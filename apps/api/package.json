@@ -13,7 +13,6 @@
     "cloud:configure-providers": "tsx src/cloud/configureProvidersCli.ts",
     "cloud:backup": "tsx src/cloud/backupCli.ts",
     "cloud:restore": "tsx src/cloud/restoreCli.ts",
-    "local:backup": "tsx src/local/backupCli.ts",
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
