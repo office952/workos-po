@@ -1,0 +1,130 @@
+name: WorkOS owner rehearsal package
+
+on:
+  push:
+    branches:
+      - ops/owner-rehearsal-package-v1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+env:
+  CANONICAL_SOURCE_COMMIT: cb027fcac99d56dabd68a886ad87d8726b64e07a
+  PACKAGE_DIR: .tmp/workos-local-package
+  ARTIFACT_NAME: workos-local-owner-rehearsal-cb027fc
+
+jobs:
+  package-windows:
+    name: Package WorkOS Local on Windows
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout pinned canonical commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CANONICAL_SOURCE_COMMIT }}
+          persist-credentials: false
+
+      - name: Verify pinned checkout
+        shell: bash
+        run: |
+          actual="$(git rev-parse HEAD)"
+          echo "CANONICAL_SOURCE_CHECKOUT=$actual"
+          test "$actual" = "$CANONICAL_SOURCE_COMMIT"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Record toolchain
+        shell: pwsh
+        run: |
+          Write-Output "WINDOWS_RUNNER=$env:ImageOS $env:ImageVersion"
+          Write-Output "NODE_VERSION=$(node --version)"
+          Write-Output "PNPM_VERSION=$(pnpm --version)"
+
+      - name: Install dependencies from lockfile
+        run: pnpm install --frozen-lockfile
+
+      - name: Build canonical Local package
+        run: pnpm package:local
+
+      - name: Verify package layout
+        shell: pwsh
+        run: |
+          $root = $env:PACKAGE_DIR
+          $required = @(
+            "runtime/node.exe",
+            "app/dist/index.js",
+            "app/web/index.html",
+            "launcher/hidden.vbs",
+            "launcher/launch.mjs",
+            "Install WorkOS.cmd",
+            "Start WorkOS.cmd",
+            "Uninstall WorkOS.cmd",
+            "product.json"
+          )
+          foreach ($relative in $required) {
+            $path = Join-Path $root $relative
+            if (-not (Test-Path -LiteralPath $path)) {
+              throw "package_missing $relative"
+            }
+          }
+          if (Test-Path -LiteralPath (Join-Path $root "app/src")) {
+            throw "installed_source_tree_present"
+          }
+          if (Test-Path -LiteralPath (Join-Path $root "app/node_modules/vite")) {
+            throw "installed_vite_present"
+          }
+          if (Test-Path -LiteralPath (Join-Path $root "app/node_modules/tsx")) {
+            throw "installed_tsx_present"
+          }
+          $html = Get-Content -LiteralPath (Join-Path $root "app/web/index.html") -Raw
+          if ($html -notmatch "<script") {
+            throw "placeholder_frontend_or_incomplete"
+          }
+          if ($html -notmatch "/assets/") {
+            throw "canonical_frontend_assets_missing"
+          }
+
+      - name: Write rehearsal provenance manifest
+        shell: pwsh
+        run: |
+          $root = $env:PACKAGE_DIR
+          $assets = @()
+          $assetsDir = Join-Path $root "app/web/assets"
+          if (Test-Path -LiteralPath $assetsDir) {
+            $assets = Get-ChildItem -LiteralPath $assetsDir -File | ForEach-Object { $_.Name }
+          }
+          $product = Get-Content -LiteralPath (Join-Path $root "product.json") -Raw | ConvertFrom-Json
+          $manifest = [ordered]@{
+            SOURCE_REPO = "office952/workos-po"
+            SOURCE_COMMIT = $env:CANONICAL_SOURCE_COMMIT
+            PACKAGE_VERSION = $product.version
+            NODE_VERSION = (node --version)
+            PNPM_VERSION = (pnpm --version)
+            WINDOWS_RUNNER = "$env:ImageOS $env:ImageVersion"
+            BUILD_TIMESTAMP = (Get-Date).ToUniversalTime().ToString("o")
+            PACKAGE_COMMAND = "pnpm package:local"
+            FRONTEND_ASSET_NAMES = $assets
+            DISTRIBUTION = "OWNER_REHEARSAL_EVIDENCE_ONLY"
+          }
+          $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root "owner-rehearsal-manifest.json") -Encoding utf8
+          Get-Content -LiteralPath (Join-Path $root "owner-rehearsal-manifest.json")
+
+      - name: Upload Local package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: .tmp/workos-local-package
+          if-no-files-found: error
+          retention-days: 14
