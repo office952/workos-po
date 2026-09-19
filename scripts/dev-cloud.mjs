@@ -9,7 +9,23 @@ const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const IDENTITY_NAME = ".dev-identity.json";
 const DEFAULT_EMAIL = "dev@workos.local";
 const DEFAULT_ORG = "WorkOS Dev";
-const pnpmCommand = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+const useWindowsShell = process.platform === "win32";
+
+function shellArg(value) {
+  if (!useWindowsShell) {
+    return value;
+  }
+  return `"${String(value).replaceAll('"', "")}"`;
+}
+
+function spawnPnpm(args, options) {
+  return spawn("pnpm", args, {
+    cwd: repoRoot,
+    windowsHide: true,
+    shell: useWindowsShell,
+    ...options,
+  });
+}
 
 function fail(code, detail) {
   console.error(detail ? `${code}: ${detail}` : code);
@@ -92,26 +108,23 @@ function controlPlanePath(root) {
 
 function provisionWithExistingCli(root, identity, env) {
   return new Promise((resolvePromise, reject) => {
-    const child = spawn(
-      pnpmCommand,
+    const child = spawnPnpm(
       [
         "--filter",
         "@workos-final/api",
         "cloud:provision",
         "--",
         "--root",
-        root,
+        shellArg(root),
         "--org",
-        identity.organization,
+        shellArg(identity.organization),
         "--email",
-        identity.email,
+        shellArg(identity.email),
         "--password-stdin",
       ],
       {
-        cwd: repoRoot,
         env,
         stdio: ["pipe", "inherit", "inherit"],
-        windowsHide: true,
       },
     );
     child.stdin.write(identity.password);
@@ -159,16 +172,15 @@ async function ensureSyntheticCloud(root, env) {
 }
 
 function launchApi(root, env) {
-  const child = spawn(pnpmCommand, ["--filter", "@workos-final/api", "dev"], {
-    cwd: repoRoot,
+  const child = spawnPnpm(["--filter", "@workos-final/api", "dev"], {
     env: {
       ...env,
+      HOST: "127.0.0.1",
       WORKOS_CLOUD_ROOT: root,
       WORKOS_LOCAL_ROOT: "",
       WORKOS_SQLITE_PATH: "",
     },
     stdio: "inherit",
-    windowsHide: true,
   });
   child.on("exit", (code, signal) => {
     if (signal) {
@@ -188,7 +200,7 @@ const cloudRoot = resolveDevCloudRoot(argv);
 const env = {
   ...process.env,
   NODE_ENV: "development",
-  HOST: process.env.HOST?.trim() || "127.0.0.1",
+  HOST: "127.0.0.1",
   PORT: process.env.PORT?.trim() || "8787",
   WORKOS_CLOUD_ROOT: cloudRoot,
   WORKOS_LOCAL_ROOT: "",
@@ -201,8 +213,8 @@ try {
   console.log(`root: ${cloudRoot}`);
   console.log("classification: SYNTHETIC_ISOLATED_DEV");
   console.log(`email: ${identity.email}`);
-  console.log(`password: ${identity.password}`);
   console.log(`organization: ${identity.organization}`);
+  console.log(`credentials: stored in ${identityPath(cloudRoot)} (gitignored; not printed)`);
   console.log("Frontend remains `pnpm dev` → http://127.0.0.1:5173");
   console.log("Journey: login → organization → UI20");
   launchApi(cloudRoot, env);
