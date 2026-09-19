@@ -1,8 +1,8 @@
 # Production runtime contract
 
-Local product mode is a separate deployment profile. See `docs/LOCAL_RUNTIME.md`. Do not point Local proof at `WORKOS_CLOUD_ROOT`.
-
 Living operator-safe contract for WorkOS PO Cloud runtime. This is not a cutover authorization.
+
+Primary product runtime is Cloud. Normal WorkOS startup requires `WORKOS_CLOUD_ROOT` and fails closed without it. Local/Windows product runtime is deferred and is not a V1 requirement.
 
 ```text
 DEPLOY_PRODUCTION = HOLD
@@ -159,7 +159,10 @@ Dev provision CLI remains refused when `NODE_ENV=production`.
 
 ```text
 PRODUCTION_ORG_PROVISIONING = ADMIN_TOOLING_DEBT
+ADMIN_TOOLING_DEBT = RECORDED_NOT_IMPLEMENTED
 ```
+
+Recorded, not implemented: self-service signup, email verification, password recovery, MFA, billing/subscriptions, production organization provisioning UX, commercial onboarding automation.
 
 Do not enable unrestricted production provisioning in this wave.
 
@@ -167,13 +170,21 @@ Do not enable unrestricted production provisioning in this wave.
 
 Operational logs use event names only: startup, shutdown, Control Plane open failure, migration failure, plane identity failure, backup success/failure, restore validation success/failure. They must not include passwords, session tokens, PINs, attachment bytes, or avoidable filesystem paths.
 
-## Local and Cloud profiles
+## Product identity
 
 ```text
 ONE WORKOS CODEBASE
-DEPLOYMENT_PROFILES = LOCAL | CLOUD
+PRIMARY_PRODUCT_DIRECTION = CLOUD_WEB
+PRIMARY_PRESENTATION = UI20
+PRIMARY_ACCESS = BROWSER
+PRIMARY_AUTH = EMAIL_PASSWORD
+PRIMARY_RUNTIME = CLOUD
+LOCAL_PRODUCT_RUNTIME = DEFERRED_NOT_V1_REQUIREMENT
+WINDOWS_INSTALLER = DEFERRED
+CLIENT_SPECIFIC_FORKS = NO
+ORGANIZATION_TENANCY = PRESERVED
 ```
 
-There must not be separate local product code, separate Cloud product code, or client-specific forks. Frontend, API, domain, business logic, migrations, and Product Truth stay shared. Deployment and storage configuration may differ.
+There must not be separate Cloud product code or client-specific forks. Frontend, API, domain, business logic, migrations, and Product Truth stay shared. HUB MEDIA is a validation organization, not a client-specific codebase.
 
-`WORKOS_LOCAL_RUNTIME_V1` and `WORKOS_LOCAL_INSTALLATION_V1` are complete as isolated synthetic proof. Owner acceptance of a real-machine Local install remains open. See `docs/LOCAL_RUNTIME.md` and `docs/LOCAL_INSTALLATION.md`. Do not install over a real HUB MEDIA data root.
+Normal customers must not need Cursor, source access, direct SQLite edits, or a Windows Local install. Synthetic development provisioning is bootstrap tooling, not customer onboarding UX.

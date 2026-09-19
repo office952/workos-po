@@ -1,6 +1,6 @@
 # Architecture
 
-STATUS: FOUNDATION ACCEPTED / REFERENCE SLICE ACCEPTED / GOLDEN SPINE ACCEPTED / IMPLEMENTATION ACCEPTED / ENGINE_CONSOLIDATION_V1 = COMPLETE / CLOUD_RUNTIME_AND_RECOVERY_V1 = SYNTHETIC_ONLY / LOCAL_RUNTIME_V1 = COMPLETE_ISOLATED_SYNTHETIC / LOCAL_INSTALLATION_V1 = COMPLETE_ISOLATED_SYNTHETIC / LOCAL_PACKAGING_REALITY_CLOSURE_V1 = COMPLETE_ISOLATED_SYNTHETIC
+STATUS: FOUNDATION ACCEPTED / REFERENCE SLICE ACCEPTED / GOLDEN SPINE ACCEPTED / IMPLEMENTATION ACCEPTED / ENGINE_CONSOLIDATION_V1 = COMPLETE / CLOUD_RUNTIME_AND_RECOVERY_V1 = SYNTHETIC_ONLY / PRIMARY_PRODUCT_DIRECTION = CLOUD_WEB / LOCAL_PRODUCT_RUNTIME = DEFERRED_NOT_V1_REQUIREMENT
 
 ## Boundary
 
@@ -55,9 +55,11 @@ Local development uses a same-origin Vite proxy to `/api` → `127.0.0.1:8787`. 
 
 Same-origin HTTPS reverse proxy → built frontend → `/api` → single Node API → external `WORKOS_CLOUD_ROOT`. See `docs/PRODUCTION_RUNTIME.md`. Isolated synthetic backup/restore is authorized. Real HUB MEDIA cutover is not.
 
-## Local product runtime
+## Product runtime
 
-Same codebase, different deployment profile: built frontend + same-origin `/api` + one local SQLite root. See `docs/LOCAL_RUNTIME.md`. Vite is development only. Local and Cloud roots must not be combined.
+Primary product runtime is Cloud Web: browser access, email/password Cloud session, organization tenancy, same-origin production topology. See `docs/PRODUCTION_RUNTIME.md`.
+
+Normal product startup requires `WORKOS_CLOUD_ROOT` and fails closed without it. Explicit single-plane construction remains a test/internal helper, not a deployment mode. Local/Windows product runtime is deferred and is not a V1 requirement. Vite remains development only.
 
 ## Tooling advisory
 

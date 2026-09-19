@@ -16,7 +16,7 @@ export type OpsEvent = (typeof OPS_EVENTS)[number];
 
 export type OpsLogFields = {
   code?: string;
-  mode?: "cloud" | "single_plane" | "local";
+  mode?: "cloud" | "single_plane";
   port?: number;
   organizationCount?: number;
   planeCount?: number;

@@ -22,17 +22,15 @@ WORKOS_PO_CLOUD_RUNTIME_AND_RECOVERY_V1 = COMPLETE
 BACKUP_MODE = QUIESCED_OFFLINE_V1
 CLOUD_RUNTIME_RECOVERY_SYNTHETIC_PROOF = COMPLETE
 
-WORKOS_LOCAL_RUNTIME_V1 = COMPLETE_ISOLATED_SYNTHETIC
-LOCAL_RUNTIME_LOOPBACK_ONLY_V1 = COMPLETE
-LOCAL_RUNTIME_OWNER_ACCEPTED = NO
+PRIMARY_PRODUCT_DIRECTION = CLOUD_WEB
+PRIMARY_PRESENTATION = UI20
+PRIMARY_ACCESS = BROWSER
+PRIMARY_AUTH = EMAIL_PASSWORD
+PRIMARY_RUNTIME = CLOUD
+LOCAL_PRODUCT_RUNTIME = DEFERRED_NOT_V1_REQUIREMENT
+WINDOWS_INSTALLER = DEFERRED
 
-WORKOS_LOCAL_INSTALLATION_V1 = COMPLETE_ISOLATED_SYNTHETIC
-WORKOS_LOCAL_RUNTIME_AND_INSTALLATION_V1 = COMPLETE_ISOLATED_SYNTHETIC
-LOCAL_INSTALLATION_OWNER_ACCEPTED = NO
-LOCAL_SHORTCUT_LAUNCH_CLOSURE_V1 = COMPLETE_ISOLATED_SYNTHETIC
-LOCAL_PACKAGING_REALITY_CLOSURE_V1 = COMPLETE_ISOLATED_SYNTHETIC
-
-NEXT_PROGRAM_PRIORITY = CONTROLLED_OWNER_MACHINE_LOCAL_INSTALLATION_REHEARSAL
+NEXT_PROGRAM_PRIORITY = PRIMARY_USER_JOURNEY
 NEXT_PROGRAM_STATUS = NOT_STARTED
 NEXT_PROGRAM_STARTED = NO
 
@@ -42,32 +40,45 @@ DEPLOY = HOLD
 CUTOVER = HOLD
 FIRST_REAL_BUSINESS_OPERATION = HOLD
 REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
-REAL_HUB_MEDIA_LOCAL_ADOPTION = HOLD
 ```
 
 `WORKOS_PO_CLOUD_RUNTIME_AND_RECOVERY_V1` is complete as isolated synthetic proof. It did not access or cut over the real HUB MEDIA Cloud root. See `docs/PRODUCTION_RUNTIME.md`.
 
-`WORKOS_LOCAL_RUNTIME_V1` is complete as isolated synthetic proof. Loopback-only bind is required because Local V1 uses implicit Owner authority. See `docs/LOCAL_RUNTIME.md`.
-
-`WORKOS_LOCAL_INSTALLATION_V1` is complete as isolated synthetic proof. The user-facing Start Menu chain is `wscript.exe` → `hidden.vbs` → packaged Node → `launch.mjs`, without `//nologo` on that chain. Installed startup discovers the application directory from the packaged layout and the data directory from `%LOCALAPPDATA%`; it does not require `WORKOS_INSTALL_DIR` or `WORKOS_LOCAL_ROOT`. `pnpm package:local` builds or verifies the canonical frontend and refuses a placeholder page. Isolated synthetic proof uses a temp Windows profile. It did not install on a real Owner machine and did not touch HUB MEDIA data. Owner acceptance of a real-machine install remains open. See `docs/LOCAL_INSTALLATION.md`.
+Normal WorkOS product startup is Cloud-only and fail-closed. `WORKOS_LOCAL_ROOT` is not a product mode. Explicit single-plane helpers remain for isolated tests only. Local/Windows product runtime is deferred and is not a V1 requirement.
 
 ```text
 ONE WORKOS CODEBASE
-DEPLOYMENT_PROFILES = LOCAL | CLOUD
+PRIMARY_PRODUCT_DIRECTION = CLOUD_WEB
+PRIMARY_PRESENTATION = UI20
+PRIMARY_ACCESS = BROWSER
+PRIMARY_AUTH = EMAIL_PASSWORD
+PRIMARY_RUNTIME = CLOUD
+LOCAL_PRODUCT_RUNTIME = DEFERRED_NOT_V1_REQUIREMENT
+WINDOWS_INSTALLER = DEFERRED
 SEPARATE_LOCAL_PRODUCT_CODE = NO
 SEPARATE_CLOUD_PRODUCT_CODE = NO
 CLIENT_SPECIFIC_FORKS = NO
+ORGANIZATION_TENANCY = PRESERVED
+HUB_MEDIA = VALIDATION_ORGANIZATION_NOT_CODE_FORK
+NORMAL_CUSTOMER_REQUIRES_CURSOR = NO
+NORMAL_CUSTOMER_REQUIRES_SOURCE_ACCESS = NO
+NORMAL_CUSTOMER_REQUIRES_DIRECT_SQLITE_EDIT = NO
+NORMAL_CUSTOMER_REQUIRES_WINDOWS_LOCAL_INSTALL = NO
 ```
 
-Shared: frontend, API, domain, business logic, migrations, Product Truth. Deployment and storage configuration may differ.
+Shared: frontend, API, domain, business logic, migrations, Product Truth.
 
-The Local installation customer experience is:
+The living product journey remains:
 
 ```text
-INSTALL → INITIALIZE → START WORKOS → BROWSER OPENS → OPERATE
+AUTH → CLIENT → CERERE → CONFIGURATOR → OFERTA → ACCEPTANCE → LUCRARE → PRODUCTION RELEASE → ATELIER → EXECUTION → COMPLETE → PLANNED VS ACTUAL
 ```
 
-Normal daily use of an installed package must not require Cursor, GitHub, a terminal, pnpm, source edits, or direct SQLite edits. Do not install over real HUB MEDIA data. The next evidence tier is a controlled Owner-machine Local installation rehearsal on a new isolated Local data root.
+```text
+ADMIN_TOOLING_DEBT = RECORDED_NOT_IMPLEMENTED
+```
+
+Recorded, not implemented: self-service signup, email verification, password recovery, MFA, billing/subscriptions, production organization provisioning UX, commercial onboarding automation. Do not build these without a later Owner GO.
 
 ## Authority after engine consolidation
 

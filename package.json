@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:cloud": "node scripts/dev-cloud.mjs",
     "dev:canonical": "node scripts/reclaim-dev-ports.mjs && vite",
     "ports:reclaim": "node scripts/reclaim-dev-ports.mjs",
     "build": "tsc -b && vite build",
@@ -17,9 +18,6 @@
     "engine:lint": "eslint -c eslint.engine.config.js apps/api/src apps/api/tests packages/domain/src",
     "engine:test": "pnpm --filter @workos-final/domain test && pnpm --filter @workos-final/api test",
     "engine:build": "pnpm --filter @workos-final/domain build && pnpm --filter @workos-final/api build",
-    "local:start": "node scripts/local-start.mjs",
-    "local:backup": "node scripts/local-backup.mjs",
-    "package:local": "node packaging/build-package.mjs",
     "verify:all": "pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm engine:lint && pnpm engine:typecheck && pnpm engine:test && pnpm engine:build"
   },
   "dependencies": {
