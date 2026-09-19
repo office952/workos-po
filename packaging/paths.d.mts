@@ -15,3 +15,5 @@ export function installedAppDir(env?: NodeJS.ProcessEnv): string;
 export function installedDataDir(env?: NodeJS.ProcessEnv): string;
 export function startMenuShortcutDir(env?: NodeJS.ProcessEnv): string;
 export function desktopShortcutPath(env?: NodeJS.ProcessEnv): string;
+export function isPackagedRoot(dir: string): boolean;
+export function discoverPackagedRoot(fromFilePath: string): string;

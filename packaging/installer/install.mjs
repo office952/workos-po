@@ -13,13 +13,14 @@ import {
   installedDataDir,
   readProductIdentity,
   startMenuShortcutDir,
+  discoverPackagedRoot,
 } from "../paths.mjs";
 import { launchWorkos } from "../launcher/launch.mjs";
 import { operatorMessage } from "../launcher/messages.mjs";
 import { retireDirectory, stopPackagedRuntimeProcesses } from "./packaged-runtime.mjs";
 import { createShortcut, userShortcutArguments, windowsSystem32 } from "./shortcuts.mjs";
 
-const packageRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
+const packageRoot = discoverPackagedRoot(fileURLToPath(import.meta.url));
 
 function writeLog(dataRoot, message) {
   const logPath = join(dataRoot, "logs", "installer.log");

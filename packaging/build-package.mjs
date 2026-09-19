@@ -165,6 +165,7 @@ function copyPackagingFiles(destRoot) {
     ["packaging/installer/install.mjs", "installer/install.mjs"],
     ["packaging/installer/uninstall.mjs", "installer/uninstall.mjs"],
     ["packaging/installer/shortcuts.mjs", "installer/shortcuts.mjs"],
+    ["packaging/installer/lnk-unicode.mjs", "installer/lnk-unicode.mjs"],
     ["packaging/installer/packaged-runtime.mjs", "installer/packaged-runtime.mjs"],
     ["packaging/installer/create-shortcut.vbs", "installer/create-shortcut.vbs"],
     ["packaging/installer/inspect-shortcut.vbs", "installer/inspect-shortcut.vbs"],
@@ -180,6 +181,75 @@ function copyPackagingFiles(destRoot) {
   }
 }
 
+const PLACEHOLDER_FRONTEND_MARKERS = ["Se încarcă WorkOS.", "Se incarca WorkOS."];
+
+function findFrontendTsc() {
+  const candidate = join(repoRoot, "node_modules", "typescript", "bin", "tsc");
+  if (existsSync(candidate)) {
+    return candidate;
+  }
+  throw new Error("frontend_typescript_missing");
+}
+
+function buildCanonicalFrontend() {
+  const tsc = spawnSync(process.execPath, [findFrontendTsc(), "-b"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  if (tsc.status !== 0) {
+    throw new Error(tsc.stderr || tsc.stdout || "frontend_tsc_failed");
+  }
+  const viteJs = join(repoRoot, "node_modules", "vite", "bin", "vite.js");
+  if (!existsSync(viteJs)) {
+    throw new Error("frontend_vite_missing");
+  }
+  const vite = spawnSync(process.execPath, [viteJs, "build"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  if (vite.status !== 0) {
+    throw new Error(vite.stderr || vite.stdout || "frontend_vite_failed");
+  }
+}
+
+export function isPlaceholderOnlyFrontend(html) {
+  const hasScript = html.includes("<script");
+  const hasMarker = PLACEHOLDER_FRONTEND_MARKERS.some((marker) => html.includes(marker));
+  return !hasScript && (hasMarker || html.length < 400);
+}
+
+export function assertCanonicalFrontend(indexHtmlPath) {
+  if (!existsSync(indexHtmlPath)) {
+    throw new Error("frontend_dist_missing");
+  }
+  const html = readFileSync(indexHtmlPath, "utf8");
+  if (isPlaceholderOnlyFrontend(html)) {
+    throw new Error("placeholder_frontend_forbidden");
+  }
+  if (!html.includes("<script")) {
+    throw new Error("frontend_dist_incomplete");
+  }
+}
+
+function copyFrontendIntoPackage(webDir, options) {
+  mkdirSync(webDir, { recursive: true });
+  if (options.frontendMode === "TEST_FIXTURE" || options.frontendMode === "SYNTHETIC") {
+    const fixtureRoot = options.frontendRoot;
+    if (!fixtureRoot || !existsSync(join(fixtureRoot, "index.html"))) {
+      throw new Error("test_fixture_frontend_missing");
+    }
+    cpSync(fixtureRoot, webDir, { recursive: true, dereference: true });
+    return { frontendMode: "TEST_FIXTURE", frontendRoot: fixtureRoot };
+  }
+  const frontendRoot = options.frontendRoot ?? join(repoRoot, "dist");
+  assertCanonicalFrontend(join(frontendRoot, "index.html"));
+  cpSync(frontendRoot, webDir, { recursive: true, dereference: true });
+  assertCanonicalFrontend(join(webDir, "index.html"));
+  return { frontendMode: "canonical", frontendRoot };
+}
+
 export function compileProductionArtifacts() {
   runTsc("tsconfig.build.json", join(repoRoot, "packages", "domain"));
   runTsc("tsconfig.build.json", join(repoRoot, "apps", "api"));
@@ -193,9 +263,26 @@ export function compileProductionArtifacts() {
 export function buildLocalPackage(options = {}) {
   const product = readProductIdentity(defaultProductJsonPath());
   const destRoot = resolve(options.destRoot ?? join(repoRoot, ".tmp", "workos-local-package"));
-  const frontendRoot =
-    options.frontendRoot ??
-    (existsSync(join(repoRoot, "dist", "index.html")) ? join(repoRoot, "dist") : "");
+  if (options.frontendMode !== "TEST_FIXTURE" && options.frontendMode !== "SYNTHETIC") {
+    const defaultFrontendRoot = join(repoRoot, "dist");
+    const frontendRoot = options.frontendRoot ?? defaultFrontendRoot;
+    if (options.rebuildFrontend) {
+      buildCanonicalFrontend();
+    }
+    let frontendError = null;
+    try {
+      assertCanonicalFrontend(join(frontendRoot, "index.html"));
+    } catch (error) {
+      frontendError = error instanceof Error ? error : new Error("frontend_dist_missing");
+    }
+    if (frontendError) {
+      if (options.skipFrontendBuild || frontendRoot !== defaultFrontendRoot) {
+        throw frontendError;
+      }
+      buildCanonicalFrontend();
+      assertCanonicalFrontend(join(defaultFrontendRoot, "index.html"));
+    }
+  }
 
   compileProductionArtifacts();
 
@@ -246,15 +333,7 @@ export function buildLocalPackage(options = {}) {
   }
 
   const webDir = join(appDir, "web");
-  mkdirSync(webDir, { recursive: true });
-  if (frontendRoot && existsSync(join(frontendRoot, "index.html"))) {
-    cpSync(frontendRoot, webDir, { recursive: true, dereference: true });
-  } else {
-    writeFileSync(
-      join(webDir, "index.html"),
-      "<!doctype html><html><head><title>WorkOS</title></head><body>Se încarcă WorkOS.</body></html>\n",
-    );
-  }
+  const frontend = copyFrontendIntoPackage(webDir, options);
 
   writeFileSync(
     join(appDir, "package.json"),
@@ -312,13 +391,15 @@ export function buildLocalPackage(options = {}) {
     version: product.version,
     nodePath: nodeDest,
     sqliteBindings,
-    frontendPackaged: Boolean(frontendRoot && existsSync(join(frontendRoot, "index.html"))),
+    frontendPackaged: true,
+    frontendMode: frontend.frontendMode,
+    frontendRoot: frontend.frontendRoot,
   };
 }
 
 const invokedDirectly =
   process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (invokedDirectly) {
-  const built = buildLocalPackage();
+  const built = buildLocalPackage({ rebuildFrontend: true });
   console.log(`WorkOS local package written to ${built.destRoot}`);
 }

@@ -7,5 +7,5 @@ If WScript.Arguments.Count >= 2 Then
 Else
   command = "start"
 End If
-exitCode = shell.Run("""" & nodePath & """ """ & launchPath & """ " & command, 0, True)
+exitCode = shell.Run("""" & nodePath & """ """ & launchPath & """ " & command & " """ & installDir & """", 0, True)
 WScript.Quit exitCode

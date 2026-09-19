@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
-import { join } from "node:path";
-import { readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 export const LOCAL_BIND_HOST = "127.0.0.1";
@@ -57,4 +57,20 @@ export function startMenuShortcutDir(env = process.env) {
 export function desktopShortcutPath(env = process.env) {
   const userProfile = env.USERPROFILE?.trim() || homedir();
   return join(userProfile, "Desktop", "WorkOS.lnk");
+}
+
+export function isPackagedRoot(dir) {
+  return (
+    existsSync(join(dir, "launcher", "launch.mjs")) &&
+    existsSync(join(dir, "app", "dist", "index.js")) &&
+    existsSync(join(dir, "app", "web", "index.html"))
+  );
+}
+
+export function discoverPackagedRoot(fromFilePath) {
+  const parent = resolve(dirname(fromFilePath), "..");
+  if (isPackagedRoot(parent)) {
+    return parent;
+  }
+  return resolve(dirname(fromFilePath), "../..");
 }

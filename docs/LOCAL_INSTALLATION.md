@@ -5,6 +5,7 @@ Living operator-safe contract for packaging WorkOS as a Local Windows product. T
 ```text
 WORKOS_LOCAL_INSTALLATION_V1 = IN_PROGRESS
 LOCAL_SHORTCUT_LAUNCH_CLOSURE_V1 = COMPLETE_ISOLATED_SYNTHETIC
+LOCAL_PACKAGING_REALITY_CLOSURE_V1 = COMPLETE_ISOLATED_SYNTHETIC
 INSTALLATION_OWNER_ACCEPTED = NO
 REAL_HUB_MEDIA_LOCAL_ADOPTION = HOLD
 DEPLOY_REAL_OWNER_MACHINE = NO
@@ -36,7 +37,7 @@ V1 ships a self-contained folder produced by `pnpm package:local` (`packaging/bu
 - launcher and installer scripts
 - `Install WorkOS.cmd` / `Start WorkOS.cmd` / `Uninstall WorkOS.cmd`
 
-The installer is `packaging/installer/install.mjs` running on the packaged Node. Start Menu shortcuts are created with `create-shortcut.vbs`. A Windows service is not used.
+The installer is `packaging/installer/install.mjs` running on the packaged Node. Start Menu shortcuts are created with `cscript.exe //nologo create-shortcut.vbs` writing a valid `.lnk` target, then `lnk-unicode.mjs` patches Unicode argument and working-directory strings so characters such as `Ș` survive WScript.Shell's ANSI limit. A Windows service is not used.
 
 Why this instead of WiX / NSIS / MSIX / Electron:
 
@@ -130,7 +131,7 @@ Rebuild the package if the build Node major version changes.
 
 ## Launcher and lifecycle
 
-Start Menu **WorkOS** (and optional desktop shortcut) is a user-facing `wscript.exe` shortcut. It does **not** pass `//nologo`. That option is reserved for noninteractive shortcut *creation* via `cscript.exe //nologo create-shortcut.vbs`.
+Start Menu **WorkOS** (and optional desktop shortcut) is a user-facing `wscript.exe` shortcut. It does **not** pass `//nologo`. That option is reserved for noninteractive helpers such as shortcut create/inspect and process listing via `cscript.exe //nologo`. Helper path payloads use UTF-16 LE files, not WSH command-line argv.
 
 ```text
 FINAL_USER_LAUNCH_CHAIN =
@@ -149,7 +150,7 @@ Shortcut arguments:
 "<absolute hidden.vbs>" "<absolute installDir>" stop
 ```
 
-`hidden.vbs` starts packaged Node without a visible console and waits for `launch.mjs` to finish that command. The API stays detached after start. Operator error dialogs use `wscript.exe "<show-message.vbs>" "<message>"` without `//nologo`. A WorkOS message dialog may appear. A Windows Script Host "Unknown option" dialog must not. Upgrade retires a locked `runtime` folder instead of requiring an immediate delete of a running `node.exe`.
+`hidden.vbs` starts packaged Node without a visible console and waits for `launch.mjs` to finish that command. It forwards the shortcut `installDir` argument to `launch.mjs`. The installed launcher also discovers the application root from the packaged folder next to `launcher/launch.mjs` (`app/dist` + `app/web`). Data defaults to `%LOCALAPPDATA%\WorkOS\local`. Normal startup does not require `WORKOS_INSTALL_DIR` or `WORKOS_LOCAL_ROOT`. The API stays detached after start. Operator error dialogs use `wscript.exe "<show-message.vbs>" "<message>"` without `//nologo`. A WorkOS message dialog may appear. A Windows Script Host "Unknown option" dialog must not. Upgrade retires a locked `runtime` folder instead of requiring an immediate delete of a running `node.exe`. `pnpm package:local` rebuilds the canonical frontend and fails if that frontend is missing or is the forbidden placeholder page.
 
 The launcher:
 
@@ -244,9 +245,14 @@ package
 ```
 
 ```text
-INSTALLATION_E2E = PASS_ISOLATED_SYNTHETIC_WITH_REAL_ENTRYPOINT
+INSTALLATION_E2E = PASS_ISOLATED_SYNTHETIC_WITH_REALISTIC_USER_ENV
 OWNER_WSH_UNKNOWN_OPTION_REGRESSION = PASS
-DIRECT_LAUNCHWORKOS_TEST = REUSE_AND_BACKUP_ONLY
+DEFAULT_INSTALLED_START_WITHOUT_WORKOS_INSTALL_DIR = YES
+DEFAULT_INSTALLED_START_WITHOUT_WORKOS_LOCAL_ROOT = YES
+PLACEHOLDER_FRONTEND_ALLOWED = NO
+PACKAGE_WITHOUT_FRONTEND = FAIL
+PATH_WITH_SPACES = PASS
+NON_ASCII_PATH = PASS
 ```
 
 ## Clean-machine proof

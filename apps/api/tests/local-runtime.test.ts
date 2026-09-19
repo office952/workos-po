@@ -301,8 +301,8 @@ describe("local runtime HTTP", () => {
       expect(html.toLowerCase()).toContain("<!doctype html");
       expect(html).toContain("<title>WorkOS</title>");
       expect(html).toContain("Se încarcă WorkOS.");
-      expect(html).toContain("/assets/index-D87y8Kui.js");
-      expect(html).toContain("/assets/index-h89T23-N.css");
+      expect(html).toMatch(/\/assets\/index-[A-Za-z0-9_-]+\.js/);
+      expect(html).toMatch(/\/assets\/index-[A-Za-z0-9_-]+\.css/);
       expect(html).not.toContain("workos-local-spa");
     }
     await started.close();

@@ -30,6 +30,7 @@ WORKOS_LOCAL_INSTALLATION_V1 = IN_PROGRESS
 WORKOS_LOCAL_RUNTIME_AND_INSTALLATION_V1 = IN_PROGRESS
 LOCAL_INSTALLATION_OWNER_ACCEPTED = NO
 LOCAL_SHORTCUT_LAUNCH_CLOSURE_V1 = COMPLETE_ISOLATED_SYNTHETIC
+LOCAL_PACKAGING_REALITY_CLOSURE_V1 = COMPLETE_ISOLATED_SYNTHETIC
 
 NEXT_PROGRAM_PRIORITY = INDEPENDENT_REVIEW_THEN_MAIN_INTEGRATION
 NEXT_PROGRAM_STATUS = WAITING_REVIEW
@@ -48,7 +49,7 @@ REAL_HUB_MEDIA_LOCAL_ADOPTION = HOLD
 
 `WORKOS_LOCAL_RUNTIME_V1` is complete as isolated synthetic proof. Loopback-only bind is required because Local V1 uses implicit Owner authority. See `docs/LOCAL_RUNTIME.md`.
 
-`WORKOS_LOCAL_INSTALLATION_V1` remains in progress pending independent review. Packaging is accepted. The user-facing Start Menu chain is `wscript.exe` → `hidden.vbs` → packaged Node → `launch.mjs`, without `//nologo` on that chain. Isolated synthetic proof includes generated `.lnk` inspection and the installed `hidden.vbs` entrypoint. It did not install on a real Owner machine and did not touch HUB MEDIA data. See `docs/LOCAL_INSTALLATION.md`.
+`WORKOS_LOCAL_INSTALLATION_V1` remains in progress pending independent review. The user-facing Start Menu chain is `wscript.exe` → `hidden.vbs` → packaged Node → `launch.mjs`, without `//nologo` on that chain. Installed startup discovers the application directory from the packaged layout and the data directory from `%LOCALAPPDATA%`; it does not require `WORKOS_INSTALL_DIR` or `WORKOS_LOCAL_ROOT`. `pnpm package:local` builds or verifies the canonical frontend and refuses a placeholder page. Isolated synthetic proof uses a temp Windows profile. It did not install on a real Owner machine and did not touch HUB MEDIA data. See `docs/LOCAL_INSTALLATION.md`.
 
 ```text
 ONE WORKOS CODEBASE
@@ -66,7 +67,7 @@ The Local installation customer experience is:
 INSTALL → INITIALIZE → START WORKOS → BROWSER OPENS → OPERATE
 ```
 
-Normal daily use of an installed package must not require Cursor, GitHub, a terminal, pnpm, source edits, or direct SQLite edits. Do not install over real HUB MEDIA data. The next step is independent review of the shortcut-launch closure, then main integration, before any real-machine install.
+Normal daily use of an installed package must not require Cursor, GitHub, a terminal, pnpm, source edits, or direct SQLite edits. Do not install over real HUB MEDIA data. The next step is independent review of this packaging-reality closure, then main integration, before any real-machine install.
 
 ## Authority after engine consolidation
 

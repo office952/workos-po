@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { buildLocalPackage } from "../../../packaging/build-package.mjs";
+import { assertCanonicalFrontend, buildLocalPackage } from "../../../packaging/build-package.mjs";
 import { installWorkos } from "../../../packaging/installer/install.mjs";
 import {
   createShortcut,
@@ -22,14 +22,19 @@ import {
   readLeasePid,
   waitForReady,
 } from "../../../packaging/launcher/launch-core.mjs";
-import { launchWorkos, operatorMessageWscriptInvocation } from "../../../packaging/launcher/launch.mjs";
+import { launchWorkos, operatorMessageWscriptInvocation, resolveLayout } from "../../../packaging/launcher/launch.mjs";
 import { operatorMessage } from "../../../packaging/launcher/messages.mjs";
 import {
+  desktopShortcutPath,
+  discoverPackagedRoot,
   installedAppDir,
   installedDataDir,
   LOCAL_BIND_HOST,
   readProductIdentity,
+  startMenuShortcutDir,
 } from "../../../packaging/paths.mjs";
+
+const ownerLocalAppData = process.env.LOCALAPPDATA ?? "";
 
 const temps: string[] = [];
 const stoppers: Array<() => Promise<void>> = [];
@@ -77,6 +82,48 @@ function tempDir(prefix: string): string {
   const dir = mkdtempSync(join(tmpdir(), prefix));
   temps.push(dir);
   return dir;
+}
+
+function realisticUserEnv(profileRoot: string): {
+  env: NodeJS.ProcessEnv;
+  localAppData: string;
+  appData: string;
+  userProfile: string;
+  installDir: string;
+  dataRoot: string;
+  startMenuDir: string;
+  desktopPath: string;
+} {
+  const userProfile = profileRoot;
+  const localAppData = join(profileRoot, "AppData", "Local");
+  const appData = join(profileRoot, "AppData", "Roaming");
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    LOCALAPPDATA: localAppData,
+    APPDATA: appData,
+    USERPROFILE: userProfile,
+    HOST: LOCAL_BIND_HOST,
+    WORKOS_OPEN_BROWSER: "0",
+    WORKOS_CLOUD_ROOT: "",
+    PATH: join(process.env.WINDIR ?? "C:\\Windows", "System32"),
+  };
+  delete env.WORKOS_INSTALL_DIR;
+  delete env.WORKOS_LOCAL_ROOT;
+  delete env.VITEST;
+  delete env.WORKOS_SQLITE_PATH;
+  delete env.NODE_OPTIONS;
+  delete env.WORKOS_PUBLIC_ORIGIN;
+  delete env.WORKOS_TRUSTED_ORIGINS;
+  return {
+    env,
+    localAppData,
+    appData,
+    userProfile,
+    installDir: installedAppDir(env),
+    dataRoot: installedDataDir(env),
+    startMenuDir: startMenuShortcutDir(env),
+    desktopPath: desktopShortcutPath(env),
+  };
 }
 
 async function freePort(): Promise<number> {
@@ -257,6 +304,45 @@ describe("local installation contracts", () => {
     expect(inspected?.WindowStyle).toBe(7);
   });
 
+  it("writes a user shortcut through a non-ASCII path without //nologo", () => {
+    const workspace = tempDir("workos-shortcut-diacritic-");
+    const installDir = join(workspace, "WorkOS Test Ș", "Programs", "WorkOS");
+    const hiddenVbs = join(installDir, "launcher", "hidden.vbs");
+    const shortcutPath = join(workspace, "Start Menu", "WorkOS.lnk");
+    mkdirSync(join(installDir, "launcher"), { recursive: true });
+    const created = createShortcut(
+      shortcutPath,
+      windowsSystem32("wscript.exe"),
+      userShortcutArguments(hiddenVbs, installDir, "start"),
+      installDir,
+      "Pornește WorkOS",
+    );
+    expect(created).toBe(true);
+    const inspected = inspectShortcut(shortcutPath);
+    expect(inspected?.Arguments).toBe(userShortcutArguments(hiddenVbs, installDir, "start"));
+    expect(inspected?.Arguments).not.toMatch(/nologo/i);
+    expect(inspected?.WorkingDirectory).toBe(installDir);
+  });
+
+  it("refuses a placeholder frontend as the production package default", () => {
+    const workspace = tempDir("workos-placeholder-frontend-");
+    const fakeWeb = join(workspace, "fake-web");
+    mkdirSync(fakeWeb, { recursive: true });
+    const fakeIndex = join(fakeWeb, "index.html");
+    writeFileSync(
+      fakeIndex,
+      "<!doctype html><html><head><title>WorkOS</title></head><body>Se încarcă WorkOS.</body></html>\n",
+    );
+    expect(() => assertCanonicalFrontend(fakeIndex)).toThrow(/placeholder_frontend_forbidden/);
+    expect(() =>
+      buildLocalPackage({
+        destRoot: join(workspace, "package"),
+        frontendRoot: fakeWeb,
+        skipFrontendBuild: true,
+      }),
+    ).toThrow(/placeholder_frontend_forbidden/);
+  });
+
   it("reuses a live WorkOS listener and refuses a foreign port occupant", async () => {
     const workos = createServer((req, res) => {
       if (req.url === "/api/health") {
@@ -320,72 +406,118 @@ describe("local installation packaged runtime", () => {
     expect(existsSync(join(packageRoot, "app", "node_modules", "tsx"))).toBe(false);
   });
 
+  it("discovers install and data paths without WORKOS_INSTALL_DIR or WORKOS_LOCAL_ROOT", () => {
+    const launcherPath = join(packageRoot, "launcher", "launch.mjs");
+    const naiveParent = resolve(packageRoot, "..");
+    expect(resolve(join(packageRoot, "launcher"), "..", "..")).toBe(naiveParent);
+    expect(discoverPackagedRoot(launcherPath)).toBe(resolve(packageRoot));
+    const layout = resolveLayout(
+      { LOCALAPPDATA: "C:\\Users\\Demo\\AppData\\Local" },
+      { launcherPath },
+    );
+    expect(layout.installDir).toBe(resolve(packageRoot));
+    expect(layout.appDir).toBe(join(packageRoot, "app"));
+    expect(layout.nodePath.toLowerCase()).toBe(join(packageRoot, "runtime", "node.exe").toLowerCase());
+    expect(layout.entryPath).toBe(join(packageRoot, "app", "dist", "index.js"));
+    expect(layout.staticRoot).toBe(join(packageRoot, "app", "web"));
+    expect(layout.dataRoot).toBe("C:\\Users\\Demo\\AppData\\Local\\WorkOS\\local");
+  });
+
+  it("packages the canonical frontend, not a placeholder page", () => {
+    const indexPath = join(packageRoot, "app", "web", "index.html");
+    assertCanonicalFrontend(indexPath);
+    const html = readFileSync(indexPath, "utf8");
+    expect(html).toContain("<script");
+    expect(html).toContain("/assets/");
+    const assetsDir = join(packageRoot, "app", "web", "assets");
+    expect(existsSync(assetsDir)).toBe(true);
+    const assets = readdirSync(assetsDir);
+    expect(assets.some((name) => name.endsWith(".js"))).toBe(true);
+    expect(assets.some((name) => name.endsWith(".css"))).toBe(true);
+  });
+
   it(
     "installs, launches through the installed shortcut chain, persists, backs up, upgrades, and uninstalls",
     async () => {
       const workspace = tempDir("workos-install-proof-");
-      const installDir = join(workspace, "Local Programs", "WorkOS App");
-      const dataRoot = join(workspace, "WorkOS Data", "local");
-      const startMenuDir = join(workspace, "Start Menu");
-      const desktopPath = join(workspace, "Desktop", "WorkOS.lnk");
-      const installed = await installWorkos(process.env, {
-        packageRoot,
-        installDir,
-        dataRoot,
-        startMenuDir,
-        desktopPath,
-      });
+      const profile = join(workspace, "WorkOS Test Ș");
+      const user = realisticUserEnv(profile);
+      expect(user.installDir).toBe(join(user.localAppData, "Programs", "WorkOS"));
+      expect(user.dataRoot).toBe(join(user.localAppData, "WorkOS", "local"));
+      expect(user.startMenuDir).toBe(
+        join(user.appData, "Microsoft", "Windows", "Start Menu", "Programs", "WorkOS"),
+      );
+      expect(user.env.WORKOS_INSTALL_DIR).toBeUndefined();
+      expect(user.env.WORKOS_LOCAL_ROOT).toBeUndefined();
+      if (ownerLocalAppData) {
+        expect(resolve(user.installDir).toLowerCase()).not.toBe(
+          resolve(join(ownerLocalAppData, "Programs", "WorkOS")).toLowerCase(),
+        );
+        expect(resolve(user.dataRoot).toLowerCase()).not.toBe(
+          resolve(join(ownerLocalAppData, "WorkOS", "local")).toLowerCase(),
+        );
+      }
+
+      const installed = await installWorkos(user.env, { packageRoot });
       expect(installed.ok).toBe(true);
       expect(installed.upgraded).toBe(false);
+      expect(installed.installDir).toBe(user.installDir);
+      expect(installed.dataRoot).toBe(user.dataRoot);
 
-      const hiddenVbs = join(installDir, "launcher", "hidden.vbs");
-      const startShortcut = inspectShortcut(join(startMenuDir, "WorkOS.lnk"));
-      const stopShortcut = inspectShortcut(join(startMenuDir, "Opreste WorkOS.lnk"));
-      const desktopShortcut = inspectShortcut(desktopPath);
+      const hiddenVbs = join(user.installDir, "launcher", "hidden.vbs");
+      const startShortcut = inspectShortcut(join(user.startMenuDir, "WorkOS.lnk"));
+      const stopShortcut = inspectShortcut(join(user.startMenuDir, "Opreste WorkOS.lnk"));
+      const desktopShortcut = inspectShortcut(user.desktopPath);
       expect(startShortcut?.TargetPath.toLowerCase().endsWith("wscript.exe")).toBe(true);
-      expect(startShortcut?.Arguments).toBe(userShortcutArguments(hiddenVbs, installDir, "start"));
+      expect(startShortcut?.Arguments).toBe(userShortcutArguments(hiddenVbs, user.installDir, "start"));
       expect(startShortcut?.Arguments).not.toMatch(/nologo/i);
-      expect(startShortcut?.WorkingDirectory).toBe(installDir);
+      expect(startShortcut?.WorkingDirectory).toBe(user.installDir);
       expect(startShortcut?.WindowStyle).toBe(7);
       expect(stopShortcut?.TargetPath.toLowerCase().endsWith("wscript.exe")).toBe(true);
-      expect(stopShortcut?.Arguments).toBe(userShortcutArguments(hiddenVbs, installDir, "stop"));
+      expect(stopShortcut?.Arguments).toBe(userShortcutArguments(hiddenVbs, user.installDir, "stop"));
       expect(stopShortcut?.Arguments).not.toMatch(/nologo/i);
       expect(desktopShortcut?.Arguments).not.toMatch(/nologo/i);
 
-      const launchEnv: NodeJS.ProcessEnv = {
-        ...process.env,
-        WORKOS_INSTALL_DIR: installDir,
-        WORKOS_LOCAL_ROOT: dataRoot,
-        WORKOS_CLOUD_ROOT: "",
-        HOST: LOCAL_BIND_HOST,
-        WORKOS_OPEN_BROWSER: "0",
-        PATH: join(process.env.WINDIR ?? "C:\\Windows", "System32"),
-      };
-      delete launchEnv.VITEST;
-      delete launchEnv.WORKOS_SQLITE_PATH;
-
+      const launchEnv = { ...user.env };
       let port = 0;
       let started = false;
       for (let attempt = 0; attempt < 5; attempt += 1) {
         port = await freePort();
         launchEnv.PORT = String(port);
-        const startCode = await runThroughInstalledEntrypoint(hiddenVbs, installDir, "start", launchEnv);
+        const startCode = await runThroughInstalledEntrypoint(hiddenVbs, user.installDir, "start", launchEnv);
         started = startCode === 0 && (await waitForReady(port, 5000));
         if (started) {
           break;
         }
-        await runThroughInstalledEntrypoint(hiddenVbs, installDir, "stop", launchEnv);
+        await runThroughInstalledEntrypoint(hiddenVbs, user.installDir, "stop", launchEnv);
       }
       expect(started).toBe(true);
       stoppers.push(async () => {
         if (existsSync(hiddenVbs)) {
-          await runThroughInstalledEntrypoint(hiddenVbs, installDir, "stop", launchEnv);
+          await runThroughInstalledEntrypoint(hiddenVbs, user.installDir, "stop", launchEnv);
         } else {
           await launchWorkos(launchEnv, { command: "stop", openBrowser: false });
         }
         await waitUntilGone(port);
-        await waitUntilLeaseGone(dataRoot);
+        await waitUntilLeaseGone(user.dataRoot);
       });
+
+      const sqlitePath = join(user.dataRoot, "data", "product-system.sqlite");
+      const documentsRoot = join(user.dataRoot, "data", "documents");
+      expect(existsSync(sqlitePath)).toBe(true);
+      expect(existsSync(join(user.dataRoot, "logs"))).toBe(true);
+      expect(existsSync(join(user.dataRoot, "ops", "runtime-lease.json"))).toBe(true);
+      expect(existsSync(join(user.installDir, "data", "product-system.sqlite"))).toBe(false);
+      expect(resolve(sqlitePath).toLowerCase().startsWith(resolve(user.dataRoot).toLowerCase())).toBe(true);
+
+      const discovered = resolveLayout(launchEnv, {
+        launcherPath: join(user.installDir, "launcher", "launch.mjs"),
+      });
+      expect(discovered.installDir).toBe(user.installDir);
+      expect(discovered.appDir).toBe(join(user.installDir, "app"));
+      expect(discovered.staticRoot).toBe(join(user.installDir, "app", "web"));
+      expect(discovered.entryPath).toBe(join(user.installDir, "app", "dist", "index.js"));
+      expect(discovered.dataRoot).toBe(user.dataRoot);
 
       const base = `http://127.0.0.1:${port}`;
       expect((await readJsonResponse(await fetch(`${base}/api/health`))).status).toBe("ok");
@@ -431,19 +563,18 @@ describe("local installation packaged runtime", () => {
       });
       expect(uploaded.status).toBe(201);
       const attachment = ((await uploaded.json()) as { attachment: { attachmentId: string } }).attachment;
+      expect(existsSync(documentsRoot)).toBe(true);
 
-      const reused = await launchWorkos(launchEnv, { command: "start", openBrowser: false });
-      expect(reused.ok).toBe(true);
-      expect(reused.reused).toBe(true);
+      expect(await runThroughInstalledEntrypoint(hiddenVbs, user.installDir, "start", launchEnv)).toBe(0);
+      expect(await waitForReady(port)).toBe(true);
 
-      expect(await runThroughInstalledEntrypoint(hiddenVbs, installDir, "stop", launchEnv)).toBe(0);
+      expect(await runThroughInstalledEntrypoint(hiddenVbs, user.installDir, "stop", launchEnv)).toBe(0);
       expect(await waitUntilGone(port)).toBe(true);
-      expect(await waitUntilLeaseGone(dataRoot)).toBe(true);
+      expect(await waitUntilLeaseGone(user.dataRoot)).toBe(true);
 
-      const backup = await launchWorkos(launchEnv, { command: "backup", openBrowser: false });
-      expect(backup.ok).toBe(true);
+      expect(await runThroughInstalledEntrypoint(hiddenVbs, user.installDir, "backup", launchEnv)).toBe(0);
 
-      expect(await runThroughInstalledEntrypoint(hiddenVbs, installDir, "start", launchEnv)).toBe(0);
+      expect(await runThroughInstalledEntrypoint(hiddenVbs, user.installDir, "start", launchEnv)).toBe(0);
       expect(await waitForReady(port)).toBe(true);
       const listed = (await readJsonResponse(await fetch(`${base}/api/customers`))).customers as {
         customerId: string;
@@ -457,22 +588,16 @@ describe("local installation packaged runtime", () => {
       expect(createHash("sha256").update(downloaded).digest("hex")).toBe(
         createHash("sha256").update(bytes).digest("hex"),
       );
-      expect(await runThroughInstalledEntrypoint(hiddenVbs, installDir, "stop", launchEnv)).toBe(0);
+      expect(await runThroughInstalledEntrypoint(hiddenVbs, user.installDir, "stop", launchEnv)).toBe(0);
       expect(await waitUntilGone(port)).toBe(true);
-      expect(await waitUntilLeaseGone(dataRoot)).toBe(true);
+      expect(await waitUntilLeaseGone(user.dataRoot)).toBe(true);
 
-      const upgraded = await installWorkos(process.env, {
-        packageRoot,
-        installDir,
-        dataRoot,
-        startMenuDir,
-        desktopPath,
-      });
+      const upgraded = await installWorkos(user.env, { packageRoot });
       expect(upgraded.ok).toBe(true);
       expect(upgraded.upgraded).toBe(true);
-      expect(existsSync(join(dataRoot, "data", "product-system.sqlite"))).toBe(true);
+      expect(existsSync(sqlitePath)).toBe(true);
 
-      expect(await runThroughInstalledEntrypoint(hiddenVbs, installDir, "start", launchEnv)).toBe(0);
+      expect(await runThroughInstalledEntrypoint(hiddenVbs, user.installDir, "start", launchEnv)).toBe(0);
       expect(await waitForReady(port)).toBe(true);
       const stillListed = (await readJsonResponse(await fetch(`${base}/api/customers`))).customers as {
         customerId: string;
@@ -480,41 +605,31 @@ describe("local installation packaged runtime", () => {
       expect(stillListed.some((item) => item.customerId === createdCustomer.customer.customerId)).toBe(
         true,
       );
-      expect(await runThroughInstalledEntrypoint(hiddenVbs, installDir, "stop", launchEnv)).toBe(0);
+      expect(await runThroughInstalledEntrypoint(hiddenVbs, user.installDir, "stop", launchEnv)).toBe(0);
       expect(await waitUntilGone(port)).toBe(true);
-      expect(await waitUntilLeaseGone(dataRoot)).toBe(true);
+      expect(await waitUntilLeaseGone(user.dataRoot)).toBe(true);
 
-      const removed = await uninstallWorkos(process.env, {
-        installDir,
-        dataRoot,
-        startMenuDir,
-        desktopPath,
-        purgeData: false,
-      });
+      const removed = await uninstallWorkos(user.env, { purgeData: false });
       expect(removed.ok).toBe(true);
       expect(removed.dataPreserved).toBe(true);
-      expect(existsSync(installDir)).toBe(false);
-      expect(existsSync(join(dataRoot, "data", "product-system.sqlite"))).toBe(true);
+      expect(existsSync(user.installDir)).toBe(false);
+      expect(existsSync(sqlitePath)).toBe(true);
     },
     240000,
   );
 
   it("does not overwrite an existing synthetic database during first install", async () => {
     const workspace = tempDir("workos-install-preserve-");
-    const installDir = join(workspace, "Programs", "WorkOS");
-    const dataRoot = join(workspace, "WorkOS", "local");
-    mkdirSync(join(dataRoot, "data"), { recursive: true });
-    const sqlitePath = join(dataRoot, "data", "product-system.sqlite");
+    const user = realisticUserEnv(join(workspace, "WorkOS Test Ș"));
+    mkdirSync(join(user.dataRoot, "data"), { recursive: true });
+    const sqlitePath = join(user.dataRoot, "data", "product-system.sqlite");
     writeFileSync(sqlitePath, "synthetic-sqlite-marker");
-    const installed = await installWorkos(process.env, {
+    const installed = await installWorkos(user.env, {
       packageRoot,
-      installDir,
-      dataRoot,
-      startMenuDir: join(workspace, "StartMenu"),
-      desktopPath: join(workspace, "Desktop", "WorkOS.lnk"),
       preUpgradeBackup: false,
     });
     expect(installed.ok).toBe(true);
+    expect(installed.dataRoot).toBe(user.dataRoot);
     expect(readFileSync(sqlitePath, "utf8")).toBe("synthetic-sqlite-marker");
   }, 180000);
 });

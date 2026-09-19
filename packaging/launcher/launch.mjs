@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
 import {
   defaultProductJsonPath,
+  discoverPackagedRoot,
   installedDataDir,
   LOCAL_BIND_HOST,
   readProductIdentity,
@@ -18,8 +19,6 @@ import {
   stopRuntime,
   waitForReady,
 } from "./launch-core.mjs";
-
-const packageRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 
 function logLine(logPath, message) {
   mkdirSync(dirname(logPath), { recursive: true });
@@ -58,8 +57,11 @@ function openBrowser(url) {
   return false;
 }
 
-function resolveLayout(env) {
-  const installDir = env.WORKOS_INSTALL_DIR?.trim() || packageRoot;
+export function resolveLayout(env = process.env, options = {}) {
+  const installDir =
+    env.WORKOS_INSTALL_DIR?.trim() ||
+    (typeof options.installDir === "string" ? options.installDir.trim() : "") ||
+    discoverPackagedRoot(options.launcherPath || fileURLToPath(import.meta.url));
   const appDir = existsSync(join(installDir, "app", "package.json"))
     ? join(installDir, "app")
     : installDir;
@@ -86,7 +88,7 @@ function resolveLayout(env) {
 }
 
 export async function launchWorkos(env = process.env, options = {}) {
-  const layout = resolveLayout(env);
+  const layout = resolveLayout(env, options);
   const command = options.command ?? "start";
   try {
     mkdirSync(layout.dataRoot, { recursive: true });
@@ -264,6 +266,7 @@ if (invokedDirectly) {
       : "start";
   const result = await launchWorkos(process.env, {
     command,
+    installDir: process.argv[3],
     openBrowser: process.env.WORKOS_OPEN_BROWSER !== "0",
   });
   if (!result.ok) {
