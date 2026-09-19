@@ -1,6 +1,6 @@
 # Architecture
 
-STATUS: FOUNDATION ACCEPTED / REFERENCE SLICE ACCEPTED / GOLDEN SPINE ACCEPTED / IMPLEMENTATION ACCEPTED / ENGINE_CONSOLIDATION_V1 = COMPLETE_PENDING_MAIN_INTEGRATION
+STATUS: FOUNDATION ACCEPTED / REFERENCE SLICE ACCEPTED / GOLDEN SPINE ACCEPTED / IMPLEMENTATION ACCEPTED / ENGINE_CONSOLIDATION_V1 = COMPLETE / CLOUD_RUNTIME_AND_RECOVERY_V1 = SYNTHETIC_ONLY
 
 ## Boundary
 
@@ -51,10 +51,14 @@ NO generated domain models
 
 Local development uses a same-origin Vite proxy to `/api` → `127.0.0.1:8787`. Isolated proof may override the proxy target without changing presentation.
 
+## Production runtime
+
+Same-origin HTTPS reverse proxy → built frontend → `/api` → single Node API → external `WORKOS_CLOUD_ROOT`. See `docs/PRODUCTION_RUNTIME.md`. Isolated synthetic backup/restore is authorized. Real HUB MEDIA cutover is not.
+
 ## Tooling advisory
 
 ```text
-ENGINE_LINT_COVERAGE = REQUIRED_BEFORE_OR_WITH_FIRST_WORKOS_PO_ENGINE_MODIFICATION
+ENGINE_LINT_COVERAGE = REQUIRED
 ```
 
 ## Presentation areas

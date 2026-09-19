@@ -14,19 +14,22 @@ NO PARALLEL PRODUCT TRUTH
 
 ```text
 FRONTEND_PRESERVATION_SEED = COMPLETE
-ENGINE_CONSOLIDATION_V1 = COMPLETE_PENDING_MAIN_INTEGRATION
+ENGINE_CONSOLIDATION_V1 = COMPLETE
+AUTHORITY_HANDOFF = COMPLETE
+INTEGRATED_ON_MAIN = YES
 
 NEXT_PROGRAM_PRIORITY = WORKOS_PO_CLOUD_RUNTIME_AND_RECOVERY_V1
-NEXT_PROGRAM_STATUS = NOT_STARTED
+NEXT_PROGRAM_STATUS = IMPLEMENTED_ON_FEATURE_BRANCH
 
 REAL_CLOUD_WRITE = HOLD
 REAL_DB_WRITE = HOLD
 DEPLOY = HOLD
 CUTOVER = HOLD
 FIRST_REAL_BUSINESS_OPERATION = HOLD
+REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = NO
 ```
 
-Do not start `WORKOS_PO_CLOUD_RUNTIME_AND_RECOVERY_V1` until a later explicit Owner GO.
+`WORKOS_PO_CLOUD_RUNTIME_AND_RECOVERY_V1` is authorized only as isolated synthetic proof. It does not access or cut over the real HUB MEDIA Cloud root. See `docs/PRODUCTION_RUNTIME.md`.
 
 ## Authority after engine consolidation
 
@@ -44,10 +47,10 @@ Source code lives in this repository. Real business data must not live in Git. `
 ## Tooling advisory
 
 ```text
-ENGINE_LINT_COVERAGE = REQUIRED_BEFORE_OR_WITH_FIRST_WORKOS_PO_ENGINE_MODIFICATION
+ENGINE_LINT_COVERAGE = REQUIRED
 ```
 
-Do not invent a lint migration until the first authorized engine change.
+Engine lint is active for `apps/api` and `packages/domain`. Root `pnpm lint` remains frontend-only.
 
 ## Historical UI20 presentation phases
 

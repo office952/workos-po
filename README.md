@@ -49,6 +49,7 @@ pnpm build
 pnpm engine:dev       # imported API, default 8787
 pnpm engine:typecheck
 pnpm engine:test
+pnpm engine:lint
 pnpm engine:build
 ```
 
@@ -78,11 +79,13 @@ The root frontend still must not hardcode Product Truth, pricing, eligibility, o
 
 ```text
 FRONTEND_PRESERVATION_SEED = COMPLETE
-ENGINE_CONSOLIDATION_V1 = COMPLETE_PENDING_MAIN_INTEGRATION
+ENGINE_CONSOLIDATION_V1 = COMPLETE
 NEXT_PROGRAM_PRIORITY = WORKOS_PO_CLOUD_RUNTIME_AND_RECOVERY_V1
-NEXT_PROGRAM_STATUS = NOT_STARTED
+NEXT_PROGRAM_STATUS = IMPLEMENTED_ON_FEATURE_BRANCH
 REAL_CLOUD_WRITE = HOLD
 REAL_DB_WRITE = HOLD
 DEPLOY = HOLD
 CUTOVER = HOLD
 ```
+
+See `docs/PRODUCTION_RUNTIME.md` for the production topology. Do not point proof runtimes at a real HUB MEDIA Cloud root.

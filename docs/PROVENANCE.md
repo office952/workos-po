@@ -46,5 +46,5 @@ Copying the engine did not copy or migrate real customer or business data. Real 
 ## Tooling advisory
 
 ```text
-ENGINE_LINT_COVERAGE = REQUIRED_BEFORE_OR_WITH_FIRST_WORKOS_PO_ENGINE_MODIFICATION
+ENGINE_LINT_COVERAGE = REQUIRED
 ```

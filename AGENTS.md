@@ -116,10 +116,10 @@ Normal operator UI does not expose internal jargon: hashes, DTO names, raw codes
 ## Tooling advisory
 
 ```text
-ENGINE_LINT_COVERAGE = REQUIRED_BEFORE_OR_WITH_FIRST_WORKOS_PO_ENGINE_MODIFICATION
+ENGINE_LINT_COVERAGE = REQUIRED
 ```
 
-Do not invent a lint migration until the first authorized engine change.
+`pnpm lint` remains the root frontend linter. `pnpm engine:lint` covers `apps/api` and `packages/domain`. Do not downgrade frontend lint to make the engine pass.
 
 ## Owner gates
 
@@ -129,7 +129,8 @@ No business database, ORM, migrations, seeds, or destructive data operations wit
 
 ```text
 NEXT_PROGRAM_PRIORITY = WORKOS_PO_CLOUD_RUNTIME_AND_RECOVERY_V1
-NEXT_PROGRAM_STATUS = NOT_STARTED
+NEXT_PROGRAM_STATUS = IMPLEMENTED_ON_FEATURE_BRANCH
 REAL_CLOUD_WRITE = HOLD
 REAL_DB_WRITE = HOLD
+REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = NO
 ```
