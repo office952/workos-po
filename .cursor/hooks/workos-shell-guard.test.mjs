@@ -133,6 +133,49 @@ describe("deny: destructive Git", () => {
   });
 });
 
+describe("classify: git push destination safety", () => {
+  test("explicit main and master destinations are denied", () => {
+    assertDeny("git push origin main");
+    assertDeny("git push origin HEAD:main");
+    assertDeny("git push origin HEAD:refs/heads/main");
+    assertDeny("git push origin :main");
+    assertDeny("git push origin --delete main");
+    assertDeny("git push --delete origin main");
+    assertDeny("git push origin --delete refs/heads/main");
+    assertDeny("git push origin HEAD:refs/heads/master");
+  });
+
+  test("broad --all / --mirror / --branches pushes are denied", () => {
+    assertDeny("git push --all origin");
+    assertDeny("git push origin --all");
+    assertDeny("git push --mirror origin");
+    assertDeny("git push origin --mirror");
+    assertDeny("git push --branches origin");
+  });
+
+  test("ambiguous implicit and HEAD pushes require Owner review", () => {
+    assertAsk("git push");
+    assertAsk("git push origin");
+    assertAsk("git push origin HEAD");
+    assertAsk("git push -u origin HEAD");
+    assertAsk("git push --set-upstream origin HEAD");
+    assertAsk("git push origin HEAD~1");
+  });
+
+  test("explicit non-main feature pushes remain allowed", () => {
+    assertAllow("git push origin chore/saas-canon-cursor-safety-wave-0-v1");
+    assertAllow("git push -u origin chore/saas-canon-cursor-safety-wave-0-v1");
+    assertAllow("git push origin HEAD:refs/heads/chore/saas-canon-cursor-safety-wave-0-v1");
+  });
+
+  test("non-main remote deletion and prune require Owner review", () => {
+    assertAsk("git push --delete origin feature");
+    assertAsk("git push origin --delete feature");
+    assertAsk("git push origin :feature");
+    assertAsk("git push --prune origin");
+  });
+});
+
 describe("deny: historical repository writes", () => {
   test("destructive write targeted at workos-final", () => {
     assertDeny("git -C C:/Users/offic/workspace/workos-final reset --hard");

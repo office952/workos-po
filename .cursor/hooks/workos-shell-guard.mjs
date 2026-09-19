@@ -310,15 +310,100 @@ function isDryRun(args) {
   return hasFlag(args, "-n", "--dry-run");
 }
 
-function isMainRefspec(spec) {
-  const raw = spec.startsWith("+") ? spec.slice(1) : spec;
-  const destination = raw.includes(":") ? raw.slice(raw.lastIndexOf(":") + 1) : raw;
+function normalizeRefToken(spec) {
+  return stripQuotes(spec).replace(/\\/g, "/");
+}
+
+function isForceRefspec(spec) {
+  return normalizeRefToken(spec).startsWith("+");
+}
+
+function destFromRefspec(spec) {
+  const raw = normalizeRefToken(spec).trim();
+  const withoutForce = raw.startsWith("+") ? raw.slice(1) : raw;
+  const dest = withoutForce.includes(":")
+    ? withoutForce.slice(withoutForce.lastIndexOf(":") + 1)
+    : withoutForce;
+  return dest.replace(/\/+$/, "");
+}
+
+function isDeleteRefspec(spec) {
+  const raw = normalizeRefToken(spec);
+  const withoutForce = raw.startsWith("+") ? raw.slice(1) : raw;
+  return withoutForce.startsWith(":");
+}
+
+function isProtectedBranchDest(spec) {
+  const dest = destFromRefspec(spec).toLowerCase();
   return (
-    destination === "main" ||
-    destination === "master" ||
-    destination === "refs/heads/main" ||
-    destination === "refs/heads/master"
+    dest === "main" ||
+    dest === "master" ||
+    dest === "refs/heads/main" ||
+    dest === "refs/heads/master"
   );
+}
+
+function isAmbiguousPushDest(spec) {
+  const dest = destFromRefspec(spec);
+  return dest === "" || dest === "HEAD" || dest === "@";
+}
+
+const EXPLICIT_BRANCH_DEST_RE = /^[A-Za-z0-9._/-]+$/;
+
+function isProvenNonMainDest(spec) {
+  if (
+    isForceRefspec(spec) ||
+    isDeleteRefspec(spec) ||
+    isAmbiguousPushDest(spec) ||
+    isProtectedBranchDest(spec)
+  ) {
+    return false;
+  }
+  const dest = destFromRefspec(spec);
+  return dest.length > 0 && EXPLICIT_BRANCH_DEST_RE.test(dest);
+}
+
+function pushPositionals(args) {
+  return args.filter((arg) => !arg.startsWith("-")).map((arg) => stripQuotes(arg));
+}
+
+function classifyGitPush(git, historicalTarget) {
+  if (hasFlag(git.args, "-f", "--force", "--force-with-lease", "--force-if-includes")) {
+    return deny("Force-push is hard-denied.");
+  }
+
+  if (hasFlag(git.args, "--all", "--mirror", "--branches")) {
+    return deny("Broad git push --all/--mirror is hard-denied because it can update main.");
+  }
+
+  const positional = pushPositionals(git.args);
+  const refspecs = positional.slice(1);
+
+  if (refspecs.some((spec) => isForceRefspec(spec))) {
+    return deny("Force-push is hard-denied.");
+  }
+
+  if (refspecs.some((spec) => isProtectedBranchDest(spec))) {
+    return deny("Direct push to main is hard-denied.");
+  }
+
+  if (historicalTarget) {
+    return deny("Write/destructive Git against a historical repository is hard-denied.");
+  }
+
+  if (hasFlag(git.args, "-d", "--delete") || refspecs.some((spec) => isDeleteRefspec(spec))) {
+    return ask("Remote branch deletion needs Owner review.");
+  }
+
+  if (hasFlag(git.args, "--prune")) {
+    return ask("git push --prune can delete remote refs and needs Owner review.");
+  }
+
+  if (refspecs.length === 0 || !refspecs.every((spec) => isProvenNonMainDest(spec))) {
+    return ask("Ambiguous git push destination needs Owner review.");
+  }
+
+  return null;
 }
 
 function pathMentionsHistoricalRepo(value, { allowBareName = false } = {}) {
@@ -362,17 +447,7 @@ function classifyGit(git, cwd) {
   }
 
   if (git.subcommand === "push") {
-    if (hasFlag(git.args, "-f", "--force", "--force-with-lease", "--force-if-includes")) {
-      return deny("Force-push is hard-denied.");
-    }
-    const refspecs = positional.slice(1);
-    if (refspecs.some((spec) => isMainRefspec(spec))) {
-      return deny("Direct push to main is hard-denied.");
-    }
-    if (historicalTarget) {
-      return deny("Write/destructive Git against a historical repository is hard-denied.");
-    }
-    return null;
+    return classifyGitPush(git, historicalTarget);
   }
 
   if (git.subcommand === "reset" && hasFlag(git.args, "--hard")) {
