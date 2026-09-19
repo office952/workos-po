@@ -1,0 +1,31 @@
+{
+  "name": "@workos-final/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "lint": "eslint src tests",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "cloud:provision": "tsx src/cloud/devProvisionCli.ts",
+    "cloud:adopt": "tsx src/cloud/adoptCli.ts",
+    "cloud:configure-providers": "tsx src/cloud/configureProvidersCli.ts",
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.0",
+    "@pdf-lib/fontkit": "^1.1.1",
+    "@workos-final/domain": "workspace:*",
+    "better-sqlite3": "^12.4.1",
+    "hono": "^4.9.0",
+    "pdf-lib": "^1.17.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^24.2.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
