@@ -1,0 +1,70 @@
+import type { FoundationProofModel } from "../presentation/foundationProof";
+
+export const FOUNDATION_PROOF_FIXTURE: FoundationProofModel = {
+  pageTitle: "Cereri",
+  pageLead: "Listă operațională și obiect selectat. Starea vine din modelul de prezentare, nu din calcule locale.",
+  pageMeta: "3 obiecte de demonstrație · fără date reale de client",
+  primaryAction: "Continuă configurarea",
+  items: [
+    {
+      id: "CER-DEMO-0847",
+      title: "Litere volumetrice luminoase",
+      statusLabel: "Incomplet",
+      tone: "incomplete",
+      dateLabel: "16.09.2026",
+    },
+    {
+      id: "CER-DEMO-0842",
+      title: "Caseta luminoasă",
+      statusLabel: "Pregătit",
+      tone: "ready",
+      dateLabel: "16.09.2026",
+    },
+    {
+      id: "CER-DEMO-0835",
+      title: "Litere volumetrice",
+      statusLabel: "Blocat",
+      tone: "blocked",
+      dateLabel: "16.09.2026",
+    },
+  ],
+  objects: {
+    "CER-DEMO-0847": {
+      id: "CER-DEMO-0847",
+      title: "Litere volumetrice luminoase",
+      purpose: "Completează faptele vizibile înainte de confirmare.",
+      nextAction: "Trimite valorile la preview pe server.",
+      consequence: "Confirmarea rămâne blocată până când serverul raportează că obiectul este pregătit.",
+      readiness: "blocked",
+      missing: ["Textul de inscripție"],
+      fieldLabel: "Inscripție",
+      fieldValue: "",
+      fieldHint: "Câmpul este doar de prezentare. Vizibilitatea și ready vin din preview.",
+    },
+    "CER-DEMO-0842": {
+      id: "CER-DEMO-0842",
+      title: "Caseta luminoasă",
+      purpose: "Obiect demonstrativ cu stare settled din fixture.",
+      nextAction:
+        "Contractul API este compatibil. Acțiunea principală poate continua pentru acest obiect demonstrativ.",
+      consequence: "Continuarea va folosi values + reviewId, nu ProductDefinition.",
+      readiness: "ready",
+      missing: [],
+      fieldLabel: "Inscripție",
+      fieldValue: "NOVA",
+      fieldHint: "Valoarea din fixture. Nu este autoritate de produs.",
+    },
+    "CER-DEMO-0835": {
+      id: "CER-DEMO-0835",
+      title: "Litere volumetrice",
+      purpose: "Exemplu de blocaj cu motiv explicit.",
+      nextAction: "Rezolvă faptele lipsă raportate de server.",
+      consequence: "Acțiunea primară rămâne inactivă cât timp obiectul e blocat.",
+      readiness: "blocked",
+      missing: ["Înălțimea literei", "Finisaj față"],
+      fieldLabel: "Inscripție",
+      fieldValue: "HUB",
+      fieldHint: "Fixture-ul arată missing; UI20 nu decide readiness.",
+    },
+  },
+};

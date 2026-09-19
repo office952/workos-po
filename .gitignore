@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+.tmp/
+playwright-report/
+test-results/
+.DS_Store
+evidence/
+.playwright-mcp/
+*.tsbuildinfo
+_review/hf-system-v2-final/
+_review/hf-convergence-v2/

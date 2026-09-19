@@ -1,0 +1,108 @@
+:root {
+  --color-azure-a1: #2066cf;
+  --color-azure-a0: #2870e9;
+  --color-azure-a2: #185ecc;
+  --color-text-primary: #1a1d21;
+  --color-text-secondary: #53575e;
+  --color-text-kicker: #6b7884;
+  --color-text-muted: #868b94;
+  --color-selection-edge: #8a8d94;
+  --color-selection-fill: #f0f1f3;
+  --color-focus-ring: #2066cf;
+  --color-canvas: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-surface-raised: #f4f5f7;
+  --color-surface-alt: #f7f7f5;
+  --color-border-subtle: #ebeef2;
+  --color-border: #e2e5ea;
+  --color-border-strong: #d0d6dd;
+  --color-danger: #c0392b;
+  --color-warning: #c4750a;
+  --color-success: #1b7a3d;
+  --color-info: #2563eb;
+  --color-danger-soft: rgb(192 57 43 / 12%);
+  --color-warning-soft: rgb(196 117 10 / 12%);
+  --color-success-soft: rgb(27 122 61 / 12%);
+  --color-info-soft: rgb(37 99 235 / 12%);
+  --color-shell: #ffffff;
+  --color-shell-ink: #1a1d21;
+
+  --font-sans: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-brand: "Geist Sans", "IBM Plex Sans", sans-serif;
+
+  --text-page: 1.75rem;
+  --text-section: 0.9375rem;
+  --text-body: 0.875rem;
+  --text-label: 0.8125rem;
+  --text-value: 0.875rem;
+  --text-meta: 0.75rem;
+  --text-eyebrow: 0.6875rem;
+  --text-status: 0.6875rem;
+  --text-nav: 0.875rem;
+  --tracking-eyebrow: 0.8px;
+
+  --space-2: 2px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-48: 48px;
+
+  --radius-control: 2px;
+  --radius-badge: 4px;
+  --radius-panel: 6px;
+
+  --stroke: 1px;
+  --focus-width: 2px;
+
+  --control-visual-height: 32px;
+  --target-min: 44px;
+  --shell-height: 64px;
+  --page-header-height: 124px;
+  --gutter-desktop: 48px;
+  --gutter-mid: 32px;
+  --gutter-compact: 24px;
+
+  --page-gutter: var(--gutter-desktop);
+  --workspace-width: 100%;
+  --readable-text-width: 42rem;
+  --worklist-min: 0;
+  --detail-main-min: 0;
+  --context-rail-min: 18rem;
+  --context-rail-max: 24rem;
+  --catalog-rail-min: 15rem;
+  --catalog-rail-max: 18rem;
+  --form-column-min: 18rem;
+  --form-column-max: 24rem;
+  --operational-workspace-width: 100%;
+  --operational-gate-max: 36rem;
+
+  --motion-navigate: 160ms;
+  --motion-edit: 100ms;
+  --ease-work: cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+@media (max-width: 1280px) {
+  :root {
+    --page-gutter: var(--gutter-mid);
+    --catalog-rail-min: 13rem;
+    --catalog-rail-max: 16rem;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --page-gutter: var(--gutter-compact);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-navigate: 0ms;
+    --motion-edit: 0ms;
+  }
+}

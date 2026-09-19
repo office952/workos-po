@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ro">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>WorkOS</title>
+    <style>
+      html,
+      body,
+      #root {
+        min-height: 100%;
+      }
+      html {
+        background: #f7f8fa;
+      }
+      body {
+        margin: 0;
+        color: #1a1d21;
+        background: #f7f8fa;
+      }
+      .boot {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: #f7f8fa;
+      }
+      .boot__bar {
+        height: 64px;
+        background: #ffffff;
+        border-bottom: 1px solid #ebeef2;
+      }
+      .boot__status {
+        margin: 24px 48px;
+        font-family: "Segoe UI", sans-serif;
+        font-size: 14px;
+        line-height: 1.45;
+        color: #53575e;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div class="boot" role="status" aria-live="polite">
+        <div class="boot__bar" aria-hidden="true"></div>
+        <p class="boot__status">Se încarcă WorkOS.</p>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
