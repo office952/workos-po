@@ -1,0 +1,103 @@
+name: WorkOS local uninstall fix validation
+
+on:
+  push:
+    branches:
+      - fix/local-uninstall-self-delete-v1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PACKAGE_DIR: .tmp/workos-local-package
+  ARTIFACT_NAME: workos-local-uninstall-fix-candidate
+
+jobs:
+  validate-windows:
+    name: Validate packaged uninstall on Windows
+    runs-on: windows-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout correction branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Record identity
+        shell: pwsh
+        run: |
+          Write-Output "HEAD=$(git rev-parse HEAD)"
+          Write-Output "WINDOWS_RUNNER=$env:ImageOS $env:ImageVersion"
+          Write-Output "NODE_VERSION=$(node --version)"
+          Write-Output "PNPM_VERSION=$(pnpm --version)"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Engine typecheck
+        run: pnpm engine:typecheck
+
+      - name: Build corrected Local package
+        run: pnpm package:local
+
+      - name: Run Local installation regression
+        run: pnpm --filter @workos-final/api exec vitest run tests/local-installation.test.ts
+
+      - name: Verify corrected uninstall payload
+        shell: pwsh
+        run: |
+          $root = $env:PACKAGE_DIR
+          $required = @(
+            "runtime/node.exe",
+            "app/dist/index.js",
+            "app/web/index.html",
+            "installer/uninstall.mjs",
+            "installer/uninstall-external.mjs",
+            "Uninstall WorkOS.cmd",
+            "app/node_modules/pdf-lib",
+            "app/node_modules/tslib",
+            "app/node_modules/better-sqlite3"
+          )
+          foreach ($relative in $required) {
+            if (-not (Test-Path -LiteralPath (Join-Path $root $relative))) {
+              throw "package_missing $relative"
+            }
+          }
+
+      - name: Write correction provenance
+        shell: pwsh
+        run: |
+          $root = $env:PACKAGE_DIR
+          $manifest = [ordered]@{
+            SOURCE_REPO = "office952/workos-po"
+            CORRECTION_BRANCH = "fix/local-uninstall-self-delete-v1"
+            CORRECTION_COMMIT = (git rev-parse HEAD)
+            BASE_MAIN = "ec81163a8cc94f462254845509847f97d67c8a41"
+            PURPOSE = "WINDOWS_SELF_LOCKING_UNINSTALL_FIX"
+            BUILD_TIMESTAMP = (Get-Date).ToUniversalTime().ToString("o")
+            NODE_VERSION = (node --version)
+            PNPM_VERSION = (pnpm --version)
+            WINDOWS_RUNNER = "$env:ImageOS $env:ImageVersion"
+          }
+          $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root "uninstall-fix-manifest.json") -Encoding utf8
+
+      - name: Upload corrected Local package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: .tmp/workos-local-package
+          if-no-files-found: error
+          retention-days: 14
