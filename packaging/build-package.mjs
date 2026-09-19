@@ -206,6 +206,7 @@ function copyPackagingFiles(destRoot) {
     ["packaging/launcher/show-message.vbs", "launcher/show-message.vbs"],
     ["packaging/installer/install.mjs", "installer/install.mjs"],
     ["packaging/installer/uninstall.mjs", "installer/uninstall.mjs"],
+    ["packaging/installer/uninstall-external.mjs", "installer/uninstall-external.mjs"],
     ["packaging/installer/shortcuts.mjs", "installer/shortcuts.mjs"],
     ["packaging/installer/lnk-unicode.mjs", "installer/lnk-unicode.mjs"],
     ["packaging/installer/packaged-runtime.mjs", "installer/packaged-runtime.mjs"],

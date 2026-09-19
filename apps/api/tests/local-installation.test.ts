@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -13,7 +14,6 @@ import {
   userShortcutArguments,
   windowsSystem32,
 } from "../../../packaging/installer/shortcuts.mjs";
-import { uninstallWorkos } from "../../../packaging/installer/uninstall.mjs";
 import {
   buildRuntimeEnv,
   inspectLocalEndpoint,
@@ -176,6 +176,28 @@ async function waitUntilLeaseGone(dataRoot: string, timeoutMs = 8000): Promise<b
   }
   const pid = readLeasePid(dataRoot);
   return !pid || !isAlive(pid);
+}
+
+function runInstalledUninstall(uninstallCmd: string, env: NodeJS.ProcessEnv): number | null {
+  const result = spawnSync(uninstallCmd, [], {
+    cwd: tmpdir(),
+    env,
+    encoding: "utf8",
+    windowsHide: true,
+    shell: true,
+  });
+  return result.status;
+}
+
+async function waitUntilPathGone(path: string, timeoutMs = 30000): Promise<boolean> {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    if (!existsSync(path)) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return !existsSync(path);
 }
 
 async function waitUntilGone(port: number, timeoutMs = 15000): Promise<boolean> {
@@ -616,11 +638,16 @@ describe("local installation packaged runtime", () => {
       expect(await waitUntilGone(port)).toBe(true);
       expect(await waitUntilLeaseGone(user.dataRoot)).toBe(true);
 
-      const removed = await uninstallWorkos(user.env, { purgeData: false });
-      expect(removed.ok).toBe(true);
-      expect(removed.dataPreserved).toBe(true);
+      const uninstallCmd = join(user.installDir, "Uninstall WorkOS.cmd");
+      expect(existsSync(uninstallCmd)).toBe(true);
+      expect(runInstalledUninstall(uninstallCmd, user.env)).toBe(0);
+      expect(await waitUntilPathGone(user.installDir)).toBe(true);
       expect(existsSync(user.installDir)).toBe(false);
+      expect(existsSync(user.startMenuDir)).toBe(false);
+      expect(existsSync(user.desktopPath)).toBe(false);
       expect(existsSync(sqlitePath)).toBe(true);
+      expect(existsSync(documentsRoot)).toBe(true);
+      expect(readdirSync(documentsRoot).length).toBeGreaterThan(0);
     },
     240000,
   );
