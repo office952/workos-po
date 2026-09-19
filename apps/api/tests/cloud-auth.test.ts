@@ -253,7 +253,9 @@ describe("Cloud auth and authorization", () => {
     expect(cookie).not.toMatch(/Secure/i);
     fixture.close();
 
-    const production = createCloudFixture({ env: { NODE_ENV: "production" } });
+    const production = createCloudFixture({
+      env: { NODE_ENV: "production", WORKOS_PUBLIC_ORIGIN: "https://workos.example" },
+    });
     const prodOrg = await addOrganization(production, "Atelier Alpha");
     await addUser(production, {
       email: "owner@example.test",
@@ -265,6 +267,8 @@ describe("Cloud auth and authorization", () => {
       production.app,
       "owner@example.test",
       OWNER_PASSWORD,
+      undefined,
+      { origin: "https://workos.example" },
     );
     const prodCookie = prodLogin.response.headers.getSetCookie().find((item) =>
       item.startsWith("workos_cloud_session="),
@@ -276,7 +280,9 @@ describe("Cloud auth and authorization", () => {
   });
 
   it("does not advertise credentialed CORS to Vite origins in production", async () => {
-    const fixture = createCloudFixture({ env: { NODE_ENV: "production" } });
+    const fixture = createCloudFixture({
+      env: { NODE_ENV: "production", WORKOS_PUBLIC_ORIGIN: "https://workos.example" },
+    });
     const response = await fixture.app.request("/api/health", {
       headers: { Origin: "http://127.0.0.1:5173" },
     });

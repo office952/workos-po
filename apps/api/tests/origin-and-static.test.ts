@@ -105,4 +105,20 @@ describe("same-origin static frontend", () => {
     expect(ready.status).toBe(200);
     fixture.close();
   });
+
+  it("applies HSTS to static production responses", async () => {
+    const root = mkdtempSync(join(tmpdir(), "workos-static-hsts-"));
+    writeFileSync(join(root, "index.html"), "<!doctype html><title>WorkOS</title>");
+    const app = createApp({
+      env: {
+        NODE_ENV: "production",
+        WORKOS_PUBLIC_ORIGIN: "https://workos.example",
+      },
+      staticRoot: root,
+    });
+    const response = await app.request("/");
+    expect(response.headers.get("strict-transport-security")).toBe(
+      "max-age=31536000; includeSubDomains",
+    );
+  });
 });

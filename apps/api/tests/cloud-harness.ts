@@ -115,10 +115,15 @@ export async function loginCloud(
   email: string,
   password: string,
   organizationId?: string,
+  options: { origin?: string } = {},
 ) {
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (options.origin) {
+    headers.origin = options.origin;
+  }
   const response = await app.request("/api/cloud/login", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers,
     body: JSON.stringify({ email, password, organizationId }),
   });
   return {

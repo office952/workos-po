@@ -6,6 +6,12 @@ import { openProvisionedControlPlane } from "./cloud/provision.js";
 import { isCloudRootConfigured, resolveCloudRoot } from "./cloud/paths.js";
 import { createRuntimeRegistry } from "./cloud/runtimeRegistry.js";
 import { opsLog } from "./ops/log.js";
+import { assertProductionCloudPublicOrigin } from "./ops/origin.js";
+import {
+  acquireCloudRuntimeLease,
+  releaseCloudRuntimeLease,
+  type CloudRuntimeLease,
+} from "./ops/runtimeLease.js";
 import { resolveProductSystemSqlitePath } from "./persistence/sqlite.js";
 import { createProductSystemRuntime } from "./productSystem/runtime.js";
 import { installProcessShutdown, shutdownApi } from "./serverLifecycle.js";
@@ -38,7 +44,7 @@ export function startWorkosApi(
   const hostname = env.HOST ?? "127.0.0.1";
   const installSignals = options.installSignals ?? true;
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolveStart, reject) => {
     let settled = false;
     const settleError = (error: unknown) => {
       if (settled) {
@@ -50,47 +56,86 @@ export function startWorkosApi(
 
     if (isCloudRootConfigured(env)) {
       const cloudRoot = resolveCloudRoot(env);
+      if (env.NODE_ENV === "production") {
+        try {
+          assertProductionCloudPublicOrigin(env);
+        } catch (error) {
+          settleError(error);
+          return;
+        }
+      }
+
+      let lease: CloudRuntimeLease;
+      try {
+        lease = acquireCloudRuntimeLease(cloudRoot);
+      } catch (error) {
+        settleError(error);
+        return;
+      }
+
       let controlPlane;
       try {
         controlPlane = openProvisionedControlPlane(cloudRoot);
       } catch (error) {
+        releaseCloudRuntimeLease(cloudRoot, lease);
         opsLog("error", "control_plane_open_failed", { code: "open_failed" });
         settleError(error);
         return;
       }
+
       const registry = createRuntimeRegistry();
+      let released = false;
+      const closeResources = () => {
+        if (released) {
+          return;
+        }
+        released = true;
+        registry.closeAll();
+        controlPlane.close();
+        releaseCloudRuntimeLease(cloudRoot, lease);
+      };
+
+      let app;
+      try {
+        app = createApp({
+          cloud: { controlPlane, registry },
+          env,
+          staticRoot: resolveStaticRoot(env),
+        });
+      } catch (error) {
+        closeResources();
+        settleError(error);
+        return;
+      }
+
       const server = serve(
         {
-          fetch: createApp({
-            cloud: { controlPlane, registry },
-            env,
-            staticRoot: resolveStaticRoot(env),
-          }).fetch,
+          fetch: app.fetch,
           hostname,
           port,
         },
         (info) => {
           if (settled) {
+            closeResources();
             return;
           }
           settled = true;
-          const closeResources = () => {
-            registry.closeAll();
-            controlPlane.close();
-          };
           if (installSignals) {
             installProcessShutdown(server, closeResources);
           }
           opsLog("info", "api_startup", { mode: "cloud", port: info.port });
           console.log(`workos-final-api listening on http://${info.address}:${info.port}`);
-          resolve({
+          resolveStart({
             hostname: String(info.address),
             port: info.port,
             close: () => shutdownApi(server, closeResources),
           });
         },
       );
-      server.once("error", settleError);
+      server.once("error", (error) => {
+        closeResources();
+        settleError(error);
+      });
       return;
     }
 
@@ -119,7 +164,7 @@ export function startWorkosApi(
         }
         opsLog("info", "api_startup", { mode: "single_plane", port: info.port });
         console.log(`workos-final-api listening on http://${info.address}:${info.port}`);
-        resolve({
+        resolveStart({
           hostname: String(info.address),
           port: info.port,
           close: () => shutdownApi(server, closeResources),

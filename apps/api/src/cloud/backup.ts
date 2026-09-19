@@ -12,7 +12,15 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import Database from "better-sqlite3";
 import { API_CONTRACT_ID, HEALTH_SERVICE_NAME } from "../ops/contract.js";
 import { opsLog } from "../ops/log.js";
+import {
+  assertCloudRuntimeQuiesced,
+  CloudRuntimeLeaseError,
+} from "../ops/runtimeLease.js";
 import { listControlPlaneMigrationFiles } from "../persistence/controlPlaneSqlite.js";
+import {
+  migrationSetsEqual,
+  readSqliteMigrationIds,
+} from "../persistence/schemaLedger.js";
 import { listOperationalMigrationFiles } from "../persistence/sqlite.js";
 import { derivePlanePaths, resolveCloudRoot } from "./paths.js";
 import { readOperationalPlaneIdentity } from "./planeIdentity.js";
@@ -26,7 +34,9 @@ export type BackupFaultCode =
   | "control_plane_missing"
   | "sqlite_backup_failed"
   | "plane_missing"
-  | "documents_missing";
+  | "documents_missing"
+  | "cloud_runtime_active"
+  | "schema_mismatch";
 
 export class CloudBackupError extends Error {
   readonly code: BackupFaultCode;
@@ -145,7 +155,7 @@ function listDocumentFiles(documentsRoot: string): string[] {
   return files.sort();
 }
 
-function readControlInventory(controlSqlitePath: string): {
+export function readControlInventory(controlSqlitePath: string): {
   organizations: ControlOrgRow[];
   planes: ControlPlaneRow[];
   controlMigrations: string[];
@@ -184,11 +194,18 @@ function resolveBackupRoot(env: NodeJS.ProcessEnv, explicit?: string): string {
   return root;
 }
 
+function requireExactMigrations(actual: readonly string[], expected: readonly string[]): void {
+  if (!migrationSetsEqual(actual, expected)) {
+    fail("schema_mismatch");
+  }
+}
+
 export async function createCloudBackup(input: {
   cloudRoot?: string;
   backupRoot?: string;
   env?: NodeJS.ProcessEnv;
   createdAt?: string;
+  onAfterControlSnapshot?: () => void;
 }): Promise<CloudBackupResult> {
   const env = input.env ?? process.env;
   let cloudRoot: string;
@@ -199,6 +216,15 @@ export async function createCloudBackup(input: {
   }
   const backupRoot = resolveBackupRoot(env, input.backupRoot);
   assertOutsideCloudRoot(cloudRoot, backupRoot);
+
+  try {
+    assertCloudRuntimeQuiesced(cloudRoot);
+  } catch (error) {
+    if (error instanceof CloudRuntimeLeaseError) {
+      fail("cloud_runtime_active");
+    }
+    throw error;
+  }
 
   const controlSource = join(cloudRoot, "control", "control-plane.sqlite");
   if (!existsSync(controlSource)) {
@@ -212,8 +238,14 @@ export async function createCloudBackup(input: {
 
   const controlDest = join(backupDir, "control", "control-plane.sqlite");
   await snapshotSqlite(controlSource, controlDest);
+  input.onAfterControlSnapshot?.();
 
-  const inventory = readControlInventory(controlSource);
+  const inventory = readControlInventory(controlDest);
+  const expectedControlMigrations = listControlPlaneMigrationFiles();
+  const controlMigrations = readSqliteMigrationIds(controlDest);
+  requireExactMigrations(controlMigrations, expectedControlMigrations);
+  requireExactMigrations(inventory.controlMigrations, expectedControlMigrations);
+
   const artifacts: BackupArtifact[] = [];
   const controlHash = sha256File(controlDest);
   artifacts.push({
@@ -223,6 +255,8 @@ export async function createCloudBackup(input: {
     bytes: controlHash.bytes,
   });
 
+  const expectedOperationalMigrations = listOperationalMigrationFiles();
+  let operationalMigrations: string[] = [];
   const organizationRecords: BackupOrganizationRecord[] = [];
   for (const plane of inventory.planes) {
     const paths = derivePlanePaths(cloudRoot, plane.plane_key);
@@ -240,7 +274,15 @@ export async function createCloudBackup(input: {
       bytes: sqliteHash.bytes,
     });
 
-    const identityDb = new Database(paths.sqlitePath, { fileMustExist: true, readonly: true });
+    const planeMigrations = readSqliteMigrationIds(planeSqliteDest);
+    requireExactMigrations(planeMigrations, expectedOperationalMigrations);
+    if (operationalMigrations.length === 0) {
+      operationalMigrations = planeMigrations;
+    } else if (!migrationSetsEqual(operationalMigrations, planeMigrations)) {
+      fail("schema_mismatch");
+    }
+
+    const identityDb = new Database(planeSqliteDest, { fileMustExist: true, readonly: true });
     try {
       const identity = readOperationalPlaneIdentity(identityDb);
       if (
@@ -275,17 +317,22 @@ export async function createCloudBackup(input: {
     const organization = inventory.organizations.find(
       (row) => row.organization_id === plane.organization_id,
     );
-    if (organization) {
-      organizationRecords.push({
-        organizationId: organization.organization_id,
-        slug: organization.slug,
-        displayName: organization.display_name,
-        status: organization.status,
-        planeId: plane.plane_id,
-        storageKind: plane.storage_kind,
-        artifactPrefix: prefix,
-      });
+    if (!organization) {
+      fail("plane_missing");
     }
+    organizationRecords.push({
+      organizationId: organization.organization_id,
+      slug: organization.slug,
+      displayName: organization.display_name,
+      status: organization.status,
+      planeId: plane.plane_id,
+      storageKind: plane.storage_kind,
+      artifactPrefix: prefix,
+    });
+  }
+
+  if (inventory.planes.length > 0) {
+    requireExactMigrations(operationalMigrations, expectedOperationalMigrations);
   }
 
   const manifest: CloudBackupManifest = {
@@ -293,10 +340,8 @@ export async function createCloudBackup(input: {
     createdAt,
     service: HEALTH_SERVICE_NAME,
     apiContractId: API_CONTRACT_ID,
-    controlPlaneMigrations: inventory.controlMigrations.length
-      ? inventory.controlMigrations
-      : listControlPlaneMigrationFiles(),
-    operationalMigrations: listOperationalMigrationFiles(),
+    controlPlaneMigrations: controlMigrations,
+    operationalMigrations,
     organizationCount: inventory.organizations.length,
     planeCount: inventory.planes.length,
     artifacts,

@@ -4,6 +4,10 @@ import type { ControlPlane } from "../cloud/controlPlane.js";
 import { derivePlanePaths } from "../cloud/paths.js";
 import { readOperationalPlaneIdentity } from "../cloud/planeIdentity.js";
 import { listControlPlaneMigrationFiles } from "../persistence/controlPlaneSqlite.js";
+import {
+  migrationSetsEqual,
+  readAppliedMigrationIds,
+} from "../persistence/schemaLedger.js";
 import { listOperationalMigrationFiles } from "../persistence/sqlite.js";
 import type { ProductSystemRuntime } from "../productSystem/runtime.js";
 import { API_CONTRACT_ID, HEALTH_SERVICE_NAME } from "./contract.js";
@@ -34,25 +38,6 @@ export type ReadinessInput = {
   productSystem?: ProductSystemRuntime;
 };
 
-function appliedMigrationIds(db: {
-  prepare: (sql: string) => { all: () => unknown[] };
-}): string[] {
-  try {
-    return db
-      .prepare("SELECT id FROM schema_migrations")
-      .all()
-      .map((row) => (row as { id: string }).id)
-      .sort();
-  } catch {
-    return [];
-  }
-}
-
-function migrationsCover(applied: readonly string[], expected: readonly string[]): boolean {
-  const have = new Set(applied);
-  return expected.every((id) => have.has(id));
-}
-
 function isWritableDir(dir: string): boolean {
   try {
     accessSync(dir, constants.W_OK);
@@ -62,7 +47,7 @@ function isWritableDir(dir: string): boolean {
   }
 }
 
-function inspectFirstPlane(
+function inspectActivePlanes(
   controlPlane: ControlPlane,
   cloudRoot: string,
 ): { migrationsValid: boolean; resolvable: boolean } {
@@ -73,27 +58,33 @@ function inspectFirstPlane(
   if (planes.length === 0) {
     return { migrationsValid: true, resolvable: true };
   }
-  const first = planes[0];
-  if (!first) {
-    return { migrationsValid: false, resolvable: false };
+
+  const expectedOperational = listOperationalMigrationFiles();
+  let migrationsValid = true;
+  let resolvable = true;
+  for (const plane of planes) {
+    let db: InstanceType<typeof Database> | undefined;
+    try {
+      const paths = derivePlanePaths(cloudRoot, plane.planeKey);
+      db = new Database(paths.sqlitePath, { fileMustExist: true, readonly: true });
+      const operationalOk = migrationSetsEqual(readAppliedMigrationIds(db), expectedOperational);
+      const identity = readOperationalPlaneIdentity(db);
+      const identityOk =
+        identity?.planeId === plane.planeId && identity.organizationId === plane.organizationId;
+      if (!operationalOk) {
+        migrationsValid = false;
+      }
+      if (!identityOk) {
+        resolvable = false;
+      }
+    } catch {
+      migrationsValid = false;
+      resolvable = false;
+    } finally {
+      db?.close();
+    }
   }
-  let db: InstanceType<typeof Database> | undefined;
-  try {
-    const paths = derivePlanePaths(cloudRoot, first.planeKey);
-    db = new Database(paths.sqlitePath, { fileMustExist: true, readonly: true });
-    const operationalOk = migrationsCover(
-      appliedMigrationIds(db),
-      listOperationalMigrationFiles(),
-    );
-    const identity = readOperationalPlaneIdentity(db);
-    const identityOk =
-      identity?.planeId === first.planeId && identity.organizationId === first.organizationId;
-    return { migrationsValid: operationalOk, resolvable: identityOk };
-  } catch {
-    return { migrationsValid: false, resolvable: false };
-  } finally {
-    db?.close();
-  }
+  return { migrationsValid, resolvable };
 }
 
 export function evaluateReadiness(input: ReadinessInput): ReadinessResponse {
@@ -114,13 +105,18 @@ export function evaluateReadiness(input: ReadinessInput): ReadinessResponse {
   } else if (input.controlPlane && input.cloudRoot) {
     checks.controlPlaneOpen = true;
     checks.persistentRootWritable = isWritableDir(input.cloudRoot);
-    const controlOk = migrationsCover(
-      appliedMigrationIds(input.controlPlane.db),
-      listControlPlaneMigrationFiles(),
-    );
-    const plane = inspectFirstPlane(input.controlPlane, input.cloudRoot);
-    checks.migrationsValid = controlOk && plane.migrationsValid;
-    checks.operationalRuntimeResolvable = plane.resolvable;
+    let controlOk = false;
+    try {
+      controlOk = migrationSetsEqual(
+        readAppliedMigrationIds(input.controlPlane.db),
+        listControlPlaneMigrationFiles(),
+      );
+    } catch {
+      controlOk = false;
+    }
+    const planes = inspectActivePlanes(input.controlPlane, input.cloudRoot);
+    checks.migrationsValid = controlOk && planes.migrationsValid;
+    checks.operationalRuntimeResolvable = planes.resolvable;
   }
 
   const ready = Object.values(checks).every(Boolean);

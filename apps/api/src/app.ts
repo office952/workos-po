@@ -27,7 +27,12 @@ import {
   HEALTH_SERVICE_NAME,
   type HealthResponse,
 } from "./ops/contract.js";
-import { mutatingOriginAllowed, shouldSendHsts } from "./ops/origin.js";
+import {
+  assertProductionCloudPublicOrigin,
+  mutatingOriginAllowed,
+  PRODUCTION_HSTS_VALUE,
+  shouldSendHsts,
+} from "./ops/origin.js";
 import { evaluateReadiness } from "./ops/readiness.js";
 import { registerStaticSite } from "./ops/staticSite.js";
 import { registerProductRoutes } from "./product.js";
@@ -66,16 +71,27 @@ export function createApp(options: CreateAppOptions = {}): Hono<ApiEnv> {
   if (options.cloud && options.productSystem) {
     throw new Error("createApp cannot take both productSystem and cloud");
   }
+  if (options.cloud && env.NODE_ENV === "production") {
+    assertProductionCloudPublicOrigin(env);
+  }
 
   const app = new Hono<ApiEnv>();
 
-  app.use("/api/*", async (c, next) => {
-    if (!mutatingOriginAllowed(env, c.req.method, c.req.header("origin"))) {
-      return c.json({ error: "origin_forbidden" }, 403);
-    }
+  app.use("*", async (c, next) => {
+    await next();
     const proto = (c.req.header("x-forwarded-proto") ?? "").split(",")[0]?.trim();
     if (shouldSendHsts(env, proto)) {
-      c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+      c.res.headers.set("Strict-Transport-Security", PRODUCTION_HSTS_VALUE);
+    }
+  });
+
+  app.use("/api/*", async (c, next) => {
+    if (
+      !mutatingOriginAllowed(env, c.req.method, c.req.header("origin"), {
+        cloud: Boolean(options.cloud),
+      })
+    ) {
+      return c.json({ error: "origin_forbidden" }, 403);
     }
     await next();
   });

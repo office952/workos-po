@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
@@ -249,18 +249,22 @@ describe("cloud backup and restore", () => {
     if (!artifact) {
       throw new Error("missing artifact");
     }
-    artifact.sha256 = createHash("sha256").update(readFileSync(alphaSqlite)).digest("hex");
+    const swappedBytes = readFileSync(alphaSqlite);
+    artifact.sha256 = createHash("sha256").update(swappedBytes).digest("hex");
+    artifact.bytes = swappedBytes.byteLength;
     writeFileSync(join(backup.backupDir, "manifest.json"), JSON.stringify(manifest));
+    const targetRoot = trackTempDir();
     try {
       restoreCloudBackup({
         backupDir: backup.backupDir,
-        targetRoot: trackTempDir(),
+        targetRoot,
         sourceCloudRoot: world.fixture.cloudRoot,
       });
       throw new Error("expected identity mismatch");
     } catch (error) {
       expect((error as CloudRestoreError).code).toBe("plane_identity_mismatch");
     }
+    expect(existsSync(join(targetRoot, "control"))).toBe(false);
   });
 
   it("refuses to restore onto the source cloud root", async () => {
