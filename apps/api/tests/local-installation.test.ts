@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -6,6 +7,7 @@ import { join, resolve } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { assertCanonicalFrontend, buildLocalPackage } from "../../../packaging/build-package.mjs";
 import { installWorkos } from "../../../packaging/installer/install.mjs";
+import { uninstallWorkos } from "../../../packaging/installer/uninstall.mjs";
 import {
   createShortcut,
   inspectShortcut,
@@ -13,7 +15,6 @@ import {
   userShortcutArguments,
   windowsSystem32,
 } from "../../../packaging/installer/shortcuts.mjs";
-import { uninstallWorkos } from "../../../packaging/installer/uninstall.mjs";
 import {
   buildRuntimeEnv,
   inspectLocalEndpoint,
@@ -176,6 +177,28 @@ async function waitUntilLeaseGone(dataRoot: string, timeoutMs = 8000): Promise<b
   }
   const pid = readLeasePid(dataRoot);
   return !pid || !isAlive(pid);
+}
+
+function runInstalledUninstall(uninstallCmd: string, env: NodeJS.ProcessEnv): number | null {
+  const result = spawnSync(uninstallCmd, [], {
+    cwd: tmpdir(),
+    env,
+    encoding: "utf8",
+    windowsHide: true,
+    shell: true,
+  });
+  return result.status;
+}
+
+async function waitUntilPathGone(path: string, timeoutMs = 30000): Promise<boolean> {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    if (!existsSync(path)) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return !existsSync(path);
 }
 
 async function waitUntilGone(port: number, timeoutMs = 15000): Promise<boolean> {
@@ -623,6 +646,48 @@ describe("local installation packaged runtime", () => {
       expect(existsSync(sqlitePath)).toBe(true);
     },
     240000,
+  );
+
+  it(
+    "runs the actual installed Uninstall WorkOS.cmd outside installDir and preserves Local data",
+    async () => {
+      if (process.platform !== "win32") {
+        return;
+      }
+
+      const workspace = tempDir("workos-uninstall-entrypoint-");
+      const profile = join(workspace, "WorkOS Uninstall Test Ș");
+      const user = realisticUserEnv(profile);
+
+      const installed = await installWorkos(user.env, { packageRoot });
+      expect(installed.ok).toBe(true);
+
+      const sqlitePath = join(user.dataRoot, "data", "product-system.sqlite");
+      const documentsRoot = join(user.dataRoot, "data", "documents");
+      const proofDocument = join(documentsRoot, "uninstall-proof.txt");
+      mkdirSync(documentsRoot, { recursive: true });
+      if (!existsSync(sqlitePath)) {
+        writeFileSync(sqlitePath, "synthetic-sqlite-uninstall-proof");
+      }
+      writeFileSync(proofDocument, "synthetic-document-uninstall-proof");
+
+      const uninstallCmd = join(user.installDir, "Uninstall WorkOS.cmd");
+      expect(existsSync(uninstallCmd)).toBe(true);
+      expect(existsSync(join(user.installDir, "runtime", "node.exe"))).toBe(true);
+      expect(existsSync(join(user.installDir, "installer", "uninstall-external.mjs"))).toBe(true);
+
+      expect(runInstalledUninstall(uninstallCmd, user.env)).toBe(0);
+      expect(await waitUntilPathGone(user.installDir, 45000)).toBe(true);
+
+      expect(existsSync(user.installDir)).toBe(false);
+      expect(existsSync(user.startMenuDir)).toBe(false);
+      expect(existsSync(user.desktopPath)).toBe(false);
+      expect(existsSync(user.dataRoot)).toBe(true);
+      expect(existsSync(sqlitePath)).toBe(true);
+      expect(existsSync(proofDocument)).toBe(true);
+      expect(readFileSync(proofDocument, "utf8")).toBe("synthetic-document-uninstall-proof");
+    },
+    90000,
   );
 
   it("does not overwrite an existing synthetic database during first install", async () => {
