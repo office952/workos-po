@@ -1,5 +1,9 @@
 # E2E Reference Slice Pattern V1
 
+> HISTORICAL EXECUTION ARTIFACT
+> NOT CURRENT PRODUCT AUTHORITY
+> CURRENT WORKOS PO SAAS CANON WINS
+
 Practical reusable path for a WorkOS setting that feeds a server-owned calculation and a frozen snapshot.
 
 ```text

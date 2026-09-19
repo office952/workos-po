@@ -2,7 +2,7 @@
 
 Living operator-safe contract for WorkOS PO Cloud runtime. This is not a cutover authorization.
 
-Primary product runtime is Cloud. Normal WorkOS startup requires `WORKOS_CLOUD_ROOT` and fails closed without it. Local/Windows product runtime is deferred and is not a V1 requirement.
+Primary product direction is SaaS. Primary product runtime is Cloud. Normal WorkOS startup requires `WORKOS_CLOUD_ROOT` and fails closed without it. Local loopback runtimes and synthetic Cloud roots are engineering infrastructure, not a customer product variant.
 
 ```text
 DEPLOY_PRODUCTION = HOLD
@@ -174,17 +174,20 @@ Operational logs use event names only: startup, shutdown, Control Plane open fai
 
 ```text
 ONE WORKOS CODEBASE
-PRIMARY_PRODUCT_DIRECTION = CLOUD_WEB
+PRODUCT_MODEL = SAAS_ONLY
+PRIMARY_PRODUCT_DIRECTION = SAAS
 PRIMARY_PRESENTATION = UI20
 PRIMARY_ACCESS = BROWSER
 PRIMARY_AUTH = EMAIL_PASSWORD
+PRIMARY_SESSION = SERVER_SIDE_CLOUD_SESSION
+PRIMARY_TENANCY = ORGANIZATION
 PRIMARY_RUNTIME = CLOUD
-LOCAL_PRODUCT_RUNTIME = DEFERRED_NOT_V1_REQUIREMENT
-WINDOWS_INSTALLER = DEFERRED
+PRIMARY_PRODUCTION_TOPOLOGY = SAME_ORIGIN_HTTPS
+ALTERNATIVE_PRODUCT_DELIVERY = NO
 CLIENT_SPECIFIC_FORKS = NO
 ORGANIZATION_TENANCY = PRESERVED
 ```
 
-There must not be separate Cloud product code or client-specific forks. Frontend, API, domain, business logic, migrations, and Product Truth stay shared. HUB MEDIA is a validation organization, not a client-specific codebase.
+There must not be separate Cloud product code, a second customer-delivery track, or client-specific forks. Frontend, API, domain, business logic, migrations, and Product Truth stay shared. HUB MEDIA is a validation organization, not a client-specific codebase.
 
-Normal customers must not need Cursor, source access, direct SQLite edits, or a Windows Local install. Synthetic development provisioning is bootstrap tooling, not customer onboarding UX.
+Normal customers use the browser SaaS product. They do not need Cursor, source access, or direct SQLite edits. Synthetic development provisioning is bootstrap tooling, not customer onboarding UX.
