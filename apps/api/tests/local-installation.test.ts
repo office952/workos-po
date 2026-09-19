@@ -7,6 +7,7 @@ import { join, resolve } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { assertCanonicalFrontend, buildLocalPackage } from "../../../packaging/build-package.mjs";
 import { installWorkos } from "../../../packaging/installer/install.mjs";
+import { uninstallWorkos } from "../../../packaging/installer/uninstall.mjs";
 import {
   createShortcut,
   inspectShortcut,
@@ -638,18 +639,55 @@ describe("local installation packaged runtime", () => {
       expect(await waitUntilGone(port)).toBe(true);
       expect(await waitUntilLeaseGone(user.dataRoot)).toBe(true);
 
+      const removed = await uninstallWorkos(user.env, { purgeData: false });
+      expect(removed.ok).toBe(true);
+      expect(removed.dataPreserved).toBe(true);
+      expect(existsSync(user.installDir)).toBe(false);
+      expect(existsSync(sqlitePath)).toBe(true);
+    },
+    240000,
+  );
+
+  it(
+    "runs the actual installed Uninstall WorkOS.cmd outside installDir and preserves Local data",
+    async () => {
+      if (process.platform !== "win32") {
+        return;
+      }
+
+      const workspace = tempDir("workos-uninstall-entrypoint-");
+      const profile = join(workspace, "WorkOS Uninstall Test Ș");
+      const user = realisticUserEnv(profile);
+
+      const installed = await installWorkos(user.env, { packageRoot });
+      expect(installed.ok).toBe(true);
+
+      const sqlitePath = join(user.dataRoot, "data", "product-system.sqlite");
+      const documentsRoot = join(user.dataRoot, "data", "documents");
+      const proofDocument = join(documentsRoot, "uninstall-proof.txt");
+      mkdirSync(documentsRoot, { recursive: true });
+      if (!existsSync(sqlitePath)) {
+        writeFileSync(sqlitePath, "synthetic-sqlite-uninstall-proof");
+      }
+      writeFileSync(proofDocument, "synthetic-document-uninstall-proof");
+
       const uninstallCmd = join(user.installDir, "Uninstall WorkOS.cmd");
       expect(existsSync(uninstallCmd)).toBe(true);
+      expect(existsSync(join(user.installDir, "runtime", "node.exe"))).toBe(true);
+      expect(existsSync(join(user.installDir, "installer", "uninstall-external.mjs"))).toBe(true);
+
       expect(runInstalledUninstall(uninstallCmd, user.env)).toBe(0);
-      expect(await waitUntilPathGone(user.installDir)).toBe(true);
+      expect(await waitUntilPathGone(user.installDir, 45000)).toBe(true);
+
       expect(existsSync(user.installDir)).toBe(false);
       expect(existsSync(user.startMenuDir)).toBe(false);
       expect(existsSync(user.desktopPath)).toBe(false);
+      expect(existsSync(user.dataRoot)).toBe(true);
       expect(existsSync(sqlitePath)).toBe(true);
-      expect(existsSync(documentsRoot)).toBe(true);
-      expect(readdirSync(documentsRoot).length).toBeGreaterThan(0);
+      expect(existsSync(proofDocument)).toBe(true);
+      expect(readFileSync(proofDocument, "utf8")).toBe("synthetic-document-uninstall-proof");
     },
-    240000,
+    90000,
   );
 
   it("does not overwrite an existing synthetic database during first install", async () => {
