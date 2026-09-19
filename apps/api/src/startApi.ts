@@ -6,6 +6,7 @@ import { openProvisionedControlPlane } from "./cloud/provision.js";
 import { isCloudRootConfigured, resolveCloudRoot } from "./cloud/paths.js";
 import { createRuntimeRegistry } from "./cloud/runtimeRegistry.js";
 import { LocalRuntimeError } from "./local/errors.js";
+import { assertLocalLoopbackHost } from "./local/host.js";
 import { DEFAULT_LOCAL_PORT, isLocalRootConfigured } from "./local/paths.js";
 import { openLocalProductRuntime } from "./local/runtime.js";
 import { opsLog } from "./ops/log.js";
@@ -64,6 +65,14 @@ export function startWorkosApi(
     }
 
     if (localConfigured) {
+      let localHost: string;
+      try {
+        localHost = assertLocalLoopbackHost(env);
+      } catch (error) {
+        settleError(error);
+        return;
+      }
+
       let opened;
       try {
         opened = openLocalProductRuntime(env);
@@ -80,7 +89,7 @@ export function startWorkosApi(
             env,
             staticRoot,
           }).fetch,
-          hostname,
+          hostname: localHost,
           port,
         },
         (info) => {

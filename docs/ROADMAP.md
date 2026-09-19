@@ -39,7 +39,7 @@ REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
 
 `WORKOS_PO_CLOUD_RUNTIME_AND_RECOVERY_V1` is complete as isolated synthetic proof. It did not access or cut over the real HUB MEDIA Cloud root. See `docs/PRODUCTION_RUNTIME.md`.
 
-`WORKOS_LOCAL_RUNTIME_AND_INSTALLATION_V1` is implemented as isolated synthetic proof on `feat/local-runtime-installation-v1`. It did not access or adopt a real HUB MEDIA Cloud root. See `docs/LOCAL_RUNTIME.md`. Owner acceptance, packaging/installer, and main merge remain HOLD.
+`WORKOS_LOCAL_RUNTIME_AND_INSTALLATION_V1` is implemented as isolated synthetic proof on `feat/local-runtime-installation-v1`. Loopback-only bind is required because Local V1 uses implicit Owner authority. It did not access or adopt a real HUB MEDIA Cloud root. See `docs/LOCAL_RUNTIME.md`. Owner acceptance, packaging/installer, and main merge remain HOLD.
 
 ```text
 ONE WORKOS CODEBASE

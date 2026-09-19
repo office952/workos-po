@@ -1,23 +1,34 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { backupLocalRuntime } from "../src/local/backup.js";
 import { LocalRuntimeError } from "../src/local/errors.js";
+import { LOCAL_LOOPBACK_HOST } from "../src/local/host.js";
+import { resolveLocalProductLaunchEnv } from "../src/local/launchEnv.js";
 import {
   assertSafeLocalRoot,
   defaultLocalRoot,
   isLocalRootConfigured,
+  localLayout,
   resolveLocalRoot,
 } from "../src/local/paths.js";
 import { ensureLocalProfile } from "../src/local/profile.js";
+import { openLocalProductRuntime } from "../src/local/runtime.js";
+import { cloudRuntimeLeasePath } from "../src/ops/runtimeLease.js";
 import { startWorkosApi } from "../src/startApi.js";
+import {
+  addOrganization,
+  cleanupCloudTemps,
+  createCloudFixture,
+} from "./cloud-harness.js";
 
 const temps: string[] = [];
 
 afterEach(() => {
+  cleanupCloudTemps();
   for (const dir of temps.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -307,6 +318,117 @@ describe("local runtime HTTP", () => {
       startWorkosApi(localEnv(root, { WORKOS_STATIC_ROOT: staticRoot }), { installSignals: false }),
     ).rejects.toThrowError(/local_runtime_active/);
     await first.close();
+  });
+});
+
+describe("local loopback bind", () => {
+  it("starts Local only on 127.0.0.1", async () => {
+    const root = tempDir("workos-local-loopback-ok-");
+    const started = await startWorkosApi(localEnv(root, { HOST: LOCAL_LOOPBACK_HOST }), {
+      installSignals: false,
+    });
+    expect(started.hostname).toBe(LOCAL_LOOPBACK_HOST);
+    const health = await fetch(`http://127.0.0.1:${started.port}/api/health`);
+    expect(health.status).toBe(200);
+    await started.close();
+  });
+
+  it.each(["0.0.0.0", "192.168.10.20", "::", "localhost", "::1"] as const)(
+    "refuses Local HOST=%s before opening data",
+    async (host) => {
+      const root = tempDir(`workos-local-host-${host.replace(/[^a-z0-9]+/gi, "-")}-`);
+      const staticRoot = writeStaticRoot();
+      await expect(
+        startWorkosApi(localEnv(root, { HOST: host, WORKOS_STATIC_ROOT: staticRoot }), {
+          installSignals: false,
+        }),
+      ).rejects.toThrowError(/local_host_not_loopback/);
+      expect(() =>
+        openLocalProductRuntime(localEnv(root, { HOST: host, WORKOS_STATIC_ROOT: staticRoot })),
+      ).toThrowError(/local_host_not_loopback/);
+      const layout = localLayout(root);
+      expect(existsSync(layout.sqlitePath)).toBe(false);
+      expect(existsSync(cloudRuntimeLeasePath(root))).toBe(false);
+      expect(existsSync(layout.configPath)).toBe(false);
+    },
+  );
+
+  it("does not apply the Local loopback rule to ordinary single-plane DEV", async () => {
+    const sqlitePath = join(tempDir("workos-dev-bind-"), "product-system.sqlite");
+    const started = await startWorkosApi(
+      {
+        ...process.env,
+        HOST: "0.0.0.0",
+        PORT: "0",
+        WORKOS_SQLITE_PATH: sqlitePath,
+        WORKOS_LOCAL_ROOT: "",
+        WORKOS_CLOUD_ROOT: "",
+      },
+      { installSignals: false },
+    );
+    const health = await fetch(`http://127.0.0.1:${started.port}/api/health`);
+    expect(health.status).toBe(200);
+    await started.close();
+  });
+
+  it("does not apply the Local loopback rule to Cloud mode", async () => {
+    const fixture = createCloudFixture();
+    await addOrganization(fixture, "Loopback Cloud Org");
+    const cloudRoot = fixture.cloudRoot;
+    fixture.close();
+    const started = await startWorkosApi(
+      {
+        ...process.env,
+        HOST: "0.0.0.0",
+        PORT: "0",
+        WORKOS_CLOUD_ROOT: cloudRoot,
+        WORKOS_LOCAL_ROOT: "",
+        WORKOS_SQLITE_PATH: "",
+        WORKOS_PUBLIC_ORIGIN: "",
+        WORKOS_TRUSTED_ORIGINS: "",
+      },
+      { installSignals: false },
+    );
+    const health = await fetch(`http://127.0.0.1:${started.port}/api/health`);
+    expect(health.status).toBe(200);
+    await started.close();
+  });
+
+  it("forces Local product launcher env onto loopback production origins", () => {
+    const resolved = resolveLocalProductLaunchEnv(
+      {
+        HOST: "0.0.0.0",
+        NODE_ENV: "development",
+        WORKOS_PUBLIC_ORIGIN: "https://stale-cloud.example",
+        WORKOS_TRUSTED_ORIGINS: "https://stale-cloud.example",
+        WORKOS_CLOUD_ROOT: "",
+        WORKOS_LOCAL_ROOT: "C:\\Users\\Public\\WorkOS-local-proof",
+        PORT: "8793",
+      },
+      {
+        defaultLocalRoot: "unused",
+        staticRoot: "C:\\unused-dist",
+      },
+    );
+    expect(resolved.HOST).toBe("127.0.0.1");
+    expect(resolved.NODE_ENV).toBe("production");
+    expect(resolved.WORKOS_PUBLIC_ORIGIN).toBe("http://127.0.0.1:8793");
+    expect(resolved.WORKOS_TRUSTED_ORIGINS).toBe("");
+    expect(resolved.WORKOS_CLOUD_ROOT).toBe("");
+    expect(resolved.PORT).toBe("8793");
+    const launcherSource = readFileSync(
+      fileURLToPath(new URL("../../../scripts/local-start.mjs", import.meta.url)),
+      "utf8",
+    );
+    const configSource = readFileSync(
+      fileURLToPath(new URL("../../../scripts/local-start-config.mjs", import.meta.url)),
+      "utf8",
+    );
+    expect(launcherSource).toContain("local-start-config.mjs");
+    expect(configSource).toContain('HOST: LOCAL_PRODUCT_HOST');
+    expect(configSource).toContain('NODE_ENV: "production"');
+    expect(configSource).toContain("WORKOS_PUBLIC_ORIGIN:");
+    expect(configSource).toContain('WORKOS_TRUSTED_ORIGINS: ""');
   });
 });
 

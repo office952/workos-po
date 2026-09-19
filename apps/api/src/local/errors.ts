@@ -11,6 +11,7 @@ export const LOCAL_RUNTIME_FAULTS = [
   "local_runtime_lease_invalid",
   "local_profile_invalid",
   "local_backup_failed",
+  "local_host_not_loopback",
 ] as const;
 
 export type LocalRuntimeFaultCode = (typeof LOCAL_RUNTIME_FAULTS)[number];

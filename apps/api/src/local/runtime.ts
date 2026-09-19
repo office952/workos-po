@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createProductSystemRuntime, type ProductSystemRuntime } from "../productSystem/runtime.js";
 import { LocalRuntimeError } from "./errors.js";
+import { assertLocalLoopbackHost } from "./host.js";
 import { acquireLocalRuntimeLease, releaseLocalRuntimeLease, type LocalRuntimeLease } from "./lease.js";
 import { ensureLocalProfile, type LocalProfile } from "./profile.js";
 
@@ -30,6 +31,7 @@ export type OpenLocalRuntime = {
 };
 
 export function openLocalProductRuntime(env: NodeJS.ProcessEnv = process.env): OpenLocalRuntime {
+  assertLocalLoopbackHost(env);
   const staticRoot = resolveLocalStaticRoot(env);
   const profile = ensureLocalProfile(env);
   const lease = acquireLocalRuntimeLease(profile.root, "api");

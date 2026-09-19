@@ -34,6 +34,22 @@ CLOUD  = Control Plane + Operational Planes + HTTPS production rules
 
 Do not set `WORKOS_LOCAL_ROOT` and `WORKOS_CLOUD_ROOT` together. Startup fails closed.
 
+## Network
+
+```text
+LOCAL_NETWORK_MODE = LOOPBACK_ONLY_V1
+LOCAL_BIND = 127.0.0.1
+LAN_ACCESS = NOT_SUPPORTED_IN_V1
+REMOTE_ACCESS = NOT_SUPPORTED_IN_V1
+PUBLIC_BIND = NO
+```
+
+Local V1 has implicit local Owner authority (`isOwner` is true for every single-plane request). Therefore it MUST remain bound to `127.0.0.1`.
+
+The API engine rejects any other `HOST` when `WORKOS_LOCAL_ROOT` is set, including `0.0.0.0`, `::`, LAN addresses, public addresses, and hostnames. That check runs before local profile, SQLite, documents, or the runtime lease are opened.
+
+This is not a limitation to work around with `HOST=0.0.0.0`. Multi-user LAN or remote operation is not part of Local V1. A future authenticated LAN/server deployment needs its own explicit product contract.
+
 ## Directory model
 
 `WORKOS_LOCAL_ROOT` is resolved from the environment. If unset, `pnpm local:start` uses `join(homedir(), "WorkOS", "local")`. That default is not hardcoded as a Windows user path.
@@ -69,10 +85,21 @@ pnpm build
 pnpm local:start
 ```
 
-`pnpm local:start`:
+`pnpm local:start` forces Local product configuration and does not inherit stale Cloud or development values:
+
+```text
+HOST = 127.0.0.1
+NODE_ENV = production
+WORKOS_PUBLIC_ORIGIN = http://127.0.0.1:<port>
+WORKOS_CLOUD_ROOT = (empty)
+WORKOS_TRUSTED_ORIGINS = (empty)
+```
+
+PORT and `WORKOS_LOCAL_ROOT` remain configurable, subject to the existing path guards.
+
+The launcher also:
 
 - refuses a set `WORKOS_CLOUD_ROOT`
-- resolves `WORKOS_LOCAL_ROOT`
 - requires `dist/index.html` (or `WORKOS_STATIC_ROOT`)
 - initializes or migrates the local database without wiping it
 - starts the API
