@@ -176,4 +176,4 @@ DEPLOYMENT_PROFILES = LOCAL | CLOUD
 
 There must not be separate local product code, separate Cloud product code, or client-specific forks. Frontend, API, domain, business logic, migrations, and Product Truth stay shared. Deployment and storage configuration may differ.
 
-The next recorded program is `WORKOS_LOCAL_RUNTIME_AND_INSTALLATION_V1`. It is not started by this closure.
+`WORKOS_LOCAL_RUNTIME_V1` is complete as isolated synthetic proof. The next recorded program is `WORKOS_LOCAL_INSTALLATION_V1`. It is not started by this closure.

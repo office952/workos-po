@@ -22,12 +22,16 @@ WORKOS_PO_CLOUD_RUNTIME_AND_RECOVERY_V1 = COMPLETE
 BACKUP_MODE = QUIESCED_OFFLINE_V1
 CLOUD_RUNTIME_RECOVERY_SYNTHETIC_PROOF = COMPLETE
 
-WORKOS_LOCAL_RUNTIME_AND_INSTALLATION_V1 = COMPLETE_ISOLATED_SYNTHETIC
+WORKOS_LOCAL_RUNTIME_V1 = COMPLETE_ISOLATED_SYNTHETIC
+LOCAL_RUNTIME_LOOPBACK_ONLY_V1 = COMPLETE
 LOCAL_RUNTIME_OWNER_ACCEPTED = NO
 
-NEXT_PROGRAM_PRIORITY = WORKOS_LOCAL_RUNTIME_AND_INSTALLATION_V1
-NEXT_PROGRAM_STATUS = IMPLEMENTED_AWAITING_INDEPENDENT_REVIEW
-NEXT_PROGRAM_STARTED = YES
+WORKOS_LOCAL_INSTALLATION_V1 = NOT_STARTED
+WORKOS_LOCAL_RUNTIME_AND_INSTALLATION_V1 = IN_PROGRESS
+
+NEXT_PROGRAM_PRIORITY = WORKOS_LOCAL_INSTALLATION_V1
+NEXT_PROGRAM_STATUS = NOT_STARTED
+NEXT_PROGRAM_STARTED = NO
 
 REAL_CLOUD_WRITE = HOLD
 REAL_DB_WRITE = HOLD
@@ -35,11 +39,12 @@ DEPLOY = HOLD
 CUTOVER = HOLD
 FIRST_REAL_BUSINESS_OPERATION = HOLD
 REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
+REAL_HUB_MEDIA_LOCAL_ADOPTION = HOLD
 ```
 
 `WORKOS_PO_CLOUD_RUNTIME_AND_RECOVERY_V1` is complete as isolated synthetic proof. It did not access or cut over the real HUB MEDIA Cloud root. See `docs/PRODUCTION_RUNTIME.md`.
 
-`WORKOS_LOCAL_RUNTIME_AND_INSTALLATION_V1` is implemented as isolated synthetic proof on `feat/local-runtime-installation-v1`. Loopback-only bind is required because Local V1 uses implicit Owner authority. It did not access or adopt a real HUB MEDIA Cloud root. See `docs/LOCAL_RUNTIME.md`. Owner acceptance, packaging/installer, and main merge remain HOLD.
+`WORKOS_LOCAL_RUNTIME_V1` is complete as isolated synthetic proof. Loopback-only bind is required because Local V1 uses implicit Owner authority. Installation, launcher, shortcut, packaged Node, Windows service, and MSI are not implemented. See `docs/LOCAL_RUNTIME.md`. Owner acceptance and real HUB MEDIA local adoption remain HOLD.
 
 ```text
 ONE WORKOS CODEBASE
@@ -51,13 +56,13 @@ CLIENT_SPECIFIC_FORKS = NO
 
 Shared: frontend, API, domain, business logic, migrations, Product Truth. Deployment and storage configuration may differ.
 
-The next wave's customer experience, when separately authorized, is:
+The next program, `WORKOS_LOCAL_INSTALLATION_V1`, is the installer/launcher wave. Its customer experience is:
 
 ```text
-INSTALL → INITIALIZE → START WORKOS → OPEN LOCAL APP → OPERATE
+INSTALL → INITIALIZE → START WORKOS → BROWSER OPENS → OPERATE
 ```
 
-Normal use must not require Cursor, GitHub, a terminal, pnpm, source edits, or direct SQLite edits. Do not implement that installer in this closure.
+Normal daily use must not require Cursor, GitHub, a terminal, pnpm, source edits, or direct SQLite edits. Do not implement that installer in this closure.
 
 ## Authority after engine consolidation
 

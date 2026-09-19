@@ -6,8 +6,15 @@ Living operator-safe contract for WorkOS PO **Local** deployment. This is not a 
 DEPLOYMENT_PROFILE = LOCAL
 ONE WORKOS CODEBASE = YES
 SEPARATE_LOCAL_PRODUCT = NO
-VITE_IN_LOCAL_PRODUCT_MODE = NO
-REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = NO
+VITE_IN_LOCAL_PRODUCT_RUNTIME = NO
+REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
+REAL_HUB_MEDIA_LOCAL_ADOPTION = HOLD
+
+WORKOS_LOCAL_RUNTIME_V1 = COMPLETE_ISOLATED_SYNTHETIC
+LOCAL_RUNTIME_LOOPBACK_ONLY_V1 = COMPLETE
+WORKOS_LOCAL_INSTALLATION_V1 = NOT_STARTED
+WORKOS_LOCAL_RUNTIME_AND_INSTALLATION_V1 = IN_PROGRESS
+LOCAL_RUNTIME_OWNER_ACCEPTED = NO
 ```
 
 ## Architecture
@@ -39,9 +46,19 @@ Do not set `WORKOS_LOCAL_ROOT` and `WORKOS_CLOUD_ROOT` together. Startup fails c
 ```text
 LOCAL_NETWORK_MODE = LOOPBACK_ONLY_V1
 LOCAL_BIND = 127.0.0.1
+LOCAL_AUTH_MODEL = SINGLE_PLANE_SESSION
+LOCAL_OWNER_MODEL = IMPLICIT_LOCAL_OWNER
 LAN_ACCESS = NOT_SUPPORTED_IN_V1
 REMOTE_ACCESS = NOT_SUPPORTED_IN_V1
 PUBLIC_BIND = NO
+SAME_ORIGIN_FRONTEND_API = YES
+LOCAL_PERSISTENCE = PASS
+LOCAL_DOCUMENT_PERSISTENCE = PASS
+SECOND_LOCAL_RUNTIME_SAME_ROOT = REFUSED
+LOCAL_BACKUP = PASS
+LOCAL_CLOUD_CONFLICT = FAIL_CLOSED
+NO_CLIENT_CODE_FORK = YES
+SAME_PRODUCT_TRUTH_LOCAL_CLOUD = YES
 ```
 
 Local V1 has implicit local Owner authority (`isOwner` is true for every single-plane request). Therefore it MUST remain bound to `127.0.0.1`.
@@ -187,16 +204,26 @@ Local proof and Local product mode must not open a real HUB MEDIA Cloud root. Is
 
 Do not use Vite as the Local product server.
 
-## Future installer / service
+## Installation remains open
 
-This wave prepares the runtime. It does not ship an MSI.
-
-Recommended V1 packaging direction:
+`WORKOS_LOCAL_INSTALLATION_V1` is not started by this runtime closure.
 
 ```text
-PACKAGING_DIRECTION = packaged Node runtime + built frontend + local launcher
-WINDOWS_SERVICE_DIRECTION = optional later wrapper around the same local:start entrypoint
+TERMINAL_REQUIRED_FOR_DAILY_USE = YES_CURRENTLY
+PACKAGED_NODE_RUNTIME = NOT_IMPLEMENTED
+START_WORKOS_SHORTCUT = NOT_IMPLEMENTED
+WINDOWS_SERVICE = NOT_IMPLEMENTED
+INSTALLER = NOT_IMPLEMENTED
+MSI = NOT_IMPLEMENTED
 ELECTRON_REQUIRED = NO
 ```
 
-Daily operation target after a later installer wave: a Start WorkOS shortcut that starts the API and opens the local URL. This wave still starts from `pnpm local:start` (terminal required for daily use until that shortcut exists).
+Recommended later packaging direction: packaged Node runtime + built frontend + API + SQLite + local launcher + Start WorkOS shortcut. Daily-use target: Start WorkOS opens the browser; no Cursor, GitHub, pnpm, terminal, source edits, or direct SQLite.
+
+## Packaging advisory
+
+```text
+LOCAL_LAUNCH_ENV_IMPLEMENTATION_DUPLICATION = REVIEW_DURING_INSTALLATION_PACKAGING
+```
+
+P3 / nonblocking. Equivalent launcher contracts currently exist in `apps/api/src/local/launchEnv.ts` and `scripts/local-start-config.mjs`. Do not open a separate correction wave. During installation packaging, prefer one durable configuration authority if practical.
