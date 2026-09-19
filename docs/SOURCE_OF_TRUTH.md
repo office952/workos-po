@@ -3,7 +3,8 @@
 ## Authorities
 
 ```text
-BUSINESS_SOURCE_OF_TRUTH = office952/workos-final
+BUSINESS_SOURCE_OF_TRUTH = office952/workos-final @ 084ddebb
+BUSINESS_ENGINE_IN_PO = apps/api + packages/domain
 PRESENTATION_SOURCE_OF_TRUTH = Owner-accepted WorkOs-F design
 UI_IMPLEMENTATION_SOURCE = office952/workos-po
 PRESENTATION_BASE_REPOSITORY = office952/workos-ui20

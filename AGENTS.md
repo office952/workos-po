@@ -27,11 +27,13 @@ Do not use Pass A reconstruction as the frontend source.
 
 ## Hard boundary
 
-`office952/workos-final` is the business / API / domain / database authority during this wave.
+The preserved root frontend is the only UI. Do not import Final `apps/web`.
+
+`office952/workos-final` remains the pinned business-engine source. The imported `@workos-final/api` and `@workos-final/domain` packages must stay semantically identical to that pin unless a later Owner GO authorizes engine change.
 
 Never commit WorkOS PO work to `workos-final` or `workos-ui20`.
 
-Never modify `workos-final` to make the frontend easier unless a separate explicit Owner GO authorizes an API / business-engine change.
+Never modify `workos-final` from this repository.
 
 ```text
 workos-final != workos-po

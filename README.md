@@ -36,12 +36,18 @@ contract workos-ui-contract-v1
 ```text
 pnpm install --frozen-lockfile
 pnpm ports:reclaim
-pnpm dev              # http://127.0.0.1:5173 , strictPort
+pnpm dev              # frontend http://127.0.0.1:5173 → /api 127.0.0.1:8787
 pnpm typecheck
 pnpm lint
 pnpm test
 pnpm build
+pnpm engine:dev       # imported API, default 8787
+pnpm engine:typecheck
+pnpm engine:test
+pnpm engine:build
 ```
+
+Isolated engine proof may use `PORT=8788` plus a temporary SQLite path, and `WORKOS_API_PROXY_TARGET=http://127.0.0.1:8788` for a non-default frontend port. The default frontend proxy remains 8787.
 
 Do not run `ports:reclaim` while an Owner reference runtime is already using 5173 / 8787.
 

@@ -43,12 +43,13 @@ workos-ui20 != workos-po
 ## Required isolation
 
 - NO GIT SUBMODULE
-- NO COPY OF `packages/domain`
-- NO COPY OF `apps/api`
-- NO SHARED DATABASE FILE
 - NO SYMLINK INTO `workos-final`
 - NO CLIENT-SPECIFIC BUSINESS FORK
 - NO SOURCE IMPORT FROM OLD UI BY DEFAULT
+- NO IMPORT OF Final `apps/web`
+- NO SHARED REAL DATABASE FILE
+
+Owner-authorized engine consolidation copied `apps/api` and `packages/domain` from Final `084ddebb` into this repository. That is an import of the existing engine, not a second Product Truth.
 
 ## Local directories
 

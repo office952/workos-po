@@ -4,9 +4,9 @@ STATUS: FOUNDATION ACCEPTED / REFERENCE SLICE ACCEPTED / GOLDEN SPINE ACCEPTED /
 
 ## Boundary
 
-`office952/workos-po` is the WorkOS PO frontend / presentation layer, seeded from `office952/workos-ui20` at `9446b6d7b2b4e6b7c8ff829de97c1a583c712366`.
+`office952/workos-po` is the WorkOS PO product repository. The root package is the preserved UI20 frontend. `apps/api` and `packages/domain` are the imported Final engine at `084ddebb02950d058554eec01f3dc347790f4ca1`.
 
-`office952/workos-final` remains the business engine, current runtime, domain authority, API authority, database authority, and Product Truth authority.
+`office952/workos-final` remains the pinned business-engine source for this wave. Do not import Final `apps/web`.
 
 ## Data flow
 
