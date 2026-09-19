@@ -22,6 +22,14 @@ import { registerSellerRoutes } from "./seller/routes.js";
 import { registerPeopleRoutes } from "./people/routes.js";
 import { assertDevOperatorConfigSafe } from "./operator/devMode.js";
 import { registerOperatorRoutes } from "./operator/routes.js";
+import {
+  API_CONTRACT_ID,
+  HEALTH_SERVICE_NAME,
+  type HealthResponse,
+} from "./ops/contract.js";
+import { mutatingOriginAllowed, shouldSendHsts } from "./ops/origin.js";
+import { evaluateReadiness } from "./ops/readiness.js";
+import { registerStaticSite } from "./ops/staticSite.js";
 import { registerProductRoutes } from "./product.js";
 import { registerProductSystemAdminRoutes } from "./productSystem/routes.js";
 import {
@@ -30,14 +38,7 @@ import {
 } from "./productSystem/runtime.js";
 import { registerSystemProjectionRoutes } from "./system.js";
 
-export const HEALTH_SERVICE_NAME = "workos-final-api" as const;
-export const API_CONTRACT_ID = "workos-ui-contract-v1" as const;
-
-export type HealthResponse = {
-  status: "ok";
-  service: typeof HEALTH_SERVICE_NAME;
-  apiContractId: typeof API_CONTRACT_ID;
-};
+export { API_CONTRACT_ID, HEALTH_SERVICE_NAME, type HealthResponse };
 
 const DEV_WEB_ORIGINS = [
   "http://127.0.0.1:5173",
@@ -55,6 +56,7 @@ export type CreateAppOptions = {
     controlPlane: ControlPlane;
     registry?: RuntimeRegistry;
   };
+  staticRoot?: string;
 };
 
 export function createApp(options: CreateAppOptions = {}): Hono<ApiEnv> {
@@ -67,6 +69,17 @@ export function createApp(options: CreateAppOptions = {}): Hono<ApiEnv> {
 
   const app = new Hono<ApiEnv>();
 
+  app.use("/api/*", async (c, next) => {
+    if (!mutatingOriginAllowed(env, c.req.method, c.req.header("origin"))) {
+      return c.json({ error: "origin_forbidden" }, 403);
+    }
+    const proto = (c.req.header("x-forwarded-proto") ?? "").split(",")[0]?.trim();
+    if (shouldSendHsts(env, proto)) {
+      c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    }
+    await next();
+  });
+
   if (env.NODE_ENV !== "production") {
     app.use(
       "/api/*",
@@ -77,13 +90,16 @@ export function createApp(options: CreateAppOptions = {}): Hono<ApiEnv> {
     );
   }
 
+  const singlePlaneRuntime = options.cloud
+    ? undefined
+    : (options.productSystem ?? createProductSystemRuntime());
+
   if (options.cloud) {
     const registry = options.cloud.registry ?? createRuntimeRegistry();
     app.use("/api/*", attachCloudHost(options.cloud.controlPlane, registry, env));
     app.use("/api/*", requireCloudSession());
-  } else {
-    const productSystem = options.productSystem ?? createProductSystemRuntime();
-    app.use("/api/*", attachSinglePlaneRuntime(productSystem, env));
+  } else if (singlePlaneRuntime) {
+    app.use("/api/*", attachSinglePlaneRuntime(singlePlaneRuntime, env));
   }
 
   app.get("/api/health", (c) => {
@@ -93,6 +109,16 @@ export function createApp(options: CreateAppOptions = {}): Hono<ApiEnv> {
       apiContractId: API_CONTRACT_ID,
     };
     return c.json(body);
+  });
+
+  app.get("/api/ready", (c) => {
+    const body = evaluateReadiness({
+      mode: options.cloud ? "cloud" : "single_plane",
+      cloudRoot: options.cloud?.controlPlane.cloudRoot,
+      controlPlane: options.cloud?.controlPlane,
+      productSystem: singlePlaneRuntime ?? c.get("productSystem"),
+    });
+    return c.json(body, body.status === "ready" ? 200 : 503);
   });
 
   registerCloudRoutes(app);
@@ -108,6 +134,10 @@ export function createApp(options: CreateAppOptions = {}): Hono<ApiEnv> {
   registerInventoryRoutes(app);
   registerSystemProjectionRoutes(app);
   registerProductSystemAdminRoutes(app);
+
+  if (options.staticRoot) {
+    registerStaticSite(app, options.staticRoot);
+  }
 
   return app;
 }

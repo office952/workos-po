@@ -1,11 +1,28 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { openProvisionedControlPlane } from "./cloud/provision.js";
 import { isCloudRootConfigured, resolveCloudRoot } from "./cloud/paths.js";
 import { createRuntimeRegistry } from "./cloud/runtimeRegistry.js";
+import { opsLog } from "./ops/log.js";
 import { resolveProductSystemSqlitePath } from "./persistence/sqlite.js";
 import { createProductSystemRuntime } from "./productSystem/runtime.js";
 import { installProcessShutdown, shutdownApi } from "./serverLifecycle.js";
+
+function resolveStaticRoot(env: NodeJS.ProcessEnv): string | undefined {
+  const configured = env.WORKOS_STATIC_ROOT?.trim();
+  if (configured) {
+    return configured;
+  }
+  if (env.NODE_ENV === "production") {
+    const fallback = resolve(process.cwd(), "dist");
+    if (existsSync(fallback)) {
+      return fallback;
+    }
+  }
+  return undefined;
+}
 
 export type StartedWorkosApi = {
   hostname: string;
@@ -33,13 +50,21 @@ export function startWorkosApi(
 
     if (isCloudRootConfigured(env)) {
       const cloudRoot = resolveCloudRoot(env);
-      const controlPlane = openProvisionedControlPlane(cloudRoot);
+      let controlPlane;
+      try {
+        controlPlane = openProvisionedControlPlane(cloudRoot);
+      } catch (error) {
+        opsLog("error", "control_plane_open_failed", { code: "open_failed" });
+        settleError(error);
+        return;
+      }
       const registry = createRuntimeRegistry();
       const server = serve(
         {
           fetch: createApp({
             cloud: { controlPlane, registry },
             env,
+            staticRoot: resolveStaticRoot(env),
           }).fetch,
           hostname,
           port,
@@ -56,10 +81,8 @@ export function startWorkosApi(
           if (installSignals) {
             installProcessShutdown(server, closeResources);
           }
-          console.log(
-            `workos-final-api listening on http://${info.address}:${info.port}`,
-          );
-          console.log(`workos cloud root: ${cloudRoot}`);
+          opsLog("info", "api_startup", { mode: "cloud", port: info.port });
+          console.log(`workos-final-api listening on http://${info.address}:${info.port}`);
           resolve({
             hostname: String(info.address),
             port: info.port,
@@ -75,7 +98,11 @@ export function startWorkosApi(
     const productSystem = createProductSystemRuntime(sqlitePath);
     const server = serve(
       {
-        fetch: createApp({ productSystem, env }).fetch,
+        fetch: createApp({
+          productSystem,
+          env,
+          staticRoot: resolveStaticRoot(env),
+        }).fetch,
         hostname,
         port,
       },
@@ -90,10 +117,8 @@ export function startWorkosApi(
         if (installSignals) {
           installProcessShutdown(server, closeResources);
         }
-        console.log(
-          `workos-final-api listening on http://${info.address}:${info.port}`,
-        );
-        console.log(`product-system sqlite: ${productSystem.sqlitePath}`);
+        opsLog("info", "api_startup", { mode: "single_plane", port: info.port });
+        console.log(`workos-final-api listening on http://${info.address}:${info.port}`);
         resolve({
           hostname: String(info.address),
           port: info.port,

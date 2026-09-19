@@ -2,6 +2,7 @@ import { mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
+import { opsLog } from "../ops/log.js";
 import type { SqliteDatabase } from "./sqlite.js";
 
 const CONTROL_PLANE_MIGRATIONS_DIR = fileURLToPath(
@@ -33,15 +34,20 @@ export function openControlPlaneDatabase(filePath: string): SqliteDatabase {
     applyControlPlaneMigrations(db);
     return db;
   } catch (error) {
+    opsLog("error", "migration_failed", { code: "control_plane" });
     db.close();
     throw error;
   }
 }
 
-export function applyControlPlaneMigrations(db: SqliteDatabase): void {
-  const files = readdirSync(CONTROL_PLANE_MIGRATIONS_DIR)
+export function listControlPlaneMigrationFiles(): string[] {
+  return readdirSync(CONTROL_PLANE_MIGRATIONS_DIR)
     .filter((name) => name.endsWith(".sql"))
     .sort();
+}
+
+export function applyControlPlaneMigrations(db: SqliteDatabase): void {
+  const files = listControlPlaneMigrationFiles();
 
   // One IMMEDIATE transaction covers schema_migrations bootstrap, applied-id
   // inspection, DDL, and ledger inserts so concurrent openers re-read after

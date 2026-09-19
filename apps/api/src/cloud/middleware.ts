@@ -1,5 +1,6 @@
 import type { MiddlewareHandler } from "hono";
 import { getCookie } from "hono/cookie";
+import { opsLog } from "../ops/log.js";
 import type { ProductSystemRuntime } from "../productSystem/runtime.js";
 import { PlaneIdentityError } from "./planeIdentity.js";
 import {
@@ -11,6 +12,7 @@ import type { RuntimeRegistry } from "./runtimeRegistry.js";
 
 const PUBLIC_PATHS = new Set([
   "/api/health",
+  "/api/ready",
   "/api/cloud/login",
   "/api/cloud/session",
   "/api/cloud/logout",
@@ -94,7 +96,7 @@ export function requireCloudSession(): MiddlewareHandler<ApiEnv> {
       c.set("productSystem", runtime);
     } catch (error) {
       if (error instanceof PlaneIdentityError) {
-        console.error("operational plane identity failed", {
+        opsLog("error", "plane_identity_failed", {
           code: error.code,
           organizationId: organization.organizationId,
           planeId: descriptor.planeId,

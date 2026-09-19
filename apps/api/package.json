@@ -5,12 +5,14 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
-    "lint": "eslint src tests",
+    "lint": "eslint -c ../../eslint.engine.config.js src tests",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "cloud:provision": "tsx src/cloud/devProvisionCli.ts",
     "cloud:adopt": "tsx src/cloud/adoptCli.ts",
     "cloud:configure-providers": "tsx src/cloud/configureProvidersCli.ts",
+    "cloud:backup": "tsx src/cloud/backupCli.ts",
+    "cloud:restore": "tsx src/cloud/restoreCli.ts",
     "build": "tsc --noEmit"
   },
   "dependencies": {

@@ -1,3 +1,5 @@
+import { opsLog } from "./ops/log.js";
+
 export type ClosableHttpServer = {
   close(callback?: (error?: Error) => void): unknown;
 };
@@ -37,11 +39,12 @@ export function installProcessShutdown(
     closing = true;
     void shutdownApi(server, closeResources)
       .then(() => {
+        opsLog("info", "api_shutdown", {});
         console.log("workos-final-api shutdown complete");
         process.exit(0);
       })
-      .catch((error) => {
-        console.error("workos-final-api shutdown failed", error);
+      .catch(() => {
+        opsLog("error", "api_shutdown", { code: "shutdown_failed" });
         process.exit(1);
       });
   };

@@ -1,5 +1,6 @@
 import type { Context, Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import { cookieSecure } from "../ops/origin.js";
 import { OPERATOR_SESSION_COOKIE } from "../operator/store.js";
 import {
   CLOUD_SESSION_COOKIE,
@@ -222,7 +223,7 @@ function setCloudSessionCookie(c: Context<ApiEnv>, rawToken: string): void {
     httpOnly: true,
     path: "/",
     sameSite: "Lax",
-    secure: env.NODE_ENV === "production",
+    secure: cookieSecure(env),
     maxAge: CLOUD_SESSION_MAX_AGE_SEC,
   });
 }
