@@ -5,9 +5,13 @@ Living operator-safe contract for WorkOS PO Cloud runtime. This is not a cutover
 ```text
 DEPLOY_PRODUCTION = HOLD
 CUTOVER = HOLD
-REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = NO
+REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
+REAL_CLOUD_WRITE = HOLD
+REAL_DB_WRITE = HOLD
 BACKUP_MODE = QUIESCED_OFFLINE_V1
+CLOUD_RUNTIME_RECOVERY_SYNTHETIC_PROOF = COMPLETE
 ONLINE_BACKUP_WITH_CONCURRENT_BUSINESS_WRITES = NOT_YET_SUPPORTED
+UNATTENDED_STALE_LEASE_CONCURRENT_RECOVERY = FUTURE_HARDENING
 PRODUCTION_PUBLIC_ORIGIN_REQUIRED = YES
 PRODUCTION_ORIGIN_MISSING = FAIL_CLOSED
 PRODUCTION_ORIGIN_HTTP_PUBLIC = FAIL_CLOSED
@@ -89,15 +93,17 @@ CLEAN SHUTDOWN / BACKUP FINALLY = remove only this operation's lease
 BACKUP_MODE = QUIESCED_OFFLINE_V1
 ```
 
-Supported production backup:
+Supported production backup remains an operator-controlled quiesced operation:
 
 ```text
 STOP API
-→ VERIFY QUIESCED
+→ VERIFY STOPPED
 → BACKUP
 → VALIDATE
 → START API
 ```
+
+Do not enable unattended scheduled production backup with automatic service restart yet. Concurrent recovery of an unattended stale lease is future hardening. This advisory does not reopen Cloud Runtime and Recovery V1.
 
 ```text
 pnpm --filter @workos-final/api cloud:backup
@@ -158,3 +164,14 @@ Do not enable unrestricted production provisioning in this wave.
 ## Observability
 
 Operational logs use event names only: startup, shutdown, Control Plane open failure, migration failure, plane identity failure, backup success/failure, restore validation success/failure. They must not include passwords, session tokens, PINs, attachment bytes, or avoidable filesystem paths.
+
+## Local and Cloud profiles
+
+```text
+ONE WORKOS CODEBASE
+DEPLOYMENT_PROFILES = LOCAL | CLOUD
+```
+
+There must not be separate local product code, separate Cloud product code, or client-specific forks. Frontend, API, domain, business logic, migrations, and Product Truth stay shared. Deployment and storage configuration may differ.
+
+The next recorded program is `WORKOS_LOCAL_RUNTIME_AND_INSTALLATION_V1`. It is not started by this closure.

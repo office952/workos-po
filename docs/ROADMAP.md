@@ -18,18 +18,43 @@ ENGINE_CONSOLIDATION_V1 = COMPLETE
 AUTHORITY_HANDOFF = COMPLETE
 INTEGRATED_ON_MAIN = YES
 
-NEXT_PROGRAM_PRIORITY = WORKOS_PO_CLOUD_RUNTIME_AND_RECOVERY_V1
-NEXT_PROGRAM_STATUS = FINAL_SAFETY_CLOSURE_ON_FEATURE_BRANCH
+WORKOS_PO_CLOUD_RUNTIME_AND_RECOVERY_V1 = COMPLETE
+BACKUP_MODE = QUIESCED_OFFLINE_V1
+CLOUD_RUNTIME_RECOVERY_SYNTHETIC_PROOF = COMPLETE
+
+NEXT_PROGRAM_PRIORITY = WORKOS_LOCAL_RUNTIME_AND_INSTALLATION_V1
+NEXT_PROGRAM_STATUS = NOT_STARTED
+NEXT_PROGRAM_STARTED = NO
 
 REAL_CLOUD_WRITE = HOLD
 REAL_DB_WRITE = HOLD
 DEPLOY = HOLD
 CUTOVER = HOLD
 FIRST_REAL_BUSINESS_OPERATION = HOLD
-REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = NO
+REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
 ```
 
-`WORKOS_PO_CLOUD_RUNTIME_AND_RECOVERY_V1` is authorized only as isolated synthetic proof. It does not access or cut over the real HUB MEDIA Cloud root. See `docs/PRODUCTION_RUNTIME.md`.
+`WORKOS_PO_CLOUD_RUNTIME_AND_RECOVERY_V1` is complete as isolated synthetic proof. It did not access or cut over the real HUB MEDIA Cloud root. See `docs/PRODUCTION_RUNTIME.md`.
+
+`WORKOS_LOCAL_RUNTIME_AND_INSTALLATION_V1` is recorded only. Do not start it from this closure.
+
+```text
+ONE WORKOS CODEBASE
+DEPLOYMENT_PROFILES = LOCAL | CLOUD
+SEPARATE_LOCAL_PRODUCT_CODE = NO
+SEPARATE_CLOUD_PRODUCT_CODE = NO
+CLIENT_SPECIFIC_FORKS = NO
+```
+
+Shared: frontend, API, domain, business logic, migrations, Product Truth. Deployment and storage configuration may differ.
+
+The next wave's customer experience, when separately authorized, is:
+
+```text
+INSTALL → INITIALIZE → START WORKOS → OPEN LOCAL APP → OPERATE
+```
+
+Normal use must not require Cursor, GitHub, a terminal, pnpm, source edits, or direct SQLite edits. Do not implement that installer in this closure.
 
 ## Authority after engine consolidation
 
