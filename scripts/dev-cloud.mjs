@@ -1,5 +1,4 @@
 import { spawn } from "node:child_process";
-import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve } from "node:path";
@@ -8,6 +7,7 @@ import { fileURLToPath } from "node:url";
 const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const IDENTITY_NAME = ".dev-identity.json";
 const DEFAULT_EMAIL = "dev@workos.local";
+const DEFAULT_PASSWORD = "workos1234";
 const DEFAULT_ORG = "WorkOS Dev";
 const useWindowsShell = process.platform === "win32";
 
@@ -67,10 +67,6 @@ function resolveDevCloudRoot(argv) {
     return assertSafeDevRoot(override);
   }
   return assertSafeDevRoot(join(repoRoot, ".tmp", "workos-dev-cloud"));
-}
-
-function generateSyntheticPassword() {
-  return `Dev${randomBytes(18).toString("base64url")}9`;
 }
 
 function identityPath(root) {
@@ -163,7 +159,7 @@ async function ensureSyntheticCloud(root, env) {
   const identity = {
     classification: "SYNTHETIC_ISOLATED_DEV",
     email: DEFAULT_EMAIL,
-    password: generateSyntheticPassword(),
+    password: DEFAULT_PASSWORD,
     organization: DEFAULT_ORG,
   };
   await provisionWithExistingCli(root, identity, env);
@@ -212,9 +208,10 @@ try {
   console.log("WorkOS development Cloud (isolated synthetic root)");
   console.log(`root: ${cloudRoot}`);
   console.log("classification: SYNTHETIC_ISOLATED_DEV");
-  console.log(`email: ${identity.email}`);
-  console.log(`organization: ${identity.organization}`);
-  console.log(`credentials: stored in ${identityPath(cloudRoot)} (gitignored; not printed)`);
+  console.log("Development login:");
+  console.log(`Email: ${identity.email}`);
+  console.log(`Password: ${identity.password}`);
+  console.log(`Organization: ${identity.organization}`);
   console.log("Frontend remains `pnpm dev` → http://127.0.0.1:5173");
   console.log("Journey: login → organization → UI20");
   launchApi(cloudRoot, env);
