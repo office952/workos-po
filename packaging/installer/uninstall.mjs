@@ -1,5 +1,5 @@
 import { existsSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   desktopShortcutPath,
@@ -8,6 +8,7 @@ import {
   startMenuShortcutDir,
 } from "../paths.mjs";
 import { launchWorkos } from "../launcher/launch.mjs";
+import { retireDirectory, stopPackagedRuntimeProcesses } from "./packaged-runtime.mjs";
 
 function writeLog(dataRoot, message) {
   try {
@@ -33,7 +34,7 @@ export async function uninstallWorkos(env = process.env, options = {}) {
   const menuDir = options.startMenuDir ?? startMenuShortcutDir(env);
   for (const path of [
     join(menuDir, "WorkOS.lnk"),
-    join(menuDir, "Oprește WorkOS.lnk"),
+    join(menuDir, "Opreste WorkOS.lnk"),
     options.desktopPath ?? desktopShortcutPath(env),
   ]) {
     rmSync(path, { force: true });
@@ -41,7 +42,8 @@ export async function uninstallWorkos(env = process.env, options = {}) {
   rmSync(menuDir, { recursive: true, force: true });
 
   if (existsSync(installDir)) {
-    rmSync(installDir, { recursive: true, force: true });
+    await stopPackagedRuntimeProcesses(installDir);
+    await retireDirectory(installDir);
   }
 
   let dataPreserved = existsSync(dataRoot);

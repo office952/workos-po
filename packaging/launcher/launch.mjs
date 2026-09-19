@@ -26,13 +26,21 @@ function logLine(logPath, message) {
   appendFileSync(logPath, `${new Date().toISOString()} ${message}\n`);
 }
 
+export function operatorMessageWscriptInvocation(message) {
+  return {
+    file: "wscript.exe",
+    args: [fileURLToPath(new URL("./show-message.vbs", import.meta.url)), message],
+  };
+}
+
 function showOperatorError(message) {
   if (process.platform === "win32") {
-    spawn("wscript.exe", [
-      "//nologo",
-      fileURLToPath(new URL("./show-message.vbs", import.meta.url)),
-      message,
-    ], { detached: true, stdio: "ignore", windowsHide: true }).unref();
+    const invocation = operatorMessageWscriptInvocation(message);
+    spawn(invocation.file, invocation.args, {
+      detached: true,
+      stdio: "ignore",
+      windowsHide: true,
+    }).unref();
     return;
   }
   console.error(message);
@@ -227,6 +235,7 @@ export async function launchWorkos(env = process.env, options = {}) {
   const startedLease = readLeasePid(layout.dataRoot);
   const sqliteReady = existsSync(join(layout.dataRoot, "data", "product-system.sqlite"));
   if (!ready || !sqliteReady || (childPid && startedLease !== childPid)) {
+    await stopRuntime(layout.dataRoot);
     const message = operatorMessage("runtime_not_ready");
     logLine(
       logPath,
@@ -253,7 +262,10 @@ if (invokedDirectly) {
     process.argv[2] === "stop" || process.argv[2] === "status" || process.argv[2] === "backup"
       ? process.argv[2]
       : "start";
-  const result = await launchWorkos(process.env, { command });
+  const result = await launchWorkos(process.env, {
+    command,
+    openBrowser: process.env.WORKOS_OPEN_BROWSER !== "0",
+  });
   if (!result.ok) {
     showOperatorError(result.message ?? operatorMessage("generic_failure"));
     process.exit(1);

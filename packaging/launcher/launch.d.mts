@@ -1,3 +1,8 @@
+export function operatorMessageWscriptInvocation(message: string): {
+  file: "wscript.exe";
+  args: string[];
+};
+
 export function launchWorkos(
   env?: NodeJS.ProcessEnv,
   options?: {

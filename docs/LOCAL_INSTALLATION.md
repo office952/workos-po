@@ -3,7 +3,8 @@
 Living operator-safe contract for packaging WorkOS as a Local Windows product. This is not a Cloud cutover, not a HUB MEDIA adoption, and not an Owner-machine install authorization.
 
 ```text
-WORKOS_LOCAL_INSTALLATION_V1 = COMPLETE_ISOLATED_SYNTHETIC
+WORKOS_LOCAL_INSTALLATION_V1 = IN_PROGRESS
+LOCAL_SHORTCUT_LAUNCH_CLOSURE_V1 = COMPLETE_ISOLATED_SYNTHETIC
 INSTALLATION_OWNER_ACCEPTED = NO
 REAL_HUB_MEDIA_LOCAL_ADOPTION = HOLD
 DEPLOY_REAL_OWNER_MACHINE = NO
@@ -129,7 +130,26 @@ Rebuild the package if the build Node major version changes.
 
 ## Launcher and lifecycle
 
-Start Menu **WorkOS** (and optional desktop shortcut) runs `launcher/hidden.vbs`, which starts `launcher/launch.mjs` without a visible console.
+Start Menu **WorkOS** (and optional desktop shortcut) is a user-facing `wscript.exe` shortcut. It does **not** pass `//nologo`. That option is reserved for noninteractive shortcut *creation* via `cscript.exe //nologo create-shortcut.vbs`.
+
+```text
+FINAL_USER_LAUNCH_CHAIN =
+  WorkOS.lnk
+  → %WINDIR%\System32\wscript.exe
+  → "<hidden.vbs>" "<installDir>" start
+  → packaged node.exe
+  → launch.mjs
+  → packaged API
+```
+
+Shortcut arguments:
+
+```text
+"<absolute hidden.vbs>" "<absolute installDir>" start
+"<absolute hidden.vbs>" "<absolute installDir>" stop
+```
+
+`hidden.vbs` starts packaged Node without a visible console and waits for `launch.mjs` to finish that command. The API stays detached after start. Operator error dialogs use `wscript.exe "<show-message.vbs>" "<message>"` without `//nologo`. A WorkOS message dialog may appear. A Windows Script Host "Unknown option" dialog must not. Upgrade retires a locked `runtime` folder instead of requiring an immediate delete of a running `node.exe`.
 
 The launcher:
 
@@ -201,6 +221,33 @@ pnpm package:local    produce the installed-product folder
 ```
 
 Do not use the installer as the daily developer loop.
+
+## Installation E2E
+
+The installation proof is not complete if it only calls `launchWorkos()` from Node. The required isolated chain is:
+
+```text
+package
+→ install synthetic temp root
+→ inspect generated .lnk
+→ execute installed hidden.vbs with the shortcut arguments
+→ WorkOS starts
+→ /api/health and /api/ready
+→ principal routes
+→ synthetic create/persist
+→ stop through installed launcher
+→ backup
+→ upgrade
+→ restart
+→ persistence
+→ uninstall keep-data
+```
+
+```text
+INSTALLATION_E2E = PASS_ISOLATED_SYNTHETIC_WITH_REAL_ENTRYPOINT
+OWNER_WSH_UNKNOWN_OPTION_REGRESSION = PASS
+DIRECT_LAUNCHWORKOS_TEST = REUSE_AND_BACKUP_ONLY
+```
 
 ## Clean-machine proof
 

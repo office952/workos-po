@@ -2,13 +2,10 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
-  readFileSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
 import {
   defaultProductJsonPath,
   desktopShortcutPath,
@@ -19,6 +16,8 @@ import {
 } from "../paths.mjs";
 import { launchWorkos } from "../launcher/launch.mjs";
 import { operatorMessage } from "../launcher/messages.mjs";
+import { retireDirectory, stopPackagedRuntimeProcesses } from "./packaged-runtime.mjs";
+import { createShortcut, userShortcutArguments, windowsSystem32 } from "./shortcuts.mjs";
 
 const packageRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 
@@ -28,22 +27,8 @@ function writeLog(dataRoot, message) {
   writeFileSync(logPath, `${new Date().toISOString()} ${message}\n`, { flag: "a" });
 }
 
-function createShortcut(shortcutPath, target, args, workingDir, description) {
-  if (process.platform !== "win32") {
-    return false;
-  }
-  mkdirSync(dirname(shortcutPath), { recursive: true });
-  const vbs = fileURLToPath(new URL("./create-shortcut.vbs", import.meta.url));
-  const result = spawnSync(
-    "wscript.exe",
-    ["//nologo", vbs, shortcutPath, target, args, workingDir, description],
-    { windowsHide: true, encoding: "utf8" },
-  );
-  return result.status === 0;
-}
-
 function shortcutTarget() {
-  return join(process.env.WINDIR || "C:\\Windows", "System32", "wscript.exe");
+  return windowsSystem32("wscript.exe");
 }
 
 export async function installWorkos(env = process.env, options = {}) {
@@ -84,6 +69,7 @@ export async function installWorkos(env = process.env, options = {}) {
         };
       }
     }
+    await stopPackagedRuntimeProcesses(installDir);
   }
 
   mkdirSync(installDir, { recursive: true });
@@ -93,7 +79,7 @@ export async function installWorkos(env = process.env, options = {}) {
       continue;
     }
     const to = join(installDir, name);
-    rmSync(to, { recursive: true, force: true });
+    await retireDirectory(to);
     cpSync(from, to, { recursive: true, dereference: true, force: true });
   }
   for (const name of [
@@ -130,14 +116,14 @@ export async function installWorkos(env = process.env, options = {}) {
   const startCreated = createShortcut(
     join(menuDir, "WorkOS.lnk"),
     wscript,
-    `//nologo "${hiddenVbs}" "${installDir}" start`,
+    userShortcutArguments(hiddenVbs, installDir, "start"),
     installDir,
     "Pornește WorkOS",
   );
   createShortcut(
-    join(menuDir, "Oprește WorkOS.lnk"),
+    join(menuDir, "Opreste WorkOS.lnk"),
     wscript,
-    `//nologo "${hiddenVbs}" "${installDir}" stop`,
+    userShortcutArguments(hiddenVbs, installDir, "stop"),
     installDir,
     "Oprește WorkOS",
   );
@@ -146,7 +132,7 @@ export async function installWorkos(env = process.env, options = {}) {
     desktopCreated = createShortcut(
       options.desktopPath ?? desktopShortcutPath(env),
       wscript,
-      `//nologo "${hiddenVbs}" "${installDir}" start`,
+      userShortcutArguments(hiddenVbs, installDir, "start"),
       installDir,
       "Pornește WorkOS",
     );

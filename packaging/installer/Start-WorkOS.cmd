@@ -1,2 +1,2 @@
 @echo off
-wscript.exe //nologo "%~dp0launcher\hidden.vbs" "%~dp0" start
+wscript.exe "%~dp0launcher\hidden.vbs" "%~dp0" start
