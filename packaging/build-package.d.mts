@@ -1,3 +1,7 @@
+export function collectProductionPackages(
+  startDir: string,
+  names: string[],
+): Map<string, string>;
 export function compileProductionArtifacts(): void;
 export function isPlaceholderOnlyFrontend(html: string): boolean;
 export function assertCanonicalFrontend(indexHtmlPath: string): void;

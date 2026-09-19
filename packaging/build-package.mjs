@@ -85,24 +85,66 @@ function packageRootFromRequire(requireFrom, name) {
   }
 }
 
-function collectProductionPackages(startDir, names) {
-  const requireFrom = createRequire(join(startDir, "package.json"));
+function readPackageJson(packageRoot) {
+  return JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8"));
+}
+
+function enqueueDeclaredDependencies(queue, pkg, packageRoot) {
+  for (const name of Object.keys(pkg.dependencies ?? {})) {
+    queue.push({
+      name,
+      parentRoot: packageRoot,
+      parentName: pkg.name ?? packageRoot,
+      kind: "required",
+    });
+  }
+  for (const name of Object.keys(pkg.optionalDependencies ?? {})) {
+    queue.push({
+      name,
+      parentRoot: packageRoot,
+      parentName: pkg.name ?? packageRoot,
+      kind: "optional",
+    });
+  }
+}
+
+export function collectProductionPackages(startDir, names) {
+  const startPkg = readPackageJson(startDir);
   const seen = new Map();
-  const queue = [...names];
+  const queue = names.map((name) => ({
+    name,
+    parentRoot: startDir,
+    parentName: startPkg.name ?? startDir,
+    kind: "required",
+  }));
   while (queue.length > 0) {
-    const name = queue.pop();
-    if (!name || name.startsWith("@workos-final/") || seen.has(name)) {
+    const item = queue.pop();
+    if (!item.name || item.name.startsWith("@workos-final/")) {
       continue;
     }
-    const root = packageRootFromRequire(requireFrom, name);
-    seen.set(name, root);
-    const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-    for (const next of [
-      ...Object.keys(pkg.dependencies ?? {}),
-      ...Object.keys(pkg.optionalDependencies ?? {}),
-    ]) {
-      queue.push(next);
+    const requireFrom = createRequire(join(item.parentRoot, "package.json"));
+    let root;
+    try {
+      root = packageRootFromRequire(requireFrom, item.name);
+    } catch (error) {
+      if (item.kind === "optional") {
+        continue;
+      }
+      const detail = error instanceof Error ? error.message : "resolve_failed";
+      throw new Error(
+        `cannot_resolve_${item.name}:parent=${item.parentName}:kind=${item.kind}:${detail}`,
+      );
     }
+    const resolvedRoot = resolve(root);
+    const existing = seen.get(item.name);
+    if (existing) {
+      if (existing !== resolvedRoot) {
+        throw new Error(`production_dependency_version_conflict:${item.name}`);
+      }
+      continue;
+    }
+    seen.set(item.name, resolvedRoot);
+    enqueueDeclaredDependencies(queue, readPackageJson(resolvedRoot), resolvedRoot);
   }
   return seen;
 }

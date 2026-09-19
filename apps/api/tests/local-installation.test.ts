@@ -402,6 +402,13 @@ describe("local installation packaged runtime", () => {
     expect(existsSync(join(packageRoot, "app", "src"))).toBe(false);
     expect(existsSync(join(packageRoot, "app", "node_modules", "tsx"))).toBe(false);
     expect(existsSync(join(packageRoot, "app", "node_modules", "vite"))).toBe(false);
+    expect(existsSync(join(packageRoot, "app", "node_modules", "pdf-lib"))).toBe(true);
+    expect(existsSync(join(packageRoot, "app", "node_modules", "tslib"))).toBe(true);
+    expect(existsSync(join(packageRoot, "app", "node_modules", "better-sqlite3"))).toBe(true);
+    const apiDependencies = JSON.parse(
+      readFileSync(join(process.cwd(), "package.json"), "utf8"),
+    ).dependencies as Record<string, string>;
+    expect(apiDependencies.tslib).toBeUndefined();
     expect(readFileSync(join(packageRoot, "app", "dist", "index.js"), "utf8")).not.toContain("tsx src");
     expect(existsSync(join(packageRoot, "app", "node_modules", "tsx"))).toBe(false);
   });
