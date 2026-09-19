@@ -4,10 +4,10 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "coverage", "evidence", "_review"] },
+  { ignores: ["dist", "coverage", "evidence", "_review", "apps", "packages"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
-    files: ["**/*.{ts,tsx}"],
+    files: ["src/**/*.{ts,tsx}", "vite.config.ts", "eslint.config.js"],
     languageOptions: {
       ecmaVersion: 2022,
     },

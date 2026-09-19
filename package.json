@@ -11,7 +11,12 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --pretty false",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "engine:dev": "pnpm --filter @workos-final/api dev",
+    "engine:typecheck": "pnpm --filter @workos-final/domain typecheck && pnpm --filter @workos-final/api typecheck",
+    "engine:test": "pnpm --filter @workos-final/domain test && pnpm --filter @workos-final/api test",
+    "engine:build": "pnpm --filter @workos-final/domain build && pnpm --filter @workos-final/api build",
+    "verify:all": "pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm engine:typecheck && pnpm engine:test && pnpm engine:build"
   },
   "dependencies": {
     "@fontsource/geist-sans": "^5.3.0",
