@@ -67,7 +67,7 @@ export function startWorkosApi(
 
       let lease: CloudRuntimeLease;
       try {
-        lease = acquireCloudRuntimeLease(cloudRoot);
+        lease = acquireCloudRuntimeLease(cloudRoot, "api");
       } catch (error) {
         settleError(error);
         return;

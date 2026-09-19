@@ -56,7 +56,7 @@ Safe examples only. Never commit secrets or real Cloud paths.
 | `WORKOS_CLOUD_ROOT` | External persistent Cloud root. Not in Git. |
 | `WORKOS_BACKUP_ROOT` | Backup destination **outside** the Cloud root |
 | `WORKOS_PUBLIC_ORIGIN` | Required production Cloud public origin. Must be a normalized `https://` origin with no path, query, hash, or userinfo. |
-| `WORKOS_TRUSTED_ORIGINS` | Optional extra allowed mutating origins |
+| `WORKOS_TRUSTED_ORIGINS` | Optional extra allowed mutating origins. In production Cloud each entry must be a normalized `https://` origin. |
 | `WORKOS_STATIC_ROOT` | Built frontend directory served by the API |
 
 `WORKOS_CLOUD_ROOT` remains external persistent storage. Real business data must not live in Git.
@@ -65,14 +65,16 @@ Production Cloud startup fails closed when `WORKOS_PUBLIC_ORIGIN` is missing, ma
 
 ## Runtime lease
 
-One API process may own a Cloud root. The lease lives at `ops/runtime-lease.json` under that root. It is operational metadata, not Product Truth. It may contain only `pid`, `startedAt`, and a lease identifier.
+One exclusive Cloud-root lease lives at `ops/runtime-lease.json`. It is operational metadata, not Product Truth. It may contain only `pid`, `startedAt`, `leaseId`, and `purpose` (`api` or `backup`).
 
 ```text
-API START = acquire lease or refuse
-LIVE OWNER = refuse second API for the same Cloud root
+ONE CLOUD ROOT = ONE EXCLUSIVE LEASE
+API START = acquire purpose=api or refuse
+BACKUP = acquire purpose=backup before the first Control snapshot; release after the manifest is written
+ANY LIVE LEASE = refuse API start and refuse a second backup
 STALE LEASE = recover only after the recorded process is proven not alive
 LIVENESS UNKNOWN = FAIL_CLOSED
-CLEAN SHUTDOWN = remove only this process's lease
+CLEAN SHUTDOWN / BACKUP FINALLY = remove only this operation's lease
 ```
 
 ## Health and readiness
@@ -106,7 +108,7 @@ pnpm --filter @workos-final/api cloud:restore -- --backup <dir> --target <new-ro
 ONLINE_BACKUP_WITH_CONCURRENT_BUSINESS_WRITES = NOT_YET_SUPPORTED
 ```
 
-A live Cloud API / runtime lease refuses backup with `cloud_runtime_active`. Per-SQLite `better-sqlite3` `.backup()` is a consistent snapshot of that one file. It is not global application consistency while the API can accept writes. V1 does not pretend otherwise.
+A live Cloud API lease refuses backup with `cloud_runtime_active`. While backup holds the exclusive lease, API start and a second backup are refused. Per-SQLite `better-sqlite3` `.backup()` is a consistent snapshot of that one file. It is not global application consistency while the API can accept writes. V1 does not pretend otherwise.
 
 After the API is quiesced, backup snapshots Control Plane first, reads organization / plane inventory from **that Control snapshot**, then snapshots each Operational Plane and copies documents. Backup does not invent migration IDs from source files. Every backed-up plane must match the current supported schema. Restore validates Control and Operational migration ledgers against the current supported schema **before** any automatic migration can modify a restored database. Incompatible backups fail closed with `schema_mismatch`.
 
@@ -114,7 +116,7 @@ After the API is quiesced, backup snapshots Control Plane first, reads organizat
 RESTORE_SUPPORTED_SCHEMA = CURRENT_SUPPORTED_SCHEMA
 ```
 
-Restore writes only to a new isolated root. Artifact paths must resolve inside the backup directory. Never restore over a live source Cloud root.
+Restore writes only to a new isolated root. Artifact paths must resolve inside the backup directory. The restore target must not equal, contain, or be nested inside the source Cloud root or the backup artifact directory.
 
 Offsite vendor upload is a reserved future seam. This V1 destination is a local `WORKOS_BACKUP_ROOT`.
 

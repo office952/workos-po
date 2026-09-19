@@ -3,12 +3,15 @@ import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "
 import { dirname, join, resolve } from "node:path";
 
 export const CLOUD_RUNTIME_LEASE_VERSION = 1 as const;
+export const CLOUD_LEASE_PURPOSES = ["api", "backup"] as const;
+export type CloudLeasePurpose = (typeof CLOUD_LEASE_PURPOSES)[number];
 
 export type CloudRuntimeLease = {
   version: typeof CLOUD_RUNTIME_LEASE_VERSION;
   leaseId: string;
   pid: number;
   startedAt: string;
+  purpose: CloudLeasePurpose;
 };
 
 export type CloudRuntimeLeaseFaultCode =
@@ -51,6 +54,13 @@ export function inspectProcessLiveness(pid: number): ProcessLiveness {
   }
 }
 
+function parsePurpose(value: unknown): CloudLeasePurpose {
+  if (value === "api" || value === "backup") {
+    return value;
+  }
+  throw new CloudRuntimeLeaseError("cloud_runtime_lease_invalid");
+}
+
 function parseLease(raw: unknown): CloudRuntimeLease {
   if (!raw || typeof raw !== "object") {
     throw new CloudRuntimeLeaseError("cloud_runtime_lease_invalid");
@@ -73,6 +83,7 @@ function parseLease(raw: unknown): CloudRuntimeLease {
     leaseId: record.leaseId,
     pid: record.pid,
     startedAt: record.startedAt,
+    purpose: parsePurpose(record.purpose),
   };
 }
 
@@ -118,7 +129,10 @@ function refuseExistingLease(existing: CloudRuntimeLease): void {
   }
 }
 
-export function acquireCloudRuntimeLease(cloudRoot: string): CloudRuntimeLease {
+export function acquireCloudRuntimeLease(
+  cloudRoot: string,
+  purpose: CloudLeasePurpose,
+): CloudRuntimeLease {
   const filePath = cloudRuntimeLeasePath(cloudRoot);
   mkdirSync(dirname(filePath), { recursive: true });
 
@@ -137,6 +151,7 @@ export function acquireCloudRuntimeLease(cloudRoot: string): CloudRuntimeLease {
       leaseId: randomBytes(16).toString("hex"),
       pid: process.pid,
       startedAt: new Date().toISOString(),
+      purpose,
     };
     try {
       writeFileSync(filePath, `${JSON.stringify(lease)}\n`, { encoding: "utf8", flag: "wx" });
@@ -148,7 +163,12 @@ export function acquireCloudRuntimeLease(cloudRoot: string): CloudRuntimeLease {
     }
 
     const written = readCloudRuntimeLeaseFile(cloudRoot);
-    if (!written || written.leaseId !== lease.leaseId || written.pid !== process.pid) {
+    if (
+      !written ||
+      written.leaseId !== lease.leaseId ||
+      written.pid !== process.pid ||
+      written.purpose !== purpose
+    ) {
       throw new CloudRuntimeLeaseError("cloud_runtime_active");
     }
     return lease;
@@ -171,7 +191,11 @@ export function releaseCloudRuntimeLease(
   if (!existing) {
     return;
   }
-  if (existing.leaseId !== lease.leaseId || existing.pid !== process.pid) {
+  if (
+    existing.leaseId !== lease.leaseId ||
+    existing.pid !== process.pid ||
+    existing.purpose !== lease.purpose
+  ) {
     return;
   }
   removeLeaseFile(cloudRuntimeLeasePath(cloudRoot));

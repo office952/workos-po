@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
@@ -66,7 +66,7 @@ async function deadPid(): Promise<number> {
 
 function writeLease(
   cloudRoot: string,
-  lease: { leaseId: string; pid: number; startedAt?: string },
+  lease: { leaseId: string; pid: number; startedAt?: string; purpose?: "api" | "backup" },
 ): void {
   const path = cloudRuntimeLeasePath(cloudRoot);
   mkdirSync(join(cloudRoot, "ops"), { recursive: true });
@@ -77,6 +77,7 @@ function writeLease(
       leaseId: lease.leaseId,
       pid: lease.pid,
       startedAt: lease.startedAt ?? new Date().toISOString(),
+      purpose: lease.purpose ?? "api",
     })}\n`,
   );
 }
@@ -134,7 +135,7 @@ describe("cloud runtime recovery safety closure", () => {
 
   it("C: recovers a stale runtime marker after the process is proven dead", async () => {
     const cloudRoot = await provisionSimpleCloud();
-    writeLease(cloudRoot, { leaseId: "stalelease12", pid: await deadPid() });
+    writeLease(cloudRoot, { leaseId: "stalelease12", pid: await deadPid(), purpose: "api" });
     const backup = await createCloudBackup({ cloudRoot, backupRoot: trackTempDir() });
     expect(backup.manifest.planeCount).toBe(1);
     const started = await startCloudApi(cloudRoot);
@@ -148,6 +149,90 @@ describe("cloud runtime recovery safety closure", () => {
     } finally {
       await started.close();
     }
+  });
+
+  it("A2: refuses API start while backup holds the exclusive lease", async () => {
+    const cloudRoot = await provisionSimpleCloud();
+    const backup = await createCloudBackup({
+      cloudRoot,
+      backupRoot: trackTempDir(),
+      onAfterControlSnapshot: async () => {
+        await expect(startCloudApi(cloudRoot)).rejects.toMatchObject({
+          code: "cloud_runtime_active",
+        });
+        const held = JSON.parse(readFileSync(cloudRuntimeLeasePath(cloudRoot), "utf8")) as {
+          purpose: string;
+        };
+        expect(held.purpose).toBe("backup");
+      },
+    });
+    expect(backup.manifest.planeCount).toBe(1);
+    expect(existsSync(cloudRuntimeLeasePath(cloudRoot))).toBe(false);
+  });
+
+  it("A3: refuses a second backup while a backup lease is held", async () => {
+    const cloudRoot = await provisionSimpleCloud();
+    await createCloudBackup({
+      cloudRoot,
+      backupRoot: trackTempDir(),
+      onAfterControlSnapshot: async () => {
+        await expect(
+          createCloudBackup({ cloudRoot, backupRoot: trackTempDir() }),
+        ).rejects.toMatchObject({ code: "cloud_runtime_active" });
+      },
+    });
+    expect(existsSync(cloudRuntimeLeasePath(cloudRoot))).toBe(false);
+  });
+
+  it("A4: releases the backup lease after a handled failure", async () => {
+    const cloudRoot = await provisionSimpleCloud();
+    await expect(
+      createCloudBackup({
+        cloudRoot,
+        backupRoot: trackTempDir(),
+        onAfterControlSnapshot: () => {
+          throw new Error("injected backup failure");
+        },
+      }),
+    ).rejects.toThrow(/injected backup failure/);
+    expect(existsSync(cloudRuntimeLeasePath(cloudRoot))).toBe(false);
+  });
+
+  it("A5: removes the backup lease after a successful backup", async () => {
+    const cloudRoot = await provisionSimpleCloud();
+    await createCloudBackup({ cloudRoot, backupRoot: trackTempDir() });
+    expect(existsSync(cloudRuntimeLeasePath(cloudRoot))).toBe(false);
+  });
+
+  it("A6: recovers a stale backup lease from a proven-dead process", async () => {
+    const cloudRoot = await provisionSimpleCloud();
+    writeLease(cloudRoot, {
+      leaseId: "stalebackup12",
+      pid: await deadPid(),
+      purpose: "backup",
+    });
+    const recovered = await createCloudBackup({ cloudRoot, backupRoot: trackTempDir() });
+    expect(recovered.manifest.planeCount).toBe(1);
+    expect(existsSync(cloudRuntimeLeasePath(cloudRoot))).toBe(false);
+    writeLease(cloudRoot, {
+      leaseId: "stalebackup13",
+      pid: await deadPid(),
+      purpose: "backup",
+    });
+    const started = await startCloudApi(cloudRoot);
+    try {
+      const lease = JSON.parse(readFileSync(cloudRuntimeLeasePath(cloudRoot), "utf8")) as {
+        purpose: string;
+        pid: number;
+      };
+      expect(lease.purpose).toBe("api");
+      expect(lease.pid).toBe(process.pid);
+    } finally {
+      await started.close();
+    }
+    const backup = await createCloudBackup({ cloudRoot, backupRoot: trackTempDir() });
+    expect(backup.manifest.planeCount).toBe(1);
+    expect(existsSync(cloudRuntimeLeasePath(cloudRoot))).toBe(false);
   });
 
   it("D: refuses a second API process for the same Cloud root", async () => {
@@ -469,5 +554,95 @@ describe("cloud runtime recovery safety closure", () => {
         cloud: true,
       }),
     ).toBe(false);
+  });
+
+  it("production Cloud rejects malformed or non-HTTPS trusted origins", () => {
+    const fixture = createCloudFixture();
+    expect(() =>
+      createApp({
+        cloud: { controlPlane: fixture.controlPlane, registry: fixture.registry },
+        env: {
+          NODE_ENV: "production",
+          WORKOS_PUBLIC_ORIGIN: PRODUCTION_ORIGIN,
+          WORKOS_TRUSTED_ORIGINS: "http://extra.example",
+        },
+      }),
+    ).toThrow(ProductionOriginConfigError);
+    expect(() =>
+      createApp({
+        cloud: { controlPlane: fixture.controlPlane, registry: fixture.registry },
+        env: {
+          NODE_ENV: "production",
+          WORKOS_PUBLIC_ORIGIN: PRODUCTION_ORIGIN,
+          WORKOS_TRUSTED_ORIGINS: "https://extra.example/path",
+        },
+      }),
+    ).toThrow(ProductionOriginConfigError);
+    fixture.close();
+  });
+});
+
+describe("restore target isolation", () => {
+  async function backupSimpleCloud() {
+    const cloudRoot = await provisionSimpleCloud();
+    const backup = await createCloudBackup({
+      cloudRoot,
+      backupRoot: trackTempDir(),
+    });
+    return { cloudRoot, backupDir: backup.backupDir };
+  }
+
+  function expectIsolated(
+    backupDir: string,
+    targetRoot: string,
+    sourceCloudRoot: string,
+  ): void {
+    try {
+      restoreCloudBackup({ backupDir, targetRoot, sourceCloudRoot });
+      throw new Error("expected restore isolation failure");
+    } catch (error) {
+      expect((error as CloudRestoreError).code).toBe("restore_target_not_isolated");
+    }
+  }
+
+  it("B1: refuses target equal to the source Cloud root", async () => {
+    const { cloudRoot, backupDir } = await backupSimpleCloud();
+    expectIsolated(backupDir, cloudRoot, cloudRoot);
+  });
+
+  it("B2: refuses a child of the source Cloud root", async () => {
+    const { cloudRoot, backupDir } = await backupSimpleCloud();
+    expectIsolated(backupDir, join(cloudRoot, "nested-restore"), cloudRoot);
+  });
+
+  it("B3: refuses a parent of the source Cloud root", async () => {
+    const { cloudRoot, backupDir } = await backupSimpleCloud();
+    expectIsolated(backupDir, dirname(cloudRoot), cloudRoot);
+  });
+
+  it("B4: refuses target equal to the backup directory", async () => {
+    const { cloudRoot, backupDir } = await backupSimpleCloud();
+    expectIsolated(backupDir, backupDir, cloudRoot);
+  });
+
+  it("B5: refuses a child of the backup directory", async () => {
+    const { cloudRoot, backupDir } = await backupSimpleCloud();
+    expectIsolated(backupDir, join(backupDir, "nested-restore"), cloudRoot);
+  });
+
+  it("B6: refuses a parent that contains the backup directory", async () => {
+    const { cloudRoot, backupDir } = await backupSimpleCloud();
+    expectIsolated(backupDir, dirname(backupDir), cloudRoot);
+  });
+
+  it("B7: restores into an independent sibling temp root", async () => {
+    const { cloudRoot, backupDir } = await backupSimpleCloud();
+    const restored = restoreCloudBackup({
+      backupDir,
+      targetRoot: trackTempDir(),
+      sourceCloudRoot: cloudRoot,
+    });
+    expect(restored.organizationCount).toBe(1);
+    expect(restored.planeCount).toBe(1);
   });
 });

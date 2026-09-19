@@ -74,11 +74,7 @@ export function resolveTrustedOrigins(env: NodeJS.ProcessEnv): string[] {
   return publicOrigin ? [publicOrigin, ...extras] : extras;
 }
 
-export function assertProductionCloudPublicOrigin(env: NodeJS.ProcessEnv): string {
-  const raw = env.WORKOS_PUBLIC_ORIGIN?.trim();
-  if (!raw) {
-    throw new ProductionOriginConfigError("production_origin_missing");
-  }
+function assertProductionHttpsOrigin(raw: string): string {
   let origin: string;
   try {
     origin = parseNormalizedOrigin(raw);
@@ -90,6 +86,22 @@ export function assertProductionCloudPublicOrigin(env: NodeJS.ProcessEnv): strin
   }
   if (new URL(origin).protocol !== "https:") {
     throw new ProductionOriginConfigError("production_origin_not_https");
+  }
+  return origin;
+}
+
+export function assertProductionCloudPublicOrigin(env: NodeJS.ProcessEnv): string {
+  const raw = env.WORKOS_PUBLIC_ORIGIN?.trim();
+  if (!raw) {
+    throw new ProductionOriginConfigError("production_origin_missing");
+  }
+  const origin = assertProductionHttpsOrigin(raw);
+  for (const extra of (env.WORKOS_TRUSTED_ORIGINS ?? "").split(",")) {
+    const trimmed = extra.trim();
+    if (!trimmed) {
+      continue;
+    }
+    assertProductionHttpsOrigin(trimmed);
   }
   return origin;
 }

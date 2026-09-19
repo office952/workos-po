@@ -13,8 +13,10 @@ import Database from "better-sqlite3";
 import { API_CONTRACT_ID, HEALTH_SERVICE_NAME } from "../ops/contract.js";
 import { opsLog } from "../ops/log.js";
 import {
-  assertCloudRuntimeQuiesced,
+  acquireCloudRuntimeLease,
   CloudRuntimeLeaseError,
+  releaseCloudRuntimeLease,
+  type CloudRuntimeLease,
 } from "../ops/runtimeLease.js";
 import { listControlPlaneMigrationFiles } from "../persistence/controlPlaneSqlite.js";
 import {
@@ -205,7 +207,7 @@ export async function createCloudBackup(input: {
   backupRoot?: string;
   env?: NodeJS.ProcessEnv;
   createdAt?: string;
-  onAfterControlSnapshot?: () => void;
+  onAfterControlSnapshot?: () => void | Promise<void>;
 }): Promise<CloudBackupResult> {
   const env = input.env ?? process.env;
   let cloudRoot: string;
@@ -217,8 +219,9 @@ export async function createCloudBackup(input: {
   const backupRoot = resolveBackupRoot(env, input.backupRoot);
   assertOutsideCloudRoot(cloudRoot, backupRoot);
 
+  let lease: CloudRuntimeLease;
   try {
-    assertCloudRuntimeQuiesced(cloudRoot);
+    lease = acquireCloudRuntimeLease(cloudRoot, "backup");
   } catch (error) {
     if (error instanceof CloudRuntimeLeaseError) {
       fail("cloud_runtime_active");
@@ -226,6 +229,21 @@ export async function createCloudBackup(input: {
     throw error;
   }
 
+  try {
+    return await runQuiescedBackup(cloudRoot, backupRoot, input);
+  } finally {
+    releaseCloudRuntimeLease(cloudRoot, lease);
+  }
+}
+
+async function runQuiescedBackup(
+  cloudRoot: string,
+  backupRoot: string,
+  input: {
+    createdAt?: string;
+    onAfterControlSnapshot?: () => void | Promise<void>;
+  },
+): Promise<CloudBackupResult> {
   const controlSource = join(cloudRoot, "control", "control-plane.sqlite");
   if (!existsSync(controlSource)) {
     fail("control_plane_missing");
@@ -238,7 +256,7 @@ export async function createCloudBackup(input: {
 
   const controlDest = join(backupDir, "control", "control-plane.sqlite");
   await snapshotSqlite(controlSource, controlDest);
-  input.onAfterControlSnapshot?.();
+  await input.onAfterControlSnapshot?.();
 
   const inventory = readControlInventory(controlDest);
   const expectedControlMigrations = listControlPlaneMigrationFiles();

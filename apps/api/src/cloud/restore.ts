@@ -407,11 +407,9 @@ export function restoreCloudBackup(input: {
     fail("restore_target_invalid");
   }
   if (input.sourceCloudRoot) {
-    const source = resolve(input.sourceCloudRoot);
-    if (targetRoot === source) {
-      fail("restore_target_not_isolated");
-    }
+    assertRestoreIsolation(input.sourceCloudRoot, targetRoot);
   }
+  assertRestoreIsolation(backupDir, targetRoot);
   if (isNonEmptyDir(targetRoot)) {
     fail("restore_target_not_empty");
   }
@@ -445,10 +443,23 @@ export function restoreCloudBackup(input: {
   };
 }
 
+export function resolvedRootsOverlap(left: string, right: string): boolean {
+  const first = resolve(left);
+  const second = resolve(right);
+  if (first === second) {
+    return true;
+  }
+  return first.startsWith(second + sep) || second.startsWith(first + sep);
+}
+
+function assertRestoreIsolation(otherRoot: string, targetRoot: string): void {
+  if (resolvedRootsOverlap(otherRoot, targetRoot)) {
+    fail("restore_target_not_isolated");
+  }
+}
+
 export function assertRestoreTargetIsolated(sourceRoot: string, targetRoot: string): void {
-  const source = resolve(sourceRoot);
-  const target = resolve(targetRoot);
-  if (target === source || target.startsWith(source + sep) || source.startsWith(target + sep)) {
+  if (resolvedRootsOverlap(sourceRoot, targetRoot)) {
     throw new CloudRestoreError("restore_target_not_isolated");
   }
 }
