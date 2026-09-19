@@ -176,4 +176,4 @@ DEPLOYMENT_PROFILES = LOCAL | CLOUD
 
 There must not be separate local product code, separate Cloud product code, or client-specific forks. Frontend, API, domain, business logic, migrations, and Product Truth stay shared. Deployment and storage configuration may differ.
 
-`WORKOS_LOCAL_RUNTIME_V1` is complete as isolated synthetic proof. `WORKOS_LOCAL_INSTALLATION_V1` is packaged and proven in isolation; Owner acceptance and main integration remain open. See `docs/LOCAL_RUNTIME.md` and `docs/LOCAL_INSTALLATION.md`. Do not install over a real HUB MEDIA data root.
+`WORKOS_LOCAL_RUNTIME_V1` and `WORKOS_LOCAL_INSTALLATION_V1` are complete as isolated synthetic proof. Owner acceptance of a real-machine Local install remains open. See `docs/LOCAL_RUNTIME.md` and `docs/LOCAL_INSTALLATION.md`. Do not install over a real HUB MEDIA data root.
