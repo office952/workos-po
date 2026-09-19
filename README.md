@@ -53,7 +53,15 @@ pnpm engine:lint
 pnpm engine:build
 ```
 
-`pnpm dev:cloud` provisions a disposable synthetic identity under `.tmp/workos-dev-cloud` (gitignored) and binds the API to `127.0.0.1`. Credentials are stored only in that ignored identity file and are not printed. It never uses a real HUB MEDIA Cloud root or production credentials.
+`pnpm dev:cloud` provisions a disposable synthetic identity under `.tmp/workos-dev-cloud` (gitignored) and binds the API to `127.0.0.1`. It never uses a real HUB MEDIA Cloud root or production credentials.
+
+Development login (isolated synthetic Cloud only):
+
+```text
+Email:         dev@workos.local
+Password:      workos1234
+Organization:  WorkOS Dev
+```
 
 Isolated engine proof may use `PORT=8788` plus `WORKOS_CLOUD_ROOT` on a disposable root, and `WORKOS_API_PROXY_TARGET=http://127.0.0.1:8788` for a non-default frontend port. The default frontend proxy remains 8787.
 
