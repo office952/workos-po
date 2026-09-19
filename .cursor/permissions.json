@@ -1,0 +1,18 @@
+{
+  // Project Auto-review steering only. This is not a security boundary and
+  // does not replace the deterministic beforeShellExecution hook.
+  // terminalAllowlist and mcpAllowlist are intentionally omitted so this file
+  // does not override IDE allowlists.
+  "autoRun": {
+    "allow_instructions": [
+      "Read-only Git inspection is routine: status, diff, log, show, rev-parse, merge-base, and fetch.",
+      "Deterministic repository verification may run when the task authorizes testing: lint, typecheck, tests, and build, including pnpm verify:all and the engine equivalents."
+    ],
+    "block_instructions": [
+      "Destructive Git should be reviewed: force push, reset --hard, git clean -f, branch -D, and any direct push to main.",
+      "Cloud administration, restore, provisioning, adopt --execute, and commands that set WORKOS_CLOUD_ROOT to a non-synthetic path should be reviewed.",
+      "Port termination such as pnpm ports:reclaim should be reviewed.",
+      "Commands that print secrets, .env files, tokens, cookies, session stores, credential files, or private Cursor user config should be reviewed."
+    ]
+  }
+}

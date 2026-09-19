@@ -1,6 +1,6 @@
 # Architecture
 
-STATUS: FOUNDATION ACCEPTED / REFERENCE SLICE ACCEPTED / GOLDEN SPINE ACCEPTED / IMPLEMENTATION ACCEPTED / ENGINE_CONSOLIDATION_V1 = COMPLETE / CLOUD_RUNTIME_AND_RECOVERY_V1 = SYNTHETIC_ONLY / PRIMARY_PRODUCT_DIRECTION = CLOUD_WEB / LOCAL_PRODUCT_RUNTIME = DEFERRED_NOT_V1_REQUIREMENT
+STATUS: FOUNDATION ACCEPTED / REFERENCE SLICE ACCEPTED / GOLDEN SPINE ACCEPTED / IMPLEMENTATION ACCEPTED / ENGINE_CONSOLIDATION_V1 = COMPLETE / CLOUD_RUNTIME_AND_RECOVERY_V1 = SYNTHETIC_ONLY / PRODUCT_MODEL = SAAS_ONLY / PRIMARY_PRODUCT_DIRECTION = SAAS / ALTERNATIVE_PRODUCT_DELIVERY = NO
 
 ## Boundary
 
@@ -57,9 +57,9 @@ Same-origin HTTPS reverse proxy → built frontend → `/api` → single Node AP
 
 ## Product runtime
 
-Primary product runtime is Cloud Web: browser access, email/password Cloud session, organization tenancy, same-origin production topology. See `docs/PRODUCTION_RUNTIME.md`.
+Primary product direction is SaaS. Primary product runtime is Cloud: browser access, email/password Cloud session, organization tenancy, same-origin production topology. See `docs/PRODUCTION_RUNTIME.md`.
 
-Normal product startup requires `WORKOS_CLOUD_ROOT` and fails closed without it. Explicit single-plane construction remains a test/internal helper, not a deployment mode. Local/Windows product runtime is deferred and is not a V1 requirement. Vite remains development only.
+Normal product startup requires `WORKOS_CLOUD_ROOT` and fails closed without it. Explicit single-plane construction remains a test/internal helper, not a deployment mode. Local loopback runtimes and synthetic Cloud roots are engineering infrastructure, not a customer product variant. Vite remains development only.
 
 ## Tooling advisory
 

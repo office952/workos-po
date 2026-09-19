@@ -21,6 +21,27 @@ HISTORICAL_ENGINE_SOURCE = office952/workos-final
 HISTORICAL_ENGINE_HEAD = 084ddebb02950d058554eec01f3dc347790f4ca1
 ```
 
+## Product identity
+
+WorkOS is a SaaS-only product. Local loopback runtimes, synthetic Cloud roots, test fixtures, and developer worktrees are engineering infrastructure, not product variants.
+
+```text
+PRODUCT_MODEL = SAAS_ONLY
+PRIMARY_PRODUCT_DIRECTION = SAAS
+PRIMARY_PRESENTATION = UI20
+PRIMARY_ACCESS = BROWSER
+PRIMARY_AUTH = EMAIL_PASSWORD
+PRIMARY_SESSION = SERVER_SIDE_CLOUD_SESSION
+PRIMARY_TENANCY = ORGANIZATION
+PRIMARY_RUNTIME = CLOUD
+PRIMARY_PRODUCTION_TOPOLOGY = SAME_ORIGIN_HTTPS
+ONE_WORKOS_CODEBASE = YES
+ONE_BUSINESS_ENGINE = YES
+ONE_PRODUCT_TRUTH = YES
+NO_CLIENT_CODE_FORK = YES
+ALTERNATIVE_PRODUCT_DELIVERY = NO
+```
+
 Future WorkOS development happens in `office952/workos-po` unless a later explicit Owner decision changes repository strategy.
 
 Do not import or synchronize future business changes from `workos-final` by default.
