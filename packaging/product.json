@@ -1,0 +1,7 @@
+{
+  "productName": "WorkOS",
+  "packageId": "workos-local",
+  "version": "1.0.0-local.1",
+  "defaultPort": 8790,
+  "bindHost": "127.0.0.1"
+}

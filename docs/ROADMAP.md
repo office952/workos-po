@@ -26,11 +26,12 @@ WORKOS_LOCAL_RUNTIME_V1 = COMPLETE_ISOLATED_SYNTHETIC
 LOCAL_RUNTIME_LOOPBACK_ONLY_V1 = COMPLETE
 LOCAL_RUNTIME_OWNER_ACCEPTED = NO
 
-WORKOS_LOCAL_INSTALLATION_V1 = NOT_STARTED
-WORKOS_LOCAL_RUNTIME_AND_INSTALLATION_V1 = IN_PROGRESS
+WORKOS_LOCAL_INSTALLATION_V1 = COMPLETE_ISOLATED_SYNTHETIC
+WORKOS_LOCAL_RUNTIME_AND_INSTALLATION_V1 = COMPLETE_ISOLATED_SYNTHETIC
+LOCAL_INSTALLATION_OWNER_ACCEPTED = NO
 
-NEXT_PROGRAM_PRIORITY = WORKOS_LOCAL_INSTALLATION_V1
-NEXT_PROGRAM_STATUS = NOT_STARTED
+NEXT_PROGRAM_PRIORITY = INDEPENDENT_REVIEW_BEFORE_REAL_INSTALLATION
+NEXT_PROGRAM_STATUS = WAITING_REVIEW
 NEXT_PROGRAM_STARTED = NO
 
 REAL_CLOUD_WRITE = HOLD
@@ -44,7 +45,9 @@ REAL_HUB_MEDIA_LOCAL_ADOPTION = HOLD
 
 `WORKOS_PO_CLOUD_RUNTIME_AND_RECOVERY_V1` is complete as isolated synthetic proof. It did not access or cut over the real HUB MEDIA Cloud root. See `docs/PRODUCTION_RUNTIME.md`.
 
-`WORKOS_LOCAL_RUNTIME_V1` is complete as isolated synthetic proof. Loopback-only bind is required because Local V1 uses implicit Owner authority. Installation, launcher, shortcut, packaged Node, Windows service, and MSI are not implemented. See `docs/LOCAL_RUNTIME.md`. Owner acceptance and real HUB MEDIA local adoption remain HOLD.
+`WORKOS_LOCAL_RUNTIME_V1` is complete as isolated synthetic proof. Loopback-only bind is required because Local V1 uses implicit Owner authority. See `docs/LOCAL_RUNTIME.md`.
+
+`WORKOS_LOCAL_INSTALLATION_V1` is complete as isolated synthetic packaging proof. It packages the same Local runtime for a per-user Windows install (packaged Node, compiled API, launcher, Start Menu shortcut). It did not install on a real Owner machine and did not touch HUB MEDIA data. See `docs/LOCAL_INSTALLATION.md`. Owner acceptance and real HUB MEDIA local adoption remain HOLD.
 
 ```text
 ONE WORKOS CODEBASE
@@ -56,13 +59,13 @@ CLIENT_SPECIFIC_FORKS = NO
 
 Shared: frontend, API, domain, business logic, migrations, Product Truth. Deployment and storage configuration may differ.
 
-The next program, `WORKOS_LOCAL_INSTALLATION_V1`, is the installer/launcher wave. Its customer experience is:
+The Local installation customer experience is:
 
 ```text
 INSTALL → INITIALIZE → START WORKOS → BROWSER OPENS → OPERATE
 ```
 
-Normal daily use must not require Cursor, GitHub, a terminal, pnpm, source edits, or direct SQLite edits. Do not implement that installer in this closure.
+Normal daily use of an installed package must not require Cursor, GitHub, a terminal, pnpm, source edits, or direct SQLite edits. Do not install over real HUB MEDIA data. The next step is independent review, not main merge and not a real-machine install.
 
 ## Authority after engine consolidation
 

@@ -12,8 +12,8 @@ REAL_HUB_MEDIA_LOCAL_ADOPTION = HOLD
 
 WORKOS_LOCAL_RUNTIME_V1 = COMPLETE_ISOLATED_SYNTHETIC
 LOCAL_RUNTIME_LOOPBACK_ONLY_V1 = COMPLETE
-WORKOS_LOCAL_INSTALLATION_V1 = NOT_STARTED
-WORKOS_LOCAL_RUNTIME_AND_INSTALLATION_V1 = IN_PROGRESS
+WORKOS_LOCAL_INSTALLATION_V1 = COMPLETE_ISOLATED_SYNTHETIC
+WORKOS_LOCAL_RUNTIME_AND_INSTALLATION_V1 = COMPLETE_ISOLATED_SYNTHETIC
 LOCAL_RUNTIME_OWNER_ACCEPTED = NO
 ```
 
@@ -204,21 +204,20 @@ Local proof and Local product mode must not open a real HUB MEDIA Cloud root. Is
 
 Do not use Vite as the Local product server.
 
-## Installation remains open
+## Installation
 
-`WORKOS_LOCAL_INSTALLATION_V1` is not started by this runtime closure.
+`WORKOS_LOCAL_INSTALLATION_V1` packages this runtime for daily Windows use. See `docs/LOCAL_INSTALLATION.md`.
 
 ```text
-TERMINAL_REQUIRED_FOR_DAILY_USE = YES_CURRENTLY
-PACKAGED_NODE_RUNTIME = NOT_IMPLEMENTED
-START_WORKOS_SHORTCUT = NOT_IMPLEMENTED
-WINDOWS_SERVICE = NOT_IMPLEMENTED
-INSTALLER = NOT_IMPLEMENTED
-MSI = NOT_IMPLEMENTED
+PACKAGED_NODE_RUNTIME = YES
+START_WORKOS_SHORTCUT = YES
+WINDOWS_SERVICE = DEFERRED
+INSTALLER = NODE_PACKAGE_PLUS_VBS_SHORTCUTS
+MSI = NO
 ELECTRON_REQUIRED = NO
 ```
 
-Recommended later packaging direction: packaged Node runtime + built frontend + API + SQLite + local launcher + Start WorkOS shortcut. Daily-use target: Start WorkOS opens the browser; no Cursor, GitHub, pnpm, terminal, source edits, or direct SQLite.
+Developer `pnpm local:start` still requires a source checkout. The installed product does not.
 
 ## Packaging advisory
 
