@@ -1,31 +1,36 @@
 # WorkOS PO
 
-WorkOS PO is the product operating frontend.
+WorkOS PO is the canonical WorkOS product repository.
 
-This initial repository is a preservation seed of the accepted UI20 frontend. It is not a redesign and not a reconstruction of Pass A.
+It contains the preserved accepted frontend, the imported API, domain, persistence implementation, and business engine.
 
-## Provenance
+This is not a redesign and not a reconstruction of Pass A.
+
+## Authority
 
 ```text
-PRESENTATION_BASE_REPOSITORY = office952/workos-ui20
-PRESENTATION_BASE_HEAD = 9446b6d7b2b4e6b7c8ff829de97c1a583c712366
-
-BUSINESS_AUTHORITY_REPOSITORY = office952/workos-final
-BUSINESS_AUTHORITY_HEAD_AT_SEED = 084ddebb02950d058554eec01f3dc347790f4ca1
-
-TARGET_REPOSITORY = office952/workos-po
+CANONICAL_PRODUCT_REPOSITORY = office952/workos-po
+PRESENTATION_AUTHORITY = workos-po root frontend
+BUSINESS_ENGINE_AUTHORITY = workos-po/apps/api + workos-po/packages/domain
+PERSISTENCE_IMPLEMENTATION_AUTHORITY = workos-po/apps/api
+SOURCE_CODE = workos-po
+REAL_BUSINESS_DATA = external persistent WorkOS data root / Operational Planes
 ```
 
-- UI20 is now the presentation baseline of WorkOS PO.
-- WorkOS Final remains business / API / domain / database authority during this wave.
-- Pass A reconstruction is not the frontend source.
-- No later UI20 commit was silently included.
+Historical provenance, not continuing development pins:
 
-See `docs/PROVENANCE.md`.
+```text
+HISTORICAL_PRESENTATION_SOURCE = office952/workos-ui20
+HISTORICAL_PRESENTATION_HEAD = 9446b6d7b2b4e6b7c8ff829de97c1a583c712366
+HISTORICAL_ENGINE_SOURCE = office952/workos-final
+HISTORICAL_ENGINE_HEAD = 084ddebb02950d058554eec01f3dc347790f4ca1
+```
+
+See `docs/PROVENANCE.md` and `docs/SOURCE_OF_TRUTH.md`.
 
 ## Local runtime
 
-This wave keeps the proven frontend-to-Final connection:
+Default local connection:
 
 ```text
 frontend 127.0.0.1:5173
@@ -51,27 +56,33 @@ Isolated engine proof may use `PORT=8788` plus a temporary SQLite path, and `WOR
 
 Do not run `ports:reclaim` while an Owner reference runtime is already using 5173 / 8787.
 
+Do not point local proof at a real Cloud root or real business database without an explicit Owner GO.
+
 ## This repository owns
 
-- UI
-- UX
-- layout
-- presentation
-- responsive behavior
-- accessibility
-- interaction states
-- presentation models / adapters
+- UI, UX, layout, presentation, adapters
+- API
+- domain
+- persistence implementation
+- business engine
 
-## This repository does not own (this wave)
+The root frontend still must not hardcode Product Truth, pricing, eligibility, or execution.
 
-- business formulas
-- pricing truth
-- ProductDefinition
-- Product Truth
-- persistence
-- database
-- quote truth
-- order truth
-- execution truth
-- eligibility rules
-- readiness rules
+## This repository does not own
+
+- real customer / operational data
+- the external `WORKOS_CLOUD_ROOT`
+- later commits in `workos-ui20` or `workos-final`
+
+## Current program
+
+```text
+FRONTEND_PRESERVATION_SEED = COMPLETE
+ENGINE_CONSOLIDATION_V1 = COMPLETE_PENDING_MAIN_INTEGRATION
+NEXT_PROGRAM_PRIORITY = WORKOS_PO_CLOUD_RUNTIME_AND_RECOVERY_V1
+NEXT_PROGRAM_STATUS = NOT_STARTED
+REAL_CLOUD_WRITE = HOLD
+REAL_DB_WRITE = HOLD
+DEPLOY = HOLD
+CUTOVER = HOLD
+```

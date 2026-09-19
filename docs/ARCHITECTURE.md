@@ -1,12 +1,23 @@
 # Architecture
 
-STATUS: FOUNDATION ACCEPTED / REFERENCE SLICE ACCEPTED / GOLDEN SPINE ACCEPTED / IMPLEMENTATION ACCEPTED / INTEGRATED_ON_MAIN = NO
+STATUS: FOUNDATION ACCEPTED / REFERENCE SLICE ACCEPTED / GOLDEN SPINE ACCEPTED / IMPLEMENTATION ACCEPTED / ENGINE_CONSOLIDATION_V1 = COMPLETE_PENDING_MAIN_INTEGRATION
 
 ## Boundary
 
-`office952/workos-po` is the WorkOS PO product repository. The root package is the preserved UI20 frontend. `apps/api` and `packages/domain` are the imported Final engine at `084ddebb02950d058554eec01f3dc347790f4ca1`.
+`office952/workos-po` is the canonical WorkOS product repository.
 
-`office952/workos-final` remains the pinned business-engine source for this wave. Do not import Final `apps/web`.
+It contains the preserved accepted frontend, the imported API, domain, persistence implementation, and business engine.
+
+```text
+PRESENTATION_AUTHORITY = workos-po root frontend
+BUSINESS_ENGINE_AUTHORITY = workos-po/apps/api + workos-po/packages/domain
+PERSISTENCE_IMPLEMENTATION_AUTHORITY = workos-po/apps/api
+```
+
+`office952/workos-ui20` at `9446b6d` is historical presentation provenance.
+`office952/workos-final` at `084ddebb` is historical engine provenance.
+
+Do not import Final `apps/web`. Do not keep a second active business engine in `workos-final`.
 
 ## Data flow
 
@@ -20,6 +31,12 @@ API
 
 The UI consumes supported contracts. It does not independently implement ProductDefinition, Product Truth, formulas, pricing, EIC, Quote, Acceptance, Order, Production Release, Execution Plan, eligibility, or readiness.
 
+## Persistence and data
+
+Persistence implementation lives in `apps/api`.
+
+Real business data lives outside Git, in the external persistent WorkOS data root / Operational Planes. `WORKOS_CLOUD_ROOT` remains external. Engine consolidation did not cut over the real Cloud root.
+
 ## Chosen stack
 
 ```text
@@ -32,7 +49,13 @@ NO GraphQL
 NO generated domain models
 ```
 
-Local development uses a same-origin Vite proxy to `/api` → `127.0.0.1:8787`.
+Local development uses a same-origin Vite proxy to `/api` → `127.0.0.1:8787`. Isolated proof may override the proxy target without changing presentation.
+
+## Tooling advisory
+
+```text
+ENGINE_LINT_COVERAGE = REQUIRED_BEFORE_OR_WITH_FIRST_WORKOS_PO_ENGINE_MODIFICATION
+```
 
 ## Presentation areas
 
