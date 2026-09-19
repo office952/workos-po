@@ -1,5 +1,7 @@
 # Production runtime contract
 
+Local product mode is a separate deployment profile. See `docs/LOCAL_RUNTIME.md`. Do not point Local proof at `WORKOS_CLOUD_ROOT`.
+
 Living operator-safe contract for WorkOS PO Cloud runtime. This is not a cutover authorization.
 
 ```text

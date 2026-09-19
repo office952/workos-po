@@ -17,6 +17,8 @@
     "engine:lint": "eslint -c eslint.engine.config.js apps/api/src apps/api/tests packages/domain/src",
     "engine:test": "pnpm --filter @workos-final/domain test && pnpm --filter @workos-final/api test",
     "engine:build": "pnpm --filter @workos-final/domain build && pnpm --filter @workos-final/api build",
+    "local:start": "node scripts/local-start.mjs",
+    "local:backup": "node scripts/local-backup.mjs",
     "verify:all": "pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm engine:lint && pnpm engine:typecheck && pnpm engine:test && pnpm engine:build"
   },
   "dependencies": {

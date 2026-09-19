@@ -1,6 +1,6 @@
 # Architecture
 
-STATUS: FOUNDATION ACCEPTED / REFERENCE SLICE ACCEPTED / GOLDEN SPINE ACCEPTED / IMPLEMENTATION ACCEPTED / ENGINE_CONSOLIDATION_V1 = COMPLETE / CLOUD_RUNTIME_AND_RECOVERY_V1 = SYNTHETIC_ONLY
+STATUS: FOUNDATION ACCEPTED / REFERENCE SLICE ACCEPTED / GOLDEN SPINE ACCEPTED / IMPLEMENTATION ACCEPTED / ENGINE_CONSOLIDATION_V1 = COMPLETE / CLOUD_RUNTIME_AND_RECOVERY_V1 = SYNTHETIC_ONLY / LOCAL_RUNTIME_AND_INSTALLATION_V1 = ISOLATED_SYNTHETIC
 
 ## Boundary
 
@@ -54,6 +54,10 @@ Local development uses a same-origin Vite proxy to `/api` → `127.0.0.1:8787`. 
 ## Production runtime
 
 Same-origin HTTPS reverse proxy → built frontend → `/api` → single Node API → external `WORKOS_CLOUD_ROOT`. See `docs/PRODUCTION_RUNTIME.md`. Isolated synthetic backup/restore is authorized. Real HUB MEDIA cutover is not.
+
+## Local product runtime
+
+Same codebase, different deployment profile: built frontend + same-origin `/api` + one local SQLite root. See `docs/LOCAL_RUNTIME.md`. Vite is development only. Local and Cloud roots must not be combined.
 
 ## Tooling advisory
 

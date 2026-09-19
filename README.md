@@ -30,13 +30,29 @@ See `docs/PROVENANCE.md` and `docs/SOURCE_OF_TRUTH.md`.
 
 ## Local runtime
 
-Default local connection:
+Two distinct modes:
+
+```text
+DEV              = Vite 127.0.0.1:5173 → proxy /api → 127.0.0.1:8787
+LOCAL product    = built frontend + API on http://127.0.0.1:8790
+```
+
+Development (unchanged):
 
 ```text
 frontend 127.0.0.1:5173
 /api proxy → 127.0.0.1:8787
 contract workos-ui-contract-v1
 ```
+
+Local product mode (not Vite):
+
+```text
+pnpm build
+pnpm local:start
+```
+
+See `docs/LOCAL_RUNTIME.md`. Do not set `WORKOS_CLOUD_ROOT` for Local.
 
 ```text
 pnpm install --frozen-lockfile
@@ -82,8 +98,9 @@ FRONTEND_PRESERVATION_SEED = COMPLETE
 ENGINE_CONSOLIDATION_V1 = COMPLETE
 WORKOS_PO_CLOUD_RUNTIME_AND_RECOVERY_V1 = COMPLETE
 BACKUP_MODE = QUIESCED_OFFLINE_V1
+WORKOS_LOCAL_RUNTIME_AND_INSTALLATION_V1 = COMPLETE_ISOLATED_SYNTHETIC
 NEXT_PROGRAM_PRIORITY = WORKOS_LOCAL_RUNTIME_AND_INSTALLATION_V1
-NEXT_PROGRAM_STATUS = NOT_STARTED
+NEXT_PROGRAM_STATUS = IMPLEMENTED_AWAITING_INDEPENDENT_REVIEW
 REAL_CLOUD_WRITE = HOLD
 REAL_DB_WRITE = HOLD
 DEPLOY = HOLD

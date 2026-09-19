@@ -5,6 +5,9 @@ import { createApp } from "./app.js";
 import { openProvisionedControlPlane } from "./cloud/provision.js";
 import { isCloudRootConfigured, resolveCloudRoot } from "./cloud/paths.js";
 import { createRuntimeRegistry } from "./cloud/runtimeRegistry.js";
+import { LocalRuntimeError } from "./local/errors.js";
+import { DEFAULT_LOCAL_PORT, isLocalRootConfigured } from "./local/paths.js";
+import { openLocalProductRuntime } from "./local/runtime.js";
 import { opsLog } from "./ops/log.js";
 import { assertProductionCloudPublicOrigin } from "./ops/origin.js";
 import {
@@ -40,7 +43,8 @@ export function startWorkosApi(
   env: NodeJS.ProcessEnv = process.env,
   options: { installSignals?: boolean } = {},
 ): Promise<StartedWorkosApi> {
-  const port = Number(env.PORT ?? 8787);
+  const localConfigured = isLocalRootConfigured(env);
+  const port = Number(env.PORT ?? (localConfigured ? DEFAULT_LOCAL_PORT : 8787));
   const hostname = env.HOST ?? "127.0.0.1";
   const installSignals = options.installSignals ?? true;
 
@@ -53,6 +57,56 @@ export function startWorkosApi(
       settled = true;
       reject(error);
     };
+
+    if (localConfigured && isCloudRootConfigured(env)) {
+      settleError(new LocalRuntimeError("local_cloud_conflict"));
+      return;
+    }
+
+    if (localConfigured) {
+      let opened;
+      try {
+        opened = openLocalProductRuntime(env);
+      } catch (error) {
+        settleError(error);
+        return;
+      }
+
+      const { productSystem, staticRoot, close: closeLocal } = opened;
+      const server = serve(
+        {
+          fetch: createApp({
+            productSystem,
+            env,
+            staticRoot,
+          }).fetch,
+          hostname,
+          port,
+        },
+        (info) => {
+          if (settled) {
+            closeLocal();
+            return;
+          }
+          settled = true;
+          if (installSignals) {
+            installProcessShutdown(server, closeLocal);
+          }
+          opsLog("info", "api_startup", { mode: "local", port: info.port });
+          console.log(`workos-final-api listening on http://${info.address}:${info.port}`);
+          resolveStart({
+            hostname: String(info.address),
+            port: info.port,
+            close: () => shutdownApi(server, closeLocal),
+          });
+        },
+      );
+      server.once("error", (error) => {
+        closeLocal();
+        settleError(error);
+      });
+      return;
+    }
 
     if (isCloudRootConfigured(env)) {
       const cloudRoot = resolveCloudRoot(env);
