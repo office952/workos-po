@@ -66,6 +66,10 @@ import {
   type CommercialPolicyDraftValues,
   type CommercialPolicyResolution,
   type CommercialPolicyVersionRecord,
+  type TechnicalSettingActor,
+  type TechnicalSettingDraftValue,
+  type TechnicalSettingResolution,
+  type TechnicalSettingVersionRecord,
   type OrderSnapshot,
   type QuoteAcceptanceDecision,
   type QuoteSnapshot,
@@ -166,6 +170,12 @@ import {
   type CommercialPolicySaveResult,
 } from "../commercial/policyStore.js";
 import {
+  listTechnicalSettingVersions,
+  persistTechnicalSettingSave,
+  resolveStoredTechnicalSettings,
+  type TechnicalSettingSaveResult,
+} from "../product/technicalSettingStore.js";
+import {
   getAcceptedProductionSnapshot,
   getAcceptedProductionSnapshotByOrder,
   insertAcceptedProductionSnapshot,
@@ -238,6 +248,12 @@ export type ProductSystemRuntime = {
   listCommercialPolicyVersions(): CommercialPolicyVersionRecord[];
   resolveCommercialPolicy(): CommercialPolicyResolution;
   saveCommercialPolicy(values: CommercialPolicyDraftValues): CommercialPolicySaveResult;
+  listTechnicalSettingVersions(): TechnicalSettingVersionRecord[];
+  resolveTechnicalSettings(): TechnicalSettingResolution;
+  saveTechnicalSettings(
+    drafts: readonly TechnicalSettingDraftValue[],
+    actor: TechnicalSettingActor,
+  ): TechnicalSettingSaveResult;
   persistQuoteSnapshot(snapshot: QuoteSnapshot): {
     created: boolean;
     snapshot: QuoteSnapshot;
@@ -603,6 +619,15 @@ export function createProductSystemRuntimeFromOpenDb(
     },
     saveCommercialPolicy(values) {
       return persistCommercialPolicySave(db, values);
+    },
+    listTechnicalSettingVersions() {
+      return listTechnicalSettingVersions(db);
+    },
+    resolveTechnicalSettings() {
+      return resolveStoredTechnicalSettings(db);
+    },
+    saveTechnicalSettings(drafts, actor) {
+      return persistTechnicalSettingSave(db, drafts, actor);
     },
     persistQuoteSnapshot(snapshot) {
       return insertQuoteSnapshot(db, snapshot);

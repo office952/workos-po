@@ -4,7 +4,9 @@ import {
   type ComponentEvaluation,
 } from "./componentEvaluation.js";
 import type { DisplayLabelCatalog } from "./displayMetadata.js";
+import type { ComponentTechnicalSettingDefinition } from "./technicalSettings.js";
 import type {
+  ComponentTypeId,
   DraftConfiguration,
   DraftValue,
   DraftValues,
@@ -216,6 +218,9 @@ function optionLabel(schema: FormSchema, fieldId: string, value: DraftValue): st
 
 export type CompileAggregateOptions = {
   readonly evaluations?: readonly ComponentEvaluation[];
+  readonly technicalSettingsForType?: (
+    typeId: ComponentTypeId,
+  ) => readonly ComponentTechnicalSettingDefinition[];
 };
 
 export function compileAggregate(
@@ -272,6 +277,7 @@ export function compileAggregate(
       selectedComponentIds: truth.selectedComponentIds,
       values: truth.values,
       measurements: truth.measurements,
+      technicalSettingsForType: options.technicalSettingsForType,
     });
 
   return {

@@ -11,15 +11,16 @@ NO_SILENT_BUSINESS_TRUTH = CANONICAL
 FUNCTIONAL_WORKOS_FIRST = YES
 OPTIONAL_BUSINESS_AUTOMATION_MUST_NOT_CREATE_DEAD_END = YES
 SAFE_MANUAL_FALLBACK = REQUIRED_WHERE_SEMANTICALLY_VALID
-IMPLEMENTATION_AUTHORIZED = CF1_COMMERCIAL_VERTICAL_V1_ONLY
-DB_IMPLEMENTATION_AUTHORIZED = COMMERCIAL_POLICY_VERSIONS_ONLY
+IMPLEMENTATION_AUTHORIZED = CF1_COMPLETE_AND_CF2_CF3_TECHNICAL_IN_REVIEW
+DB_IMPLEMENTATION_AUTHORIZED = COMMERCIAL_POLICY_VERSIONS_AND_TECHNICAL_SETTING_VERSIONS
 OWNER_ACCEPTED_IMPLEMENTATION = YES
 INTEGRATED_ON_MAIN = YES
 MERGE = COMPLETE
 MERGE_COMMIT = ec899ba294f37e614617256260727bd9eb61d6e3
 PR_8 = MERGED
-CF2 = NOT_STARTED
-CF3 = NOT_STARTED
+CF2_CF3_TECHNICAL_CONFIGURATION_V1 = IMPLEMENTED_IN_REVIEW
+CF2 = IMPLEMENTED_IN_REVIEW
+CF3 = IMPLEMENTED_IN_REVIEW
 CF4 = NOT_STARTED
 CF5 = NOT_STARTED
 NEXT_WAVE_AUTHORIZED = NO
@@ -711,7 +712,7 @@ UNBOUNDED_NO_CODE_ERP_BUILDER = NO
 
 Product variants should be data when their differences are business configuration. Do not invent a generic product-graph editor for every future product.
 
-Current Product System already distinguishes families, categories, templates, component types, display metadata, and technical settings. Display labels are already organization-persisted. Technical setting values and commercial policy values are still source-held. That split is the migration problem, not a second Product System.
+Current Product System already distinguishes families, categories, templates, component types, display metadata, and technical settings. Display labels are already organization-persisted. Commercial policy is organization-versioned (CF1). The three LIGHTING_FRONT_LED settings `ledPitchMm`, `ledModulePowerW`, and `psuReservePercent` are organization-versioned in review (CF2+CF3). Remaining technical / business values stay source-held until a later authorized wave. That split is the migration problem, not a second Product System.
 
 ## 9. New organization bootstrap
 

@@ -24,6 +24,7 @@ import type {
   TechnicalMeasurement,
 } from "../product/types.js";
 import { compileEic, costCompletenessLabel, type EicResult } from "../resources/eic.js";
+import type { ComponentTechnicalSettingDefinition } from "../product/technicalSettings.js";
 import type { CostEvidence } from "../resources/catalog.js";
 import {
   APPLY_SURFACE_FINISH_ID,
@@ -146,6 +147,9 @@ export type ProcessCompositionOptions = {
   readonly measurements?: readonly TechnicalMeasurement[];
   readonly evaluations?: readonly ComponentEvaluation[];
   readonly costEvidenceRows?: readonly CostEvidence[];
+  readonly technicalSettingsForType?: (
+    typeId: ComponentTypeId,
+  ) => readonly ComponentTechnicalSettingDefinition[];
 };
 
 export function compositionNodeId(
@@ -213,6 +217,7 @@ export function composeProductProcessesFromTruth(
   truth: ProductTruth,
   template: ProductTemplate,
   costEvidenceRows?: readonly CostEvidence[],
+  options?: Pick<ProcessCompositionOptions, "technicalSettingsForType">,
 ): ProductProcessComposition {
   if (truth.templateCode !== template.code) {
     throw new Error(`process_composition_template_mismatch:${truth.templateCode}`);
@@ -222,11 +227,13 @@ export function composeProductProcessesFromTruth(
     selectedComponentIds: truth.selectedComponentIds,
     values: truth.values,
     measurements: truth.measurements,
+    technicalSettingsForType: options?.technicalSettingsForType,
   });
   return composeProductProcesses(template, truth.values, {
     measurements: truth.measurements,
     evaluations,
     costEvidenceRows,
+    technicalSettingsForType: options?.technicalSettingsForType,
   });
 }
 
@@ -253,6 +260,7 @@ function resolveProcessCompositionInputs(
       selectedComponentIds: selectedIds,
       values: merged,
       measurements,
+      technicalSettingsForType: options.technicalSettingsForType,
     });
   return { merged, selectedIds, evaluations };
 }

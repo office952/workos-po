@@ -2,7 +2,9 @@ import {
   compileAcceptedProductEvaluation,
   compileDefinition,
   confirmReviewedDraft,
+  frozenTechnicalSettingsFromResolved,
   projectConfigurationPreview,
+  technicalSettingsLookupFromResolved,
   projectCommercialExperience,
   siteInstallationIsPrequoteReady,
   noteListActiveCostEvidence,
@@ -411,10 +413,21 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: "not_found" }, 404);
     }
     const body = await c.req.json().catch(() => null);
+    const technical = runtime.resolveTechnicalSettings();
+    if (!technical.ok) {
+      return c.json(
+        {
+          error: "technical_settings_unavailable",
+          reasons: [technical.reason],
+        },
+        409,
+      );
+    }
     const preview = projectConfigurationPreview(
       template,
       formSchema,
       readDraft(productCode, body),
+      technical.settings,
     );
     const previewPolicy = runtime.resolveCommercialPolicy();
     const installationProjection = readInstallationProjection(
@@ -550,7 +563,12 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       compiled.aggregate,
       compiled.composition,
       compiled.eic,
-      { costEvidenceRows: compiled.costEvidenceRows },
+      {
+        costEvidenceRows: compiled.costEvidenceRows,
+        technicalSettings: frozenTechnicalSettingsFromResolved(
+          compiled.resolvedTechnicalSettings,
+        ),
+      },
     );
     const stored = runtime.acceptProductionSnapshot(frozen);
     return c.json({
@@ -701,6 +719,9 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         },
         seller,
         costEvidenceRows: compiled.costEvidenceRows,
+        technicalSettings: frozenTechnicalSettingsFromResolved(
+          compiled.resolvedTechnicalSettings,
+        ),
       },
     );
     if (!frozen.ok) {
@@ -1147,6 +1168,18 @@ function compileAcceptedProduct(
     return { ok: false as const, status: 404 as const, body: { error: "not_found" } };
   }
 
+  const technical = runtime.resolveTechnicalSettings();
+  if (!technical.ok) {
+    return {
+      ok: false as const,
+      status: 409 as const,
+      body: {
+        error: "technical_settings_unavailable",
+        reasons: [technical.reason],
+      },
+    };
+  }
+
   const reviewed = readReviewedDefinition(body);
   const draft = readReviewedDraft(body);
   const confirmed = reviewed.definition
@@ -1163,6 +1196,8 @@ function compileAcceptedProduct(
           formSchema,
           { templateCode: productCode, values: draft.values },
           draft.reviewId,
+          undefined,
+          technical.settings,
         )
       : {
           ok: false as const,
@@ -1182,10 +1217,12 @@ function compileAcceptedProduct(
     formSchema,
     labels: runtime.labels(),
     costEvidenceRows: runtime.listActiveCostEvidence(),
+    technicalSettingsForType: technicalSettingsLookupFromResolved(technical.settings),
   });
   return {
     ok: true as const,
     ...compiled,
+    resolvedTechnicalSettings: technical.settings,
   };
 }
 

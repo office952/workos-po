@@ -22,6 +22,7 @@ import { assertCloudPassword, hashCloudPassword } from "./password.js";
 export const NEW_ORGANIZATION_MARKERS = [
   "OPERATIONAL_SKILL_FOUNDATION_V1_APPLIED",
   "RESOURCE_COST_EVIDENCE_V1_APPLIED",
+  "TECHNICAL_SETTING_STARTERS_V1_APPLIED",
 ] as const;
 
 const CLIENT_PROVISION_CODES = new Set([

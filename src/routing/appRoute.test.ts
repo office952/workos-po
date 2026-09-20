@@ -32,6 +32,7 @@ describe("parseAppRoute", () => {
     expect(parseAppRoute("/executie/exp-1")).toEqual({ name: "execution", planId: "exp-1" });
     expect(parseAppRoute("/admin/resources")).toEqual({ name: "admin-resources" });
     expect(parseAppRoute("/admin/commercial")).toEqual({ name: "admin-commercial" });
+    expect(parseAppRoute("/admin/technical")).toEqual({ name: "admin-technical" });
     expect(parseAppRoute("/foundation")).toEqual({ name: "foundation" });
     expect(parseAppRoute(quoteHref("PRD-LETTERS-FRONTLIT-PLEXI-AL06", "q1"))).toEqual({
       name: "quote",
@@ -78,6 +79,8 @@ describe("parseAppRoute", () => {
     expect(navItemCurrent("/executie/exp-1", "/lucrari")).toBe(false);
     expect(isAdministrationPath("/admin/resources")).toBe(true);
     expect(isAdministrationPath("/admin/commercial")).toBe(true);
+    expect(isAdministrationPath("/admin/technical")).toBe(true);
+    expect(navItemCurrent("/admin/technical", ADMINISTRATION_HREF)).toBe(true);
     expect(navItemCurrent("/admin/resources", ADMINISTRATION_HREF)).toBe(true);
     expect(navItemCurrent("/admin/commercial", ADMINISTRATION_HREF)).toBe(true);
     expect(navItemCurrent("/clienti", ADMINISTRATION_HREF)).toBe(false);

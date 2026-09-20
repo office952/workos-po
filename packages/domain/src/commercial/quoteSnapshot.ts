@@ -5,6 +5,7 @@ import {
   type FrozenEicReference,
   type FrozenProductionInput,
   type FrozenQuantity,
+  type FrozenTechnicalSetting,
 } from "../production/snapshot.js";
 import {
   freezeCustomerIdentity,
@@ -214,6 +215,7 @@ export function freezeQuoteSnapshot(
     customer?: FrozenCustomerIdentity;
     seller?: FrozenSellerIdentity;
     costEvidenceRows?: readonly CostEvidence[];
+    technicalSettings?: readonly FrozenTechnicalSetting[];
     installation?: QuoteInstallationFreezeInput;
   },
 ): QuoteSnapshotResult {
@@ -339,6 +341,7 @@ export function freezeQuoteSnapshot(
     eic: frozenProductEic,
     productionInput: freezeProductionInput(aggregate, composition, {
       costEvidenceRows: options?.costEvidenceRows,
+      technicalSettings: options?.technicalSettings,
     }),
     commercial: frozenProductCommercial,
     ...(v2Fields && v2Fields.ok

@@ -52,8 +52,9 @@ INTEGRATED_ON_MAIN = YES
 MERGE = COMPLETE
 MERGE_COMMIT = ec899ba294f37e614617256260727bd9eb61d6e3
 PR_8 = MERGED
-CF2 = NOT_STARTED
-CF3 = NOT_STARTED
+CF2_CF3_TECHNICAL_CONFIGURATION_V1 = IMPLEMENTED_IN_REVIEW
+CF2 = IMPLEMENTED_IN_REVIEW
+CF3 = IMPLEMENTED_IN_REVIEW
 CF4 = NOT_STARTED
 CF5 = NOT_STARTED
 NEXT_WAVE_AUTHORIZED = NO
@@ -214,9 +215,10 @@ UNBOUNDED_NO_CODE_ERP_BUILDER = NO
 NO_UNIVERSAL_SCOPE_PRECEDENCE = YES
 HISTORICAL_REWRITE = NO
 CUSTOMER_WITHOUT_CURSOR = REQUIRED
-IMPLEMENTATION_AUTHORIZED = CF1_COMMERCIAL_VERTICAL_V1_ONLY
-DB_IMPLEMENTATION_AUTHORIZED = COMMERCIAL_POLICY_VERSIONS_ONLY
+IMPLEMENTATION_AUTHORIZED = CF1_COMMERCIAL_VERTICAL_V1_COMPLETE
+DB_IMPLEMENTATION_AUTHORIZED = COMMERCIAL_POLICY_VERSIONS_AND_TECHNICAL_SETTING_VERSIONS
 OWNER_ACCEPTED_IMPLEMENTATION = YES
+CF2_CF3_TECHNICAL_CONFIGURATION_V1 = IMPLEMENTED_IN_REVIEW
 NEXT_WAVE_AUTHORIZED = NO
 ```
 
@@ -224,8 +226,8 @@ NEXT_WAVE_AUTHORIZED = NO
 | --- | --- | --- | --- |
 | CF0 | Configuration-First canon / documentation | COMPLETE | documentation wave |
 | CF1 | CF1_COMMERCIAL_VERTICAL_V1: organization commercial defaults, quote-specific commercial terms, explicit pricing method, one additive `commercial_policy_versions` table, narrow resolver, `/admin/commercial`, engine consumption, snapshot provenance, manual product pricing | COMPLETE | Owner-accepted and merged on main (`ec899ba`, PR #8) |
-| CF2 | Remaining resolver / audit / snapshot provenance beyond commercial policy | NOT_STARTED | later Owner GO |
-| CF3 | Basic administration for remaining technical / variant configuration | NOT_STARTED | later Owner GO |
+| CF2 | Narrow technical resolver / audit / snapshot provenance for three LIGHTING_FRONT_LED settings | IMPLEMENTED_IN_REVIEW | Owner GO issued; not Owner-accepted or merged |
+| CF3 | `/admin/technical` for the same three LIGHTING_FRONT_LED settings | IMPLEMENTED_IN_REVIEW | Owner GO issued; not Owner-accepted or merged |
 | CF4 | Safe configurable formula foundation + administration | NOT_STARTED | later Owner GO |
 | CF5 | Migrate remaining source-held technical settings / business values | NOT_STARTED | later Owner GO |
 
@@ -242,9 +244,11 @@ FROZEN_QUOTE_MUTATION = NO
 ACCEPTANCE_TARGETS_EXACT_SNAPSHOT = YES
 ```
 
-CF1 was previously recorded as `IMPLEMENTED_IN_REVIEW` while on the review branch. That marker was branch-local evidence, not Owner acceptance. Owner acceptance and merge are now complete. CF2 is the next listed roadmap wave and is not started or authorized.
+CF1 was previously recorded as `IMPLEMENTED_IN_REVIEW` while on the review branch. That marker was branch-local evidence, not Owner acceptance. Owner acceptance and merge are now complete.
 
-CF1 does not migrate technical settings, does not implement a formula engine, and does not authorize real Cloud/DB access.
+CF2+CF3 technical configuration V1 is `IMPLEMENTED_IN_REVIEW` on this branch: organization-local versions for `ledPitchMm`, `ledModulePowerW`, and `psuReservePercent` only. It is not Owner-accepted and not merged. CF4, broad CF5, and remaining technical values are not started.
+
+CF1 does not migrate technical settings. CF2+CF3 in review migrates only the three LIGHTING_FRONT_LED settings. Neither wave implements a formula engine or authorizes real Cloud/DB access.
 
 After CF5, resume:
 

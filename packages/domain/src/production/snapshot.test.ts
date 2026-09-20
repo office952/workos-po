@@ -233,4 +233,51 @@ describe("accepted production snapshot", () => {
     const { aggregate, composition } = confirmedSpine();
     expect(compileEic(aggregate, composition).total).toBe(382.5);
   });
+
+  it("adds optional provenance on new frozen settings without rewriting old payloads", () => {
+    const { snapshot, truth, aggregate, composition, eic } = freeze();
+    expect(snapshot.schemaVersion).toBe(1);
+    expect(snapshot.usedTechnicalSettings[0]?.definitionId).toBeUndefined();
+    expect(snapshot.usedRecipes[0]?.evidenceRowId).toBeUndefined();
+
+    const withProvenance = freezeAcceptedProductionSnapshot(
+      truth,
+      aggregate,
+      composition,
+      eic,
+      {
+        createdAt: "2026-09-20T00:00:00.000Z",
+        technicalSettings: snapshot.usedTechnicalSettings.map((item) => ({
+          ...item,
+          definitionId: `LIGHTING_FRONT_LED.${item.id}`,
+          source: "PLATFORM_STARTER",
+          version: 1,
+          scope: "ORGANIZATION",
+          effectiveFrom: "2026-09-20T00:00:00.000Z",
+        })),
+        costEvidenceRows: [
+          {
+            resourceId: "aluminium_return_profile",
+            amount: 3,
+            currency: "EUR",
+            perUnit: "m",
+            source: "PLATFORM_DEFAULT",
+            classification: "DEVELOPMENT_DEFAULT",
+            note: "synthetic",
+            evidenceRowId: "cev:synthetic-aluminium",
+          },
+        ],
+      },
+    );
+    expect(withProvenance.usedTechnicalSettings[0]).toMatchObject({
+      definitionId: expect.stringContaining("LIGHTING_FRONT_LED."),
+      source: "PLATFORM_STARTER",
+      version: 1,
+      scope: "ORGANIZATION",
+    });
+    expect(snapshot.usedTechnicalSettings.find((item) => item.id === LED_PITCH_SETTING_ID)?.value).toBe(
+      100,
+    );
+    expect(snapshot.usedTechnicalSettings[0]?.version).toBeUndefined();
+  });
 });

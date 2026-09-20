@@ -11,7 +11,9 @@ import {
   type ComponentEvaluation,
 } from "./componentEvaluation.js";
 import type { DisplayLabelCatalog } from "./displayMetadata.js";
+import type { ComponentTechnicalSettingDefinition } from "./technicalSettings.js";
 import type {
+  ComponentTypeId,
   FormSchema,
   ProductAggregate,
   ProductTemplate,
@@ -35,6 +37,9 @@ export function compileAcceptedProductEvaluation(input: {
   readonly formSchema: FormSchema;
   readonly labels: DisplayLabelCatalog;
   readonly costEvidenceRows: readonly CostEvidence[];
+  readonly technicalSettingsForType?: (
+    typeId: ComponentTypeId,
+  ) => readonly ComponentTechnicalSettingDefinition[];
 }): AcceptedProductEvaluation {
   if (input.truth.templateCode !== input.template.code) {
     throw new Error(`accepted_evaluation_template_mismatch:${input.truth.templateCode}`);
@@ -45,6 +50,7 @@ export function compileAcceptedProductEvaluation(input: {
     selectedComponentIds: input.truth.selectedComponentIds,
     values: input.truth.values,
     measurements: input.truth.measurements,
+    technicalSettingsForType: input.technicalSettingsForType,
   });
   const aggregate = compileAggregate(
     input.truth,

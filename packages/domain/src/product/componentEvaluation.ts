@@ -4,8 +4,9 @@ import type {
 } from "./componentContract.js";
 import { getComponentContract } from "./componentRegistry.js";
 import { noteEvaluateProductComponents } from "./evaluationTrace.js";
-import { listTypeTechnicalSettings } from "./technicalSettings.js";
+import { listTypeTechnicalSettings, type ComponentTechnicalSettingDefinition } from "./technicalSettings.js";
 import type {
+  ComponentTypeId,
   DraftValues,
   ProductComponent,
   ProductTemplate,
@@ -34,8 +35,12 @@ export function evaluateProductComponents(input: {
   selectedComponentIds: readonly string[];
   values: DraftValues;
   measurements: readonly TechnicalMeasurement[];
+  technicalSettingsForType?: (
+    typeId: ComponentTypeId,
+  ) => readonly ComponentTechnicalSettingDefinition[];
 }): readonly ComponentEvaluation[] {
   noteEvaluateProductComponents();
+  const settingsForType = input.technicalSettingsForType ?? listTypeTechnicalSettings;
   return input.template.components
     .filter((component) => input.selectedComponentIds.includes(component.id))
     .map((component) => ({
@@ -44,7 +49,7 @@ export function evaluateProductComponents(input: {
         values: input.values,
         measurements: input.measurements,
         shared: sharedContextFor(component, input.measurements),
-        technicalSettings: listTypeTechnicalSettings(component.typeId),
+        technicalSettings: settingsForType(component.typeId),
       }),
     }));
 }

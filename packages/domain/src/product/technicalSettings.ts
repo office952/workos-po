@@ -35,8 +35,14 @@ export type ComponentTechnicalSettingDefinition = {
   readonly note?: string;
   readonly constraints?: {
     readonly min?: number;
+    readonly exclusiveMin?: number;
     readonly max?: number;
   };
+};
+
+export type TechnicalSettingIssue = {
+  readonly field: string;
+  readonly reason: string;
 };
 
 export type ComponentTechnicalSettingProjection = {
@@ -97,6 +103,7 @@ export const lightingFrontLedTechnicalSettings: readonly ComponentTechnicalSetti
       configurable: true,
       unresolvedReason: "Regula de pas LED nu este stabilită",
       note: "Valoare activă canonică. Documentația explică; calculul consumă.",
+      constraints: { exclusiveMin: 0 },
     },
     {
       id: LED_MODULE_POWER_SETTING_ID,
@@ -140,6 +147,90 @@ export function listTypeTechnicalSettings(
   typeId: ComponentTypeId,
 ): readonly ComponentTechnicalSettingDefinition[] {
   return componentTechnicalSettingsRegistry.listByType(typeId);
+}
+
+export function technicalSettingDefinitionId(
+  typeId: ComponentTypeId,
+  settingId: string,
+): string {
+  return `${typeId}.${settingId}`;
+}
+
+export function findTechnicalSettingDefinition(
+  definitionId: string,
+): ComponentTechnicalSettingDefinition | undefined {
+  return componentTechnicalSettingsRegistry.definitions.find(
+    (item) => technicalSettingDefinitionId(item.typeId, item.id) === definitionId,
+  );
+}
+
+export function findTechnicalSettingDefinitionBySettingId(
+  settingId: string,
+): ComponentTechnicalSettingDefinition | undefined {
+  return componentTechnicalSettingsRegistry.definitions.find((item) => item.id === settingId);
+}
+
+export function requiredTechnicalSettingDefinitions(): readonly ComponentTechnicalSettingDefinition[] {
+  return lightingFrontLedTechnicalSettings;
+}
+
+export function applyResolvedTechnicalSettingValue(
+  definition: ComponentTechnicalSettingDefinition,
+  value: number,
+): ComponentTechnicalSettingDefinition {
+  return {
+    ...definition,
+    resolution: { status: "RESOLVED", value },
+  };
+}
+
+export function validateTechnicalSettingValue(
+  definition: ComponentTechnicalSettingDefinition,
+  value: unknown,
+  unit?: string,
+): TechnicalSettingIssue[] {
+  const field = definition.id;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return [{ field, reason: "Valoarea trebuie să fie un număr valid." }];
+  }
+  if (definition.valueType !== "number") {
+    return [{ field, reason: "Tipul valorii nu este acceptat." }];
+  }
+  if (unit !== undefined && unit !== definition.unit) {
+    return [{ field, reason: "Unitatea nu este validă pentru această setare." }];
+  }
+  const issues: TechnicalSettingIssue[] = [];
+  const { min, exclusiveMin, max } = definition.constraints ?? {};
+  if (exclusiveMin !== undefined && value <= exclusiveMin) {
+    issues.push({
+      field,
+      reason:
+        field === LED_PITCH_SETTING_ID
+          ? "Pasul modulelor LED trebuie să fie mai mare decât 0 mm."
+          : `${definition.label} trebuie să fie mai mare decât ${exclusiveMin}.`,
+    });
+  }
+  if (min !== undefined && value < min) {
+    issues.push({
+      field,
+      reason:
+        field === LED_MODULE_POWER_SETTING_ID
+          ? "Puterea modulului LED nu poate fi negativă."
+          : field === PSU_RESERVE_SETTING_ID
+            ? "Rezerva sursei trebuie să fie între 0 și 100%."
+          : `${definition.label} nu poate fi mai mică decât ${min}.`,
+    });
+  }
+  if (max !== undefined && value > max) {
+    issues.push({
+      field,
+      reason:
+        field === PSU_RESERVE_SETTING_ID
+          ? "Rezerva sursei trebuie să fie între 0 și 100%."
+          : `${definition.label} nu poate fi mai mare decât ${max}.`,
+    });
+  }
+  return issues;
 }
 
 export function resolvedSettingValue(
@@ -207,15 +298,13 @@ function validateSetting(setting: ComponentTechnicalSettingDefinition): void {
     }
   }
   if (setting.resolution.status === "RESOLVED") {
-    if (!Number.isFinite(setting.resolution.value)) {
-      throw new Error(`${setting.id} resolved value must be a finite number`);
-    }
-    const { min, max } = setting.constraints ?? {};
-    if (min !== undefined && setting.resolution.value < min) {
-      throw new Error(`${setting.id} is below minimum ${min}`);
-    }
-    if (max !== undefined && setting.resolution.value > max) {
-      throw new Error(`${setting.id} is above maximum ${max}`);
+    const issues = validateTechnicalSettingValue(
+      setting,
+      setting.resolution.value,
+      setting.unit,
+    );
+    if (issues.length > 0) {
+      throw new Error(`${setting.id}: ${issues[0]?.reason ?? "invalid technical setting"}`);
     }
   }
 }

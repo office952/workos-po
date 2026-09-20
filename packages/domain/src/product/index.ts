@@ -161,12 +161,48 @@ export {
   LED_MODULE_POWER_SETTING_ID,
   LED_PITCH_SETTING_ID,
   PSU_RESERVE_SETTING_ID,
+  applyResolvedTechnicalSettingValue,
   componentTechnicalSettingsRegistry,
   createTechnicalSettingsRegistry,
+  findTechnicalSettingDefinition,
+  findTechnicalSettingDefinitionBySettingId,
+  lightingFrontLedTechnicalSettings,
   listTypeTechnicalSettings,
   projectTechnicalSettings,
+  requiredTechnicalSettingDefinitions,
   resolvedSettingValue,
+  technicalSettingDefinitionId,
+  validateTechnicalSettingValue,
 } from "./technicalSettings.js";
+export {
+  SUPPORTED_TECHNICAL_SETTING_IDS,
+  TECHNICAL_SETTING_ACTOR_KINDS,
+  TECHNICAL_SETTING_SCOPE,
+  TECHNICAL_SETTING_STARTER_SYSTEM_ID,
+  TECHNICAL_SETTING_VERSION_SOURCES,
+  TECHNICAL_SETTING_VERSION_STATUSES,
+  actorFieldsFrom,
+  actorIsValid,
+  createPlatformStarterTechnicalSettingVersions,
+  isSupportedTechnicalSettingId,
+  isTechnicalSettingActorKind,
+  isTechnicalSettingVersionRecord,
+  isTechnicalSettingVersionSource,
+  isTechnicalSettingVersionStatus,
+  planTechnicalSettingsSave,
+  technicalSettingSourceLabel,
+  technicalSettingStatusLabel,
+} from "./technicalSettingVersion.js";
+export {
+  TECHNICAL_SETTINGS_EMPTY_REASON,
+  TECHNICAL_SETTINGS_INACTIVE,
+  TECHNICAL_SETTINGS_INACTIVE_REASON,
+  TECHNICAL_SETTINGS_INVALID,
+  TECHNICAL_SETTINGS_INVALID_REASON,
+  resolveOrganizationTechnicalSettings,
+  technicalSettingsForTypeFromResolved,
+  technicalSettingsLookupFromResolved,
+} from "./resolveTechnicalSettings.js";
 export {
   VOLUME_COMPONENT_ID,
   VOLUME_MISSING_PERIMETER,
@@ -198,8 +234,23 @@ export type {
 export type {
   ComponentTechnicalSettingDefinition,
   ComponentTechnicalSettingProjection,
+  TechnicalSettingIssue,
   TechnicalSettingsRegistry,
 } from "./technicalSettings.js";
+export type {
+  SupportedTechnicalSettingId,
+  TechnicalSettingActor,
+  TechnicalSettingActorKind,
+  TechnicalSettingDraftValue,
+  TechnicalSettingSavePlan,
+  TechnicalSettingVersionRecord,
+  TechnicalSettingVersionSource,
+  TechnicalSettingVersionStatus,
+} from "./technicalSettingVersion.js";
+export type {
+  ResolvedTechnicalSetting,
+  TechnicalSettingResolution,
+} from "./resolveTechnicalSettings.js";
 export type {
   AdminCategoryRecord,
   AdminEditClass,
