@@ -72,9 +72,9 @@ Owned by this repository's imported engine (`apps/api` + `packages/domain`):
 
 - ProductDefinition
 - Product Truth
-- formulas
+- formula contracts and evaluation
 - technical quantities
-- pricing
+- pricing contracts and evaluation
 - EIC
 - Quote
 - Acceptance
@@ -88,6 +88,8 @@ Owned by this repository's imported engine (`apps/api` + `packages/domain`):
 - authentication
 - persistence implementation
 - backend APIs
+
+The engine owns contracts, validation, evaluation, snapshots, and invariants. Changeable business values, formulas, rates, and commercial rules belong in versioned domain-owned configuration, not as silent source constants. That is Configuration-First, not a second Product Truth. See `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
 The root frontend must consume supported contracts. It must not independently implement them. It must not import `@workos-final/domain`.
 

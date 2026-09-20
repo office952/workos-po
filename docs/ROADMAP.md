@@ -37,12 +37,15 @@ ONE_PRODUCT_TRUTH = YES
 NO_CLIENT_CODE_FORK = YES
 ALTERNATIVE_PRODUCT_DELIVERY = NO
 
-NEXT_PROGRAM_PRIORITY = PRIMARY_USER_JOURNEY
-NEXT_PROGRAM_STATUS = COMPLETE
-NEXT_PROGRAM_STARTED = YES
 PRIMARY_USER_JOURNEY = COMPLETE
 PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
 PRIMARY_USER_JOURNEY_PROOF_DATE = 2026-09-20
+
+NEXT_PROGRAM_PRIORITY = WORKOS_CONFIGURATION_FIRST_FOUNDATION_V1
+NEXT_PROGRAM_STATUS = CF0_COMPLETE
+NEXT_PROGRAM_STARTED = YES
+CONFIGURATION_FIRST_CANON = docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md
+CONFIGURATION_FIRST_IMPLEMENTATION = NOT_AUTHORIZED
 
 REAL_CLOUD_WRITE = HOLD
 REAL_DB_WRITE = HOLD
@@ -172,3 +175,42 @@ PRODUCT_FOLLOW_UP = NO
 `CONFIGURATOR_FREEZE_RUNTIME`: owner seller setup is in the configurator; freeze surfaces API reasons. Freeze succeeded after owner-confirmed cost evidence (existing EIC, supported owner resource PATCH — not a schema change).
 
 A new organization still needs owner-confirmed cost evidence before freeze. Operator skills and machines are explicit organization truth: they are not invented in Atelier or Execution. The journey consumes configured providers and explains a missing machine. General People/Machine administration remains recorded admin debt.
+
+## Configuration-First Foundation V1
+
+Primary User Journey is complete. The living next program is Configuration-First: changeable business values must not permanently require source-code edits, and they must not remain silent in source.
+
+Architecture ownership: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
+
+```text
+WORKOS = CONFIGURATION-FIRST BUSINESS ENGINE
+NO_SILENT_BUSINESS_TRUTH = CANONICAL
+CHANGEABLE_BUSINESS_VALUES_IN_SOURCE = MIGRATION_TARGET_NOT_DESIRED_END_STATE
+GENERIC_MEGA_SETTINGS_BLOB = REJECTED
+UNBOUNDED_NO_CODE_ERP_BUILDER = NO
+NO_UNIVERSAL_SCOPE_PRECEDENCE = YES
+HISTORICAL_REWRITE = NO
+CUSTOMER_WITHOUT_CURSOR = REQUIRED
+IMPLEMENTATION_AUTHORIZED = NO
+DB_IMPLEMENTATION_AUTHORIZED = NO
+```
+
+| Wave | Scope | Status | Authorization |
+| --- | --- | --- | --- |
+| CF0 | Configuration-First canon / documentation | COMPLETE | this documentation wave only |
+| CF1 | Typed configuration domain + persistence foundation | NOT_STARTED | later Owner GO |
+| CF2 | Resolver + version + audit + snapshot provenance | NOT_STARTED | later Owner GO |
+| CF3 | Basic administration for technical / commercial / variant configuration | NOT_STARTED | later Owner GO |
+| CF4 | Safe configurable formula foundation + administration | NOT_STARTED | later Owner GO |
+| CF5 | Migrate current source-held changeable business settings / rules | NOT_STARTED | later Owner GO |
+
+CF0 does not authorize CF1 or later, schema work, migrations, seeds, or real Cloud/DB access.
+
+After CF5, resume:
+
+- Letters Product Truth
+- ACM Product Truth
+- member DAG corrections
+- Letters + ACM composition
+- execution expansion
+- planning / capacity

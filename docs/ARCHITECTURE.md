@@ -1,6 +1,6 @@
 # Architecture
 
-STATUS: FOUNDATION ACCEPTED / REFERENCE SLICE ACCEPTED / GOLDEN SPINE ACCEPTED / IMPLEMENTATION ACCEPTED / ENGINE_CONSOLIDATION_V1 = COMPLETE / CLOUD_RUNTIME_AND_RECOVERY_V1 = SYNTHETIC_ONLY / PRODUCT_MODEL = SAAS_ONLY / PRIMARY_PRODUCT_DIRECTION = SAAS / ALTERNATIVE_PRODUCT_DELIVERY = NO
+STATUS: FOUNDATION ACCEPTED / REFERENCE SLICE ACCEPTED / GOLDEN SPINE ACCEPTED / IMPLEMENTATION ACCEPTED / ENGINE_CONSOLIDATION_V1 = COMPLETE / CLOUD_RUNTIME_AND_RECOVERY_V1 = SYNTHETIC_ONLY / PRODUCT_MODEL = SAAS_ONLY / PRIMARY_PRODUCT_DIRECTION = SAAS / ALTERNATIVE_PRODUCT_DELIVERY = NO / PRIMARY_USER_JOURNEY = COMPLETE / NEXT_PROGRAM = WORKOS_CONFIGURATION_FIRST_FOUNDATION_V1
 
 ## Boundary
 
@@ -91,3 +91,9 @@ Golden Spine Completion V1 extends the same shell with the minimum route set for
 - Atelier / Execuție
 
 Remaining products and horizontal thickening stay out of scope until a later Owner GO.
+
+## Configuration-First
+
+Living architecture for changeable business truth: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
+
+The engine remains the only evaluator. Configuration is domain-owned data with shared resolution semantics. This is not a second Product Truth, not a mega Settings blob, and not an implementation authorization.
