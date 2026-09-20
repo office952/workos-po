@@ -151,6 +151,22 @@ describe("projectOperatorTaskInbox", () => {
       "JOB-B",
     ]);
     expect(florinInbox.availableReady.every((item) => item.canClaimStart)).toBe(true);
+    expect(florinInbox.availableReady.every((item) => item.jobId === null)).toBe(true);
+
+    const scoped = projectOperatorTaskInbox({
+      currentOperator: setup.florin,
+      people: setup.people,
+      eligibility: setup.eligibility,
+      plans: [
+        {
+          record: withA.record,
+          snapshot: jobA.snapshot,
+          customerDisplayName: "Client A",
+          jobId: "ord:job-a",
+        },
+      ],
+    });
+    expect(scoped.availableReady.every((item) => item.jobId === "ord:job-a")).toBe(true);
 
     const calinInbox = projectOperatorTaskInbox({
       currentOperator: setup.calin,

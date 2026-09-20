@@ -6,6 +6,7 @@ function task(partial: Partial<InboxTaskTransport>): InboxTaskTransport {
   return {
     taskId: "t1",
     planId: "p1",
+    jobId: null,
     processLabel: "Tăiere",
     scopeLabel: "Spate",
     statusLabel: "Planificat",

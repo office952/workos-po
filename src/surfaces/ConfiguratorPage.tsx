@@ -7,10 +7,11 @@ import {
 import { presentPreview } from "../adapters/previewAdapter";
 import { presentQuoteSnapshot } from "../adapters/quoteAdapter";
 import { postConfigurationConfirm } from "../api/confirm";
-import { TransportError } from "../api/http";
+import { TransportError, readTransportErrorCode, readTransportReasons } from "../api/http";
 import { postConfigurationPreview } from "../api/preview";
 import { postQuoteSnapshot } from "../api/quote";
 import { LoadingFloor } from "../components/LoadingFloor";
+import { SellerSetupPanel } from "../components/SellerSetupPanel";
 import { invalidateAfterFreezeQuote } from "../data/invalidation";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadSellerConfigured } from "../data/routeLoaders";
@@ -56,6 +57,36 @@ export const EDIT_PREVIEW_DEBOUNCE_MS = 250;
 function profilePresentation(lines: ConfirmTransport["lines"]) {
   const line = selectLineByResource(lines, ALUMINIUM_RETURN_PROFILE_RESOURCE_ID);
   return line ? presentCostLine(line) : null;
+}
+
+function presentFreezeError(error: unknown): string {
+  if (!(error instanceof TransportError)) {
+    return "Înghețarea ofertei a eșuat.";
+  }
+  const reasons = readTransportReasons(error.body);
+  if (reasons[0]) {
+    return reasons[0];
+  }
+  const code = readTransportErrorCode(error.body);
+  switch (code) {
+    case "seller_unconfigured":
+      return "Datele firmei trebuie configurate înainte de a crea oferta.";
+    case "missing_customer":
+      return "Selectează un client înainte de a crea oferta.";
+    case "request_unavailable":
+      return "Cererea de ofertă nu este disponibilă.";
+    case "request_cancelled":
+      return "Cererea anulată nu poate primi o ofertă nouă.";
+    case "request_customer_mismatch":
+      return "Oferta trebuie să folosească același client ca cererea.";
+    case "review_mismatch":
+    case "review_required":
+      return "Configurația s-a schimbat. Reia previzualizarea.";
+    case "service_quote_freeze_not_authorized":
+      return "Oferta cu montaj nu poate fi înghețată în această etapă.";
+    default:
+      return "Înghețarea ofertei a eșuat.";
+  }
 }
 
 export function ConfiguratorPage({
@@ -234,9 +265,9 @@ export function ConfiguratorPage({
       });
       invalidateAfterFreezeQuote();
       setFreezeState("idle");
-    } catch {
+    } catch (error) {
       setFreezeState("error");
-      setFreezeError("Înghețarea ofertei a eșuat.");
+      setFreezeError(presentFreezeError(error));
     }
   }
 
@@ -348,9 +379,11 @@ export function ConfiguratorPage({
             <LoadingIndicator label="Se actualizează previzualizarea" />
           ) : null}
           {sellerConfigured === false ? (
-            <InlineAlert tone="blocked" title="Datele firmei lipsesc">
-              Datele firmei trebuie configurate înainte de a crea oferta.
-            </InlineAlert>
+            <SellerSetupPanel
+              onSaved={() => {
+                setFreezeError(null);
+              }}
+            />
           ) : null}
           {customerId === null ? (
             <InlineAlert tone="blocked" title="Client lipsă">

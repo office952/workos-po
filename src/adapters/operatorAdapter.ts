@@ -64,6 +64,7 @@ export function presentInboxTasks(payload: unknown): InboxTaskTransport[] {
         {
           taskId: row.taskId,
           planId: row.planId,
+          jobId: asString(row.jobId),
           processLabel: asString(row.processLabel) ?? "",
           scopeLabel: asString(row.scopeLabel) ?? "",
           statusLabel: asString(row.statusLabel) ?? "",

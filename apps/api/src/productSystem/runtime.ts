@@ -686,6 +686,7 @@ export function createProductSystemRuntimeFromOpenDb(
           record,
           snapshot,
           customerDisplayName: order?.customer?.displayName ?? null,
+          jobId: orderId ?? snapshot?.sourceOrderSnapshotId ?? null,
         };
       });
       return projectOperatorTaskInbox({

@@ -21,6 +21,10 @@ export function invalidateAfterFreezeQuote(): void {
   invalidateResources(resourceKeys.quotes());
 }
 
+export function invalidateAfterSellerChange(): void {
+  invalidateResources(resourceKeys.seller());
+}
+
 export function invalidateAfterProductionRelease(jobId: string): void {
   invalidateResources(resourceKeys.job(jobId), resourceKeys.jobs());
 }

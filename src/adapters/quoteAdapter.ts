@@ -16,6 +16,8 @@ export function presentQuoteSnapshot(
     return null;
   }
   const eic = asRecord(snapshot.eic);
+  const customer = asRecord(snapshot.customer);
+  const request = asRecord(record?.request);
   return {
     quoteSnapshotId: snapshot.quoteSnapshotId,
     productCode: snapshot.productCode,
@@ -25,9 +27,13 @@ export function presentQuoteSnapshot(
       typeof snapshot.inscription === "string" ? snapshot.inscription : null,
     sourceReviewId:
       typeof snapshot.sourceReviewId === "string" ? snapshot.sourceReviewId : null,
-    customerId: asString(snapshot.customerId),
-    customerDisplayName: asString(snapshot.customerDisplayName),
-    requestId: asString(snapshot.requestId),
+    customerId: asString(customer?.customerId) ?? asString(snapshot.customerId),
+    customerDisplayName:
+      asString(customer?.displayName) ?? asString(snapshot.customerDisplayName),
+    requestId:
+      asString(request?.requestId) ??
+      asString(record?.requestId) ??
+      asString(snapshot.requestId),
     completeness: typeof eic?.completeness === "string" ? eic.completeness : null,
     currency: typeof eic?.currency === "string" ? eic.currency : null,
     lines: presentCostLines(eic?.lines),

@@ -42,6 +42,22 @@ describe("quote adapter", () => {
     expect(presented?.requestId).toBeNull();
   });
 
+  it("reads frozen customer identity and the request link from server transport", () => {
+    const presented = presentQuoteSnapshot({
+      quoteSnapshot: {
+        quoteSnapshotId: "q-ctx",
+        productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+        productLabel: "Litere",
+        customer: { customerId: "cus-1", displayName: "Atelier Nord" },
+        eic: { completeness: "COMPLETE", currency: "EUR", total: 1, lines: [] },
+      },
+      request: { requestId: "req-1", href: "/requests/req-1" },
+    });
+    expect(presented?.customerId).toBe("cus-1");
+    expect(presented?.customerDisplayName).toBe("Atelier Nord");
+    expect(presented?.requestId).toBe("req-1");
+  });
+
   it("passes through customer and request facts when the snapshot already has them", () => {
     const presented = presentQuoteSnapshot({
       quoteSnapshot: {

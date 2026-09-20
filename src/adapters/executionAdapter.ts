@@ -14,6 +14,7 @@ export function presentExecutionPlan(payload: unknown): ExecutionPlanTransport |
   }
   const progress = asRecord(planView.progress);
   const tasks = Array.isArray(planView.tasks) ? planView.tasks : [];
+  const job = asRecord(record?.job);
   return {
     planId,
     productLabel: asString(plan.productLabel) ?? "",
@@ -21,6 +22,7 @@ export function presentExecutionPlan(payload: unknown): ExecutionPlanTransport |
     statusLabel: asString(planView.statusLabel) ?? asString(plan.status) ?? "—",
     progressLabel: progressLabel(progress, planView),
     sourceSnapshotId: asString(plan.sourceSnapshotId) ?? "",
+    jobId: asString(job?.jobId) ?? asString(plan.jobId),
     tasks: tasks.flatMap((item) => {
       const presented = presentExecutionTask(item);
       return presented ? [presented] : [];
@@ -53,6 +55,7 @@ export function presentExecutionTask(value: unknown): ExecutionTaskTransport | n
     statusLabel: asString(row.statusLabel) ?? asString(row.status) ?? "—",
     assignmentLabel: asString(row.assignmentLabel) ?? "Nealocat",
     requiresProvider: row.requiresProvider === true,
+    requiredCapabilityId: asString(row.requiredCapabilityId),
     canAssign: row.canAssign === true,
     canClaimStart: row.canClaimStart === true || row.canStart === true,
     canComplete: row.canComplete === true,

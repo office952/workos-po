@@ -26,10 +26,12 @@ import {
   parseCompletedQuantity,
 } from "../presentation/completedQuantity";
 import { statusTone } from "../presentation/statusTone";
-import { executionHref } from "../routing/appRoute";
+import { atelierHref, executionHref, jobHref } from "../routing/appRoute";
 
 type ExecutionPageProps = {
   planId: string;
+  taskId?: string | null;
+  jobId?: string | null;
 };
 
 function firstActionableTask(
@@ -43,6 +45,23 @@ function firstActionableTask(
   );
 }
 
+function selectCurrentExecutionTask(
+  tasks: readonly ExecutionTaskTransport[],
+  taskId: string | null,
+  allComplete: boolean,
+): ExecutionTaskTransport | null {
+  if (allComplete || tasks.length === 0) {
+    return null;
+  }
+  const requested = taskId
+    ? (tasks.find((task) => task.taskId === taskId) ?? null)
+    : null;
+  if (requested && requested.status !== "COMPLETED") {
+    return requested;
+  }
+  return firstActionableTask(tasks);
+}
+
 function taskStatusKind(task: ExecutionTaskTransport) {
   if (task.status === "COMPLETED") {
     return statusTone("success");
@@ -53,7 +72,11 @@ function taskStatusKind(task: ExecutionTaskTransport) {
   return statusTone("workflow");
 }
 
-export function ExecutionPage({ planId }: ExecutionPageProps) {
+export function ExecutionPage({
+  planId,
+  taskId = null,
+  jobId = null,
+}: ExecutionPageProps) {
   const session = useResource(resourceKeys.operatorSession(), loadOperatorSession);
   const planResource = useResource(resourceKeys.executionPlan(planId), () =>
     loadExecutionPlan(planId),
@@ -139,15 +162,18 @@ export function ExecutionPage({ planId }: ExecutionPageProps) {
     }
   }
 
+  const resolvedJobId = jobId ?? plan?.jobId ?? null;
   const allComplete =
     plan !== null && plan.tasks.length > 0 && plan.tasks.every((task) => task.status === "COMPLETED");
-  const currentTask = allComplete || !plan ? null : firstActionableTask(plan.tasks);
+  const currentTask = plan
+    ? selectCurrentExecutionTask(plan.tasks, taskId, allComplete)
+    : null;
   const sessionKnown = session.status === "success";
 
   return (
     <SlicePage
       contextLabel="Execuție"
-      currentHref={executionHref(planId)}
+      currentHref={executionHref(planId, { taskId, jobId: resolvedJobId })}
       workspace="operational"
       eyebrow="Execuție"
       title={plan?.inscription || plan?.productLabel || "Execuție"}
@@ -172,7 +198,7 @@ export function ExecutionPage({ planId }: ExecutionPageProps) {
       {identified === false ? (
         <InlineAlert tone="blocked" title="Operator neidentificat">
           Intră în atelier înainte de a porni sau închide o sarcină.{" "}
-          <a className="text-link" href="/atelier">
+          <a className="text-link" href={atelierHref({ jobId: resolvedJobId })}>
             Deschide atelierul
           </a>
         </InlineAlert>
@@ -233,6 +259,14 @@ export function ExecutionPage({ planId }: ExecutionPageProps) {
                   }));
                 }}
               />
+            ) : null}
+            {currentTask.requiresProvider &&
+            currentTask.eligibleProviderIds.length === 0 &&
+            currentTask.status !== "COMPLETED" ? (
+              <InlineAlert tone="blocked" title="Utilaj lipsește">
+                Această sarcină cere un utilaj deja configurat în organizație. Execuția nu
+                inventează utilaje.
+              </InlineAlert>
             ) : null}
             <div className="cluster">
               {currentTask.canAssign ? (
@@ -312,6 +346,10 @@ export function ExecutionPage({ planId }: ExecutionPageProps) {
                 >
                   <WorklistRow
                     variant="operational"
+                    href={executionHref(planId, {
+                      taskId: task.taskId,
+                      jobId: resolvedJobId,
+                    })}
                     identity={`${task.seqLabel} ${task.processLabel}`}
                     identityDetail={task.completedQuantityLabel ?? undefined}
                     context={task.scopeLabel}
@@ -326,8 +364,8 @@ export function ExecutionPage({ planId }: ExecutionPageProps) {
         : null}
       {plan ? (
         <p>
-          <a className="text-link" href="/lucrari">
-            Revino la lucrări
+          <a className="text-link" href={resolvedJobId ? jobHref(resolvedJobId) : "/lucrari"}>
+            {resolvedJobId ? "Revino la lucrare" : "Revino la lucrări"}
           </a>
         </p>
       ) : null}

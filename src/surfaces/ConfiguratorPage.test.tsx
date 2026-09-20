@@ -334,6 +334,117 @@ describe("ConfiguratorPage", () => {
           String(call[0]).endsWith("/seller") && String(call[1]?.method) === "PATCH",
       ),
     ).toBe(false);
+    expect(screen.getByLabelText("Denumire firmă")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvează datele firmei" })).toBeDisabled();
+  });
+
+  it("saves seller identity through the API and then allows freeze", async () => {
+    let sellerConfigured = false;
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      const method = String(init?.method ?? "GET");
+      if (url.endsWith("/preview")) {
+        return jsonResponse(previewBody);
+      }
+      if (url.endsWith("/confirm")) {
+        return jsonResponse({
+          eic: {
+            completeness: "COMPLETE",
+            completenessReasons: [],
+            currency: "EUR",
+            total: 37.5,
+            lines: [
+              {
+                resourceId: "aluminium_return_profile",
+                label: "Profil aluminiu 0,6 mm",
+                quantity: 12.5,
+                unit: "m",
+                rate: 3,
+                currency: "EUR",
+                cost: 37.5,
+              },
+            ],
+          },
+        });
+      }
+      if (url.endsWith("/seller") && method === "PATCH") {
+        sellerConfigured = true;
+        return jsonResponse({ configured: true, seller: { legalName: "Firma Nord" } });
+      }
+      if (url.endsWith("/seller")) {
+        return jsonResponse({
+          configured: sellerConfigured,
+          seller: sellerConfigured ? { legalName: "Firma Nord" } : null,
+        });
+      }
+      if (url.endsWith("/quote-snapshots")) {
+        return jsonResponse({
+          created: true,
+          quoteSnapshot: {
+            quoteSnapshotId: "q-live",
+            productCode: LETTERS_PRODUCT,
+            productLabel: "Litere",
+            inscription: "text",
+            sourceReviewId: "crv1:letters-ready",
+            eic: {
+              completeness: "COMPLETE",
+              currency: "EUR",
+              total: 37.5,
+              lines: [],
+            },
+          },
+        });
+      }
+      return jsonResponse({});
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    window.history.replaceState(
+      null,
+      "",
+      "/?customer=cus-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    );
+    renderConfigurator({ requestId: null });
+    const user = await confirmReady();
+    await user.type(screen.getByLabelText("Denumire firmă"), "Firma Nord");
+    await user.click(screen.getByRole("button", { name: "Salvează datele firmei" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeEnabled();
+    });
+    const sellerPatch = fetchMock.mock.calls.find(
+      (call) => String(call[0]).endsWith("/seller") && String(call[1]?.method) === "PATCH",
+    );
+    expect(String(sellerPatch?.[1]?.body)).toContain("\"legalName\":\"Firma Nord\"");
+    await user.click(screen.getByRole("button", { name: "Îngheață oferta" }));
+    expect(await screen.findByText("Deschide oferta înghețată")).toBeInTheDocument();
+  });
+
+  it("presents the server freeze reason without inventing a local quote", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    const fallback = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation((input: RequestInfo, init?: RequestInit) => {
+      if (String(input).endsWith("/quote-snapshots")) {
+        return jsonResponse(
+          {
+            error: "seller_unconfigured",
+            reasons: ["Datele firmei trebuie configurate înainte de a crea oferta."],
+          },
+          422,
+        );
+      }
+      return fallback ? fallback(input, init) : jsonResponse({});
+    });
+    window.history.replaceState(
+      null,
+      "",
+      "/?customer=cus-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    );
+    renderConfigurator({ requestId: null });
+    const user = await confirmReady();
+    await user.click(screen.getByRole("button", { name: "Îngheață oferta" }));
+    expect(
+      await screen.findByText("Datele firmei trebuie configurate înainte de a crea oferta."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Deschide oferta înghețată")).not.toBeInTheDocument();
   });
 
   it("presents a later server cost without calculating it in the browser", async () => {

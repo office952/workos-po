@@ -26,6 +26,7 @@ export type OperatorInboxLaneKind =
 export type OperatorInboxTaskItem = {
   taskId: string;
   planId: string;
+  jobId: string | null;
   productLabel: string;
   inscription: string;
   customerDisplayName: string | null;
@@ -71,6 +72,7 @@ export type OperatorInboxPlanSource = {
   record: ExecutionPlanRecord;
   snapshot: AcceptedProductionSnapshot | null;
   customerDisplayName: string | null;
+  jobId?: string | null;
 };
 
 export function projectOperatorTaskInbox(input: {
@@ -103,6 +105,7 @@ export function projectOperatorTaskInbox(input: {
         people,
         eligibility,
         customerDisplayName: plan.customerDisplayName,
+        jobId: plan.jobId ?? plan.snapshot?.sourceOrderSnapshotId ?? null,
         planCreatedAt: view.plan.createdAt,
         providerRegistry,
       });
@@ -150,6 +153,7 @@ function classifyInboxTask(input: {
   people: readonly Person[];
   eligibility: PeopleEligibilityContext | null;
   customerDisplayName: string | null;
+  jobId: string | null;
   planCreatedAt: string;
   providerRegistry: WorkcenterRegistry;
 }): OperatorInboxTaskItem | null {
@@ -207,14 +211,16 @@ function toInboxItem(
     task: ExecutionTaskView;
     view: ExecutionPlanView;
     customerDisplayName: string | null;
+    jobId: string | null;
     planCreatedAt: string;
   },
   lane: OperatorInboxLaneKind,
 ): OperatorInboxTaskItem {
-  const { task, view, customerDisplayName, planCreatedAt } = input;
+  const { task, view, customerDisplayName, jobId, planCreatedAt } = input;
   return {
     taskId: task.taskId,
     planId: view.plan.planId,
+    jobId,
     productLabel: view.plan.productLabel,
     inscription: view.plan.inscription,
     customerDisplayName,

@@ -21,7 +21,7 @@ import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { presentJobLifecycle } from "../presentation/jobLifecycle";
 import { statusTone } from "../presentation/statusTone";
-import { executionHref, jobHref, quoteHref } from "../routing/appRoute";
+import { atelierHref, executionHref, jobHref, quoteHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
 
 type JobDetailPageProps = {
@@ -195,11 +195,18 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
               )}
             </div>
             {plan ? (
-              <p>
-                <a className="text-link" href={executionHref(plan.planId)}>
-                  Deschide execuția
-                </a>
-              </p>
+              <>
+                <p>
+                  <a className="text-link" href={executionHref(plan.planId, { jobId })}>
+                    Deschide execuția
+                  </a>
+                </p>
+                <p>
+                  <a className="text-link" href={atelierHref({ jobId })}>
+                    Deschide atelierul lucrării
+                  </a>
+                </p>
+              </>
             ) : null}
           </SurfacePanel>
         </>
