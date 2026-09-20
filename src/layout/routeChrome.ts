@@ -136,6 +136,15 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         title: "Dovezi de cost",
         lead: "Tarif confirmat pe resursă și calificator. Valoarea salvată este folosită doar la calcule noi.",
       };
+    case "admin-commercial":
+      return {
+        contextLabel: "Administrare",
+        currentHref: "/admin/commercial",
+        workspace: "admin",
+        eyebrow: "Administrare",
+        title: "Politică comercială",
+        lead: "Adaos, TVA, discount și ajustare. Salvarea creează o versiune nouă. Ofertele înghețate rămân neschimbate.",
+      };
     case "foundation":
       return {
         contextLabel: "Fundație",

@@ -5,12 +5,17 @@ Living architecture for changeable business truth in `office952/workos-po`.
 This file is the single Configuration-First architecture owner. It is not a second Product Truth, not a second roadmap, and not an implementation authorization.
 
 ```text
-STATUS = CF0_COMPLETE
+STATUS = CF1_COMMERCIAL_VERTICAL_V1_IMPLEMENTED_IN_REVIEW
 CONFIGURATION_FIRST_DIRECTION = CANONICAL
 NO_SILENT_BUSINESS_TRUTH = CANONICAL
-IMPLEMENTATION_AUTHORIZED = NO
-DB_IMPLEMENTATION_AUTHORIZED = NO
+FUNCTIONAL_WORKOS_FIRST = YES
+OPTIONAL_BUSINESS_AUTOMATION_MUST_NOT_CREATE_DEAD_END = YES
+SAFE_MANUAL_FALLBACK = REQUIRED_WHERE_SEMANTICALLY_VALID
+IMPLEMENTATION_AUTHORIZED = CF1_COMMERCIAL_VERTICAL_V1_ONLY
+DB_IMPLEMENTATION_AUTHORIZED = COMMERCIAL_POLICY_VERSIONS_ONLY
+OWNER_ACCEPTED_IMPLEMENTATION = NO
 NEXT_WAVE_AUTHORIZED = NO
+FORMULA_CONFIGURABILITY_FULLY_DELIVERED = NO
 ```
 
 Authority:
@@ -102,7 +107,7 @@ This canon rejects:
 - customer dependence on Cursor, source access, terminal, or direct database editing
 - treating a hardcoded number swap as Configuration-First
 
-This wave documents architecture only. It does not authorize CF1 or later, schema edits, migrations, seeds, or real Cloud/DB access.
+CF0 documented architecture only. CF1_COMMERCIAL_VERTICAL_V1 is the first authorized functional slice: organization commercial policy versions, a narrow resolver, commercial admin, engine consumption, snapshot provenance, and a supported manual product price. It does not authorize technical-settings persistence, a formula engine, or real Cloud/DB access.
 
 ## 3. Ownership: code, configuration, job input
 
@@ -570,9 +575,13 @@ Unknown is not zero. A missing required value is not a silent fallback.
 UNKNOWN != ZERO
 MISSING_REQUIRED_CONFIG = FAIL_CLOSED
 SILENT_FALLBACK = NO
+OPTIONAL_BUSINESS_AUTOMATION_MUST_NOT_CREATE_DEAD_END = YES
+SAFE_MANUAL_FALLBACK = REQUIRED_WHERE_SEMANTICALLY_VALID
 ```
 
-Noncritical defaults may operate only when their contract explicitly allows it.
+`MISSING_REQUIRED_CONFIG = FAIL_CLOSED` applies to genuinely required truth and integrity: tenancy, snapshot immutability, invalid commercial policy saves, and required technical facts for production.
+
+Optional business automation may use an explicit supported manual or basic mode. Incomplete cost evidence makes cost-plus unavailable. It does not automatically make a valid authorized manual product price unavailable.
 
 ## 7. Formula architecture
 
@@ -869,7 +878,9 @@ After CF5, resume in the living roadmap:
 - planning / capacity
 
 ```text
-CF1_OR_LATER = NOT_AUTHORIZED_BY_THIS_DOCUMENT
+CF1_COMMERCIAL_VERTICAL_V1 = IMPLEMENTED_IN_REVIEW
+CF2_OR_LATER = NOT_AUTHORIZED_BY_THIS_DOCUMENT
+OWNER_ACCEPTED_IMPLEMENTATION = NO
 ```
 
 ## 18. Acceptance
@@ -894,7 +905,12 @@ HISTORICAL_REWRITE = NO
 CUSTOMER_WITHOUT_CURSOR = REQUIRED
 PRIMARY_USER_JOURNEY = COMPLETE
 NEXT_PROGRAM = WORKOS_CONFIGURATION_FIRST_FOUNDATION_V1
-IMPLEMENTATION_AUTHORIZED = NO
-DB_IMPLEMENTATION_AUTHORIZED = NO
+FUNCTIONAL_WORKOS_FIRST = YES
+OPTIONAL_BUSINESS_AUTOMATION_MUST_NOT_CREATE_DEAD_END = YES
+SAFE_MANUAL_FALLBACK = REQUIRED_WHERE_SEMANTICALLY_VALID
+IMPLEMENTATION_AUTHORIZED = CF1_COMMERCIAL_VERTICAL_V1_ONLY
+DB_IMPLEMENTATION_AUTHORIZED = COMMERCIAL_POLICY_VERSIONS_ONLY
+OWNER_ACCEPTED_IMPLEMENTATION = NO
 NEXT_WAVE_AUTHORIZED = NO
+FORMULA_CONFIGURABILITY_FULLY_DELIVERED = NO
 ```

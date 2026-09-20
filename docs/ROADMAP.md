@@ -42,10 +42,13 @@ PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
 PRIMARY_USER_JOURNEY_PROOF_DATE = 2026-09-20
 
 NEXT_PROGRAM_PRIORITY = WORKOS_CONFIGURATION_FIRST_FOUNDATION_V1
-NEXT_PROGRAM_STATUS = CF0_COMPLETE
+NEXT_PROGRAM_STATUS = CF1_COMMERCIAL_VERTICAL_V1_IMPLEMENTED_IN_REVIEW
 NEXT_PROGRAM_STARTED = YES
 CONFIGURATION_FIRST_CANON = docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md
-CONFIGURATION_FIRST_IMPLEMENTATION = NOT_AUTHORIZED
+CONFIGURATION_FIRST_IMPLEMENTATION = CF1_COMMERCIAL_VERTICAL_V1_IN_REVIEW
+OWNER_ACCEPTED_IMPLEMENTATION = NO
+MERGE = NO
+FORMULA_CONFIGURABILITY_FULLY_DELIVERED = NO
 
 REAL_CLOUD_WRITE = HOLD
 REAL_DB_WRITE = HOLD
@@ -191,20 +194,23 @@ UNBOUNDED_NO_CODE_ERP_BUILDER = NO
 NO_UNIVERSAL_SCOPE_PRECEDENCE = YES
 HISTORICAL_REWRITE = NO
 CUSTOMER_WITHOUT_CURSOR = REQUIRED
-IMPLEMENTATION_AUTHORIZED = NO
-DB_IMPLEMENTATION_AUTHORIZED = NO
+IMPLEMENTATION_AUTHORIZED = CF1_COMMERCIAL_VERTICAL_V1_ONLY
+DB_IMPLEMENTATION_AUTHORIZED = COMMERCIAL_POLICY_VERSIONS_ONLY
+OWNER_ACCEPTED_IMPLEMENTATION = NO
 ```
 
 | Wave | Scope | Status | Authorization |
 | --- | --- | --- | --- |
-| CF0 | Configuration-First canon / documentation | COMPLETE | this documentation wave only |
-| CF1 | Typed configuration domain + persistence foundation | NOT_STARTED | later Owner GO |
-| CF2 | Resolver + version + audit + snapshot provenance | NOT_STARTED | later Owner GO |
-| CF3 | Basic administration for technical / commercial / variant configuration | NOT_STARTED | later Owner GO |
+| CF0 | Configuration-First canon / documentation | COMPLETE | documentation wave |
+| CF1 | CF1_COMMERCIAL_VERTICAL_V1: commercial contracts, one additive `commercial_policy_versions` table, narrow resolver, `/admin/commercial`, engine consumption, snapshot provenance, manual product pricing fallback | IMPLEMENTED_IN_REVIEW | this commercial vertical only |
+| CF2 | Remaining resolver / audit / snapshot provenance beyond commercial policy | NOT_STARTED | later Owner GO |
+| CF3 | Basic administration for remaining technical / variant configuration | NOT_STARTED | later Owner GO |
 | CF4 | Safe configurable formula foundation + administration | NOT_STARTED | later Owner GO |
-| CF5 | Migrate current source-held changeable business settings / rules | NOT_STARTED | later Owner GO |
+| CF5 | Migrate remaining source-held technical settings / business values | NOT_STARTED | later Owner GO |
 
-CF0 does not authorize CF1 or later, schema work, migrations, seeds, or real Cloud/DB access.
+`IMPLEMENTED_IN_REVIEW` is branch-local evidence. It is not Owner acceptance and not merge authorization.
+
+CF1 does not migrate technical settings, does not implement a formula engine, and does not authorize real Cloud/DB access.
 
 After CF5, resume:
 

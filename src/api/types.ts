@@ -17,6 +17,8 @@ export type ConfirmRequest = {
   values: DraftValues;
   reviewId: string;
   requestId?: string;
+  manualProductNetPrice?: number;
+  preferManualProductPrice?: boolean;
 };
 
 export type QuoteFreezeRequest = {
@@ -24,6 +26,8 @@ export type QuoteFreezeRequest = {
   reviewId: string;
   customerId: string;
   requestId?: string;
+  manualProductNetPrice?: number;
+  preferManualProductPrice?: boolean;
 };
 
 export type ConfigurationReadiness = "ready" | "blocked";
@@ -106,6 +110,15 @@ export type CommercialPriceTransport = {
   unavailableReasons: string[];
   internalCost: number | null;
   internalCostCurrency: string | null;
+  policySource?: string | null;
+  commercialStrategy?: string | null;
+};
+
+export type CommercialPolicyTransport = {
+  source: string | null;
+  sourceLabel: string | null;
+  guidance: string | null;
+  version: number | null;
 };
 
 export type ConfirmTransport = {
@@ -117,6 +130,9 @@ export type ConfirmTransport = {
   total: number | null;
   financialVisible: boolean;
   commercial: CommercialPriceTransport | null;
+  commercialPolicy: CommercialPolicyTransport | null;
+  calculatedPriceAvailable: boolean;
+  manualProductPriceAuthorized: boolean;
   quoteBlocker: string | null;
 };
 

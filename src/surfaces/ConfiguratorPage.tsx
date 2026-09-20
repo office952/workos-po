@@ -107,6 +107,8 @@ export function ConfiguratorPage({
   const [confirmation, setConfirmation] = useState<ConfirmTransport | null>(null);
   const [freezeState, setFreezeState] = useState<ActionState>("idle");
   const [freezeError, setFreezeError] = useState<string | null>(null);
+  const [manualNetDraft, setManualNetDraft] = useState("");
+  const [preferManualPrice, setPreferManualPrice] = useState(false);
   const seller = useResource(resourceKeys.seller(), loadSellerConfigured);
   const sellerConfigured = seller.status === "success" ? seller.data : null;
   const [lastQuote, setLastQuote] = useState<FrozenQuoteRef | null>(() =>
@@ -118,6 +120,22 @@ export function ConfiguratorPage({
   const draftKey = JSON.stringify(drafts);
   const activeProduct = preview?.product.code ?? productCode;
   const visibleLastQuote = lastQuoteOwnedByContext(lastQuote, context);
+
+  function parsedManualNet(): number | null {
+    const parsed = Number(manualNetDraft.replace(",", "."));
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  function manualPricePayload(): {
+    manualProductNetPrice?: number;
+    preferManualProductPrice?: boolean;
+  } {
+    const net = parsedManualNet();
+    return {
+      ...(net !== null ? { manualProductNetPrice: net } : {}),
+      ...(preferManualPrice ? { preferManualProductPrice: true } : {}),
+    };
+  }
 
   function currentTransportValues(): DraftValues {
     return schemaRef.current
@@ -207,6 +225,7 @@ export function ConfiguratorPage({
           values: currentTransportValues(),
           reviewId: preview.reviewId,
           ...(requestId ? { requestId } : {}),
+          ...manualPricePayload(),
         }),
         preview.reviewId,
       );
@@ -250,6 +269,7 @@ export function ConfiguratorPage({
           reviewId: preview.reviewId,
           customerId,
           ...(requestId ? { requestId } : {}),
+          ...manualPricePayload(),
         }),
       );
       if (!presented) {
@@ -443,11 +463,38 @@ export function ConfiguratorPage({
             </InlineAlert>
           ) : null}
           {confirmation ? (
-            <CommercialPricePanel
-              commercial={confirmation.commercial}
-              internalTotal={confirmation.total}
-              internalCurrency={confirmation.currency}
-            />
+            <>
+              <CommercialPricePanel
+                commercial={confirmation.commercial}
+                internalTotal={confirmation.total}
+                internalCurrency={confirmation.currency}
+                policySourceLabel={confirmation.commercialPolicy?.sourceLabel}
+                policyGuidance={confirmation.commercialPolicy?.guidance}
+              />
+              {confirmation.manualProductPriceAuthorized &&
+              (!confirmation.calculatedPriceAvailable || preferManualPrice) ? (
+                <TextField
+                  id="manualProductNetPrice"
+                  label="Preț net manual produs"
+                  value={manualNetDraft}
+                  inputMode="decimal"
+                  hint="TVA și totalul vin de la politica comercială. Costul intern rămâne neschimbat."
+                  onChange={setManualNetDraft}
+                />
+              ) : null}
+              {confirmation.manualProductPriceAuthorized &&
+              confirmation.calculatedPriceAvailable ? (
+                <label className="field" htmlFor="preferManualProductPrice">
+                  <input
+                    id="preferManualProductPrice"
+                    type="checkbox"
+                    checked={preferManualPrice}
+                    onChange={(event) => setPreferManualPrice(event.target.checked)}
+                  />
+                  Folosește preț net manual
+                </label>
+              ) : null}
+            </>
           ) : null}
           {confirmation?.quoteBlocker ? (
             <InlineAlert tone="blocked" title="Oferta nu poate fi creată">

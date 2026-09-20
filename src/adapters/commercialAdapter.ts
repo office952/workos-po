@@ -16,6 +16,26 @@ export function presentCommercialPrice(value: unknown): CommercialPriceTransport
     unavailableReasons: asStringList(record.unavailableReasons),
     internalCost: asNumber(record.internalCost),
     internalCostCurrency: asString(record.internalCostCurrency),
+    policySource: asString(record.policySource),
+    commercialStrategy: asString(record.commercialStrategy),
+  };
+}
+
+export function presentCommercialPolicySummary(value: unknown): {
+  source: string | null;
+  sourceLabel: string | null;
+  guidance: string | null;
+  version: number | null;
+} | null {
+  const record = asRecord(value);
+  if (!record) {
+    return null;
+  }
+  return {
+    source: asString(record.source),
+    sourceLabel: asString(record.sourceLabel),
+    guidance: asString(record.guidance),
+    version: asNumber(record.version),
   };
 }
 

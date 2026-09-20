@@ -6,24 +6,52 @@ import {
   type CommercialPolicy,
 } from "./policy.js";
 import {
-  roundMoney,
   type CommercialPriceCompleteness,
   type CommercialPriceProjection,
 } from "./price.js";
 import { policySourceOf, type ResolvedCommercialPolicy } from "./resolvePolicy.js";
 
-export const MANUAL_FIXED_SERVICE_STRATEGY = "MANUAL_FIXED_PER_REQUEST";
-export const MISSING_MANUAL_SERVICE_PRICE_REASON =
-  "Prețul de montaj nu este confirmat de owner.";
-const INVALID_MANUAL_PRICE_REASON = "Prețul de montaj nu este valid.";
-const CURRENCY_MISMATCH_REASON =
-  "Moneda prețului de montaj nu coincide cu moneda comercială.";
+export const PRODUCT_COST_PLUS_STRATEGY = "PRODUCT_COST_PLUS" as const;
+export const MANUAL_FIXED_PRODUCT_STRATEGY = "MANUAL_FIXED_PRODUCT" as const;
+export const RESERVED_PRODUCT_PRICING_STRATEGIES = [
+  "FIXED_OR_LIST_PRICE",
+  "CONFIGURABLE_FORMULA_PRICE",
+  "CALCULATED_RECOMMENDATION_WITH_OVERRIDE",
+] as const;
+export const SUPPORTED_PRODUCT_PRICING_STRATEGIES = [
+  PRODUCT_COST_PLUS_STRATEGY,
+  MANUAL_FIXED_PRODUCT_STRATEGY,
+] as const;
+export type SupportedProductPricingStrategy =
+  (typeof SUPPORTED_PRODUCT_PRICING_STRATEGIES)[number];
+export type ReservedProductPricingStrategy =
+  (typeof RESERVED_PRODUCT_PRICING_STRATEGIES)[number];
+export type ProductPricingStrategy =
+  | SupportedProductPricingStrategy
+  | ReservedProductPricingStrategy;
 
-export function isValidManualServiceNetPrice(value: number | null | undefined): value is number {
+export const MISSING_MANUAL_PRODUCT_PRICE_REASON =
+  "Prețul net manual al produsului nu este confirmat.";
+export const INVALID_MANUAL_PRODUCT_PRICE_REASON =
+  "Prețul net manual al produsului nu este valid.";
+const CURRENCY_MISMATCH_REASON =
+  "Moneda prețului manual nu coincide cu moneda comercială.";
+
+export function isSupportedProductPricingStrategy(
+  value: string,
+): value is SupportedProductPricingStrategy {
+  return (SUPPORTED_PRODUCT_PRICING_STRATEGIES as readonly string[]).includes(
+    value,
+  );
+}
+
+export function isValidManualProductNetPrice(
+  value: number | null | undefined,
+): value is number {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
-export function projectManualFixedServicePrice(
+export function projectManualFixedProductPrice(
   input: {
     netPrice: number | null | undefined;
     currency?: string;
@@ -54,7 +82,7 @@ export function projectManualFixedServicePrice(
     policyId: policy.id,
     policyVersion: policy.version,
     policySource: policySourceOf(policy),
-    commercialStrategy: MANUAL_FIXED_SERVICE_STRATEGY,
+    commercialStrategy: MANUAL_FIXED_PRODUCT_STRATEGY,
     markupPercent: 0,
     discountPercent: 0,
     vatPercent: policy.vatPercent,
@@ -75,7 +103,7 @@ export function projectManualFixedServicePrice(
     };
   }
 
-  if (!isValidManualServiceNetPrice(input.netPrice)) {
+  if (!isValidManualProductNetPrice(input.netPrice)) {
     return {
       ...base,
       markupAmount: 0,
@@ -85,7 +113,7 @@ export function projectManualFixedServicePrice(
       vatAmount: null,
       grossPrice: null,
       completeness: "PARTIAL",
-      unavailableReasons: [MISSING_MANUAL_SERVICE_PRICE_REASON],
+      unavailableReasons: [MISSING_MANUAL_PRODUCT_PRICE_REASON],
     };
   }
 
@@ -100,7 +128,7 @@ export function projectManualFixedServicePrice(
       vatAmount: null,
       grossPrice: null,
       completeness: "UNAVAILABLE",
-      unavailableReasons: [INVALID_MANUAL_PRICE_REASON],
+      unavailableReasons: [INVALID_MANUAL_PRODUCT_PRICE_REASON],
     };
   }
 
@@ -117,47 +145,43 @@ export function projectManualFixedServicePrice(
   };
 }
 
-export type LiveJobCommercial = {
-  netPrice: number;
-  vatAmount: number;
-  grossPrice: number;
-  currency: "EUR";
-  completeness: "COMPLETE";
-};
+export function projectAuthorizedProductCommercialPrice(
+  costPlus: CommercialPriceProjection,
+  policy: CommercialPolicy | ResolvedCommercialPolicy,
+  options: {
+    authorized: boolean;
+    manualNetPrice?: number | null;
+    preferManual?: boolean;
+  },
+): CommercialPriceProjection {
+  const calculatedAvailable = costPlus.completeness === "COMPLETE";
+  const hasValidManual =
+    options.authorized && isValidManualProductNetPrice(options.manualNetPrice);
+  const wantsManual =
+    options.authorized && (options.preferManual === true || !calculatedAvailable);
 
-export function projectLiveJobCommercial(
-  product: Pick<
-    CommercialPriceProjection,
-    "completeness" | "netPrice" | "vatAmount" | "grossPrice"
-  >,
-  installation:
-    | Pick<CommercialPriceProjection, "completeness" | "netPrice" | "vatAmount" | "grossPrice">
-    | null
-    | undefined,
-): LiveJobCommercial | null {
-  if (
-    !installation ||
-    product.completeness !== "COMPLETE" ||
-    installation.completeness !== "COMPLETE" ||
-    product.netPrice == null ||
-    product.vatAmount == null ||
-    product.grossPrice == null ||
-    installation.netPrice == null ||
-    installation.vatAmount == null ||
-    installation.grossPrice == null
-  ) {
-    return null;
+  if (wantsManual && hasValidManual) {
+    return projectManualFixedProductPrice(
+      { netPrice: options.manualNetPrice },
+      policy,
+    );
   }
+
+  if (wantsManual && options.preferManual === true) {
+    return projectManualFixedProductPrice(
+      { netPrice: options.manualNetPrice },
+      policy,
+    );
+  }
+
   return {
-    netPrice: roundMoney(product.netPrice + installation.netPrice),
-    vatAmount: roundMoney(product.vatAmount + installation.vatAmount),
-    grossPrice: roundMoney(product.grossPrice + installation.grossPrice),
-    currency: "EUR",
-    completeness: "COMPLETE",
+    ...costPlus,
+    commercialStrategy: PRODUCT_COST_PLUS_STRATEGY,
+    policySource: costPlus.policySource ?? policySourceOf(policy),
   };
 }
 
-export function serviceCommercialCompletenessLabel(
+export function productCommercialCompletenessLabel(
   completeness: CommercialPriceCompleteness,
 ): string {
   switch (completeness) {

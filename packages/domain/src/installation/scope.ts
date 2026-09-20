@@ -1,3 +1,4 @@
+import type { CommercialPolicy } from "../commercial/policy.js";
 import {
   projectManualFixedServicePrice,
 } from "../commercial/servicePrice.js";
@@ -63,6 +64,7 @@ export type SiteInstallationProjectionInput = {
   evidence?: SiteInstallationEvidenceInput;
   manualNetPrice?: number | null;
   asOf?: string;
+  policy?: CommercialPolicy;
 };
 
 export type SiteInstallationScopeProjection = {
@@ -254,9 +256,12 @@ export function projectSiteInstallationScope(
     scopeId: SITE_INSTALLATION_SCOPE_ID,
     label: SITE_INSTALLATION_LABEL,
     eic,
-    commercial: projectManualFixedServicePrice({
-      netPrice: input.manualNetPrice ?? null,
-    }),
+    commercial: projectManualFixedServicePrice(
+      {
+        netPrice: input.manualNetPrice ?? null,
+      },
+      input.policy,
+    ),
     incompleteReasons,
   };
 }

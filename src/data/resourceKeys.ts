@@ -21,4 +21,5 @@ export const resourceKeys = {
   operatorCandidates: () => "operator-candidates",
   operatorInbox: () => "operator-inbox",
   resourcesAdmin: () => "resources-admin",
+  commercialAdmin: () => "commercial-admin",
 } as const;

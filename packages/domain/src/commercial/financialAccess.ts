@@ -62,6 +62,9 @@ export type ScopedClientCommercial = {
   adjustmentAmount: number | null;
   policyId: string;
   policyVersion: number;
+  policySource?: string;
+  commercialStrategy?: string;
+  manualNetPrice?: number;
 };
 
 export type ScopedOwnerCommercial = ScopedClientCommercial & {
@@ -103,6 +106,8 @@ export function scopeCommercialPrice(
     adjustmentAmount: price.adjustmentAmount,
     policyId: price.policyId,
     policyVersion: price.policyVersion,
+    ...(price.policySource ? { policySource: price.policySource } : {}),
+    ...(price.commercialStrategy ? { commercialStrategy: price.commercialStrategy } : {}),
   };
   if (access === "commercial") {
     return client;
@@ -141,6 +146,9 @@ export function scopeFrozenCommercial(
     adjustmentAmount: offer.adjustmentAmount,
     policyId: offer.policyId,
     policyVersion: offer.policyVersion,
+    ...(offer.policySource ? { policySource: offer.policySource } : {}),
+    ...(offer.commercialStrategy ? { commercialStrategy: offer.commercialStrategy } : {}),
+    ...(offer.manualNetPrice !== undefined ? { manualNetPrice: offer.manualNetPrice } : {}),
   };
   if (access === "commercial") {
     return client;

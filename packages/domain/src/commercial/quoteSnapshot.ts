@@ -40,7 +40,12 @@ import {
   type SiteInstallationFixingMethod,
   type SiteInstallationMeasurementStatus,
 } from "../installation/facts.js";
+import type { CommercialPolicySource } from "./resolvePolicy.js";
 import type { CommercialPriceProjection } from "./price.js";
+import {
+  MANUAL_FIXED_PRODUCT_STRATEGY,
+  PRODUCT_COST_PLUS_STRATEGY,
+} from "./productPrice.js";
 import {
   MANUAL_FIXED_SERVICE_STRATEGY,
   projectLiveJobCommercial,
@@ -56,7 +61,7 @@ export type QuoteSnapshotStatus = (typeof QUOTE_SNAPSHOT_STATUSES)[number];
 export const FROZEN_QUOTE_LINE_KINDS = ["PRODUCT", "SITE_INSTALLATION"] as const;
 export type FrozenQuoteLineKind = (typeof FROZEN_QUOTE_LINE_KINDS)[number];
 export const FROZEN_QUOTE_LINE_VERSION = 1 as const;
-export const PRODUCT_COMMERCIAL_STRATEGY = "PRODUCT_COST_PLUS" as const;
+export const PRODUCT_COMMERCIAL_STRATEGY = PRODUCT_COST_PLUS_STRATEGY;
 export const SERVICE_QUOTE_FREEZE_NOT_AUTHORIZED = "service_quote_freeze_not_authorized";
 export const SERVICE_QUOTE_FREEZE_NOT_AUTHORIZED_REASON =
   "Previzualizarea ofertei cu montaj este pregătită. Înghețarea acestei oferte nu este activată în această etapă.";
@@ -75,6 +80,8 @@ export type QuoteSnapshotError = (typeof QUOTE_SNAPSHOT_ERRORS)[number];
 export type FrozenCommercialOffer = {
   policyId: string;
   policyVersion: number;
+  policySource?: CommercialPolicySource;
+  commercialStrategy?: string;
   markupPercent: number;
   markupAmount: number;
   discountPercent: number;
@@ -86,6 +93,7 @@ export type FrozenCommercialOffer = {
   grossPrice: number;
   currency: "EUR";
   completeness: "COMPLETE";
+  manualNetPrice?: number;
 };
 
 export type FrozenInstallationTechnicalConfiguration = {
@@ -111,7 +119,9 @@ export type FrozenServiceEvidenceProvenance = {
 export type FrozenProductQuoteLine = {
   kind: "PRODUCT";
   lineVersion: typeof FROZEN_QUOTE_LINE_VERSION;
-  commercialStrategy: typeof PRODUCT_COMMERCIAL_STRATEGY;
+  commercialStrategy:
+    | typeof PRODUCT_COMMERCIAL_STRATEGY
+    | typeof MANUAL_FIXED_PRODUCT_STRATEGY;
   label: string;
   productCode: string;
   eic: FrozenEicReference;
@@ -188,7 +198,7 @@ export type QuoteSnapshotResult =
   | { ok: false; error: QuoteSnapshotError; reasons: readonly string[] };
 
 const INCOMPLETE_REASON =
-  "Oferta nu poate fi înghețată până când costul intern și prețul client nu sunt complete.";
+  "Oferta nu poate fi înghețată fără un preț comercial valid. Completează prețul calculat sau un preț net manual autorizat.";
 const UNAVAILABLE_REASON = "Prețul client nu este disponibil pentru înghețare.";
 const INVALID_CUSTOMER_REASON = "Identitatea clientului nu este validă pentru înghețare.";
 const INVALID_SELLER_REASON = "Identitatea vânzătorului nu este validă pentru înghețare.";
@@ -207,7 +217,21 @@ export function freezeQuoteSnapshot(
     installation?: QuoteInstallationFreezeInput;
   },
 ): QuoteSnapshotResult {
-  if (eic.completeness !== "COMPLETE" || commercial.completeness !== "COMPLETE") {
+  const productStrategy =
+    commercial.commercialStrategy === MANUAL_FIXED_PRODUCT_STRATEGY
+      ? MANUAL_FIXED_PRODUCT_STRATEGY
+      : PRODUCT_COMMERCIAL_STRATEGY;
+  if (commercial.completeness !== "COMPLETE") {
+    return {
+      ok: false,
+      error: "incomplete_offer",
+      reasons: [INCOMPLETE_REASON],
+    };
+  }
+  if (
+    productStrategy === PRODUCT_COMMERCIAL_STRATEGY &&
+    eic.completeness !== "COMPLETE"
+  ) {
     return {
       ok: false,
       error: "incomplete_offer",
@@ -280,21 +304,7 @@ export function freezeQuoteSnapshot(
     };
   }
 
-  const frozenProductCommercial = {
-    policyId: commercial.policyId,
-    policyVersion: commercial.policyVersion,
-    markupPercent: commercial.markupPercent,
-    markupAmount: commercial.markupAmount,
-    discountPercent: commercial.discountPercent,
-    discountAmount: commercial.discountAmount,
-    adjustmentAmount: commercial.adjustmentAmount,
-    netPrice: commercial.netPrice,
-    vatPercent: commercial.vatPercent,
-    vatAmount: commercial.vatAmount,
-    grossPrice: commercial.grossPrice,
-    currency: "EUR" as const,
-    completeness: "COMPLETE" as const,
-  };
+  const frozenProductCommercial = freezeCommercialOffer(commercial, productStrategy);
   const frozenProductEic = freezeEic(eic);
   const v2Fields = installation
     ? freezeJobQuoteFields({
@@ -359,6 +369,21 @@ function copyFrozenEicReference(eic: FrozenEicReference): FrozenEicReference {
   };
 }
 
+export function copyFrozenCommercialOffer(
+  commercial: FrozenCommercialOffer,
+): FrozenCommercialOffer {
+  return {
+    ...commercial,
+    ...(commercial.policySource ? { policySource: commercial.policySource } : {}),
+    ...(commercial.commercialStrategy
+      ? { commercialStrategy: commercial.commercialStrategy }
+      : {}),
+    ...(commercial.manualNetPrice !== undefined
+      ? { manualNetPrice: commercial.manualNetPrice }
+      : {}),
+  };
+}
+
 export function copyFrozenQuoteLine(line: FrozenQuoteLine): FrozenQuoteLine {
   switch (line.kind) {
     case "PRODUCT":
@@ -369,7 +394,7 @@ export function copyFrozenQuoteLine(line: FrozenQuoteLine): FrozenQuoteLine {
         label: line.label,
         productCode: line.productCode,
         eic: copyFrozenEicReference(line.eic),
-        commercial: { ...line.commercial },
+        commercial: copyFrozenCommercialOffer(line.commercial),
       };
     case "SITE_INSTALLATION":
       return {
@@ -383,7 +408,7 @@ export function copyFrozenQuoteLine(line: FrozenQuoteLine): FrozenQuoteLine {
         quantity: line.quantity,
         commercialUnit: line.commercialUnit,
         eic: copyFrozenEicReference(line.eic),
-        commercial: { ...line.commercial },
+        commercial: copyFrozenCommercialOffer(line.commercial),
         technicalConfiguration: { ...line.technicalConfiguration },
         evidence: {
           resourceId: line.evidence.resourceId,
@@ -540,21 +565,10 @@ function freezeJobQuoteFields(input: {
       reasons: [SERVICE_LINE_INVARIANT_REASON],
     };
   }
-  const installLineCommercial: FrozenCommercialOffer = {
-    policyId: installCommercial.policyId,
-    policyVersion: installCommercial.policyVersion,
-    markupPercent: installCommercial.markupPercent,
-    markupAmount: installCommercial.markupAmount,
-    discountPercent: installCommercial.discountPercent,
-    discountAmount: installCommercial.discountAmount,
-    adjustmentAmount: installCommercial.adjustmentAmount,
-    netPrice: installCommercial.netPrice,
-    vatPercent: installCommercial.vatPercent,
-    vatAmount: installCommercial.vatAmount,
-    grossPrice: installCommercial.grossPrice,
-    currency: "EUR",
-    completeness: "COMPLETE",
-  };
+  const installLineCommercial = freezeCommercialOffer(
+    installCommercial,
+    MANUAL_FIXED_SERVICE_STRATEGY,
+  );
   const jobCommercial = projectLiveJobCommercial(
     input.productCommercial,
     installLineCommercial,
@@ -596,6 +610,36 @@ function freezeJobQuoteFields(input: {
     ],
     jobCommercial,
   };
+}
+
+function freezeCommercialOffer(
+  commercial: CommercialPriceProjection,
+  strategy: string,
+): FrozenCommercialOffer {
+  if (!isCompleteFrozenCommercial(commercial)) {
+    throw new Error("incomplete_frozen_commercial");
+  }
+  const offer: FrozenCommercialOffer = {
+    policyId: commercial.policyId,
+    policyVersion: commercial.policyVersion,
+    policySource: commercial.policySource ?? "CODE_DEFAULT",
+    commercialStrategy: commercial.commercialStrategy ?? strategy,
+    markupPercent: commercial.markupPercent,
+    markupAmount: commercial.markupAmount,
+    discountPercent: commercial.discountPercent,
+    discountAmount: commercial.discountAmount,
+    adjustmentAmount: commercial.adjustmentAmount,
+    netPrice: commercial.netPrice,
+    vatPercent: commercial.vatPercent,
+    vatAmount: commercial.vatAmount,
+    grossPrice: commercial.grossPrice,
+    currency: "EUR",
+    completeness: "COMPLETE",
+  };
+  if (strategy === MANUAL_FIXED_PRODUCT_STRATEGY || commercial.commercialStrategy === MANUAL_FIXED_PRODUCT_STRATEGY) {
+    offer.manualNetPrice = commercial.netPrice;
+  }
+  return offer;
 }
 
 function isCompleteFrozenCommercial(

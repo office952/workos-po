@@ -12,6 +12,7 @@ import {
 import { presentQuoteSnapshot } from "../adapters/quoteAdapter";
 import { presentAcceptanceId, presentOrderSnapshotId, presentQuoteList } from "../adapters/quoteListAdapter";
 import { presentRequestDetail, presentRequestList } from "../adapters/requestAdapter";
+import { presentCommercialPolicyAdmin } from "../adapters/commercialPolicyAdapter";
 import { presentResourcesAdmin } from "../adapters/resourcesAdapter";
 import { fetchProductCatalog } from "../api/catalog";
 import { fetchCustomer, fetchCustomers } from "../api/customers";
@@ -22,6 +23,7 @@ import { fetchOperatorCandidates, fetchOperatorInbox, fetchOperatorSession } fro
 import { fetchQuoteSnapshot } from "../api/quote";
 import { fetchQuoteOverview } from "../api/quotes";
 import { fetchRequest, fetchRequests } from "../api/requests";
+import { fetchCommercialPolicy } from "../api/commercialPolicy";
 import { fetchResourcesAdmin } from "../api/resources";
 import { fetchSeller } from "../api/seller";
 
@@ -135,6 +137,14 @@ export async function loadOperatorInbox() {
 
 export async function loadResourcesAdmin() {
   const presented = presentResourcesAdmin(await fetchResourcesAdmin());
+  if (!presented) {
+    throw new Error("unpresentable");
+  }
+  return presented;
+}
+
+export async function loadCommercialPolicyAdmin() {
+  const presented = presentCommercialPolicyAdmin(await fetchCommercialPolicy());
   if (!presented) {
     throw new Error("unpresentable");
   }

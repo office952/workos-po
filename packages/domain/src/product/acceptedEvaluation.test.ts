@@ -57,7 +57,7 @@ const acmValues: DraftValues = {
 };
 
 const QUOTE_HASH_PIN =
-  "35e562617d45f4caabb4f582b9c6385e6be5c1edc345c1dd31d688b25add2f27";
+  "0dda835a76e32fe519ae3c2e8c17435d4233a2221f34f5fcb5d84c9993807604";
 
 function confirmedTruth(
   template: ProductTemplate,

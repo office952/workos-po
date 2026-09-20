@@ -8,12 +8,16 @@ type CommercialPricePanelProps = {
   commercial: CommercialPriceTransport | null;
   internalTotal: number | null;
   internalCurrency: string | null;
+  policySourceLabel?: string | null;
+  policyGuidance?: string | null;
 };
 
 export function CommercialPricePanel({
   commercial,
   internalTotal,
   internalCurrency,
+  policySourceLabel,
+  policyGuidance,
 }: CommercialPricePanelProps) {
   const currency = commercial?.currency ?? internalCurrency ?? "EUR";
   const selling =
@@ -23,12 +27,20 @@ export function CommercialPricePanel({
 
   return (
     <div className="stack" data-testid="commercial-price">
+      {policySourceLabel ? (
+        <p data-testid="commercial-policy-source">{policySourceLabel}</p>
+      ) : null}
+      {policyGuidance ? (
+        <InlineAlert tone="pending" title="Politică de sistem">
+          {policyGuidance}
+        </InlineAlert>
+      ) : null}
       {commercial?.unavailableReasons.length ? (
         <InlineAlert tone="blocked" title="Prețul clientului nu este disponibil">
           {commercial.unavailableReasons.join(" ")}
         </InlineAlert>
       ) : null}
-      {selling !== null ? (
+      {selling !== null && commercial?.unavailableReasons.length === 0 ? (
         <div className="price-hero">
           {commercial?.netPrice !== null && commercial?.netPrice !== undefined ? (
             <>

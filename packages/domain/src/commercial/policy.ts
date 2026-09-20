@@ -1,8 +1,14 @@
+import {
+  CONFIGURATION_STATUSES,
+  isConfigurationStatus,
+  type ConfigurationStatus,
+} from "../configuration/contracts.js";
+
 export const DEFAULT_COMMERCIAL_POLICY_ID = "DEFAULT_COMMERCIAL_POLICY";
 export const COMMERCIAL_CURRENCY = "EUR";
 export const COMMERCIAL_ROUNDING = 0.01;
-
-export type CommercialPolicyStatus = "ACTIVE";
+export const COMMERCIAL_POLICY_STATUSES = CONFIGURATION_STATUSES;
+export type CommercialPolicyStatus = ConfigurationStatus;
 
 export type CommercialPolicy = {
   id: string;
@@ -88,5 +94,17 @@ export function validateCommercialPolicy(
       reason: "Versiunea politicii trebuie să fie un întreg pozitiv.",
     });
   }
+  if (!isConfigurationStatus(policy.status)) {
+    issues.push({
+      field: "status",
+      reason: "Starea politicii comerciale nu este validă.",
+    });
+  }
   return issues;
+}
+
+export function isCommercialPolicyStatus(
+  value: string,
+): value is CommercialPolicyStatus {
+  return isConfigurationStatus(value);
 }

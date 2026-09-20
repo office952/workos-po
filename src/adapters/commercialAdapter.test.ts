@@ -24,6 +24,8 @@ describe("presentCommercialPrice", () => {
       unavailableReasons: [],
       internalCost: 382.5,
       internalCostCurrency: "EUR",
+      policySource: null,
+      commercialStrategy: null,
     });
   });
 

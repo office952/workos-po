@@ -29,6 +29,7 @@ const SLICE_NAV = [
   { id: "jobs", label: "Lucrări", href: "/lucrari" },
   { id: "atelier", label: "Atelier", href: "/atelier" },
   { id: "resources", label: "Resurse", href: "/admin/resources" },
+  { id: "commercial", label: "Comercial", href: "/admin/commercial" },
 ] as const;
 
 export function AppShell({

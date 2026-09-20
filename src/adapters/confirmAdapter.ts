@@ -1,5 +1,9 @@
 import type { ConfirmTransport, CostLineTransport } from "../api/types";
-import { presentCommercialPrice, presentQuoteBlocker } from "./commercialAdapter";
+import {
+  presentCommercialPolicySummary,
+  presentCommercialPrice,
+  presentQuoteBlocker,
+} from "./commercialAdapter";
 import { asRecord } from "./record";
 
 export function presentCostLines(value: unknown): CostLineTransport[] {
@@ -53,6 +57,9 @@ export function presentConfirm(
       total: null,
       financialVisible: false,
       commercial: presentCommercialPrice(record.commercialPrice),
+      commercialPolicy: presentCommercialPolicySummary(record.commercialPolicy),
+      calculatedPriceAvailable: record.calculatedPriceAvailable === true,
+      manualProductPriceAuthorized: record.manualProductPriceAuthorized === true,
       quoteBlocker: presentQuoteBlocker(record.commercialExperience),
     };
   }
@@ -67,6 +74,9 @@ export function presentConfirm(
     total: typeof eic.total === "number" ? eic.total : null,
     financialVisible: true,
     commercial: presentCommercialPrice(record.commercialPrice),
+    commercialPolicy: presentCommercialPolicySummary(record.commercialPolicy),
+    calculatedPriceAvailable: record.calculatedPriceAvailable === true,
+    manualProductPriceAuthorized: record.manualProductPriceAuthorized === true,
     quoteBlocker: presentQuoteBlocker(record.commercialExperience),
   };
 }

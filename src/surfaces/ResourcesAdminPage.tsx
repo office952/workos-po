@@ -155,7 +155,10 @@ export function ResourcesAdminPage() {
         <>
           <CollectionRail
             label="Colecții"
-            items={[{ id: "cost-evidence", label: "Dovezi de cost", selected: true }]}
+            items={[
+              { id: "cost-evidence", label: "Dovezi de cost", selected: true },
+              { id: "commercial", label: "Politică comercială", href: "/admin/commercial" },
+            ]}
           />
           <SurfacePanel variant="flush" title="Setări active" label="Resurse" busy>
             <LoadingFloor variant="admin" label="Se încarcă dovezile de cost" />
@@ -174,7 +177,10 @@ export function ResourcesAdminPage() {
         <>
           <CollectionRail
             label="Colecții"
-            items={[{ id: "cost-evidence", label: "Dovezi de cost", selected: true }]}
+            items={[
+              { id: "cost-evidence", label: "Dovezi de cost", selected: true },
+              { id: "commercial", label: "Politică comercială", href: "/admin/commercial" },
+            ]}
           />
           <SurfacePanel variant="flush" title="Setări active" label="Resurse">
             <Worklist variant="compact" label="Dovezi de cost">

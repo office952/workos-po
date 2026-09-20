@@ -5,6 +5,7 @@ type CollectionItem = {
   id: string;
   label: string;
   selected?: boolean;
+  href?: string;
 };
 
 type CollectionRailProps = {
@@ -21,6 +22,7 @@ export function CollectionRail({ label, items }: CollectionRailProps) {
           id: item.id,
           label: item.label,
           selected: item.selected,
+          href: item.href,
         }))}
       />
     </SurfacePanel>

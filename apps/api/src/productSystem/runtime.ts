@@ -63,6 +63,9 @@ import {
   type OperationalServiceProviderMode,
   type OperationalServicesAdminProjection,
   type OrganizationServiceOfferMutationResult,
+  type CommercialPolicyDraftValues,
+  type CommercialPolicyResolution,
+  type CommercialPolicyVersionRecord,
   type OrderSnapshot,
   type QuoteAcceptanceDecision,
   type QuoteSnapshot,
@@ -157,6 +160,12 @@ import {
   insertQuoteSnapshot,
 } from "../commercial/store.js";
 import {
+  listCommercialPolicyVersions,
+  persistCommercialPolicySave,
+  resolveStoredCommercialPolicy,
+  type CommercialPolicySaveResult,
+} from "../commercial/policyStore.js";
+import {
   getAcceptedProductionSnapshot,
   getAcceptedProductionSnapshotByOrder,
   insertAcceptedProductionSnapshot,
@@ -226,6 +235,9 @@ export type ProductSystemRuntime = {
   };
   readProductionSnapshot(snapshotId: string): AcceptedProductionSnapshot | null;
   readProductionReleaseByOrder(orderSnapshotId: string): AcceptedProductionSnapshot | null;
+  listCommercialPolicyVersions(): CommercialPolicyVersionRecord[];
+  resolveCommercialPolicy(): CommercialPolicyResolution;
+  saveCommercialPolicy(values: CommercialPolicyDraftValues): CommercialPolicySaveResult;
   persistQuoteSnapshot(snapshot: QuoteSnapshot): {
     created: boolean;
     snapshot: QuoteSnapshot;
@@ -582,6 +594,15 @@ export function createProductSystemRuntimeFromOpenDb(
     },
     readProductionReleaseByOrder(orderSnapshotId) {
       return getAcceptedProductionSnapshotByOrder(db, orderSnapshotId);
+    },
+    listCommercialPolicyVersions() {
+      return listCommercialPolicyVersions(db);
+    },
+    resolveCommercialPolicy() {
+      return resolveStoredCommercialPolicy(db);
+    },
+    saveCommercialPolicy(values) {
+      return persistCommercialPolicySave(db, values);
     },
     persistQuoteSnapshot(snapshot) {
       return insertQuoteSnapshot(db, snapshot);

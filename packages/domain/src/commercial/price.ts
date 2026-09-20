@@ -5,6 +5,7 @@ import {
   validateCommercialPolicy,
   type CommercialPolicy,
 } from "./policy.js";
+import { policySourceOf, type CommercialPolicySource, type ResolvedCommercialPolicy } from "./resolvePolicy.js";
 
 export type CommercialCostInput = {
   total: number;
@@ -20,6 +21,8 @@ export type CommercialPriceProjection = {
   internalCostCompleteness: CommercialCostInput["completeness"];
   policyId: string;
   policyVersion: number;
+  policySource?: CommercialPolicySource;
+  commercialStrategy?: string;
   markupPercent: number;
   markupAmount: number | null;
   discountPercent: number;
@@ -51,7 +54,7 @@ export function roundMoney(
 
 export function projectCommercialPrice(
   input: CommercialCostInput,
-  policy: CommercialPolicy = DEFAULT_COMMERCIAL_POLICY,
+  policy: CommercialPolicy | ResolvedCommercialPolicy = DEFAULT_COMMERCIAL_POLICY,
 ): CommercialPriceProjection {
   const policyIssues = validateCommercialPolicy(policy);
   const reasons: string[] = policyIssues.map((issue) => issue.reason);
@@ -79,6 +82,8 @@ export function projectCommercialPrice(
     internalCostCompleteness: input.completeness,
     policyId: policy.id,
     policyVersion: policy.version,
+    policySource: policySourceOf(policy),
+    commercialStrategy: "PRODUCT_COST_PLUS",
     markupPercent: policy.markupPercent,
     discountPercent: policy.defaultDiscountPercent,
     vatPercent: policy.vatPercent,

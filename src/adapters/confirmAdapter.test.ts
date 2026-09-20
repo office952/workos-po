@@ -41,6 +41,9 @@ describe("presentConfirm", () => {
       total: null,
       financialVisible: false,
       commercial: null,
+      commercialPolicy: null,
+      calculatedPriceAvailable: false,
+      manualProductPriceAuthorized: false,
       quoteBlocker: null,
     });
   });

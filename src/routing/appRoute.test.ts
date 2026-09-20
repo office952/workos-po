@@ -29,6 +29,7 @@ describe("parseAppRoute", () => {
     expect(parseAppRoute("/atelier")).toEqual({ name: "atelier" });
     expect(parseAppRoute("/executie/exp-1")).toEqual({ name: "execution", planId: "exp-1" });
     expect(parseAppRoute("/admin/resources")).toEqual({ name: "admin-resources" });
+    expect(parseAppRoute("/admin/commercial")).toEqual({ name: "admin-commercial" });
     expect(parseAppRoute("/foundation")).toEqual({ name: "foundation" });
     expect(parseAppRoute(quoteHref("PRD-LETTERS-FRONTLIT-PLEXI-AL06", "q1"))).toEqual({
       name: "quote",
