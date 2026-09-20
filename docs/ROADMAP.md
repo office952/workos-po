@@ -175,9 +175,20 @@ PRODUCT_FOLLOW_UP = NO
 
 `JOB_TO_ATELIER_JOB_CONTEXT`: inbox/plan carry `jobId`; job opens `/atelier?job=`; execution honors `?task=` / `?job=` and advances off a completed task query. Atelier listed the same NORD plan (12 tasks).
 
-`CONFIGURATOR_FREEZE_RUNTIME`: owner seller setup is in the configurator; freeze surfaces API reasons. Freeze succeeded after owner-confirmed cost evidence (existing EIC, supported owner resource PATCH — not a schema change).
+`CONFIGURATOR_FREEZE_RUNTIME`: owner seller setup is in the configurator; freeze surfaces API reasons. The historical synthetic proof happened to freeze after owner-confirmed cost evidence (existing EIC, supported owner resource PATCH — not a schema change). That was the old proof state, not the current product requirement: numeric `NEEDS_VERIFICATION` evidence may participate in calculations.
 
-A new organization still needs owner-confirmed cost evidence before freeze. Operator skills and machines are explicit organization truth: they are not invented in Atelier or Execution. The journey consumes configured providers and explains a missing machine. General People/Machine administration remains recorded admin debt.
+```text
+COST_CALCULABILITY != COST_VERIFICATION
+NUMERIC_CONFIRMED = CALCULABLE
+NUMERIC_NEEDS_VERIFICATION = CALCULABLE
+NUMERIC_NEEDS_VERIFICATION = NON_BLOCKING
+NUMERIC_NEEDS_VERIFICATION = VISIBLE_WARNING
+MISSING_NUMERIC_VALUE = NO_ZERO
+MISSING_NUMERIC_VALUE = NO_INVENTION
+MISSING_NUMERIC_VALUE = BLOCK_DEPENDENT_CALCULATION_ONLY
+```
+
+Owner confirmation is not required merely for a calculation to run or for calculated pricing to be available. Operator skills and machines are explicit organization truth: they are not invented in Atelier or Execution. The journey consumes configured providers and explains a missing machine. General People/Machine administration remains recorded admin debt.
 
 ## Configuration-First Foundation V1
 
