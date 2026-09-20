@@ -42,12 +42,21 @@ PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
 PRIMARY_USER_JOURNEY_PROOF_DATE = 2026-09-20
 
 NEXT_PROGRAM_PRIORITY = WORKOS_CONFIGURATION_FIRST_FOUNDATION_V1
-NEXT_PROGRAM_STATUS = CF1_COMMERCIAL_VERTICAL_V1_IMPLEMENTED_IN_REVIEW
+NEXT_PROGRAM_STATUS = CF1_COMPLETE
 NEXT_PROGRAM_STARTED = YES
 CONFIGURATION_FIRST_CANON = docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md
-CONFIGURATION_FIRST_IMPLEMENTATION = CF1_COMMERCIAL_VERTICAL_V1_IN_REVIEW
-OWNER_ACCEPTED_IMPLEMENTATION = NO
-MERGE = NO
+CONFIGURATION_FIRST_IMPLEMENTATION = CF1_COMMERCIAL_VERTICAL_V1_COMPLETE
+CF1_COMMERCIAL_VERTICAL_V1 = COMPLETE
+OWNER_ACCEPTED_IMPLEMENTATION = YES
+INTEGRATED_ON_MAIN = YES
+MERGE = COMPLETE
+MERGE_COMMIT = ec899ba294f37e614617256260727bd9eb61d6e3
+PR_8 = MERGED
+CF2 = NOT_STARTED
+CF3 = NOT_STARTED
+CF4 = NOT_STARTED
+CF5 = NOT_STARTED
+NEXT_WAVE_AUTHORIZED = NO
 FORMULA_CONFIGURABILITY_FULLY_DELIVERED = NO
 
 REAL_CLOUD_WRITE = HOLD
@@ -207,13 +216,14 @@ HISTORICAL_REWRITE = NO
 CUSTOMER_WITHOUT_CURSOR = REQUIRED
 IMPLEMENTATION_AUTHORIZED = CF1_COMMERCIAL_VERTICAL_V1_ONLY
 DB_IMPLEMENTATION_AUTHORIZED = COMMERCIAL_POLICY_VERSIONS_ONLY
-OWNER_ACCEPTED_IMPLEMENTATION = NO
+OWNER_ACCEPTED_IMPLEMENTATION = YES
+NEXT_WAVE_AUTHORIZED = NO
 ```
 
 | Wave | Scope | Status | Authorization |
 | --- | --- | --- | --- |
 | CF0 | Configuration-First canon / documentation | COMPLETE | documentation wave |
-| CF1 | CF1_COMMERCIAL_VERTICAL_V1: organization commercial defaults, quote-specific commercial terms, explicit pricing method, one additive `commercial_policy_versions` table, narrow resolver, `/admin/commercial`, engine consumption, snapshot provenance, manual product pricing | IMPLEMENTED_IN_REVIEW | this commercial vertical only |
+| CF1 | CF1_COMMERCIAL_VERTICAL_V1: organization commercial defaults, quote-specific commercial terms, explicit pricing method, one additive `commercial_policy_versions` table, narrow resolver, `/admin/commercial`, engine consumption, snapshot provenance, manual product pricing | COMPLETE | Owner-accepted and merged on main (`ec899ba`, PR #8) |
 | CF2 | Remaining resolver / audit / snapshot provenance beyond commercial policy | NOT_STARTED | later Owner GO |
 | CF3 | Basic administration for remaining technical / variant configuration | NOT_STARTED | later Owner GO |
 | CF4 | Safe configurable formula foundation + administration | NOT_STARTED | later Owner GO |
@@ -232,7 +242,7 @@ FROZEN_QUOTE_MUTATION = NO
 ACCEPTANCE_TARGETS_EXACT_SNAPSHOT = YES
 ```
 
-`IMPLEMENTED_IN_REVIEW` is branch-local evidence. It is not Owner acceptance and not merge authorization.
+CF1 was previously recorded as `IMPLEMENTED_IN_REVIEW` while on the review branch. That marker was branch-local evidence, not Owner acceptance. Owner acceptance and merge are now complete. CF2 is the next listed roadmap wave and is not started or authorized.
 
 CF1 does not migrate technical settings, does not implement a formula engine, and does not authorize real Cloud/DB access.
 
