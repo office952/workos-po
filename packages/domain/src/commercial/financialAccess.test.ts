@@ -38,6 +38,19 @@ describe("financial access", () => {
     expect(scoped && "marginAmount" in scoped ? scoped.marginAmount : null).toBe(133.88);
   });
 
+  it("does not invent a margin from a partial internal cost", () => {
+    const partial = projectCommercialPrice({
+      total: 345,
+      currency: "EUR",
+      completeness: "PARTIAL",
+    });
+    const scoped = scopeCommercialPrice(partial, "owner");
+    expect(scoped && "internalCostCompleteness" in scoped ? scoped.internalCostCompleteness : null).toBe(
+      "PARTIAL",
+    );
+    expect(scoped && "marginAmount" in scoped ? scoped.marginAmount : undefined).toBeNull();
+  });
+
   it("omits owner-only fields for member commercial", () => {
     const scoped = scopeCommercialPrice(price, "commercial");
     const keys = collectFinancialKeys(scoped);

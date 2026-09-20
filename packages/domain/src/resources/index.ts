@@ -63,18 +63,34 @@ export {
 } from "./catalog.js";
 export {
   EIC_CALIBRATION_REASON,
+  EIC_CALCULATION_STATUSES,
   EIC_GEOMETRY_CONFIRMED_LABEL,
+  EIC_VERIFICATION_STATUSES,
   compileEic,
   costCompletenessLabel,
-  costEvidenceKeepsEicPartial,
+  costEvidenceNeedsVerification,
+  eicIsCalculable,
   missingCostEvidenceReason,
   eicLineGroupLabel,
   resourceRequirements,
+  type EicCalculationStatus,
   type EicLine,
   type EicLineGroup,
   type EicResult,
+  type EicVerificationStatus,
   type ResourceRequirement,
 } from "./eic.js";
+export {
+  COST_COMPLETENESS_ISSUE_TYPES,
+  COST_ISSUE_IMPACTS,
+  PROVISIONAL_COST_EVIDENCE_REASON,
+  costIssueImpact,
+  isCostCompletenessIssueType,
+  projectCostCompletenessIssues,
+  type CostCompletenessIssue,
+  type CostCompletenessIssueType,
+  type CostIssueImpact,
+} from "./costCompleteness.js";
 export {
   applyResourcesAdministrationWrite,
   projectResourcesAdministration,

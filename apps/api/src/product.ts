@@ -11,7 +11,18 @@ import {
   freezeOrderSnapshot,
   freezeQuoteSnapshot,
   projectQuoteDocument,
+  CODE_DEFAULT_POLICY_GUIDANCE,
+  commercialPolicySourceLabel,
+  MANUAL_FIXED_PRODUCT_STRATEGY,
+  PRODUCT_COST_PLUS_STRATEGY,
+  organizationCommercialDefaultsFromPolicy,
+  projectAuthorizedProductCommercialPrice,
   projectCommercialPrice,
+  projectCostCompletenessIssues,
+  quoteCommercialTermsFromPolicy,
+  quoteCommercialTermsMatchDefaults,
+  validateQuoteCommercialTerms,
+  type QuoteCommercialTerms,
   projectLiveJobCommercial,
   omitForbiddenFinancialFields,
   scopeCommercialPrice,
@@ -47,13 +58,14 @@ import {
   type TaskMutationResult,
   type DraftConfiguration,
   type DraftValue,
+  type CommercialPolicy,
   type DraftValues,
   type ProductDefinition,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
 import { getCookie } from "hono/cookie";
 import type { ProductSystemRuntime } from "./productSystem/runtime.js";
-import { getProductSystem, type ApiContext, type ApiEnv } from "./cloud/context.js";
+import { getProductSystem, isOwner, type ApiContext, type ApiEnv } from "./cloud/context.js";
 import { financialAccess } from "./financial/access.js";
 import { requireOwnerRole } from "./cloud/middleware.js";
 import { httpPathIdentity } from "./httpPathIdentity.js";
@@ -120,6 +132,7 @@ function installationReadinessForRequest(
 function readInstallationProjection(
   runtime: ProductSystemRuntime,
   body: unknown,
+  policy?: CommercialPolicy,
 ) {
   const requestId = readRequestId(body);
   if (!requestId) {
@@ -132,6 +145,7 @@ function readInstallationProjection(
   return projectSiteInstallationScope({
     selected: request.optionalScopeIds.includes(SITE_INSTALLATION_SCOPE_ID),
     ...readiness,
+    ...(policy ? { policy } : {}),
   });
 }
 
@@ -152,6 +166,138 @@ function presentInstallationTransport(
       ? siteInstallationIsPrequoteReady(installationScope)
       : false,
     incompleteReasons: installationScope?.incompleteReasons ?? [],
+  };
+}
+
+function readManualProductNetPrice(body: unknown): number | null {
+  if (typeof body !== "object" || body === null || !("manualProductNetPrice" in body)) {
+    return null;
+  }
+  const value = (body as { manualProductNetPrice: unknown }).manualProductNetPrice;
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function readPreferManualProductPrice(body: unknown): boolean {
+  if (typeof body !== "object" || body === null || !("preferManualProductPrice" in body)) {
+    return false;
+  }
+  return (body as { preferManualProductPrice: unknown }).preferManualProductPrice === true;
+}
+
+function readPricingMethod(body: unknown): "PRODUCT_COST_PLUS" | "MANUAL_FIXED_PRODUCT" | null {
+  if (typeof body !== "object" || body === null || !("pricingMethod" in body)) {
+    return null;
+  }
+  const value = (body as { pricingMethod: unknown }).pricingMethod;
+  if (value === PRODUCT_COST_PLUS_STRATEGY || value === MANUAL_FIXED_PRODUCT_STRATEGY) {
+    return value;
+  }
+  return null;
+}
+
+function readQuoteCommercialTerms(body: unknown): QuoteCommercialTerms | null | undefined {
+  if (typeof body !== "object" || body === null || !("quoteCommercialTerms" in body)) {
+    return undefined;
+  }
+  const raw = (body as { quoteCommercialTerms: unknown }).quoteCommercialTerms;
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    return null;
+  }
+  const payload = raw as Record<string, unknown>;
+  const markupPercent = payload.markupPercent;
+  const discountPercent = payload.discountPercent;
+  const adjustmentAmount = payload.adjustmentAmount;
+  if (
+    typeof markupPercent !== "number" ||
+    !Number.isFinite(markupPercent) ||
+    typeof discountPercent !== "number" ||
+    !Number.isFinite(discountPercent) ||
+    typeof adjustmentAmount !== "number" ||
+    !Number.isFinite(adjustmentAmount)
+  ) {
+    return null;
+  }
+  return { markupPercent, discountPercent, adjustmentAmount };
+}
+
+function resolveProductCommercialForRequest(
+  runtime: ProductSystemRuntime,
+  eic: Parameters<typeof projectCommercialPrice>[0],
+  body: unknown,
+  authorized: boolean,
+) {
+  const resolution = runtime.resolveCommercialPolicy();
+  if (!resolution.ok) {
+    return { ok: false as const, resolution };
+  }
+  const requestedTerms = readQuoteCommercialTerms(body);
+  if (requestedTerms === null) {
+    return {
+      ok: false as const,
+      error: "invalid_quote_terms" as const,
+      issues: [
+        {
+          field: "quoteCommercialTerms",
+          reason: "Termenii comerciali ai ofertei trebuie să fie numere valide.",
+        },
+      ],
+    };
+  }
+  const quoteTerms = requestedTerms ?? quoteCommercialTermsFromPolicy(resolution.policy);
+  const termIssues = validateQuoteCommercialTerms(quoteTerms);
+  if (termIssues.length > 0) {
+    return {
+      ok: false as const,
+      error: "invalid_quote_terms" as const,
+      issues: termIssues,
+    };
+  }
+  const pricingMethod =
+    readPricingMethod(body) ??
+    (authorized && readPreferManualProductPrice(body)
+      ? MANUAL_FIXED_PRODUCT_STRATEGY
+      : PRODUCT_COST_PLUS_STRATEGY);
+  const preferManual = authorized && pricingMethod === MANUAL_FIXED_PRODUCT_STRATEGY;
+  const costPlus = projectCommercialPrice(eic, resolution.policy, quoteTerms);
+  const commercialPrice = projectAuthorizedProductCommercialPrice(
+    costPlus,
+    resolution.policy,
+    {
+      authorized,
+      manualNetPrice: authorized ? readManualProductNetPrice(body) : null,
+      preferManual,
+    },
+  );
+  const organizationDefaults = organizationCommercialDefaultsFromPolicy(resolution.policy);
+  return {
+    ok: true as const,
+    resolution,
+    costPlus,
+    commercialPrice,
+    quoteTerms,
+    organizationDefaults,
+    quoteTermsFromDefaults: quoteCommercialTermsMatchDefaults(quoteTerms, organizationDefaults),
+    pricingMethod: commercialPrice.commercialStrategy ?? pricingMethod,
+    calculatedPriceAvailable: costPlus.calculationStatus === "CALCULABLE",
+    manualProductPriceAuthorized: authorized,
+  };
+}
+
+function presentResolvedCommercialPolicy(
+  resolution: Extract<
+    ReturnType<ProductSystemRuntime["resolveCommercialPolicy"]>,
+    { ok: true }
+  >,
+) {
+  return {
+    source: resolution.policy.source,
+    sourceLabel: commercialPolicySourceLabel(resolution.policy.source),
+    guidance:
+      resolution.policy.source === "CODE_DEFAULT" ? CODE_DEFAULT_POLICY_GUIDANCE : null,
+    policyId: resolution.policy.id,
+    version: resolution.policy.version,
+    currency: resolution.policy.currency,
+    rounding: resolution.policy.rounding,
   };
 }
 
@@ -270,7 +416,12 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       formSchema,
       readDraft(productCode, body),
     );
-    const installationProjection = readInstallationProjection(runtime, body);
+    const previewPolicy = runtime.resolveCommercialPolicy();
+    const installationProjection = readInstallationProjection(
+      runtime,
+      body,
+      previewPolicy.ok ? previewPolicy.policy : undefined,
+    );
     const presentedInstallation = presentSiteInstallationScope(installationProjection);
     const access = financialAccess(c, "commercial");
     const installationScope = presentedInstallation
@@ -294,8 +445,37 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       return c.json(compiled.body, compiled.status);
     }
     const access = financialAccess(c, "commercial");
-    const commercialPrice = projectCommercialPrice(compiled.eic);
-    const installationProjection = readInstallationProjection(runtime, body);
+    const priced = resolveProductCommercialForRequest(
+      runtime,
+      compiled.eic,
+      body,
+      isOwner(c),
+    );
+    if (!priced.ok) {
+      if ("error" in priced && priced.error === "invalid_quote_terms") {
+        return c.json(
+          {
+            error: "invalid_quote_terms",
+            issues: priced.issues,
+            reasons: priced.issues.map((issue) => issue.reason),
+          },
+          400,
+        );
+      }
+      return c.json(
+        {
+          error: priced.resolution.error,
+          reasons: [priced.resolution.reason],
+        },
+        422,
+      );
+    }
+    const commercialPrice = priced.commercialPrice;
+    const installationProjection = readInstallationProjection(
+      runtime,
+      body,
+      priced.resolution.policy,
+    );
     const presentedInstallation = presentSiteInstallationScope(installationProjection);
     const installationScope = presentedInstallation
       ? scopeSiteInstallationOperatorView(presentedInstallation, access)
@@ -312,10 +492,31 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       truth: compiled.truth,
       aggregate: compiled.aggregate,
       eic: scopeEic(compiled.eic, access),
+      ...(access === "owner"
+        ? {
+            costCompletenessIssues: projectCostCompletenessIssues(
+              compiled.aggregate,
+              compiled.composition,
+              compiled.costEvidenceRows,
+            ),
+          }
+        : {}),
       commercialPrice: scopeCommercialPrice(commercialPrice, access),
+      commercialPolicy: presentResolvedCommercialPolicy(priced.resolution),
+      ...(access === "owner"
+        ? {
+            organizationDefaults: priced.organizationDefaults,
+            quoteCommercialTerms: priced.quoteTerms,
+            quoteTermsFromDefaults: priced.quoteTermsFromDefaults,
+          }
+        : {}),
+      pricingMethod: priced.pricingMethod,
+      calculatedPriceAvailable: priced.calculatedPriceAvailable,
+      manualProductPriceAuthorized: priced.manualProductPriceAuthorized,
       commercialExperience: projectCommercialExperience({
         commercialCompleteness: commercialPrice.completeness,
         internalCostCompleteness: compiled.eic.completeness,
+        manualProductPriceAuthorized: priced.manualProductPriceAuthorized,
       }),
       installationScope,
       installationPrequoteReady: installationScope
@@ -431,7 +632,32 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         return c.json(installationRefusal, 422);
       }
     }
-    const commercialPrice = projectCommercialPrice(compiled.eic);
+    const priced = resolveProductCommercialForRequest(
+      runtime,
+      compiled.eic,
+      body,
+      isOwner(c),
+    );
+    if (!priced.ok) {
+      if ("error" in priced && priced.error === "invalid_quote_terms") {
+        return c.json(
+          {
+            error: "invalid_quote_terms",
+            issues: priced.issues,
+            reasons: priced.issues.map((issue) => issue.reason),
+          },
+          400,
+        );
+      }
+      return c.json(
+        {
+          error: priced.resolution.error,
+          reasons: [priced.resolution.reason],
+        },
+        422,
+      );
+    }
+    const commercialPrice = priced.commercialPrice;
     const seller = runtime.getSellerProfile();
     if (!seller) {
       return c.json(
@@ -450,6 +676,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
               ?.optionalScopeIds.includes(SITE_INSTALLATION_SCOPE_ID),
           ),
           ...installationReadinessForRequest(runtime, requestId).readiness,
+          policy: priced.resolution.policy,
         })
       : null;
     if (installationForFreeze) {

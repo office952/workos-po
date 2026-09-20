@@ -7,6 +7,8 @@ import {
   executionHref,
   parseJobContext,
   parseTaskContext,
+  ADMINISTRATION_HREF,
+  isAdministrationPath,
   navItemCurrent,
   parseAppRoute,
   parseCustomerContext,
@@ -29,6 +31,7 @@ describe("parseAppRoute", () => {
     expect(parseAppRoute("/atelier")).toEqual({ name: "atelier" });
     expect(parseAppRoute("/executie/exp-1")).toEqual({ name: "execution", planId: "exp-1" });
     expect(parseAppRoute("/admin/resources")).toEqual({ name: "admin-resources" });
+    expect(parseAppRoute("/admin/commercial")).toEqual({ name: "admin-commercial" });
     expect(parseAppRoute("/foundation")).toEqual({ name: "foundation" });
     expect(parseAppRoute(quoteHref("PRD-LETTERS-FRONTLIT-PLEXI-AL06", "q1"))).toEqual({
       name: "quote",
@@ -73,6 +76,12 @@ describe("parseAppRoute", () => {
     expect(navItemCurrent("/lucrari/job-1", "/lucrari")).toBe(true);
     expect(navItemCurrent("/executie/exp-1", "/atelier")).toBe(true);
     expect(navItemCurrent("/executie/exp-1", "/lucrari")).toBe(false);
+    expect(isAdministrationPath("/admin/resources")).toBe(true);
+    expect(isAdministrationPath("/admin/commercial")).toBe(true);
+    expect(navItemCurrent("/admin/resources", ADMINISTRATION_HREF)).toBe(true);
+    expect(navItemCurrent("/admin/commercial", ADMINISTRATION_HREF)).toBe(true);
+    expect(navItemCurrent("/clienti", ADMINISTRATION_HREF)).toBe(false);
+    expect(navItemCurrent("/oferte", ADMINISTRATION_HREF)).toBe(false);
     expect(
       catalogHref({
         customerId: "cus-1",

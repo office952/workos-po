@@ -243,22 +243,30 @@ describe("commercial configuration gate", () => {
     );
   });
 
-  it("stays PARTIAL for vinyl and painted finishes", () => {
-    const vinyl = projectCommercialPrice(
-      confirmedEic({
-        ...readyValues,
-        "face.finish": "vinyl",
-        "face.color": "alb",
-      }),
-    );
-    const painted = projectCommercialPrice(
-      confirmedEic({
-        ...readyValues,
-        "volume.finish": "painted",
-        "volume.color": "RAL 9010",
-      }),
-    );
-    expect(vinyl.completeness).toBe("PARTIAL");
-    expect(painted.completeness).toBe("PARTIAL");
+  it("calculates PRODUCT_COST_PLUS when numeric evidence needs verification", () => {
+    const vinylEic = confirmedEic({
+      ...readyValues,
+      "face.finish": "vinyl",
+      "face.color": "alb",
+    });
+    const paintedEic = confirmedEic({
+      ...readyValues,
+      "volume.finish": "painted",
+      "volume.color": "RAL 9010",
+    });
+    const vinyl = projectCommercialPrice(vinylEic);
+    const painted = projectCommercialPrice(paintedEic);
+    expect(vinylEic.verificationStatus).toBe("NEEDS_VERIFICATION");
+    expect(paintedEic.verificationStatus).toBe("NEEDS_VERIFICATION");
+    expect(vinyl.completeness).toBe("COMPLETE");
+    expect(painted.completeness).toBe("COMPLETE");
+    expect(vinyl.calculationStatus).toBe("CALCULABLE");
+    expect(painted.calculationStatus).toBe("CALCULABLE");
+    expect(vinyl.verificationStatus).toBe("NEEDS_VERIFICATION");
+    expect(painted.verificationStatus).toBe("NEEDS_VERIFICATION");
+    expect(vinyl.unavailableReasons).toEqual([]);
+    expect(painted.unavailableReasons).toEqual([]);
+    expect(vinyl.netPrice).toBe(roundMoney(vinylEic.total * 1.35));
+    expect(vinyl.grossPrice).toBe(roundMoney(roundMoney(vinylEic.total * 1.35) * 1.21));
   });
 });

@@ -41,6 +41,7 @@ import { QuoteSnapshotPage } from "./surfaces/QuoteSnapshotPage";
 import { QuotesPage } from "./surfaces/QuotesPage";
 import { RequestDetailPage } from "./surfaces/RequestDetailPage";
 import { RequestsPage } from "./surfaces/RequestsPage";
+import { CommercialAdminPage } from "./surfaces/CommercialAdminPage";
 import { ResourcesAdminPage } from "./surfaces/ResourcesAdminPage";
 
 function syncCanonicalLocation(): AppLocation {
@@ -103,6 +104,8 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
       );
     case "admin-resources":
       return <ResourcesAdminPage />;
+    case "admin-commercial":
+      return <CommercialAdminPage />;
     case "foundation":
       return <FoundationProofPage />;
     case "unknown":

@@ -1,36 +1,144 @@
 import type { CommercialPriceTransport } from "../api/types";
-import { InfoRow } from "../components/InfoRow";
 import { InlineAlert } from "../components/InlineAlert";
 import { SectionLabel } from "../components/SectionLabel";
+import { StatusBadge } from "../components/StatusBadge";
 import { formatMoney } from "./format";
 
 type CommercialPricePanelProps = {
   commercial: CommercialPriceTransport | null;
   internalTotal: number | null;
   internalCurrency: string | null;
+  internalCompleteness?: string | null;
+  calculationStatus?: string | null;
+  verificationStatus?: string | null;
+  policySourceLabel?: string | null;
+  policyGuidance?: string | null;
+  showCustomerPrice?: boolean;
+  showInternalCost?: boolean;
 };
+
+function costPresentation(
+  completeness: string | null | undefined,
+  calculationStatus: string | null | undefined,
+  verificationStatus: string | null | undefined,
+): {
+  heading: string;
+  label: string;
+  tone: "ready" | "pending" | "incomplete";
+  attention: string | null;
+} {
+  const calculable =
+    calculationStatus === "CALCULABLE" || completeness === "COMPLETE";
+  if (calculable && verificationStatus === "NEEDS_VERIFICATION") {
+    return {
+      heading: "Cost intern estimat",
+      label: "Calculat",
+      tone: "pending",
+      attention: "Necesită verificare",
+    };
+  }
+  if (calculable) {
+    return {
+      heading: "Cost intern cunoscut",
+      label: "Complet",
+      tone: "ready",
+      attention: null,
+    };
+  }
+  return {
+    heading: "Cost intern cunoscut",
+    label: "Incomplet",
+    tone: "incomplete",
+    attention: null,
+  };
+}
+
+function knownInternalCost(
+  commercialCost: number | null | undefined,
+  commercialCompleteness: string | null | undefined,
+  internalTotal: number | null,
+  internalCompleteness: string | null | undefined,
+): number | null {
+  if (
+    typeof commercialCost === "number" &&
+    (commercialCost > 0 || commercialCompleteness === "COMPLETE")
+  ) {
+    return commercialCost;
+  }
+  if (
+    typeof internalTotal === "number" &&
+    (internalTotal > 0 || internalCompleteness === "COMPLETE")
+  ) {
+    return internalTotal;
+  }
+  return null;
+}
 
 export function CommercialPricePanel({
   commercial,
   internalTotal,
   internalCurrency,
+  internalCompleteness,
+  calculationStatus,
+  verificationStatus,
+  policySourceLabel,
+  policyGuidance,
+  showCustomerPrice = true,
+  showInternalCost = true,
 }: CommercialPricePanelProps) {
   const currency = commercial?.currency ?? internalCurrency ?? "EUR";
-  const selling =
-    commercial?.grossPrice ??
-    commercial?.netPrice ??
-    null;
+  const completenessValue =
+    commercial?.internalCostCompleteness ?? internalCompleteness ?? null;
+  const resolvedCalculation =
+    calculationStatus ?? commercial?.calculationStatus ?? null;
+  const resolvedVerification =
+    verificationStatus ?? commercial?.verificationStatus ?? null;
+  const costStatus = costPresentation(
+    completenessValue,
+    resolvedCalculation,
+    resolvedVerification,
+  );
+  const knownCost = knownInternalCost(
+    commercial?.internalCost,
+    commercial?.internalCostCompleteness,
+    internalTotal,
+    internalCompleteness,
+  );
+  const showKnownCostBlock =
+    showInternalCost && (knownCost !== null || completenessValue === "PARTIAL");
+  const customerReady =
+    showCustomerPrice &&
+    commercial?.completeness === "COMPLETE" &&
+    commercial.unavailableReasons.length === 0 &&
+    (commercial.netPrice !== null || commercial.grossPrice !== null);
 
   return (
     <div className="stack" data-testid="commercial-price">
-      {commercial?.unavailableReasons.length ? (
-        <InlineAlert tone="blocked" title="Prețul clientului nu este disponibil">
-          {commercial.unavailableReasons.join(" ")}
+      {policySourceLabel ? (
+        <p data-testid="commercial-policy-source">{policySourceLabel}</p>
+      ) : null}
+      {policyGuidance ? (
+        <InlineAlert tone="pending" title="Valori de sistem">
+          {policyGuidance}
         </InlineAlert>
       ) : null}
-      {selling !== null ? (
-        <div className="price-hero">
-          {commercial?.netPrice !== null && commercial?.netPrice !== undefined ? (
+      {showKnownCostBlock ? (
+        <div data-testid="internal-cost">
+          <SectionLabel>{costStatus.heading}</SectionLabel>
+          {knownCost !== null ? (
+            <p className="price-hero__value">
+              {formatMoney(knownCost, commercial?.internalCostCurrency ?? currency)}
+            </p>
+          ) : null}
+          <p>
+            <StatusBadge label={costStatus.label} tone={costStatus.tone} />
+          </p>
+          {costStatus.attention ? <p>{costStatus.attention}</p> : null}
+        </div>
+      ) : null}
+      {customerReady ? (
+        <div className="price-hero" data-testid="customer-price">
+          {commercial.netPrice !== null && commercial.netPrice !== undefined ? (
             <>
               <SectionLabel>Preț net client</SectionLabel>
               <p className="price-hero__value">
@@ -38,23 +146,20 @@ export function CommercialPricePanel({
               </p>
             </>
           ) : null}
-          {commercial?.grossPrice !== null && commercial?.grossPrice !== undefined ? (
+          {commercial.vatPercent !== null ? (
             <p className="price-hero__meta">
-              Preț client cu TVA {formatMoney(commercial.grossPrice, currency)}
+              TVA {commercial.vatPercent}%
+              {commercial.vatAmount !== null
+                ? ` · ${formatMoney(commercial.vatAmount, currency)}`
+                : ""}
+            </p>
+          ) : null}
+          {commercial.grossPrice !== null && commercial.grossPrice !== undefined ? (
+            <p className="price-hero__meta">
+              Preț total cu TVA {formatMoney(commercial.grossPrice, currency)}
             </p>
           ) : null}
         </div>
-      ) : null}
-      {commercial && selling === null && commercial.unavailableReasons.length === 0 ? (
-        <p>Prețul clientului nu a fost returnat pentru această confirmare.</p>
-      ) : null}
-      {internalTotal !== null ? (
-        <dl>
-          <InfoRow
-            label="Cost intern"
-            value={formatMoney(internalTotal, internalCurrency ?? currency)}
-          />
-        </dl>
       ) : null}
     </div>
   );

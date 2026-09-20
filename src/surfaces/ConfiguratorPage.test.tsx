@@ -80,6 +80,73 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+function confirmBody(options: {
+  rate: number;
+  cost: number;
+  completeness?: string;
+  calculationStatus?: string;
+  verificationStatus?: string;
+  calculatedPriceAvailable?: boolean;
+  costCompletenessIssues?: Array<Record<string, unknown>>;
+}) {
+  const completeness = options.completeness ?? "COMPLETE";
+  const calculationStatus =
+    options.calculationStatus ??
+    (completeness === "COMPLETE" ? "CALCULABLE" : "UNAVAILABLE");
+  const verificationStatus = options.verificationStatus ?? "CONFIRMED";
+  return {
+    eic: {
+      completeness,
+      calculationStatus,
+      verificationStatus,
+      completenessReasons: [],
+      currency: "EUR",
+      total: options.cost,
+      lines: [
+        {
+          resourceId: "aluminium_return_profile",
+          label: "Profil aluminiu 0,6 mm",
+          quantity: 12.5,
+          unit: "m",
+          rate: options.rate,
+          currency: "EUR",
+          cost: options.cost,
+        },
+      ],
+    },
+    commercialPrice: {
+      netPrice: 100,
+      grossPrice: 121,
+      vatPercent: 21,
+      vatAmount: 21,
+      currency: "EUR",
+      completeness: "COMPLETE",
+      unavailableReasons: [],
+      internalCost: options.cost,
+      internalCostCurrency: "EUR",
+      internalCostCompleteness: completeness,
+      calculationStatus,
+      verificationStatus,
+    },
+    costCompletenessIssues: options.costCompletenessIssues ?? [],
+    organizationDefaults: {
+      markupPercent: 35,
+      discountPercent: 0,
+      adjustmentAmount: 0,
+    },
+    quoteCommercialTerms: {
+      markupPercent: 35,
+      discountPercent: 0,
+      adjustmentAmount: 0,
+    },
+    quoteTermsFromDefaults: true,
+    pricingMethod: "PRODUCT_COST_PLUS",
+    calculatedPriceAvailable: options.calculatedPriceAvailable ?? completeness === "COMPLETE",
+    manualProductPriceAuthorized: true,
+    commercialExperience: { quoteBlocker: null },
+  };
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
   sessionStorage.clear();
@@ -90,6 +157,11 @@ function installFetch(options: {
   rate: number;
   cost: number;
   sellerConfigured?: boolean;
+  completeness?: string;
+  calculationStatus?: string;
+  verificationStatus?: string;
+  calculatedPriceAvailable?: boolean;
+  costCompletenessIssues?: Array<Record<string, unknown>>;
 }) {
   const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
     void init;
@@ -98,25 +170,7 @@ function installFetch(options: {
       return jsonResponse(url.includes(ACM_PRODUCT) ? acmPreviewBody : previewBody);
     }
     if (url.endsWith("/confirm")) {
-      return jsonResponse({
-        eic: {
-          completeness: "COMPLETE",
-          completenessReasons: [],
-          currency: "EUR",
-          total: options.cost,
-          lines: [
-            {
-              resourceId: "aluminium_return_profile",
-              label: "Profil aluminiu 0,6 mm",
-              quantity: 12.5,
-              unit: "m",
-              rate: options.rate,
-              currency: "EUR",
-              cost: options.cost,
-            },
-          ],
-        },
-      });
+      return jsonResponse(confirmBody(options));
     }
     if (url.endsWith("/seller")) {
       return jsonResponse({
@@ -206,9 +260,9 @@ async function confirmReady() {
   const user = userEvent.setup();
   await screen.findByLabelText("Textul literelor");
   await waitFor(() => {
-    expect(screen.getByRole("button", { name: "Confirmă" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
   });
-  await user.click(screen.getByRole("button", { name: "Confirmă" }));
+  await user.click(screen.getByRole("button", { name: "Confirmă configurația" }));
   await screen.findByTestId("profile-cost");
   return user;
 }
@@ -233,9 +287,9 @@ describe("ConfiguratorPage", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Confirmă" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
     });
-    await userEvent.setup().click(screen.getByRole("button", { name: "Confirmă" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Confirmă configurația" }));
     expect(await screen.findByTestId("profile-cost")).toHaveTextContent(
       "12,5 m × 3,00 EUR/m = 37,50 EUR",
     );
@@ -251,6 +305,7 @@ describe("ConfiguratorPage", () => {
     );
     expect(String(confirmCall?.[1]?.body)).toContain("\"values\"");
     expect(String(confirmCall?.[1]?.body)).not.toContain("ProductDefinition");
+    expect(String(confirmCall?.[1]?.body)).not.toContain("quoteCommercialTerms");
   });
 
   it("freezes only with existing customer context and does not create seller, customer, or request", async () => {
@@ -296,7 +351,7 @@ describe("ConfiguratorPage", () => {
     renderConfigurator({ customerId: null, requestId: null });
     await confirmReady();
     expect(
-      screen.getByText("Selectează un client înainte de a crea oferta."),
+      screen.getByText(/Selectează un client înainte de a crea oferta/),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeDisabled();
     expect(
@@ -347,25 +402,7 @@ describe("ConfiguratorPage", () => {
         return jsonResponse(previewBody);
       }
       if (url.endsWith("/confirm")) {
-        return jsonResponse({
-          eic: {
-            completeness: "COMPLETE",
-            completenessReasons: [],
-            currency: "EUR",
-            total: 37.5,
-            lines: [
-              {
-                resourceId: "aluminium_return_profile",
-                label: "Profil aluminiu 0,6 mm",
-                quantity: 12.5,
-                unit: "m",
-                rate: 3,
-                currency: "EUR",
-                cost: 37.5,
-              },
-            ],
-          },
-        });
+        return jsonResponse(confirmBody({ rate: 3, cost: 37.5 }));
       }
       if (url.endsWith("/seller") && method === "PATCH") {
         sellerConfigured = true;
@@ -456,12 +493,31 @@ describe("ConfiguratorPage", () => {
     );
     renderConfigurator({ requestId: null });
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Confirmă" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
     });
-    await userEvent.setup().click(screen.getByRole("button", { name: "Confirmă" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Confirmă configurația" }));
     expect(await screen.findByTestId("profile-cost")).toHaveTextContent(
       "12,5 m × 3,20 EUR/m = 40,00 EUR",
     );
+  });
+
+  it("asks how this quote is priced and keeps cost separate from customer price", async () => {
+    installFetch({ rate: 3, cost: 37.5 });
+    window.history.replaceState(
+      null,
+      "",
+      "/?customer=cus-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    );
+    renderConfigurator({ requestId: null });
+    await confirmReady();
+    expect(screen.getByText("Cum stabilești prețul acestei oferte?")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Calculat din costuri/ })).toBeChecked();
+    expect(screen.getByRole("radio", { name: /Preț net negociat manual/ })).toBeInTheDocument();
+    expect(screen.getByLabelText("Adaos pentru această ofertă (%)")).toHaveValue("35");
+    expect(screen.getByText("Pornit din valorile implicite ale firmei.")).toBeInTheDocument();
+    expect(screen.getByText("Cost intern cunoscut")).toBeInTheDocument();
+    expect(screen.getByTestId("customer-price")).toHaveTextContent("Preț net client");
+    expect(screen.queryByText("Preț net manual produs")).not.toBeInTheDocument();
   });
 
   it("does not use proof A/B language", async () => {
@@ -685,5 +741,201 @@ describe("ConfiguratorPage", () => {
     expect(document.querySelector(".panel__header")).toBeNull();
     expect(document.querySelector(".panel__body")).toBeNull();
     expect(document.querySelector(".configurator-new-panel")).toBeNull();
+  });
+
+  it("shows the missing cost-evidence resource and a cost-evidence action", async () => {
+    installFetch({
+      rate: 3,
+      cost: 345,
+      completeness: "PARTIAL",
+      calculatedPriceAvailable: false,
+      costCompletenessIssues: [
+        {
+          type: "MISSING_COST_EVIDENCE",
+          impact: "BLOCKS_CALCULATION",
+          resourceId: "plexiglas_3mm_opal",
+          label: "Plexiglas 3 mm opal",
+          reason: "Tarif lipsă pentru Plexiglas 3 mm opal",
+        },
+      ],
+    });
+    window.history.replaceState(
+      null,
+      "",
+      "/?customer=cus-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    );
+    renderConfigurator({ requestId: null });
+    await confirmReady();
+    expect(screen.getByText("Cost intern cunoscut")).toBeInTheDocument();
+    expect(screen.getByText("Incomplet")).toBeInTheDocument();
+    expect(screen.getByText("Linii cunoscute")).toBeInTheDocument();
+    expect(screen.getByText("Ce lipsește din cost")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Vezi ce lipsește" })).toHaveAttribute(
+      "href",
+      "#cost-intern-gaps",
+    );
+    expect(screen.getByText("Plexiglas 3 mm opal")).toBeInTheDocument();
+    expect(screen.getByText("Tarif lipsă pentru Plexiglas 3 mm opal")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Deschide Dovezi de cost" })).toHaveAttribute(
+      "href",
+      "/admin/resources",
+    );
+    expect(screen.getByRole("radio", { name: /Preț net negociat manual/ })).toBeEnabled();
+    expect(screen.getByText(/deoarece costul intern este incomplet/)).toBeInTheDocument();
+  });
+
+  it("shows a technical gap without claiming a missing tariff", async () => {
+    installFetch({
+      rate: 3,
+      cost: 0,
+      completeness: "PARTIAL",
+      calculatedPriceAvailable: false,
+      costCompletenessIssues: [
+        {
+          type: "MISSING_TECHNICAL_INPUT",
+          impact: "BLOCKS_CALCULATION",
+          label: "Față",
+          reason: "Suprafață față neconfirmată",
+          componentLabel: "Față",
+        },
+      ],
+    });
+    window.history.replaceState(
+      null,
+      "",
+      "/?customer=cus-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    );
+    renderConfigurator({ requestId: null });
+    await confirmReady();
+    expect(screen.getByText("Suprafață față neconfirmată")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Completează configurația" })).toHaveAttribute(
+      "href",
+      "#configuratie",
+    );
+    expect(screen.queryByText(/Tarif lipsă/)).not.toBeInTheDocument();
+  });
+
+  it("shows provisional evidence as unconfirmed, not missing", async () => {
+    installFetch({
+      rate: 3,
+      cost: 386,
+      completeness: "COMPLETE",
+      calculationStatus: "CALCULABLE",
+      verificationStatus: "NEEDS_VERIFICATION",
+      calculatedPriceAvailable: true,
+      costCompletenessIssues: [
+        {
+          type: "PROVISIONAL_COST_EVIDENCE",
+          impact: "REQUIRES_VERIFICATION",
+          resourceId: "MAT-VINYL-ORACAL-651",
+          label: "Vinil Oracal 651",
+          reason: "Cost existent, dar neconfirmat",
+          rate: 9,
+        },
+      ],
+    });
+    window.history.replaceState(
+      null,
+      "",
+      "/?customer=cus-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    );
+    renderConfigurator({ requestId: null });
+    await confirmReady();
+    expect(screen.getByText("Cost intern estimat")).toBeInTheDocument();
+    expect(screen.getByText("Calculat")).toBeInTheDocument();
+    expect(screen.getAllByText("Necesită verificare").length).toBeGreaterThan(0);
+    expect(screen.getByText("Valori care necesită verificare")).toBeInTheDocument();
+    expect(screen.getByText("Vinil Oracal 651")).toBeInTheDocument();
+    expect(screen.getByText("9,00 EUR")).toBeInTheDocument();
+    expect(screen.getByText("Cost existent, dar neconfirmat")).toBeInTheDocument();
+    expect(screen.queryByText("Ce lipsește din cost")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Tarif lipsă/)).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Calculat din costuri/ })).toBeEnabled();
+    expect(screen.getByRole("radio", { name: /Preț net negociat manual/ })).toBeEnabled();
+    expect(
+      screen.getByText("Calculul folosește 1 valoare care necesită verificare."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Calculul automat nu este disponibil/)).not.toBeInTheDocument();
+    expect(screen.getByText("Adaos pentru această ofertă (%)")).toBeInTheDocument();
+  });
+
+  it("hides unresolved cost issues when EIC is complete", async () => {
+    installFetch({ rate: 3, cost: 37.5 });
+    window.history.replaceState(
+      null,
+      "",
+      "/?customer=cus-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    );
+    renderConfigurator({ requestId: null });
+    await confirmReady();
+    expect(screen.queryByTestId("cost-completeness-issues")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ce lipsește din cost")).not.toBeInTheDocument();
+  });
+
+  it("does not show internal cost gaps when financial context is hidden", async () => {
+    const fetchMock = installFetch({
+      rate: 3,
+      cost: 345,
+      completeness: "PARTIAL",
+      calculatedPriceAvailable: false,
+      costCompletenessIssues: [
+        {
+          type: "MISSING_COST_EVIDENCE",
+          impact: "BLOCKS_CALCULATION",
+          resourceId: "plexiglas_3mm_opal",
+          label: "Plexiglas 3 mm opal",
+          reason: "Tarif lipsă pentru Plexiglas 3 mm opal",
+        },
+      ],
+    });
+    fetchMock.mockImplementation((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/preview")) {
+        return jsonResponse(previewBody);
+      }
+      if (url.endsWith("/confirm")) {
+        return jsonResponse({
+          commercialPrice: {
+            netPrice: 400,
+            grossPrice: 484,
+            vatPercent: 21,
+            vatAmount: 84,
+            currency: "EUR",
+            completeness: "COMPLETE",
+            unavailableReasons: [],
+          },
+          pricingMethod: "MANUAL_FIXED_PRODUCT",
+          calculatedPriceAvailable: false,
+          manualProductPriceAuthorized: true,
+          costCompletenessIssues: [
+            {
+              type: "MISSING_COST_EVIDENCE",
+              label: "Plexiglas 3 mm opal",
+              reason: "Tarif lipsă pentru Plexiglas 3 mm opal",
+            },
+          ],
+        });
+      }
+      if (url.endsWith("/seller")) {
+        return jsonResponse({ configured: true, seller: { legalName: "Isolated" } });
+      }
+      void init;
+      return jsonResponse({});
+    });
+    window.history.replaceState(
+      null,
+      "",
+      "/?customer=cus-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    );
+    renderConfigurator({ requestId: null });
+    const user = userEvent.setup();
+    await screen.findByLabelText("Textul literelor");
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
+    });
+    await user.click(screen.getByRole("button", { name: "Confirmă configurația" }));
+    expect(await screen.findByText("Cost intern indisponibil")).toBeInTheDocument();
+    expect(screen.queryByTestId("cost-completeness-issues")).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Preț net negociat manual/ })).toBeEnabled();
   });
 });

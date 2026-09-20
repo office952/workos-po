@@ -1,6 +1,6 @@
+import { projectNetVatGross } from "./money.js";
 import {
   COMMERCIAL_CURRENCY,
-  COMMERCIAL_ROUNDING,
   DEFAULT_COMMERCIAL_POLICY,
   validateCommercialPolicy,
   type CommercialPolicy,
@@ -10,6 +10,7 @@ import {
   type CommercialPriceCompleteness,
   type CommercialPriceProjection,
 } from "./price.js";
+import { policySourceOf, type ResolvedCommercialPolicy } from "./resolvePolicy.js";
 
 export const MANUAL_FIXED_SERVICE_STRATEGY = "MANUAL_FIXED_PER_REQUEST";
 export const MISSING_MANUAL_SERVICE_PRICE_REASON =
@@ -27,7 +28,7 @@ export function projectManualFixedServicePrice(
     netPrice: number | null | undefined;
     currency?: string;
   },
-  policy: CommercialPolicy = DEFAULT_COMMERCIAL_POLICY,
+  policy: CommercialPolicy | ResolvedCommercialPolicy = DEFAULT_COMMERCIAL_POLICY,
 ): CommercialPriceProjection {
   const policyIssues = validateCommercialPolicy(policy);
   const reasons: string[] = policyIssues.map((issue) => issue.reason);
@@ -52,10 +53,14 @@ export function projectManualFixedServicePrice(
     internalCostCompleteness: "PARTIAL",
     policyId: policy.id,
     policyVersion: policy.version,
+    policySource: policySourceOf(policy),
+    commercialStrategy: MANUAL_FIXED_SERVICE_STRATEGY,
     markupPercent: 0,
     discountPercent: 0,
     vatPercent: policy.vatPercent,
     currency: COMMERCIAL_CURRENCY,
+    calculationStatus: "UNAVAILABLE",
+    verificationStatus: "CONFIRMED",
   };
 
   if (reasons.length > 0) {
@@ -86,8 +91,8 @@ export function projectManualFixedServicePrice(
     };
   }
 
-  const netPrice = roundMoney(input.netPrice, policy.rounding ?? COMMERCIAL_ROUNDING);
-  if (netPrice <= 0) {
+  const priced = projectNetVatGross(input.netPrice, policy);
+  if (priced.netPrice <= 0) {
     return {
       ...base,
       markupAmount: null,
@@ -101,16 +106,14 @@ export function projectManualFixedServicePrice(
     };
   }
 
-  const vatAmount = roundMoney(netPrice * (policy.vatPercent / 100), policy.rounding);
-  const grossPrice = roundMoney(netPrice + vatAmount, policy.rounding);
   return {
     ...base,
     markupAmount: 0,
     discountAmount: 0,
     adjustmentAmount: 0,
-    netPrice,
-    vatAmount,
-    grossPrice,
+    netPrice: priced.netPrice,
+    vatAmount: priced.vatAmount,
+    grossPrice: priced.grossPrice,
     completeness: "COMPLETE",
     unavailableReasons: [],
   };

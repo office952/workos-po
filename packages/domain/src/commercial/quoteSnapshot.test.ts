@@ -13,8 +13,15 @@ import {
 } from "../product/frontlitPlexiAl06.js";
 import type { DraftValues } from "../product/types.js";
 import { compileEic } from "../resources/eic.js";
+import {
+  ALUMINIUM_RETURN_PROFILE_ID,
+  PLEXIGLAS_3MM_OPAL_ID,
+  costEvidence,
+  type CostEvidence,
+} from "../resources/catalog.js";
 import { DEFAULT_COMMERCIAL_POLICY, type CommercialPolicy } from "./policy.js";
 import { projectCommercialPrice } from "./price.js";
+import { projectManualFixedProductPrice } from "./productPrice.js";
 import { projectManualFixedServicePrice } from "./servicePrice.js";
 import {
   PRODUCT_COMMERCIAL_STRATEGY,
@@ -36,7 +43,10 @@ const readyValues: DraftValues = {
   "volume.confirmedPerimeterMm": 12500,
 };
 
-function confirmedSpine(values: DraftValues = readyValues) {
+function confirmedSpine(
+  values: DraftValues = readyValues,
+  evidenceRows: readonly CostEvidence[] = costEvidence,
+) {
   const definition = compileDefinition(
     frontlitPlexiAl06Template,
     frontlitPlexiAl06FormSchema,
@@ -56,8 +66,8 @@ function confirmedSpine(values: DraftValues = readyValues) {
     seededDisplayLabelCatalog(),
   );
   const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
-  const eic = compileEic(aggregate, composition);
-  return { truth, aggregate, composition, eic };
+  const eic = compileEic(aggregate, composition, evidenceRows);
+  return { truth, aggregate, composition, eic, evidenceRows };
 }
 
 describe("quote snapshot freeze", () => {
@@ -78,6 +88,8 @@ describe("quote snapshot freeze", () => {
     expect(result.snapshot.commercial).toEqual({
       policyId: "DEFAULT_COMMERCIAL_POLICY",
       policyVersion: 1,
+      policySource: "CODE_DEFAULT",
+      commercialStrategy: "PRODUCT_COST_PLUS",
       markupPercent: 35,
       markupAmount: 133.88,
       discountPercent: 0,
@@ -94,8 +106,8 @@ describe("quote snapshot freeze", () => {
       `qts:${CANONICAL_PRODUCT_CODE}:${result.snapshot.contentHash}`,
     );
     expect(result.snapshot.contentHash).toBe(
-      // Proven equal on origin/main 33c2f9fae4402b152f2840c96cf6da98a1c74a03.
-      "35e562617d45f4caabb4f582b9c6385e6be5c1edc345c1dd31d688b25add2f27",
+      // New-freeze pin after CF1 provenance fields (policySource + commercialStrategy).
+      "0dda835a76e32fe519ae3c2e8c17435d4233a2221f34f5fcb5d84c9993807604",
     );
     expect(quoteSnapshotContentHash(result.snapshot)).toBe(result.snapshot.contentHash);
     expect(JSON.stringify(result.snapshot)).not.toMatch(
@@ -132,35 +144,59 @@ describe("quote snapshot freeze", () => {
     expect(second.snapshot.createdAt).toBe("2026-08-17T12:00:00.000Z");
   });
 
-  it("blocks PARTIAL EIC and commercial from becoming a frozen quote", () => {
-    const { truth, aggregate, composition, eic } = confirmedSpine({
-      ...readyValues,
-      "face.finish": "vinyl",
-      "face.color": "alb",
-    });
+  it("blocks a missing numeric tariff from becoming a cost-plus frozen quote", () => {
+    const sixtyOnly = costEvidence.filter(
+      (item) =>
+        item.resourceId !== ALUMINIUM_RETURN_PROFILE_ID || item.when?.volumeDepthMm === 60,
+    );
+    const { truth, aggregate, composition, eic } = confirmedSpine(
+      {
+        ...readyValues,
+        "volume.depthMm": "30",
+      },
+      sixtyOnly,
+    );
     const commercial = projectCommercialPrice(eic);
     expect(eic.completeness).toBe("PARTIAL");
+    expect(eic.calculationStatus).toBe("UNAVAILABLE");
     expect(commercial.completeness).toBe("PARTIAL");
     expect(freezeQuoteSnapshot(truth, aggregate, composition, eic, commercial)).toEqual({
       ok: false,
       error: "incomplete_offer",
       reasons: [
-        "Oferta nu poate fi înghețată până când costul intern și prețul client nu sunt complete.",
+        "Oferta nu poate fi înghețată fără un preț comercial valid. Completează prețul calculat sau un preț net manual autorizat.",
       ],
     });
   });
 
-  it.each<DraftValues>([
-    { "face.finish": "vinyl", "face.color": "alb" },
-    { "volume.finish": "painted", "volume.color": "RAL 9010" },
-  ])("blocks incomplete configuration %o", (overrides) => {
-    const { truth, aggregate, composition, eic } = confirmedSpine({
+  it("freezes PRODUCT_COST_PLUS when numeric evidence needs verification", () => {
+    const { truth, aggregate, composition, eic, evidenceRows } = confirmedSpine({
       ...readyValues,
-      ...overrides,
+      "face.finish": "vinyl",
+      "face.color": "alb",
     });
+    const commercial = projectCommercialPrice(eic);
+    expect(eic.completeness).toBe("COMPLETE");
+    expect(eic.verificationStatus).toBe("NEEDS_VERIFICATION");
+    expect(commercial.completeness).toBe("COMPLETE");
+    const frozen = freezeQuoteSnapshot(truth, aggregate, composition, eic, commercial, {
+      costEvidenceRows: evidenceRows,
+    });
+    expect(frozen.ok).toBe(true);
+    if (!frozen.ok) {
+      return;
+    }
+    expect(frozen.snapshot.eic.completeness).toBe("COMPLETE");
+    expect(frozen.snapshot.eic.total).toBe(eic.total);
     expect(
-      freezeQuoteSnapshot(truth, aggregate, composition, eic, projectCommercialPrice(eic)).ok,
-    ).toBe(false);
+      frozen.snapshot.eic.lines.some(
+        (line) => line.resourceId === "MAT-VINYL-ORACAL-651" && line.rate > 0,
+      ),
+    ).toBe(true);
+    expect(
+      frozen.snapshot.productionInput.usedRecipes.every((recipe) => recipe.rate > 0),
+    ).toBe(true);
+    expect(JSON.stringify(frozen.snapshot.eic)).not.toMatch(/CONFIRMED|NEEDS_VERIFICATION/);
   });
 
   it.each([
@@ -382,6 +418,8 @@ describe("quote snapshot freeze", () => {
         },
         eic: {
           completeness: "COMPLETE",
+          calculationStatus: "CALCULABLE",
+          verificationStatus: "CONFIRMED",
           completenessReasons: [],
           geometryLabel: null,
           currency: "EUR",
@@ -483,5 +521,64 @@ describe("quote snapshot freeze", () => {
     expect(ordered.snapshot.schemaVersion).toBe(2);
     expect(ordered.snapshot.lines).toEqual(withInstall.snapshot.lines);
     expect(ordered.snapshot.jobCommercial).toEqual(withInstall.snapshot.jobCommercial);
+  });
+
+  it("freezes a manual product price when cost-plus is unavailable", () => {
+    const withoutPlexiglas = costEvidence.filter(
+      (item) => item.resourceId !== PLEXIGLAS_3MM_OPAL_ID,
+    );
+    const { truth, aggregate, composition, eic } = confirmedSpine(
+      readyValues,
+      withoutPlexiglas,
+    );
+    expect(eic.completeness).toBe("PARTIAL");
+    expect(eic.calculationStatus).toBe("UNAVAILABLE");
+    const commercial = projectManualFixedProductPrice({ netPrice: 400 });
+    const frozen = freezeQuoteSnapshot(truth, aggregate, composition, eic, commercial);
+    expect(frozen.ok).toBe(true);
+    if (!frozen.ok) {
+      return;
+    }
+    expect(frozen.snapshot.commercial.commercialStrategy).toBe("MANUAL_FIXED_PRODUCT");
+    expect(frozen.snapshot.commercial.policySource).toBe("CODE_DEFAULT");
+    expect(frozen.snapshot.commercial.manualNetPrice).toBe(400);
+    expect(frozen.snapshot.commercial.vatPercent).toBe(21);
+    expect(frozen.snapshot.commercial.netPrice).toBe(400);
+    expect(frozen.snapshot.eic.completeness).toBe("PARTIAL");
+    expect(isSupportedQuoteSnapshot(frozen.snapshot)).toBe(true);
+  });
+
+  it("still reads a historical V1 snapshot that has no policySource", () => {
+    const { truth, aggregate, composition, eic } = confirmedSpine();
+    const frozen = freezeQuoteSnapshot(
+      truth,
+      aggregate,
+      composition,
+      eic,
+      projectCommercialPrice(eic),
+    );
+    expect(frozen.ok).toBe(true);
+    if (!frozen.ok) {
+      return;
+    }
+    const historical = {
+      ...frozen.snapshot,
+      commercial: {
+        policyId: frozen.snapshot.commercial.policyId,
+        policyVersion: frozen.snapshot.commercial.policyVersion,
+        markupPercent: frozen.snapshot.commercial.markupPercent,
+        markupAmount: frozen.snapshot.commercial.markupAmount,
+        discountPercent: frozen.snapshot.commercial.discountPercent,
+        discountAmount: frozen.snapshot.commercial.discountAmount,
+        adjustmentAmount: frozen.snapshot.commercial.adjustmentAmount,
+        netPrice: frozen.snapshot.commercial.netPrice,
+        vatPercent: frozen.snapshot.commercial.vatPercent,
+        vatAmount: frozen.snapshot.commercial.vatAmount,
+        grossPrice: frozen.snapshot.commercial.grossPrice,
+        currency: "EUR" as const,
+        completeness: "COMPLETE" as const,
+      },
+    };
+    expect(isSupportedQuoteSnapshot(historical)).toBe(true);
   });
 });

@@ -23,6 +23,7 @@ import { writeResource } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadResourcesAdmin } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
+import { administrationRailItems } from "../layout/administrationNav";
 import { SlicePage } from "../layout/SlicePage";
 import { formatMoney, formatTimestamp } from "../presentation/format";
 import { statusTone } from "../presentation/statusTone";
@@ -154,8 +155,8 @@ export function ResourcesAdminPage() {
       {loadState === "loading" ? (
         <>
           <CollectionRail
-            label="Colecții"
-            items={[{ id: "cost-evidence", label: "Dovezi de cost", selected: true }]}
+            label="Administrare"
+            items={administrationRailItems("resources")}
           />
           <SurfacePanel variant="flush" title="Setări active" label="Resurse" busy>
             <LoadingFloor variant="admin" label="Se încarcă dovezile de cost" />
@@ -173,8 +174,8 @@ export function ResourcesAdminPage() {
       {loadState === "ready" ? (
         <>
           <CollectionRail
-            label="Colecții"
-            items={[{ id: "cost-evidence", label: "Dovezi de cost", selected: true }]}
+            label="Administrare"
+            items={administrationRailItems("resources")}
           />
           <SurfacePanel variant="flush" title="Setări active" label="Resurse">
             <Worklist variant="compact" label="Dovezi de cost">

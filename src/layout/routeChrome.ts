@@ -136,6 +136,15 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         title: "Dovezi de cost",
         lead: "Tarif confirmat pe resursă și calificator. Valoarea salvată este folosită doar la calcule noi.",
       };
+    case "admin-commercial":
+      return {
+        contextLabel: "Administrare",
+        currentHref: "/admin/commercial",
+        workspace: "admin",
+        eyebrow: "Administrare",
+        title: "Valori comerciale implicite",
+        lead: "Aceste valori sunt folosite ca punct de pornire pentru ofertele noi. Pot fi modificate individual pe fiecare ofertă.",
+      };
     case "foundation":
       return {
         contextLabel: "Fundație",

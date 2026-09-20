@@ -23,7 +23,6 @@ import {
   resourceCatalog,
 } from "./catalog.js";
 import {
-  EIC_CALIBRATION_REASON,
   EIC_GEOMETRY_CONFIRMED_LABEL,
   applyRequirement,
   compileEic,
@@ -202,8 +201,10 @@ describe("EIC", () => {
     expect(eic.lines.filter((line) => line.resourceId === "MAT-VINYL-ORACAL-651")).toHaveLength(
       1,
     );
-    expect(eic.completeness).toBe("PARTIAL");
-    expect(eic.completenessReasons).toEqual([EIC_CALIBRATION_REASON]);
+    expect(eic.completeness).toBe("COMPLETE");
+    expect(eic.calculationStatus).toBe("CALCULABLE");
+    expect(eic.verificationStatus).toBe("NEEDS_VERIFICATION");
+    expect(eic.completenessReasons).toEqual([]);
     expect(eic.total).toBe(386);
   });
 
@@ -215,8 +216,10 @@ describe("EIC", () => {
     });
     const eic = compileEic(aggregate, composition);
     expect(lineCost(eic, "SVC-PAINT-RAL")).toBe(50);
-    expect(eic.completeness).toBe("PARTIAL");
-    expect(eic.completenessReasons).toEqual([EIC_CALIBRATION_REASON]);
+    expect(eic.completeness).toBe("COMPLETE");
+    expect(eic.calculationStatus).toBe("CALCULABLE");
+    expect(eic.verificationStatus).toBe("NEEDS_VERIFICATION");
+    expect(eic.completenessReasons).toEqual([]);
     expect(eic.total).toBe(432.5);
   });
 

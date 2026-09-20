@@ -13,10 +13,20 @@ export type PreviewRequest = {
   requestId?: string;
 };
 
+export type QuoteCommercialTermsTransport = {
+  markupPercent: number;
+  discountPercent: number;
+  adjustmentAmount: number;
+};
+
 export type ConfirmRequest = {
   values: DraftValues;
   reviewId: string;
   requestId?: string;
+  pricingMethod?: "PRODUCT_COST_PLUS" | "MANUAL_FIXED_PRODUCT";
+  quoteCommercialTerms?: QuoteCommercialTermsTransport;
+  manualProductNetPrice?: number;
+  preferManualProductPrice?: boolean;
 };
 
 export type QuoteFreezeRequest = {
@@ -24,6 +34,10 @@ export type QuoteFreezeRequest = {
   reviewId: string;
   customerId: string;
   requestId?: string;
+  pricingMethod?: "PRODUCT_COST_PLUS" | "MANUAL_FIXED_PRODUCT";
+  quoteCommercialTerms?: QuoteCommercialTermsTransport;
+  manualProductNetPrice?: number;
+  preferManualProductPrice?: boolean;
 };
 
 export type ConfigurationReadiness = "ready" | "blocked";
@@ -96,6 +110,22 @@ export type CostLineTransport = {
   cost: number;
 };
 
+export type CostCompletenessIssueTransport = {
+  type:
+    | "MISSING_COST_EVIDENCE"
+    | "MISSING_TECHNICAL_INPUT"
+    | "UNCALCULATED_COMPONENT"
+    | "PROVISIONAL_COST_EVIDENCE"
+    | "OTHER";
+  impact: "BLOCKS_CALCULATION" | "REQUIRES_VERIFICATION";
+  label: string;
+  reason: string;
+  resourceId: string | null;
+  componentLabel: string | null;
+  context: string | null;
+  rate: number | null;
+};
+
 export type CommercialPriceTransport = {
   netPrice: number | null;
   grossPrice: number | null;
@@ -106,17 +136,45 @@ export type CommercialPriceTransport = {
   unavailableReasons: string[];
   internalCost: number | null;
   internalCostCurrency: string | null;
+  internalCostCompleteness: string | null;
+  markupPercent: number | null;
+  markupAmount: number | null;
+  discountPercent: number | null;
+  discountAmount: number | null;
+  adjustmentAmount: number | null;
+  marginAmount: number | null;
+  policySource?: string | null;
+  commercialStrategy?: string | null;
+  calculationStatus?: string | null;
+  verificationStatus?: string | null;
+};
+
+export type CommercialPolicyTransport = {
+  source: string | null;
+  sourceLabel: string | null;
+  guidance: string | null;
+  version: number | null;
 };
 
 export type ConfirmTransport = {
   reviewId: string;
   completeness: string | null;
+  calculationStatus: string | null;
+  verificationStatus: string | null;
   completenessReasons: string[];
+  costCompletenessIssues: CostCompletenessIssueTransport[];
   currency: string | null;
   lines: CostLineTransport[];
   total: number | null;
   financialVisible: boolean;
   commercial: CommercialPriceTransport | null;
+  commercialPolicy: CommercialPolicyTransport | null;
+  organizationDefaults: QuoteCommercialTermsTransport | null;
+  quoteCommercialTerms: QuoteCommercialTermsTransport | null;
+  quoteTermsFromDefaults: boolean;
+  pricingMethod: "PRODUCT_COST_PLUS" | "MANUAL_FIXED_PRODUCT" | null;
+  calculatedPriceAvailable: boolean;
+  manualProductPriceAuthorized: boolean;
   quoteBlocker: string | null;
 };
 

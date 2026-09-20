@@ -694,6 +694,98 @@ a.hit {
   font-weight: 600;
 }
 
+.choice-stack {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.choice-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-12);
+  align-items: start;
+  margin: 0;
+  padding: var(--space-12);
+  border: var(--stroke) solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.choice-card--unavailable {
+  cursor: not-allowed;
+  opacity: 0.84;
+}
+
+.choice-card--selected {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-raised);
+}
+
+.choice-card input {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: 0.2rem;
+}
+
+.choice-card__title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.choice-card__copy,
+.choice-card__status {
+  margin: var(--space-4) 0 0;
+  color: var(--color-text-secondary);
+}
+
+.choice-card__status {
+  font-weight: 600;
+}
+
+.quiet-action {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target-min);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-secondary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.quiet-action:disabled {
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.cost-issue-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cost-issue-list__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.cost-issue-list__label {
+  font-weight: 600;
+}
+
 .equation {
   display: flex;
   flex-direction: column;

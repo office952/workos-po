@@ -43,6 +43,7 @@ export type CommercialMilestone = {
 export type CommercialExperienceInput = {
   commercialCompleteness: CommercialPriceCompleteness;
   internalCostCompleteness?: "COMPLETE" | "PARTIAL" | "UNAVAILABLE";
+  manualProductPriceAuthorized?: boolean;
   quote?: QuoteSnapshot;
   acceptance?: QuoteAcceptanceDecision;
   order?: OrderSnapshot;
@@ -58,8 +59,9 @@ export type CommercialExperienceProjection = {
   quoteBlocker: string | null;
 };
 
-const INCOMPLETE_INTERNAL = "Costul intern nu este complet.";
-const INCOMPLETE_PRICE = "Prețul clientului nu poate fi calculat.";
+const NO_VALID_COMMERCIAL_PRICE =
+  "Calculul automat nu este disponibil. Costurile interne nu sunt complete. Completează costurile sau alege Preț net negociat manual.";
+const UNAUTHORIZED_INCOMPLETE_PRICE = "Prețul clientului nu poate fi confirmat.";
 
 export function projectCommercialExperience(
   input: CommercialExperienceInput,
@@ -85,7 +87,9 @@ export function projectCommercialExperience(
   return {
     ...projection("CONFIGURATION_CONFIRMED", null),
     quoteBlocker:
-      input.internalCostCompleteness === "COMPLETE" ? INCOMPLETE_PRICE : INCOMPLETE_INTERNAL,
+      input.manualProductPriceAuthorized === false
+        ? UNAUTHORIZED_INCOMPLETE_PRICE
+        : NO_VALID_COMMERCIAL_PRICE,
   };
 }
 

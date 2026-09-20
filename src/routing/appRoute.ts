@@ -12,6 +12,7 @@ export type AppRoute =
   | { name: "atelier" }
   | { name: "execution"; planId: string }
   | { name: "admin-resources" }
+  | { name: "admin-commercial" }
   | { name: "foundation" }
   | { name: "unknown"; path: string };
 
@@ -61,6 +62,9 @@ export function parseAppRoute(pathname: string): AppRoute {
   }
   if (pathname === "/admin/resources") {
     return { name: "admin-resources" };
+  }
+  if (pathname === "/admin/commercial") {
+    return { name: "admin-commercial" };
   }
   if (pathname === "/foundation") {
     return { name: "foundation" };
@@ -169,6 +173,13 @@ export function parseSpineContext(search: string): SpineContext {
   };
 }
 
+export const ADMINISTRATION_HREF = "/admin/resources";
+
+export function isAdministrationPath(pathname: string): boolean {
+  const path = pathname.split("?")[0] ?? pathname;
+  return path === "/admin" || path.startsWith("/admin/");
+}
+
 export function navItemCurrent(currentHref: string, href: string): boolean {
   const path = currentHref.split("?")[0] ?? currentHref;
   if (href === path) {
@@ -181,6 +192,9 @@ export function navItemCurrent(currentHref: string, href: string): boolean {
     return true;
   }
   if (href === "/atelier" && path.startsWith("/executie/")) {
+    return true;
+  }
+  if (href === ADMINISTRATION_HREF && isAdministrationPath(path)) {
     return true;
   }
   return href !== "/" && path.startsWith(`${href}/`);

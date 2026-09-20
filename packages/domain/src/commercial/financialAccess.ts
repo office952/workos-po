@@ -39,6 +39,7 @@ export const INTERNAL_FINANCIAL_KEYS = [
   "cost",
   "plannedCost",
   "actualCost",
+  "costCompletenessIssues",
 ] as const;
 
 export const CLIENT_PRICE_KEYS = [
@@ -62,6 +63,11 @@ export type ScopedClientCommercial = {
   adjustmentAmount: number | null;
   policyId: string;
   policyVersion: number;
+  policySource?: string;
+  commercialStrategy?: string;
+  manualNetPrice?: number;
+  calculationStatus?: string;
+  verificationStatus?: string;
 };
 
 export type ScopedOwnerCommercial = ScopedClientCommercial & {
@@ -103,12 +109,18 @@ export function scopeCommercialPrice(
     adjustmentAmount: price.adjustmentAmount,
     policyId: price.policyId,
     policyVersion: price.policyVersion,
+    ...(price.policySource ? { policySource: price.policySource } : {}),
+    ...(price.commercialStrategy ? { commercialStrategy: price.commercialStrategy } : {}),
+    calculationStatus: price.calculationStatus,
+    verificationStatus: price.verificationStatus,
   };
   if (access === "commercial") {
     return client;
   }
   const marginAmount =
-    price.netPrice === null ? null : roundMoney(price.netPrice - price.internalCost);
+    price.netPrice === null || price.internalCostCompleteness !== "COMPLETE"
+      ? null
+      : roundMoney(price.netPrice - price.internalCost);
   return {
     ...client,
     internalCost: price.internalCost,
@@ -124,6 +136,7 @@ export function scopeFrozenCommercial(
   offer: FrozenCommercialOffer,
   access: FinancialAccessScope,
   internalCost?: number,
+  internalCostCompleteness: "COMPLETE" | "PARTIAL" = "COMPLETE",
 ): ScopedOwnerCommercial | ScopedClientCommercial | undefined {
   if (access === "workshop") {
     return undefined;
@@ -141,19 +154,23 @@ export function scopeFrozenCommercial(
     adjustmentAmount: offer.adjustmentAmount,
     policyId: offer.policyId,
     policyVersion: offer.policyVersion,
+    ...(offer.policySource ? { policySource: offer.policySource } : {}),
+    ...(offer.commercialStrategy ? { commercialStrategy: offer.commercialStrategy } : {}),
+    ...(offer.manualNetPrice !== undefined ? { manualNetPrice: offer.manualNetPrice } : {}),
   };
   if (access === "commercial") {
     return client;
   }
   const cost = internalCost ?? null;
+  const costComplete = cost !== null && internalCostCompleteness === "COMPLETE";
   return {
     ...client,
     internalCost: cost ?? 0,
     internalCostCurrency: "EUR",
-    internalCostCompleteness: "COMPLETE",
+    internalCostCompleteness,
     markupPercent: offer.markupPercent,
     markupAmount: offer.markupAmount,
-    marginAmount: cost === null ? null : roundMoney(offer.netPrice - cost),
+    marginAmount: costComplete ? roundMoney(offer.netPrice - cost) : null,
   };
 }
 
@@ -187,7 +204,12 @@ export function scopeQuoteSnapshot(
   access: FinancialAccessScope,
 ): Record<string, unknown> {
   const commercial = snapshot.commercial
-    ? scopeFrozenCommercial(snapshot.commercial, access, snapshot.eic?.total)
+    ? scopeFrozenCommercial(
+        snapshot.commercial,
+        access,
+        snapshot.eic?.total,
+        snapshot.eic?.completeness === "COMPLETE" ? "COMPLETE" : "PARTIAL",
+      )
     : undefined;
   const eic = snapshot.eic ? scopeEic(snapshot.eic, access) : undefined;
   const scoped: Record<string, unknown> = {
@@ -232,7 +254,12 @@ export function scopeOrderSnapshot(
   access: FinancialAccessScope,
 ): Record<string, unknown> {
   const commercial = snapshot.commercial
-    ? scopeFrozenCommercial(snapshot.commercial, access, snapshot.eic?.total)
+    ? scopeFrozenCommercial(
+        snapshot.commercial,
+        access,
+        snapshot.eic?.total,
+        snapshot.eic?.completeness === "COMPLETE" ? "COMPLETE" : "PARTIAL",
+      )
     : undefined;
   const eic = snapshot.eic ? scopeEic(snapshot.eic, access) : undefined;
   const scoped: Record<string, unknown> = {
@@ -376,7 +403,12 @@ function scopeFrozenProductQuoteLine(
   if (access === "workshop") {
     return scoped;
   }
-  const commercial = scopeFrozenCommercial(line.commercial, access, line.eic.total);
+  const commercial = scopeFrozenCommercial(
+    line.commercial,
+    access,
+    line.eic.total,
+    line.eic.completeness === "COMPLETE" ? "COMPLETE" : "PARTIAL",
+  );
   const eic = scopeEic(line.eic, access);
   if (commercial) {
     scoped.commercial = commercial;
@@ -404,7 +436,12 @@ function scopeFrozenSiteInstallationQuoteLine(
   }
   scoped.commercialStrategy = line.commercialStrategy;
   scoped.providerMode = line.providerMode;
-  const commercial = scopeFrozenCommercial(line.commercial, access, line.eic.total);
+  const commercial = scopeFrozenCommercial(
+    line.commercial,
+    access,
+    line.eic.total,
+    line.eic.completeness === "COMPLETE" ? "COMPLETE" : "PARTIAL",
+  );
   if (commercial) {
     scoped.commercial = commercial;
   }

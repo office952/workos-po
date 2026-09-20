@@ -545,6 +545,8 @@ describe("product system persistence", () => {
           },
           eic: {
             completeness: "COMPLETE",
+            calculationStatus: "CALCULABLE",
+            verificationStatus: "CONFIRMED",
             completenessReasons: [],
             geometryLabel: null,
             currency: "EUR",

@@ -32,4 +32,44 @@ describe("AppShell", () => {
     expect(document.querySelector(".app-shell__context")).toBeNull();
     expect(screen.getByRole("link", { name: "Clienți" })).toBeInTheDocument();
   });
+
+  it("keeps one Administrare L1 entry for both admin routes", () => {
+    const { rerender } = render(
+      <AppShell contextLabel="Administrare" mode="slice" currentHref="/admin/commercial">
+        <div>conținut</div>
+      </AppShell>,
+    );
+
+    const administration = screen.getByRole("link", { name: "Administrare" });
+    expect(administration).toHaveAttribute("href", "/admin/resources");
+    expect(administration).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByRole("link", { name: "Resurse" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Comercial" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Clienți" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Cereri" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Catalog" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Configurator" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Oferte" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Lucrări" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Atelier" })).toBeInTheDocument();
+
+    rerender(
+      <AppShell contextLabel="Administrare" mode="slice" currentHref="/admin/resources">
+        <div>conținut</div>
+      </AppShell>,
+    );
+    expect(screen.getByRole("link", { name: "Administrare" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    rerender(
+      <AppShell contextLabel="Clienți" mode="slice" currentHref="/clienti">
+        <div>conținut</div>
+      </AppShell>,
+    );
+    expect(screen.getByRole("link", { name: "Administrare" })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
 });

@@ -24,6 +24,17 @@ describe("presentCommercialPrice", () => {
       unavailableReasons: [],
       internalCost: 382.5,
       internalCostCurrency: "EUR",
+      internalCostCompleteness: null,
+      markupPercent: null,
+      markupAmount: null,
+      discountPercent: null,
+      discountAmount: null,
+      adjustmentAmount: null,
+      marginAmount: null,
+      policySource: null,
+      commercialStrategy: null,
+      calculationStatus: null,
+      verificationStatus: null,
     });
   });
 

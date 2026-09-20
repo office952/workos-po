@@ -33,8 +33,16 @@ export type EicLine = {
 export const EIC_CALIBRATION_REASON = "Costuri încă în calibrare";
 export const EIC_GEOMETRY_CONFIRMED_LABEL = "Geometrie confirmată";
 
+export const EIC_CALCULATION_STATUSES = ["CALCULABLE", "UNAVAILABLE"] as const;
+export type EicCalculationStatus = (typeof EIC_CALCULATION_STATUSES)[number];
+
+export const EIC_VERIFICATION_STATUSES = ["CONFIRMED", "NEEDS_VERIFICATION"] as const;
+export type EicVerificationStatus = (typeof EIC_VERIFICATION_STATUSES)[number];
+
 export type EicResult = {
   completeness: "PARTIAL" | "COMPLETE";
+  calculationStatus: EicCalculationStatus;
+  verificationStatus: EicVerificationStatus;
   completenessReasons: readonly string[];
   geometryLabel: string | null;
   currency: "EUR";
@@ -42,6 +50,10 @@ export type EicResult = {
   total: number;
   excludedComponentLabels: readonly string[];
 };
+
+export function eicIsCalculable(eic: Pick<EicResult, "calculationStatus" | "completeness">): boolean {
+  return eic.calculationStatus === "CALCULABLE" || eic.completeness === "COMPLETE";
+}
 
 export function resourceRequirements(
   aggregate: ProductAggregate,
@@ -61,6 +73,13 @@ export function missingCostEvidenceReason(
     return when?.volumeDepthMm !== undefined
       ? `Tarif profil aluminiu neconfirmat pentru adâncimea ${when.volumeDepthMm} mm`
       : "Tarif profil aluminiu neconfirmat pentru această adâncime";
+  }
+  const label = getResource(resourceId)?.label;
+  if (label && when?.volumeDepthMm !== undefined) {
+    return `Tarif lipsă pentru ${label} (${when.volumeDepthMm} mm)`;
+  }
+  if (label) {
+    return `Tarif lipsă pentru ${label}`;
   }
   return "Evidență de cost indisponibilă";
 }
@@ -136,22 +155,22 @@ export function compileEic(
       requirement.resourceId,
       requirement.costQualifier,
     );
-    return evidence !== undefined && costEvidenceKeepsEicPartial(evidence);
+    return evidence !== undefined && costEvidenceNeedsVerification(evidence);
   });
   const completenessReasons = uniqueReasons([
     ...measurementGaps,
     ...missingEvidenceReasons,
-    ...(hasProvisionalCost ? [EIC_CALIBRATION_REASON] : []),
   ]);
+  const calculationUnavailable =
+    completenessReasons.length > 0 || excludedComponentLabels.length > 0;
   const geometryMissing = aggregate.componentStatuses.some(
     (item) => item.status === "MISSING_MEASUREMENT",
   );
 
   return {
-    completeness:
-      completenessReasons.length === 0 && excludedComponentLabels.length === 0
-        ? "COMPLETE"
-        : "PARTIAL",
+    completeness: calculationUnavailable ? "PARTIAL" : "COMPLETE",
+    calculationStatus: calculationUnavailable ? "UNAVAILABLE" : "CALCULABLE",
+    verificationStatus: hasProvisionalCost ? "NEEDS_VERIFICATION" : "CONFIRMED",
     completenessReasons,
     geometryLabel: geometryMissing ? null : EIC_GEOMETRY_CONFIRMED_LABEL,
     currency: "EUR",
@@ -168,7 +187,7 @@ export function costCompletenessLabel(
     case "COMPLETE":
       return "Complete pentru configurația curentă";
     case "PARTIAL":
-      return "Necesită calibrare";
+      return "Incomplet pentru configurația curentă";
     default: {
       const _exhaustive: never = completeness;
       return _exhaustive;
@@ -176,7 +195,7 @@ export function costCompletenessLabel(
   }
 }
 
-export function costEvidenceKeepsEicPartial(evidence: CostEvidence): boolean {
+export function costEvidenceNeedsVerification(evidence: CostEvidence): boolean {
   if (evidence.source === "PILOT_INTERNAL_EVIDENCE" || evidence.source === "LEGACY_EVIDENCE") {
     return true;
   }

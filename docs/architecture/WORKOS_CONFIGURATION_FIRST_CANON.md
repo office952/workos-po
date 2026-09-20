@@ -5,12 +5,17 @@ Living architecture for changeable business truth in `office952/workos-po`.
 This file is the single Configuration-First architecture owner. It is not a second Product Truth, not a second roadmap, and not an implementation authorization.
 
 ```text
-STATUS = CF0_COMPLETE
+STATUS = CF1_COMMERCIAL_VERTICAL_V1_IMPLEMENTED_IN_REVIEW
 CONFIGURATION_FIRST_DIRECTION = CANONICAL
 NO_SILENT_BUSINESS_TRUTH = CANONICAL
-IMPLEMENTATION_AUTHORIZED = NO
-DB_IMPLEMENTATION_AUTHORIZED = NO
+FUNCTIONAL_WORKOS_FIRST = YES
+OPTIONAL_BUSINESS_AUTOMATION_MUST_NOT_CREATE_DEAD_END = YES
+SAFE_MANUAL_FALLBACK = REQUIRED_WHERE_SEMANTICALLY_VALID
+IMPLEMENTATION_AUTHORIZED = CF1_COMMERCIAL_VERTICAL_V1_ONLY
+DB_IMPLEMENTATION_AUTHORIZED = COMMERCIAL_POLICY_VERSIONS_ONLY
+OWNER_ACCEPTED_IMPLEMENTATION = NO
 NEXT_WAVE_AUTHORIZED = NO
+FORMULA_CONFIGURABILITY_FULLY_DELIVERED = NO
 ```
 
 Authority:
@@ -102,7 +107,20 @@ This canon rejects:
 - customer dependence on Cursor, source access, terminal, or direct database editing
 - treating a hardcoded number swap as Configuration-First
 
-This wave documents architecture only. It does not authorize CF1 or later, schema edits, migrations, seeds, or real Cloud/DB access.
+CF0 documented architecture only. CF1_COMMERCIAL_VERTICAL_V1 is the first authorized functional slice: organization commercial defaults, quote-specific commercial terms, a narrow resolver, commercial admin, engine consumption, snapshot provenance, and a supported manual product price. It does not authorize technical-settings persistence, a formula engine, customer commercial defaults, or real Cloud/DB access.
+
+```text
+ORGANIZATION_COMMERCIAL_POLICY = DEFAULTS
+QUOTE_COMMERCIAL_TERMS = JOB_INPUT
+NEGOTIATED_QUOTE_OVERRIDE = SUPPORTED
+MANUAL_FIXED_PRODUCT = SUPPORTED
+CUSTOMER_COMMERCIAL_DEFAULT = FUTURE_OPTIONAL_LAYER
+ADMIN_CONFIGURATION_NAVIGATION = one L1 Administration entry + domain-owned L2
+ORGANIZATION_COMMERCIAL_DEFAULT → QUOTE DRAFT TERMS → FROZEN QUOTE
+NEGOTIATION_AFTER_FREEZE → NEW QUOTE REVISION
+FROZEN_QUOTE_MUTATION = NO
+ACCEPTANCE_TARGETS_EXACT_SNAPSHOT = YES
+```
 
 ## 3. Ownership: code, configuration, job input
 
@@ -146,6 +164,7 @@ The engine remains the only evaluator of Product Truth, Quote, Order, Production
 - width / height
 - L1 / L2
 - uploaded geometry references
+- quote-specific markup, discount, and commercial adjustment
 - other case-specific operator inputs
 
 Job inputs are not organization settings and not configuration overrides.
@@ -184,7 +203,7 @@ Domain ownership stays separate:
 | --- | --- |
 | Product / Production | technical settings, variants, product-family configuration, geometry policy, product-bound formula relationships |
 | Resources / Cost | resource identity, cost evidence, resource rates |
-| Commercial | markup, VAT, discount / default commercial policy, commercial price rules |
+| Commercial | organization commercial defaults, quote-specific commercial terms, VAT, commercial price rules |
 | Formula / Calculation | formula definition contract and safe evaluation |
 | Organization | organization-level defaults and capabilities that the definition explicitly allows |
 | Platform Owner | platform contracts and starter defaults, never silent mutation of private organization configuration |
@@ -345,7 +364,7 @@ Resource identity is not a price and not a technical quantity.
 
 ### COST_EVIDENCE
 
-Owner-confirmed cost facts for a resource.
+Numeric cost facts for a resource. Confirmation is verification, not calculability.
 
 ```text
 OWNER_DOMAIN = RESOURCES / COST
@@ -362,10 +381,18 @@ AUDIT = REQUIRED
 VISIBILITY = RESOURCES_ADMINISTRATION
 SNAPSHOT_BEHAVIOR = FREEZE_USED_EVIDENCE
 PERMISSION_MODEL = ADVANCED
-MISSING_VALUE_BEHAVIOR = FAIL_CLOSED
+MISSING_VALUE_BEHAVIOR = FAIL_CLOSED_FOR_DEPENDENT_CALCULATION
 ```
 
-No silent zero. Current journey already requires owner-confirmed cost evidence before quote freeze.
+```text
+COST_CALCULABILITY != COST_VERIFICATION
+NUMERIC_NEEDS_VERIFICATION = USABLE_FOR_CALCULATION
+MISSING_NUMERIC_VALUE = FAIL_CLOSED_FOR_DEPENDENT_CALCULATION
+NO_SILENT_ZERO = YES
+PROVISIONAL_PROVENANCE_MUST_REMAIN_VISIBLE = YES
+```
+
+A confirmed numeric cost is calculable. A numeric cost that needs verification is also calculable and must stay visibly unverified; it does not block quote freeze by itself. A missing numeric cost must not become zero and blocks only the calculation that depends on it.
 
 ### COMMERCIAL_RULE
 
@@ -570,9 +597,13 @@ Unknown is not zero. A missing required value is not a silent fallback.
 UNKNOWN != ZERO
 MISSING_REQUIRED_CONFIG = FAIL_CLOSED
 SILENT_FALLBACK = NO
+OPTIONAL_BUSINESS_AUTOMATION_MUST_NOT_CREATE_DEAD_END = YES
+SAFE_MANUAL_FALLBACK = REQUIRED_WHERE_SEMANTICALLY_VALID
 ```
 
-Noncritical defaults may operate only when their contract explicitly allows it.
+`MISSING_REQUIRED_CONFIG = FAIL_CLOSED` applies to genuinely required truth and integrity: tenancy, snapshot immutability, invalid commercial policy saves, and required technical facts for production.
+
+Optional business automation may use an explicit supported manual or basic mode. A missing required numeric cost value makes cost-plus unavailable. A present numeric cost that still needs verification remains usable for calculation and must stay visibly unverified. It does not automatically make a valid authorized manual product price unavailable.
 
 ## 7. Formula architecture
 
@@ -697,7 +728,7 @@ Current bootstrap evidence, as migration context only:
 
 - `NEW_ORGANIZATION` / `SYNTHETIC_TEST` use an empty provider foundation
 - `ADOPT_EXISTING` currently uses HUB MEDIA workcenter compatibility as first-pilot compatibility, not permanent law
-- new organizations still need owner-confirmed cost evidence before freeze
+- new organizations may calculate from numeric cost evidence that still needs verification; a missing numeric cost fails closed for the dependent calculation and must not become a silent zero
 
 HUB MEDIA must not become the starter law for every organization.
 
@@ -869,7 +900,9 @@ After CF5, resume in the living roadmap:
 - planning / capacity
 
 ```text
-CF1_OR_LATER = NOT_AUTHORIZED_BY_THIS_DOCUMENT
+CF1_COMMERCIAL_VERTICAL_V1 = IMPLEMENTED_IN_REVIEW
+CF2_OR_LATER = NOT_AUTHORIZED_BY_THIS_DOCUMENT
+OWNER_ACCEPTED_IMPLEMENTATION = NO
 ```
 
 ## 18. Acceptance
@@ -894,7 +927,12 @@ HISTORICAL_REWRITE = NO
 CUSTOMER_WITHOUT_CURSOR = REQUIRED
 PRIMARY_USER_JOURNEY = COMPLETE
 NEXT_PROGRAM = WORKOS_CONFIGURATION_FIRST_FOUNDATION_V1
-IMPLEMENTATION_AUTHORIZED = NO
-DB_IMPLEMENTATION_AUTHORIZED = NO
+FUNCTIONAL_WORKOS_FIRST = YES
+OPTIONAL_BUSINESS_AUTOMATION_MUST_NOT_CREATE_DEAD_END = YES
+SAFE_MANUAL_FALLBACK = REQUIRED_WHERE_SEMANTICALLY_VALID
+IMPLEMENTATION_AUTHORIZED = CF1_COMMERCIAL_VERTICAL_V1_ONLY
+DB_IMPLEMENTATION_AUTHORIZED = COMMERCIAL_POLICY_VERSIONS_ONLY
+OWNER_ACCEPTED_IMPLEMENTATION = NO
 NEXT_WAVE_AUTHORIZED = NO
+FORMULA_CONFIGURABILITY_FULLY_DELIVERED = NO
 ```
