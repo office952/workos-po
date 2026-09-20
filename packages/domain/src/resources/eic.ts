@@ -62,6 +62,13 @@ export function missingCostEvidenceReason(
       ? `Tarif profil aluminiu neconfirmat pentru adâncimea ${when.volumeDepthMm} mm`
       : "Tarif profil aluminiu neconfirmat pentru această adâncime";
   }
+  const label = getResource(resourceId)?.label;
+  if (label && when?.volumeDepthMm !== undefined) {
+    return `Tarif lipsă pentru ${label} (${when.volumeDepthMm} mm)`;
+  }
+  if (label) {
+    return `Tarif lipsă pentru ${label}`;
+  }
   return "Evidență de cost indisponibilă";
 }
 

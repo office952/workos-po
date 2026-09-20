@@ -18,6 +18,7 @@ import {
   organizationCommercialDefaultsFromPolicy,
   projectAuthorizedProductCommercialPrice,
   projectCommercialPrice,
+  projectCostCompletenessIssues,
   quoteCommercialTermsFromPolicy,
   quoteCommercialTermsMatchDefaults,
   validateQuoteCommercialTerms,
@@ -491,6 +492,15 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       truth: compiled.truth,
       aggregate: compiled.aggregate,
       eic: scopeEic(compiled.eic, access),
+      ...(access === "owner"
+        ? {
+            costCompletenessIssues: projectCostCompletenessIssues(
+              compiled.aggregate,
+              compiled.composition,
+              compiled.costEvidenceRows,
+            ),
+          }
+        : {}),
       commercialPrice: scopeCommercialPrice(commercialPrice, access),
       commercialPolicy: presentResolvedCommercialPolicy(priced.resolution),
       ...(access === "owner"

@@ -761,6 +761,31 @@ a.hit {
   text-decoration: none;
 }
 
+.cost-issue-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cost-issue-list__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.cost-issue-list__label {
+  font-weight: 600;
+}
+
 .equation {
   display: flex;
   flex-direction: column;

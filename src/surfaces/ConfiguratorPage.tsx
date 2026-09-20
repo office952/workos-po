@@ -27,6 +27,7 @@ import { Button } from "../components/Button";
 import { InfoRow } from "../components/InfoRow";
 import { InlineAlert } from "../components/InlineAlert";
 import { LoadingIndicator } from "../components/LoadingIndicator";
+import { SectionLabel } from "../components/SectionLabel";
 import { SelectField } from "../components/SelectField";
 import { StatusBadge } from "../components/StatusBadge";
 import { SurfacePanel } from "../components/SurfacePanel";
@@ -34,6 +35,7 @@ import { TextField } from "../components/TextField";
 import { SlicePage } from "../layout/SlicePage";
 import { presentContextMeta } from "../presentation/contextMeta";
 import { CommercialPricePanel } from "../presentation/commercialPrice";
+import { CostCompletenessIssues } from "../presentation/costCompleteness";
 import { presentCostLine, selectLineByResource } from "../presentation/costLine";
 import { ALUMINIUM_RETURN_PROFILE_RESOURCE_ID } from "../reference/lettersProduct";
 import { catalogHref, quoteHref } from "../routing/appRoute";
@@ -375,6 +377,7 @@ export function ConfiguratorPage({
         </Button>
       }
     >
+      <div id="configuratie">
       <SurfacePanel
         title="Configurație"
         label="Configurare"
@@ -448,6 +451,7 @@ export function ConfiguratorPage({
           </fieldset>
         ))}
       </SurfacePanel>
+      </div>
       <div className="stack">
         <SurfacePanel variant="quiet" title="Stare și acțiune" label="Stare">
           {previewState === "pending" ? (
@@ -508,12 +512,19 @@ export function ConfiguratorPage({
             </InlineAlert>
           ) : null}
           {profile ? (
-            <div className="equation" data-testid="profile-cost">
-              <p className="equation__label">{profile.label}</p>
-              <p className="equation__value">{profile.equationLabel}</p>
+            <div className="stack">
+              {confirmation?.completeness !== "COMPLETE" ? (
+                <SectionLabel>Linii cunoscute</SectionLabel>
+              ) : null}
+              <div className="equation" data-testid="profile-cost">
+                <p className="equation__label">{profile.label}</p>
+                <p className="equation__value">{profile.equationLabel}</p>
+              </div>
             </div>
           ) : null}
-          {confirmation?.financialVisible && !profile ? (
+          {confirmation?.financialVisible &&
+          !profile &&
+          confirmation.costCompletenessIssues.length === 0 ? (
             <InlineAlert tone="blocked" title="Profilul nu are tarif">
               {confirmation.completenessReasons.join(" ") ||
                 "Nu există o linie de cost pentru acest profil."}
@@ -527,6 +538,11 @@ export function ConfiguratorPage({
               internalCompleteness={confirmation.completeness}
               showCustomerPrice={false}
             />
+          ) : null}
+          {confirmation?.financialVisible &&
+          confirmation.completeness !== "COMPLETE" &&
+          confirmation.costCompletenessIssues.length > 0 ? (
+            <CostCompletenessIssues issues={confirmation.costCompletenessIssues} />
           ) : null}
         </SurfacePanel>
         <SurfacePanel title="Cum stabilești prețul acestei oferte" label="Preț">
@@ -589,8 +605,14 @@ export function ConfiguratorPage({
               </fieldset>
               {calculatedUnavailable ? (
                 <InlineAlert tone="pending" title="Calculul automat nu este disponibil">
-                  Costurile interne nu sunt complete pentru această configurație. Poți
-                  completa costurile sau poți folosi un preț net negociat manual.
+                  Calculul automat nu este disponibil deoarece costul intern este
+                  incomplet.{" "}
+                  {confirmation.financialVisible &&
+                  confirmation.costCompletenessIssues.length > 0 ? (
+                    <a className="text-link" href="#cost-intern-gaps">
+                      Vezi ce lipsește
+                    </a>
+                  ) : null}
                 </InlineAlert>
               ) : null}
               {confirmation.financialVisible &&

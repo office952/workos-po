@@ -80,10 +80,17 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function confirmBody(options: { rate: number; cost: number }) {
+function confirmBody(options: {
+  rate: number;
+  cost: number;
+  completeness?: string;
+  calculatedPriceAvailable?: boolean;
+  costCompletenessIssues?: Array<Record<string, unknown>>;
+}) {
+  const completeness = options.completeness ?? "COMPLETE";
   return {
     eic: {
-      completeness: "COMPLETE",
+      completeness,
       completenessReasons: [],
       currency: "EUR",
       total: options.cost,
@@ -109,8 +116,9 @@ function confirmBody(options: { rate: number; cost: number }) {
       unavailableReasons: [],
       internalCost: options.cost,
       internalCostCurrency: "EUR",
-      internalCostCompleteness: "COMPLETE",
+      internalCostCompleteness: completeness,
     },
+    costCompletenessIssues: options.costCompletenessIssues ?? [],
     organizationDefaults: {
       markupPercent: 35,
       discountPercent: 0,
@@ -123,7 +131,7 @@ function confirmBody(options: { rate: number; cost: number }) {
     },
     quoteTermsFromDefaults: true,
     pricingMethod: "PRODUCT_COST_PLUS",
-    calculatedPriceAvailable: true,
+    calculatedPriceAvailable: options.calculatedPriceAvailable ?? completeness === "COMPLETE",
     manualProductPriceAuthorized: true,
     commercialExperience: { quoteBlocker: null },
   };
@@ -139,6 +147,9 @@ function installFetch(options: {
   rate: number;
   cost: number;
   sellerConfigured?: boolean;
+  completeness?: string;
+  calculatedPriceAvailable?: boolean;
+  costCompletenessIssues?: Array<Record<string, unknown>>;
 }) {
   const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
     void init;
@@ -718,5 +729,181 @@ describe("ConfiguratorPage", () => {
     expect(document.querySelector(".panel__header")).toBeNull();
     expect(document.querySelector(".panel__body")).toBeNull();
     expect(document.querySelector(".configurator-new-panel")).toBeNull();
+  });
+
+  it("shows the missing cost-evidence resource and a cost-evidence action", async () => {
+    installFetch({
+      rate: 3,
+      cost: 345,
+      completeness: "PARTIAL",
+      calculatedPriceAvailable: false,
+      costCompletenessIssues: [
+        {
+          type: "MISSING_COST_EVIDENCE",
+          resourceId: "plexiglas_3mm_opal",
+          label: "Plexiglas 3 mm opal",
+          reason: "Tarif lipsă pentru Plexiglas 3 mm opal",
+        },
+      ],
+    });
+    window.history.replaceState(
+      null,
+      "",
+      "/?customer=cus-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    );
+    renderConfigurator({ requestId: null });
+    await confirmReady();
+    expect(screen.getByText("Cost intern cunoscut")).toBeInTheDocument();
+    expect(screen.getByText("Incomplet")).toBeInTheDocument();
+    expect(screen.getByText("Linii cunoscute")).toBeInTheDocument();
+    expect(screen.getByText("Ce lipsește din cost")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Vezi ce lipsește" })).toHaveAttribute(
+      "href",
+      "#cost-intern-gaps",
+    );
+    expect(screen.getByText("Plexiglas 3 mm opal")).toBeInTheDocument();
+    expect(screen.getByText("Tarif lipsă pentru Plexiglas 3 mm opal")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Deschide Dovezi de cost" })).toHaveAttribute(
+      "href",
+      "/admin/resources",
+    );
+    expect(screen.getByRole("radio", { name: /Preț net negociat manual/ })).toBeEnabled();
+    expect(screen.getByText(/deoarece costul intern este incomplet/)).toBeInTheDocument();
+  });
+
+  it("shows a technical gap without claiming a missing tariff", async () => {
+    installFetch({
+      rate: 3,
+      cost: 0,
+      completeness: "PARTIAL",
+      calculatedPriceAvailable: false,
+      costCompletenessIssues: [
+        {
+          type: "MISSING_TECHNICAL_INPUT",
+          label: "Față",
+          reason: "Suprafață față neconfirmată",
+          componentLabel: "Față",
+        },
+      ],
+    });
+    window.history.replaceState(
+      null,
+      "",
+      "/?customer=cus-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    );
+    renderConfigurator({ requestId: null });
+    await confirmReady();
+    expect(screen.getByText("Suprafață față neconfirmată")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Completează configurația" })).toHaveAttribute(
+      "href",
+      "#configuratie",
+    );
+    expect(screen.queryByText(/Tarif lipsă/)).not.toBeInTheDocument();
+  });
+
+  it("shows provisional evidence as unconfirmed, not missing", async () => {
+    installFetch({
+      rate: 3,
+      cost: 386,
+      completeness: "PARTIAL",
+      calculatedPriceAvailable: false,
+      costCompletenessIssues: [
+        {
+          type: "PROVISIONAL_COST_EVIDENCE",
+          resourceId: "MAT-VINYL-ORACAL-651",
+          label: "Vinil Oracal 651",
+          reason: "Cost existent, dar neconfirmat",
+        },
+      ],
+    });
+    window.history.replaceState(
+      null,
+      "",
+      "/?customer=cus-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    );
+    renderConfigurator({ requestId: null });
+    await confirmReady();
+    expect(screen.getByText("Cost existent, dar neconfirmat")).toBeInTheDocument();
+    expect(screen.queryByText(/Tarif lipsă/)).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Preț net negociat manual/ })).toBeEnabled();
+  });
+
+  it("hides unresolved cost issues when EIC is complete", async () => {
+    installFetch({ rate: 3, cost: 37.5 });
+    window.history.replaceState(
+      null,
+      "",
+      "/?customer=cus-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    );
+    renderConfigurator({ requestId: null });
+    await confirmReady();
+    expect(screen.queryByTestId("cost-completeness-issues")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ce lipsește din cost")).not.toBeInTheDocument();
+  });
+
+  it("does not show internal cost gaps when financial context is hidden", async () => {
+    const fetchMock = installFetch({
+      rate: 3,
+      cost: 345,
+      completeness: "PARTIAL",
+      calculatedPriceAvailable: false,
+      costCompletenessIssues: [
+        {
+          type: "MISSING_COST_EVIDENCE",
+          resourceId: "plexiglas_3mm_opal",
+          label: "Plexiglas 3 mm opal",
+          reason: "Tarif lipsă pentru Plexiglas 3 mm opal",
+        },
+      ],
+    });
+    fetchMock.mockImplementation((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/preview")) {
+        return jsonResponse(previewBody);
+      }
+      if (url.endsWith("/confirm")) {
+        return jsonResponse({
+          commercialPrice: {
+            netPrice: 400,
+            grossPrice: 484,
+            vatPercent: 21,
+            vatAmount: 84,
+            currency: "EUR",
+            completeness: "COMPLETE",
+            unavailableReasons: [],
+          },
+          pricingMethod: "MANUAL_FIXED_PRODUCT",
+          calculatedPriceAvailable: false,
+          manualProductPriceAuthorized: true,
+          costCompletenessIssues: [
+            {
+              type: "MISSING_COST_EVIDENCE",
+              label: "Plexiglas 3 mm opal",
+              reason: "Tarif lipsă pentru Plexiglas 3 mm opal",
+            },
+          ],
+        });
+      }
+      if (url.endsWith("/seller")) {
+        return jsonResponse({ configured: true, seller: { legalName: "Isolated" } });
+      }
+      void init;
+      return jsonResponse({});
+    });
+    window.history.replaceState(
+      null,
+      "",
+      "/?customer=cus-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    );
+    renderConfigurator({ requestId: null });
+    const user = userEvent.setup();
+    await screen.findByLabelText("Textul literelor");
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
+    });
+    await user.click(screen.getByRole("button", { name: "Confirmă configurația" }));
+    expect(await screen.findByText("Cost intern indisponibil")).toBeInTheDocument();
+    expect(screen.queryByTestId("cost-completeness-issues")).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Preț net negociat manual/ })).toBeEnabled();
   });
 });

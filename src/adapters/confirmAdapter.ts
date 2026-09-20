@@ -1,4 +1,8 @@
-import type { ConfirmTransport, CostLineTransport } from "../api/types";
+import type {
+  ConfirmTransport,
+  CostCompletenessIssueTransport,
+  CostLineTransport,
+} from "../api/types";
 import {
   presentCommercialPolicySummary,
   presentCommercialPrice,
@@ -7,6 +11,45 @@ import {
   presentQuoteCommercialTerms,
 } from "./commercialAdapter";
 import { asRecord } from "./record";
+
+const ISSUE_TYPES = [
+  "MISSING_COST_EVIDENCE",
+  "MISSING_TECHNICAL_INPUT",
+  "UNCALCULATED_COMPONENT",
+  "PROVISIONAL_COST_EVIDENCE",
+  "OTHER",
+] as const;
+
+export function presentCostCompletenessIssues(
+  value: unknown,
+): CostCompletenessIssueTransport[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => {
+    const record = asRecord(item);
+    if (
+      !record ||
+      typeof record.type !== "string" ||
+      !(ISSUE_TYPES as readonly string[]).includes(record.type) ||
+      typeof record.label !== "string" ||
+      typeof record.reason !== "string"
+    ) {
+      return [];
+    }
+    return [
+      {
+        type: record.type as CostCompletenessIssueTransport["type"],
+        label: record.label,
+        reason: record.reason,
+        resourceId: typeof record.resourceId === "string" ? record.resourceId : null,
+        componentLabel:
+          typeof record.componentLabel === "string" ? record.componentLabel : null,
+        context: typeof record.context === "string" ? record.context : null,
+      },
+    ];
+  });
+}
 
 export function presentCostLines(value: unknown): CostLineTransport[] {
   if (!Array.isArray(value)) {
@@ -54,6 +97,7 @@ export function presentConfirm(
       reviewId,
       completeness: null,
       completenessReasons: [],
+      costCompletenessIssues: [],
       currency: null,
       lines: [],
       total: null,
@@ -75,6 +119,7 @@ export function presentConfirm(
     completenessReasons: Array.isArray(eic.completenessReasons)
       ? eic.completenessReasons.filter((reason) => typeof reason === "string")
       : [],
+    costCompletenessIssues: presentCostCompletenessIssues(record.costCompletenessIssues),
     currency: typeof eic.currency === "string" ? eic.currency : null,
     lines: presentCostLines(eic.lines),
     total: typeof eic.total === "number" ? eic.total : null,

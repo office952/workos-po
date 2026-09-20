@@ -39,6 +39,7 @@ export const INTERNAL_FINANCIAL_KEYS = [
   "cost",
   "plannedCost",
   "actualCost",
+  "costCompletenessIssues",
 ] as const;
 
 export const CLIENT_PRICE_KEYS = [

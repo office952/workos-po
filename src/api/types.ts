@@ -110,6 +110,20 @@ export type CostLineTransport = {
   cost: number;
 };
 
+export type CostCompletenessIssueTransport = {
+  type:
+    | "MISSING_COST_EVIDENCE"
+    | "MISSING_TECHNICAL_INPUT"
+    | "UNCALCULATED_COMPONENT"
+    | "PROVISIONAL_COST_EVIDENCE"
+    | "OTHER";
+  label: string;
+  reason: string;
+  resourceId: string | null;
+  componentLabel: string | null;
+  context: string | null;
+};
+
 export type CommercialPriceTransport = {
   netPrice: number | null;
   grossPrice: number | null;
@@ -142,6 +156,7 @@ export type ConfirmTransport = {
   reviewId: string;
   completeness: string | null;
   completenessReasons: string[];
+  costCompletenessIssues: CostCompletenessIssueTransport[];
   currency: string | null;
   lines: CostLineTransport[];
   total: number | null;

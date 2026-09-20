@@ -34,7 +34,39 @@ describe("CommercialPricePanel", () => {
     );
 
     expect(screen.getByTestId("internal-cost")).toHaveTextContent("382,50 EUR");
-    expect(screen.getByTestId("internal-cost")).toHaveTextContent("Parțial / incomplet");
+    expect(screen.getByTestId("internal-cost")).toHaveTextContent("Incomplet");
+    expect(screen.getByTestId("internal-cost")).not.toHaveTextContent("0,00 EUR");
+  });
+
+  it("does not present an unknown partial cost as zero", () => {
+    render(
+      <CommercialPricePanel
+        commercial={{
+          netPrice: null,
+          vatPercent: 21,
+          vatAmount: null,
+          grossPrice: null,
+          currency: "EUR",
+          completeness: "PARTIAL",
+          unavailableReasons: [],
+          internalCost: 0,
+          internalCostCurrency: "EUR",
+          internalCostCompleteness: "PARTIAL",
+          markupPercent: 0,
+          markupAmount: 0,
+          discountPercent: 0,
+          discountAmount: 0,
+          adjustmentAmount: 0,
+          marginAmount: null,
+        }}
+        internalTotal={0}
+        internalCurrency="EUR"
+        internalCompleteness="PARTIAL"
+        showCustomerPrice={false}
+      />,
+    );
+
+    expect(screen.getByTestId("internal-cost")).toHaveTextContent("Incomplet");
     expect(screen.getByTestId("internal-cost")).not.toHaveTextContent("0,00 EUR");
   });
 });

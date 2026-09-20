@@ -24,10 +24,31 @@ function costCompletenessLabel(value: string | null | undefined): {
     return { label: "Complet", tone: "ready", explanation: null };
   }
   return {
-    label: "Parțial / incomplet",
+    label: "Incomplet",
     tone: "incomplete",
-    explanation: "Costurile interne nu sunt încă complete.",
+    explanation: null,
   };
+}
+
+function knownInternalCost(
+  commercialCost: number | null | undefined,
+  commercialCompleteness: string | null | undefined,
+  internalTotal: number | null,
+  internalCompleteness: string | null | undefined,
+): number | null {
+  if (
+    typeof commercialCost === "number" &&
+    (commercialCost > 0 || commercialCompleteness === "COMPLETE")
+  ) {
+    return commercialCost;
+  }
+  if (
+    typeof internalTotal === "number" &&
+    (internalTotal > 0 || internalCompleteness === "COMPLETE")
+  ) {
+    return internalTotal;
+  }
+  return null;
 }
 
 export function CommercialPricePanel({
@@ -41,15 +62,17 @@ export function CommercialPricePanel({
   showInternalCost = true,
 }: CommercialPricePanelProps) {
   const currency = commercial?.currency ?? internalCurrency ?? "EUR";
-  const costStatus = costCompletenessLabel(
-    commercial?.internalCostCompleteness ?? internalCompleteness,
+  const completenessValue =
+    commercial?.internalCostCompleteness ?? internalCompleteness ?? null;
+  const costStatus = costCompletenessLabel(completenessValue);
+  const knownCost = knownInternalCost(
+    commercial?.internalCost,
+    commercial?.internalCostCompleteness,
+    internalTotal,
+    internalCompleteness,
   );
-  const commercialCost = commercial?.internalCost;
-  const knownCost =
-    typeof commercialCost === "number" &&
-    (commercialCost > 0 || commercial?.internalCostCompleteness === "COMPLETE")
-      ? commercialCost
-      : internalTotal;
+  const showKnownCostBlock =
+    showInternalCost && (knownCost !== null || completenessValue === "PARTIAL");
   const customerReady =
     showCustomerPrice &&
     commercial?.completeness === "COMPLETE" &&
@@ -66,10 +89,14 @@ export function CommercialPricePanel({
           {policyGuidance}
         </InlineAlert>
       ) : null}
-      {showInternalCost && knownCost !== null ? (
+      {showKnownCostBlock ? (
         <div data-testid="internal-cost">
           <SectionLabel>Cost intern cunoscut</SectionLabel>
-          <p className="price-hero__value">{formatMoney(knownCost, commercial?.internalCostCurrency ?? currency)}</p>
+          {knownCost !== null ? (
+            <p className="price-hero__value">
+              {formatMoney(knownCost, commercial?.internalCostCurrency ?? currency)}
+            </p>
+          ) : null}
           <p>
             <StatusBadge label={costStatus.label} tone={costStatus.tone} />
           </p>

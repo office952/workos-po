@@ -28,6 +28,41 @@ describe("presentConfirm", () => {
     expect(presented?.reviewId).toBe("crv1:kept");
     expect(presented?.financialVisible).toBe(true);
     expect(presented?.lines[0]?.cost).toBe(37.5);
+    expect(presented?.costCompletenessIssues).toEqual([]);
+  });
+
+  it("preserves owner cost-completeness issues without inventing rates", () => {
+    const presented = presentConfirm(
+      {
+        eic: {
+          completeness: "PARTIAL",
+          completenessReasons: ["Tarif lipsă pentru Plexiglas 3 mm opal"],
+          currency: "EUR",
+          total: 345,
+          lines: [],
+        },
+        costCompletenessIssues: [
+          {
+            type: "MISSING_COST_EVIDENCE",
+            resourceId: "plexiglas_3mm_opal",
+            label: "Plexiglas 3 mm opal",
+            reason: "Tarif lipsă pentru Plexiglas 3 mm opal",
+          },
+        ],
+      },
+      "crv1:gaps",
+    );
+    expect(presented?.costCompletenessIssues).toEqual([
+      {
+        type: "MISSING_COST_EVIDENCE",
+        resourceId: "plexiglas_3mm_opal",
+        label: "Plexiglas 3 mm opal",
+        reason: "Tarif lipsă pentru Plexiglas 3 mm opal",
+        componentLabel: null,
+        context: null,
+      },
+    ]);
+    expect(JSON.stringify(presented?.costCompletenessIssues)).not.toMatch(/"rate"|"cost":0/);
   });
 
   it("does not invent cost lines when financial context is omitted", () => {
@@ -36,6 +71,7 @@ describe("presentConfirm", () => {
       reviewId: "crv1:hidden",
       completeness: null,
       completenessReasons: [],
+      costCompletenessIssues: [],
       currency: null,
       lines: [],
       total: null,

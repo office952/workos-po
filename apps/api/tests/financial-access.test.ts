@@ -152,6 +152,8 @@ describe("ALT_B_SCOPED financial access", () => {
     expect(memberConfirmKeys.has("internalCost")).toBe(false);
     expect(memberConfirmKeys.has("markupPercent")).toBe(false);
     expect(memberConfirmKeys.has("eic")).toBe(false);
+    expect(confirmMemberBody.costCompletenessIssues).toBeUndefined();
+    expect(Array.isArray(confirmOwnerBody.costCompletenessIssues)).toBe(true);
 
     const customer = await fixture.app.request("/api/customers", {
       method: "POST",

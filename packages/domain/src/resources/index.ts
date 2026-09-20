@@ -76,6 +76,14 @@ export {
   type ResourceRequirement,
 } from "./eic.js";
 export {
+  COST_COMPLETENESS_ISSUE_TYPES,
+  PROVISIONAL_COST_EVIDENCE_REASON,
+  isCostCompletenessIssueType,
+  projectCostCompletenessIssues,
+  type CostCompletenessIssue,
+  type CostCompletenessIssueType,
+} from "./costCompleteness.js";
+export {
   applyResourcesAdministrationWrite,
   projectResourcesAdministration,
   type MissingRecipeAdminRecord,
