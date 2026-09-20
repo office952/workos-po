@@ -1,7 +1,9 @@
 import type { ComponentTypeId } from "./componentTypes.js";
 import {
   actorIsValid,
+  isTechnicalSettingVersionRecord,
   isTechnicalSettingVersionSource,
+  type PersistedTechnicalSettingVersion,
   type TechnicalSettingVersionRecord,
 } from "./technicalSettingVersion.js";
 import {
@@ -48,11 +50,11 @@ export type TechnicalSettingResolution =
       readonly ok: false;
       readonly error: typeof TECHNICAL_SETTINGS_INACTIVE | typeof TECHNICAL_SETTINGS_INVALID;
       readonly reason: string;
-      readonly history: readonly TechnicalSettingVersionRecord[];
+      readonly history: readonly PersistedTechnicalSettingVersion[];
     };
 
 export function resolveOrganizationTechnicalSettings(
-  versions: readonly TechnicalSettingVersionRecord[],
+  versions: readonly PersistedTechnicalSettingVersion[],
   options: {
     readonly requiredDefinitions?: readonly ComponentTechnicalSettingDefinition[];
   } = {},
@@ -67,10 +69,23 @@ export function resolveOrganizationTechnicalSettings(
     };
   }
 
+  const records: TechnicalSettingVersionRecord[] = [];
+  for (const row of versions) {
+    if (!isTechnicalSettingVersionRecord(row)) {
+      return {
+        ok: false,
+        error: TECHNICAL_SETTINGS_INVALID,
+        reason: TECHNICAL_SETTINGS_INVALID_REASON,
+        history: versions,
+      };
+    }
+    records.push(row);
+  }
+
   const requiredIds = new Set(
     required.map((definition) => technicalSettingDefinitionId(definition.typeId, definition.id)),
   );
-  const active = versions.filter((row) => row.status === "ACTIVE");
+  const active = records.filter((row) => row.status === "ACTIVE");
   for (const row of active) {
     if (!requiredIds.has(row.definitionId) || !findTechnicalSettingDefinition(row.definitionId)) {
       return {

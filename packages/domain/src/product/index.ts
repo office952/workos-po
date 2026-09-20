@@ -238,6 +238,7 @@ export type {
   TechnicalSettingsRegistry,
 } from "./technicalSettings.js";
 export type {
+  PersistedTechnicalSettingVersion,
   SupportedTechnicalSettingId,
   TechnicalSettingActor,
   TechnicalSettingActorKind,

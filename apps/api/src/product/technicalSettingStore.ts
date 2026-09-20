@@ -4,11 +4,11 @@ import {
   isTechnicalSettingVersionRecord,
   planTechnicalSettingsSave,
   resolveOrganizationTechnicalSettings,
+  type PersistedTechnicalSettingVersion,
   type TechnicalSettingActor,
   type TechnicalSettingDraftValue,
   type TechnicalSettingIssue,
   type TechnicalSettingResolution,
-  type TechnicalSettingVersionRecord,
 } from "@workos-final/domain";
 import type { SqliteDatabase } from "../persistence/sqlite.js";
 import type { BootstrapPolicy } from "../cloud/controlPlane.js";
@@ -40,14 +40,14 @@ export type TechnicalSettingSaveResult =
       ok: true;
       alreadyApplied: boolean;
       resolution: Extract<TechnicalSettingResolution, { ok: true }>;
-      history: TechnicalSettingVersionRecord[];
+      history: PersistedTechnicalSettingVersion[];
     }
   | {
       ok: false;
       error: "invalid_settings" | "inactive_technical_settings";
       issues?: TechnicalSettingIssue[];
       reason?: string;
-      history: TechnicalSettingVersionRecord[];
+      history: PersistedTechnicalSettingVersion[];
     };
 
 export function isTechnicalSettingStartersApplied(db: SqliteDatabase): boolean {
@@ -59,7 +59,7 @@ export function isTechnicalSettingStartersApplied(db: SqliteDatabase): boolean {
 
 export function listTechnicalSettingVersions(
   db: SqliteDatabase,
-): TechnicalSettingVersionRecord[] {
+): PersistedTechnicalSettingVersion[] {
   const rows = db
     .prepare(
       `
@@ -86,7 +86,7 @@ export function listTechnicalSettingVersions(
     `,
     )
     .all() as TechnicalSettingRow[];
-  return rows.map(recordFromRow).filter(isTechnicalSettingVersionRecord);
+  return rows.map(recordFromRow);
 }
 
 export function resolveStoredTechnicalSettings(
@@ -180,7 +180,17 @@ export function persistTechnicalSettingSave(
   now = new Date().toISOString(),
 ): TechnicalSettingSaveResult {
   const existing = listTechnicalSettingVersions(db);
-  const planned = planTechnicalSettingsSave(existing, drafts, actor, {
+  const current = resolveOrganizationTechnicalSettings(existing);
+  if (!current.ok) {
+    return {
+      ok: false,
+      error: "inactive_technical_settings",
+      reason: current.reason,
+      history: existing,
+    };
+  }
+  const validExisting = existing.filter(isTechnicalSettingVersionRecord);
+  const planned = planTechnicalSettingsSave(validExisting, drafts, actor, {
     now,
     rowIdFor: (definitionId) => `tsv:${definitionId}:${randomUUID()}`,
   });
@@ -300,22 +310,22 @@ export function persistTechnicalSettingSave(
   };
 }
 
-function recordFromRow(row: TechnicalSettingRow): TechnicalSettingVersionRecord {
+function recordFromRow(row: TechnicalSettingRow): PersistedTechnicalSettingVersion {
   return {
     technicalSettingVersionRowId: row.technical_setting_version_row_id,
     definitionId: row.definition_id,
-    typeId: row.type_id as TechnicalSettingVersionRecord["typeId"],
+    typeId: row.type_id,
     settingId: row.setting_id,
     version: row.version,
-    status: row.status as TechnicalSettingVersionRecord["status"],
+    status: row.status,
     value: row.value,
-    valueType: "number",
-    unit: row.unit as TechnicalSettingVersionRecord["unit"],
-    scope: "ORGANIZATION",
-    source: row.source as TechnicalSettingVersionRecord["source"],
+    valueType: row.value_type,
+    unit: row.unit,
+    scope: row.scope,
+    source: row.source,
     effectiveFrom: row.effective_from,
     createdAt: row.created_at,
-    actorKind: row.actor_kind as TechnicalSettingVersionRecord["actorKind"],
+    actorKind: row.actor_kind,
     actorUserId: row.actor_user_id,
     actorSystemId: row.actor_system_id,
     supersedesVersion: row.supersedes_version,

@@ -14,6 +14,7 @@ import {
   createPlatformStarterTechnicalSettingVersions,
   isTechnicalSettingVersionRecord,
   planTechnicalSettingsSave,
+  type PersistedTechnicalSettingVersion,
   type TechnicalSettingVersionRecord,
 } from "./technicalSettingVersion.js";
 import {
@@ -245,6 +246,72 @@ describe("technical setting resolver", () => {
     }
     expect(resolved.settings.find((item) => item.settingId === LED_PITCH_SETTING_ID)?.value).toBe(100);
     expect(laterPlatform.find((row) => row.settingId === LED_PITCH_SETTING_ID)?.value).toBe(80);
+  });
+
+  it("rejects any persisted row that fails the version-record guard", () => {
+    const valid = starters();
+    const unknownDefinition: PersistedTechnicalSettingVersion = {
+      ...valid[0]!,
+      technicalSettingVersionRowId: "unknown",
+      definitionId: "UNKNOWN.type.setting",
+      typeId: "UNKNOWN_TYPE",
+      settingId: "unknownSetting",
+    };
+    const withUnknown = [...valid, unknownDefinition];
+    const unknownResolution = resolveOrganizationTechnicalSettings(withUnknown);
+    expect(unknownResolution).toMatchObject({
+      ok: false,
+      error: TECHNICAL_SETTINGS_INVALID,
+    });
+    expect(unknownResolution.ok ? [] : unknownResolution.history).toHaveLength(4);
+    expect(unknownResolution.ok).toBe(false);
+
+    expect(
+      resolveOrganizationTechnicalSettings(
+        valid.map((row) =>
+          row.settingId === LED_PITCH_SETTING_ID ? { ...row, unit: "W" } : row,
+        ),
+      ),
+    ).toMatchObject({ ok: false, error: TECHNICAL_SETTINGS_INVALID });
+    expect(
+      resolveOrganizationTechnicalSettings(
+        valid.map((row) =>
+          row.settingId === LED_PITCH_SETTING_ID ? { ...row, source: "CODE_DEFAULT" } : row,
+        ),
+      ),
+    ).toMatchObject({ ok: false, error: TECHNICAL_SETTINGS_INVALID });
+    expect(
+      resolveOrganizationTechnicalSettings(
+        valid.map((row) =>
+          row.settingId === LED_PITCH_SETTING_ID ? { ...row, scope: "VARIANT" } : row,
+        ),
+      ),
+    ).toMatchObject({ ok: false, error: TECHNICAL_SETTINGS_INVALID });
+    expect(
+      resolveOrganizationTechnicalSettings(
+        valid.map((row) =>
+          row.settingId === LED_MODULE_POWER_SETTING_ID
+            ? { ...row, valueType: "string" }
+            : row,
+        ),
+      ),
+    ).toMatchObject({ ok: false, error: TECHNICAL_SETTINGS_INVALID });
+    expect(
+      resolveOrganizationTechnicalSettings(
+        valid.map((row) =>
+          row.settingId === PSU_RESERVE_SETTING_ID
+            ? { ...row, actorKind: "USER", actorUserId: null, actorSystemId: null }
+            : row,
+        ),
+      ),
+    ).toMatchObject({ ok: false, error: TECHNICAL_SETTINGS_INVALID });
+
+    const silentlyReduced = withUnknown.filter(isTechnicalSettingVersionRecord);
+    expect(silentlyReduced).toHaveLength(3);
+    expect(resolveOrganizationTechnicalSettings(silentlyReduced).ok).toBe(true);
+    expect(resolveOrganizationTechnicalSettings(withUnknown).ok).toBe(false);
+
+    expect(resolveOrganizationTechnicalSettings(valid).ok).toBe(true);
   });
 });
 

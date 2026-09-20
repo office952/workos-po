@@ -68,8 +68,8 @@ import {
   type CommercialPolicyVersionRecord,
   type TechnicalSettingActor,
   type TechnicalSettingDraftValue,
+  type PersistedTechnicalSettingVersion,
   type TechnicalSettingResolution,
-  type TechnicalSettingVersionRecord,
   type OrderSnapshot,
   type QuoteAcceptanceDecision,
   type QuoteSnapshot,
@@ -248,7 +248,7 @@ export type ProductSystemRuntime = {
   listCommercialPolicyVersions(): CommercialPolicyVersionRecord[];
   resolveCommercialPolicy(): CommercialPolicyResolution;
   saveCommercialPolicy(values: CommercialPolicyDraftValues): CommercialPolicySaveResult;
-  listTechnicalSettingVersions(): TechnicalSettingVersionRecord[];
+  listTechnicalSettingVersions(): PersistedTechnicalSettingVersion[];
   resolveTechnicalSettings(): TechnicalSettingResolution;
   saveTechnicalSettings(
     drafts: readonly TechnicalSettingDraftValue[],

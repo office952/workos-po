@@ -42,6 +42,26 @@ export type TechnicalSettingActor =
   | { readonly kind: "SYSTEM"; readonly systemId: string }
   | { readonly kind: "USER"; readonly userId: string };
 
+export type PersistedTechnicalSettingVersion = {
+  readonly technicalSettingVersionRowId: string;
+  readonly definitionId: string;
+  readonly typeId: string;
+  readonly settingId: string;
+  readonly version: number;
+  readonly status: string;
+  readonly value: number;
+  readonly valueType: string;
+  readonly unit: string;
+  readonly scope: string;
+  readonly source: string;
+  readonly effectiveFrom: string;
+  readonly createdAt: string;
+  readonly actorKind: string;
+  readonly actorUserId: string | null;
+  readonly actorSystemId: string | null;
+  readonly supersedesVersion: number | null;
+};
+
 export type TechnicalSettingVersionRecord = {
   readonly technicalSettingVersionRowId: string;
   readonly definitionId: string;

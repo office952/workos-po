@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { CANONICAL_PRODUCT_CODE, LED_PITCH_SETTING_ID } from "@workos-final/domain";
+import {
+  CANONICAL_PRODUCT_CODE,
+  LED_PITCH_SETTING_ID,
+  TECHNICAL_SETTINGS_INVALID,
+} from "@workos-final/domain";
 import { NEW_ORGANIZATION_MARKERS } from "../src/cloud/provision.js";
 import { applyOperationalBootstrap } from "../src/cloud/bootstrapPolicy.js";
 import { applyMigrations, openSqliteDatabase } from "../src/persistence/sqlite.js";
@@ -8,6 +12,8 @@ import {
   TECHNICAL_SETTING_STARTERS_MARKER,
   ensureTechnicalSettingStarters,
   listTechnicalSettingVersions,
+  persistTechnicalSettingSave,
+  resolveStoredTechnicalSettings,
 } from "../src/product/technicalSettingStore.js";
 import { createApp } from "../src/app.js";
 import {
@@ -116,6 +122,110 @@ describe("technical setting persistence", () => {
     }
     expect(resolved.settings.find((item) => item.settingId === LED_PITCH_SETTING_ID)?.value).toBe(100);
     second.close();
+  });
+
+  it("fails closed on persisted unknown definition, wrong unit, and invalid actor", () => {
+    const db = openSqliteDatabase(tempSqlitePath());
+    applyMigrations(db);
+    applyOperationalBootstrap(db, "NEW_ORGANIZATION");
+    const starters = listTechnicalSettingVersions(db);
+    expect(starters).toHaveLength(3);
+    expect(resolveStoredTechnicalSettings(db).ok).toBe(true);
+
+    db.prepare(
+      `
+      INSERT INTO technical_setting_versions (
+        technical_setting_version_row_id,
+        definition_id,
+        type_id,
+        setting_id,
+        version,
+        status,
+        value,
+        value_type,
+        unit,
+        scope,
+        source,
+        effective_from,
+        created_at,
+        actor_kind,
+        actor_user_id,
+        actor_system_id,
+        supersedes_version
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+    ).run(
+      "tsv:unknown:test",
+      "UNKNOWN.type.setting",
+      "UNKNOWN_TYPE",
+      "unknownSetting",
+      1,
+      "ACTIVE",
+      1,
+      "number",
+      "mm",
+      "ORGANIZATION",
+      "ORGANIZATION",
+      "2026-09-20T00:00:00.000Z",
+      "2026-09-20T00:00:00.000Z",
+      "SYSTEM",
+      null,
+      "TECHNICAL_SETTING_STARTER_V1",
+      null,
+    );
+    const withUnknown = listTechnicalSettingVersions(db);
+    expect(withUnknown).toHaveLength(4);
+    expect(withUnknown.some((row) => row.definitionId === "UNKNOWN.type.setting")).toBe(true);
+    const unknownResolution = resolveStoredTechnicalSettings(db);
+    expect(unknownResolution).toMatchObject({
+      ok: false,
+      error: TECHNICAL_SETTINGS_INVALID,
+    });
+    expect(unknownResolution.ok ? null : unknownResolution.history).toHaveLength(4);
+    db.prepare("DELETE FROM technical_setting_versions WHERE definition_id = ?").run(
+      "UNKNOWN.type.setting",
+    );
+
+    db.prepare("UPDATE technical_setting_versions SET unit = ? WHERE setting_id = ?").run(
+      "W",
+      LED_PITCH_SETTING_ID,
+    );
+    const wrongUnit = listTechnicalSettingVersions(db);
+    expect(wrongUnit.find((row) => row.settingId === LED_PITCH_SETTING_ID)?.unit).toBe("W");
+    expect(wrongUnit).toHaveLength(3);
+    expect(resolveStoredTechnicalSettings(db)).toMatchObject({
+      ok: false,
+      error: TECHNICAL_SETTINGS_INVALID,
+    });
+    db.prepare("UPDATE technical_setting_versions SET unit = ? WHERE setting_id = ?").run(
+      "mm",
+      LED_PITCH_SETTING_ID,
+    );
+
+    db.prepare(
+      `
+      UPDATE technical_setting_versions
+      SET actor_kind = 'USER', actor_user_id = '', actor_system_id = NULL
+      WHERE setting_id = ?
+    `,
+    ).run(LED_PITCH_SETTING_ID);
+    const listed = listTechnicalSettingVersions(db);
+    expect(listed.find((row) => row.settingId === LED_PITCH_SETTING_ID)).toMatchObject({
+      actorKind: "USER",
+      actorUserId: "",
+      actorSystemId: null,
+    });
+    expect(resolveStoredTechnicalSettings(db)).toMatchObject({
+      ok: false,
+      error: TECHNICAL_SETTINGS_INVALID,
+    });
+    expect(
+      persistTechnicalSettingSave(db, [{ settingId: LED_PITCH_SETTING_ID, value: 80 }], {
+        kind: "USER",
+        userId: "user-1",
+      }).ok,
+    ).toBe(false);
+    db.close();
   });
 });
 

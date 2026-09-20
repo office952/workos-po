@@ -167,6 +167,7 @@ export {
   type TechnicalSettingActorKind,
   type TechnicalSettingDraftValue,
   type TechnicalSettingSavePlan,
+  type PersistedTechnicalSettingVersion,
   type TechnicalSettingVersionRecord,
   type TechnicalSettingVersionSource,
   type TechnicalSettingVersionStatus,

@@ -1,5 +1,7 @@
 import {
   isSupportedTechnicalSettingId,
+  isTechnicalSettingVersionSource,
+  isTechnicalSettingVersionStatus,
   requiredTechnicalSettingDefinitions,
   technicalSettingDefinitionId,
   technicalSettingSourceLabel,
@@ -73,14 +75,14 @@ function presentTechnicalSettingsAdmin(
       sourceLabel: resolved
         ? technicalSettingSourceLabel(resolved.source)
         : current
-          ? technicalSettingSourceLabel(current.source)
+          ? persistedSourceLabel(current.source)
           : null,
       version: resolved?.version ?? current?.version ?? null,
       status: resolved?.status ?? current?.status ?? null,
       statusLabel: resolved
         ? technicalSettingStatusLabel(resolved.status)
         : current
-          ? technicalSettingStatusLabel(current.status)
+          ? persistedStatusLabel(current.status)
           : null,
       effectiveFrom: resolved?.effectiveFrom ?? current?.effectiveFrom ?? null,
     };
@@ -98,9 +100,9 @@ function presentTechnicalSettingsAdmin(
       typeId: row.typeId,
       version: row.version,
       status: row.status,
-      statusLabel: technicalSettingStatusLabel(row.status),
+      statusLabel: persistedStatusLabel(row.status),
       source: row.source,
-      sourceLabel: technicalSettingSourceLabel(row.source),
+      sourceLabel: persistedSourceLabel(row.source),
       value: row.value,
       unit: row.unit,
       createdAt: row.createdAt,
@@ -148,6 +150,18 @@ function readDrafts(body: unknown): TechnicalSettingDraftValue[] | null {
     drafts.push({ settingId, value });
   }
   return drafts.length > 0 ? drafts : null;
+}
+
+function persistedSourceLabel(source: string): string | null {
+  return isTechnicalSettingVersionSource(source)
+    ? technicalSettingSourceLabel(source)
+    : null;
+}
+
+function persistedStatusLabel(status: string): string | null {
+  return isTechnicalSettingVersionStatus(status)
+    ? technicalSettingStatusLabel(status)
+    : null;
 }
 
 function asFiniteNumber(value: unknown): number | null {
