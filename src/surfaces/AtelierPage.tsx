@@ -1,9 +1,7 @@
 import { useMemo, useState } from "react";
 import { presentOperatorSession } from "../adapters/operatorAdapter";
-import { asRecord, asString } from "../adapters/record";
 import { TransportError, readTransportErrorCode } from "../api/http";
 import { configureOperatorPin, identifyOperator, logoutOperator } from "../api/operator";
-import { assignPersonSkill, createPerson, fetchPeopleSkills } from "../api/people";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { InlineAlert } from "../components/InlineAlert";
@@ -40,7 +38,6 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
     loadOperatorInbox,
   );
   const [personId, setPersonId] = useState("");
-  const [newOperatorName, setNewOperatorName] = useState("");
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [actionState, setActionState] = useState<"idle" | "pending" | "error">("idle");
@@ -62,42 +59,6 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
   const nextCount = lanes.filter((lane) => lane.lane === "next").length;
   const sessionKnown = session.status === "success";
   const candidatesPending = candidates.status !== "success" && people.length === 0;
-
-  async function addOperator(): Promise<void> {
-    if (newOperatorName.trim() === "") {
-      return;
-    }
-    setActionState("pending");
-    setActionError(null);
-    try {
-      const created = asRecord(await createPerson(newOperatorName.trim()));
-      const personIdCreated = asString(asRecord(created?.person)?.personId);
-      if (!personIdCreated) {
-        setActionState("error");
-        setActionError("Operatorul nu a putut fi creat.");
-        return;
-      }
-      const skillsPayload = asRecord(await fetchPeopleSkills());
-      const skills = Array.isArray(skillsPayload?.skills) ? skillsPayload.skills : [];
-      for (const skill of skills) {
-        const skillId = asString(asRecord(skill)?.skillId);
-        if (skillId) {
-          await assignPersonSkill(personIdCreated, skillId);
-        }
-      }
-      setPersonId(personIdCreated);
-      setNewOperatorName("");
-      setActionState("idle");
-      invalidateAfterOperatorSessionChange();
-    } catch (error) {
-      setActionState("error");
-      setActionError(
-        error instanceof TransportError && error.status === 403
-          ? "Doar proprietarul organizației poate adăuga un operator."
-          : "Operatorul nu a putut fi creat.",
-      );
-    }
-  }
 
   async function login(): Promise<void> {
     if (!selectedPersonId || pin.trim() === "") {
@@ -192,20 +153,10 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
       ) : !currentSession ? (
         <SurfacePanel variant="operational" title="Operator" label="Identificare">
           {people.length === 0 ? (
-            <>
-              <TextField
-                id="operator-name"
-                label="Nume operator"
-                value={newOperatorName}
-                onChange={setNewOperatorName}
-              />
-              <Button
-                disabled={newOperatorName.trim() === "" || actionState === "pending"}
-                onClick={() => void addOperator()}
-              >
-                Adaugă operator
-              </Button>
-            </>
+            <EmptyState
+              title="Nu există operatori configurați"
+              description="Calificările se setează explicit în organizație. Atelierul nu creează persoane și nu atribuie meserii."
+            />
           ) : (
             <>
               <SelectField

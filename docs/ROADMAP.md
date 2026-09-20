@@ -90,7 +90,7 @@ AUTH → CLIENT → CERERE → CONFIGURATOR → OFERTA → ACCEPTANCE → LUCRAR
 ADMIN_TOOLING_DEBT = RECORDED_NOT_IMPLEMENTED
 ```
 
-Recorded, not implemented: self-service signup, email verification, password recovery, MFA, billing/subscriptions, production organization provisioning UX, commercial onboarding automation. Do not build these without a later Owner GO.
+Recorded, not implemented: self-service signup, email verification, password recovery, MFA, billing/subscriptions, production organization provisioning UX, commercial onboarding automation, general People administration UX, general Machine/workcenter administration UX. Do not build these without a later Owner GO. Synthetic E2E may use existing owner APIs and the organization-provider CLI as explicit prerequisites. That does not make general admin tooling complete.
 
 ## Authority after engine consolidation
 
@@ -169,6 +169,6 @@ PRODUCT_FOLLOW_UP = NO
 
 `JOB_TO_ATELIER_JOB_CONTEXT`: inbox/plan carry `jobId`; job opens `/atelier?job=`; execution honors `?task=` / `?job=` and advances off a completed task query. Atelier listed the same NORD plan (12 tasks).
 
-`CONFIGURATOR_FREEZE_RUNTIME`: owner seller setup is in the configurator; freeze surfaces API reasons; empty-org CNC capability is added through the organization-provider API. Freeze succeeded after owner-confirmed cost evidence (existing EIC, supported owner resource PATCH — not a schema change).
+`CONFIGURATOR_FREEZE_RUNTIME`: owner seller setup is in the configurator; freeze surfaces API reasons. Freeze succeeded after owner-confirmed cost evidence (existing EIC, supported owner resource PATCH — not a schema change).
 
-A new organization still needs owner-confirmed cost evidence before freeze. That is the existing fail-closed EIC rule, not a remaining named journey defect.
+A new organization still needs owner-confirmed cost evidence before freeze. Operator skills and machines are explicit organization truth: they are not invented in Atelier or Execution. The journey consumes configured providers and explains a missing machine. General People/Machine administration remains recorded admin debt.

@@ -1,5 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AtelierPage } from "./AtelierPage";
 
@@ -16,18 +15,9 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 describe("AtelierPage", () => {
-  it("lets the first owner add an operator when the people list is empty", async () => {
-    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+  it("explains an empty people list without creating a person or assigning skills", async () => {
+    const fetchMock = vi.fn((input: RequestInfo) => {
       const url = String(input);
-      if (url.endsWith("/api/people") && init?.method === "POST") {
-        return jsonResponse({ person: { personId: "per:1", displayName: "Operator Nord" } });
-      }
-      if (url.endsWith("/api/people/skills")) {
-        return jsonResponse({ skills: [{ skillId: "sk:cnc" }, { skillId: "sk:wire" }] });
-      }
-      if (url.includes("/skills") && init?.method === "POST") {
-        return jsonResponse({ ok: true });
-      }
       if (url.includes("/operator-candidates")) {
         return jsonResponse({ candidates: [] });
       }
@@ -39,21 +29,11 @@ describe("AtelierPage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<AtelierPage />);
-    const user = userEvent.setup();
-    await user.type(await screen.findByLabelText("Nume operator"), "Operator Nord");
-    await user.click(screen.getByRole("button", { name: "Adaugă operator" }));
-    await waitFor(() => {
-      expect(
-        fetchMock.mock.calls.some(
-          ([url, init]) => String(url) === "/api/people" && init?.method === "POST",
-        ),
-      ).toBe(true);
-      expect(
-        fetchMock.mock.calls.filter(
-          ([url, init]) => String(url).includes("/skills") && init?.method === "POST",
-        ),
-      ).toHaveLength(2);
-    });
+    expect(await screen.findByText("Nu există operatori configurați")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Adaugă operator" })).not.toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).includes("/api/people")),
+    ).toBe(false);
   });
 
   it("keeps only the selected job in the inbox and carries task plus job into execution", async () => {

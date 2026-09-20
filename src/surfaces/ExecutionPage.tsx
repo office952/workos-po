@@ -1,12 +1,10 @@
 import { useState } from "react";
-import { asRecord, asString } from "../adapters/record";
 import { TransportError } from "../api/http";
 import {
   assignTaskProvider,
   completeExecutionTask,
   startExecutionTask,
 } from "../api/lifecycle";
-import { ensureOrganizationCapabilityProvider } from "../api/providers";
 import type { ExecutionTaskTransport } from "../api/types";
 import { Button } from "../components/Button";
 import { InfoRow } from "../components/InfoRow";
@@ -97,38 +95,6 @@ export function ExecutionPage({
       return draftCompletedQuantity(task.plannedQuantity);
     }
     return "";
-  }
-
-  async function ensureProvider(task: ExecutionTaskTransport): Promise<void> {
-    setActionState("pending");
-    setActionError(null);
-    try {
-      const capabilityId = task.requiredCapabilityId;
-      if (!capabilityId) {
-        setActionState("error");
-        setActionError("Sarcina nu cere un utilaj cunoscut.");
-        return;
-      }
-      const created = asRecord(
-        await ensureOrganizationCapabilityProvider(capabilityId, "Utilaj de producție"),
-      );
-      const machineId = asString(created?.machineId);
-      if (!machineId) {
-        setActionState("error");
-        setActionError("Utilajul nu a putut fi adăugat.");
-        return;
-      }
-      await assignTaskProvider(task.taskId, machineId);
-      setActionState("idle");
-      invalidateAfterExecutionTaskChange(planId);
-    } catch (error) {
-      setActionState("error");
-      setActionError(
-        error instanceof TransportError && error.status === 403
-          ? "Doar proprietarul organizației poate adăuga un utilaj."
-          : "Utilajul nu a putut fi adăugat.",
-      );
-    }
   }
 
   async function assign(task: ExecutionTaskTransport): Promise<void> {
@@ -294,18 +260,15 @@ export function ExecutionPage({
                 }}
               />
             ) : null}
+            {currentTask.requiresProvider &&
+            currentTask.eligibleProviderIds.length === 0 &&
+            currentTask.status !== "COMPLETED" ? (
+              <InlineAlert tone="blocked" title="Utilaj lipsește">
+                Această sarcină cere un utilaj deja configurat în organizație. Execuția nu
+                inventează utilaje.
+              </InlineAlert>
+            ) : null}
             <div className="cluster">
-              {currentTask.requiresProvider &&
-              currentTask.eligibleProviderIds.length === 0 &&
-              currentTask.status !== "COMPLETED" ? (
-                <Button
-                  variant="secondary"
-                  disabled={actionState === "pending"}
-                  onClick={() => void ensureProvider(currentTask)}
-                >
-                  Adaugă utilajul de debitare
-                </Button>
-              ) : null}
               {currentTask.canAssign ? (
                 <Button
                   variant="secondary"

@@ -392,19 +392,13 @@ describe("ExecutionPage", () => {
     );
   });
 
-  it("asks the API for a capability machine instead of inventing a provider id", async () => {
-    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+  it("explains a missing configured machine without creating one", async () => {
+    const fetchMock = vi.fn((input: RequestInfo) => {
       const url = String(input);
       if (url.includes("/operator-session")) {
         return jsonResponse({
           operator: { personId: "per:andrei", displayName: "Andrei Goghi" },
         });
-      }
-      if (url.includes("/organization-providers/capability") && init?.method === "POST") {
-        return jsonResponse({ machineId: "mch:org-cnc-routing", alreadyApplied: false });
-      }
-      if (url.includes("/provider") && init?.method === "POST") {
-        return jsonResponse({ ok: true });
       }
       return jsonResponse({
         executionPlan: {
@@ -440,24 +434,10 @@ describe("ExecutionPage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<ExecutionPage planId="exp:1" />);
-    await userEvent
-      .setup()
-      .click(await screen.findByRole("button", { name: "Adaugă utilajul de debitare" }));
-    await waitFor(() => {
-      const capability = fetchMock.mock.calls.find(([url, init]) =>
-        String(url).includes("/organization-providers/capability") && init?.method === "POST",
-      );
-      expect(capability?.[1]?.body).toBe(
-        JSON.stringify({ capabilityId: "CNC_ROUTING", label: "Utilaj de producție" }),
-      );
-      expect(
-        fetchMock.mock.calls.some(
-          ([url, init]) =>
-            String(url).includes("/execution-tasks/task-cut/provider") &&
-            init?.method === "POST" &&
-            String(init.body).includes("mch:org-cnc-routing"),
-        ),
-      ).toBe(true);
-    });
+    expect(await screen.findByText("Utilaj lipsește")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Adaugă utilajul de debitare" })).not.toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).includes("/organization-providers")),
+    ).toBe(false);
   });
 });

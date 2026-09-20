@@ -82,10 +82,7 @@ import {
   resolveProviderRegistryKind,
   type ProviderRegistryKind,
 } from "../cloud/bootstrapPolicy.js";
-import {
-  ensureOrganizationCapabilityProvider,
-  loadOrganizationProviderRegistry,
-} from "../workcenters/organizationProviderStore.js";
+import { loadOrganizationProviderRegistry } from "../workcenters/organizationProviderStore.js";
 import type { BootstrapPolicy } from "../cloud/controlPlane.js";
 import {
   applyMigrations,
@@ -354,10 +351,6 @@ export type ProductSystemRuntime = {
   providerRegistry: WorkcenterRegistry;
   providerRegistryKind: ProviderRegistryKind;
   updateSellerProfile(input: SellerProfileInput): SellerMutationResult;
-  ensureOrganizationCapabilityProvider(input: {
-    capabilityId: string;
-    label: string;
-  }): ReturnType<typeof ensureOrganizationCapabilityProvider>;
   readOperationalServicesAdmin(): OperationalServicesAdminProjection;
   updateOrganizationServiceOffer(
     capabilityId: string,
@@ -770,9 +763,6 @@ export function createProductSystemRuntimeFromOpenDb(
     },
     updateSellerProfile(input) {
       return persistUpdatedSeller(db, input);
-    },
-    ensureOrganizationCapabilityProvider(input) {
-      return ensureOrganizationCapabilityProvider(db, input);
     },
     readOperationalServicesAdmin() {
       return readOperationalServicesAdmin(db);
