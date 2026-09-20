@@ -42,7 +42,7 @@ PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
 PRIMARY_USER_JOURNEY_PROOF_DATE = 2026-09-20
 
 NEXT_PROGRAM_PRIORITY = WORKOS_CONFIGURATION_FIRST_FOUNDATION_V1
-NEXT_PROGRAM_STATUS = CF0_DOCUMENTATION_PROPOSED
+NEXT_PROGRAM_STATUS = CF0_COMPLETE
 NEXT_PROGRAM_STARTED = YES
 CONFIGURATION_FIRST_CANON = docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md
 CONFIGURATION_FIRST_IMPLEMENTATION = NOT_AUTHORIZED
@@ -197,7 +197,7 @@ DB_IMPLEMENTATION_AUTHORIZED = NO
 
 | Wave | Scope | Status | Authorization |
 | --- | --- | --- | --- |
-| CF0 | Configuration-First canon / documentation | PROPOSED | this documentation wave only |
+| CF0 | Configuration-First canon / documentation | COMPLETE | this documentation wave only |
 | CF1 | Typed configuration domain + persistence foundation | NOT_STARTED | later Owner GO |
 | CF2 | Resolver + version + audit + snapshot provenance | NOT_STARTED | later Owner GO |
 | CF3 | Basic administration for technical / commercial / variant configuration | NOT_STARTED | later Owner GO |
