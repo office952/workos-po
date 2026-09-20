@@ -278,7 +278,7 @@ function resolveProductCommercialForRequest(
     organizationDefaults,
     quoteTermsFromDefaults: quoteCommercialTermsMatchDefaults(quoteTerms, organizationDefaults),
     pricingMethod: commercialPrice.commercialStrategy ?? pricingMethod,
-    calculatedPriceAvailable: costPlus.completeness === "COMPLETE",
+    calculatedPriceAvailable: costPlus.calculationStatus === "CALCULABLE",
     manualProductPriceAuthorized: authorized,
   };
 }

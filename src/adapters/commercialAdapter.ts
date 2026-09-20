@@ -52,6 +52,8 @@ export function presentCommercialPrice(value: unknown): CommercialPriceTransport
     marginAmount: asNumber(record.marginAmount),
     policySource: asString(record.policySource),
     commercialStrategy: asString(record.commercialStrategy),
+    calculationStatus: asString(record.calculationStatus),
+    verificationStatus: asString(record.verificationStatus),
   };
 }
 

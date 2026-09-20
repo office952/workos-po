@@ -66,6 +66,8 @@ export type ScopedClientCommercial = {
   policySource?: string;
   commercialStrategy?: string;
   manualNetPrice?: number;
+  calculationStatus?: string;
+  verificationStatus?: string;
 };
 
 export type ScopedOwnerCommercial = ScopedClientCommercial & {
@@ -109,6 +111,8 @@ export function scopeCommercialPrice(
     policyVersion: price.policyVersion,
     ...(price.policySource ? { policySource: price.policySource } : {}),
     ...(price.commercialStrategy ? { commercialStrategy: price.commercialStrategy } : {}),
+    calculationStatus: price.calculationStatus,
+    verificationStatus: price.verificationStatus,
   };
   if (access === "commercial") {
     return client;

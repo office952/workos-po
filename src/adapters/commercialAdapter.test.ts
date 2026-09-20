@@ -33,6 +33,8 @@ describe("presentCommercialPrice", () => {
       marginAmount: null,
       policySource: null,
       commercialStrategy: null,
+      calculationStatus: null,
+      verificationStatus: null,
     });
   });
 

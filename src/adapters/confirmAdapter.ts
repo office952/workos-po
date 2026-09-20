@@ -37,15 +37,23 @@ export function presentCostCompletenessIssues(
     ) {
       return [];
     }
+    const impact =
+      record.impact === "REQUIRES_VERIFICATION" || record.impact === "BLOCKS_CALCULATION"
+        ? record.impact
+        : record.type === "PROVISIONAL_COST_EVIDENCE"
+          ? "REQUIRES_VERIFICATION"
+          : "BLOCKS_CALCULATION";
     return [
       {
         type: record.type as CostCompletenessIssueTransport["type"],
+        impact,
         label: record.label,
         reason: record.reason,
         resourceId: typeof record.resourceId === "string" ? record.resourceId : null,
         componentLabel:
           typeof record.componentLabel === "string" ? record.componentLabel : null,
         context: typeof record.context === "string" ? record.context : null,
+        rate: typeof record.rate === "number" && record.rate > 0 ? record.rate : null,
       },
     ];
   });
@@ -96,6 +104,8 @@ export function presentConfirm(
     return {
       reviewId,
       completeness: null,
+      calculationStatus: null,
+      verificationStatus: null,
       completenessReasons: [],
       costCompletenessIssues: [],
       currency: null,
@@ -116,6 +126,10 @@ export function presentConfirm(
   return {
     reviewId,
     completeness: typeof eic.completeness === "string" ? eic.completeness : null,
+    calculationStatus:
+      typeof eic.calculationStatus === "string" ? eic.calculationStatus : null,
+    verificationStatus:
+      typeof eic.verificationStatus === "string" ? eic.verificationStatus : null,
     completenessReasons: Array.isArray(eic.completenessReasons)
       ? eic.completenessReasons.filter((reason) => typeof reason === "string")
       : [],

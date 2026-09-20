@@ -84,13 +84,21 @@ function confirmBody(options: {
   rate: number;
   cost: number;
   completeness?: string;
+  calculationStatus?: string;
+  verificationStatus?: string;
   calculatedPriceAvailable?: boolean;
   costCompletenessIssues?: Array<Record<string, unknown>>;
 }) {
   const completeness = options.completeness ?? "COMPLETE";
+  const calculationStatus =
+    options.calculationStatus ??
+    (completeness === "COMPLETE" ? "CALCULABLE" : "UNAVAILABLE");
+  const verificationStatus = options.verificationStatus ?? "CONFIRMED";
   return {
     eic: {
       completeness,
+      calculationStatus,
+      verificationStatus,
       completenessReasons: [],
       currency: "EUR",
       total: options.cost,
@@ -117,6 +125,8 @@ function confirmBody(options: {
       internalCost: options.cost,
       internalCostCurrency: "EUR",
       internalCostCompleteness: completeness,
+      calculationStatus,
+      verificationStatus,
     },
     costCompletenessIssues: options.costCompletenessIssues ?? [],
     organizationDefaults: {
@@ -148,6 +158,8 @@ function installFetch(options: {
   cost: number;
   sellerConfigured?: boolean;
   completeness?: string;
+  calculationStatus?: string;
+  verificationStatus?: string;
   calculatedPriceAvailable?: boolean;
   costCompletenessIssues?: Array<Record<string, unknown>>;
 }) {
@@ -740,6 +752,7 @@ describe("ConfiguratorPage", () => {
       costCompletenessIssues: [
         {
           type: "MISSING_COST_EVIDENCE",
+          impact: "BLOCKS_CALCULATION",
           resourceId: "plexiglas_3mm_opal",
           label: "Plexiglas 3 mm opal",
           reason: "Tarif lipsă pentru Plexiglas 3 mm opal",
@@ -780,6 +793,7 @@ describe("ConfiguratorPage", () => {
       costCompletenessIssues: [
         {
           type: "MISSING_TECHNICAL_INPUT",
+          impact: "BLOCKS_CALCULATION",
           label: "Față",
           reason: "Suprafață față neconfirmată",
           componentLabel: "Față",
@@ -805,14 +819,18 @@ describe("ConfiguratorPage", () => {
     installFetch({
       rate: 3,
       cost: 386,
-      completeness: "PARTIAL",
-      calculatedPriceAvailable: false,
+      completeness: "COMPLETE",
+      calculationStatus: "CALCULABLE",
+      verificationStatus: "NEEDS_VERIFICATION",
+      calculatedPriceAvailable: true,
       costCompletenessIssues: [
         {
           type: "PROVISIONAL_COST_EVIDENCE",
+          impact: "REQUIRES_VERIFICATION",
           resourceId: "MAT-VINYL-ORACAL-651",
           label: "Vinil Oracal 651",
           reason: "Cost existent, dar neconfirmat",
+          rate: 9,
         },
       ],
     });
@@ -823,9 +841,22 @@ describe("ConfiguratorPage", () => {
     );
     renderConfigurator({ requestId: null });
     await confirmReady();
+    expect(screen.getByText("Cost intern estimat")).toBeInTheDocument();
+    expect(screen.getByText("Calculat")).toBeInTheDocument();
+    expect(screen.getAllByText("Necesită verificare").length).toBeGreaterThan(0);
+    expect(screen.getByText("Valori care necesită verificare")).toBeInTheDocument();
+    expect(screen.getByText("Vinil Oracal 651")).toBeInTheDocument();
+    expect(screen.getByText("9,00 EUR")).toBeInTheDocument();
     expect(screen.getByText("Cost existent, dar neconfirmat")).toBeInTheDocument();
+    expect(screen.queryByText("Ce lipsește din cost")).not.toBeInTheDocument();
     expect(screen.queryByText(/Tarif lipsă/)).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Calculat din costuri/ })).toBeEnabled();
     expect(screen.getByRole("radio", { name: /Preț net negociat manual/ })).toBeEnabled();
+    expect(
+      screen.getByText("Calculul folosește 1 valoare care necesită verificare."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Calculul automat nu este disponibil/)).not.toBeInTheDocument();
+    expect(screen.getByText("Adaos pentru această ofertă (%)")).toBeInTheDocument();
   });
 
   it("hides unresolved cost issues when EIC is complete", async () => {
@@ -850,6 +881,7 @@ describe("ConfiguratorPage", () => {
       costCompletenessIssues: [
         {
           type: "MISSING_COST_EVIDENCE",
+          impact: "BLOCKS_CALCULATION",
           resourceId: "plexiglas_3mm_opal",
           label: "Plexiglas 3 mm opal",
           reason: "Tarif lipsă pentru Plexiglas 3 mm opal",

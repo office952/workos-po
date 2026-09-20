@@ -351,6 +351,14 @@ export function ConfiguratorPage({
   const calculatedUnavailable = Boolean(
     confirmation && !confirmation.calculatedPriceAvailable,
   );
+  const verificationIssues =
+    confirmation?.costCompletenessIssues.filter(
+      (issue) => issue.impact === "REQUIRES_VERIFICATION",
+    ) ?? [];
+  const blockingIssues =
+    confirmation?.costCompletenessIssues.filter(
+      (issue) => issue.impact === "BLOCKS_CALCULATION",
+    ) ?? [];
   const priceNotReady = Boolean(confirmation && !validCustomerPrice);
   const organizationDefaults = confirmation?.organizationDefaults;
   return (
@@ -536,11 +544,12 @@ export function ConfiguratorPage({
               internalTotal={confirmation.total}
               internalCurrency={confirmation.currency}
               internalCompleteness={confirmation.completeness}
+              calculationStatus={confirmation.calculationStatus}
+              verificationStatus={confirmation.verificationStatus}
               showCustomerPrice={false}
             />
           ) : null}
           {confirmation?.financialVisible &&
-          confirmation.completeness !== "COMPLETE" &&
           confirmation.costCompletenessIssues.length > 0 ? (
             <CostCompletenessIssues issues={confirmation.costCompletenessIssues} />
           ) : null}
@@ -607,12 +616,18 @@ export function ConfiguratorPage({
                 <InlineAlert tone="pending" title="Calculul automat nu este disponibil">
                   Calculul automat nu este disponibil deoarece costul intern este
                   incomplet.{" "}
-                  {confirmation.financialVisible &&
-                  confirmation.costCompletenessIssues.length > 0 ? (
+                  {confirmation.financialVisible && blockingIssues.length > 0 ? (
                     <a className="text-link" href="#cost-intern-gaps">
                       Vezi ce lipsește
                     </a>
                   ) : null}
+                </InlineAlert>
+              ) : null}
+              {!calculatedUnavailable && verificationIssues.length > 0 ? (
+                <InlineAlert tone="pending" title="Necesită verificare">
+                  {verificationIssues.length === 1
+                    ? "Calculul folosește 1 valoare care necesită verificare."
+                    : `Calculul folosește ${verificationIssues.length} valori care necesită verificare.`}
                 </InlineAlert>
               ) : null}
               {confirmation.financialVisible &&

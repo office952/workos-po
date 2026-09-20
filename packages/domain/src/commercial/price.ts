@@ -11,11 +11,17 @@ import {
   validateQuoteCommercialTerms,
   type QuoteCommercialTerms,
 } from "./quoteTerms.js";
+import type {
+  EicCalculationStatus,
+  EicVerificationStatus,
+} from "../resources/eic.js";
 
 export type CommercialCostInput = {
   total: number;
   currency: string;
   completeness: "PARTIAL" | "COMPLETE";
+  calculationStatus?: EicCalculationStatus;
+  verificationStatus?: EicVerificationStatus;
 };
 
 export type CommercialPriceCompleteness = "COMPLETE" | "PARTIAL" | "UNAVAILABLE";
@@ -40,6 +46,8 @@ export type CommercialPriceProjection = {
   currency: typeof COMMERCIAL_CURRENCY;
   completeness: CommercialPriceCompleteness;
   unavailableReasons: readonly string[];
+  calculationStatus: EicCalculationStatus;
+  verificationStatus: EicVerificationStatus;
 };
 
 const PARTIAL_EIC_REASON =
@@ -48,6 +56,22 @@ const CURRENCY_MISMATCH_REASON =
   "Moneda costului intern nu coincide cu moneda comercială.";
 const INVALID_COST_REASON = "Costul intern nu poate fi folosit pentru preț client.";
 const NEGATIVE_NET_REASON = "Prețul net nu poate fi negativ.";
+
+export function commercialCostIsCalculable(input: CommercialCostInput): boolean {
+  if (input.calculationStatus === "CALCULABLE") {
+    return true;
+  }
+  if (input.calculationStatus === "UNAVAILABLE") {
+    return false;
+  }
+  return input.completeness === "COMPLETE";
+}
+
+function commercialVerificationStatus(
+  input: CommercialCostInput,
+): EicVerificationStatus {
+  return input.verificationStatus ?? "CONFIRMED";
+}
 
 export function roundMoney(
   value: number,
@@ -96,6 +120,8 @@ export function projectCommercialPrice(
     discountPercent: terms.discountPercent,
     vatPercent: policy.vatPercent,
     currency: COMMERCIAL_CURRENCY,
+    calculationStatus: commercialCostIsCalculable(input) ? "CALCULABLE" : "UNAVAILABLE",
+    verificationStatus: commercialVerificationStatus(input),
   };
 
   if (reasons.length > 0) {
@@ -130,8 +156,10 @@ export function projectCommercialPrice(
     netPrice,
     vatAmount,
     grossPrice,
-    completeness: input.completeness === "COMPLETE" ? "COMPLETE" : "PARTIAL",
-    unavailableReasons: input.completeness === "COMPLETE" ? [] : [PARTIAL_EIC_REASON],
+    completeness: commercialCostIsCalculable(input) ? "COMPLETE" : "PARTIAL",
+    unavailableReasons: commercialCostIsCalculable(input) ? [] : [PARTIAL_EIC_REASON],
+    calculationStatus: commercialCostIsCalculable(input) ? "CALCULABLE" : "UNAVAILABLE",
+    verificationStatus: commercialVerificationStatus(input),
   };
 }
 
@@ -176,5 +204,7 @@ function unavailableProjection(
     grossPrice: null,
     completeness: "UNAVAILABLE",
     unavailableReasons: [...new Set(reasons)],
+    calculationStatus: "UNAVAILABLE",
+    verificationStatus: base.verificationStatus,
   };
 }

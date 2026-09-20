@@ -595,7 +595,7 @@ SAFE_MANUAL_FALLBACK = REQUIRED_WHERE_SEMANTICALLY_VALID
 
 `MISSING_REQUIRED_CONFIG = FAIL_CLOSED` applies to genuinely required truth and integrity: tenancy, snapshot immutability, invalid commercial policy saves, and required technical facts for production.
 
-Optional business automation may use an explicit supported manual or basic mode. Incomplete cost evidence makes cost-plus unavailable. It does not automatically make a valid authorized manual product price unavailable.
+Optional business automation may use an explicit supported manual or basic mode. A missing required numeric cost value makes cost-plus unavailable. A present numeric cost that still needs verification remains usable for calculation and must stay visibly unverified. It does not automatically make a valid authorized manual product price unavailable.
 
 ## 7. Formula architecture
 

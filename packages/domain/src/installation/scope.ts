@@ -410,6 +410,8 @@ function compileSiteInstallationEic(
   const total = roundMoney(lines.reduce((sum, line) => sum + line.cost, 0));
   return {
     completeness: complete ? "COMPLETE" : "PARTIAL",
+    calculationStatus: complete ? "CALCULABLE" : "UNAVAILABLE",
+    verificationStatus: "CONFIRMED",
     completenessReasons: incompleteReasons.map((reason) => reason.label),
     geometryLabel: null,
     currency: "EUR",

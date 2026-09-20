@@ -69,4 +69,43 @@ describe("CommercialPricePanel", () => {
     expect(screen.getByTestId("internal-cost")).toHaveTextContent("Incomplet");
     expect(screen.getByTestId("internal-cost")).not.toHaveTextContent("0,00 EUR");
   });
+
+  it("marks a calculable unverified cost as estimated, not missing", () => {
+    render(
+      <CommercialPricePanel
+        commercial={{
+          netPrice: 521.1,
+          vatPercent: 21,
+          vatAmount: 109.43,
+          grossPrice: 630.53,
+          currency: "EUR",
+          completeness: "COMPLETE",
+          unavailableReasons: [],
+          internalCost: 386,
+          internalCostCurrency: "EUR",
+          internalCostCompleteness: "COMPLETE",
+          markupPercent: 35,
+          markupAmount: 135.1,
+          discountPercent: 0,
+          discountAmount: 0,
+          adjustmentAmount: 0,
+          marginAmount: 135.1,
+          calculationStatus: "CALCULABLE",
+          verificationStatus: "NEEDS_VERIFICATION",
+        }}
+        internalTotal={386}
+        internalCurrency="EUR"
+        internalCompleteness="COMPLETE"
+        calculationStatus="CALCULABLE"
+        verificationStatus="NEEDS_VERIFICATION"
+        showCustomerPrice={false}
+      />,
+    );
+
+    expect(screen.getByTestId("internal-cost")).toHaveTextContent("Cost intern estimat");
+    expect(screen.getByTestId("internal-cost")).toHaveTextContent("386,00 EUR");
+    expect(screen.getByTestId("internal-cost")).toHaveTextContent("Calculat");
+    expect(screen.getByTestId("internal-cost")).toHaveTextContent("Necesită verificare");
+    expect(screen.getByTestId("internal-cost")).not.toHaveTextContent("Incomplet");
+  });
 });

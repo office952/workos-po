@@ -72,6 +72,7 @@ export {
 export { projectNetVatGross } from "./money.js";
 export {
   commercialCompletenessLabel,
+  commercialCostIsCalculable,
   projectCommercialPrice,
   roundMoney,
   type CommercialCostInput,

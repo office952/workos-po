@@ -9,24 +9,47 @@ type CommercialPricePanelProps = {
   internalTotal: number | null;
   internalCurrency: string | null;
   internalCompleteness?: string | null;
+  calculationStatus?: string | null;
+  verificationStatus?: string | null;
   policySourceLabel?: string | null;
   policyGuidance?: string | null;
   showCustomerPrice?: boolean;
   showInternalCost?: boolean;
 };
 
-function costCompletenessLabel(value: string | null | undefined): {
+function costPresentation(
+  completeness: string | null | undefined,
+  calculationStatus: string | null | undefined,
+  verificationStatus: string | null | undefined,
+): {
+  heading: string;
   label: string;
   tone: "ready" | "pending" | "incomplete";
-  explanation: string | null;
+  attention: string | null;
 } {
-  if (value === "COMPLETE") {
-    return { label: "Complet", tone: "ready", explanation: null };
+  const calculable =
+    calculationStatus === "CALCULABLE" || completeness === "COMPLETE";
+  if (calculable && verificationStatus === "NEEDS_VERIFICATION") {
+    return {
+      heading: "Cost intern estimat",
+      label: "Calculat",
+      tone: "pending",
+      attention: "Necesită verificare",
+    };
+  }
+  if (calculable) {
+    return {
+      heading: "Cost intern cunoscut",
+      label: "Complet",
+      tone: "ready",
+      attention: null,
+    };
   }
   return {
+    heading: "Cost intern cunoscut",
     label: "Incomplet",
     tone: "incomplete",
-    explanation: null,
+    attention: null,
   };
 }
 
@@ -56,6 +79,8 @@ export function CommercialPricePanel({
   internalTotal,
   internalCurrency,
   internalCompleteness,
+  calculationStatus,
+  verificationStatus,
   policySourceLabel,
   policyGuidance,
   showCustomerPrice = true,
@@ -64,7 +89,15 @@ export function CommercialPricePanel({
   const currency = commercial?.currency ?? internalCurrency ?? "EUR";
   const completenessValue =
     commercial?.internalCostCompleteness ?? internalCompleteness ?? null;
-  const costStatus = costCompletenessLabel(completenessValue);
+  const resolvedCalculation =
+    calculationStatus ?? commercial?.calculationStatus ?? null;
+  const resolvedVerification =
+    verificationStatus ?? commercial?.verificationStatus ?? null;
+  const costStatus = costPresentation(
+    completenessValue,
+    resolvedCalculation,
+    resolvedVerification,
+  );
   const knownCost = knownInternalCost(
     commercial?.internalCost,
     commercial?.internalCostCompleteness,
@@ -91,7 +124,7 @@ export function CommercialPricePanel({
       ) : null}
       {showKnownCostBlock ? (
         <div data-testid="internal-cost">
-          <SectionLabel>Cost intern cunoscut</SectionLabel>
+          <SectionLabel>{costStatus.heading}</SectionLabel>
           {knownCost !== null ? (
             <p className="price-hero__value">
               {formatMoney(knownCost, commercial?.internalCostCurrency ?? currency)}
@@ -100,7 +133,7 @@ export function CommercialPricePanel({
           <p>
             <StatusBadge label={costStatus.label} tone={costStatus.tone} />
           </p>
-          {costStatus.explanation ? <p>{costStatus.explanation}</p> : null}
+          {costStatus.attention ? <p>{costStatus.attention}</p> : null}
         </div>
       ) : null}
       {customerReady ? (

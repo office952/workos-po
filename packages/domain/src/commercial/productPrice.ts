@@ -93,6 +93,9 @@ export function projectManualFixedProductPrice(
     discountPercent: 0,
     vatPercent: policy.vatPercent,
     currency: COMMERCIAL_CURRENCY,
+    calculationStatus:
+      input.internalCostCompleteness === "COMPLETE" ? "CALCULABLE" : "UNAVAILABLE",
+    verificationStatus: "CONFIRMED",
   };
 
   if (reasons.length > 0) {

@@ -87,16 +87,16 @@ describe("letters process composition", () => {
       ...vinylFinish,
       ...canonicalGeometry,
     });
-    expect(vinyl.costCompleteness).toBe("PARTIAL");
-    expect(vinyl.costCompletenessLabel).toBe("Necesită calibrare");
+    expect(vinyl.costCompleteness).toBe("COMPLETE");
+    expect(vinyl.costCompletenessLabel).toBe("Complete pentru configurația curentă");
 
     const painted = composeProductProcesses(frontlitPlexiAl06Template, {
       "face.finish": "none",
       "volume.finish": "painted",
       ...canonicalGeometry,
     });
-    expect(painted.costCompleteness).toBe("PARTIAL");
-    expect(painted.costCompletenessLabel).toBe("Necesită calibrare");
+    expect(painted.costCompleteness).toBe("COMPLETE");
+    expect(painted.costCompletenessLabel).toBe("Complete pentru configurația curentă");
   });
 
   it("gives FACE a CNC requirement and BACK a distinct node of the same process", () => {

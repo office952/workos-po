@@ -23,14 +23,35 @@ export const COST_COMPLETENESS_ISSUE_TYPES = [
 
 export type CostCompletenessIssueType = (typeof COST_COMPLETENESS_ISSUE_TYPES)[number];
 
+export const COST_ISSUE_IMPACTS = ["BLOCKS_CALCULATION", "REQUIRES_VERIFICATION"] as const;
+export type CostIssueImpact = (typeof COST_ISSUE_IMPACTS)[number];
+
 export type CostCompletenessIssue = {
   type: CostCompletenessIssueType;
+  impact: CostIssueImpact;
   label: string;
   reason: string;
   resourceId?: string;
   componentLabel?: string;
   context?: string;
+  rate?: number;
 };
+
+export function costIssueImpact(type: CostCompletenessIssueType): CostIssueImpact {
+  switch (type) {
+    case "PROVISIONAL_COST_EVIDENCE":
+      return "REQUIRES_VERIFICATION";
+    case "MISSING_COST_EVIDENCE":
+    case "MISSING_TECHNICAL_INPUT":
+    case "UNCALCULATED_COMPONENT":
+    case "OTHER":
+      return "BLOCKS_CALCULATION";
+    default: {
+      const exhaustive: never = type;
+      return exhaustive;
+    }
+  }
+}
 
 export const PROVISIONAL_COST_EVIDENCE_REASON = "Cost existent, dar neconfirmat";
 
@@ -60,6 +81,7 @@ export function projectCostCompletenessIssues(
     if (!evidence) {
       issues.push({
         type: "MISSING_COST_EVIDENCE",
+        impact: costIssueImpact("MISSING_COST_EVIDENCE"),
         resourceId: requirement.resourceId,
         label: resource.label,
         reason: missingCostEvidenceReason(
@@ -73,10 +95,14 @@ export function projectCostCompletenessIssues(
     if (costEvidenceKeepsEicPartial(evidence)) {
       issues.push({
         type: "PROVISIONAL_COST_EVIDENCE",
+        impact: costIssueImpact("PROVISIONAL_COST_EVIDENCE"),
         resourceId: requirement.resourceId,
         label: resource.label,
         reason: PROVISIONAL_COST_EVIDENCE_REASON,
         ...(context ? { context } : {}),
+        ...(Number.isFinite(evidence.amount) && evidence.amount > 0
+          ? { rate: evidence.amount }
+          : {}),
       });
     }
   }
@@ -93,6 +119,7 @@ export function projectCostCompletenessIssues(
     if (reasons.length === 0) {
       issues.push({
         type,
+        impact: costIssueImpact(type),
         label: component.label,
         reason: component.label,
         componentLabel: component.label,
@@ -102,6 +129,7 @@ export function projectCostCompletenessIssues(
     for (const reason of reasons) {
       issues.push({
         type,
+        impact: costIssueImpact(type),
         label: component.label,
         reason,
         componentLabel: component.label,

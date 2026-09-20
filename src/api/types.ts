@@ -117,11 +117,13 @@ export type CostCompletenessIssueTransport = {
     | "UNCALCULATED_COMPONENT"
     | "PROVISIONAL_COST_EVIDENCE"
     | "OTHER";
+  impact: "BLOCKS_CALCULATION" | "REQUIRES_VERIFICATION";
   label: string;
   reason: string;
   resourceId: string | null;
   componentLabel: string | null;
   context: string | null;
+  rate: number | null;
 };
 
 export type CommercialPriceTransport = {
@@ -143,6 +145,8 @@ export type CommercialPriceTransport = {
   marginAmount: number | null;
   policySource?: string | null;
   commercialStrategy?: string | null;
+  calculationStatus?: string | null;
+  verificationStatus?: string | null;
 };
 
 export type CommercialPolicyTransport = {
@@ -155,6 +159,8 @@ export type CommercialPolicyTransport = {
 export type ConfirmTransport = {
   reviewId: string;
   completeness: string | null;
+  calculationStatus: string | null;
+  verificationStatus: string | null;
   completenessReasons: string[];
   costCompletenessIssues: CostCompletenessIssueTransport[];
   currency: string | null;

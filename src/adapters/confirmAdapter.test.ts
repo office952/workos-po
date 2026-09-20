@@ -55,14 +55,16 @@ describe("presentConfirm", () => {
     expect(presented?.costCompletenessIssues).toEqual([
       {
         type: "MISSING_COST_EVIDENCE",
+        impact: "BLOCKS_CALCULATION",
         resourceId: "plexiglas_3mm_opal",
         label: "Plexiglas 3 mm opal",
         reason: "Tarif lipsă pentru Plexiglas 3 mm opal",
         componentLabel: null,
         context: null,
+        rate: null,
       },
     ]);
-    expect(JSON.stringify(presented?.costCompletenessIssues)).not.toMatch(/"rate"|"cost":0/);
+    expect(presented?.costCompletenessIssues[0]?.rate).toBeNull();
   });
 
   it("does not invent cost lines when financial context is omitted", () => {
@@ -70,6 +72,8 @@ describe("presentConfirm", () => {
     expect(presented).toEqual({
       reviewId: "crv1:hidden",
       completeness: null,
+      calculationStatus: null,
+      verificationStatus: null,
       completenessReasons: [],
       costCompletenessIssues: [],
       currency: null,

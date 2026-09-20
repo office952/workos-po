@@ -223,7 +223,7 @@ describe("product configuration API", () => {
     expect(JSON.stringify(preview)).not.toMatch(/ExecutionTask|startTask|assignedTo/);
   });
 
-  it("keeps commercial PARTIAL when planned EIC is PARTIAL", async () => {
+  it("calculates commercial price when numeric cost evidence needs verification", async () => {
     const compiled = await createApp().request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/compile`,
       {
@@ -250,11 +250,16 @@ describe("product configuration API", () => {
     const body = await readBody(response);
     const eic = body.eic as JsonObject;
     const commercialPrice = body.commercialPrice as JsonObject;
-    expect(eic.completeness).toBe("PARTIAL");
-    expect(commercialPrice.completeness).toBe("PARTIAL");
-    expect(commercialPrice.unavailableReasons).toEqual([
-      "Costul intern nu este complet pentru această configurație.",
-    ]);
+    expect(eic.completeness).toBe("COMPLETE");
+    expect(eic.calculationStatus).toBe("CALCULABLE");
+    expect(eic.verificationStatus).toBe("NEEDS_VERIFICATION");
+    expect(commercialPrice.completeness).toBe("COMPLETE");
+    expect(commercialPrice.calculationStatus).toBe("CALCULABLE");
+    expect(commercialPrice.verificationStatus).toBe("NEEDS_VERIFICATION");
+    expect(commercialPrice.unavailableReasons).toEqual([]);
+    expect(typeof commercialPrice.netPrice).toBe("number");
+    expect(typeof commercialPrice.grossPrice).toBe("number");
+    expect(body.calculatedPriceAvailable).toBe(true);
   });
 
   it.each([
@@ -822,7 +827,7 @@ describe("product configuration API", () => {
     expect(planPath).not.toMatch(/projectCommercialPrice|composeProductProcesses/);
   });
 
-  it("rejects a PARTIAL configuration from becoming a quote snapshot", async () => {
+  it("freezes a quote when numeric cost evidence needs verification", async () => {
     const app = createApp();
     const compiled = await app.request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/compile`,
@@ -847,10 +852,12 @@ describe("product configuration API", () => {
         }),
       },
     );
-    expect(response.status).toBe(422);
+    expect(response.status).toBe(200);
     const body = await readBody(response);
-    expect(body.error).toBe("incomplete_offer");
-    expect(body.quoteSnapshot).toBeUndefined();
+    expect((body.quoteSnapshot as JsonObject | undefined)?.eic).toBeDefined();
+    expect(((body.quoteSnapshot as JsonObject).eic as JsonObject).completeness).toBe(
+      "COMPLETE",
+    );
   });
 
   it("does not let a draft override product-fixed identity", async () => {

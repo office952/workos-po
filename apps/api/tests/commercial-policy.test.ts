@@ -277,6 +277,7 @@ describe("commercial policy API", () => {
       body: JSON.stringify({
         definition: compiled.definition,
         reviewId: compiled.reviewId,
+        pricingMethod: "MANUAL_FIXED_PRODUCT",
         manualProductNetPrice: 400,
       }),
     });
@@ -294,6 +295,7 @@ describe("commercial policy API", () => {
         definition: compiled.definition,
         reviewId: compiled.reviewId,
         customerId,
+        pricingMethod: "MANUAL_FIXED_PRODUCT",
         manualProductNetPrice: 400,
       }),
     });
@@ -301,13 +303,18 @@ describe("commercial policy API", () => {
     const snapshot = (await readBody(frozen)).quoteSnapshot as JsonObject;
     expect((snapshot.commercial as JsonObject).commercialStrategy).toBe("MANUAL_FIXED_PRODUCT");
     expect((snapshot.commercial as JsonObject).manualNetPrice).toBe(400);
-    expect((snapshot.eic as JsonObject | undefined)?.completeness ?? "PARTIAL").not.toBe("COMPLETE");
+    expect((snapshot.eic as JsonObject | undefined)?.completeness).toBe("COMPLETE");
   });
 
   it("blocks freeze when neither calculated nor manual price is valid", async () => {
     const app = createApp();
     const customerId = await createCustomer(app, "Client blocat");
-    const compiled = await compile(app, vinylValues);
+    const compiled = await compile(app, {
+      "root.inscription": "WORKOS",
+      "face.finish": "none",
+      "volume.depthMm": "60",
+      "volume.finish": "none",
+    });
     const frozen = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -319,7 +326,7 @@ describe("commercial policy API", () => {
     });
     expect(frozen.status).toBe(422);
     const body = await readBody(frozen);
-    expect(JSON.stringify(body.reasons)).toMatch(/preț comercial valid/i);
+    expect(body.error).toMatch(/not_ready|incomplete_offer/);
   });
 
   it("rejects unauthorized commercial policy writes in cloud mode", async () => {

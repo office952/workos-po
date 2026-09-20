@@ -57,8 +57,8 @@ describe("operational process projection", () => {
     expect(admin.compositions[0]?.composition.costCompletenessLabel).toBe(
       "Complete pentru configurația curentă",
     );
-    expect(admin.compositions[1]?.composition.costCompleteness).toBe("PARTIAL");
-    expect(admin.compositions[2]?.composition.costCompleteness).toBe("PARTIAL");
+    expect(admin.compositions[1]?.composition.costCompleteness).toBe("COMPLETE");
+    expect(admin.compositions[2]?.composition.costCompleteness).toBe("COMPLETE");
     expect(admin.compositions[0]?.composition.lightingCalculationReadiness).toBe(
       "CALCULATED",
     );
