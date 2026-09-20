@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   canonicalLocation,
+  atelierHref,
   catalogHref,
   configuratorHref,
+  executionHref,
+  parseJobContext,
+  parseTaskContext,
   navItemCurrent,
   parseAppRoute,
   parseCustomerContext,
@@ -76,5 +80,11 @@ describe("parseAppRoute", () => {
         productCode: null,
       }),
     ).toBe("/catalog?customer=cus-1&request=req-1");
+    expect(atelierHref({ jobId: "ord-1" })).toBe("/atelier?job=ord-1");
+    expect(executionHref("exp-1", { taskId: "task-1", jobId: "ord-1" })).toBe(
+      "/executie/exp-1?task=task-1&job=ord-1",
+    );
+    expect(parseJobContext("?job=ord-1")).toBe("ord-1");
+    expect(parseTaskContext("?task=task-1")).toBe("task-1");
   });
 });

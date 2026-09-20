@@ -42,6 +42,7 @@ import {
   type ProductSystemRuntime,
 } from "./productSystem/runtime.js";
 import { registerSystemProjectionRoutes } from "./system.js";
+import { registerWorkcenterRoutes } from "./workcenters/routes.js";
 
 export { API_CONTRACT_ID, HEALTH_SERVICE_NAME, type HealthResponse };
 
@@ -149,6 +150,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<ApiEnv> {
   registerOperationalServiceRoutes(app);
   registerInventoryRoutes(app);
   registerSystemProjectionRoutes(app);
+  registerWorkcenterRoutes(app);
   registerProductSystemAdminRoutes(app);
 
   if (options.staticRoot) {

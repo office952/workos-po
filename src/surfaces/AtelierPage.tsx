@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { presentOperatorSession } from "../adapters/operatorAdapter";
+import { asRecord, asString } from "../adapters/record";
 import { TransportError, readTransportErrorCode } from "../api/http";
 import { configureOperatorPin, identifyOperator, logoutOperator } from "../api/operator";
+import { assignPersonSkill, createPerson, fetchPeopleSkills } from "../api/people";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { InlineAlert } from "../components/InlineAlert";
@@ -24,9 +26,13 @@ import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { presentInboxLane } from "../presentation/inboxLane";
 import { statusTone } from "../presentation/statusTone";
-import { executionHref } from "../routing/appRoute";
+import { atelierHref, executionHref } from "../routing/appRoute";
 
-export function AtelierPage() {
+type AtelierPageProps = {
+  jobId?: string | null;
+};
+
+export function AtelierPage({ jobId = null }: AtelierPageProps) {
   const candidates = useResource(resourceKeys.operatorCandidates(), loadOperatorCandidates);
   const session = useResource(resourceKeys.operatorSession(), loadOperatorSession);
   const inbox = useResource(
@@ -34,6 +40,7 @@ export function AtelierPage() {
     loadOperatorInbox,
   );
   const [personId, setPersonId] = useState("");
+  const [newOperatorName, setNewOperatorName] = useState("");
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [actionState, setActionState] = useState<"idle" | "pending" | "error">("idle");
@@ -41,7 +48,13 @@ export function AtelierPage() {
 
   const people = useMemo(() => candidates.data ?? [], [candidates.data]);
   const currentSession = session.data ?? null;
-  const tasks = useMemo(() => inbox.data ?? [], [inbox.data]);
+  const tasks = useMemo(() => {
+    const all = inbox.data ?? [];
+    if (!jobId) {
+      return all;
+    }
+    return all.filter((task) => task.jobId === jobId);
+  }, [inbox.data, jobId]);
   const selectedPersonId = personId || people[0]?.personId || "";
   const selected = people.find((item) => item.personId === selectedPersonId) ?? null;
   const lanes = useMemo(() => tasks.map((task) => presentInboxLane(task)), [tasks]);
@@ -49,6 +62,42 @@ export function AtelierPage() {
   const nextCount = lanes.filter((lane) => lane.lane === "next").length;
   const sessionKnown = session.status === "success";
   const candidatesPending = candidates.status !== "success" && people.length === 0;
+
+  async function addOperator(): Promise<void> {
+    if (newOperatorName.trim() === "") {
+      return;
+    }
+    setActionState("pending");
+    setActionError(null);
+    try {
+      const created = asRecord(await createPerson(newOperatorName.trim()));
+      const personIdCreated = asString(asRecord(created?.person)?.personId);
+      if (!personIdCreated) {
+        setActionState("error");
+        setActionError("Operatorul nu a putut fi creat.");
+        return;
+      }
+      const skillsPayload = asRecord(await fetchPeopleSkills());
+      const skills = Array.isArray(skillsPayload?.skills) ? skillsPayload.skills : [];
+      for (const skill of skills) {
+        const skillId = asString(asRecord(skill)?.skillId);
+        if (skillId) {
+          await assignPersonSkill(personIdCreated, skillId);
+        }
+      }
+      setPersonId(personIdCreated);
+      setNewOperatorName("");
+      setActionState("idle");
+      invalidateAfterOperatorSessionChange();
+    } catch (error) {
+      setActionState("error");
+      setActionError(
+        error instanceof TransportError && error.status === 403
+          ? "Doar proprietarul organizației poate adăuga un operator."
+          : "Operatorul nu a putut fi creat.",
+      );
+    }
+  }
 
   async function login(): Promise<void> {
     if (!selectedPersonId || pin.trim() === "") {
@@ -107,11 +156,15 @@ export function AtelierPage() {
   return (
     <SlicePage
       contextLabel="Atelier"
-      currentHref="/atelier"
+      currentHref={atelierHref({ jobId })}
       workspace="operational"
       eyebrow="Atelier"
       title="Atelier"
-      lead="Identifică operatorul, apoi preia sarcina disponibilă."
+      lead={
+        jobId
+          ? "Identifică operatorul, apoi preia sarcina acestei lucrări."
+          : "Identifică operatorul, apoi preia sarcina disponibilă."
+      }
       status={
         !sessionKnown ? null : currentSession ? (
           <StatusBadge label={currentSession.displayName} tone={statusTone("workflow")} />
@@ -138,37 +191,56 @@ export function AtelierPage() {
         </SurfacePanel>
       ) : !currentSession ? (
         <SurfacePanel variant="operational" title="Operator" label="Identificare">
-          <SelectField
-            id="operator-person"
-            label="Persoană"
-            value={selectedPersonId}
-            options={people.map((item) => ({
-              value: item.personId,
-              label: item.displayName,
-            }))}
-            onChange={setPersonId}
-          />
-          <TextField id="operator-pin" label="PIN" value={pin} onChange={setPin} />
-          {selected && !selected.pinConfigured ? (
+          {people.length === 0 ? (
             <>
               <TextField
-                id="operator-pin-confirm"
-                label="Confirmă PIN"
-                value={confirmPin}
-                onChange={setConfirmPin}
+                id="operator-name"
+                label="Nume operator"
+                value={newOperatorName}
+                onChange={setNewOperatorName}
               />
               <Button
-                variant="secondary"
-                disabled={actionState === "pending"}
-                onClick={() => void configurePin()}
+                disabled={newOperatorName.trim() === "" || actionState === "pending"}
+                onClick={() => void addOperator()}
               >
-                Configurează PIN
+                Adaugă operator
               </Button>
             </>
           ) : (
-            <Button disabled={actionState === "pending"} onClick={() => void login()}>
-              Intră în atelier
-            </Button>
+            <>
+              <SelectField
+                id="operator-person"
+                label="Persoană"
+                value={selectedPersonId}
+                options={people.map((item) => ({
+                  value: item.personId,
+                  label: item.displayName,
+                }))}
+                onChange={setPersonId}
+              />
+              <TextField id="operator-pin" label="PIN" value={pin} onChange={setPin} />
+              {selected && !selected.pinConfigured ? (
+                <>
+                  <TextField
+                    id="operator-pin-confirm"
+                    label="Confirmă PIN"
+                    value={confirmPin}
+                    onChange={setConfirmPin}
+                  />
+                  <Button
+                    variant="secondary"
+                    disabled={actionState === "pending"}
+                    onClick={() => void configurePin()}
+                  >
+                    Configurează PIN
+                  </Button>
+                </>
+              ) : (
+                <Button disabled={actionState === "pending"} onClick={() => void login()}>
+                  Intră în atelier
+                </Button>
+              )}
+            </>
           )}
           {actionError ? (
             <InlineAlert tone="error" title="Identificarea a eșuat">
@@ -203,7 +275,20 @@ export function AtelierPage() {
           ) : null}
           {inbox.status === "success" && tasks.length === 0 ? (
             <div className="ui-panel__pad">
-              <EmptyState title="Nu există sarcini în inbox-ul curent." />
+              <EmptyState
+                title={
+                  jobId
+                    ? "Nu există sarcini pentru această lucrare în inbox."
+                    : "Nu există sarcini în inbox-ul curent."
+                }
+              />
+              {jobId ? (
+                <p>
+                  <a className="text-link" href={atelierHref()}>
+                    Vezi toate sarcinile
+                  </a>
+                </p>
+              ) : null}
             </div>
           ) : null}
           {tasks.length > 0 ? (
@@ -218,7 +303,10 @@ export function AtelierPage() {
                   <WorklistRow
                     key={task.taskId}
                     variant="operational"
-                    href={executionHref(task.planId)}
+                    href={executionHref(task.planId, {
+                      taskId: task.taskId,
+                      jobId: task.jobId ?? jobId,
+                    })}
                     identity={`${task.processLabel} · ${task.scopeLabel}`}
                     identityDetail={task.inscription || task.productLabel}
                     context={task.productLabel}

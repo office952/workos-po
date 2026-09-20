@@ -220,6 +220,7 @@ export type OperatorSessionTransport = {
 export type InboxTaskTransport = {
   taskId: string;
   planId: string;
+  jobId: string | null;
   processLabel: string;
   scopeLabel: string;
   statusLabel: string;
@@ -239,6 +240,7 @@ export type ExecutionTaskTransport = {
   statusLabel: string;
   assignmentLabel: string;
   requiresProvider: boolean;
+  requiredCapabilityId: string | null;
   canAssign: boolean;
   canClaimStart: boolean;
   canComplete: boolean;
@@ -261,6 +263,7 @@ export type ExecutionPlanTransport = {
   statusLabel: string;
   progressLabel: string;
   sourceSnapshotId: string;
+  jobId: string | null;
   tasks: ExecutionTaskTransport[];
 };
 

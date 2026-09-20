@@ -38,8 +38,11 @@ NO_CLIENT_CODE_FORK = YES
 ALTERNATIVE_PRODUCT_DELIVERY = NO
 
 NEXT_PROGRAM_PRIORITY = PRIMARY_USER_JOURNEY
-NEXT_PROGRAM_STATUS = NOT_STARTED
-NEXT_PROGRAM_STARTED = NO
+NEXT_PROGRAM_STATUS = COMPLETE
+NEXT_PROGRAM_STARTED = YES
+PRIMARY_USER_JOURNEY = COMPLETE
+PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
+PRIMARY_USER_JOURNEY_PROOF_DATE = 2026-09-20
 
 REAL_CLOUD_WRITE = HOLD
 REAL_DB_WRITE = HOLD
@@ -151,13 +154,21 @@ EMAIL_768 = MAY_ELLIPSIZE_AS_SECONDARY_METADATA
 
 ## Known product follow-up
 
-These remain open product-contract items. Do not mark them fixed. Do not work around them in the UI.
+Investigated and runtime-proven on isolated synthetic SaaS (same Client Nord / Cerere litere Nord / LETTERS / NORD job). Do not work around engine truth in the UI.
 
 ```text
-QUOTE_SNAPSHOT_CUSTOMER_REQUEST
-JOB_TO_ATELIER_JOB_CONTEXT
-CONFIGURATOR_FREEZE_RUNTIME
+QUOTE_SNAPSHOT_CUSTOMER_REQUEST = FIXED
+JOB_TO_ATELIER_JOB_CONTEXT = FIXED
+CONFIGURATOR_FREEZE_RUNTIME = FIXED
 
 UI20_ACCEPTANCE_BLOCKER = NO
-PRODUCT_FOLLOW_UP = YES
+PRODUCT_FOLLOW_UP = NO
 ```
+
+`QUOTE_SNAPSHOT_CUSTOMER_REQUEST`: scoped quote GET now carries the customer snapshot plus the request sibling from commercial-request links. Frozen quote UI showed Client Nord and Deschide cererea.
+
+`JOB_TO_ATELIER_JOB_CONTEXT`: inbox/plan carry `jobId`; job opens `/atelier?job=`; execution honors `?task=` / `?job=` and advances off a completed task query. Atelier listed the same NORD plan (12 tasks).
+
+`CONFIGURATOR_FREEZE_RUNTIME`: owner seller setup is in the configurator; freeze surfaces API reasons; empty-org CNC capability is added through the organization-provider API. Freeze succeeded after owner-confirmed cost evidence (existing EIC, supported owner resource PATCH — not a schema change).
+
+A new organization still needs owner-confirmed cost evidence before freeze. That is the existing fail-closed EIC rule, not a remaining named journey defect.

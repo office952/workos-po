@@ -43,4 +43,42 @@ describe("presentExecutionPlan", () => {
     expect(presented?.tasks[0]?.plannedQuantity).toBe(0.25);
     expect(presented?.tasks[0]?.operatorRelation).toBeNull();
   });
+
+  it("reads the source job and required capability from server transport", () => {
+    const presented = presentExecutionPlan({
+      executionPlan: {
+        plan: {
+          planId: "exp:1",
+          productLabel: "Litere",
+          inscription: "NORD",
+          sourceSnapshotId: "aps:1",
+        },
+        statusLabel: "În lucru",
+        progress: { completed: 0, total: 1 },
+        tasks: [
+          {
+            taskId: "task:1",
+            processLabel: "Debitare",
+            scopeLabel: "Spate",
+            seqLabel: "01",
+            status: "PLANNED",
+            statusLabel: "Planificat",
+            assignmentLabel: "Nealocat",
+            requiresProvider: true,
+            requiredCapabilityId: "CNC_ROUTING",
+            canAssign: false,
+            canClaimStart: false,
+            canComplete: false,
+            requiresCompletedQuantity: true,
+            measurableQuantity: { label: "Lungime", value: 12.5, unit: "m" },
+            waitingFor: [],
+            eligibleProviders: [],
+          },
+        ],
+      },
+      job: { jobId: "ord:1", href: "/jobs/ord:1" },
+    });
+    expect(presented?.jobId).toBe("ord:1");
+    expect(presented?.tasks[0]?.requiredCapabilityId).toBe("CNC_ROUTING");
+  });
 });

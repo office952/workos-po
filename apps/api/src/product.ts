@@ -523,8 +523,18 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
     if (!snapshot || snapshot.productCode !== c.req.param("productCode")) {
       return c.json({ error: "not_found" }, 404);
     }
+    const requestLink = runtime
+      .listQuoteOverview()
+      .quotes.find((quote) => quote.quoteSnapshotId === snapshot.quoteSnapshotId);
     return c.json({
       quoteSnapshot: scopeQuoteSnapshot(snapshot, financialAccess(c, "commercial")),
+      request: requestLink?.requestId
+        ? {
+            requestId: requestLink.requestId,
+            href: `/requests/${encodeURIComponent(requestLink.requestId)}`,
+            reference: requestLink.requestReference,
+          }
+        : null,
     });
   });
 
@@ -783,6 +793,8 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: "not_found" }, 404);
     }
     const session = runtime.resolveOperatorSession(getCookie(c, OPERATOR_SESSION_COOKIE));
+    const snapshot = runtime.readProductionSnapshot(record.plan.sourceSnapshotId);
+    const jobId = snapshot?.sourceOrderSnapshotId ?? null;
     return c.json({
       executionPlan: scopeExecutionPlanView(
         projectPlanView(
@@ -792,6 +804,12 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         ),
         financialAccess(c, "workshop"),
       ),
+      job: jobId
+        ? {
+            jobId,
+            href: `/jobs/${encodeURIComponent(jobId)}`,
+          }
+        : null,
     });
   });
 

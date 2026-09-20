@@ -92,8 +92,27 @@ export function jobHref(jobId: string): string {
   return `/lucrari/${encodeURIComponent(jobId)}`;
 }
 
-export function executionHref(planId: string): string {
-  return `/executie/${encodeURIComponent(planId)}`;
+export function executionHref(
+  planId: string,
+  context: { taskId?: string | null; jobId?: string | null } = {},
+): string {
+  const params = new URLSearchParams();
+  if (context.taskId) {
+    params.set("task", context.taskId);
+  }
+  if (context.jobId) {
+    params.set("job", context.jobId);
+  }
+  const query = params.toString();
+  return query
+    ? `/executie/${encodeURIComponent(planId)}?${query}`
+    : `/executie/${encodeURIComponent(planId)}`;
+}
+
+export function atelierHref(context: { jobId?: string | null } = {}): string {
+  return context.jobId
+    ? `/atelier?job=${encodeURIComponent(context.jobId)}`
+    : "/atelier";
 }
 
 export function withSpineContext(pathname: string, context: SpineContext): string {
@@ -132,6 +151,14 @@ export function canonicalLocation(pathname: string, search: string): string | nu
 
 export function parseCustomerContext(search: string): string | null {
   return readSearchParam(search, "customer");
+}
+
+export function parseJobContext(search: string): string | null {
+  return readSearchParam(search, "job");
+}
+
+export function parseTaskContext(search: string): string | null {
+  return readSearchParam(search, "task");
 }
 
 export function parseSpineContext(search: string): SpineContext {

@@ -63,6 +63,84 @@ type ProviderRow = {
   updated_at: string;
 };
 
+export function ensureOrganizationCapabilityProvider(
+  db: SqliteDatabase,
+  input: { capabilityId: string; label: string },
+):
+  | { ok: true; alreadyApplied: boolean; machineId: string; registry: WorkcenterRegistry }
+  | { ok: false; error: OrganizationProviderConfigError; detail?: string } {
+  const label = input.label.trim();
+  if (!label) {
+    return { ok: false, error: "invalid_config", detail: "label_required" };
+  }
+  if (!isCapabilityId(input.capabilityId)) {
+    return { ok: false, error: "invalid_config", detail: "invalid_capability" };
+  }
+  const capabilityId = input.capabilityId;
+  const current = loadOrganizationProviderRegistry(db);
+  const existing = current.machines.find((machine) =>
+    machine.capabilityIds.includes(capabilityId),
+  );
+  if (existing) {
+    return {
+      ok: true,
+      alreadyApplied: true,
+      machineId: existing.id,
+      registry: current,
+    };
+  }
+  const slug = capabilityId.toLowerCase().replaceAll("_", "-");
+  const workcenterId = `wc:org-${slug}`;
+  const machineId = `mch:org-${slug}`;
+  const applied = applyOrganizationProviderConfiguration(
+    db,
+    {
+      workcenters: [
+        ...current.workcenters.map((workcenter) => ({
+          id: workcenter.id,
+          label: workcenter.label,
+          description: workcenter.description,
+          lifecycle: workcenter.lifecycle,
+          capabilityIds: workcenter.capabilityIds,
+        })),
+        current.getWorkcenter(workcenterId)
+          ? undefined
+          : {
+              id: workcenterId,
+              label,
+              capabilityIds: [capabilityId],
+            },
+      ].filter((item): item is NonNullable<typeof item> => Boolean(item)),
+      machines: [
+        ...current.machines.map((machine) => ({
+          id: machine.id,
+          label: machine.label,
+          description: machine.description,
+          workcenterId: machine.workcenterId ?? workcenterId,
+          lifecycle: machine.lifecycle,
+          capabilityIds: machine.capabilityIds,
+        })),
+        {
+          id: machineId,
+          label,
+          workcenterId,
+          capabilityIds: [capabilityId],
+        },
+      ],
+    },
+    { mode: "execute", source: "api" },
+  );
+  if (!applied.ok) {
+    return applied;
+  }
+  return {
+    ok: true,
+    alreadyApplied: applied.alreadyApplied,
+    machineId,
+    registry: applied.registry,
+  };
+}
+
 export function loadOrganizationProviderRegistry(db: SqliteDatabase): WorkcenterRegistry {
   const workcenterRows = db
     .prepare(

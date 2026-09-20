@@ -12,7 +12,9 @@ import { presentRouteChrome } from "./layout/routeChrome";
 import {
   canonicalLocation,
   parseAppRoute,
+  parseJobContext,
   parseSpineContext,
+  parseTaskContext,
   type AppRoute,
 } from "./routing/appRoute";
 import {
@@ -90,9 +92,15 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
     case "job":
       return <JobDetailPage jobId={route.jobId} />;
     case "atelier":
-      return <AtelierPage />;
+      return <AtelierPage jobId={parseJobContext(search)} />;
     case "execution":
-      return <ExecutionPage planId={route.planId} />;
+      return (
+        <ExecutionPage
+          planId={route.planId}
+          taskId={parseTaskContext(search)}
+          jobId={parseJobContext(search)}
+        />
+      );
     case "admin-resources":
       return <ResourcesAdminPage />;
     case "foundation":

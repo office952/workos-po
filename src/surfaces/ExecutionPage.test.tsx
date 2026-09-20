@@ -44,7 +44,7 @@ function taskPayload(task: TaskFixture): Record<string, unknown> {
   };
 }
 
-function planPayload(tasks: readonly TaskFixture[]): unknown {
+function planPayload(tasks: readonly TaskFixture[]): Record<string, unknown> {
   return {
     executionPlan: {
       plan: {
@@ -282,5 +282,182 @@ describe("ExecutionPage", () => {
     releaseSession();
     expect(await screen.findByText("Operator neidentificat")).toBeInTheDocument();
     expect(screen.queryByText("Se identifică")).not.toBeInTheDocument();
+  });
+
+  it("honors the task query and keeps the job back-link", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/operator-session")) {
+          return jsonResponse({
+            operator: { personId: "per:andrei", displayName: "Andrei Goghi" },
+          });
+        }
+        return jsonResponse({
+          ...planPayload([
+            {
+              taskId: "task-cut",
+              processLabel: "Debitare foaie CNC",
+              status: "IN_PROGRESS",
+              statusLabel: "În lucru",
+              canComplete: true,
+              requiresCompletedQuantity: true,
+              plannedValue: 12.5,
+              completedQuantityLabel: null,
+              varianceLabel: null,
+            },
+            {
+              taskId: "task-wire",
+              processLabel: "Cablare electrică",
+              status: "PLANNED",
+              statusLabel: "Planificat",
+              canComplete: false,
+              requiresCompletedQuantity: false,
+              plannedValue: null,
+              completedQuantityLabel: null,
+              varianceLabel: null,
+            },
+          ]),
+          job: { jobId: "ord-1", href: "/jobs/ord-1" },
+        });
+      }),
+    );
+
+    render(<ExecutionPage planId="exp:1" taskId="task-wire" jobId="ord-1" />);
+    expect(await screen.findByRole("heading", { name: "04 Cablare electrică" })).toBeInTheDocument();
+    expect(document.querySelector(".operational-task--current")).toHaveAttribute(
+      "data-task-id",
+      "task-wire",
+    );
+    expect(screen.getByRole("link", { name: "Revino la lucrare" })).toHaveAttribute(
+      "href",
+      "/lucrari/ord-1",
+    );
+    expect(screen.getByRole("link", { name: /01 Debitare foaie CNC/ })).toHaveAttribute(
+      "href",
+      "/executie/exp%3A1?task=task-cut&job=ord-1",
+    );
+  });
+
+  it("advances past a completed task query to the next actionable task", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/operator-session")) {
+          return jsonResponse({
+            operator: { personId: "per:andrei", displayName: "Andrei Goghi" },
+          });
+        }
+        return jsonResponse(
+          planPayload([
+            {
+              taskId: "task-cut",
+              processLabel: "Debitare foaie CNC",
+              status: "COMPLETED",
+              statusLabel: "Finalizat",
+              canComplete: false,
+              requiresCompletedQuantity: true,
+              plannedValue: 12.5,
+              completedQuantityLabel: "Realizat: 12,5 m",
+              varianceLabel: "Conform planului",
+            },
+            {
+              taskId: "task-wire",
+              processLabel: "Cablare electrică",
+              status: "IN_PROGRESS",
+              statusLabel: "În lucru",
+              canComplete: true,
+              requiresCompletedQuantity: false,
+              plannedValue: null,
+              completedQuantityLabel: null,
+              varianceLabel: null,
+            },
+          ]),
+        );
+      }),
+    );
+
+    render(<ExecutionPage planId="exp:1" taskId="task-cut" jobId="ord-1" />);
+    expect(await screen.findByRole("heading", { name: "04 Cablare electrică" })).toBeInTheDocument();
+    expect(document.querySelector(".operational-task--current")).toHaveAttribute(
+      "data-task-id",
+      "task-wire",
+    );
+    expect(screen.getByRole("button", { name: "Închide sarcina" })).toBeEnabled();
+    expect(screen.getByRole("link", { name: /01 Debitare foaie CNC/ })).toHaveAttribute(
+      "href",
+      "/executie/exp%3A1?task=task-cut&job=ord-1",
+    );
+  });
+
+  it("asks the API for a capability machine instead of inventing a provider id", async () => {
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({
+          operator: { personId: "per:andrei", displayName: "Andrei Goghi" },
+        });
+      }
+      if (url.includes("/organization-providers/capability") && init?.method === "POST") {
+        return jsonResponse({ machineId: "mch:org-cnc-routing", alreadyApplied: false });
+      }
+      if (url.includes("/provider") && init?.method === "POST") {
+        return jsonResponse({ ok: true });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: {
+            planId: "exp:1",
+            productLabel: "Litere",
+            inscription: "WORKOS GOLDEN",
+            sourceSnapshotId: "aps:1",
+          },
+          statusLabel: "În lucru",
+          progress: { completed: 0, total: 1 },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-cut",
+                processLabel: "Debitare foaie CNC",
+                status: "PLANNED",
+                statusLabel: "Planificat",
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              requiresProvider: true,
+              requiredCapabilityId: "CNC_ROUTING",
+              eligibleProviders: [],
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Adaugă utilajul de debitare" }));
+    await waitFor(() => {
+      const capability = fetchMock.mock.calls.find(([url, init]) =>
+        String(url).includes("/organization-providers/capability") && init?.method === "POST",
+      );
+      expect(capability?.[1]?.body).toBe(
+        JSON.stringify({ capabilityId: "CNC_ROUTING", label: "Utilaj de producție" }),
+      );
+      expect(
+        fetchMock.mock.calls.some(
+          ([url, init]) =>
+            String(url).includes("/execution-tasks/task-cut/provider") &&
+            init?.method === "POST" &&
+            String(init.body).includes("mch:org-cnc-routing"),
+        ),
+      ).toBe(true);
+    });
   });
 });
