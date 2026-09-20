@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS commercial_policy_versions (
   version INTEGER NOT NULL,
   status TEXT NOT NULL,
   label TEXT NOT NULL,
-  markup_percent REAL NOT NULL,
+  default_markup_percent REAL NOT NULL,
   vat_percent REAL NOT NULL,
   default_discount_percent REAL NOT NULL,
   default_adjustment REAL NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS commercial_policy_versions (
   CHECK (status IN ('DRAFT', 'NEEDS_CONFIRMATION', 'ACTIVE', 'RETIRED')),
   CHECK (currency = 'EUR'),
   CHECK (rounding = 0.01),
-  CHECK (markup_percent >= 0),
+  CHECK (default_markup_percent >= 0),
   CHECK (vat_percent >= 0),
   CHECK (default_discount_percent >= 0 AND default_discount_percent <= 100),
   CHECK (source = 'ORGANIZATION')

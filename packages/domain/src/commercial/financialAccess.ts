@@ -113,7 +113,9 @@ export function scopeCommercialPrice(
     return client;
   }
   const marginAmount =
-    price.netPrice === null ? null : roundMoney(price.netPrice - price.internalCost);
+    price.netPrice === null || price.internalCostCompleteness !== "COMPLETE"
+      ? null
+      : roundMoney(price.netPrice - price.internalCost);
   return {
     ...client,
     internalCost: price.internalCost,
@@ -129,6 +131,7 @@ export function scopeFrozenCommercial(
   offer: FrozenCommercialOffer,
   access: FinancialAccessScope,
   internalCost?: number,
+  internalCostCompleteness: "COMPLETE" | "PARTIAL" = "COMPLETE",
 ): ScopedOwnerCommercial | ScopedClientCommercial | undefined {
   if (access === "workshop") {
     return undefined;
@@ -154,14 +157,15 @@ export function scopeFrozenCommercial(
     return client;
   }
   const cost = internalCost ?? null;
+  const costComplete = cost !== null && internalCostCompleteness === "COMPLETE";
   return {
     ...client,
     internalCost: cost ?? 0,
     internalCostCurrency: "EUR",
-    internalCostCompleteness: "COMPLETE",
+    internalCostCompleteness,
     markupPercent: offer.markupPercent,
     markupAmount: offer.markupAmount,
-    marginAmount: cost === null ? null : roundMoney(offer.netPrice - cost),
+    marginAmount: costComplete ? roundMoney(offer.netPrice - cost) : null,
   };
 }
 
@@ -195,7 +199,12 @@ export function scopeQuoteSnapshot(
   access: FinancialAccessScope,
 ): Record<string, unknown> {
   const commercial = snapshot.commercial
-    ? scopeFrozenCommercial(snapshot.commercial, access, snapshot.eic?.total)
+    ? scopeFrozenCommercial(
+        snapshot.commercial,
+        access,
+        snapshot.eic?.total,
+        snapshot.eic?.completeness === "COMPLETE" ? "COMPLETE" : "PARTIAL",
+      )
     : undefined;
   const eic = snapshot.eic ? scopeEic(snapshot.eic, access) : undefined;
   const scoped: Record<string, unknown> = {
@@ -240,7 +249,12 @@ export function scopeOrderSnapshot(
   access: FinancialAccessScope,
 ): Record<string, unknown> {
   const commercial = snapshot.commercial
-    ? scopeFrozenCommercial(snapshot.commercial, access, snapshot.eic?.total)
+    ? scopeFrozenCommercial(
+        snapshot.commercial,
+        access,
+        snapshot.eic?.total,
+        snapshot.eic?.completeness === "COMPLETE" ? "COMPLETE" : "PARTIAL",
+      )
     : undefined;
   const eic = snapshot.eic ? scopeEic(snapshot.eic, access) : undefined;
   const scoped: Record<string, unknown> = {
@@ -384,7 +398,12 @@ function scopeFrozenProductQuoteLine(
   if (access === "workshop") {
     return scoped;
   }
-  const commercial = scopeFrozenCommercial(line.commercial, access, line.eic.total);
+  const commercial = scopeFrozenCommercial(
+    line.commercial,
+    access,
+    line.eic.total,
+    line.eic.completeness === "COMPLETE" ? "COMPLETE" : "PARTIAL",
+  );
   const eic = scopeEic(line.eic, access);
   if (commercial) {
     scoped.commercial = commercial;
@@ -412,7 +431,12 @@ function scopeFrozenSiteInstallationQuoteLine(
   }
   scoped.commercialStrategy = line.commercialStrategy;
   scoped.providerMode = line.providerMode;
-  const commercial = scopeFrozenCommercial(line.commercial, access, line.eic.total);
+  const commercial = scopeFrozenCommercial(
+    line.commercial,
+    access,
+    line.eic.total,
+    line.eic.completeness === "COMPLETE" ? "COMPLETE" : "PARTIAL",
+  );
   if (commercial) {
     scoped.commercial = commercial;
   }

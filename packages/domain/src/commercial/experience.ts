@@ -60,7 +60,7 @@ export type CommercialExperienceProjection = {
 };
 
 const NO_VALID_COMMERCIAL_PRICE =
-  "Prețul calculat nu este disponibil. Introdu un preț net manual pentru a continua oferta.";
+  "Calculul automat nu este disponibil. Costurile interne nu sunt complete. Completează costurile sau alege Preț net negociat manual.";
 const UNAUTHORIZED_INCOMPLETE_PRICE = "Prețul clientului nu poate fi confirmat.";
 
 export function projectCommercialExperience(

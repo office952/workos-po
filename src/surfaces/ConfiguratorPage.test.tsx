@@ -80,6 +80,55 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+function confirmBody(options: { rate: number; cost: number }) {
+  return {
+    eic: {
+      completeness: "COMPLETE",
+      completenessReasons: [],
+      currency: "EUR",
+      total: options.cost,
+      lines: [
+        {
+          resourceId: "aluminium_return_profile",
+          label: "Profil aluminiu 0,6 mm",
+          quantity: 12.5,
+          unit: "m",
+          rate: options.rate,
+          currency: "EUR",
+          cost: options.cost,
+        },
+      ],
+    },
+    commercialPrice: {
+      netPrice: 100,
+      grossPrice: 121,
+      vatPercent: 21,
+      vatAmount: 21,
+      currency: "EUR",
+      completeness: "COMPLETE",
+      unavailableReasons: [],
+      internalCost: options.cost,
+      internalCostCurrency: "EUR",
+      internalCostCompleteness: "COMPLETE",
+    },
+    organizationDefaults: {
+      markupPercent: 35,
+      discountPercent: 0,
+      adjustmentAmount: 0,
+    },
+    quoteCommercialTerms: {
+      markupPercent: 35,
+      discountPercent: 0,
+      adjustmentAmount: 0,
+    },
+    quoteTermsFromDefaults: true,
+    pricingMethod: "PRODUCT_COST_PLUS",
+    calculatedPriceAvailable: true,
+    manualProductPriceAuthorized: true,
+    commercialExperience: { quoteBlocker: null },
+  };
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
   sessionStorage.clear();
@@ -98,25 +147,7 @@ function installFetch(options: {
       return jsonResponse(url.includes(ACM_PRODUCT) ? acmPreviewBody : previewBody);
     }
     if (url.endsWith("/confirm")) {
-      return jsonResponse({
-        eic: {
-          completeness: "COMPLETE",
-          completenessReasons: [],
-          currency: "EUR",
-          total: options.cost,
-          lines: [
-            {
-              resourceId: "aluminium_return_profile",
-              label: "Profil aluminiu 0,6 mm",
-              quantity: 12.5,
-              unit: "m",
-              rate: options.rate,
-              currency: "EUR",
-              cost: options.cost,
-            },
-          ],
-        },
-      });
+      return jsonResponse(confirmBody(options));
     }
     if (url.endsWith("/seller")) {
       return jsonResponse({
@@ -206,9 +237,9 @@ async function confirmReady() {
   const user = userEvent.setup();
   await screen.findByLabelText("Textul literelor");
   await waitFor(() => {
-    expect(screen.getByRole("button", { name: "Confirmă" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
   });
-  await user.click(screen.getByRole("button", { name: "Confirmă" }));
+  await user.click(screen.getByRole("button", { name: "Confirmă configurația" }));
   await screen.findByTestId("profile-cost");
   return user;
 }
@@ -233,9 +264,9 @@ describe("ConfiguratorPage", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Confirmă" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
     });
-    await userEvent.setup().click(screen.getByRole("button", { name: "Confirmă" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Confirmă configurația" }));
     expect(await screen.findByTestId("profile-cost")).toHaveTextContent(
       "12,5 m × 3,00 EUR/m = 37,50 EUR",
     );
@@ -251,6 +282,7 @@ describe("ConfiguratorPage", () => {
     );
     expect(String(confirmCall?.[1]?.body)).toContain("\"values\"");
     expect(String(confirmCall?.[1]?.body)).not.toContain("ProductDefinition");
+    expect(String(confirmCall?.[1]?.body)).not.toContain("quoteCommercialTerms");
   });
 
   it("freezes only with existing customer context and does not create seller, customer, or request", async () => {
@@ -296,7 +328,7 @@ describe("ConfiguratorPage", () => {
     renderConfigurator({ customerId: null, requestId: null });
     await confirmReady();
     expect(
-      screen.getByText("Selectează un client înainte de a crea oferta."),
+      screen.getByText(/Selectează un client înainte de a crea oferta/),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeDisabled();
     expect(
@@ -347,25 +379,7 @@ describe("ConfiguratorPage", () => {
         return jsonResponse(previewBody);
       }
       if (url.endsWith("/confirm")) {
-        return jsonResponse({
-          eic: {
-            completeness: "COMPLETE",
-            completenessReasons: [],
-            currency: "EUR",
-            total: 37.5,
-            lines: [
-              {
-                resourceId: "aluminium_return_profile",
-                label: "Profil aluminiu 0,6 mm",
-                quantity: 12.5,
-                unit: "m",
-                rate: 3,
-                currency: "EUR",
-                cost: 37.5,
-              },
-            ],
-          },
-        });
+        return jsonResponse(confirmBody({ rate: 3, cost: 37.5 }));
       }
       if (url.endsWith("/seller") && method === "PATCH") {
         sellerConfigured = true;
@@ -456,12 +470,31 @@ describe("ConfiguratorPage", () => {
     );
     renderConfigurator({ requestId: null });
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Confirmă" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
     });
-    await userEvent.setup().click(screen.getByRole("button", { name: "Confirmă" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Confirmă configurația" }));
     expect(await screen.findByTestId("profile-cost")).toHaveTextContent(
       "12,5 m × 3,20 EUR/m = 40,00 EUR",
     );
+  });
+
+  it("asks how this quote is priced and keeps cost separate from customer price", async () => {
+    installFetch({ rate: 3, cost: 37.5 });
+    window.history.replaceState(
+      null,
+      "",
+      "/?customer=cus-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    );
+    renderConfigurator({ requestId: null });
+    await confirmReady();
+    expect(screen.getByText("Cum stabilești prețul acestei oferte?")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Calculat din costuri/ })).toBeChecked();
+    expect(screen.getByRole("radio", { name: /Preț net negociat manual/ })).toBeInTheDocument();
+    expect(screen.getByLabelText("Adaos pentru această ofertă (%)")).toHaveValue("35");
+    expect(screen.getByText("Pornit din valorile implicite ale firmei.")).toBeInTheDocument();
+    expect(screen.getByText("Cost intern cunoscut")).toBeInTheDocument();
+    expect(screen.getByTestId("customer-price")).toHaveTextContent("Preț net client");
+    expect(screen.queryByText("Preț net manual produs")).not.toBeInTheDocument();
   });
 
   it("does not use proof A/B language", async () => {

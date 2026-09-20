@@ -5,13 +5,13 @@ import {
   type CommercialPolicyDraftValues,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
-import { getProductSystem, isOwner, type ApiEnv } from "../cloud/context.js";
+import { getProductSystem, type ApiEnv } from "../cloud/context.js";
 import { requireOwnerRole } from "../cloud/middleware.js";
 
 export function registerCommercialPolicyRoutes(app: Hono<ApiEnv>): void {
-  app.get("/api/admin/commercial-policy", (c) => {
+  app.get("/api/admin/commercial-policy", requireOwnerRole(), (c) => {
     const runtime = getProductSystem(c);
-    return c.json(presentCommercialPolicyAdmin(runtime, isOwner(c)));
+    return c.json(presentCommercialPolicyAdmin(runtime, true));
   });
 
   app.post("/api/admin/commercial-policy", requireOwnerRole(), async (c) => {
@@ -58,7 +58,7 @@ function presentCommercialPolicyAdmin(
     guidance: resolution.ok
       ? source === "CODE_DEFAULT"
         ? CODE_DEFAULT_POLICY_GUIDANCE
-        : null
+        : "Aceste valori sunt folosite ca punct de pornire pentru ofertele noi. Pot fi modificate individual pe fiecare ofertă."
       : resolution.reason,
     policyId: policy?.id ?? DEFAULT_COMMERCIAL_POLICY.id,
     activeVersion: policy && source === "ORGANIZATION" ? policy.version : null,

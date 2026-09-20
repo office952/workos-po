@@ -16,7 +16,7 @@ type PolicyRow = {
   version: number;
   status: string;
   label: string;
-  markup_percent: number;
+  default_markup_percent: number;
   vat_percent: number;
   default_discount_percent: number;
   default_adjustment: number;
@@ -55,7 +55,7 @@ export function listCommercialPolicyVersions(
         version,
         status,
         label,
-        markup_percent,
+        default_markup_percent,
         vat_percent,
         default_discount_percent,
         default_adjustment,
@@ -135,7 +135,7 @@ export function persistCommercialPolicySave(
         version,
         status,
         label,
-        markup_percent,
+        default_markup_percent,
         vat_percent,
         default_discount_percent,
         default_adjustment,
@@ -207,7 +207,7 @@ function recordFromRow(row: PolicyRow): CommercialPolicyVersionRecord {
     version: row.version,
     status: row.status as CommercialPolicyVersionRecord["status"],
     label: row.label,
-    markupPercent: row.markup_percent,
+    markupPercent: row.default_markup_percent,
     vatPercent: row.vat_percent,
     defaultDiscountPercent: row.default_discount_percent,
     defaultAdjustment: row.default_adjustment,

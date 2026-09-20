@@ -26,6 +26,17 @@ describe("manual fixed product commercial", () => {
     expect(price.internalCostCompleteness).toBe("PARTIAL");
     expect(price.internalCost).toBe(0);
     expect(price.markupPercent).toBe(0);
+
+    const withKnownCost = projectManualFixedProductPrice(
+      {
+        netPrice: 200,
+        internalCost: 150,
+        internalCostCompleteness: "PARTIAL",
+      },
+      policy,
+    );
+    expect(withKnownCost.internalCost).toBe(150);
+    expect(withKnownCost.internalCostCompleteness).toBe("PARTIAL");
   });
 
   it("rejects a negative or invalid manual net", () => {
@@ -84,6 +95,7 @@ describe("manual fixed product commercial", () => {
     expect(resolved.netPrice).toBe(250);
     expect(resolved.completeness).toBe("COMPLETE");
     expect(resolved.internalCostCompleteness).toBe("PARTIAL");
+    expect(resolved.internalCost).toBe(100);
   });
 
   it("uses authorized override even when cost-plus is available", () => {

@@ -55,6 +55,9 @@ export function projectManualFixedProductPrice(
   input: {
     netPrice: number | null | undefined;
     currency?: string;
+    internalCost?: number;
+    internalCostCurrency?: string;
+    internalCostCompleteness?: CommercialPriceProjection["internalCostCompleteness"];
   },
   policy: CommercialPolicy | ResolvedCommercialPolicy = DEFAULT_COMMERCIAL_POLICY,
 ): CommercialPriceProjection {
@@ -76,9 +79,12 @@ export function projectManualFixedProductPrice(
     | "completeness"
     | "unavailableReasons"
   > = {
-    internalCost: 0,
-    internalCostCurrency: currency,
-    internalCostCompleteness: "PARTIAL",
+    internalCost:
+      typeof input.internalCost === "number" && Number.isFinite(input.internalCost)
+        ? input.internalCost
+        : 0,
+    internalCostCurrency: input.internalCostCurrency ?? currency,
+    internalCostCompleteness: input.internalCostCompleteness ?? "PARTIAL",
     policyId: policy.id,
     policyVersion: policy.version,
     policySource: policySourceOf(policy),
@@ -160,16 +166,22 @@ export function projectAuthorizedProductCommercialPrice(
   const wantsManual =
     options.authorized && (options.preferManual === true || !calculatedAvailable);
 
+  const costFacts = {
+    internalCost: costPlus.internalCost,
+    internalCostCurrency: costPlus.internalCostCurrency,
+    internalCostCompleteness: costPlus.internalCostCompleteness,
+  };
+
   if (wantsManual && hasValidManual) {
     return projectManualFixedProductPrice(
-      { netPrice: options.manualNetPrice },
+      { netPrice: options.manualNetPrice, ...costFacts },
       policy,
     );
   }
 
   if (wantsManual && options.preferManual === true) {
     return projectManualFixedProductPrice(
-      { netPrice: options.manualNetPrice },
+      { netPrice: options.manualNetPrice, ...costFacts },
       policy,
     );
   }

@@ -107,7 +107,15 @@ This canon rejects:
 - customer dependence on Cursor, source access, terminal, or direct database editing
 - treating a hardcoded number swap as Configuration-First
 
-CF0 documented architecture only. CF1_COMMERCIAL_VERTICAL_V1 is the first authorized functional slice: organization commercial policy versions, a narrow resolver, commercial admin, engine consumption, snapshot provenance, and a supported manual product price. It does not authorize technical-settings persistence, a formula engine, or real Cloud/DB access.
+CF0 documented architecture only. CF1_COMMERCIAL_VERTICAL_V1 is the first authorized functional slice: organization commercial defaults, quote-specific commercial terms, a narrow resolver, commercial admin, engine consumption, snapshot provenance, and a supported manual product price. It does not authorize technical-settings persistence, a formula engine, customer commercial defaults, or real Cloud/DB access.
+
+```text
+ORGANIZATION_COMMERCIAL_POLICY = DEFAULTS
+QUOTE_COMMERCIAL_TERMS = JOB_INPUT
+NEGOTIATED_QUOTE_OVERRIDE = SUPPORTED
+MANUAL_FIXED_PRODUCT = SUPPORTED
+CUSTOMER_COMMERCIAL_DEFAULT = FUTURE_OPTIONAL_LAYER
+```
 
 ## 3. Ownership: code, configuration, job input
 
@@ -151,6 +159,7 @@ The engine remains the only evaluator of Product Truth, Quote, Order, Production
 - width / height
 - L1 / L2
 - uploaded geometry references
+- quote-specific markup, discount, and commercial adjustment
 - other case-specific operator inputs
 
 Job inputs are not organization settings and not configuration overrides.
@@ -189,7 +198,7 @@ Domain ownership stays separate:
 | --- | --- |
 | Product / Production | technical settings, variants, product-family configuration, geometry policy, product-bound formula relationships |
 | Resources / Cost | resource identity, cost evidence, resource rates |
-| Commercial | markup, VAT, discount / default commercial policy, commercial price rules |
+| Commercial | organization commercial defaults, quote-specific commercial terms, VAT, commercial price rules |
 | Formula / Calculation | formula definition contract and safe evaluation |
 | Organization | organization-level defaults and capabilities that the definition explicitly allows |
 | Platform Owner | platform contracts and starter defaults, never silent mutation of private organization configuration |

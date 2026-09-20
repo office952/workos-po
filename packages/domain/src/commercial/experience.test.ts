@@ -69,7 +69,7 @@ describe("commercial experience projection", () => {
     expect(blocked.stage).toBe("CONFIGURATION_CONFIRMED");
     expect(blocked.primaryAction).toBeNull();
     expect(blocked.quoteBlocker).toBe(
-      "Prețul calculat nu este disponibil. Introdu un preț net manual pentru a continua oferta.",
+      "Calculul automat nu este disponibil. Costurile interne nu sunt complete. Completează costurile sau alege Preț net negociat manual.",
     );
   });
 

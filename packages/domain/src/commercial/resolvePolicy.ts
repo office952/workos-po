@@ -60,7 +60,7 @@ export function commercialPolicySourceLabel(source: CommercialPolicySource): str
     case "CODE_DEFAULT":
       return "Politică de sistem";
     case "ORGANIZATION":
-      return "Politică confirmată de organizație";
+      return "Valori implicite ale firmei";
     default: {
       const _exhaustive: never = source;
       return _exhaustive;

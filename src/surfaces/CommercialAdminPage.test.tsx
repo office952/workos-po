@@ -51,15 +51,41 @@ describe("CommercialAdminPage", () => {
         "Politica de sistem. Valorile nu au fost încă confirmate pentru această organizație.",
       ),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Adaos comercial (%)")).toHaveValue("35");
+    expect(screen.getByLabelText("Adaos implicit (%)")).toHaveValue("35");
+    expect(screen.getAllByText("Politică de sistem").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Salvează politica" })).toBeEnabled();
+  });
+
+  it("does not tell the owner that saved organization defaults still need configuration", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ...defaultAdmin,
+          source: "ORGANIZATION",
+          sourceLabel: "Valori implicite ale firmei",
+          guidance:
+            "Aceste valori sunt folosite ca punct de pornire pentru ofertele noi. Pot fi modificate individual pe fiecare ofertă.",
+          activeVersion: 1,
+        }),
+      }),
+    );
+
+    render(<CommercialAdminPage />);
+
+    expect(
+      await screen.findByText("Punct de pornire pentru oferte noi"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Politica trebuie configurată")).not.toBeInTheDocument();
   });
 
   it("saves a new organization version", async () => {
     const saved = {
       ...defaultAdmin,
       source: "ORGANIZATION",
-      sourceLabel: "Politică confirmată de organizație",
+      sourceLabel: "Valori implicite ale firmei",
       guidance: null,
       activeVersion: 1,
       editable: {
@@ -94,12 +120,12 @@ describe("CommercialAdminPage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<CommercialAdminPage />);
-    const markup = await screen.findByLabelText("Adaos comercial (%)");
+    const markup = await screen.findByLabelText("Adaos implicit (%)");
     await userEvent.clear(markup);
     await userEvent.type(markup, "30");
     await userEvent.click(screen.getByRole("button", { name: "Salvează politica" }));
     expect(await screen.findByText("Politica a fost salvată")).toBeInTheDocument();
     expect(screen.getByText("Versiunea 1")).toBeInTheDocument();
-    expect(screen.getByLabelText("Adaos comercial (%)")).toHaveValue("30");
+    expect(screen.getByLabelText("Adaos implicit (%)")).toHaveValue("30");
   });
 });

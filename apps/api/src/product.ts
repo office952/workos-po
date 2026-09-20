@@ -13,8 +13,15 @@ import {
   projectQuoteDocument,
   CODE_DEFAULT_POLICY_GUIDANCE,
   commercialPolicySourceLabel,
+  MANUAL_FIXED_PRODUCT_STRATEGY,
+  PRODUCT_COST_PLUS_STRATEGY,
+  organizationCommercialDefaultsFromPolicy,
   projectAuthorizedProductCommercialPrice,
   projectCommercialPrice,
+  quoteCommercialTermsFromPolicy,
+  quoteCommercialTermsMatchDefaults,
+  validateQuoteCommercialTerms,
+  type QuoteCommercialTerms,
   projectLiveJobCommercial,
   omitForbiddenFinancialFields,
   scopeCommercialPrice,
@@ -176,6 +183,42 @@ function readPreferManualProductPrice(body: unknown): boolean {
   return (body as { preferManualProductPrice: unknown }).preferManualProductPrice === true;
 }
 
+function readPricingMethod(body: unknown): "PRODUCT_COST_PLUS" | "MANUAL_FIXED_PRODUCT" | null {
+  if (typeof body !== "object" || body === null || !("pricingMethod" in body)) {
+    return null;
+  }
+  const value = (body as { pricingMethod: unknown }).pricingMethod;
+  if (value === PRODUCT_COST_PLUS_STRATEGY || value === MANUAL_FIXED_PRODUCT_STRATEGY) {
+    return value;
+  }
+  return null;
+}
+
+function readQuoteCommercialTerms(body: unknown): QuoteCommercialTerms | null | undefined {
+  if (typeof body !== "object" || body === null || !("quoteCommercialTerms" in body)) {
+    return undefined;
+  }
+  const raw = (body as { quoteCommercialTerms: unknown }).quoteCommercialTerms;
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    return null;
+  }
+  const payload = raw as Record<string, unknown>;
+  const markupPercent = payload.markupPercent;
+  const discountPercent = payload.discountPercent;
+  const adjustmentAmount = payload.adjustmentAmount;
+  if (
+    typeof markupPercent !== "number" ||
+    !Number.isFinite(markupPercent) ||
+    typeof discountPercent !== "number" ||
+    !Number.isFinite(discountPercent) ||
+    typeof adjustmentAmount !== "number" ||
+    !Number.isFinite(adjustmentAmount)
+  ) {
+    return null;
+  }
+  return { markupPercent, discountPercent, adjustmentAmount };
+}
+
 function resolveProductCommercialForRequest(
   runtime: ProductSystemRuntime,
   eic: Parameters<typeof projectCommercialPrice>[0],
@@ -186,21 +229,54 @@ function resolveProductCommercialForRequest(
   if (!resolution.ok) {
     return { ok: false as const, resolution };
   }
-  const costPlus = projectCommercialPrice(eic, resolution.policy);
+  const requestedTerms = readQuoteCommercialTerms(body);
+  if (requestedTerms === null) {
+    return {
+      ok: false as const,
+      error: "invalid_quote_terms" as const,
+      issues: [
+        {
+          field: "quoteCommercialTerms",
+          reason: "Termenii comerciali ai ofertei trebuie să fie numere valide.",
+        },
+      ],
+    };
+  }
+  const quoteTerms = requestedTerms ?? quoteCommercialTermsFromPolicy(resolution.policy);
+  const termIssues = validateQuoteCommercialTerms(quoteTerms);
+  if (termIssues.length > 0) {
+    return {
+      ok: false as const,
+      error: "invalid_quote_terms" as const,
+      issues: termIssues,
+    };
+  }
+  const pricingMethod =
+    readPricingMethod(body) ??
+    (authorized && readPreferManualProductPrice(body)
+      ? MANUAL_FIXED_PRODUCT_STRATEGY
+      : PRODUCT_COST_PLUS_STRATEGY);
+  const preferManual = authorized && pricingMethod === MANUAL_FIXED_PRODUCT_STRATEGY;
+  const costPlus = projectCommercialPrice(eic, resolution.policy, quoteTerms);
   const commercialPrice = projectAuthorizedProductCommercialPrice(
     costPlus,
     resolution.policy,
     {
       authorized,
       manualNetPrice: authorized ? readManualProductNetPrice(body) : null,
-      preferManual: authorized && readPreferManualProductPrice(body),
+      preferManual,
     },
   );
+  const organizationDefaults = organizationCommercialDefaultsFromPolicy(resolution.policy);
   return {
     ok: true as const,
     resolution,
     costPlus,
     commercialPrice,
+    quoteTerms,
+    organizationDefaults,
+    quoteTermsFromDefaults: quoteCommercialTermsMatchDefaults(quoteTerms, organizationDefaults),
+    pricingMethod: commercialPrice.commercialStrategy ?? pricingMethod,
     calculatedPriceAvailable: costPlus.completeness === "COMPLETE",
     manualProductPriceAuthorized: authorized,
   };
@@ -375,6 +451,16 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       isOwner(c),
     );
     if (!priced.ok) {
+      if ("error" in priced && priced.error === "invalid_quote_terms") {
+        return c.json(
+          {
+            error: "invalid_quote_terms",
+            issues: priced.issues,
+            reasons: priced.issues.map((issue) => issue.reason),
+          },
+          400,
+        );
+      }
       return c.json(
         {
           error: priced.resolution.error,
@@ -407,6 +493,14 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       eic: scopeEic(compiled.eic, access),
       commercialPrice: scopeCommercialPrice(commercialPrice, access),
       commercialPolicy: presentResolvedCommercialPolicy(priced.resolution),
+      ...(access === "owner"
+        ? {
+            organizationDefaults: priced.organizationDefaults,
+            quoteCommercialTerms: priced.quoteTerms,
+            quoteTermsFromDefaults: priced.quoteTermsFromDefaults,
+          }
+        : {}),
+      pricingMethod: priced.pricingMethod,
       calculatedPriceAvailable: priced.calculatedPriceAvailable,
       manualProductPriceAuthorized: priced.manualProductPriceAuthorized,
       commercialExperience: projectCommercialExperience({
@@ -535,6 +629,16 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       isOwner(c),
     );
     if (!priced.ok) {
+      if ("error" in priced && priced.error === "invalid_quote_terms") {
+        return c.json(
+          {
+            error: "invalid_quote_terms",
+            issues: priced.issues,
+            reasons: priced.issues.map((issue) => issue.reason),
+          },
+          400,
+        );
+      }
       return c.json(
         {
           error: priced.resolution.error,

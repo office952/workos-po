@@ -202,11 +202,19 @@ OWNER_ACCEPTED_IMPLEMENTATION = NO
 | Wave | Scope | Status | Authorization |
 | --- | --- | --- | --- |
 | CF0 | Configuration-First canon / documentation | COMPLETE | documentation wave |
-| CF1 | CF1_COMMERCIAL_VERTICAL_V1: commercial contracts, one additive `commercial_policy_versions` table, narrow resolver, `/admin/commercial`, engine consumption, snapshot provenance, manual product pricing fallback | IMPLEMENTED_IN_REVIEW | this commercial vertical only |
+| CF1 | CF1_COMMERCIAL_VERTICAL_V1: organization commercial defaults, quote-specific commercial terms, explicit pricing method, one additive `commercial_policy_versions` table, narrow resolver, `/admin/commercial`, engine consumption, snapshot provenance, manual product pricing | IMPLEMENTED_IN_REVIEW | this commercial vertical only |
 | CF2 | Remaining resolver / audit / snapshot provenance beyond commercial policy | NOT_STARTED | later Owner GO |
 | CF3 | Basic administration for remaining technical / variant configuration | NOT_STARTED | later Owner GO |
 | CF4 | Safe configurable formula foundation + administration | NOT_STARTED | later Owner GO |
 | CF5 | Migrate remaining source-held technical settings / business values | NOT_STARTED | later Owner GO |
+
+```text
+ORGANIZATION_COMMERCIAL_POLICY = DEFAULTS
+QUOTE_COMMERCIAL_TERMS = JOB_INPUT
+NEGOTIATED_QUOTE_OVERRIDE = SUPPORTED
+MANUAL_FIXED_PRODUCT = SUPPORTED
+CUSTOMER_COMMERCIAL_DEFAULT = FUTURE_OPTIONAL_LAYER
+```
 
 `IMPLEMENTED_IN_REVIEW` is branch-local evidence. It is not Owner acceptance and not merge authorization.
 

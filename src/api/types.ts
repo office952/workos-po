@@ -13,10 +13,18 @@ export type PreviewRequest = {
   requestId?: string;
 };
 
+export type QuoteCommercialTermsTransport = {
+  markupPercent: number;
+  discountPercent: number;
+  adjustmentAmount: number;
+};
+
 export type ConfirmRequest = {
   values: DraftValues;
   reviewId: string;
   requestId?: string;
+  pricingMethod?: "PRODUCT_COST_PLUS" | "MANUAL_FIXED_PRODUCT";
+  quoteCommercialTerms?: QuoteCommercialTermsTransport;
   manualProductNetPrice?: number;
   preferManualProductPrice?: boolean;
 };
@@ -26,6 +34,8 @@ export type QuoteFreezeRequest = {
   reviewId: string;
   customerId: string;
   requestId?: string;
+  pricingMethod?: "PRODUCT_COST_PLUS" | "MANUAL_FIXED_PRODUCT";
+  quoteCommercialTerms?: QuoteCommercialTermsTransport;
   manualProductNetPrice?: number;
   preferManualProductPrice?: boolean;
 };
@@ -110,6 +120,13 @@ export type CommercialPriceTransport = {
   unavailableReasons: string[];
   internalCost: number | null;
   internalCostCurrency: string | null;
+  internalCostCompleteness: string | null;
+  markupPercent: number | null;
+  markupAmount: number | null;
+  discountPercent: number | null;
+  discountAmount: number | null;
+  adjustmentAmount: number | null;
+  marginAmount: number | null;
   policySource?: string | null;
   commercialStrategy?: string | null;
 };
@@ -131,6 +148,10 @@ export type ConfirmTransport = {
   financialVisible: boolean;
   commercial: CommercialPriceTransport | null;
   commercialPolicy: CommercialPolicyTransport | null;
+  organizationDefaults: QuoteCommercialTermsTransport | null;
+  quoteCommercialTerms: QuoteCommercialTermsTransport | null;
+  quoteTermsFromDefaults: boolean;
+  pricingMethod: "PRODUCT_COST_PLUS" | "MANUAL_FIXED_PRODUCT" | null;
   calculatedPriceAvailable: boolean;
   manualProductPriceAuthorized: boolean;
   quoteBlocker: string | null;

@@ -115,8 +115,8 @@ export function CommercialAdminPage() {
       currentHref="/admin/commercial"
       workspace="admin"
       eyebrow="Administrare"
-      title="Politică comercială"
-      lead="Adaos, TVA, discount și ajustare. Salvarea creează o versiune nouă. Ofertele înghețate rămân neschimbate."
+      title="Valori comerciale implicite"
+      lead="Aceste valori sunt folosite ca punct de pornire pentru ofertele noi. Pot fi modificate individual pe fiecare ofertă. Salvarea creează o versiune nouă. Ofertele înghețate rămân neschimbate."
       meta={
         model?.canEdit
           ? "Doar Owner poate confirma politica organizației."
@@ -165,9 +165,11 @@ export function CommercialAdminPage() {
               <InlineAlert
                 tone={model.resolutionOk ? "pending" : "blocked"}
                 title={
-                  model.source === "CODE_DEFAULT"
-                    ? "Politică de sistem"
-                    : "Politica trebuie configurată"
+                  !model.resolutionOk
+                    ? "Politica trebuie configurată"
+                    : model.source === "CODE_DEFAULT"
+                      ? "Politică de sistem"
+                      : "Punct de pornire pentru oferte noi"
                 }
               >
                 {model.guidance}
@@ -193,7 +195,8 @@ export function CommercialAdminPage() {
             </dl>
             <TextField
               id="markupPercent"
-              label="Adaos comercial (%)"
+              label="Adaos implicit (%)"
+              hint="Punct de pornire pentru ofertele noi. Poate fi schimbat pe fiecare ofertă."
               value={markupPercent}
               inputMode="decimal"
               disabled={!editEnabled}
@@ -202,6 +205,7 @@ export function CommercialAdminPage() {
             <TextField
               id="vatPercent"
               label="TVA (%)"
+              hint="TVA rămâne din politica firmei și nu se negociază pe ofertă."
               value={vatPercent}
               inputMode="decimal"
               disabled={!editEnabled}
@@ -210,6 +214,7 @@ export function CommercialAdminPage() {
             <TextField
               id="defaultDiscountPercent"
               label="Discount implicit (%)"
+              hint="Punct de pornire pentru ofertele noi. Poate fi schimbat pe fiecare ofertă."
               value={defaultDiscountPercent}
               inputMode="decimal"
               disabled={!editEnabled}
@@ -218,6 +223,7 @@ export function CommercialAdminPage() {
             <TextField
               id="defaultAdjustment"
               label="Ajustare implicită"
+              hint="Sumă netă implicită (+/− EUR) pentru ofertele noi, fără TVA."
               value={defaultAdjustment}
               inputMode="decimal"
               disabled={!editEnabled}

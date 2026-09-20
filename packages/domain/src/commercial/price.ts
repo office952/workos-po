@@ -6,6 +6,11 @@ import {
   type CommercialPolicy,
 } from "./policy.js";
 import { policySourceOf, type CommercialPolicySource, type ResolvedCommercialPolicy } from "./resolvePolicy.js";
+import {
+  quoteCommercialTermsFromPolicy,
+  validateQuoteCommercialTerms,
+  type QuoteCommercialTerms,
+} from "./quoteTerms.js";
 
 export type CommercialCostInput = {
   total: number;
@@ -55,9 +60,12 @@ export function roundMoney(
 export function projectCommercialPrice(
   input: CommercialCostInput,
   policy: CommercialPolicy | ResolvedCommercialPolicy = DEFAULT_COMMERCIAL_POLICY,
+  quoteTerms?: QuoteCommercialTerms,
 ): CommercialPriceProjection {
+  const terms = quoteTerms ?? quoteCommercialTermsFromPolicy(policy);
   const policyIssues = validateCommercialPolicy(policy);
-  const reasons: string[] = policyIssues.map((issue) => issue.reason);
+  const termIssues = validateQuoteCommercialTerms(terms);
+  const reasons: string[] = [...policyIssues, ...termIssues].map((issue) => issue.reason);
   const costUsable = Number.isFinite(input.total) && input.total >= 0;
   if (!costUsable) {
     reasons.push(INVALID_COST_REASON);
@@ -84,8 +92,8 @@ export function projectCommercialPrice(
     policyVersion: policy.version,
     policySource: policySourceOf(policy),
     commercialStrategy: "PRODUCT_COST_PLUS",
-    markupPercent: policy.markupPercent,
-    discountPercent: policy.defaultDiscountPercent,
+    markupPercent: terms.markupPercent,
+    discountPercent: terms.discountPercent,
     vatPercent: policy.vatPercent,
     currency: COMMERCIAL_CURRENCY,
   };
@@ -95,16 +103,16 @@ export function projectCommercialPrice(
   }
 
   const markupAmount = roundMoney(
-    input.total * (policy.markupPercent / 100),
+    input.total * (terms.markupPercent / 100),
     policy.rounding,
   );
-  const adjustmentAmount = roundMoney(policy.defaultAdjustment, policy.rounding);
+  const adjustmentAmount = roundMoney(terms.adjustmentAmount, policy.rounding);
   const subtotal = roundMoney(
     input.total + markupAmount + adjustmentAmount,
     policy.rounding,
   );
   const discountAmount = roundMoney(
-    subtotal * (policy.defaultDiscountPercent / 100),
+    subtotal * (terms.discountPercent / 100),
     policy.rounding,
   );
   const netPrice = roundMoney(subtotal - discountAmount, policy.rounding);

@@ -2,7 +2,9 @@ import type { ConfirmTransport, CostLineTransport } from "../api/types";
 import {
   presentCommercialPolicySummary,
   presentCommercialPrice,
+  presentPricingMethod,
   presentQuoteBlocker,
+  presentQuoteCommercialTerms,
 } from "./commercialAdapter";
 import { asRecord } from "./record";
 
@@ -58,6 +60,10 @@ export function presentConfirm(
       financialVisible: false,
       commercial: presentCommercialPrice(record.commercialPrice),
       commercialPolicy: presentCommercialPolicySummary(record.commercialPolicy),
+      organizationDefaults: presentQuoteCommercialTerms(record.organizationDefaults),
+      quoteCommercialTerms: presentQuoteCommercialTerms(record.quoteCommercialTerms),
+      quoteTermsFromDefaults: record.quoteTermsFromDefaults === true,
+      pricingMethod: presentPricingMethod(record.pricingMethod),
       calculatedPriceAvailable: record.calculatedPriceAvailable === true,
       manualProductPriceAuthorized: record.manualProductPriceAuthorized === true,
       quoteBlocker: presentQuoteBlocker(record.commercialExperience),
@@ -75,6 +81,10 @@ export function presentConfirm(
     financialVisible: true,
     commercial: presentCommercialPrice(record.commercialPrice),
     commercialPolicy: presentCommercialPolicySummary(record.commercialPolicy),
+    organizationDefaults: presentQuoteCommercialTerms(record.organizationDefaults),
+    quoteCommercialTerms: presentQuoteCommercialTerms(record.quoteCommercialTerms),
+    quoteTermsFromDefaults: record.quoteTermsFromDefaults === true,
+    pricingMethod: presentPricingMethod(record.pricingMethod),
     calculatedPriceAvailable: record.calculatedPriceAvailable === true,
     manualProductPriceAuthorized: record.manualProductPriceAuthorized === true,
     quoteBlocker: presentQuoteBlocker(record.commercialExperience),

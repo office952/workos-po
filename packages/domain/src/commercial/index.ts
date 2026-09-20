@@ -45,6 +45,15 @@ export {
   type CommercialPolicyVersionRecord,
 } from "./policyVersion.js";
 export {
+  organizationCommercialDefaultsFromPolicy,
+  quoteCommercialTermsFromOrganizationDefaults,
+  quoteCommercialTermsFromPolicy,
+  quoteCommercialTermsMatchDefaults,
+  validateQuoteCommercialTerms,
+  type OrganizationCommercialDefaults,
+  type QuoteCommercialTerms,
+} from "./quoteTerms.js";
+export {
   INVALID_MANUAL_PRODUCT_PRICE_REASON,
   MANUAL_FIXED_PRODUCT_STRATEGY,
   MISSING_MANUAL_PRODUCT_PRICE_REASON,

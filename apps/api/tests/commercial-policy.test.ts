@@ -86,6 +86,8 @@ describe("commercial policy persistence", () => {
       .prepare("PRAGMA table_info(commercial_policy_versions)")
       .all() as Array<{ name: string }>;
     expect(columns.map((column) => column.name)).not.toContain("organization_id");
+    expect(columns.map((column) => column.name)).toContain("default_markup_percent");
+    expect(columns.map((column) => column.name)).not.toContain("markup_percent");
     db.close();
   });
 
@@ -104,7 +106,7 @@ describe("commercial policy persistence", () => {
         `
         INSERT INTO commercial_policy_versions (
           policy_version_row_id, policy_id, version, status, label,
-          markup_percent, vat_percent, default_discount_percent, default_adjustment,
+          default_markup_percent, vat_percent, default_discount_percent, default_adjustment,
           currency, rounding, source, effective_from, created_at, supersedes_version
         ) VALUES (?, ?, ?, 'ACTIVE', 'x', 31, 21, 0, 0, 'EUR', 0.01, 'ORGANIZATION', ?, ?, 1)
       `,
@@ -352,6 +354,10 @@ describe("commercial policy API", () => {
       }),
     });
     expect(denied.status).toBe(403);
+    const deniedGet = await fixture.app.request("/api/admin/commercial-policy", {
+      headers: { cookie: member.cookie ?? "" },
+    });
+    expect(deniedGet.status).toBe(403);
 
     const owner = await loginCloud(
       fixture.app,
@@ -370,7 +376,120 @@ describe("commercial policy API", () => {
       }),
     });
     expect(allowed.status).toBe(200);
+    const ownerGet = await fixture.app.request("/api/admin/commercial-policy", {
+      headers: { cookie: owner.cookie ?? "" },
+    });
+    expect(ownerGet.status).toBe(200);
     fixture.close();
+  });
+
+  it("uses quote commercial terms without mutating organization defaults", async () => {
+    const app = createApp();
+    const customerId = await createCustomer(app, "Client negociat");
+    await app.request("/api/admin/commercial-policy", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        markupPercent: 35,
+        vatPercent: 21,
+        defaultDiscountPercent: 0,
+        defaultAdjustment: 0,
+      }),
+    });
+    const compiled = await compile(app);
+    const negotiated = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/confirm`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        definition: compiled.definition,
+        reviewId: compiled.reviewId,
+        pricingMethod: "PRODUCT_COST_PLUS",
+        quoteCommercialTerms: {
+          markupPercent: 25,
+          discountPercent: 5,
+          adjustmentAmount: 0,
+        },
+      }),
+    });
+    const negotiatedBody = await readBody(negotiated);
+    const negotiatedPrice = negotiatedBody.commercialPrice as JsonObject;
+    expect(negotiatedPrice.markupPercent).toBe(25);
+    expect(negotiatedPrice.discountPercent).toBe(5);
+    expect(negotiatedBody.quoteTermsFromDefaults).toBe(false);
+
+    const frozen = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        definition: compiled.definition,
+        reviewId: compiled.reviewId,
+        customerId,
+        pricingMethod: "PRODUCT_COST_PLUS",
+        quoteCommercialTerms: {
+          markupPercent: 25,
+          discountPercent: 5,
+          adjustmentAmount: 0,
+        },
+      }),
+    });
+    expect(frozen.status).toBe(200);
+    const first = (await readBody(frozen)).quoteSnapshot as JsonObject;
+    expect(((first.commercial as JsonObject).markupPercent)).toBe(25);
+    expect(((first.commercial as JsonObject).discountPercent)).toBe(5);
+
+    const secondConfirm = await readBody(
+      await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/confirm`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          definition: compiled.definition,
+          reviewId: compiled.reviewId,
+        }),
+      }),
+    );
+    expect((secondConfirm.commercialPrice as JsonObject).markupPercent).toBe(35);
+    expect(secondConfirm.quoteTermsFromDefaults).toBe(true);
+
+    const policy = await readBody(await app.request("/api/admin/commercial-policy"));
+    expect((policy.editable as JsonObject).markupPercent).toBe(35);
+
+    await app.request("/api/admin/commercial-policy", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        markupPercent: 40,
+        vatPercent: 21,
+        defaultDiscountPercent: 0,
+        defaultAdjustment: 0,
+      }),
+    });
+    const reread = await readBody(
+      await app.request(
+        `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots/${first.quoteSnapshotId}`,
+      ),
+    );
+    expect(((reread.quoteSnapshot as JsonObject).commercial as JsonObject).markupPercent).toBe(25);
+  });
+
+  it("rejects invalid quote terms without freezing", async () => {
+    const app = createApp();
+    const compiled = await compile(app);
+    const response = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/confirm`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        definition: compiled.definition,
+        reviewId: compiled.reviewId,
+        quoteCommercialTerms: {
+          markupPercent: -8,
+          discountPercent: 0,
+          adjustmentAmount: 0,
+        },
+      }),
+    });
+    expect(response.status).toBe(400);
+    const body = await readBody(response);
+    expect(body.error).toBe("invalid_quote_terms");
   });
 
   it("keeps commercial policy data inside the operational plane", async () => {

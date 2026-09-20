@@ -1,29 +1,60 @@
 import type { CommercialPriceTransport } from "../api/types";
-import { InfoRow } from "../components/InfoRow";
 import { InlineAlert } from "../components/InlineAlert";
 import { SectionLabel } from "../components/SectionLabel";
+import { StatusBadge } from "../components/StatusBadge";
 import { formatMoney } from "./format";
 
 type CommercialPricePanelProps = {
   commercial: CommercialPriceTransport | null;
   internalTotal: number | null;
   internalCurrency: string | null;
+  internalCompleteness?: string | null;
   policySourceLabel?: string | null;
   policyGuidance?: string | null;
+  showCustomerPrice?: boolean;
+  showInternalCost?: boolean;
 };
+
+function costCompletenessLabel(value: string | null | undefined): {
+  label: string;
+  tone: "ready" | "pending" | "incomplete";
+  explanation: string | null;
+} {
+  if (value === "COMPLETE") {
+    return { label: "Complet", tone: "ready", explanation: null };
+  }
+  return {
+    label: "Parțial / incomplet",
+    tone: "incomplete",
+    explanation: "Costurile interne nu sunt încă complete.",
+  };
+}
 
 export function CommercialPricePanel({
   commercial,
   internalTotal,
   internalCurrency,
+  internalCompleteness,
   policySourceLabel,
   policyGuidance,
+  showCustomerPrice = true,
+  showInternalCost = true,
 }: CommercialPricePanelProps) {
   const currency = commercial?.currency ?? internalCurrency ?? "EUR";
-  const selling =
-    commercial?.grossPrice ??
-    commercial?.netPrice ??
-    null;
+  const costStatus = costCompletenessLabel(
+    commercial?.internalCostCompleteness ?? internalCompleteness,
+  );
+  const commercialCost = commercial?.internalCost;
+  const knownCost =
+    typeof commercialCost === "number" &&
+    (commercialCost > 0 || commercial?.internalCostCompleteness === "COMPLETE")
+      ? commercialCost
+      : internalTotal;
+  const customerReady =
+    showCustomerPrice &&
+    commercial?.completeness === "COMPLETE" &&
+    commercial.unavailableReasons.length === 0 &&
+    (commercial.netPrice !== null || commercial.grossPrice !== null);
 
   return (
     <div className="stack" data-testid="commercial-price">
@@ -31,18 +62,23 @@ export function CommercialPricePanel({
         <p data-testid="commercial-policy-source">{policySourceLabel}</p>
       ) : null}
       {policyGuidance ? (
-        <InlineAlert tone="pending" title="Politică de sistem">
+        <InlineAlert tone="pending" title="Valori de sistem">
           {policyGuidance}
         </InlineAlert>
       ) : null}
-      {commercial?.unavailableReasons.length ? (
-        <InlineAlert tone="blocked" title="Prețul clientului nu este disponibil">
-          {commercial.unavailableReasons.join(" ")}
-        </InlineAlert>
+      {showInternalCost && knownCost !== null ? (
+        <div data-testid="internal-cost">
+          <SectionLabel>Cost intern cunoscut</SectionLabel>
+          <p className="price-hero__value">{formatMoney(knownCost, commercial?.internalCostCurrency ?? currency)}</p>
+          <p>
+            <StatusBadge label={costStatus.label} tone={costStatus.tone} />
+          </p>
+          {costStatus.explanation ? <p>{costStatus.explanation}</p> : null}
+        </div>
       ) : null}
-      {selling !== null && commercial?.unavailableReasons.length === 0 ? (
-        <div className="price-hero">
-          {commercial?.netPrice !== null && commercial?.netPrice !== undefined ? (
+      {customerReady ? (
+        <div className="price-hero" data-testid="customer-price">
+          {commercial.netPrice !== null && commercial.netPrice !== undefined ? (
             <>
               <SectionLabel>Preț net client</SectionLabel>
               <p className="price-hero__value">
@@ -50,23 +86,20 @@ export function CommercialPricePanel({
               </p>
             </>
           ) : null}
-          {commercial?.grossPrice !== null && commercial?.grossPrice !== undefined ? (
+          {commercial.vatPercent !== null ? (
             <p className="price-hero__meta">
-              Preț client cu TVA {formatMoney(commercial.grossPrice, currency)}
+              TVA {commercial.vatPercent}%
+              {commercial.vatAmount !== null
+                ? ` · ${formatMoney(commercial.vatAmount, currency)}`
+                : ""}
+            </p>
+          ) : null}
+          {commercial.grossPrice !== null && commercial.grossPrice !== undefined ? (
+            <p className="price-hero__meta">
+              Preț total cu TVA {formatMoney(commercial.grossPrice, currency)}
             </p>
           ) : null}
         </div>
-      ) : null}
-      {commercial && selling === null && commercial.unavailableReasons.length === 0 ? (
-        <p>Prețul clientului nu a fost returnat pentru această confirmare.</p>
-      ) : null}
-      {internalTotal !== null ? (
-        <dl>
-          <InfoRow
-            label="Cost intern"
-            value={formatMoney(internalTotal, internalCurrency ?? currency)}
-          />
-        </dl>
       ) : null}
     </div>
   );
