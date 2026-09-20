@@ -50,6 +50,12 @@ describe("ResourcesAdminPage", () => {
 
     expect(await screen.findByLabelText("Tarif")).toBeEnabled();
     expect(screen.getByRole("button", { name: "Salvează" })).toBeEnabled();
+    expect(screen.getByRole("group", { name: "Administrare" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Valori comerciale" })).toHaveAttribute(
+      "href",
+      "/admin/commercial",
+    );
+    expect(screen.getAllByText("Dovezi de cost").length).toBeGreaterThan(0);
   });
 
   it("does not enable edit when amounts are omitted", async () => {

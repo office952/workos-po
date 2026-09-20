@@ -54,6 +54,12 @@ describe("CommercialAdminPage", () => {
     expect(screen.getByLabelText("Adaos implicit (%)")).toHaveValue("35");
     expect(screen.getAllByText("Politică de sistem").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Salvează politica" })).toBeEnabled();
+    expect(screen.getByRole("group", { name: "Administrare" })).toBeInTheDocument();
+    expect(screen.getByText("Valori comerciale")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Dovezi de cost" })).toHaveAttribute(
+      "href",
+      "/admin/resources",
+    );
   });
 
   it("does not tell the owner that saved organization defaults still need configuration", async () => {

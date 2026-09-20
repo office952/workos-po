@@ -270,6 +270,107 @@ describe("commercial request API", () => {
     expect((await readBody(again)).alreadyApplied).toBe(true);
   });
 
+  it("keeps two frozen commercial revisions on one request without rewriting the first", async () => {
+    const app = createApp();
+    const customer = await createCustomer(app, "Client revizie");
+    const created = await readBody(
+      await createRequest(app, customer.customerId as string, "Aceeași cerere, două oferte"),
+    );
+    const requestId = (created.request as JsonObject).requestId as string;
+    const firstCompiled = await compileReady(
+      app,
+      CANONICAL_PRODUCT_CODE,
+      lettersValues,
+      "REV1",
+    );
+    const firstFrozen = await app.request(
+      `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          definition: firstCompiled.definition,
+          reviewId: firstCompiled.reviewId,
+          customerId: customer.customerId,
+          requestId,
+          pricingMethod: "PRODUCT_COST_PLUS",
+          quoteCommercialTerms: {
+            markupPercent: 35,
+            discountPercent: 0,
+            adjustmentAmount: 0,
+          },
+        }),
+      },
+    );
+    expect(firstFrozen.status).toBe(200);
+    const firstQuote = (await readBody(firstFrozen)).quoteSnapshot as JsonObject;
+    const firstCommercial = firstQuote.commercial as JsonObject;
+    const firstId = firstQuote.quoteSnapshotId as string;
+    const firstHash = firstQuote.contentHash as string;
+
+    const secondCompiled = await compileReady(
+      app,
+      CANONICAL_PRODUCT_CODE,
+      lettersValues,
+      "REV2",
+    );
+    const secondFrozen = await app.request(
+      `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          definition: secondCompiled.definition,
+          reviewId: secondCompiled.reviewId,
+          customerId: customer.customerId,
+          requestId,
+          pricingMethod: "PRODUCT_COST_PLUS",
+          quoteCommercialTerms: {
+            markupPercent: 25,
+            discountPercent: 5,
+            adjustmentAmount: 0,
+          },
+        }),
+      },
+    );
+    expect(secondFrozen.status).toBe(200);
+    const secondQuote = (await readBody(secondFrozen)).quoteSnapshot as JsonObject;
+    const secondId = secondQuote.quoteSnapshotId as string;
+    const secondHash = secondQuote.contentHash as string;
+    expect(secondId).not.toBe(firstId);
+    expect(secondHash).not.toBe(firstHash);
+    expect(((secondQuote.commercial as JsonObject).markupPercent)).toBe(25);
+    expect(((secondQuote.commercial as JsonObject).discountPercent)).toBe(5);
+
+    const accepted = await readBody(
+      await app.request(
+        `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots/${secondId}/acceptance`,
+        { method: "POST" },
+      ),
+    );
+    const decision = accepted.acceptanceDecision as JsonObject;
+    expect(decision.quoteSnapshotId).toBe(secondId);
+    expect(decision.quoteContentHash).toBe(secondHash);
+
+    const rereadFirst = await readBody(
+      await app.request(
+        `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots/${firstId}`,
+      ),
+    );
+    const rereadCommercial = (rereadFirst.quoteSnapshot as JsonObject)
+      .commercial as JsonObject;
+    expect((rereadFirst.quoteSnapshot as JsonObject).contentHash).toBe(firstHash);
+    expect(rereadCommercial.markupPercent).toBe(firstCommercial.markupPercent);
+    expect(rereadCommercial.discountPercent).toBe(firstCommercial.discountPercent);
+
+    const detail = (await readBody(await app.request(`/api/requests/${requestId}`)))
+      .detail as { linkedOffers: Array<JsonObject> };
+    expect(detail.linkedOffers).toHaveLength(2);
+    expect(detail.linkedOffers.map((offer) => offer.quoteSnapshotId).sort()).toEqual(
+      [firstId, secondId].sort(),
+    );
+  });
+
   it("persists optional site installation without creating a quote", async () => {
     const app = createApp();
     await enableSiteInstallation(app);

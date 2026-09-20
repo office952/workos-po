@@ -7,6 +7,8 @@ import {
   executionHref,
   parseJobContext,
   parseTaskContext,
+  ADMINISTRATION_HREF,
+  isAdministrationPath,
   navItemCurrent,
   parseAppRoute,
   parseCustomerContext,
@@ -74,6 +76,12 @@ describe("parseAppRoute", () => {
     expect(navItemCurrent("/lucrari/job-1", "/lucrari")).toBe(true);
     expect(navItemCurrent("/executie/exp-1", "/atelier")).toBe(true);
     expect(navItemCurrent("/executie/exp-1", "/lucrari")).toBe(false);
+    expect(isAdministrationPath("/admin/resources")).toBe(true);
+    expect(isAdministrationPath("/admin/commercial")).toBe(true);
+    expect(navItemCurrent("/admin/resources", ADMINISTRATION_HREF)).toBe(true);
+    expect(navItemCurrent("/admin/commercial", ADMINISTRATION_HREF)).toBe(true);
+    expect(navItemCurrent("/clienti", ADMINISTRATION_HREF)).toBe(false);
+    expect(navItemCurrent("/oferte", ADMINISTRATION_HREF)).toBe(false);
     expect(
       catalogHref({
         customerId: "cus-1",

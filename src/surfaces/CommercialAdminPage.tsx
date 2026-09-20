@@ -21,6 +21,7 @@ import { writeResource } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadCommercialPolicyAdmin } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
+import { administrationRailItems } from "../layout/administrationNav";
 import { SlicePage } from "../layout/SlicePage";
 import { formatTimestamp } from "../presentation/format";
 
@@ -127,10 +128,7 @@ export function CommercialAdminPage() {
         <>
           <CollectionRail
             label="Administrare"
-            items={[
-              { id: "commercial", label: "Politică comercială", selected: true },
-              { id: "resources", label: "Dovezi de cost", href: "/admin/resources" },
-            ]}
+            items={administrationRailItems("commercial")}
           />
           <SurfacePanel title="Politica curentă" label="Politică" busy>
             <LoadingFloor variant="admin" label="Se încarcă politica comercială" />
@@ -146,10 +144,7 @@ export function CommercialAdminPage() {
         <>
           <CollectionRail
             label="Administrare"
-            items={[
-              { id: "commercial", label: "Politică comercială", selected: true },
-              { id: "resources", label: "Dovezi de cost", href: "/admin/resources" },
-            ]}
+            items={administrationRailItems("commercial")}
           />
           <SurfacePanel
             title="Politica curentă"

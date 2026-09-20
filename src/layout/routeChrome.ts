@@ -142,8 +142,8 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         currentHref: "/admin/commercial",
         workspace: "admin",
         eyebrow: "Administrare",
-        title: "Politică comercială",
-        lead: "Adaos, TVA, discount și ajustare. Salvarea creează o versiune nouă. Ofertele înghețate rămân neschimbate.",
+        title: "Valori comerciale implicite",
+        lead: "Aceste valori sunt folosite ca punct de pornire pentru ofertele noi. Pot fi modificate individual pe fiecare ofertă.",
       };
     case "foundation":
       return {
