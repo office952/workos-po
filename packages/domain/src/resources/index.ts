@@ -68,7 +68,7 @@ export {
   EIC_VERIFICATION_STATUSES,
   compileEic,
   costCompletenessLabel,
-  costEvidenceKeepsEicPartial,
+  costEvidenceNeedsVerification,
   eicIsCalculable,
   missingCostEvidenceReason,
   eicLineGroupLabel,

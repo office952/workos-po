@@ -8,7 +8,7 @@ import {
   type CostEvidenceWhen,
 } from "./catalog.js";
 import {
-  costEvidenceKeepsEicPartial,
+  costEvidenceNeedsVerification,
   missingCostEvidenceReason,
   resourceRequirements,
 } from "./eic.js";
@@ -92,7 +92,7 @@ export function projectCostCompletenessIssues(
       });
       continue;
     }
-    if (costEvidenceKeepsEicPartial(evidence)) {
+    if (costEvidenceNeedsVerification(evidence)) {
       issues.push({
         type: "PROVISIONAL_COST_EVIDENCE",
         impact: costIssueImpact("PROVISIONAL_COST_EVIDENCE"),

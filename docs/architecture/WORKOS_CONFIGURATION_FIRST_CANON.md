@@ -364,7 +364,7 @@ Resource identity is not a price and not a technical quantity.
 
 ### COST_EVIDENCE
 
-Owner-confirmed cost facts for a resource.
+Numeric cost facts for a resource. Confirmation is verification, not calculability.
 
 ```text
 OWNER_DOMAIN = RESOURCES / COST
@@ -381,10 +381,18 @@ AUDIT = REQUIRED
 VISIBILITY = RESOURCES_ADMINISTRATION
 SNAPSHOT_BEHAVIOR = FREEZE_USED_EVIDENCE
 PERMISSION_MODEL = ADVANCED
-MISSING_VALUE_BEHAVIOR = FAIL_CLOSED
+MISSING_VALUE_BEHAVIOR = FAIL_CLOSED_FOR_DEPENDENT_CALCULATION
 ```
 
-No silent zero. Current journey already requires owner-confirmed cost evidence before quote freeze.
+```text
+COST_CALCULABILITY != COST_VERIFICATION
+NUMERIC_NEEDS_VERIFICATION = USABLE_FOR_CALCULATION
+MISSING_NUMERIC_VALUE = FAIL_CLOSED_FOR_DEPENDENT_CALCULATION
+NO_SILENT_ZERO = YES
+PROVISIONAL_PROVENANCE_MUST_REMAIN_VISIBLE = YES
+```
+
+A confirmed numeric cost is calculable. A numeric cost that needs verification is also calculable and must stay visibly unverified; it does not block quote freeze by itself. A missing numeric cost must not become zero and blocks only the calculation that depends on it.
 
 ### COMMERCIAL_RULE
 
@@ -720,7 +728,7 @@ Current bootstrap evidence, as migration context only:
 
 - `NEW_ORGANIZATION` / `SYNTHETIC_TEST` use an empty provider foundation
 - `ADOPT_EXISTING` currently uses HUB MEDIA workcenter compatibility as first-pilot compatibility, not permanent law
-- new organizations still need owner-confirmed cost evidence before freeze
+- new organizations may calculate from numeric cost evidence that still needs verification; a missing numeric cost fails closed for the dependent calculation and must not become a silent zero
 
 HUB MEDIA must not become the starter law for every organization.
 

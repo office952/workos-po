@@ -155,7 +155,7 @@ export function compileEic(
       requirement.resourceId,
       requirement.costQualifier,
     );
-    return evidence !== undefined && costEvidenceKeepsEicPartial(evidence);
+    return evidence !== undefined && costEvidenceNeedsVerification(evidence);
   });
   const completenessReasons = uniqueReasons([
     ...measurementGaps,
@@ -195,7 +195,7 @@ export function costCompletenessLabel(
   }
 }
 
-export function costEvidenceKeepsEicPartial(evidence: CostEvidence): boolean {
+export function costEvidenceNeedsVerification(evidence: CostEvidence): boolean {
   if (evidence.source === "PILOT_INTERNAL_EVIDENCE" || evidence.source === "LEGACY_EVIDENCE") {
     return true;
   }

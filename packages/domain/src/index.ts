@@ -159,7 +159,7 @@ export {
   PROVISIONAL_COST_EVIDENCE_REASON,
   compileEic,
   costCompletenessLabel,
-  costEvidenceKeepsEicPartial,
+  costEvidenceNeedsVerification,
   costIssueImpact,
   eicIsCalculable,
   isCostCompletenessIssueType,
