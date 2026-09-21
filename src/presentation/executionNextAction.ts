@@ -11,16 +11,12 @@ export function presentExecutionNextAction(
   if (task.waitingFor.length > 0) {
     return `Așteaptă: ${task.waitingFor.join(", ")}`;
   }
-  if (
-    task.requiresProvider &&
-    task.assignmentLabel === "Nealocat" &&
-    task.eligibleProviders.length === 0 &&
-    task.status !== "COMPLETED"
-  ) {
-    return "Utilaj lipsește";
+  const providerAction = presentUnassignedProviderAction(task);
+  if (providerAction) {
+    return providerAction;
   }
   if (task.canAssignProvider) {
-    return "Alocare utilaj necesară";
+    return "Alocare utilaj / zonă necesară";
   }
   if (task.canComplete) {
     return "Poate fi închisă";
@@ -29,6 +25,23 @@ export function presentExecutionNextAction(
     return identified === false ? "Identifică operatorul" : "Poate fi pornită";
   }
   return presentOperatorRelation(task);
+}
+
+function presentUnassignedProviderAction(task: ExecutionTaskTransport): string | null {
+  if (
+    !task.requiresProvider ||
+    task.assignmentLabel !== "Nealocat" ||
+    task.status === "COMPLETED"
+  ) {
+    return null;
+  }
+  if (task.eligibleProviders.length === 0) {
+    return "Lipsește utilajul / zona necesară";
+  }
+  if (task.canAssignProvider) {
+    return "Alocare utilaj / zonă necesară";
+  }
+  return "Așteaptă alocarea utilajului / zonei";
 }
 
 function presentOperatorRelation(task: ExecutionTaskTransport): string {
@@ -42,7 +55,9 @@ function presentOperatorRelation(task: ExecutionTaskTransport): string {
     case "unavailable":
       return "Operator indisponibil";
     case "missing_provider":
-      return "Utilaj lipsește";
+      return task.eligibleProviders.length > 0
+        ? "Așteaptă alocarea utilajului / zonei"
+        : "Lipsește utilajul / zona necesară";
     case "waiting_dependencies":
       return "Așteaptă dependențe";
     case "reserved_other":

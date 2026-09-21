@@ -150,7 +150,7 @@ function PlanSummary({
       ? { key: "wait", label: `Așteaptă ${progress.waitingDependencies}` }
       : null,
     progress && progress.noProvider > 0
-      ? { key: "provider", label: `Fără utilaj ${progress.noProvider}` }
+      ? { key: "provider", label: `Fără utilaj / zonă ${progress.noProvider}` }
       : null,
     progress && progress.varianceCount > 0
       ? { key: "variance", label: `Diferențe ${progress.varianceCount}` }
@@ -412,9 +412,9 @@ export function ExecutionPage({
             currentTask.assignmentLabel === "Nealocat" &&
             currentTask.eligibleProviders.length === 0 &&
             currentTask.status !== "COMPLETED" ? (
-              <InlineAlert tone="blocked" title="Utilaj lipsește">
-                Această sarcină cere un utilaj deja configurat în organizație. Execuția nu
-                inventează utilaje.
+              <InlineAlert tone="blocked" title="Utilaj / zonă lipsă">
+                Această sarcină cere un utilaj sau o zonă de lucru eligibilă deja configurată
+                în organizație. Execuția nu inventează utilaje sau zone.
               </InlineAlert>
             ) : null}
             {currentTask.canAssignProvider ? (

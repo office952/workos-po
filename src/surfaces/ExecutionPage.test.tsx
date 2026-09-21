@@ -446,7 +446,8 @@ describe("ExecutionPage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<ExecutionPage planId="exp:1" />);
-    expect(await screen.findAllByText("Utilaj lipsește")).not.toHaveLength(0);
+    expect(await screen.findAllByText("Utilaj / zonă lipsă")).not.toHaveLength(0);
+    expect(screen.getAllByText("Lipsește utilajul / zona necesară").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Adaugă utilajul de debitare" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Alocă/ })).not.toBeInTheDocument();
     expect(
@@ -739,6 +740,7 @@ describe("ExecutionPage", () => {
               requiresProvider: true,
               canAssign: true,
               canAssignProvider: false,
+              operatorRelation: "missing_provider",
               eligibleProviders: [
                 {
                   id: "mch:cnc-a",
@@ -757,8 +759,14 @@ describe("ExecutionPage", () => {
     render(<ExecutionPage planId="exp:1" />);
     expect(await screen.findAllByText("Nealocat")).not.toHaveLength(0);
     expect(screen.getByText("Utilaje eligibile: Utilaj — CNC 4020")).toBeInTheDocument();
+    expect(screen.getAllByText("Așteaptă alocarea utilajului / zonei").length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: /01 Debitare foaie CNC/ })).toHaveTextContent(
+      "Așteaptă alocarea utilajului / zonei",
+    );
     expect(screen.queryByRole("button", { name: /Alocă/ })).not.toBeInTheDocument();
     expect(screen.queryByText("Utilaj lipsește")).not.toBeInTheDocument();
+    expect(screen.queryByText("Lipsește utilajul / zona necesară")).not.toBeInTheDocument();
+    expect(screen.queryByText("Utilaj / zonă lipsă")).not.toBeInTheDocument();
   });
 
   it("reloads the plan after a successful assignment and keeps a failure from looking assigned", async () => {
@@ -1010,14 +1018,14 @@ describe("ExecutionPage", () => {
     expect(await screen.findByLabelText("Starea planului")).toHaveTextContent("Finalizate 1 / 4");
     expect(screen.getByLabelText("Starea planului")).toHaveTextContent("În curs 1");
     expect(screen.getByLabelText("Starea planului")).toHaveTextContent("Așteaptă 1");
-    expect(screen.getByLabelText("Starea planului")).toHaveTextContent("Fără utilaj 1");
+    expect(screen.getByLabelText("Starea planului")).toHaveTextContent("Fără utilaj / zonă 1");
     expect(screen.getByLabelText("Starea planului")).toHaveTextContent("Diferențe 1");
     expect(screen.getByLabelText("Starea planului")).not.toHaveTextContent("executor");
     expect(screen.getByText("Următoarea sarcină acționabilă")).toBeInTheDocument();
     expect(screen.queryByText("Prima sarcină eligibilă din acest plan.")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /03 Cablare electrică/ })).toBeInTheDocument();
     expect(screen.getAllByText("Așteaptă: Formare volume").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Utilaj lipsește").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Lipsește utilajul / zona necesară").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Andrei Goghi").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Realizat: 12,5 m").length).toBeGreaterThan(0);
   });

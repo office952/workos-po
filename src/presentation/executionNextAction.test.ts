@@ -53,9 +53,9 @@ describe("presentExecutionNextAction", () => {
         }),
         true,
       ),
-    ).toBe("Utilaj lipsește");
+    ).toBe("Lipsește utilajul / zona necesară");
     expect(presentExecutionNextAction(task({ canAssignProvider: true }), true)).toBe(
-      "Alocare utilaj necesară",
+      "Alocare utilaj / zonă necesară",
     );
     expect(presentExecutionNextAction(task({ canComplete: true }), true)).toBe(
       "Poate fi închisă",
@@ -72,6 +72,63 @@ describe("presentExecutionNextAction", () => {
     expect(
       presentExecutionNextAction(task({ operatorRelation: "owned_by_other" }), true),
     ).toBe("În lucru la alt operator");
+  });
+
+  it("does not call an unassigned eligible provider missing", () => {
+    const memberWaiting = task({
+      requiresProvider: true,
+      assignmentLabel: "Nealocat",
+      canAssign: true,
+      canAssignProvider: false,
+      operatorRelation: "missing_provider",
+      eligibleProviders: [
+        {
+          id: "mch:cnc",
+          kind: "MACHINE",
+          kindLabel: "Utilaj",
+          label: "CNC 4020",
+        },
+      ],
+    });
+    expect(presentExecutionNextAction(memberWaiting, true)).toBe(
+      "Așteaptă alocarea utilajului / zonei",
+    );
+    expect(presentExecutionNextAction(memberWaiting, true)).not.toBe("Utilaj lipsește");
+    expect(presentExecutionNextAction(memberWaiting, true)).not.toBe(
+      "Lipsește utilajul / zona necesară",
+    );
+  });
+
+  it("keeps provider wording usable for a work center", () => {
+    expect(
+      presentExecutionNextAction(
+        task({
+          requiresProvider: true,
+          assignmentLabel: "Nealocat",
+          canAssignProvider: true,
+          eligibleProviders: [
+            {
+              id: "wc:paint",
+              kind: "WORKCENTER",
+              kindLabel: "Zonă",
+              label: "Vopsitorie",
+            },
+          ],
+        }),
+        true,
+      ),
+    ).toBe("Alocare utilaj / zonă necesară");
+    expect(
+      presentExecutionNextAction(
+        task({
+          requiresProvider: true,
+          assignmentLabel: "Nealocat",
+          operatorRelation: "missing_provider",
+          eligibleProviders: [],
+        }),
+        true,
+      ),
+    ).toBe("Lipsește utilajul / zona necesară");
   });
 
   it("does not invent eligibility and distinguishes selected vs actionable copy", () => {
