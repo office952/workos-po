@@ -57,7 +57,8 @@ EXE3_INTEGRATED_ON_MAIN = YES
 EXE3_MERGE_COMMIT = 54d91e11d06b4deb567f601118147182c863dbf5
 PR_27 = MERGED
 NEXT_WAVE = EXE4_ACTUALS_AND_EXECUTION_CLOSURE
-NEXT_WAVE_STATUS = AUTHORIZED_FOR_IMPLEMENTATION_BY_THIS_OWNER_GO
+NEXT_WAVE_STATUS = IMPLEMENTED_IN_REVIEW
+EXE4 = IMPLEMENTED_IN_REVIEW
 EXE4_COMPLETE = NO
 EXECUTION_EXPANSION_COMPLETE = NO
 NEXT_MAJOR_CANDIDATE = PLANNING_CAPACITY_V1
@@ -577,7 +578,8 @@ EXE3_WHOLE_PLAN_COMPREHENSION = COMPLETE / MERGED
 EXE3_MERGE_COMMIT = 54d91e11d06b4deb567f601118147182c863dbf5
 PR_27 = MERGED
 NEXT_WAVE = EXE4_ACTUALS_AND_EXECUTION_CLOSURE
-NEXT_WAVE_STATUS = AUTHORIZED_FOR_IMPLEMENTATION_BY_THIS_OWNER_GO
+NEXT_WAVE_STATUS = IMPLEMENTED_IN_REVIEW
+EXE4 = IMPLEMENTED_IN_REVIEW
 EXE4_COMPLETE = NO
 EXECUTION_EXPANSION_COMPLETE = NO
 OWNER_ACCEPTED = NO
@@ -586,4 +588,4 @@ PLANNING_CAPACITY = NOT_STARTED / NOT_NEXT
 MEMBER_DAG_COMPOSITION_CORRECTIONS = DEFERRED / NOT_EXECUTION_BLOCKER
 ```
 
-Execution Expansion V1 is in progress. EXE1 replaced hardcoded `executionReadiness = NOT_IMPLEMENTED` with topology-derived READY|BLOCKED. EXE2 made provider assignment explicit and projected Owner-only `canAssignProvider`. EXE3 made the whole plan comprehensible from existing server facts. EXE4 is the authorized remaining wave: operators record actual resource consumption through the existing complete contract. This documentation does not mark EXE4 complete or Execution Expansion complete. Planning/capacity stays later. Member DAG / composition corrections remain deferred and are not an execution blocker.
+Execution Expansion V1 is in progress. EXE1 replaced hardcoded `executionReadiness = NOT_IMPLEMENTED` with topology-derived READY|BLOCKED. EXE2 made provider assignment explicit and projected Owner-only `canAssignProvider`. EXE3 made the whole plan comprehensible from existing server facts. EXE4 records operator actual consumption through the existing complete contract and is implemented in review on this branch. This documentation does not mark EXE4 merged or Execution Expansion complete. Planning/capacity stays later. Member DAG / composition corrections remain deferred and are not an execution blocker.

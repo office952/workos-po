@@ -28,7 +28,13 @@ describe("system governance projection", () => {
       "acceptare ofertă",
       "snapshot comandă",
     ]);
-    expect(byId.EXECUTION?.state).toBe("NOT_IMPLEMENTED");
+    expect(byId.EXECUTION?.state).toBe("IMPLEMENTED");
+    expect(byId.EXECUTION?.owns).toEqual([
+      "plan operațional",
+      "sarcini de execuție",
+      "ciclu de viață",
+      "actuale de execuție",
+    ]);
     expect(byId.ANALYZER?.state).toBe("NOT_IMPLEMENTED");
     expect(governance.freeze.state).toBe("PLANNED");
     expect(governance.freeze.note).toMatch(/Nu este activă/);
@@ -242,6 +248,27 @@ describe("system governance projection", () => {
     );
     expect(governance.roadmap.find((item) => item.id === "client-workspace")?.state).toBe(
       "IMPLEMENTED",
+    );
+    expect(governance.boundaries.find((item) => item.id === "execution")?.state).toBe(
+      "IMPLEMENTED",
+    );
+    expect(governance.boundaries.find((item) => item.id === "execution")?.statement).toMatch(
+      /consumul real sunt implementate/,
+    );
+    expect(governance.boundaries.find((item) => item.id === "execution")?.statement).toMatch(
+      /Capacitatea, programarea și MachineRun nu sunt implementate/,
+    );
+    expect(governance.roadmap.find((item) => item.id === "execution")?.state).toBe(
+      "IMPLEMENTED",
+    );
+    expect(governance.boundaries.find((item) => item.id === "capacity-planning")?.state).toBe(
+      "NOT_IMPLEMENTED",
+    );
+    expect(governance.boundaries.find((item) => item.id === "scheduling")?.state).toBe(
+      "NOT_IMPLEMENTED",
+    );
+    expect(governance.boundaries.find((item) => item.id === "machine-run")?.state).toBe(
+      "NOT_IMPLEMENTED",
     );
   });
 

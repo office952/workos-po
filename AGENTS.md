@@ -160,7 +160,8 @@ EXE3_INTEGRATED_ON_MAIN = YES
 EXE3_MERGE_COMMIT = 54d91e11d06b4deb567f601118147182c863dbf5
 PR_27 = MERGED
 NEXT_WAVE = EXE4_ACTUALS_AND_EXECUTION_CLOSURE
-NEXT_WAVE_STATUS = AUTHORIZED_FOR_IMPLEMENTATION_BY_THIS_OWNER_GO
+NEXT_WAVE_STATUS = IMPLEMENTED_IN_REVIEW
+EXE4 = IMPLEMENTED_IN_REVIEW
 EXE4_COMPLETE = NO
 EXECUTION_EXPANSION_COMPLETE = NO
 NEXT_MAJOR_CANDIDATE = PLANNING_CAPACITY_V1
@@ -231,7 +232,7 @@ REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
 Living program authority: `docs/ROADMAP.md`.
 Configuration-First architecture: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
-People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Current supported-product People capabilities are mapped; unused catalog capabilities may stay unmapped. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Current program is Execution Expansion V1. EXE1 readiness, EXE2 provider/operator interaction, and EXE3 whole-plan comprehension are merged. EXE4 operator actuals and execution program closure is the authorized next wave. Planning/capacity remains the next major candidate after EXE4 integration, not this wave. Member DAG / composition corrections stay deferred and are not an execution blocker. Exact merge commits live in `docs/ROADMAP.md`.
+People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Current supported-product People capabilities are mapped; unused catalog capabilities may stay unmapped. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Current program is Execution Expansion V1. EXE1 readiness, EXE2 provider/operator interaction, and EXE3 whole-plan comprehension are merged. EXE4 operator actuals and execution program closure is implemented in review on this branch, not merged. Planning/capacity remains the next major candidate after EXE4 integration, not this wave. Member DAG / composition corrections stay deferred and are not an execution blocker. Exact merge commits live in `docs/ROADMAP.md`.
 
 ```text
 NO_SILENT_BUSINESS_TRUTH = CANONICAL

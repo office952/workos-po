@@ -103,8 +103,8 @@ export type WorkcentersAdminProjection = {
     laborRecipeMissingCount: number;
     capacityPlanningState: "NOT_IMPLEMENTED";
     schedulingState: "NOT_IMPLEMENTED";
-    executionState: "NOT_IMPLEMENTED";
-    peopleState: "NOT_IMPLEMENTED";
+    executionState: "IMPLEMENTED";
+    peopleState: "IMPLEMENTED";
     writeState: "NOT_IMPLEMENTED";
   };
   workcenters: readonly WorkcenterAdminRecord[];
@@ -166,8 +166,8 @@ export function projectWorkcentersAdministration(
       ).length,
       capacityPlanningState: "NOT_IMPLEMENTED",
       schedulingState: "NOT_IMPLEMENTED",
-      executionState: "NOT_IMPLEMENTED",
-      peopleState: "NOT_IMPLEMENTED",
+      executionState: "IMPLEMENTED",
+      peopleState: "IMPLEMENTED",
       writeState: "NOT_IMPLEMENTED",
     },
     workcenters: registry.workcenters.map((item) => toWorkcenterRecord(item, registry)),
