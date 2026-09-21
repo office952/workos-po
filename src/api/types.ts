@@ -289,6 +289,13 @@ export type InboxTaskTransport = {
   lane: string;
 };
 
+export type EligibleProviderTransport = {
+  id: string;
+  kind: string;
+  kindLabel: string;
+  label: string;
+};
+
 export type ExecutionTaskTransport = {
   taskId: string;
   processLabel: string;
@@ -300,6 +307,7 @@ export type ExecutionTaskTransport = {
   requiresProvider: boolean;
   requiredCapabilityId: string | null;
   canAssign: boolean;
+  canAssignProvider: boolean;
   canClaimStart: boolean;
   canComplete: boolean;
   requiresCompletedQuantity: boolean;
@@ -308,8 +316,7 @@ export type ExecutionTaskTransport = {
   completedQuantityLabel: string | null;
   varianceLabel: string | null;
   waitingFor: string[];
-  eligibleProviderIds: string[];
-  eligibleProviderLabels: string[];
+  eligibleProviders: EligibleProviderTransport[];
   startBlockReason: string | null;
   operatorRelation: string | null;
 };

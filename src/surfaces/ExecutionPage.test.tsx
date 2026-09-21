@@ -30,6 +30,7 @@ function taskPayload(task: TaskFixture): Record<string, unknown> {
     assignmentLabel: "CNC 4020",
     requiresProvider: false,
     canAssign: false,
+    canAssignProvider: false,
     canClaimStart: false,
     canComplete: task.canComplete,
     requiresCompletedQuantity: task.requiresCompletedQuantity,
@@ -423,6 +424,7 @@ describe("ExecutionPage", () => {
                 completedQuantityLabel: null,
                 varianceLabel: null,
               }),
+              assignmentLabel: "Nealocat",
               requiresProvider: true,
               requiredCapabilityId: "CNC_ROUTING",
               eligibleProviders: [],
@@ -436,8 +438,466 @@ describe("ExecutionPage", () => {
     render(<ExecutionPage planId="exp:1" />);
     expect(await screen.findByText("Utilaj lipsește")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Adaugă utilajul de debitare" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Alocă/ })).not.toBeInTheDocument();
     expect(
       fetchMock.mock.calls.some(([url]) => String(url).includes("/organization-providers")),
     ).toBe(false);
+  });
+
+  it("lets an owner assign the single eligible provider after seeing its label", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei Goghi" } });
+      }
+      if (url.includes("/provider") && init?.method === "POST") {
+        return jsonResponse({ ok: true });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          statusLabel: "Planificat",
+          progress: { completed: 0, total: 1 },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-cut",
+                processLabel: "Debitare foaie CNC",
+                status: "PLANNED",
+                statusLabel: "Planificat",
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              assignmentLabel: "Nealocat",
+              requiresProvider: true,
+              canAssign: true,
+              canAssignProvider: true,
+              eligibleProviders: [
+                {
+                  id: "mch:cnc-a",
+                  kind: "MACHINE",
+                  kindLabel: "Utilaj",
+                  label: "CNC 4020",
+                },
+              ],
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    expect(await screen.findByText("Se alocă: Utilaj — CNC 4020")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Alocă CNC 4020" }));
+    await waitFor(() => {
+      const assignCall = fetchMock.mock.calls.find(
+        ([url, init]) => String(url).includes("/provider") && init?.method === "POST",
+      );
+      expect(assignCall?.[1]?.body).toBe(JSON.stringify({ providerId: "mch:cnc-a" }));
+    });
+  });
+
+  it("requires an explicit choice when several eligible providers exist", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei Goghi" } });
+      }
+      if (url.includes("/provider") && init?.method === "POST") {
+        return jsonResponse({ ok: true });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          statusLabel: "Planificat",
+          progress: { completed: 0, total: 1 },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-cut",
+                processLabel: "Debitare foaie CNC",
+                status: "PLANNED",
+                statusLabel: "Planificat",
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              assignmentLabel: "Nealocat",
+              requiresProvider: true,
+              canAssign: true,
+              canAssignProvider: true,
+              eligibleProviders: [
+                {
+                  id: "mch:cnc-a",
+                  kind: "MACHINE",
+                  kindLabel: "Utilaj",
+                  label: "CNC Alfa",
+                },
+                {
+                  id: "mch:cnc-b",
+                  kind: "MACHINE",
+                  kindLabel: "Utilaj",
+                  label: "CNC Beta",
+                },
+              ],
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    expect(await screen.findByLabelText("Utilaj / zonă")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Alocă utilajul" })).toBeDisabled();
+    await user.selectOptions(screen.getByLabelText("Utilaj / zonă"), "mch:cnc-b");
+    expect(screen.getByRole("button", { name: "Alocă CNC Beta" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "Alocă CNC Beta" }));
+    await waitFor(() => {
+      const assignCall = fetchMock.mock.calls.find(
+        ([url, init]) => String(url).includes("/provider") && init?.method === "POST",
+      );
+      expect(assignCall?.[1]?.body).toBe(JSON.stringify({ providerId: "mch:cnc-b" }));
+    });
+  });
+
+  it("keeps the explicit choice when the first eligible provider is not the chosen one", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei Goghi" } });
+      }
+      if (url.includes("/provider") && init?.method === "POST") {
+        return jsonResponse({ ok: true });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-cut",
+                processLabel: "Debitare foaie CNC",
+                status: "PLANNED",
+                statusLabel: "Planificat",
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              canAssign: true,
+              canAssignProvider: true,
+              requiresProvider: true,
+              eligibleProviders: [
+                {
+                  id: "mch:cnc-b",
+                  kind: "MACHINE",
+                  kindLabel: "Utilaj",
+                  label: "CNC Beta",
+                },
+                {
+                  id: "mch:cnc-a",
+                  kind: "MACHINE",
+                  kindLabel: "Utilaj",
+                  label: "CNC Alfa",
+                },
+              ],
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    await screen.findByLabelText("Utilaj / zonă");
+    await user.selectOptions(screen.getByLabelText("Utilaj / zonă"), "mch:cnc-a");
+    await user.click(screen.getByRole("button", { name: "Alocă CNC Alfa" }));
+    await waitFor(() => {
+      const assignCall = fetchMock.mock.calls.find(
+        ([url, init]) => String(url).includes("/provider") && init?.method === "POST",
+      );
+      expect(assignCall?.[1]?.body).toBe(JSON.stringify({ providerId: "mch:cnc-a" }));
+    });
+  });
+
+  it("hides assignment action from a member and prefers a task the viewer can start", async () => {
+    const fetchMock = vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei Goghi" } });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          statusLabel: "Planificat",
+          progress: { completed: 0, total: 2 },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-cut",
+                processLabel: "Debitare foaie CNC",
+                status: "PLANNED",
+                statusLabel: "Planificat",
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              assignmentLabel: "Nealocat",
+              requiresProvider: true,
+              canAssign: true,
+              canAssignProvider: false,
+              canClaimStart: false,
+              eligibleProviders: [
+                {
+                  id: "mch:cnc-a",
+                  kind: "MACHINE",
+                  kindLabel: "Utilaj",
+                  label: "CNC 4020",
+                },
+              ],
+            },
+            {
+              ...taskPayload({
+                taskId: "task-wire",
+                processLabel: "Cablare electrică",
+                status: "PLANNED",
+                statusLabel: "Planificat",
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              canAssign: false,
+              canAssignProvider: false,
+              canClaimStart: true,
+              requiresProvider: false,
+              eligibleProviders: [],
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    expect(await screen.findByRole("heading", { name: "04 Cablare electrică" })).toBeInTheDocument();
+    expect(document.querySelector(".operational-task--current")).toHaveAttribute(
+      "data-task-id",
+      "task-wire",
+    );
+    expect(screen.getByRole("button", { name: "Pornește" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: /Alocă/ })).not.toBeInTheDocument();
+  });
+
+  it("shows member-visible task state without an assign action", async () => {
+    const fetchMock = vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei Goghi" } });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-cut",
+                processLabel: "Debitare foaie CNC",
+                status: "PLANNED",
+                statusLabel: "Planificat",
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              assignmentLabel: "Nealocat",
+              requiresProvider: true,
+              canAssign: true,
+              canAssignProvider: false,
+              eligibleProviders: [
+                {
+                  id: "mch:cnc-a",
+                  kind: "MACHINE",
+                  kindLabel: "Utilaj",
+                  label: "CNC 4020",
+                },
+              ],
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    expect(await screen.findAllByText("Nealocat")).not.toHaveLength(0);
+    expect(screen.getByText("Utilaje eligibile: Utilaj — CNC 4020")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Alocă/ })).not.toBeInTheDocument();
+    expect(screen.queryByText("Utilaj lipsește")).not.toBeInTheDocument();
+  });
+
+  it("reloads the plan after a successful assignment and keeps a failure from looking assigned", async () => {
+    const user = userEvent.setup();
+    let assigned = false;
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei Goghi" } });
+      }
+      if (url.includes("/provider") && init?.method === "POST") {
+        assigned = true;
+        return jsonResponse({ ok: true });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-cut",
+                processLabel: "Debitare foaie CNC",
+                status: "PLANNED",
+                statusLabel: "Planificat",
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              assignmentLabel: assigned ? "CNC 4020" : "Nealocat",
+              requiresProvider: true,
+              canAssign: !assigned,
+              canAssignProvider: !assigned,
+              eligibleProviders: assigned
+                ? []
+                : [
+                    {
+                      id: "mch:cnc-a",
+                      kind: "MACHINE",
+                      kindLabel: "Utilaj",
+                      label: "CNC 4020",
+                    },
+                  ],
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    await user.click(await screen.findByRole("button", { name: "Alocă CNC 4020" }));
+    expect(await screen.findAllByText("CNC 4020")).not.toHaveLength(0);
+    expect(screen.queryByRole("button", { name: /Alocă/ })).not.toBeInTheDocument();
+    expect(screen.queryByText("Utilaj lipsește")).not.toBeInTheDocument();
+  });
+
+  it("shows the assigned provider label without a missing-provider blocker", async () => {
+    const fetchMock = vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei Goghi" } });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-cut",
+                processLabel: "Debitare foaie CNC",
+                status: "PLANNED",
+                statusLabel: "Planificat",
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              assignmentLabel: "CNC Zebra",
+              requiresProvider: true,
+              canAssign: false,
+              canAssignProvider: false,
+              canClaimStart: true,
+              eligibleProviders: [],
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    expect(await screen.findAllByText("CNC Zebra")).not.toHaveLength(0);
+    expect(screen.queryByText("Utilaj lipsește")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Alocă/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pornește" })).toBeInTheDocument();
+  });
+
+  it("shows an error and does not fake success when assignment fails", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei Goghi" } });
+      }
+      if (url.includes("/provider") && init?.method === "POST") {
+        return jsonResponse({ error: "ineligible_provider" }, 422);
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-cut",
+                processLabel: "Debitare foaie CNC",
+                status: "PLANNED",
+                statusLabel: "Planificat",
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              assignmentLabel: "Nealocat",
+              requiresProvider: true,
+              canAssign: true,
+              canAssignProvider: true,
+              eligibleProviders: [
+                {
+                  id: "mch:cnc-a",
+                  kind: "MACHINE",
+                  kindLabel: "Utilaj",
+                  label: "CNC 4020",
+                },
+              ],
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    await user.click(await screen.findByRole("button", { name: "Alocă CNC 4020" }));
+    expect(await screen.findByText("Alocarea utilajului nu este permisă pentru această sarcină.")).toBeInTheDocument();
+    expect(screen.getAllByText("Nealocat").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Alocă CNC 4020" })).toBeInTheDocument();
   });
 });
