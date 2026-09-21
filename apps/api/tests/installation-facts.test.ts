@@ -426,7 +426,7 @@ describe("commercial request installation facts API", () => {
       headers: { "content-type": "application/json" },
       body: factsPayload(completeFacts(), 0),
     });
-    const compile = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/compile`, {
+    const compile = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -438,7 +438,7 @@ describe("commercial request installation facts API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        definition: compiled.definition,
+        values: { ...lettersValues, "root.inscription": "LOCKF" },
         reviewId: compiled.reviewId,
         customerId: customer.customerId,
         requestId,
@@ -450,7 +450,7 @@ describe("commercial request installation facts API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        definition: compiled.definition,
+        values: { ...lettersValues, "root.inscription": "LOCKF" },
         reviewId: compiled.reviewId,
         customerId: customer.customerId,
       }),
@@ -530,7 +530,7 @@ describe("commercial request installation facts API", () => {
       await createRequest(app, customer.customerId as string, "Doar produs"),
     );
     const requestId = (created.request as JsonObject).requestId as string;
-    const compile = await app.request(`/api/products/${ACM_CASSETTE_NONE_PRODUCT_CODE}/compile`, {
+    const compile = await app.request(`/api/products/${ACM_CASSETTE_NONE_PRODUCT_CODE}/preview`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -551,7 +551,14 @@ describe("commercial request installation facts API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: compiled.definition,
+          values: {
+            "root.inscription": "ACM1",
+            "root.mountingSystem": "steel_angle",
+            "face.widthMm": 1000,
+            "face.heightMm": 500,
+            "face.cassetteDepthMm": "40",
+            "face.foldCount": "2",
+          },
           reviewId: compiled.reviewId,
           customerId: customer.customerId,
           requestId,

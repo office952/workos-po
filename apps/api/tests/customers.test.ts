@@ -107,7 +107,7 @@ describe("customer API", () => {
 
   it("requires an active customer for a new commercial quote", async () => {
     const app = createApp();
-    const compiled = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/compile`, {
+    const compiled = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -126,7 +126,14 @@ describe("customer API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        definition: reviewed.definition,
+        values: {
+          "root.inscription": "WORKOS",
+          "face.finish": "none",
+          "face.confirmedAreaMm2": 250000,
+          "volume.depthMm": "60",
+          "volume.finish": "none",
+          "volume.confirmedPerimeterMm": 12500,
+        },
         reviewId: reviewed.reviewId,
       }),
     });

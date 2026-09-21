@@ -49,7 +49,7 @@ async function createCustomer(app: ReturnType<typeof createApp>, displayName: st
 
 async function freezeQuote(productCode: string, values: Record<string, unknown>) {
   const app = createApp();
-  const compiled = await app.request(`/api/products/${productCode}/compile`, {
+  const compiled = await app.request(`/api/products/${productCode}/preview`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ values }),
@@ -59,7 +59,7 @@ async function freezeQuote(productCode: string, values: Record<string, unknown>)
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      definition: compiledBody.definition,
+      values,
       reviewId: compiledBody.reviewId,
       customerId: await createCustomer(app, productCode.includes("ACM") ? "Client Demo ACM" : "Client Demo LETTERS"),
     }),

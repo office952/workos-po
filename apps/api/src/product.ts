@@ -36,7 +36,6 @@ import {
   scopeQuoteSnapshot,
   recordQuoteAcceptance,
   composeProductProcesses,
-  confirmReviewedDefinition,
   projectExecutionPlanPreview,
   assertOrderReleaseReadyForExecution,
   freezeAcceptedProductionSnapshot,
@@ -315,20 +314,6 @@ function readCustomerId(body: unknown): string | null {
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
-}
-
-function readReviewedDefinition(body: unknown): {
-  definition: ProductDefinition | null;
-  reviewId: string;
-} {
-  if (typeof body !== "object" || body === null) {
-    return { definition: null, reviewId: "" };
-  }
-  const payload = body as { definition?: ProductDefinition; reviewId?: string };
-  return {
-    definition: payload.definition ?? null,
-    reviewId: typeof payload.reviewId === "string" ? payload.reviewId : "",
-  };
 }
 
 function readReviewedDraft(body: unknown): {
@@ -1219,17 +1204,9 @@ function compileAcceptedProduct(
     };
   }
 
-  const reviewed = readReviewedDefinition(body);
   const draft = readReviewedDraft(body);
-  const confirmed = reviewed.definition
-    ? reviewed.definition.templateCode !== productCode
-      ? {
-          ok: false as const,
-          reason: "review_required" as const,
-          definition: reviewed.definition,
-        }
-      : confirmReviewedDefinition(reviewed.definition, reviewed.reviewId)
-    : draft.values && draft.reviewId
+  const confirmed =
+    draft.values && draft.reviewId
       ? confirmReviewedDraft(
           template,
           formSchema,

@@ -446,7 +446,7 @@ describe("request attachments documents V1", () => {
       "text/plain",
     );
 
-    const compiled = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/compile`, {
+    const compiled = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -463,7 +463,10 @@ describe("request attachments documents V1", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: compiledBody.definition,
+          values: {
+            ...lettersValues,
+            "root.inscription": "ATTACH",
+          },
           reviewId: compiledBody.reviewId,
           customerId,
           requestId,

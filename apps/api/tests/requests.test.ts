@@ -36,16 +36,17 @@ async function compileReady(
   values: Record<string, string | number>,
   inscription: string,
 ) {
-  const response = await app.request(`/api/products/${productCode}/compile`, {
+  const draft = { ...values, "root.inscription": inscription };
+  const response = await app.request(`/api/products/${productCode}/preview`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      values: { ...values, "root.inscription": inscription },
+      values: draft,
     }),
   });
   const body = await readBody(response);
   return {
-    definition: body.definition as JsonObject,
+    values: draft,
     reviewId: body.reviewId as string,
   };
 }
@@ -97,7 +98,7 @@ async function freezeQuote(
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      definition: reviewed.definition,
+      values: reviewed.values,
       reviewId: reviewed.reviewId,
       customerId,
       ...(requestId ? { requestId } : {}),
@@ -289,7 +290,7 @@ describe("commercial request API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: firstCompiled.definition,
+          values: firstCompiled.values,
           reviewId: firstCompiled.reviewId,
           customerId: customer.customerId,
           requestId,
@@ -320,7 +321,7 @@ describe("commercial request API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: secondCompiled.definition,
+          values: secondCompiled.values,
           reviewId: secondCompiled.reviewId,
           customerId: customer.customerId,
           requestId,

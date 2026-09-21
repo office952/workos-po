@@ -148,25 +148,23 @@ async function seedBlockedJob(
     headers,
     body: JSON.stringify({ legalName: "Atelier Sintetic SRL" }),
   });
-  const compiled = await app.request(`/api/products/${productCode}/compile`, {
+  const values = {
+    "root.inscription": "W3-CLOUD",
+    "face.finish": "none",
+    "face.confirmedAreaMm2": 250000,
+    "volume.depthMm": "60",
+    "volume.finish": "none",
+    "volume.confirmedPerimeterMm": 12500,
+  };
+  const compiled = await app.request(`/api/products/${productCode}/preview`, {
     method: "POST",
     headers,
-    body: JSON.stringify({
-      values: {
-        "root.inscription": "W3-CLOUD",
-        "face.finish": "none",
-        "face.confirmedAreaMm2": 250000,
-        "volume.depthMm": "60",
-        "volume.finish": "none",
-        "volume.confirmedPerimeterMm": 12500,
-      },
-    }),
+    body: JSON.stringify({ values }),
   });
   if (!compiled.ok) {
     return null;
   }
   const compiledBody = (await compiled.json()) as {
-    definition?: unknown;
     reviewId?: string;
   };
   const customer = await app.request("/api/customers", {
@@ -183,7 +181,7 @@ async function seedBlockedJob(
     method: "POST",
     headers,
     body: JSON.stringify({
-      definition: compiledBody.definition,
+      values,
       reviewId: compiledBody.reviewId,
       customerId,
     }),

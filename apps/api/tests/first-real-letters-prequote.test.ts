@@ -139,7 +139,7 @@ describe("first real letters pre-quote API", () => {
     expect((installationScope.ownerInternalCost as JsonObject).quantity).toBe(12);
     expect((installationScope.ownerInternalCost as JsonObject).rate).toBe(25);
 
-    const compile = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/compile`, {
+    const compile = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ values: { "root.inscription": "PREQ", ...lettersValues } }),
@@ -149,7 +149,7 @@ describe("first real letters pre-quote API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        definition: compiled.definition,
+        values: { "root.inscription": "PREQ", ...lettersValues },
         reviewId: compiled.reviewId,
         requestId,
       }),
@@ -164,7 +164,7 @@ describe("first real letters pre-quote API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        definition: compiled.definition,
+        values: { "root.inscription": "PREQ", ...lettersValues },
         reviewId: compiled.reviewId,
         customerId: customer.customerId,
         requestId,
@@ -178,7 +178,7 @@ describe("first real letters pre-quote API", () => {
     ]);
 
     const productOnlyCompile = await app.request(
-      `/api/products/${CANONICAL_PRODUCT_CODE}/compile`,
+      `/api/products/${CANONICAL_PRODUCT_CODE}/preview`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -192,7 +192,7 @@ describe("first real letters pre-quote API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: productCompiled.definition,
+          values: { "root.inscription": "ONLY", ...lettersValues },
           reviewId: productCompiled.reviewId,
           customerId: customer.customerId,
         }),
@@ -282,7 +282,7 @@ describe("first real letters pre-quote API", () => {
     expect((scope.ownerInternalCost as JsonObject).total).toBe(180);
     expect((scope.ownerInternalCost as JsonObject).label).toBe("Cost subcontractat montaj");
 
-    const compile = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/compile`, {
+    const compile = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ values: { "root.inscription": "SUBC", ...lettersValues } }),
@@ -292,7 +292,7 @@ describe("first real letters pre-quote API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        definition: compiled.definition,
+        values: { "root.inscription": "SUBC", ...lettersValues },
         reviewId: compiled.reviewId,
         customerId: customer.customerId,
         requestId,
@@ -516,7 +516,7 @@ describe("first real letters pre-quote owner writes", () => {
     expect(memberScope.ownerInternalCost).toBeUndefined();
     expect(JSON.stringify(memberDetail)).not.toContain("\"total\":300");
     expect(JSON.stringify(memberDetail)).not.toContain("\"rate\":25");
-    const compile = await fixture.app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/compile`, {
+    const compile = await fixture.app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
       method: "POST",
       headers: ownerHeaders,
       body: JSON.stringify({ values: { "root.inscription": "LEAK", ...lettersValues } }),
@@ -530,7 +530,7 @@ describe("first real letters pre-quote owner writes", () => {
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          definition: compiled.definition,
+          values: { "root.inscription": "LEAK", ...lettersValues },
           reviewId: compiled.reviewId,
           requestId,
         }),

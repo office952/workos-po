@@ -30,13 +30,14 @@ const acmValues = {
   "face.foldCount": "2",
 };
 
-async function compileProduct(productCode: string, values: Record<string, unknown>) {
-  const response = await createApp().request(`/api/products/${productCode}/compile`, {
+async function previewProduct(productCode: string, values: Record<string, unknown>) {
+  const response = await createApp().request(`/api/products/${productCode}/preview`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ values }),
   });
-  return readBody(response);
+  const body = await readBody(response);
+  return { values, reviewId: body.reviewId as string, body };
 }
 
 describe("accepted product evaluation API", () => {
@@ -72,21 +73,22 @@ describe("accepted product evaluation API", () => {
   });
 
   it("does not evaluate or compile EIC for a not-ready reviewed definition", async () => {
-    const reviewed = await compileProduct(CANONICAL_PRODUCT_CODE, {
+    const values = {
       ...lettersValues,
       "root.inscription": "",
-    });
+    };
+    const reviewed = await previewProduct(CANONICAL_PRODUCT_CODE, values);
     const { result, trace } = await runWithProductEvaluationTraceAsync(async () =>
       createApp().request(`/api/products/${CANONICAL_PRODUCT_CODE}/confirm`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: reviewed.definition,
+          values,
           reviewId: reviewed.reviewId,
         }),
       }),
     );
-    expect(result.status).toBe(422);
+    expect(result.status).toBe(400);
     expect(trace.evaluateProductComponents).toBe(0);
     expect(trace.compileEic).toBe(0);
     expect(trace.runtimeLabels).toBe(0);
@@ -94,17 +96,13 @@ describe("accepted product evaluation API", () => {
   });
 
   it("does not evaluate or compile EIC for a review mismatch", async () => {
-    const reviewed = await compileProduct(CANONICAL_PRODUCT_CODE, lettersValues);
-    const changed = await compileProduct(CANONICAL_PRODUCT_CODE, {
-      ...lettersValues,
-      "root.inscription": "CHANGED",
-    });
+    const reviewed = await previewProduct(CANONICAL_PRODUCT_CODE, lettersValues);
     const { result, trace } = await runWithProductEvaluationTraceAsync(async () =>
       createApp().request(`/api/products/${CANONICAL_PRODUCT_CODE}/confirm`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: changed.definition,
+          values: { ...lettersValues, "root.inscription": "CHANGED" },
           reviewId: reviewed.reviewId,
         }),
       }),
@@ -115,7 +113,7 @@ describe("accepted product evaluation API", () => {
   });
 
   it("confirms LETTERS 60 mm with one evaluation, one EIC, and no extra runtime reads", async () => {
-    const reviewed = await compileProduct(CANONICAL_PRODUCT_CODE, lettersValues);
+    const reviewed = await previewProduct(CANONICAL_PRODUCT_CODE, lettersValues);
     const { result, trace } = await runWithProductEvaluationTraceAsync(async () => {
       const response = await createApp().request(
         `/api/products/${CANONICAL_PRODUCT_CODE}/confirm`,
@@ -123,7 +121,7 @@ describe("accepted product evaluation API", () => {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            definition: reviewed.definition,
+            values: reviewed.values,
             reviewId: reviewed.reviewId,
           }),
         },
@@ -141,7 +139,7 @@ describe("accepted product evaluation API", () => {
   });
 
   it("confirms ACM cassette through the same evaluation pipeline", async () => {
-    const reviewed = await compileProduct(ACM_CASSETTE_NONE_PRODUCT_CODE, acmValues);
+    const reviewed = await previewProduct(ACM_CASSETTE_NONE_PRODUCT_CODE, acmValues);
     const { result, trace } = await runWithProductEvaluationTraceAsync(async () => {
       const response = await createApp().request(
         `/api/products/${ACM_CASSETTE_NONE_PRODUCT_CODE}/confirm`,
@@ -149,7 +147,7 @@ describe("accepted product evaluation API", () => {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            definition: reviewed.definition,
+            values: reviewed.values,
             reviewId: reviewed.reviewId,
           }),
         },

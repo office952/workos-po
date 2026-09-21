@@ -59,7 +59,7 @@ describe("claim-on-start concurrency", () => {
     }
 
     const compiled = await readBody(
-      await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/compile`, {
+      await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ values: readyValues }),
@@ -70,7 +70,7 @@ describe("claim-on-start concurrency", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: compiled.definition,
+          values: readyValues,
           reviewId: compiled.reviewId,
         }),
       }),

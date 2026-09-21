@@ -42,7 +42,7 @@ async function createPlanWithInscription(
   inscription: string,
 ) {
   const compiled = await readBody(
-    await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/compile`, {
+    await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -62,7 +62,14 @@ async function createPlanWithInscription(
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        definition: compiled.definition,
+        values: {
+          "root.inscription": inscription,
+          "face.finish": "none",
+          "face.confirmedAreaMm2": 250000,
+          "volume.depthMm": "60",
+          "volume.finish": "none",
+          "volume.confirmedPerimeterMm": 12500,
+        },
         reviewId: compiled.reviewId,
       }),
     }),

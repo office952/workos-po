@@ -30,7 +30,7 @@ describe("seller API", () => {
       body: JSON.stringify({ displayName: "Client Demo LETTERS" }),
     });
     const customerId = ((await readBody(customer)).customer as JsonObject).customerId as string;
-    const compiled = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/compile`, {
+    const compiled = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -49,7 +49,14 @@ describe("seller API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        definition: compiledBody.definition,
+        values: {
+          "root.inscription": "WORKOS",
+          "face.finish": "none",
+          "face.confirmedAreaMm2": 250000,
+          "volume.depthMm": "60",
+          "volume.finish": "none",
+          "volume.confirmedPerimeterMm": 12500,
+        },
         reviewId: compiledBody.reviewId,
         customerId,
       }),
@@ -78,7 +85,14 @@ describe("seller API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        definition: compiledBody.definition,
+        values: {
+          "root.inscription": "WORKOS",
+          "face.finish": "none",
+          "face.confirmedAreaMm2": 250000,
+          "volume.depthMm": "60",
+          "volume.finish": "none",
+          "volume.confirmedPerimeterMm": 12500,
+        },
         reviewId: compiledBody.reviewId,
         customerId,
       }),

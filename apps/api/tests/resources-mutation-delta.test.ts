@@ -115,14 +115,14 @@ async function compileReady(
   productCode: string,
   values: Record<string, string | number>,
 ) {
-  const response = await app.request(`/api/products/${productCode}/compile`, {
+  const response = await app.request(`/api/products/${productCode}/preview`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ values }),
   });
   const body = await readBody(response);
   return {
-    definition: body.definition as JsonObject,
+    values,
     reviewId: body.reviewId as string,
   };
 }

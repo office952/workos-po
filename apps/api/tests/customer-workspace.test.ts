@@ -20,16 +20,15 @@ async function compileReady(
   app: ReturnType<typeof createApp>,
   inscription: string,
 ) {
-  const response = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/compile`, {
+  const values = { ...lettersValues, "root.inscription": inscription };
+  const response = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      values: { ...lettersValues, "root.inscription": inscription },
-    }),
+    body: JSON.stringify({ values }),
   });
   const body = await readBody(response);
   return {
-    definition: body.definition as JsonObject,
+    values,
     reviewId: body.reviewId as string,
   };
 }
@@ -75,7 +74,7 @@ async function freezeQuote(
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      definition: reviewed.definition,
+      values: reviewed.values,
       reviewId: reviewed.reviewId,
       customerId,
       ...(requestId ? { requestId } : {}),
