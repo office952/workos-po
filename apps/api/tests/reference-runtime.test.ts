@@ -9,6 +9,12 @@ import {
   resolveReferenceRoot,
 } from "../../../scripts/reference-root.mjs";
 import {
+  REFERENCE_LAUNCH_PNPM_ARGS,
+  REFERENCE_PROCESS_MARKER,
+  isPositivelyIdentifiedReferenceProcess,
+  recordedAllowsStop,
+} from "../../../scripts/reference-process.mjs";
+import {
   isProtectedOwnerPort,
   portsEligibleForGenericReclaim,
 } from "../../../scripts/dev-ports.mjs";
@@ -61,5 +67,67 @@ describe("protected owner reference port", () => {
     expect(isProtectedOwnerPort(8787)).toBe(true);
     expect(portsEligibleForGenericReclaim([5173, 8787])).toEqual([5173]);
     expect(portsEligibleForGenericReclaim()).not.toContain(8787);
+  });
+});
+
+describe("reference process ownership", () => {
+  const recorded = {
+    pid: 4242,
+    classification: "SYNTHETIC_REFERENCE",
+    port: 8787,
+  };
+
+  it("launches the API with an explicit command-line marker", () => {
+    expect(REFERENCE_PROCESS_MARKER).toBe("--workos-reference-runtime");
+    expect(REFERENCE_LAUNCH_PNPM_ARGS).toEqual([
+      "--filter",
+      "@workos-final/api",
+      "start",
+      "--",
+      "--workos-reference-runtime",
+    ]);
+  });
+
+  it("allows stop only for a recorded synthetic 8787 process whose command line has the marker", () => {
+    const command = "pnpm --filter @workos-final/api start -- --workos-reference-runtime";
+    expect(recordedAllowsStop(recorded, command)).toEqual({ ok: true });
+    expect(isPositivelyIdentifiedReferenceProcess(4242, recorded, command)).toBe(true);
+  });
+
+  it("refuses stop when the command line cannot be read", () => {
+    expect(recordedAllowsStop(recorded, "")).toEqual({
+      ok: false,
+      reason: "command_unreadable",
+    });
+    expect(recordedAllowsStop(recorded, null)).toEqual({
+      ok: false,
+      reason: "command_unreadable",
+    });
+  });
+
+  it("refuses stop when the marker is absent even if the recorded kind looks familiar", () => {
+    expect(
+      recordedAllowsStop(
+        { ...recorded, kind: "workos-reference-runtime" },
+        "tsx src/index.ts",
+      ),
+    ).toEqual({ ok: false, reason: "marker_absent" });
+    expect(
+      recordedAllowsStop(recorded, "node workos-final src/index.ts"),
+    ).toEqual({ ok: false, reason: "marker_absent" });
+  });
+
+  it("refuses stop when classification or port do not match the Owner reference", () => {
+    expect(recordedAllowsStop({ ...recorded, classification: "UNKNOWN" }, "x --workos-reference-runtime")).toEqual({
+      ok: false,
+      reason: "classification",
+    });
+    expect(recordedAllowsStop({ ...recorded, port: 28787 }, "x --workos-reference-runtime")).toEqual({
+      ok: false,
+      reason: "port",
+    });
+    expect(isPositivelyIdentifiedReferenceProcess(99, recorded, "x --workos-reference-runtime")).toBe(
+      false,
+    );
   });
 });

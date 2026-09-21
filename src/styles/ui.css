@@ -73,7 +73,6 @@
 .app-shell__nav {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: var(--space-8);
   flex: 1;
 }

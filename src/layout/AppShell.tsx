@@ -27,7 +27,6 @@ const SLICE_NAV = [
   { id: "configurator", label: "Configurator", href: "/configurator" },
   { id: "quotes", label: "Oferte", href: "/oferte" },
   { id: "jobs", label: "Lucrări", href: "/lucrari" },
-  { id: "planning", label: "Planificare", href: "/planificare" },
   { id: "atelier", label: "Atelier", href: "/atelier" },
   { id: "administration", label: "Administrare", href: "/admin/resources" },
 ] as const;

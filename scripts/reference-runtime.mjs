@@ -9,6 +9,12 @@ import {
   ensureSyntheticReferenceRoot,
   resolveReferenceRoot,
 } from "./reference-root.mjs";
+import {
+  REFERENCE_LAUNCH_PNPM_ARGS,
+  REFERENCE_PROCESS_MARKER,
+  isPositivelyIdentifiedReferenceProcess,
+  recordedAllowsStop,
+} from "./reference-process.mjs";
 
 const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const IDENTITY_NAME = ".reference-identity.json";
@@ -105,20 +111,11 @@ function processAlive(pid) {
   }
 }
 
-function isWorkosReferenceProcess(pid, recorded) {
-  if (!processAlive(pid)) {
+function isOwnedReferenceRuntime(pid, recorded) {
+  if (!recorded || recorded.pid !== pid || !processAlive(pid)) {
     return false;
   }
-  const command = commandLineFor(pid).toLowerCase();
-  if (!command) {
-    return recorded?.kind === "workos-reference-runtime";
-  }
-  const looksLikeApi =
-    command.includes("tsx") ||
-    command.includes("workos-final") ||
-    command.includes("src/index.ts") ||
-    command.includes("src\\index.ts");
-  return looksLikeApi;
+  return isPositivelyIdentifiedReferenceProcess(pid, recorded, commandLineFor(pid));
 }
 
 function listenersOnReferencePort() {
@@ -240,9 +237,6 @@ async function ensureIdentity(root, env) {
 }
 
 function ensureFrontendBuild() {
-  if (existsSync(join(repoRoot, "dist", "index.html"))) {
-    return;
-  }
   const result = spawnPnpm(["build"], { stdio: "inherit" });
   return new Promise((resolvePromise, reject) => {
     result.on("exit", (code, signal) => {
@@ -287,7 +281,7 @@ function launchApi(root, env) {
   const log = logPath(root);
   const out = writeFileSync(log, "", { flag: "a" });
   void out;
-  const child = spawnPnpm(["--filter", "@workos-final/api", "start"], {
+  const child = spawnPnpm(REFERENCE_LAUNCH_PNPM_ARGS, {
     env: referenceEnv(root, env),
     detached: true,
     stdio: ["ignore", "pipe", "pipe"],
@@ -300,6 +294,7 @@ function launchApi(root, env) {
   child.unref();
   writeJson(pidPath(root), {
     kind: "workos-reference-runtime",
+    processMarker: REFERENCE_PROCESS_MARKER,
     pid: child.pid,
     startedAt: new Date().toISOString(),
     port: REFERENCE_PORT,
@@ -311,7 +306,7 @@ function launchApi(root, env) {
 
 async function startCommand(root, env) {
   const recorded = readRecordedPid(root);
-  if (recorded && isWorkosReferenceProcess(recorded.pid, recorded) && (await healthOk())) {
+  if (recorded && isOwnedReferenceRuntime(recorded.pid, recorded) && (await healthOk())) {
     console.log("REFERENCE_RUNTIME_STATUS = RUNNING");
     console.log(`REFERENCE_URL = ${REFERENCE_URL}`);
     console.log("already running");
@@ -319,7 +314,10 @@ async function startCommand(root, env) {
   }
   const occupants = listenersOnReferencePort();
   if (occupants.length > 0) {
-    const ours = recorded && occupants.includes(recorded.pid);
+    const ours =
+      recorded &&
+      occupants.includes(recorded.pid) &&
+      isOwnedReferenceRuntime(recorded.pid, recorded);
     if (!ours || !(await healthOk())) {
       fail(
         "REFERENCE_RUNTIME_ACTIVATION = BLOCKED_PORT_OWNERSHIP_UNKNOWN",
@@ -353,7 +351,7 @@ async function statusCommand(root) {
   const healthy = await healthOk();
   const occupants = listenersOnReferencePort();
   const owned =
-    recorded && isWorkosReferenceProcess(recorded.pid, recorded) ? recorded.pid : null;
+    recorded && isOwnedReferenceRuntime(recorded.pid, recorded) ? recorded.pid : null;
   console.log(`REFERENCE_URL = ${REFERENCE_URL}`);
   console.log(`REFERENCE_ROOT = ${root}`);
   console.log(`PID = ${owned ?? recorded?.pid ?? "none"}`);
@@ -378,10 +376,13 @@ function stopOwned(root) {
     console.log("stale pid removed");
     return false;
   }
-  if (!isWorkosReferenceProcess(recorded.pid, recorded)) {
+  const decision = recordedAllowsStop(recorded, commandLineFor(recorded.pid));
+  if (!decision.ok) {
     fail(
       "reference_stop_refused",
-      "Recorded PID is not a positively identified WorkOS reference runtime. Not killed.",
+      decision.reason === "command_unreadable"
+        ? "Command line could not be read. Recorded PID was not killed."
+        : "Recorded PID is not a positively identified WorkOS reference runtime. Not killed.",
     );
   }
   try {

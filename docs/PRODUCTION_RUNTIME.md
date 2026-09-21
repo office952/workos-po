@@ -219,4 +219,6 @@ Engineering commands:
 - `pnpm reference:seed`
 - `pnpm reference:stop`
 
+`reference:start` and `reference:restart` always run `pnpm build` before launching a new reference process. `reference:status` does not rebuild. The launched process command line includes `--workos-reference-runtime`. `reference:stop` / `reference:restart` terminate only a recorded `SYNTHETIC_REFERENCE` process on port 8787 whose live command line contains that marker. If the command line cannot be read, or the marker is absent, the process is not killed.
+
 Port 8787 is protected Owner reference. Generic `ports:reclaim` / `dev:canonical` must not terminate it. Automated tests use isolated non-8787 ports.
