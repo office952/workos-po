@@ -1194,9 +1194,9 @@ function confirmFailure(
 function refuseDisabledNewWork(
   runtime: ProductSystemRuntime,
   productCode: string,
-): { status: 404 | 409; body: Record<string, unknown> } | null {
+): { status: 409; body: Record<string, unknown> } | null {
   if (!getProductTemplate(productCode)) {
-    return { status: 404, body: { error: "not_found" } };
+    return null;
   }
   const resolution = runtime.resolveProductEnablement();
   if (!resolution.ok) {
@@ -1225,16 +1225,16 @@ function compileAcceptedProduct(
   productCode: string,
   body: unknown,
 ) {
-  const blocked = refuseDisabledNewWork(runtime, productCode);
-  if (blocked) {
-    return { ok: false as const, status: blocked.status, body: blocked.body };
-  }
   noteRuntimePresent();
   const presented = runtime.present();
   const template = presented.template(productCode);
   const formSchema = presented.formSchema(productCode);
   if (!template || !formSchema) {
     return { ok: false as const, status: 404 as const, body: { error: "not_found" } };
+  }
+  const blocked = refuseDisabledNewWork(runtime, productCode);
+  if (blocked) {
+    return { ok: false as const, status: blocked.status, body: blocked.body };
   }
 
   const technical = runtime.resolveTechnicalSettings({
