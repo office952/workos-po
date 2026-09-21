@@ -145,8 +145,8 @@ ALTERNATIVE_PRODUCT_DELIVERY = NO
 PRIMARY_USER_JOURNEY = COMPLETE
 PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
 PEOPLE_AND_MACHINE_ADMIN_V1 = COMPLETE
-CURRENT_PROGRAM = EXECUTION_EXPANSION_V1
-CURRENT_PROGRAM_STATUS = IN_PROGRESS
+EXECUTION_EXPANSION_V1_IMPLEMENTATION = COMPLETE / INTEGRATED
+EXECUTION_EXPANSION_V1_OWNER_ACCEPTED = NO
 EXE1_EXECUTION_READINESS = COMPLETE
 EXE1_INTEGRATED_ON_MAIN = YES
 EXE1_MERGE_COMMIT = 18d5506f062ad0725f0fa3a8b204e5b121bd45b1
@@ -159,14 +159,22 @@ EXE3_WHOLE_PLAN_COMPREHENSION = COMPLETE
 EXE3_INTEGRATED_ON_MAIN = YES
 EXE3_MERGE_COMMIT = 54d91e11d06b4deb567f601118147182c863dbf5
 PR_27 = MERGED
-NEXT_WAVE = EXE4_ACTUALS_AND_EXECUTION_CLOSURE
-NEXT_WAVE_STATUS = IMPLEMENTED_IN_REVIEW
-EXE4 = IMPLEMENTED_IN_REVIEW
-EXE4_COMPLETE = NO
-EXECUTION_EXPANSION_COMPLETE = NO
-NEXT_MAJOR_CANDIDATE = PLANNING_CAPACITY_V1
-MEMBER_DAG_COMPOSITION_CORRECTIONS = DEFERRED / NOT_EXECUTION_BLOCKER
-PLANNING_CAPACITY = NOT_STARTED / NOT_NEXT
+EXE4 = COMPLETE / MERGED
+EXE4_INTEGRATED_ON_MAIN = YES
+EXE4_MERGE_COMMIT = e0ddbdac7de5896d683e05782a21f0e55a984b9b
+PR_28 = MERGED
+CURRENT_PROGRAM = PLANNING_CAPACITY_V1
+CURRENT_PROGRAM_STATUS = CAP0_CANON_IMPLEMENTED_IN_REVIEW
+PLANNING_CAPACITY_V1_PREFLIGHT = COMPLETE
+PLANNING_CAPACITY_V1_OWNER_DECISIONS = LOCKED
+CAP0 = IMPLEMENTED_IN_REVIEW
+CAP1 = NOT_STARTED
+CAP2 = NOT_STARTED
+CAP3 = NOT_STARTED
+CAPACITY_IMPLEMENTATION = NOT_STARTED
+SCHEDULING = NOT_STARTED / OUT_OF_SCOPE_V1
+MEMBER_DAG_COMPOSITION_CORRECTIONS = DEFERRED / NOT_CAPACITY_BLOCKER
+PLANNING_CAPACITY_CANON = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
 CF1_COMMERCIAL_VERTICAL_V1 = COMPLETE
 CF1_OWNER_ACCEPTED_IMPLEMENTATION = YES
 CF2_CF3_TECHNICAL_CONFIGURATION_V1 = COMPLETE
@@ -222,7 +230,7 @@ VALUES_CRV1_AUTHORITY = REQUIRED
 GENERIC_ACCEPTANCE_BOUNDARY = CLOSED
 CURRENT_FIRST_LETTERS_SKU = PRD-LETTERS-FRONTLIT-PLEXI-AL06
 CURRENT_SKU_MODEL = SPECIFIC_PRODUCT_TEMPLATE_SKU
-NEXT_WAVE_AUTHORIZED = YES
+NEXT_WAVE_AUTHORIZED = NO
 FORMULA_CONFIGURABILITY_FULLY_DELIVERED = NO
 REAL_CLOUD_WRITE = HOLD
 REAL_DB_WRITE = HOLD
@@ -232,7 +240,7 @@ REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
 Living program authority: `docs/ROADMAP.md`.
 Configuration-First architecture: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
-People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Current supported-product People capabilities are mapped; unused catalog capabilities may stay unmapped. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Current program is Execution Expansion V1. EXE1 readiness, EXE2 provider/operator interaction, and EXE3 whole-plan comprehension are merged. EXE4 operator actuals and execution program closure is implemented in review on this branch, not merged. Planning/capacity remains the next major candidate after EXE4 integration, not this wave. Member DAG / composition corrections stay deferred and are not an execution blocker. Exact merge commits live in `docs/ROADMAP.md`.
+People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Current supported-product People capabilities are mapped; unused catalog capabilities may stay unmapped. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Execution Expansion V1 implementation is complete and integrated on main through PR #28. Owner has not accepted Execution Expansion. Current program is Planning Capacity V1. CAP0 freezes the Capacity contract in review and does not implement Capacity. CAP1, CAP2, and CAP3 are not started. Scheduling remains out of V1. Member DAG / composition corrections stay deferred and are not a Capacity blocker. Living Capacity canon: `docs/architecture/PLANNING_CAPACITY_V1_CANON.md`. Exact merge commits live in `docs/ROADMAP.md`.
 
 ```text
 NO_SILENT_BUSINESS_TRUTH = CANONICAL

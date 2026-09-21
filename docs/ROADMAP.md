@@ -42,8 +42,8 @@ PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
 PRIMARY_USER_JOURNEY_PROOF_DATE = 2026-09-20
 
 PEOPLE_AND_MACHINE_ADMIN_V1 = COMPLETE
-CURRENT_PROGRAM = EXECUTION_EXPANSION_V1
-CURRENT_PROGRAM_STATUS = IN_PROGRESS
+EXECUTION_EXPANSION_V1_IMPLEMENTATION = COMPLETE / INTEGRATED
+EXECUTION_EXPANSION_V1_OWNER_ACCEPTED = NO
 EXE1_EXECUTION_READINESS = COMPLETE
 EXE1_INTEGRATED_ON_MAIN = YES
 EXE1_MERGE_COMMIT = 18d5506f062ad0725f0fa3a8b204e5b121bd45b1
@@ -56,14 +56,22 @@ EXE3_WHOLE_PLAN_COMPREHENSION = COMPLETE
 EXE3_INTEGRATED_ON_MAIN = YES
 EXE3_MERGE_COMMIT = 54d91e11d06b4deb567f601118147182c863dbf5
 PR_27 = MERGED
-NEXT_WAVE = EXE4_ACTUALS_AND_EXECUTION_CLOSURE
-NEXT_WAVE_STATUS = IMPLEMENTED_IN_REVIEW
-EXE4 = IMPLEMENTED_IN_REVIEW
-EXE4_COMPLETE = NO
-EXECUTION_EXPANSION_COMPLETE = NO
-NEXT_MAJOR_CANDIDATE = PLANNING_CAPACITY_V1
-MEMBER_DAG_COMPOSITION_CORRECTIONS = DEFERRED / NOT_EXECUTION_BLOCKER
-PLANNING_CAPACITY = NOT_STARTED / NOT_NEXT
+EXE4 = COMPLETE / MERGED
+EXE4_INTEGRATED_ON_MAIN = YES
+EXE4_MERGE_COMMIT = e0ddbdac7de5896d683e05782a21f0e55a984b9b
+PR_28 = MERGED
+CURRENT_PROGRAM = PLANNING_CAPACITY_V1
+CURRENT_PROGRAM_STATUS = CAP0_CANON_IMPLEMENTED_IN_REVIEW
+PLANNING_CAPACITY_V1_PREFLIGHT = COMPLETE
+PLANNING_CAPACITY_V1_OWNER_DECISIONS = LOCKED
+CAP0 = IMPLEMENTED_IN_REVIEW
+CAP1 = NOT_STARTED
+CAP2 = NOT_STARTED
+CAP3 = NOT_STARTED
+CAPACITY_IMPLEMENTATION = NOT_STARTED
+SCHEDULING = NOT_STARTED / OUT_OF_SCOPE_V1
+MEMBER_DAG_COMPOSITION_CORRECTIONS = DEFERRED / NOT_CAPACITY_BLOCKER
+PLANNING_CAPACITY_CANON = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
 CONFIGURATION_FIRST_CANON = docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md
 CONFIGURATION_FIRST_IMPLEMENTATION = CF1_COMPLETE_AND_CF2_CF3_COMPLETE_AND_CF4_COMPLETE
 CF1_COMMERCIAL_VERTICAL_V1 = COMPLETE
@@ -136,7 +144,7 @@ VALUES_CRV1_AUTHORITY = REQUIRED
 GENERIC_ACCEPTANCE_BOUNDARY = CLOSED
 CURRENT_FIRST_LETTERS_SKU = PRD-LETTERS-FRONTLIT-PLEXI-AL06
 CURRENT_SKU_MODEL = SPECIFIC_PRODUCT_TEMPLATE_SKU
-NEXT_WAVE_AUTHORIZED = YES
+NEXT_WAVE_AUTHORIZED = NO
 FORMULA_CONFIGURABILITY_FULLY_DELIVERED = NO
 
 REAL_CLOUD_WRITE = HOLD
@@ -393,7 +401,7 @@ After CF4, preferred living sequence:
 5. execution expansion
 6. planning / capacity
 
-Letters Product Truth V1, ACM Product Truth V1, Product Enablement Admin V1, and People and Machine Admin V1 are complete. Living next program is Execution Expansion V1. Preflight is required. Implementation is not authorized. Member DAG / composition corrections remain a secondary candidate, not the selected program. Planning/capacity remains later. CF5 remains NOT_STARTED and is not selected.
+Letters Product Truth V1, ACM Product Truth V1, Product Enablement Admin V1, and People and Machine Admin V1 are complete. Execution Expansion V1 implementation is complete and integrated. Owner has not accepted Execution Expansion. Living program is Planning Capacity V1. CAP0 freezes the Capacity contract in review and does not implement Capacity. Member DAG / composition corrections remain deferred and are not a Capacity blocker. CF5 remains NOT_STARTED and is not selected.
 
 ## ACM Product Truth V1
 
@@ -455,7 +463,7 @@ Product-scoped technical-setting resolution: ACM requires `STEEL_INTERNAL_FRAME.
 
 Accepted mutation authority remains server ProductTemplate + FormSchema + DraftValues + applicable organization technical settings + applicable formulas + crv1. Client ProductDefinition has zero authority.
 
-Organizations can enable or disable shared ProductTemplates for new work through `/admin/products`. Do not treat Product Enablement as CF5 complete. Living next program is Execution Expansion V1. Implementation is not authorized.
+Organizations can enable or disable shared ProductTemplates for new work through `/admin/products`. Do not treat Product Enablement as CF5 complete. Living program is Planning Capacity V1. Capacity implementation is not authorized.
 
 ## Product Enablement Admin V1
 
@@ -563,11 +571,12 @@ METAL_CUTTING → SK_METAL_CUTTING_OPERATOR → Operator debitare metale
 
 These three mappings are current product/process truth, not universal HR policy. Unused future catalog capabilities may remain unmapped. Shared-foundation reconciliation is idempotent. Existing V1 marker is preserved and no longer blocks later shared-skill reconcile. `ADOPT_EXISTING` receives shared skill foundation only, not trusted workforce. Employee qualifications are not invented automatically.
 
-## Current program
+## Previous program
 
 ```text
-CURRENT_PROGRAM = EXECUTION_EXPANSION_V1
-CURRENT_PROGRAM_STATUS = IN_PROGRESS
+PREVIOUS_PROGRAM = EXECUTION_EXPANSION_V1
+EXECUTION_EXPANSION_V1_IMPLEMENTATION = COMPLETE / INTEGRATED
+EXECUTION_EXPANSION_V1_OWNER_ACCEPTED = NO
 EXE1_EXECUTION_READINESS = COMPLETE / MERGED
 EXE1_MERGE_COMMIT = 18d5506f062ad0725f0fa3a8b204e5b121bd45b1
 PR_25 = MERGED
@@ -577,15 +586,28 @@ PR_26 = MERGED
 EXE3_WHOLE_PLAN_COMPREHENSION = COMPLETE / MERGED
 EXE3_MERGE_COMMIT = 54d91e11d06b4deb567f601118147182c863dbf5
 PR_27 = MERGED
-NEXT_WAVE = EXE4_ACTUALS_AND_EXECUTION_CLOSURE
-NEXT_WAVE_STATUS = IMPLEMENTED_IN_REVIEW
-EXE4 = IMPLEMENTED_IN_REVIEW
-EXE4_COMPLETE = NO
-EXECUTION_EXPANSION_COMPLETE = NO
-OWNER_ACCEPTED = NO
-NEXT_MAJOR_CANDIDATE = PLANNING_CAPACITY_V1
-PLANNING_CAPACITY = NOT_STARTED / NOT_NEXT
-MEMBER_DAG_COMPOSITION_CORRECTIONS = DEFERRED / NOT_EXECUTION_BLOCKER
+EXE4 = COMPLETE / MERGED
+EXE4_MERGE_COMMIT = e0ddbdac7de5896d683e05782a21f0e55a984b9b
+PR_28 = MERGED
 ```
 
-Execution Expansion V1 is in progress. EXE1 replaced hardcoded `executionReadiness = NOT_IMPLEMENTED` with topology-derived READY|BLOCKED. EXE2 made provider assignment explicit and projected Owner-only `canAssignProvider`. EXE3 made the whole plan comprehensible from existing server facts. EXE4 records operator actual consumption through the existing complete contract and is implemented in review on this branch. This documentation does not mark EXE4 merged or Execution Expansion complete. Planning/capacity stays later. Member DAG / composition corrections remain deferred and are not an execution blocker.
+Execution Expansion V1 implementation is complete and integrated on main. EXE1 replaced hardcoded `executionReadiness = NOT_IMPLEMENTED` with topology-derived READY|BLOCKED. EXE2 made provider assignment explicit and projected Owner-only `canAssignProvider`. EXE3 made the whole plan comprehensible from existing server facts. EXE4 records operator actual consumption through the existing complete contract. Owner has not accepted Execution Expansion. Capacity, scheduling, and MachineRun remain unimplemented.
+
+## Current program
+
+```text
+CURRENT_PROGRAM = PLANNING_CAPACITY_V1
+CURRENT_PROGRAM_STATUS = CAP0_CANON_IMPLEMENTED_IN_REVIEW
+PLANNING_CAPACITY_V1_PREFLIGHT = COMPLETE
+PLANNING_CAPACITY_V1_OWNER_DECISIONS = LOCKED
+CAP0 = IMPLEMENTED_IN_REVIEW
+CAP1 = NOT_STARTED
+CAP2 = NOT_STARTED
+CAP3 = NOT_STARTED
+CAPACITY_IMPLEMENTATION = NOT_STARTED
+SCHEDULING = NOT_STARTED / OUT_OF_SCOPE_V1
+MEMBER_DAG_COMPOSITION_CORRECTIONS = DEFERRED / NOT_CAPACITY_BLOCKER
+PLANNING_CAPACITY_CANON = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
+```
+
+Planning Capacity V1 is the living program. CAP0 freezes Owner decisions 1-4 and the Capacity contract. It does not implement planned effort, weekly provider capacity, load calculation, API, UI, or migration. CAP1, CAP2, and CAP3 are not started. Scheduling is out of V1. Member DAG / composition corrections remain deferred and are not a Capacity blocker.
