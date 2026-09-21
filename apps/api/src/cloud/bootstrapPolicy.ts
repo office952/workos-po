@@ -29,9 +29,10 @@ export { PLATFORM_DEFAULT_COST_NOTE } from "../resources/store.js";
  * memberships, or sessions. Differentiation belongs to test fixture setup.
  *
  * ADOPT_EXISTING uses the current curated HUB MEDIA workcenter catalog only as
- * first-pilot compatibility. It is not the permanent law that every adopted
- * existing company receives HUB MEDIA equipment. Future adoption must resolve
- * that Organization's own provider configuration. Machine Admin is later.
+ * first-pilot compatibility until organization-owned provider configuration
+ * exists. The first supported Machine Admin mutation materializes that catalog
+ * into organization tables exactly once. After ownership, organization tables
+ * are the live provider authority.
  */
 export function resolveProviderRegistryKind(
   policy: BootstrapPolicy | "SINGLE_PLANE" | undefined,

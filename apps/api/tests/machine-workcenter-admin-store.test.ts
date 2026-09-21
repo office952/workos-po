@@ -2,10 +2,22 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { providersForCapability } from "@workos-final/domain";
+import {
+  MCH_CNC_4020_ID,
+  WC_ASSEMBLY_01_ID,
+  WC_CNC_ROUTING_ID,
+  createWorkcenterRegistry,
+  providersForCapability,
+  workcenterRegistry,
+} from "@workos-final/domain";
 import { openSqliteDatabase } from "../src/persistence/sqlite.js";
 import { createProductSystemRuntime } from "../src/productSystem/runtime.js";
 import {
+  ORGANIZATION_PROVIDER_COMPATIBILITY_SOURCE,
+  OrganizationProviderPersistError,
+  ensureOrganizationProviderFoundation,
+  hasOrganizationProviderOwnership,
+  loadOrganizationProviderRegistry,
   persistCreatedWorkcenter,
   persistUpdatedMachine,
   persistUpdatedWorkcenter,
@@ -16,7 +28,11 @@ const temps: string[] = [];
 
 afterEach(() => {
   for (const dir of temps.splice(0)) {
-    rmSync(dir, { recursive: true, force: true });
+    try {
+      rmSync(dir, { recursive: true, force: true });
+    } catch {
+      // Windows may briefly keep a handle on a closed SQLite file.
+    }
   }
 });
 
@@ -190,12 +206,227 @@ describe("machine workcenter admin store", () => {
       runtime.close();
     }
   });
+
+  it("materializes the compatibility registry once and then keeps organization ownership", () => {
+    const runtime = createProductSystemRuntime(tempSqlitePath(), {
+      bootstrapPolicy: "ADOPT_EXISTING",
+    });
+    try {
+      expect(runtime.providerRegistry.getMachine(MCH_CNC_4020_ID)?.id).toBe(MCH_CNC_4020_ID);
+      const db = openSqliteDatabase(runtime.sqlitePath);
+      expect(hasOrganizationProviderOwnership(db)).toBe(false);
+      expect(loadOrganizationProviderRegistry(db).machines).toEqual([]);
+
+      const first = ensureOrganizationProviderFoundation(db, workcenterRegistry);
+      expect(first.materialized).toBe(true);
+      expect(first.alreadyOwned).toBe(true);
+      expect(readOrganizationProviderConfig(db)?.source).toBe(
+        ORGANIZATION_PROVIDER_COMPATIBILITY_SOURCE,
+      );
+      expect(snapshotRegistry(first.registry)).toEqual(snapshotRegistry(workcenterRegistry));
+
+      const renamed = persistUpdatedMachine(db, MCH_CNC_4020_ID, {
+        label: "CNC 4020 edit",
+      });
+      expect(renamed.ok).toBe(true);
+      const afterEdit = readOrganizationProviderConfig(db);
+
+      const second = ensureOrganizationProviderFoundation(db, workcenterRegistry);
+      expect(second.materialized).toBe(false);
+      expect(second.alreadyOwned).toBe(true);
+      expect(second.registry.getMachine(MCH_CNC_4020_ID)?.label).toBe("CNC 4020 edit");
+      expect(second.registry.getMachine(MCH_CNC_4020_ID)?.workcenterId).toBe(WC_CNC_ROUTING_ID);
+      const afterSecond = readOrganizationProviderConfig(db);
+      expect(afterSecond?.contentHash).toBe(afterEdit?.contentHash);
+      expect(afterSecond?.appliedAt).toBe(afterEdit?.appliedAt);
+      expect(afterSecond?.source).toBe("admin");
+      db.close();
+    } finally {
+      runtime.close();
+    }
+  });
+
+  it("keeps organization-owned rows when compatibility is offered again without a config row", () => {
+    const runtime = createProductSystemRuntime(tempSqlitePath(), {
+      bootstrapPolicy: "ADOPT_EXISTING",
+    });
+    try {
+      const db = openSqliteDatabase(runtime.sqlitePath);
+      ensureOrganizationProviderFoundation(db, workcenterRegistry);
+      const renamed = persistUpdatedMachine(db, MCH_CNC_4020_ID, {
+        label: "CNC 4020 org",
+      });
+      expect(renamed.ok).toBe(true);
+      db.prepare("DELETE FROM organization_provider_configuration").run();
+      expect(hasOrganizationProviderOwnership(db)).toBe(true);
+
+      const again = ensureOrganizationProviderFoundation(db, workcenterRegistry);
+      expect(again.materialized).toBe(false);
+      expect(again.alreadyOwned).toBe(true);
+      expect(again.registry.getMachine(MCH_CNC_4020_ID)?.label).toBe("CNC 4020 org");
+      expect(readOrganizationProviderConfig(db)?.source).toBe("organization");
+      db.close();
+    } finally {
+      runtime.close();
+    }
+  });
+
+  it("leaves an empty NEW_ORGANIZATION foundation untouched", () => {
+    const runtime = openEmptyRuntime();
+    try {
+      const db = openSqliteDatabase(runtime.sqlitePath);
+      const result = ensureOrganizationProviderFoundation(
+        db,
+        createWorkcenterRegistry([], []),
+      );
+      expect(result.materialized).toBe(false);
+      expect(result.alreadyOwned).toBe(false);
+      expect(result.registry.workcenters).toEqual([]);
+      expect(result.registry.machines).toEqual([]);
+      expect(readOrganizationProviderConfig(db)).toBeNull();
+      db.close();
+    } finally {
+      runtime.close();
+    }
+  });
+
+  it("makes a legacy single-plane mutation visible on the same live registry", () => {
+    const runtime = createProductSystemRuntime(tempSqlitePath());
+    try {
+      expect(runtime.providerRegistry.getMachine(MCH_CNC_4020_ID)?.label).toBe("CNC 4020");
+      const db = openSqliteDatabase(runtime.sqlitePath);
+      expect(hasOrganizationProviderOwnership(db)).toBe(false);
+      db.close();
+
+      const updated = runtime.updateMachine(MCH_CNC_4020_ID, {
+        label: "CNC 4020 legacy",
+      });
+      expect(updated.ok).toBe(true);
+      expect(runtime.providerRegistry.getMachine(MCH_CNC_4020_ID)?.label).toBe(
+        "CNC 4020 legacy",
+      );
+      expect(
+        providersForCapability("CNC_ROUTING", runtime.providerRegistry).map((item) => item.id),
+      ).toContain(MCH_CNC_4020_ID);
+    } finally {
+      runtime.close();
+    }
+  });
+
+  it("preserves historical execution rows across compatibility materialization", () => {
+    const runtime = createProductSystemRuntime(tempSqlitePath(), {
+      bootstrapPolicy: "ADOPT_EXISTING",
+    });
+    try {
+      const db = openSqliteDatabase(runtime.sqlitePath);
+      insertAssignedTask(db, MCH_CNC_4020_ID, "COMPLETED", "hist-1");
+      const before = readHistoryFingerprint(db, "hist-1");
+      expect(before.assignedProviderId).toBe(MCH_CNC_4020_ID);
+
+      const materialized = ensureOrganizationProviderFoundation(db, workcenterRegistry);
+      expect(materialized.registry.getMachine(MCH_CNC_4020_ID)?.id).toBe(MCH_CNC_4020_ID);
+      expect(readHistoryFingerprint(db, "hist-1")).toEqual(before);
+
+      expect(
+        persistUpdatedMachine(db, MCH_CNC_4020_ID, {
+          capabilityIds: ["LASER_CUTTING"],
+        }),
+      ).toEqual({ ok: false, error: "provider_referenced" });
+      expect(
+        persistUpdatedMachine(db, MCH_CNC_4020_ID, {
+          workcenterId: WC_ASSEMBLY_01_ID,
+        }),
+      ).toEqual({ ok: false, error: "provider_referenced" });
+
+      insertAssignedTask(db, MCH_CNC_4020_ID, "PLANNED", "hist-2");
+      expect(
+        persistUpdatedMachine(db, MCH_CNC_4020_ID, { lifecycle: "RETIRED" }),
+      ).toEqual({ ok: false, error: "has_open_assignment" });
+      db.prepare("UPDATE execution_tasks SET status = 'IN_PROGRESS' WHERE task_id = ?").run(
+        "task-hist-2",
+      );
+      expect(
+        persistUpdatedMachine(db, MCH_CNC_4020_ID, { lifecycle: "RETIRED" }),
+      ).toEqual({ ok: false, error: "has_open_assignment" });
+      db.prepare("UPDATE execution_tasks SET status = 'COMPLETED' WHERE task_id = ?").run(
+        "task-hist-2",
+      );
+      expect(persistUpdatedMachine(db, MCH_CNC_4020_ID, { lifecycle: "RETIRED" }).ok).toBe(
+        true,
+      );
+      expect(readHistoryFingerprint(db, "hist-1")).toEqual(before);
+      db.close();
+    } finally {
+      runtime.close();
+    }
+  });
+
+  it("does not disguise unexpected persistence failures as validation errors", () => {
+    const runtime = openEmptyRuntime();
+    try {
+      const db = openSqliteDatabase(runtime.sqlitePath);
+      db.exec("DROP TABLE organization_provider_configuration");
+      expect(() => persistCreatedWorkcenter(db, { label: "Zonă CNC" })).toThrow(
+        OrganizationProviderPersistError,
+      );
+      expect(loadOrganizationProviderRegistry(db).workcenters).toEqual([]);
+
+      expect(() => ensureOrganizationProviderFoundation(db, workcenterRegistry)).toThrow(
+        OrganizationProviderPersistError,
+      );
+      expect(loadOrganizationProviderRegistry(db).machines).toEqual([]);
+      db.close();
+    } finally {
+      runtime.close();
+    }
+  });
 });
+
+function snapshotRegistry(registry: {
+  workcenters: readonly {
+    id: string;
+    label: string;
+    description: string;
+    lifecycle: string;
+    capabilityIds: readonly string[];
+  }[];
+  machines: readonly {
+    id: string;
+    label: string;
+    description: string;
+    workcenterId: string | null;
+    lifecycle: string;
+    capabilityIds: readonly string[];
+  }[];
+}) {
+  return {
+    workcenters: registry.workcenters
+      .map((item) => ({
+        id: item.id,
+        label: item.label,
+        description: item.description,
+        lifecycle: item.lifecycle,
+        capabilityIds: [...item.capabilityIds],
+      }))
+      .sort((left, right) => left.id.localeCompare(right.id)),
+    machines: registry.machines
+      .map((item) => ({
+        id: item.id,
+        label: item.label,
+        description: item.description,
+        workcenterId: item.workcenterId,
+        lifecycle: item.lifecycle,
+        capabilityIds: [...item.capabilityIds],
+      }))
+      .sort((left, right) => left.id.localeCompare(right.id)),
+  };
+}
 
 function insertAssignedTask(
   db: ReturnType<typeof openSqliteDatabase>,
   providerId: string,
   status: "PLANNED" | "IN_PROGRESS" | "COMPLETED",
+  suffix = providerId,
 ): void {
   db.prepare(
     `
@@ -205,8 +436,8 @@ function insertAssignedTask(
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
   ).run(
-    `plan-${providerId}`,
-    `snap-${providerId}`,
+    `plan-${suffix}`,
+    `snap-${suffix}`,
     "hash",
     "PRD-TEST",
     "Test",
@@ -228,8 +459,8 @@ function insertAssignedTask(
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
   ).run(
-    `task-${providerId}`,
-    `plan-${providerId}`,
+    `task-${suffix}`,
+    `plan-${suffix}`,
     "op-1",
     "CUT_SHEET_CNC",
     "Debitare",
@@ -245,4 +476,44 @@ function insertAssignedTask(
     "[]",
     providerId,
   );
+}
+
+function readHistoryFingerprint(
+  db: ReturnType<typeof openSqliteDatabase>,
+  suffix: string,
+) {
+  const plan = db
+    .prepare(
+      `
+      SELECT plan_id, source_snapshot_id, source_snapshot_hash, product_code, status
+      FROM execution_plans
+      WHERE plan_id = ?
+    `,
+    )
+    .get(`plan-${suffix}`) as {
+    plan_id: string;
+    source_snapshot_id: string;
+    source_snapshot_hash: string;
+    product_code: string;
+    status: string;
+  };
+  const task = db
+    .prepare(
+      `
+      SELECT task_id, plan_id, assigned_provider_id, status
+      FROM execution_tasks
+      WHERE task_id = ?
+    `,
+    )
+    .get(`task-${suffix}`) as {
+    task_id: string;
+    plan_id: string;
+    assigned_provider_id: string;
+    status: string;
+  };
+  return {
+    plan,
+    task,
+    assignedProviderId: task.assigned_provider_id,
+  };
 }

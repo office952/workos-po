@@ -107,6 +107,8 @@ import {
   type ProviderRegistryKind,
 } from "../cloud/bootstrapPolicy.js";
 import {
+  ensureOrganizationProviderFoundation,
+  hasOrganizationProviderOwnership,
   loadOrganizationProviderRegistry,
   persistCreatedMachine,
   persistCreatedWorkcenter,
@@ -603,10 +605,16 @@ export function createProductSystemRuntimeFromOpenDb(
   applyOperationalBootstrap(db, bootstrapPolicy ?? undefined);
   const eligibilityFailClosed = bootstrapPolicy !== null;
   const currentProviderRegistry = (): WorkcenterRegistry => {
-    if (providerRegistryKind === "EMPTY_FOUNDATION") {
+    if (
+      providerRegistryKind === "EMPTY_FOUNDATION" ||
+      hasOrganizationProviderOwnership(db)
+    ) {
       return loadOrganizationProviderRegistry(db);
     }
     return codeOrInjectedRegistry;
+  };
+  const establishOrganizationProviderAuthority = (): void => {
+    ensureOrganizationProviderFoundation(db, codeOrInjectedRegistry);
   };
   const currentEligibility = () =>
     runtimePeopleEligibilityContext(db, {
@@ -1048,15 +1056,19 @@ export function createProductSystemRuntimeFromOpenDb(
       return persistCreatedPerson(db, displayName, options);
     },
     createWorkcenter(input) {
+      establishOrganizationProviderAuthority();
       return persistCreatedWorkcenter(db, input);
     },
     updateWorkcenter(workcenterId, patch) {
+      establishOrganizationProviderAuthority();
       return persistUpdatedWorkcenter(db, workcenterId, patch);
     },
     createMachine(input) {
+      establishOrganizationProviderAuthority();
       return persistCreatedMachine(db, input);
     },
     updateMachine(machineId, patch) {
+      establishOrganizationProviderAuthority();
       return persistUpdatedMachine(db, machineId, patch);
     },
     renamePerson(personId, displayName) {

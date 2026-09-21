@@ -5,10 +5,11 @@ import {
   type ProviderLifecycle,
   type ProviderMutationError,
 } from "@workos-final/domain";
-import type { Hono } from "hono";
+import type { Context, Hono } from "hono";
 import { getProductSystem, isOwner, type ApiEnv } from "../cloud/context.js";
 import { requireOwnerRole } from "../cloud/middleware.js";
 import type { ProductSystemRuntime } from "../productSystem/runtime.js";
+import { OrganizationProviderPersistError } from "./organizationProviderStore.js";
 
 export function workcentersAdminPayload(runtime: ProductSystemRuntime, canEdit: boolean) {
   const projection = projectWorkcentersAdministration(
@@ -31,18 +32,22 @@ export function registerWorkcenterRoutes(app: Hono<ApiEnv>): void {
     if (!parsed) {
       return c.json({ error: "invalid_payload" }, 400);
     }
-    const result = runtime.createWorkcenter(parsed);
-    if (!result.ok) {
-      return c.json({ error: result.error }, providerHttpStatus(result.error));
+    try {
+      const result = runtime.createWorkcenter(parsed);
+      if (!result.ok) {
+        return c.json({ error: result.error }, providerHttpStatus(result.error));
+      }
+      return c.json(
+        {
+          workcenter: result.value,
+          alreadyApplied: result.alreadyApplied,
+          ...workcentersAdminPayload(runtime, isOwner(c)),
+        },
+        201,
+      );
+    } catch (error) {
+      return providerPersistFailure(c, error);
     }
-    return c.json(
-      {
-        workcenter: result.value,
-        alreadyApplied: result.alreadyApplied,
-        ...workcentersAdminPayload(runtime, isOwner(c)),
-      },
-      201,
-    );
   });
 
   app.patch("/api/workcenters/:workcenterId", requireOwnerRole(), async (c) => {
@@ -51,15 +56,19 @@ export function registerWorkcenterRoutes(app: Hono<ApiEnv>): void {
     if (!parsed) {
       return c.json({ error: "invalid_payload" }, 400);
     }
-    const result = runtime.updateWorkcenter(c.req.param("workcenterId"), parsed);
-    if (!result.ok) {
-      return c.json({ error: result.error }, providerHttpStatus(result.error));
+    try {
+      const result = runtime.updateWorkcenter(c.req.param("workcenterId"), parsed);
+      if (!result.ok) {
+        return c.json({ error: result.error }, providerHttpStatus(result.error));
+      }
+      return c.json({
+        workcenter: result.value,
+        alreadyApplied: result.alreadyApplied,
+        ...workcentersAdminPayload(runtime, isOwner(c)),
+      });
+    } catch (error) {
+      return providerPersistFailure(c, error);
     }
-    return c.json({
-      workcenter: result.value,
-      alreadyApplied: result.alreadyApplied,
-      ...workcentersAdminPayload(runtime, isOwner(c)),
-    });
   });
 
   app.post("/api/machines", requireOwnerRole(), async (c) => {
@@ -68,18 +77,22 @@ export function registerWorkcenterRoutes(app: Hono<ApiEnv>): void {
     if (!parsed) {
       return c.json({ error: "invalid_payload" }, 400);
     }
-    const result = runtime.createMachine(parsed);
-    if (!result.ok) {
-      return c.json({ error: result.error }, providerHttpStatus(result.error));
+    try {
+      const result = runtime.createMachine(parsed);
+      if (!result.ok) {
+        return c.json({ error: result.error }, providerHttpStatus(result.error));
+      }
+      return c.json(
+        {
+          machine: result.value,
+          alreadyApplied: result.alreadyApplied,
+          ...workcentersAdminPayload(runtime, isOwner(c)),
+        },
+        201,
+      );
+    } catch (error) {
+      return providerPersistFailure(c, error);
     }
-    return c.json(
-      {
-        machine: result.value,
-        alreadyApplied: result.alreadyApplied,
-        ...workcentersAdminPayload(runtime, isOwner(c)),
-      },
-      201,
-    );
   });
 
   app.patch("/api/machines/:machineId", requireOwnerRole(), async (c) => {
@@ -88,16 +101,27 @@ export function registerWorkcenterRoutes(app: Hono<ApiEnv>): void {
     if (!parsed) {
       return c.json({ error: "invalid_payload" }, 400);
     }
-    const result = runtime.updateMachine(c.req.param("machineId"), parsed);
-    if (!result.ok) {
-      return c.json({ error: result.error }, providerHttpStatus(result.error));
+    try {
+      const result = runtime.updateMachine(c.req.param("machineId"), parsed);
+      if (!result.ok) {
+        return c.json({ error: result.error }, providerHttpStatus(result.error));
+      }
+      return c.json({
+        machine: result.value,
+        alreadyApplied: result.alreadyApplied,
+        ...workcentersAdminPayload(runtime, isOwner(c)),
+      });
+    } catch (error) {
+      return providerPersistFailure(c, error);
     }
-    return c.json({
-      machine: result.value,
-      alreadyApplied: result.alreadyApplied,
-      ...workcentersAdminPayload(runtime, isOwner(c)),
-    });
   });
+}
+
+function providerPersistFailure(c: Context<ApiEnv>, error: unknown) {
+  if (error instanceof OrganizationProviderPersistError) {
+    return c.json({ error: "internal" }, 500);
+  }
+  throw error;
 }
 
 function readCreateBody(body: unknown): {

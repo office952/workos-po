@@ -21,6 +21,17 @@ import {
 import type { SqliteDatabase } from "../persistence/sqlite.js";
 
 export const ORGANIZATION_PROVIDER_CONFIG_ID = "org-provider-config:current" as const;
+export const ORGANIZATION_PROVIDER_COMPATIBILITY_SOURCE = "compatibility" as const;
+export const ORGANIZATION_PROVIDER_ORGANIZATION_SOURCE = "organization" as const;
+
+export class OrganizationProviderPersistError extends Error {
+  readonly error = "internal" as const;
+
+  constructor() {
+    super("internal");
+    this.name = "OrganizationProviderPersistError";
+  }
+}
 
 export const ORGANIZATION_PROVIDER_CONFIG_ERRORS = [
   "invalid_config",
@@ -520,6 +531,91 @@ export function persistUpdatedMachine(
   });
 }
 
+export type OrganizationProviderFoundationResult = {
+  materialized: boolean;
+  alreadyOwned: boolean;
+  registry: WorkcenterRegistry;
+};
+
+export function organizationProviderTablesHaveRows(db: SqliteDatabase): boolean {
+  const workcenters = db
+    .prepare("SELECT COUNT(*) AS count FROM organization_workcenters")
+    .get() as { count: number };
+  const machines = db
+    .prepare("SELECT COUNT(*) AS count FROM organization_machines")
+    .get() as { count: number };
+  return workcenters.count > 0 || machines.count > 0;
+}
+
+export function hasOrganizationProviderOwnership(db: SqliteDatabase): boolean {
+  return readOrganizationProviderConfig(db) !== null || organizationProviderTablesHaveRows(db);
+}
+
+export function ensureOrganizationProviderFoundation(
+  db: SqliteDatabase,
+  compatibility: WorkcenterRegistry,
+  appliedAt = new Date().toISOString(),
+): OrganizationProviderFoundationResult {
+  try {
+    if (readOrganizationProviderConfig(db)) {
+      return {
+        materialized: false,
+        alreadyOwned: true,
+        registry: loadOrganizationProviderRegistry(db),
+      };
+    }
+    if (organizationProviderTablesHaveRows(db)) {
+      const registry = loadOrganizationProviderRegistry(db);
+      createWorkcenterRegistry(registry.workcenters, registry.machines);
+      writeProviderConfiguration(
+        db,
+        registry,
+        ORGANIZATION_PROVIDER_ORGANIZATION_SOURCE,
+        appliedAt,
+      );
+      return {
+        materialized: false,
+        alreadyOwned: true,
+        registry,
+      };
+    }
+    if (compatibility.workcenters.length === 0 && compatibility.machines.length === 0) {
+      return {
+        materialized: false,
+        alreadyOwned: false,
+        registry: loadOrganizationProviderRegistry(db),
+      };
+    }
+    const persist = db.transaction(() => {
+      for (const workcenter of compatibility.workcenters) {
+        insertWorkcenterRow(db, workcenter, appliedAt);
+      }
+      for (const machine of compatibility.machines) {
+        insertMachineRow(db, machine, appliedAt);
+      }
+      const registry = loadOrganizationProviderRegistry(db);
+      createWorkcenterRegistry(registry.workcenters, registry.machines);
+      writeProviderConfiguration(
+        db,
+        registry,
+        ORGANIZATION_PROVIDER_COMPATIBILITY_SOURCE,
+        appliedAt,
+      );
+      return registry;
+    });
+    return {
+      materialized: true,
+      alreadyOwned: true,
+      registry: persist(),
+    };
+  } catch (error) {
+    if (error instanceof OrganizationProviderPersistError) {
+      throw error;
+    }
+    throw new OrganizationProviderPersistError();
+  }
+}
+
 export function readOrganizationProviderConfig(
   db: SqliteDatabase,
 ): { contentHash: string; appliedAt: string; source: string } | null {
@@ -564,8 +660,11 @@ function writeProviderMutation<T>(
       value: persisted.value,
       contentHash: persisted.contentHash,
     };
-  } catch {
-    return { ok: false, error: "invalid_workcenter" };
+  } catch (error) {
+    if (error instanceof Error && error.message === "invalid_workcenter") {
+      return { ok: false, error: "invalid_workcenter" };
+    }
+    throw new OrganizationProviderPersistError();
   }
 }
 
