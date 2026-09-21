@@ -91,6 +91,13 @@ import {
   type ResourcesAdministrationWriteStats,
   type ResourcesAdminProjection,
   workcenterRegistry,
+  type Machine,
+  type MachineCreateInput,
+  type MachinePatch,
+  type ProviderMutationResult,
+  type Workcenter,
+  type WorkcenterCreateInput,
+  type WorkcenterPatch,
   type WorkcenterRegistry,
 } from "@workos-final/domain";
 import {
@@ -99,7 +106,13 @@ import {
   resolveProviderRegistryKind,
   type ProviderRegistryKind,
 } from "../cloud/bootstrapPolicy.js";
-import { loadOrganizationProviderRegistry } from "../workcenters/organizationProviderStore.js";
+import {
+  loadOrganizationProviderRegistry,
+  persistCreatedMachine,
+  persistCreatedWorkcenter,
+  persistUpdatedMachine,
+  persistUpdatedWorkcenter,
+} from "../workcenters/organizationProviderStore.js";
 import type { BootstrapPolicy } from "../cloud/controlPlane.js";
 import {
   applyMigrations,
@@ -482,6 +495,13 @@ export type ProductSystemRuntime = {
     displayName: string,
     options?: { roleLabel?: string | null },
   ): PersonMutationResult;
+  createWorkcenter(input: WorkcenterCreateInput): ProviderMutationResult<Workcenter>;
+  updateWorkcenter(
+    workcenterId: string,
+    patch: WorkcenterPatch,
+  ): ProviderMutationResult<Workcenter>;
+  createMachine(input: MachineCreateInput): ProviderMutationResult<Machine>;
+  updateMachine(machineId: string, patch: MachinePatch): ProviderMutationResult<Machine>;
   renamePerson(personId: string, displayName: string): PersonMutationResult;
   retirePerson(personId: string): PersonMutationResult;
   createCustomer(
@@ -1026,6 +1046,18 @@ export function createProductSystemRuntimeFromOpenDb(
     },
     createPerson(displayName, options) {
       return persistCreatedPerson(db, displayName, options);
+    },
+    createWorkcenter(input) {
+      return persistCreatedWorkcenter(db, input);
+    },
+    updateWorkcenter(workcenterId, patch) {
+      return persistUpdatedWorkcenter(db, workcenterId, patch);
+    },
+    createMachine(input) {
+      return persistCreatedMachine(db, input);
+    },
+    updateMachine(machineId, patch) {
+      return persistUpdatedMachine(db, machineId, patch);
     },
     renamePerson(personId, displayName) {
       return persistRenamedPerson(db, personId, displayName);

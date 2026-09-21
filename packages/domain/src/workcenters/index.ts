@@ -75,3 +75,21 @@ export {
   providersForProcess,
 } from "./providers.js";
 export { providerWhereUsed, type ProviderUse } from "./whereUsed.js";
+export {
+  PROVIDER_DESCRIPTION_MAX_LENGTH,
+  PROVIDER_LABEL_MAX_LENGTH,
+  PROVIDER_MUTATION_ERRORS,
+  createMachine,
+  createWorkcenter,
+  generateMachineId,
+  generateWorkcenterId,
+  updateMachine,
+  updateWorkcenter,
+  type MachineCreateInput,
+  type MachinePatch,
+  type ProviderHistoryContext,
+  type ProviderMutationError,
+  type ProviderMutationResult,
+  type WorkcenterCreateInput,
+  type WorkcenterPatch,
+} from "./mutations.js";

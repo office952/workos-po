@@ -46,6 +46,7 @@ import { ResourcesAdminPage } from "./surfaces/ResourcesAdminPage";
 import { FormulasAdminPage } from "./surfaces/FormulasAdminPage";
 import { TechnicalAdminPage } from "./surfaces/TechnicalAdminPage";
 import { PeopleAdminPage } from "./surfaces/PeopleAdminPage";
+import { WorkcentersAdminPage } from "./surfaces/WorkcentersAdminPage";
 import { ProductEnablementAdminPage } from "./surfaces/ProductEnablementAdminPage";
 
 function syncCanonicalLocation(): AppLocation {
@@ -120,6 +121,17 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
       return <PeopleAdminPage />;
     case "admin-person":
       return <PeopleAdminPage personId={route.personId} />;
+    case "admin-workcenters":
+      return <WorkcentersAdminPage />;
+    case "admin-workcenter":
+      return <WorkcentersAdminPage workcenterId={route.workcenterId} />;
+    case "admin-machine":
+      return (
+        <WorkcentersAdminPage
+          workcenterId={route.workcenterId}
+          machineId={route.machineId}
+        />
+      );
     case "foundation":
       return <FoundationProofPage />;
     case "unknown":

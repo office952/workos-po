@@ -1,13 +1,22 @@
 import { createHash } from "node:crypto";
 import {
+  createMachine,
+  createWorkcenter,
   createWorkcenterRegistry,
   PRODUCTION_CAPABILITY_CLASS_IDS,
   PROVIDER_LIFECYCLES,
+  updateMachine,
+  updateWorkcenter,
+  type Machine,
+  type MachineCreateInput,
+  type MachinePatch,
   type ProductionCapabilityClassId,
   type ProviderLifecycle,
+  type ProviderMutationResult,
   type Workcenter,
+  type WorkcenterCreateInput,
+  type WorkcenterPatch,
   type WorkcenterRegistry,
-  type Machine,
 } from "@workos-final/domain";
 import type { SqliteDatabase } from "../persistence/sqlite.js";
 
@@ -408,5 +417,273 @@ function rowToMachine(row: ProviderRow): Machine {
     workcenterId: row.workcenter_id ?? null,
     lifecycle: row.lifecycle as ProviderLifecycle,
     capabilityIds: JSON.parse(row.capability_ids_json) as ProductionCapabilityClassId[],
+  };
+}
+
+export type OrganizationProviderMutationResult<T> = ProviderMutationResult<T> & {
+  contentHash?: string;
+};
+
+export function persistCreatedWorkcenter(
+  db: SqliteDatabase,
+  input: WorkcenterCreateInput,
+  appliedAt = new Date().toISOString(),
+): OrganizationProviderMutationResult<Workcenter> {
+  const created = createWorkcenter({
+    label: input.label,
+    description: input.description,
+    lifecycle: input.lifecycle,
+    capabilityIds: input.capabilityIds,
+  });
+  if (!created.ok) {
+    return created;
+  }
+  return writeProviderMutation(db, appliedAt, () => {
+    insertWorkcenterRow(db, created.value, appliedAt);
+    return created.value;
+  });
+}
+
+export function persistUpdatedWorkcenter(
+  db: SqliteDatabase,
+  workcenterId: string,
+  patch: WorkcenterPatch,
+  appliedAt = new Date().toISOString(),
+): OrganizationProviderMutationResult<Workcenter> {
+  const current = loadOrganizationProviderRegistry(db);
+  const workcenter = current.getWorkcenter(workcenterId);
+  if (!workcenter) {
+    return { ok: false, error: "not_found" };
+  }
+  const updated = updateWorkcenter(
+    workcenter,
+    patch,
+    providerHistoryContext(db, workcenterId),
+    current.machines,
+  );
+  if (!updated.ok || updated.alreadyApplied) {
+    return updated;
+  }
+  return writeProviderMutation(db, appliedAt, () => {
+    updateWorkcenterRow(db, updated.value, appliedAt);
+    return updated.value;
+  });
+}
+
+export function persistCreatedMachine(
+  db: SqliteDatabase,
+  input: MachineCreateInput,
+  appliedAt = new Date().toISOString(),
+): OrganizationProviderMutationResult<Machine> {
+  const created = createMachine(
+    {
+      label: input.label,
+      description: input.description,
+      workcenterId: input.workcenterId,
+      lifecycle: input.lifecycle,
+      capabilityIds: input.capabilityIds,
+    },
+    loadOrganizationProviderRegistry(db).workcenters,
+  );
+  if (!created.ok) {
+    return created;
+  }
+  return writeProviderMutation(db, appliedAt, () => {
+    insertMachineRow(db, created.value, appliedAt);
+    return created.value;
+  });
+}
+
+export function persistUpdatedMachine(
+  db: SqliteDatabase,
+  machineId: string,
+  patch: MachinePatch,
+  appliedAt = new Date().toISOString(),
+): OrganizationProviderMutationResult<Machine> {
+  const current = loadOrganizationProviderRegistry(db);
+  const machine = current.getMachine(machineId);
+  if (!machine) {
+    return { ok: false, error: "not_found" };
+  }
+  const updated = updateMachine(
+    machine,
+    patch,
+    providerHistoryContext(db, machineId),
+    current.workcenters,
+  );
+  if (!updated.ok || updated.alreadyApplied) {
+    return updated;
+  }
+  return writeProviderMutation(db, appliedAt, () => {
+    updateMachineRow(db, updated.value, appliedAt);
+    return updated.value;
+  });
+}
+
+export function readOrganizationProviderConfig(
+  db: SqliteDatabase,
+): { contentHash: string; appliedAt: string; source: string } | null {
+  const row = db
+    .prepare(
+      `
+      SELECT content_hash, applied_at, source
+      FROM organization_provider_configuration
+      WHERE config_id = ?
+    `,
+    )
+    .get(ORGANIZATION_PROVIDER_CONFIG_ID) as
+    | { content_hash: string; applied_at: string; source: string }
+    | undefined;
+  if (!row) {
+    return null;
+  }
+  return {
+    contentHash: row.content_hash,
+    appliedAt: row.applied_at,
+    source: row.source,
+  };
+}
+
+function writeProviderMutation<T>(
+  db: SqliteDatabase,
+  appliedAt: string,
+  write: () => T,
+): OrganizationProviderMutationResult<T> {
+  try {
+    const persist = db.transaction(() => {
+      const value = write();
+      const registry = loadOrganizationProviderRegistry(db);
+      createWorkcenterRegistry(registry.workcenters, registry.machines);
+      const contentHash = writeProviderConfiguration(db, registry, "admin", appliedAt);
+      return { value, contentHash };
+    });
+    const persisted = persist();
+    return {
+      ok: true,
+      alreadyApplied: false,
+      value: persisted.value,
+      contentHash: persisted.contentHash,
+    };
+  } catch {
+    return { ok: false, error: "invalid_workcenter" };
+  }
+}
+
+function writeProviderConfiguration(
+  db: SqliteDatabase,
+  registry: WorkcenterRegistry,
+  source: string,
+  appliedAt: string,
+): string {
+  const contentHash = hashProviderConfig(registry);
+  db.prepare(
+    `
+    INSERT INTO organization_provider_configuration (config_id, content_hash, applied_at, source)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(config_id) DO UPDATE SET
+      content_hash = excluded.content_hash,
+      applied_at = excluded.applied_at,
+      source = excluded.source
+  `,
+  ).run(ORGANIZATION_PROVIDER_CONFIG_ID, contentHash, appliedAt, source);
+  return contentHash;
+}
+
+function insertWorkcenterRow(db: SqliteDatabase, workcenter: Workcenter, at: string): void {
+  db.prepare(
+    `
+    INSERT INTO organization_workcenters (
+      workcenter_id, label, description, lifecycle, capability_ids_json, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+  `,
+  ).run(
+    workcenter.id,
+    workcenter.label,
+    workcenter.description,
+    workcenter.lifecycle,
+    JSON.stringify(workcenter.capabilityIds),
+    at,
+    at,
+  );
+}
+
+function updateWorkcenterRow(db: SqliteDatabase, workcenter: Workcenter, at: string): void {
+  db.prepare(
+    `
+    UPDATE organization_workcenters
+    SET label = ?, description = ?, lifecycle = ?, capability_ids_json = ?, updated_at = ?
+    WHERE workcenter_id = ?
+  `,
+  ).run(
+    workcenter.label,
+    workcenter.description,
+    workcenter.lifecycle,
+    JSON.stringify(workcenter.capabilityIds),
+    at,
+    workcenter.id,
+  );
+}
+
+function insertMachineRow(db: SqliteDatabase, machine: Machine, at: string): void {
+  if (!machine.workcenterId) {
+    throw new Error("invalid_workcenter");
+  }
+  db.prepare(
+    `
+    INSERT INTO organization_machines (
+      machine_id, label, description, workcenter_id, lifecycle, capability_ids_json, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `,
+  ).run(
+    machine.id,
+    machine.label,
+    machine.description,
+    machine.workcenterId,
+    machine.lifecycle,
+    JSON.stringify(machine.capabilityIds),
+    at,
+    at,
+  );
+}
+
+function updateMachineRow(db: SqliteDatabase, machine: Machine, at: string): void {
+  if (!machine.workcenterId) {
+    throw new Error("invalid_workcenter");
+  }
+  db.prepare(
+    `
+    UPDATE organization_machines
+    SET label = ?, description = ?, workcenter_id = ?, lifecycle = ?, capability_ids_json = ?, updated_at = ?
+    WHERE machine_id = ?
+  `,
+  ).run(
+    machine.label,
+    machine.description,
+    machine.workcenterId,
+    machine.lifecycle,
+    JSON.stringify(machine.capabilityIds),
+    at,
+    machine.id,
+  );
+}
+
+function providerHistoryContext(db: SqliteDatabase, providerId: string): {
+  referencedByHistory: boolean;
+  hasOpenAssignment: boolean;
+} {
+  const rows = db
+    .prepare(
+      `
+      SELECT status
+      FROM execution_tasks
+      WHERE assigned_provider_id = ?
+    `,
+    )
+    .all(providerId) as Array<{ status: string }>;
+  return {
+    referencedByHistory: rows.length > 0,
+    hasOpenAssignment: rows.some(
+      (row) => row.status === "PLANNED" || row.status === "IN_PROGRESS",
+    ),
   };
 }

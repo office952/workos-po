@@ -18,6 +18,9 @@ export type AppRoute =
   | { name: "admin-products" }
   | { name: "admin-people" }
   | { name: "admin-person"; personId: string }
+  | { name: "admin-workcenters" }
+  | { name: "admin-workcenter"; workcenterId: string }
+  | { name: "admin-machine"; workcenterId: string; machineId: string }
   | { name: "foundation" }
   | { name: "unknown"; path: string };
 
@@ -87,6 +90,26 @@ export function parseAppRoute(pathname: string): AppRoute {
   if (adminPerson) {
     return { name: "admin-person", personId: decodeURIComponent(adminPerson[1]) };
   }
+  if (pathname === "/admin/workcenters") {
+    return { name: "admin-workcenters" };
+  }
+  const adminMachine = pathname.match(
+    /^\/admin\/workcenters\/([^/]+)\/machines\/([^/]+)$/,
+  );
+  if (adminMachine) {
+    return {
+      name: "admin-machine",
+      workcenterId: decodeURIComponent(adminMachine[1]),
+      machineId: decodeURIComponent(adminMachine[2]),
+    };
+  }
+  const adminWorkcenter = pathname.match(/^\/admin\/workcenters\/([^/]+)$/);
+  if (adminWorkcenter) {
+    return {
+      name: "admin-workcenter",
+      workcenterId: decodeURIComponent(adminWorkcenter[1]),
+    };
+  }
   if (pathname === "/foundation") {
     return { name: "foundation" };
   }
@@ -140,6 +163,18 @@ export function adminPeopleHref(): string {
 
 export function adminPersonHref(personId: string): string {
   return `/admin/people/${encodeURIComponent(personId)}`;
+}
+
+export function adminWorkcentersHref(): string {
+  return "/admin/workcenters";
+}
+
+export function adminWorkcenterHref(workcenterId: string): string {
+  return `/admin/workcenters/${encodeURIComponent(workcenterId)}`;
+}
+
+export function adminMachineHref(workcenterId: string, machineId: string): string {
+  return `${adminWorkcenterHref(workcenterId)}/machines/${encodeURIComponent(machineId)}`;
 }
 
 export function atelierHref(context: { jobId?: string | null } = {}): string {

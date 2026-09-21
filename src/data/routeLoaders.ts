@@ -17,6 +17,7 @@ import { presentResourcesAdmin } from "../adapters/resourcesAdapter";
 import { presentFormulasAdmin } from "../adapters/formulasAdapter";
 import { presentTechnicalSettingsAdmin } from "../adapters/technicalSettingsAdapter";
 import { presentPeopleAdmin } from "../adapters/peopleAdapter";
+import { presentWorkcentersAdmin } from "../adapters/workcentersAdapter";
 import { presentProductEnablementAdmin } from "../adapters/productEnablementAdapter";
 import { fetchProductCatalog } from "../api/catalog";
 import { fetchCustomer, fetchCustomers } from "../api/customers";
@@ -32,6 +33,7 @@ import { fetchResourcesAdmin } from "../api/resources";
 import { fetchFormulas } from "../api/formulas";
 import { fetchTechnicalSettings } from "../api/technicalSettings";
 import { fetchPeopleAdmin } from "../api/people";
+import { fetchWorkcentersAdmin } from "../api/workcenters";
 import { fetchProductEnablement } from "../api/productEnablement";
 import { fetchSeller } from "../api/seller";
 
@@ -185,6 +187,14 @@ export async function loadProductEnablementAdmin() {
 
 export async function loadPeopleAdmin() {
   const presented = presentPeopleAdmin(await fetchPeopleAdmin());
+  if (!presented) {
+    throw new Error("unpresentable");
+  }
+  return presented;
+}
+
+export async function loadWorkcentersAdmin() {
+  const presented = presentWorkcentersAdmin(await fetchWorkcentersAdmin());
   if (!presented) {
     throw new Error("unpresentable");
   }
