@@ -1,6 +1,12 @@
-export type AdministrationRailId = "commercial" | "resources" | "technical" | "formulas";
+export type AdministrationRailId =
+  | "commercial"
+  | "resources"
+  | "technical"
+  | "formulas"
+  | "products";
 
 const ADMINISTRATION_RAIL = [
+  { id: "products", label: "Produse oferite", href: "/admin/products" },
   { id: "commercial", label: "Valori comerciale", href: "/admin/commercial" },
   { id: "technical", label: "Setări tehnice", href: "/admin/technical" },
   { id: "formulas", label: "Formule de calcul", href: "/admin/formulas" },

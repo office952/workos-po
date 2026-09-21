@@ -45,6 +45,7 @@ import { CommercialAdminPage } from "./surfaces/CommercialAdminPage";
 import { ResourcesAdminPage } from "./surfaces/ResourcesAdminPage";
 import { FormulasAdminPage } from "./surfaces/FormulasAdminPage";
 import { TechnicalAdminPage } from "./surfaces/TechnicalAdminPage";
+import { ProductEnablementAdminPage } from "./surfaces/ProductEnablementAdminPage";
 
 function syncCanonicalLocation(): AppLocation {
   const next = canonicalLocation(window.location.pathname, window.location.search);
@@ -112,6 +113,8 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
       return <TechnicalAdminPage />;
     case "admin-formulas":
       return <FormulasAdminPage />;
+    case "admin-products":
+      return <ProductEnablementAdminPage />;
     case "foundation":
       return <FoundationProofPage />;
     case "unknown":

@@ -163,6 +163,15 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         title: "Formule de calcul",
         lead: "Aceste formule sunt folosite la calculul tehnic al lucrărilor noi. Lucrările înghețate rămân neschimbate.",
       };
+    case "admin-products":
+      return {
+        contextLabel: "Administrare",
+        currentHref: "/admin/products",
+        workspace: "admin",
+        eyebrow: "Administrare",
+        title: "Produse oferite",
+        lead: "Alege ce produse apar în catalogul pentru lucrări noi. Ofertele și lucrările vechi rămân deschise.",
+      };
     case "foundation":
       return {
         contextLabel: "Fundație",

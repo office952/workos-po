@@ -938,4 +938,42 @@ describe("ConfiguratorPage", () => {
     expect(screen.queryByTestId("cost-completeness-issues")).not.toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /Preț net negociat manual/ })).toBeEnabled();
   });
+
+  it("states that a disabled product is unavailable for new work", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.endsWith("/preview")) {
+          return jsonResponse(
+            {
+              error: "product_not_enabled",
+              reasons: [
+                "Acest produs nu este oferit pentru lucrări noi. Ofertele și lucrările existente rămân deschise.",
+              ],
+            },
+            409,
+          );
+        }
+        if (url.endsWith("/seller")) {
+          return jsonResponse({ configured: true, seller: { legalName: "Isolated" } });
+        }
+        return jsonResponse({});
+      }),
+    );
+    window.history.replaceState(
+      null,
+      "",
+      `/configurator?product=${ACM_PRODUCT}`,
+    );
+    renderConfigurator({ productCode: ACM_PRODUCT, customerId: null, requestId: null });
+    expect(await screen.findByText("Produsul nu este oferit")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Acest produs nu este oferit pentru lucrări noi. Ofertele și lucrările existente rămân deschise.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("product_not_enabled")).not.toBeInTheDocument();
+    expect(screen.queryByText(ACM_PRODUCT)).not.toBeInTheDocument();
+  });
 });

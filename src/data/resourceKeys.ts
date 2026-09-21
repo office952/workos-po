@@ -24,4 +24,5 @@ export const resourceKeys = {
   commercialAdmin: () => "commercial-admin",
   technicalAdmin: () => "technical-admin",
   formulasAdmin: () => "formulas-admin",
+  productEnablementAdmin: () => "product-enablement-admin",
 } as const;
