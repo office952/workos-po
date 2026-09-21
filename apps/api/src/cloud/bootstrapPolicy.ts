@@ -6,6 +6,7 @@ import {
 import type { SqliteDatabase } from "../persistence/sqlite.js";
 import { bootstrapProductSystemDisplayStore } from "../productSystem/store.js";
 import { ensureCostEvidence } from "../resources/store.js";
+import { ensureFormulaStarters } from "../product/formulaStore.js";
 import { ensureTechnicalSettingStarters } from "../product/technicalSettingStore.js";
 import { applyOperationalSkillFoundation, ensureTrustedWorkforce } from "../people/store.js";
 import type { BootstrapPolicy } from "./controlPlane.js";
@@ -79,11 +80,13 @@ export function applyOperationalBootstrap(
   if (policy === "NEW_ORGANIZATION" || policy === "SYNTHETIC_TEST") {
     ensureCostEvidence(db, policy);
     ensureTechnicalSettingStarters(db, policy);
+    ensureFormulaStarters(db, policy);
     applyOperationalSkillFoundation(db);
     return;
   }
   ensureCostEvidence(db, "SINGLE_PLANE");
   ensureTechnicalSettingStarters(db, "SINGLE_PLANE");
+  ensureFormulaStarters(db, "SINGLE_PLANE");
   if (!process.env.VITEST) {
     ensureTrustedWorkforce(db);
   }

@@ -4,6 +4,11 @@ import type {
 } from "./componentContract.js";
 import { getComponentContract } from "./componentRegistry.js";
 import { noteEvaluateProductComponents } from "./evaluationTrace.js";
+import {
+  formulasForTypeFromResolved,
+  starterResolvedFormulas,
+  type ResolvedFormulaVersion,
+} from "./resolveFormulas.js";
 import { listTypeTechnicalSettings, type ComponentTechnicalSettingDefinition } from "./technicalSettings.js";
 import type {
   ComponentTypeId,
@@ -38,9 +43,13 @@ export function evaluateProductComponents(input: {
   technicalSettingsForType?: (
     typeId: ComponentTypeId,
   ) => readonly ComponentTechnicalSettingDefinition[];
+  formulaVersionsForType?: (typeId: ComponentTypeId) => readonly ResolvedFormulaVersion[];
 }): readonly ComponentEvaluation[] {
   noteEvaluateProductComponents();
   const settingsForType = input.technicalSettingsForType ?? listTypeTechnicalSettings;
+  const formulasForType =
+    input.formulaVersionsForType ??
+    ((typeId: ComponentTypeId) => formulasForTypeFromResolved(typeId, starterResolvedFormulas()));
   return input.template.components
     .filter((component) => input.selectedComponentIds.includes(component.id))
     .map((component) => ({
@@ -50,6 +59,7 @@ export function evaluateProductComponents(input: {
         measurements: input.measurements,
         shared: sharedContextFor(component, input.measurements),
         technicalSettings: settingsForType(component.typeId),
+        formulaVersions: formulasForType(component.typeId),
       }),
     }));
 }

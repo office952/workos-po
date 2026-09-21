@@ -70,6 +70,10 @@ import {
   type TechnicalSettingDraftValue,
   type PersistedTechnicalSettingVersion,
   type TechnicalSettingResolution,
+  type FormulaActor,
+  type FormulaDraftExpression,
+  type PersistedFormulaVersion,
+  type FormulaResolution,
   type OrderSnapshot,
   type QuoteAcceptanceDecision,
   type QuoteSnapshot,
@@ -176,6 +180,12 @@ import {
   type TechnicalSettingSaveResult,
 } from "../product/technicalSettingStore.js";
 import {
+  listFormulaVersions,
+  persistFormulaSave,
+  resolveStoredFormulas,
+  type FormulaSaveResult,
+} from "../product/formulaStore.js";
+import {
   getAcceptedProductionSnapshot,
   getAcceptedProductionSnapshotByOrder,
   insertAcceptedProductionSnapshot,
@@ -254,6 +264,12 @@ export type ProductSystemRuntime = {
     drafts: readonly TechnicalSettingDraftValue[],
     actor: TechnicalSettingActor,
   ): TechnicalSettingSaveResult;
+  listFormulaVersions(): PersistedFormulaVersion[];
+  resolveFormulas(): FormulaResolution;
+  saveFormulas(
+    drafts: readonly FormulaDraftExpression[],
+    actor: FormulaActor,
+  ): FormulaSaveResult;
   persistQuoteSnapshot(snapshot: QuoteSnapshot): {
     created: boolean;
     snapshot: QuoteSnapshot;
@@ -628,6 +644,15 @@ export function createProductSystemRuntimeFromOpenDb(
     },
     saveTechnicalSettings(drafts, actor) {
       return persistTechnicalSettingSave(db, drafts, actor);
+    },
+    listFormulaVersions() {
+      return listFormulaVersions(db);
+    },
+    resolveFormulas() {
+      return resolveStoredFormulas(db);
+    },
+    saveFormulas(drafts, actor) {
+      return persistFormulaSave(db, drafts, actor);
     },
     persistQuoteSnapshot(snapshot) {
       return insertQuoteSnapshot(db, snapshot);

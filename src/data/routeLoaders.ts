@@ -14,6 +14,7 @@ import { presentAcceptanceId, presentOrderSnapshotId, presentQuoteList } from ".
 import { presentRequestDetail, presentRequestList } from "../adapters/requestAdapter";
 import { presentCommercialPolicyAdmin } from "../adapters/commercialPolicyAdapter";
 import { presentResourcesAdmin } from "../adapters/resourcesAdapter";
+import { presentFormulasAdmin } from "../adapters/formulasAdapter";
 import { presentTechnicalSettingsAdmin } from "../adapters/technicalSettingsAdapter";
 import { fetchProductCatalog } from "../api/catalog";
 import { fetchCustomer, fetchCustomers } from "../api/customers";
@@ -26,6 +27,7 @@ import { fetchQuoteOverview } from "../api/quotes";
 import { fetchRequest, fetchRequests } from "../api/requests";
 import { fetchCommercialPolicy } from "../api/commercialPolicy";
 import { fetchResourcesAdmin } from "../api/resources";
+import { fetchFormulas } from "../api/formulas";
 import { fetchTechnicalSettings } from "../api/technicalSettings";
 import { fetchSeller } from "../api/seller";
 
@@ -155,6 +157,14 @@ export async function loadCommercialPolicyAdmin() {
 
 export async function loadTechnicalSettingsAdmin() {
   const presented = presentTechnicalSettingsAdmin(await fetchTechnicalSettings());
+  if (!presented) {
+    throw new Error("unpresentable");
+  }
+  return presented;
+}
+
+export async function loadFormulasAdmin() {
+  const presented = presentFormulasAdmin(await fetchFormulas());
   if (!presented) {
     throw new Error("unpresentable");
   }

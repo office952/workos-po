@@ -42,10 +42,10 @@ PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
 PRIMARY_USER_JOURNEY_PROOF_DATE = 2026-09-20
 
 NEXT_PROGRAM_PRIORITY = WORKOS_CONFIGURATION_FIRST_FOUNDATION_V1
-NEXT_PROGRAM_STATUS = CF2_CF3_COMPLETE
+NEXT_PROGRAM_STATUS = CF4_IMPLEMENTED_IN_REVIEW
 NEXT_PROGRAM_STARTED = YES
 CONFIGURATION_FIRST_CANON = docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md
-CONFIGURATION_FIRST_IMPLEMENTATION = CF1_COMPLETE_AND_CF2_CF3_COMPLETE
+CONFIGURATION_FIRST_IMPLEMENTATION = CF1_COMPLETE_AND_CF2_CF3_COMPLETE_AND_CF4_IMPLEMENTED_IN_REVIEW
 CF1_COMMERCIAL_VERTICAL_V1 = COMPLETE
 CF1_OWNER_ACCEPTED_IMPLEMENTATION = YES
 CF1_INTEGRATED_ON_MAIN = YES
@@ -60,7 +60,10 @@ CF2_CF3_INTEGRATED_ON_MAIN = YES
 CF2_CF3_MERGE = COMPLETE
 CF2_CF3_MERGE_COMMIT = 8e573617d0db8378961cce3dc6b3cbb74691511a
 PR_10 = MERGED
-CF4 = NOT_STARTED
+CF4 = IMPLEMENTED_IN_REVIEW
+CF4_NARROW_CONFIGURABLE_FORMULA_FOUNDATION_V1 = IMPLEMENTED_IN_REVIEW
+CF4_OWNER_ACCEPTED_IMPLEMENTATION = NO
+CF4_INTEGRATED_ON_MAIN = NO
 CF5 = NOT_STARTED
 NEXT_WAVE_AUTHORIZED = NO
 FORMULA_CONFIGURABILITY_FULLY_DELIVERED = NO
@@ -220,8 +223,8 @@ UNBOUNDED_NO_CODE_ERP_BUILDER = NO
 NO_UNIVERSAL_SCOPE_PRECEDENCE = YES
 HISTORICAL_REWRITE = NO
 CUSTOMER_WITHOUT_CURSOR = REQUIRED
-IMPLEMENTATION_AUTHORIZED = CF1_COMPLETE_AND_CF2_CF3_COMPLETE
-DB_IMPLEMENTATION_AUTHORIZED = COMMERCIAL_POLICY_VERSIONS_AND_TECHNICAL_SETTING_VERSIONS
+IMPLEMENTATION_AUTHORIZED = CF1_COMPLETE_AND_CF2_CF3_COMPLETE_AND_CF4_IMPLEMENTED_IN_REVIEW
+DB_IMPLEMENTATION_AUTHORIZED = COMMERCIAL_POLICY_VERSIONS_AND_TECHNICAL_SETTING_VERSIONS_AND_FORMULA_VERSIONS
 CF1_OWNER_ACCEPTED_IMPLEMENTATION = YES
 CF2_CF3_TECHNICAL_CONFIGURATION_V1 = COMPLETE
 CF2_CF3_OWNER_ACCEPTED_IMPLEMENTATION = YES
@@ -238,7 +241,7 @@ NEXT_WAVE_AUTHORIZED = NO
 | CF1 | CF1_COMMERCIAL_VERTICAL_V1: organization commercial defaults, quote-specific commercial terms, explicit pricing method, one additive `commercial_policy_versions` table, narrow resolver, `/admin/commercial`, engine consumption, snapshot provenance, manual product pricing | COMPLETE | Owner-accepted and merged on main (`ec899ba`, PR #8) |
 | CF2 | Narrow technical resolver / audit / snapshot provenance for three LIGHTING_FRONT_LED settings | COMPLETE | Owner-accepted and merged on main (`8e57361`, PR #10) |
 | CF3 | `/admin/technical` for the same three LIGHTING_FRONT_LED settings | COMPLETE | Owner-accepted and merged on main (`8e57361`, PR #10) |
-| CF4 | Safe configurable formula foundation + administration | NOT_STARTED | later Owner GO |
+| CF4 | Narrow configurable formula foundation + `/admin/formulas` for three LIGHTING_FRONT_LED derived results | IMPLEMENTED_IN_REVIEW | this branch; Owner acceptance and merge are not complete |
 | CF5 | Migrate remaining source-held technical settings / business values | NOT_STARTED | later Owner GO |
 
 ```text
@@ -256,9 +259,11 @@ ACCEPTANCE_TARGETS_EXACT_SNAPSHOT = YES
 
 CF1 was previously recorded as `IMPLEMENTED_IN_REVIEW` while on the review branch. That marker was branch-local evidence, not Owner acceptance. Owner acceptance and merge are now complete.
 
-CF2+CF3 technical configuration V1 is complete: organization-local versions for `ledPitchMm`, `ledModulePowerW`, and `psuReservePercent` only. Owner acceptance and merge on main are complete (`8e57361`, PR #10). CF4, broad CF5, and remaining technical values are not started.
+CF2+CF3 technical configuration V1 is complete: organization-local versions for `ledPitchMm`, `ledModulePowerW`, and `psuReservePercent` only. Owner acceptance and merge on main are complete (`8e57361`, PR #10).
 
-CF1 does not migrate technical settings. CF2+CF3 migrates only the three LIGHTING_FRONT_LED settings. Neither wave implements a formula engine or authorizes real Cloud/DB access.
+CF4 narrow configurable formula foundation V1 is implemented in review on this branch: three LIGHTING_FRONT_LED derived formulas only (`ledModuleQuantity`, `totalLedLoadW`, `requiredPsuCapacityW`), one domain evaluator, typed structured AST, organization-local formula versions, migration `031_formula_versions.sql`, and `/admin/formulas`. `selectPsuUnits` remains code-owned. CF4 is not Owner-accepted and is not integrated on main. CF5, Letters Product Truth, and the next wave remain unauthorized.
+
+CF1 does not migrate technical settings. CF2+CF3 migrates only the three LIGHTING_FRONT_LED settings. CF4 does not migrate PSU selection, ACM, Letters Product Truth, or remaining source-held values. Real Cloud/DB access remains unauthorized.
 
 After CF5, resume:
 

@@ -6,6 +6,8 @@ import type {
   ComponentCalculationResult,
   ComponentInspectionLine,
 } from "./componentContract.js";
+import { evaluateFormulaDag, formulaResultById } from "./evaluateFormulas.js";
+import { formulaDefinitionsForType } from "./formulaDefinition.js";
 import { selectPsuUnits, type SelectedPsuUnit } from "./psuSelection.js";
 import {
   LED_MODULE_POWER_SETTING_ID,
@@ -33,6 +35,8 @@ export const LIGHTING_MISSING_PSU_CAPACITY =
   "Capacitatea minimă a sursei nu poate fi calculată: sarcina LED nu este cunoscută";
 export const LIGHTING_MISSING_PSU_SELECTION =
   "Selecția fizică a sursei nu este disponibilă: catalogul de PSU nu a produs o combinație";
+export const LIGHTING_MISSING_FORMULAS =
+  "Formulele de calcul pentru iluminare lipsesc sau sunt invalide.";
 
 export const LIGHTING_CALCULATION_INPUTS: readonly ComponentInspectionLine[] = [
   {
@@ -99,6 +103,7 @@ function lightingResult(
   quantities: ComponentCalculationResult["quantities"],
   requirements: readonly ResourceRequirement[],
   unavailable: readonly string[],
+  formulaTraces?: ComponentCalculationResult["formulaTraces"],
 ): ComponentCalculationResult {
   return {
     typeId: "LIGHTING_FRONT_LED",
@@ -107,6 +112,7 @@ function lightingResult(
     quantities,
     requirements,
     unavailable: [...unavailable],
+    ...(formulaTraces ? { formulaTraces } : {}),
   };
 }
 
@@ -148,6 +154,17 @@ export const lightingFrontLedContract: ComponentCalculationContract = {
       throw new Error("lighting settings passed gap check without resolved values");
     }
 
+    const requiredFormulas = formulaDefinitionsForType("LIGHTING_FRONT_LED");
+    const formulaVersions = input.formulaVersions ?? [];
+    const hasAllFormulas = requiredFormulas.every((definition) =>
+      formulaVersions.some(
+        (item) => item.formulaId === definition.formulaId && item.status === "ACTIVE",
+      ),
+    );
+    if (!hasAllFormulas) {
+      return lightingResult("UNAVAILABLE", [], [], [LIGHTING_MISSING_FORMULAS]);
+    }
+
     const perimeter = input.measurements.find(
       (item) => item.fieldId === VOLUME_PERIMETER_FIELD && item.confirmed,
     );
@@ -155,26 +172,45 @@ export const lightingFrontLedContract: ComponentCalculationContract = {
       return lightingResult("PARTIAL", [], [], [LIGHTING_MISSING_LED_GEOMETRY]);
     }
 
-    const moduleQuantity = ledModuleQuantityFromPerimeter(perimeter.value, pitchMm);
-    const totalLedLoadW = moduleQuantity * modulePowerW;
-    const requiredCapacityW = requiredPsuCapacityW(totalLedLoadW, reservePercent);
-    const selected = selectPsuUnits(requiredCapacityW);
+    const evaluated = evaluateFormulaDag({
+      formulas: formulaVersions.filter((item) =>
+        requiredFormulas.some((definition) => definition.formulaId === item.formulaId),
+      ),
+      technicalSettings: input.technicalSettings,
+      measurements: input.measurements,
+    });
+    if (!evaluated.ok) {
+      return lightingResult("UNAVAILABLE", [], [], [evaluated.reason]);
+    }
+    const moduleQuantity = formulaResultById(evaluated, "ledModuleQuantity");
+    const totalLedLoad = formulaResultById(evaluated, "totalLedLoadW");
+    const requiredCapacity = formulaResultById(evaluated, "requiredPsuCapacityW");
+    if (!moduleQuantity || !totalLedLoad || !requiredCapacity) {
+      return lightingResult("UNAVAILABLE", [], [], [LIGHTING_MISSING_FORMULAS]);
+    }
+
+    const selected = selectPsuUnits(requiredCapacity.value);
     const quantities = lightingQuantities(
-      moduleQuantity,
-      totalLedLoadW,
-      requiredCapacityW,
+      moduleQuantity.value,
+      totalLedLoad.value,
+      requiredCapacity.value,
       selected,
     );
     const moduleRequirement: ResourceRequirement = {
       componentId: LIGHTING_COMPONENT_ID,
       resourceId: MAT_LED_MODULE_ID,
-      quantity: moduleQuantity,
+      quantity: moduleQuantity.value,
       unit: "buc",
     };
+    const formulaTraces = evaluated.results.map((item) => item.trace);
     if (selected.length === 0) {
-      return lightingResult("PARTIAL", quantities, [moduleRequirement], [
-        LIGHTING_MISSING_PSU_SELECTION,
-      ]);
+      return lightingResult(
+        "PARTIAL",
+        quantities,
+        [moduleRequirement],
+        [LIGHTING_MISSING_PSU_SELECTION],
+        formulaTraces,
+      );
     }
 
     return lightingResult(
@@ -190,6 +226,7 @@ export const lightingFrontLedContract: ComponentCalculationContract = {
         })),
       ],
       [],
+      formulaTraces,
     );
   },
 };

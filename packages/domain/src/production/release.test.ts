@@ -232,6 +232,83 @@ describe("production release from order", () => {
     expect(record.tasks.every((task) => task.status === "PLANNED")).toBe(true);
   });
 
+  it("preserves frozen formula traces from quote through order and release", () => {
+    const definition = compileDefinition(
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      {
+        templateCode: CANONICAL_PRODUCT_CODE,
+        values: readyValues,
+      },
+    );
+    const truth = confirmReviewedDefinition(definition, definition.reviewId);
+    if ("ok" in truth) {
+      throw new Error("expected confirmed truth");
+    }
+    const aggregate = compileAggregate(
+      truth,
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      seededDisplayLabelCatalog(),
+    );
+    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+    const eic = compileEic(aggregate, composition);
+    const quote = freezeQuoteSnapshot(
+      truth,
+      aggregate,
+      composition,
+      eic,
+      projectCommercialPrice(eic),
+      {
+        createdAt: "2026-09-21T00:00:00.000Z",
+        formulas: [
+          {
+            formulaId: "LIGHTING_FRONT_LED.ledModuleQuantity",
+            version: 2,
+            source: "ORGANIZATION",
+            scope: "ORGANIZATION",
+            effectiveFrom: "2026-09-21T00:00:00.000Z",
+            astIdentity: "ast1:v2",
+            resultId: "ledModuleQuantity",
+            resultValue: 125,
+            resultUnit: "buc",
+            resultValueKind: "COUNT",
+            explanation: "rotunjire în sus",
+            resolvedReferences: [],
+          },
+        ],
+      },
+    );
+    if (!quote.ok) {
+      throw new Error("expected quote");
+    }
+    const accepted = recordQuoteAcceptance(quote.snapshot, {
+      acceptedAt: "2026-09-21T01:00:00.000Z",
+    });
+    if (!accepted.ok) {
+      throw new Error("expected acceptance");
+    }
+    const order = freezeOrderSnapshot(quote.snapshot, accepted.decision, {
+      createdAt: "2026-09-21T02:00:00.000Z",
+    });
+    if (!order.ok) {
+      throw new Error("expected order");
+    }
+    const released = freezeProductionReleaseFromOrder(order.snapshot, {
+      createdAt: "2026-09-21T03:00:00.000Z",
+    });
+    expect(released.ok).toBe(true);
+    if (!released.ok) {
+      return;
+    }
+    expect(released.snapshot.usedFormulas?.[0]).toMatchObject({
+      version: 2,
+      source: "ORGANIZATION",
+      resultId: "ledModuleQuantity",
+    });
+    expect(order.snapshot.productionInput.usedFormulas?.[0]?.version).toBe(2);
+  });
+
   it("refuses Production Release from Order v2", () => {
     const { order } = goldenOrder();
     const refused = freezeProductionReleaseFromOrder({

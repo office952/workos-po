@@ -5,6 +5,7 @@ import {
   isFieldVisible,
   selectedComponentIds,
 } from "./compiler.js";
+import type { ResolvedFormulaVersion } from "./resolveFormulas.js";
 import type { ResolvedTechnicalSetting } from "./resolveTechnicalSettings.js";
 import { listTypeTechnicalSettings } from "./technicalSettings.js";
 import type {
@@ -32,6 +33,14 @@ export type TechnicalSettingSnapshot = {
   readonly unit?: string;
   readonly source?: string;
   readonly version?: number;
+};
+
+export type FormulaReviewSnapshot = {
+  readonly formulaId: string;
+  readonly version: number;
+  readonly source: string;
+  readonly astIdentity: string;
+  readonly resultId: string;
 };
 
 export type ConfigurationProductIdentity = {
@@ -110,13 +119,33 @@ export function usedTechnicalSettingsSnapshot(
   );
 }
 
+export function usedFormulasSnapshot(
+  resolved?: readonly ResolvedFormulaVersion[],
+): readonly FormulaReviewSnapshot[] {
+  if (!resolved) {
+    return [];
+  }
+  return resolved
+    .slice()
+    .sort((left, right) => left.formulaId.localeCompare(right.formulaId))
+    .map((item) => ({
+      formulaId: item.formulaId,
+      version: item.version,
+      source: item.source,
+      astIdentity: item.astIdentity,
+      resultId: item.resultId,
+    }));
+}
+
 export function configurationReviewId(
   definition: ProductDefinition,
   settings: readonly TechnicalSettingSnapshot[],
+  formulas: readonly FormulaReviewSnapshot[] = [],
 ): string {
   const canonical = JSON.stringify({
     definitionReviewId: definitionReviewId(definition),
     settings,
+    formulas,
   });
   return `${CONFIGURATION_REVIEW_ID_PREFIX}${fnv1aHex(canonical)}`;
 }
@@ -125,10 +154,12 @@ export function configurationReviewIdFor(
   template: ProductTemplate,
   definition: ProductDefinition,
   resolved?: readonly ResolvedTechnicalSetting[],
+  formulas?: readonly ResolvedFormulaVersion[],
 ): string {
   return configurationReviewId(
     definition,
     usedTechnicalSettingsSnapshot(template, definition.selectedComponentIds, resolved),
+    usedFormulasSnapshot(formulas),
   );
 }
 
@@ -184,6 +215,7 @@ export function projectConfigurationPreview(
   schema: FormSchema,
   draft: DraftConfiguration,
   resolved?: readonly ResolvedTechnicalSetting[],
+  formulas?: readonly ResolvedFormulaVersion[],
 ): ConfigurationPreview {
   const definition = compileDefinition(template, schema, draft);
   const selectedIds = selectedComponentIds(template, draft.values);
@@ -203,7 +235,7 @@ export function projectConfigurationPreview(
     missing: definition.missing,
     reviewId:
       definition.readiness === "ready"
-        ? configurationReviewIdFor(template, definition, resolved)
+        ? configurationReviewIdFor(template, definition, resolved, formulas)
         : null,
   };
 }
@@ -215,6 +247,7 @@ export function confirmReviewedDraft(
   reviewId: string,
   confirmedAt = new Date().toISOString(),
   resolved?: readonly ResolvedTechnicalSetting[],
+  formulas?: readonly ResolvedFormulaVersion[],
 ):
   | ProductTruth
   | {
@@ -223,7 +256,7 @@ export function confirmReviewedDraft(
       definition: ProductDefinition;
     } {
   const definition = compileDefinition(template, schema, draft);
-  if (configurationReviewIdFor(template, definition, resolved) !== reviewId) {
+  if (configurationReviewIdFor(template, definition, resolved, formulas) !== reviewId) {
     return { ok: false, reason: "review_mismatch", definition };
   }
   return confirmReviewedDefinition(definition, definition.reviewId, confirmedAt);

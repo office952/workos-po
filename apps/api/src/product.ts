@@ -3,6 +3,7 @@ import {
   compileDefinition,
   confirmReviewedDraft,
   frozenTechnicalSettingsFromResolved,
+  formulasForTypeFromResolved,
   projectConfigurationPreview,
   technicalSettingsLookupFromResolved,
   projectCommercialExperience,
@@ -423,11 +424,22 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         409,
       );
     }
+    const formulas = runtime.resolveFormulas();
+    if (!formulas.ok) {
+      return c.json(
+        {
+          error: "formulas_unavailable",
+          reasons: [formulas.reason],
+        },
+        409,
+      );
+    }
     const preview = projectConfigurationPreview(
       template,
       formSchema,
       readDraft(productCode, body),
       technical.settings,
+      formulas.formulas,
     );
     const previewPolicy = runtime.resolveCommercialPolicy();
     const installationProjection = readInstallationProjection(
@@ -568,6 +580,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         technicalSettings: frozenTechnicalSettingsFromResolved(
           compiled.resolvedTechnicalSettings,
         ),
+        formulas: compiled.formulaTraces,
       },
     );
     const stored = runtime.acceptProductionSnapshot(frozen);
@@ -722,6 +735,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         technicalSettings: frozenTechnicalSettingsFromResolved(
           compiled.resolvedTechnicalSettings,
         ),
+        formulas: compiled.formulaTraces,
       },
     );
     if (!frozen.ok) {
@@ -1179,6 +1193,17 @@ function compileAcceptedProduct(
       },
     };
   }
+  const formulas = runtime.resolveFormulas();
+  if (!formulas.ok) {
+    return {
+      ok: false as const,
+      status: 409 as const,
+      body: {
+        error: "formulas_unavailable",
+        reasons: [formulas.reason],
+      },
+    };
+  }
 
   const reviewed = readReviewedDefinition(body);
   const draft = readReviewedDraft(body);
@@ -1198,6 +1223,7 @@ function compileAcceptedProduct(
           draft.reviewId,
           undefined,
           technical.settings,
+          formulas.formulas,
         )
       : {
           ok: false as const,
@@ -1218,11 +1244,14 @@ function compileAcceptedProduct(
     labels: runtime.labels(),
     costEvidenceRows: runtime.listActiveCostEvidence(),
     technicalSettingsForType: technicalSettingsLookupFromResolved(technical.settings),
+    formulaVersionsForType: (typeId) =>
+      formulasForTypeFromResolved(typeId, formulas.formulas),
   });
   return {
     ok: true as const,
     ...compiled,
     resolvedTechnicalSettings: technical.settings,
+    resolvedFormulas: formulas.formulas,
   };
 }
 

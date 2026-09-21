@@ -12,8 +12,10 @@ import {
   configurationReviewIdFor,
   confirmReviewedDraft,
   projectConfigurationPreview,
+  usedFormulasSnapshot,
   usedTechnicalSettingsSnapshot,
 } from "./configurationPreview.js";
+import { starterResolvedFormulas } from "./resolveFormulas.js";
 import { compileDefinition } from "./compiler.js";
 import {
   CANONICAL_PRODUCT_CODE,
@@ -155,5 +157,52 @@ describe("configuration preview transport", () => {
       configurationReviewId(definition, mutated),
     );
     expect("ok" in staleSettings && staleSettings.reason).toBe("review_mismatch");
+  });
+
+  it("includes formula identity in configuration review and rejects a later version", () => {
+    const definition = compileDefinition(
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      lettersDraft(lettersReadyValues),
+    );
+    const formulas = starterResolvedFormulas();
+    const reviewId = configurationReviewId(
+      definition,
+      usedTechnicalSettingsSnapshot(frontlitPlexiAl06Template, definition.selectedComponentIds),
+      usedFormulasSnapshot(formulas),
+    );
+    expect(reviewId).toMatch(/^crv1:/);
+    expect(reviewId).not.toBe(configurationReviewIdFor(frontlitPlexiAl06Template, definition));
+    const confirmed = confirmReviewedDraft(
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      lettersDraft(lettersReadyValues),
+      reviewId,
+      "2026-09-21T00:00:00.000Z",
+      undefined,
+      formulas,
+    );
+    expect("status" in confirmed && confirmed.status).toBe("CONFIRMED_IN_RUNTIME");
+
+    const mutated = formulas.map((item, index) =>
+      index === 0 ? { ...item, version: 2, source: "ORGANIZATION" as const } : item,
+    );
+    expect(
+      configurationReviewId(
+        definition,
+        usedTechnicalSettingsSnapshot(frontlitPlexiAl06Template, definition.selectedComponentIds),
+        usedFormulasSnapshot(mutated),
+      ),
+    ).not.toBe(reviewId);
+    const stale = confirmReviewedDraft(
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      lettersDraft(lettersReadyValues),
+      reviewId,
+      "2026-09-21T00:00:00.000Z",
+      undefined,
+      mutated,
+    );
+    expect("ok" in stale && stale.reason).toBe("review_mismatch");
   });
 });

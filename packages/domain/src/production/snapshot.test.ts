@@ -280,4 +280,40 @@ describe("accepted production snapshot", () => {
     );
     expect(snapshot.usedTechnicalSettings[0]?.version).toBeUndefined();
   });
+
+  it("keeps old snapshots readable without usedFormulas and freezes new formula traces", () => {
+    const { snapshot, truth, aggregate, composition, eic } = freeze();
+    expect(snapshot.usedFormulas).toBeUndefined();
+    expect(snapshot.schemaVersion).toBe(1);
+    expect(productionWorkFromSnapshot(snapshot).usedFormulas).toBeUndefined();
+
+    const formulas = [
+      {
+        formulaId: "LIGHTING_FRONT_LED.ledModuleQuantity",
+        version: 1,
+        source: "PLATFORM_STARTER",
+        scope: "ORGANIZATION" as const,
+        effectiveFrom: "2026-09-21T00:00:00.000Z",
+        astIdentity: "ast1:starter",
+        resultId: "ledModuleQuantity",
+        resultValue: 125,
+        resultUnit: "buc",
+        resultValueKind: "COUNT" as const,
+        explanation: "rotunjire în sus",
+        resolvedReferences: [],
+      },
+    ];
+    const withFormulas = freezeAcceptedProductionSnapshot(truth, aggregate, composition, eic, {
+      createdAt: "2026-09-21T00:00:00.000Z",
+      formulas,
+    });
+    expect(withFormulas.usedFormulas?.[0]).toMatchObject({
+      resultId: "ledModuleQuantity",
+      resultValue: 125,
+      version: 1,
+    });
+    expect(withFormulas.contentHash).not.toBe(snapshot.contentHash);
+    expect(snapshot.usedFormulas).toBeUndefined();
+    expect(productionWorkFromSnapshot(withFormulas).usedFormulas?.[0]?.resultValue).toBe(125);
+  });
 });
