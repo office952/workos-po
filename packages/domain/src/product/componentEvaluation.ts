@@ -4,11 +4,7 @@ import type {
 } from "./componentContract.js";
 import { getComponentContract } from "./componentRegistry.js";
 import { noteEvaluateProductComponents } from "./evaluationTrace.js";
-import {
-  formulasForTypeFromResolved,
-  starterResolvedFormulas,
-  type ResolvedFormulaVersion,
-} from "./resolveFormulas.js";
+import { type ResolvedFormulaVersion } from "./resolveFormulas.js";
 import { listTypeTechnicalSettings, type ComponentTechnicalSettingDefinition } from "./technicalSettings.js";
 import type {
   ComponentTypeId,
@@ -47,9 +43,7 @@ export function evaluateProductComponents(input: {
 }): readonly ComponentEvaluation[] {
   noteEvaluateProductComponents();
   const settingsForType = input.technicalSettingsForType ?? listTypeTechnicalSettings;
-  const formulasForType =
-    input.formulaVersionsForType ??
-    ((typeId: ComponentTypeId) => formulasForTypeFromResolved(typeId, starterResolvedFormulas()));
+  const formulasForType = input.formulaVersionsForType ?? (() => []);
   return input.template.components
     .filter((component) => input.selectedComponentIds.includes(component.id))
     .map((component) => ({

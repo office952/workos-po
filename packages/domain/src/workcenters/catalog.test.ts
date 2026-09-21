@@ -1,3 +1,4 @@
+import { starterFormulaVersionsForType } from "../product/resolveFormulas.js";
 import { describe, expect, it } from "vitest";
 import {
   BOND_LETTER_BODY_ID,
@@ -509,13 +510,8 @@ describe("live shop-floor map", () => {
     if ("ok" in truth) {
       throw new Error("expected confirmed truth");
     }
-    const aggregate = compileAggregate(
-      truth,
-      frontlitPlexiAl06Template,
-      frontlitPlexiAl06FormSchema,
-      seededDisplayLabelCatalog(),
-    );
-    const composition = composeProductProcesses(frontlitPlexiAl06Template, truth.values);
+    const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, seededDisplayLabelCatalog(), { formulaVersionsForType: starterFormulaVersionsForType });
+    const composition = composeProductProcesses(frontlitPlexiAl06Template, truth.values, { formulaVersionsForType: starterFormulaVersionsForType });
     expect(compileEic(aggregate).total).toBe(190.5);
     expect(aggregate.componentStatuses.find((item) => item.id === "LIGHTING")?.status).toBe(
       "CALCULATED",

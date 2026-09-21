@@ -2,6 +2,7 @@ import {
   composeProductProcessesFromTruth,
   topologicalOrder,
   type ProcessCompositionNode,
+  type ProcessCompositionOptions,
   type ProductProcessComposition,
 } from "../processes/composition.js";
 import {
@@ -103,8 +104,12 @@ export function compileExecutionPlanPreview(
   aggregate: ProductAggregate,
   template: ProductTemplate,
   eic?: EicResult,
+  options?: Pick<
+    ProcessCompositionOptions,
+    "formulaVersionsForType" | "technicalSettingsForType"
+  >,
 ): ExecutionPlanPreview {
-  const composition = composeProductProcessesFromTruth(truth, template);
+  const composition = composeProductProcessesFromTruth(truth, template, undefined, options);
   const eicResult = eic ?? compileEic(aggregate, composition);
   return projectExecutionPlanPreview(truth, aggregate, composition, eicResult);
 }

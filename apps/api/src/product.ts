@@ -64,6 +64,7 @@ import {
   type CommercialPolicy,
   type DraftValues,
   type ProductDefinition,
+  type ComponentTypeId,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
 import { getCookie } from "hono/cookie";
@@ -375,10 +376,23 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       ...(faceFinish ? { "face.finish": faceFinish } : {}),
       ...(volumeFinish ? { "volume.finish": volumeFinish } : {}),
     };
+    const formulas = runtime.resolveFormulas();
+    if (!formulas.ok) {
+      return c.json(
+        {
+          error: "formulas_unavailable",
+          reasons: [formulas.reason],
+        },
+        409,
+      );
+    }
+    const formulaVersionsForType = (typeId: ComponentTypeId) =>
+      formulasForTypeFromResolved(typeId, formulas.formulas);
     return c.json({
       composition: omitForbiddenFinancialFields(
         composeProductProcesses(template, values, {
           costEvidenceRows: runtime.listActiveCostEvidence(),
+          formulaVersionsForType,
         }),
         financialAccess(c, "commercial"),
       ),

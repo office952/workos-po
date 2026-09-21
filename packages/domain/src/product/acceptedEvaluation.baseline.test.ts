@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { composeProductProcessesFromTruth } from "../processes/composition.js";
 import { compileEic } from "../resources/eic.js";
 import { compileAggregate, compileDefinition, confirmReviewedDefinition } from "./compiler.js";
+import { starterFormulaVersionsForType } from "./resolveFormulas.js";
 import { seededDisplayLabelCatalog } from "./displayMetadata.js";
 import { runWithProductEvaluationTrace } from "./evaluationTrace.js";
 import {
@@ -46,10 +47,13 @@ describe("accepted-path baseline before PERF_1 orchestration", () => {
         frontlitPlexiAl06Template,
         frontlitPlexiAl06FormSchema,
         labels,
+        { formulaVersionsForType: starterFormulaVersionsForType },
       );
       const composition = composeProductProcessesFromTruth(
         truth,
         frontlitPlexiAl06Template,
+        undefined,
+        { formulaVersionsForType: starterFormulaVersionsForType },
       );
       const eic = compileEic(aggregate, composition);
       return { aggregate, composition, eic };

@@ -1,6 +1,5 @@
 import {
   explainFormulaAst,
-  findFormulaDefinition,
   isFormulaVersionSource,
   isFormulaVersionStatus,
   isSupportedFormulaId,
@@ -8,7 +7,6 @@ import {
   requiredFormulaDefinitions,
   formulaSourceLabel,
   formulaStatusLabel,
-  validateFormulaAstAgainstDefinition,
   type FormulaDraftExpression,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
@@ -135,10 +133,6 @@ function readDrafts(body: unknown): FormulaDraftExpression[] | null {
     }
     const parsed = parseFormulaAst(row.expression);
     if (!parsed.ok) {
-      return null;
-    }
-    const definition = findFormulaDefinition(formulaId);
-    if (!definition || validateFormulaAstAgainstDefinition(definition, parsed.ast).length > 0) {
       return null;
     }
     drafts.push({ formulaId, expression: parsed.ast });

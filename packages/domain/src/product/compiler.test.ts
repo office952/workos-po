@@ -1,3 +1,4 @@
+import { starterFormulaVersionsForType } from "./resolveFormulas.js";
 import { describe, expect, it } from "vitest";
 import {
   compileAggregate,
@@ -205,12 +206,7 @@ describe("ProductTruth and ProductAggregate", () => {
     ).toBe(12500);
     expect(truth.measurements[0]?.source).toBe("OPERATOR_MANUAL");
 
-    const aggregate = compileAggregate(
-      truth,
-      frontlitPlexiAl06Template,
-      frontlitPlexiAl06FormSchema,
-      seededDisplayLabelCatalog(),
-    );
+    const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, seededDisplayLabelCatalog(), { formulaVersionsForType: starterFormulaVersionsForType });
     expect(aggregate.quantities).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

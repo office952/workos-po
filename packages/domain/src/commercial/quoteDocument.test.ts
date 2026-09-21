@@ -1,3 +1,4 @@
+import { starterFormulaVersionsForType } from "../product/resolveFormulas.js";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -57,13 +58,8 @@ function freezeLetters(values: DraftValues = lettersValues, createdAt = "2026-08
   if ("ok" in truth) {
     throw new Error("expected confirmed LETTERS truth");
   }
-  const aggregate = compileAggregate(
-    truth,
-    frontlitPlexiAl06Template,
-    frontlitPlexiAl06FormSchema,
-    seededDisplayLabelCatalog(),
-  );
-  const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+  const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, seededDisplayLabelCatalog(), { formulaVersionsForType: starterFormulaVersionsForType });
+  const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
   const eic = compileEic(aggregate, composition);
   const frozen = freezeQuoteSnapshot(
     truth,

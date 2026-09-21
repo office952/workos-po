@@ -11,7 +11,17 @@ import {
   PSU_RESERVE_SETTING_ID,
   findTechnicalSettingDefinitionBySettingId,
 } from "./technicalSettings.js";
-import type { FormulaPresentationUnit, FormulaValueKind } from "./formulaValue.js";
+import {
+  addValueKind,
+  ceilValueKind,
+  divideValueKind,
+  formulaValueKindFromTechnicalUnit,
+  multiplyValueKind,
+  presentationUnitForValueKind,
+  subtractValueKind,
+  type FormulaPresentationUnit,
+  type FormulaValueKind,
+} from "./formulaValue.js";
 
 export const LIGHTING_LED_MODULE_QUANTITY_FORMULA_ID =
   "LIGHTING_FRONT_LED.ledModuleQuantity" as const;
@@ -157,6 +167,147 @@ export function starterAstFor(formulaId: SupportedFormulaId): FormulaAst {
   return lightingFrontLedStarterAsts[formulaId];
 }
 
+export function formulaValueKindForJobInput(inputId: string): FormulaValueKind | null {
+  switch (inputId) {
+    case CONFIRMED_PERIMETER_JOB_INPUT_ID:
+      return "LENGTH";
+    default:
+      return null;
+  }
+}
+
+export function formulaDefinitionCoherenceIssues(
+  definition: FormulaDefinition,
+): FormulaAstIssue[] {
+  const expectedUnit = presentationUnitForValueKind(definition.resultValueKind);
+  if (expectedUnit !== definition.resultUnit) {
+    return [
+      {
+        field: definition.formulaId,
+        reason: "Unitatea de prezentare nu corespunde dimensiunii semantice a formulei.",
+      },
+    ];
+  }
+  return [];
+}
+
+export function inferFormulaAstValueKind(
+  ast: FormulaAst,
+): { ok: true; valueKind: FormulaValueKind } | { ok: false; issues: readonly FormulaAstIssue[] } {
+  switch (ast.kind) {
+    case "NUMERIC_CONSTANT":
+      return { ok: true, valueKind: ast.valueKind };
+    case "CONFIG_REF": {
+      const setting = findTechnicalSettingDefinitionBySettingId(ast.settingId);
+      const valueKind = setting ? formulaValueKindFromTechnicalUnit(setting.unit) : null;
+      if (!valueKind) {
+        return {
+          ok: false,
+          issues: [
+            {
+              field: ast.settingId,
+              reason: "Setarea tehnică referită nu are o dimensiune semantică recunoscută.",
+            },
+          ],
+        };
+      }
+      return { ok: true, valueKind };
+    }
+    case "JOB_REF": {
+      const valueKind = formulaValueKindForJobInput(ast.inputId);
+      if (!valueKind) {
+        return {
+          ok: false,
+          issues: [
+            {
+              field: ast.inputId,
+              reason: "Măsurătoarea referită nu are o dimensiune semantică recunoscută.",
+            },
+          ],
+        };
+      }
+      return { ok: true, valueKind };
+    }
+    case "FORMULA_REF": {
+      const referenced = findFormulaDefinition(ast.formulaId);
+      if (!referenced) {
+        return {
+          ok: false,
+          issues: [
+            {
+              field: ast.formulaId,
+              reason: "Formula referită nu este recunoscută.",
+            },
+          ],
+        };
+      }
+      return { ok: true, valueKind: referenced.resultValueKind };
+    }
+    case "ADD":
+    case "SUBTRACT":
+    case "MULTIPLY":
+    case "DIVIDE": {
+      const left = inferFormulaAstValueKind(ast.left);
+      if (!left.ok) {
+        return left;
+      }
+      const right = inferFormulaAstValueKind(ast.right);
+      if (!right.ok) {
+        return right;
+      }
+      const combined =
+        ast.kind === "ADD"
+          ? addValueKind(left.valueKind, right.valueKind)
+          : ast.kind === "SUBTRACT"
+            ? subtractValueKind(left.valueKind, right.valueKind)
+            : ast.kind === "MULTIPLY"
+              ? multiplyValueKind(left.valueKind, right.valueKind)
+              : divideValueKind(left.valueKind, right.valueKind);
+      if (typeof combined !== "string") {
+        return { ok: false, issues: [combined] };
+      }
+      return { ok: true, valueKind: combined };
+    }
+    case "CEIL": {
+      const operand = inferFormulaAstValueKind(ast.operand);
+      if (!operand.ok) {
+        return operand;
+      }
+      const combined = ceilValueKind(operand.valueKind);
+      if (typeof combined !== "string") {
+        return { ok: false, issues: [combined] };
+      }
+      return { ok: true, valueKind: combined };
+    }
+    default: {
+      const _exhaustive: never = ast;
+      return {
+        ok: false,
+        issues: [{ field: "expression", reason: `Nodul AST nu este suportat: ${_exhaustive}` }],
+      };
+    }
+  }
+}
+
+export function validateFormulaAstSemantics(
+  definition: FormulaDefinition,
+  ast: FormulaAst,
+): FormulaAstIssue[] {
+  const inferred = inferFormulaAstValueKind(ast);
+  if (!inferred.ok) {
+    return [...inferred.issues];
+  }
+  if (inferred.valueKind !== definition.resultValueKind) {
+    return [
+      {
+        field: definition.formulaId,
+        reason: "Rezultatul formulei nu are dimensiunea semantică așteptată.",
+      },
+    ];
+  }
+  return [];
+}
+
 export function explainFormulaAst(ast: FormulaAst): string {
   switch (ast.kind) {
     case "NUMERIC_CONSTANT":
@@ -194,8 +345,14 @@ export function validateFormulaAstAgainstDefinition(
   definition: FormulaDefinition,
   ast: FormulaAst,
 ): FormulaAstIssue[] {
-  const issues: FormulaAstIssue[] = [];
+  const issues: FormulaAstIssue[] = [
+    ...formulaDefinitionCoherenceIssues(definition),
+  ];
   walkAllowed(definition, ast, issues);
+  if (issues.length > 0) {
+    return issues;
+  }
+  issues.push(...validateFormulaAstSemantics(definition, ast));
   return issues;
 }
 

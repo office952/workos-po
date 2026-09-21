@@ -11,6 +11,7 @@ import {
   CANONICAL_PRODUCT_CODE,
   frontlitPlexiAl06FormSchema,
   frontlitPlexiAl06Template,
+  starterFormulaVersionsForType,
   type ExecutionPlanRecord,
 } from "@workos-final/domain";
 
@@ -38,13 +39,8 @@ export function materializeCanonicalLettersPlan(
   if ("ok" in truth) {
     throw new Error("expected confirmed truth");
   }
-  const aggregate = compileAggregate(
-    truth,
-    frontlitPlexiAl06Template,
-    frontlitPlexiAl06FormSchema,
-    seededDisplayLabelCatalog(),
-  );
-  const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+  const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, seededDisplayLabelCatalog(), { formulaVersionsForType: starterFormulaVersionsForType });
+  const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
   const snapshot = freezeAcceptedProductionSnapshot(
     truth,
     aggregate,

@@ -20,6 +20,7 @@ import {
   projectManualFixedServicePrice,
   collectFinancialKeys,
   seededDisplayLabelCatalog,
+  starterFormulaVersionsForType,
 } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
 import { createProductSystemRuntime } from "../src/productSystem/runtime.js";
@@ -77,13 +78,8 @@ function frozenInstallQuote() {
   if ("ok" in truth) {
     throw new Error("expected confirmed truth");
   }
-  const aggregate = compileAggregate(
-    truth,
-    frontlitPlexiAl06Template,
-    frontlitPlexiAl06FormSchema,
-    seededDisplayLabelCatalog(),
-  );
-  const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+  const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, seededDisplayLabelCatalog(), { formulaVersionsForType: starterFormulaVersionsForType });
+  const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
   const eic = compileEic(aggregate, composition);
   const frozen = freezeQuoteSnapshot(
     truth,

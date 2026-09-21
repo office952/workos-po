@@ -1,6 +1,7 @@
 import { VOLUME_PERIMETER_FIELD } from "./volume.js";
 import {
   findFormulaDefinition,
+  formulaValueKindForJobInput,
   CONFIRMED_PERIMETER_JOB_INPUT_ID,
   type FormulaDefinition,
 } from "./formulaDefinition.js";
@@ -116,9 +117,6 @@ export function evaluateFormulaDag(input: {
         "Rezultatul formulei nu are dimensiunea semantică așteptată.",
         formula.formulaId,
       );
-    }
-    if (definition.resultUnit && computed.value.valueKind !== definition.resultValueKind) {
-      return invalid("Unitatea rezultatului nu corespunde definiției.", formula.formulaId);
     }
     const result: FormulaEvaluationResult = {
       formulaId: formula.formulaId,
@@ -382,7 +380,8 @@ function resolveJobInput(
   inputId: string,
   measurements: readonly TechnicalMeasurement[],
 ): (FormulaTypedValue & { unit: "mm" }) | null {
-  if (inputId !== CONFIRMED_PERIMETER_JOB_INPUT_ID) {
+  const valueKind = formulaValueKindForJobInput(inputId);
+  if (inputId !== CONFIRMED_PERIMETER_JOB_INPUT_ID || valueKind !== "LENGTH") {
     return null;
   }
   const perimeter = measurements.find(
@@ -391,7 +390,7 @@ function resolveJobInput(
   if (!perimeter || perimeter.value <= 0 || !Number.isFinite(perimeter.value)) {
     return null;
   }
-  return { value: perimeter.value, valueKind: "LENGTH", unit: "mm" };
+  return { value: perimeter.value, valueKind, unit: "mm" };
 }
 
 function okValue(

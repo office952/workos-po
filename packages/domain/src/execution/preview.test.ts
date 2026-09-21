@@ -1,3 +1,4 @@
+import { starterFormulaVersionsForType } from "../product/resolveFormulas.js";
 import { describe, expect, it } from "vitest";
 import {
   APPLY_SURFACE_FINISH_ID,
@@ -50,18 +51,13 @@ function confirmedSpine(values: DraftValues = readyValues) {
   if ("ok" in truth) {
     throw new Error("expected confirmed truth");
   }
-  const aggregate = compileAggregate(
-    truth,
-    frontlitPlexiAl06Template,
-    frontlitPlexiAl06FormSchema,
-    seededDisplayLabelCatalog(),
-  );
+  const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, seededDisplayLabelCatalog(), { formulaVersionsForType: starterFormulaVersionsForType });
   return { definition, truth, aggregate };
 }
 
 function previewFor(values: DraftValues = readyValues) {
   const { truth, aggregate } = confirmedSpine(values);
-  return compileExecutionPlanPreview(truth, aggregate, frontlitPlexiAl06Template);
+  return compileExecutionPlanPreview(truth, aggregate, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
 }
 
 describe("execution plan preview", () => {
@@ -227,6 +223,8 @@ describe("execution plan preview", () => {
       truth,
       aggregate,
       frontlitPlexiAl06Template,
+      undefined,
+      { formulaVersionsForType: starterFormulaVersionsForType },
     );
     const placeLed = preview.operations.find(
       (item) => item.processId === PLACE_LED_MODULES_ID,

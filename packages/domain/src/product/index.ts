@@ -232,7 +232,11 @@ export {
   requiredFormulaDefinitions,
   starterAstFor,
   explainFormulaAst,
+  formulaDefinitionCoherenceIssues,
+  formulaValueKindForJobInput,
+  inferFormulaAstValueKind,
   validateFormulaAstAgainstDefinition,
+  validateFormulaAstSemantics,
 } from "./formulaDefinition.js";
 export {
   FORMULA_ACTOR_KINDS,
@@ -261,6 +265,7 @@ export {
   FORMULAS_INVALID_REASON,
   formulasForTypeFromResolved,
   resolveOrganizationFormulas,
+  starterFormulaVersionsForType,
   starterResolvedFormulas,
 } from "./resolveFormulas.js";
 export {
@@ -271,14 +276,19 @@ export {
   FORMULA_PRESENTATION_UNITS,
   FORMULA_VALUE_KINDS,
   addFormulaValues,
+  addValueKind,
   ceilFormulaValue,
+  ceilValueKind,
   divideFormulaValues,
+  divideValueKind,
   formulaValueKindFromTechnicalUnit,
   isFormulaPresentationUnit,
   isFormulaValueKind,
   multiplyFormulaValues,
+  multiplyValueKind,
   presentationUnitForValueKind,
   subtractFormulaValues,
+  subtractValueKind,
 } from "./formulaValue.js";
 export {
   TECHNICAL_SETTINGS_EMPTY_REASON,

@@ -23,6 +23,7 @@ import {
   LIGHTING_TOTAL_LED_LOAD_STARTER_AST,
   explainFormulaAst,
   findFormulaDefinition,
+  inferFormulaAstValueKind,
   lightingFrontLedFormulaDefinitions,
   requiredFormulaDefinitions,
   validateFormulaAstAgainstDefinition,
@@ -46,13 +47,25 @@ import {
   FORMULAS_INACTIVE,
   FORMULAS_INVALID,
   resolveOrganizationFormulas,
+  starterFormulaVersionsForType,
   starterResolvedFormulas,
 } from "./resolveFormulas.js";
 import { evaluateFormulaDag } from "./evaluateFormulas.js";
 import {
+  LIGHTING_MISSING_FORMULAS,
   ledModuleQuantityFromPerimeter,
   requiredPsuCapacityW,
 } from "./lighting.js";
+import { evaluateProductComponents, lightingEvaluationFrom } from "./componentEvaluation.js";
+import {
+  compileDefinition,
+  confirmReviewedDefinition,
+} from "./compiler.js";
+import {
+  CANONICAL_PRODUCT_CODE,
+  frontlitPlexiAl06FormSchema,
+  frontlitPlexiAl06Template,
+} from "./frontlitPlexiAl06.js";
 import { listTypeTechnicalSettings } from "./technicalSettings.js";
 
 const formulaDir = dirname(fileURLToPath(import.meta.url));
@@ -414,6 +427,144 @@ describe("formula save planning", () => {
         { now: "2026-09-21T01:00:00.000Z", rowIdFor: (id) => id },
       ).ok,
     ).toBe(false);
+  });
+
+  it("rejects structurally allowed but semantically invalid lighting ASTs", () => {
+    const existing = starters();
+    const ceilLength: FormulaAst = {
+      kind: "CEIL",
+      operand: { kind: "CONFIG_REF", settingId: "ledPitchMm" },
+    };
+    expect(inferFormulaAstValueKind(ceilLength)).toMatchObject({ ok: false });
+    expect(
+      planFormulaSave(
+        existing,
+        [{ formulaId: LIGHTING_LED_MODULE_QUANTITY_FORMULA_ID, expression: ceilLength }],
+        { kind: "USER", userId: "owner-1" },
+        { now: "2026-09-21T01:00:00.000Z", rowIdFor: (id) => `fv:${id}:bad` },
+      ),
+    ).toMatchObject({ ok: false });
+
+    const powerConstant: FormulaAst = {
+      kind: "NUMERIC_CONSTANT",
+      value: 1,
+      valueKind: "POWER",
+    };
+    expect(
+      planFormulaSave(
+        existing,
+        [{ formulaId: LIGHTING_LED_MODULE_QUANTITY_FORMULA_ID, expression: powerConstant }],
+        { kind: "USER", userId: "owner-1" },
+        { now: "2026-09-21T01:00:00.000Z", rowIdFor: (id) => `fv:${id}:bad` },
+      ),
+    ).toMatchObject({ ok: false });
+
+    const scalarLoad: FormulaAst = {
+      kind: "NUMERIC_CONSTANT",
+      value: 1,
+      valueKind: "SCALAR",
+    };
+    expect(
+      planFormulaSave(
+        existing,
+        [{ formulaId: LIGHTING_TOTAL_LED_LOAD_FORMULA_ID, expression: scalarLoad }],
+        { kind: "USER", userId: "owner-1" },
+        { now: "2026-09-21T01:00:00.000Z", rowIdFor: (id) => `fv:${id}:bad` },
+      ),
+    ).toMatchObject({ ok: false });
+
+    const incompatibleCapacity: FormulaAst = {
+      kind: "ADD",
+      left: { kind: "FORMULA_REF", formulaId: LIGHTING_TOTAL_LED_LOAD_FORMULA_ID },
+      right: { kind: "CONFIG_REF", settingId: "psuReservePercent" },
+    };
+    expect(
+      planFormulaSave(
+        existing,
+        [
+          {
+            formulaId: LIGHTING_REQUIRED_PSU_CAPACITY_FORMULA_ID,
+            expression: incompatibleCapacity,
+          },
+        ],
+        { kind: "USER", userId: "owner-1" },
+        { now: "2026-09-21T01:00:00.000Z", rowIdFor: (id) => `fv:${id}:bad` },
+      ),
+    ).toMatchObject({ ok: false });
+
+    const structural: FormulaAst = {
+      kind: "CEIL",
+      operand: {
+        kind: "DIVIDE",
+        left: {
+          kind: "DIVIDE",
+          left: { kind: "JOB_REF", inputId: "confirmedPerimeterMm" },
+          right: { kind: "CONFIG_REF", settingId: "ledPitchMm" },
+        },
+        right: { kind: "NUMERIC_CONSTANT", value: 1, valueKind: "SCALAR" },
+      },
+    };
+    const valid = planFormulaSave(
+      existing,
+      [{ formulaId: LIGHTING_LED_MODULE_QUANTITY_FORMULA_ID, expression: structural }],
+      { kind: "USER", userId: "owner-1" },
+      { now: "2026-09-21T01:00:00.000Z", rowIdFor: (id) => `fv:${id}:v2` },
+    );
+    expect(valid.ok).toBe(true);
+    if (valid.ok) {
+      expect(valid.alreadyApplied).toBe(false);
+      expect(valid.next[0]?.version).toBe(2);
+    }
+  });
+});
+
+describe("formula evaluation without implicit starters", () => {
+  it("fails closed when lighting formulas are omitted and calculates when injected", () => {
+    const definition = compileDefinition(
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      {
+        templateCode: CANONICAL_PRODUCT_CODE,
+        values: {
+          "root.inscription": "WORKOS",
+          "face.finish": "none",
+          "face.confirmedAreaMm2": 250000,
+          "volume.depthMm": "60",
+          "volume.finish": "none",
+          "volume.confirmedPerimeterMm": 12500,
+        },
+      },
+    );
+    const truth = confirmReviewedDefinition(definition, definition.reviewId);
+    if ("ok" in truth) {
+      throw new Error("expected confirmed truth");
+    }
+    const omitted = evaluateProductComponents({
+      template: frontlitPlexiAl06Template,
+      selectedComponentIds: truth.selectedComponentIds,
+      values: truth.values,
+      measurements: truth.measurements,
+    });
+    const omittedLighting = lightingEvaluationFrom(omitted);
+    expect(omittedLighting?.status).toBe("UNAVAILABLE");
+    expect(omittedLighting?.unavailable.join(" ")).toContain(LIGHTING_MISSING_FORMULAS);
+
+    const injected = evaluateProductComponents({
+      template: frontlitPlexiAl06Template,
+      selectedComponentIds: truth.selectedComponentIds,
+      values: truth.values,
+      measurements: truth.measurements,
+      formulaVersionsForType: starterFormulaVersionsForType,
+    });
+    const lighting = lightingEvaluationFrom(injected);
+    expect(lighting?.status).toBe("CALCULATED");
+    expect(lighting?.quantities.find((item) => item.id === "ledModuleQuantity")?.value).toBe(
+      ledModuleQuantityFromPerimeter(12500, 100),
+    );
+    expect(lighting?.quantities.find((item) => item.id === "totalLedLoadW")?.value).toBe(93.75);
+    expect(lighting?.quantities.find((item) => item.id === "requiredPsuCapacityW")?.value).toBe(
+      requiredPsuCapacityW(93.75, 25),
+    );
   });
 });
 

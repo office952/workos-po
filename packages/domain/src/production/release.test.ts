@@ -1,3 +1,4 @@
+import { starterFormulaVersionsForType } from "../product/resolveFormulas.js";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { recordQuoteAcceptance } from "../commercial/quoteAcceptance.js";
@@ -49,13 +50,8 @@ function goldenOrder() {
   if ("ok" in truth) {
     throw new Error("expected confirmed truth");
   }
-  const aggregate = compileAggregate(
-    truth,
-    frontlitPlexiAl06Template,
-    frontlitPlexiAl06FormSchema,
-    seededDisplayLabelCatalog(),
-  );
-  const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+  const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, seededDisplayLabelCatalog(), { formulaVersionsForType: starterFormulaVersionsForType });
+  const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
   const eic = compileEic(aggregate, composition);
   const quote = freezeQuoteSnapshot(
     truth,
@@ -245,13 +241,8 @@ describe("production release from order", () => {
     if ("ok" in truth) {
       throw new Error("expected confirmed truth");
     }
-    const aggregate = compileAggregate(
-      truth,
-      frontlitPlexiAl06Template,
-      frontlitPlexiAl06FormSchema,
-      seededDisplayLabelCatalog(),
-    );
-    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+    const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, seededDisplayLabelCatalog(), { formulaVersionsForType: starterFormulaVersionsForType });
+    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
     const eic = compileEic(aggregate, composition);
     const quote = freezeQuoteSnapshot(
       truth,

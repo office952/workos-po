@@ -156,3 +156,9 @@ export function starterResolvedFormulas(
   }
   return resolved.formulas;
 }
+
+export function starterFormulaVersionsForType(
+  typeId: FormulaVersionRecord["componentTypeId"],
+): readonly ResolvedFormulaVersion[] {
+  return formulasForTypeFromResolved(typeId, starterResolvedFormulas());
+}

@@ -43,7 +43,7 @@ export function compileAcceptedProductEvaluation(input: {
   readonly technicalSettingsForType?: (
     typeId: ComponentTypeId,
   ) => readonly ComponentTechnicalSettingDefinition[];
-  readonly formulaVersionsForType?: (
+  readonly formulaVersionsForType: (
     typeId: ComponentTypeId,
   ) => readonly ResolvedFormulaVersion[];
 }): AcceptedProductEvaluation {

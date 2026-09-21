@@ -25,6 +25,7 @@ import {
   SITE_INSTALLATION_SCOPE_ID,
   seedDisplayLabelRecords,
   siteInstallationFreezeRefusal,
+  starterFormulaVersionsForType,
 } from "@workos-final/domain";
 import { persistCreatedCustomer } from "../src/customers/store.js";
 import { persistOrganizationServiceOffer } from "../src/operationalServices/store.js";
@@ -114,13 +115,8 @@ describe("product system persistence", () => {
     if ("ok" in truth) {
       throw new Error("expected confirmed truth");
     }
-    const aggregate = compileAggregate(
-      truth,
-      frontlitPlexiAl06Template,
-      frontlitPlexiAl06FormSchema,
-      first.labels(),
-    );
-    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+    const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, first.labels(), { formulaVersionsForType: starterFormulaVersionsForType });
+    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
     const snapshot = freezeAcceptedProductionSnapshot(
       truth,
       aggregate,
@@ -171,13 +167,8 @@ describe("product system persistence", () => {
     if ("ok" in truth) {
       throw new Error("expected confirmed truth");
     }
-    const aggregate = compileAggregate(
-      truth,
-      frontlitPlexiAl06Template,
-      frontlitPlexiAl06FormSchema,
-      first.labels(),
-    );
-    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+    const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, first.labels(), { formulaVersionsForType: starterFormulaVersionsForType });
+    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
     const eic = compileEic(aggregate, composition);
     const frozen = freezeQuoteSnapshot(
       truth,
@@ -242,13 +233,8 @@ describe("product system persistence", () => {
     if ("ok" in truth) {
       throw new Error("expected confirmed truth");
     }
-    const aggregate = compileAggregate(
-      truth,
-      frontlitPlexiAl06Template,
-      frontlitPlexiAl06FormSchema,
-      first.labels(),
-    );
-    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+    const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, first.labels(), { formulaVersionsForType: starterFormulaVersionsForType });
+    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
     const eic = compileEic(aggregate, composition);
     const frozen = freezeQuoteSnapshot(
       truth,
@@ -306,13 +292,8 @@ describe("product system persistence", () => {
     if ("ok" in truth) {
       throw new Error("expected confirmed truth");
     }
-    const aggregate = compileAggregate(
-      truth,
-      frontlitPlexiAl06Template,
-      frontlitPlexiAl06FormSchema,
-      first.labels(),
-    );
-    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+    const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, first.labels(), { formulaVersionsForType: starterFormulaVersionsForType });
+    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
     const eic = compileEic(aggregate, composition);
     const frozen = freezeQuoteSnapshot(
       truth,
@@ -381,13 +362,8 @@ describe("product system persistence", () => {
     if ("ok" in truth) {
       throw new Error("expected confirmed truth");
     }
-    const aggregate = compileAggregate(
-      truth,
-      frontlitPlexiAl06Template,
-      frontlitPlexiAl06FormSchema,
-      first.labels(),
-    );
-    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+    const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, first.labels(), { formulaVersionsForType: starterFormulaVersionsForType });
+    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
     const eic = compileEic(aggregate, composition);
     const frozen = freezeQuoteSnapshot(
       truth,
@@ -506,13 +482,8 @@ describe("product system persistence", () => {
     if ("ok" in truth) {
       throw new Error("expected confirmed truth");
     }
-    const aggregate = compileAggregate(
-      truth,
-      frontlitPlexiAl06Template,
-      frontlitPlexiAl06FormSchema,
-      first.labels(),
-    );
-    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+    const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, first.labels(), { formulaVersionsForType: starterFormulaVersionsForType });
+    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
     const eic = compileEic(aggregate, composition);
     const frozen = freezeQuoteSnapshot(
       truth,
@@ -627,13 +598,8 @@ describe("product system persistence", () => {
     if ("ok" in truth) {
       throw new Error("expected confirmed truth");
     }
-    const aggregate = compileAggregate(
-      truth,
-      frontlitPlexiAl06Template,
-      frontlitPlexiAl06FormSchema,
-      first.labels(),
-    );
-    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+    const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, first.labels(), { formulaVersionsForType: starterFormulaVersionsForType });
+    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
     const eic = compileEic(aggregate, composition);
     const frozen = freezeQuoteSnapshot(
       truth,
@@ -745,13 +711,8 @@ describe("product system persistence", () => {
     if ("ok" in truth) {
       throw new Error("expected confirmed truth");
     }
-    const aggregate = compileAggregate(
-      truth,
-      frontlitPlexiAl06Template,
-      frontlitPlexiAl06FormSchema,
-      first.labels(),
-    );
-    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+    const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, first.labels(), { formulaVersionsForType: starterFormulaVersionsForType });
+    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
     const snapshot = freezeAcceptedProductionSnapshot(
       truth,
       aggregate,
@@ -808,13 +769,8 @@ describe("product system persistence", () => {
     if ("ok" in truth) {
       throw new Error("expected confirmed truth");
     }
-    const aggregate = compileAggregate(
-      truth,
-      frontlitPlexiAl06Template,
-      frontlitPlexiAl06FormSchema,
-      first.labels(),
-    );
-    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+    const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, first.labels(), { formulaVersionsForType: starterFormulaVersionsForType });
+    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
     const snapshot = freezeAcceptedProductionSnapshot(
       truth,
       aggregate,
@@ -916,13 +872,8 @@ describe("product system persistence", () => {
     if ("ok" in truth) {
       throw new Error("expected confirmed truth");
     }
-    const aggregate = compileAggregate(
-      truth,
-      frontlitPlexiAl06Template,
-      frontlitPlexiAl06FormSchema,
-      first.labels(),
-    );
-    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+    const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, first.labels(), { formulaVersionsForType: starterFormulaVersionsForType });
+    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
     const snapshot = freezeAcceptedProductionSnapshot(
       truth,
       aggregate,

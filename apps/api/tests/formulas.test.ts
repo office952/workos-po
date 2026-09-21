@@ -226,6 +226,90 @@ describe("formula API", () => {
     expect(cyclic.status).toBe(400);
   });
 
+  it("rejects a semantically invalid AST without mutating formula history", async () => {
+    const app = createApp();
+    const before = await readBody(await app.request("/api/admin/formulas"));
+    const beforeQuantity = (before.formulas as JsonObject[]).find(
+      (item) => item.formulaId === LIGHTING_LED_MODULE_QUANTITY_FORMULA_ID,
+    );
+    const beforeHistory = before.history as JsonObject[];
+    expect(beforeQuantity).toMatchObject({
+      version: 1,
+      status: "ACTIVE",
+      source: "PLATFORM_STARTER",
+    });
+    expect(beforeHistory.filter((item) => item.formulaId === LIGHTING_LED_MODULE_QUANTITY_FORMULA_ID)).toHaveLength(
+      1,
+    );
+
+    const previewBefore = await readBody(
+      await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ values: readyValues }),
+      }),
+    );
+
+    const rejected = await app.request("/api/admin/formulas", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        formulaId: LIGHTING_LED_MODULE_QUANTITY_FORMULA_ID,
+        expression: {
+          kind: "CEIL",
+          operand: { kind: "CONFIG_REF", settingId: "ledPitchMm" },
+        },
+      }),
+    });
+    expect(rejected.status).toBe(400);
+    const rejectedBody = await readBody(rejected);
+    expect(rejectedBody.error).toBe("invalid_formulas");
+
+    const after = await readBody(await app.request("/api/admin/formulas"));
+    const afterQuantity = (after.formulas as JsonObject[]).find(
+      (item) => item.formulaId === LIGHTING_LED_MODULE_QUANTITY_FORMULA_ID,
+    );
+    const afterHistory = after.history as JsonObject[];
+    expect(afterQuantity).toMatchObject({
+      version: 1,
+      status: "ACTIVE",
+      source: "PLATFORM_STARTER",
+    });
+    expect(afterHistory).toEqual(beforeHistory);
+    expect(
+      afterHistory.some(
+        (item) =>
+          item.formulaId === LIGHTING_LED_MODULE_QUANTITY_FORMULA_ID && item.status === "RETIRED",
+      ),
+    ).toBe(false);
+
+    const previewAfter = await readBody(
+      await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ values: readyValues }),
+      }),
+    );
+    expect(previewAfter.reviewId).toBe(previewBefore.reviewId);
+    const customerId = await createCustomer(app, "Client CF4 invalid save");
+    const quote = await readBody(
+      await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          values: readyValues,
+          reviewId: previewAfter.reviewId,
+          customerId,
+        }),
+      }),
+    );
+    expect(
+      (((quote.quoteSnapshot as JsonObject).productionInput as JsonObject).usedFormulas as JsonObject[]).find(
+        (item) => item.resultId === "ledModuleQuantity",
+      ),
+    ).toMatchObject({ version: 1, source: "PLATFORM_STARTER", resultValue: 125 });
+  });
+
   it("invalidates review after a structural formula change and freezes formula provenance", async () => {
     const app = createApp();
     const customerId = await createCustomer(app);
