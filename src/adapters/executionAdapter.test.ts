@@ -46,6 +46,7 @@ describe("presentExecutionPlan", () => {
     });
     expect(presented?.planId).toBe("exp:1");
     expect(presented?.progressLabel).toBe("1 / 2");
+    expect(presented?.progress).toBeNull();
     expect(presented?.tasks[0]?.completedQuantityLabel).toBe("0,25 m2");
     expect(presented?.tasks[0]?.varianceLabel).toBe("Conform planului");
     expect(presented?.tasks[0]?.plannedQuantity).toBe(0.25);
@@ -122,5 +123,48 @@ describe("presentExecutionPlan", () => {
     expect(presented?.tasks[0]?.canAssign).toBe(true);
     expect(presented?.tasks[0]?.canAssignProvider).toBe(false);
     expect(presented?.tasks[0]?.eligibleProviders[0]?.id).toBe("mch:b");
+  });
+
+  it("transports plan progress and dependency labels without noExecutor", () => {
+    const presented = presentExecutionPlan({
+      executionPlan: {
+        plan: { planId: "exp:1", productLabel: "Litere", inscription: "NORD" },
+        statusLabel: "În lucru",
+        progress: {
+          total: 4,
+          completed: 1,
+          inProgress: 1,
+          planned: 2,
+          waitingDependencies: 1,
+          noProvider: 1,
+          noExecutor: 3,
+          varianceCount: 1,
+        },
+        tasks: [
+          {
+            taskId: "task:1",
+            processLabel: "Cablare",
+            dependsOnLabels: ["Debitare foaie CNC"],
+            waitingFor: ["Debitare foaie CNC"],
+            assignedExecutor: { id: "per:andrei", label: "Andrei Goghi" },
+            startedByLabel: "Andrei Goghi",
+          },
+        ],
+      },
+    });
+    expect(presented?.progress).toEqual({
+      total: 4,
+      completed: 1,
+      inProgress: 1,
+      planned: 2,
+      waitingDependencies: 1,
+      noProvider: 1,
+      varianceCount: 1,
+    });
+    expect(presented?.progress && "noExecutor" in presented.progress).toBe(false);
+    expect(presented?.tasks[0]?.dependsOnLabels).toEqual(["Debitare foaie CNC"]);
+    expect(presented?.tasks[0]?.waitingFor).toEqual(["Debitare foaie CNC"]);
+    expect(presented?.tasks[0]?.executorLabel).toBe("Andrei Goghi");
+    expect(presented?.tasks[0]?.startedByLabel).toBe("Andrei Goghi");
   });
 });
