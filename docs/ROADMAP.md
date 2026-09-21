@@ -41,11 +41,11 @@ PRIMARY_USER_JOURNEY = COMPLETE
 PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
 PRIMARY_USER_JOURNEY_PROOF_DATE = 2026-09-20
 
-CURRENT_PROGRAM = PRODUCT_ENABLEMENT_ADMIN_V1
+CURRENT_PROGRAM = PEOPLE_AND_MACHINE_ADMIN_V1
 CURRENT_PROGRAM_STATUS = COMPLETE
-NEXT_PROGRAM_PRIORITY = NOT_SELECTED
-NEXT_PROGRAM_STATUS = PENDING_ROADMAP_REVIEW
-NEXT_PROGRAM_SELECTION = PENDING_ROADMAP_REVIEW
+NEXT_PROGRAM_PRIORITY = EXECUTION_EXPANSION_V1
+NEXT_PROGRAM_STATUS = PREFLIGHT_REQUIRED
+NEXT_PROGRAM_SELECTION = EXECUTION_EXPANSION_V1
 NEXT_PROGRAM_STARTED = NO
 CONFIGURATION_FIRST_CANON = docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md
 CONFIGURATION_FIRST_IMPLEMENTATION = CF1_COMPLETE_AND_CF2_CF3_COMPLETE_AND_CF4_COMPLETE
@@ -91,6 +91,21 @@ PRODUCT_ENABLEMENT_ADMIN_V1_INTEGRATED_ON_MAIN = YES
 PRODUCT_ENABLEMENT_ADMIN_V1_MERGE = COMPLETE
 PRODUCT_ENABLEMENT_ADMIN_V1_MERGE_COMMIT = b082b1a8a9288aac59ae0d3a34915415500107e1
 PR_19 = MERGED
+PEOPLE_AND_MACHINE_ADMIN_V1 = COMPLETE
+PEOPLE_AND_MACHINE_ADMIN_V1_INTEGRATED_ON_MAIN = YES
+PEOPLE_ADMIN_V1 = COMPLETE
+PEOPLE_ADMIN_V1_INTEGRATED_ON_MAIN = YES
+PEOPLE_ADMIN_V1_MERGE_COMMIT = a82a8046c884a09c42944068e98616a9712dc630
+PR_21 = MERGED
+MACHINE_WORKCENTER_ADMIN_V1 = COMPLETE
+MACHINE_WORKCENTER_ADMIN_V1_INTEGRATED_ON_MAIN = YES
+MACHINE_WORKCENTER_ADMIN_V1_MERGE_COMMIT = 27fb3f3bd57423f72daffc6e4989ddc990bf8d29
+PR_22 = MERGED
+PEOPLE_ELIGIBILITY_CAPABILITY_COVERAGE_CLOSURE = COMPLETE
+PEOPLE_ELIGIBILITY_CAPABILITY_COVERAGE_INTEGRATED_ON_MAIN = YES
+PEOPLE_ELIGIBILITY_CAPABILITY_COVERAGE_MERGE_COMMIT = ab3313199b7d278d364f3497e4e2c918dbd6354d
+PR_23 = MERGED
+CURRENT_SUPPORTED_PRODUCT_UNMAPPED_PEOPLE_CAPABILITIES = []
 PRODUCT_ENABLEMENT = ORGANIZATION_SCOPED
 CONFIGURATION_SURFACE = /admin/products
 CURRENT_TWO_PRODUCTS_DEFAULT = ENABLED
@@ -153,7 +168,7 @@ AUTH → CLIENT → CERERE → CONFIGURATOR → OFERTA → ACCEPTANCE → LUCRAR
 ADMIN_TOOLING_DEBT = RECORDED_NOT_IMPLEMENTED
 ```
 
-Recorded, not implemented: self-service signup, email verification, password recovery, MFA, billing/subscriptions, production organization provisioning UX, commercial onboarding automation, general People administration UX, general Machine/workcenter administration UX. Do not build these without a later Owner GO. Synthetic E2E may use existing owner APIs and the organization-provider CLI as explicit prerequisites. That does not make general admin tooling complete.
+Recorded, not implemented: self-service signup, email verification, password recovery, MFA, billing/subscriptions, production organization provisioning UX, commercial onboarding automation. People Admin V1 and Machine/Workcenter Admin V1 are complete. Do not build remaining admin debt without a later Owner GO.
 
 ## Authority after engine consolidation
 
@@ -245,7 +260,7 @@ MISSING_NUMERIC_VALUE = NO_INVENTION
 MISSING_NUMERIC_VALUE = BLOCK_DEPENDENT_CALCULATION_ONLY
 ```
 
-Owner confirmation is not required merely for a calculation to run or for calculated pricing to be available. Operator skills and machines are explicit organization truth: they are not invented in Atelier or Execution. The journey consumes configured providers and explains a missing machine. General People/Machine administration remains recorded admin debt.
+Owner confirmation is not required merely for a calculation to run or for calculated pricing to be available. Operator skills and machines are explicit organization truth: they are not invented in Atelier or Execution. The journey consumes configured providers and People qualifications. People Admin V1 and Machine/Workcenter Admin V1 are complete.
 
 ## Configuration-First Foundation V1
 
@@ -253,7 +268,7 @@ Primary User Journey is complete. Configuration-First remains canonical: changea
 
 Architecture ownership: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
-Product Enablement Admin V1 is complete after Owner acceptance and merge of PR #19. Letters Product Truth V1 and ACM Product Truth V1 remain complete. Standalone CF5 is not required first. Remaining Configuration-First work is domain-by-domain when actual product work requires it. Next program selection is pending roadmap review.
+Product Enablement Admin V1 is complete after Owner acceptance and merge of PR #19. Letters Product Truth V1 and ACM Product Truth V1 remain complete. People and Machine Admin V1 is complete. Standalone CF5 is not required first. Remaining Configuration-First work is domain-by-domain when actual product work requires it. Next program is Execution Expansion V1. Preflight is required. Implementation is not authorized.
 
 ```text
 WORKOS = CONFIGURATION-FIRST BUSINESS ENGINE
@@ -324,7 +339,8 @@ MODEL = SPECIFIC_PRODUCT_TEMPLATE_SKU
 CUSTOMER_OPERABLE_WITHOUT_CURSOR = YES_FOR_EXISTING_SKU
 NO_CLIENT_CODE_FORK = YES
 PRODUCT_ENABLEMENT = ORGANIZATION_SCOPED
-NEXT_PROGRAM_SELECTION = PENDING_ROADMAP_REVIEW
+NEXT_PROGRAM_PRIORITY = EXECUTION_EXPANSION_V1
+NEXT_PROGRAM_STATUS = PREFLIGHT_REQUIRED
 NEXT_WAVE_AUTHORIZED = NO
 ```
 
@@ -356,11 +372,11 @@ After CF4, preferred living sequence:
 1. Letters Product Truth V1
 2. domain-owned Configuration-First migrations only when required by actual product work
 3. ACM Product Truth
-4. member DAG corrections / composition
+4. People and Machine Admin V1
 5. execution expansion
 6. planning / capacity
 
-Letters Product Truth V1 is complete. ACM Product Truth V1 is complete. This documentation does not select or authorize member DAG, execution expansion, planning/capacity, CF5, or any other next wave.
+Letters Product Truth V1, ACM Product Truth V1, Product Enablement Admin V1, and People and Machine Admin V1 are complete. Living next program is Execution Expansion V1. Preflight is required. Implementation is not authorized. Member DAG / composition corrections remain a secondary candidate, not the selected program. Planning/capacity remains later. CF5 remains NOT_STARTED and is not selected.
 
 ## ACM Product Truth V1
 
@@ -390,7 +406,8 @@ CUSTOMER_OPERABLE_WITHOUT_CURSOR = YES_FOR_EXISTING_SKU
 NO_CLIENT_CODE_FORK = YES
 PRODUCT_ENABLEMENT = ORGANIZATION_SCOPED
 DB_MIGRATION_REQUIRED = NO
-NEXT_PROGRAM_SELECTION = PENDING_ROADMAP_REVIEW
+NEXT_PROGRAM_PRIORITY = EXECUTION_EXPANSION_V1
+NEXT_PROGRAM_STATUS = PREFLIGHT_REQUIRED
 NEXT_WAVE_AUTHORIZED = NO
 ```
 
@@ -421,7 +438,7 @@ Product-scoped technical-setting resolution: ACM requires `STEEL_INTERNAL_FRAME.
 
 Accepted mutation authority remains server ProductTemplate + FormSchema + DraftValues + applicable organization technical settings + applicable formulas + crv1. Client ProductDefinition has zero authority.
 
-Organizations can enable or disable shared ProductTemplates for new work through `/admin/products`. Do not treat Product Enablement as CF5 complete. Next program is not selected.
+Organizations can enable or disable shared ProductTemplates for new work through `/admin/products`. Do not treat Product Enablement as CF5 complete. Living next program is Execution Expansion V1. Implementation is not authorized.
 
 ## Product Enablement Admin V1
 
@@ -459,7 +476,8 @@ PRODUCT_ENABLEMENT_CONFIGURATION = DOMAIN_OWNED
 CF5 = NOT_STARTED
 CUSTOMER_OPERABLE_WITHOUT_CURSOR = YES
 NO_CLIENT_CODE_FORK = YES
-NEXT_PROGRAM_SELECTION = PENDING_ROADMAP_REVIEW
+NEXT_PROGRAM_PRIORITY = EXECUTION_EXPANSION_V1
+NEXT_PROGRAM_STATUS = PREFLIGHT_REQUIRED
 NEXT_WAVE_AUTHORIZED = NO
 ```
 
@@ -469,4 +487,74 @@ The current Letters and ACM templates remain available by an explicit V1 compati
 
 Disabling a product does not rewrite or block already-frozen Quote → Acceptance → Order → Production Release → Execution Plan → Execution records.
 
-Product enablement is an organization-level new-work availability rule. It is not persisted inside ProductDefinition, ProductTruth, crv1, QuoteSnapshot, OrderSnapshot, or AcceptedProductionSnapshot. This capability does not complete CF5. Next program selection remains pending.
+Product enablement is an organization-level new-work availability rule. It is not persisted inside ProductDefinition, ProductTruth, crv1, QuoteSnapshot, OrderSnapshot, or AcceptedProductionSnapshot. This capability does not complete CF5.
+
+## People and Machine Admin V1
+
+```text
+PEOPLE_AND_MACHINE_ADMIN_V1 = COMPLETE
+PEOPLE_AND_MACHINE_ADMIN_V1_INTEGRATED_ON_MAIN = YES
+PEOPLE_ADMIN_V1 = COMPLETE
+PEOPLE_ADMIN_V1_INTEGRATED_ON_MAIN = YES
+PR_21 = MERGED
+PEOPLE_ADMIN_FEATURE_HEAD = 92871d42896e37a7f068a89558927ef082f01ab2
+PEOPLE_ADMIN_V1_MERGE_COMMIT = a82a8046c884a09c42944068e98616a9712dc630
+PEOPLE_ADMIN_MERGED_AT = 2026-09-21T11:08:20Z
+MACHINE_WORKCENTER_ADMIN_V1 = COMPLETE
+MACHINE_WORKCENTER_ADMIN_V1_INTEGRATED_ON_MAIN = YES
+PR_22 = MERGED
+MACHINE_ADMIN_FEATURE_HEAD = 6f6794b69b2a1a9ed9c0ae0cd1583f0102678949
+MACHINE_WORKCENTER_ADMIN_V1_MERGE_COMMIT = 27fb3f3bd57423f72daffc6e4989ddc990bf8d29
+MACHINE_ADMIN_MERGED_AT = 2026-09-21T12:19:45Z
+PEOPLE_ELIGIBILITY_CAPABILITY_COVERAGE_CLOSURE = COMPLETE
+PEOPLE_ELIGIBILITY_CAPABILITY_COVERAGE_INTEGRATED_ON_MAIN = YES
+PR_23 = MERGED
+PEOPLE_COVERAGE_FEATURE_HEAD = 78ba693612a36a5ec3c8e3cbf8e4fa2699c572ce
+PEOPLE_ELIGIBILITY_CAPABILITY_COVERAGE_MERGE_COMMIT = ab3313199b7d278d364f3497e4e2c918dbd6354d
+PEOPLE_COVERAGE_MERGED_AT = 2026-09-21T12:49:26Z
+CURRENT_SUPPORTED_PRODUCT_UNMAPPED_PEOPLE_CAPABILITIES = []
+PROVIDER_ELIGIBILITY != EXECUTOR_ELIGIBILITY
+NEXT_PROGRAM_PRIORITY = EXECUTION_EXPANSION_V1
+NEXT_PROGRAM_STATUS = PREFLIGHT_REQUIRED
+NEXT_PROGRAM_STARTED = NO
+NEXT_WAVE_AUTHORIZED = NO
+```
+
+People Admin V1 lets an organization owner create people, assign and retire active skills, and read current eligibility. Machine/Workcenter Admin V1 lets an owner incrementally configure organization machines and workcenters. A provider capability never grants a Person qualification. A Person qualification never replaces a required provider.
+
+Current supported-product People capability coverage after PR #23:
+
+```text
+CNC_ROUTING = MAPPED
+PROFILE_FORMING = MAPPED
+MANUAL_ASSEMBLY = MAPPED
+VINYL_APPLICATION = MAPPED
+ELECTRICAL_ASSEMBLY = MAPPED
+PAINTING = MAPPED
+QUALITY_CONTROL = MAPPED
+PACKAGING = MAPPED
+METAL_CUTTING = MAPPED
+```
+
+Locked current mappings for the three closed capabilities:
+
+```text
+VINYL_APPLICATION → SK_VINYL_APPLICATOR → Aplicare autocolant
+PAINTING → SK_PAINTING → Vopsire spray / pistol
+METAL_CUTTING → SK_METAL_CUTTING_OPERATOR → Operator debitare metale
+```
+
+These three mappings are current product/process truth, not universal HR policy. Unused future catalog capabilities may remain unmapped. Shared-foundation reconciliation is idempotent. Existing V1 marker is preserved and no longer blocks later shared-skill reconcile. `ADOPT_EXISTING` receives shared skill foundation only, not trusted workforce. Employee qualifications are not invented automatically.
+
+## Next program
+
+```text
+RECOMMENDED_NEXT_PROGRAM = EXECUTION_EXPANSION_V1
+NEXT_PROGRAM_STATUS = PREFLIGHT_REQUIRED
+NEXT_PROGRAM_STARTED = NO
+NEXT_WAVE_AUTHORIZED = NO
+SECONDARY_CANDIDATE = MEMBER_DAG_COMPOSITION_CORRECTIONS
+TERTIARY_CANDIDATE = PLANNING_CAPACITY_V1
+```
+
+Execution Expansion V1 is selected because People and Machine Admin now close executor and provider prerequisites for current products, while process composition still records `executionReadiness = NOT_IMPLEMENTED` and planning/capacity remains unimplemented. The living journey's remaining product-domain thickening is shop-floor execution, not another admin polish wave, not CF5, and not inventory for its own sake. Planning/capacity stays later until execution prerequisites are explicit. Member DAG / composition corrections remain secondary unless a later preflight proves they block execution. This documentation does not authorize implementation.
