@@ -184,6 +184,7 @@ describe("system projection API", () => {
         missingCapabilityCount: number;
         capacityPlanningState: string;
         executionState: string;
+        peopleState: string;
       };
       lettersCoverage: { missingCapabilityIds: string[] };
     };
@@ -201,7 +202,8 @@ describe("system projection API", () => {
     expect(body.overview.workcenterCount).toBe(12);
     expect(body.overview.coveredCapabilityCount).toBe(14);
     expect(body.overview.capacityPlanningState).toBe("NOT_IMPLEMENTED");
-    expect(body.overview.executionState).toBe("NOT_IMPLEMENTED");
+    expect(body.overview.executionState).toBe("IMPLEMENTED");
+    expect(body.overview.peopleState).toBe("IMPLEMENTED");
     expect(body.lettersCoverage.missingCapabilityIds).toEqual([
       "PAINTING",
       "QUALITY_CONTROL",

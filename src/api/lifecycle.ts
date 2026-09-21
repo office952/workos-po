@@ -1,4 +1,5 @@
 import { getJson, postJson } from "./http";
+import type { ExecutionTaskCompletionInput } from "./types";
 
 export async function postQuoteAcceptance(
   productCode: string,
@@ -73,7 +74,7 @@ export async function startExecutionTask(taskId: string): Promise<unknown> {
 
 export async function completeExecutionTask(
   taskId: string,
-  input: { completedQuantity?: number } = {},
+  input: ExecutionTaskCompletionInput = {},
 ): Promise<unknown> {
   return postJson(`/api/execution-tasks/${encodeURIComponent(taskId)}/complete`, input);
 }

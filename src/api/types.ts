@@ -296,6 +296,30 @@ export type EligibleProviderTransport = {
   label: string;
 };
 
+export type PlannedResourceTransport = {
+  resourceId: string;
+  label: string;
+  plannedQuantity: number;
+  unit: string;
+};
+
+export type ActualConsumptionTransport = {
+  resourceId: string;
+  label: string;
+  actualQuantity: number;
+  unit: string;
+  note: string | null;
+};
+
+export type ExecutionTaskCompletionInput = {
+  completedQuantity?: number;
+  note?: string;
+  actualConsumption?: Array<{
+    resourceId: string;
+    actualQuantity: number;
+  }>;
+};
+
 export type ExecutionTaskTransport = {
   taskId: string;
   processLabel: string;
@@ -322,6 +346,9 @@ export type ExecutionTaskTransport = {
   operatorRelation: string | null;
   startedByLabel: string | null;
   executorLabel: string | null;
+  canRecordActualConsumption: boolean;
+  plannedResources: PlannedResourceTransport[];
+  actualConsumption: ActualConsumptionTransport[];
 };
 
 export type ExecutionPlanProgressTransport = {

@@ -1241,4 +1241,438 @@ describe("ExecutionPage", () => {
     expect(await screen.findByRole("button", { name: "Pornește" })).toBeEnabled();
     expect(screen.queryByText("Utilaj lipsește")).not.toBeInTheDocument();
   });
+
+  it("shows empty actual-consumption inputs for an owned in-progress task with two resources", async () => {
+    const fetchMock = vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei Goghi" } });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-led",
+                processLabel: "Montaj LED",
+                status: "IN_PROGRESS",
+                statusLabel: "În lucru",
+                canComplete: true,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              seqLabel: "03",
+              canRecordActualConsumption: true,
+              resourceDemands: [
+  {
+    resourceId: "res:plexi",
+    label: "Plexiglas opal 3 mm",
+    quantity: 0.85,
+    unit: "m²",
+  },
+  {
+    resourceId: "res:screws",
+    label: "Șuruburi inox",
+    quantity: 12,
+    unit: "buc",
+  },
+],
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    expect(await screen.findByRole("heading", { name: "Consum efectiv" })).toBeInTheDocument();
+    const plexi = screen.getByLabelText("Plexiglas opal 3 mm — consum efectiv");
+    const screws = screen.getByLabelText("Șuruburi inox — consum efectiv");
+    expect(plexi).toHaveValue("");
+    expect(screws).toHaveValue("");
+    expect(screen.getByText("Planificat: 0,85 m²")).toBeInTheDocument();
+    expect(screen.getByText("Planificat: 12 buc")).toBeInTheDocument();
+    expect(screen.queryByText("res:plexi")).not.toBeInTheDocument();
+    expect(screen.queryByText("res:screws")).not.toBeInTheDocument();
+    expect(screen.queryByText(/EUR|tarif|cost/i)).not.toBeInTheDocument();
+  });
+
+  it("posts only the explicit actuals the operator typed", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei Goghi" } });
+      }
+      if (url.includes("/complete") && init?.method === "POST") {
+        return jsonResponse({ ok: true });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-led",
+                processLabel: "Montaj LED",
+                status: "IN_PROGRESS",
+                statusLabel: "În lucru",
+                canComplete: true,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              seqLabel: "03",
+              canRecordActualConsumption: true,
+              resourceDemands: [
+  {
+    resourceId: "res:plexi",
+    label: "Plexiglas opal 3 mm",
+    quantity: 0.85,
+    unit: "m²",
+  },
+  {
+    resourceId: "res:screws",
+    label: "Șuruburi inox",
+    quantity: 12,
+    unit: "buc",
+  },
+],
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    await user.type(await screen.findByLabelText("Plexiglas opal 3 mm — consum efectiv"), "0,80");
+    await user.type(screen.getByLabelText("Șuruburi inox — consum efectiv"), "11");
+    await user.click(screen.getByRole("button", { name: "Închide sarcina" }));
+    await waitFor(() => {
+      const completeCall = fetchMock.mock.calls.find(
+        ([url, init]) => String(url).includes("/complete") && init?.method === "POST",
+      );
+      expect(completeCall?.[1]?.body).toBe(
+        JSON.stringify({
+          actualConsumption: [
+            { resourceId: "res:plexi", actualQuantity: 0.8 },
+            { resourceId: "res:screws", actualQuantity: 11 },
+          ],
+        }),
+      );
+    });
+    expect(String(fetchMock.mock.calls.find(([url]) => String(url).includes("/complete"))?.[1]?.body)).not.toContain("unit");
+    expect(String(fetchMock.mock.calls.find(([url]) => String(url).includes("/complete"))?.[1]?.body)).not.toContain("0.85");
+  });
+
+  it("posts only the one actual line the operator entered", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei Goghi" } });
+      }
+      if (url.includes("/complete") && init?.method === "POST") {
+        return jsonResponse({ ok: true });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-led",
+                processLabel: "Montaj LED",
+                status: "IN_PROGRESS",
+                statusLabel: "În lucru",
+                canComplete: true,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              seqLabel: "03",
+              canRecordActualConsumption: true,
+              resourceDemands: [
+  {
+    resourceId: "res:plexi",
+    label: "Plexiglas opal 3 mm",
+    quantity: 0.85,
+    unit: "m²",
+  },
+  {
+    resourceId: "res:screws",
+    label: "Șuruburi inox",
+    quantity: 12,
+    unit: "buc",
+  },
+],
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    await user.type(await screen.findByLabelText("Plexiglas opal 3 mm — consum efectiv"), "0,80");
+    await user.click(screen.getByRole("button", { name: "Închide sarcina" }));
+    await waitFor(() => {
+      const completeCall = fetchMock.mock.calls.find(
+        ([url, init]) => String(url).includes("/complete") && init?.method === "POST",
+      );
+      expect(completeCall?.[1]?.body).toBe(
+        JSON.stringify({
+          actualConsumption: [{ resourceId: "res:plexi", actualQuantity: 0.8 }],
+        }),
+      );
+    });
+    expect(String(fetchMock.mock.calls.find(([url]) => String(url).includes("/complete"))?.[1]?.body)).not.toContain("res:screws");
+  });
+
+  it("keeps a manual task executable without actual-consumption fields", async () => {
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei Goghi" } });
+      }
+      if (url.includes("/complete") && init?.method === "POST") {
+        return jsonResponse({ ok: true });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-wire",
+                processLabel: "Cablare electrică",
+                status: "IN_PROGRESS",
+                statusLabel: "În lucru",
+                canComplete: true,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              canRecordActualConsumption: false,
+              resourceDemands: [],
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    expect(await screen.findByRole("button", { name: "Închide sarcina" })).toBeEnabled();
+    expect(screen.queryByRole("heading", { name: "Consum efectiv" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/consum efectiv/i)).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Închide sarcina" }));
+    await waitFor(() => {
+      const completeCall = fetchMock.mock.calls.find(
+        ([url, init]) => String(url).includes("/complete") && init?.method === "POST",
+      );
+      expect(completeCall?.[1]?.body).toBe(JSON.stringify({}));
+    });
+  });
+
+  it("does not let a non-completing operator edit actual consumption", async () => {
+    const fetchMock = vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei Goghi" } });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-led",
+                processLabel: "Montaj LED",
+                status: "IN_PROGRESS",
+                statusLabel: "În lucru",
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              seqLabel: "03",
+              canRecordActualConsumption: false,
+              resourceDemands: [
+  {
+    resourceId: "res:plexi",
+    label: "Plexiglas opal 3 mm",
+    quantity: 0.85,
+    unit: "m²",
+  },
+  {
+    resourceId: "res:screws",
+    label: "Șuruburi inox",
+    quantity: 12,
+    unit: "buc",
+  },
+],
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    await screen.findByRole("heading", { name: "03 Montaj LED" });
+    expect(screen.queryByLabelText(/consum efectiv/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Închide sarcina" })).not.toBeInTheDocument();
+  });
+
+  it("reloads persisted actual history after a successful completion", async () => {
+    const user = userEvent.setup();
+    let completed = false;
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei Goghi" } });
+      }
+      if (url.includes("/complete") && init?.method === "POST") {
+        completed = true;
+        return jsonResponse({ ok: true });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          statusLabel: completed ? "Executat" : "În lucru",
+          progress: {
+            total: 1,
+            completed: completed ? 1 : 0,
+            inProgress: completed ? 0 : 1,
+            planned: 0,
+            waitingDependencies: 0,
+            noProvider: 0,
+            varianceCount: 0,
+          },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-led",
+                processLabel: "Montaj LED",
+                status: completed ? "COMPLETED" : "IN_PROGRESS",
+                statusLabel: completed ? "Finalizat" : "În lucru",
+                canComplete: !completed,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              seqLabel: "03",
+              canRecordActualConsumption: !completed,
+              resourceDemands: [
+  {
+    resourceId: "res:plexi",
+    label: "Plexiglas opal 3 mm",
+    quantity: 0.85,
+    unit: "m²",
+  },
+  {
+    resourceId: "res:screws",
+    label: "Șuruburi inox",
+    quantity: 12,
+    unit: "buc",
+  },
+],
+              actualConsumption: completed
+                ? [
+                    {
+                      resourceId: "res:plexi",
+                      resourceLabel: "Plexiglas opal 3 mm",
+                      actualQuantity: 0.8,
+                      unit: "m²",
+                      note: "Rest din foaie",
+                    },
+                  ]
+                : [],
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    await user.type(await screen.findByLabelText("Plexiglas opal 3 mm — consum efectiv"), "0,80");
+    await user.click(screen.getByRole("button", { name: "Închide sarcina" }));
+    expect(await screen.findByText("Consum înregistrat")).toBeInTheDocument();
+    expect(screen.getByText("0,8 m²")).toBeInTheDocument();
+    expect(screen.getByText("Rest din foaie")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/consum efectiv/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("res:plexi")).not.toBeInTheDocument();
+  });
+
+  it("keeps the task in progress when completion with actuals is rejected", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei Goghi" } });
+      }
+      if (url.includes("/complete") && init?.method === "POST") {
+        return jsonResponse({ error: "invalid_quantity" }, 422);
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-led",
+                processLabel: "Montaj LED",
+                status: "IN_PROGRESS",
+                statusLabel: "În lucru",
+                canComplete: true,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              seqLabel: "03",
+              canRecordActualConsumption: true,
+              resourceDemands: [
+  {
+    resourceId: "res:plexi",
+    label: "Plexiglas opal 3 mm",
+    quantity: 0.85,
+    unit: "m²",
+  },
+  {
+    resourceId: "res:screws",
+    label: "Șuruburi inox",
+    quantity: 12,
+    unit: "buc",
+  },
+],
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    await user.type(await screen.findByLabelText("Plexiglas opal 3 mm — consum efectiv"), "0,80");
+    await user.click(screen.getByRole("button", { name: "Închide sarcina" }));
+    expect(
+      await screen.findByText("Cantitatea consumată trebuie să fie un număr valid, zero sau pozitiv."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("invalid_quantity")).not.toBeInTheDocument();
+    expect(screen.queryByText("Finalizat")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Închide sarcina" })).toBeEnabled();
+    expect(screen.getByLabelText("Plexiglas opal 3 mm — consum efectiv")).toHaveValue("0,80");
+  });
 });

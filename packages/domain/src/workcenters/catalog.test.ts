@@ -302,7 +302,8 @@ describe("letters capability coverage", () => {
       "PACKAGING",
     ]);
     const admin = projectWorkcentersAdministration(fixtureRegistry);
-    expect(admin.overview.executionState).toBe("NOT_IMPLEMENTED");
+    expect(admin.overview.executionState).toBe("IMPLEMENTED");
+    expect(admin.overview.peopleState).toBe("IMPLEMENTED");
     expect(admin.overview.capacityPlanningState).toBe("NOT_IMPLEMENTED");
     expect(JSON.stringify(admin)).not.toMatch(/amount|EUR|hourly|machineHour/);
   });
@@ -384,7 +385,7 @@ describe("live shop-floor map", () => {
   it("projects the live shop-floor map and honest remaining Letters gaps", () => {
     const admin = projectWorkcentersAdministration();
     expect(admin.writeState).toBe("NOT_IMPLEMENTED");
-    expect(admin.overview.peopleState).toBe("NOT_IMPLEMENTED");
+    expect(admin.overview.peopleState).toBe("IMPLEMENTED");
     expect(admin.workcenters.map((item) => item.id)).toEqual(
       expect.arrayContaining([
         WC_ASSEMBLY_01_ID,
@@ -408,7 +409,8 @@ describe("live shop-floor map", () => {
     expect(admin.overview.coveredCapabilityCount).toBe(14);
     expect(admin.overview.missingCapabilityCount).toBe(3);
     expect(admin.overview.capacityPlanningState).toBe("NOT_IMPLEMENTED");
-    expect(admin.overview.executionState).toBe("NOT_IMPLEMENTED");
+    expect(admin.overview.schedulingState).toBe("NOT_IMPLEMENTED");
+    expect(admin.overview.executionState).toBe("IMPLEMENTED");
     const manual = admin.capabilities.find((item) => item.id === "MANUAL_ASSEMBLY");
     expect(manual?.coverage).toBe("COVERED");
     expect(manual?.providers.map((item) => item.id)).toEqual([

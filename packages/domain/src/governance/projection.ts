@@ -249,8 +249,13 @@ export function projectSystemGovernance(): GovernanceProjection {
       {
         id: "EXECUTION",
         label: "Execuție",
-        owns: ["plan operațional", "actuale de execuție"],
-        state: "NOT_IMPLEMENTED",
+        owns: [
+          "plan operațional",
+          "sarcini de execuție",
+          "ciclu de viață",
+          "actuale de execuție",
+        ],
+        state: "IMPLEMENTED",
       },
       {
         id: "ANALYZER",
@@ -291,8 +296,9 @@ export function projectSystemGovernance(): GovernanceProjection {
       {
         id: "execution",
         label: "Execuție",
-        statement: "Nu există plan de execuție, sarcini sau actuale.",
-        state: "NOT_IMPLEMENTED",
+        statement:
+          "Planul de execuție, sarcinile, ciclul de viață și consumul real sunt implementate. Capacitatea, programarea și MachineRun nu sunt implementate.",
+        state: "IMPLEMENTED",
       },
       {
         id: "business-db",
@@ -693,7 +699,7 @@ export function projectSystemGovernance(): GovernanceProjection {
         label: "Workspace client",
         state: "IMPLEMENTED",
       },
-      { id: "execution", label: "Execuție", state: "NOT_IMPLEMENTED" },
+      { id: "execution", label: "Execuție", state: "IMPLEMENTED" },
       {
         id: "cloud-foundation-v1",
         label: "WorkOS Cloud Foundation V1",
