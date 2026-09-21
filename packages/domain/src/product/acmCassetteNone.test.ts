@@ -24,10 +24,11 @@ import {
 } from "../resources/catalog.js";
 import { compileEic } from "../resources/eic.js";
 import {
+  ACM_CASSETTE_NONE_FORM_SCHEMA_ID,
   ACM_CASSETTE_NONE_PRODUCT_CODE,
-  ACM_GOLDEN_DEPTH_MM,
-  ACM_GOLDEN_HEIGHT_MM,
-  ACM_GOLDEN_WIDTH_MM,
+  ACM_CASSETTE_NONE_PROOF_VALUES,
+  ACM_CASSETTE_NONE_READY_VALUES,
+  ACM_CASSETTE_NONE_TEMPLATE_VERSION,
   acmCassetteNoneFormSchema,
   acmCassetteNoneTemplate,
 } from "./acmCassetteNone.js";
@@ -36,23 +37,45 @@ import {
   compileDefinition,
   confirmReviewedDefinition,
 } from "./compiler.js";
+import {
+  confirmReviewedDraft,
+  projectConfigurationPreview,
+} from "./configurationPreview.js";
 import { seededDisplayLabelCatalog } from "./displayMetadata.js";
-import { CANONICAL_PRODUCT_CODE, frontlitPlexiAl06Template } from "./frontlitPlexiAl06.js";
+import {
+  CANONICAL_PRODUCT_CODE,
+  frontlitPlexiAl06FormSchema,
+  frontlitPlexiAl06Template,
+} from "./frontlitPlexiAl06.js";
 import { getProductTemplate, productTemplates } from "./productRegistry.js";
+import {
+  resolveOrganizationTechnicalSettings,
+} from "./resolveTechnicalSettings.js";
+import {
+  FRAME_CLEARANCE_SETTING_ID,
+  LED_PITCH_SETTING_ID,
+  applyResolvedTechnicalSettingValue,
+  listTypeTechnicalSettings,
+  technicalSettingDefinitionsForTemplate,
+} from "./technicalSettings.js";
+import {
+  createPlatformStarterTechnicalSettingVersions,
+  planTechnicalSettingsSave,
+} from "./technicalSettingVersion.js";
 
-const goldenValues = {
-  "root.inscription": "PANOU ACM",
-  "root.mountingSystem": "steel_angle",
-  "face.widthMm": ACM_GOLDEN_WIDTH_MM,
-  "face.heightMm": ACM_GOLDEN_HEIGHT_MM,
-  "face.cassetteDepthMm": String(ACM_GOLDEN_DEPTH_MM),
-  "face.foldCount": "2",
+const lettersReadyValues = {
+  "root.inscription": "WORKOS",
+  "face.finish": "none",
+  "face.confirmedAreaMm2": 250000,
+  "volume.depthMm": "60",
+  "volume.finish": "none",
+  "volume.confirmedPerimeterMm": 12500,
 };
 
-function confirmedAcm() {
+function confirmedAcm(values = ACM_CASSETTE_NONE_READY_VALUES) {
   const definition = compileDefinition(acmCassetteNoneTemplate, acmCassetteNoneFormSchema, {
     templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE,
-    values: goldenValues,
+    values,
   });
   const truth = confirmReviewedDefinition(definition, definition.reviewId);
   if ("ok" in truth) {
@@ -68,42 +91,125 @@ function confirmedAcm() {
   return { definition, truth, aggregate, composition };
 }
 
-describe("ACM cassette second product", () => {
-  it("registers a clean second ProductTemplate without LETTERS identity", () => {
+function fieldIds(): string[] {
+  return acmCassetteNoneFormSchema.sections.flatMap((section) =>
+    section.fields.map((field) => field.id),
+  );
+}
+
+describe("ACM cassette Product Truth V2", () => {
+  it("keeps the same SKU and bumps template/form to v2", () => {
     expect(acmCassetteNoneTemplate.code).toBe("PRD-ACM-CASSETTE-NONE");
-    expect(acmCassetteNoneTemplate.label).toBe("Panou ACM casetat");
-    expect(acmCassetteNoneTemplate.familyId).toBe("SIGN_PANELS");
+    expect(acmCassetteNoneTemplate.version).toBe(ACM_CASSETTE_NONE_TEMPLATE_VERSION);
+    expect(acmCassetteNoneTemplate.version).toBe("2");
+    expect(acmCassetteNoneTemplate.formSchemaId).toBe(ACM_CASSETTE_NONE_FORM_SCHEMA_ID);
+    expect(acmCassetteNoneFormSchema.id).toBe("prd-acm-cassette-none-form-v2");
+    expect(acmCassetteNoneTemplate.fixedValues["face.materialFamily"]).toBe("acm");
+    expect(acmCassetteNoneTemplate.fixedValues["face.thicknessMm"]).toBe(3);
+    expect(acmCassetteNoneTemplate.fixedValues["face.finish"]).toBe("none");
+    expect(acmCassetteNoneTemplate.fixedValues["back.materialFamily"]).toBe("steel");
     expect(acmCassetteNoneTemplate.components.map((item) => item.typeId)).toEqual([
       "ACM_CASSETTE_BODY",
       "STEEL_INTERNAL_FRAME",
     ]);
-    expect(acmCassetteNoneTemplate.fixedValues["face.finish"]).toBe("none");
     expect(getProductTemplate(ACM_CASSETTE_NONE_PRODUCT_CODE)).toBe(acmCassetteNoneTemplate);
     expect(productTemplates.map((item) => item.code)).toEqual([
       CANONICAL_PRODUCT_CODE,
       ACM_CASSETTE_NONE_PRODUCT_CODE,
     ]);
-    expect(JSON.stringify(acmCassetteNoneTemplate)).not.toMatch(/LETTERS_ACM|ACM_TEST|PANEL_V2/);
   });
 
-  it("confirms golden geometry, frame formula and bounded sheet quantity", () => {
-    const { definition, truth, aggregate } = confirmedAcm();
+  it("accepts free numeric depth and optional second return", () => {
+    const depthField = acmCassetteNoneFormSchema.sections
+      .flatMap((section) => section.fields)
+      .find((field) => field.id === "face.cassetteDepthMm");
+    expect(depthField?.type).toBe("number");
+    expect(depthField?.options).toBeUndefined();
+    expect(fieldIds()).not.toContain("root.mountingSystem");
+    expect(fieldIds()).not.toContain("face.foldCount");
+
+    expect(
+      compileDefinition(acmCassetteNoneTemplate, acmCassetteNoneFormSchema, {
+        templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE,
+        values: { ...ACM_CASSETTE_NONE_READY_VALUES, "face.cassetteDepthMm": 73 },
+      }).readiness,
+    ).toBe("ready");
+    expect(
+      compileDefinition(acmCassetteNoneTemplate, acmCassetteNoneFormSchema, {
+        templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE,
+        values: { ...ACM_CASSETTE_NONE_READY_VALUES, "face.cassetteDepthMm": 73.5 },
+      }).readiness,
+    ).toBe("ready");
+    expect(
+      compileDefinition(acmCassetteNoneTemplate, acmCassetteNoneFormSchema, {
+        templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE,
+        values: { ...ACM_CASSETTE_NONE_READY_VALUES, "face.cassetteDepthMm": 0 },
+      }).readiness,
+    ).toBe("blocked");
+
+    const missingReturn = compileDefinition(acmCassetteNoneTemplate, acmCassetteNoneFormSchema, {
+      templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE,
+      values: ACM_CASSETTE_NONE_READY_VALUES,
+    });
+    expect(missingReturn.readiness).toBe("ready");
+    expect(missingReturn.values["face.backReturnMm"]).toBeUndefined();
+    const zeroReturn = compileDefinition(acmCassetteNoneTemplate, acmCassetteNoneFormSchema, {
+      templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE,
+      values: { ...ACM_CASSETTE_NONE_READY_VALUES, "face.backReturnMm": 0 },
+    });
+    expect(zeroReturn.readiness).toBe("ready");
+    expect(zeroReturn.values["face.backReturnMm"]).toBe(0);
+    expect(
+      compileDefinition(acmCassetteNoneTemplate, acmCassetteNoneFormSchema, {
+        templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE,
+        values: { ...ACM_CASSETTE_NONE_READY_VALUES, "face.backReturnMm": 25 },
+      }).readiness,
+    ).toBe("ready");
+    expect(
+      compileDefinition(acmCassetteNoneTemplate, acmCassetteNoneFormSchema, {
+        templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE,
+        values: { ...ACM_CASSETTE_NONE_READY_VALUES, "face.backReturnMm": -1 },
+      }).readiness,
+    ).toBe("blocked");
+  });
+
+  it("does not persist crafted removed fields as V2 ProductTruth", () => {
+    const definition = compileDefinition(acmCassetteNoneTemplate, acmCassetteNoneFormSchema, {
+      templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE,
+      values: {
+        ...ACM_CASSETTE_NONE_READY_VALUES,
+        "root.mountingSystem": "steel_angle",
+        "face.foldCount": "2",
+      },
+    });
     expect(definition.readiness).toBe("ready");
-    expect(truth.status).toBe("CONFIRMED_IN_RUNTIME");
-    expect(truth.values["root.mountingSystem"]).toBe("steel_angle");
-    expect(truth.values["face.foldCount"]).toBe("2");
-    expect(aggregate.quantities.find((item) => item.id === "face_area")?.value).toBe(0.5);
-    expect(aggregate.quantities.find((item) => item.id === "cassette_blank_area")?.value).toBe(
+    expect(definition.values["root.mountingSystem"]).toBeUndefined();
+    expect(definition.values["face.foldCount"]).toBeUndefined();
+    const truth = confirmReviewedDefinition(definition, definition.reviewId);
+    if ("ok" in truth) {
+      throw new Error("expected confirmed ACM truth");
+    }
+    expect(truth.values["root.mountingSystem"]).toBeUndefined();
+    expect(truth.values["face.foldCount"]).toBeUndefined();
+  });
+
+  it("confirms golden geometry and the 3000 x 500 proof blank", () => {
+    const golden = confirmedAcm();
+    expect(golden.definition.readiness).toBe("ready");
+    expect(golden.truth.status).toBe("CONFIRMED_IN_RUNTIME");
+    expect(golden.truth.templateVersion).toBe("2");
+    expect(golden.aggregate.quantities.find((item) => item.id === "face_area")?.value).toBe(0.5);
+    expect(golden.aggregate.quantities.find((item) => item.id === "cassette_blank_area")?.value).toBe(
       0.6264,
     );
-    expect(aggregate.quantities.find((item) => item.id === "frame_external_width_m")?.value).toBe(
+    expect(golden.aggregate.quantities.find((item) => item.id === "frame_external_width_m")?.value).toBe(
       0.992,
     );
-    expect(aggregate.quantities.find((item) => item.id === "frame_external_height_m")?.value).toBe(
+    expect(golden.aggregate.quantities.find((item) => item.id === "frame_external_height_m")?.value).toBe(
       0.492,
     );
-    expect(aggregate.quantities.find((item) => item.id === "frame_perimeter")?.value).toBe(2.968);
-    expect(aggregate.requirements).toEqual(
+    expect(golden.aggregate.quantities.find((item) => item.id === "frame_perimeter")?.value).toBe(2.968);
+    expect(golden.aggregate.requirements).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ resourceId: ACM_3MM_ID, quantity: 0.6264, unit: "m2" }),
         expect.objectContaining({
@@ -113,41 +219,190 @@ describe("ACM cassette second product", () => {
         }),
       ]),
     );
+
+    const proof = confirmedAcm(ACM_CASSETTE_NONE_PROOF_VALUES);
+    expect(proof.aggregate.quantities.find((item) => item.id === "cassette_blank_area")?.value).toBeCloseTo(
+      2.2791,
+      6,
+    );
+    expect(proof.aggregate.requirements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ resourceId: ACM_3MM_ID, quantity: 2.2791, unit: "m2" }),
+      ]),
+    );
   });
 
-  it("keeps fold as workshop truth and mounting out of the frame", () => {
-    const oneFold = compileDefinition(acmCassetteNoneTemplate, acmCassetteNoneFormSchema, {
+  it("changes frame size from organization clearance, not a source constant", () => {
+    const definition = compileDefinition(acmCassetteNoneTemplate, acmCassetteNoneFormSchema, {
       templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE,
-      values: { ...goldenValues, "face.foldCount": "1" },
+      values: ACM_CASSETTE_NONE_READY_VALUES,
     });
-    const twoFold = compileDefinition(acmCassetteNoneTemplate, acmCassetteNoneFormSchema, {
-      templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE,
-      values: goldenValues,
-    });
-    const oneTruth = confirmReviewedDefinition(oneFold, oneFold.reviewId);
-    const twoTruth = confirmReviewedDefinition(twoFold, twoFold.reviewId);
-    if ("ok" in oneTruth || "ok" in twoTruth) {
-      throw new Error("expected both fold variants to confirm");
+    const truth = confirmReviewedDefinition(definition, definition.reviewId);
+    if ("ok" in truth) {
+      throw new Error("expected confirmed ACM truth");
     }
-    const oneAgg = compileAggregate(
-      oneTruth,
+    const clearance = listTypeTechnicalSettings("STEEL_INTERNAL_FRAME").find(
+      (item) => item.id === FRAME_CLEARANCE_SETTING_ID,
+    );
+    if (!clearance) {
+      throw new Error("expected frame clearance definition");
+    }
+    const six = compileAggregate(
+      truth,
       acmCassetteNoneTemplate,
       acmCassetteNoneFormSchema,
       seededDisplayLabelCatalog(),
+      {
+        technicalSettingsForType: (typeId) =>
+          typeId === "STEEL_INTERNAL_FRAME"
+            ? [applyResolvedTechnicalSettingValue(clearance, 6)]
+            : [],
+      },
     );
-    const twoAgg = compileAggregate(
-      twoTruth,
+    expect(six.quantities.find((item) => item.id === "frame_external_width_m")?.value).toBe(0.988);
+    expect(six.quantities.find((item) => item.id === "frame_external_height_m")?.value).toBe(0.488);
+    const missing = compileAggregate(
+      truth,
       acmCassetteNoneTemplate,
       acmCassetteNoneFormSchema,
       seededDisplayLabelCatalog(),
+      {
+        technicalSettingsForType: () => [],
+      },
     );
-    expect(oneAgg.quantities.find((item) => item.id === "frame_perimeter")?.value).toBe(
-      twoAgg.quantities.find((item) => item.id === "frame_perimeter")?.value,
+    expect(missing.componentStatuses.find((item) => item.typeId === "STEEL_INTERNAL_FRAME")?.status).toBe(
+      "UNAVAILABLE",
     );
-    expect(oneAgg.requirements).toEqual(twoAgg.requirements);
-    expect(acmCassetteNoneFormSchema.sections[0]?.fields.map((item) => item.id)).toContain(
-      "root.mountingSystem",
+  });
+
+  it("invalidates ACM crv1 when frame clearance changes and leaves Letters crv1 intact", () => {
+    const starters = createPlatformStarterTechnicalSettingVersions({
+      now: "2026-09-21T00:00:00.000Z",
+      rowIdFor: (definitionId) => `tsv:${definitionId}:v1`,
+    });
+    const firstAcm = resolveOrganizationTechnicalSettings(starters, {
+      requiredDefinitions: technicalSettingDefinitionsForTemplate(acmCassetteNoneTemplate),
+    });
+    const firstLetters = resolveOrganizationTechnicalSettings(starters, {
+      requiredDefinitions: technicalSettingDefinitionsForTemplate(frontlitPlexiAl06Template),
+    });
+    expect(firstAcm.ok).toBe(true);
+    expect(firstLetters.ok).toBe(true);
+    if (!firstAcm.ok || !firstLetters.ok) {
+      throw new Error("expected starter resolution");
+    }
+    const acmPreview = projectConfigurationPreview(
+      acmCassetteNoneTemplate,
+      acmCassetteNoneFormSchema,
+      { templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE, values: ACM_CASSETTE_NONE_READY_VALUES },
+      firstAcm.settings,
     );
+    const lettersPreview = projectConfigurationPreview(
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      { templateCode: CANONICAL_PRODUCT_CODE, values: lettersReadyValues },
+      firstLetters.settings,
+    );
+    expect(acmPreview.reviewId).toMatch(/^crv1:/);
+    expect(lettersPreview.reviewId).toMatch(/^crv1:/);
+
+    const planned = planTechnicalSettingsSave(
+      starters,
+      [{ settingId: FRAME_CLEARANCE_SETTING_ID, value: 6 }],
+      { kind: "USER", userId: "user-1" },
+      {
+        now: "2026-09-21T01:00:00.000Z",
+        rowIdFor: (definitionId) => `tsv:${definitionId}:v2`,
+      },
+    );
+    expect(planned.ok).toBe(true);
+    if (!planned.ok) {
+      throw new Error("expected clearance save plan");
+    }
+    const nextRows = starters.map((row) =>
+      row.settingId === FRAME_CLEARANCE_SETTING_ID ? { ...row, status: "RETIRED" as const } : row,
+    );
+    const secondAcm = resolveOrganizationTechnicalSettings([...nextRows, ...planned.next], {
+      requiredDefinitions: technicalSettingDefinitionsForTemplate(acmCassetteNoneTemplate),
+    });
+    const secondLetters = resolveOrganizationTechnicalSettings([...nextRows, ...planned.next], {
+      requiredDefinitions: technicalSettingDefinitionsForTemplate(frontlitPlexiAl06Template),
+    });
+    expect(secondAcm.ok).toBe(true);
+    expect(secondLetters.ok).toBe(true);
+    if (!secondAcm.ok || !secondLetters.ok) {
+      throw new Error("expected next resolution");
+    }
+    const staleAcm = confirmReviewedDraft(
+      acmCassetteNoneTemplate,
+      acmCassetteNoneFormSchema,
+      { templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE, values: ACM_CASSETTE_NONE_READY_VALUES },
+      acmPreview.reviewId ?? "",
+      "2026-09-21T01:00:00.000Z",
+      secondAcm.settings,
+    );
+    expect("ok" in staleAcm && staleAcm.reason).toBe("review_mismatch");
+    const stillLetters = confirmReviewedDraft(
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      { templateCode: CANONICAL_PRODUCT_CODE, values: lettersReadyValues },
+      lettersPreview.reviewId ?? "",
+      "2026-09-21T01:00:00.000Z",
+      secondLetters.settings,
+    );
+    expect("status" in stillLetters && stillLetters.status).toBe("CONFIRMED_IN_RUNTIME");
+
+    const lightingChange = planTechnicalSettingsSave(
+      starters,
+      [{ settingId: LED_PITCH_SETTING_ID, value: 80 }],
+      { kind: "USER", userId: "user-1" },
+      {
+        now: "2026-09-21T02:00:00.000Z",
+        rowIdFor: (definitionId) => `tsv:${definitionId}:pitch`,
+      },
+    );
+    expect(lightingChange.ok).toBe(true);
+    if (!lightingChange.ok) {
+      throw new Error("expected lighting save plan");
+    }
+    const lightingRows = starters.map((row) =>
+      row.settingId === LED_PITCH_SETTING_ID ? { ...row, status: "RETIRED" as const } : row,
+    );
+    const lightingAcm = resolveOrganizationTechnicalSettings(
+      [...lightingRows, ...lightingChange.next],
+      { requiredDefinitions: technicalSettingDefinitionsForTemplate(acmCassetteNoneTemplate) },
+    );
+    expect(lightingAcm.ok).toBe(true);
+    if (!lightingAcm.ok) {
+      throw new Error("expected ACM after lighting change");
+    }
+    const stillAcm = confirmReviewedDraft(
+      acmCassetteNoneTemplate,
+      acmCassetteNoneFormSchema,
+      { templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE, values: ACM_CASSETTE_NONE_READY_VALUES },
+      acmPreview.reviewId ?? "",
+      "2026-09-21T02:00:00.000Z",
+      lightingAcm.settings,
+    );
+    expect("status" in stillAcm && stillAcm.status).toBe("CONFIRMED_IN_RUNTIME");
+  });
+
+  it("resolves only the settings required by selected component types", () => {
+    const lightingOnly = createPlatformStarterTechnicalSettingVersions({
+      now: "2026-09-21T00:00:00.000Z",
+      rowIdFor: (definitionId) => `tsv:${definitionId}:v1`,
+    }).filter((row) => row.typeId === "LIGHTING_FRONT_LED");
+    const letters = resolveOrganizationTechnicalSettings(lightingOnly, {
+      requiredDefinitions: technicalSettingDefinitionsForTemplate(frontlitPlexiAl06Template),
+    });
+    const acm = resolveOrganizationTechnicalSettings(lightingOnly, {
+      requiredDefinitions: technicalSettingDefinitionsForTemplate(acmCassetteNoneTemplate),
+    });
+    expect(letters.ok).toBe(true);
+    expect(acm.ok).toBe(false);
+    if (acm.ok) {
+      throw new Error("expected ACM to fail closed without frame clearance");
+    }
   });
 
   it("composes ACM processes from type ids, not LETTERS extras", () => {

@@ -263,6 +263,8 @@ function configurationLabel(fieldId: string): string | null {
       return qualifier ? `Lățime ${qualifier}` : "Lățime";
     case "heightMm":
       return qualifier ? `Înălțime ${qualifier}` : "Înălțime";
+    case "backReturnMm":
+      return "A doua întoarcere";
     case "foldCount":
       return "Îndoituri";
     case "mountingSystem":

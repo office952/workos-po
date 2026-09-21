@@ -107,7 +107,11 @@ describe("resolved technical settings drive future lighting calculation", () => 
     if (!planned.ok) {
       throw new Error("expected plan");
     }
-    const retired = starters().map((row) => ({ ...row, status: "RETIRED" as const }));
+    const retired = starters().map((row) =>
+      planned.next.some((next) => next.settingId === row.settingId)
+        ? { ...row, status: "RETIRED" as const }
+        : row,
+    );
     const next = compileWith([...retired, ...planned.next]);
     const lighting = next.evaluations.find((item) => item.result.role === "LIGHTING");
     expect(lighting?.result.quantities.find((item) => item.id === "ledModuleQuantity")?.value).toBe(157);

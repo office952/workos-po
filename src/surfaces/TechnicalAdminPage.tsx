@@ -66,21 +66,27 @@ export function TechnicalAdminPage() {
   }
 
   async function save(): Promise<void> {
-    const ledPitchMm = parseDraft(drafts.ledPitchMm ?? "");
-    const ledModulePowerW = parseDraft(drafts.ledModulePowerW ?? "");
-    const psuReservePercent = parseDraft(drafts.psuReservePercent ?? "");
-    if (ledPitchMm === null || ledModulePowerW === null || psuReservePercent === null) {
+    if (!model) {
+      return;
+    }
+    const settings: Array<{ settingId: string; value: number }> = [];
+    for (const setting of model.settings) {
+      const value = parseDraft(drafts[setting.settingId] ?? "");
+      if (value === null) {
+        setSaveState("error");
+        setErrorMessage("Setările tehnice trebuie să fie numere.");
+        return;
+      }
+      settings.push({ settingId: setting.settingId, value });
+    }
+    if (settings.length === 0) {
       setSaveState("error");
       setErrorMessage("Setările tehnice trebuie să fie numere.");
       return;
     }
     setSaveState("pending");
     setErrorMessage(null);
-    const result = await postTechnicalSettings({
-      ledPitchMm,
-      ledModulePowerW,
-      psuReservePercent,
-    });
+    const result = await postTechnicalSettings({ settings });
     if (result.ok) {
       const presented = presentTechnicalSettingsAdmin(result.body);
       if (!presented) {

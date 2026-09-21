@@ -50,11 +50,9 @@ const lettersPins = [
 
 const acmValues: DraftValues = {
   "root.inscription": "PANOU ACM",
-  "root.mountingSystem": "steel_angle",
   "face.widthMm": ACM_GOLDEN_WIDTH_MM,
   "face.heightMm": ACM_GOLDEN_HEIGHT_MM,
-  "face.cassetteDepthMm": String(ACM_GOLDEN_DEPTH_MM),
-  "face.foldCount": "2",
+  "face.cassetteDepthMm": ACM_GOLDEN_DEPTH_MM,
 };
 
 const QUOTE_HASH_PIN =

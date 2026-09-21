@@ -730,7 +730,7 @@ export const costEvidence: readonly CostEvidence[] = [
     perUnit: "buc",
     source: "AI_DECISION",
     classification: "AI_DECISION",
-    note: "AI development per-product labor for manual fold/deburr after CNC V-groove. foldCount is workshop truth, not a V1 quantity driver. No bending machine. Replace with labor calibration. Not owner-confirmed.",
+    note: "AI development per-product labor for manual fold/deburr after CNC V-groove. The optional second return changes developed-blank geometry, not this per-product labor quantity. No bending machine. Replace with labor calibration. Not owner-confirmed.",
   },
   {
     resourceId: LAB_ATTACH_INTERNAL_FRAME_ID,

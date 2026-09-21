@@ -88,6 +88,9 @@ function isValidValue(field: FormField, value: DraftValue | undefined): boolean 
     if (field.min !== undefined && value < field.min) {
       return false;
     }
+    if (field.exclusiveMin !== undefined && value <= field.exclusiveMin) {
+      return false;
+    }
   }
   if (field.type === "select" && field.options) {
     return field.options.some((option) => option.value === value);
@@ -125,6 +128,14 @@ export function compileDefinition(
     }
 
     const value = draft.values[field.id];
+    if (!isEmpty(value) && !isValidValue(field, value)) {
+      missing.push({
+        fieldId: field.id,
+        label: field.label,
+        componentId: field.componentId,
+      });
+      continue;
+    }
     if (field.required && !isValidValue(field, value)) {
       missing.push({
         fieldId: field.id,

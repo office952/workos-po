@@ -3,7 +3,9 @@ import {
   createPlatformStarterTechnicalSettingVersions,
   isTechnicalSettingVersionRecord,
   planTechnicalSettingsSave,
+  requiredTechnicalSettingDefinitions,
   resolveOrganizationTechnicalSettings,
+  type ComponentTechnicalSettingDefinition,
   type PersistedTechnicalSettingVersion,
   type TechnicalSettingActor,
   type TechnicalSettingDraftValue,
@@ -39,7 +41,7 @@ export type TechnicalSettingSaveResult =
   | {
       ok: true;
       alreadyApplied: boolean;
-      resolution: Extract<TechnicalSettingResolution, { ok: true }>;
+      resolution: TechnicalSettingResolution;
       history: PersistedTechnicalSettingVersion[];
     }
   | {
@@ -91,8 +93,11 @@ export function listTechnicalSettingVersions(
 
 export function resolveStoredTechnicalSettings(
   db: SqliteDatabase,
+  options: {
+    readonly requiredDefinitions?: readonly ComponentTechnicalSettingDefinition[];
+  } = {},
 ): TechnicalSettingResolution {
-  return resolveOrganizationTechnicalSettings(listTechnicalSettingVersions(db));
+  return resolveOrganizationTechnicalSettings(listTechnicalSettingVersions(db), options);
 }
 
 export function ensureTechnicalSettingStarters(
@@ -102,73 +107,79 @@ export function ensureTechnicalSettingStarters(
   if (policy === "ADOPT_EXISTING") {
     return;
   }
-  if (isTechnicalSettingStartersApplied(db)) {
-    return;
-  }
   const apply = db.transaction(() => {
-    if (isTechnicalSettingStartersApplied(db)) {
-      return;
-    }
+    const existing = listTechnicalSettingVersions(db);
+    const existingIds = new Set(existing.map((row) => row.definitionId));
     const now = new Date().toISOString();
     const starters = createPlatformStarterTechnicalSettingVersions({
       now,
       rowIdFor: (definitionId) => `tsv:${definitionId}:${randomUUID()}`,
     });
-    const insert = db.prepare(
-      `
-      INSERT INTO technical_setting_versions (
-        technical_setting_version_row_id,
-        definition_id,
-        type_id,
-        setting_id,
-        version,
-        status,
-        value,
-        value_type,
-        unit,
-        scope,
-        source,
-        effective_from,
-        created_at,
-        actor_kind,
-        actor_user_id,
-        actor_system_id,
-        supersedes_version
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-    );
-    for (const row of starters) {
-      insert.run(
-        row.technicalSettingVersionRowId,
-        row.definitionId,
-        row.typeId,
-        row.settingId,
-        row.version,
-        row.status,
-        row.value,
-        row.valueType,
-        row.unit,
-        row.scope,
-        row.source,
-        row.effectiveFrom,
-        row.createdAt,
-        row.actorKind,
-        row.actorUserId,
-        row.actorSystemId,
-        row.supersedesVersion,
+    const missing = starters.filter((row) => !existingIds.has(row.definitionId));
+    if (missing.length > 0) {
+      const insert = db.prepare(
+        `
+        INSERT INTO technical_setting_versions (
+          technical_setting_version_row_id,
+          definition_id,
+          type_id,
+          setting_id,
+          version,
+          status,
+          value,
+          value_type,
+          unit,
+          scope,
+          source,
+          effective_from,
+          created_at,
+          actor_kind,
+          actor_user_id,
+          actor_system_id,
+          supersedes_version
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
       );
+      for (const row of missing) {
+        insert.run(
+          row.technicalSettingVersionRowId,
+          row.definitionId,
+          row.typeId,
+          row.settingId,
+          row.version,
+          row.status,
+          row.value,
+          row.valueType,
+          row.unit,
+          row.scope,
+          row.source,
+          row.effectiveFrom,
+          row.createdAt,
+          row.actorKind,
+          row.actorUserId,
+          row.actorSystemId,
+          row.supersedesVersion,
+        );
+      }
     }
     const stored = listTechnicalSettingVersions(db);
     const resolution = resolveOrganizationTechnicalSettings(stored);
-    if (!resolution.ok || resolution.settings.length !== 3) {
+    const alreadyBootstrapped = isTechnicalSettingStartersApplied(db);
+    if (
+      !alreadyBootstrapped &&
+      (!resolution.ok ||
+        resolution.settings.length !== requiredTechnicalSettingDefinitions().length)
+    ) {
       throw new Error("technical_setting_starters_incomplete");
     }
-    db.prepare(
-      `
-      INSERT INTO runtime_bootstrap_markers (marker_id, applied_at)
-      VALUES (?, ?)
-    `,
-    ).run(TECHNICAL_SETTING_STARTERS_MARKER, now);
+    if (!alreadyBootstrapped) {
+      db.prepare(
+        `
+        INSERT INTO runtime_bootstrap_markers (marker_id, applied_at)
+        VALUES (?, ?)
+      `,
+      ).run(TECHNICAL_SETTING_STARTERS_MARKER, now);
+    }
   });
   apply();
 }
@@ -180,14 +191,18 @@ export function persistTechnicalSettingSave(
   now = new Date().toISOString(),
 ): TechnicalSettingSaveResult {
   const existing = listTechnicalSettingVersions(db);
-  const current = resolveOrganizationTechnicalSettings(existing);
-  if (!current.ok) {
-    return {
-      ok: false,
-      error: "inactive_technical_settings",
-      reason: current.reason,
-      history: existing,
-    };
+  if (existing.length > 0) {
+    const integrity = resolveOrganizationTechnicalSettings(existing, {
+      requiredDefinitions: [],
+    });
+    if (!integrity.ok && integrity.error === "TECHNICAL_SETTINGS_INVALID") {
+      return {
+        ok: false,
+        error: "inactive_technical_settings",
+        reason: integrity.reason,
+        history: existing,
+      };
+    }
   }
   const validExisting = existing.filter(isTechnicalSettingVersionRecord);
   const planned = planTechnicalSettingsSave(validExisting, drafts, actor, {
@@ -203,19 +218,10 @@ export function persistTechnicalSettingSave(
     };
   }
   if (planned.alreadyApplied) {
-    const resolution = resolveOrganizationTechnicalSettings(existing);
-    if (!resolution.ok) {
-      return {
-        ok: false,
-        error: "inactive_technical_settings",
-        reason: resolution.reason,
-        history: existing,
-      };
-    }
     return {
       ok: true,
       alreadyApplied: true,
-      resolution,
+      resolution: resolveOrganizationTechnicalSettings(existing),
       history: existing,
     };
   }
@@ -293,19 +299,10 @@ export function persistTechnicalSettingSave(
   }
 
   const history = listTechnicalSettingVersions(db);
-  const resolution = resolveOrganizationTechnicalSettings(history);
-  if (!resolution.ok) {
-    return {
-      ok: false,
-      error: "inactive_technical_settings",
-      reason: resolution.reason,
-      history,
-    };
-  }
   return {
     ok: true,
     alreadyApplied: false,
-    resolution,
+    resolution: resolveOrganizationTechnicalSettings(history),
     history,
   };
 }

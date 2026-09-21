@@ -45,6 +45,7 @@ export type FormField = {
   options?: readonly FieldOption[];
   visibleWhen: VisibilityRule;
   min?: number;
+  exclusiveMin?: number;
   hint?: string;
 };
 

@@ -200,7 +200,7 @@ export const componentTypes: readonly ComponentTypeDefinition[] = [
     role: "FACE",
     label: "Casetă ACM",
     description:
-      "Corp casetat din foaie ACM. Lățimea, înălțimea, adâncimea și îndoiturile sunt configurație, nu un tip nou.",
+      "Corp casetat din foaie ACM. Lățimea, înălțimea, adâncimea și a doua întoarcere sunt configurație de comandă, nu un tip nou.",
     attributes: [
       {
         id: "face.materialFamily",
@@ -228,15 +228,15 @@ export const componentTypes: readonly ComponentTypeDefinition[] = [
       },
       {
         id: "face.cassetteDepthMm",
-        label: "Adâncime casetă",
+        label: "Adâncime casetă / prima întoarcere",
         ownership: "CONFIGURABLE_BY_ORDER",
         kind: "depth",
       },
       {
-        id: "face.foldCount",
-        label: "Număr de îndoituri",
+        id: "face.backReturnMm",
+        label: "A doua întoarcere / buză spate",
         ownership: "CONFIGURABLE_BY_ORDER",
-        kind: "technology",
+        kind: "depth",
       },
       {
         id: "face.finish",
@@ -251,13 +251,19 @@ export const componentTypes: readonly ComponentTypeDefinition[] = [
     role: "BACK",
     label: "Cadru intern oțel",
     description:
-      "Cadru metalic intern. Dimensiunea vine din formula confirmată pe casetă, nu dintr-un al doilea calculator de produs.",
+      "Cadru metalic intern. Dimensiunea vine din dimensiunile casetei, grosimea ACM și jocul de montaj configurat al organizației.",
     attributes: [
       {
         id: "back.materialFamily",
         label: "Familie material",
         ownership: "FIXED_BY_PRODUCT",
         kind: "material_family",
+      },
+      {
+        id: "frameClearanceMm",
+        label: "Joc de montaj cadru",
+        ownership: "TECHNICAL_SETTING",
+        kind: "technology",
       },
     ],
   },

@@ -1,8 +1,14 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  ACM_CASSETTE_NONE_PRODUCT_CODE,
+  ACM_CASSETTE_NONE_READY_VALUES,
   CANONICAL_PRODUCT_CODE,
+  FRAME_CLEARANCE_SETTING_ID,
+  LED_MODULE_POWER_SETTING_ID,
   LED_PITCH_SETTING_ID,
+  PSU_RESERVE_SETTING_ID,
   TECHNICAL_SETTINGS_INVALID,
+  createPlatformStarterTechnicalSettingVersions,
 } from "@workos-final/domain";
 import { NEW_ORGANIZATION_MARKERS } from "../src/cloud/provision.js";
 import { applyOperationalBootstrap } from "../src/cloud/bootstrapPolicy.js";
@@ -79,12 +85,12 @@ describe("technical setting persistence", () => {
 
     applyOperationalBootstrap(db, "NEW_ORGANIZATION");
     const first = listTechnicalSettingVersions(db);
-    expect(first).toHaveLength(3);
+    expect(first).toHaveLength(4);
     expect(first.every((row) => row.source === "PLATFORM_STARTER")).toBe(true);
     expect(first.every((row) => row.status === "ACTIVE")).toBe(true);
     expect(first.every((row) => row.actorKind === "SYSTEM")).toBe(true);
     applyOperationalBootstrap(db, "NEW_ORGANIZATION");
-    expect(listTechnicalSettingVersions(db)).toHaveLength(3);
+    expect(listTechnicalSettingVersions(db)).toHaveLength(4);
     const markers = db
       .prepare("SELECT COUNT(*) AS count FROM runtime_bootstrap_markers WHERE marker_id = ?")
       .get(TECHNICAL_SETTING_STARTERS_MARKER) as { count: number };
@@ -110,7 +116,7 @@ describe("technical setting persistence", () => {
     const db = openSqliteDatabase(sqlitePath);
     ensureTechnicalSettingStarters(db, "SYNTHETIC_TEST");
     const again = listTechnicalSettingVersions(db);
-    expect(again).toHaveLength(3);
+    expect(again).toHaveLength(4);
     expect(again.find((row) => row.settingId === LED_PITCH_SETTING_ID)?.value).toBe(100);
     db.close();
 
@@ -129,7 +135,7 @@ describe("technical setting persistence", () => {
     applyMigrations(db);
     applyOperationalBootstrap(db, "NEW_ORGANIZATION");
     const starters = listTechnicalSettingVersions(db);
-    expect(starters).toHaveLength(3);
+    expect(starters).toHaveLength(4);
     expect(resolveStoredTechnicalSettings(db).ok).toBe(true);
 
     db.prepare(
@@ -174,14 +180,14 @@ describe("technical setting persistence", () => {
       null,
     );
     const withUnknown = listTechnicalSettingVersions(db);
-    expect(withUnknown).toHaveLength(4);
+    expect(withUnknown).toHaveLength(5);
     expect(withUnknown.some((row) => row.definitionId === "UNKNOWN.type.setting")).toBe(true);
     const unknownResolution = resolveStoredTechnicalSettings(db);
     expect(unknownResolution).toMatchObject({
       ok: false,
       error: TECHNICAL_SETTINGS_INVALID,
     });
-    expect(unknownResolution.ok ? null : unknownResolution.history).toHaveLength(4);
+    expect(unknownResolution.ok ? null : unknownResolution.history).toHaveLength(5);
     db.prepare("DELETE FROM technical_setting_versions WHERE definition_id = ?").run(
       "UNKNOWN.type.setting",
     );
@@ -192,7 +198,7 @@ describe("technical setting persistence", () => {
     );
     const wrongUnit = listTechnicalSettingVersions(db);
     expect(wrongUnit.find((row) => row.settingId === LED_PITCH_SETTING_ID)?.unit).toBe("W");
-    expect(wrongUnit).toHaveLength(3);
+    expect(wrongUnit).toHaveLength(4);
     expect(resolveStoredTechnicalSettings(db)).toMatchObject({
       ok: false,
       error: TECHNICAL_SETTINGS_INVALID,
@@ -238,6 +244,13 @@ describe("technical settings API", () => {
     const settings = listed.settings as JsonObject[];
     expect(settings.find((item) => item.settingId === "ledPitchMm")).toMatchObject({
       value: 100,
+      unit: "mm",
+      source: "PLATFORM_STARTER",
+      version: 1,
+      status: "ACTIVE",
+    });
+    expect(settings.find((item) => item.settingId === FRAME_CLEARANCE_SETTING_ID)).toMatchObject({
+      value: 2,
       unit: "mm",
       source: "PLATFORM_STARTER",
       version: 1,
@@ -428,5 +441,178 @@ describe("technical settings tenancy and roles", () => {
     } finally {
       fixture.close();
     }
+  });
+});
+
+describe("technical setting starter upgrade and product scope", () => {
+  it("adds only the missing frame-clearance starter to a previous three-setting history", () => {
+    const db = openSqliteDatabase(tempSqlitePath());
+    applyMigrations(db);
+    const now = "2026-09-21T00:00:00.000Z";
+    const lightingOnly = createPlatformStarterTechnicalSettingVersions({
+      now,
+      rowIdFor: (definitionId) => `tsv:${definitionId}:legacy`,
+    }).filter((row) => row.typeId === "LIGHTING_FRONT_LED");
+    const insert = db.prepare(
+      `
+      INSERT INTO technical_setting_versions (
+        technical_setting_version_row_id,
+        definition_id,
+        type_id,
+        setting_id,
+        version,
+        status,
+        value,
+        value_type,
+        unit,
+        scope,
+        source,
+        effective_from,
+        created_at,
+        actor_kind,
+        actor_user_id,
+        actor_system_id,
+        supersedes_version
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+    );
+    for (const row of lightingOnly) {
+      insert.run(
+        row.technicalSettingVersionRowId,
+        row.definitionId,
+        row.typeId,
+        row.settingId,
+        row.version,
+        row.status,
+        row.value,
+        row.valueType,
+        row.unit,
+        row.scope,
+        row.source,
+        row.effectiveFrom,
+        row.createdAt,
+        row.actorKind,
+        row.actorUserId,
+        row.actorSystemId,
+        row.supersedesVersion,
+      );
+    }
+    db.prepare(
+      `
+      INSERT INTO runtime_bootstrap_markers (marker_id, applied_at)
+      VALUES (?, ?)
+    `,
+    ).run(TECHNICAL_SETTING_STARTERS_MARKER, now);
+    expect(listTechnicalSettingVersions(db)).toHaveLength(3);
+
+    ensureTechnicalSettingStarters(db, "SYNTHETIC_TEST");
+    const upgraded = listTechnicalSettingVersions(db);
+    expect(upgraded).toHaveLength(4);
+    expect(upgraded.filter((row) => row.typeId === "LIGHTING_FRONT_LED")).toHaveLength(3);
+    expect(upgraded.find((row) => row.settingId === LED_PITCH_SETTING_ID)?.value).toBe(100);
+    expect(upgraded.find((row) => row.settingId === LED_MODULE_POWER_SETTING_ID)?.value).toBe(0.75);
+    expect(upgraded.find((row) => row.settingId === PSU_RESERVE_SETTING_ID)?.value).toBe(25);
+    expect(upgraded.find((row) => row.settingId === FRAME_CLEARANCE_SETTING_ID)).toMatchObject({
+      value: 2,
+      source: "PLATFORM_STARTER",
+      version: 1,
+      status: "ACTIVE",
+    });
+    ensureTechnicalSettingStarters(db, "SYNTHETIC_TEST");
+    expect(listTechnicalSettingVersions(db)).toHaveLength(4);
+    db.close();
+  });
+
+  it("does not seed ADOPT_EXISTING when previous lighting settings already exist", () => {
+    const db = openSqliteDatabase(tempSqlitePath());
+    applyMigrations(db);
+    const now = "2026-09-21T00:00:00.000Z";
+    const lightingOnly = createPlatformStarterTechnicalSettingVersions({
+      now,
+      rowIdFor: (definitionId) => `tsv:${definitionId}:adopt`,
+    }).filter((row) => row.typeId === "LIGHTING_FRONT_LED");
+    const insert = db.prepare(
+      `
+      INSERT INTO technical_setting_versions (
+        technical_setting_version_row_id,
+        definition_id,
+        type_id,
+        setting_id,
+        version,
+        status,
+        value,
+        value_type,
+        unit,
+        scope,
+        source,
+        effective_from,
+        created_at,
+        actor_kind,
+        actor_user_id,
+        actor_system_id,
+        supersedes_version
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+    );
+    for (const row of lightingOnly) {
+      insert.run(
+        row.technicalSettingVersionRowId,
+        row.definitionId,
+        row.typeId,
+        row.settingId,
+        row.version,
+        row.status,
+        row.value,
+        row.valueType,
+        row.unit,
+        row.scope,
+        row.source,
+        row.effectiveFrom,
+        row.createdAt,
+        row.actorKind,
+        row.actorUserId,
+        row.actorSystemId,
+        row.supersedesVersion,
+      );
+    }
+    applyOperationalBootstrap(db, "ADOPT_EXISTING");
+    expect(listTechnicalSettingVersions(db)).toHaveLength(3);
+    expect(
+      listTechnicalSettingVersions(db).some((row) => row.settingId === FRAME_CLEARANCE_SETTING_ID),
+    ).toBe(false);
+    db.close();
+  });
+
+  it("blocks only ACM when frame clearance is missing", async () => {
+    const sqlitePath = tempSqlitePath();
+    const seeded = createProductSystemRuntime(sqlitePath, { bootstrapPolicy: "SYNTHETIC_TEST" });
+    seeded.close();
+    const db = openSqliteDatabase(sqlitePath);
+    db.prepare("DELETE FROM technical_setting_versions WHERE setting_id = ?").run(
+      FRAME_CLEARANCE_SETTING_ID,
+    );
+    expect(listTechnicalSettingVersions(db).some((row) => row.settingId === FRAME_CLEARANCE_SETTING_ID)).toBe(
+      false,
+    );
+    db.close();
+
+    const productSystem = createProductSystemRuntime(sqlitePath, {
+      bootstrapPolicy: "ADOPT_EXISTING",
+    });
+    const app = createApp({ productSystem });
+    const letters = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ values: readyValues }),
+    });
+    expect(letters.status).toBe(200);
+    expect((await readBody(letters)).reviewId as string).toMatch(/^crv1:/);
+    const acm = await app.request(`/api/products/${ACM_CASSETTE_NONE_PRODUCT_CODE}/preview`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ values: ACM_CASSETTE_NONE_READY_VALUES }),
+    });
+    expect(acm.status).toBe(409);
+    productSystem.close();
   });
 });

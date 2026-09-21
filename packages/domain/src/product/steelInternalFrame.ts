@@ -9,10 +9,12 @@ import type {
   ComponentCalculationContract,
   ComponentCalculationResult,
 } from "./componentContract.js";
+import { FRAME_CLEARANCE_SETTING_ID, resolvedSettingValue } from "./technicalSettings.js";
 import { linearMetersFromMm } from "./units.js";
 
 export const STEEL_INTERNAL_FRAME_TYPE_ID = "STEEL_INTERNAL_FRAME" as const;
 export const FRAME_MISSING_PANEL_GEOMETRY = "Cadrul nu poate fi calculat fără dimensiunile casetei";
+export const FRAME_MISSING_CLEARANCE = "Jocul de montaj al cadrului nu este configurat";
 
 function frameResult(
   status: ComponentCalculationResult["status"],
@@ -50,8 +52,12 @@ export const steelInternalFrameContract: ComponentCalculationContract = {
     if (!width || !height || !thickness) {
       return frameResult("MISSING_MEASUREMENT", [], [], [FRAME_MISSING_PANEL_GEOMETRY]);
     }
-    const frameWidth = frameExternalSizeMm(width.value, thickness.value);
-    const frameHeight = frameExternalSizeMm(height.value, thickness.value);
+    const clearanceMm = resolvedSettingValue(input.technicalSettings, FRAME_CLEARANCE_SETTING_ID);
+    if (clearanceMm === undefined) {
+      return frameResult("UNAVAILABLE", [], [], [FRAME_MISSING_CLEARANCE]);
+    }
+    const frameWidth = frameExternalSizeMm(width.value, thickness.value, clearanceMm);
+    const frameHeight = frameExternalSizeMm(height.value, thickness.value, clearanceMm);
     if (frameWidth <= 0 || frameHeight <= 0) {
       return frameResult("UNAVAILABLE", [], [], ["Dimensiunile casetei sunt prea mici pentru cadru."]);
     }

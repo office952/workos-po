@@ -114,7 +114,11 @@ export {
   frontlitPlexiAl06Template,
 } from "./frontlitPlexiAl06.js";
 export {
+  ACM_CASSETTE_NONE_FORM_SCHEMA_ID,
   ACM_CASSETTE_NONE_PRODUCT_CODE,
+  ACM_CASSETTE_NONE_PROOF_VALUES,
+  ACM_CASSETTE_NONE_READY_VALUES,
+  ACM_CASSETTE_NONE_TEMPLATE_VERSION,
   ACM_GOLDEN_DEPTH_MM,
   ACM_GOLDEN_HEIGHT_MM,
   ACM_GOLDEN_WIDTH_MM,
@@ -129,7 +133,7 @@ export {
   productTemplates,
 } from "./productRegistry.js";
 export {
-  ACM_FRAME_CLEARANCE_MM,
+  ACM_FRAME_CLEARANCE_STARTER_MM,
   ACM_UNFOLD_RETURN_SIDES,
   cassetteBlankMm,
   frameExternalSizeMm,
@@ -137,6 +141,7 @@ export {
 } from "./acmGeometry.js";
 export {
   ACM_CASSETTE_BODY_TYPE_ID,
+  FACE_BACK_RETURN_FIELD,
   FACE_CASSETTE_DEPTH_FIELD,
   FACE_HEIGHT_FIELD,
   FACE_THICKNESS_FIELD,
@@ -144,6 +149,7 @@ export {
   acmCassetteBodyContract,
 } from "./acmCassetteBody.js";
 export {
+  FRAME_MISSING_CLEARANCE,
   FRAME_MISSING_PANEL_GEOMETRY,
   STEEL_INTERNAL_FRAME_TYPE_ID,
   steelInternalFrameContract,
@@ -161,6 +167,7 @@ export {
 } from "./lighting.js";
 export { selectPsuUnits } from "./psuSelection.js";
 export {
+  FRAME_CLEARANCE_SETTING_ID,
   LED_MODULE_POWER_SETTING_ID,
   LED_PITCH_SETTING_ID,
   PSU_RESERVE_SETTING_ID,
@@ -174,7 +181,10 @@ export {
   projectTechnicalSettings,
   requiredTechnicalSettingDefinitions,
   resolvedSettingValue,
+  steelInternalFrameTechnicalSettings,
   technicalSettingDefinitionId,
+  technicalSettingDefinitionsForTemplate,
+  technicalSettingDefinitionsForTypes,
   validateTechnicalSettingValue,
 } from "./technicalSettings.js";
 export {
