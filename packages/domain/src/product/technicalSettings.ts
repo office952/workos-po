@@ -1,8 +1,11 @@
+import { ACM_FRAME_CLEARANCE_STARTER_MM } from "./acmGeometry.js";
 import type { ComponentTypeId } from "./componentTypes.js";
+import type { ProductTemplate } from "./types.js";
 
 export const LED_PITCH_SETTING_ID = "ledPitchMm";
 export const LED_MODULE_POWER_SETTING_ID = "ledModulePowerW";
 export const PSU_RESERVE_SETTING_ID = "psuReservePercent";
+export const FRAME_CLEARANCE_SETTING_ID = "frameClearanceMm";
 
 export const TECHNICAL_SETTING_VALUE_TYPES = ["number"] as const;
 export const TECHNICAL_SETTING_UNITS = ["mm", "percent", "W"] as const;
@@ -139,9 +142,30 @@ export const lightingFrontLedTechnicalSettings: readonly ComponentTechnicalSetti
     },
   ];
 
-export const componentTechnicalSettingsRegistry = createTechnicalSettingsRegistry(
-  lightingFrontLedTechnicalSettings,
-);
+export const steelInternalFrameTechnicalSettings: readonly ComponentTechnicalSettingDefinition[] =
+  [
+    {
+      id: FRAME_CLEARANCE_SETTING_ID,
+      typeId: "STEEL_INTERNAL_FRAME",
+      label: "Joc de montaj cadru",
+      description:
+        "Jocul total scăzut din fiecare dimensiune exterioară a cadrului, după compensarea grosimii ACM. Valoare de organizație, nu lege de platformă.",
+      valueType: "number",
+      unit: "mm",
+      resolution: { status: "RESOLVED", value: ACM_FRAME_CLEARANCE_STARTER_MM },
+      source: "OWNER_CONFIRMED_DEVELOPMENT_DEFAULT",
+      classification: "OWNER_CONFIRMED",
+      configurable: true,
+      unresolvedReason: "Jocul de montaj al cadrului nu este configurat",
+      note: "2 mm este valoarea de pornire a platformei pentru V1. Organizația o poate schimba.",
+      constraints: { min: 0 },
+    },
+  ];
+
+export const componentTechnicalSettingsRegistry = createTechnicalSettingsRegistry([
+  ...lightingFrontLedTechnicalSettings,
+  ...steelInternalFrameTechnicalSettings,
+]);
 
 export function listTypeTechnicalSettings(
   typeId: ComponentTypeId,
@@ -171,7 +195,20 @@ export function findTechnicalSettingDefinitionBySettingId(
 }
 
 export function requiredTechnicalSettingDefinitions(): readonly ComponentTechnicalSettingDefinition[] {
-  return lightingFrontLedTechnicalSettings;
+  return componentTechnicalSettingsRegistry.definitions;
+}
+
+export function technicalSettingDefinitionsForTypes(
+  typeIds: readonly ComponentTypeId[],
+): readonly ComponentTechnicalSettingDefinition[] {
+  const wanted = new Set(typeIds);
+  return requiredTechnicalSettingDefinitions().filter((item) => wanted.has(item.typeId));
+}
+
+export function technicalSettingDefinitionsForTemplate(
+  template: Pick<ProductTemplate, "components">,
+): readonly ComponentTechnicalSettingDefinition[] {
+  return technicalSettingDefinitionsForTypes(template.components.map((item) => item.typeId));
 }
 
 export function applyResolvedTechnicalSettingValue(
@@ -218,6 +255,8 @@ export function validateTechnicalSettingValue(
           ? "Puterea modulului LED nu poate fi negativă."
           : field === PSU_RESERVE_SETTING_ID
             ? "Rezerva sursei trebuie să fie între 0 și 100%."
+            : field === FRAME_CLEARANCE_SETTING_ID
+              ? "Jocul de montaj al cadrului nu poate fi negativ."
           : `${definition.label} nu poate fi mai mică decât ${min}.`,
     });
   }

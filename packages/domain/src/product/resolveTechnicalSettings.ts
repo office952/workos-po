@@ -82,12 +82,9 @@ export function resolveOrganizationTechnicalSettings(
     records.push(row);
   }
 
-  const requiredIds = new Set(
-    required.map((definition) => technicalSettingDefinitionId(definition.typeId, definition.id)),
-  );
   const active = records.filter((row) => row.status === "ACTIVE");
   for (const row of active) {
-    if (!requiredIds.has(row.definitionId) || !findTechnicalSettingDefinition(row.definitionId)) {
+    if (!findTechnicalSettingDefinition(row.definitionId)) {
       return {
         ok: false,
         error: TECHNICAL_SETTINGS_INVALID,

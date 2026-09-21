@@ -1,4 +1,5 @@
 import {
+  SUPPORTED_TECHNICAL_SETTING_IDS,
   isSupportedTechnicalSettingId,
   isTechnicalSettingVersionSource,
   isTechnicalSettingVersionStatus,
@@ -135,11 +136,7 @@ function readDrafts(body: unknown): TechnicalSettingDraftValue[] | null {
   }
 
   const drafts: TechnicalSettingDraftValue[] = [];
-  for (const settingId of [
-    "ledPitchMm",
-    "ledModulePowerW",
-    "psuReservePercent",
-  ] as const) {
+  for (const settingId of SUPPORTED_TECHNICAL_SETTING_IDS) {
     if (!(settingId in payload)) {
       continue;
     }

@@ -86,13 +86,14 @@ describe("technical setting validation authority", () => {
 });
 
 describe("technical setting starter factory", () => {
-  it("materializes three v1 ACTIVE PLATFORM_STARTER SYSTEM rows from current starter inputs", () => {
+  it("materializes current ACTIVE PLATFORM_STARTER SYSTEM rows from current starter inputs", () => {
     const rows = starters();
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(4);
     expect(rows.map((row) => [row.settingId, row.value, row.version, row.source, row.actorKind])).toEqual([
       [LED_PITCH_SETTING_ID, 100, 1, "PLATFORM_STARTER", "SYSTEM"],
       [LED_MODULE_POWER_SETTING_ID, 0.75, 1, "PLATFORM_STARTER", "SYSTEM"],
       [PSU_RESERVE_SETTING_ID, 25, 1, "PLATFORM_STARTER", "SYSTEM"],
+      ["frameClearanceMm", 2, 1, "PLATFORM_STARTER", "SYSTEM"],
     ]);
     expect(rows.every((row) => row.actorSystemId === TECHNICAL_SETTING_STARTER_SYSTEM_ID)).toBe(true);
     expect(rows.every((row) => row.status === "ACTIVE")).toBe(true);
@@ -178,6 +179,7 @@ describe("technical setting resolver", () => {
       [LED_PITCH_SETTING_ID, 100, "PLATFORM_STARTER"],
       [LED_MODULE_POWER_SETTING_ID, 0.75, "PLATFORM_STARTER"],
       [PSU_RESERVE_SETTING_ID, 25, "PLATFORM_STARTER"],
+      ["frameClearanceMm", 2, "PLATFORM_STARTER"],
     ]);
 
     const planned = planTechnicalSettingsSave(
@@ -263,7 +265,7 @@ describe("technical setting resolver", () => {
       ok: false,
       error: TECHNICAL_SETTINGS_INVALID,
     });
-    expect(unknownResolution.ok ? [] : unknownResolution.history).toHaveLength(4);
+    expect(unknownResolution.ok ? [] : unknownResolution.history).toHaveLength(5);
     expect(unknownResolution.ok).toBe(false);
 
     expect(
@@ -307,7 +309,7 @@ describe("technical setting resolver", () => {
     ).toMatchObject({ ok: false, error: TECHNICAL_SETTINGS_INVALID });
 
     const silentlyReduced = withUnknown.filter(isTechnicalSettingVersionRecord);
-    expect(silentlyReduced).toHaveLength(3);
+    expect(silentlyReduced).toHaveLength(4);
     expect(resolveOrganizationTechnicalSettings(silentlyReduced).ok).toBe(true);
     expect(resolveOrganizationTechnicalSettings(withUnknown).ok).toBe(false);
 

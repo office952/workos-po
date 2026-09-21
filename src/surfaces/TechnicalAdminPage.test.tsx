@@ -66,6 +66,21 @@ const defaultAdmin = {
       statusLabel: "Activă",
       effectiveFrom: "2026-09-20T00:00:00.000Z",
     },
+    {
+      definitionId: "STEEL_INTERNAL_FRAME.frameClearanceMm",
+      settingId: "frameClearanceMm",
+      typeId: "STEEL_INTERNAL_FRAME",
+      label: "Joc de montaj cadru",
+      description: "Jocul total scăzut din fiecare dimensiune exterioară a cadrului.",
+      value: 2,
+      unit: "mm",
+      source: "PLATFORM_STARTER",
+      sourceLabel: "Valoare de pornire",
+      version: 1,
+      status: "ACTIVE",
+      statusLabel: "Activă",
+      effectiveFrom: "2026-09-20T00:00:00.000Z",
+    },
   ],
   history: [
     {
@@ -100,6 +115,7 @@ describe("TechnicalAdminPage", () => {
     expect(await screen.findByLabelText("Pas module LED (mm)")).toHaveValue("100");
     expect(screen.getByLabelText("Putere modul LED (W)")).toHaveValue("0.75");
     expect(screen.getByLabelText("Rezervă sursă de alimentare (percent)")).toHaveValue("25");
+    expect(screen.getByLabelText("Joc de montaj cadru (mm)")).toHaveValue("2");
     expect(screen.getAllByText("Valoare de pornire").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Salvează setările" })).toBeEnabled();
     expect(screen.getByRole("link", { name: "Valori comerciale" })).toHaveAttribute(
@@ -167,8 +183,13 @@ describe("TechnicalAdminPage", () => {
     const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith("/api/admin/technical-settings") && String(init?.method ?? "GET") === "POST") {
-        const body = JSON.parse(String(init?.body ?? "{}")) as { ledPitchMm?: number };
-        if (body.ledPitchMm === 0) {
+        const body = JSON.parse(String(init?.body ?? "{}")) as {
+          ledPitchMm?: number;
+          settings?: Array<{ settingId: string; value: number }>;
+        };
+        const pitch =
+          body.settings?.find((item) => item.settingId === "ledPitchMm")?.value ?? body.ledPitchMm;
+        if (pitch === 0) {
           return jsonResponse(
             { error: "invalid_settings", reasons: ["Pasul modulelor LED trebuie să fie mai mare decât 0 mm."] },
             400,

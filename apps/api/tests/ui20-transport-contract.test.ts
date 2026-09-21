@@ -33,11 +33,9 @@ const lettersReady = {
 
 const acmReady = {
   "root.inscription": "ACM",
-  "root.mountingSystem": "steel_angle",
   "face.widthMm": ACM_GOLDEN_WIDTH_MM,
   "face.heightMm": ACM_GOLDEN_HEIGHT_MM,
-  "face.cassetteDepthMm": String(ACM_GOLDEN_DEPTH_MM),
-  "face.foldCount": "1",
+  "face.cassetteDepthMm": ACM_GOLDEN_DEPTH_MM,
 };
 
 async function readBody(response: Response): Promise<JsonObject> {

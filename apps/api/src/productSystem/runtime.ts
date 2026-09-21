@@ -70,6 +70,7 @@ import {
   type TechnicalSettingDraftValue,
   type PersistedTechnicalSettingVersion,
   type TechnicalSettingResolution,
+  type ComponentTechnicalSettingDefinition,
   type FormulaActor,
   type FormulaDraftExpression,
   type PersistedFormulaVersion,
@@ -259,7 +260,9 @@ export type ProductSystemRuntime = {
   resolveCommercialPolicy(): CommercialPolicyResolution;
   saveCommercialPolicy(values: CommercialPolicyDraftValues): CommercialPolicySaveResult;
   listTechnicalSettingVersions(): PersistedTechnicalSettingVersion[];
-  resolveTechnicalSettings(): TechnicalSettingResolution;
+  resolveTechnicalSettings(options?: {
+    readonly requiredDefinitions?: readonly ComponentTechnicalSettingDefinition[];
+  }): TechnicalSettingResolution;
   saveTechnicalSettings(
     drafts: readonly TechnicalSettingDraftValue[],
     actor: TechnicalSettingActor,
@@ -639,8 +642,8 @@ export function createProductSystemRuntimeFromOpenDb(
     listTechnicalSettingVersions() {
       return listTechnicalSettingVersions(db);
     },
-    resolveTechnicalSettings() {
-      return resolveStoredTechnicalSettings(db);
+    resolveTechnicalSettings(options) {
+      return resolveStoredTechnicalSettings(db, options);
     },
     saveTechnicalSettings(drafts, actor) {
       return persistTechnicalSettingSave(db, drafts, actor);

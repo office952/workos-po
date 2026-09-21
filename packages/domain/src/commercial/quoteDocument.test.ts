@@ -41,11 +41,9 @@ const lettersValues: DraftValues = {
 
 const acmValues: DraftValues = {
   "root.inscription": "PANOU ACM",
-  "root.mountingSystem": "steel_angle",
   "face.widthMm": ACM_GOLDEN_WIDTH_MM,
   "face.heightMm": ACM_GOLDEN_HEIGHT_MM,
-  "face.cassetteDepthMm": String(ACM_GOLDEN_DEPTH_MM),
-  "face.foldCount": "2",
+  "face.cassetteDepthMm": ACM_GOLDEN_DEPTH_MM,
 };
 
 function freezeLetters(values: DraftValues = lettersValues, createdAt = "2026-08-17T00:00:00.000Z") {
@@ -196,16 +194,20 @@ describe("quote document projection", () => {
     expect(document.inscription).toBe("PANOU ACM");
     expect(document.configuration).toEqual(
       expect.arrayContaining([
+        { label: "Finisaj față", value: "Fără finisaj" },
+      ]),
+    );
+    expect(document.configuration).not.toEqual(
+      expect.arrayContaining([
         { label: "Prindere", value: "Cornier oțel" },
         { label: "Îndoituri", value: "2" },
-        { label: "Finisaj față", value: "Fără finisaj" },
       ]),
     );
     expect(document.technicalSummary).toEqual(
       expect.arrayContaining([
         { label: "Lățime exterioară", value: "1.000 mm" },
         { label: "Înălțime exterioară", value: "500 mm" },
-        { label: "Adâncime casetă", value: "40 mm" },
+        { label: "Adâncime casetă / prima întoarcere", value: "40 mm" },
       ]),
     );
     expect(document.commercial.grossPrice).toBe(118.66);

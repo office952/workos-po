@@ -1,11 +1,12 @@
 import type { ComponentTypeId } from "./componentTypes.js";
 import {
+  FRAME_CLEARANCE_SETTING_ID,
   LED_MODULE_POWER_SETTING_ID,
   LED_PITCH_SETTING_ID,
   PSU_RESERVE_SETTING_ID,
   findTechnicalSettingDefinition,
   findTechnicalSettingDefinitionBySettingId,
-  lightingFrontLedTechnicalSettings,
+  requiredTechnicalSettingDefinitions,
   technicalSettingDefinitionId,
   validateTechnicalSettingValue,
   type TechnicalSettingIssue,
@@ -34,6 +35,7 @@ export const SUPPORTED_TECHNICAL_SETTING_IDS = [
   LED_PITCH_SETTING_ID,
   LED_MODULE_POWER_SETTING_ID,
   PSU_RESERVE_SETTING_ID,
+  FRAME_CLEARANCE_SETTING_ID,
 ] as const;
 
 export type SupportedTechnicalSettingId = (typeof SUPPORTED_TECHNICAL_SETTING_IDS)[number];
@@ -201,7 +203,7 @@ export function createPlatformStarterTechnicalSettingVersions(input: {
   readonly now: string;
   readonly rowIdFor: (definitionId: string) => string;
 }): TechnicalSettingVersionRecord[] {
-  return lightingFrontLedTechnicalSettings.map((definition) => {
+  return requiredTechnicalSettingDefinitions().map((definition) => {
     const definitionId = technicalSettingDefinitionId(definition.typeId, definition.id);
     if (definition.resolution.status !== "RESOLVED") {
       throw new Error(`starter_requires_resolved:${definitionId}`);

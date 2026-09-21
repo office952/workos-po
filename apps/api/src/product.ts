@@ -64,6 +64,7 @@ import {
   type DraftValues,
   type ProductDefinition,
   type ComponentTypeId,
+  technicalSettingDefinitionsForTemplate,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
 import { getCookie } from "hono/cookie";
@@ -413,7 +414,9 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: "not_found" }, 404);
     }
     const body = await c.req.json().catch(() => null);
-    const technical = runtime.resolveTechnicalSettings();
+    const technical = runtime.resolveTechnicalSettings({
+      requiredDefinitions: technicalSettingDefinitionsForTemplate(template),
+    });
     if (!technical.ok) {
       return c.json(
         {
@@ -1181,7 +1184,9 @@ function compileAcceptedProduct(
     return { ok: false as const, status: 404 as const, body: { error: "not_found" } };
   }
 
-  const technical = runtime.resolveTechnicalSettings();
+  const technical = runtime.resolveTechnicalSettings({
+    requiredDefinitions: technicalSettingDefinitionsForTemplate(template),
+  });
   if (!technical.ok) {
     return {
       ok: false as const,

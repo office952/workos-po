@@ -283,7 +283,7 @@ export const costRecipes: readonly CostRecipe[] = [
     kind: "LABOR",
     label: "Formare casetă din foaie",
     description:
-      "Îndoire manuală după V-groove. Un cost pe produs în V1; foldCount rămâne adevăr de atelier.",
+      "Îndoire manuală după V-groove. Un cost pe produs în V1; a doua întoarcere schimbă geometria dezvoltată, nu inventează un al doilea proces.",
     lifecycle: "ACTIVE",
     processIds: [FORM_SHEET_CASSETTE_ID],
     quantityBasis: "PRODUCT_UNIT",

@@ -536,11 +536,9 @@ describe("commercial request installation facts API", () => {
       body: JSON.stringify({
         values: {
           "root.inscription": "ACM1",
-          "root.mountingSystem": "steel_angle",
           "face.widthMm": 1000,
           "face.heightMm": 500,
-          "face.cassetteDepthMm": "40",
-          "face.foldCount": "2",
+          "face.cassetteDepthMm": 40,
         },
       }),
     });
@@ -553,11 +551,9 @@ describe("commercial request installation facts API", () => {
         body: JSON.stringify({
           values: {
             "root.inscription": "ACM1",
-            "root.mountingSystem": "steel_angle",
             "face.widthMm": 1000,
             "face.heightMm": 500,
-            "face.cassetteDepthMm": "40",
-            "face.foldCount": "2",
+            "face.cassetteDepthMm": 40,
           },
           reviewId: compiled.reviewId,
           customerId: customer.customerId,
