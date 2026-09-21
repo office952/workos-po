@@ -190,6 +190,33 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         title: "Oameni",
         lead: "Configurează persoanele care pot lucra în producție. Contul de autentificare rămâne separat.",
       };
+    case "admin-workcenters":
+      return {
+        contextLabel: "Administrare",
+        currentHref: "/admin/workcenters",
+        workspace: "admin",
+        eyebrow: "Administrare",
+        title: "Zone și utilaje",
+        lead: "Configurează zonele de lucru și utilajele. Atelierul citește același registru.",
+      };
+    case "admin-workcenter":
+      return {
+        contextLabel: "Administrare",
+        currentHref: `/admin/workcenters/${encodeURIComponent(route.workcenterId)}`,
+        workspace: "admin",
+        eyebrow: "Administrare",
+        title: "Zone și utilaje",
+        lead: "Configurează zonele de lucru și utilajele. Atelierul citește același registru.",
+      };
+    case "admin-machine":
+      return {
+        contextLabel: "Administrare",
+        currentHref: `/admin/workcenters/${encodeURIComponent(route.workcenterId)}/machines/${encodeURIComponent(route.machineId)}`,
+        workspace: "admin",
+        eyebrow: "Administrare",
+        title: "Zone și utilaje",
+        lead: "Configurează zonele de lucru și utilajele. Atelierul citește același registru.",
+      };
     case "foundation":
       return {
         contextLabel: "Fundație",

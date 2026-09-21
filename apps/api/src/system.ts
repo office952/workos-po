@@ -2,11 +2,11 @@ import {
   omitForbiddenFinancialFields,
   projectOperationalProcessesAdministration,
   projectSystemGovernance,
-  projectWorkcentersAdministration,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
 import { getProductSystem, isOwner, type ApiEnv } from "./cloud/context.js";
 import { requireOwnerRole } from "./cloud/middleware.js";
+import { workcentersAdminPayload } from "./workcenters/routes.js";
 
 export function registerSystemProjectionRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/components", (c) => {
@@ -141,14 +141,7 @@ export function registerSystemProjectionRoutes(app: Hono<ApiEnv>): void {
 
   app.get("/api/workcenters", (c) => {
     const runtime = getProductSystem(c);
-    const projection = projectWorkcentersAdministration(
-      runtime.providerRegistry,
-      runtime.listActiveCostEvidence(),
-    );
-    if (isOwner(c)) {
-      return c.json(projection);
-    }
-    return c.json(omitForbiddenFinancialFields(projection, "commercial"));
+    return c.json(workcentersAdminPayload(runtime, isOwner(c)));
   });
 
   app.get("/api/governance", (c) => {

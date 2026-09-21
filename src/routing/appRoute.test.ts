@@ -40,6 +40,16 @@ describe("parseAppRoute", () => {
       name: "admin-person",
       personId: "per:1",
     });
+    expect(parseAppRoute("/admin/workcenters")).toEqual({ name: "admin-workcenters" });
+    expect(parseAppRoute("/admin/workcenters/wc%3A1")).toEqual({
+      name: "admin-workcenter",
+      workcenterId: "wc:1",
+    });
+    expect(parseAppRoute("/admin/workcenters/wc%3A1/machines/mch%3A2")).toEqual({
+      name: "admin-machine",
+      workcenterId: "wc:1",
+      machineId: "mch:2",
+    });
     expect(parseAppRoute("/foundation")).toEqual({ name: "foundation" });
     expect(parseAppRoute(quoteHref("PRD-LETTERS-FRONTLIT-PLEXI-AL06", "q1"))).toEqual({
       name: "quote",

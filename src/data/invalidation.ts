@@ -65,6 +65,7 @@ export function invalidateAfterCloudBoundaryChange(): void {
     resourceKeys.formulasAdmin(),
     resourceKeys.productEnablementAdmin(),
     resourceKeys.peopleAdmin(),
+    resourceKeys.workcentersAdmin(),
   );
   invalidateResourcePrefix("customer:");
   invalidateResourcePrefix("request:");
@@ -95,4 +96,14 @@ export function invalidateAfterProductEnablementChange(): void {
 
 export function invalidateAfterPeopleAdminChange(): void {
   invalidateResources(resourceKeys.peopleAdmin(), resourceKeys.operatorCandidates());
+}
+
+export function invalidateAfterWorkcentersAdminChange(): void {
+  invalidateResources(
+    resourceKeys.workcentersAdmin(),
+    resourceKeys.operatorInbox(),
+    resourceKeys.jobs(),
+  );
+  invalidateResourcePrefix(resourceKeys.jobPrefix());
+  invalidateResourcePrefix("execution-plan:");
 }
