@@ -24,6 +24,7 @@ import {
 } from "@workos-final/domain";
 import type { SqliteDatabase } from "../persistence/sqlite.js";
 import {
+  DEPRECATED_PAINTING_ASSEMBLY_SKILL_CODE,
   OPERATIONAL_FOUNDATION_CAPABILITY_SKILLS,
   OPERATIONAL_FOUNDATION_SKILLS,
   OPERATIONAL_SKILL_FOUNDATION_MARKER,
@@ -403,6 +404,15 @@ export function personHasInProgressTask(db: SqliteDatabase, personId: string): b
   return Boolean(row);
 }
 
+export class OperationalSkillFoundationReconcileError extends Error {
+  readonly error = "skill_foundation_collision" as const;
+
+  constructor(readonly skillCode: string) {
+    super(`ambiguous operational skill identity: ${skillCode}`);
+    this.name = "OperationalSkillFoundationReconcileError";
+  }
+}
+
 export const PEOPLE_TRUSTED_WORKFORCE_MARKER = "PEOPLE_TRUSTED_WORKFORCE_V1_APPLIED";
 
 export function isTrustedWorkforceApplied(db: SqliteDatabase): boolean {
@@ -420,17 +430,12 @@ export function isOperationalSkillFoundationApplied(db: SqliteDatabase): boolean
 }
 
 export function applyOperationalSkillFoundation(db: SqliteDatabase): void {
-  if (isOperationalSkillFoundationApplied(db)) {
-    return;
-  }
   const apply = db.transaction(() => {
-    if (isOperationalSkillFoundationApplied(db)) {
-      return;
-    }
     materializeSkillSeeds(db, OPERATIONAL_FOUNDATION_SKILLS, OPERATIONAL_FOUNDATION_CAPABILITY_SKILLS);
+    removeDeprecatedPaintingAssemblyMapping(db);
     db.prepare(
       `
-      INSERT INTO runtime_bootstrap_markers (marker_id, applied_at)
+      INSERT OR IGNORE INTO runtime_bootstrap_markers (marker_id, applied_at)
       VALUES (?, ?)
     `,
     ).run(OPERATIONAL_SKILL_FOUNDATION_MARKER, new Date().toISOString());
@@ -474,6 +479,67 @@ function allTrustedPeoplePresent(db: SqliteDatabase): boolean {
   return TRUSTED_PEOPLE.every((seed) => trustedPersonPresent(db, seed));
 }
 
+type SkillIdentityRow = {
+  skill_id: string;
+  code: string;
+};
+
+function loadSkillsByCode(db: SqliteDatabase, code: string): SkillIdentityRow[] {
+  return db
+    .prepare("SELECT skill_id, code FROM skills WHERE code = ?")
+    .all(code) as SkillIdentityRow[];
+}
+
+function loadSkillsById(db: SqliteDatabase, skillId: string): SkillIdentityRow[] {
+  return db
+    .prepare("SELECT skill_id, code FROM skills WHERE skill_id = ?")
+    .all(skillId) as SkillIdentityRow[];
+}
+
+function requireUniqueSkillByCode(db: SqliteDatabase, skillCode: string): SkillIdentityRow | null {
+  const rows = loadSkillsByCode(db, skillCode);
+  if (rows.length > 1) {
+    throw new OperationalSkillFoundationReconcileError(skillCode);
+  }
+  return rows[0] ?? null;
+}
+
+function resolveExistingSkillForSeed(
+  db: SqliteDatabase,
+  seed: { skillId: string; code: string },
+): SkillIdentityRow | null {
+  const byCode = loadSkillsByCode(db, seed.code);
+  const byId = loadSkillsById(db, seed.skillId);
+  if (byCode.length > 1 || byId.length > 1) {
+    throw new OperationalSkillFoundationReconcileError(seed.code);
+  }
+  const codeMatch = byCode[0];
+  const idMatch = byId[0];
+  if (codeMatch && idMatch && codeMatch.skill_id !== idMatch.skill_id) {
+    throw new OperationalSkillFoundationReconcileError(seed.code);
+  }
+  if (codeMatch) {
+    return codeMatch;
+  }
+  if (idMatch && idMatch.code !== seed.code) {
+    throw new OperationalSkillFoundationReconcileError(seed.code);
+  }
+  return idMatch ?? null;
+}
+
+function removeDeprecatedPaintingAssemblyMapping(db: SqliteDatabase): void {
+  const assembly = requireUniqueSkillByCode(db, DEPRECATED_PAINTING_ASSEMBLY_SKILL_CODE);
+  if (!assembly) {
+    return;
+  }
+  db.prepare(
+    `
+    DELETE FROM capability_skill_requirements
+    WHERE capability_id = 'PAINTING' AND skill_id = ?
+  `,
+  ).run(assembly.skill_id);
+}
+
 function materializeSkillSeeds(
   db: SqliteDatabase,
   skills: readonly { skillId: string; code: string; displayLabel: string; description: string | null }[],
@@ -481,9 +547,7 @@ function materializeSkillSeeds(
   createdAt = "2026-08-17T12:00:00.000Z",
 ): void {
   for (const seed of skills) {
-    const existing = db
-      .prepare("SELECT skill_id FROM skills WHERE code = ? OR skill_id = ?")
-      .get(seed.code, seed.skillId) as { skill_id: string } | undefined;
+    const existing = resolveExistingSkillForSeed(db, seed);
     if (existing) {
       continue;
     }
@@ -494,22 +558,29 @@ function materializeSkillSeeds(
       description: seed.description,
       createdAt,
     });
-    if (created.ok) {
+    if (!created.ok) {
+      throw new OperationalSkillFoundationReconcileError(seed.code);
+    }
+    try {
       insertSkill(db, created.skill);
+    } catch (error) {
+      if (isUniqueConstraint(error)) {
+        throw new OperationalSkillFoundationReconcileError(seed.code);
+      }
+      throw error;
     }
   }
-  const skillIdByCode = new Map(listSkills(db).map((skill) => [skill.code, skill.skillId]));
   for (const mapping of mappings) {
-    const skillId = skillIdByCode.get(mapping.skillCode);
-    if (!skillId) {
-      continue;
+    const skill = requireUniqueSkillByCode(db, mapping.skillCode);
+    if (!skill) {
+      throw new OperationalSkillFoundationReconcileError(mapping.skillCode);
     }
     db.prepare(
       `
       INSERT OR IGNORE INTO capability_skill_requirements (capability_id, skill_id)
       VALUES (?, ?)
     `,
-    ).run(mapping.capabilityId, skillId);
+    ).run(mapping.capabilityId, skill.skill_id);
   }
 }
 

@@ -76,6 +76,8 @@ export function applyOperationalBootstrap(
 ): void {
   bootstrapProductSystemDisplayStore(db);
   if (policy === "ADOPT_EXISTING") {
+    // Shared operational skill foundation only. Trusted workforce stays off this path.
+    applyOperationalSkillFoundation(db);
     return;
   }
   if (policy === "NEW_ORGANIZATION" || policy === "SYNTHETIC_TEST") {

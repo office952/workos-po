@@ -84,6 +84,9 @@ describe("Cloud bootstrap policy", () => {
       "SK_ELECTRICIAN",
       "SK_LETTER_CANT_OPERATOR",
       "SK_LETTER_MODELING",
+      "SK_METAL_CUTTING_OPERATOR",
+      "SK_PAINTING",
+      "SK_VINYL_APPLICATOR",
     ]);
 
     const eligibility = (await (

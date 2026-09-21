@@ -22,7 +22,6 @@ const ADDITIONAL_TRUSTED_SKILLS: readonly TrustedSkillSeed[] = [
   { skillId: "skl:legacy:cutter-operator", code: "SK_CUTTER_OPERATOR", displayLabel: "Operator Cutter Plotter", description: null },
   { skillId: "skl:legacy:cnc-prep", code: "SK_CNC_PREP", displayLabel: "Pregătire materiale CNC", description: null },
   { skillId: "skl:legacy:locksmith", code: "SK_LOCKSMITH", displayLabel: "Lăcătuș", description: null },
-  { skillId: "skl:legacy:vinyl", code: "SK_VINYL_APPLICATOR", displayLabel: "Colantator", description: null },
   { skillId: "skl:legacy:field-installer", code: "SK_FIELD_INSTALLER", displayLabel: "Montator", description: null },
   { skillId: "skl:legacy:commercial-tech", code: "SK_COMMERCIAL_TECH", displayLabel: "Director comercial / tehnic", description: null },
 ];
@@ -117,14 +116,12 @@ const ADDITIONAL_CAPABILITY_SKILLS: ReadonlyArray<{
   capabilityId: ProductionCapabilityClassId;
   skillCode: string;
 }> = [
-  { capabilityId: "VINYL_APPLICATION", skillCode: "SK_VINYL_APPLICATOR" },
   { capabilityId: "PRINTING", skillCode: "SK_PRINT_OPERATOR" },
   { capabilityId: "LAMINATION", skillCode: "SK_LAMINATOR_OPERATOR" },
   { capabilityId: "PLOTTER_CUTTING", skillCode: "SK_CUTTER_OPERATOR" },
   { capabilityId: "WELD_STEEL", skillCode: "SK_LOCKSMITH" },
   { capabilityId: "WELD_ALUMINIUM", skillCode: "SK_LOCKSMITH" },
   { capabilityId: "RIGID_FILM_LAMINATION", skillCode: "SK_VINYL_APPLICATOR" },
-  { capabilityId: "PAINTING", skillCode: "SK_ASSEMBLY" },
 ];
 
 export const TRUSTED_CAPABILITY_SKILLS: ReadonlyArray<{
