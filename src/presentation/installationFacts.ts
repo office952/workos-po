@@ -64,6 +64,15 @@ export function presentInstallationModeLabel(value: string | null): string {
   return PROVIDER_MODE_LABELS[value] ?? value;
 }
 
+export function presentInstallationModeOptions(
+  availableModes: readonly string[],
+): { value: string; label: string }[] {
+  return availableModes.map((value) => ({
+    value,
+    label: presentInstallationModeLabel(value),
+  }));
+}
+
 export const MEASUREMENT_STATUS_OPTIONS = Object.entries(MEASUREMENT_STATUS_LABELS).map(
   ([value, label]) => ({ value, label }),
 );

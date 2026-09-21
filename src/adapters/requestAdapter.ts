@@ -7,7 +7,7 @@ import type {
   RequestLinkedOfferTransport,
   RequestListItemTransport,
 } from "../api/types";
-import { asBoolean, asNumber, asRecord, asString } from "./record";
+import { asBoolean, asNumber, asRecord, asString, asStringList } from "./record";
 
 export function presentRequestList(payload: unknown): RequestListItemTransport[] {
   const record = asRecord(payload);
@@ -191,10 +191,20 @@ function presentInstallationOffer(
     return null;
   }
   return {
+    capabilityId: asString(row.capabilityId) ?? "SITE_INSTALLATION",
     selected: row.selected,
     label: asString(row.label) ?? "Montaj la locație",
     mode: asString(row.mode),
+    orgConfigured: asBoolean(row.orgConfigured) ?? false,
+    orgOfferMode: asString(row.orgOfferMode),
+    canSelectNew: asBoolean(row.canSelectNew) ?? false,
+    canChangeSelection: asBoolean(row.canChangeSelection) ?? false,
+    canChangeMode: asBoolean(row.canChangeMode) ?? false,
     selectionLocked: asBoolean(row.selectionLocked) ?? false,
+    showModeControl: asBoolean(row.showModeControl) ?? false,
+    availableModes: asStringList(row.availableModes),
+    persistedSelectionPreserved: asBoolean(row.persistedSelectionPreserved) ?? false,
+    persistedModeIncompatible: asBoolean(row.persistedModeIncompatible) ?? false,
   };
 }
 

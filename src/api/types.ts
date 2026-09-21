@@ -255,10 +255,26 @@ export type RequestInstallationScopeTransport = {
 };
 
 export type RequestInstallationOfferTransport = {
+  capabilityId: string;
   selected: boolean;
   label: string;
   mode: string | null;
+  orgConfigured: boolean;
+  orgOfferMode: string | null;
+  canSelectNew: boolean;
+  canChangeSelection: boolean;
+  canChangeMode: boolean;
   selectionLocked: boolean;
+  showModeControl: boolean;
+  availableModes: string[];
+  persistedSelectionPreserved: boolean;
+  persistedModeIncompatible: boolean;
+};
+
+export type RequestPatchInput = {
+  optionalScopeIds?: string[];
+  siteInstallationMode?: string | null;
+  confirmDeleteInstallationFacts?: boolean;
 };
 
 export type RequestInstallationFactsTransport = {

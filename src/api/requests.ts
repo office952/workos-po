@@ -1,4 +1,5 @@
 import { getJson, patchJson, postForm, postJson } from "./http";
+import type { RequestPatchInput } from "./types";
 
 export async function fetchRequests(): Promise<unknown> {
   return getJson("/api/requests");
@@ -23,6 +24,13 @@ export async function uploadRequestAttachment(
   const body = new FormData();
   body.append("file", file);
   return postForm(`/api/requests/${encodeURIComponent(requestId)}/attachments`, body);
+}
+
+export async function patchRequest(
+  requestId: string,
+  input: RequestPatchInput,
+): Promise<unknown> {
+  return patchJson(`/api/requests/${encodeURIComponent(requestId)}`, input);
 }
 
 export async function patchRequestInstallationFacts(

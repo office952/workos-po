@@ -1,8 +1,12 @@
-import { useState } from "react";
-import { presentAcceptanceId, presentOrderSnapshotId } from "../adapters/quoteListAdapter";
+import { useState, type ReactNode } from "react";
+import {
+  presentOrderSnapshotId,
+  presentQuoteAcceptanceFact,
+} from "../adapters/quoteListAdapter";
 import { TransportError, readTransportReasons } from "../api/http";
-import { fetchQuoteDocument } from "../api/quote";
 import { postQuoteAcceptance, postQuoteOrder } from "../api/lifecycle";
+import { fetchQuoteDocument } from "../api/quote";
+import type { QuoteListItemTransport } from "../api/types";
 import { Button } from "../components/Button";
 import { InfoRow } from "../components/InfoRow";
 import { InlineAlert } from "../components/InlineAlert";
@@ -10,14 +14,8 @@ import { LoadingFloor } from "../components/LoadingFloor";
 import { StatusBadge } from "../components/StatusBadge";
 import { SurfacePanel } from "../components/SurfacePanel";
 import { invalidateAfterAcceptQuote, invalidateAfterCreateOrder } from "../data/invalidation";
-import { writeResource } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
-import {
-  loadQuoteAcceptance,
-  loadQuoteEnvelope,
-  loadQuoteOrder,
-  loadQuoteSnapshot,
-} from "../data/routeLoaders";
+import { loadQuoteEnvelope, loadQuoteSnapshot } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { CommercialPricePanel } from "../presentation/commercialPrice";
@@ -44,13 +42,6 @@ export function QuoteSnapshotPage({
   const envelope = useResource(resourceKeys.quoteEnvelope(quoteSnapshotId), () =>
     loadQuoteEnvelope(quoteSnapshotId),
   );
-  const acceptance = useResource(
-    resourceKeys.quoteAcceptance(productCode, quoteSnapshotId),
-    () => loadQuoteAcceptance(productCode, quoteSnapshotId),
-  );
-  const order = useResource(resourceKeys.quoteOrder(productCode, quoteSnapshotId), () =>
-    loadQuoteOrder(productCode, quoteSnapshotId),
-  );
   const [actionState, setActionState] = useState<"idle" | "pending" | "error">("idle");
   const [actionError, setActionError] = useState<string | null>(null);
   const [documentState, setDocumentState] = useState<"idle" | "pending" | "error">("idle");
@@ -60,11 +51,8 @@ export function QuoteSnapshotPage({
     setActionState("pending");
     setActionError(null);
     try {
-      const accepted = presentAcceptanceId(
-        await postQuoteAcceptance(productCode, quoteSnapshotId),
-      );
-      writeResource(resourceKeys.quoteAcceptance(productCode, quoteSnapshotId), accepted);
-      invalidateAfterAcceptQuote();
+      await postQuoteAcceptance(productCode, quoteSnapshotId);
+      invalidateAfterAcceptQuote(quoteSnapshotId);
       setActionState("idle");
     } catch (error) {
       setActionState("error");
@@ -83,15 +71,15 @@ export function QuoteSnapshotPage({
       const created = presentOrderSnapshotId(
         await postQuoteOrder(productCode, quoteSnapshotId),
       );
-      if (!created) {
+      invalidateAfterCreateOrder(quoteSnapshotId);
+      const orderSnapshotId = created ?? envelope.data?.orderSnapshotId;
+      if (!orderSnapshotId) {
         setActionState("error");
         setActionError("Comanda nu a putut fi prezentată.");
         return;
       }
-      writeResource(resourceKeys.quoteOrder(productCode, quoteSnapshotId), created);
-      invalidateAfterCreateOrder();
       setActionState("idle");
-      navigate(jobHref(created));
+      navigate(jobHref(orderSnapshotId));
     } catch (error) {
       setActionState("error");
       setActionError(
@@ -117,14 +105,13 @@ export function QuoteSnapshotPage({
   }
 
   const presentedSnapshot = snapshot.data ?? null;
-  const stageLabel = envelope.data?.stageLabel ?? presentedSnapshot?.stageLabel;
+  const presentedEnvelope = envelope.data ?? null;
+  const stageLabel = presentedEnvelope?.stageLabel ?? presentedSnapshot?.stageLabel;
   const profile = presentedSnapshot
     ? selectLineByResource(presentedSnapshot.lines, ALUMINIUM_RETURN_PROFILE_RESOURCE_ID)
     : null;
   const presented = profile ? presentCostLine(profile) : null;
-  const acceptanceReady = acceptance.status === "success";
-  const orderReady = order.status === "success";
-  const accepted = acceptanceReady && acceptance.data !== null;
+  const orderSnapshotId = presentedEnvelope?.orderSnapshotId ?? null;
 
   return (
     <SlicePage
@@ -143,19 +130,12 @@ export function QuoteSnapshotPage({
         stageLabel ? <StatusBadge label={stageLabel} tone={statusTone("workflow")} /> : null
       }
       action={
-        !acceptanceReady || !orderReady ? null : !acceptance.data ? (
-          <Button disabled={actionState === "pending"} onClick={() => void accept()}>
-            Acceptă oferta
-          </Button>
-        ) : !order.data ? (
-          <Button disabled={actionState === "pending"} onClick={() => void createOrder()}>
-            Creează lucrarea
-          </Button>
-        ) : (
-          <a className="hit" href={jobHref(order.data)}>
-            <span className="button button--primary">Deschide lucrarea</span>
-          </a>
-        )
+        <QuoteEnvelopeAction
+          envelope={presentedEnvelope}
+          pending={actionState === "pending"}
+          onAccept={() => void accept()}
+          onCreateOrder={() => void createOrder()}
+        />
       }
     >
       {snapshot.status === "error" && !presentedSnapshot ? (
@@ -183,9 +163,7 @@ export function QuoteSnapshotPage({
               ) : null}
               <InfoRow
                 label="Acceptare"
-                value={
-                  acceptanceReady ? (accepted ? "Acceptată" : "Neacceptată") : "Se verifică"
-                }
+                value={presentQuoteAcceptanceFact(presentedEnvelope?.stage ?? null)}
               />
             </dl>
             {presented ? (
@@ -227,43 +205,78 @@ export function QuoteSnapshotPage({
           <LoadingFloor variant="facts" label="Se citește oferta înghețată" />
         ) : null}
       </SurfacePanel>
-      <SurfacePanel
-        variant="quiet"
-        title="Stare și următorul pas"
-        busy={!acceptanceReady || !orderReady}
-      >
-        {acceptanceReady && orderReady ? (
-          <>
-            <p className="ui-note">
-              Acceptarea și lucrarea rămân pe această versiune înghețată. Nu se reconstruiește
-              configurația.
-            </p>
-            {presentedSnapshot?.customerId ? (
-              <p>
-                <a className="text-link" href={clientHref(presentedSnapshot.customerId)}>
-                  Deschide clientul
-                </a>
-              </p>
-            ) : null}
-            {presentedSnapshot?.requestId ? (
-              <p>
-                <a className="text-link" href={requestHref(presentedSnapshot.requestId)}>
-                  Deschide cererea
-                </a>
-              </p>
-            ) : null}
-            {order.data ? (
-              <p>
-                <a className="text-link" href={jobHref(order.data)}>
-                  Deschide lucrarea
-                </a>
-              </p>
-            ) : null}
-          </>
-        ) : (
-          <LoadingFloor variant="facts" label="Se citește continuarea ofertei" rows={3} />
-        )}
+      <SurfacePanel variant="quiet" title="Stare și următorul pas">
+        <p className="ui-note">
+          Acceptarea și lucrarea rămân pe această versiune înghețată. Nu se reconstruiește
+          configurația.
+        </p>
+        {presentedSnapshot?.customerId ? (
+          <p>
+            <a className="text-link" href={clientHref(presentedSnapshot.customerId)}>
+              Deschide clientul
+            </a>
+          </p>
+        ) : null}
+        {presentedSnapshot?.requestId ? (
+          <p>
+            <a className="text-link" href={requestHref(presentedSnapshot.requestId)}>
+              Deschide cererea
+            </a>
+          </p>
+        ) : null}
+        {orderSnapshotId ? (
+          <p>
+            <a className="text-link" href={jobHref(orderSnapshotId)}>
+              {presentedEnvelope?.nextAction === "OPEN_ORDER"
+                ? presentedEnvelope.nextActionLabel || "Deschide comanda"
+                : "Deschide lucrarea"}
+            </a>
+          </p>
+        ) : null}
       </SurfacePanel>
     </SlicePage>
   );
+}
+
+function QuoteEnvelopeAction({
+  envelope,
+  pending,
+  onAccept,
+  onCreateOrder,
+}: {
+  envelope: QuoteListItemTransport | null;
+  pending: boolean;
+  onAccept: () => void;
+  onCreateOrder: () => void;
+}): ReactNode {
+  if (!envelope) {
+    return null;
+  }
+  switch (envelope.nextAction) {
+    case "ACCEPT_QUOTE":
+      return (
+        <Button disabled={pending} onClick={onAccept}>
+          {envelope.nextActionLabel || "Marchează acceptată"}
+        </Button>
+      );
+    case "CREATE_ORDER":
+      return (
+        <Button disabled={pending} onClick={onCreateOrder}>
+          {envelope.nextActionLabel || "Creează comanda"}
+        </Button>
+      );
+    case "OPEN_ORDER":
+      if (!envelope.orderSnapshotId) {
+        return null;
+      }
+      return (
+        <a className="hit" href={jobHref(envelope.orderSnapshotId)}>
+          <span className="button button--primary">
+            {envelope.nextActionLabel || "Deschide comanda"}
+          </span>
+        </a>
+      );
+    default:
+      return null;
+  }
 }

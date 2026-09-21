@@ -13,12 +13,20 @@ export function invalidateAfterRequestDetailChange(requestId: string): void {
   invalidateResources(resourceKeys.request(requestId), resourceKeys.requests());
 }
 
-export function invalidateAfterAcceptQuote(): void {
-  invalidateResources(resourceKeys.quotes());
+export function invalidateAfterAcceptQuote(quoteSnapshotId?: string): void {
+  const keys = [resourceKeys.quotes()];
+  if (quoteSnapshotId) {
+    keys.push(resourceKeys.quoteEnvelope(quoteSnapshotId));
+  }
+  invalidateResources(...keys);
 }
 
-export function invalidateAfterCreateOrder(): void {
-  invalidateResources(resourceKeys.quotes(), resourceKeys.jobs());
+export function invalidateAfterCreateOrder(quoteSnapshotId?: string): void {
+  const keys = [resourceKeys.quotes(), resourceKeys.jobs()];
+  if (quoteSnapshotId) {
+    keys.push(resourceKeys.quoteEnvelope(quoteSnapshotId));
+  }
+  invalidateResources(...keys);
 }
 
 export function invalidateAfterFreezeQuote(): void {

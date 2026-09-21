@@ -48,6 +48,18 @@ export function presentQuoteEnvelope(payload: unknown): QuoteListItemTransport |
   return presentQuoteListItem(record?.quote ?? record?.overview ?? record);
 }
 
+export function presentQuoteAcceptanceFact(stage: string | null): string {
+  switch (stage) {
+    case "QUOTE_ACCEPTED":
+    case "ORDER_CREATED":
+      return "Acceptată";
+    case "QUOTE_CREATED":
+      return "Neacceptată";
+    default:
+      return "—";
+  }
+}
+
 export function presentAcceptanceId(payload: unknown): string | null {
   const record = asRecord(payload);
   const decision = asRecord(record?.acceptanceDecision) ?? asRecord(record?.acceptance);

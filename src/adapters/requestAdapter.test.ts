@@ -70,17 +70,39 @@ describe("request adapter", () => {
           },
         ],
         installationOffer: {
+          capabilityId: "SITE_INSTALLATION",
           selected: true,
           label: "Montaj la locație",
           mode: "INTERNAL",
+          orgConfigured: true,
+          orgOfferMode: "INTERNAL",
+          canSelectNew: true,
+          canChangeSelection: false,
+          canChangeMode: false,
           selectionLocked: true,
+          showModeControl: false,
+          availableModes: ["INTERNAL"],
+          persistedSelectionPreserved: false,
+          persistedModeIncompatible: false,
         },
         canWriteInstallationFacts: false,
       },
     });
     expect(detail?.reference).toBe("CRQ-104");
     expect(detail?.attachments[0]?.downloadHref).toContain("/attachments/att-1/download");
-    expect(detail?.installationOffer?.selected).toBe(true);
+    expect(detail?.installationOffer).toMatchObject({
+      selected: true,
+      canSelectNew: true,
+      canChangeSelection: false,
+      canChangeMode: false,
+      selectionLocked: true,
+      showModeControl: false,
+      availableModes: ["INTERNAL"],
+      persistedSelectionPreserved: false,
+      persistedModeIncompatible: false,
+      orgConfigured: true,
+      orgOfferMode: "INTERNAL",
+    });
     expect(detail?.canWriteInstallationFacts).toBe(false);
     expect(JSON.stringify(detail)).not.toMatch(/Nu adăuga montaj|Montajul nu face parte/);
   });
