@@ -10,6 +10,20 @@ export type TrustedSkillSeed = {
 export const OPERATIONAL_SKILL_FOUNDATION_MARKER =
   "OPERATIONAL_SKILL_FOUNDATION_V1_APPLIED" as const;
 
+export const VINYL_APPLICATOR_SKILL_ID = "skl:legacy:vinyl" as const;
+export const VINYL_APPLICATOR_SKILL_CODE = "SK_VINYL_APPLICATOR" as const;
+export const VINYL_APPLICATOR_NEW_ORG_LABEL = "Aplicare autocolant" as const;
+
+export const PAINTING_SKILL_ID = "skl:operational:painting" as const;
+export const PAINTING_SKILL_CODE = "SK_PAINTING" as const;
+export const PAINTING_SKILL_LABEL = "Vopsire spray / pistol" as const;
+
+export const METAL_CUTTING_OPERATOR_SKILL_ID = "skl:operational:metal-cutting-operator" as const;
+export const METAL_CUTTING_OPERATOR_SKILL_CODE = "SK_METAL_CUTTING_OPERATOR" as const;
+export const METAL_CUTTING_OPERATOR_SKILL_LABEL = "Operator debitare metale" as const;
+
+export const DEPRECATED_PAINTING_ASSEMBLY_SKILL_CODE = "SK_ASSEMBLY" as const;
+
 export const OPERATIONAL_FOUNDATION_SKILLS: readonly TrustedSkillSeed[] = [
   {
     skillId: "skl:operational:cnc-operator",
@@ -41,6 +55,24 @@ export const OPERATIONAL_FOUNDATION_SKILLS: readonly TrustedSkillSeed[] = [
     displayLabel: "Electrician",
     description: null,
   },
+  {
+    skillId: VINYL_APPLICATOR_SKILL_ID,
+    code: VINYL_APPLICATOR_SKILL_CODE,
+    displayLabel: VINYL_APPLICATOR_NEW_ORG_LABEL,
+    description: null,
+  },
+  {
+    skillId: PAINTING_SKILL_ID,
+    code: PAINTING_SKILL_CODE,
+    displayLabel: PAINTING_SKILL_LABEL,
+    description: null,
+  },
+  {
+    skillId: METAL_CUTTING_OPERATOR_SKILL_ID,
+    code: METAL_CUTTING_OPERATOR_SKILL_CODE,
+    displayLabel: METAL_CUTTING_OPERATOR_SKILL_LABEL,
+    description: null,
+  },
 ];
 
 export const OPERATIONAL_FOUNDATION_CAPABILITY_SKILLS: ReadonlyArray<{
@@ -54,4 +86,7 @@ export const OPERATIONAL_FOUNDATION_CAPABILITY_SKILLS: ReadonlyArray<{
   { capabilityId: "ELECTRICAL_ASSEMBLY", skillCode: "SK_ELECTRICIAN" },
   { capabilityId: "QUALITY_CONTROL", skillCode: "SK_ASSEMBLY" },
   { capabilityId: "PACKAGING", skillCode: "SK_ASSEMBLY" },
+  { capabilityId: "VINYL_APPLICATION", skillCode: VINYL_APPLICATOR_SKILL_CODE },
+  { capabilityId: "PAINTING", skillCode: PAINTING_SKILL_CODE },
+  { capabilityId: "METAL_CUTTING", skillCode: METAL_CUTTING_OPERATOR_SKILL_CODE },
 ];
