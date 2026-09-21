@@ -100,6 +100,15 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         title: "Lucrări",
         lead: "Continuă eliberarea, planul de execuție sau lucrarea finalizată.",
       };
+    case "planning":
+      return {
+        contextLabel: "Planificare",
+        currentHref: "/planificare",
+        workspace: "operational",
+        eyebrow: "Planificare",
+        title: "Planificare",
+        lead: "Ce lucru este acum pe fiecare zonă sau utilaj și cât timp estimat avem.",
+      };
     case "job":
       return {
         contextLabel: "Lucrare",

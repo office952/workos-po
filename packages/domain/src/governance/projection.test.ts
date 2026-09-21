@@ -118,13 +118,13 @@ describe("system governance projection", () => {
     );
     expect(
       governance.roadmap.find((item) => item.id === "capacity-planning")?.state,
-    ).toBe("NOT_IMPLEMENTED");
+    ).toBe("IMPLEMENTED");
     expect(governance.boundaries.find((item) => item.id === "machines")?.state).toBe(
       "IMPLEMENTED",
     );
     expect(
       governance.boundaries.find((item) => item.id === "capacity-planning")?.state,
-    ).toBe("NOT_IMPLEMENTED");
+    ).toBe("IMPLEMENTED");
     expect(
       governance.roadmap.find((item) => item.id === "process-admin-write")?.state,
     ).toBe("NOT_IMPLEMENTED");
@@ -256,13 +256,22 @@ describe("system governance projection", () => {
       /consumul real sunt implementate/,
     );
     expect(governance.boundaries.find((item) => item.id === "execution")?.statement).toMatch(
-      /Capacitatea, programarea și MachineRun nu sunt implementate/,
+      /Programarea și MachineRun nu sunt implementate/,
     );
     expect(governance.roadmap.find((item) => item.id === "execution")?.state).toBe(
       "IMPLEMENTED",
     );
     expect(governance.boundaries.find((item) => item.id === "capacity-planning")?.state).toBe(
-      "NOT_IMPLEMENTED",
+      "IMPLEMENTED",
+    );
+    expect(governance.boundaries.find((item) => item.id === "capacity-planning")?.label).toBe(
+      "Planificare",
+    );
+    expect(governance.roadmap.find((item) => item.id === "capacity-planning")?.state).toBe(
+      "IMPLEMENTED",
+    );
+    expect(governance.roadmap.find((item) => item.id === "capacity-planning")?.label).toBe(
+      "Planificare",
     );
     expect(governance.boundaries.find((item) => item.id === "scheduling")?.state).toBe(
       "NOT_IMPLEMENTED",

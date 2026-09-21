@@ -14,6 +14,7 @@ export const resourceKeys = {
   quoteOrder: (productCode: string, quoteSnapshotId: string) =>
     `quote-order:${productCode}:${quoteSnapshotId}`,
   jobs: () => "jobs",
+  planningWorkload: () => "planning-workload",
   job: (jobId: string) => `job:${jobId}`,
   jobPrefix: () => "job:",
   executionPlan: (planId: string) => `execution-plan:${planId}`,

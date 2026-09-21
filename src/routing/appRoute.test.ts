@@ -28,6 +28,7 @@ describe("parseAppRoute", () => {
     expect(parseAppRoute("/oferte")).toEqual({ name: "quotes" });
     expect(parseAppRoute("/lucrari")).toEqual({ name: "jobs" });
     expect(parseAppRoute("/lucrari/job-1")).toEqual({ name: "job", jobId: "job-1" });
+    expect(parseAppRoute("/planificare")).toEqual({ name: "planning" });
     expect(parseAppRoute("/atelier")).toEqual({ name: "atelier" });
     expect(parseAppRoute("/executie/exp-1")).toEqual({ name: "execution", planId: "exp-1" });
     expect(parseAppRoute("/admin/resources")).toEqual({ name: "admin-resources" });

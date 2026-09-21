@@ -77,9 +77,24 @@ export {
   type ActualInternalCostStatus,
 } from "./actualCost.js";
 export {
+  parsePlannedEffortMinutes,
+  plannedEffortIsUnknown,
+  type PlannedEffortParseResult,
+} from "./plannedEffort.js";
+export {
+  compareWorkloadDisplayOrder,
+  isOpenWorkloadStatus,
+  projectPlanningWorkload,
+  type PlanningWorkloadProjection,
+  type ProviderWorkloadGroup,
+  type WorkloadPlanSource,
+  type WorkloadTaskItem,
+} from "./workload.js";
+export {
   TASK_MUTATION_ERRORS,
   assignExecutorToTask,
   assignProviderToTask,
+  setPlannedEffortOnTask,
   assignedExecutorFromRow,
   assignedProviderFromRow,
   completeExecutionTask,

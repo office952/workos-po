@@ -38,6 +38,7 @@ export function invalidateAfterExecutionTaskChange(planId: string): void {
     resourceKeys.executionPlan(planId),
     resourceKeys.operatorInbox(),
     resourceKeys.jobs(),
+    resourceKeys.planningWorkload(),
   );
   invalidateResourcePrefix(resourceKeys.jobPrefix());
 }
@@ -66,6 +67,7 @@ export function invalidateAfterCloudBoundaryChange(): void {
     resourceKeys.productEnablementAdmin(),
     resourceKeys.peopleAdmin(),
     resourceKeys.workcentersAdmin(),
+    resourceKeys.planningWorkload(),
   );
   invalidateResourcePrefix("customer:");
   invalidateResourcePrefix("request:");
@@ -103,6 +105,7 @@ export function invalidateAfterWorkcentersAdminChange(): void {
     resourceKeys.workcentersAdmin(),
     resourceKeys.operatorInbox(),
     resourceKeys.jobs(),
+    resourceKeys.planningWorkload(),
   );
   invalidateResourcePrefix(resourceKeys.jobPrefix());
   invalidateResourcePrefix("execution-plan:");

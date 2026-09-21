@@ -12,18 +12,18 @@ PARALLEL_PLANNING_TRUTH = NO
 CANON_FILENAME = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
 CANON_FILENAME_RENAME = DEFERRED / NAMING_DEBT
 CURRENT_PROGRAM = PLANNING_WORKLOAD_V1
-CURRENT_PROGRAM_STATUS = PLN0_CANON_IMPLEMENTED_IN_REVIEW
+CURRENT_PROGRAM_STATUS = PLN1_IMPLEMENTED_IN_REVIEW
 PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
-PLN0 = IMPLEMENTED_IN_REVIEW
-PLN1 = NOT_STARTED
+PLN0 = COMPLETE
+PLN1 = IMPLEMENTED_IN_REVIEW
 PLN2 = NOT_STARTED
 PLN3 = NOT_STARTED
-PLANNING_IMPLEMENTATION = NOT_STARTED
+PLANNING_IMPLEMENTATION = IMPLEMENTED_IN_REVIEW
 SCHEDULING = NOT_STARTED / OUT_OF_SCOPE_V1
 OWNER_ACCEPTED_PLANNING_IMPLEMENTATION = NO
 ```
 
-Living program sequence is owned by `docs/ROADMAP.md`. Configuration-First architecture remains `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`. This document does not authorize PLN1 persistence, API, UI, or migration.
+Living program sequence is owned by `docs/ROADMAP.md`. Configuration-First architecture remains `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`. PLN1 persistence, API, `/planificare`, and the synthetic Owner reference runtime are implemented in review. This document remains the Planning contract owner. It does not authorize PLN2 or PLN3.
 
 ## Authority
 
@@ -45,7 +45,7 @@ Repository truth wins over preflight prose. Current domain already uses:
 - in-plan process `seq`, which is not provider queue priority
 - People `AVAILABLE` | `TEMPORARILY_UNAVAILABLE` as operational eligibility, not hours
 - provider lifecycle `ACTIVE` | `PLANNED` | `RETIRED`
-- governance `capacity-planning`, `scheduling`, and `machine-run` as `NOT_IMPLEMENTED`
+- governance `capacity-planning` as implemented workload planning, with `scheduling` and `machine-run` remaining `NOT_IMPLEMENTED`
 
 ## Owner-confirmed production reality
 

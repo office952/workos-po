@@ -9,6 +9,7 @@ export type AppRoute =
   | { name: "quote"; productCode: string; quoteSnapshotId: string }
   | { name: "jobs" }
   | { name: "job"; jobId: string }
+  | { name: "planning" }
   | { name: "atelier" }
   | { name: "execution"; planId: string }
   | { name: "admin-resources" }
@@ -56,6 +57,9 @@ export function parseAppRoute(pathname: string): AppRoute {
   }
   if (pathname === "/lucrari") {
     return { name: "jobs" };
+  }
+  if (pathname === "/planificare") {
+    return { name: "planning" };
   }
   const job = pathname.match(/^\/lucrari\/([^/]+)$/);
   if (job) {
@@ -175,6 +179,10 @@ export function adminWorkcenterHref(workcenterId: string): string {
 
 export function adminMachineHref(workcenterId: string, machineId: string): string {
   return `${adminWorkcenterHref(workcenterId)}/machines/${encodeURIComponent(machineId)}`;
+}
+
+export function planningHref(): string {
+  return "/planificare";
 }
 
 export function atelierHref(context: { jobId?: string | null } = {}): string {

@@ -191,3 +191,32 @@ ORGANIZATION_TENANCY = PRESERVED
 There must not be separate Cloud product code, a second customer-delivery track, or client-specific forks. Frontend, API, domain, business logic, migrations, and Product Truth stay shared. HUB MEDIA is a validation organization, not a client-specific codebase.
 
 Normal customers use the browser SaaS product. They do not need Cursor, source access, or direct SQLite edits. Synthetic development provisioning is bootstrap tooling, not customer onboarding UX.
+
+## Engineering synthetic reference runtime
+
+This is local engineering infrastructure. It is not production, not real Cloud, and not Product Truth.
+
+```text
+REFERENCE_URL = http://127.0.0.1:8787
+REFERENCE_PORT = 8787
+REFERENCE_CLASSIFICATION = SYNTHETIC_REFERENCE
+REAL_HUB_MEDIA = NO
+REAL_CLOUD = NO
+```
+
+Default data root is user-local, outside Git/worktrees:
+
+- Windows: `%LOCALAPPDATA%\WorkOS\reference-runtime`
+- Override: `WORKOS_REFERENCE_ROOT`
+
+The reference process does not inherit ambient `WORKOS_CLOUD_ROOT`. An existing directory with business storage but without the `SYNTHETIC_REFERENCE` marker is refused.
+
+Engineering commands:
+
+- `pnpm reference:start`
+- `pnpm reference:status`
+- `pnpm reference:restart`
+- `pnpm reference:seed`
+- `pnpm reference:stop`
+
+Port 8787 is protected Owner reference. Generic `ports:reclaim` / `dev:canonical` must not terminate it. Automated tests use isolated non-8787 ports.

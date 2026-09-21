@@ -4,6 +4,7 @@ import { presentCustomer, presentCustomerList } from "../adapters/customerAdapte
 import { presentExecutionPlan } from "../adapters/executionAdapter";
 import { presentHealth, type HealthPresentation } from "../adapters/healthAdapter";
 import { presentJobDetail, presentJobList } from "../adapters/jobAdapter";
+import { presentPlanningWorkload } from "../adapters/planningAdapter";
 import {
   presentInboxTasks,
   presentOperatorCandidates,
@@ -23,6 +24,7 @@ import { fetchProductCatalog } from "../api/catalog";
 import { fetchCustomer, fetchCustomers } from "../api/customers";
 import { fetchHealth } from "../api/health";
 import { fetchJob, fetchJobOverview } from "../api/jobs";
+import { fetchPlanningWorkload } from "../api/planning";
 import { fetchExecutionPlan, fetchQuoteAcceptance, fetchQuoteOrder } from "../api/lifecycle";
 import { fetchOperatorCandidates, fetchOperatorInbox, fetchOperatorSession } from "../api/operator";
 import { fetchQuoteSnapshot } from "../api/quote";
@@ -115,6 +117,14 @@ export async function loadQuoteOrder(productCode: string, quoteSnapshotId: strin
 
 export async function loadJobList() {
   return presentJobList(await fetchJobOverview());
+}
+
+export async function loadPlanningWorkload() {
+  const presented = presentPlanningWorkload(await fetchPlanningWorkload());
+  if (!presented) {
+    throw new Error("unpresentable");
+  }
+  return presented;
 }
 
 export async function loadJobDetail(jobId: string) {

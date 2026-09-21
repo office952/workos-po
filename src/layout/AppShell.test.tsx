@@ -51,6 +51,7 @@ describe("AppShell", () => {
     expect(screen.getByRole("link", { name: "Configurator" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Oferte" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Lucrări" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Planificare" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Atelier" })).toBeInTheDocument();
 
     rerender(
