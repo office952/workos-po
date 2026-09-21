@@ -8,6 +8,7 @@ type TextFieldProps = {
   error?: string;
   disabled?: boolean;
   inputMode?: "text" | "decimal";
+  type?: "text" | "password";
   className?: string;
   onChange: (value: string) => void;
 };
@@ -20,6 +21,7 @@ export function TextField({
   error,
   disabled,
   inputMode = "text",
+  type = "text",
   className,
   onChange,
 }: TextFieldProps) {
@@ -28,6 +30,7 @@ export function TextField({
       <input
         id={id}
         className="field__control"
+        type={type}
         value={value}
         inputMode={inputMode}
         disabled={disabled}

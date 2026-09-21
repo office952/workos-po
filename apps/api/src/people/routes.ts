@@ -5,16 +5,30 @@ import {
   type SkillMutationError,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
-import { getProductSystem, type ApiEnv } from "../cloud/context.js";
+import { getProductSystem, isOwner, type ApiEnv } from "../cloud/context.js";
+import type { ProductSystemRuntime } from "../productSystem/runtime.js";
 import { requireOwnerRole } from "../cloud/middleware.js";
+
+function peopleAdminPayload(runtime: ProductSystemRuntime, canEdit: boolean) {
+  const registry = runtime.listPeopleRegistry();
+  return {
+    canEdit,
+    people: runtime.listPeople(),
+    skills: runtime.listSkills(),
+    registry: {
+      ...registry,
+      people: registry.people.map((item) => ({
+        ...item,
+        operatorPinConfigured: runtime.personHasOperatorPin(item.personId),
+      })),
+    },
+  };
+}
 
 export function registerPeopleRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/people", (c) => {
     const runtime = getProductSystem(c);
-    return c.json({
-      people: runtime.listPeople(),
-      registry: runtime.listPeopleRegistry(),
-    });
+    return c.json(peopleAdminPayload(runtime, isOwner(c)));
   });
 
   app.get("/api/people/skills", (c) => {
@@ -109,7 +123,7 @@ export function registerPeopleRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: result.error }, personHttpStatus(result.error));
     }
     return c.json(
-      { person: result.person, people: runtime.listPeople(), registry: runtime.listPeopleRegistry() },
+      { person: result.person, ...peopleAdminPayload(runtime, isOwner(c)) },
       201,
     );
   });
@@ -136,8 +150,7 @@ export function registerPeopleRoutes(app: Hono<ApiEnv>): void {
       return c.json({
         alreadyApplied: result.alreadyApplied,
         person: result.person,
-        people: runtime.listPeople(),
-        registry: runtime.listPeopleRegistry(),
+        ...peopleAdminPayload(runtime, isOwner(c)),
       });
     }
     const result = runtime.updatePerson(c.req.param("personId"), {
@@ -165,8 +178,7 @@ export function registerPeopleRoutes(app: Hono<ApiEnv>): void {
     return c.json({
       alreadyApplied: result.alreadyApplied,
       person: result.person,
-      people: runtime.listPeople(),
-      registry: runtime.listPeopleRegistry(),
+      ...peopleAdminPayload(runtime, isOwner(c)),
     });
   });
 
@@ -183,7 +195,7 @@ export function registerPeopleRoutes(app: Hono<ApiEnv>): void {
     }
     return c.json({
       assignment: result.assignment,
-      registry: runtime.listPeopleRegistry(),
+      ...peopleAdminPayload(runtime, isOwner(c)),
     });
   });
 
@@ -206,7 +218,7 @@ export function registerPeopleRoutes(app: Hono<ApiEnv>): void {
     }
     return c.json({
       assignment: result.assignment,
-      registry: runtime.listPeopleRegistry(),
+      ...peopleAdminPayload(runtime, isOwner(c)),
     });
   });
 }

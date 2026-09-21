@@ -45,6 +45,7 @@ import { CommercialAdminPage } from "./surfaces/CommercialAdminPage";
 import { ResourcesAdminPage } from "./surfaces/ResourcesAdminPage";
 import { FormulasAdminPage } from "./surfaces/FormulasAdminPage";
 import { TechnicalAdminPage } from "./surfaces/TechnicalAdminPage";
+import { PeopleAdminPage } from "./surfaces/PeopleAdminPage";
 import { ProductEnablementAdminPage } from "./surfaces/ProductEnablementAdminPage";
 
 function syncCanonicalLocation(): AppLocation {
@@ -115,6 +116,10 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
       return <FormulasAdminPage />;
     case "admin-products":
       return <ProductEnablementAdminPage />;
+    case "admin-people":
+      return <PeopleAdminPage />;
+    case "admin-person":
+      return <PeopleAdminPage personId={route.personId} />;
     case "foundation":
       return <FoundationProofPage />;
     case "unknown":

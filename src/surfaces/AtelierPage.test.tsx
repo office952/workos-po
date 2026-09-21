@@ -95,4 +95,34 @@ describe("AtelierPage", () => {
     expect(screen.queryByText("NORD B")).not.toBeInTheDocument();
     expect(document.querySelector('a[href="/executie/exp-a?task=task-a&job=ord-a"]')).not.toBeNull();
   });
+
+  it("lists a configured person as an operator candidate", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/operator-candidates")) {
+          return jsonResponse({
+            candidates: [
+              {
+                personId: "per:operator-test",
+                displayName: "Operator Test",
+                pinConfigured: true,
+                availabilityLabel: "Disponibil",
+              },
+            ],
+          });
+        }
+        if (url.includes("/operator-session")) {
+          return jsonResponse({ operator: null });
+        }
+        return jsonResponse({});
+      }),
+    );
+
+    render(<AtelierPage />);
+    expect(await screen.findByLabelText("Persoană")).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Operator Test" })).toBeInTheDocument();
+    expect(screen.queryByText("Nu există operatori configurați")).not.toBeInTheDocument();
+  });
 });
