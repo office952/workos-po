@@ -49,11 +49,13 @@ export {
   configurationReviewIdFor,
   confirmReviewedDraft,
   projectConfigurationPreview,
+  usedFormulasSnapshot,
   usedTechnicalSettingsSnapshot,
   visibleFormSchema,
   type ConfigurationPreview,
   type ConfigurationProductIdentity,
   type ConfigurationSelectedComponent,
+  type FormulaReviewSnapshot,
   type TechnicalSettingSnapshot,
 } from "./configurationPreview.js";
 export {
@@ -151,6 +153,7 @@ export {
   LIGHTING_MISSING_LED_GEOMETRY,
   LIGHTING_MISSING_LED_LOAD,
   LIGHTING_MISSING_PSU_CAPACITY,
+  LIGHTING_MISSING_FORMULAS,
   LIGHTING_MISSING_PSU_SELECTION,
   ledModuleQuantityFromPerimeter,
   lightingFrontLedContract,
@@ -193,6 +196,100 @@ export {
   technicalSettingSourceLabel,
   technicalSettingStatusLabel,
 } from "./technicalSettingVersion.js";
+export {
+  DEFERRED_FORMULA_OPERATORS,
+  FORMULA_AST_IDENTITY_PREFIX,
+  FORMULA_AST_KINDS,
+  FORMULA_OPERATOR_KINDS,
+  MAX_AST_DEPTH,
+  MAX_AST_NODES,
+  collectFormulaRefs,
+  countFormulaAstNodes,
+  formulaAstDepth,
+  formulaDependencyGraphHasCycle,
+  formulaAstEquals,
+  formulaAstIdentity,
+  isFormulaAstKind,
+  isFormulaOperatorKind,
+  parseFormulaAst,
+  parseFormulaExpressionJson,
+  serializeFormulaExpression,
+} from "./formulaAst.js";
+export {
+  CONFIRMED_PERIMETER_JOB_INPUT_ID,
+  LIGHTING_LED_MODULE_QUANTITY_FORMULA_ID,
+  LIGHTING_LED_MODULE_QUANTITY_STARTER_AST,
+  LIGHTING_REQUIRED_PSU_CAPACITY_FORMULA_ID,
+  LIGHTING_REQUIRED_PSU_CAPACITY_STARTER_AST,
+  LIGHTING_TOTAL_LED_LOAD_FORMULA_ID,
+  LIGHTING_TOTAL_LED_LOAD_STARTER_AST,
+  SUPPORTED_FORMULA_IDS,
+  findFormulaDefinition,
+  formulaDefinitionsForType,
+  isSupportedFormulaId,
+  lightingFrontLedFormulaDefinitions,
+  lightingFrontLedStarterAsts,
+  requiredFormulaDefinitions,
+  starterAstFor,
+  explainFormulaAst,
+  formulaDefinitionCoherenceIssues,
+  formulaValueKindForJobInput,
+  inferFormulaAstValueKind,
+  validateFormulaAstAgainstDefinition,
+  validateFormulaAstSemantics,
+} from "./formulaDefinition.js";
+export {
+  FORMULA_ACTOR_KINDS,
+  FORMULA_SCOPE,
+  FORMULA_STARTER_SYSTEM_ID,
+  FORMULA_VERSION_SOURCES,
+  FORMULA_VERSION_STATUSES,
+  createPlatformStarterFormulaVersions,
+  formulaActorFieldsFrom,
+  formulaActorIsValid,
+  formulaSourceLabel,
+  formulaStatusLabel,
+  formulaVersionRecordFromPersisted,
+  isFormulaActorKind,
+  isFormulaVersionRecord,
+  isFormulaVersionSource,
+  isFormulaVersionStatus,
+  persistedFormulaVersionFromRecord,
+  planFormulaSave,
+} from "./formulaVersion.js";
+export {
+  FORMULAS_EMPTY_REASON,
+  FORMULAS_INACTIVE,
+  FORMULAS_INACTIVE_REASON,
+  FORMULAS_INVALID,
+  FORMULAS_INVALID_REASON,
+  formulasForTypeFromResolved,
+  resolveOrganizationFormulas,
+  starterFormulaVersionsForType,
+  starterResolvedFormulas,
+} from "./resolveFormulas.js";
+export {
+  evaluateFormulaDag,
+  formulaResultById,
+} from "./evaluateFormulas.js";
+export {
+  FORMULA_PRESENTATION_UNITS,
+  FORMULA_VALUE_KINDS,
+  addFormulaValues,
+  addValueKind,
+  ceilFormulaValue,
+  ceilValueKind,
+  divideFormulaValues,
+  divideValueKind,
+  formulaValueKindFromTechnicalUnit,
+  isFormulaPresentationUnit,
+  isFormulaValueKind,
+  multiplyFormulaValues,
+  multiplyValueKind,
+  presentationUnitForValueKind,
+  subtractFormulaValues,
+  subtractValueKind,
+} from "./formulaValue.js";
 export {
   TECHNICAL_SETTINGS_EMPTY_REASON,
   TECHNICAL_SETTINGS_INACTIVE,
@@ -252,6 +349,44 @@ export type {
   ResolvedTechnicalSetting,
   TechnicalSettingResolution,
 } from "./resolveTechnicalSettings.js";
+export type {
+  FormulaAst,
+  FormulaAstIssue,
+  FormulaAstKind,
+  FormulaOperatorKind,
+} from "./formulaAst.js";
+export type {
+  FormulaDefinition,
+  FormulaReferenceAllowlist,
+  SupportedFormulaId,
+} from "./formulaDefinition.js";
+export type {
+  FormulaActor,
+  FormulaActorKind,
+  FormulaDraftExpression,
+  FormulaIssue,
+  FormulaSavePlan,
+  FormulaVersionRecord,
+  FormulaVersionSource,
+  FormulaVersionStatus,
+  PersistedFormulaVersion,
+} from "./formulaVersion.js";
+export type {
+  FormulaResolution,
+  ResolvedFormulaVersion,
+} from "./resolveFormulas.js";
+export type {
+  FormulaBreakdownStep,
+  FormulaDagEvaluation,
+  FormulaEvaluationResult,
+  FormulaFrozenTrace,
+  FormulaResolvedReference,
+} from "./evaluateFormulas.js";
+export type {
+  FormulaPresentationUnit,
+  FormulaTypedValue,
+  FormulaValueKind,
+} from "./formulaValue.js";
 export type {
   AdminCategoryRecord,
   AdminEditClass,

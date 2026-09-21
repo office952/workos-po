@@ -21,6 +21,7 @@ export {
   type FrozenRecipeTrace,
   type FrozenRequirement,
   type FrozenTechnicalSetting,
+  type FrozenFormulaTrace,
   type ProductionReleaseSource,
 } from "./snapshot.js";
 export {

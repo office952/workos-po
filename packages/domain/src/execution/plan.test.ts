@@ -1,3 +1,4 @@
+import { starterFormulaVersionsForType } from "../product/resolveFormulas.js";
 import { describe, expect, it } from "vitest";
 import {
   BOND_LETTER_BODY_ID,
@@ -47,13 +48,8 @@ function freeze(values: DraftValues = readyValues) {
   if ("ok" in truth) {
     throw new Error("expected confirmed truth");
   }
-  const aggregate = compileAggregate(
-    truth,
-    frontlitPlexiAl06Template,
-    frontlitPlexiAl06FormSchema,
-    seededDisplayLabelCatalog(),
-  );
-  const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+  const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, seededDisplayLabelCatalog(), { formulaVersionsForType: starterFormulaVersionsForType });
+  const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
   const snapshot = freezeAcceptedProductionSnapshot(
     truth,
     aggregate,
@@ -183,13 +179,8 @@ describe("persisted execution plan materialization", () => {
     if ("ok" in truth) {
       throw new Error("expected confirmed truth");
     }
-    const aggregate = compileAggregate(
-      truth,
-      frontlitPlexiAl06Template,
-      frontlitPlexiAl06FormSchema,
-      seededDisplayLabelCatalog(),
-    );
-    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+    const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, seededDisplayLabelCatalog(), { formulaVersionsForType: starterFormulaVersionsForType });
+    const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
     const eic = compileEic(aggregate, composition);
     const vinyl = freezeAcceptedProductionSnapshot(truth, aggregate, composition, eic, {
       createdAt: "2026-08-15T14:00:00.000Z",

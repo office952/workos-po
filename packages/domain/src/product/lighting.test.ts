@@ -10,12 +10,14 @@ import {
   listPsuCapacityCatalog,
 } from "../resources/catalog.js";
 import {
+  LIGHTING_MISSING_FORMULAS,
   LIGHTING_MISSING_LED_GEOMETRY,
   LIGHTING_MISSING_PSU_SELECTION,
   ledModuleQuantityFromPerimeter,
   lightingFrontLedContract,
   requiredPsuCapacityW,
 } from "./lighting.js";
+import { starterResolvedFormulas } from "./resolveFormulas.js";
 import {
   LED_MODULE_POWER_SETTING_ID,
   LED_PITCH_SETTING_ID,
@@ -79,12 +81,24 @@ describe("LIGHTING_FRONT_LED", () => {
     expect(reserve?.configurable).toBe(true);
   });
 
+  it("fails closed when formula versions are missing", () => {
+    const result = lightingFrontLedContract.calculate({
+      values: { "lighting.mode": "front_lit" },
+      measurements: [confirmedPerimeter],
+      shared: {},
+      technicalSettings: lightingSettings(),
+    });
+    expect(result.status).toBe("UNAVAILABLE");
+    expect(result.unavailable).toEqual([LIGHTING_MISSING_FORMULAS]);
+  });
+
   it("stays partial without inventing LED quantity or fake zeros", () => {
     const result = lightingFrontLedContract.calculate({
       values: { "lighting.mode": "front_lit" },
       measurements: [],
       shared: {},
       technicalSettings: lightingSettings(),
+      formulaVersions: starterResolvedFormulas(),
     });
     expect(result.status).toBe("PARTIAL");
     expect(result.quantities).toEqual([]);
@@ -101,6 +115,7 @@ describe("LIGHTING_FRONT_LED", () => {
       measurements: [confirmedPerimeter],
       shared: {},
       technicalSettings: lightingSettings(),
+      formulaVersions: starterResolvedFormulas(),
     });
     expect(result.status).toBe("CALCULATED");
     expect(result.unavailable).toEqual([]);
@@ -150,6 +165,7 @@ describe("LIGHTING_FRONT_LED", () => {
       measurements: [confirmedPerimeter],
       shared: {},
       technicalSettings: lightingSettings({ [LED_MODULE_POWER_SETTING_ID]: 1.44 }),
+      formulaVersions: starterResolvedFormulas(),
     });
     expect(result.status).toBe("CALCULATED");
     expect(result.quantities.find((item) => item.id === "totalLedLoadW")?.value).toBe(180);

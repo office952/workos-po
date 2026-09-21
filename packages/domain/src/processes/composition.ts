@@ -8,6 +8,7 @@ import {
 import { selectedComponentIds } from "../product/compiler.js";
 import { getComponentType } from "../product/componentTypes.js";
 import { CANONICAL_PRODUCT_CODE } from "../product/frontlitPlexiAl06.js";
+import { starterFormulaVersionsForType } from "../product/resolveFormulas.js";
 import {
   LIGHTING_MISSING_LED_GEOMETRY,
   LIGHTING_MISSING_LED_LOAD,
@@ -24,6 +25,7 @@ import type {
   TechnicalMeasurement,
 } from "../product/types.js";
 import { compileEic, costCompletenessLabel, type EicResult } from "../resources/eic.js";
+import type { ResolvedFormulaVersion } from "../product/resolveFormulas.js";
 import type { ComponentTechnicalSettingDefinition } from "../product/technicalSettings.js";
 import type { CostEvidence } from "../resources/catalog.js";
 import {
@@ -150,6 +152,9 @@ export type ProcessCompositionOptions = {
   readonly technicalSettingsForType?: (
     typeId: ComponentTypeId,
   ) => readonly ComponentTechnicalSettingDefinition[];
+  readonly formulaVersionsForType?: (
+    typeId: ComponentTypeId,
+  ) => readonly ResolvedFormulaVersion[];
 };
 
 export function compositionNodeId(
@@ -217,7 +222,10 @@ export function composeProductProcessesFromTruth(
   truth: ProductTruth,
   template: ProductTemplate,
   costEvidenceRows?: readonly CostEvidence[],
-  options?: Pick<ProcessCompositionOptions, "technicalSettingsForType">,
+  options?: Pick<
+    ProcessCompositionOptions,
+    "technicalSettingsForType" | "formulaVersionsForType"
+  >,
 ): ProductProcessComposition {
   if (truth.templateCode !== template.code) {
     throw new Error(`process_composition_template_mismatch:${truth.templateCode}`);
@@ -228,12 +236,14 @@ export function composeProductProcessesFromTruth(
     values: truth.values,
     measurements: truth.measurements,
     technicalSettingsForType: options?.technicalSettingsForType,
+    formulaVersionsForType: options?.formulaVersionsForType,
   });
   return composeProductProcesses(template, truth.values, {
     measurements: truth.measurements,
     evaluations,
     costEvidenceRows,
     technicalSettingsForType: options?.technicalSettingsForType,
+    formulaVersionsForType: options?.formulaVersionsForType,
   });
 }
 
@@ -261,6 +271,7 @@ function resolveProcessCompositionInputs(
       values: merged,
       measurements,
       technicalSettingsForType: options.technicalSettingsForType,
+      formulaVersionsForType: options.formulaVersionsForType,
     });
   return { merged, selectedIds, evaluations };
 }
@@ -369,6 +380,8 @@ export function lettersProcessCompositionInspections(
       "face.confirmedAreaMm2": 250000,
       "volume.depthMm": "60",
       "volume.confirmedPerimeterMm": 12500,
+    }, {
+      formulaVersionsForType: starterFormulaVersionsForType,
     }),
   }));
 }

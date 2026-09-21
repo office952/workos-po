@@ -1,3 +1,4 @@
+import { starterFormulaVersionsForType } from "../product/resolveFormulas.js";
 import { describe, expect, it } from "vitest";
 import { assignPersonSkill, retirePersonSkill } from "../people/assignment.js";
 import { createPerson, setPersonAvailability } from "../people/identity.js";
@@ -50,13 +51,8 @@ function planned(inscription: string, createdAt: string) {
   if ("ok" in truth) {
     throw new Error("expected confirmed truth");
   }
-  const aggregate = compileAggregate(
-    truth,
-    frontlitPlexiAl06Template,
-    frontlitPlexiAl06FormSchema,
-    seededDisplayLabelCatalog(),
-  );
-  const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+  const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, seededDisplayLabelCatalog(), { formulaVersionsForType: starterFormulaVersionsForType });
+  const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
   const snapshot = freezeAcceptedProductionSnapshot(
     truth,
     aggregate,

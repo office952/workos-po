@@ -1,3 +1,4 @@
+import { starterFormulaVersionsForType } from "../product/resolveFormulas.js";
 import { describe, expect, it } from "vitest";
 import { composeProductProcessesFromTruth } from "../processes/composition.js";
 import {
@@ -59,13 +60,8 @@ function confirmedSpine(
   if ("ok" in truth) {
     throw new Error("expected confirmed truth");
   }
-  const aggregate = compileAggregate(
-    truth,
-    frontlitPlexiAl06Template,
-    frontlitPlexiAl06FormSchema,
-    seededDisplayLabelCatalog(),
-  );
-  const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+  const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, seededDisplayLabelCatalog(), { formulaVersionsForType: starterFormulaVersionsForType });
+  const composition = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
   const eic = compileEic(aggregate, composition, evidenceRows);
   return { truth, aggregate, composition, eic, evidenceRows };
 }
@@ -580,5 +576,67 @@ describe("quote snapshot freeze", () => {
       },
     };
     expect(isSupportedQuoteSnapshot(historical)).toBe(true);
+  });
+
+  it("freezes optional usedFormulas without rewriting old quotes", () => {
+    const { truth, aggregate, composition, eic } = confirmedSpine();
+    const commercial = projectCommercialPrice(eic);
+    const oldQuote = freezeQuoteSnapshot(truth, aggregate, composition, eic, commercial, {
+      createdAt: "2026-09-21T00:00:00.000Z",
+    });
+    expect(oldQuote.ok).toBe(true);
+    if (!oldQuote.ok) {
+      return;
+    }
+    expect(oldQuote.snapshot.productionInput.usedFormulas).toBeUndefined();
+    expect(isSupportedQuoteSnapshot(oldQuote.snapshot)).toBe(true);
+
+    const formulas = [
+      {
+        formulaId: "LIGHTING_FRONT_LED.ledModuleQuantity",
+        version: 2,
+        source: "ORGANIZATION",
+        scope: "ORGANIZATION" as const,
+        effectiveFrom: "2026-09-21T01:00:00.000Z",
+        astIdentity: "ast1:v2",
+        resultId: "ledModuleQuantity",
+        resultValue: 125,
+        resultUnit: "buc",
+        resultValueKind: "COUNT" as const,
+        explanation: "rotunjire în sus",
+        resolvedReferences: [],
+      },
+    ];
+    const next = freezeQuoteSnapshot(truth, aggregate, composition, eic, commercial, {
+      createdAt: "2026-09-21T01:00:00.000Z",
+      formulas,
+    });
+    expect(next.ok).toBe(true);
+    if (!next.ok) {
+      return;
+    }
+    expect(next.snapshot.productionInput.usedFormulas?.[0]).toMatchObject({
+      version: 2,
+      source: "ORGANIZATION",
+      resultId: "ledModuleQuantity",
+    });
+    expect(next.snapshot.contentHash).not.toBe(oldQuote.snapshot.contentHash);
+    expect(oldQuote.snapshot.productionInput.usedFormulas).toBeUndefined();
+
+    const accepted = recordQuoteAcceptance(next.snapshot, {
+      acceptedAt: "2026-09-21T02:00:00.000Z",
+    });
+    expect(accepted.ok).toBe(true);
+    if (!accepted.ok) {
+      return;
+    }
+    const order = freezeOrderSnapshot(next.snapshot, accepted.decision, {
+      createdAt: "2026-09-21T03:00:00.000Z",
+    });
+    expect(order.ok).toBe(true);
+    if (!order.ok) {
+      return;
+    }
+    expect(order.snapshot.productionInput.usedFormulas?.[0]?.version).toBe(2);
   });
 });

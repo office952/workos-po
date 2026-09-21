@@ -4,6 +4,7 @@ import {
   type ComponentEvaluation,
 } from "./componentEvaluation.js";
 import type { DisplayLabelCatalog } from "./displayMetadata.js";
+import type { ResolvedFormulaVersion } from "./resolveFormulas.js";
 import type { ComponentTechnicalSettingDefinition } from "./technicalSettings.js";
 import type {
   ComponentTypeId,
@@ -221,6 +222,9 @@ export type CompileAggregateOptions = {
   readonly technicalSettingsForType?: (
     typeId: ComponentTypeId,
   ) => readonly ComponentTechnicalSettingDefinition[];
+  readonly formulaVersionsForType?: (
+    typeId: ComponentTypeId,
+  ) => readonly ResolvedFormulaVersion[];
 };
 
 export function compileAggregate(
@@ -278,6 +282,7 @@ export function compileAggregate(
       values: truth.values,
       measurements: truth.measurements,
       technicalSettingsForType: options.technicalSettingsForType,
+      formulaVersionsForType: options.formulaVersionsForType,
     });
 
   return {

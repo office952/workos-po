@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { compileAcceptedProductEvaluation } from "./acceptedEvaluation.js";
+import { starterFormulaVersionsForType } from "./resolveFormulas.js";
 import { confirmReviewedDraft, projectConfigurationPreview } from "./configurationPreview.js";
 import {
   CANONICAL_PRODUCT_CODE,
@@ -72,6 +73,7 @@ function compileWith(versions: readonly TechnicalSettingVersionRecord[]) {
     labels: seededDisplayLabelCatalog(),
     costEvidenceRows: costEvidence,
     technicalSettingsForType: technicalSettingsLookupFromResolved(resolution.settings),
+    formulaVersionsForType: starterFormulaVersionsForType,
   });
 }
 

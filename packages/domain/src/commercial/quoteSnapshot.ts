@@ -216,6 +216,7 @@ export function freezeQuoteSnapshot(
     seller?: FrozenSellerIdentity;
     costEvidenceRows?: readonly CostEvidence[];
     technicalSettings?: readonly FrozenTechnicalSetting[];
+    formulas?: FrozenProductionInput["usedFormulas"];
     installation?: QuoteInstallationFreezeInput;
   },
 ): QuoteSnapshotResult {
@@ -342,6 +343,7 @@ export function freezeQuoteSnapshot(
     productionInput: freezeProductionInput(aggregate, composition, {
       costEvidenceRows: options?.costEvidenceRows,
       technicalSettings: options?.technicalSettings,
+      formulas: options?.formulas,
     }),
     commercial: frozenProductCommercial,
     ...(v2Fields && v2Fields.ok

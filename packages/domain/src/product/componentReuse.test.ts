@@ -1,3 +1,4 @@
+import { starterFormulaVersionsForType } from "./resolveFormulas.js";
 import { describe, expect, it } from "vitest";
 import { compileEic } from "../resources/eic.js";
 import { getComponentContract } from "./componentRegistry.js";
@@ -48,12 +49,7 @@ describe("component reuse", () => {
     if ("ok" in truth) {
       throw new Error("expected confirmed truth");
     }
-    const aggregate = compileAggregate(
-      truth,
-      frontlitPlexiAl06Template,
-      frontlitPlexiAl06FormSchema,
-      seededDisplayLabelCatalog(),
-    );
+    const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, seededDisplayLabelCatalog(), { formulaVersionsForType: starterFormulaVersionsForType });
     const fromProduct = aggregate.quantities.find((item) => item.componentId === "FACE");
 
     expect(getComponentContract("PLEXIGLAS_FACE")).toBe(plexiglasFaceContract);

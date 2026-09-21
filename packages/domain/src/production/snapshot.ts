@@ -11,6 +11,7 @@ import {
   processProviderRequirement,
   type ProviderRequirement,
 } from "../processes/catalog.js";
+import type { FormulaFrozenTrace } from "../product/evaluateFormulas.js";
 import type { ResolvedTechnicalSetting } from "../product/resolveTechnicalSettings.js";
 import {
   findTechnicalSettingDefinition,
@@ -92,6 +93,8 @@ export type FrozenProductionOperation = {
   resourceDemands: readonly FrozenResourceDemand[];
 };
 
+export type FrozenFormulaTrace = FormulaFrozenTrace;
+
 export type FrozenRecipeTrace = {
   recipeId: string;
   processId: string;
@@ -155,6 +158,7 @@ export type AcceptedProductionSnapshot = {
   operations: readonly FrozenProductionOperation[];
   usedTechnicalSettings: readonly FrozenTechnicalSetting[];
   usedRecipes: readonly FrozenRecipeTrace[];
+  usedFormulas?: readonly FrozenFormulaTrace[];
   eic: FrozenEicReference;
 };
 
@@ -166,6 +170,7 @@ export type FrozenProductionWork = {
   requirements: readonly FrozenRequirement[];
   usedTechnicalSettings: readonly FrozenTechnicalSetting[];
   usedRecipes: readonly FrozenRecipeTrace[];
+  usedFormulas?: readonly FrozenFormulaTrace[];
   eic: FrozenEicReference;
 };
 
@@ -177,6 +182,7 @@ export type FrozenProductionInput = {
   operations: readonly FrozenProductionOperation[];
   usedTechnicalSettings: readonly FrozenTechnicalSetting[];
   usedRecipes: readonly FrozenRecipeTrace[];
+  usedFormulas?: readonly FrozenFormulaTrace[];
   contentHash: string;
 };
 
@@ -188,6 +194,7 @@ export function freezeAcceptedProductionSnapshot(
   options?: {
     createdAt?: string;
     technicalSettings?: readonly FrozenTechnicalSetting[];
+    formulas?: readonly FrozenFormulaTrace[];
     costEvidenceRows?: readonly CostEvidence[];
   },
 ): AcceptedProductionSnapshot {
@@ -212,6 +219,7 @@ export function freezeAcceptedProductionSnapshot(
     operations: productionInput.operations,
     usedTechnicalSettings: productionInput.usedTechnicalSettings,
     usedRecipes: productionInput.usedRecipes,
+    ...(productionInput.usedFormulas ? { usedFormulas: productionInput.usedFormulas } : {}),
     eic: freezeEic(eic),
   };
   const contentHash = canonicalContentHash(hashedContent);
@@ -235,6 +243,7 @@ export function productionWorkFromSnapshot(
     requirements: snapshot.requirements,
     usedTechnicalSettings: snapshot.usedTechnicalSettings,
     usedRecipes: snapshot.usedRecipes,
+    ...(snapshot.usedFormulas ? { usedFormulas: snapshot.usedFormulas } : {}),
     eic: snapshot.eic,
   };
 }
@@ -253,6 +262,9 @@ export function copyFrozenProductionInput(
     })),
     usedTechnicalSettings: input.usedTechnicalSettings.map((item) => ({ ...item })),
     usedRecipes: input.usedRecipes.map((item) => ({ ...item })),
+    ...(input.usedFormulas
+      ? { usedFormulas: input.usedFormulas.map((item) => ({ ...item })) }
+      : {}),
     contentHash: input.contentHash,
   });
 }
@@ -262,6 +274,7 @@ export function freezeProductionInput(
   composition: ProductProcessComposition,
   options?: {
     technicalSettings?: readonly FrozenTechnicalSetting[];
+    formulas?: readonly FrozenFormulaTrace[];
     costEvidenceRows?: readonly CostEvidence[];
   },
 ): FrozenProductionInput {
@@ -276,6 +289,9 @@ export function freezeProductionInput(
       aggregate,
       options?.costEvidenceRows ?? costEvidence,
     ),
+    ...(options?.formulas && options.formulas.length > 0
+      ? { usedFormulas: options.formulas.map((item) => ({ ...item })) }
+      : {}),
   };
   return deepFreeze({
     ...hashedContent,

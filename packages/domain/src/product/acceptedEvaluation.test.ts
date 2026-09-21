@@ -18,6 +18,7 @@ import {
   acmCassetteNoneTemplate,
 } from "./acmCassetteNone.js";
 import { compileAcceptedProductEvaluation } from "./acceptedEvaluation.js";
+import { starterFormulaVersionsForType } from "./resolveFormulas.js";
 import {
   compileAggregate,
   compileDefinition,
@@ -86,6 +87,7 @@ function evaluateAccepted(
     formSchema: schema,
     labels: seededDisplayLabelCatalog(),
     costEvidenceRows: costEvidence,
+    formulaVersionsForType: starterFormulaVersionsForType,
   });
 }
 
@@ -204,6 +206,7 @@ describe("accepted product evaluation", () => {
     const { result, trace } = runWithProductEvaluationTrace(() =>
       composeProductProcesses(frontlitPlexiAl06Template, lettersNoneNone, {
         costEvidenceRows: costEvidence,
+        formulaVersionsForType: starterFormulaVersionsForType,
       }),
     );
     expect(trace.evaluateProductComponents).toBe(1);
@@ -234,10 +237,13 @@ describe("accepted product evaluation", () => {
         frontlitPlexiAl06Template,
         frontlitPlexiAl06FormSchema,
         labels,
+        { formulaVersionsForType: starterFormulaVersionsForType },
       );
       const composition = composeProductProcessesFromTruth(
         truth,
         frontlitPlexiAl06Template,
+        undefined,
+        { formulaVersionsForType: starterFormulaVersionsForType },
       );
       return compileEic(aggregate, composition, costEvidence);
     };
@@ -248,6 +254,7 @@ describe("accepted product evaluation", () => {
         formSchema: frontlitPlexiAl06FormSchema,
         labels,
         costEvidenceRows: costEvidence,
+        formulaVersionsForType: starterFormulaVersionsForType,
       });
 
     for (let index = 0; index < warmup; index += 1) {

@@ -80,6 +80,7 @@ export function freezeProductionReleaseFromOrder(
     operations: productionInput.operations,
     usedTechnicalSettings: productionInput.usedTechnicalSettings,
     usedRecipes: productionInput.usedRecipes,
+    ...(productionInput.usedFormulas ? { usedFormulas: productionInput.usedFormulas } : {}),
     eic: {
       total: order.eic.total,
       currency: order.eic.currency,

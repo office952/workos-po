@@ -1,3 +1,4 @@
+import { starterFormulaVersionsForType } from "../product/resolveFormulas.js";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -64,9 +65,19 @@ const canonicalGeometry = {
   "volume.confirmedPerimeterMm": 12500,
 } as const;
 
+function composeLetters(
+  values: Record<string, string | number>,
+  options?: Parameters<typeof composeProductProcesses>[2],
+) {
+  return composeProductProcesses(frontlitPlexiAl06Template, values, {
+    formulaVersionsForType: starterFormulaVersionsForType,
+    ...options,
+  });
+}
+
 describe("letters process composition", () => {
   it("derives cost completeness from selected cost evidence", () => {
-    const none = composeProductProcesses(frontlitPlexiAl06Template, {
+    const none = composeLetters( {
       ...noneFinish,
       ...canonicalGeometry,
     });
@@ -74,7 +85,7 @@ describe("letters process composition", () => {
     expect(none.costCompletenessLabel).toBe("Complete pentru configurația curentă");
 
     for (const depthMm of ["30", "80", "100"] as const) {
-      const composition = composeProductProcesses(frontlitPlexiAl06Template, {
+      const composition = composeLetters( {
         ...noneFinish,
         ...canonicalGeometry,
         "volume.depthMm": depthMm,
@@ -83,14 +94,14 @@ describe("letters process composition", () => {
       expect(composition.costCompletenessLabel).toBe("Complete pentru configurația curentă");
     }
 
-    const vinyl = composeProductProcesses(frontlitPlexiAl06Template, {
+    const vinyl = composeLetters( {
       ...vinylFinish,
       ...canonicalGeometry,
     });
     expect(vinyl.costCompleteness).toBe("COMPLETE");
     expect(vinyl.costCompletenessLabel).toBe("Complete pentru configurația curentă");
 
-    const painted = composeProductProcesses(frontlitPlexiAl06Template, {
+    const painted = composeLetters( {
       "face.finish": "none",
       "volume.finish": "painted",
       ...canonicalGeometry,
@@ -100,7 +111,7 @@ describe("letters process composition", () => {
   });
 
   it("gives FACE a CNC requirement and BACK a distinct node of the same process", () => {
-    const composition = composeProductProcesses(frontlitPlexiAl06Template, noneFinish);
+    const composition = composeLetters( noneFinish);
     const faceCut = composition.nodes.find(
       (item) => item.id === compositionNodeId("FACE", CUT_SHEET_CNC_ID),
     );
@@ -115,7 +126,7 @@ describe("letters process composition", () => {
   });
 
   it("gives VOLUME forming and keeps finish silent when none is selected", () => {
-    const composition = composeProductProcesses(frontlitPlexiAl06Template, noneFinish);
+    const composition = composeLetters( noneFinish);
     expect(
       composition.nodes.some((item) => item.processId === FORM_ALUMINIUM_PROFILE_ID),
     ).toBe(true);
@@ -125,7 +136,7 @@ describe("letters process composition", () => {
   });
 
   it("requires vinyl finish only when selected and orders volume vinyl before forming", () => {
-    const composition = composeProductProcesses(frontlitPlexiAl06Template, vinylFinish);
+    const composition = composeLetters( vinylFinish);
     const faceVinyl = composition.nodes.find(
       (item) => item.id === compositionNodeId("FACE", APPLY_SURFACE_FINISH_ID),
     );
@@ -143,7 +154,7 @@ describe("letters process composition", () => {
   });
 
   it("gives bonding explicit prerequisites and keeps lighting required but blocked", () => {
-    const composition = composeProductProcesses(frontlitPlexiAl06Template, vinylFinish);
+    const composition = composeLetters( vinylFinish);
     const bond = composition.nodes.find(
       (item) => item.id === compositionNodeId("BODY", BOND_LETTER_BODY_ID),
     );
@@ -162,7 +173,7 @@ describe("letters process composition", () => {
   });
 
   it("does not treat painted volume as vinyl and composes RAL after closure", () => {
-    const composition = composeProductProcesses(frontlitPlexiAl06Template, {
+    const composition = composeLetters( {
       "face.finish": "none",
       "volume.finish": "painted",
     });
@@ -188,7 +199,7 @@ describe("letters process composition", () => {
   });
 
   it("keeps electrical stages distinct and closes the body only after ignition", () => {
-    const composition = composeProductProcesses(frontlitPlexiAl06Template, noneFinish);
+    const composition = composeLetters( noneFinish);
     const placeLed = compositionNodeId("LIGHTING", PLACE_LED_MODULES_ID);
     const wire = compositionNodeId("LIGHTING", WIRE_LIGHTING_ID);
     const psu = compositionNodeId("LIGHTING", INSTALL_OR_CONNECT_PSU_ID);
@@ -229,8 +240,8 @@ describe("letters process composition", () => {
   });
 
   it("keeps the graph acyclic, deterministic, and free of execution identity", () => {
-    const first = composeProductProcesses(frontlitPlexiAl06Template, vinylFinish);
-    const second = composeProductProcesses(frontlitPlexiAl06Template, vinylFinish);
+    const first = composeLetters( vinylFinish);
+    const second = composeLetters( vinylFinish);
     expect(first.derivedOrder).toEqual(second.derivedOrder);
     expect(first.derivedOrder).toEqual(topologicalOrder(first.nodes));
     expect(JSON.stringify(first)).not.toMatch(
@@ -242,7 +253,7 @@ describe("letters process composition", () => {
   it("reuses the same type process contract standalone and in the product", () => {
     const values = { "face.finish": "vinyl" };
     const standalone = composeTypeProcessNodes("FACE", "PLEXIGLAS_FACE", values);
-    const product = composeProductProcesses(frontlitPlexiAl06Template, vinylFinish);
+    const product = composeLetters( vinylFinish);
     const productFace = product.nodes.filter((item) => item.scope === "FACE");
     expect(standalone.map((item) => item.processId)).toEqual(
       resolvedProcessRequirementsForType("PLEXIGLAS_FACE", values).map(
@@ -277,13 +288,8 @@ describe("letters process composition", () => {
     if ("ok" in truth) {
       throw new Error("expected confirmed truth");
     }
-    const aggregate = compileAggregate(
-      truth,
-      frontlitPlexiAl06Template,
-      frontlitPlexiAl06FormSchema,
-      seededDisplayLabelCatalog(),
-    );
-    const fromTruth = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template);
+    const aggregate = compileAggregate(truth, frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, seededDisplayLabelCatalog(), { formulaVersionsForType: starterFormulaVersionsForType });
+    const fromTruth = composeProductProcessesFromTruth(truth, frontlitPlexiAl06Template, undefined, { formulaVersionsForType: starterFormulaVersionsForType });
     expect(compileEic(aggregate).total).toBe(190.5);
     const eic = compileEic(aggregate, fromTruth);
     expect(eic.total).toBe(382.5);
@@ -304,12 +310,7 @@ describe("letters process composition", () => {
       ]),
     );
     const lighting = lightingEvaluationFrom(
-      evaluateProductComponents({
-        template: frontlitPlexiAl06Template,
-        selectedComponentIds: truth.selectedComponentIds,
-        values: truth.values,
-        measurements: truth.measurements,
-      }),
+      evaluateProductComponents({ template: frontlitPlexiAl06Template, selectedComponentIds: truth.selectedComponentIds, values: truth.values, measurements: truth.measurements, formulaVersionsForType: starterFormulaVersionsForType }),
     );
     expect(fromTruth.lightingCalculationReadiness).toBe("CALCULATED");
     expect(fromTruth.nodes.find((item) => item.processId === PLACE_LED_MODULES_ID)?.nodeReadiness).toBe(
@@ -340,7 +341,7 @@ describe("letters process composition", () => {
     if (!lightingComponent) {
       throw new Error("expected lighting component");
     }
-    const composition = composeProductProcesses(frontlitPlexiAl06Template, noneFinish, {
+    const composition = composeLetters( noneFinish, {
       evaluations: [
         {
           component: lightingComponent,

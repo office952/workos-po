@@ -1,4 +1,6 @@
 import type { ResourceRequirement } from "../resources/requirement.js";
+import type { FormulaFrozenTrace } from "./evaluateFormulas.js";
+import type { ResolvedFormulaVersion } from "./resolveFormulas.js";
 import type { ComponentTechnicalSettingDefinition } from "./technicalSettings.js";
 import type { ComponentTypeId } from "./componentTypes.js";
 import type {
@@ -23,6 +25,7 @@ export type ComponentCalculationInput = {
   measurements: readonly TechnicalMeasurement[];
   shared: SharedCalculationContext;
   technicalSettings: readonly ComponentTechnicalSettingDefinition[];
+  formulaVersions?: readonly ResolvedFormulaVersion[];
 };
 
 export type ComponentCalculationResult = {
@@ -32,6 +35,7 @@ export type ComponentCalculationResult = {
   quantities: readonly TechnicalQuantity[];
   requirements: readonly ResourceRequirement[];
   unavailable: readonly string[];
+  formulaTraces?: readonly FormulaFrozenTrace[];
 };
 
 export type ComponentMeasurementKind =
