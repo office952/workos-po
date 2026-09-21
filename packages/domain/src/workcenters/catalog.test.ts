@@ -516,7 +516,8 @@ describe("live shop-floor map", () => {
     expect(aggregate.componentStatuses.find((item) => item.id === "LIGHTING")?.status).toBe(
       "CALCULATED",
     );
-    expect(composition.executionReadiness).toBe("NOT_IMPLEMENTED");
+    expect(composition.executionReadiness).toBe("READY");
+    expect(composition.executionReadinessLabel).toBe("Pregătită pentru execuție");
     expect(JSON.stringify(aggregate)).not.toMatch(/workcenter|machineId|Utilaje/);
     expect(JSON.stringify(composition)).not.toMatch(/workcenterId|machineId/);
   });
