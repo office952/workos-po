@@ -41,12 +41,20 @@ PRIMARY_USER_JOURNEY = COMPLETE
 PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
 PRIMARY_USER_JOURNEY_PROOF_DATE = 2026-09-20
 
-CURRENT_PROGRAM = PEOPLE_AND_MACHINE_ADMIN_V1
-CURRENT_PROGRAM_STATUS = COMPLETE
-NEXT_PROGRAM_PRIORITY = EXECUTION_EXPANSION_V1
-NEXT_PROGRAM_STATUS = PREFLIGHT_REQUIRED
-NEXT_PROGRAM_SELECTION = EXECUTION_EXPANSION_V1
-NEXT_PROGRAM_STARTED = NO
+PEOPLE_AND_MACHINE_ADMIN_V1 = COMPLETE
+CURRENT_PROGRAM = EXECUTION_EXPANSION_V1
+CURRENT_PROGRAM_STATUS = IN_PROGRESS
+EXE1_EXECUTION_READINESS = COMPLETE
+EXE1_INTEGRATED_ON_MAIN = YES
+EXE1_MERGE_COMMIT = 18d5506f062ad0725f0fa3a8b204e5b121bd45b1
+PR_25 = MERGED
+EXE2_PROVIDER_OPERATOR_INTERACTION = COMPLETE
+EXE2_INTEGRATED_ON_MAIN = YES
+EXE2_MERGE_COMMIT = 0919f217dfb0efe1600fde659f8cad66c252b88a
+PR_26 = MERGED
+NEXT_WAVE = EXE3_WHOLE_PLAN_COMPREHENSION
+NEXT_WAVE_STATUS = AUTHORIZED_FOR_IMPLEMENTATION_BY_THIS_OWNER_GO
+PLANNING_CAPACITY = NOT_STARTED / NOT_NEXT
 CONFIGURATION_FIRST_CANON = docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md
 CONFIGURATION_FIRST_IMPLEMENTATION = CF1_COMPLETE_AND_CF2_CF3_COMPLETE_AND_CF4_COMPLETE
 CF1_COMMERCIAL_VERTICAL_V1 = COMPLETE
@@ -119,7 +127,7 @@ VALUES_CRV1_AUTHORITY = REQUIRED
 GENERIC_ACCEPTANCE_BOUNDARY = CLOSED
 CURRENT_FIRST_LETTERS_SKU = PRD-LETTERS-FRONTLIT-PLEXI-AL06
 CURRENT_SKU_MODEL = SPECIFIC_PRODUCT_TEMPLATE_SKU
-NEXT_WAVE_AUTHORIZED = NO
+NEXT_WAVE_AUTHORIZED = YES
 FORMULA_CONFIGURABILITY_FULLY_DELIVERED = NO
 
 REAL_CLOUD_WRITE = HOLD
@@ -546,15 +554,24 @@ METAL_CUTTING → SK_METAL_CUTTING_OPERATOR → Operator debitare metale
 
 These three mappings are current product/process truth, not universal HR policy. Unused future catalog capabilities may remain unmapped. Shared-foundation reconciliation is idempotent. Existing V1 marker is preserved and no longer blocks later shared-skill reconcile. `ADOPT_EXISTING` receives shared skill foundation only, not trusted workforce. Employee qualifications are not invented automatically.
 
-## Next program
+## Current program
 
 ```text
-RECOMMENDED_NEXT_PROGRAM = EXECUTION_EXPANSION_V1
-NEXT_PROGRAM_STATUS = PREFLIGHT_REQUIRED
-NEXT_PROGRAM_STARTED = NO
-NEXT_WAVE_AUTHORIZED = NO
+CURRENT_PROGRAM = EXECUTION_EXPANSION_V1
+CURRENT_PROGRAM_STATUS = IN_PROGRESS
+EXE1_EXECUTION_READINESS = COMPLETE / MERGED
+EXE1_MERGE_COMMIT = 18d5506f062ad0725f0fa3a8b204e5b121bd45b1
+PR_25 = MERGED
+EXE2_PROVIDER_OPERATOR_INTERACTION = COMPLETE / MERGED
+EXE2_MERGE_COMMIT = 0919f217dfb0efe1600fde659f8cad66c252b88a
+PR_26 = MERGED
+NEXT_WAVE = EXE3_WHOLE_PLAN_COMPREHENSION
+NEXT_WAVE_STATUS = AUTHORIZED_FOR_IMPLEMENTATION_BY_THIS_OWNER_GO
+EXE3_COMPLETE = NO
+EXECUTION_EXPANSION_COMPLETE = NO
+OWNER_ACCEPTED = NO
+PLANNING_CAPACITY = NOT_STARTED / NOT_NEXT
 SECONDARY_CANDIDATE = MEMBER_DAG_COMPOSITION_CORRECTIONS
-TERTIARY_CANDIDATE = PLANNING_CAPACITY_V1
 ```
 
-Execution Expansion V1 is selected because People and Machine Admin now close executor and provider prerequisites for current products, while process composition still records `executionReadiness = NOT_IMPLEMENTED` and planning/capacity remains unimplemented. The living journey's remaining product-domain thickening is shop-floor execution, not another admin polish wave, not CF5, and not inventory for its own sake. Planning/capacity stays later until execution prerequisites are explicit. Member DAG / composition corrections remain secondary unless a later preflight proves they block execution. This documentation does not authorize implementation.
+Execution Expansion V1 is in progress. EXE1 replaced hardcoded `executionReadiness = NOT_IMPLEMENTED` with topology-derived READY|BLOCKED. EXE2 made provider assignment explicit and projected Owner-only `canAssignProvider`. EXE3 is the authorized whole-plan comprehension wave: present existing plan sequence, status, dependencies, blockers, provider, executor, quantities, and the next valid viewer action without a second execution engine. Planning/capacity stays later. Member DAG / composition corrections remain secondary. This documentation does not mark EXE3 complete.
