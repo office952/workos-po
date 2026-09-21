@@ -7,10 +7,13 @@ import type { CatalogTreeNode } from "./types.js";
 import {
   CODE_DEFAULT_ENABLEMENT_GUIDANCE,
   INACTIVE_PRODUCT_ENABLEMENT,
+  PLATFORM_DEFAULT_ENABLED_TEMPLATE_CODES_V1,
   PRODUCT_NOT_ENABLED_FOR_NEW_WORK_REASON,
   defaultEnabledTemplateCodes,
   isTemplateEnabledForNewWork,
+  knownProductTemplateCodes,
   planProductEnablementSave,
+  productEnablementEntries,
   productEnablementSourceLabel,
   projectNewWorkProductCatalog,
   resolveProductEnablement,
@@ -35,7 +38,24 @@ function walk(node: CatalogTreeNode): string[] {
 }
 
 describe("product enablement", () => {
-  it("defaults both shared templates enabled without organization rows", () => {
+  it("freezes CODE_DEFAULT to the V1 pair, not the live registry", () => {
+    expect([...PLATFORM_DEFAULT_ENABLED_TEMPLATE_CODES_V1]).toEqual([
+      CANONICAL_PRODUCT_CODE,
+      ACM_CASSETTE_NONE_PRODUCT_CODE,
+    ]);
+    expect([...defaultEnabledTemplateCodes()]).toEqual([
+      CANONICAL_PRODUCT_CODE,
+      ACM_CASSETTE_NONE_PRODUCT_CODE,
+    ]);
+    expect([...defaultEnabledTemplateCodes()]).toEqual([
+      ...PLATFORM_DEFAULT_ENABLED_TEMPLATE_CODES_V1,
+    ]);
+    expect(defaultEnabledTemplateCodes()).not.toContain("PRD-FUTURE-UNCONFIGURED");
+    expect(CODE_DEFAULT_ENABLEMENT_GUIDANCE).toContain("Produsele existente");
+    expect(CODE_DEFAULT_ENABLEMENT_GUIDANCE).not.toContain("Toate produsele partajate");
+  });
+
+  it("defaults the frozen V1 products without organization rows", () => {
     const resolution = resolveProductEnablement([]);
     expect(resolution.ok).toBe(true);
     if (!resolution.ok) {
@@ -43,13 +63,40 @@ describe("product enablement", () => {
     }
     expect(resolution.source).toBe("CODE_DEFAULT");
     expect(resolution.version).toBeNull();
-    expect(resolution.enabledTemplateCodes).toEqual(defaultEnabledTemplateCodes());
+    expect([...resolution.enabledTemplateCodes]).toEqual([
+      CANONICAL_PRODUCT_CODE,
+      ACM_CASSETTE_NONE_PRODUCT_CODE,
+    ]);
     expect(resolution.guidance).toBe(CODE_DEFAULT_ENABLEMENT_GUIDANCE);
     expect(productEnablementSourceLabel(resolution.source)).toBe("Selecție de sistem");
     expect(isTemplateEnabledForNewWork(CANONICAL_PRODUCT_CODE, resolution)).toBe(true);
     expect(isTemplateEnabledForNewWork(ACM_CASSETTE_NONE_PRODUCT_CODE, resolution)).toBe(
       true,
     );
+    expect(isTemplateEnabledForNewWork("PRD-FUTURE-UNCONFIGURED", resolution)).toBe(false);
+  });
+
+  it("lists every registered template in Admin independently of the default-enabled set", () => {
+    const noneEnabled = productEnablementEntries([]);
+    expect(noneEnabled.map((item) => item.templateCode)).toEqual(knownProductTemplateCodes());
+    expect(noneEnabled.every((item) => item.enabled === false)).toBe(true);
+    const defaults = productEnablementEntries(defaultEnabledTemplateCodes());
+    expect(defaults.map((item) => item.templateCode)).toEqual(knownProductTemplateCodes());
+    expect(
+      defaults.find((item) => item.templateCode === CANONICAL_PRODUCT_CODE)?.enabled,
+    ).toBe(true);
+    expect(
+      defaults.find((item) => item.templateCode === ACM_CASSETTE_NONE_PRODUCT_CODE)
+        ?.enabled,
+    ).toBe(true);
+    const lettersOnly = productEnablementEntries([CANONICAL_PRODUCT_CODE]);
+    expect(lettersOnly.map((item) => item.templateCode)).toEqual(
+      knownProductTemplateCodes(),
+    );
+    expect(
+      lettersOnly.find((item) => item.templateCode === ACM_CASSETTE_NONE_PRODUCT_CODE)
+        ?.enabled,
+    ).toBe(false);
   });
 
   it("hides a disabled template from new-work catalog only", () => {

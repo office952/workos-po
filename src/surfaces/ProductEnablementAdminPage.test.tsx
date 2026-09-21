@@ -21,7 +21,7 @@ const defaultAdmin = {
   source: "CODE_DEFAULT",
   sourceLabel: "Selecție de sistem",
   guidance:
-    "Toate produsele partajate sunt oferite pentru lucrări noi, până când organizația confirmă altă selecție.",
+    "Produsele existente rămân oferite pentru lucrări noi, până când organizația confirmă propria selecție.",
   activeVersion: null,
   products: [
     {
@@ -53,7 +53,7 @@ describe("ProductEnablementAdminPage", () => {
 
     expect(
       await screen.findByText(
-        "Toate produsele partajate sunt oferite pentru lucrări noi, până când organizația confirmă altă selecție.",
+        "Produsele existente rămân oferite pentru lucrări noi, până când organizația confirmă propria selecție.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Litere volumetrice față plexi")).toBeChecked();

@@ -1,8 +1,10 @@
+import { ACM_CASSETTE_NONE_PRODUCT_CODE } from "./acmCassetteNone.js";
 import {
   presentedTemplates,
   type DisplayLabelCatalog,
 } from "./displayMetadata.js";
 import { projectProductCatalog } from "./catalogProjection.js";
+import { CANONICAL_PRODUCT_CODE } from "./frontlitPlexiAl06.js";
 import { getProductTemplate, productTemplates } from "./productRegistry.js";
 import type { CatalogTreeNode } from "./types.js";
 
@@ -22,7 +24,12 @@ export const INACTIVE_PRODUCT_ENABLEMENT_REASON =
   "Organizația deține o selecție de produse, dar nu există o versiune activă validă. Configurează produsele oferite înainte de lucrări noi.";
 
 export const CODE_DEFAULT_ENABLEMENT_GUIDANCE =
-  "Toate produsele partajate sunt oferite pentru lucrări noi, până când organizația confirmă altă selecție.";
+  "Produsele existente rămân oferite pentru lucrări noi, până când organizația confirmă propria selecție.";
+
+export const PLATFORM_DEFAULT_ENABLED_TEMPLATE_CODES_V1 = [
+  CANONICAL_PRODUCT_CODE,
+  ACM_CASSETTE_NONE_PRODUCT_CODE,
+] as const;
 
 export const ORGANIZATION_ENABLEMENT_GUIDANCE =
   "Aceste produse apar în catalogul pentru lucrări noi. Ofertele și lucrările vechi rămân deschise.";
@@ -109,7 +116,7 @@ export function knownProductTemplateCodes(): readonly string[] {
 }
 
 export function defaultEnabledTemplateCodes(): readonly string[] {
-  return knownProductTemplateCodes();
+  return PLATFORM_DEFAULT_ENABLED_TEMPLATE_CODES_V1;
 }
 
 export function productEnablementSourceLabel(source: ProductEnablementSource): string {

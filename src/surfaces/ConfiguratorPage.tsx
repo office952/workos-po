@@ -434,7 +434,14 @@ export function ConfiguratorPage({
           <LoadingFloor variant="form" label="Se citește formularul produsului" />
         ) : null}
         {previewError ? (
-          <InlineAlert tone="error" title="Previzualizare indisponibilă">
+          <InlineAlert
+            tone="error"
+            title={
+              previewError.includes("nu este oferit")
+                ? "Produsul nu este oferit"
+                : "Previzualizare indisponibilă"
+            }
+          >
             {previewError}
           </InlineAlert>
         ) : null}
