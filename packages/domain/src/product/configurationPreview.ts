@@ -5,6 +5,7 @@ import {
   isFieldVisible,
   selectedComponentIds,
 } from "./compiler.js";
+import type { ResolvedTechnicalSetting } from "./resolveTechnicalSettings.js";
 import { listTypeTechnicalSettings } from "./technicalSettings.js";
 import type {
   DraftConfiguration,
@@ -27,6 +28,10 @@ export type TechnicalSettingSnapshot = {
   readonly id: string;
   readonly status: string;
   readonly value: number | null;
+  readonly definitionId?: string;
+  readonly unit?: string;
+  readonly source?: string;
+  readonly version?: number;
 };
 
 export type ConfigurationProductIdentity = {
@@ -66,6 +71,7 @@ function fnv1aHex(canonical: string): string {
 export function usedTechnicalSettingsSnapshot(
   template: ProductTemplate,
   selectedIds: readonly string[],
+  resolved?: readonly ResolvedTechnicalSetting[],
 ): readonly TechnicalSettingSnapshot[] {
   const typeIds = [
     ...new Set(
@@ -74,6 +80,25 @@ export function usedTechnicalSettingsSnapshot(
         .map((component) => component.typeId),
     ),
   ].sort((left, right) => left.localeCompare(right));
+
+  if (resolved) {
+    return typeIds.flatMap((typeId) =>
+      resolved
+        .filter((item) => item.typeId === typeId)
+        .slice()
+        .sort((left, right) => left.settingId.localeCompare(right.settingId))
+        .map((item) => ({
+          typeId: item.typeId,
+          id: item.settingId,
+          status: "RESOLVED",
+          value: item.value,
+          definitionId: item.definitionId,
+          unit: item.unit,
+          source: item.source,
+          version: item.version,
+        })),
+    );
+  }
 
   return typeIds.flatMap((typeId) =>
     listTypeTechnicalSettings(typeId).map((setting) => ({
@@ -99,10 +124,11 @@ export function configurationReviewId(
 export function configurationReviewIdFor(
   template: ProductTemplate,
   definition: ProductDefinition,
+  resolved?: readonly ResolvedTechnicalSetting[],
 ): string {
   return configurationReviewId(
     definition,
-    usedTechnicalSettingsSnapshot(template, definition.selectedComponentIds),
+    usedTechnicalSettingsSnapshot(template, definition.selectedComponentIds, resolved),
   );
 }
 
@@ -157,6 +183,7 @@ export function projectConfigurationPreview(
   template: ProductTemplate,
   schema: FormSchema,
   draft: DraftConfiguration,
+  resolved?: readonly ResolvedTechnicalSetting[],
 ): ConfigurationPreview {
   const definition = compileDefinition(template, schema, draft);
   const selectedIds = selectedComponentIds(template, draft.values);
@@ -175,7 +202,9 @@ export function projectConfigurationPreview(
     readiness: definition.readiness,
     missing: definition.missing,
     reviewId:
-      definition.readiness === "ready" ? configurationReviewIdFor(template, definition) : null,
+      definition.readiness === "ready"
+        ? configurationReviewIdFor(template, definition, resolved)
+        : null,
   };
 }
 
@@ -185,6 +214,7 @@ export function confirmReviewedDraft(
   draft: DraftConfiguration,
   reviewId: string,
   confirmedAt = new Date().toISOString(),
+  resolved?: readonly ResolvedTechnicalSetting[],
 ):
   | ProductTruth
   | {
@@ -193,7 +223,7 @@ export function confirmReviewedDraft(
       definition: ProductDefinition;
     } {
   const definition = compileDefinition(template, schema, draft);
-  if (configurationReviewIdFor(template, definition) !== reviewId) {
+  if (configurationReviewIdFor(template, definition, resolved) !== reviewId) {
     return { ok: false, reason: "review_mismatch", definition };
   }
   return confirmReviewedDefinition(definition, definition.reviewId, confirmedAt);

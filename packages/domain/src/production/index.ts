@@ -8,6 +8,7 @@ export {
   freezeAcceptedProductionSnapshot,
   freezeProductionInput,
   productionWorkFromSnapshot,
+  frozenTechnicalSettingsFromResolved,
   usedTechnicalSettingsFromAggregate,
   type AcceptedProductionSnapshot,
   type AcceptedProductionSnapshotStatus,

@@ -61,6 +61,7 @@ export function invalidateAfterCloudBoundaryChange(): void {
     resourceKeys.jobs(),
     resourceKeys.resourcesAdmin(),
     resourceKeys.commercialAdmin(),
+    resourceKeys.technicalAdmin(),
   );
   invalidateResourcePrefix("customer:");
   invalidateResourcePrefix("request:");
@@ -75,4 +76,8 @@ export function invalidateAfterCostEvidenceChange(): void {
 
 export function invalidateAfterCommercialPolicyChange(): void {
   invalidateResources(resourceKeys.commercialAdmin());
+}
+
+export function invalidateAfterTechnicalSettingsChange(): void {
+  invalidateResources(resourceKeys.technicalAdmin());
 }

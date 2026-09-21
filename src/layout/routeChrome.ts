@@ -145,6 +145,15 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         title: "Valori comerciale implicite",
         lead: "Aceste valori sunt folosite ca punct de pornire pentru ofertele noi. Pot fi modificate individual pe fiecare ofertă.",
       };
+    case "admin-technical":
+      return {
+        contextLabel: "Administrare",
+        currentHref: "/admin/technical",
+        workspace: "admin",
+        eyebrow: "Administrare",
+        title: "Setări tehnice",
+        lead: "Aceste valori sunt folosite la calculul tehnic al lucrărilor noi. Lucrările înghețate rămân neschimbate.",
+      };
     case "foundation":
       return {
         contextLabel: "Fundație",

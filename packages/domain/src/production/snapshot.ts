@@ -11,7 +11,11 @@ import {
   processProviderRequirement,
   type ProviderRequirement,
 } from "../processes/catalog.js";
-import { listTypeTechnicalSettings } from "../product/technicalSettings.js";
+import type { ResolvedTechnicalSetting } from "../product/resolveTechnicalSettings.js";
+import {
+  findTechnicalSettingDefinition,
+  listTypeTechnicalSettings,
+} from "../product/technicalSettings.js";
 import type {
   ProductAggregate,
   ProductTruth,
@@ -37,6 +41,11 @@ export type FrozenTechnicalSetting = {
   label: string;
   value: number;
   unit: string;
+  definitionId?: string;
+  source?: string;
+  version?: number;
+  scope?: string;
+  effectiveFrom?: string;
 };
 
 export type FrozenQuantity = {
@@ -95,6 +104,7 @@ export type FrozenRecipeTrace = {
   rate: number;
   currency: "EUR";
   cost: number;
+  evidenceRowId?: string;
 };
 
 export type FrozenEicLine = {
@@ -273,6 +283,26 @@ export function freezeProductionInput(
   });
 }
 
+export function frozenTechnicalSettingsFromResolved(
+  resolved: readonly ResolvedTechnicalSetting[],
+): FrozenTechnicalSetting[] {
+  return resolved.map((item) => {
+    const definition = findTechnicalSettingDefinition(item.definitionId);
+    return {
+      id: item.settingId,
+      typeId: item.typeId,
+      label: definition?.label ?? item.settingId,
+      value: item.value,
+      unit: item.unit,
+      definitionId: item.definitionId,
+      source: item.source,
+      version: item.version,
+      scope: item.scope,
+      effectiveFrom: item.effectiveFrom,
+    };
+  });
+}
+
 export function usedTechnicalSettingsFromAggregate(
   aggregate: ProductAggregate,
 ): FrozenTechnicalSetting[] {
@@ -364,6 +394,7 @@ function freezeRecipeTraces(
       rate: evidence.amount,
       currency: evidence.currency,
       cost: quantity * evidence.amount,
+      ...(evidence.evidenceRowId ? { evidenceRowId: evidence.evidenceRowId } : {}),
     });
   }
   return traces.sort((left, right) =>
