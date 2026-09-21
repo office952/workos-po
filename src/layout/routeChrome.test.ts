@@ -11,6 +11,19 @@ describe("routeChrome layout contract", () => {
     expect(loadingFloorVariantFor("collection-with-rail")).toBe("registry");
   });
 
+  it("loads Request with neutral copy that does not invent catalog or installation truth", () => {
+    const chrome = presentRouteChrome({ name: "request", requestId: "req-1" });
+
+    expect(chrome.contextLabel).toBe("Cerere");
+    expect(chrome.currentHref).toBe("/cereri/req-1");
+    expect(chrome.workspace).toBe("object");
+    expect(chrome.eyebrow).toBe("Cerere");
+    expect(chrome.title).toBe("Cerere");
+    expect(chrome.lead).toBe("Se încarcă detaliile cererii și următorul pas disponibil.");
+    expect(chrome.lead).not.toMatch(/Nu adăuga montaj/);
+    expect(chrome.lead).not.toMatch(/Alege produsul din catalog/);
+  });
+
   it("maps every workspace family to a loading floor without inventing a new chassis", () => {
     expect(loadingFloorVariantFor("stack")).toBe("registry");
     expect(loadingFloorVariantFor("object")).toBe("object");

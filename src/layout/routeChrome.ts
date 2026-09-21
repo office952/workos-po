@@ -53,7 +53,7 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         workspace: "object",
         eyebrow: "Cerere",
         title: "Cerere",
-        lead: "Alege produsul din catalog. Nu adăuga montaj pe această lucrare.",
+        lead: "Se încarcă detaliile cererii și următorul pas disponibil.",
       };
     case "catalog":
       return {
