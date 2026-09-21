@@ -16,6 +16,8 @@ export type AppRoute =
   | { name: "admin-technical" }
   | { name: "admin-formulas" }
   | { name: "admin-products" }
+  | { name: "admin-people" }
+  | { name: "admin-person"; personId: string }
   | { name: "foundation" }
   | { name: "unknown"; path: string };
 
@@ -78,6 +80,13 @@ export function parseAppRoute(pathname: string): AppRoute {
   if (pathname === "/admin/products") {
     return { name: "admin-products" };
   }
+  if (pathname === "/admin/people") {
+    return { name: "admin-people" };
+  }
+  const adminPerson = pathname.match(/^\/admin\/people\/([^/]+)$/);
+  if (adminPerson) {
+    return { name: "admin-person", personId: decodeURIComponent(adminPerson[1]) };
+  }
   if (pathname === "/foundation") {
     return { name: "foundation" };
   }
@@ -123,6 +132,14 @@ export function executionHref(
   return query
     ? `/executie/${encodeURIComponent(planId)}?${query}`
     : `/executie/${encodeURIComponent(planId)}`;
+}
+
+export function adminPeopleHref(): string {
+  return "/admin/people";
+}
+
+export function adminPersonHref(personId: string): string {
+  return `/admin/people/${encodeURIComponent(personId)}`;
 }
 
 export function atelierHref(context: { jobId?: string | null } = {}): string {

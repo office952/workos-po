@@ -172,6 +172,24 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         title: "Produse oferite",
         lead: "Alege ce produse apar în catalogul pentru lucrări noi. Ofertele și lucrările vechi rămân deschise.",
       };
+    case "admin-people":
+      return {
+        contextLabel: "Administrare",
+        currentHref: "/admin/people",
+        workspace: "admin",
+        eyebrow: "Administrare",
+        title: "Oameni",
+        lead: "Configurează persoanele care pot lucra în producție. Contul de autentificare rămâne separat.",
+      };
+    case "admin-person":
+      return {
+        contextLabel: "Administrare",
+        currentHref: `/admin/people/${encodeURIComponent(route.personId)}`,
+        workspace: "admin",
+        eyebrow: "Administrare",
+        title: "Oameni",
+        lead: "Configurează persoanele care pot lucra în producție. Contul de autentificare rămâne separat.",
+      };
     case "foundation":
       return {
         contextLabel: "Fundație",
