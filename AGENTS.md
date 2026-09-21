@@ -144,11 +144,12 @@ NO_CLIENT_CODE_FORK = YES
 ALTERNATIVE_PRODUCT_DELIVERY = NO
 PRIMARY_USER_JOURNEY = COMPLETE
 PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
-CURRENT_PROGRAM = PRODUCT_ENABLEMENT_ADMIN_V1
+CURRENT_PROGRAM = PEOPLE_AND_MACHINE_ADMIN_V1
 CURRENT_PROGRAM_STATUS = COMPLETE
-NEXT_PROGRAM_PRIORITY = NOT_SELECTED
-NEXT_PROGRAM_STATUS = PENDING_ROADMAP_REVIEW
-NEXT_PROGRAM_SELECTION = PENDING_ROADMAP_REVIEW
+NEXT_PROGRAM_PRIORITY = EXECUTION_EXPANSION_V1
+NEXT_PROGRAM_STATUS = PREFLIGHT_REQUIRED
+NEXT_PROGRAM_SELECTION = EXECUTION_EXPANSION_V1
+NEXT_PROGRAM_STARTED = NO
 CF1_COMMERCIAL_VERTICAL_V1 = COMPLETE
 CF1_OWNER_ACCEPTED_IMPLEMENTATION = YES
 CF2_CF3_TECHNICAL_CONFIGURATION_V1 = COMPLETE
@@ -182,6 +183,12 @@ PRODUCT_ENABLEMENT_ADMIN_V1_INTEGRATED_ON_MAIN = YES
 PRODUCT_ENABLEMENT_ADMIN_V1_MERGE = COMPLETE
 PRODUCT_ENABLEMENT_ADMIN_V1_MERGE_COMMIT = b082b1a8a9288aac59ae0d3a34915415500107e1
 PR_19 = MERGED
+PEOPLE_AND_MACHINE_ADMIN_V1 = COMPLETE
+PEOPLE_AND_MACHINE_ADMIN_V1_INTEGRATED_ON_MAIN = YES
+PEOPLE_ADMIN_V1 = COMPLETE
+MACHINE_WORKCENTER_ADMIN_V1 = COMPLETE
+PEOPLE_ELIGIBILITY_CAPABILITY_COVERAGE_CLOSURE = COMPLETE
+CURRENT_SUPPORTED_PRODUCT_UNMAPPED_PEOPLE_CAPABILITIES = []
 PRODUCT_ENABLEMENT = ORGANIZATION_SCOPED
 CONFIGURATION_SURFACE = /admin/products
 CURRENT_TWO_PRODUCTS_DEFAULT = ENABLED
@@ -208,7 +215,7 @@ REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
 Living program authority: `docs/ROADMAP.md`.
 Configuration-First architecture: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
-Product Enablement Admin V1 is complete, Owner-accepted, and integrated on main. Letters Product Truth V1 and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Next program selection is pending roadmap review.
+People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Current supported-product People capabilities are mapped; unused catalog capabilities may stay unmapped. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Next program is Execution Expansion V1. Preflight is required. Implementation is not authorized. Exact merge commits live in `docs/ROADMAP.md`.
 
 ```text
 NO_SILENT_BUSINESS_TRUTH = CANONICAL

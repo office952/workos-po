@@ -108,11 +108,12 @@ NO_CLIENT_CODE_FORK = YES
 ALTERNATIVE_PRODUCT_DELIVERY = NO
 PRIMARY_USER_JOURNEY = COMPLETE
 PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
-CURRENT_PROGRAM = PRODUCT_ENABLEMENT_ADMIN_V1
+CURRENT_PROGRAM = PEOPLE_AND_MACHINE_ADMIN_V1
 CURRENT_PROGRAM_STATUS = COMPLETE
-NEXT_PROGRAM_PRIORITY = NOT_SELECTED
-NEXT_PROGRAM_STATUS = PENDING_ROADMAP_REVIEW
-NEXT_PROGRAM_SELECTION = PENDING_ROADMAP_REVIEW
+NEXT_PROGRAM_PRIORITY = EXECUTION_EXPANSION_V1
+NEXT_PROGRAM_STATUS = PREFLIGHT_REQUIRED
+NEXT_PROGRAM_SELECTION = EXECUTION_EXPANSION_V1
+NEXT_PROGRAM_STARTED = NO
 CF4 = COMPLETE
 CF4_OWNER_ACCEPTED_IMPLEMENTATION = YES
 CF4_INTEGRATED_ON_MAIN = YES
@@ -131,6 +132,11 @@ PRODUCT_ENABLEMENT_ADMIN_V1 = COMPLETE
 PRODUCT_ENABLEMENT_ADMIN_V1_OWNER_ACCEPTED_IMPLEMENTATION = YES
 PRODUCT_ENABLEMENT_ADMIN_V1_INTEGRATED_ON_MAIN = YES
 PR_19 = MERGED
+PEOPLE_AND_MACHINE_ADMIN_V1 = COMPLETE
+PEOPLE_AND_MACHINE_ADMIN_V1_INTEGRATED_ON_MAIN = YES
+PR_21 = MERGED
+PR_22 = MERGED
+PR_23 = MERGED
 PRODUCT_ENABLEMENT = ORGANIZATION_SCOPED
 CONFIGURATION_SURFACE = /admin/products
 CURRENT_TWO_PRODUCTS_DEFAULT = ENABLED
@@ -150,6 +156,6 @@ CUTOVER = HOLD
 REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
 ```
 
-Product Enablement Admin V1 is complete, Owner-accepted, and integrated on main through PR #19. Letters Product Truth V1 and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Next program selection is pending. Next wave is unauthorized.
+People and Machine Admin V1 is complete and integrated on main through PR #21–#23. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Next program is Execution Expansion V1. Preflight is required. Next wave is unauthorized.
 
 See `docs/PRODUCTION_RUNTIME.md` for the production topology. Do not point proof runtimes at a real HUB MEDIA Cloud root.
