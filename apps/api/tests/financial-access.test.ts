@@ -111,7 +111,7 @@ describe("ALT_B_SCOPED financial access", () => {
     expect(seller.status).toBe(200);
     await confirmPlatformCostEvidence(fixture.app, owner.cookie ?? "");
 
-    const compiled = await fixture.app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/compile`, {
+    const compiled = await fixture.app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
       method: "POST",
       headers: ownerHeaders,
       body: JSON.stringify({ values: readyValues }),
@@ -123,7 +123,7 @@ describe("ALT_B_SCOPED financial access", () => {
         method: "POST",
         headers: ownerHeaders,
         body: JSON.stringify({
-          definition: compiledBody.definition,
+          values: readyValues,
           reviewId: compiledBody.reviewId,
         }),
       },
@@ -140,7 +140,7 @@ describe("ALT_B_SCOPED financial access", () => {
         method: "POST",
         headers: { ...memberHeaders, "content-type": "application/json" },
         body: JSON.stringify({
-          definition: compiledBody.definition,
+          values: readyValues,
           reviewId: compiledBody.reviewId,
         }),
       },
@@ -168,7 +168,7 @@ describe("ALT_B_SCOPED financial access", () => {
         method: "POST",
         headers: ownerHeaders,
         body: JSON.stringify({
-          definition: compiledBody.definition,
+          values: readyValues,
           reviewId: compiledBody.reviewId,
           customerId,
         }),

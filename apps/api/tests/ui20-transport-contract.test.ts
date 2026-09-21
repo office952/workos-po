@@ -187,7 +187,7 @@ describe("UI20 transport contract", () => {
     expect((frozen.commercialExperience as JsonObject).primaryAction).toBe("DOWNLOAD_QUOTE");
   });
 
-  it("rejects stale review after values change and keeps legacy definition confirm", async () => {
+  it("rejects stale review after values change and rejects legacy definition confirm", async () => {
     const app = createApp();
     const previewed = await preview(app, CANONICAL_PRODUCT_CODE, lettersReady);
     const stale = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/confirm`, {
@@ -215,9 +215,8 @@ describe("UI20 transport contract", () => {
         reviewId: compiled.reviewId,
       }),
     });
-    expect(legacy.status).toBe(200);
-    const legacyBody = await readBody(legacy);
-    expect((legacyBody.commercialExperience as JsonObject).primaryAction).toBe("CREATE_QUOTE");
+    expect(legacy.status).toBe(400);
+    expect((await readBody(legacy)).error).toBe("review_required");
   });
 
   it("rejects a settings-bound review identity that no longer matches", async () => {

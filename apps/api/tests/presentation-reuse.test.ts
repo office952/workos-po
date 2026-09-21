@@ -265,7 +265,7 @@ describe("product system runtime presentation reuse", () => {
 
   it("keeps one presentation generation across two accepted LETTERS confirms", async () => {
     const reviewedResponse = await createApp().request(
-      `/api/products/${CANONICAL_PRODUCT_CODE}/compile`,
+      `/api/products/${CANONICAL_PRODUCT_CODE}/preview`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -286,7 +286,7 @@ describe("product system runtime presentation reuse", () => {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            definition: reviewed.definition,
+            values: lettersValues,
             reviewId: reviewed.reviewId,
           }),
         },
@@ -313,7 +313,7 @@ describe("product system runtime presentation reuse", () => {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            definition: reviewed.definition,
+            values: lettersValues,
             reviewId: reviewed.reviewId,
           }),
         },

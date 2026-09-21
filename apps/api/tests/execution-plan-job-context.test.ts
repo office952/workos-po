@@ -21,7 +21,7 @@ describe("execution plan job context", () => {
   it("exposes the source job on the plan read path", async () => {
     const app = createApp();
     const compiled = await readBody(
-      await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/compile`, {
+      await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ values: readyValues }),
@@ -39,7 +39,7 @@ describe("execution plan job context", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: compiled.definition,
+          values: readyValues,
           reviewId: compiled.reviewId,
           customerId: (customer.customer as JsonObject).customerId,
         }),

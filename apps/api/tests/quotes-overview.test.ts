@@ -30,16 +30,17 @@ async function compileReady(
   values: Record<string, string | number>,
   inscription: string,
 ) {
-  const response = await app.request(`/api/products/${productCode}/compile`, {
+  const draft = { ...values, "root.inscription": inscription };
+  const response = await app.request(`/api/products/${productCode}/preview`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      values: { ...values, "root.inscription": inscription },
+      values: draft,
     }),
   });
   const body = await readBody(response);
   return {
-    definition: body.definition as JsonObject,
+    values: draft,
     reviewId: body.reviewId as string,
   };
 }
@@ -64,7 +65,7 @@ async function createQuote(
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      definition: reviewed.definition,
+      values: reviewed.values,
       reviewId: reviewed.reviewId,
       customerId: await createCustomer(app, `Client ${inscription}`),
     }),

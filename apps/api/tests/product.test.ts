@@ -83,6 +83,22 @@ async function compileReady() {
   };
 }
 
+async function previewReady() {
+  const response = await createApp().request(
+    `/api/products/${CANONICAL_PRODUCT_CODE}/preview`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ values: readyValues }),
+    },
+  );
+  const body = await readBody(response);
+  return {
+    values: readyValues,
+    reviewId: body.reviewId as string,
+  };
+}
+
 describe("product catalog API", () => {
   it("projects the family, front-lit category, and canonical product", async () => {
     const response = await createApp().request("/api/product-catalog");
@@ -116,51 +132,39 @@ describe("product configuration API", () => {
   });
 
   it("rejects confirmation while the reviewed definition is blocked", async () => {
-    const response = await createApp().request(
-      `/api/products/${CANONICAL_PRODUCT_CODE}/compile`,
+    const values = { ...readyValues, "root.inscription": "" };
+    const preview = await createApp().request(
+      `/api/products/${CANONICAL_PRODUCT_CODE}/preview`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          values: { ...readyValues, "root.inscription": "" },
-        }),
+        body: JSON.stringify({ values }),
       },
     );
-    const body = await readBody(response);
+    const body = await readBody(preview);
     const confirm = await createApp().request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/confirm`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: body.definition,
+          values,
           reviewId: body.reviewId,
         }),
       },
     );
-    expect(confirm.status).toBe(422);
+    expect(confirm.status).toBe(400);
   });
 
   it("rejects confirmation of a different definition than the one reviewed", async () => {
-    const reviewed = await compileReady();
-    const changed = await createApp().request(
-      `/api/products/${CANONICAL_PRODUCT_CODE}/compile`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          values: { ...readyValues, "root.inscription": "CHANGED" },
-        }),
-      },
-    );
-    const changedBody = await readBody(changed);
+    const reviewed = await previewReady();
     const response = await createApp().request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/confirm`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: changedBody.definition,
+          values: { ...readyValues, "root.inscription": "CHANGED" },
           reviewId: reviewed.reviewId,
         }),
       },
@@ -169,14 +173,14 @@ describe("product configuration API", () => {
   });
 
   it("confirms the reviewed definition and returns partial EIC", async () => {
-    const reviewed = await compileReady();
+    const reviewed = await previewReady();
     const response = await createApp().request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/confirm`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: reviewed.definition,
+          values: reviewed.values,
           reviewId: reviewed.reviewId,
         }),
       },
@@ -224,24 +228,23 @@ describe("product configuration API", () => {
   });
 
   it("calculates commercial price when numeric cost evidence needs verification", async () => {
-    const compiled = await createApp().request(
-      `/api/products/${CANONICAL_PRODUCT_CODE}/compile`,
+    const values = { ...readyValues, "face.finish": "vinyl", "face.color": "alb" };
+    const previewed = await createApp().request(
+      `/api/products/${CANONICAL_PRODUCT_CODE}/preview`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          values: { ...readyValues, "face.finish": "vinyl", "face.color": "alb" },
-        }),
+        body: JSON.stringify({ values }),
       },
     );
-    const reviewed = await readBody(compiled);
+    const reviewed = await readBody(previewed);
     const response = await createApp().request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/confirm`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: reviewed.definition,
+          values,
           reviewId: reviewed.reviewId,
         }),
       },
@@ -269,24 +272,23 @@ describe("product configuration API", () => {
   ] as const)(
     "confirms COMPLETE commercial for none/none $depthMm mm",
     async ({ depthMm, eicTotal, gross }) => {
-      const compiled = await createApp().request(
-        `/api/products/${CANONICAL_PRODUCT_CODE}/compile`,
+      const values = { ...readyValues, "volume.depthMm": depthMm };
+      const previewed = await createApp().request(
+        `/api/products/${CANONICAL_PRODUCT_CODE}/preview`,
         {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            values: { ...readyValues, "volume.depthMm": depthMm },
-          }),
+          body: JSON.stringify({ values }),
         },
       );
-      const reviewed = await readBody(compiled);
+      const reviewed = await readBody(previewed);
       const response = await createApp().request(
         `/api/products/${CANONICAL_PRODUCT_CODE}/confirm`,
         {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            definition: reviewed.definition,
+            values,
             reviewId: reviewed.reviewId,
           }),
         },
@@ -310,24 +312,23 @@ describe("product configuration API", () => {
     "freezes a quote snapshot for none/none $depthMm mm",
     async ({ depthMm, eicTotal, gross }) => {
       const app = createApp();
-      const compiled = await app.request(
-        `/api/products/${CANONICAL_PRODUCT_CODE}/compile`,
+      const values = { ...readyValues, "volume.depthMm": depthMm };
+      const previewed = await app.request(
+        `/api/products/${CANONICAL_PRODUCT_CODE}/preview`,
         {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            values: { ...readyValues, "volume.depthMm": depthMm },
-          }),
+          body: JSON.stringify({ values }),
         },
       );
-      const reviewed = await readBody(compiled);
+      const reviewed = await readBody(previewed);
       const response = await app.request(
         `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`,
         {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            definition: reviewed.definition,
+            values,
             reviewId: reviewed.reviewId,
             customerId: await createCustomer(app),
           }),
@@ -345,10 +346,10 @@ describe("product configuration API", () => {
   );
 
   it("freezes a quote snapshot from server-confirmed truth without production side effects", async () => {
-    const reviewed = await compileReady();
+    const reviewed = await previewReady();
     const app = createApp();
     const payload = {
-      definition: reviewed.definition,
+      values: reviewed.values,
       reviewId: reviewed.reviewId,
       customerId: await createCustomer(app),
     };
@@ -408,7 +409,7 @@ describe("product configuration API", () => {
   });
 
   it("records quote acceptance against a persisted snapshot without side effects", async () => {
-    const reviewed = await compileReady();
+    const reviewed = await previewReady();
     const app = createApp();
     const createdQuote = await app.request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`,
@@ -416,7 +417,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: reviewed.definition,
+          values: reviewed.values,
           reviewId: reviewed.reviewId,
           customerId: await createCustomer(app),
         }),
@@ -466,7 +467,7 @@ describe("product configuration API", () => {
   });
 
   it("does not accept an unknown or mismatched quote snapshot", async () => {
-    const reviewed = await compileReady();
+    const reviewed = await previewReady();
     const app = createApp();
     const createdQuote = await app.request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`,
@@ -474,7 +475,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: reviewed.definition,
+          values: reviewed.values,
           reviewId: reviewed.reviewId,
           customerId: await createCustomer(app),
         }),
@@ -495,7 +496,7 @@ describe("product configuration API", () => {
   });
 
   it("creates an order snapshot from accepted quote without calculating or side effects", async () => {
-    const reviewed = await compileReady();
+    const reviewed = await previewReady();
     const app = createApp();
     const createdQuote = await app.request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`,
@@ -503,7 +504,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: reviewed.definition,
+          values: reviewed.values,
           reviewId: reviewed.reviewId,
           customerId: await createCustomer(app),
         }),
@@ -570,7 +571,7 @@ describe("product configuration API", () => {
   });
 
   it("does not create an order from a frozen quote without acceptance", async () => {
-    const reviewed = await compileReady();
+    const reviewed = await previewReady();
     const app = createApp();
     const createdQuote = await app.request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`,
@@ -578,7 +579,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: reviewed.definition,
+          values: reviewed.values,
           reviewId: reviewed.reviewId,
           customerId: await createCustomer(app),
         }),
@@ -615,7 +616,7 @@ describe("product configuration API", () => {
   });
 
   it("releases production from a frozen order without live compile or side effects", async () => {
-    const reviewed = await compileReady();
+    const reviewed = await previewReady();
     const app = createApp();
     const createdQuote = await app.request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`,
@@ -623,7 +624,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: reviewed.definition,
+          values: reviewed.values,
           reviewId: reviewed.reviewId,
           customerId: await createCustomer(app),
         }),
@@ -698,7 +699,7 @@ describe("product configuration API", () => {
   });
 
   it("creates an execution plan from the order release without live compile or side effects", async () => {
-    const reviewed = await compileReady();
+    const reviewed = await previewReady();
     const app = createApp();
     const createdQuote = await app.request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`,
@@ -706,7 +707,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: reviewed.definition,
+          values: reviewed.values,
           reviewId: reviewed.reviewId,
           customerId: await createCustomer(app),
         }),
@@ -761,7 +762,7 @@ describe("product configuration API", () => {
   });
 
   it("keeps the execution plan on the frozen release after live product mutation", async () => {
-    const reviewed = await compileReady();
+    const reviewed = await previewReady();
     const app = createApp();
     const createdQuote = await app.request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`,
@@ -769,7 +770,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: reviewed.definition,
+          values: reviewed.values,
           reviewId: reviewed.reviewId,
           customerId: await createCustomer(app),
         }),
@@ -829,24 +830,23 @@ describe("product configuration API", () => {
 
   it("freezes a quote when numeric cost evidence needs verification", async () => {
     const app = createApp();
-    const compiled = await app.request(
-      `/api/products/${CANONICAL_PRODUCT_CODE}/compile`,
+    const values = { ...readyValues, "face.finish": "vinyl", "face.color": "alb" };
+    const previewed = await app.request(
+      `/api/products/${CANONICAL_PRODUCT_CODE}/preview`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          values: { ...readyValues, "face.finish": "vinyl", "face.color": "alb" },
-        }),
+        body: JSON.stringify({ values }),
       },
     );
-    const reviewed = await readBody(compiled);
+    const reviewed = await readBody(previewed);
     const response = await app.request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: reviewed.definition,
+          values,
           reviewId: reviewed.reviewId,
           customerId: await createCustomer(app),
         }),
@@ -884,10 +884,10 @@ describe("product configuration API", () => {
   });
 
   it("freezes an accepted production snapshot idempotently without tasks", async () => {
-    const reviewed = await compileReady();
+    const reviewed = await previewReady();
     const app = createApp();
     const payload = {
-      definition: reviewed.definition,
+      values: reviewed.values,
       reviewId: reviewed.reviewId,
     };
     const first = await app.request(
@@ -940,10 +940,10 @@ describe("product configuration API", () => {
   });
 
   it("materializes an idempotent planned execution plan from the frozen snapshot", async () => {
-    const reviewed = await compileReady();
+    const reviewed = await previewReady();
     const app = createApp();
     const payload = {
-      definition: reviewed.definition,
+      values: reviewed.values,
       reviewId: reviewed.reviewId,
     };
     const accepted = await app.request(
@@ -1004,10 +1004,10 @@ describe("product configuration API", () => {
   });
 
   it("assigns a provider and starts/completes a root task without mutating cost", async () => {
-    const reviewed = await compileReady();
+    const reviewed = await previewReady();
     const app = createApp();
     const payload = {
-      definition: reviewed.definition,
+      values: reviewed.values,
       reviewId: reviewed.reviewId,
     };
     const accepted = await app.request(
@@ -1200,7 +1200,7 @@ describe("product configuration API", () => {
   });
 
   it("requires a session, claims an empty task, and respects preassignment", async () => {
-    const reviewed = await compileReady();
+    const reviewed = await previewReady();
     const app = createApp();
     const accepted = await app.request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/accepted-production-snapshot`,
@@ -1208,7 +1208,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: reviewed.definition,
+          values: reviewed.values,
           reviewId: reviewed.reviewId,
         }),
       },
@@ -1317,7 +1317,7 @@ describe("product configuration API", () => {
   });
 
   it("executes the reachable LETTERS DAG and does not complete the plan with open tasks", async () => {
-    const reviewed = await compileReady();
+    const reviewed = await previewReady();
     const app = createApp();
     const accepted = await app.request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/accepted-production-snapshot`,
@@ -1325,7 +1325,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: reviewed.definition,
+          values: reviewed.values,
           reviewId: reviewed.reviewId,
         }),
       },
@@ -1419,7 +1419,7 @@ describe("product configuration API", () => {
   });
 
   it("records completion evidence separately from planned quantity", async () => {
-    const reviewed = await compileReady();
+    const reviewed = await previewReady();
     const app = createApp();
     const accepted = await app.request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/accepted-production-snapshot`,
@@ -1427,7 +1427,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: reviewed.definition,
+          values: reviewed.values,
           reviewId: reviewed.reviewId,
         }),
       },
@@ -1540,7 +1540,7 @@ describe("product configuration API", () => {
   });
 
   it("records actual consumption on complete and keeps it immutable", async () => {
-    const reviewed = await compileReady();
+    const reviewed = await previewReady();
     const app = createApp();
     const accepted = await app.request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/accepted-production-snapshot`,
@@ -1548,7 +1548,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: reviewed.definition,
+          values: reviewed.values,
           reviewId: reviewed.reviewId,
         }),
       },

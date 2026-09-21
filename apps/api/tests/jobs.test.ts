@@ -26,16 +26,15 @@ const readyValues = {
 };
 
 async function compileReady(app: ReturnType<typeof createApp>, inscription: string) {
-  const response = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/compile`, {
+  const values = { ...readyValues, "root.inscription": inscription };
+  const response = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      values: { ...readyValues, "root.inscription": inscription },
-    }),
+    body: JSON.stringify({ values }),
   });
   const body = await readBody(response);
   return {
-    definition: body.definition as JsonObject,
+    values,
     reviewId: body.reviewId as string,
   };
 }
@@ -59,7 +58,7 @@ async function createOrder(
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      definition: reviewed.definition,
+      values: reviewed.values,
       reviewId: reviewed.reviewId,
       customerId: await createCustomer(app, customerName),
     }),
@@ -197,7 +196,7 @@ describe("job overview API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        definition: reviewed.definition,
+        values: reviewed.values,
         reviewId: reviewed.reviewId,
       }),
     });

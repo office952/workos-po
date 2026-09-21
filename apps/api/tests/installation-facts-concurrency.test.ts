@@ -243,7 +243,7 @@ async function createOrphanQuote(
   customerId: string,
   inscription: string,
 ) {
-  const compile = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/compile`, {
+  const compile = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -255,7 +255,7 @@ async function createOrphanQuote(
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      definition: compiled.definition,
+      values: { ...lettersValues, "root.inscription": inscription },
       reviewId: compiled.reviewId,
       customerId,
     }),

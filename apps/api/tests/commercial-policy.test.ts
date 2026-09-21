@@ -66,12 +66,13 @@ async function compile(
   app: ReturnType<typeof createApp>,
   values: Record<string, string | number> = readyValues,
 ) {
-  const response = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/compile`, {
+  const response = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ values }),
   });
-  return readBody(response);
+  const body = await readBody(response);
+  return { values, reviewId: body.reviewId as string };
 }
 
 describe("commercial policy persistence", () => {
@@ -176,7 +177,7 @@ describe("commercial policy API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        definition: compiled.definition,
+        values: compiled.values,
         reviewId: compiled.reviewId,
       }),
     });
@@ -224,7 +225,7 @@ describe("commercial policy API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        definition: compiled.definition,
+        values: compiled.values,
         reviewId: compiled.reviewId,
         customerId,
       }),
@@ -249,7 +250,7 @@ describe("commercial policy API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        definition: compiled.definition,
+        values: compiled.values,
         reviewId: compiled.reviewId,
         customerId,
       }),
@@ -275,7 +276,7 @@ describe("commercial policy API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        definition: compiled.definition,
+        values: compiled.values,
         reviewId: compiled.reviewId,
         pricingMethod: "MANUAL_FIXED_PRODUCT",
         manualProductNetPrice: 400,
@@ -292,7 +293,7 @@ describe("commercial policy API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        definition: compiled.definition,
+        values: compiled.values,
         reviewId: compiled.reviewId,
         customerId,
         pricingMethod: "MANUAL_FIXED_PRODUCT",
@@ -319,14 +320,14 @@ describe("commercial policy API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        definition: compiled.definition,
+        values: compiled.values,
         reviewId: compiled.reviewId,
         customerId,
       }),
     });
-    expect(frozen.status).toBe(422);
+    expect(frozen.status).toBe(400);
     const body = await readBody(frozen);
-    expect(body.error).toMatch(/not_ready|incomplete_offer/);
+    expect(body.error).toBe("review_required");
   });
 
   it("rejects unauthorized commercial policy writes in cloud mode", async () => {
@@ -408,7 +409,7 @@ describe("commercial policy API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        definition: compiled.definition,
+        values: compiled.values,
         reviewId: compiled.reviewId,
         pricingMethod: "PRODUCT_COST_PLUS",
         quoteCommercialTerms: {
@@ -428,7 +429,7 @@ describe("commercial policy API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        definition: compiled.definition,
+        values: compiled.values,
         reviewId: compiled.reviewId,
         customerId,
         pricingMethod: "PRODUCT_COST_PLUS",
@@ -449,7 +450,7 @@ describe("commercial policy API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: compiled.definition,
+          values: compiled.values,
           reviewId: compiled.reviewId,
         }),
       }),
@@ -485,7 +486,7 @@ describe("commercial policy API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        definition: compiled.definition,
+        values: compiled.values,
         reviewId: compiled.reviewId,
         quoteCommercialTerms: {
           markupPercent: -8,

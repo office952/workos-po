@@ -20,7 +20,7 @@ describe("quote snapshot customer and request", () => {
   it("re-reads customer identity and the request link after freeze", async () => {
     const app = createApp();
     const compiled = await readBody(
-      await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/compile`, {
+      await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -53,7 +53,7 @@ describe("quote snapshot customer and request", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          definition: compiled.definition,
+          values: { ...lettersValues, "root.inscription": "NORD" },
           reviewId: compiled.reviewId,
           customerId,
           requestId,
