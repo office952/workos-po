@@ -1,5 +1,6 @@
 import type {
   EligibleProviderTransport,
+  ExecutionPlanProgressTransport,
   ExecutionPlanTransport,
   ExecutionTaskTransport,
 } from "../api/types";
@@ -25,6 +26,7 @@ export function presentExecutionPlan(payload: unknown): ExecutionPlanTransport |
     inscription: asString(plan.inscription) ?? "",
     statusLabel: asString(planView.statusLabel) ?? asString(plan.status) ?? "—",
     progressLabel: progressLabel(progress, planView),
+    progress: presentExecutionProgress(progress),
     sourceSnapshotId: asString(plan.sourceSnapshotId) ?? "",
     jobId: asString(job?.jobId) ?? asString(plan.jobId),
     tasks: tasks.flatMap((item) => {
@@ -64,9 +66,52 @@ export function presentExecutionTask(value: unknown): ExecutionTaskTransport | n
     completedQuantityLabel: asString(row.completedQuantityLabel),
     varianceLabel: asString(row.varianceLabel),
     waitingFor: asStringList(row.waitingFor),
+    dependsOnLabels: asStringList(row.dependsOnLabels),
     eligibleProviders: presentEligibleProviders(row.eligibleProviders),
     startBlockReason: asString(row.startBlockReason),
     operatorRelation: asString(row.operatorRelation),
+    startedByLabel: asString(row.startedByLabel),
+    executorLabel: presentExecutorLabel(row),
+  };
+}
+
+function presentExecutorLabel(row: Record<string, unknown>): string | null {
+  const assigned = asRecord(row.assignedExecutor);
+  return asString(assigned?.label) ?? asString(row.startedByLabel);
+}
+
+function presentExecutionProgress(
+  progress: Record<string, unknown> | null,
+): ExecutionPlanProgressTransport | null {
+  if (!progress) {
+    return null;
+  }
+  const total = asNumber(progress.total);
+  const completed = asNumber(progress.completed);
+  const inProgress = asNumber(progress.inProgress);
+  const planned = asNumber(progress.planned);
+  const waitingDependencies = asNumber(progress.waitingDependencies);
+  const noProvider = asNumber(progress.noProvider);
+  const varianceCount = asNumber(progress.varianceCount);
+  if (
+    total === null ||
+    completed === null ||
+    inProgress === null ||
+    planned === null ||
+    waitingDependencies === null ||
+    noProvider === null ||
+    varianceCount === null
+  ) {
+    return null;
+  }
+  return {
+    total,
+    completed,
+    inProgress,
+    planned,
+    waitingDependencies,
+    noProvider,
+    varianceCount,
   };
 }
 

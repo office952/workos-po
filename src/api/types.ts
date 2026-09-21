@@ -316,9 +316,22 @@ export type ExecutionTaskTransport = {
   completedQuantityLabel: string | null;
   varianceLabel: string | null;
   waitingFor: string[];
+  dependsOnLabels: string[];
   eligibleProviders: EligibleProviderTransport[];
   startBlockReason: string | null;
   operatorRelation: string | null;
+  startedByLabel: string | null;
+  executorLabel: string | null;
+};
+
+export type ExecutionPlanProgressTransport = {
+  total: number;
+  completed: number;
+  inProgress: number;
+  planned: number;
+  waitingDependencies: number;
+  noProvider: number;
+  varianceCount: number;
 };
 
 export type ExecutionPlanTransport = {
@@ -327,6 +340,7 @@ export type ExecutionPlanTransport = {
   inscription: string;
   statusLabel: string;
   progressLabel: string;
+  progress: ExecutionPlanProgressTransport | null;
   sourceSnapshotId: string;
   jobId: string | null;
   tasks: ExecutionTaskTransport[];

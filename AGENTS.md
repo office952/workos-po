@@ -144,12 +144,20 @@ NO_CLIENT_CODE_FORK = YES
 ALTERNATIVE_PRODUCT_DELIVERY = NO
 PRIMARY_USER_JOURNEY = COMPLETE
 PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
-CURRENT_PROGRAM = PEOPLE_AND_MACHINE_ADMIN_V1
-CURRENT_PROGRAM_STATUS = COMPLETE
-NEXT_PROGRAM_PRIORITY = EXECUTION_EXPANSION_V1
-NEXT_PROGRAM_STATUS = PREFLIGHT_REQUIRED
-NEXT_PROGRAM_SELECTION = EXECUTION_EXPANSION_V1
-NEXT_PROGRAM_STARTED = NO
+PEOPLE_AND_MACHINE_ADMIN_V1 = COMPLETE
+CURRENT_PROGRAM = EXECUTION_EXPANSION_V1
+CURRENT_PROGRAM_STATUS = IN_PROGRESS
+EXE1_EXECUTION_READINESS = COMPLETE
+EXE1_INTEGRATED_ON_MAIN = YES
+EXE1_MERGE_COMMIT = 18d5506f062ad0725f0fa3a8b204e5b121bd45b1
+PR_25 = MERGED
+EXE2_PROVIDER_OPERATOR_INTERACTION = COMPLETE
+EXE2_INTEGRATED_ON_MAIN = YES
+EXE2_MERGE_COMMIT = 0919f217dfb0efe1600fde659f8cad66c252b88a
+PR_26 = MERGED
+NEXT_WAVE = EXE3_WHOLE_PLAN_COMPREHENSION
+NEXT_WAVE_STATUS = AUTHORIZED_FOR_IMPLEMENTATION_BY_THIS_OWNER_GO
+PLANNING_CAPACITY = NOT_STARTED / NOT_NEXT
 CF1_COMMERCIAL_VERTICAL_V1 = COMPLETE
 CF1_OWNER_ACCEPTED_IMPLEMENTATION = YES
 CF2_CF3_TECHNICAL_CONFIGURATION_V1 = COMPLETE
@@ -205,7 +213,7 @@ VALUES_CRV1_AUTHORITY = REQUIRED
 GENERIC_ACCEPTANCE_BOUNDARY = CLOSED
 CURRENT_FIRST_LETTERS_SKU = PRD-LETTERS-FRONTLIT-PLEXI-AL06
 CURRENT_SKU_MODEL = SPECIFIC_PRODUCT_TEMPLATE_SKU
-NEXT_WAVE_AUTHORIZED = NO
+NEXT_WAVE_AUTHORIZED = YES
 FORMULA_CONFIGURABILITY_FULLY_DELIVERED = NO
 REAL_CLOUD_WRITE = HOLD
 REAL_DB_WRITE = HOLD
@@ -215,7 +223,7 @@ REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
 Living program authority: `docs/ROADMAP.md`.
 Configuration-First architecture: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
-People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Current supported-product People capabilities are mapped; unused catalog capabilities may stay unmapped. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Next program is Execution Expansion V1. Preflight is required. Implementation is not authorized. Exact merge commits live in `docs/ROADMAP.md`.
+People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Current supported-product People capabilities are mapped; unused catalog capabilities may stay unmapped. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Current program is Execution Expansion V1. EXE1 readiness and EXE2 provider/operator interaction are merged. EXE3 whole-plan comprehension is authorized by Owner GO. Planning/capacity is not next. Exact merge commits live in `docs/ROADMAP.md`.
 
 ```text
 NO_SILENT_BUSINESS_TRUTH = CANONICAL

@@ -5,7 +5,11 @@ import {
   completeExecutionTask,
   startExecutionTask,
 } from "../api/lifecycle";
-import type { EligibleProviderTransport, ExecutionTaskTransport } from "../api/types";
+import type {
+  EligibleProviderTransport,
+  ExecutionPlanProgressTransport,
+  ExecutionTaskTransport,
+} from "../api/types";
 import { Button } from "../components/Button";
 import { InfoRow } from "../components/InfoRow";
 import { InlineAlert } from "../components/InlineAlert";
@@ -26,6 +30,10 @@ import {
   draftCompletedQuantity,
   parseCompletedQuantity,
 } from "../presentation/completedQuantity";
+import {
+  presentCurrentTaskRole,
+  presentExecutionNextAction,
+} from "../presentation/executionNextAction";
 import { statusTone } from "../presentation/statusTone";
 import { atelierHref, executionHref, jobHref } from "../routing/appRoute";
 
@@ -110,18 +118,73 @@ function ProviderAssignmentControls({
 function selectCurrentExecutionTask(
   tasks: readonly ExecutionTaskTransport[],
   taskId: string | null,
-  allComplete: boolean,
 ): ExecutionTaskTransport | null {
-  if (allComplete || tasks.length === 0) {
+  if (tasks.length === 0) {
     return null;
   }
   const requested = taskId
     ? (tasks.find((task) => task.taskId === taskId) ?? null)
     : null;
-  if (requested && requested.status !== "COMPLETED") {
+  if (requested) {
     return requested;
   }
   return firstActionableTask(tasks);
+}
+
+function PlanSummary({
+  statusLabel,
+  progress,
+}: {
+  statusLabel: string;
+  progress: ExecutionPlanProgressTransport | null;
+}) {
+  const items = [
+    { key: "status", label: statusLabel },
+    progress
+      ? { key: "done", label: `Finalizate ${progress.completed} / ${progress.total}` }
+      : null,
+    progress && progress.inProgress > 0
+      ? { key: "live", label: `În curs ${progress.inProgress}` }
+      : null,
+    progress && progress.waitingDependencies > 0
+      ? { key: "wait", label: `Așteaptă ${progress.waitingDependencies}` }
+      : null,
+    progress && progress.noProvider > 0
+      ? { key: "provider", label: `Fără utilaj / zonă ${progress.noProvider}` }
+      : null,
+    progress && progress.varianceCount > 0
+      ? { key: "variance", label: `Diferențe ${progress.varianceCount}` }
+      : null,
+  ].filter((item): item is { key: string; label: string } => item !== null);
+  return (
+    <p className="plan-summary" aria-label="Starea planului">
+      {items.map((item) => (
+        <span key={item.key} className="plan-summary__item">
+          {item.label}
+        </span>
+      ))}
+    </p>
+  );
+}
+
+function compactTaskFacts(task: ExecutionTaskTransport): string[] {
+  const parts: string[] = [];
+  if (task.requiresProvider || task.assignmentLabel !== "Nealocat") {
+    parts.push(task.assignmentLabel);
+  }
+  if (task.executorLabel) {
+    parts.push(task.executorLabel);
+  }
+  if (task.waitingFor.length === 0 && task.plannedQuantityLabel) {
+    parts.push(task.plannedQuantityLabel);
+  }
+  if (task.completedQuantityLabel) {
+    parts.push(task.completedQuantityLabel);
+  }
+  if (task.varianceLabel) {
+    parts.push(task.varianceLabel);
+  }
+  return parts;
 }
 
 function taskStatusKind(task: ExecutionTaskTransport) {
@@ -241,9 +304,8 @@ export function ExecutionPage({
   const resolvedJobId = jobId ?? plan?.jobId ?? null;
   const allComplete =
     plan !== null && plan.tasks.length > 0 && plan.tasks.every((task) => task.status === "COMPLETED");
-  const currentTask = plan
-    ? selectCurrentExecutionTask(plan.tasks, taskId, allComplete)
-    : null;
+  const currentTask = plan ? selectCurrentExecutionTask(plan.tasks, taskId) : null;
+  const actionableTask = plan ? firstActionableTask(plan.tasks) : null;
   const sessionKnown = session.status === "success";
 
   return (
@@ -253,7 +315,7 @@ export function ExecutionPage({
       workspace="operational"
       eyebrow="Execuție"
       title={plan?.inscription || plan?.productLabel || "Execuție"}
-      lead="Planul vine de la motorul de producție. Operatorul pornește și închide sarcinile eligibile."
+      lead="Planul vine de la motorul de producție. Operatorul pornește și închide sarcinile pe care le poate lucra."
       meta={
         plan
           ? [
@@ -289,6 +351,9 @@ export function ExecutionPage({
           {actionError}
         </InlineAlert>
       ) : null}
+      {plan ? (
+        <PlanSummary statusLabel={plan.statusLabel} progress={plan.progress} />
+      ) : null}
       {currentTask ? (
         <article
           className="operational-task operational-task--current"
@@ -297,7 +362,7 @@ export function ExecutionPage({
           <SurfacePanel
             variant="operational"
             title={`${currentTask.seqLabel} ${currentTask.processLabel}`}
-            description="Prima sarcină eligibilă din acest plan."
+            description={presentCurrentTaskRole(currentTask, actionableTask)}
             status={
               <StatusBadge
                 label={currentTask.statusLabel}
@@ -313,11 +378,18 @@ export function ExecutionPage({
             <dl className="fact-grid">
               <InfoRow label="Zonă" value={currentTask.scopeLabel} />
               <InfoRow label="Alocare" value={currentTask.assignmentLabel} />
+              {currentTask.executorLabel || currentTask.startedByLabel ? (
+                <InfoRow
+                  label="Operator sarcină"
+                  value={currentTask.executorLabel ?? currentTask.startedByLabel ?? ""}
+                />
+              ) : null}
               <InfoRow label="Diferență" value={currentTask.varianceLabel ?? "—"} />
+              <InfoRow
+                label="Următorul pas"
+                value={presentExecutionNextAction(currentTask, identified)}
+              />
             </dl>
-            {currentTask.waitingFor.length > 0 ? (
-              <p>Așteaptă: {currentTask.waitingFor.join(", ")}</p>
-            ) : null}
             {currentTask.operatorRelation === "not_eligible" ? (
               <p>Alt operator trebuie să preia această sarcină.</p>
             ) : null}
@@ -340,9 +412,9 @@ export function ExecutionPage({
             currentTask.assignmentLabel === "Nealocat" &&
             currentTask.eligibleProviders.length === 0 &&
             currentTask.status !== "COMPLETED" ? (
-              <InlineAlert tone="blocked" title="Utilaj lipsește">
-                Această sarcină cere un utilaj deja configurat în organizație. Execuția nu
-                inventează utilaje.
+              <InlineAlert tone="blocked" title="Utilaj / zonă lipsă">
+                Această sarcină cere un utilaj sau o zonă de lucru eligibilă deja configurată
+                în organizație. Execuția nu inventează utilaje sau zone.
               </InlineAlert>
             ) : null}
             {currentTask.canAssignProvider ? (
@@ -406,7 +478,9 @@ export function ExecutionPage({
                 value={
                   currentTask.waitingFor.length > 0
                     ? currentTask.waitingFor.join(", ")
-                    : "Îndeplinite"
+                    : currentTask.dependsOnLabels.length > 0
+                      ? "Îndeplinite"
+                      : "Fără dependențe"
                 }
               />
             </dl>
@@ -423,37 +497,42 @@ export function ExecutionPage({
           </SurfacePanel>
         </article>
       ) : null}
-      {plan
-        ? plan.tasks
-            .filter((task) => task.taskId !== currentTask?.taskId)
-            .map((task) => (
+      {plan ? (
+        <Worklist variant="operational" label="Planul de execuție">
+          {plan.tasks.map((task) => {
+            const facts = compactTaskFacts(task);
+            return (
               <article
                 key={task.taskId}
                 className="operational-task operational-task--compact"
                 data-task-id={task.taskId}
               >
-                <Worklist
+                <WorklistRow
                   variant="operational"
-                  label={`${task.seqLabel} ${task.processLabel}`}
-                >
-                  <WorklistRow
-                    variant="operational"
-                    href={executionHref(planId, {
-                      taskId: task.taskId,
-                      jobId: resolvedJobId,
-                    })}
-                    identity={`${task.seqLabel} ${task.processLabel}`}
-                    identityDetail={task.completedQuantityLabel ?? undefined}
-                    context={task.scopeLabel}
-                    state={
-                      <StatusBadge label={task.statusLabel} tone={taskStatusKind(task)} />
-                    }
-                  />
-                </Worklist>
-                {task.varianceLabel ? <p>{task.varianceLabel}</p> : null}
+                  href={executionHref(planId, {
+                    taskId: task.taskId,
+                    jobId: resolvedJobId,
+                  })}
+                  current={task.taskId === currentTask?.taskId}
+                  identity={`${task.seqLabel} ${task.processLabel}`}
+                  identityDetail={presentExecutionNextAction(task, identified)}
+                  context={task.scopeLabel}
+                  state={
+                    <StatusBadge label={task.statusLabel} tone={taskStatusKind(task)} />
+                  }
+                />
+                {facts.length > 0 ? (
+                  <p className="task-row-facts">
+                    {facts.map((fact) => (
+                      <span key={fact}>{fact}</span>
+                    ))}
+                  </p>
+                ) : null}
               </article>
-            ))
-        : null}
+            );
+          })}
+        </Worklist>
+      ) : null}
       {plan ? (
         <p>
           <a className="text-link" href={resolvedJobId ? jobHref(resolvedJobId) : "/lucrari"}>

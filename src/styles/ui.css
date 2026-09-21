@@ -1429,6 +1429,41 @@ button.context-rail__item:focus-visible {
   display: block;
 }
 
+.plan-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8) var(--space-16);
+  align-items: baseline;
+  margin: 0 0 var(--space-16);
+}
+
+.plan-summary__item {
+  font-size: var(--text-label);
+  color: var(--color-text-secondary);
+}
+
+.worklist--operational .operational-task--compact {
+  border-bottom: var(--stroke) solid var(--color-border);
+  padding: var(--space-8) 0;
+}
+
+.worklist--operational .operational-task--compact:last-child {
+  border-bottom: 0;
+}
+
+.worklist--operational .operational-task--compact .worklist-row {
+  border-bottom: 0;
+}
+
+.task-row-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-12);
+  margin: var(--space-8) 0 0;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
 @keyframes pulse {
   50% {
     opacity: 0.35;

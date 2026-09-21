@@ -55,7 +55,15 @@ function planPayload(tasks: readonly TaskFixture[]): Record<string, unknown> {
         sourceSnapshotId: "aps:1",
       },
       statusLabel: "În lucru",
-      progress: { completed: tasks.filter((task) => task.status === "COMPLETED").length, total: 2 },
+      progress: {
+        total: tasks.length,
+        completed: tasks.filter((task) => task.status === "COMPLETED").length,
+        inProgress: tasks.filter((task) => task.status === "IN_PROGRESS").length,
+        planned: tasks.filter((task) => task.status === "PLANNED").length,
+        waitingDependencies: 0,
+        noProvider: 0,
+        varianceCount: 0,
+      },
       tasks: tasks.map(taskPayload),
     },
   };
@@ -150,8 +158,8 @@ describe("ExecutionPage", () => {
       expect(String(completeCall?.[1]?.body)).not.toContain("12.5");
     });
 
-    expect(await screen.findByText("Realizat: 11,8 m")).toBeInTheDocument();
-    expect(screen.getByText("Diferență față de plan: −0,7 m")).toBeInTheDocument();
+    expect(await screen.findAllByText("Realizat: 11,8 m")).not.toHaveLength(0);
+    expect(screen.getAllByText("Diferență față de plan: −0,7 m").length).toBeGreaterThan(0);
     expect(
       within(document.querySelector('[data-task-id="task-cut"]') as HTMLElement).queryByLabelText(
         "Cantitate realizată",
@@ -341,7 +349,7 @@ describe("ExecutionPage", () => {
     );
   });
 
-  it("advances past a completed task query to the next actionable task", async () => {
+  it("keeps a deep-linked completed task selected so history stays inspectable", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn((input: RequestInfo) => {
@@ -381,16 +389,18 @@ describe("ExecutionPage", () => {
     );
 
     render(<ExecutionPage planId="exp:1" taskId="task-cut" jobId="ord-1" />);
-    expect(await screen.findByRole("heading", { name: "04 Cablare electrică" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "01 Debitare foaie CNC" })).toBeInTheDocument();
     expect(document.querySelector(".operational-task--current")).toHaveAttribute(
       "data-task-id",
-      "task-wire",
+      "task-cut",
     );
-    expect(screen.getByRole("button", { name: "Închide sarcina" })).toBeEnabled();
-    expect(screen.getByRole("link", { name: /01 Debitare foaie CNC/ })).toHaveAttribute(
+    expect(screen.getByText("Sarcina selectată din plan")).toBeInTheDocument();
+    expect(screen.getAllByText("Realizat: 12,5 m").length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: /04 Cablare electrică/ })).toHaveAttribute(
       "href",
-      "/executie/exp%3A1?task=task-cut&job=ord-1",
+      "/executie/exp%3A1?task=task-wire&job=ord-1",
     );
+    expect(screen.queryByText("Prima sarcină eligibilă din acest plan.")).not.toBeInTheDocument();
   });
 
   it("explains a missing configured machine without creating one", async () => {
@@ -436,7 +446,8 @@ describe("ExecutionPage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<ExecutionPage planId="exp:1" />);
-    expect(await screen.findByText("Utilaj lipsește")).toBeInTheDocument();
+    expect(await screen.findAllByText("Utilaj / zonă lipsă")).not.toHaveLength(0);
+    expect(screen.getAllByText("Lipsește utilajul / zona necesară").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Adaugă utilajul de debitare" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Alocă/ })).not.toBeInTheDocument();
     expect(
@@ -729,6 +740,7 @@ describe("ExecutionPage", () => {
               requiresProvider: true,
               canAssign: true,
               canAssignProvider: false,
+              operatorRelation: "missing_provider",
               eligibleProviders: [
                 {
                   id: "mch:cnc-a",
@@ -747,8 +759,14 @@ describe("ExecutionPage", () => {
     render(<ExecutionPage planId="exp:1" />);
     expect(await screen.findAllByText("Nealocat")).not.toHaveLength(0);
     expect(screen.getByText("Utilaje eligibile: Utilaj — CNC 4020")).toBeInTheDocument();
+    expect(screen.getAllByText("Așteaptă alocarea utilajului / zonei").length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: /01 Debitare foaie CNC/ })).toHaveTextContent(
+      "Așteaptă alocarea utilajului / zonei",
+    );
     expect(screen.queryByRole("button", { name: /Alocă/ })).not.toBeInTheDocument();
     expect(screen.queryByText("Utilaj lipsește")).not.toBeInTheDocument();
+    expect(screen.queryByText("Lipsește utilajul / zona necesară")).not.toBeInTheDocument();
+    expect(screen.queryByText("Utilaj / zonă lipsă")).not.toBeInTheDocument();
   });
 
   it("reloads the plan after a successful assignment and keeps a failure from looking assigned", async () => {
@@ -899,5 +917,328 @@ describe("ExecutionPage", () => {
     expect(await screen.findByText("Alocarea utilajului nu este permisă pentru această sarcină.")).toBeInTheDocument();
     expect(screen.getAllByText("Nealocat").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Alocă CNC 4020" })).toBeInTheDocument();
+  });
+
+  it("shows whole-plan summary, dependency labels, and truthful current-task copy", async () => {
+    const fetchMock = vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei Goghi" } });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          statusLabel: "În lucru",
+          progress: {
+            total: 4,
+            completed: 1,
+            inProgress: 1,
+            planned: 2,
+            waitingDependencies: 1,
+            noProvider: 1,
+            noExecutor: 2,
+            varianceCount: 1,
+          },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-done",
+                processLabel: "Debitare foaie CNC",
+                status: "COMPLETED",
+                statusLabel: "Finalizat",
+                canComplete: false,
+                requiresCompletedQuantity: true,
+                plannedValue: 12.5,
+                completedQuantityLabel: "Realizat: 12,5 m",
+                varianceLabel: "Diferență față de plan: 0 m",
+              }),
+              seqLabel: "01",
+              assignmentLabel: "CNC Zebra",
+              startedByLabel: "Andrei Goghi",
+              assignedExecutor: { id: "per:andrei", label: "Andrei Goghi" },
+            },
+            {
+              ...taskPayload({
+                taskId: "task-live",
+                processLabel: "Formare volume",
+                status: "IN_PROGRESS",
+                statusLabel: "În lucru",
+                canComplete: true,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              seqLabel: "02",
+              canClaimStart: false,
+              startedByLabel: "Andrei Goghi",
+              assignedExecutor: { id: "per:andrei", label: "Andrei Goghi" },
+            },
+            {
+              ...taskPayload({
+                taskId: "task-wait",
+                processLabel: "Cablare electrică",
+                status: "PLANNED",
+                statusLabel: "Planificat",
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              seqLabel: "03",
+              requiresProvider: false,
+              waitingFor: ["Formare volume"],
+              dependsOnLabels: ["Formare volume"],
+            },
+            {
+              ...taskPayload({
+                taskId: "task-cut",
+                processLabel: "Vopsire",
+                status: "PLANNED",
+                statusLabel: "Planificat",
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              seqLabel: "04",
+              assignmentLabel: "Nealocat",
+              requiresProvider: true,
+              eligibleProviders: [],
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    expect(await screen.findByLabelText("Starea planului")).toHaveTextContent("Finalizate 1 / 4");
+    expect(screen.getByLabelText("Starea planului")).toHaveTextContent("În curs 1");
+    expect(screen.getByLabelText("Starea planului")).toHaveTextContent("Așteaptă 1");
+    expect(screen.getByLabelText("Starea planului")).toHaveTextContent("Fără utilaj / zonă 1");
+    expect(screen.getByLabelText("Starea planului")).toHaveTextContent("Diferențe 1");
+    expect(screen.getByLabelText("Starea planului")).not.toHaveTextContent("executor");
+    expect(screen.getByText("Următoarea sarcină acționabilă")).toBeInTheDocument();
+    expect(screen.queryByText("Prima sarcină eligibilă din acest plan.")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /03 Cablare electrică/ })).toBeInTheDocument();
+    expect(screen.getAllByText("Așteaptă: Formare volume").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Lipsește utilajul / zona necesară").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Andrei Goghi").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Realizat: 12,5 m").length).toBeGreaterThan(0);
+  });
+
+  it("keeps a deep-linked blocked task selected without calling it eligible", async () => {
+    const fetchMock = vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei Goghi" } });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          progress: {
+            total: 2,
+            completed: 0,
+            inProgress: 0,
+            planned: 2,
+            waitingDependencies: 1,
+            noProvider: 0,
+            varianceCount: 0,
+          },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-cut",
+                processLabel: "Debitare foaie CNC",
+                status: "PLANNED",
+                statusLabel: "Planificat",
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              canClaimStart: true,
+            },
+            {
+              ...taskPayload({
+                taskId: "task-wire",
+                processLabel: "Cablare electrică",
+                status: "PLANNED",
+                statusLabel: "Planificat",
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              waitingFor: ["Debitare foaie CNC"],
+              dependsOnLabels: ["Debitare foaie CNC"],
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" taskId="task-wire" />);
+    expect(await screen.findByText("Sarcina selectată din plan")).toBeInTheDocument();
+    expect(document.querySelector(".operational-task--current")).toHaveAttribute(
+      "data-task-id",
+      "task-wire",
+    );
+    expect(screen.getAllByText("Așteaptă: Debitare foaie CNC").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Prima sarcină eligibilă din acest plan.")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /01 Debitare foaie CNC/ })).toHaveAttribute(
+      "href",
+      "/executie/exp%3A1?task=task-cut",
+    );
+  });
+
+  it("keeps the plan readable for an unidentified operator and disables start", async () => {
+    const fetchMock = vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: null });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-cut",
+                processLabel: "Debitare foaie CNC",
+                status: "PLANNED",
+                statusLabel: "Planificat",
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              canClaimStart: true,
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    expect(await screen.findByText("Operator neidentificat")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "01 Debitare foaie CNC" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pornește" })).toBeDisabled();
+    expect(screen.getAllByText("Identifică operatorul").length).toBeGreaterThan(0);
+  });
+
+  it("keeps completed-plan history visible", async () => {
+    const fetchMock = vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei Goghi" } });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          statusLabel: "Finalizat",
+          progress: {
+            total: 2,
+            completed: 2,
+            inProgress: 0,
+            planned: 0,
+            waitingDependencies: 0,
+            noProvider: 0,
+            varianceCount: 1,
+          },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-cut",
+                processLabel: "Debitare foaie CNC",
+                status: "COMPLETED",
+                statusLabel: "Finalizat",
+                canComplete: false,
+                requiresCompletedQuantity: true,
+                plannedValue: 12.5,
+                completedQuantityLabel: "Realizat: 11,8 m",
+                varianceLabel: "Diferență față de plan: −0,7 m",
+              }),
+              assignmentLabel: "CNC Zebra",
+              startedByLabel: "Andrei Goghi",
+              assignedExecutor: { id: "per:andrei", label: "Andrei Goghi" },
+            },
+            {
+              ...taskPayload({
+                taskId: "task-wire",
+                processLabel: "Cablare electrică",
+                status: "COMPLETED",
+                statusLabel: "Finalizat",
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              seqLabel: "04",
+              requiresProvider: false,
+              assignmentLabel: "Nealocat",
+              startedByLabel: "Andrei Goghi",
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    expect(await screen.findByText("Lucrare executată")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /01 Debitare foaie CNC/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /04 Cablare electrică/ })).toBeInTheDocument();
+    expect(screen.getAllByText("CNC Zebra").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Andrei Goghi").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Realizat: 11,8 m").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Diferență față de plan: −0,7 m").length).toBeGreaterThan(0);
+  });
+
+  it("does not invent a machine blocker for a manual-only task", async () => {
+    const fetchMock = vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei Goghi" } });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+          tasks: [
+            {
+              ...taskPayload({
+                taskId: "task-wire",
+                processLabel: "Cablare electrică",
+                status: "PLANNED",
+                statusLabel: "Planificat",
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                plannedValue: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+              }),
+              requiresProvider: false,
+              assignmentLabel: "Nealocat",
+              canClaimStart: true,
+              eligibleProviders: [],
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:1" />);
+    expect(await screen.findByRole("button", { name: "Pornește" })).toBeEnabled();
+    expect(screen.queryByText("Utilaj lipsește")).not.toBeInTheDocument();
   });
 });
