@@ -108,7 +108,7 @@ NO_CLIENT_CODE_FORK = YES
 ALTERNATIVE_PRODUCT_DELIVERY = NO
 PRIMARY_USER_JOURNEY = COMPLETE
 PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
-CURRENT_PROGRAM = LETTERS_PRODUCT_TRUTH_V1
+CURRENT_PROGRAM = ACM_PRODUCT_TRUTH_V1
 CURRENT_PROGRAM_STATUS = COMPLETE
 NEXT_PROGRAM_PRIORITY = NOT_SELECTED
 NEXT_PROGRAM_STATUS = PENDING_ROADMAP_REVIEW
@@ -123,6 +123,12 @@ LETTERS_PRODUCT_TRUTH_V1 = COMPLETE
 LETTERS_PRODUCT_TRUTH_V1_OWNER_ACCEPTED_IMPLEMENTATION = YES
 LETTERS_PRODUCT_TRUTH_V1_INTEGRATED_ON_MAIN = YES
 PR_15 = MERGED
+ACM_PRODUCT_TRUTH_V1 = COMPLETE
+ACM_PRODUCT_TRUTH_V1_OWNER_ACCEPTED_IMPLEMENTATION = YES
+ACM_PRODUCT_TRUTH_V1_INTEGRATED_ON_MAIN = YES
+PR_17 = MERGED
+ACM_TEMPLATE_VERSION = 2
+FRAME_CLEARANCE = ORGANIZATION_CONFIGURABLE_VERSIONED
 CLIENT_PRODUCT_DEFINITION_AUTHORITY = REMOVED
 VALUES_CRV1_AUTHORITY = REQUIRED
 NEXT_WAVE_AUTHORIZED = NO
@@ -135,6 +141,6 @@ CUTOVER = HOLD
 REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
 ```
 
-Letters Product Truth V1 is complete, Owner-accepted, and integrated on main through PR #15. Accepted product truth is reconstructed from template, schema, values, and crv1. Next program selection is pending. Next wave is unauthorized.
+ACM Product Truth V1 is complete, Owner-accepted, and integrated on main through PR #17. Letters Product Truth V1 remains complete. Accepted product truth is reconstructed from template, schema, values, and crv1. Next program selection is pending. Next wave is unauthorized.
 
 See `docs/PRODUCTION_RUNTIME.md` for the production topology. Do not point proof runtimes at a real HUB MEDIA Cloud root.

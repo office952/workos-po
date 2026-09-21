@@ -41,7 +41,7 @@ PRIMARY_USER_JOURNEY = COMPLETE
 PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
 PRIMARY_USER_JOURNEY_PROOF_DATE = 2026-09-20
 
-CURRENT_PROGRAM = LETTERS_PRODUCT_TRUTH_V1
+CURRENT_PROGRAM = ACM_PRODUCT_TRUTH_V1
 CURRENT_PROGRAM_STATUS = COMPLETE
 NEXT_PROGRAM_PRIORITY = NOT_SELECTED
 NEXT_PROGRAM_STATUS = PENDING_ROADMAP_REVIEW
@@ -79,6 +79,14 @@ LETTERS_PRODUCT_TRUTH_V1_INTEGRATED_ON_MAIN = YES
 LETTERS_PRODUCT_TRUTH_V1_MERGE = COMPLETE
 LETTERS_PRODUCT_TRUTH_V1_MERGE_COMMIT = bb3c80b7f500b8b71c15106140ca55af1faf70d9
 PR_15 = MERGED
+ACM_PRODUCT_TRUTH_V1 = COMPLETE
+ACM_PRODUCT_TRUTH_V1_OWNER_ACCEPTED_IMPLEMENTATION = YES
+ACM_PRODUCT_TRUTH_V1_INTEGRATED_ON_MAIN = YES
+ACM_PRODUCT_TRUTH_V1_MERGE = COMPLETE
+ACM_PRODUCT_TRUTH_V1_MERGE_COMMIT = 1583c458fd4c6e3d06d48629b954afabcb23b149
+PR_17 = MERGED
+ACM_PRODUCT_CODE = PRD-ACM-CASSETTE-NONE
+ACM_TEMPLATE_VERSION = 2
 CLIENT_PRODUCT_DEFINITION_AUTHORITY = REMOVED
 VALUES_CRV1_AUTHORITY = REQUIRED
 GENERIC_ACCEPTANCE_BOUNDARY = CLOSED
@@ -233,7 +241,7 @@ Primary User Journey is complete. Configuration-First remains canonical: changea
 
 Architecture ownership: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
-Letters Product Truth V1 is complete after Owner acceptance and merge of PR #15. Standalone CF5 is not required first. Remaining Configuration-First work is domain-by-domain when actual product work requires it. Next program selection is pending roadmap review.
+ACM Product Truth V1 is complete after Owner acceptance and merge of PR #17. Letters Product Truth V1 remains complete. Standalone CF5 is not required first. Remaining Configuration-First work is domain-by-domain when actual product work requires it. Next program selection is pending roadmap review.
 
 ```text
 WORKOS = CONFIGURATION-FIRST BUSINESS ENGINE
@@ -340,4 +348,65 @@ After CF4, preferred living sequence:
 5. execution expansion
 6. planning / capacity
 
-Letters Product Truth V1 is complete. This documentation does not select or authorize ACM Product Truth or those later items.
+Letters Product Truth V1 is complete. ACM Product Truth V1 is complete. This documentation does not select or authorize member DAG, execution expansion, planning/capacity, CF5, or any other next wave.
+
+## ACM Product Truth V1
+
+```text
+ACM_PRODUCT_TRUTH_V1 = COMPLETE
+OWNER_ACCEPTED_IMPLEMENTATION = YES
+INTEGRATED_ON_MAIN = YES
+PR_17 = MERGED
+MERGE_COMMIT = 1583c458fd4c6e3d06d48629b954afabcb23b149
+ACM_PRODUCT_CODE = PRD-ACM-CASSETTE-NONE
+ACM_TEMPLATE_VERSION = 2
+ACM_FORM_SCHEMA_VERSION = prd-acm-cassette-none-form-v2
+MODEL = SPECIFIC_PRODUCT_TEMPLATE_SKU
+DEPTH = FREE_NUMERIC_MM
+SECOND_RETURN = OPTIONAL_NUMERIC_MM
+FOLD_COUNT = REMOVED
+MOUNTING_SYSTEM = REMOVED
+FRAME_CLEARANCE = ORGANIZATION_CONFIGURABLE_VERSIONED
+FRAME_CLEARANCE_DEFINITION_ID = STEEL_INTERNAL_FRAME.frameClearanceMm
+FRAME_CLEARANCE_SCOPE = ORGANIZATION
+FRAME_CLEARANCE_STARTER = 2 mm
+PRODUCT_SCOPED_TECHNICAL_SETTING_RESOLUTION = YES
+CLIENT_PRODUCT_DEFINITION_AUTHORITY = REMOVED
+VALUES_CRV1_AUTHORITY = REQUIRED
+GENERIC_ACCEPTANCE_BOUNDARY = CLOSED
+CUSTOMER_OPERABLE_WITHOUT_CURSOR = YES_FOR_EXISTING_SKU
+NO_CLIENT_CODE_FORK = YES
+PRODUCT_ENABLEMENT = LATER_ADMIN_TOOLING_DEBT
+DB_MIGRATION_REQUIRED = NO
+NEXT_PROGRAM_SELECTION = PENDING_ROADMAP_REVIEW
+NEXT_WAVE_AUTHORIZED = NO
+```
+
+Current ACM SKU identity is a specific product template, not universal ACM law:
+
+```text
+face.materialFamily = acm
+face.thicknessMm = 3
+face.finish = none
+back.materialFamily = steel
+lighting = none
+```
+
+Current order/job geometry is numeric Product Truth: `face.widthMm`, `face.heightMm`, free positive `face.cassetteDepthMm` (prima întoarcere / adâncime / perete casetă), and optional `face.backReturnMm` (a doua întoarcere / buză spate). Missing or 0 backReturn means no second return. `root.mountingSystem` and `face.foldCount` are not current V2 Product Truth.
+
+Developed blank is the current rectangular numeric basis, not nesting, DXF, SVG, CAM, or production-graphics parsing:
+
+```text
+blankWidth = width + 2 * (depth + backReturn)
+blankHeight = height + 2 * (depth + backReturn)
+```
+
+Accepted proof: 3000 × 500, depth 80, backReturn 25 → blank 3210 × 710 → 2.2791 m².
+
+Frame outer dimension = panel dimension − 2 × ACM thickness − organization `frameClearanceMm`. The 2 mm starter is organization-versioned technical-setting default, not immutable platform law. Owner may edit it on `/admin/technical`. Members are read-only. Later setting changes do not rewrite frozen snapshots.
+
+Product-scoped technical-setting resolution: ACM requires `STEEL_INTERNAL_FRAME.frameClearanceMm`. Letters requires only its own lighting settings. An ACM clearance change invalidates ACM crv1 and does not invalidate a Letters crv1. Missing ACM clearance blocks ACM only. Starter upgrade is additive and idempotent. `ADOPT_EXISTING` does not silently seed ACM truth.
+
+Accepted mutation authority remains server ProductTemplate + FormSchema + DraftValues + applicable organization technical settings + applicable formulas + crv1. Client ProductDefinition has zero authority.
+
+A company that does not use ACM may still see the catalog entry in V1. Product availability/enablement is later admin tooling debt. Do not treat this as CF5 complete. Next program is not selected.
