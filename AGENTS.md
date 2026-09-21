@@ -144,7 +144,7 @@ NO_CLIENT_CODE_FORK = YES
 ALTERNATIVE_PRODUCT_DELIVERY = NO
 PRIMARY_USER_JOURNEY = COMPLETE
 PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
-CURRENT_PROGRAM = ACM_PRODUCT_TRUTH_V1
+CURRENT_PROGRAM = PRODUCT_ENABLEMENT_ADMIN_V1
 CURRENT_PROGRAM_STATUS = COMPLETE
 NEXT_PROGRAM_PRIORITY = NOT_SELECTED
 NEXT_PROGRAM_STATUS = PENDING_ROADMAP_REVIEW
@@ -176,6 +176,19 @@ ACM_PRODUCT_TRUTH_V1_INTEGRATED_ON_MAIN = YES
 ACM_PRODUCT_TRUTH_V1_MERGE = COMPLETE
 ACM_PRODUCT_TRUTH_V1_MERGE_COMMIT = 1583c458fd4c6e3d06d48629b954afabcb23b149
 PR_17 = MERGED
+PRODUCT_ENABLEMENT_ADMIN_V1 = COMPLETE
+PRODUCT_ENABLEMENT_ADMIN_V1_OWNER_ACCEPTED_IMPLEMENTATION = YES
+PRODUCT_ENABLEMENT_ADMIN_V1_INTEGRATED_ON_MAIN = YES
+PRODUCT_ENABLEMENT_ADMIN_V1_MERGE = COMPLETE
+PRODUCT_ENABLEMENT_ADMIN_V1_MERGE_COMMIT = b082b1a8a9288aac59ae0d3a34915415500107e1
+PR_19 = MERGED
+PRODUCT_ENABLEMENT = ORGANIZATION_SCOPED
+CONFIGURATION_SURFACE = /admin/products
+CURRENT_TWO_PRODUCTS_DEFAULT = ENABLED
+FUTURE_UNCONFIGURED_PRODUCT = FAIL_CLOSED
+HISTORICAL_LIFECYCLE = PRESERVED
+OWNER_WRITE = YES
+MEMBER_WRITE = NO
 ACM_PRODUCT_CODE = PRD-ACM-CASSETTE-NONE
 ACM_TEMPLATE_VERSION = 2
 ACM_FORM_SCHEMA_VERSION = prd-acm-cassette-none-form-v2
@@ -195,7 +208,7 @@ REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
 Living program authority: `docs/ROADMAP.md`.
 Configuration-First architecture: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
-ACM Product Truth V1 is complete, Owner-accepted, and integrated on main. Letters Product Truth V1 remains complete. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Next program selection is pending roadmap review.
+Product Enablement Admin V1 is complete, Owner-accepted, and integrated on main. Letters Product Truth V1 and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Next program selection is pending roadmap review.
 
 ```text
 NO_SILENT_BUSINESS_TRUTH = CANONICAL

@@ -41,7 +41,7 @@ PRIMARY_USER_JOURNEY = COMPLETE
 PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
 PRIMARY_USER_JOURNEY_PROOF_DATE = 2026-09-20
 
-CURRENT_PROGRAM = ACM_PRODUCT_TRUTH_V1
+CURRENT_PROGRAM = PRODUCT_ENABLEMENT_ADMIN_V1
 CURRENT_PROGRAM_STATUS = COMPLETE
 NEXT_PROGRAM_PRIORITY = NOT_SELECTED
 NEXT_PROGRAM_STATUS = PENDING_ROADMAP_REVIEW
@@ -85,6 +85,18 @@ ACM_PRODUCT_TRUTH_V1_INTEGRATED_ON_MAIN = YES
 ACM_PRODUCT_TRUTH_V1_MERGE = COMPLETE
 ACM_PRODUCT_TRUTH_V1_MERGE_COMMIT = 1583c458fd4c6e3d06d48629b954afabcb23b149
 PR_17 = MERGED
+PRODUCT_ENABLEMENT_ADMIN_V1 = COMPLETE
+PRODUCT_ENABLEMENT_ADMIN_V1_OWNER_ACCEPTED_IMPLEMENTATION = YES
+PRODUCT_ENABLEMENT_ADMIN_V1_INTEGRATED_ON_MAIN = YES
+PRODUCT_ENABLEMENT_ADMIN_V1_MERGE = COMPLETE
+PRODUCT_ENABLEMENT_ADMIN_V1_MERGE_COMMIT = b082b1a8a9288aac59ae0d3a34915415500107e1
+PR_19 = MERGED
+PRODUCT_ENABLEMENT = ORGANIZATION_SCOPED
+CONFIGURATION_SURFACE = /admin/products
+CURRENT_TWO_PRODUCTS_DEFAULT = ENABLED
+DEFAULT_DERIVED_FROM_ALL_REGISTRY_TEMPLATES = NO
+FUTURE_UNCONFIGURED_PRODUCT = FAIL_CLOSED
+HISTORICAL_LIFECYCLE = PRESERVED
 ACM_PRODUCT_CODE = PRD-ACM-CASSETTE-NONE
 ACM_TEMPLATE_VERSION = 2
 CLIENT_PRODUCT_DEFINITION_AUTHORITY = REMOVED
@@ -241,7 +253,7 @@ Primary User Journey is complete. Configuration-First remains canonical: changea
 
 Architecture ownership: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
-ACM Product Truth V1 is complete after Owner acceptance and merge of PR #17. Letters Product Truth V1 remains complete. Standalone CF5 is not required first. Remaining Configuration-First work is domain-by-domain when actual product work requires it. Next program selection is pending roadmap review.
+Product Enablement Admin V1 is complete after Owner acceptance and merge of PR #19. Letters Product Truth V1 and ACM Product Truth V1 remain complete. Standalone CF5 is not required first. Remaining Configuration-First work is domain-by-domain when actual product work requires it. Next program selection is pending roadmap review.
 
 ```text
 WORKOS = CONFIGURATION-FIRST BUSINESS ENGINE
@@ -311,14 +323,14 @@ CURRENT_FIRST_LETTERS_SKU = PRD-LETTERS-FRONTLIT-PLEXI-AL06
 MODEL = SPECIFIC_PRODUCT_TEMPLATE_SKU
 CUSTOMER_OPERABLE_WITHOUT_CURSOR = YES_FOR_EXISTING_SKU
 NO_CLIENT_CODE_FORK = YES
-PRODUCT_ENABLEMENT = LATER_ADMIN_TOOLING_DEBT
+PRODUCT_ENABLEMENT = ORGANIZATION_SCOPED
 NEXT_PROGRAM_SELECTION = PENDING_ROADMAP_REVIEW
 NEXT_WAVE_AUTHORIZED = NO
 ```
 
 Accepted product mutation authority is server ProductTemplate + FormSchema + DraftValues + resolved organization technical settings + resolved organization formulas + crv1, reconstructed on the server. A client-submitted ProductDefinition is not accepted mutation authority. `/compile` remains a diagnostic/compile contract. Definition-only confirm, quote freeze, and accepted production fail closed.
 
-A company that does not use Letters may still see the catalog entry in V1. Product availability/enablement is later admin tooling debt.
+Organizations can enable or disable shared ProductTemplates for new work through `/admin/products`.
 
 Current first Letters SKU is a specific product template. Fixed construction remains product identity, not organization-wide technical settings:
 
@@ -376,7 +388,7 @@ VALUES_CRV1_AUTHORITY = REQUIRED
 GENERIC_ACCEPTANCE_BOUNDARY = CLOSED
 CUSTOMER_OPERABLE_WITHOUT_CURSOR = YES_FOR_EXISTING_SKU
 NO_CLIENT_CODE_FORK = YES
-PRODUCT_ENABLEMENT = LATER_ADMIN_TOOLING_DEBT
+PRODUCT_ENABLEMENT = ORGANIZATION_SCOPED
 DB_MIGRATION_REQUIRED = NO
 NEXT_PROGRAM_SELECTION = PENDING_ROADMAP_REVIEW
 NEXT_WAVE_AUTHORIZED = NO
@@ -409,4 +421,52 @@ Product-scoped technical-setting resolution: ACM requires `STEEL_INTERNAL_FRAME.
 
 Accepted mutation authority remains server ProductTemplate + FormSchema + DraftValues + applicable organization technical settings + applicable formulas + crv1. Client ProductDefinition has zero authority.
 
-A company that does not use ACM may still see the catalog entry in V1. Product availability/enablement is later admin tooling debt. Do not treat this as CF5 complete. Next program is not selected.
+Organizations can enable or disable shared ProductTemplates for new work through `/admin/products`. Do not treat Product Enablement as CF5 complete. Next program is not selected.
+
+## Product Enablement Admin V1
+
+```text
+PRODUCT_ENABLEMENT_ADMIN_V1 = COMPLETE
+OWNER_ACCEPTED_IMPLEMENTATION = YES
+INTEGRATED_ON_MAIN = YES
+PR_19 = MERGED
+MERGE_COMMIT = b082b1a8a9288aac59ae0d3a34915415500107e1
+PRODUCT_ENABLEMENT = ORGANIZATION_SCOPED
+CONFIGURATION_SURFACE = /admin/products
+AVAILABLE_MODES = ENABLED / DISABLED
+OWNER_WRITE = YES
+MEMBER_READ = YES
+MEMBER_WRITE = NO
+NEW_WORK_GATE = SERVER_AUTHORITATIVE
+CURRENT_TWO_PRODUCTS_DEFAULT = ENABLED
+DEFAULT_DERIVED_FROM_ALL_REGISTRY_TEMPLATES = NO
+PLATFORM_DEFAULT_ENABLED_TEMPLATE_CODES_V1 = PRD-LETTERS-FRONTLIT-PLEXI-AL06; PRD-ACM-CASSETTE-NONE
+FUTURE_UNCONFIGURED_PRODUCT = FAIL_CLOSED
+PRODUCT_ENABLEMENT_SCOPE = NEW_WORK_ONLY
+HISTORICAL_LIFECYCLE = PRESERVED
+HISTORICAL_REWRITE = NO
+MIGRATION = 032_organization_product_enablement_versions.sql
+PRODUCT_ENABLEMENT_VERSIONED = YES
+SAME_VALUE_SAVE = IDEMPOTENT
+VERSION_INCREMENT = ON_CHANGE
+ORG_ISOLATION = YES
+PRODUCT_ENABLEMENT_IS_PRODUCT_TRUTH = NO
+PRODUCT_TRUTH_CHANGED = NO
+SNAPSHOT_SCHEMA_CHANGED = NO
+CLIENT_PRODUCT_DEFINITION_AUTHORITY = REMOVED
+VALUES_CRV1_AUTHORITY = REQUIRED
+PRODUCT_ENABLEMENT_CONFIGURATION = DOMAIN_OWNED
+CF5 = NOT_STARTED
+CUSTOMER_OPERABLE_WITHOUT_CURSOR = YES
+NO_CLIENT_CODE_FORK = YES
+NEXT_PROGRAM_SELECTION = PENDING_ROADMAP_REVIEW
+NEXT_WAVE_AUTHORIZED = NO
+```
+
+Owner writes, member reads. ENABLED products appear for new work. DISABLED known products are hidden from the new-work catalog and refused by server Product routes with `product_not_enabled`. An unknown ProductTemplate remains `404`.
+
+The current Letters and ACM templates remain available by an explicit V1 compatibility default. A future ProductTemplate does not become available merely because it exists in the shared registry. It must be explicitly enabled.
+
+Disabling a product does not rewrite or block already-frozen Quote → Acceptance → Order → Production Release → Execution Plan → Execution records.
+
+Product enablement is an organization-level new-work availability rule. It is not persisted inside ProductDefinition, ProductTruth, crv1, QuoteSnapshot, OrderSnapshot, or AcceptedProductionSnapshot. This capability does not complete CF5. Next program selection remains pending.
