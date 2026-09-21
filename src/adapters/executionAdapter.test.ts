@@ -24,6 +24,7 @@ describe("presentExecutionPlan", () => {
             assignmentLabel: "CNC 4020",
             requiresProvider: true,
             canAssign: false,
+            canAssignProvider: false,
             canClaimStart: false,
             canComplete: false,
             requiresCompletedQuantity: true,
@@ -31,7 +32,14 @@ describe("presentExecutionPlan", () => {
             completedQuantityLabel: "0,25 m2",
             varianceLabel: "Conform planului",
             waitingFor: [],
-            eligibleProviders: [{ id: "mch:cnc", label: "CNC 4020" }],
+            eligibleProviders: [
+              {
+                id: "mch:cnc",
+                kind: "MACHINE",
+                kindLabel: "Utilaj",
+                label: "CNC 4020",
+              },
+            ],
           },
         ],
       },
@@ -42,6 +50,15 @@ describe("presentExecutionPlan", () => {
     expect(presented?.tasks[0]?.varianceLabel).toBe("Conform planului");
     expect(presented?.tasks[0]?.plannedQuantity).toBe(0.25);
     expect(presented?.tasks[0]?.operatorRelation).toBeNull();
+    expect(presented?.tasks[0]?.canAssignProvider).toBe(false);
+    expect(presented?.tasks[0]?.eligibleProviders).toEqual([
+      {
+        id: "mch:cnc",
+        kind: "MACHINE",
+        kindLabel: "Utilaj",
+        label: "CNC 4020",
+      },
+    ]);
   });
 
   it("reads the source job and required capability from server transport", () => {
@@ -67,6 +84,7 @@ describe("presentExecutionPlan", () => {
             requiresProvider: true,
             requiredCapabilityId: "CNC_ROUTING",
             canAssign: false,
+            canAssignProvider: false,
             canClaimStart: false,
             canComplete: false,
             requiresCompletedQuantity: true,
@@ -80,5 +98,29 @@ describe("presentExecutionPlan", () => {
     });
     expect(presented?.jobId).toBe("ord:1");
     expect(presented?.tasks[0]?.requiredCapabilityId).toBe("CNC_ROUTING");
+    expect(presented?.tasks[0]?.canAssign).toBe(false);
+    expect(presented?.tasks[0]?.canAssignProvider).toBe(false);
+  });
+
+  it("does not treat domain canAssign as viewer mutation permission", () => {
+    const presented = presentExecutionPlan({
+      executionPlan: {
+        plan: { planId: "exp:1", productLabel: "Litere", inscription: "NORD" },
+        tasks: [
+          {
+            taskId: "task:1",
+            processLabel: "Debitare",
+            status: "PLANNED",
+            canAssign: true,
+            eligibleProviders: [
+              { id: "mch:b", kind: "MACHINE", kindLabel: "Utilaj", label: "CNC B" },
+            ],
+          },
+        ],
+      },
+    });
+    expect(presented?.tasks[0]?.canAssign).toBe(true);
+    expect(presented?.tasks[0]?.canAssignProvider).toBe(false);
+    expect(presented?.tasks[0]?.eligibleProviders[0]?.id).toBe("mch:b");
   });
 });

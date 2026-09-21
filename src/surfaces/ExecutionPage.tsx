@@ -5,12 +5,13 @@ import {
   completeExecutionTask,
   startExecutionTask,
 } from "../api/lifecycle";
-import type { ExecutionTaskTransport } from "../api/types";
+import type { EligibleProviderTransport, ExecutionTaskTransport } from "../api/types";
 import { Button } from "../components/Button";
 import { InfoRow } from "../components/InfoRow";
 import { InlineAlert } from "../components/InlineAlert";
 import { LoadingFloor } from "../components/LoadingFloor";
 import { MeasurePair } from "../components/MeasurePair";
+import { SelectField } from "../components/SelectField";
 import { StatusBadge } from "../components/StatusBadge";
 import { SurfacePanel } from "../components/SurfacePanel";
 import { TextField } from "../components/TextField";
@@ -38,10 +39,71 @@ function firstActionableTask(
   tasks: readonly ExecutionTaskTransport[],
 ): ExecutionTaskTransport | null {
   return (
-    tasks.find((task) => task.canComplete || task.canClaimStart || task.canAssign) ??
+    tasks.find(
+      (task) => task.canComplete || task.canClaimStart || task.canAssignProvider,
+    ) ??
     tasks.find((task) => task.status !== "COMPLETED") ??
     tasks[0] ??
     null
+  );
+}
+
+function providerChoiceLabel(provider: EligibleProviderTransport): string {
+  return provider.kindLabel
+    ? `${provider.kindLabel} — ${provider.label}`
+    : provider.label;
+}
+
+function ProviderAssignmentControls({
+  task,
+  selectedProviderId,
+  pending,
+  onSelect,
+  onAssign,
+}: {
+  task: ExecutionTaskTransport;
+  selectedProviderId: string;
+  pending: boolean;
+  onSelect: (providerId: string) => void;
+  onAssign: (providerId: string) => void;
+}) {
+  const providers = task.eligibleProviders;
+  if (providers.length === 0) {
+    return null;
+  }
+  const onlyProvider = providers.length === 1 ? providers[0] : null;
+  const chosen = onlyProvider
+    ? onlyProvider
+    : (providers.find((provider) => provider.id === selectedProviderId) ?? null);
+  const assignableId = chosen?.id ?? "";
+  return (
+    <div className="stack">
+      {onlyProvider ? (
+        <p>Se alocă: {providerChoiceLabel(onlyProvider)}</p>
+      ) : (
+        <SelectField
+          id={`provider-${task.taskId}`}
+          label="Utilaj / zonă"
+          hint="Alege explicit utilajul sau zona. Nimic nu se alocă până alegi."
+          value={selectedProviderId}
+          disabled={pending}
+          options={providers.map((provider) => ({
+            value: provider.id,
+            label: providerChoiceLabel(provider),
+          }))}
+          onChange={onSelect}
+        />
+      )}
+      <div className="cluster">
+        <Button
+          variant="secondary"
+          disabled={pending || !assignableId}
+          onClick={() => onAssign(assignableId)}
+        >
+          {chosen ? `Alocă ${chosen.label}` : "Alocă utilajul"}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -86,6 +148,9 @@ export function ExecutionPage({
   const [actionState, setActionState] = useState<"idle" | "pending" | "error">("idle");
   const [actionError, setActionError] = useState<string | null>(null);
   const [actualDrafts, setActualDrafts] = useState<Record<string, string>>({});
+  const [selectedProviderByTask, setSelectedProviderByTask] = useState<
+    Record<string, string>
+  >({});
 
   function actualQuantityDraft(task: ExecutionTaskTransport): string {
     if (actualDrafts[task.taskId] !== undefined) {
@@ -97,9 +162,15 @@ export function ExecutionPage({
     return "";
   }
 
-  async function assign(task: ExecutionTaskTransport): Promise<void> {
-    const providerId = task.eligibleProviderIds[0];
-    if (!providerId) {
+  async function assign(
+    task: ExecutionTaskTransport,
+    providerId: string,
+  ): Promise<void> {
+    if (!task.canAssignProvider || !providerId) {
+      return;
+    }
+    const known = task.eligibleProviders.some((provider) => provider.id === providerId);
+    if (!known) {
       return;
     }
     setActionState("pending");
@@ -107,6 +178,11 @@ export function ExecutionPage({
     try {
       await assignTaskProvider(task.taskId, providerId);
       setActionState("idle");
+      setSelectedProviderByTask((current) => {
+        const next = { ...current };
+        delete next[task.taskId];
+        return next;
+      });
       invalidateAfterExecutionTaskChange(planId);
     } catch (error) {
       setActionState("error");
@@ -261,23 +337,39 @@ export function ExecutionPage({
               />
             ) : null}
             {currentTask.requiresProvider &&
-            currentTask.eligibleProviderIds.length === 0 &&
+            currentTask.assignmentLabel === "Nealocat" &&
+            currentTask.eligibleProviders.length === 0 &&
             currentTask.status !== "COMPLETED" ? (
               <InlineAlert tone="blocked" title="Utilaj lipsește">
                 Această sarcină cere un utilaj deja configurat în organizație. Execuția nu
                 inventează utilaje.
               </InlineAlert>
             ) : null}
+            {currentTask.canAssignProvider ? (
+              <ProviderAssignmentControls
+                task={currentTask}
+                selectedProviderId={selectedProviderByTask[currentTask.taskId] ?? ""}
+                pending={actionState === "pending"}
+                onSelect={(providerId) => {
+                  setSelectedProviderByTask((current) => ({
+                    ...current,
+                    [currentTask.taskId]: providerId,
+                  }));
+                }}
+                onAssign={(providerId) => void assign(currentTask, providerId)}
+              />
+            ) : currentTask.requiresProvider &&
+              currentTask.eligibleProviders.length > 0 &&
+              currentTask.status !== "COMPLETED" &&
+              currentTask.assignmentLabel === "Nealocat" ? (
+              <p>
+                Utilaje eligibile:{" "}
+                {currentTask.eligibleProviders
+                  .map((provider) => providerChoiceLabel(provider))
+                  .join(", ")}
+              </p>
+            ) : null}
             <div className="cluster">
-              {currentTask.canAssign ? (
-                <Button
-                  variant="secondary"
-                  disabled={actionState === "pending"}
-                  onClick={() => void assign(currentTask)}
-                >
-                  Alocă utilajul eligibil
-                </Button>
-              ) : null}
               {currentTask.canClaimStart ? (
                 <Button
                   disabled={actionState === "pending" || identified !== true}

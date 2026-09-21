@@ -74,6 +74,10 @@ import type { Hono } from "hono";
 import { getCookie } from "hono/cookie";
 import type { ProductSystemRuntime } from "./productSystem/runtime.js";
 import { getProductSystem, isOwner, type ApiContext, type ApiEnv } from "./cloud/context.js";
+import {
+  presentExecutionPlanForViewer,
+  viewerCanAssignProvider,
+} from "./execution/presentExecutionPlan.js";
 import { financialAccess } from "./financial/access.js";
 import { requireOwnerRole } from "./cloud/middleware.js";
 import { httpPathIdentity } from "./httpPathIdentity.js";
@@ -1039,9 +1043,9 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       );
       return c.json({
         created: stored.created,
-        executionPlan: scopeExecutionPlanView(
+        executionPlan: presentScopedExecutionPlan(
+          c,
           projectPlanView(runtime, stored.record),
-          financialAccess(c, "workshop"),
         ),
       });
     },
@@ -1060,10 +1064,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         return c.json({ error: "not_found" }, 404);
       }
       return c.json({
-        executionPlan: scopeExecutionPlanView(
-          projectPlanView(runtime, record),
-          financialAccess(c, "workshop"),
-        ),
+        executionPlan: presentScopedExecutionPlan(c, projectPlanView(runtime, record)),
       });
     },
   );
@@ -1080,13 +1081,13 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
     const snapshot = runtime.readProductionSnapshot(record.plan.sourceSnapshotId);
     const jobId = snapshot?.sourceOrderSnapshotId ?? null;
     return c.json({
-      executionPlan: scopeExecutionPlanView(
+      executionPlan: presentScopedExecutionPlan(
+        c,
         projectPlanView(
           runtime,
           record,
           session.ok ? session.person.personId : null,
         ),
-        financialAccess(c, "workshop"),
       ),
       job: jobId
         ? {
@@ -1475,11 +1476,21 @@ function respondTaskMutation(
   }
   return c.json({
     alreadyApplied: result.alreadyApplied,
-    executionPlan: scopeExecutionPlanView(
+    executionPlan: presentScopedExecutionPlan(
+      c,
       projectPlanView(runtime, result.record, operatorId),
-      financialAccess(c, "workshop"),
     ),
   });
+}
+
+function presentScopedExecutionPlan(
+  c: ApiContext,
+  view: ReturnType<typeof projectPlanView>,
+) {
+  return presentExecutionPlanForViewer(
+    scopeExecutionPlanView(view, financialAccess(c, "workshop")),
+    viewerCanAssignProvider(c),
+  );
 }
 
 function getPlanForTask(runtime: ProductSystemRuntime, taskId: string): ExecutionPlanRecord | null {

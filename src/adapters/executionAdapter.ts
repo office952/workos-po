@@ -1,4 +1,8 @@
-import type { ExecutionPlanTransport, ExecutionTaskTransport } from "../api/types";
+import type {
+  EligibleProviderTransport,
+  ExecutionPlanTransport,
+  ExecutionTaskTransport,
+} from "../api/types";
 import { asNumber, asRecord, asString, asStringList } from "./record";
 
 export function presentExecutionPlan(payload: unknown): ExecutionPlanTransport | null {
@@ -36,16 +40,6 @@ export function presentExecutionTask(value: unknown): ExecutionTaskTransport | n
     return null;
   }
   const measurable = asRecord(row.measurableQuantity);
-  const providers = Array.isArray(row.eligibleProviders) ? row.eligibleProviders : [];
-  const providerIds: string[] = [];
-  const providerLabels: string[] = [];
-  for (const provider of providers) {
-    const item = asRecord(provider);
-    if (item && typeof item.id === "string") {
-      providerIds.push(item.id);
-      providerLabels.push(asString(item.label) ?? item.id);
-    }
-  }
   return {
     taskId: row.taskId,
     processLabel: asString(row.processLabel) ?? "",
@@ -57,6 +51,7 @@ export function presentExecutionTask(value: unknown): ExecutionTaskTransport | n
     requiresProvider: row.requiresProvider === true,
     requiredCapabilityId: asString(row.requiredCapabilityId),
     canAssign: row.canAssign === true,
+    canAssignProvider: row.canAssignProvider === true,
     canClaimStart: row.canClaimStart === true || row.canStart === true,
     canComplete: row.canComplete === true,
     requiresCompletedQuantity: row.requiresCompletedQuantity === true,
@@ -69,11 +64,30 @@ export function presentExecutionTask(value: unknown): ExecutionTaskTransport | n
     completedQuantityLabel: asString(row.completedQuantityLabel),
     varianceLabel: asString(row.varianceLabel),
     waitingFor: asStringList(row.waitingFor),
-    eligibleProviderIds: providerIds,
-    eligibleProviderLabels: providerLabels,
+    eligibleProviders: presentEligibleProviders(row.eligibleProviders),
     startBlockReason: asString(row.startBlockReason),
     operatorRelation: asString(row.operatorRelation),
   };
+}
+
+function presentEligibleProviders(value: unknown): EligibleProviderTransport[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((provider) => {
+    const item = asRecord(provider);
+    if (!item || typeof item.id !== "string" || typeof item.label !== "string") {
+      return [];
+    }
+    return [
+      {
+        id: item.id,
+        kind: asString(item.kind) ?? "",
+        kindLabel: asString(item.kindLabel) ?? "",
+        label: item.label,
+      },
+    ];
+  });
 }
 
 function progressLabel(

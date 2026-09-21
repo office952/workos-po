@@ -6,6 +6,10 @@ import {
   scopeOrderSnapshot,
 } from "@workos-final/domain";
 import { getProductSystem, type ApiEnv } from "../cloud/context.js";
+import {
+  presentExecutionPlanForViewer,
+  viewerCanAssignProvider,
+} from "../execution/presentExecutionPlan.js";
 import { financialAccess } from "../financial/access.js";
 import { httpPathIdentity } from "../httpPathIdentity.js";
 
@@ -68,7 +72,12 @@ export function registerJobRoutes(app: Hono<ApiEnv>): void {
             progressLabel: job.progressLabel,
             blocked: job.needsAttention,
             attentionLabel: job.attentionLabel,
-            view: planView ? scopeExecutionPlanView(planView, executionAccess) : null,
+            view: planView
+              ? presentExecutionPlanForViewer(
+                  scopeExecutionPlanView(planView, executionAccess),
+                  viewerCanAssignProvider(c),
+                )
+              : null,
           }
         : null,
     });
