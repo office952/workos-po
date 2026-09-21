@@ -41,9 +41,9 @@ PRIMARY_USER_JOURNEY = COMPLETE
 PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
 PRIMARY_USER_JOURNEY_PROOF_DATE = 2026-09-20
 
-NEXT_PROGRAM_PRIORITY = WORKOS_CONFIGURATION_FIRST_FOUNDATION_V1
-NEXT_PROGRAM_STATUS = CF4_COMPLETE
-NEXT_PROGRAM_STARTED = YES
+NEXT_PROGRAM_PRIORITY = LETTERS_PRODUCT_TRUTH_V1
+NEXT_PROGRAM_STATUS = LETTERS_PRODUCT_TRUTH_V1_NOT_STARTED
+NEXT_PROGRAM_STARTED = NO
 CONFIGURATION_FIRST_CANON = docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md
 CONFIGURATION_FIRST_IMPLEMENTATION = CF1_COMPLETE_AND_CF2_CF3_COMPLETE_AND_CF4_COMPLETE
 CF1_COMMERCIAL_VERTICAL_V1 = COMPLETE
@@ -68,6 +68,10 @@ CF4_MERGE = COMPLETE
 CF4_MERGE_COMMIT = 1c91f9fd7f7d57bc91b16d1baed90eabee4581bb
 PR_12 = MERGED
 CF5 = NOT_STARTED
+STANDALONE_CF5_REQUIRED_BEFORE_LETTERS = NO
+REMAINING_CONFIGURATION_FIRST_WORK = DOMAIN_BY_DOMAIN_WHEN_REQUIRED
+LETTERS_PRODUCT_TRUTH_V1 = NOT_STARTED
+LETTERS_IMPLEMENTATION_AUTHORIZED = NO
 NEXT_WAVE_AUTHORIZED = NO
 FORMULA_CONFIGURABILITY_FULLY_DELIVERED = NO
 
@@ -213,9 +217,11 @@ Owner confirmation is not required merely for a calculation to run or for calcul
 
 ## Configuration-First Foundation V1
 
-Primary User Journey is complete. The living next program is Configuration-First: changeable business values must not permanently require source-code edits, and they must not remain silent in source.
+Primary User Journey is complete. Configuration-First remains canonical: changeable business values must not permanently require source-code edits, and they must not remain silent in source. Not every source constant is organization configuration.
 
 Architecture ownership: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
+
+The living next program after CF4 is Letters Product Truth V1. Standalone CF5 is not required first. Remaining Configuration-First work is domain-by-domain when actual product work requires it. Letters implementation is not authorized by this documentation realignment.
 
 ```text
 WORKOS = CONFIGURATION-FIRST BUSINESS ENGINE
@@ -245,7 +251,7 @@ NEXT_WAVE_AUTHORIZED = NO
 | CF2 | Narrow technical resolver / audit / snapshot provenance for three LIGHTING_FRONT_LED settings | COMPLETE | Owner-accepted and merged on main (`8e57361`, PR #10) |
 | CF3 | `/admin/technical` for the same three LIGHTING_FRONT_LED settings | COMPLETE | Owner-accepted and merged on main (`8e57361`, PR #10) |
 | CF4 | Narrow configurable formula foundation + `/admin/formulas` for three LIGHTING_FRONT_LED derived results | COMPLETE | Owner-accepted and merged on main (`1c91f9f`, PR #12) |
-| CF5 | Migrate remaining source-held technical settings / business values | NOT_STARTED | later Owner GO |
+| CF5 | Remaining Configuration-First migrations, only as domain-owned work when later product work requires them. Not a standalone mandatory gate before Letters. | NOT_STARTED | later domain-owned Owner GO |
 
 ```text
 ORGANIZATION_COMMERCIAL_POLICY = DEFAULTS
@@ -264,15 +270,50 @@ CF1 was previously recorded as `IMPLEMENTED_IN_REVIEW` while on the review branc
 
 CF2+CF3 technical configuration V1 is complete: organization-local versions for `ledPitchMm`, `ledModulePowerW`, and `psuReservePercent` only. Owner acceptance and merge on main are complete (`8e57361`, PR #10).
 
-CF4 narrow configurable formula foundation V1 is complete, Owner-accepted, and integrated on main through PR #12 / merge commit `1c91f9f`. It contains only the three LIGHTING_FRONT_LED derived formulas (`ledModuleQuantity`, `totalLedLoadW`, `requiredPsuCapacityW`), with one domain evaluator, typed structured AST, semantic save validation, organization-local versioning, migration `031_formula_versions.sql`, `/admin/formulas`, and frozen Quote → Order → Production formula provenance. `selectPsuUnits` remains code-owned. CF5 remains NOT_STARTED and unauthorized. Letters Product Truth and the next wave remain unauthorized.
+CF4 narrow configurable formula foundation V1 is complete, Owner-accepted, and integrated on main through PR #12 / merge commit `1c91f9f`. It contains only the three LIGHTING_FRONT_LED derived formulas (`ledModuleQuantity`, `totalLedLoadW`, `requiredPsuCapacityW`), with one domain evaluator, typed structured AST, semantic save validation, organization-local versioning, migration `031_formula_versions.sql`, `/admin/formulas`, and frozen Quote → Order → Production formula provenance. `selectPsuUnits` remains code-owned. CF5 remains NOT_STARTED and is not a standalone mandatory gate before Letters.
 
 CF1 does not migrate technical settings. CF2+CF3 migrates only the three LIGHTING_FRONT_LED settings. CF4 does not migrate PSU selection, ACM, Letters Product Truth, or remaining source-held values. Real Cloud/DB access remains unauthorized.
 
-After CF5, resume:
+## Letters Product Truth V1
 
-- Letters Product Truth
-- ACM Product Truth
-- member DAG corrections
-- Letters + ACM composition
-- execution expansion
-- planning / capacity
+```text
+NEXT_PROGRAM_PRIORITY = LETTERS_PRODUCT_TRUTH_V1
+NEXT_PROGRAM_STATUS = LETTERS_PRODUCT_TRUTH_V1_NOT_STARTED
+LETTERS_PRODUCT_TRUTH_V1 = NOT_STARTED
+LETTERS_IMPLEMENTATION_AUTHORIZED = NO
+STANDALONE_CF5_REQUIRED_BEFORE_LETTERS = NO
+REMAINING_CONFIGURATION_FIRST_WORK = DOMAIN_BY_DOMAIN_WHEN_REQUIRED
+CURRENT_FIRST_LETTERS_SKU = PRD-LETTERS-FRONTLIT-PLEXI-AL06
+MODEL = SPECIFIC_PRODUCT_TEMPLATE_SKU
+NEXT_WAVE_AUTHORIZED = NO
+```
+
+Current first Letters SKU is a specific product template. Fixed construction remains product identity, not organization-wide technical settings:
+
+```text
+face.materialFamily = plexiglas
+face.thicknessMm = 3
+face.opticalType = opal
+volume.materialFamily = aluminium
+volume.thicknessMm = 0.6
+back.materialFamily = forex
+back.thicknessMm = 10
+lighting.mode = front_lit
+```
+
+Current order/job options remain product option truth: volume depth 30 / 60 / 80 / 100 mm; face finish none / vinyl; volume finish none / vinyl / painted. Confirmed face area and confirmed perimeter remain job/operator inputs.
+
+These values describe this current SKU. They are not universal HUB MEDIA platform law. A later Owner Product Truth decision may change this SKU or add another.
+
+Different constructions such as other Plexiglas / aluminium / Forex thicknesses, halo or reverse illumination, or full aluminium should normally become additional product templates / SKUs / resource identities, not organization technical-setting overrides of this SKU. Do not implement those products now.
+
+After CF4, preferred living sequence:
+
+1. Letters Product Truth V1
+2. domain-owned Configuration-First migrations only when required by actual product work
+3. ACM Product Truth
+4. member DAG corrections / composition
+5. execution expansion
+6. planning / capacity
+
+This documentation does not authorize Letters implementation or those later items.

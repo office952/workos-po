@@ -34,6 +34,10 @@ CF4_MERGE = COMPLETE
 CF4_MERGE_COMMIT = 1c91f9fd7f7d57bc91b16d1baed90eabee4581bb
 PR_12 = MERGED
 CF5 = NOT_STARTED
+STANDALONE_CF5_REQUIRED_BEFORE_LETTERS = NO
+REMAINING_CONFIGURATION_FIRST_WORK = DOMAIN_BY_DOMAIN_WHEN_REQUIRED
+LETTERS_PRODUCT_TRUTH_V1 = NOT_STARTED
+LETTERS_IMPLEMENTATION_AUTHORIZED = NO
 NEXT_WAVE_AUTHORIZED = NO
 FORMULA_CONFIGURABILITY_FULLY_DELIVERED = NO
 ```
@@ -65,7 +69,8 @@ NO_CLIENT_CODE_FORK = YES
 HUB_MEDIA = VALIDATION_ORGANIZATION_NOT_UNIVERSAL_PRODUCT_LAW
 PRIMARY_USER_JOURNEY = COMPLETE
 PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
-NEXT_PROGRAM = WORKOS_CONFIGURATION_FIRST_FOUNDATION_V1
+NEXT_PROGRAM = LETTERS_PRODUCT_TRUTH_V1
+STANDALONE_CF5_REQUIRED_BEFORE_LETTERS = NO
 ```
 
 ## 1. Direction
@@ -111,6 +116,8 @@ SILENT_BURIED_BUSINESS_TRUTH = FORBIDDEN
 ```
 
 HUB MEDIA is a validation organization. It is not universal product law and must not be copied into platform constants.
+
+Not every source constant is organization configuration. Product identity, resource identity, job options, and engine invariants remain in their owning domains. Do not rewrite those domains into generic technical settings.
 
 ## 2. What this is not
 
@@ -820,16 +827,28 @@ Commercial administration is Commercial-owned. It is not a generic technical-set
 
 The architectural problem is source-held mutability, not a list of preferred replacement numbers.
 
-Current source-held technical, commercial, and product values are migration targets for CF5. Examples of the class of problem, not a work list authorized here:
+CF1–CF4 already own the organization-changeable commercial, lighting-setting, and lighting-formula values. Remaining source constants are not automatically a standalone CF5 leftover-settings migration. Classify first:
 
-- LED pitch, LED module power, and PSU reserve live in domain source while already labeled configurable
-- default commercial markup and VAT live in domain source
-- EUR currency and 0.01 rounding are fixed V1 constraints and must remain visible until they have a configuration contract
-- HUB MEDIA-specific catalogs and evidence must not be promoted to platform constants
+- product identity stays product-owned
+- job options stay product option / job truth
+- resource identities stay resource catalog
+- cost evidence stays Resources
+- engine invariants stay code-owned and visible
+
+Examples of later domain-owned work, not a generic CF5 settings table and not authorized here:
+
+- resource catalog ownership / configuration if later product work requires it
+- commercial currency / rounding if product requirements expand
+- future product option administration
+- other genuinely organization-changeable rules discovered by later Product Truth waves
+
+HUB MEDIA-specific catalogs and evidence must not be promoted to platform constants.
 
 ```text
 CHANGEABLE_BUSINESS_VALUES_IN_SOURCE = MIGRATION_TARGET_NOT_DESIRED_END_STATE
 NUMBER_SWAP_IN_TYPESCRIPT = NOT_CONFIGURATION_FIRST
+CF5_STANDALONE_WAVE = NOT_REQUIRED_NOW
+GENERIC_CF5_SETTINGS_TABLE = REJECTED
 ```
 
 ## 14. Administration direction
@@ -907,7 +926,7 @@ CF1  TYPED CONFIGURATION DOMAIN + PERSISTENCE FOUNDATION
 CF2  RESOLVER + VERSION + AUDIT + SNAPSHOT PROVENANCE
 CF3  BASIC ADMINISTRATION FOR TECHNICAL / COMMERCIAL / VARIANT CONFIGURATION
 CF4  SAFE CONFIGURABLE FORMULA FOUNDATION + ADMINISTRATION
-CF5  MIGRATE CURRENT SOURCE-HELD CHANGEABLE BUSINESS SETTINGS / RULES
+CF5  REMAINING DOMAIN-OWNED CONFIGURATION WORK WHEN REQUIRED, NOT A STANDALONE LETTERS GATE
 ```
 
 CF4 narrow V1 is complete, Owner-accepted, and integrated on main through
@@ -917,17 +936,22 @@ organization-local versions for `LIGHTING_FRONT_LED.ledModuleQuantity`,
 only. Representation is a typed structured AST. Evaluation lives only in
 `packages/domain`. Semantic save validation rejects structurally allowed but
 semantically invalid ASTs before persistence. There is no implicit starter
-runtime fallback. `selectPsuUnits` remains a code-owned engine formula. CF5
-and Letters remain unauthorized.
+runtime fallback. `selectPsuUnits` remains a code-owned engine formula.
 
-After CF5, resume in the living roadmap:
+Standalone CF5 is not required before Letters. CF5 remains NOT_STARTED and
+is not marked complete. Remaining Configuration-First work is domain-by-domain
+when later product work requires it. Do not create a generic CF5 settings table.
 
-- Letters Product Truth
-- ACM Product Truth
-- member DAG corrections
-- Letters + ACM composition
-- execution expansion
-- planning / capacity
+After CF4, preferred living sequence is owned by `docs/ROADMAP.md`:
+
+1. Letters Product Truth V1
+2. domain-owned Configuration-First migrations only when required by actual product work
+3. ACM Product Truth
+4. member DAG corrections / composition
+5. execution expansion
+6. planning / capacity
+
+This document does not authorize Letters implementation or those later items.
 
 ```text
 CF1_COMMERCIAL_VERTICAL_V1 = COMPLETE
@@ -947,6 +971,10 @@ CF4_MERGE = COMPLETE
 CF4_MERGE_COMMIT = 1c91f9fd7f7d57bc91b16d1baed90eabee4581bb
 PR_12 = MERGED
 CF5 = NOT_STARTED
+STANDALONE_CF5_REQUIRED_BEFORE_LETTERS = NO
+REMAINING_CONFIGURATION_FIRST_WORK = DOMAIN_BY_DOMAIN_WHEN_REQUIRED
+LETTERS_PRODUCT_TRUTH_V1 = NOT_STARTED
+LETTERS_IMPLEMENTATION_AUTHORIZED = NO
 CF5_OR_LATER = NOT_AUTHORIZED_BY_THIS_DOCUMENT
 NEXT_WAVE_AUTHORIZED = NO
 FORMULA_CONFIGURABILITY_FULLY_DELIVERED = NO
@@ -973,7 +1001,8 @@ SNAPSHOT_PROVENANCE = REQUIRED
 HISTORICAL_REWRITE = NO
 CUSTOMER_WITHOUT_CURSOR = REQUIRED
 PRIMARY_USER_JOURNEY = COMPLETE
-NEXT_PROGRAM = WORKOS_CONFIGURATION_FIRST_FOUNDATION_V1
+NEXT_PROGRAM = LETTERS_PRODUCT_TRUTH_V1
+STANDALONE_CF5_REQUIRED_BEFORE_LETTERS = NO
 FUNCTIONAL_WORKOS_FIRST = YES
 OPTIONAL_BUSINESS_AUTOMATION_MUST_NOT_CREATE_DEAD_END = YES
 SAFE_MANUAL_FALLBACK = REQUIRED_WHERE_SEMANTICALLY_VALID
