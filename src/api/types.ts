@@ -187,12 +187,18 @@ export type QuoteSnapshotTransport = {
   customerId: string | null;
   customerDisplayName: string | null;
   requestId: string | null;
+  requestReference: string | null;
   completeness: string | null;
   currency: string | null;
   lines: CostLineTransport[];
   total: number | null;
   financialVisible: boolean;
   commercial: CommercialPriceTransport | null;
+  stage: string | null;
+  stageLabel: string | null;
+  nextAction: string | null;
+  nextActionLabel: string | null;
+  orderSnapshotId: string | null;
 };
 
 export type CustomerTransport = {
@@ -208,21 +214,97 @@ export type RequestListItemTransport = {
   reference: string | null;
   customerId: string;
   customerDisplayName: string | null;
+  status: string | null;
   statusLabel: string;
   contextLabel: string | null;
-  updatedAt: string | null;
+  commercialProgress: string | null;
+  createdAt: string | null;
+  nextAction: string;
   nextActionLabel: string;
+  nextActionHref: string | null;
+  needsAttention: boolean;
+  attentionLabel: string | null;
+  linkedQuoteSnapshotId: string | null;
+  linkedQuoteProductCode: string | null;
+};
+
+export type RequestLinkedOfferTransport = {
+  quoteSnapshotId: string;
+  productCode: string;
+  reference: string | null;
+};
+
+export type RequestAttachmentTransport = {
+  attachmentId: string;
+  originalFileName: string;
+  sizeLabel: string;
+  createdAt: string;
+  downloadHref: string;
+};
+
+export type RequestInstallationReasonTransport = {
+  id: string;
+  label: string;
+};
+
+export type RequestInstallationScopeTransport = {
+  label: string;
+  eicCompleteness: string | null;
+  commercialCompleteness: string | null;
+  incompleteReasons: RequestInstallationReasonTransport[];
+};
+
+export type RequestInstallationOfferTransport = {
+  selected: boolean;
+  label: string;
+  mode: string | null;
+  selectionLocked: boolean;
+};
+
+export type RequestInstallationFactsTransport = {
+  version: number;
+  siteName: string | null;
+  street: string;
+  city: string;
+  county: string | null;
+  postalCode: string | null;
+  contactName: string | null;
+  contactPhone: string | null;
+  accessNotes: string | null;
+  measurementStatus: string;
+  mountingSurfaceWidthMm: number | null;
+  mountingSurfaceHeightMm: number | null;
+  installationElevationMm: number | null;
+  facadeType: string;
+  fixingMethod: string;
+  siteElectrical: string;
+  crewSize: number | null;
+  plannedDurationHours: number | null;
 };
 
 export type RequestDetailTransport = {
   requestId: string;
   title: string;
+  reference: string | null;
   description: string;
   customerId: string;
   customerDisplayName: string | null;
+  status: string | null;
   statusLabel: string;
+  commercialProgress: string | null;
+  commercialProgressLabel: string | null;
+  createdAt: string | null;
+  nextAction: string;
+  nextActionLabel: string;
+  canUploadAttachments: boolean;
+  linkedOffers: RequestLinkedOfferTransport[];
   linkedQuoteIds: string[];
   linkedQuoteProductCodes: string[];
+  attachments: RequestAttachmentTransport[];
+  installationOffer: RequestInstallationOfferTransport | null;
+  installationScope: RequestInstallationScopeTransport | null;
+  installationFacts: RequestInstallationFactsTransport | null;
+  canWriteInstallationFacts: boolean;
 };
 
 export type CatalogProductTransport = {
@@ -239,10 +321,15 @@ export type QuoteListItemTransport = {
   reference: string;
   inscription: string;
   customerDisplayName: string | null;
+  stage: string | null;
   stageLabel: string;
-  updatedAt: string | null;
+  createdAt: string | null;
+  nextAction: string;
   nextActionLabel: string;
+  needsAttention: boolean;
+  attentionLabel: string | null;
   requestId: string | null;
+  requestReference: string | null;
   orderSnapshotId: string | null;
 };
 
@@ -256,8 +343,10 @@ export type JobListItemTransport = {
   stageLabel: string;
   nextAction: string;
   nextActionLabel: string;
+  needsAttention: boolean;
+  attentionLabel: string | null;
   progressLabel: string | null;
-  updatedAt: string | null;
+  createdAt: string | null;
   releaseSnapshotId: string | null;
   planId: string | null;
   orderSnapshotId: string;

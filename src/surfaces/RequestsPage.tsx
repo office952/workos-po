@@ -12,10 +12,11 @@ import { SlicePage } from "../layout/SlicePage";
 import { formatTimestamp } from "../presentation/format";
 import { matchesSearch, uniqueLabels } from "../presentation/listFilter";
 import { statusTone } from "../presentation/statusTone";
+import { presentRequestWorklistAction } from "../presentation/worklistAction";
 import { requestHref } from "../routing/appRoute";
 
 const ALL = "all";
-const COLUMNS = ["Cerere", "Client", "Context", "Stare", "Actualizat", "Acțiune"] as const;
+const COLUMNS = ["Cerere", "Client", "Context", "Stare", "Creată", "Acțiune"] as const;
 
 export function RequestsPage() {
   const requests = useResource(resourceKeys.requests(), loadRequestList);
@@ -47,6 +48,7 @@ export function RequestsPage() {
             item.contextLabel,
             item.statusLabel,
             item.nextActionLabel,
+            item.attentionLabel,
           ])
         );
       }),
@@ -60,7 +62,7 @@ export function RequestsPage() {
       workspace="stack"
       eyebrow="Cereri"
       title="Cereri de ofertă"
-      lead="Deschide cererea lucrării și continuă către catalog."
+      lead="Deschide cererea lucrării și continuă către pasul canonic."
     >
       <SurfacePanel
         variant="flush"
@@ -100,22 +102,31 @@ export function RequestsPage() {
           }
           filteredEmpty={<EmptyState title="Nicio cerere nu corespunde filtrului." />}
         >
-          {visible.map((item) => (
-            <WorklistRow
-              key={item.requestId}
-              variant="registry"
-              href={requestHref(item.requestId)}
-              identity={item.reference || item.title}
-              identityDetail={
-                item.reference && item.reference !== item.title ? item.title : undefined
-              }
-              context={item.customerDisplayName ?? "Fără client"}
-              support={item.contextLabel ?? ""}
-              state={<StatusBadge label={item.statusLabel} tone={statusTone("workflow")} />}
-              meta={formatTimestamp(item.updatedAt) ?? ""}
-              actionLabel={item.nextActionLabel || "Deschide"}
-            />
-          ))}
+          {visible.map((item) => {
+            const action = presentRequestWorklistAction(item);
+            return (
+              <WorklistRow
+                key={item.requestId}
+                variant="registry"
+                detailHref={requestHref(item.requestId)}
+                actionHref={action.actionHref}
+                identity={item.reference || item.title}
+                identityDetail={
+                  [
+                    item.reference && item.reference !== item.title ? item.title : null,
+                    item.attentionLabel,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || undefined
+                }
+                context={item.customerDisplayName ?? "Fără client"}
+                support={item.contextLabel ?? ""}
+                state={<StatusBadge label={item.statusLabel} tone={statusTone("workflow")} />}
+                meta={formatTimestamp(item.createdAt) ?? ""}
+                actionLabel={action.actionLabel}
+              />
+            );
+          })}
         </CollectionBody>
       </SurfacePanel>
     </SlicePage>

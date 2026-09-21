@@ -1,5 +1,5 @@
 import type { QuoteListItemTransport } from "../api/types";
-import { asRecord, asString } from "./record";
+import { asBoolean, asRecord, asString } from "./record";
 
 export function presentQuoteList(payload: unknown): QuoteListItemTransport[] {
   const record = asRecord(payload);
@@ -9,30 +9,43 @@ export function presentQuoteList(payload: unknown): QuoteListItemTransport[] {
     return [];
   }
   return quotes.flatMap((item) => {
-    const row = asRecord(item);
-    if (
-      !row ||
-      typeof row.quoteSnapshotId !== "string" ||
-      typeof row.productCode !== "string"
-    ) {
-      return [];
-    }
-    return [
-      {
-        quoteSnapshotId: row.quoteSnapshotId,
-        productCode: row.productCode,
-        productLabel: asString(row.productLabel) ?? row.productCode,
-        reference: asString(row.reference) ?? row.quoteSnapshotId,
-        inscription: asString(row.inscription) ?? "",
-        customerDisplayName: asString(row.customerDisplayName),
-        stageLabel: asString(row.stageLabel) ?? asString(row.stage) ?? "—",
-        updatedAt: asString(row.createdAt) ?? asString(row.updatedAt),
-        nextActionLabel: asString(row.nextActionLabel) ?? "",
-        requestId: asString(row.requestId),
-        orderSnapshotId: asString(row.orderSnapshotId),
-      },
-    ];
+    const presented = presentQuoteListItem(item);
+    return presented ? [presented] : [];
   });
+}
+
+export function presentQuoteListItem(value: unknown): QuoteListItemTransport | null {
+  const row = asRecord(value);
+  if (
+    !row ||
+    typeof row.quoteSnapshotId !== "string" ||
+    typeof row.productCode !== "string"
+  ) {
+    return null;
+  }
+  return {
+    quoteSnapshotId: row.quoteSnapshotId,
+    productCode: row.productCode,
+    productLabel: asString(row.productLabel) ?? row.productCode,
+    reference: asString(row.reference) ?? row.quoteSnapshotId,
+    inscription: asString(row.inscription) ?? "",
+    customerDisplayName: asString(row.customerDisplayName),
+    stage: asString(row.stage),
+    stageLabel: asString(row.stageLabel) ?? asString(row.stage) ?? "—",
+    createdAt: asString(row.createdAt),
+    nextAction: asString(row.nextAction) ?? "",
+    nextActionLabel: asString(row.nextActionLabel) ?? "",
+    needsAttention: asBoolean(row.needsAttention) ?? false,
+    attentionLabel: asString(row.attentionLabel),
+    requestId: asString(row.requestId),
+    requestReference: asString(row.requestReference),
+    orderSnapshotId: asString(row.orderSnapshotId),
+  };
+}
+
+export function presentQuoteEnvelope(payload: unknown): QuoteListItemTransport | null {
+  const record = asRecord(payload);
+  return presentQuoteListItem(record?.quote ?? record?.overview ?? record);
 }
 
 export function presentAcceptanceId(payload: unknown): string | null {

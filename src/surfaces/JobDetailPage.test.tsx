@@ -126,5 +126,8 @@ describe("JobDetailPage", () => {
       "href",
       "/atelier?job=job-1",
     );
+    const headerAction = document.querySelector(".page-header__action");
+    expect(headerAction?.querySelector('a[href="/executie/exp-1?job=job-1"]')).not.toBeNull();
+    expect(headerAction).toHaveTextContent("Continuă execuția");
   });
 });

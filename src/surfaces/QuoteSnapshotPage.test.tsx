@@ -71,6 +71,8 @@ describe("QuoteSnapshotPage", () => {
     expect(screen.getByTestId("commercial-price")).toHaveTextContent("Preț net client");
     expect(screen.getByRole("button", { name: "Acceptă oferta" })).toBeEnabled();
     expect(document.querySelector(".lifecycle")).toBeNull();
+    expect(screen.queryByText("Înghețată")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Descarcă oferta PDF" })).toBeEnabled();
   });
 
   it("presents customer and request links only when the snapshot transport has them", async () => {
@@ -299,5 +301,112 @@ describe("QuoteSnapshotPage", () => {
     releaseTail();
     expect(await screen.findByRole("button", { name: "Acceptă oferta" })).toBeEnabled();
     expect(screen.getByText("Neacceptată")).toBeInTheDocument();
+  });
+
+  it("uses the canonical stage label from the quote envelope", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.endsWith("/acceptance") || url.endsWith("/order")) {
+          return Promise.resolve({
+            ok: false,
+            status: 404,
+            json: async () => ({ error: "not_found" }),
+          });
+        }
+        if (url.endsWith("/api/quotes/q-a")) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => ({
+              quote: {
+                quoteSnapshotId: "q-a",
+                productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+                stage: "QUOTE_CREATED",
+                stageLabel: "Creată",
+                nextAction: "ACCEPT_QUOTE",
+              },
+            }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            quoteSnapshot: {
+              quoteSnapshotId: "q-a",
+              productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+              productLabel: "Litere",
+              inscription: "NORD",
+              eic: { completeness: "COMPLETE", currency: "EUR", total: 1, lines: [] },
+            },
+          }),
+        });
+      }),
+    );
+
+    render(
+      <QuoteSnapshotPage
+        productCode="PRD-LETTERS-FRONTLIT-PLEXI-AL06"
+        quoteSnapshotId="q-a"
+      />,
+    );
+    expect(await screen.findByText("Creată")).toBeInTheDocument();
+    expect(screen.queryByText("Înghețată")).not.toBeInTheDocument();
+  });
+
+  it("surfaces a blocked server document response without inventing a PDF", async () => {
+    const fetchMock = vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      if (url.endsWith("/document")) {
+        return Promise.resolve({
+          ok: false,
+          status: 422,
+          headers: { get: () => "application/json" },
+          json: async () => ({
+            error: "service_quote_document_not_authorized",
+            reasons: ["Documentul nu este autorizat pentru această ofertă."],
+          }),
+        });
+      }
+      if (url.endsWith("/acceptance") || url.endsWith("/order")) {
+        return Promise.resolve({
+          ok: false,
+          status: 404,
+          json: async () => ({ error: "not_found" }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          quoteSnapshot: {
+            quoteSnapshotId: "q-a",
+            productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+            productLabel: "Litere",
+            inscription: "NORD",
+            eic: { completeness: "COMPLETE", currency: "EUR", total: 1, lines: [] },
+          },
+        }),
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <QuoteSnapshotPage
+        productCode="PRD-LETTERS-FRONTLIT-PLEXI-AL06"
+        quoteSnapshotId="q-a"
+      />,
+    );
+    await userEvent.setup().click(
+      await screen.findByRole("button", { name: "Descarcă oferta PDF" }),
+    );
+    expect(
+      await screen.findByText("Documentul nu este autorizat pentru această ofertă."),
+    ).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some((call) => String(call[0]).endsWith("/document"))).toBe(
+      true,
+    );
   });
 });

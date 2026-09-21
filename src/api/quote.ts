@@ -1,4 +1,4 @@
-import { getJson, postJson } from "./http";
+import { fetchDownload, getJson, postJson, type DownloadResult } from "./http";
 import type { QuoteFreezeRequest } from "./types";
 
 export function quoteFreezePath(productCode: string): string {
@@ -24,4 +24,15 @@ export async function fetchQuoteSnapshot(
   quoteSnapshotId: string,
 ): Promise<unknown> {
   return getJson(quoteSnapshotPath(productCode, quoteSnapshotId));
+}
+
+export function quoteDocumentPath(productCode: string, quoteSnapshotId: string): string {
+  return `${quoteSnapshotPath(productCode, quoteSnapshotId)}/document`;
+}
+
+export async function fetchQuoteDocument(
+  productCode: string,
+  quoteSnapshotId: string,
+): Promise<DownloadResult> {
+  return fetchDownload(quoteDocumentPath(productCode, quoteSnapshotId));
 }

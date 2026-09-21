@@ -70,6 +70,8 @@ export type RequestOverviewItem = {
   needsAttention: boolean;
   attentionLabel: string | null;
   linkedQuoteCount: number;
+  linkedQuoteSnapshotId: string | null;
+  linkedQuoteProductCode: string | null;
 };
 
 export type RequestOverviewSummary = {
@@ -102,6 +104,8 @@ export type RequestDetailProjection = {
   installationOffer: SiteInstallationRequestOfferView;
   installationFacts: SiteInstallationFacts | null;
   canWriteInstallationFacts: boolean;
+  nextAction: RequestOverviewNextAction;
+  nextActionLabel: string;
 };
 
 export function requestOverviewFilterLabel(filter: RequestOverviewFilter): string {
@@ -265,6 +269,7 @@ export function projectRequestOverviewItem(input: {
     status: input.request.status,
     hasLinkedQuotes: input.quotes.length > 0,
   });
+  const furthestQuote = furthestLinkedQuote(input.quotes);
   return {
     requestId: input.request.requestId,
     reference: input.request.reference,
@@ -289,6 +294,8 @@ export function projectRequestOverviewItem(input: {
     needsAttention: attention.needsAttention,
     attentionLabel: attention.attentionLabel,
     linkedQuoteCount: input.quotes.length,
+    linkedQuoteSnapshotId: furthestQuote?.quoteSnapshotId ?? null,
+    linkedQuoteProductCode: furthestQuote?.productCode ?? null,
   };
 }
 
@@ -364,6 +371,10 @@ export function projectRequestDetail(input: {
   const selected = input.request.optionalScopeIds.includes(SITE_INSTALLATION_SCOPE_ID);
   const installationFacts = selected ? (input.installationFacts ?? null) : null;
   const hasLinkedQuotes = input.quotes.length > 0;
+  const nextAction = deriveRequestOverviewNextAction({
+    status: input.request.status,
+    quotes: input.quotes,
+  });
   return {
     request: input.request,
     customerDisplayName: input.customerDisplayName,
@@ -395,5 +406,7 @@ export function projectRequestDetail(input: {
     }),
     installationFacts,
     canWriteInstallationFacts: selected && !hasLinkedQuotes,
+    nextAction,
+    nextActionLabel: requestOverviewNextActionLabel(nextAction),
   };
 }

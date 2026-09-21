@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { presentAcceptanceId, presentOrderSnapshotId } from "../adapters/quoteListAdapter";
-import { TransportError } from "../api/http";
+import { TransportError, readTransportReasons } from "../api/http";
+import { fetchQuoteDocument } from "../api/quote";
 import { postQuoteAcceptance, postQuoteOrder } from "../api/lifecycle";
 import { Button } from "../components/Button";
 import { InfoRow } from "../components/InfoRow";
@@ -11,10 +12,16 @@ import { SurfacePanel } from "../components/SurfacePanel";
 import { invalidateAfterAcceptQuote, invalidateAfterCreateOrder } from "../data/invalidation";
 import { writeResource } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
-import { loadQuoteAcceptance, loadQuoteOrder, loadQuoteSnapshot } from "../data/routeLoaders";
+import {
+  loadQuoteAcceptance,
+  loadQuoteEnvelope,
+  loadQuoteOrder,
+  loadQuoteSnapshot,
+} from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { CommercialPricePanel } from "../presentation/commercialPrice";
+import { triggerBrowserDownload } from "../presentation/download";
 import { presentCostLine, selectLineByResource } from "../presentation/costLine";
 import { presentContextMeta } from "../presentation/contextMeta";
 import { statusTone } from "../presentation/statusTone";
@@ -34,6 +41,9 @@ export function QuoteSnapshotPage({
   const snapshot = useResource(resourceKeys.quote(productCode, quoteSnapshotId), () =>
     loadQuoteSnapshot(productCode, quoteSnapshotId),
   );
+  const envelope = useResource(resourceKeys.quoteEnvelope(quoteSnapshotId), () =>
+    loadQuoteEnvelope(quoteSnapshotId),
+  );
   const acceptance = useResource(
     resourceKeys.quoteAcceptance(productCode, quoteSnapshotId),
     () => loadQuoteAcceptance(productCode, quoteSnapshotId),
@@ -43,6 +53,8 @@ export function QuoteSnapshotPage({
   );
   const [actionState, setActionState] = useState<"idle" | "pending" | "error">("idle");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [documentState, setDocumentState] = useState<"idle" | "pending" | "error">("idle");
+  const [documentError, setDocumentError] = useState<string | null>(null);
 
   async function accept(): Promise<void> {
     setActionState("pending");
@@ -90,7 +102,22 @@ export function QuoteSnapshotPage({
     }
   }
 
+  async function downloadDocument(): Promise<void> {
+    setDocumentState("pending");
+    setDocumentError(null);
+    const result = await fetchQuoteDocument(productCode, quoteSnapshotId);
+    if (!result.ok) {
+      const reasons = readTransportReasons(result.body);
+      setDocumentState("error");
+      setDocumentError(reasons[0] ?? "Documentul ofertei nu este disponibil.");
+      return;
+    }
+    triggerBrowserDownload(result.blob, result.filename ?? "oferta.pdf");
+    setDocumentState("idle");
+  }
+
   const presentedSnapshot = snapshot.data ?? null;
+  const stageLabel = envelope.data?.stageLabel ?? presentedSnapshot?.stageLabel;
   const profile = presentedSnapshot
     ? selectLineByResource(presentedSnapshot.lines, ALUMINIUM_RETURN_PROFILE_RESOURCE_ID)
     : null;
@@ -109,9 +136,12 @@ export function QuoteSnapshotPage({
       lead="Înregistrare comercială înghețată. Acceptarea păstrează această versiune."
       meta={presentContextMeta([
         presentedSnapshot?.customerDisplayName,
+        presentedSnapshot?.requestReference,
         presentedSnapshot?.inscription,
       ])}
-      status={<StatusBadge label="Înghețată" tone={statusTone("workflow")} />}
+      status={
+        stageLabel ? <StatusBadge label={stageLabel} tone={statusTone("workflow")} /> : null
+      }
       action={
         !acceptanceReady || !orderReady ? null : !acceptance.data ? (
           <Button disabled={actionState === "pending"} onClick={() => void accept()}>
@@ -173,6 +203,20 @@ export function QuoteSnapshotPage({
                 lipsește din înregistrarea înghețată.
               </InlineAlert>
             )}
+            <p>
+              <Button
+                variant="secondary"
+                disabled={documentState === "pending"}
+                onClick={() => void downloadDocument()}
+              >
+                Descarcă oferta PDF
+              </Button>
+            </p>
+            {documentError ? (
+              <InlineAlert tone="error" title="Documentul nu poate fi descărcat">
+                {documentError}
+              </InlineAlert>
+            ) : null}
             {actionError ? (
               <InlineAlert tone="error" title="Acțiunea a eșuat">
                 {actionError}

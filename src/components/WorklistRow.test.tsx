@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import { WorklistRow } from "./WorklistRow";
 
 describe("WorklistRow", () => {
@@ -67,5 +68,41 @@ describe("WorklistRow", () => {
     const row = screen.getByRole("button", { name: /Profil aluminiu/ });
     expect(row).toHaveAttribute("aria-pressed", "true");
     expect(row).not.toHaveAttribute("aria-current");
+  });
+
+  it("separates object identity from the named next action without nesting", () => {
+    render(
+      <WorklistRow
+        variant="registry"
+        detailHref="/cereri/req-1"
+        actionHref="/quotes/PRD/q-1"
+        identity="CRQ-104"
+        context="Atelier Nord"
+        actionLabel="Deschide oferta"
+      />,
+    );
+
+    const objectLink = screen.getByRole("link", { name: "CRQ-104" });
+    const actionLink = screen.getByRole("link", { name: "Deschide oferta" });
+    expect(objectLink).toHaveAttribute("href", "/cereri/req-1");
+    expect(actionLink).toHaveAttribute("href", "/quotes/PRD/q-1");
+    expect(objectLink.contains(actionLink)).toBe(false);
+    expect(actionLink.contains(objectLink)).toBe(false);
+  });
+
+  it("keeps a command action as a button, not a second destination", async () => {
+    const onAction = vi.fn();
+    render(
+      <WorklistRow
+        detailHref="/oferte/q-1"
+        actionCommand={onAction}
+        identity="OF-1"
+        actionLabel="Marchează acceptată"
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "OF-1" })).toHaveAttribute("href", "/oferte/q-1");
+    await userEvent.setup().click(screen.getByRole("button", { name: "Marchează acceptată" }));
+    expect(onAction).toHaveBeenCalledOnce();
   });
 });

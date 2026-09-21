@@ -9,6 +9,10 @@ export function invalidateAfterCreateRequest(customerId: string): void {
   invalidateResources(resourceKeys.requests(), resourceKeys.customer(customerId));
 }
 
+export function invalidateAfterRequestDetailChange(requestId: string): void {
+  invalidateResources(resourceKeys.request(requestId), resourceKeys.requests());
+}
+
 export function invalidateAfterAcceptQuote(): void {
   invalidateResources(resourceKeys.quotes());
 }

@@ -12,10 +12,11 @@ import { SlicePage } from "../layout/SlicePage";
 import { formatTimestamp } from "../presentation/format";
 import { matchesSearch, uniqueLabels } from "../presentation/listFilter";
 import { statusTone } from "../presentation/statusTone";
+import { presentQuoteWorklistAction } from "../presentation/worklistAction";
 import { quoteHref } from "../routing/appRoute";
 
 const ALL = "all";
-const COLUMNS = ["Ofertă", "Client", "Produs", "Stare", "Actualizat", "Acțiune"] as const;
+const COLUMNS = ["Ofertă", "Client", "Produs", "Stare", "Creată", "Acțiune"] as const;
 
 export function QuotesPage() {
   const quotes = useResource(resourceKeys.quotes(), loadQuoteList);
@@ -47,6 +48,8 @@ export function QuotesPage() {
             item.customerDisplayName,
             item.stageLabel,
             item.nextActionLabel,
+            item.requestReference,
+            item.attentionLabel,
           ])
         );
       }),
@@ -89,20 +92,27 @@ export function QuotesPage() {
           empty={<EmptyState title="Nu există oferte înghețate." />}
           filteredEmpty={<EmptyState title="Nicio ofertă nu corespunde filtrului." />}
         >
-          {visible.map((item) => (
-            <WorklistRow
-              key={item.quoteSnapshotId}
-              variant="registry"
-              href={quoteHref(item.productCode, item.quoteSnapshotId)}
-              identity={item.reference}
-              identityDetail={item.inscription || undefined}
-              context={item.customerDisplayName ?? "Fără client"}
-              support={item.productLabel}
-              state={<StatusBadge label={item.stageLabel} tone={statusTone("workflow")} />}
-              meta={formatTimestamp(item.updatedAt) ?? ""}
-              actionLabel={item.nextActionLabel || "Deschide"}
-            />
-          ))}
+          {visible.map((item) => {
+            const action = presentQuoteWorklistAction(item);
+            return (
+              <WorklistRow
+                key={item.quoteSnapshotId}
+                variant="registry"
+                detailHref={quoteHref(item.productCode, item.quoteSnapshotId)}
+                actionHref={action.actionHref}
+                identity={item.reference}
+                identityDetail={
+                  [item.inscription || null, item.attentionLabel].filter(Boolean).join(" · ") ||
+                  undefined
+                }
+                context={item.customerDisplayName ?? "Fără client"}
+                support={item.productLabel}
+                state={<StatusBadge label={item.stageLabel} tone={statusTone("workflow")} />}
+                meta={formatTimestamp(item.createdAt) ?? ""}
+                actionLabel={action.actionLabel}
+              />
+            );
+          })}
         </CollectionBody>
       </SurfacePanel>
     </SlicePage>

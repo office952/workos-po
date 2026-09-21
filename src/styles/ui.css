@@ -1132,6 +1132,54 @@ button.worklist-row {
   cursor: pointer;
 }
 
+.worklist-row--split {
+  cursor: default;
+}
+
+.worklist-row__object,
+.worklist-row__next {
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.worklist-row__object {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.worklist-row__next {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-azure-a1);
+  font: inherit;
+  font-size: var(--text-label);
+  font-weight: 500;
+  text-align: right;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.worklist-row__next:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.worklist-row__object:hover .worklist-row__title,
+.worklist-row__next:hover {
+  text-decoration: underline;
+}
+
+.worklist-row__object:focus-visible,
+.worklist-row__next:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
 .worklist-row:last-child {
   border-bottom: 0;
 }

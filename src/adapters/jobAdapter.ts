@@ -1,5 +1,5 @@
 import type { JobListItemTransport } from "../api/types";
-import { asRecord, asString } from "./record";
+import { asBoolean, asRecord, asString } from "./record";
 
 export function presentJobList(payload: unknown): JobListItemTransport[] {
   const record = asRecord(payload);
@@ -29,8 +29,10 @@ export function presentJobItem(value: unknown): JobListItemTransport | null {
     stageLabel: asString(row.stageLabel) ?? "—",
     nextAction: asString(row.nextAction) ?? "",
     nextActionLabel: asString(row.nextActionLabel) ?? "",
+    needsAttention: asBoolean(row.needsAttention) ?? false,
+    attentionLabel: asString(row.attentionLabel),
     progressLabel: asString(row.progressLabel),
-    updatedAt: asString(row.createdAt) ?? asString(row.updatedAt),
+    createdAt: asString(row.createdAt),
     releaseSnapshotId: asString(row.releaseSnapshotId),
     planId: asString(row.planId),
     orderSnapshotId: asString(row.orderSnapshotId) ?? row.jobId,

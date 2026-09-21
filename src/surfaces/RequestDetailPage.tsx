@@ -9,11 +9,14 @@ import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { presentContextMeta } from "../presentation/contextMeta";
 import { statusTone } from "../presentation/statusTone";
-import { catalogHref, quoteHref, requestHref } from "../routing/appRoute";
+import { presentRequestPrimaryAction } from "../presentation/worklistAction";
+import { quoteHref, requestHref } from "../routing/appRoute";
 import {
   readConfiguratorSession,
   writeConfiguratorSession,
 } from "../session/configuratorSession";
+import { RequestAttachmentsSection } from "./RequestAttachmentsSection";
+import { RequestInstallationSection } from "./RequestInstallationSection";
 
 type RequestDetailPageProps = {
   requestId: string;
@@ -22,6 +25,7 @@ type RequestDetailPageProps = {
 export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
   const request = useResource(resourceKeys.request(requestId), () => loadRequestDetail(requestId));
   const detail = request.data;
+  const primary = detail ? presentRequestPrimaryAction(detail) : null;
 
   useEffect(() => {
     if (!detail) {
@@ -37,14 +41,6 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
     });
   }, [detail]);
 
-  const catalogUrl = detail
-    ? catalogHref({
-        customerId: detail.customerId,
-        requestId: detail.requestId,
-        productCode: null,
-      })
-    : null;
-
   return (
     <SlicePage
       contextLabel="Cerere"
@@ -52,17 +48,17 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
       workspace="object"
       eyebrow="Cerere"
       title={detail?.title ?? "Cerere"}
-      lead="Alege produsul din catalog. Nu adăuga montaj pe această lucrare."
-      meta={presentContextMeta([detail?.customerDisplayName])}
+      lead={detail?.commercialProgressLabel ?? detail?.description ?? undefined}
+      meta={presentContextMeta([detail?.reference, detail?.customerDisplayName])}
       status={
         detail ? (
           <StatusBadge label={detail.statusLabel} tone={statusTone("workflow")} />
         ) : null
       }
       action={
-        catalogUrl ? (
-          <a className="hit" href={catalogUrl}>
-            <span className="button button--primary">Alege produsul din catalog</span>
+        primary ? (
+          <a className="hit" href={primary.actionHref}>
+            <span className="button button--primary">{primary.actionLabel}</span>
           </a>
         ) : null
       }
@@ -77,23 +73,23 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
           <SurfacePanel title="Descriere" label="Descriere">
             <p>{detail.description || "Fără descriere."}</p>
           </SurfacePanel>
-          {detail.linkedQuoteIds.length > 0 ? (
+          {detail.linkedOffers.length > 0 ? (
             <SurfacePanel variant="quiet" title="Oferte legate" label="Oferte legate">
-              {detail.linkedQuoteIds.map((quoteSnapshotId, index) => {
-                const productCode = detail.linkedQuoteProductCodes[index];
-                if (!productCode) {
-                  return null;
-                }
-                return (
-                  <p key={quoteSnapshotId}>
-                    <a className="text-link" href={quoteHref(productCode, quoteSnapshotId)}>
-                      Deschide oferta
-                    </a>
-                  </p>
-                );
-              })}
+              {detail.linkedOffers.map((offer) => (
+                <p key={offer.quoteSnapshotId}>
+                  <a className="text-link" href={quoteHref(offer.productCode, offer.quoteSnapshotId)}>
+                    {offer.reference ? `Deschide oferta ${offer.reference}` : "Deschide oferta"}
+                  </a>
+                </p>
+              ))}
             </SurfacePanel>
           ) : null}
+          <RequestAttachmentsSection
+            requestId={detail.requestId}
+            attachments={detail.attachments}
+            canUploadAttachments={detail.canUploadAttachments}
+          />
+          <RequestInstallationSection detail={detail} />
         </>
       ) : request.status !== "error" ? (
         <SurfacePanel title="Descriere" label="Descriere" busy>
