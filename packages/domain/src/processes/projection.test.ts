@@ -53,6 +53,12 @@ describe("operational process projection", () => {
       "letters-volume-painted",
     ]);
     expect(admin.compositions[0]?.composition.completeness).toBe("PARTIAL");
+    expect(admin.compositions[0]?.composition.executionReadiness).toBe("READY");
+    expect(admin.compositions[1]?.composition.executionReadiness).toBe("READY");
+    expect(admin.compositions[2]?.composition.executionReadiness).toBe("READY");
+    expect(admin.compositions[0]?.composition.executionReadinessLabel).toBe(
+      "Pregătită pentru execuție",
+    );
     expect(admin.compositions[0]?.composition.costCompleteness).toBe("COMPLETE");
     expect(admin.compositions[0]?.composition.costCompletenessLabel).toBe(
       "Complete pentru configurația curentă",

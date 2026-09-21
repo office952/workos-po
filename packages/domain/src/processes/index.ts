@@ -53,6 +53,7 @@ export {
   type ProviderRequirement,
 } from "./catalog.js";
 export {
+  EXECUTION_READINESS,
   LIGHTING_CALCULATION_READINESS,
   applyCompositionCostCompleteness,
   composeProductProcessTopology,
@@ -60,10 +61,13 @@ export {
   composeProductProcessesFromTruth,
   composeTypeProcessNodes,
   compositionNodeId,
+  deriveExecutionReadiness,
+  executionReadinessLabel,
   lettersProcessCompositionInspections,
   topologicalOrder,
   type CompositionCompleteness,
   type CompositionNodeReadiness,
+  type ExecutionReadiness,
   type LightingCalculationReadiness,
   type MissingProcessGap,
   type ProcessCompositionInspection,

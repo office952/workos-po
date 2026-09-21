@@ -92,6 +92,9 @@ export const MISSING_PROCESS_CLASSIFICATIONS = [
 export type MissingProcessClassification =
   (typeof MISSING_PROCESS_CLASSIFICATIONS)[number];
 
+export const EXECUTION_READINESS = ["READY", "BLOCKED"] as const;
+export type ExecutionReadiness = (typeof EXECUTION_READINESS)[number];
+
 export type ProcessCompositionNode = {
   id: string;
   processId: string;
@@ -130,7 +133,7 @@ export type ProductProcessComposition = {
   lightingCalculationReadinessLabel: string;
   costCompleteness: "PARTIAL" | "COMPLETE";
   costCompletenessLabel: string;
-  executionReadiness: "NOT_IMPLEMENTED";
+  executionReadiness: ExecutionReadiness;
   executionReadinessLabel: string;
   nodes: readonly ProcessCompositionNode[];
   derivedOrder: readonly string[];
@@ -300,6 +303,7 @@ function composeProductProcessTopologyFromResolved(
   const connected = applyProductDependencies(withProduct);
   const derivedOrder = topologicalOrder(connected);
   const missingProcesses = missingProcessesFor();
+  const executionReadiness = deriveExecutionReadiness(connected, missingProcesses);
   const { completeness, completenessReasons, technological } =
     compositionCompleteness(connected, missingProcesses);
   return {
@@ -316,12 +320,58 @@ function composeProductProcessTopologyFromResolved(
     ),
     costCompleteness: "PARTIAL",
     costCompletenessLabel: costCompletenessLabel("PARTIAL"),
-    executionReadiness: "NOT_IMPLEMENTED",
-    executionReadinessLabel: "Neimplementat",
+    executionReadiness,
+    executionReadinessLabel: executionReadinessLabel(executionReadiness),
     nodes: sortNodes(connected),
     derivedOrder,
     missingProcesses,
   };
+}
+
+export function deriveExecutionReadiness(
+  nodes: readonly ProcessCompositionNode[],
+  missingProcesses: readonly MissingProcessGap[] = [],
+): ExecutionReadiness {
+  if (nodes.length === 0) {
+    return "BLOCKED";
+  }
+  if (nodes.some((item) => item.nodeReadiness === "REQUIRED_BLOCKED")) {
+    return "BLOCKED";
+  }
+  if (missingProcesses.some((item) => missingProcessBlocksExecution(item.classification))) {
+    return "BLOCKED";
+  }
+  return "READY";
+}
+
+export function executionReadinessLabel(readiness: ExecutionReadiness): string {
+  switch (readiness) {
+    case "READY":
+      return "Pregătită pentru execuție";
+    case "BLOCKED":
+      return "Blocată pentru execuție";
+    default: {
+      const _exhaustive: never = readiness;
+      return _exhaustive;
+    }
+  }
+}
+
+function missingProcessBlocksExecution(
+  classification: MissingProcessClassification,
+): boolean {
+  switch (classification) {
+    case "REQUIRED_FOR_V1":
+    case "BLOCKED":
+    case "UNKNOWN_OWNER_DECISION":
+      return true;
+    case "LATER":
+      return false;
+    default: {
+      const _exhaustive: never = classification;
+      return _exhaustive;
+    }
+  }
 }
 
 function costAggregateFromEvaluations(
