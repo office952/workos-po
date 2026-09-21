@@ -40,6 +40,16 @@ describe("business boundary", () => {
     }
   });
 
+  it("does not add a frontend pricing or technical formula engine", () => {
+    const files = walk("src").filter(isProductSource);
+    for (const file of files) {
+      const text = readFileSync(file, "utf8");
+      expect(text, file).not.toContain("function evaluatePrice");
+      expect(text, file).not.toContain("function evaluateFormula");
+      expect(text, file).not.toContain("new Function(");
+    }
+  });
+
   it("keeps reference-slice fixtures out of product surfaces", () => {
     const files = walk("src").filter(isProductSource);
     const surfaceFiles = files.filter((file) =>

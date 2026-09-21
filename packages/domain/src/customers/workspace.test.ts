@@ -36,6 +36,8 @@ function requestItem(
     needsAttention: true,
     attentionLabel: "Cerere nouă",
     linkedQuoteCount: 0,
+    linkedQuoteSnapshotId: null,
+    linkedQuoteProductCode: null,
     ...overrides,
   };
 }

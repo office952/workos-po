@@ -18,6 +18,8 @@ export function presentQuoteSnapshot(
   const eic = asRecord(snapshot.eic);
   const customer = asRecord(snapshot.customer);
   const request = asRecord(record?.request);
+  const overview = asRecord(record?.quote) ?? asRecord(record?.overview);
+  const order = asRecord(record?.order);
   return {
     quoteSnapshotId: snapshot.quoteSnapshotId,
     productCode: snapshot.productCode,
@@ -33,12 +35,19 @@ export function presentQuoteSnapshot(
     requestId:
       asString(request?.requestId) ??
       asString(record?.requestId) ??
-      asString(snapshot.requestId),
+      asString(snapshot.requestId) ??
+      asString(overview?.requestId),
+    requestReference: asString(request?.reference) ?? asString(overview?.requestReference),
     completeness: typeof eic?.completeness === "string" ? eic.completeness : null,
     currency: typeof eic?.currency === "string" ? eic.currency : null,
     lines: presentCostLines(eic?.lines),
     total: typeof eic?.total === "number" ? eic.total : null,
     financialVisible: eic !== null,
     commercial: presentCommercialPrice(snapshot.commercial),
+    stage: asString(overview?.stage),
+    stageLabel: asString(overview?.stageLabel),
+    nextAction: asString(overview?.nextAction),
+    nextActionLabel: asString(overview?.nextActionLabel),
+    orderSnapshotId: asString(overview?.orderSnapshotId) ?? asString(order?.orderSnapshotId),
   };
 }

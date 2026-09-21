@@ -17,6 +17,7 @@ import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { formatTimestamp } from "../presentation/format";
 import { statusTone } from "../presentation/statusTone";
+import { presentRequestWorklistAction } from "../presentation/worklistAction";
 import { catalogHref, clientHref, requestHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
 import {
@@ -94,11 +95,7 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
       eyebrow="Client"
       title={customer.data?.displayName ?? "Client"}
       lead="Deschide o cerere existentă sau creează cererea pentru această lucrare."
-      meta={
-        [customer.data?.city, "Montajul nu face parte din această lucrare."]
-          .filter(Boolean)
-          .join(" · ")
-      }
+      meta={customer.data?.city ?? undefined}
       status={
         customer.data ? (
           <StatusBadge
@@ -142,22 +139,30 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
             />
           }
         >
-          {mine.map((item) => (
-            <WorklistRow
-              key={item.requestId}
-              variant="commercial"
-              href={requestHref(item.requestId)}
-              identity={item.title}
-              identityDetail={
-                [item.reference && item.reference !== item.title ? item.reference : null, formatTimestamp(item.updatedAt)]
-                  .filter(Boolean)
-                  .join(" · ") || undefined
-              }
-              context={item.contextLabel ?? item.statusLabel}
-              state={<StatusBadge label={item.statusLabel} tone={statusTone("workflow")} />}
-              actionLabel={item.nextActionLabel || "Deschide"}
-            />
-          ))}
+          {mine.map((item) => {
+            const action = presentRequestWorklistAction(item);
+            return (
+              <WorklistRow
+                key={item.requestId}
+                variant="commercial"
+                detailHref={requestHref(item.requestId)}
+                actionHref={action.actionHref}
+                identity={item.title}
+                identityDetail={
+                  [
+                    item.reference && item.reference !== item.title ? item.reference : null,
+                    formatTimestamp(item.createdAt),
+                    item.attentionLabel,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || undefined
+                }
+                context={item.contextLabel ?? item.statusLabel}
+                state={<StatusBadge label={item.statusLabel} tone={statusTone("workflow")} />}
+                actionLabel={action.actionLabel}
+              />
+            );
+          })}
         </CollectionBody>
         {customer.data ? (
           <div className="ui-panel__pad">

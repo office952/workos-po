@@ -25,9 +25,13 @@ describe("JobsPage", () => {
                   customerDisplayName: "ALPHA CLIMA DEMO SRL",
                   stage: "IN_EXECUTION",
                   stageLabel: "În execuție",
+                  nextAction: "CONTINUE_EXECUTION",
                   nextActionLabel: "Continuă execuția",
                   progressLabel: "0 / 2",
                   createdAt: "2026-09-21T10:00:00.000Z",
+                  planId: "exp-1",
+                  needsAttention: true,
+                  attentionLabel: "Lipsă utilaj dedicat",
                 },
               ],
             },
@@ -43,5 +47,12 @@ describe("JobsPage", () => {
     expect(planning).toHaveAttribute("href", "/planificare");
     expect(planning.closest(".page-header__action")).not.toBeNull();
     expect(document.querySelector(".app-shell__nav")).toBeNull();
+    expect(screen.getByRole("link", { name: /ALPHA/ })).toHaveAttribute("href", "/lucrari/job-1");
+    expect(screen.getByRole("link", { name: "Continuă execuția" })).toHaveAttribute(
+      "href",
+      "/executie/exp-1",
+    );
+    expect(screen.getByText(/Lipsă utilaj dedicat/)).toBeInTheDocument();
+    expect(screen.queryByText("Actualizat")).not.toBeInTheDocument();
   });
 });

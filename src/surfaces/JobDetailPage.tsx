@@ -119,6 +119,12 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
           <Button disabled={actionState === "pending"} onClick={() => void createPlan()}>
             Creează planul de execuție
           </Button>
+        ) : job &&
+          (job.nextAction === "OPEN_EXECUTION" || job.nextAction === "CONTINUE_EXECUTION") &&
+          planId ? (
+          <a className="hit" href={executionHref(planId, { jobId })}>
+            <span className="button button--primary">{job.nextActionLabel}</span>
+          </a>
         ) : null
       }
     >

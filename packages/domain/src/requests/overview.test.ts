@@ -75,6 +75,8 @@ describe("request overview projection", () => {
     expect(item.commercialProgressLabel).toBe("Ofertă acceptată");
     expect(item.nextAction).toBe("OPEN_QUOTE");
     expect(item.nextActionLabel).toBe("Deschide oferta");
+    expect(item.linkedQuoteSnapshotId).toBe("qts:HUB");
+    expect(item.linkedQuoteProductCode).toBe("PRD-LETTERS-FRONTLIT-PLEXI-AL06");
     expect(item.href).toBe("/requests/crq%3A11111111-2222-3333-4444-555555555555");
     expect(item.nextActionHref).toContain("/quotes/");
     expect(item.nextActionHref).not.toContain("/requests/");
@@ -184,6 +186,8 @@ describe("request overview projection", () => {
     expect(detail.canUploadAttachments).toBe(true);
     expect(detail.attachments).toEqual([]);
     expect(detail.linkedOffers).toHaveLength(1);
+    expect(detail.nextAction).toBe("OPEN_QUOTE");
+    expect(detail.nextActionLabel).toBe("Deschide oferta");
     expect(detail.request.description).toContain("fațadă");
     expect(detail.request).not.toHaveProperty("eic");
     expect(detail.installationScope).toBeNull();

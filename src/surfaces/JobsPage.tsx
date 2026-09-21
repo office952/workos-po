@@ -12,10 +12,11 @@ import { SlicePage } from "../layout/SlicePage";
 import { formatTimestamp } from "../presentation/format";
 import { matchesSearch, uniqueLabels } from "../presentation/listFilter";
 import { statusTone } from "../presentation/statusTone";
+import { presentJobWorklistAction } from "../presentation/worklistAction";
 import { jobHref } from "../routing/appRoute";
 
 const ALL = "all";
-const COLUMNS = ["Lucrare", "Client", "Progres", "Stare", "Actualizat", "Acțiune"] as const;
+const COLUMNS = ["Lucrare", "Client", "Progres", "Stare", "Creată", "Acțiune"] as const;
 
 export function JobsPage() {
   const jobs = useResource(resourceKeys.jobs(), loadJobList);
@@ -47,6 +48,7 @@ export function JobsPage() {
             item.stageLabel,
             item.nextActionLabel,
             item.progressLabel,
+            item.attentionLabel,
           ])
         );
       }),
@@ -94,25 +96,36 @@ export function JobsPage() {
           empty={<EmptyState title="Nu există lucrări." />}
           filteredEmpty={<EmptyState title="Nicio lucrare nu corespunde filtrului." />}
         >
-          {visible.map((item) => (
-            <WorklistRow
-              key={item.jobId}
-              variant="registry"
-              href={jobHref(item.jobId)}
-              identity={item.inscription || item.productLabel}
-              identityDetail={item.inscription ? item.productLabel : undefined}
-              context={item.customerDisplayName ?? "—"}
-              support={item.progressLabel ?? ""}
-              state={
-                <StatusBadge
-                  label={item.stageLabel}
-                  tone={statusTone(item.stage === "EXECUTION_COMPLETED" ? "success" : "workflow")}
-                />
-              }
-              meta={formatTimestamp(item.updatedAt) ?? ""}
-              actionLabel={item.nextActionLabel || "Deschide"}
-            />
-          ))}
+          {visible.map((item) => {
+            const action = presentJobWorklistAction(item);
+            return (
+              <WorklistRow
+                key={item.jobId}
+                variant="registry"
+                detailHref={jobHref(item.jobId)}
+                actionHref={action.actionHref}
+                identity={item.inscription || item.productLabel}
+                identityDetail={
+                  [
+                    item.inscription ? item.productLabel : null,
+                    item.attentionLabel,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || undefined
+                }
+                context={item.customerDisplayName ?? "—"}
+                support={item.progressLabel ?? ""}
+                state={
+                  <StatusBadge
+                    label={item.stageLabel}
+                    tone={statusTone(item.stage === "EXECUTION_COMPLETED" ? "success" : "workflow")}
+                  />
+                }
+                meta={formatTimestamp(item.createdAt) ?? ""}
+                actionLabel={action.actionLabel}
+              />
+            );
+          })}
         </CollectionBody>
       </SurfacePanel>
     </SlicePage>

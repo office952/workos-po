@@ -9,6 +9,7 @@ export const resourceKeys = {
   quotes: () => "quotes",
   quote: (productCode: string, quoteSnapshotId: string) =>
     `quote:${productCode}:${quoteSnapshotId}`,
+  quoteEnvelope: (quoteSnapshotId: string) => `quote-envelope:${quoteSnapshotId}`,
   quoteAcceptance: (productCode: string, quoteSnapshotId: string) =>
     `quote-acceptance:${productCode}:${quoteSnapshotId}`,
   quoteOrder: (productCode: string, quoteSnapshotId: string) =>

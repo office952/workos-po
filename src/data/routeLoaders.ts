@@ -11,7 +11,12 @@ import {
   presentOperatorSession,
 } from "../adapters/operatorAdapter";
 import { presentQuoteSnapshot } from "../adapters/quoteAdapter";
-import { presentAcceptanceId, presentOrderSnapshotId, presentQuoteList } from "../adapters/quoteListAdapter";
+import {
+  presentAcceptanceId,
+  presentOrderSnapshotId,
+  presentQuoteEnvelope,
+  presentQuoteList,
+} from "../adapters/quoteListAdapter";
 import { presentRequestDetail, presentRequestList } from "../adapters/requestAdapter";
 import { presentCommercialPolicyAdmin } from "../adapters/commercialPolicyAdapter";
 import { presentResourcesAdmin } from "../adapters/resourcesAdapter";
@@ -28,7 +33,7 @@ import { fetchPlanningWorkload } from "../api/planning";
 import { fetchExecutionPlan, fetchQuoteAcceptance, fetchQuoteOrder } from "../api/lifecycle";
 import { fetchOperatorCandidates, fetchOperatorInbox, fetchOperatorSession } from "../api/operator";
 import { fetchQuoteSnapshot } from "../api/quote";
-import { fetchQuoteOverview } from "../api/quotes";
+import { fetchQuoteEnvelope, fetchQuoteOverview } from "../api/quotes";
 import { fetchRequest, fetchRequests } from "../api/requests";
 import { fetchCommercialPolicy } from "../api/commercialPolicy";
 import { fetchResourcesAdmin } from "../api/resources";
@@ -97,6 +102,14 @@ export async function loadQuoteSnapshot(productCode: string, quoteSnapshotId: st
     throw new Error("unpresentable");
   }
   return presented;
+}
+
+export async function loadQuoteEnvelope(quoteSnapshotId: string) {
+  try {
+    return presentQuoteEnvelope(await fetchQuoteEnvelope(quoteSnapshotId));
+  } catch {
+    return null;
+  }
 }
 
 export async function loadQuoteAcceptance(productCode: string, quoteSnapshotId: string) {

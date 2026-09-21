@@ -41,5 +41,6 @@ describe("ClientDetailPage", () => {
     expect(screen.getByText("Deschide catalogul pentru acest client")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Context client" })).not.toBeInTheDocument();
     expect(document.querySelector(".client-special-panel")).toBeNull();
+    expect(screen.queryByText(/Montajul nu face parte/i)).not.toBeInTheDocument();
   });
 });

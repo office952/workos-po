@@ -90,6 +90,66 @@ export async function putJson(path: string, body: unknown): Promise<unknown> {
   return result.body;
 }
 
+export async function postForm(path: string, body: FormData): Promise<unknown> {
+  const response = await fetch(path, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/json",
+    },
+    body,
+  });
+  if (!response.ok) {
+    notifyCloudUnauthorizedUnlessPublic(path, response.status);
+    const payload = await response.json().catch(() => null);
+    throw new TransportError(`Cererea ${path} a eșuat.`, response.status, payload);
+  }
+  return response.json().catch(() => null);
+}
+
+export type DownloadResult =
+  | { ok: true; blob: Blob; filename: string | null }
+  | { ok: false; status: number; body: unknown };
+
+export async function fetchDownload(path: string): Promise<DownloadResult> {
+  const response = await fetch(path, {
+    method: "GET",
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/pdf, application/json",
+    },
+  });
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!response.ok) {
+    notifyCloudUnauthorizedUnlessPublic(path, response.status);
+    const body = contentType.includes("application/json")
+      ? await response.json().catch(() => null)
+      : null;
+    return { ok: false, status: response.status, body };
+  }
+  return {
+    ok: true,
+    blob: await response.blob(),
+    filename: readContentDispositionFilename(response.headers.get("content-disposition")),
+  };
+}
+
+export function readContentDispositionFilename(header: string | null): string | null {
+  if (!header) {
+    return null;
+  }
+  const utf8 = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8?.[1]) {
+    try {
+      return decodeURIComponent(utf8[1]);
+    } catch {
+      return utf8[1];
+    }
+  }
+  const ascii = header.match(/filename="([^"]+)"/i) ?? header.match(/filename=([^;]+)/i);
+  return ascii?.[1]?.trim() ?? null;
+}
+
 export async function deleteJson(path: string): Promise<unknown> {
   const result = await sendJson("DELETE", path);
   if (!result.ok) {
