@@ -41,8 +41,11 @@ PRIMARY_USER_JOURNEY = COMPLETE
 PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
 PRIMARY_USER_JOURNEY_PROOF_DATE = 2026-09-20
 
-NEXT_PROGRAM_PRIORITY = LETTERS_PRODUCT_TRUTH_V1
-NEXT_PROGRAM_STATUS = LETTERS_PRODUCT_TRUTH_V1_NOT_STARTED
+CURRENT_PROGRAM = LETTERS_PRODUCT_TRUTH_V1
+CURRENT_PROGRAM_STATUS = COMPLETE
+NEXT_PROGRAM_PRIORITY = NOT_SELECTED
+NEXT_PROGRAM_STATUS = PENDING_ROADMAP_REVIEW
+NEXT_PROGRAM_SELECTION = PENDING_ROADMAP_REVIEW
 NEXT_PROGRAM_STARTED = NO
 CONFIGURATION_FIRST_CANON = docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md
 CONFIGURATION_FIRST_IMPLEMENTATION = CF1_COMPLETE_AND_CF2_CF3_COMPLETE_AND_CF4_COMPLETE
@@ -70,8 +73,17 @@ PR_12 = MERGED
 CF5 = NOT_STARTED
 STANDALONE_CF5_REQUIRED_BEFORE_LETTERS = NO
 REMAINING_CONFIGURATION_FIRST_WORK = DOMAIN_BY_DOMAIN_WHEN_REQUIRED
-LETTERS_PRODUCT_TRUTH_V1 = NOT_STARTED
-LETTERS_IMPLEMENTATION_AUTHORIZED = NO
+LETTERS_PRODUCT_TRUTH_V1 = COMPLETE
+LETTERS_PRODUCT_TRUTH_V1_OWNER_ACCEPTED_IMPLEMENTATION = YES
+LETTERS_PRODUCT_TRUTH_V1_INTEGRATED_ON_MAIN = YES
+LETTERS_PRODUCT_TRUTH_V1_MERGE = COMPLETE
+LETTERS_PRODUCT_TRUTH_V1_MERGE_COMMIT = bb3c80b7f500b8b71c15106140ca55af1faf70d9
+PR_15 = MERGED
+CLIENT_PRODUCT_DEFINITION_AUTHORITY = REMOVED
+VALUES_CRV1_AUTHORITY = REQUIRED
+GENERIC_ACCEPTANCE_BOUNDARY = CLOSED
+CURRENT_FIRST_LETTERS_SKU = PRD-LETTERS-FRONTLIT-PLEXI-AL06
+CURRENT_SKU_MODEL = SPECIFIC_PRODUCT_TEMPLATE_SKU
 NEXT_WAVE_AUTHORIZED = NO
 FORMULA_CONFIGURABILITY_FULLY_DELIVERED = NO
 
@@ -221,7 +233,7 @@ Primary User Journey is complete. Configuration-First remains canonical: changea
 
 Architecture ownership: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
-The living next program after CF4 is Letters Product Truth V1. Standalone CF5 is not required first. Remaining Configuration-First work is domain-by-domain when actual product work requires it. Letters implementation is not authorized by this documentation realignment.
+Letters Product Truth V1 is complete after Owner acceptance and merge of PR #15. Standalone CF5 is not required first. Remaining Configuration-First work is domain-by-domain when actual product work requires it. Next program selection is pending roadmap review.
 
 ```text
 WORKOS = CONFIGURATION-FIRST BUSINESS ENGINE
@@ -277,16 +289,28 @@ CF1 does not migrate technical settings. CF2+CF3 migrates only the three LIGHTIN
 ## Letters Product Truth V1
 
 ```text
-NEXT_PROGRAM_PRIORITY = LETTERS_PRODUCT_TRUTH_V1
-NEXT_PROGRAM_STATUS = LETTERS_PRODUCT_TRUTH_V1_NOT_STARTED
-LETTERS_PRODUCT_TRUTH_V1 = NOT_STARTED
-LETTERS_IMPLEMENTATION_AUTHORIZED = NO
+LETTERS_PRODUCT_TRUTH_V1 = COMPLETE
+OWNER_ACCEPTED_IMPLEMENTATION = YES
+INTEGRATED_ON_MAIN = YES
+PR_15 = MERGED
+MERGE_COMMIT = bb3c80b7f500b8b71c15106140ca55af1faf70d9
+CLIENT_PRODUCT_DEFINITION_AUTHORITY = REMOVED
+VALUES_CRV1_AUTHORITY = REQUIRED
+GENERIC_ACCEPTANCE_BOUNDARY = CLOSED
 STANDALONE_CF5_REQUIRED_BEFORE_LETTERS = NO
 REMAINING_CONFIGURATION_FIRST_WORK = DOMAIN_BY_DOMAIN_WHEN_REQUIRED
 CURRENT_FIRST_LETTERS_SKU = PRD-LETTERS-FRONTLIT-PLEXI-AL06
 MODEL = SPECIFIC_PRODUCT_TEMPLATE_SKU
+CUSTOMER_OPERABLE_WITHOUT_CURSOR = YES_FOR_EXISTING_SKU
+NO_CLIENT_CODE_FORK = YES
+PRODUCT_ENABLEMENT = LATER_ADMIN_TOOLING_DEBT
+NEXT_PROGRAM_SELECTION = PENDING_ROADMAP_REVIEW
 NEXT_WAVE_AUTHORIZED = NO
 ```
+
+Accepted product mutation authority is server ProductTemplate + FormSchema + DraftValues + resolved organization technical settings + resolved organization formulas + crv1, reconstructed on the server. A client-submitted ProductDefinition is not accepted mutation authority. `/compile` remains a diagnostic/compile contract. Definition-only confirm, quote freeze, and accepted production fail closed.
+
+A company that does not use Letters may still see the catalog entry in V1. Product availability/enablement is later admin tooling debt.
 
 Current first Letters SKU is a specific product template. Fixed construction remains product identity, not organization-wide technical settings:
 
@@ -316,4 +340,4 @@ After CF4, preferred living sequence:
 5. execution expansion
 6. planning / capacity
 
-This documentation does not authorize Letters implementation or those later items.
+Letters Product Truth V1 is complete. This documentation does not select or authorize ACM Product Truth or those later items.
