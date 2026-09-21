@@ -16,6 +16,7 @@ import { presentCommercialPolicyAdmin } from "../adapters/commercialPolicyAdapte
 import { presentResourcesAdmin } from "../adapters/resourcesAdapter";
 import { presentFormulasAdmin } from "../adapters/formulasAdapter";
 import { presentTechnicalSettingsAdmin } from "../adapters/technicalSettingsAdapter";
+import { presentProductEnablementAdmin } from "../adapters/productEnablementAdapter";
 import { fetchProductCatalog } from "../api/catalog";
 import { fetchCustomer, fetchCustomers } from "../api/customers";
 import { fetchHealth } from "../api/health";
@@ -29,6 +30,7 @@ import { fetchCommercialPolicy } from "../api/commercialPolicy";
 import { fetchResourcesAdmin } from "../api/resources";
 import { fetchFormulas } from "../api/formulas";
 import { fetchTechnicalSettings } from "../api/technicalSettings";
+import { fetchProductEnablement } from "../api/productEnablement";
 import { fetchSeller } from "../api/seller";
 
 export async function loadHealthPresentation(): Promise<HealthPresentation> {
@@ -165,6 +167,14 @@ export async function loadTechnicalSettingsAdmin() {
 
 export async function loadFormulasAdmin() {
   const presented = presentFormulasAdmin(await fetchFormulas());
+  if (!presented) {
+    throw new Error("unpresentable");
+  }
+  return presented;
+}
+
+export async function loadProductEnablementAdmin() {
+  const presented = presentProductEnablementAdmin(await fetchProductEnablement());
   if (!presented) {
     throw new Error("unpresentable");
   }

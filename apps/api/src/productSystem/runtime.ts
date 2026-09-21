@@ -1,5 +1,6 @@
 import {
   presentProductSystem,
+  projectNewWorkProductCatalog,
   type AcceptedProductionSnapshot,
   type DisplayLabelCatalog,
   type ExecutionPlanRecord,
@@ -66,6 +67,10 @@ import {
   type CommercialPolicyDraftValues,
   type CommercialPolicyResolution,
   type CommercialPolicyVersionRecord,
+  type CatalogTreeNode,
+  type PersistedProductEnablementVersion,
+  type ProductEnablementDraft,
+  type ProductEnablementResolution,
   type TechnicalSettingActor,
   type TechnicalSettingDraftValue,
   type PersistedTechnicalSettingVersion,
@@ -187,6 +192,12 @@ import {
   type FormulaSaveResult,
 } from "../product/formulaStore.js";
 import {
+  listProductEnablementVersions,
+  persistProductEnablementSave,
+  resolveStoredProductEnablement,
+  type ProductEnablementSaveResult,
+} from "../product/productEnablementStore.js";
+import {
   getAcceptedProductionSnapshot,
   getAcceptedProductionSnapshotByOrder,
   insertAcceptedProductionSnapshot,
@@ -273,6 +284,13 @@ export type ProductSystemRuntime = {
     drafts: readonly FormulaDraftExpression[],
     actor: FormulaActor,
   ): FormulaSaveResult;
+  listProductEnablementVersions(): PersistedProductEnablementVersion[];
+  resolveProductEnablement(): ProductEnablementResolution;
+  saveProductEnablement(
+    drafts: readonly ProductEnablementDraft[],
+    actorUserId: string | null,
+  ): ProductEnablementSaveResult;
+  presentNewWorkCatalog(): CatalogTreeNode[];
   persistQuoteSnapshot(snapshot: QuoteSnapshot): {
     created: boolean;
     snapshot: QuoteSnapshot;
@@ -656,6 +674,22 @@ export function createProductSystemRuntimeFromOpenDb(
     },
     saveFormulas(drafts, actor) {
       return persistFormulaSave(db, drafts, actor);
+    },
+    listProductEnablementVersions() {
+      return listProductEnablementVersions(db);
+    },
+    resolveProductEnablement() {
+      return resolveStoredProductEnablement(db);
+    },
+    saveProductEnablement(drafts, actorUserId) {
+      return persistProductEnablementSave(db, drafts, actorUserId);
+    },
+    presentNewWorkCatalog() {
+      const resolution = resolveStoredProductEnablement(db);
+      return projectNewWorkProductCatalog(
+        presentationReuse.labels(),
+        resolution.ok ? resolution.enabledTemplateCodes : [],
+      );
     },
     persistQuoteSnapshot(snapshot) {
       return insertQuoteSnapshot(db, snapshot);

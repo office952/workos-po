@@ -65,6 +65,10 @@ import {
   type ProductDefinition,
   type ComponentTypeId,
   technicalSettingDefinitionsForTemplate,
+  PRODUCT_NOT_ENABLED_FOR_NEW_WORK,
+  PRODUCT_NOT_ENABLED_FOR_NEW_WORK_REASON,
+  getProductTemplate,
+  isTemplateEnabledForNewWork,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
 import { getCookie } from "hono/cookie";
@@ -334,12 +338,16 @@ function readReviewedDraft(body: unknown): {
 export function registerProductRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/product-catalog", (c) => {
     const runtime = getProductSystem(c);
-    return c.json({ tree: runtime.present().catalog });
+    return c.json({ tree: runtime.presentNewWorkCatalog() });
   });
 
   app.get("/api/products/:productCode", (c) => {
     const runtime = getProductSystem(c);
     const productCode = c.req.param("productCode");
+    const blocked = refuseDisabledNewWork(runtime, productCode);
+    if (blocked) {
+      return c.json(blocked.body, blocked.status);
+    }
     const presented = runtime.present();
     const template = presented.template(productCode);
     const formSchema = presented.formSchema(productCode);
@@ -352,6 +360,10 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/products/:productCode/process-composition", (c) => {
     const runtime = getProductSystem(c);
     const productCode = c.req.param("productCode");
+    const blocked = refuseDisabledNewWork(runtime, productCode);
+    if (blocked) {
+      return c.json(blocked.body, blocked.status);
+    }
     const template = runtime.present().template(productCode);
     if (!template) {
       return c.json({ error: "not_found" }, 404);
@@ -389,6 +401,10 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
   app.post("/api/products/:productCode/compile", async (c) => {
     const runtime = getProductSystem(c);
     const productCode = c.req.param("productCode");
+    const blocked = refuseDisabledNewWork(runtime, productCode);
+    if (blocked) {
+      return c.json(blocked.body, blocked.status);
+    }
     const presented = runtime.present();
     const template = presented.template(productCode);
     const formSchema = presented.formSchema(productCode);
@@ -407,6 +423,10 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
   app.post("/api/products/:productCode/preview", async (c) => {
     const runtime = getProductSystem(c);
     const productCode = c.req.param("productCode");
+    const blocked = refuseDisabledNewWork(runtime, productCode);
+    if (blocked) {
+      return c.json(blocked.body, blocked.status);
+    }
     const presented = runtime.present();
     const template = presented.template(productCode);
     const formSchema = presented.formSchema(productCode);
@@ -1171,11 +1191,44 @@ function confirmFailure(
   };
 }
 
+function refuseDisabledNewWork(
+  runtime: ProductSystemRuntime,
+  productCode: string,
+): { status: 404 | 409; body: Record<string, unknown> } | null {
+  if (!getProductTemplate(productCode)) {
+    return { status: 404, body: { error: "not_found" } };
+  }
+  const resolution = runtime.resolveProductEnablement();
+  if (!resolution.ok) {
+    return {
+      status: 409,
+      body: {
+        error: resolution.error,
+        reasons: [resolution.reason],
+      },
+    };
+  }
+  if (!isTemplateEnabledForNewWork(productCode, resolution)) {
+    return {
+      status: 409,
+      body: {
+        error: PRODUCT_NOT_ENABLED_FOR_NEW_WORK,
+        reasons: [PRODUCT_NOT_ENABLED_FOR_NEW_WORK_REASON],
+      },
+    };
+  }
+  return null;
+}
+
 function compileAcceptedProduct(
   runtime: ProductSystemRuntime,
   productCode: string,
   body: unknown,
 ) {
+  const blocked = refuseDisabledNewWork(runtime, productCode);
+  if (blocked) {
+    return { ok: false as const, status: blocked.status, body: blocked.body };
+  }
   noteRuntimePresent();
   const presented = runtime.present();
   const template = presented.template(productCode);

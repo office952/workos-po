@@ -231,10 +231,15 @@ export function ConfiguratorPage({
           }
           setPreview(presented);
           setPreviewState("ready");
-        } catch {
+        } catch (error) {
           if (!cancelled) {
             setPreviewState("error");
-            setPreviewError("Previzualizarea nu este disponibilă.");
+            setPreviewError(
+              error instanceof TransportError
+                ? (readTransportReasons(error.body)[0] ??
+                    "Previzualizarea nu este disponibilă.")
+                : "Previzualizarea nu este disponibilă.",
+            );
           }
         }
       })();
@@ -287,8 +292,11 @@ export function ConfiguratorPage({
     } catch (error) {
       setConfirmState("error");
       setConfirmError(
-        error instanceof TransportError && error.status === 409
-          ? "Configurația s-a schimbat. Reia previzualizarea."
+        error instanceof TransportError
+          ? (readTransportReasons(error.body)[0] ??
+              (error.status === 409
+                ? "Configurația s-a schimbat. Reia previzualizarea."
+                : "Confirmarea a eșuat."))
           : "Confirmarea a eșuat.",
       );
     }

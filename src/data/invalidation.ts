@@ -63,6 +63,7 @@ export function invalidateAfterCloudBoundaryChange(): void {
     resourceKeys.commercialAdmin(),
     resourceKeys.technicalAdmin(),
     resourceKeys.formulasAdmin(),
+    resourceKeys.productEnablementAdmin(),
   );
   invalidateResourcePrefix("customer:");
   invalidateResourcePrefix("request:");
@@ -85,4 +86,8 @@ export function invalidateAfterTechnicalSettingsChange(): void {
 
 export function invalidateAfterFormulasChange(): void {
   invalidateResources(resourceKeys.formulasAdmin());
+}
+
+export function invalidateAfterProductEnablementChange(): void {
+  invalidateResources(resourceKeys.productEnablementAdmin(), resourceKeys.catalog());
 }
