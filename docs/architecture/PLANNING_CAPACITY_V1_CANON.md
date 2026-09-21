@@ -1,47 +1,69 @@
-# Planning Capacity V1 canon
+# Planning Workload V1 canon
 
-Living architecture for Planning / Capacity V1 in `office952/workos-po`.
+Living architecture for Planning / Workload V1 in `office952/workos-po`.
 
-This file is the single Capacity contract owner. It is not Product Truth, not Commercial, not a scheduler, and not implementation authorization.
+This file is the single Planning contract owner. It is not Product Truth, not Commercial, not a scheduler, and not implementation authorization.
+
+Filename `PLANNING_CAPACITY_V1_CANON.md` is temporary naming debt from the superseded weekly-capacity program. Do not create a second planning canon.
 
 ```text
-ONE_CAPACITY_CANON = YES
-PARALLEL_CAPACITY_TRUTH = NO
-CAPACITY_IMPLEMENTATION = NOT_STARTED
-CAP0 = IMPLEMENTED_IN_REVIEW
-CAP1 = NOT_STARTED
-CAP2 = NOT_STARTED
-CAP3 = NOT_STARTED
+ONE_PLANNING_CANON = YES
+PARALLEL_PLANNING_TRUTH = NO
+CANON_FILENAME = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
+CANON_FILENAME_RENAME = DEFERRED / NAMING_DEBT
+CURRENT_PROGRAM = PLANNING_WORKLOAD_V1
+CURRENT_PROGRAM_STATUS = PLN1_IMPLEMENTED_IN_REVIEW
+PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
+PLN0 = COMPLETE
+PLN1 = IMPLEMENTED_IN_REVIEW
+PLN2 = NOT_STARTED
+PLN3 = NOT_STARTED
+PLANNING_IMPLEMENTATION = IMPLEMENTED_IN_REVIEW
 SCHEDULING = NOT_STARTED / OUT_OF_SCOPE_V1
-PLANNING_CAPACITY_V1_PREFLIGHT = COMPLETE
-PLANNING_CAPACITY_V1_OWNER_DECISIONS = LOCKED
-OWNER_ACCEPTED_CAPACITY_IMPLEMENTATION = NO
+OWNER_ACCEPTED_PLANNING_IMPLEMENTATION = NO
 ```
 
-Living program sequence is owned by `docs/ROADMAP.md`. Configuration-First architecture remains `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`. This document does not authorize CAP1, persistence, API, UI, or migration.
+Living program sequence is owned by `docs/ROADMAP.md`. Configuration-First architecture remains `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`. PLN1 persistence, API, `/planificare`, and the synthetic Owner reference runtime are implemented in review. This document remains the Planning contract owner. It does not authorize PLN2 or PLN3.
 
 ## Authority
 
 ```text
 1. Explicit Owner GO
 2. Current office952/workos-po canon and code
-3. This document for Planning / Capacity V1
+3. This document for Planning / Workload V1
 4. docs/ROADMAP.md for living program sequence
 5. AGENTS.md for compact constitution
 ```
+
+Owner-confirmed workshop reality outranks the superseded CAP0 weekly-supply decisions.
 
 Repository truth wins over preflight prose. Current domain already uses:
 
 - `CapabilityProvider` with `kind` `WORKCENTER` | `MACHINE`
 - Execution assignment of one `assignedProvider` independently of `assignedExecutor`
+- Execution task lifecycle `PLANNED` → `IN_PROGRESS` → `COMPLETED`
+- in-plan process `seq`, which is not provider queue priority
 - People `AVAILABLE` | `TEMPORARILY_UNAVAILABLE` as operational eligibility, not hours
-- governance `capacity-planning`, `scheduling`, and `machine-run` as `NOT_IMPLEMENTED`
+- provider lifecycle `ACTIVE` | `PLANNED` | `RETIRED`
+- governance `capacity-planning` as implemented workload planning, with `scheduling` and `machine-run` remaining `NOT_IMPLEMENTED`
 
-## Locked Owner decisions
+## Owner-confirmed production reality
 
 ```text
-OWNER_DECISIONS_1_TO_4 = LOCKED
-CAPACITY_PROVIDER_OWNER = CapabilityProvider
+V1_DIRECTION = WORKLOAD_FIRST
+```
+
+- A machine or workcenter is used when work exists.
+- It may run during normal hours or beyond them if the team stays.
+- Normal working hours are not a hard machine-capacity ceiling.
+- The useful V1 truth is queued / planned effort on a provider.
+- WorkOS must not invent 8h/day, 40h/week, or utilization ceilings.
+- Working-hours / calendar may later assist forecasting. They must not become a hard execution blocker.
+
+## Current Owner decisions
+
+```text
+CAPABILITY_PROVIDER_OWNER = CapabilityProvider
 PROVIDER_KINDS = WORKCENTER | MACHINE
 AUTOMATIC_PARENT_CHILD_POOLING = NO
 AUTOMATIC_PARENT_CHILD_SUM = NO
@@ -50,26 +72,38 @@ PLANNED_EFFORT_OWNER = Execution task planning metadata
 PLANNED_EFFORT_PRIMITIVE = plannedEffortMinutes
 PLANNED_EFFORT_DEFAULT = UNKNOWN
 PLANNED_EFFORT_AUTO_DERIVATION = FORBIDDEN
-PLANNING_WINDOW = ISO_CALENDAR_WEEK
-TASK_PLANNING_BUCKET = planningWeek
-PROVIDER_CAPACITY_BUCKET = CapabilityProvider + planningWeek
-CAPACITY_AVAILABLE_MODES = DISABLED | ENABLED
-CAPACITY_DEFAULT_MODE = DISABLED
-OVERLOAD_POLICY = WARNING_ONLY
+WORKLOAD_PRIMITIVE = plannedEffortMinutes | UNKNOWN
+PLANNING_WINDOW = NONE_IN_V1
+TASK_PLANNING_BUCKET = NONE
+PROVIDER_CAPACITY_BUCKET = NONE
+WEEKLY_AVAILABLE_MINUTES = REMOVE_FROM_V1
+PLANNING_WEEK = REMOVE_FROM_V1
+HARD_CAPACITY = NO
+UTILIZATION_PERCENT = NO
+OVERLOAD_VS_WEEKLY_SUPPLY = NO
+HARD_EXECUTION_BLOCK = NO
 CAPACITY_BLOCKS_PRODUCTION_RELEASE = NO
 CAPACITY_BLOCKS_TASK_START = NO
 CAPACITY_AUTO_ASSIGN_PROVIDER = NO
 CAPACITY_RESERVES_PROVIDER = NO
 PEOPLE_CAPACITY = OUT
+SCHEDULING = OUT_OF_SCOPE_V1
 CAPACITY_COMMERCIAL_COUPLING = NONE
 FAKE_BACKFILL = FORBIDDEN
 MACHINE_RUN = NOT_IMPLEMENTED
 ACTUAL_DURATION_V1 = NOT_IMPLEMENTED
+PRODUCTION_PRIORITY = NOT_IMPLEMENTED_V1_INITIAL
+TARGET_DATE = NOT_REQUIRED_FOR_INITIAL_V1
+MANUAL_QUEUE_ORDER = DEFERRED
+NORMAL_WORKING_HOURS = LATER / OPTIONAL / SOFT_FORECAST_CONTEXT
+TEMPORARY_MACHINE_AVAILABILITY = DEFERRED
 ```
 
-## 1. Capacity provider
+Operator-facing UI may show `plannedEffortMinutes` as **Timp estimat**. The domain field name stays `plannedEffortMinutes`.
 
-Capacity is owned independently by an Execution-assignable `CapabilityProvider`.
+## 1. Planning owner
+
+Planning / workload is owned independently by an Execution-assignable `CapabilityProvider`.
 
 Provider kinds already used by Execution:
 
@@ -78,30 +112,28 @@ WORKCENTER
 MACHINE
 ```
 
-Each assignable provider may carry its own Capacity configuration.
-
 Forbidden:
 
-- workcenter capacity automatically equals `sum(children)`
-- machine capacity automatically rolls into the parent workcenter
+- workcenter workload automatically equals `sum(children)`
+- machine workload automatically rolls into the parent workcenter
 - parent + child load automatically summed
-- requiring a Machine registry for Capacity
-- treating a workcenter with no capabilities as an implicit capacity pool for its machines
+- requiring a Machine registry before a workcenter can have a queue
+- treating a workcenter with no capabilities as an implicit pool for its machines
 
 Reason: Execution already treats `WORKCENTER` and `MACHINE` as independent assignable provider kinds. Manual-only workcenters must remain supported.
 
 ```text
-CAPACITY_PROVIDER_OWNER = CapabilityProvider
+CAPABILITY_PROVIDER_OWNER = CapabilityProvider
 AUTOMATIC_PARENT_CHILD_POOLING = NO
 AUTOMATIC_PARENT_CHILD_SUM = NO
 DOUBLE_COUNTING = FORBIDDEN
 ```
 
-A workcenter that lists no capabilities is a location / grouping, not a Capacity owner, unless it is itself assignable for a capability.
+A workcenter that lists no capabilities is a location / grouping, not a workload owner, unless it is itself assignable for a capability.
 
 ## 2. Planned effort
 
-Capacity V1 demand primitive:
+V1 workload primitive:
 
 ```text
 plannedEffortMinutes
@@ -136,53 +168,139 @@ NO_VALUE != 0
 
 Do not treat process-default minutes as V1 authority. Do not treat automatic duration formulas as V1 authority. Those may be future enhancements only, under a later Owner GO.
 
-### Ownership boundary
+`plannedEffortMinutes` is not Product Truth, Commercial Price, Estimated Internal Cost, resource quantity, MachineRun actual, HR / Pontaj, or site-installation crew hours.
 
-`plannedEffortMinutes` is not:
+PLN0 does not define persistence schema or migration fields.
 
-- Product Truth
-- Commercial Price
-- Estimated Internal Cost
-- resource quantity
-- MachineRun actual
-- HR / Pontaj
-- site-installation crew hours
+## 3. Workload-first contract
 
-It is operational planning metadata for the Execution task.
-
-CAP0 does not define persistence schema or migration fields.
+This is workload, not a capacity ceiling, utilization, scheduling, or ETA.
 
 ```text
-PLANNED_EFFORT_MUTABILITY = TO_BE_DEFINED_IN_CAP1_IMPLEMENTATION_PREFLIGHT
-PLANNING_WEEK_MUTABILITY = TO_BE_DEFINED_IN_CAP1_IMPLEMENTATION_PREFLIGHT
+WORKLOAD_PRIMITIVE = plannedEffortMinutes | UNKNOWN
 ```
 
-Do not silently invent whether values freeze at production release, provider assignment, task start, or another point. CAP1 must resolve mutability from current Execution lifecycle evidence before any persistence write.
-
-## 3. Capacity window
-
-Capacity V1 time bucket is an ISO calendar week.
-
-Canonical representation concept:
+For one exact `CapabilityProvider`:
 
 ```text
-YYYY-Www
+PROVIDER_KNOWN_QUEUED_EFFORT =
+  sum(plannedEffortMinutes)
+  for relevant open tasks assigned to that exact provider
+  where effort is known
+
+UNKNOWN_EFFORT_COUNT =
+  open assigned tasks with UNKNOWN effort
+
+UNASSIGNED_OPEN_TASKS =
+  open tasks requiring a provider but without assignedProvider
 ```
 
-Example: `2026-W39`.
+V1 has no weekly bucket. Do not force a task into `YYYY-Www`. Do not compute remaining minutes against invented supply.
 
-Each capacity-planned task may have `planningWeek`.
-Each capacity-enabled assignable provider may have explicit available capacity for a given `planningWeek`.
+Missing facts must never render as `0`, `100%`, or a green complete state.
 
-Aggregation key:
+## 4. Task state model
 
 ```text
-provider identity + planningWeek
+PLANNED =
+  included in provider workload when assigned
+IN_PROGRESS =
+  included in provider workload
+COMPLETED =
+  not in current queued workload
 ```
 
-No finer scheduling granularity in V1.
+```text
+plannedEffortMinutes =
+  editable while PLANNED
+  frozen when the task starts / becomes IN_PROGRESS
+```
 
-Explicitly out of V1:
+UNKNOWN never becomes 0 automatically.
+
+Provider assignment remains explicit. Workload must not auto-assign a provider.
+
+## 5. Queue model
+
+V1 requires a provider workload / queue **read** model.
+
+Do not introduce manual priority, sort-order, or target-date fields in the initial implementation.
+
+Display order may use deterministic existing facts. Current Execution `seq` is in-plan process order. It must not be redefined as provider priority.
+
+```text
+PRODUCTION_PRIORITY = NOT_IMPLEMENTED_V1_INITIAL
+TARGET_DATE = NOT_REQUIRED_FOR_INITIAL_V1
+MANUAL_QUEUE_ORDER = DEFERRED
+```
+
+Later PLN2 may add these only if real operational use proves necessary.
+
+## 6. No hard capacity
+
+Workload must not block:
+
+- production release
+- provider assignment
+- task start
+- task completion
+
+No Execution lifecycle mutation is introduced by Planning V1.
+
+There is no weekly overload warning, because there is no weekly supply.
+
+```text
+HARD_EXECUTION_BLOCK = NO
+HARD_CAPACITY = NO
+UTILIZATION_PERCENT = NO
+OVERLOAD_VS_WEEKLY_SUPPLY = NO
+CAPACITY_AUTO_ASSIGN_PROVIDER = NO
+CAPACITY_RESERVES_PROVIDER = NO
+```
+
+EXE2 assignment remains explicit.
+
+Planning fields are optional. Execution already works when effort is UNKNOWN. V1 does not require an organization DISABLED / ENABLED Capacity mode.
+
+```text
+CUSTOMER_OPERABLE_WITHOUT_CURSOR = YES
+NO_CLIENT_CODE_FORK = YES
+```
+
+## 7. People capacity
+
+```text
+PEOPLE_CAPACITY = OUT
+```
+
+Existing People availability remains eligibility / operational availability. It is not capacity hours, shift, attendance, or an employee calendar.
+
+Do not infer workforce capacity. Do not create an HR / Pontaj dependency for Planning V1.
+
+## 8. Workload versus scheduling
+
+Workload V1 answers:
+
+- which open tasks are assigned to this provider?
+- how much known planned effort is queued there?
+- how many assigned tasks have UNKNOWN effort?
+- which open tasks still need a provider?
+
+Workload V1 does not answer:
+
+- exact day / time
+- optimized sequence
+- remaining weekly minutes
+- utilization percent
+- ETA
+- dispatch priority
+- due-date optimization
+
+```text
+SCHEDULING = OUT_OF_SCOPE_V1
+```
+
+Out of V1:
 
 - day planning
 - hour slot
@@ -193,167 +311,49 @@ Explicitly out of V1:
 - Gantt
 - drag / drop scheduling
 - optimizer
-- ETA
-- dispatch priority
-- due-date policy
+- ETA engine
+- shift engine
 
-`planningWeek` is a bucket, not a scheduler.
+## 9. Conceptual planner surface
 
-## 4. Provider weekly capacity
+Canon only. No UI in PLN0.
 
-Capacity supply primitive concept:
+Primary future planning surface is a planner view grouped by provider. It is not Atelier, not the only job-centric Execution page, and not admin registry CRUD.
 
-```text
-availableMinutes
-```
+Atelier remains operator-centric.
+Execution remains per-job operational control.
 
-or a semantically equivalent later field, per:
+The planner surface should support:
 
-```text
-CapabilityProvider + planningWeek
-```
+- provider grouping
+- open assigned tasks
+- known queued effort
+- unknown effort count
+- unassigned pool
 
-Operator-facing copy may talk in hours. Domain precision may use minutes later. CAP0 does not authorize the storage representation.
-
-Missing provider-week capacity:
+Example:
 
 ```text
-UNKNOWN
+CNC Router
+  1. PURE CLIMATE letters — 45m
+  2. Finestore ACM — 2h15m
+  3. Virandy letters — 1h30m
+Known workload: 4h30m
+Unknown effort: 2 tasks
 ```
-
-not `0`, not `100%`, not `unavailable`.
-
-Forbidden defaults:
-
-- recurring Monday-Friday
-- 40 hours / week
-- 8 hours / day
-- Romanian-holiday calendars
-
-## 5. Enablement
-
-Capacity is an optional organization capability.
-
-```text
-AVAILABLE_MODES = DISABLED | ENABLED
-DEFAULT = DISABLED
-```
-
-Owner explicitly enables Capacity for the organization.
-
-When `DISABLED`:
-
-- commercial workflow works
-- quote works
-- acceptance / order works
-- production release works
-- Execution works
-- provider assignment works
-- operator execution works
-
-No Capacity calculation is required. No customer needs Cursor or CLI to use disabled mode.
-
-```text
-CUSTOMER_OPERABLE_WITHOUT_CURSOR = YES
-NO_CLIENT_CODE_FORK = YES
-```
-
-## 6. Overload policy
-
-```text
-OVERLOAD = WARNING_ONLY
-```
-
-Capacity does not block:
-
-- production release
-- provider assignment
-- task start
-- task completion
-
-No Execution lifecycle mutation is introduced by Capacity V1.
-
-```text
-CAPACITY_BLOCKS_PRODUCTION_RELEASE = NO
-CAPACITY_BLOCKS_TASK_START = NO
-CAPACITY_AUTO_ASSIGN_PROVIDER = NO
-CAPACITY_RESERVES_PROVIDER = NO
-```
-
-EXE2 assignment remains explicit. Capacity must not pick an eligible provider automatically.
-
-## 7. People capacity
-
-```text
-PEOPLE_CAPACITY = OUT
-```
-
-Existing People availability remains eligibility / operational availability. It is not capacity hours, shift, attendance, or an employee calendar.
-
-Do not infer workforce capacity. Do not create an HR / Pontaj dependency for Capacity V1.
-
-## 8. Capacity versus scheduling
-
-Capacity V1 answers:
-
-- what planned load is assigned to this provider in this week?
-- how much provider capacity is explicitly configured?
-- how much remains?
-- is the provider overloaded?
-- what facts are UNKNOWN?
-
-Capacity V1 does not answer:
-
-- exact day / time
-- exact sequence inside the week
-- optimized schedule
-- ETA
-- dispatch priority
-- due-date optimization
-
-Scheduling remains out of scope for V1.
-
-## 9. Conceptual projection
-
-For one provider + `planningWeek`, the intended later read model is:
-
-```text
-KNOWN_LOAD = sum(plannedEffortMinutes)
-```
-
-only for tasks that:
-
-- belong to that `planningWeek`
-- are assigned to that exact provider
-- have known `plannedEffortMinutes`
-- are relevant to current planning state per a future CAP3 contract
-
-```text
-SUPPLY = explicit provider capacity for that same planningWeek
-remaining = supply - knownLoad
-overload = knownLoad > supply
-```
-
-CAP0 does not decide CAP3 relevance rules, persistence, or API shape.
-
-Tasks with unknown effort are incomplete / UNKNOWN facts. They are not counted as zero.
-Tasks without `planningWeek` are unplanned / UNKNOWN. They are not silently inserted into the current week.
-
-Missing facts must never render as `0`, `100%`, or a green complete state.
 
 ## 10. Existing and historical plans
 
-Plans created before Capacity V1 receive no backfill.
+Plans created before Planning Workload V1 receive no backfill.
 
 ```text
 plannedEffortMinutes = UNKNOWN unless explicitly added later under an authorized policy
-planningWeek = UNKNOWN unless explicitly planned later under an authorized policy
 FAKE_BACKFILL = FORBIDDEN
 ```
 
 No historical execution rewrite. No deriving effort from timestamps.
 
-Later Capacity configuration changes must not rewrite completed or frozen business history. Exact freeze points remain a CAP1 preflight question.
+Later planning configuration must not rewrite completed or frozen business history.
 
 ## 11. Commercial boundary
 
@@ -364,14 +364,12 @@ CAPACITY_COMMERCIAL_COUPLING = NONE
 Never derive client price from:
 
 - `plannedEffortMinutes`
-- `planningWeek`
-- provider available minutes
-- load percent
-- remaining capacity
-- overload
+- provider queued effort
+- unknown-effort counts
+- later working-hours forecast
 
-Capacity does not modify accepted quote / order commercial truth.
-Site-installation `plannedDurationHours` remains commercial / installation labor, not atelier Capacity.
+Planning does not modify accepted quote / order commercial truth.
+Site-installation `plannedDurationHours` remains commercial / installation labor, not atelier workload.
 
 ## 12. MachineRun and actual duration
 
@@ -382,68 +380,150 @@ ACTUAL_DURATION_V1 = NOT_IMPLEMENTED
 
 `startedAt` / `completedAt` are Execution lifecycle timestamps. They are not automatically machine runtime, productive minutes, or operator labor time.
 
-Do not add telemetry, IoT, or runtime counters for Capacity V1.
+Do not add telemetry, IoT, or runtime counters for Planning V1.
 
-## 13. Smart modularity
+## 13. Machine availability
+
+Keep separate:
+
+- provider lifecycle
+- queued workload
+- temporary machine availability
+- future working-hours forecast
+
+Current lifecycle:
+
+```text
+ACTIVE
+PLANNED
+RETIRED
+```
+
+```text
+TEMPORARY_MACHINE_AVAILABILITY = DEFERRED
+```
+
+Do not invent a maintenance / down state in PLN0. Workload remains readable independently of any later machine-down state.
+
+## 14. Working hours
+
+Normal working hours are later, optional, soft forecast context.
+
+They are not hard Capacity, provider eligibility, a task-start blocker, or a production-release blocker.
+
+Future example only:
+
+```text
+Approx. 12h planned work exceeds today's normal working window.
+```
+
+Overtime remains possible.
+
+No:
+
+- 8h/day default
+- 40h/week default
+- Romanian holiday assumption
+- People-hours inference
+- shift engine
+
+```text
+NORMAL_WORKING_HOURS = LATER / OPTIONAL / SOFT_FORECAST_CONTEXT
+```
+
+## 15. Smart modularity
 
 ```text
 COMMERCIAL_ONLY
-  Capacity DISABLED. Commercial path unaffected.
+  No planning fields required. Commercial path unaffected.
 
 MANUAL_ONLY
-  A WORKCENTER provider can own weekly capacity. A Machine is not required.
+  A WORKCENTER provider can own a queue. A Machine is not required.
 
 SMALL_COMPANY
-  Few providers, manually planned task minutes, weekly warnings.
+  Few providers, manually entered task minutes, derived display order.
 
 ADVANCED_COMPANY
   Multiple independently assignable machines and workcenters.
   No parent-child double counting.
 
-ENABLE_LATER
-  Old records stay intact. No fake capacity history.
+NO_PLANNING_ADOPTION
+  Execution still works. Effort remains UNKNOWN.
 
-CONFIG_CHANGE_LATER
-  Historical execution truth is not rewritten.
+ENABLE_LATER
+  Old records stay intact. No fake workload history.
+
+OVERTIME
+  No arbitrary hard capacity block.
+
+MACHINE_DOWN
+  Later availability. Current queued workload remains readable.
 
 NO_CLIENT_CODE_FORK = YES
 CUSTOMER_OPERABLE_WITHOUT_CURSOR = YES
 ```
 
-## 14. Future waves
-
-Recorded order. Not authorized by this document.
+## 16. Program sequence
 
 ```text
-CAP0 = canon + locked Owner decisions + living-doc sync
-CAP1 = task planning truth
-  expected subject: plannedEffortMinutes, planningWeek,
-  lifecycle / mutability, historical safety, planner persistence / API / UI
-CAP2 = provider weekly-capacity configuration
-  expected subject: enablement, provider + week capacity,
-  Owner configuration, version / history semantics
-CAP3 = capacity load projection + operational UI
-  expected subject: known load, unknown facts, remaining, overload warning
+PLN0 = canon correction / workload-first contract
+PLN1 = plannedEffortMinutes
+       + provider workload projection
+       + planner queue / read surface
+       + derived deterministic display order
+PLN2 = optional explicit priority / order and/or target date
+       only if real operational use proves necessary
+PLN3 = optional soft working-hours forecast
 ```
 
-CAP1 / CAP2 order may be adjusted after an implementation preflight only if current repository evidence requires it. No CAP1 implementation is authorized here.
+Do not over-fragment PLN1. Effort without a provider total is not useful. A provider total cannot exist without the effort field.
+
+Scheduling remains outside V1.
+
+This document does not authorize PLN1, PLN2, or PLN3 implementation.
 
 Do not revive MaterializedOpsGraph, DEC-009, scoped-B, old capacity fixtures, hardcoded workcenter names, or FastAPI / V2 architecture.
 
-## 15. Open questions for CAP1
+## 17. Superseded CAP0 weekly-capacity model
 
-These remain implementation questions. They do not reopen Owner decisions 1-4.
+The previous CAP0 weekly-capacity contract is **superseded in part**.
 
-- exact persistence representation
-- exact `plannedEffortMinutes` mutability / freeze point
-- exact `planningWeek` mutability / freeze point
-- whether planner write maps to Owner or another existing permission
-- exact new-plan versus existing-plan edit behavior
-- CAP3 rule for which task states count toward `KNOWN_LOAD`
+It remains valid for: CapabilityProvider owner, WORKCENTER | MACHINE, explicit `plannedEffortMinutes`, UNKNOWN != 0, no People Capacity, no Scheduling V1, no parent-child sum, no commercial coupling, no fake backfill, no MachineRun-as-capacity, no hard execution block.
+
+It is no longer V1 authority for:
 
 ```text
-CAP1_IMPLEMENTATION = NOT_AUTHORIZED_BY_THIS_DOCUMENT
-CAP2_IMPLEMENTATION = NOT_AUTHORIZED_BY_THIS_DOCUMENT
-CAP3_IMPLEMENTATION = NOT_AUTHORIZED_BY_THIS_DOCUMENT
-CAPACITY_CALCULATION = NOT_IMPLEMENTED
+PLANNING_WINDOW = ISO_CALENDAR_WEEK
+TASK_PLANNING_BUCKET = planningWeek
+PROVIDER_CAPACITY_BUCKET = CapabilityProvider + planningWeek
+availableMinutes
+weekly provider supply
+SUPPLY - LOAD remaining
+utilization percent
+weekly overload
+DISABLED | ENABLED weekly Capacity mode as a V1 gate
+CAP2 weekly supply as the next wave
+```
+
+Do not implement weekly provider `availableMinutes`. Cancelled CAP2 weekly-supply drafts are not product.
+
+```text
+PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
+CAP2_WEEKLY_SUPPLY = CANCELLED
+```
+
+## 18. Open questions for PLN1
+
+These are implementation questions. They do not reopen the workload-first direction.
+
+- exact persistence representation for `plannedEffortMinutes`
+- whether planner write maps to Owner or another existing permission
+- exact new-plan versus existing-plan edit behavior
+- exact derived display-order tie-break among existing facts
+
+```text
+PLN1_IMPLEMENTATION = NOT_AUTHORIZED_BY_THIS_DOCUMENT
+PLN2_IMPLEMENTATION = NOT_AUTHORIZED_BY_THIS_DOCUMENT
+PLN3_IMPLEMENTATION = NOT_AUTHORIZED_BY_THIS_DOCUMENT
+PLANNING_CALCULATION = NOT_IMPLEMENTED
 ```

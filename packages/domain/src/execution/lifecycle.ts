@@ -10,6 +10,7 @@ import {
   buildActualConsumption,
   type ActualConsumptionLineInput,
 } from "./consumption.js";
+import { parsePlannedEffortMinutes } from "./plannedEffort.js";
 import {
   COMPLETION_NOTE_MAX_LENGTH,
   assignedProviderStillValid,
@@ -29,6 +30,8 @@ export const TASK_MUTATION_ERRORS = [
   "not_found",
   "ineligible_provider",
   "reassignment_locked",
+  "effort_frozen",
+  "invalid_planned_effort",
   "missing_assignment",
   "missing_executor",
   "provider_unavailable",
@@ -148,6 +151,35 @@ export function assignExecutorToTask(
         id: person.personId,
         label: person.displayName,
       },
+    }),
+  };
+}
+
+export function setPlannedEffortOnTask(
+  record: ExecutionPlanRecord,
+  taskId: string,
+  plannedEffortMinutes: unknown,
+): TaskMutationResult {
+  const task = findTask(record, taskId);
+  if (!task) {
+    return { ok: false, error: "not_found" };
+  }
+  if (task.status !== "PLANNED") {
+    return { ok: false, error: "effort_frozen" };
+  }
+  const parsed = parsePlannedEffortMinutes(plannedEffortMinutes);
+  if (!parsed.ok) {
+    return { ok: false, error: parsed.error };
+  }
+  if (task.plannedEffortMinutes === parsed.plannedEffortMinutes) {
+    return { ok: true, record, alreadyApplied: true };
+  }
+  return {
+    ok: true,
+    alreadyApplied: false,
+    record: replaceTask(record, {
+      ...task,
+      plannedEffortMinutes: parsed.plannedEffortMinutes,
     }),
   };
 }

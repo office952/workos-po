@@ -34,6 +34,7 @@ import {
   assignProviderToTask,
   completeExecutionTask,
   plannedCompletionInput,
+  setPlannedEffortOnTask,
   startExecutionTask,
 } from "./lifecycle.js";
 import {
@@ -433,5 +434,73 @@ describe("minimal execution task lifecycle", () => {
       /employeeId|workerId|operatorId|plannedStart|capacity|pontaj|"actualCost"|scrap/,
     );
     expect(JSON.stringify(view)).not.toMatch(/employeeId|schedule|gantt|timesheet/);
+  });
+});
+
+describe("planned effort mutation", () => {
+  it("saves and clears planned effort only while PLANNED", () => {
+    const record = planned();
+    const backCnc = taskBySource(record, "BACK", CUT_SHEET_CNC_ID);
+    const saved = setPlannedEffortOnTask(record, backCnc.taskId, 45);
+    expect(saved.ok).toBe(true);
+    if (!saved.ok) {
+      return;
+    }
+    expect(
+      saved.record.tasks.find((item) => item.taskId === backCnc.taskId)?.plannedEffortMinutes,
+    ).toBe(45);
+    const cleared = setPlannedEffortOnTask(saved.record, backCnc.taskId, null);
+    expect(cleared.ok).toBe(true);
+    if (!cleared.ok) {
+      return;
+    }
+    expect(
+      cleared.record.tasks.find((item) => item.taskId === backCnc.taskId)?.plannedEffortMinutes,
+    ).toBeNull();
+    expect(setPlannedEffortOnTask(record, backCnc.taskId, 0)).toEqual({
+      ok: false,
+      error: "invalid_planned_effort",
+    });
+  });
+
+  it("freezes effort after start and still allows start with UNKNOWN", () => {
+    const record = planned();
+    const backCnc = taskBySource(record, "BACK", CUT_SHEET_CNC_ID);
+    const assigned = assignProviderToTask(record, backCnc.taskId, MCH_CNC_4020_ID);
+    if (!assigned.ok) {
+      throw new Error("expected assignment");
+    }
+    const ready = withExecutor(assigned.record, backCnc.taskId);
+    expect(
+      ready.record.tasks.find((item) => item.taskId === backCnc.taskId)?.plannedEffortMinutes,
+    ).toBeNull();
+    const started = startExecutionTask(
+      ready.record,
+      backCnc.taskId,
+      "2026-08-15T16:00:00.000Z",
+      ready.people,
+    );
+    expect(started.ok).toBe(true);
+    if (!started.ok) {
+      return;
+    }
+    expect(setPlannedEffortOnTask(started.record, backCnc.taskId, 45)).toEqual({
+      ok: false,
+      error: "effort_frozen",
+    });
+    const completed = completeExecutionTask(
+      started.record,
+      backCnc.taskId,
+      "2026-08-15T16:10:00.000Z",
+      plannedCompletionInput(backCnc),
+    );
+    expect(completed.ok).toBe(true);
+    if (!completed.ok) {
+      return;
+    }
+    expect(setPlannedEffortOnTask(completed.record, backCnc.taskId, 45)).toEqual({
+      ok: false,
+      error: "effort_frozen",
+    });
   });
 });

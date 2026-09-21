@@ -115,6 +115,7 @@ export type ExecutionTask = {
   resourceDemands: AcceptedProductionSnapshot["operations"][number]["resourceDemands"];
   assignedProvider: AssignedExecutionProvider | null;
   assignedExecutor: AssignedExecutionExecutor | null;
+  plannedEffortMinutes: number | null;
   startedAt: string | null;
   completedAt: string | null;
   completion: TaskCompletionEvidence | null;
@@ -245,6 +246,7 @@ export function materializeExecutionPlanFromSnapshot(
       resourceDemands: operation.resourceDemands,
       assignedProvider: null,
       assignedExecutor: null,
+      plannedEffortMinutes: null,
       startedAt: null,
       completedAt: null,
       completion: null,

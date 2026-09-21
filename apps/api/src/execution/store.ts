@@ -1,6 +1,7 @@
 import {
   assignExecutorToTask,
   assignProviderToTask,
+  setPlannedEffortOnTask,
   assignedExecutorFromRow,
   assignedProviderFromRow,
   claimAndStartExecutionTask,
@@ -65,6 +66,7 @@ type TaskRow = {
   completed_quantity: number | null;
   completed_quantity_unit: string | null;
   completion_note: string | null;
+  planned_effort_minutes: number | null;
 };
 
 type DependencyRow = {
@@ -157,8 +159,9 @@ export function insertExecutionPlanRecord(
         completion_outcome,
         completed_quantity,
         completed_quantity_unit,
-        completion_note
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        completion_note,
+        planned_effort_minutes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     );
     const insertDependency = db.prepare(
@@ -200,6 +203,7 @@ export function insertExecutionPlanRecord(
         task.completion?.completedQuantity ?? null,
         task.completion?.completedQuantityUnit ?? null,
         task.completion?.note ?? null,
+        task.plannedEffortMinutes,
       );
       for (const dependencyId of task.dependsOnTaskIds) {
         insertDependency.run(record.plan.planId, task.taskId, dependencyId);
@@ -343,6 +347,53 @@ export function persistClaimAndStart(
   );
 }
 
+export function persistPlannedEffort(
+  db: SqliteDatabase,
+  taskId: string,
+  plannedEffortMinutes: unknown,
+): TaskMutationResult {
+  const run = db.transaction((): TaskMutationResult => {
+    const record = getExecutionPlanByTaskId(db, taskId);
+    if (!record) {
+      return { ok: false, error: "not_found" };
+    }
+    const result = setPlannedEffortOnTask(record, taskId, plannedEffortMinutes);
+    if (!result.ok || result.alreadyApplied) {
+      return result;
+    }
+    const next = result.record.tasks.find((task) => task.taskId === taskId);
+    const previous = record.tasks.find((task) => task.taskId === taskId);
+    if (!next || !previous) {
+      return { ok: false, error: "not_found" };
+    }
+    const written = writePlannedEffortOnly(db, next, previous);
+    if (!written) {
+      const current = getExecutionPlanByTaskId(db, taskId);
+      if (!current) {
+        return { ok: false, error: "not_found" };
+      }
+      const currentTask = current.tasks.find((task) => task.taskId === taskId);
+      if (!currentTask || currentTask.status !== "PLANNED") {
+        return { ok: false, error: "effort_frozen" };
+      }
+      const retried = writePlannedEffortOnly(
+        db,
+        { ...currentTask, plannedEffortMinutes: next.plannedEffortMinutes },
+        currentTask,
+      );
+      if (!retried) {
+        return { ok: false, error: "effort_frozen" };
+      }
+    }
+    const stored = getExecutionPlanByTaskId(db, taskId);
+    if (!stored) {
+      return { ok: false, error: "not_found" };
+    }
+    return { ok: true, alreadyApplied: false, record: stored };
+  });
+  return run();
+}
+
 export function persistTaskComplete(
   db: SqliteDatabase,
   taskId: string,
@@ -392,6 +443,35 @@ function applyMutation(
     return { ok: true, alreadyApplied: false, record: stored };
   });
   return run();
+}
+
+function writePlannedEffortOnly(
+  db: SqliteDatabase,
+  next: ExecutionTask,
+  previous: ExecutionTask,
+): boolean {
+  const result = db
+    .prepare(
+      `
+      UPDATE execution_tasks
+      SET planned_effort_minutes = ?
+      WHERE task_id = ?
+        AND status = 'PLANNED'
+        AND IFNULL(assigned_provider_id, '') = ?
+        AND IFNULL(assigned_executor_id, '') = ?
+        AND IFNULL(started_at, '') = ?
+        AND IFNULL(completed_at, '') = ?
+    `,
+    )
+    .run(
+      next.plannedEffortMinutes,
+      next.taskId,
+      previous.assignedProvider?.id ?? "",
+      previous.assignedExecutor?.id ?? "",
+      previous.startedAt ?? "",
+      previous.completedAt ?? "",
+    );
+  return result.changes === 1;
 }
 
 function writeTaskOperationalState(
@@ -578,6 +658,7 @@ function hydrateRecord(db: SqliteDatabase, planRow: PlanRow): ExecutionPlanRecor
         row.assigned_executor_id,
         row.assigned_executor_label,
       ),
+      plannedEffortMinutes: row.planned_effort_minutes ?? null,
       startedAt: row.started_at,
       completedAt: row.completed_at,
       completion: completionFromRow(

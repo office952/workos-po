@@ -131,6 +131,7 @@ import {
   listOpenExecutionPlanRecords,
   persistAssignedExecutor,
   persistAssignedProvider,
+  persistPlannedEffort,
   persistClaimAndStart,
   persistTaskComplete,
   persistTaskStart,
@@ -329,7 +330,12 @@ export type ProductSystemRuntime = {
   readExecutionPlan(planId: string): ExecutionPlanRecord | null;
   readExecutionPlanBySnapshot(snapshotId: string): ExecutionPlanRecord | null;
   readExecutionPlanByTaskId(taskId: string): ExecutionPlanRecord | null;
+  listOpenExecutionPlans(): ExecutionPlanRecord[];
   assignExecutionTaskProvider(taskId: string, providerId: string): TaskMutationResult;
+  setExecutionTaskPlannedEffort(
+    taskId: string,
+    plannedEffortMinutes: unknown,
+  ): TaskMutationResult;
   assignExecutionTaskExecutor(taskId: string, personId: string): TaskMutationResult;
   startExecutionTask(taskId: string): TaskMutationResult;
   claimAndStartExecutionTask(taskId: string, personId: string): TaskMutationResult;
@@ -752,8 +758,14 @@ export function createProductSystemRuntimeFromOpenDb(
     readExecutionPlanByTaskId(taskId) {
       return getExecutionPlanByTaskId(db, taskId);
     },
+    listOpenExecutionPlans() {
+      return listOpenExecutionPlanRecords(db);
+    },
     assignExecutionTaskProvider(taskId, providerId) {
       return persistAssignedProvider(db, taskId, providerId, currentProviderRegistry());
+    },
+    setExecutionTaskPlannedEffort(taskId, plannedEffortMinutes) {
+      return persistPlannedEffort(db, taskId, plannedEffortMinutes);
     },
     assignExecutionTaskExecutor(taskId, personId) {
       return persistAssignedExecutor(

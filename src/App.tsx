@@ -37,6 +37,7 @@ import { FailClosedPage } from "./surfaces/FailClosedPage";
 import { FoundationProofPage } from "./surfaces/FoundationProofPage";
 import { JobDetailPage } from "./surfaces/JobDetailPage";
 import { JobsPage } from "./surfaces/JobsPage";
+import { PlanningPage } from "./surfaces/PlanningPage";
 import { QuoteSnapshotPage } from "./surfaces/QuoteSnapshotPage";
 import { QuotesPage } from "./surfaces/QuotesPage";
 import { RequestDetailPage } from "./surfaces/RequestDetailPage";
@@ -97,6 +98,8 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
       return <JobsPage />;
     case "job":
       return <JobDetailPage jobId={route.jobId} />;
+    case "planning":
+      return <PlanningPage />;
     case "atelier":
       return <AtelierPage jobId={parseJobContext(search)} />;
     case "execution":

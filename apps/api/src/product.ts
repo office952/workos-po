@@ -1117,6 +1117,25 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
     );
   });
 
+  app.post("/api/execution-tasks/:taskId/planned-effort", requireOwnerRole(), async (c) => {
+    const runtime = getProductSystem(c);
+    const plannedEffortMinutes = readPlannedEffortMinutes(await c.req.json().catch(() => null));
+    if (plannedEffortMinutes === undefined) {
+      return c.json({ error: "invalid_payload" }, 400);
+    }
+    const session = runtime.resolveOperatorSession(getCookie(c, OPERATOR_SESSION_COOKIE));
+    const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/planned-effort");
+    return respondTaskMutation(
+      c,
+      runtime,
+      runtime.setExecutionTaskPlannedEffort(taskId, plannedEffortMinutes),
+      {
+        taskId,
+        operatorId: session.ok ? session.person.personId : null,
+      },
+    );
+  });
+
   app.post("/api/execution-tasks/:taskId/executor", requireOwnerRole(), async (c) => {
     const runtime = getProductSystem(c);
     const personId = readPersonId(await c.req.json().catch(() => null));
@@ -1410,8 +1429,10 @@ function mutationHttpStatus(error: TaskMutationError): 404 | 409 | 422 {
     case "invalid_unit":
     case "invalid_resource":
     case "invalid_note":
+    case "invalid_planned_effort":
       return 422;
     case "reassignment_locked":
+    case "effort_frozen":
     case "already_started_by_other":
     case "dependencies_incomplete":
     case "invalid_transition":
@@ -1421,6 +1442,13 @@ function mutationHttpStatus(error: TaskMutationError): 404 | 409 | 422 {
       return _exhaustive;
     }
   }
+}
+
+function readPlannedEffortMinutes(body: unknown): unknown {
+  if (typeof body !== "object" || body === null || !("plannedEffortMinutes" in body)) {
+    return undefined;
+  }
+  return (body as { plannedEffortMinutes: unknown }).plannedEffortMinutes;
 }
 
 function readPersonId(body: unknown): string | null {

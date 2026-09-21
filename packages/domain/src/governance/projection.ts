@@ -297,7 +297,7 @@ export function projectSystemGovernance(): GovernanceProjection {
         id: "execution",
         label: "Execuție",
         statement:
-          "Planul de execuție, sarcinile, ciclul de viață și consumul real sunt implementate. Capacitatea, programarea și MachineRun nu sunt implementate.",
+          "Planul de execuție, sarcinile, ciclul de viață și consumul real sunt implementate. Planificarea workload citește efortul planificat pe furnizor. Programarea și MachineRun nu sunt implementate.",
         state: "IMPLEMENTED",
       },
       {
@@ -339,21 +339,21 @@ export function projectSystemGovernance(): GovernanceProjection {
         id: "machines",
         label: "Utilaje / workcenter",
         statement:
-          "Harta de atelier este live: mese de asamblare, sudură, debitare metale, CNC, formare, electric, print și celelalte utilaje reale. Planificarea de capacitate nu este implementată.",
+          "Harta de atelier este live: mese de asamblare, sudură, debitare metale, CNC, formare, electric, print și celelalte utilaje reale. Planificarea workload grupează efortul planificat pe furnizor, fără capacitate săptămânală.",
         state: "IMPLEMENTED",
       },
       {
         id: "capacity-planning",
-        label: "Planificare capacitate",
+        label: "Planificare",
         statement:
-          "Workcenter / Utilaj vor deține ulterior modelul de capacitate. Nu există calendar, disponibilitate dinamică sau ore-mașină.",
-        state: "NOT_IMPLEMENTED",
+          "Efortul planificat pe sarcină și workload-ul derivat pe furnizor. Nu există ore săptămânale, utilizare sau capacitate fixă.",
+        state: "IMPLEMENTED",
       },
       {
         id: "scheduling",
         label: "Programare",
         statement:
-          "Nu există programare, calendar sau capacitate. Alocarea de furnizor și executant pe task există, fără programare.",
+          "Nu există programare sau calendar. Alocarea de furnizor și executant pe task există, fără programare.",
         state: "NOT_IMPLEMENTED",
       },
       {
@@ -594,8 +594,8 @@ export function projectSystemGovernance(): GovernanceProjection {
       },
       {
         id: "capacity-planning",
-        label: "Planificare capacitate",
-        state: "NOT_IMPLEMENTED",
+        label: "Planificare",
+        state: "IMPLEMENTED",
       },
       {
         id: "scheduling",

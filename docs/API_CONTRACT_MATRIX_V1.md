@@ -89,6 +89,8 @@ Organization scope: Cloud mode binds the operational plane from the active organ
 | CURRENT | EXECUTION | Assign executor | POST | `/api/execution-tasks/:taskId/executor` | `{ personId }` | plan or typed error | cloud+owner | `productApi.ts` | YES | READY_FOR_UI20 | Compatibility path | Prefer claim-on-start |
 | CURRENT | EXECUTION | Start / claim | POST | `/api/execution-tasks/:taskId/start` | none | plan or typed error | operator | `productApi.ts` | YES | READY_FOR_UI20 | | Adapter |
 | CURRENT | EXECUTION | Complete + actuals | POST | `/api/execution-tasks/:taskId/complete` | `{ completedQuantity?, note?, actualConsumption? }` | plan or typed error | operator | `productApi.ts` | YES | READY_FOR_UI20 | Planned qty never overwritten | Adapter |
+| CURRENT | PLANNING | Set planned effort | POST | `/api/execution-tasks/:taskId/planned-effort` | `{ plannedEffortMinutes: number \| null }` | plan or typed error | cloud+owner | `planning.ts` | YES | READY_WITH_ADAPTER | PLANNED only; UNKNOWN is null | Adapter |
+| CURRENT | PLANNING | Read provider workload | GET | `/api/planning/workload` | none | derived provider groups + unassigned open tasks | cloud | `planning.ts` | YES | READY_WITH_ADAPTER | Not persisted totals | Adapter |
 
 Idempotency observed (server `created` / `alreadyApplied`), not a client key:
 

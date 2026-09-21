@@ -33,6 +33,7 @@ function taskStub(
     resourceDemands: [],
     assignedProvider: null,
     assignedExecutor: null,
+    plannedEffortMinutes: null,
     startedAt: null,
     completedAt: null,
     completion: null,

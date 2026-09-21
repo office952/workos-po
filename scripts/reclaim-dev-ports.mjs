@@ -1,6 +1,10 @@
 import { execFileSync } from "node:child_process";
+import {
+  OWNER_REFERENCE_PORT,
+  portsEligibleForGenericReclaim,
+} from "./dev-ports.mjs";
 
-const CANONICAL_PORTS = [5173, 8787];
+const CANONICAL_PORTS = portsEligibleForGenericReclaim();
 const UNSAFE_WINDOWS_PIDS = new Set([0, 4]);
 
 function unique(values) {
@@ -93,11 +97,29 @@ function terminate(pid) {
   return true;
 }
 
-function report(port, pid, processLabel, terminated) {
+function report(port, pid, processLabel, terminated, extra = "") {
   console.log(`PORT ${port}`);
   console.log(`PID ${pid ?? "none"}`);
   console.log(`PROCESS ${processLabel}`);
   console.log(`TERMINATED ${terminated ? "yes" : "no"}`);
+  if (extra) {
+    console.log(extra);
+  }
+}
+
+const protectedListeners = listeners(OWNER_REFERENCE_PORT);
+if (protectedListeners.length > 0) {
+  for (const pid of protectedListeners) {
+    report(
+      OWNER_REFERENCE_PORT,
+      pid,
+      processName(pid),
+      false,
+      "PROTECTED owner reference runtime port; generic reclaim will not terminate it.",
+    );
+  }
+} else {
+  report(OWNER_REFERENCE_PORT, null, "none", false, "PROTECTED owner reference runtime port.");
 }
 
 let failed = false;

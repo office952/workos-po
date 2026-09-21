@@ -60,6 +60,11 @@ export function JobsPage() {
       eyebrow="Lucrări"
       title="Lucrări"
       lead="Continuă eliberarea, planul de execuție sau lucrarea finalizată."
+      action={
+        <a className="hit" href="/planificare">
+          <span className="button button--primary">Planificare</span>
+        </a>
+      }
     >
       <SurfacePanel
         variant="flush"

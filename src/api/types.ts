@@ -373,6 +373,42 @@ export type ExecutionPlanTransport = {
   tasks: ExecutionTaskTransport[];
 };
 
+export type PlanningWorkloadTaskTransport = {
+  taskId: string;
+  executionPlanId: string;
+  status: string;
+  statusLabel: string;
+  processLabel: string;
+  requiredCapabilityLabel: string;
+  productLabel: string;
+  inscription: string;
+  jobId: string | null;
+  jobHref: string | null;
+  executionHref: string;
+  assignedProvider: { id: string; kind: string; label: string } | null;
+  plannedEffortMinutes: number | null;
+  requiresProvider: boolean;
+  canEditEffort: boolean;
+};
+
+export type PlanningWorkloadProviderTransport = {
+  provider: {
+    kind: string;
+    kindLabel: string;
+    id: string;
+    label: string;
+  };
+  knownQueuedMinutes: number;
+  unknownEffortCount: number;
+  tasks: PlanningWorkloadTaskTransport[];
+};
+
+export type PlanningWorkloadTransport = {
+  canEditEffort: boolean;
+  providers: PlanningWorkloadProviderTransport[];
+  unassigned: PlanningWorkloadTaskTransport[];
+};
+
 export type ResourcesWriteState = "READY" | "NOT_IMPLEMENTED";
 
 export type CostEvidenceQualifierTransport = {

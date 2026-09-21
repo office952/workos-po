@@ -1769,3 +1769,43 @@ button.context-rail__item:focus-visible {
 .loading-floor--operational {
   min-height: 14rem;
 }
+
+.planner-floor {
+  display: grid;
+  gap: var(--space-16);
+}
+
+.planner-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8) var(--space-16);
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-meta);
+}
+
+.planner-row-edit {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1.4fr) minmax(8rem, 1fr) auto minmax(16rem, 1.6fr);
+  gap: var(--space-12);
+  align-items: start;
+  padding: var(--space-12);
+}
+
+.planner-effort-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-8);
+}
+
+.planner-effort-form .field {
+  min-width: 5.5rem;
+  max-width: 7rem;
+}
+
+@media (max-width: 768px) {
+  .planner-row-edit {
+    grid-template-columns: 1fr;
+  }
+}
