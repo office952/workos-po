@@ -167,4 +167,92 @@ describe("presentExecutionPlan", () => {
     expect(presented?.tasks[0]?.executorLabel).toBe("Andrei Goghi");
     expect(presented?.tasks[0]?.startedByLabel).toBe("Andrei Goghi");
   });
+
+  it("transports planned resources, consumption eligibility, and persisted actuals", () => {
+    const presented = presentExecutionPlan({
+      executionPlan: {
+        plan: { planId: "exp:1", productLabel: "Litere", inscription: "NORD" },
+        tasks: [
+          {
+            taskId: "task:led",
+            processLabel: "Montaj LED",
+            canRecordActualConsumption: true,
+            resourceDemands: [
+              {
+                resourceId: "res:plexi",
+                label: "Plexiglas opal 3 mm",
+                quantity: 0.85,
+                unit: "m²",
+              },
+              {
+                resourceId: "res:screws",
+                label: "Șuruburi inox",
+                quantity: 12,
+                unit: "buc",
+              },
+            ],
+            actualConsumption: [
+              {
+                resourceId: "res:plexi",
+                resourceLabel: "Plexiglas opal 3 mm",
+                actualQuantity: 0.8,
+                unit: "m²",
+                note: "Rest din foaie",
+              },
+            ],
+          },
+        ],
+      },
+    });
+    expect(presented?.tasks[0]?.canRecordActualConsumption).toBe(true);
+    expect(presented?.tasks[0]?.plannedResources).toEqual([
+      {
+        resourceId: "res:plexi",
+        label: "Plexiglas opal 3 mm",
+        plannedQuantity: 0.85,
+        unit: "m²",
+      },
+      {
+        resourceId: "res:screws",
+        label: "Șuruburi inox",
+        plannedQuantity: 12,
+        unit: "buc",
+      },
+    ]);
+    expect(presented?.tasks[0]?.actualConsumption).toEqual([
+      {
+        resourceId: "res:plexi",
+        label: "Plexiglas opal 3 mm",
+        actualQuantity: 0.8,
+        unit: "m²",
+        note: "Rest din foaie",
+      },
+    ]);
+    expect(JSON.stringify(presented)).not.toMatch(/rate|internalCost|EUR/);
+  });
+
+  it("fails closed when canRecordActualConsumption is absent", () => {
+    const presented = presentExecutionPlan({
+      executionPlan: {
+        plan: { planId: "exp:1", productLabel: "Litere", inscription: "NORD" },
+        tasks: [
+          {
+            taskId: "task:led",
+            processLabel: "Montaj LED",
+            resourceDemands: [
+              {
+                resourceId: "res:plexi",
+                label: "Plexiglas opal 3 mm",
+                quantity: 0.85,
+                unit: "m²",
+              },
+            ],
+          },
+        ],
+      },
+    });
+    expect(presented?.tasks[0]?.canRecordActualConsumption).toBe(false);
+    expect(presented?.tasks[0]?.plannedResources).toHaveLength(1);
+    expect(presented?.tasks[0]?.actualConsumption).toEqual([]);
+  });
 });

@@ -8,6 +8,7 @@ import {
 import type {
   EligibleProviderTransport,
   ExecutionPlanProgressTransport,
+  ExecutionTaskCompletionInput,
   ExecutionTaskTransport,
 } from "../api/types";
 import { Button } from "../components/Button";
@@ -31,11 +32,21 @@ import {
   parseCompletedQuantity,
 } from "../presentation/completedQuantity";
 import {
+  actualConsumptionDraftKey,
+  canEditActualConsumption,
+  collectActualConsumptionInput,
+} from "../presentation/executionActuals";
+import { presentExecutionCompletionError } from "../presentation/executionCompletionError";
+import {
   presentCurrentTaskRole,
   presentExecutionNextAction,
 } from "../presentation/executionNextAction";
 import { statusTone } from "../presentation/statusTone";
 import { atelierHref, executionHref, jobHref } from "../routing/appRoute";
+import {
+  ExecutionActualConsumptionFields,
+  ExecutionActualConsumptionHistory,
+} from "./ExecutionActualConsumption";
 
 type ExecutionPageProps = {
   planId: string;
@@ -184,6 +195,9 @@ function compactTaskFacts(task: ExecutionTaskTransport): string[] {
   if (task.varianceLabel) {
     parts.push(task.varianceLabel);
   }
+  if (task.actualConsumption.length > 0) {
+    parts.push("Consum înregistrat");
+  }
   return parts;
 }
 
@@ -211,6 +225,9 @@ export function ExecutionPage({
   const [actionState, setActionState] = useState<"idle" | "pending" | "error">("idle");
   const [actionError, setActionError] = useState<string | null>(null);
   const [actualDrafts, setActualDrafts] = useState<Record<string, string>>({});
+  const [resourceActualDrafts, setResourceActualDrafts] = useState<Record<string, string>>(
+    {},
+  );
   const [selectedProviderByTask, setSelectedProviderByTask] = useState<
     Record<string, string>
   >({});
@@ -275,7 +292,7 @@ export function ExecutionPage({
   }
 
   async function complete(task: ExecutionTaskTransport): Promise<void> {
-    const completionInput: { completedQuantity?: number } = {};
+    const completionInput: ExecutionTaskCompletionInput = {};
     if (task.requiresCompletedQuantity) {
       const parsed = parseCompletedQuantity(actualQuantityDraft(task));
       if (parsed === null) {
@@ -285,6 +302,21 @@ export function ExecutionPage({
       }
       completionInput.completedQuantity = parsed;
     }
+    if (canEditActualConsumption(task)) {
+      const collected = collectActualConsumptionInput(
+        task.plannedResources,
+        resourceActualDrafts,
+        task.taskId,
+      );
+      if (!collected.ok) {
+        setActionState("error");
+        setActionError("Cantitatea consumată trebuie să fie un număr valid, zero sau pozitiv.");
+        return;
+      }
+      if (collected.actualConsumption) {
+        completionInput.actualConsumption = collected.actualConsumption;
+      }
+    }
     setActionState("pending");
     setActionError(null);
     try {
@@ -293,11 +325,7 @@ export function ExecutionPage({
       invalidateAfterExecutionTaskChange(planId);
     } catch (error) {
       setActionState("error");
-      setActionError(
-        error instanceof TransportError
-          ? "Sarcina nu poate fi închisă încă."
-          : "Finalizarea a eșuat.",
-      );
+      setActionError(presentExecutionCompletionError(error));
     }
   }
 
@@ -408,6 +436,24 @@ export function ExecutionPage({
                 }}
               />
             ) : null}
+            {canEditActualConsumption(currentTask) ? (
+              <ExecutionActualConsumptionFields
+                taskId={currentTask.taskId}
+                plannedResources={currentTask.plannedResources}
+                drafts={resourceActualDrafts}
+                disabled={actionState === "pending"}
+                onChange={(resourceId, value) => {
+                  setResourceActualDrafts((currentDrafts) => ({
+                    ...currentDrafts,
+                    [actualConsumptionDraftKey(currentTask.taskId, resourceId)]: value,
+                  }));
+                }}
+              />
+            ) : (
+              <ExecutionActualConsumptionHistory
+                actualConsumption={currentTask.actualConsumption}
+              />
+            )}
             {currentTask.requiresProvider &&
             currentTask.assignmentLabel === "Nealocat" &&
             currentTask.eligibleProviders.length === 0 &&

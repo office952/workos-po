@@ -35,6 +35,9 @@ function task(
     operatorRelation: null,
     startedByLabel: null,
     executorLabel: null,
+    canRecordActualConsumption: false,
+    plannedResources: [],
+    actualConsumption: [],
     ...overrides,
   };
 }

@@ -1,8 +1,10 @@
 import type {
+  ActualConsumptionTransport,
   EligibleProviderTransport,
   ExecutionPlanProgressTransport,
   ExecutionPlanTransport,
   ExecutionTaskTransport,
+  PlannedResourceTransport,
 } from "../api/types";
 import { asNumber, asRecord, asString, asStringList } from "./record";
 
@@ -72,6 +74,9 @@ export function presentExecutionTask(value: unknown): ExecutionTaskTransport | n
     operatorRelation: asString(row.operatorRelation),
     startedByLabel: asString(row.startedByLabel),
     executorLabel: presentExecutorLabel(row),
+    canRecordActualConsumption: row.canRecordActualConsumption === true,
+    plannedResources: presentPlannedResources(row.resourceDemands ?? row.plannedResources),
+    actualConsumption: presentActualConsumption(row.actualConsumption),
   };
 }
 
@@ -113,6 +118,54 @@ function presentExecutionProgress(
     noProvider,
     varianceCount,
   };
+}
+
+function presentPlannedResources(value: unknown): PlannedResourceTransport[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => {
+    const row = asRecord(item);
+    if (!row) {
+      return [];
+    }
+    const resourceId = asString(row.resourceId);
+    const label = asString(row.label);
+    const plannedQuantity = asNumber(row.plannedQuantity ?? row.quantity);
+    const unit = asString(row.unit);
+    if (!resourceId || !label || plannedQuantity === null || !unit) {
+      return [];
+    }
+    return [{ resourceId, label, plannedQuantity, unit }];
+  });
+}
+
+function presentActualConsumption(value: unknown): ActualConsumptionTransport[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => {
+    const row = asRecord(item);
+    if (!row) {
+      return [];
+    }
+    const resourceId = asString(row.resourceId);
+    const label = asString(row.resourceLabel) ?? asString(row.label);
+    const actualQuantity = asNumber(row.actualQuantity);
+    const unit = asString(row.unit);
+    if (!resourceId || !label || actualQuantity === null || !unit) {
+      return [];
+    }
+    return [
+      {
+        resourceId,
+        label,
+        actualQuantity,
+        unit,
+        note: typeof row.note === "string" && row.note.trim() !== "" ? row.note : null,
+      },
+    ];
+  });
 }
 
 function presentEligibleProviders(value: unknown): EligibleProviderTransport[] {
