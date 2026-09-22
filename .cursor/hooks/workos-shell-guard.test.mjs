@@ -33,6 +33,13 @@ function assertAsk(command, cwd) {
   assert.equal(typeof result.agent_message, "string");
 }
 
+function assertAskMessage(command, message, cwd) {
+  const result = decideCommand(command, cwd);
+  assert.equal(result.permission, PERMISSION.ASK, command);
+  assert.equal(result.user_message, message, command);
+  assert.equal(result.agent_message, message, command);
+}
+
 describe("allow: routine development", () => {
   test("git status", () => {
     assertAllow("git status");
@@ -119,13 +126,11 @@ describe("deny: destructive Git", () => {
     assertDeny("git push --force-with-lease origin feature");
   });
 
-  test("git push origin HEAD:main", () => {
-    assertDeny("git push origin HEAD:main");
-  });
-
-  test("direct push to main without force", () => {
-    assertDeny("git push origin main");
-    assertDeny("git push origin refs/heads/main");
+  test("force push to main remains denied", () => {
+    assertDeny("git push --force origin HEAD:main");
+    assertDeny("git push --force-with-lease origin HEAD:main");
+    assertDeny("git push origin +HEAD:main");
+    assertDeny("git push --force origin main");
   });
 
   test("compound safe + destructive is denied", () => {
@@ -134,15 +139,23 @@ describe("deny: destructive Git", () => {
 });
 
 describe("classify: git push destination safety", () => {
-  test("explicit main and master destinations are denied", () => {
-    assertDeny("git push origin main");
-    assertDeny("git push origin HEAD:main");
-    assertDeny("git push origin HEAD:refs/heads/main");
-    assertDeny("git push origin :main");
-    assertDeny("git push origin --delete main");
-    assertDeny("git push --delete origin main");
-    assertDeny("git push origin --delete refs/heads/main");
-    assertDeny("git push origin HEAD:refs/heads/master");
+  test("explicit non-force main and master destinations require Owner approval", () => {
+    assertAskMessage("git push origin HEAD:main", "Direct push to main needs explicit Owner approval.");
+    assertAskMessage("git push origin main", "Direct push to main needs explicit Owner approval.");
+    assertAskMessage("git push origin HEAD:refs/heads/main", "Direct push to main needs explicit Owner approval.");
+    assertAskMessage("git push origin refs/heads/main", "Direct push to main needs explicit Owner approval.");
+    assertAskMessage(
+      "git push origin HEAD:refs/heads/master",
+      "Direct push to main needs explicit Owner approval.",
+    );
+  });
+
+  test("delete of main is Owner-gated as protected-main ASK, not ALLOW", () => {
+    const mainAsk = "Direct push to main needs explicit Owner approval.";
+    assertAskMessage("git push origin :main", mainAsk);
+    assertAskMessage("git push origin --delete main", mainAsk);
+    assertAskMessage("git push --delete origin main", mainAsk);
+    assertAskMessage("git push origin --delete refs/heads/main", mainAsk);
   });
 
   test("broad --all / --mirror / --branches pushes are denied", () => {
@@ -166,6 +179,7 @@ describe("classify: git push destination safety", () => {
     assertAllow("git push origin chore/saas-canon-cursor-safety-wave-0-v1");
     assertAllow("git push -u origin chore/saas-canon-cursor-safety-wave-0-v1");
     assertAllow("git push origin HEAD:refs/heads/chore/saas-canon-cursor-safety-wave-0-v1");
+    assertAllow("git push origin HEAD:chore/test-safe-branch");
   });
 
   test("non-main remote deletion and prune require Owner review", () => {
