@@ -383,12 +383,12 @@ function classifyGitPush(git, historicalTarget) {
     return deny("Force-push is hard-denied.");
   }
 
-  if (refspecs.some((spec) => isProtectedBranchDest(spec))) {
-    return deny("Direct push to main is hard-denied.");
-  }
-
   if (historicalTarget) {
     return deny("Write/destructive Git against a historical repository is hard-denied.");
+  }
+
+  if (refspecs.some((spec) => isProtectedBranchDest(spec))) {
+    return ask("Direct push to main needs explicit Owner approval.");
   }
 
   if (hasFlag(git.args, "-d", "--delete") || refspecs.some((spec) => isDeleteRefspec(spec))) {
