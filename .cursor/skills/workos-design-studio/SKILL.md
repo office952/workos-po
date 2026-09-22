@@ -103,6 +103,74 @@ Future Configurator design may consider blueprint, focused editor, layers, subla
 
 Future Configurator design requires a separate Owner GO.
 
+## Exploration tool routing
+
+Route tools by the job. Do not open Canvas for every UI task. Do not treat a missing Agent API as proof that a Cursor UI feature is absent.
+
+```text
+MICRO_VISUAL_CHANGE
+Browser evidence
+→ Owner Browser Design Mode
+→ Design Studio judgment / refinement
+CANVAS_BY_DEFAULT = NO
+
+EXISTING_PAGE_REFINEMENT
+Design Studio
+→ Browser observation
+→ Browser Design Mode when useful
+→ implementation / refinement
+Canvas only when a genuinely unsettled structural or spatial idea appears.
+
+UNSETTLED_STRUCTURAL_UI
+floorplan / information architecture / selection model /
+spatial hierarchy / workbench relationship / major interaction model
+Reality Extraction
+→ Browser observation of current runtime (evidence, not authority)
+→ Canvas exploration STRONGLY_PREFERRED when accepted Figma does not already settle the composition
+→ Owner composition decision
+→ compact engineering handoff
+→ implementation
+→ Browser + Design Mode refinement
+
+NEW_COMPLEX_SURFACE
+accepted Figma settles the relevant structure → do not duplicate exploration in Canvas
+otherwise → Canvas exploration = STRONGLY_PREFERRED
+
+CONFIGURATOR
+future Owner-authorized structural redesign
+(PRODUCT / LAYER / SUBLAYER / BLUEPRINT / HORIZONTAL / VERTICAL /
+SELECTION / PROPERTIES / VALIDATION / REVIEW)
+Canvas before implementation = STRONGLY_PREFERRED
+unless accepted Figma already settles the required composition
+This does not authorize Configurator redesign now.
+CONFIGURATOR_REDESIGN = NO
+```
+
+```text
+CANVAS = NON_AUTHORITATIVE_EXPLORATION
+CANVAS != Product Truth
+CANVAS != Figma authority
+CANVAS != WorkOS implementation
+CANVAS != WorkOS component / token authority
+CANVAS != CAD precision
+CANVAS != build authority
+```
+
+Canvas must not invent fields, states, formulas, permissions, readiness, business rules, or technical precision unsupported by Product Truth. Keep `UNKNOWN` and `NOT_IMPLEMENTED` explicit.
+
+Canvas Design Mode is an official Cursor capability: the Owner may select and annotate elements inside an exploratory Canvas when that UI is available. It improves iteration on the exploratory artifact only.
+
+```text
+CANVAS_DESIGN_MODE_OFFICIAL = YES
+LOCAL_OWNER_UI_VERIFICATION = NOT_REQUIRED_FOR_STABLE_ROUTING
+CANVAS_DESIGN_MODE != Product Truth
+CANVAS_DESIGN_MODE != accepted Figma
+CANVAS_DESIGN_MODE != implementation authority
+CANVAS_DESIGN_MODE != product code
+```
+
+After Owner composition decision and engineering handoff, the Canvas is exploration evidence / a design-decision artifact. It must not become a second living design system or a second WorkOS implementation. Product truth stays in canonical WorkOS sources.
+
 ## Loop
 
 ```text
