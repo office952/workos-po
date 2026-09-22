@@ -1,0 +1,159 @@
+---
+description: WorkOS research-on-demand policy. Prevent guessing on material technical uncertainty and route external or version-sensitive questions to authoritative sources before implementation.
+alwaysApply: true
+---
+
+# WorkOS research on demand
+
+Do not guess material technical facts.
+
+Research must be proportional to the uncertainty. If current WorkOS evidence already settles the question, continue without unnecessary external research.
+
+## Source order
+
+### 1. WorkOS repository first
+
+Use current repository truth before external sources:
+
+* source code
+* tests
+* installed package versions and lockfile
+* existing implementation patterns
+* AGENTS.md
+* applicable canonical WorkOS documentation
+
+Current WorkOS Product Truth outranks external documentation.
+
+### 2. Context7 for external technical uncertainty
+
+When uncertainty concerns an external:
+
+* library
+* framework
+* SDK
+* package
+* API
+* version-sensitive behavior
+
+proactively use Context7 before relying on model memory.
+
+Prefer documentation matching the version actually installed by WorkOS.
+
+Do not use Context7 to determine WorkOS business semantics or Product Truth.
+
+### 3. Official current documentation
+
+If repository evidence and Context7 are insufficient, or the question concerns current vendor/tool behavior:
+
+use current official documentation and official changelogs.
+
+Prefer primary sources.
+
+For Cursor behavior, use current official Cursor documentation/changelog when material.
+
+### 4. Bug or regression research
+
+When documented behavior conflicts with observed runtime behavior, investigate:
+
+* official issue trackers
+* official release notes
+* maintainer evidence
+
+Distinguish explicitly:
+
+DOCUMENTED_BEHAVIOR
+KNOWN_BUG
+REGRESSION
+UNCONFIRMED_REPORT
+
+Do not treat forum speculation as authoritative evidence.
+
+### 5. Verify against WorkOS
+
+When material and safe, verify the research against the actual WorkOS environment using the appropriate evidence:
+
+* repository source
+* tests
+* Browser
+* console
+* network
+* minimal reproduction
+
+External documentation is evidence, not permission to change WorkOS semantics.
+
+## Two-attempt escalation
+
+If two reasonable implementation attempts fail:
+
+STOP_PATCHING.
+
+Do not continue random fixes.
+
+Switch to:
+
+REPRODUCE
+→ HYPOTHESIS
+→ RESEARCH
+→ ROOT CAUSE
+→ MINIMAL FIX
+→ VERIFY
+
+## Research synthesis
+
+Keep research output compact.
+
+When research materially affects the solution, capture:
+
+RESEARCH_QUESTION
+CURRENT_WORKOS_EVIDENCE
+SOURCE
+SOURCE_TYPE
+SOURCE_VERSION
+SOURCE_DATE
+FINDING
+APPLIES_TO_CURRENT_WORKOS
+CONFLICTS_WITH_REPOSITORY_TRUTH
+DECISION
+CONFIDENCE
+UNKNOWN_REMAINING
+
+Do not paste large external documentation into the primary task context.
+
+## Knowledge promotion
+
+ONE_TIME_FINDING
+→ current task only
+
+REPEATED_TECHNICAL_PATTERN
+→ candidate Skill/reference
+
+STABLE_ENGINEERING_CONVENTION
+→ candidate project documentation
+
+PRODUCT_DECISION
+→ explicit Owner decision required
+
+HARD_PRODUCT_BOUNDARY
+→ explicit Owner authorization required before changing AGENTS.md or persistent Rules
+
+Do not silently canonize research findings.
+
+## Boundaries
+
+Never:
+
+* invent WorkOS Product Truth from external research
+* invent fields, states, formulas, permissions, workflows or business rules
+* automatically edit AGENTS.md because of a research finding
+* automatically create another Rule or Skill
+* install a dependency merely because research recommends it
+* let external documentation override current WorkOS business contracts
+* browse externally when current repository evidence already answers the question
+
+The goal is:
+
+RESEARCH WHEN MATERIAL UNCERTAINTY EXISTS.
+
+NOT:
+
+RESEARCH EVERYTHING.
