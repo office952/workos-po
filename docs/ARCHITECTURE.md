@@ -92,6 +92,17 @@ Golden Spine Completion V1 extends the same shell with the minimum route set for
 
 Remaining products and horizontal thickening stay out of scope until a later Owner GO.
 
+## Product Assembly
+
+Owner-accepted architecture direction: `docs/architecture/WORKOS_PRODUCT_ASSEMBLY_CONTRACT_V1.md`.
+
+```text
+PRODUCT_ASSEMBLY_CONTRACT_V1 = OWNER_ACCEPTED_ARCHITECTURE_DIRECTION
+PRODUCT_ASSEMBLY_IMPLEMENTATION = NOT_IMPLEMENTED
+```
+
+Typed Product Assembly is canonical direction only. Runtime still compiles, confirms, and freezes one ProductTemplate at a time. This is not implementation authorization.
+
 ## Configuration-First
 
 Living architecture for changeable business truth: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.

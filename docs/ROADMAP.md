@@ -80,6 +80,9 @@ SCHEDULING = NOT_STARTED / OUT_OF_SCOPE_V1
 MEMBER_DAG_COMPOSITION_CORRECTIONS = DEFERRED / NOT_CAPACITY_BLOCKER
 PLANNING_CAPACITY_CANON = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
 CONFIGURATION_FIRST_CANON = docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md
+PRODUCT_ASSEMBLY_CONTRACT_V1 = OWNER_ACCEPTED_DIRECTION
+PRODUCT_ASSEMBLY_IMPLEMENTATION = NOT_AUTHORIZED
+PRODUCT_ASSEMBLY_CANON = docs/architecture/WORKOS_PRODUCT_ASSEMBLY_CONTRACT_V1.md
 CONFIGURATION_FIRST_IMPLEMENTATION = CF1_COMPLETE_AND_CF2_CF3_COMPLETE_AND_CF4_COMPLETE
 CF1_COMMERCIAL_VERTICAL_V1 = COMPLETE
 CF1_OWNER_ACCEPTED_IMPLEMENTATION = YES
@@ -471,6 +474,16 @@ Product-scoped technical-setting resolution: ACM requires `STEEL_INTERNAL_FRAME.
 Accepted mutation authority remains server ProductTemplate + FormSchema + DraftValues + applicable organization technical settings + applicable formulas + crv1. Client ProductDefinition has zero authority.
 
 Organizations can enable or disable shared ProductTemplates for new work through `/admin/products`. Do not treat Product Enablement as CF5 complete. Living program is Planning Capacity V1. Capacity implementation is not authorized.
+
+## Product Assembly Contract V1
+
+Cross-cutting architecture direction so Configurator design does not invent a mega-template or absorb ACM into Letters BACK. Not the current program. Not implementation authorization.
+
+```text
+PRODUCT_ASSEMBLY_CONTRACT_V1 = OWNER_ACCEPTED_DIRECTION
+PRODUCT_ASSEMBLY_IMPLEMENTATION = NOT_AUTHORIZED
+PRODUCT_ASSEMBLY_CANON = docs/architecture/WORKOS_PRODUCT_ASSEMBLY_CONTRACT_V1.md
+```
 
 ## Product Enablement Admin V1
 
