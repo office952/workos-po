@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
 import {
-  ASSEMBLY_OFFERING_LABEL,
+  SIGN_ASSEMBLY_ACM_LETTERS_V1,
+  SIGN_ASSEMBLY_ACM_SIGNAGE_V2,
   acknowledgeAssemblyReview,
   acceptAssemblyQuote,
   assemblyAvailableForNewWork,
+  assemblyV2AvailableForNewWork,
   attachConfirmedChild,
   confirmAssembly,
   createAssemblyDefinition,
@@ -13,9 +15,13 @@ import {
   frozenTechnicalSettingsFromResolved,
   hashProductAggregate,
   hashProductTruth,
+  isAssemblyKind,
+  isTemplateEnabledForNewWork,
   materializeAssemblyExecutionPlan,
   presentAssemblyReview,
+  productCodeForRole,
   projectAssemblyProduction,
+  type AssemblyKind,
   type AssemblyMemberRole,
   type ConfirmedChildProduct,
 } from "@workos-final/domain";
@@ -45,10 +51,26 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/assemblies/offering", (c) => {
     const runtime = getProductSystem(c);
     const resolution = runtime.resolveProductEnablement();
+    const v1 = assemblyAvailableForNewWork(resolution);
+    const v2 = assemblyV2AvailableForNewWork(resolution);
     return c.json({
-      available: assemblyAvailableForNewWork(resolution),
-      label: ASSEMBLY_OFFERING_LABEL,
+      available: v1,
+      label: "Panou ACM + litere volumetrice",
       summary: "Panou ACM și litere volumetrice, confirmate separat și montate împreună.",
+      offerings: [
+        {
+          kind: SIGN_ASSEMBLY_ACM_LETTERS_V1,
+          available: v1,
+          label: "Panou ACM + litere volumetrice",
+          summary: "Panou ACM și litere volumetrice, confirmate separat și montate împreună.",
+        },
+        {
+          kind: SIGN_ASSEMBLY_ACM_SIGNAGE_V2,
+          available: v2,
+          label: "Panou ACM + logo volumetric",
+          summary: "Panou ACM și logo volumetric. Literele pot fi adăugate când sunt oferite.",
+        },
+      ],
     });
   });
 
@@ -68,6 +90,10 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: "not_found" }, 404);
     }
     const resolution = runtime.resolveProductEnablement();
+    const kind = readKind(body);
+    if (readString(body, "kind") !== null && !kind) {
+      return c.json({ error: "invalid_payload" }, 400);
+    }
     const created = createAssemblyDefinition({
       assemblyId: `asm:${randomUUID()}`,
       organizationId: plane.organizationId,
@@ -75,6 +101,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       customerId: request.customerId,
       resolution,
       createdAt: new Date().toISOString(),
+      kind: kind ?? SIGN_ASSEMBLY_ACM_LETTERS_V1,
     });
     if (!created.ok) {
       return c.json({ error: created.error, reasons: created.reasons }, 409);
@@ -111,9 +138,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     if (!role) {
       return c.json({ error: "invalid_payload" }, 400);
     }
-    const productCode = role === "SUPPORT_PANEL"
-      ? "PRD-ACM-CASSETTE-NONE"
-      : "PRD-LETTERS-FRONTLIT-PLEXI-AL06";
+    const productCode = productCodeForRole(role);
     const compiled = compileAcceptedProduct(runtime, productCode, body);
     if (!compiled.ok) {
       return c.json(compiled.body, compiled.status);
@@ -330,6 +355,7 @@ function presentCurrent(
   if (!bundle) {
     return null;
   }
+  const resolution = runtime.resolveProductEnablement();
   return presentAssemblyReview({
     definition: bundle.definition,
     truth: bundle.truth,
@@ -337,6 +363,9 @@ function presentCurrent(
     order: bundle.order,
     production: bundle.production,
     executionPlanId: bundle.executionPlanId,
+    lettersSelectable:
+      resolution.ok &&
+      isTemplateEnabledForNewWork(productCodeForRole("SIGNAGE_LETTERS"), resolution),
   });
 }
 
@@ -377,9 +406,17 @@ function readString(body: unknown, key: string): string | null {
   return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
 }
 
+function readKind(body: unknown): AssemblyKind | null {
+  const kind = readString(body, "kind");
+  if (!kind) {
+    return null;
+  }
+  return isAssemblyKind(kind) ? kind : null;
+}
+
 function readRole(body: unknown): AssemblyMemberRole | null {
   const role = readString(body, "role");
-  if (role === "SUPPORT_PANEL" || role === "SIGNAGE_LETTERS") {
+  if (role === "SUPPORT_PANEL" || role === "SIGNAGE_LETTERS" || role === "SIGNAGE_LOGO") {
     return role;
   }
   return null;

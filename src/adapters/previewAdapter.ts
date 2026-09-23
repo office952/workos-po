@@ -20,6 +20,26 @@ function presentReadiness(value: unknown): ConfigurationReadiness | null {
   return null;
 }
 
+function presentIdentityFacts(
+  value: unknown,
+): Array<{ id: string; label: string; value: string }> {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => {
+    const record = asRecord(item);
+    if (
+      !record ||
+      typeof record.id !== "string" ||
+      typeof record.label !== "string" ||
+      typeof record.value !== "string"
+    ) {
+      return [];
+    }
+    return [{ id: record.id, label: record.label, value: record.value }];
+  });
+}
+
 function presentMissing(value: unknown): MissingFact[] {
   if (!Array.isArray(value)) {
     return [];
@@ -107,6 +127,7 @@ export function presentPreview(payload: unknown): PreviewTransport | null {
     product: {
       code,
       label: product.label,
+      identityFacts: presentIdentityFacts(product.identityFacts),
     },
     values:
       asRecord(record.values) !== null

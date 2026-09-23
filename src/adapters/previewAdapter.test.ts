@@ -23,6 +23,7 @@ describe("presentPreview", () => {
     expect(presented?.reviewId).toBeNull();
     expect(presented?.installation.prequoteReady).toBe(false);
     expect(presented?.product.code).toBe("LETTERS");
+    expect(presented?.product.identityFacts).toEqual([]);
   });
 
   it("accepts the live productCode field from workos-final preview", () => {
@@ -30,6 +31,9 @@ describe("presentPreview", () => {
       product: {
         productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
         label: "Litere volumetrice luminoase",
+        identityFacts: [
+          { id: "face.material", label: "Material față", value: "Plexiglas 3 mm opal" },
+        ],
       },
       values: {},
       formSchema: {
@@ -56,6 +60,9 @@ describe("presentPreview", () => {
     });
 
     expect(presented?.product.code).toBe("PRD-LETTERS-FRONTLIT-PLEXI-AL06");
+    expect(presented?.product.identityFacts).toEqual([
+      { id: "face.material", label: "Material față", value: "Plexiglas 3 mm opal" },
+    ]);
     expect(presented?.reviewId).toBe("crv1:abc");
     expect(presented?.formSchema?.sections[0]?.fields[0]?.label).toBe(
       "Textul literelor",

@@ -157,7 +157,14 @@ export function QuoteSnapshotPage({
             />
             <dl className="fact-grid">
               <InfoRow label="Produs" value={presentedSnapshot.productLabel} />
-              <InfoRow label="Text" value={presentedSnapshot.inscription ?? "—"} />
+              <InfoRow
+                label={
+                  productCode === "PRD-LOGO-FRONTLIT-PLEXI-AL06"
+                    ? "Denumire logo"
+                    : "Text"
+                }
+                value={presentedSnapshot.inscription ?? "—"}
+              />
               {presentedSnapshot.customerDisplayName ? (
                 <InfoRow label="Client" value={presentedSnapshot.customerDisplayName} />
               ) : null}

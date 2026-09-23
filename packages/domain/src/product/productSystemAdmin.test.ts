@@ -15,8 +15,11 @@ describe("product system administration projection", () => {
     expect(admin.families[0]?.id).toBe("LIGHTED_VOLUMETRIC_SIGNS");
     expect(admin.families[0]?.label).toBe("Litere și semne volumetrice luminoase");
     expect(admin.families[0]?.id).not.toBe(admin.families[0]?.label);
-    expect(admin.families[0]?.categoryIds).toHaveLength(3);
-    expect(admin.families[0]?.productCodes).toEqual([CANONICAL_PRODUCT_CODE]);
+    expect(admin.families[0]?.categoryIds).toHaveLength(4);
+    expect(admin.families[0]?.productCodes).toEqual([
+      CANONICAL_PRODUCT_CODE,
+      "PRD-LOGO-FRONTLIT-PLEXI-AL06",
+    ]);
     expect(admin.families[0]?.readiness.lifecycle).toBe("ACTIVE");
     expect(admin.families[0]?.readiness.canDelete).toBe(false);
     expect(admin.families[1]?.id).toBe("SIGN_PANELS");
@@ -25,6 +28,7 @@ describe("product system administration projection", () => {
       "FRONT_LIT_VOLUMETRIC_LETTERS",
       "HALO_LIT_VOLUMETRIC_LETTERS",
       "FULL_ALUMINIUM_VOLUMETRIC_LETTERS",
+      "FRONT_LIT_VOLUMETRIC_LOGO",
       "ACM_CASSETTE_PANELS",
     ]);
     const used = admin.categories.find((item) => item.id === "FRONT_LIT_VOLUMETRIC_LETTERS");
@@ -63,7 +67,10 @@ describe("product system administration projection", () => {
     expect(product?.unresolvedAreas).not.toContain("Regula de rezervă PSU nu este stabilită");
 
     const lighting = admin.types.find((item) => item.typeId === "LIGHTING_FRONT_LED");
-    expect(lighting?.usedByProductCodes).toEqual([CANONICAL_PRODUCT_CODE]);
+    expect(lighting?.usedByProductCodes).toEqual([
+      CANONICAL_PRODUCT_CODE,
+      "PRD-LOGO-FRONTLIT-PLEXI-AL06",
+    ]);
     expect(lighting?.usedByLabels[0]).toContain("Litere volumetrice luminoase");
     expect(lighting?.independentCalculation).toBe(true);
     expect(lighting?.technicalSettings.map((item) => item.id)).toEqual([

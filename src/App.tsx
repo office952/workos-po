@@ -32,7 +32,7 @@ import { CatalogPage } from "./surfaces/CatalogPage";
 import { AssemblyPage } from "./surfaces/AssemblyPage";
 import { ClientDetailPage } from "./surfaces/ClientDetailPage";
 import { ClientsPage } from "./surfaces/ClientsPage";
-import { ConfiguratorPage } from "./surfaces/ConfiguratorPage";
+import { ConfiguratorPage, readAssemblyMemberRole } from "./surfaces/ConfiguratorPage";
 import { ExecutionPage } from "./surfaces/ExecutionPage";
 import { FailClosedPage } from "./surfaces/FailClosedPage";
 import { FoundationProofPage } from "./surfaces/FoundationProofPage";
@@ -88,11 +88,7 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
           requestId={context.requestId}
           productCode={context.productCode}
           assemblyId={assemblyId}
-          memberRole={
-            memberRole === "SUPPORT_PANEL" || memberRole === "SIGNAGE_LETTERS"
-              ? memberRole
-              : null
-          }
+          memberRole={readAssemblyMemberRole(memberRole)}
         />
       );
     }

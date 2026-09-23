@@ -116,6 +116,7 @@ describe("ACM cassette Product Truth V2", () => {
     expect(productTemplates.map((item) => item.code)).toEqual([
       CANONICAL_PRODUCT_CODE,
       ACM_CASSETTE_NONE_PRODUCT_CODE,
+      "PRD-LOGO-FRONTLIT-PLEXI-AL06",
     ]);
   });
 

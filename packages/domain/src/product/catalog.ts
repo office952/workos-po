@@ -9,6 +9,7 @@ export const LIGHTED_VOLUMETRIC_SIGNS_FAMILY_ID = "LIGHTED_VOLUMETRIC_SIGNS";
 export const SIGN_PANELS_FAMILY_ID = "SIGN_PANELS";
 export const FRONT_LIT_VOLUMETRIC_LETTERS_CATEGORY_ID =
   "FRONT_LIT_VOLUMETRIC_LETTERS";
+export const FRONT_LIT_VOLUMETRIC_LOGO_CATEGORY_ID = "FRONT_LIT_VOLUMETRIC_LOGO";
 export const ACM_CASSETTE_PANELS_CATEGORY_ID = "ACM_CASSETTE_PANELS";
 export const HALO_LIT_VOLUMETRIC_LETTERS_CATEGORY_ID =
   "HALO_LIT_VOLUMETRIC_LETTERS";
@@ -49,6 +50,13 @@ export const productCategories: readonly ProductCategory[] = [
     parentId: null,
     label: "Litere volumetrice luminoase integral aluminiu",
     sortOrder: 3,
+  },
+  {
+    id: FRONT_LIT_VOLUMETRIC_LOGO_CATEGORY_ID,
+    familyId: LIGHTED_VOLUMETRIC_SIGNS_FAMILY_ID,
+    parentId: null,
+    label: "Logo volumetric luminos",
+    sortOrder: 4,
   },
   {
     id: ACM_CASSETTE_PANELS_CATEGORY_ID,

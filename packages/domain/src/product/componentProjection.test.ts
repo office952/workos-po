@@ -31,6 +31,10 @@ describe("component architecture projection", () => {
         productLabel:
           "Litere volumetrice luminoase — față plexiglas, volum aluminiu 0,6 mm",
       }),
+      expect.objectContaining({
+        productCode: "PRD-LOGO-FRONTLIT-PLEXI-AL06",
+        productLabel: "Logo volumetric luminos",
+      }),
     ]);
     expect(face?.types[0]?.independentCalculation).toBe(true);
     expect(face?.types[0]?.gaps).toEqual([]);

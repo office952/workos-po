@@ -1,15 +1,18 @@
 import { acmCassetteNoneFormSchema, acmCassetteNoneTemplate } from "./acmCassetteNone.js";
 import { frontlitPlexiAl06FormSchema, frontlitPlexiAl06Template } from "./frontlitPlexiAl06.js";
+import { logoFrontlitPlexiAl06FormSchema, logoFrontlitPlexiAl06Template } from "./logoFrontlitPlexiAl06.js";
 import type { FormSchema, ProductTemplate } from "./types.js";
 
 export const productTemplates: readonly ProductTemplate[] = [
   frontlitPlexiAl06Template,
   acmCassetteNoneTemplate,
+  logoFrontlitPlexiAl06Template,
 ];
 
 export const formSchemas: readonly FormSchema[] = [
   frontlitPlexiAl06FormSchema,
   acmCassetteNoneFormSchema,
+  logoFrontlitPlexiAl06FormSchema,
 ];
 
 export function getProductTemplate(code: string): ProductTemplate | undefined {

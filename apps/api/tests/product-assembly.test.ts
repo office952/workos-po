@@ -220,6 +220,7 @@ describe("product assembly API", () => {
         products: [
           { templateCode: CANONICAL_PRODUCT_CODE, enabled: true },
           { templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE, enabled: false },
+          { templateCode: "PRD-LOGO-FRONTLIT-PLEXI-AL06", enabled: false },
         ],
       }),
     });

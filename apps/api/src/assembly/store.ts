@@ -1,5 +1,6 @@
 import {
   SIGN_ASSEMBLY_ACM_LETTERS_V1,
+  SIGN_ASSEMBLY_ACM_SIGNAGE_V2,
   type AssemblyDefinition,
   type AssemblyOrderSnapshot,
   type AssemblyProductionSnapshot,
@@ -283,7 +284,10 @@ export function readAssemblyProductionByOrder(
 
 function parseDefinition(payload: string): AssemblyDefinition | null {
   const value = JSON.parse(payload) as AssemblyDefinition;
-  if (value.kind !== SIGN_ASSEMBLY_ACM_LETTERS_V1) {
+  if (
+    value.kind !== SIGN_ASSEMBLY_ACM_LETTERS_V1 &&
+    value.kind !== SIGN_ASSEMBLY_ACM_SIGNAGE_V2
+  ) {
     return null;
   }
   if (value.status !== "DRAFT" && value.status !== "STALE" && value.status !== "CONFIRMED") {

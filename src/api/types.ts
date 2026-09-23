@@ -90,6 +90,7 @@ export type PreviewTransport = {
   product: {
     code: string;
     label: string;
+    identityFacts: Array<{ id: string; label: string; value: string }>;
   };
   values: DraftValues;
   formSchema: PresentedFormSchema | null;

@@ -23,6 +23,12 @@ describe("resources administration projection", () => {
         role: "FACE",
         productCode: CANONICAL_PRODUCT_CODE,
       }),
+      expect.objectContaining({
+        resourceId: PLEXIGLAS_3MM_OPAL_ID,
+        typeId: "PLEXIGLAS_FACE",
+        role: "FACE",
+        productCode: "PRD-LOGO-FRONTLIT-PLEXI-AL06",
+      }),
     ]);
     expect(resourceWhereUsed(FOREX_10MM_ID)[0]?.role).toBe("BACK");
     expect(resourceWhereUsed(ALUMINIUM_RETURN_PROFILE_ID)[0]?.role).toBe("VOLUME");

@@ -9,11 +9,19 @@ import { processWhereUsed } from "./whereUsed.js";
 describe("operational process projection", () => {
   it("derives where-used from type applicability and product composition", () => {
     const cncUses = processWhereUsed(CUT_SHEET_CNC_ID);
-    expect(cncUses.map((item) => item.role).sort()).toEqual(["BACK", "FACE", "FACE"]);
+    expect(cncUses.map((item) => item.role).sort()).toEqual([
+      "BACK",
+      "BACK",
+      "FACE",
+      "FACE",
+      "FACE",
+    ]);
     expect(cncUses.map((item) => item.productCode).sort()).toEqual([
       ACM_CASSETTE_NONE_PRODUCT_CODE,
       CANONICAL_PRODUCT_CODE,
       CANONICAL_PRODUCT_CODE,
+      "PRD-LOGO-FRONTLIT-PLEXI-AL06",
+      "PRD-LOGO-FRONTLIT-PLEXI-AL06",
     ]);
     expect(processWhereUsed(FORM_ALUMINIUM_PROFILE_ID)[0]?.role).toBe("VOLUME");
   });

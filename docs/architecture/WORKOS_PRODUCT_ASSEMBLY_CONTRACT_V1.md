@@ -36,8 +36,13 @@ Living program sequence remains `docs/ROADMAP.md`. Current Letters and ACM Produ
 ```text
 CANONICAL_DIRECTION = Owner-accepted model below
 CURRENT_IMPLEMENTATION = one ProductTemplate → one ProductDefinition / ProductTruth / ProductAggregate → one QuoteSnapshot.productCode
-NOT_IMPLEMENTED = Host Context, Logo child, ACM segmentation, generic assembly graph, recursive assemblies, CAD positioning, mounting price, mounting hardware
+NOT_IMPLEMENTED = Host Context, ACM segmentation, generic assembly graph, recursive assemblies, CAD positioning, mounting price, mounting hardware
 IMPLEMENTED = SIGN_ASSEMBLY_ACM_LETTERS_V1 definition, truth, aggregate, relation, grouped quote, order, production, execution
+VOLUMETRIC_LOGO_V1 = IMPLEMENTED_IN_REVIEW
+OWNER_ACCEPTED_VOLUMETRIC_LOGO_V1 = NO
+PRODUCT_ASSEMBLY_V2 = IMPLEMENTED_IN_REVIEW
+OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V2 = NO
+ASSEMBLY_V2_KIND = SIGN_ASSEMBLY_ACM_SIGNAGE_V2
 OPEN_DECISION = listed at the end; do not reopen the top-level model
 ```
 

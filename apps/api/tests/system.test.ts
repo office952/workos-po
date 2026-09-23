@@ -58,7 +58,10 @@ describe("system projection API", () => {
       }>;
     };
     expect(body.families[0]?.id).toBe("LIGHTED_VOLUMETRIC_SIGNS");
-    expect(body.families[0]?.productCodes).toEqual([CANONICAL_PRODUCT_CODE]);
+    expect(body.families[0]?.productCodes).toEqual([
+      CANONICAL_PRODUCT_CODE,
+      "PRD-LOGO-FRONTLIT-PLEXI-AL06",
+    ]);
     expect(body.products[0]?.composition.map((item) => item.typeId)).toEqual([
       "PLEXIGLAS_FACE",
       "ALUMINIUM_VOLUME",
@@ -68,7 +71,7 @@ describe("system projection API", () => {
     expect(
       body.types.find((item) => item.typeId === "LIGHTING_FRONT_LED")
         ?.usedByProductCodes,
-    ).toEqual([CANONICAL_PRODUCT_CODE]);
+    ).toEqual([CANONICAL_PRODUCT_CODE, "PRD-LOGO-FRONTLIT-PLEXI-AL06"]);
   });
 
   it("projects resources administration from the typed catalog", async () => {
@@ -148,6 +151,8 @@ describe("system projection API", () => {
       "CUT_STYROFOAM",
       "MOUNT_LETTERS_ON_PANEL",
       "INSPECT_FINISHED_ASSEMBLY",
+      "INSPECT_FINISHED_LOGO",
+      "MOUNT_LOGO_ON_PANEL",
     ]);
     expect(
       body.processes.find((item) => item.id === "FORM_ALUMINIUM_PROFILE")

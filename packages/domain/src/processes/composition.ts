@@ -8,6 +8,7 @@ import {
 import { selectedComponentIds } from "../product/compiler.js";
 import { getComponentType } from "../product/componentTypes.js";
 import { CANONICAL_PRODUCT_CODE } from "../product/frontlitPlexiAl06.js";
+import { LOGO_PRODUCT_CODE } from "../product/logoFrontlitPlexiAl06.js";
 import { starterFormulaVersionsForType } from "../product/resolveFormulas.js";
 import {
   LIGHTING_MISSING_LED_GEOMETRY,
@@ -38,6 +39,7 @@ import {
   CUT_SHEET_CNC_ID,
   FORM_ALUMINIUM_PROFILE_ID,
   INSPECT_FINISHED_LETTER_ID,
+  INSPECT_FINISHED_LOGO_ID,
   INSTALL_OR_CONNECT_PSU_ID,
   PACK_PRODUCT_ID,
   PAINT_RAL_ID,
@@ -296,6 +298,7 @@ function composeProductProcessTopologyFromResolved(
     ),
   );
   const withProduct = addProductComposition(
+    template,
     nodes,
     selectedComponents.map((item) => item.typeId),
     lightingResult,
@@ -398,6 +401,36 @@ function costAggregateFromEvaluations(
   };
 }
 
+export function logoProcessCompositionInspections(
+  template: ProductTemplate,
+): ProcessCompositionInspection[] {
+  if (template.code !== LOGO_PRODUCT_CODE) {
+    return [];
+  }
+  return [
+    {
+      id: "logo-finish-none",
+      label: "Fără finisaj",
+      summary: "Față și volum fără finisaj aplicat.",
+      values: { "face.finish": "none", "volume.finish": "none" },
+    },
+  ].map((branch) => ({
+    ...branch,
+    composition: composeProductProcesses(
+      template,
+      {
+        ...branch.values,
+        "face.confirmedAreaMm2": 180000,
+        "volume.depthMm": "60",
+        "volume.confirmedPerimeterMm": 8400,
+      },
+      {
+        formulaVersionsForType: starterFormulaVersionsForType,
+      },
+    ),
+  }));
+}
+
 export function lettersProcessCompositionInspections(
   template: ProductTemplate,
 ): ProcessCompositionInspection[] {
@@ -436,7 +469,18 @@ export function lettersProcessCompositionInspections(
   }));
 }
 
+function terminalInspectProcessId(templateCode: string): string | null {
+  if (templateCode === CANONICAL_PRODUCT_CODE) {
+    return INSPECT_FINISHED_LETTER_ID;
+  }
+  if (templateCode === LOGO_PRODUCT_CODE) {
+    return INSPECT_FINISHED_LOGO_ID;
+  }
+  return null;
+}
+
 function addProductComposition(
+  template: ProductTemplate,
   nodes: ProcessCompositionNode[],
   selectedTypeIds: readonly ComponentTypeId[],
   lightingResult?: ComponentCalculationResult,
@@ -473,14 +517,22 @@ function addProductComposition(
       }),
     );
   }
-  if (types.has("PLEXIGLAS_FACE") && types.has("ALUMINIUM_VOLUME")) {
+  const inspectProcessId = terminalInspectProcessId(template.code);
+  if (
+    inspectProcessId &&
+    types.has("PLEXIGLAS_FACE") &&
+    types.has("ALUMINIUM_VOLUME")
+  ) {
     extra.push(
       toNode({
         scope: "PRODUCT",
         typeId: null,
-        processId: INSPECT_FINISHED_LETTER_ID,
+        processId: inspectProcessId,
         condition: { kind: "always" },
-        reason: "Controlul final verifică corpul, finisajul și închiderea.",
+        reason:
+          inspectProcessId === INSPECT_FINISHED_LOGO_ID
+            ? "Controlul final verifică logo-ul, finisajul și închiderea."
+            : "Controlul final verifică corpul, finisajul și închiderea.",
         dependsOn: [],
         lightingResult,
       }),
@@ -547,7 +599,8 @@ function explicitDependencies(
   const metalCut = compositionNodeId("BACK", CUT_METAL_STOCK_ID);
   const formCassette = compositionNodeId("FACE", FORM_SHEET_CASSETTE_ID);
   const attach = compositionNodeId("BODY", ATTACH_INTERNAL_FRAME_ID);
-  const inspect = compositionNodeId("PRODUCT", INSPECT_FINISHED_LETTER_ID);
+  const letterInspect = compositionNodeId("PRODUCT", INSPECT_FINISHED_LETTER_ID);
+  const logoInspect = compositionNodeId("PRODUCT", INSPECT_FINISHED_LOGO_ID);
   const pack = compositionNodeId("PRODUCT", PACK_PRODUCT_ID);
 
   if (node.id === faceVinyl && ids.has(faceCut)) {
@@ -586,11 +639,11 @@ function explicitDependencies(
   if (node.id === attach) {
     pushIfPresent(deps, ids, faceCut, formCassette, metalCut);
   }
-  if (node.id === inspect) {
+  if (node.id === letterInspect || node.id === logoInspect) {
     pushIfPresent(deps, ids, testUniformity, volumePaint, close);
   }
   if (node.id === pack) {
-    pushIfPresent(deps, ids, inspect, attach);
+    pushIfPresent(deps, ids, letterInspect, logoInspect, attach);
   }
   return deps;
 }

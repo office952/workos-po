@@ -91,6 +91,7 @@ export const TEST_LIGHTING_IGNITION_ID = "TEST_LIGHTING_IGNITION";
 export const CLOSE_LETTER_BODY_ID = "CLOSE_LETTER_BODY";
 export const TEST_ILLUMINATION_UNIFORMITY_ID = "TEST_ILLUMINATION_UNIFORMITY";
 export const INSPECT_FINISHED_LETTER_ID = "INSPECT_FINISHED_LETTER";
+export const INSPECT_FINISHED_LOGO_ID = "INSPECT_FINISHED_LOGO";
 export const PACK_PRODUCT_ID = "PACK_PRODUCT";
 export const ATTACH_INTERNAL_FRAME_ID = "ATTACH_INTERNAL_FRAME";
 export const FORM_SHEET_CASSETTE_ID = "FORM_SHEET_CASSETTE";
@@ -104,6 +105,7 @@ export const CUT_CONTOUR_PLOTTER_ID = "CUT_CONTOUR_PLOTTER";
 export const CUT_LASER_SHEET_ID = "CUT_LASER_SHEET";
 export const CUT_STYROFOAM_ID = "CUT_STYROFOAM";
 export const MOUNT_LETTERS_ON_PANEL_ID = "MOUNT_LETTERS_ON_PANEL";
+export const MOUNT_LOGO_ON_PANEL_ID = "MOUNT_LOGO_ON_PANEL";
 export const INSPECT_FINISHED_ASSEMBLY_ID = "INSPECT_FINISHED_ASSEMBLY";
 
 export const productionCapabilityClasses: readonly ProductionCapabilityClass[] = [
@@ -599,6 +601,36 @@ export const operationalProcesses: readonly OperationalProcess[] = [
     lifecycle: "PLANNED",
     readiness: "PLANNED",
     readinessNote: "Control de ansamblu. Nu este controlul final al unei litere.",
+    providerRequirement: "NOT_REQUIRED",
+  },
+  {
+    id: INSPECT_FINISHED_LOGO_ID,
+    label: "Control calitate final logo",
+    description:
+      "Verificare vizuală a logo-ului, finisajului și închiderii înainte de ambalare. Nu înlocuiește controlul final al literelor.",
+    category: "QUALITY_CONTROL",
+    requiredCapabilityId: "QUALITY_CONTROL",
+    applicableTypeIds: [],
+    outcome: "Logo acceptat vizual",
+    resourceIds: [],
+    lifecycle: "PLANNED",
+    readiness: "PLANNED",
+    readinessNote: "Control terminal de logo. Fără cerință de utilaj.",
+    providerRequirement: "NOT_REQUIRED",
+  },
+  {
+    id: MOUNT_LOGO_ON_PANEL_ID,
+    label: "Montaj logo pe panou",
+    description:
+      "Montaj al logo-ului confirmat pe panoul ACM confirmat. Nu schimbă adevărul niciunui produs și nu are preț comercial propriu.",
+    category: "ASSEMBLY",
+    requiredCapabilityId: "MANUAL_ASSEMBLY",
+    applicableTypeIds: [],
+    outcome: "Logo montat pe panou",
+    resourceIds: [],
+    lifecycle: "PLANNED",
+    readiness: "KNOWN_PROCESS",
+    readinessNote: "Proces de ansamblu. Fără formulă de cost și fără consum de material inventat.",
     providerRequirement: "NOT_REQUIRED",
   },
 ];

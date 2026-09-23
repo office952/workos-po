@@ -367,7 +367,7 @@ describe("PERF_3 resources mutation delta", () => {
         costEvidenceRowsRebuilt: 1,
         resourceRecordsRebuilt: 1,
         recipeRecordsRebuilt: 0,
-        templateUsagesRebuilt: 1,
+        templateUsagesRebuilt: 2,
       },
     ]);
     expect(runtime.present()).toBe(runtime.present());
@@ -437,7 +437,7 @@ describe("PERF_3 resources mutation delta", () => {
     expect(counts.deltas[0]).toMatchObject({
       costEvidenceRowsRebuilt: 1,
       resourceRecordsRebuilt: 1,
-      templateUsagesRebuilt: 1,
+      templateUsagesRebuilt: 2,
     });
 
     const thirty = await confirmProduct(app, CANONICAL_PRODUCT_CODE, {
@@ -478,7 +478,7 @@ describe("PERF_3 resources mutation delta", () => {
       },
     );
     expect(saved.status).toBe(200);
-    expect(counts.deltas[0]?.templateUsagesRebuilt).toBe(2);
+    expect(counts.deltas[0]?.templateUsagesRebuilt).toBe(3);
     expect(counts.evidenceLoads).toBe(1);
     expect(counts.fullAdminBuilds).toBe(1);
     runtime.close();

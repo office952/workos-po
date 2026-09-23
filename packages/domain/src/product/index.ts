@@ -2,6 +2,7 @@ export {
   ACM_CASSETTE_PANELS_CATEGORY_ID,
   FULL_ALUMINIUM_VOLUMETRIC_LETTERS_CATEGORY_ID,
   FRONT_LIT_VOLUMETRIC_LETTERS_CATEGORY_ID,
+  FRONT_LIT_VOLUMETRIC_LOGO_CATEGORY_ID,
   HALO_LIT_VOLUMETRIC_LETTERS_CATEGORY_ID,
   LIGHTED_VOLUMETRIC_SIGNS_FAMILY_ID,
   SIGN_PANELS_FAMILY_ID,
@@ -148,6 +149,12 @@ export {
   frontlitPlexiAl06FormSchema,
   frontlitPlexiAl06Template,
 } from "./frontlitPlexiAl06.js";
+export {
+  LOGO_PRODUCT_CODE,
+  logoFrontlitPlexiAl06FormSchema,
+  logoFrontlitPlexiAl06Template,
+  logoReadyValues,
+} from "./logoFrontlitPlexiAl06.js";
 export {
   ACM_CASSETTE_NONE_FORM_SCHEMA_ID,
   ACM_CASSETTE_NONE_PRODUCT_CODE,

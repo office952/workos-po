@@ -2,8 +2,11 @@ import type { FrozenCommercialOffer } from "../commercial/quoteSnapshot.js";
 import type { FrozenProductionInput } from "../production/snapshot.js";
 import type { ProductTruth } from "../product/types.js";
 import type {
+  AssemblyContractVersion,
   AssemblyDefinitionStatus,
+  AssemblyKind,
   AssemblyMemberRole,
+  AssemblyRelationKind,
 } from "./contract.js";
 
 export type AssemblyMember = {
@@ -20,7 +23,7 @@ export type AssemblyMember = {
 
 export type AssemblyRelation = {
   relationId: string;
-  kind: "LETTERS_ON_ACM_PANEL";
+  kind: AssemblyRelationKind;
   sourceMemberId: string;
   targetMemberId: string;
 };
@@ -30,8 +33,8 @@ export type AssemblyDefinition = {
   organizationId: string;
   requestId: string | null;
   customerId: string | null;
-  kind: "SIGN_ASSEMBLY_ACM_LETTERS_V1";
-  contractVersion: "product-assembly-v1";
+  kind: AssemblyKind;
+  contractVersion: AssemblyContractVersion;
   status: AssemblyDefinitionStatus;
   members: readonly AssemblyMember[];
   relations: readonly AssemblyRelation[];
@@ -47,8 +50,8 @@ export type AssemblyTruth = {
   assemblyId: string;
   organizationId: string;
   requestId: string | null;
-  kind: "SIGN_ASSEMBLY_ACM_LETTERS_V1";
-  contractVersion: "product-assembly-v1";
+  kind: AssemblyKind;
+  contractVersion: AssemblyContractVersion;
   members: readonly AssemblyMember[];
   relations: readonly AssemblyRelation[];
   contentHash: string;
@@ -69,7 +72,7 @@ export type AssemblyAggregate = {
   childAggregates: readonly AssemblyAggregateChild[];
   relationConsequences: readonly {
     relationId: string;
-    processId: "MOUNT_LETTERS_ON_PANEL";
+    processId: "MOUNT_LETTERS_ON_PANEL" | "MOUNT_LOGO_ON_PANEL";
   }[];
   assemblyDemand: readonly [];
 };

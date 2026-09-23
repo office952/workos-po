@@ -11,10 +11,12 @@ import { configuratorHref } from "../routing/appRoute";
 import { readConfiguratorSession } from "../session/configuratorSession";
 
 type AssemblyScope = {
-  id: "acm" | "letters" | "relation" | "summary";
+  id: "acm" | "logo" | "letters" | "relation" | "summary";
   title: string;
   complete: boolean;
   summary: string;
+  productCode?: string | null;
+  role?: string | null;
 };
 
 type AssemblyView = {
@@ -38,15 +40,17 @@ type AssemblyView = {
   executionPlanId: string | null;
 };
 
-const SCOPE_PRODUCT: Record<AssemblyScope["id"], string | null> = {
+const SCOPE_PRODUCT: Partial<Record<AssemblyScope["id"], string | null>> = {
   acm: "PRD-ACM-CASSETTE-NONE",
+  logo: "PRD-LOGO-FRONTLIT-PLEXI-AL06",
   letters: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
   relation: null,
   summary: null,
 };
 
-const SCOPE_ROLE: Record<AssemblyScope["id"], string | null> = {
+const SCOPE_ROLE: Partial<Record<AssemblyScope["id"], string | null>> = {
   acm: "SUPPORT_PANEL",
+  logo: "SIGNAGE_LOGO",
   letters: "SIGNAGE_LETTERS",
   relation: null,
   summary: null,
@@ -93,8 +97,9 @@ export function AssemblyPage() {
   }
 
   const scope = assembly?.scopes.find((item) => item.id === scopeId) ?? assembly?.scopes[0];
-  const productCode = scope ? SCOPE_PRODUCT[scope.id] : null;
-  const role = scope ? SCOPE_ROLE[scope.id] : null;
+  const productCode = scope?.productCode ?? (scope ? SCOPE_PRODUCT[scope.id] : null);
+  const role = scope?.role ?? (scope ? SCOPE_ROLE[scope.id] : null);
+  const hasLogo = assembly?.scopes.some((item) => item.id === "logo") ?? false;
 
   return (
     <SlicePage
@@ -103,7 +108,11 @@ export function AssemblyPage() {
       workspace="stack"
       eyebrow="Ansamblu"
       title={assembly?.label ?? "Panou ACM + litere volumetrice"}
-      lead="Configurează panoul și literele, apoi confirmă ansamblul."
+      lead={
+        hasLogo
+          ? "Configurează panoul și logo-ul. Literele sunt opționale."
+          : "Configurează panoul și literele, apoi confirmă ansamblul."
+      }
     >
       {!assemblyId ? (
         <InlineAlert tone="blocked" title="Ansamblu lipsă">
@@ -131,7 +140,7 @@ export function AssemblyPage() {
               ))}
             </div>
           </div>
-          {scope ? (
+          {scope && scope.id !== "summary" ? (
             <SurfacePanel title={scope.title} label={scope.title}>
               <p>{scope.summary}</p>
               <InfoRow label="Stare" value={scope.complete ? "Complet" : "Necesită date"} />

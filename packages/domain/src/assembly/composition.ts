@@ -3,7 +3,9 @@ import {
   getProductionCapability,
   INSPECT_FINISHED_ASSEMBLY_ID,
   INSPECT_FINISHED_LETTER_ID,
+  INSPECT_FINISHED_LOGO_ID,
   MOUNT_LETTERS_ON_PANEL_ID,
+  MOUNT_LOGO_ON_PANEL_ID,
   PACK_PRODUCT_ID,
   processProviderRequirement,
 } from "../processes/catalog.js";
@@ -12,17 +14,20 @@ import { contentHash } from "./canonical.js";
 import {
   ASSEMBLY_OFFERING_LABEL,
   ASSEMBLY_QC_LABEL,
+  SIGN_ASSEMBLY_ACM_LETTERS_V1,
+  SIGN_ASSEMBLY_ACM_SIGNAGE_V2,
   assemblyRoleLabel,
   type AssemblyMemberRole,
 } from "./contract.js";
 import type { AssemblyOrderSnapshot, AssemblyProductionSnapshot } from "./snapshots.js";
 import type { AssemblyRuleFailure } from "./model.js";
 
-export { INSPECT_FINISHED_ASSEMBLY_ID, MOUNT_LETTERS_ON_PANEL_ID };
+export { INSPECT_FINISHED_ASSEMBLY_ID, MOUNT_LETTERS_ON_PANEL_ID, MOUNT_LOGO_ON_PANEL_ID };
 
 const DROPPED_TERMINAL_PROCESSES = new Set<string>([
   PACK_PRODUCT_ID,
   INSPECT_FINISHED_LETTER_ID,
+  INSPECT_FINISHED_LOGO_ID,
 ]);
 
 export function projectAssemblyProduction(
@@ -50,36 +55,11 @@ export function projectAssemblyProduction(
     };
   }
   const sinks = members.flatMap((member) => sinkIds(member.operations));
-  const mount = assemblyOperation(
-    `ANSAMBLARE:${MOUNT_LETTERS_ON_PANEL_ID}`,
-    MOUNT_LETTERS_ON_PANEL_ID,
-    sinks,
-  );
-  if (!mount) {
-    return {
-      ok: false,
-      error: "missing_relation",
-      reasons: ["Procesele de ansamblare nu sunt disponibile."],
-    };
-  }
-  const qc = assemblyOperation(
-    `ANSAMBLARE:${INSPECT_FINISHED_ASSEMBLY_ID}`,
-    INSPECT_FINISHED_ASSEMBLY_ID,
-    [mount.id],
-  );
-  if (!qc) {
-    return {
-      ok: false,
-      error: "missing_relation",
-      reasons: ["Procesele de ansamblare nu sunt disponibile."],
-    };
-  }
-  const pack = assemblyOperation(
-    `ANSAMBLARE:${PACK_PRODUCT_ID}`,
-    PACK_PRODUCT_ID,
-    [qc.id],
-  );
-  if (!pack) {
+  const assemblyOperations =
+    order.assemblyKind === SIGN_ASSEMBLY_ACM_SIGNAGE_V2
+      ? v2AssemblyOperations(members)
+      : v1AssemblyOperations(sinks);
+  if (!assemblyOperations) {
     return {
       ok: false,
       error: "missing_relation",
@@ -92,6 +72,8 @@ export function projectAssemblyProduction(
   )
     ? "COMPLETE"
     : "PARTIAL";
+  const label =
+    order.assemblyKind === SIGN_ASSEMBLY_ACM_LETTERS_V1 ? ASSEMBLY_OFFERING_LABEL : order.label;
   const body = {
     schemaVersion: 1 as const,
     status: "ACCEPTED" as const,
@@ -102,9 +84,9 @@ export function projectAssemblyProduction(
     assemblyTruthId: order.assemblyTruthId,
     assemblyTruthHash: order.assemblyTruthHash,
     assemblyKind: order.assemblyKind,
-    label: ASSEMBLY_OFFERING_LABEL,
+    label,
     members,
-    assemblyOperations: [mount, qc, pack],
+    assemblyOperations,
     eicTotal,
     eicCurrency: "EUR" as const,
     eicCompleteness,
@@ -118,6 +100,77 @@ export function projectAssemblyProduction(
       contentHash: contentHash(body),
     },
   };
+}
+
+function v1AssemblyOperations(
+  sinks: readonly string[],
+): FrozenProductionOperation[] | null {
+  const mount = assemblyOperation(
+    `ANSAMBLARE:${MOUNT_LETTERS_ON_PANEL_ID}`,
+    MOUNT_LETTERS_ON_PANEL_ID,
+    sinks,
+  );
+  if (!mount) {
+    return null;
+  }
+  const qc = assemblyOperation(
+    `ANSAMBLARE:${INSPECT_FINISHED_ASSEMBLY_ID}`,
+    INSPECT_FINISHED_ASSEMBLY_ID,
+    [mount.id],
+  );
+  if (!qc) {
+    return null;
+  }
+  const pack = assemblyOperation(`ANSAMBLARE:${PACK_PRODUCT_ID}`, PACK_PRODUCT_ID, [qc.id]);
+  if (!pack) {
+    return null;
+  }
+  return [mount, qc, pack];
+}
+
+function v2AssemblyOperations(
+  members: readonly { role: AssemblyMemberRole; operations: readonly FrozenProductionOperation[] }[],
+): FrozenProductionOperation[] | null {
+  const support = members.find((member) => member.role === "SUPPORT_PANEL");
+  const logo = members.find((member) => member.role === "SIGNAGE_LOGO");
+  const letters = members.find((member) => member.role === "SIGNAGE_LETTERS");
+  if (!support || !logo) {
+    return null;
+  }
+  const operations: FrozenProductionOperation[] = [];
+  if (letters) {
+    const lettersMount = assemblyOperation(
+      `ANSAMBLARE:${MOUNT_LETTERS_ON_PANEL_ID}`,
+      MOUNT_LETTERS_ON_PANEL_ID,
+      [...sinkIds(support.operations), ...sinkIds(letters.operations)],
+    );
+    if (!lettersMount) {
+      return null;
+    }
+    operations.push(lettersMount);
+  }
+  const logoMount = assemblyOperation(
+    `ANSAMBLARE:${MOUNT_LOGO_ON_PANEL_ID}`,
+    MOUNT_LOGO_ON_PANEL_ID,
+    [...sinkIds(support.operations), ...sinkIds(logo.operations)],
+  );
+  if (!logoMount) {
+    return null;
+  }
+  operations.push(logoMount);
+  const qc = assemblyOperation(
+    `ANSAMBLARE:${INSPECT_FINISHED_ASSEMBLY_ID}`,
+    INSPECT_FINISHED_ASSEMBLY_ID,
+    operations.map((item) => item.id),
+  );
+  if (!qc) {
+    return null;
+  }
+  const pack = assemblyOperation(`ANSAMBLARE:${PACK_PRODUCT_ID}`, PACK_PRODUCT_ID, [qc.id]);
+  if (!pack) {
+    return null;
+  }
+  return [...operations, qc, pack];
 }
 
 function projectMemberOperations(

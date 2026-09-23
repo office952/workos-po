@@ -103,7 +103,16 @@ PRODUCT_ASSEMBLY_IMPLEMENTATION = COMPLETE / INTEGRATED
 OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = YES
 ```
 
-Narrow V1 is Owner-accepted and integrated: one ACM panel and one Letters product, related by `LETTERS_ON_ACM_PANEL`. Standalone products still compile, confirm, and freeze one ProductTemplate at a time. Host Context, a Logo child, ACM segmentation, and a generic assembly graph remain unimplemented.
+Narrow V1 is Owner-accepted and integrated: one ACM panel and one Letters product, related by `LETTERS_ON_ACM_PANEL`. Standalone products still compile, confirm, and freeze one ProductTemplate at a time.
+
+```text
+VOLUMETRIC_LOGO_V1 = IMPLEMENTED_IN_REVIEW
+OWNER_ACCEPTED_VOLUMETRIC_LOGO_V1 = NO
+PRODUCT_ASSEMBLY_V2 = IMPLEMENTED_IN_REVIEW
+OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V2 = NO
+```
+
+Logo V1 is the specific front-lit SKU `PRD-LOGO-FRONTLIT-PLEXI-AL06`. It is disabled until an organization enables it. Assembly V2 is `SIGN_ASSEMBLY_ACM_SIGNAGE_V2`: one ACM, one Logo, and optional Letters. V1 semantics stay in place. Host Context, ACM segmentation, and a generic assembly graph remain unimplemented. `ProductAggregate.inscription` remains the transport field for the logo designation; the operator label is Denumire logo.
 
 ## Configuration-First
 

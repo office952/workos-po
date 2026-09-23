@@ -53,9 +53,22 @@ import {
 type PreviewState = "idle" | "pending" | "ready" | "error";
 type ActionState = "idle" | "pending" | "error";
 
+export type AssemblyMemberRole = "SUPPORT_PANEL" | "SIGNAGE_LETTERS" | "SIGNAGE_LOGO";
+
+export function readAssemblyMemberRole(value: string | null): AssemblyMemberRole | null {
+  switch (value) {
+    case "SUPPORT_PANEL":
+    case "SIGNAGE_LETTERS":
+    case "SIGNAGE_LOGO":
+      return value;
+    default:
+      return null;
+  }
+}
+
 export type ConfiguratorPageProps = ConfiguratorContext & {
   assemblyId?: string | null;
-  memberRole?: "SUPPORT_PANEL" | "SIGNAGE_LETTERS" | null;
+  memberRole?: AssemblyMemberRole | null;
 };
 
 export const INITIAL_PREVIEW_DEBOUNCE_MS = 0;
@@ -459,6 +472,13 @@ export function ConfiguratorPage({
           >
             {previewError}
           </InlineAlert>
+        ) : null}
+        {preview && preview.product.identityFacts.length > 0 ? (
+          <dl>
+            {preview.product.identityFacts.map((fact) => (
+              <InfoRow key={fact.id} label={fact.label} value={fact.value} />
+            ))}
+          </dl>
         ) : null}
         {preview?.formSchema?.sections.map((section) => (
           <fieldset key={section.id} className="stack fieldset">

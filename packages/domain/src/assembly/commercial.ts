@@ -1,9 +1,8 @@
 import type { FrozenCommercialOffer, FrozenJobCommercial } from "../commercial/quoteSnapshot.js";
 import { contentHash } from "./canonical.js";
 import {
-  ASSEMBLY_OFFERING_LABEL,
   ASSEMBLY_RELATION_COMMERCIAL_PRICE,
-  SIGN_ASSEMBLY_ACM_LETTERS_V1,
+  assemblyOfferingLabelFor,
   assemblyRoleLabel,
 } from "./contract.js";
 import type { AssemblyOrderSnapshot, AssemblyQuoteSnapshot } from "./snapshots.js";
@@ -56,7 +55,7 @@ export function freezeAssemblyQuote(input: {
       reasons: ["Oferta de ansamblu cere un preț comercial complet pentru fiecare produs confirmat."],
     };
   }
-  if (members.some((item) => item === null) || members.length !== 2) {
+  if (members.some((item) => item === null) || members.length !== input.truth.members.length) {
     return {
       ok: false,
       error: "stale_child",
@@ -64,19 +63,26 @@ export function freezeAssemblyQuote(input: {
     };
   }
   const confirmed = members.flatMap((item) => (item && !("incomplete" in item) ? [item] : []));
-  const totals = sumCommercial(confirmed.map((item) => item.commercial));
+  const published =
+    input.truth.kind === "SIGN_ASSEMBLY_ACM_SIGNAGE_V2"
+      ? [...confirmed].sort((left, right) => quoteMemberRank(left.role) - quoteMemberRank(right.role))
+      : confirmed;
+  const totals = sumCommercial(published.map((item) => item.commercial));
   const body = {
     schemaVersion: 1 as const,
     status: "FROZEN" as const,
     organizationId: input.truth.organizationId,
     requestId: input.truth.requestId,
-    assemblyKind: SIGN_ASSEMBLY_ACM_LETTERS_V1,
+    assemblyKind: input.truth.kind,
     assemblyContractVersion: input.truth.contractVersion,
     assemblyId: input.truth.assemblyId,
     assemblyTruthId: input.truth.assemblyTruthId,
     assemblyTruthHash: input.truth.contentHash,
-    label: ASSEMBLY_OFFERING_LABEL,
-    members: confirmed,
+    label: assemblyOfferingLabelFor(
+      input.truth.kind,
+      published.map((item) => item.role),
+    ),
+    members: published,
     relationCommercialPrice: ASSEMBLY_RELATION_COMMERCIAL_PRICE,
     totals,
   };
@@ -178,6 +184,21 @@ export function acceptAssemblyQuote(input: {
       contentHash: contentHash(body),
     },
   };
+}
+
+function quoteMemberRank(role: AssemblyQuoteSnapshot["members"][number]["role"]): number {
+  switch (role) {
+    case "SUPPORT_PANEL":
+      return 0;
+    case "SIGNAGE_LETTERS":
+      return 1;
+    case "SIGNAGE_LOGO":
+      return 2;
+    default: {
+      const _exhaustive: never = role;
+      return _exhaustive;
+    }
+  }
 }
 
 function sumCommercial(

@@ -33,24 +33,59 @@ export function CatalogPage() {
   const products = useMemo(() => catalog.data ?? [], [catalog.data]);
   const [query, setQuery] = useState("");
   const [family, setFamily] = useState(ALL);
-  const [offering, setOffering] = useState<{ available: boolean; label: string; summary: string } | null>(
-    null,
-  );
+  const [offerings, setOfferings] = useState<
+    { kind: string; available: boolean; label: string; summary: string }[]
+  >([]);
 
   useEffect(() => {
     void getJson("/api/assemblies/offering")
       .then((body) => {
-        const record = body as { available?: unknown; label?: unknown; summary?: unknown };
+        const record = body as {
+          available?: unknown;
+          label?: unknown;
+          summary?: unknown;
+          offerings?: unknown;
+        };
+        if (Array.isArray(record.offerings)) {
+          setOfferings(
+            record.offerings.flatMap((item) => {
+              if (typeof item !== "object" || item === null) {
+                return [];
+              }
+              const row = item as {
+                kind?: unknown;
+                available?: unknown;
+                label?: unknown;
+                summary?: unknown;
+              };
+              if (row.available !== true || typeof row.label !== "string" || typeof row.kind !== "string") {
+                return [];
+              }
+              return [
+                {
+                  kind: row.kind,
+                  available: true,
+                  label: row.label,
+                  summary: typeof row.summary === "string" ? row.summary : "",
+                },
+              ];
+            }),
+          );
+          return;
+        }
         if (record.available === true && typeof record.label === "string") {
-          setOffering({
-            available: true,
-            label: record.label,
-            summary: typeof record.summary === "string" ? record.summary : "",
-          });
+          setOfferings([
+            {
+              kind: "SIGN_ASSEMBLY_ACM_LETTERS_V1",
+              available: true,
+              label: record.label,
+              summary: typeof record.summary === "string" ? record.summary : "",
+            },
+          ]);
         }
       })
       .catch(() => {
-        setOffering(null);
+        setOfferings([]);
       });
   }, []);
 
@@ -140,23 +175,26 @@ export function CatalogPage() {
               <EmptyState title="Categoria nu are șabloane care să corespundă." />
             }
           >
-            {offering?.available && requestId ? (
-              <WorklistRow
-                variant="compact"
-                onSelect={() => {
-                  void postJson("/api/assemblies", { requestId }).then((body) => {
-                    const assembly = (body as { assembly?: { assemblyId?: string } }).assembly;
-                    if (assembly?.assemblyId) {
-                      navigate(`/ansamblu?assembly=${encodeURIComponent(assembly.assemblyId)}`);
-                    }
-                  });
-                }}
-                identity={offering.label}
-                identityDetail={offering.summary}
-                context="Ansamblu"
-                actionLabel="Deschide ansamblul"
-              />
-            ) : null}
+            {offerings.map((item) =>
+              requestId ? (
+                <WorklistRow
+                  key={item.kind}
+                  variant="compact"
+                  onSelect={() => {
+                    void postJson("/api/assemblies", { requestId, kind: item.kind }).then((body) => {
+                      const assembly = (body as { assembly?: { assemblyId?: string } }).assembly;
+                      if (assembly?.assemblyId) {
+                        navigate(`/ansamblu?assembly=${encodeURIComponent(assembly.assemblyId)}`);
+                      }
+                    });
+                  }}
+                  identity={item.label}
+                  identityDetail={item.summary}
+                  context="Ansamblu"
+                  actionLabel="Deschide ansamblul"
+                />
+              ) : null,
+            )}
             {visible.map((product) => (
               <WorklistRow
                 key={product.code}

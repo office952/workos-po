@@ -2,7 +2,10 @@ import { getComponentType } from "../product/componentTypes.js";
 import { productTemplates } from "../product/productRegistry.js";
 import type { ComponentRole, ComponentTypeId } from "../product/types.js";
 import { getOperationalProcess } from "./catalog.js";
-import { lettersProcessCompositionInspections } from "./composition.js";
+import {
+  lettersProcessCompositionInspections,
+  logoProcessCompositionInspections,
+} from "./composition.js";
 
 export type ProcessUse = {
   processId: string;
@@ -41,9 +44,10 @@ export function processWhereUsed(processId: string): ProcessUse[] {
     return typeUses;
   }
   return productTemplates.flatMap((template) => {
-    const used = lettersProcessCompositionInspections(template).some((item) =>
-      item.composition.nodes.some((node) => node.processId === processId),
-    );
+    const used = [
+      ...lettersProcessCompositionInspections(template),
+      ...logoProcessCompositionInspections(template),
+    ].some((item) => item.composition.nodes.some((node) => node.processId === processId));
     if (!used) {
       return [];
     }

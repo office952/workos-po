@@ -62,7 +62,7 @@ describe("resources administration mutation delta", () => {
       costEvidenceRowsRebuilt: 1,
       resourceRecordsRebuilt: 1,
       recipeRecordsRebuilt: 0,
-      templateUsagesRebuilt: 1,
+      templateUsagesRebuilt: 2,
     });
 
     const thirty = before.costEvidence.find(
@@ -150,7 +150,7 @@ describe("resources administration mutation delta", () => {
     const delta = applyResourcesAdministrationWrite(before, afterRows, next, AS_OF);
 
     expect(delta.admin).toEqual(projectResourcesAdministration(afterRows, AS_OF));
-    expect(delta.stats.templateUsagesRebuilt).toBe(2);
+    expect(delta.stats.templateUsagesRebuilt).toBe(3);
     expect(delta.stats.resourceRecordsRebuilt).toBe(1);
     expect(delta.stats.recipeRecordsRebuilt).toBe(1);
     expect(

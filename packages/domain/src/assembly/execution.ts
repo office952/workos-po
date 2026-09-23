@@ -5,7 +5,6 @@ import {
 } from "../execution/plan.js";
 import { setPlannedEffortOnTask, type TaskMutationResult } from "../execution/lifecycle.js";
 import type { AssemblyProductionSnapshot } from "./snapshots.js";
-import { ASSEMBLY_OFFERING_LABEL } from "./contract.js";
 
 export function materializeAssemblyExecutionPlan(
   snapshot: AssemblyProductionSnapshot,
@@ -54,8 +53,8 @@ export function materializeAssemblyExecutionPlan(
       sourceSnapshotId: snapshot.snapshotId,
       sourceSnapshotHash: snapshot.contentHash,
       productCode: snapshot.assemblyKind,
-      productLabel: ASSEMBLY_OFFERING_LABEL,
-      inscription: ASSEMBLY_OFFERING_LABEL,
+      productLabel: snapshot.label,
+      inscription: snapshot.label,
       createdAt,
       status: "PLANNED",
       taskCount: tasks.length,

@@ -1,6 +1,6 @@
 import type { FrozenCommercialOffer, FrozenJobCommercial } from "../commercial/quoteSnapshot.js";
 import type { FrozenProductionInput, FrozenProductionOperation } from "../production/snapshot.js";
-import type { AssemblyMemberRole } from "./contract.js";
+import type { AssemblyKind, AssemblyMemberRole } from "./contract.js";
 
 export type AssemblyQuoteMember = {
   memberId: string;
@@ -22,8 +22,8 @@ export type AssemblyQuoteSnapshot = {
   status: "FROZEN";
   organizationId: string;
   requestId: string | null;
-  assemblyKind: "SIGN_ASSEMBLY_ACM_LETTERS_V1";
-  assemblyContractVersion: "product-assembly-v1";
+  assemblyKind: AssemblyKind;
+  assemblyContractVersion: "product-assembly-v1" | "product-assembly-v2";
   assemblyId: string;
   assemblyTruthId: string;
   assemblyTruthHash: string;
@@ -66,7 +66,7 @@ export type AssemblyOrderSnapshot = {
   assemblyId: string;
   assemblyTruthId: string;
   assemblyTruthHash: string;
-  assemblyKind: "SIGN_ASSEMBLY_ACM_LETTERS_V1";
+  assemblyKind: AssemblyKind;
   label: string;
   createdAt: string;
   contentHash: string;
@@ -97,7 +97,7 @@ export type AssemblyProductionSnapshot = {
   assemblyId: string;
   assemblyTruthId: string;
   assemblyTruthHash: string;
-  assemblyKind: "SIGN_ASSEMBLY_ACM_LETTERS_V1";
+  assemblyKind: AssemblyKind;
   label: string;
   createdAt: string;
   contentHash: string;

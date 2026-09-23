@@ -4,6 +4,7 @@ import {
   ACM_CASSETTE_NONE_READY_VALUES,
   CANONICAL_PRODUCT_CODE,
   CODE_DEFAULT_ENABLEMENT_GUIDANCE,
+  LOGO_PRODUCT_CODE,
   PRODUCT_NOT_ENABLED_FOR_NEW_WORK,
 } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
@@ -72,10 +73,11 @@ const lettersValues = {
 
 const unknownProductCode = "PRD-NOT-A-SHARED-SKU";
 
-function bothProducts(enabledLetters: boolean, enabledAcm: boolean) {
+function bothProducts(enabledLetters: boolean, enabledAcm: boolean, enabledLogo = false) {
   return [
     { templateCode: CANONICAL_PRODUCT_CODE, enabled: enabledLetters },
     { templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE, enabled: enabledAcm },
+    { templateCode: LOGO_PRODUCT_CODE, enabled: enabledLogo },
   ];
 }
 
@@ -122,8 +124,15 @@ describe("product enablement admin", () => {
     expect(products.map((item) => item.templateCode)).toEqual([
       CANONICAL_PRODUCT_CODE,
       ACM_CASSETTE_NONE_PRODUCT_CODE,
+      LOGO_PRODUCT_CODE,
     ]);
-    expect(products.every((item) => item.enabled === true)).toBe(true);
+    expect(products.find((item) => item.templateCode === CANONICAL_PRODUCT_CODE)?.enabled).toBe(
+      true,
+    );
+    expect(products.find((item) => item.templateCode === ACM_CASSETTE_NONE_PRODUCT_CODE)?.enabled).toBe(
+      true,
+    );
+    expect(products.find((item) => item.templateCode === LOGO_PRODUCT_CODE)?.enabled).toBe(false);
     const catalog = await readBody(await app.request("/api/product-catalog"));
     expect(catalogCodes(catalog)).toEqual([
       CANONICAL_PRODUCT_CODE,

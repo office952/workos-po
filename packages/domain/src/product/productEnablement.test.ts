@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ACM_CASSETTE_NONE_PRODUCT_CODE } from "./acmCassetteNone.js";
 import { CANONICAL_PRODUCT_CODE } from "./frontlitPlexiAl06.js";
+import { LOGO_PRODUCT_CODE } from "./logoFrontlitPlexiAl06.js";
 import { seededDisplayLabelCatalog } from "./displayMetadata.js";
 import { productTemplates } from "./productRegistry.js";
 import type { CatalogTreeNode } from "./types.js";
@@ -74,6 +75,7 @@ describe("product enablement", () => {
       true,
     );
     expect(isTemplateEnabledForNewWork("PRD-FUTURE-UNCONFIGURED", resolution)).toBe(false);
+    expect(isTemplateEnabledForNewWork(LOGO_PRODUCT_CODE, resolution)).toBe(false);
   });
 
   it("lists every registered template in Admin independently of the default-enabled set", () => {
@@ -107,6 +109,7 @@ describe("product enablement", () => {
     expect(productTemplates.map((item) => item.code)).toEqual([
       CANONICAL_PRODUCT_CODE,
       ACM_CASSETTE_NONE_PRODUCT_CODE,
+      "PRD-LOGO-FRONTLIT-PLEXI-AL06",
     ]);
   });
 
@@ -116,6 +119,7 @@ describe("product enablement", () => {
       [
         { templateCode: CANONICAL_PRODUCT_CODE, enabled: true },
         { templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE, enabled: false },
+        { templateCode: LOGO_PRODUCT_CODE, enabled: false },
       ],
       { now: "2026-09-21T00:00:00.000Z", actorUserId: "owner-1", rowId: "pev:1" },
     );
@@ -137,6 +141,7 @@ describe("product enablement", () => {
       [
         { templateCode: CANONICAL_PRODUCT_CODE, enabled: true },
         { templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE, enabled: true },
+        { templateCode: LOGO_PRODUCT_CODE, enabled: false },
       ],
       { now: "2026-09-21T01:00:00.000Z", actorUserId: "owner-1", rowId: "pev:2" },
     );

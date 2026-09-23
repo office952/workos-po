@@ -494,6 +494,8 @@ function assemblyMemberDisplayRank(role: AssemblyMemberRole): number {
       return 0;
     case "SIGNAGE_LETTERS":
       return 1;
+    case "SIGNAGE_LOGO":
+      return 2;
     default: {
       const _exhaustive: never = role;
       return _exhaustive;
@@ -507,6 +509,8 @@ function operationalMemberLabel(role: AssemblyMemberRole): string {
       return "Panou ACM";
     case "SIGNAGE_LETTERS":
       return "Litere volumetrice";
+    case "SIGNAGE_LOGO":
+      return "Logo";
     default: {
       const _exhaustive: never = role;
       return _exhaustive;
