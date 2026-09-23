@@ -92,10 +92,12 @@ PRODUCT_ASSEMBLY_V1 = COMPLETE / OWNER_ACCEPTED
 OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = YES
 PRODUCT_ASSEMBLY_IMPLEMENTATION = COMPLETE / INTEGRATED
 PRODUCT_ASSEMBLY_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
-VOLUMETRIC_LOGO_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_VOLUMETRIC_LOGO_V1 = NO
-PRODUCT_ASSEMBLY_V2 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V2 = NO
+VOLUMETRIC_LOGO_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_VOLUMETRIC_LOGO_V1 = YES
+PRODUCT_ASSEMBLY_V2 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V2 = YES
+VOLUMETRIC_LOGO_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+PRODUCT_ASSEMBLY_V2_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 LOGO_DEFAULT_ENABLEMENT = DISABLED
 PRODUCT_ASSEMBLY_CANON = docs/architecture/WORKOS_PRODUCT_ASSEMBLY_CONTRACT_V1.md
 CONFIGURATION_FIRST_IMPLEMENTATION = CF1_COMPLETE_AND_CF2_CF3_COMPLETE_AND_CF4_COMPLETE
@@ -514,19 +516,24 @@ TECHNICAL_COMPOSITION_COMMERCIAL_LINES_COUPLED = NO
 
 Accepted V1 is ACM plus Letters: typed AssemblyDefinition, AssemblyTruth, AssemblyAggregate, `LETTERS_ON_ACM_PANEL`, a grouped assembly quote, an immutable order, production release, and one combined Execution Plan with mount, assembly QC, and final packing. PLN1 compatibility and organization enablement behavior remain. AssemblyTruth references child ProductTruth identity and hash, child ProductAggregate hash, member roles, and relations. AssemblyQuote owns child quote snapshot identity and commercial values. Repricing a child quote is not a technical Assembly change.
 
-Volumetric Logo V1 and Product Assembly V2 are implemented and awaiting Owner review. They do not replace V1 and they do not change the Planning program.
+Volumetric Logo V1 and Product Assembly V2 are Owner-accepted. They do not replace V1 and they do not change the Planning program.
 
 ```text
-VOLUMETRIC_LOGO_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_VOLUMETRIC_LOGO_V1 = NO
+VOLUMETRIC_LOGO_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_VOLUMETRIC_LOGO_V1 = YES
 LOGO_PRODUCT = PRD-LOGO-FRONTLIT-PLEXI-AL06
 LOGO_MODEL = ONE_HOMOGENEOUS_SET
 LOGO_DEFAULT_ENABLEMENT = DISABLED
-PRODUCT_ASSEMBLY_V2 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V2 = NO
+PRODUCT_ASSEMBLY_V2 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V2 = YES
 ASSEMBLY_V2_KIND = SIGN_ASSEMBLY_ACM_SIGNAGE_V2
 ASSEMBLY_V2_CARDINALITY = 1 ACM + 1 Logo + optional 0..1 Letters
+VOLUMETRIC_LOGO_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+PRODUCT_ASSEMBLY_V2_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 LEGACY_NAMING_DEBT = ProductAggregate.inscription is a generic display designation for some products
+LEGACY_PROCESS_NAMING = some shared process IDs retain LETTER naming
+LEGACY_DISPLAY_DESIGNATION = ProductAggregate.inscription also transports generic product designation
+GLOBAL_MOBILE_NAV_CLIPPING = existing shell debt around narrow viewport
 ```
 
 Logo V1 reuses the front-lit Letters fabrication stack as this SKU's identity: Plexiglas 3 mm opal, aluminium 0.6 mm, Forex 10 mm, front-lit LED, depths 30/60/80/100. Confirmed area and perimeter are operator totals for the whole set. There is no piece collection. Logo stays disabled until the organization enables it. Assembly V2 adds `LOGO_ON_ACM_PANEL` and, when Letters is present, a separate `MOUNT_LETTERS_ON_PANEL`. `MOUNT_LOGO_ON_PANEL` waits for the panel and the logo, not for Letters.
@@ -540,6 +547,12 @@ Product Assembly V1 acceptance advisories, not a correction wave:
 - quote section order could be improved
 - existing narrow navigation clipping
 - execution metadata spacing / "Nealocat" density
+
+Logo V1 and Assembly V2 acceptance advisories, not a correction wave:
+
+- some shared process IDs retain LETTER naming
+- `ProductAggregate.inscription` also transports a generic product designation; the Logo operator label remains Denumire logo
+- existing shell navigation clipping on a narrow viewport
 
 ## Product Enablement Admin V1
 

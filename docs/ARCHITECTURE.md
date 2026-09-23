@@ -106,10 +106,12 @@ OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = YES
 Narrow V1 is Owner-accepted and integrated: one ACM panel and one Letters product, related by `LETTERS_ON_ACM_PANEL`. Standalone products still compile, confirm, and freeze one ProductTemplate at a time.
 
 ```text
-VOLUMETRIC_LOGO_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_VOLUMETRIC_LOGO_V1 = NO
-PRODUCT_ASSEMBLY_V2 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V2 = NO
+VOLUMETRIC_LOGO_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_VOLUMETRIC_LOGO_V1 = YES
+PRODUCT_ASSEMBLY_V2 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V2 = YES
+VOLUMETRIC_LOGO_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+PRODUCT_ASSEMBLY_V2_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 ```
 
 Logo V1 is the specific front-lit SKU `PRD-LOGO-FRONTLIT-PLEXI-AL06`. It is disabled until an organization enables it. Assembly V2 is `SIGN_ASSEMBLY_ACM_SIGNAGE_V2`: one ACM, one Logo, and optional Letters. V1 semantics stay in place. Host Context, ACM segmentation, and a generic assembly graph remain unimplemented. `ProductAggregate.inscription` remains the transport field for the logo designation; the operator label is Denumire logo.
@@ -120,4 +122,4 @@ Living architecture for changeable business truth: `docs/architecture/WORKOS_CON
 
 The engine remains the only evaluator. Configuration is domain-owned data with shared resolution semantics. This is not a second Product Truth, not a mega Settings blob, and not an implementation authorization.
 
-People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organization-scoped product availability is configured on `/admin/products`. The server is authoritative for new-work gates. The current Letters and ACM templates remain enabled by an explicit V1 compatibility default; a future unconfigured ProductTemplate fails closed. Historical frozen lifecycle is preserved. Product enablement is not ProductTruth and does not change snapshot schema. Standalone CF5 is not required. Remaining Configuration-First work is domain-by-domain when required. Execution Expansion V1 is Owner-accepted and integrated. Current program is Planning Workload V1. PLN1 is Owner-accepted. PLN2 and Operations Control V1 are Owner-accepted. An accepted Product Assembly is one operational job. PLN3 is not started. Product Assembly V1 is Owner-accepted and integrated. It does not replace the Planning program. Scheduling is out of V1. Next wave is unauthorized.
+People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organization-scoped product availability is configured on `/admin/products`. The server is authoritative for new-work gates. The current Letters and ACM templates remain enabled by an explicit V1 compatibility default; a future unconfigured ProductTemplate fails closed. Historical frozen lifecycle is preserved. Product enablement is not ProductTruth and does not change snapshot schema. Standalone CF5 is not required. Remaining Configuration-First work is domain-by-domain when required. Execution Expansion V1 is Owner-accepted and integrated. Current program is Planning Workload V1. PLN1 is Owner-accepted. PLN2 and Operations Control V1 are Owner-accepted. An accepted Product Assembly is one operational job. PLN3 is not started. Product Assembly V1 is Owner-accepted and integrated. It does not replace the Planning program. Volumetric Logo V1 and Product Assembly V2 are Owner-accepted. They do not replace V1 or the Planning program. Acceptance advisories are recorded and are not a correction wave. Scheduling is out of V1. Next wave is unauthorized.

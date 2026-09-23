@@ -122,10 +122,12 @@ PLN3 = NOT_STARTED
 PRODUCT_ASSEMBLY_V1 = COMPLETE / OWNER_ACCEPTED
 OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = YES
 PRODUCT_ASSEMBLY_IMPLEMENTATION = COMPLETE / INTEGRATED
-VOLUMETRIC_LOGO_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_VOLUMETRIC_LOGO_V1 = NO
-PRODUCT_ASSEMBLY_V2 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V2 = NO
+VOLUMETRIC_LOGO_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_VOLUMETRIC_LOGO_V1 = YES
+PRODUCT_ASSEMBLY_V2 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V2 = YES
+VOLUMETRIC_LOGO_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+PRODUCT_ASSEMBLY_V2_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 SCHEDULING = NOT_STARTED / OUT_OF_SCOPE_V1
 CF4 = COMPLETE
 CF4_OWNER_ACCEPTED_IMPLEMENTATION = YES
@@ -169,6 +171,6 @@ CUTOVER = HOLD
 REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
 ```
 
-People and Machine Admin V1 is complete and integrated on main through PR #21–#23. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Execution Expansion V1 is Owner-accepted and integrated. Current program is Planning Workload V1. PLN1 is Owner-accepted. PLN2 and Operations Control V1 are Owner-accepted. An accepted Product Assembly is one operational job. PLN3 is not started. Product Assembly V1 is Owner-accepted and integrated. Volumetric Logo V1 and Product Assembly V2 are implemented and awaiting Owner review. They do not replace V1 or the Planning program. Scheduling is out of V1. Next wave is unauthorized.
+People and Machine Admin V1 is complete and integrated on main through PR #21–#23. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Execution Expansion V1 is Owner-accepted and integrated. Current program is Planning Workload V1. PLN1 is Owner-accepted. PLN2 and Operations Control V1 are Owner-accepted. An accepted Product Assembly is one operational job. PLN3 is not started. Product Assembly V1 is Owner-accepted and integrated. Volumetric Logo V1 and Product Assembly V2 are Owner-accepted. They do not replace V1 or the Planning program. Acceptance advisories are recorded and are not a correction wave. Scheduling is out of V1. Next wave is unauthorized.
 
 See `docs/PRODUCTION_RUNTIME.md` for the production topology. Do not point proof runtimes at a real HUB MEDIA Cloud root.

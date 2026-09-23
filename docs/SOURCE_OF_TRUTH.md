@@ -92,10 +92,12 @@ Owned by this repository's imported engine (`apps/api` + `packages/domain`):
 The engine owns contracts, validation, evaluation, snapshots, and invariants. Changeable business values, formulas, rates, and commercial rules belong in versioned domain-owned configuration, not as silent source constants. That is Configuration-First, not a second Product Truth. See `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
 ```text
-VOLUMETRIC_LOGO_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_VOLUMETRIC_LOGO_V1 = NO
-PRODUCT_ASSEMBLY_V2 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V2 = NO
+VOLUMETRIC_LOGO_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_VOLUMETRIC_LOGO_V1 = YES
+PRODUCT_ASSEMBLY_V2 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V2 = YES
+VOLUMETRIC_LOGO_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+PRODUCT_ASSEMBLY_V2_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 LEGACY_NAMING_DEBT = ProductAggregate.inscription is a generic display designation for some products
 ```
 
