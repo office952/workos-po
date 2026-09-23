@@ -36,8 +36,15 @@ import {
   type SkillMutationResult,
   projectExecutionPlanView,
   projectOperatorTaskInbox,
+  projectAssemblyJobOverviewItem,
   projectJobOverview,
   projectJobOverviewItem,
+  planningMetadataIsEditable,
+  parseOperationalPriority,
+  parseTargetDate,
+  type AssemblyOrderSnapshot,
+  type AssemblyProductionSnapshot,
+  type JobPlanningMetadata,
   projectQuoteOverview,
   projectQuoteOverviewItem,
   projectRequestDetail,
@@ -213,6 +220,14 @@ import {
   resolveStoredProductEnablement,
   type ProductEnablementSaveResult,
 } from "../product/productEnablementStore.js";
+import {
+  listAssemblyOrders,
+  readAssemblyOrder,
+  readAssemblyProductionByOrder,
+  readAssemblyProductionBySnapshot,
+  saveAssemblyProduction as persistAssemblyProduction,
+} from "../assembly/store.js";
+import { readJobPlanningMetadata, writeJobPlanningMetadata } from "../jobs/planningStore.js";
 import {
   getAcceptedProductionSnapshot,
   getAcceptedProductionSnapshotByOrder,
@@ -443,6 +458,25 @@ export type ProductSystemRuntime = {
     offerMode: string,
   ): OrganizationServiceOfferMutationResult;
   listJobOverview(): JobOverviewProjection;
+  readAssemblyOrder(orderSnapshotId: string): AssemblyOrderSnapshot | null;
+  readAssemblyProductionBySnapshot(snapshotId: string): AssemblyProductionSnapshot | null;
+  readAssemblyProductionForOrder(orderSnapshotId: string): AssemblyProductionSnapshot | null;
+  saveAssemblyProduction(snapshot: AssemblyProductionSnapshot): void;
+  updateJobPlanning(
+    jobId: string,
+    patch: { priority?: unknown; targetDate?: unknown },
+    updatedAt: string,
+  ):
+    | { ok: true; alreadyApplied: boolean }
+    | {
+        ok: false;
+        error:
+          | "not_found"
+          | "invalid_payload"
+          | "invalid_priority"
+          | "invalid_target_date"
+          | "planning_readonly";
+      };
   listQuoteOverview(): QuoteOverviewProjection;
   listRequestOverview(): RequestOverviewProjection;
   readCommercialRequest(requestId: string): CommercialRequest | null;
@@ -611,6 +645,8 @@ export function createProductSystemRuntimeFromOpenDb(
       : workcenterRegistry);
   applyOperationalBootstrap(db, bootstrapPolicy ?? undefined);
   const eligibilityFailClosed = bootstrapPolicy !== null;
+  const currentOrganizationId = (): string =>
+    planeIdentity?.organizationId ?? "single-plane";
   const currentProviderRegistry = (): WorkcenterRegistry => {
     if (
       providerRegistryKind === "EMPTY_FOUNDATION" ||
@@ -920,7 +956,89 @@ export function createProductSystemRuntimeFromOpenDb(
       return persistOrganizationServiceOffer(db, capabilityId, offerMode);
     },
     listJobOverview() {
-      return projectJobOverview(jobOverviewItems(db, currentProviderRegistry(), currentEligibility()));
+      return projectJobOverview(
+        jobOverviewItems(
+          db,
+          currentProviderRegistry(),
+          currentEligibility(),
+          currentOrganizationId(),
+        ),
+      );
+    },
+    readAssemblyOrder(orderSnapshotId) {
+      return readAssemblyOrder(db, currentOrganizationId(), orderSnapshotId);
+    },
+    readAssemblyProductionBySnapshot(snapshotId) {
+      return readAssemblyProductionBySnapshot(db, currentOrganizationId(), snapshotId);
+    },
+    readAssemblyProductionForOrder(orderSnapshotId) {
+      return readAssemblyProductionByOrder(db, currentOrganizationId(), orderSnapshotId);
+    },
+    saveAssemblyProduction(snapshot) {
+      if (snapshot.organizationId !== currentOrganizationId()) {
+        return;
+      }
+      persistAssemblyProduction(db, snapshot);
+    },
+    updateJobPlanning(jobId, patch, updatedAt) {
+      const organizationId = currentOrganizationId();
+      const product = getOrderSnapshot(db, jobId);
+      const assembly = product
+        ? null
+        : readAssemblyOrder(db, organizationId, jobId);
+      if (!product && !assembly) {
+        return { ok: false, error: "not_found" };
+      }
+      const kind = product ? "PRODUCT" : "ASSEMBLY";
+      const items = jobOverviewItems(
+        db,
+        currentProviderRegistry(),
+        currentEligibility(),
+        organizationId,
+      );
+      const job = items.find((item) => item.jobId === jobId && item.kind === kind);
+      if (!job) {
+        return { ok: false, error: "not_found" };
+      }
+      if (!planningMetadataIsEditable(job.stage)) {
+        return { ok: false, error: "planning_readonly" };
+      }
+      const hasPriority = Object.prototype.hasOwnProperty.call(patch, "priority");
+      const hasTargetDate = Object.prototype.hasOwnProperty.call(patch, "targetDate");
+      if (!hasPriority && !hasTargetDate) {
+        return { ok: false, error: "invalid_payload" };
+      }
+      const current = readJobPlanningMetadata(db, organizationId, jobId, kind);
+      let priority = current?.priority ?? "STANDARD";
+      let targetDate = current?.targetDate ?? null;
+      if (hasPriority) {
+        const parsed = parseOperationalPriority(patch.priority);
+        if (!parsed.ok) {
+          return { ok: false, error: parsed.error };
+        }
+        priority = parsed.priority;
+      }
+      if (hasTargetDate) {
+        const parsed = parseTargetDate(patch.targetDate);
+        if (!parsed.ok) {
+          return { ok: false, error: parsed.error };
+        }
+        targetDate = parsed.targetDate;
+      }
+      if (current && current.priority === priority && current.targetDate === targetDate) {
+        return { ok: true, alreadyApplied: true };
+      }
+      const metadata: JobPlanningMetadata = {
+        organizationId,
+        jobId,
+        jobKind: kind,
+        priority,
+        targetDate,
+        createdAt: current?.createdAt ?? updatedAt,
+        updatedAt,
+      };
+      writeJobPlanningMetadata(db, metadata);
+      return { ok: true, alreadyApplied: false };
     },
     listQuoteOverview() {
       return projectQuoteOverview(quoteOverviewItems(db));
@@ -931,7 +1049,12 @@ export function createProductSystemRuntimeFromOpenDb(
     listCustomerRegistry() {
       const requests = requestOverviewItems(db);
       const quotes = quoteOverviewItems(db);
-      const jobs = jobOverviewItems(db, currentProviderRegistry(), currentEligibility());
+      const jobs = jobOverviewItems(
+        db,
+        currentProviderRegistry(),
+        currentEligibility(),
+        currentOrganizationId(),
+      );
       return projectCustomerRegistry(
         listCustomers(db).map((customer) =>
           projectCustomerRegistryItem({
@@ -953,7 +1076,12 @@ export function createProductSystemRuntimeFromOpenDb(
         requests: requestsForCustomer(requestOverviewItems(db), customerId),
         quotes: quotesForCustomer(quoteOverviewItems(db), customerId),
         jobs: jobsForCustomer(
-          jobOverviewItems(db, currentProviderRegistry(), currentEligibility()),
+          jobOverviewItems(
+            db,
+            currentProviderRegistry(),
+            currentEligibility(),
+            currentOrganizationId(),
+          ),
           customerId,
         ),
       });
@@ -1196,16 +1324,22 @@ function jobOverviewItems(
   db: SqliteDatabase,
   providerRegistry: WorkcenterRegistry,
   eligibility: PeopleEligibilityContext | null,
+  organizationId: string,
 ) {
   const people = listPeople(db);
-  return listOrderSnapshots(db).map((order) => {
+  const productJobs = listOrderSnapshots(db).map((order) => {
     const release = getAcceptedProductionSnapshotByOrder(db, order.orderSnapshotId);
     const record = release
       ? getExecutionPlanBySnapshotId(db, release.snapshotId)
       : null;
+    const requestLink = getCommercialRequestQuoteLinkByQuote(db, order.sourceQuoteSnapshotId);
+    const planning = readJobPlanningMetadata(db, organizationId, order.orderSnapshotId, "PRODUCT");
     return projectJobOverviewItem({
       order,
       release,
+      organizationId,
+      requestId: requestLink?.requestId ?? null,
+      planning,
       planView: record
         ? projectExecutionPlanView(
             record,
@@ -1218,6 +1352,47 @@ function jobOverviewItems(
         : null,
     });
   });
+  const assemblyJobs = listAssemblyOrders(db, organizationId).map((order) => {
+    const release = readAssemblyProductionByOrder(db, organizationId, order.orderSnapshotId);
+    const record = release
+      ? getExecutionPlanBySnapshotId(db, release.snapshotId)
+      : null;
+    const request = order.requestId ? getCommercialRequest(db, order.requestId) : null;
+    const customer = request ? getCustomer(db, request.customerId) : null;
+    const planning = readJobPlanningMetadata(
+      db,
+      organizationId,
+      order.orderSnapshotId,
+      "ASSEMBLY",
+    );
+    return projectAssemblyJobOverviewItem({
+      orderSnapshotId: order.orderSnapshotId,
+      organizationId,
+      requestId: order.requestId,
+      label: order.label,
+      createdAt: order.createdAt,
+      members: order.members.map((member) => ({
+        role: member.role,
+        inscription: member.inscription,
+      })),
+      customer: customer
+        ? { customerId: customer.customerId, displayName: customer.displayName }
+        : null,
+      releaseSnapshotId: release?.snapshotId ?? null,
+      planning,
+      planView: record
+        ? projectExecutionPlanView(
+            record,
+            people,
+            null,
+            eligibility,
+            null,
+            providerRegistry,
+          )
+        : null,
+    });
+  });
+  return [...productJobs, ...assemblyJobs];
 }
 
 function assertExistingPlaneIdentity(

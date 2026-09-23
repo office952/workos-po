@@ -219,6 +219,55 @@ export function saveAssemblyProduction(
   );
 }
 
+export function listAssemblyOrders(
+  db: SqliteDatabase,
+  organizationId: string,
+): AssemblyOrderSnapshot[] {
+  const rows = db
+    .prepare(
+      `SELECT payload FROM assembly_order_snapshots WHERE organization_id = ? ORDER BY created_at DESC`,
+    )
+    .all(organizationId) as { payload: string }[];
+  return rows.flatMap((row) => {
+    const order = JSON.parse(row.payload) as AssemblyOrderSnapshot;
+    return order.organizationId === organizationId ? [order] : [];
+  });
+}
+
+export function readAssemblyOrder(
+  db: SqliteDatabase,
+  organizationId: string,
+  orderSnapshotId: string,
+): AssemblyOrderSnapshot | null {
+  const row = db
+    .prepare(
+      `SELECT payload FROM assembly_order_snapshots WHERE organization_id = ? AND order_snapshot_id = ?`,
+    )
+    .get(organizationId, orderSnapshotId) as { payload: string } | undefined;
+  if (!row) {
+    return null;
+  }
+  const order = JSON.parse(row.payload) as AssemblyOrderSnapshot;
+  return order.organizationId === organizationId ? order : null;
+}
+
+export function readAssemblyProductionBySnapshot(
+  db: SqliteDatabase,
+  organizationId: string,
+  snapshotId: string,
+): AssemblyProductionSnapshot | null {
+  const row = db
+    .prepare(
+      `SELECT payload FROM assembly_production_snapshots WHERE organization_id = ? AND snapshot_id = ?`,
+    )
+    .get(organizationId, snapshotId) as { payload: string } | undefined;
+  if (!row) {
+    return null;
+  }
+  const snapshot = JSON.parse(row.payload) as AssemblyProductionSnapshot;
+  return snapshot.organizationId === organizationId ? snapshot : null;
+}
+
 export function readAssemblyProductionByOrder(
   db: SqliteDatabase,
   organizationId: string,

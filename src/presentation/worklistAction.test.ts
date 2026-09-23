@@ -62,7 +62,18 @@ function quote(partial: Partial<QuoteListItemTransport> = {}): QuoteListItemTran
 function job(partial: Partial<JobListItemTransport> = {}): JobListItemTransport {
   return {
     jobId: "job-1",
+    kind: "PRODUCT",
+    kindLabel: "Produs",
     productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    memberLabels: [],
+    customerId: "cus-1",
+    requestId: "req-1",
+    priority: "STANDARD",
+    priorityLabel: "Standard",
+    targetDate: null,
+    targetDateLabel: "Fără termen",
+    planningEditable: true,
+    overdue: false,
     productLabel: "Litere",
     inscription: "NORD",
     customerDisplayName: "Atelier Nord",
@@ -256,7 +267,7 @@ describe("presentJobWorklistAction", () => {
       ),
     ).toEqual({
       actionLabel: "Continuă execuția",
-      actionHref: "/executie/exp-1",
+      actionHref: "/executie/exp-1?job=job-1",
     });
   });
 });

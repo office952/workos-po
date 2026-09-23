@@ -123,6 +123,12 @@ const WRITE_ATTACKS: Attack[] = [
     body: {},
   },
   {
+    name: "JOB_PLANNING",
+    method: "PATCH",
+    path: (id) => `/api/jobs/${id.orderId}/planning`,
+    body: { priority: "URGENT", targetDate: "2026-10-02", organizationId: "spoofed" },
+  },
+  {
     name: "TASK_PROVIDER",
     method: "POST",
     path: (id) => `/api/execution-tasks/${id.taskId}/provider`,

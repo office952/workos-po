@@ -50,7 +50,7 @@ describe("JobsPage", () => {
     expect(screen.getByRole("link", { name: /ALPHA/ })).toHaveAttribute("href", "/lucrari/job-1");
     expect(screen.getByRole("link", { name: "Continuă execuția" })).toHaveAttribute(
       "href",
-      "/executie/exp-1",
+      "/executie/exp-1?job=job-1",
     );
     expect(screen.getByText(/Lipsă utilaj dedicat/)).toBeInTheDocument();
     expect(screen.queryByText("Actualizat")).not.toBeInTheDocument();

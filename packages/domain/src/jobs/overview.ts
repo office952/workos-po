@@ -1,3 +1,5 @@
+import type { AssemblyMemberRole } from "../assembly/contract.js";
+import { calendarDateFromUtcInstant } from "../calendarDate.js";
 import type { OrderSnapshot } from "../commercial/orderSnapshot.js";
 import {
   type ExecutionPlanProgress,
@@ -6,6 +8,17 @@ import {
 } from "../execution/plan.js";
 import type { AcceptedProductionSnapshot } from "../production/snapshot.js";
 import { matchesSearchFields } from "../searchNormalize.js";
+import {
+  DEFAULT_OPERATIONAL_PRIORITY,
+  OVERDUE_ATTENTION_LABEL,
+  isOperationallyOverdue,
+  jobKindLabel,
+  operationalPriorityLabel,
+  operationalTargetDateLabel,
+  planningMetadataIsEditable,
+  type JobKind,
+  type OperationalPriority,
+} from "./planning.js";
 
 export const JOB_STAGES = [
   "ORDER_CREATED",
@@ -25,14 +38,26 @@ export const JOB_NEXT_ACTIONS = [
 ] as const;
 export type JobNextAction = (typeof JOB_NEXT_ACTIONS)[number];
 
-export const JOB_FILTERS = ["ALL", "NEEDS_ACTION", "IN_EXECUTION", "COMPLETED"] as const;
+export const JOB_FILTERS = [
+  "ALL",
+  "NEEDS_ACTION",
+  "URGENT",
+  "OVERDUE",
+  "IN_EXECUTION",
+  "COMPLETED",
+] as const;
 export type JobFilter = (typeof JOB_FILTERS)[number];
 
 export type JobOverviewItem = {
   jobId: string;
+  kind: JobKind;
+  kindLabel: string;
+  organizationId: string;
+  requestId: string | null;
   productCode: string;
   productLabel: string;
   inscription: string;
+  memberLabels: readonly string[];
   customerId: string | null;
   customerDisplayName: string | null;
   createdAt: string;
@@ -41,6 +66,12 @@ export type JobOverviewItem = {
   nextAction: JobNextAction;
   nextActionLabel: string;
   href: string;
+  priority: OperationalPriority;
+  priorityLabel: string;
+  targetDate: string | null;
+  targetDateLabel: string;
+  planningEditable: boolean;
+  overdue: boolean;
   needsAttention: boolean;
   attentionLabel: string | null;
   completedCount: number | null;
@@ -109,6 +140,10 @@ export function jobFilterLabel(filter: JobFilter): string {
       return "Toate";
     case "NEEDS_ACTION":
       return "Necesită acțiune";
+    case "URGENT":
+      return "Urgente";
+    case "OVERDUE":
+      return "Termen depășit";
     case "IN_EXECUTION":
       return "În execuție";
     case "COMPLETED":
@@ -121,7 +156,7 @@ export function jobFilterLabel(filter: JobFilter): string {
 }
 
 export function deriveJobStage(input: {
-  release: AcceptedProductionSnapshot | null;
+  release: { snapshotId: string } | null;
   progress: ExecutionPlanProgress | null;
 }): JobStage {
   if (!input.release) {
@@ -187,20 +222,38 @@ export function deriveJobAttention(input: {
   stage: JobStage;
   progress: ExecutionPlanProgress | null;
   tasks: readonly ExecutionTaskView[];
-}): { needsAttention: boolean; attentionLabel: string | null } {
+  targetDate?: string | null;
+  today?: string;
+}): { needsAttention: boolean; attentionLabel: string | null; overdue: boolean } {
+  const overdue = isOperationallyOverdue({
+    targetDate: input.targetDate ?? null,
+    stage: input.stage,
+    today: input.today ?? utcToday(),
+  });
   if (input.stage === "ORDER_CREATED") {
-    return { needsAttention: true, attentionLabel: "Urmează eliberarea pentru producție" };
+    return {
+      needsAttention: true,
+      attentionLabel: "Urmează eliberarea pentru producție",
+      overdue,
+    };
   }
   if (input.stage === "RELEASED") {
-    return { needsAttention: true, attentionLabel: "Urmează planul de execuție" };
+    return {
+      needsAttention: true,
+      attentionLabel: "Urmează planul de execuție",
+      overdue,
+    };
   }
   // Claim-on-Start: PLANNED + executor null is normal. IN_PROGRESS alone is normal progress.
   // Waiting dependencies are normal DAG flow — not job attention.
   // Provider attention only when absence is a CURRENT blocker (deps done).
   if (input.tasks.some(isCurrentProviderBlocker)) {
-    return { needsAttention: true, attentionLabel: "Lipsă utilaj dedicat" };
+    return { needsAttention: true, attentionLabel: "Lipsă utilaj dedicat", overdue };
   }
-  return { needsAttention: false, attentionLabel: null };
+  if (overdue) {
+    return { needsAttention: true, attentionLabel: OVERDUE_ATTENTION_LABEL, overdue: true };
+  }
+  return { needsAttention: false, attentionLabel: null, overdue: false };
 }
 
 function isCurrentProviderBlocker(task: ExecutionTaskView): boolean {
@@ -222,46 +275,144 @@ function isCurrentProviderBlocker(task: ExecutionTaskView): boolean {
   );
 }
 
+export type OperationalJobPlanning = {
+  priority: OperationalPriority;
+  targetDate: string | null;
+};
+
 export function projectJobOverviewItem(input: {
   order: OrderSnapshot;
   release: AcceptedProductionSnapshot | null;
   planView: ExecutionPlanView | null;
+  organizationId?: string;
+  requestId?: string | null;
+  planning?: OperationalJobPlanning | null;
+  today?: string;
+}): JobOverviewItem {
+  return projectOperationalJob({
+    jobId: input.order.orderSnapshotId,
+    kind: "PRODUCT",
+    organizationId: input.organizationId ?? "single-plane",
+    requestId: input.requestId ?? null,
+    productCode: input.order.productCode,
+    productLabel: input.order.productLabel,
+    inscription: input.order.inscription,
+    memberLabels: [],
+    customerId: input.order.customer?.customerId ?? null,
+    customerDisplayName: input.order.customer?.displayName ?? null,
+    createdAt: input.order.createdAt,
+    releaseSnapshotId: input.release?.snapshotId ?? null,
+    planView: input.planView,
+    planning: input.planning ?? null,
+    today: input.today,
+  });
+}
+
+export function projectAssemblyJobOverviewItem(input: {
+  orderSnapshotId: string;
+  organizationId: string;
+  requestId: string | null;
+  label: string;
+  createdAt: string;
+  members: readonly { role: AssemblyMemberRole; inscription: string }[];
+  customer: { customerId: string; displayName: string } | null;
+  releaseSnapshotId: string | null;
+  planView: ExecutionPlanView | null;
+  planning?: OperationalJobPlanning | null;
+  today?: string;
+}): JobOverviewItem {
+  return projectOperationalJob({
+    jobId: input.orderSnapshotId,
+    kind: "ASSEMBLY",
+    organizationId: input.organizationId,
+    requestId: input.requestId,
+    productCode: "ASSEMBLY",
+    productLabel: input.label,
+    inscription: assemblyInscription(orderedAssemblyMembers(input.members)),
+    memberLabels: orderedAssemblyMembers(input.members).map((member) =>
+      operationalMemberLabel(member.role),
+    ),
+    customerId: input.customer?.customerId ?? null,
+    customerDisplayName: input.customer?.displayName ?? null,
+    createdAt: input.createdAt,
+    releaseSnapshotId: input.releaseSnapshotId,
+    planView: input.planView,
+    planning: input.planning ?? null,
+    today: input.today,
+  });
+}
+
+function projectOperationalJob(input: {
+  jobId: string;
+  kind: JobKind;
+  organizationId: string;
+  requestId: string | null;
+  productCode: string;
+  productLabel: string;
+  inscription: string;
+  memberLabels: readonly string[];
+  customerId: string | null;
+  customerDisplayName: string | null;
+  createdAt: string;
+  releaseSnapshotId: string | null;
+  planView: ExecutionPlanView | null;
+  planning: OperationalJobPlanning | null;
+  today?: string;
 }): JobOverviewItem {
   const progress = input.planView?.progress ?? null;
-  const stage = deriveJobStage({ release: input.release, progress });
+  const stage = deriveJobStage({
+    release: input.releaseSnapshotId ? { snapshotId: input.releaseSnapshotId } : null,
+    progress,
+  });
   const nextAction = deriveJobNextAction(stage);
+  const priority = input.planning?.priority ?? DEFAULT_OPERATIONAL_PRIORITY;
+  const targetDate = input.planning?.targetDate ?? null;
+  const today = input.today ?? utcToday();
   const attention = deriveJobAttention({
     stage,
     progress,
     tasks: input.planView?.tasks ?? [],
+    targetDate,
+    today,
   });
   const planId = input.planView?.plan.planId ?? null;
   return {
-    jobId: input.order.orderSnapshotId,
-    productCode: input.order.productCode,
-    productLabel: input.order.productLabel,
-    inscription: input.order.inscription,
-    customerId: input.order.customer?.customerId ?? null,
-    customerDisplayName: input.order.customer?.displayName ?? null,
-    createdAt: input.order.createdAt,
+    jobId: input.jobId,
+    kind: input.kind,
+    kindLabel: jobKindLabel(input.kind),
+    organizationId: input.organizationId,
+    requestId: input.requestId,
+    productCode: input.productCode,
+    productLabel: input.productLabel,
+    inscription: input.inscription,
+    memberLabels: input.memberLabels,
+    customerId: input.customerId,
+    customerDisplayName: input.customerDisplayName,
+    createdAt: input.createdAt,
     stage,
     stageLabel: jobStageLabel(stage),
     nextAction,
     nextActionLabel: jobNextActionLabel(nextAction),
     href: jobHref({
-      productCode: input.order.productCode,
-      orderSnapshotId: input.order.orderSnapshotId,
+      productCode: input.productCode,
+      orderSnapshotId: input.jobId,
       planId,
       nextAction,
     }),
+    priority,
+    priorityLabel: operationalPriorityLabel(priority),
+    targetDate,
+    targetDateLabel: operationalTargetDateLabel(targetDate),
+    planningEditable: planningMetadataIsEditable(stage),
+    overdue: attention.overdue,
     needsAttention: attention.needsAttention,
     attentionLabel: attention.attentionLabel,
     completedCount: progress?.completed ?? null,
     taskCount: progress?.total ?? null,
     inProgressCount: progress?.inProgress ?? null,
     progressLabel: progressLabel(progress),
-    orderSnapshotId: input.order.orderSnapshotId,
-    releaseSnapshotId: input.release?.snapshotId ?? null,
+    orderSnapshotId: input.jobId,
+    releaseSnapshotId: input.releaseSnapshotId,
     planId,
   };
 }
@@ -286,7 +437,15 @@ export function projectJobOverview(
 
 export function matchesJobSearch(item: JobOverviewItem, query: string): boolean {
   return matchesSearchFields(
-    [item.customerDisplayName, item.productLabel, item.productCode, item.inscription],
+    [
+      item.customerDisplayName,
+      item.productLabel,
+      item.inscription,
+      item.priorityLabel,
+      item.stageLabel,
+      item.kindLabel,
+      ...item.memberLabels,
+    ],
     query,
   );
 }
@@ -304,6 +463,10 @@ export function filterJobOverview(
         return overview.jobs.filter(
           (job) => job.needsAttention && job.stage !== "EXECUTION_COMPLETED",
         );
+      case "URGENT":
+        return overview.jobs.filter((job) => job.priority === "URGENT");
+      case "OVERDUE":
+        return overview.jobs.filter((job) => job.overdue);
       case "IN_EXECUTION":
         return overview.jobs.filter((job) => job.stage === "EXECUTION_IN_PROGRESS");
       case "COMPLETED":
@@ -315,6 +478,54 @@ export function filterJobOverview(
     }
   })();
   return byStage.filter((item) => matchesJobSearch(item, query));
+}
+
+function orderedAssemblyMembers<T extends { role: AssemblyMemberRole }>(
+  members: readonly T[],
+): T[] {
+  return [...members].sort(
+    (left, right) => assemblyMemberDisplayRank(left.role) - assemblyMemberDisplayRank(right.role),
+  );
+}
+
+function assemblyMemberDisplayRank(role: AssemblyMemberRole): number {
+  switch (role) {
+    case "SUPPORT_PANEL":
+      return 0;
+    case "SIGNAGE_LETTERS":
+      return 1;
+    default: {
+      const _exhaustive: never = role;
+      return _exhaustive;
+    }
+  }
+}
+
+function operationalMemberLabel(role: AssemblyMemberRole): string {
+  switch (role) {
+    case "SUPPORT_PANEL":
+      return "Panou ACM";
+    case "SIGNAGE_LETTERS":
+      return "Litere volumetrice";
+    default: {
+      const _exhaustive: never = role;
+      return _exhaustive;
+    }
+  }
+}
+
+function assemblyInscription(
+  members: readonly { inscription: string }[],
+): string {
+  return members
+    .map((member) => member.inscription.trim())
+    .filter((inscription) => inscription.length > 0)
+    .join(" · ");
+}
+
+function utcToday(): string {
+  const parsed = calendarDateFromUtcInstant(new Date().toISOString());
+  return parsed.ok ? parsed.date : "1970-01-01";
 }
 
 function progressLabel(progress: ExecutionPlanProgress | null): string | null {

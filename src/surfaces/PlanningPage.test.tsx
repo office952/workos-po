@@ -75,11 +75,15 @@ function workloadPayload(overrides: Record<string, unknown> = {}) {
           jobId: "job-1",
           jobHref: "/lucrari/job-1",
           executionHref: "/executie/exp:1?task=task:open&job=job-1",
-          assignedProvider: null,
-          plannedEffortMinutes: null,
-          requiresProvider: true,
-          canEditEffort: true,
-        },
+              assignedProvider: null,
+              plannedEffortMinutes: null,
+              requiresProvider: true,
+              canEditEffort: true,
+              customerDisplayName: "Client Ansamblu",
+              priorityLabel: "Urgentă",
+              targetDateLabel: "15.10.2026",
+              scopeLabel: "Ansamblare",
+            },
       ],
       ...overrides,
     },
@@ -87,7 +91,7 @@ function workloadPayload(overrides: Record<string, unknown> = {}) {
 }
 
 describe("PlanningPage", () => {
-  it("shows the planner floorplan without priority or weekly total language", async () => {
+  it("shows provider groups, job context, and a separate unassigned allocation link", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(workloadPayload())));
 
     render(<PlanningPage />);
@@ -96,12 +100,14 @@ describe("PlanningPage", () => {
     expect(screen.getByText("CNC Router")).toBeInTheDocument();
     expect(screen.getByText("Timp cunoscut 3h")).toBeInTheDocument();
     expect(screen.getByText("Fără estimare 1 sarcină")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Alocă în Execuție/ })).toHaveAttribute(
+    expect(screen.getByText(/Client Ansamblu · Urgentă · 15.10.2026 · Ansamblare/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Alocă furnizorul în execuție" })).toHaveAttribute(
       "href",
       "/executie/exp:1?task=task:open&job=job-1",
     );
-    expect(screen.queryByText(/Prioritate/i)).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Fără estimare" }).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Total =/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Gantt|capacitate|utilizare/i)).not.toBeInTheDocument();
   });
 
   it("lets the owner edit estimated time on a planned task", async () => {

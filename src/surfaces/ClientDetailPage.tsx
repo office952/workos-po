@@ -12,7 +12,7 @@ import { TextField } from "../components/TextField";
 import { WorklistRow } from "../components/WorklistRow";
 import { invalidateAfterCreateRequest } from "../data/invalidation";
 import { resourceKeys } from "../data/resourceKeys";
-import { loadCustomer, loadRequestList } from "../data/routeLoaders";
+import { loadCustomer, loadJobList, loadRequestList } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { formatTimestamp } from "../presentation/format";
@@ -20,6 +20,7 @@ import { statusTone } from "../presentation/statusTone";
 import { presentRequestWorklistAction } from "../presentation/worklistAction";
 import { catalogHref, clientHref, requestHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
+import { LinkedJobs } from "./LinkedJobs";
 import {
   readConfiguratorSession,
   writeConfiguratorSession,
@@ -34,6 +35,11 @@ const COLUMNS = ["Cerere", "Context", "Stare", "Acțiune"] as const;
 export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
   const customer = useResource(resourceKeys.customer(customerId), () => loadCustomer(customerId));
   const requests = useResource(resourceKeys.requests(), loadRequestList);
+  const jobs = useResource(resourceKeys.jobs(), loadJobList);
+  const customerJobs = useMemo(
+    () => (jobs.data ?? []).filter((item) => item.customerId === customerId),
+    [customerId, jobs.data],
+  );
   const mine = useMemo(
     () => (requests.data ?? []).filter((item) => item.customerId === customerId),
     [customerId, requests.data],
@@ -181,6 +187,7 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
           </div>
         ) : null}
       </SurfacePanel>
+      <LinkedJobs title="Lucrări ale clientului" jobs={customerJobs} />
       <div className="stack">
         {customer.status === "error" && !customer.data ? (
           <InlineAlert tone="error" title="Clientul nu a putut fi citit">

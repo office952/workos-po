@@ -1,5 +1,7 @@
 import {
   executionTaskStatusLabel,
+  operationalPriorityLabel,
+  operationalTargetDateLabel,
   projectPlanningWorkload,
   providerKindLabel,
   type PlanningWorkloadProjection,
@@ -19,6 +21,10 @@ export type PlanningWorkloadTaskTransport = {
   requiredCapabilityLabel: string;
   productLabel: string;
   inscription: string;
+  scopeLabel: string;
+  customerDisplayName: string | null;
+  priorityLabel: string;
+  targetDateLabel: string;
   jobId: string | null;
   jobHref: string | null;
   executionHref: string;
@@ -61,6 +67,9 @@ export function presentPlanningWorkload(
       record,
       jobId: job?.jobId ?? null,
       jobHref: job ? `/lucrari/${encodeURIComponent(job.jobId)}` : null,
+      customerDisplayName: job?.customerDisplayName ?? null,
+      priority: job?.priority,
+      targetDate: job?.targetDate ?? null,
     };
   });
   const projection = projectPlanningWorkload(sources, runtime.providerRegistry);
@@ -108,6 +117,10 @@ function presentWorkloadTask(
     requiredCapabilityLabel: task.requiredCapabilityLabel,
     productLabel: task.productLabel,
     inscription: task.inscription,
+    scopeLabel: task.scopeLabel,
+    customerDisplayName: task.customerDisplayName,
+    priorityLabel: operationalPriorityLabel(task.priority),
+    targetDateLabel: operationalTargetDateLabel(task.targetDate),
     jobId: task.jobId,
     jobHref: task.jobId ? `/lucrari/${encodeURIComponent(task.jobId)}` : task.jobHref,
     executionHref: plannerExecutionHref(task),

@@ -347,6 +347,8 @@ export function ExecutionPage({
       meta={
         plan
           ? [
+              plan.priorityLabel,
+              plan.targetDateLabel,
               plan.statusLabel,
               plan.progressLabel,
               session.data ? session.data.displayName : identified === false ? "Operator neidentificat" : null,

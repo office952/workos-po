@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type WorklistVariant = "registry" | "commercial" | "operational" | "compact";
+export type WorklistVariant = "registry" | "operations" | "commercial" | "operational" | "compact";
 
 type WorklistProps = {
   label: string;

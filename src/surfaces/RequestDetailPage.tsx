@@ -1,10 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { InlineAlert } from "../components/InlineAlert";
 import { LoadingFloor } from "../components/LoadingFloor";
 import { StatusBadge } from "../components/StatusBadge";
 import { SurfacePanel } from "../components/SurfacePanel";
 import { resourceKeys } from "../data/resourceKeys";
-import { loadRequestDetail } from "../data/routeLoaders";
+import { loadJobList, loadRequestDetail } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { presentContextMeta } from "../presentation/contextMeta";
@@ -15,6 +15,7 @@ import {
   readConfiguratorSession,
   writeConfiguratorSession,
 } from "../session/configuratorSession";
+import { LinkedJobs } from "./LinkedJobs";
 import { RequestAttachmentsSection } from "./RequestAttachmentsSection";
 import { RequestInstallationSection } from "./RequestInstallationSection";
 
@@ -24,6 +25,11 @@ type RequestDetailPageProps = {
 
 export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
   const request = useResource(resourceKeys.request(requestId), () => loadRequestDetail(requestId));
+  const jobs = useResource(resourceKeys.jobs(), loadJobList);
+  const requestJobs = useMemo(
+    () => (jobs.data ?? []).filter((item) => item.requestId === requestId),
+    [jobs.data, requestId],
+  );
   const detail = request.data;
   const primary = detail ? presentRequestPrimaryAction(detail) : null;
 
@@ -84,6 +90,7 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
               ))}
             </SurfacePanel>
           ) : null}
+          <LinkedJobs title="Lucrări din cerere" jobs={requestJobs} />
           <RequestAttachmentsSection
             requestId={detail.requestId}
             attachments={detail.attachments}

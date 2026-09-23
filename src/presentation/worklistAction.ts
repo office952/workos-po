@@ -123,7 +123,7 @@ export function presentJobWorklistAction(item: JobListItemTransport): PresentedW
       if (item.planId) {
         return {
           actionLabel: item.nextActionLabel,
-          actionHref: executionHref(item.planId),
+          actionHref: executionHref(item.planId, { jobId: item.jobId }),
         };
       }
       return { actionLabel: "Deschide lucrarea", actionHref: detailHref };

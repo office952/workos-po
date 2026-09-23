@@ -123,6 +123,44 @@ describe("product assembly API", () => {
     expect(new Set(tasks.map((task) => task.scopeLabel))).toEqual(
       new Set(["Panou ACM", "Litere", "Ansamblare"]),
     );
+
+    const listed = await json(await app.request("/api/jobs"));
+    const jobs = (listed.overview as { jobs: Array<Record<string, unknown>> }).jobs;
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]).toMatchObject({
+      kind: "ASSEMBLY",
+      productLabel: "Panou ACM + litere volumetrice",
+      customerDisplayName: "Assembly Demo",
+      priority: "STANDARD",
+      targetDate: null,
+      memberLabels: ["Panou ACM", "Litere volumetrice"],
+    });
+    const assemblyJobId = jobs[0]?.jobId as string;
+    const detail = await json(await app.request(`/api/jobs/${encodeURIComponent(assemblyJobId)}`));
+    expect((detail.job as { kind: string }).kind).toBe("ASSEMBLY");
+    expect((detail.job as { memberLabels: string[] }).memberLabels).toEqual([
+      "Panou ACM",
+      "Litere volumetrice",
+    ]);
+    const assemblyBefore = await json(await app.request(`/api/assemblies/${assemblyId}`));
+    const planned = await app.request(`/api/jobs/${encodeURIComponent(assemblyJobId)}/planning`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ priority: "URGENT", targetDate: "2026-10-15" }),
+    });
+    expect(planned.status).toBe(200);
+    const assemblyAfter = await json(await app.request(`/api/assemblies/${assemblyId}`));
+    expect(assemblyAfter).toEqual(assemblyBefore);
+    expect((assemblyAfter.assembly as { quote: { grossPrice: number } }).quote.grossPrice).toBe(
+      (assemblyBefore.assembly as { quote: { grossPrice: number } }).quote.grossPrice,
+    );
+    const afterJobs = (
+      (await json(await app.request("/api/jobs"))).overview as {
+        jobs: Array<{ kind: string; priority: string; targetDate: string | null }>;
+      }
+    ).jobs;
+    expect(afterJobs.filter((job) => job.kind === "ASSEMBLY")).toHaveLength(1);
+    expect(afterJobs[0]).toMatchObject({ priority: "URGENT", targetDate: "2026-10-15" });
     const mount = tasks.find((task) => task.processId === MOUNT_LETTERS_ON_PANEL_ID);
     const effort = await app.request(`/api/execution-tasks/${mount?.taskId}/planned-effort`, {
       method: "POST",

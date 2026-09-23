@@ -26,6 +26,8 @@ function worklistColumnCount(variant: WorklistVariant): number {
   switch (variant) {
     case "registry":
       return 6;
+    case "operations":
+      return 7;
     case "commercial":
     case "operational":
       return 4;

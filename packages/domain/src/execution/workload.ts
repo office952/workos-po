@@ -1,3 +1,9 @@
+import {
+  DEFAULT_OPERATIONAL_PRIORITY,
+  compareOperationalTargetDates,
+  operationalPriorityRank,
+  type OperationalPriority,
+} from "../jobs/planning.js";
 import { taskRequiresProvider, type AssignedExecutionProvider, type ExecutionPlanRecord, type ExecutionTask, type ExecutionTaskStatus } from "./plan.js";
 import { plannedEffortIsUnknown } from "./plannedEffort.js";
 import {
@@ -14,6 +20,10 @@ export type WorkloadTaskItem = {
   requiredCapabilityLabel: string;
   productLabel: string;
   inscription: string;
+  scopeLabel: string;
+  customerDisplayName: string | null;
+  priority: OperationalPriority;
+  targetDate: string | null;
   jobId: string | null;
   jobHref: string | null;
   assignedProvider: AssignedExecutionProvider | null;
@@ -38,6 +48,9 @@ export type WorkloadPlanSource = {
   record: ExecutionPlanRecord;
   jobId?: string | null;
   jobHref?: string | null;
+  customerDisplayName?: string | null;
+  priority?: OperationalPriority;
+  targetDate?: string | null;
 };
 
 export type PlanningWorkloadProjection = {
@@ -50,13 +63,28 @@ export function isOpenWorkloadStatus(status: ExecutionTaskStatus): boolean {
 }
 
 export function compareWorkloadDisplayOrder(
-  left: Pick<WorkloadTaskItem, "status" | "createdAt" | "executionPlanId" | "seq" | "taskId">,
-  right: Pick<WorkloadTaskItem, "status" | "createdAt" | "executionPlanId" | "seq" | "taskId">,
+  left: Pick<WorkloadTaskItem, "status" | "createdAt" | "executionPlanId" | "seq" | "taskId"> & {
+    priority?: OperationalPriority;
+    targetDate?: string | null;
+  },
+  right: Pick<WorkloadTaskItem, "status" | "createdAt" | "executionPlanId" | "seq" | "taskId"> & {
+    priority?: OperationalPriority;
+    targetDate?: string | null;
+  },
 ): number {
   const leftRank = left.status === "IN_PROGRESS" ? 0 : 1;
   const rightRank = right.status === "IN_PROGRESS" ? 0 : 1;
   if (leftRank !== rightRank) {
     return leftRank - rightRank;
+  }
+  const byPriority = operationalPriorityRank(left.priority ?? DEFAULT_OPERATIONAL_PRIORITY)
+    - operationalPriorityRank(right.priority ?? DEFAULT_OPERATIONAL_PRIORITY);
+  if (byPriority !== 0) {
+    return byPriority;
+  }
+  const byTarget = compareOperationalTargetDates(left.targetDate ?? null, right.targetDate ?? null);
+  if (byTarget !== 0) {
+    return byTarget;
   }
   const byCreated = left.createdAt.localeCompare(right.createdAt);
   if (byCreated !== 0) {
@@ -145,6 +173,10 @@ function toWorkloadItem(task: ExecutionTask, source: WorkloadPlanSource): Worklo
     requiredCapabilityLabel: task.requiredCapabilityLabel,
     productLabel: source.record.plan.productLabel,
     inscription: source.record.plan.inscription,
+    scopeLabel: task.scopeLabel,
+    customerDisplayName: source.customerDisplayName ?? null,
+    priority: source.priority ?? DEFAULT_OPERATIONAL_PRIORITY,
+    targetDate: source.targetDate ?? null,
     jobId: source.jobId ?? null,
     jobHref: source.jobHref ?? null,
     assignedProvider: task.assignedProvider,

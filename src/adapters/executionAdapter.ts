@@ -26,6 +26,8 @@ export function presentExecutionPlan(payload: unknown): ExecutionPlanTransport |
     planId,
     productLabel: asString(plan.productLabel) ?? "",
     inscription: asString(plan.inscription) ?? "",
+    priorityLabel: asString(job?.priorityLabel),
+    targetDateLabel: asString(job?.targetDateLabel),
     statusLabel: asString(planView.statusLabel) ?? asString(plan.status) ?? "—",
     progressLabel: progressLabel(progress, planView),
     progress: presentExecutionProgress(progress),

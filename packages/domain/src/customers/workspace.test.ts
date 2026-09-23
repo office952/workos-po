@@ -98,6 +98,17 @@ function jobItem(
     orderSnapshotId: "ord:alpha",
     releaseSnapshotId: null,
     planId: null,
+    kind: "PRODUCT",
+    kindLabel: "Produs",
+    organizationId: "org:test",
+    requestId: null,
+    memberLabels: [],
+    priority: "STANDARD",
+    priorityLabel: "Standard",
+    targetDate: null,
+    targetDateLabel: "Fără termen",
+    planningEditable: true,
+    overdue: false,
     ...overrides,
   };
 }

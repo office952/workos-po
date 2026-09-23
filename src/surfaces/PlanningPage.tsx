@@ -137,20 +137,25 @@ export function PlanningPage() {
                 columns={TASK_COLUMNS}
               >
                 {unassigned.map((task) => (
-                  <PlannerTaskRow
-                    key={task.taskId}
-                    task={task}
-                    editing={editingTaskId === task.taskId}
-                    hours={hours}
-                    minutes={minutes}
-                    pending={pending}
-                    onHoursChange={setHours}
-                    onMinutesChange={setMinutes}
-                    onBeginEdit={() => beginEdit(task)}
-                    onCancel={() => setEditingTaskId(null)}
-                    onSave={() => void saveEffort(task)}
-                    unassigned
-                  />
+                  <div key={task.taskId}>
+                    <PlannerTaskRow
+                      task={task}
+                      editing={editingTaskId === task.taskId}
+                      hours={hours}
+                      minutes={minutes}
+                      pending={pending}
+                      onHoursChange={setHours}
+                      onMinutesChange={setMinutes}
+                      onBeginEdit={() => beginEdit(task)}
+                      onCancel={() => setEditingTaskId(null)}
+                      onSave={() => void saveEffort(task)}
+                    />
+                    <p className="ui-note">
+                      <a className="text-link" href={task.executionHref}>
+                        Alocă furnizorul în execuție
+                      </a>
+                    </p>
+                  </div>
                 ))}
               </Worklist>
             )}
@@ -242,7 +247,6 @@ function PlannerTaskRow({
   onBeginEdit,
   onCancel,
   onSave,
-  unassigned = false,
 }: {
   task: PlanningWorkloadTaskTransport;
   editing: boolean;
@@ -254,10 +258,16 @@ function PlannerTaskRow({
   onBeginEdit: () => void;
   onCancel: () => void;
   onSave: () => void;
-  unassigned?: boolean;
 }) {
-  const identity = task.inscription || task.productLabel || task.processLabel;
-  const identityDetail = task.inscription ? task.productLabel : task.requiredCapabilityLabel;
+  const identity = task.productLabel || task.inscription || task.processLabel;
+  const identityDetail = [
+    task.customerDisplayName,
+    task.priorityLabel,
+    task.targetDateLabel,
+    task.scopeLabel,
+  ]
+    .filter((part) => part && part.length > 0)
+    .join(" · ");
 
   if (editing) {
     return (
@@ -316,15 +326,10 @@ function PlannerTaskRow({
           tone={statusTone(task.status === "IN_PROGRESS" ? "warning" : "workflow")}
         />
       }
-      actionLabel={
-        unassigned
-          ? "Alocă în Execuție"
-          : task.canEditEffort
-            ? formatPlannedEffort(task.plannedEffortMinutes)
-            : formatPlannedEffort(task.plannedEffortMinutes)
-      }
-      href={unassigned ? task.executionHref : undefined}
-      onSelect={task.canEditEffort && !unassigned ? onBeginEdit : undefined}
+      actionLabel={formatPlannedEffort(task.plannedEffortMinutes)}
+      detailHref={task.jobHref ?? undefined}
+      onSelect={task.canEditEffort && !task.jobHref ? onBeginEdit : undefined}
+      actionCommand={task.canEditEffort && task.jobHref ? onBeginEdit : undefined}
     />
   );
 }

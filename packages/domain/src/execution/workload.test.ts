@@ -235,6 +235,58 @@ describe("projectPlanningWorkload", () => {
     ).toBe(45);
   });
 
+  it("orders open work by progress, job priority, then target date, then the PLN1 tie-break", () => {
+    const base = {
+      status: "PLANNED" as const,
+      createdAt: "2026-09-21T10:00:00.000Z",
+      executionPlanId: "exp:same",
+      seq: 2,
+      taskId: "task:standard",
+    };
+    expect(
+      compareWorkloadDisplayOrder(
+        { ...base, status: "IN_PROGRESS", priority: "STANDARD", taskId: "task:running" },
+        { ...base, priority: "URGENT", taskId: "task:urgent" },
+      ),
+    ).toBeLessThan(0);
+    expect(
+      compareWorkloadDisplayOrder(
+        { ...base, priority: "URGENT", taskId: "task:urgent" },
+        { ...base, priority: "HIGH", taskId: "task:high" },
+      ),
+    ).toBeLessThan(0);
+    expect(
+      compareWorkloadDisplayOrder(
+        { ...base, priority: "HIGH", taskId: "task:high" },
+        { ...base, priority: "STANDARD", taskId: "task:standard" },
+      ),
+    ).toBeLessThan(0);
+    expect(
+      compareWorkloadDisplayOrder(
+        { ...base, priority: "HIGH", targetDate: "2026-09-01", taskId: "task:early" },
+        { ...base, priority: "HIGH", targetDate: "2026-09-20", taskId: "task:later" },
+      ),
+    ).toBeLessThan(0);
+    expect(
+      compareWorkloadDisplayOrder(
+        { ...base, priority: "HIGH", targetDate: "2026-09-20", taskId: "task:dated" },
+        { ...base, priority: "HIGH", targetDate: null, taskId: "task:open" },
+      ),
+    ).toBeLessThan(0);
+    expect(
+      compareWorkloadDisplayOrder(
+        { ...base, priority: "STANDARD", targetDate: null, createdAt: "2026-09-21T08:00:00.000Z", taskId: "task:older" },
+        { ...base, priority: "STANDARD", targetDate: null, createdAt: "2026-09-21T12:00:00.000Z", taskId: "task:newer" },
+      ),
+    ).toBeLessThan(0);
+    expect(
+      compareWorkloadDisplayOrder(
+        { ...base, priority: "STANDARD", seq: 9, taskId: "task:later-seq" },
+        { ...base, priority: "STANDARD", seq: 1, taskId: "task:earlier-seq" },
+      ),
+    ).toBeGreaterThan(0);
+  });
+
   it("sorts IN_PROGRESS before PLANNED without treating seq as priority", () => {
     expect(
       compareWorkloadDisplayOrder(

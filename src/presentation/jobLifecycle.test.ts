@@ -5,7 +5,18 @@ import { presentJobLifecycle, presentQuoteContinuation } from "./jobLifecycle";
 function job(partial: Partial<JobListItemTransport>): JobListItemTransport {
   return {
     jobId: "job-1",
+    kind: "PRODUCT",
+    kindLabel: "Produs",
     productCode: "PRD",
+    memberLabels: [],
+    customerId: null,
+    requestId: null,
+    priority: "STANDARD",
+    priorityLabel: "Standard",
+    targetDate: null,
+    targetDateLabel: "Fără termen",
+    planningEditable: true,
+    overdue: false,
     productLabel: "Litere",
     inscription: "WORKOS",
     customerDisplayName: "Atelier",

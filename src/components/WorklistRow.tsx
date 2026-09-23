@@ -12,6 +12,7 @@ type WorklistRowProps = {
   identityDetail?: string;
   context?: string;
   support?: string;
+  progress?: string;
   state?: ReactNode;
   meta?: ReactNode;
   actionLabel?: string;
@@ -31,6 +32,7 @@ export function WorklistRow({
   identityDetail,
   context,
   support,
+  progress,
   state,
   meta,
   actionLabel,
@@ -39,7 +41,8 @@ export function WorklistRow({
   actionPending = false,
 }: WorklistRowProps) {
   const compact = variant === "compact";
-  const registry = variant === "registry";
+  const registry = variant === "registry" || variant === "operations";
+  const operations = variant === "operations";
   const split = Boolean(detailHref && (actionHref || actionCommand));
   const interactive = Boolean(href || onSelect || split);
   const identityContent = (
@@ -84,6 +87,7 @@ export function WorklistRow({
       </span>
       <span className="worklist-row__context">{context ?? ""}</span>
       {registry ? <span className="worklist-row__support">{support ?? ""}</span> : null}
+      {operations ? <span className="worklist-row__progress">{progress ?? ""}</span> : null}
       {compact ? null : <span className="worklist-row__state">{state}</span>}
       {registry ? <span className="worklist-row__meta">{meta ?? ""}</span> : null}
       <span className="worklist-row__action">{actionControl}</span>

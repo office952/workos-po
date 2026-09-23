@@ -1093,6 +1093,18 @@ a.hit {
   grid-template-columns: minmax(10rem, 1.4fr) minmax(8rem, 0.95fr) minmax(8rem, 0.95fr) minmax(6.5rem, 0.6fr) minmax(6.5rem, 7.5rem) minmax(7rem, 0.75fr);
 }
 
+.worklist--operations .worklist__head,
+.worklist--operations .worklist-row {
+  grid-template-columns:
+    minmax(8rem, 1.4fr)
+    minmax(6.5rem, 0.9fr)
+    minmax(5.5rem, 0.55fr)
+    minmax(6rem, 0.7fr)
+    minmax(6.5rem, 0.8fr)
+    minmax(5.5rem, 0.6fr)
+    minmax(6.5rem, 0.75fr);
+}
+
 .worklist--commercial .worklist__head,
 .worklist--commercial .worklist-row,
 .worklist--operational .worklist__head,
@@ -1653,7 +1665,8 @@ button.context-rail__item:focus-visible {
   .worklist--commercial .worklist-row,
   .worklist--operational .worklist-row,
   .worklist--compact .worklist-row,
-  .worklist--registry .worklist-row {
+  .worklist--registry .worklist-row,
+  .worklist--operations .worklist-row {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "identity action"
@@ -1686,6 +1699,18 @@ button.context-rail__item:focus-visible {
   .worklist-row__meta {
     grid-area: meta;
     justify-self: end;
+  }
+
+  .worklist--operations .worklist-row {
+    grid-template-areas:
+      "identity action"
+      "context state"
+      "support meta"
+      "progress progress";
+  }
+
+  .worklist-row__progress {
+    grid-area: progress;
   }
 
   .ui-panel__header {

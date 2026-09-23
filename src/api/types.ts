@@ -351,14 +351,25 @@ export type QuoteListItemTransport = {
 
 export type JobListItemTransport = {
   jobId: string;
+  kind: string;
+  kindLabel: string;
   productCode: string;
   productLabel: string;
   inscription: string;
+  memberLabels: string[];
+  customerId: string | null;
   customerDisplayName: string | null;
+  requestId: string | null;
   stage: string;
   stageLabel: string;
   nextAction: string;
   nextActionLabel: string;
+  priority: string;
+  priorityLabel: string;
+  targetDate: string | null;
+  targetDateLabel: string;
+  planningEditable: boolean;
+  overdue: boolean;
   needsAttention: boolean;
   attentionLabel: string | null;
   progressLabel: string | null;
@@ -470,6 +481,8 @@ export type ExecutionPlanTransport = {
   planId: string;
   productLabel: string;
   inscription: string;
+  priorityLabel: string | null;
+  targetDateLabel: string | null;
   statusLabel: string;
   progressLabel: string;
   progress: ExecutionPlanProgressTransport | null;
@@ -487,6 +500,10 @@ export type PlanningWorkloadTaskTransport = {
   requiredCapabilityLabel: string;
   productLabel: string;
   inscription: string;
+  scopeLabel: string;
+  customerDisplayName: string | null;
+  priorityLabel: string;
+  targetDateLabel: string;
   jobId: string | null;
   jobHref: string | null;
   executionHref: string;

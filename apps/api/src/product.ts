@@ -1079,7 +1079,14 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
     }
     const session = runtime.resolveOperatorSession(getCookie(c, OPERATOR_SESSION_COOKIE));
     const snapshot = runtime.readProductionSnapshot(record.plan.sourceSnapshotId);
-    const jobId = snapshot?.sourceOrderSnapshotId ?? null;
+    const assemblyProduction = snapshot
+      ? null
+      : runtime.readAssemblyProductionBySnapshot(record.plan.sourceSnapshotId);
+    const jobId =
+      snapshot?.sourceOrderSnapshotId ?? assemblyProduction?.sourceOrderSnapshotId ?? null;
+    const job = jobId
+      ? runtime.listJobOverview().jobs.find((item) => item.jobId === jobId) ?? null
+      : null;
     return c.json({
       executionPlan: presentScopedExecutionPlan(
         c,
@@ -1093,6 +1100,10 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         ? {
             jobId,
             href: `/jobs/${encodeURIComponent(jobId)}`,
+            label: job?.productLabel ?? null,
+            kindLabel: job?.kindLabel ?? null,
+            priorityLabel: job?.priorityLabel ?? null,
+            targetDateLabel: job?.targetDateLabel ?? null,
           }
         : null,
     });

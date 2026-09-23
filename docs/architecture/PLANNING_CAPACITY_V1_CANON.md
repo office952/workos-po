@@ -12,18 +12,21 @@ PARALLEL_PLANNING_TRUTH = NO
 CANON_FILENAME = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
 CANON_FILENAME_RENAME = DEFERRED / NAMING_DEBT
 CURRENT_PROGRAM = PLANNING_WORKLOAD_V1
-CURRENT_PROGRAM_STATUS = PLN1_OWNER_ACCEPTED
+CURRENT_PROGRAM_STATUS = PLN2_IMPLEMENTED_IN_REVIEW
 PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
 PLN0 = COMPLETE
 PLN1 = COMPLETE / OWNER_ACCEPTED
-PLN2 = NOT_STARTED
+PLN2 = IMPLEMENTED_IN_REVIEW
+OPERATIONS_CONTROL_V1 = IMPLEMENTED_IN_REVIEW
+PRODUCT_ASSEMBLY_FIRST_CLASS_JOB = IMPLEMENTED_IN_REVIEW
+OWNER_ACCEPTED_OPERATIONS_CONTROL_V1 = NO
 PLN3 = NOT_STARTED
 PLANNING_IMPLEMENTATION = OWNER_ACCEPTED
 SCHEDULING = NOT_STARTED / OUT_OF_SCOPE_V1
 OWNER_ACCEPTED_PLANNING_IMPLEMENTATION = YES
 ```
 
-Living program sequence is owned by `docs/ROADMAP.md`. Configuration-First architecture remains `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`. PLN1 persistence, API, `/planificare`, and the synthetic Owner reference runtime are Owner-accepted. This document remains the Planning contract owner. It does not authorize PLN2 or PLN3.
+Living program sequence is owned by `docs/ROADMAP.md`. Configuration-First architecture remains `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`. PLN1 persistence, API, `/planificare`, and the synthetic Owner reference runtime are Owner-accepted. This document remains the Planning contract owner. PLN2 is implemented in review and is not Owner-accepted. It does not authorize PLN3.
 
 ## Authority
 
@@ -224,7 +227,7 @@ Provider assignment remains explicit. Workload must not auto-assign a provider.
 
 V1 requires a provider workload / queue **read** model.
 
-Do not introduce manual priority, sort-order, or target-date fields in the initial implementation.
+The initial PLN1 slice did not introduce manual priority, sort-order, or target-date fields.
 
 Display order may use deterministic existing facts. Current Execution `seq` is in-plan process order. It must not be redefined as provider priority.
 
@@ -234,7 +237,7 @@ TARGET_DATE = NOT_REQUIRED_FOR_INITIAL_V1
 MANUAL_QUEUE_ORDER = DEFERRED
 ```
 
-Later PLN2 may add these only if real operational use proves necessary.
+PLN2, implemented in review, adds job-level operational priority and an optional target date. They order the planner and can mark an overdue target. They do not schedule, dispatch, or change Execution dependencies.
 
 ## 6. No hard capacity
 
@@ -471,16 +474,17 @@ PLN1 = plannedEffortMinutes
        + provider workload projection
        + planner queue / read surface
        + derived deterministic display order
-PLN2 = optional explicit priority / order and/or target date
-       only if real operational use proves necessary
-PLN3 = optional soft working-hours forecast
+PLN2 = job priority STANDARD|HIGH|URGENT and optional target date
+       implemented in review, not Owner-accepted
+       display order only; not scheduling
+PLN3 = optional soft working-hours forecast / NOT_STARTED
 ```
 
 Do not over-fragment PLN1. Effort without a provider total is not useful. A provider total cannot exist without the effort field.
 
 Scheduling remains outside V1.
 
-PLN1 implementation is Owner-accepted. This document does not authorize PLN2 or PLN3 implementation.
+PLN1 implementation is Owner-accepted. PLN2 is implemented in review and is not Owner-accepted. This document does not authorize PLN3.
 
 Do not revive MaterializedOpsGraph, DEC-009, scoped-B, old capacity fixtures, hardcoded workcenter names, or FastAPI / V2 architecture.
 
@@ -523,7 +527,7 @@ These questions were open before PLN1. They do not reopen the workload-first dir
 
 ```text
 PLN1 = COMPLETE / OWNER_ACCEPTED
-PLN2_IMPLEMENTATION = NOT_AUTHORIZED_BY_THIS_DOCUMENT
+PLN2_IMPLEMENTATION = IMPLEMENTED_IN_REVIEW / NOT_OWNER_ACCEPTED
 PLN3_IMPLEMENTATION = NOT_AUTHORIZED_BY_THIS_DOCUMENT
 PLANNING_CALCULATION = IMPLEMENTED / OWNER_ACCEPTED
 ```

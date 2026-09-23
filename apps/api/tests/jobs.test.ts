@@ -242,7 +242,23 @@ describe("job overview API", () => {
       nextActionLabel: "Lucrare finalizată",
       progressLabel: "12 / 12 finalizate",
       needsAttention: false,
+      priority: "STANDARD",
+      targetDate: null,
     });
+    const completedId = String(byInscription.JOBE.jobId);
+    const locked = await app.request(`/api/jobs/${encodeURIComponent(completedId)}/planning`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ priority: "URGENT", targetDate: "2026-10-02" }),
+    });
+    expect(locked.status).toBe(409);
+    expect((await readBody(locked)).error).toBe("planning_readonly");
+    const stillCompleted = await readBody(
+      await app.request(`/api/jobs/${encodeURIComponent(completedId)}`),
+    );
+    expect((stillCompleted.job as JsonObject).priority).toBe("STANDARD");
+    expect((stillCompleted.job as JsonObject).targetDate).toBeNull();
+    expect((stillCompleted.order as JsonObject).contentHash).toBe(doneOrder.contentHash);
     expect(overview.summary).toMatchObject({
       total: 5,
       active: 4,

@@ -7,6 +7,7 @@ import {
   deriveJobStage,
   filterJobOverview,
   jobHref,
+  projectAssemblyJobOverviewItem,
   projectJobOverview,
   projectJobOverviewItem,
 } from "./overview.js";
@@ -378,5 +379,56 @@ describe("job overview projection", () => {
     expect(withCustomer.customerDisplayName).toBe("Client Demo LETTERS");
     expect(legacy.customerDisplayName).toBeNull();
     expect(withCustomer.inscription).toBe("WORKOS");
+    expect(withCustomer.kind).toBe("PRODUCT");
+    expect(withCustomer.priority).toBe("STANDARD");
+    expect(withCustomer.targetDate).toBeNull();
+  });
+
+  it("projects one assembly job and keeps technical attention ahead of an overdue target", () => {
+    const assembly = projectAssemblyJobOverviewItem({
+      orderSnapshotId: "asmo:accepted",
+      organizationId: "org:workshop",
+      requestId: "crq:1",
+      label: "Panou ACM + litere volumetrice",
+      createdAt: "2026-09-20T08:00:00.000Z",
+      members: [
+        { role: "SUPPORT_PANEL", inscription: "PANOU" },
+        { role: "SIGNAGE_LETTERS", inscription: "LITERE" },
+      ],
+      customer: { customerId: "cus:1", displayName: "Client Ansamblu" },
+      releaseSnapshotId: null,
+      planView: null,
+      planning: { priority: "URGENT", targetDate: "2026-09-01" },
+      today: "2026-09-23",
+    });
+    expect(assembly.kind).toBe("ASSEMBLY");
+    expect(assembly.jobId).toBe("asmo:accepted");
+    expect(assembly.productLabel).toBe("Panou ACM + litere volumetrice");
+    expect(assembly.memberLabels).toEqual(["Panou ACM", "Litere volumetrice"]);
+    expect(assembly.priority).toBe("URGENT");
+    expect(assembly.overdue).toBe(true);
+    expect(assembly.attentionLabel).toBe("Urmează eliberarea pentru producție");
+    expect(filterJobOverview(projectJobOverview([assembly]), "URGENT")).toHaveLength(1);
+    expect(filterJobOverview(projectJobOverview([assembly]), "OVERDUE")).toHaveLength(1);
+
+    const running = projectJobOverviewItem({
+      order: order("LATE"),
+      release: release(),
+      planView: planView("IN_PROGRESS"),
+      planning: { priority: "HIGH", targetDate: "2026-09-01" },
+      today: "2026-09-23",
+    });
+    expect(running.attentionLabel).toBe("Termen depășit");
+    expect(running.planningEditable).toBe(true);
+
+    const done = projectJobOverviewItem({
+      order: order("DONE-LATE"),
+      release: release(),
+      planView: planView("COMPLETED"),
+      planning: { priority: "URGENT", targetDate: "2026-09-01" },
+      today: "2026-09-23",
+    });
+    expect(done.overdue).toBe(false);
+    expect(done.planningEditable).toBe(false);
   });
 });

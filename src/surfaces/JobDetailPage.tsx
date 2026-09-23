@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { presentExecutionPlan } from "../adapters/executionAdapter";
-import { TransportError } from "../api/http";
-import { postExecutionPlan, postProductionRelease } from "../api/lifecycle";
+import { TransportError, readTransportErrorCode } from "../api/http";
+import { patchJobPlanning, postJobExecutionPlan, postJobProductionRelease } from "../api/jobs";
 import { Button } from "../components/Button";
 import { InfoRow } from "../components/InfoRow";
 import { EmptyState } from "../components/EmptyState";
@@ -9,8 +9,10 @@ import { InlineAlert } from "../components/InlineAlert";
 import { LifecycleList } from "../components/LifecycleList";
 import { LoadingFloor } from "../components/LoadingFloor";
 import { MeasurePair } from "../components/MeasurePair";
+import { SelectField } from "../components/SelectField";
 import { StatusBadge } from "../components/StatusBadge";
 import { SurfacePanel } from "../components/SurfacePanel";
+import { TextField } from "../components/TextField";
 import {
   invalidateAfterCreateExecutionPlan,
   invalidateAfterProductionRelease,
@@ -32,6 +34,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
   const jobResource = useResource(resourceKeys.job(jobId), () => loadJobDetail(jobId));
   const job = jobResource.data?.job ?? null;
   const quoteSnapshotId = jobResource.data?.quoteSnapshotId ?? null;
+  const quoteHrefValue = jobResource.data?.quoteHref ?? null;
   const planId = jobResource.data?.planId ?? null;
   const planResource = useResource(planId ? resourceKeys.executionPlan(planId) : null, () =>
     loadExecutionPlan(planId ?? ""),
@@ -39,6 +42,18 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
   const plan = planResource.data ?? null;
   const [actionState, setActionState] = useState<"idle" | "pending" | "error">("idle");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [draftScope, setDraftScope] = useState(jobId);
+  const [priorityDraft, setPriorityDraft] = useState<string | null>(null);
+  const [targetDraft, setTargetDraft] = useState<string | null>(null);
+  const [planningMessage, setPlanningMessage] = useState<string | null>(null);
+  if (draftScope !== jobId) {
+    setDraftScope(jobId);
+    setPriorityDraft(null);
+    setTargetDraft(null);
+    setPlanningMessage(null);
+  }
+  const priority = priorityDraft ?? job?.priority ?? "STANDARD";
+  const targetDate = targetDraft ?? job?.targetDate ?? "";
 
   async function release(): Promise<void> {
     if (!job) {
@@ -47,7 +62,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
     setActionState("pending");
     setActionError(null);
     try {
-      await postProductionRelease(job.productCode, job.orderSnapshotId);
+      await postJobProductionRelease(job.jobId);
       setActionState("idle");
       invalidateAfterProductionRelease(jobId);
     } catch (error) {
@@ -70,9 +85,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
     setActionState("pending");
     setActionError(null);
     try {
-      const presented = presentExecutionPlan(
-        await postExecutionPlan(job.productCode, snapshotId),
-      );
+      const presented = presentExecutionPlan(await postJobExecutionPlan(job.jobId));
       if (!presented) {
         setActionState("error");
         setActionError("Planul de execuție nu a putut fi prezentat.");
@@ -80,7 +93,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
       }
       setActionState("idle");
       invalidateAfterCreateExecutionPlan(jobId);
-      navigate(executionHref(presented.planId));
+      navigate(executionHref(presented.planId, { jobId: job.jobId }));
     } catch (error) {
       setActionState("error");
       setActionError(
@@ -91,7 +104,43 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
     }
   }
 
+  async function savePlanning(): Promise<void> {
+    if (!job || !job.planningEditable) {
+      return;
+    }
+    setActionState("pending");
+    setActionError(null);
+    setPlanningMessage(null);
+    try {
+      await patchJobPlanning(job.jobId, {
+        priority,
+        targetDate: targetDate.trim() === "" ? null : targetDate.trim(),
+      });
+      setActionState("idle");
+      setPriorityDraft(null);
+      setTargetDraft(null);
+      setPlanningMessage("Prioritatea și termenul au fost salvate.");
+      invalidateAfterProductionRelease(jobId);
+    } catch (error) {
+      setActionState("error");
+      const code = error instanceof TransportError ? readTransportErrorCode(error.body) : null;
+      setActionError(
+        code === "planning_readonly"
+          ? "Lucrarea finalizată nu mai poate fi replanificată."
+          : code === "invalid_target_date"
+            ? "Termenul trebuie să fie o dată calendaristică."
+            : "Planificarea nu a putut fi salvată.",
+      );
+    }
+  }
+
   const planPending = Boolean(planId) && !plan && planResource.status !== "error";
+  const sourceHref =
+    job?.kind === "ASSEMBLY"
+      ? quoteHrefValue
+      : quoteSnapshotId
+        ? quoteHref(job?.productCode ?? "", quoteSnapshotId)
+        : null;
 
   return (
     <SlicePage
@@ -137,17 +186,62 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
         <>
           <SurfacePanel title="Identitate" label="Identitate">
             <dl className="fact-grid">
-              <InfoRow label="Produs" value={job.productLabel} />
+              <InfoRow label="Lucrare" value={job.productLabel} />
               <InfoRow label="Client" value={job.customerDisplayName ?? "—"} />
+              <InfoRow label="Tip" value={job.kindLabel} />
+              <InfoRow label="Prioritate" value={job.priorityLabel} />
+              <InfoRow label="Termen" value={job.targetDateLabel} />
+              <InfoRow label="Stare" value={job.stageLabel} />
+              <InfoRow label="Progres" value={job.progressLabel ?? "—"} />
+              <InfoRow label="Atenție" value={job.attentionLabel ?? "Fără atenție specială"} />
               <InfoRow label="Următoarea acțiune" value={job.nextActionLabel} />
             </dl>
-            {quoteSnapshotId ? (
+            {job.memberLabels.length > 0 ? (
+              <p>{job.memberLabels.join(" · ")}</p>
+            ) : null}
+            {sourceHref ? (
               <p>
-                <a className="text-link" href={quoteHref(job.productCode, quoteSnapshotId)}>
-                  Deschide oferta sursă
+                <a className="text-link" href={sourceHref}>
+                  {job.kind === "ASSEMBLY" ? "Deschide ansamblul" : "Deschide oferta sursă"}
                 </a>
               </p>
             ) : null}
+            <form
+              className="stack"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void savePlanning();
+              }}
+            >
+              <SelectField
+                id="job-priority"
+                label="Prioritate operațională"
+                value={priority}
+                disabled={!job.planningEditable || actionState === "pending"}
+                options={[
+                  { value: "STANDARD", label: "Standard" },
+                  { value: "HIGH", label: "Ridicată" },
+                  { value: "URGENT", label: "Urgentă" },
+                ]}
+                onChange={setPriorityDraft}
+              />
+              <TextField
+                id="job-target-date"
+                label="Termen operațional"
+                value={targetDate}
+                hint="Dată calendaristică YYYY-MM-DD. Gol înseamnă fără termen."
+                disabled={!job.planningEditable || actionState === "pending"}
+                onChange={setTargetDraft}
+              />
+              {job.planningEditable ? (
+                <Button type="submit" disabled={actionState === "pending"}>
+                  Salvează planificarea
+                </Button>
+              ) : (
+                <p className="ui-note">Lucrarea finalizată are planificarea doar pentru citire.</p>
+              )}
+              {planningMessage ? <p className="ui-note">{planningMessage}</p> : null}
+            </form>
             <p className="ui-note">
               Oferta acceptată rămâne sursa istorică. Lucrarea adaugă doar starea
               operațională.
