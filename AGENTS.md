@@ -164,7 +164,7 @@ EXE4_INTEGRATED_ON_MAIN = YES
 EXE4_MERGE_COMMIT = e0ddbdac7de5896d683e05782a21f0e55a984b9b
 PR_28 = MERGED
 CURRENT_PROGRAM = PLANNING_WORKLOAD_V1
-CURRENT_PROGRAM_STATUS = PLN2_IMPLEMENTED_IN_REVIEW
+CURRENT_PROGRAM_STATUS = PLN2_OWNER_ACCEPTED
 PRODUCT_ASSEMBLY_V1 = COMPLETE / OWNER_ACCEPTED
 OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = YES
 PRODUCT_ASSEMBLY_IMPLEMENTATION = COMPLETE / INTEGRATED
@@ -179,10 +179,11 @@ CAP2 = CANCELLED
 CAP3 = SUPERSEDED_BY_PLN1_PROJECTION
 PLN0 = COMPLETE
 PLN1 = COMPLETE / OWNER_ACCEPTED
-PLN2 = IMPLEMENTED_IN_REVIEW
-OPERATIONS_CONTROL_V1 = IMPLEMENTED_IN_REVIEW
-PRODUCT_ASSEMBLY_FIRST_CLASS_JOB = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_OPERATIONS_CONTROL_V1 = NO
+PLN2 = COMPLETE / OWNER_ACCEPTED
+OPERATIONS_CONTROL_V1 = COMPLETE / OWNER_ACCEPTED
+PRODUCT_ASSEMBLY_FIRST_CLASS_JOB = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_OPERATIONS_CONTROL_V1 = YES
+OPERATIONS_CONTROL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PLN3 = NOT_STARTED
 PLANNING_IMPLEMENTATION = OWNER_ACCEPTED
 OWNER_ACCEPTED_PLANNING_IMPLEMENTATION = YES
@@ -255,7 +256,7 @@ REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
 Living program authority: `docs/ROADMAP.md`.
 Configuration-First architecture: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
-People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Current supported-product People capabilities are mapped; unused catalog capabilities may stay unmapped. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Execution Expansion V1 is Owner-accepted and integrated on main through PR #28. Execution acceptance advisories are recorded on the roadmap and are not a correction wave. Product Assembly V1 is Owner-accepted and integrated. It is cross-cutting work and does not replace Planning Workload V1. Acceptance advisories are recorded on the roadmap and are not a correction wave. Current program is Planning Workload V1. PLN0 workload-first canon is complete. PLN1 planned effort, provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787` are Owner-accepted. PLN1 acceptance advisories are recorded on the roadmap and are not a correction wave. Weekly provider `availableMinutes` and `planningWeek` remain cancelled. PLN2 and Operations Control V1 are implemented in review: one operational job for Product and Assembly, job priority and optional target date, and unassigned planned effort. They are not Owner-accepted. PLN3 is not started. Scheduling remains out of V1. Member DAG / composition corrections stay deferred and are not a Planning blocker. Living Planning canon: `docs/architecture/PLANNING_CAPACITY_V1_CANON.md`. Exact merge commits live in `docs/ROADMAP.md`.
+People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Current supported-product People capabilities are mapped; unused catalog capabilities may stay unmapped. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Execution Expansion V1 is Owner-accepted and integrated on main through PR #28. Execution acceptance advisories are recorded on the roadmap and are not a correction wave. Product Assembly V1 is Owner-accepted and integrated. It is cross-cutting work and does not replace Planning Workload V1. Acceptance advisories are recorded on the roadmap and are not a correction wave. Current program is Planning Workload V1. PLN0 workload-first canon is complete. PLN1 planned effort, provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787` are Owner-accepted. PLN1 acceptance advisories are recorded on the roadmap and are not a correction wave. Weekly provider `availableMinutes` and `planningWeek` remain cancelled. PLN2 and Operations Control V1 are Owner-accepted: one operational job for Product and Assembly, job priority and optional target date, and unassigned planned effort. Acceptance advisories are recorded and are not a correction wave. PLN3 is not started. Scheduling remains out of V1. Member DAG / composition corrections stay deferred and are not a Planning blocker. Living Planning canon: `docs/architecture/PLANNING_CAPACITY_V1_CANON.md`. Exact merge commits live in `docs/ROADMAP.md`.
 
 ```text
 NO_SILENT_BUSINESS_TRUTH = CANONICAL

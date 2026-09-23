@@ -62,7 +62,7 @@ EXE4_INTEGRATED_ON_MAIN = YES
 EXE4_MERGE_COMMIT = e0ddbdac7de5896d683e05782a21f0e55a984b9b
 PR_28 = MERGED
 CURRENT_PROGRAM = PLANNING_WORKLOAD_V1
-CURRENT_PROGRAM_STATUS = PLN2_IMPLEMENTED_IN_REVIEW
+CURRENT_PROGRAM_STATUS = PLN2_OWNER_ACCEPTED
 PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
 PLANNING_CAPACITY_V1_PREFLIGHT = COMPLETE
 PLANNING_CAPACITY_V1_OWNER_DECISIONS = SUPERSEDED_IN_PART
@@ -73,10 +73,11 @@ CAP2 = CANCELLED
 CAP3 = SUPERSEDED_BY_PLN1_PROJECTION
 PLN0 = COMPLETE
 PLN1 = COMPLETE / OWNER_ACCEPTED
-PLN2 = IMPLEMENTED_IN_REVIEW
-OPERATIONS_CONTROL_V1 = IMPLEMENTED_IN_REVIEW
-PRODUCT_ASSEMBLY_FIRST_CLASS_JOB = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_OPERATIONS_CONTROL_V1 = NO
+PLN2 = COMPLETE / OWNER_ACCEPTED
+OPERATIONS_CONTROL_V1 = COMPLETE / OWNER_ACCEPTED
+PRODUCT_ASSEMBLY_FIRST_CLASS_JOB = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_OPERATIONS_CONTROL_V1 = YES
+OPERATIONS_CONTROL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PLN3 = NOT_STARTED
 PLANNING_IMPLEMENTATION = OWNER_ACCEPTED
 OWNER_ACCEPTED_PLANNING_IMPLEMENTATION = YES
@@ -312,7 +313,7 @@ Primary User Journey is complete. Configuration-First remains canonical: changea
 
 Architecture ownership: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
-Product Enablement Admin V1 is complete after Owner acceptance and merge of PR #19. Letters Product Truth V1 and ACM Product Truth V1 remain complete. People and Machine Admin V1 is complete. Standalone CF5 is not required first. Remaining Configuration-First work is domain-by-domain when actual product work requires it. Execution Expansion V1 is Owner-accepted and integrated. Current program is Planning Workload V1. PLN1 is Owner-accepted. PLN2 and Operations Control V1 are implemented in review and are not Owner-accepted. PLN3 is not started. Next wave is unauthorized.
+Product Enablement Admin V1 is complete after Owner acceptance and merge of PR #19. Letters Product Truth V1 and ACM Product Truth V1 remain complete. People and Machine Admin V1 is complete. Standalone CF5 is not required first. Remaining Configuration-First work is domain-by-domain when actual product work requires it. Execution Expansion V1 is Owner-accepted and integrated. Current program is Planning Workload V1. PLN1 is Owner-accepted. PLN2 and Operations Control V1 are Owner-accepted. PLN3 is not started. Next wave is unauthorized.
 
 ```text
 WORKOS = CONFIGURATION-FIRST BUSINESS ENGINE
@@ -420,7 +421,7 @@ After CF4, preferred living sequence:
 5. execution expansion
 6. planning / workload
 
-Letters Product Truth V1, ACM Product Truth V1, Product Enablement Admin V1, and People and Machine Admin V1 are complete. Execution Expansion V1 is Owner-accepted and integrated. Living program is Planning Workload V1. PLN1 is Owner-accepted. The previous CAP0 weekly-capacity contract is superseded in part. PLN0 is canon correction only. Weekly provider `availableMinutes` is cancelled. Member DAG / composition corrections remain deferred and are not a Planning blocker. CF5 remains NOT_STARTED and is not selected.
+Letters Product Truth V1, ACM Product Truth V1, Product Enablement Admin V1, and People and Machine Admin V1 are complete. Execution Expansion V1 is Owner-accepted and integrated. Living program is Planning Workload V1. PLN1, PLN2, and Operations Control V1 are Owner-accepted. The previous CAP0 weekly-capacity contract is superseded in part. PLN0 is canon correction only. Weekly provider `availableMinutes` is cancelled. Member DAG / composition corrections remain deferred and are not a Planning blocker. CF5 remains NOT_STARTED and is not selected.
 
 ## ACM Product Truth V1
 
@@ -512,7 +513,7 @@ Still not implemented: Logo child, Host Context, ACM segmentation, generic graph
 
 Product Assembly V1 acceptance advisories, not a correction wave:
 
-- Operations Control V1 puts the accepted ACM + Letters sale on `/lucrari` as one job. That advisory is implemented in review and is not Owner-accepted.
+- The accepted ACM + Letters sale is one first-class job on `/lucrari`. That row is Owner-accepted with Operations Control V1.
 - repeated "Rezumat ansamblu" heading
 - quote section order could be improved
 - existing narrow navigation clipping
@@ -671,7 +672,7 @@ Execution acceptance advisories, not a correction wave:
 
 ```text
 CURRENT_PROGRAM = PLANNING_WORKLOAD_V1
-CURRENT_PROGRAM_STATUS = PLN2_IMPLEMENTED_IN_REVIEW
+CURRENT_PROGRAM_STATUS = PLN2_OWNER_ACCEPTED
 PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
 PLANNING_CAPACITY_V1_PREFLIGHT = COMPLETE
 PLANNING_CAPACITY_V1_OWNER_DECISIONS = SUPERSEDED_IN_PART
@@ -682,10 +683,11 @@ CAP2 = CANCELLED
 CAP3 = SUPERSEDED_BY_PLN1_PROJECTION
 PLN0 = COMPLETE
 PLN1 = COMPLETE / OWNER_ACCEPTED
-PLN2 = IMPLEMENTED_IN_REVIEW
-OPERATIONS_CONTROL_V1 = IMPLEMENTED_IN_REVIEW
-PRODUCT_ASSEMBLY_FIRST_CLASS_JOB = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_OPERATIONS_CONTROL_V1 = NO
+PLN2 = COMPLETE / OWNER_ACCEPTED
+OPERATIONS_CONTROL_V1 = COMPLETE / OWNER_ACCEPTED
+PRODUCT_ASSEMBLY_FIRST_CLASS_JOB = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_OPERATIONS_CONTROL_V1 = YES
+OPERATIONS_CONTROL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PLN3 = NOT_STARTED
 PLANNING_IMPLEMENTATION = OWNER_ACCEPTED
 OWNER_ACCEPTED_PLANNING_IMPLEMENTATION = YES
@@ -696,12 +698,19 @@ MEMBER_DAG_COMPOSITION_CORRECTIONS = DEFERRED / NOT_CAPACITY_BLOCKER
 PLANNING_CAPACITY_CANON = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
 ```
 
-Planning Workload V1 is the living program. PLN0 workload-first canon is complete. PLN1 is Owner-accepted: `plannedEffortMinutes`, derived provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787`. `planningWeek` and weekly `availableMinutes` remain cancelled. PLN2 and Operations Control V1 are implemented in review and are not Owner-accepted. PLN3 is not started. Scheduling is out of V1. Member DAG / composition corrections remain deferred and are not a Planning blocker.
+Planning Workload V1 is the living program. PLN0 workload-first canon is complete. PLN1 is Owner-accepted: `plannedEffortMinutes`, derived provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787`. `planningWeek` and weekly `availableMinutes` remain cancelled. PLN2 and Operations Control V1 are Owner-accepted. PLN3 is not started. Scheduling is out of V1. Member DAG / composition corrections remain deferred and are not a Planning blocker.
 
 PLN1 acceptance advisories, not a correction wave:
 
-- unassigned task effort editing — closed in review by Operations Control V1
+- unassigned task effort editing — closed and Owner-accepted with Operations Control V1
 - duplicate-looking planning rows / task differentiation
 - empty-state density
 - narrow mobile navigation clipping
 - minor PLN1 test/doc cleanup
+
+Operations Control V1 and PLN2 acceptance advisories, not a correction wave:
+
+- Assembly Job Detail title may show joined inscriptions, such as `PANOU ACM · NORD`. The preferred later title is `Panou ACM + litere volumetrice`, with inscriptions as secondary context.
+- Overdue comparison uses the UTC calendar day. Organization-local midnight can differ. `OPERATIONAL_DATE_TIMEZONE_SEMANTICS = FOLLOW_UP_REQUIRED_BEFORE_ADVANCED_CALENDAR_AUTOMATION`. Do not add timezone or calendar infrastructure for this residual.
+- `Alocă furnizorul în execuție` uses a separate planning row. Density can improve later.
+- Narrow mobile navigation clipping around 390px predates this wave.

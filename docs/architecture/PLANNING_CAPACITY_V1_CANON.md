@@ -12,21 +12,44 @@ PARALLEL_PLANNING_TRUTH = NO
 CANON_FILENAME = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
 CANON_FILENAME_RENAME = DEFERRED / NAMING_DEBT
 CURRENT_PROGRAM = PLANNING_WORKLOAD_V1
-CURRENT_PROGRAM_STATUS = PLN2_IMPLEMENTED_IN_REVIEW
+CURRENT_PROGRAM_STATUS = PLN2_OWNER_ACCEPTED
 PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
 PLN0 = COMPLETE
 PLN1 = COMPLETE / OWNER_ACCEPTED
-PLN2 = IMPLEMENTED_IN_REVIEW
-OPERATIONS_CONTROL_V1 = IMPLEMENTED_IN_REVIEW
-PRODUCT_ASSEMBLY_FIRST_CLASS_JOB = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_OPERATIONS_CONTROL_V1 = NO
+PLN2 = COMPLETE / OWNER_ACCEPTED
+OPERATIONS_CONTROL_V1 = COMPLETE / OWNER_ACCEPTED
+PRODUCT_ASSEMBLY_FIRST_CLASS_JOB = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_OPERATIONS_CONTROL_V1 = YES
+OPERATIONS_CONTROL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PLN3 = NOT_STARTED
 PLANNING_IMPLEMENTATION = OWNER_ACCEPTED
 SCHEDULING = NOT_STARTED / OUT_OF_SCOPE_V1
 OWNER_ACCEPTED_PLANNING_IMPLEMENTATION = YES
 ```
 
-Living program sequence is owned by `docs/ROADMAP.md`. Configuration-First architecture remains `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`. PLN1 persistence, API, `/planificare`, and the synthetic Owner reference runtime are Owner-accepted. This document remains the Planning contract owner. PLN2 is implemented in review and is not Owner-accepted. It does not authorize PLN3.
+Living program sequence is owned by `docs/ROADMAP.md`. Configuration-First architecture remains `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`. PLN1 persistence, API, `/planificare`, and the synthetic Owner reference runtime are Owner-accepted. This document remains the Planning contract owner. PLN2 and Operations Control V1 are Owner-accepted. Acceptance advisories are recorded and are not a correction wave. This document does not authorize PLN3.
+
+Accepted PLN2 contract:
+
+```text
+OPERATIONAL_PRIORITY = STANDARD | HIGH | URGENT
+DEFAULT_OPERATIONAL_PRIORITY = STANDARD
+TARGET_DATE = optional YYYY-MM-DD
+PRIORITY_OWNER = JOB PLANNING METADATA
+TARGET_DATE_OWNER = JOB PLANNING METADATA
+JOB_KIND = PRODUCT | ASSEMBLY
+PLANNING_PRODUCT_TRUTH_COUPLING = NONE
+PLANNING_COMMERCIAL_COUPLING = NONE
+PLANNING_EXECUTION_TRUTH_COUPLING = NONE
+DISPLAY_ORDER != EXECUTION_DEPENDENCY
+DISPLAY_ORDER != AUTO_DISPATCH
+DISPLAY_ORDER != SCHEDULING
+OPERATIONAL_DATE_TIMEZONE_SEMANTICS = FOLLOW_UP_REQUIRED_BEFORE_ADVANCED_CALENDAR_AUTOMATION
+```
+
+Planner display order is in progress before planned, then urgent before high before standard, then the earliest target date, then a null target date, then the existing PLN1 tie-break. Product jobs still come from OrderSnapshot. Assembly jobs still come from AssemblyOrderSnapshot. Those schemas stay separate. The accepted chain is `/lucrari`, unified Job Detail, `/planificare`, then `/executie`. An accepted assembly is one operational job and keeps the scopes Panou ACM, Litere, and Ansamblare.
+
+Accepted residuals, not a correction wave: the Assembly Job Detail title may show joined inscriptions; overdue uses the UTC calendar day; the planning allocation link uses a separate row; narrow navigation clipping around 390px remains.
 
 ## Authority
 
@@ -237,7 +260,7 @@ TARGET_DATE = NOT_REQUIRED_FOR_INITIAL_V1
 MANUAL_QUEUE_ORDER = DEFERRED
 ```
 
-PLN2, implemented in review, adds job-level operational priority and an optional target date. They order the planner and can mark an overdue target. They do not schedule, dispatch, or change Execution dependencies.
+PLN2, Owner-accepted, adds job-level operational priority and an optional target date. They order the planner and can mark an overdue target. They do not schedule, dispatch, or change Execution dependencies.
 
 ## 6. No hard capacity
 
@@ -475,7 +498,7 @@ PLN1 = plannedEffortMinutes
        + planner queue / read surface
        + derived deterministic display order
 PLN2 = job priority STANDARD|HIGH|URGENT and optional target date
-       implemented in review, not Owner-accepted
+       COMPLETE / OWNER_ACCEPTED
        display order only; not scheduling
 PLN3 = optional soft working-hours forecast / NOT_STARTED
 ```
@@ -484,7 +507,7 @@ Do not over-fragment PLN1. Effort without a provider total is not useful. A prov
 
 Scheduling remains outside V1.
 
-PLN1 implementation is Owner-accepted. PLN2 is implemented in review and is not Owner-accepted. This document does not authorize PLN3.
+PLN1 implementation is Owner-accepted. PLN2 is Owner-accepted. This document does not authorize PLN3.
 
 Do not revive MaterializedOpsGraph, DEC-009, scoped-B, old capacity fixtures, hardcoded workcenter names, or FastAPI / V2 architecture.
 
@@ -527,7 +550,7 @@ These questions were open before PLN1. They do not reopen the workload-first dir
 
 ```text
 PLN1 = COMPLETE / OWNER_ACCEPTED
-PLN2_IMPLEMENTATION = IMPLEMENTED_IN_REVIEW / NOT_OWNER_ACCEPTED
+PLN2_IMPLEMENTATION = COMPLETE / OWNER_ACCEPTED
 PLN3_IMPLEMENTATION = NOT_AUTHORIZED_BY_THIS_DOCUMENT
 PLANNING_CALCULATION = IMPLEMENTED / OWNER_ACCEPTED
 ```
