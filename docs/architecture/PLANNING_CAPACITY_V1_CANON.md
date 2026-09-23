@@ -12,18 +12,18 @@ PARALLEL_PLANNING_TRUTH = NO
 CANON_FILENAME = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
 CANON_FILENAME_RENAME = DEFERRED / NAMING_DEBT
 CURRENT_PROGRAM = PLANNING_WORKLOAD_V1
-CURRENT_PROGRAM_STATUS = PLN1_IMPLEMENTED_IN_REVIEW
+CURRENT_PROGRAM_STATUS = PLN1_OWNER_ACCEPTED
 PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
 PLN0 = COMPLETE
-PLN1 = IMPLEMENTED_IN_REVIEW
+PLN1 = COMPLETE / OWNER_ACCEPTED
 PLN2 = NOT_STARTED
 PLN3 = NOT_STARTED
-PLANNING_IMPLEMENTATION = IMPLEMENTED_IN_REVIEW
+PLANNING_IMPLEMENTATION = OWNER_ACCEPTED
 SCHEDULING = NOT_STARTED / OUT_OF_SCOPE_V1
-OWNER_ACCEPTED_PLANNING_IMPLEMENTATION = NO
+OWNER_ACCEPTED_PLANNING_IMPLEMENTATION = YES
 ```
 
-Living program sequence is owned by `docs/ROADMAP.md`. Configuration-First architecture remains `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`. PLN1 persistence, API, `/planificare`, and the synthetic Owner reference runtime are implemented in review. This document remains the Planning contract owner. It does not authorize PLN2 or PLN3.
+Living program sequence is owned by `docs/ROADMAP.md`. Configuration-First architecture remains `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`. PLN1 persistence, API, `/planificare`, and the synthetic Owner reference runtime are Owner-accepted. This document remains the Planning contract owner. It does not authorize PLN2 or PLN3.
 
 ## Authority
 
@@ -480,7 +480,7 @@ Do not over-fragment PLN1. Effort without a provider total is not useful. A prov
 
 Scheduling remains outside V1.
 
-This document does not authorize PLN1, PLN2, or PLN3 implementation.
+PLN1 implementation is Owner-accepted. This document does not authorize PLN2 or PLN3 implementation.
 
 Do not revive MaterializedOpsGraph, DEC-009, scoped-B, old capacity fixtures, hardcoded workcenter names, or FastAPI / V2 architecture.
 
@@ -512,9 +512,9 @@ PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
 CAP2_WEEKLY_SUPPLY = CANCELLED
 ```
 
-## 18. Open questions for PLN1
+## 18. PLN1 implementation questions
 
-These are implementation questions. They do not reopen the workload-first direction.
+These questions were open before PLN1. They do not reopen the workload-first direction. The accepted implementation answers them in the domain, API, and `/planificare`.
 
 - exact persistence representation for `plannedEffortMinutes`
 - whether planner write maps to Owner or another existing permission
@@ -522,8 +522,8 @@ These are implementation questions. They do not reopen the workload-first direct
 - exact derived display-order tie-break among existing facts
 
 ```text
-PLN1_IMPLEMENTATION = NOT_AUTHORIZED_BY_THIS_DOCUMENT
+PLN1 = COMPLETE / OWNER_ACCEPTED
 PLN2_IMPLEMENTATION = NOT_AUTHORIZED_BY_THIS_DOCUMENT
 PLN3_IMPLEMENTATION = NOT_AUTHORIZED_BY_THIS_DOCUMENT
-PLANNING_CALCULATION = NOT_IMPLEMENTED
+PLANNING_CALCULATION = IMPLEMENTED / OWNER_ACCEPTED
 ```

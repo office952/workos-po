@@ -164,7 +164,7 @@ EXE4_INTEGRATED_ON_MAIN = YES
 EXE4_MERGE_COMMIT = e0ddbdac7de5896d683e05782a21f0e55a984b9b
 PR_28 = MERGED
 CURRENT_PROGRAM = PLANNING_WORKLOAD_V1
-CURRENT_PROGRAM_STATUS = PLN1_IMPLEMENTED_IN_REVIEW
+CURRENT_PROGRAM_STATUS = PLN1_OWNER_ACCEPTED
 PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
 PLANNING_CAPACITY_V1_PREFLIGHT = COMPLETE
 PLANNING_CAPACITY_V1_OWNER_DECISIONS = SUPERSEDED_IN_PART
@@ -174,10 +174,11 @@ CAP1 = SUPERSEDED_BY_PLN1
 CAP2 = CANCELLED
 CAP3 = SUPERSEDED_BY_PLN1_PROJECTION
 PLN0 = COMPLETE
-PLN1 = IMPLEMENTED_IN_REVIEW
+PLN1 = COMPLETE / OWNER_ACCEPTED
 PLN2 = NOT_STARTED
 PLN3 = NOT_STARTED
-PLANNING_IMPLEMENTATION = IMPLEMENTED_IN_REVIEW
+PLANNING_IMPLEMENTATION = OWNER_ACCEPTED
+OWNER_ACCEPTED_PLANNING_IMPLEMENTATION = YES
 CAPACITY_IMPLEMENTATION = CANCELLED_WEEKLY_SUPPLY
 SCHEDULING = NOT_STARTED / OUT_OF_SCOPE_V1
 MEMBER_DAG_COMPOSITION_CORRECTIONS = DEFERRED / NOT_CAPACITY_BLOCKER
@@ -247,7 +248,7 @@ REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
 Living program authority: `docs/ROADMAP.md`.
 Configuration-First architecture: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
-People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Current supported-product People capabilities are mapped; unused catalog capabilities may stay unmapped. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Execution Expansion V1 implementation is complete and integrated on main through PR #28. Owner has not accepted Execution Expansion. Current program is Planning Workload V1. PLN0 workload-first canon is complete. PLN1 planned effort, provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787` are implemented in review. Weekly provider `availableMinutes` and `planningWeek` remain cancelled. PLN2 and PLN3 are not started. Scheduling remains out of V1. Member DAG / composition corrections stay deferred and are not a Planning blocker. Living Planning canon: `docs/architecture/PLANNING_CAPACITY_V1_CANON.md`. Exact merge commits live in `docs/ROADMAP.md`.
+People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Current supported-product People capabilities are mapped; unused catalog capabilities may stay unmapped. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Execution Expansion V1 implementation is complete and integrated on main through PR #28. Owner has not accepted Execution Expansion. Current program is Planning Workload V1. PLN0 workload-first canon is complete. PLN1 planned effort, provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787` are Owner-accepted. Acceptance advisories are recorded on the roadmap and are not a correction wave. Weekly provider `availableMinutes` and `planningWeek` remain cancelled. PLN2 and PLN3 are not started. Scheduling remains out of V1. Member DAG / composition corrections stay deferred and are not a Planning blocker. Living Planning canon: `docs/architecture/PLANNING_CAPACITY_V1_CANON.md`. Exact merge commits live in `docs/ROADMAP.md`.
 
 ```text
 NO_SILENT_BUSINESS_TRUTH = CANONICAL
