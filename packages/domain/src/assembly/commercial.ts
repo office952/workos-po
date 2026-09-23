@@ -19,11 +19,21 @@ export function freezeAssemblyQuote(input: {
     const child = input.children.find((item) => item.truthId === member.confirmedTruthId);
     if (
       !child ||
+      child.organizationId !== input.truth.organizationId ||
+      child.productCode !== member.productCode ||
+      child.templateVersion !== member.templateVersion ||
       child.truthHash !== member.confirmedTruthHash ||
-      child.childQuoteContentHash !== member.childQuoteContentHash ||
-      child.organizationId !== input.truth.organizationId
+      child.aggregateHash !== member.confirmedAggregateHash
     ) {
       return null;
+    }
+    if (
+      !child.commercial ||
+      child.commercial.completeness !== "COMPLETE" ||
+      !child.childQuoteSnapshotId ||
+      !child.childQuoteContentHash
+    ) {
+      return { incomplete: true as const };
     }
     return {
       memberId: member.memberId,
@@ -39,6 +49,13 @@ export function freezeAssemblyQuote(input: {
       commercial: copyCommercial(child.commercial),
     };
   });
+  if (members.some((item) => item !== null && "incomplete" in item)) {
+    return {
+      ok: false,
+      error: "incomplete_commercial",
+      reasons: ["Oferta de ansamblu cere un preț comercial complet pentru fiecare produs confirmat."],
+    };
+  }
   if (members.some((item) => item === null) || members.length !== 2) {
     return {
       ok: false,
@@ -46,7 +63,7 @@ export function freezeAssemblyQuote(input: {
       reasons: ["Oferta de ansamblu poate îngheța doar produsele confirmate în adevărul ansamblului."],
     };
   }
-  const confirmed = members.flatMap((item) => (item ? [item] : []));
+  const confirmed = members.flatMap((item) => (item && !("incomplete" in item) ? [item] : []));
   const totals = sumCommercial(confirmed.map((item) => item.commercial));
   const body = {
     schemaVersion: 1 as const,
@@ -86,6 +103,8 @@ export function acceptAssemblyQuote(input: {
     const child = childrenByTruth.get(member.confirmedTruthId);
     if (
       !child ||
+      !child.commercial ||
+      !child.childQuoteSnapshotId ||
       child.organizationId !== input.quote.organizationId ||
       child.truthHash !== member.confirmedTruthHash ||
       child.childQuoteContentHash !== member.childQuoteContentHash

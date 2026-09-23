@@ -8,6 +8,7 @@ import {
   confirmAssembly,
   createAssemblyDefinition,
   freezeAssemblyQuote,
+  freezeProductionInput,
   freezeQuoteSnapshot,
   frozenTechnicalSettingsFromResolved,
   hashProductAggregate,
@@ -117,35 +118,12 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     if (!compiled.ok) {
       return c.json(compiled.body, compiled.status);
     }
-    const priced = resolveProductCommercialForRequest(
-      runtime,
-      compiled.eic,
-      body,
-      isOwner(c),
-    );
-    if (!priced.ok) {
-      if ("error" in priced && priced.error === "invalid_quote_terms") {
-        return c.json({ error: priced.error, reasons: priced.issues.map((issue) => issue.reason) }, 400);
-      }
-      return c.json({ error: priced.resolution.error, reasons: [priced.resolution.reason] }, 422);
-    }
-    const frozen = freezeQuoteSnapshot(
-      compiled.truth,
-      compiled.aggregate,
-      compiled.composition,
-      compiled.eic,
-      priced.commercialPrice,
-      {
-        createdAt: new Date().toISOString(),
-        costEvidenceRows: compiled.costEvidenceRows,
-        technicalSettings: frozenTechnicalSettingsFromResolved(compiled.resolvedTechnicalSettings),
-        formulas: compiled.formulaTraces,
-      },
-    );
-    if (!frozen.ok) {
-      return c.json({ error: frozen.error, reasons: frozen.reasons }, 422);
-    }
     const truthHash = hashProductTruth(compiled.truth);
+    const productionOptions = {
+      costEvidenceRows: compiled.costEvidenceRows,
+      technicalSettings: frozenTechnicalSettingsFromResolved(compiled.resolvedTechnicalSettings),
+      formulas: compiled.formulaTraces,
+    };
     const child: ConfirmedChildProduct = {
       truthId: `pct:${truthHash}`,
       organizationId: plane.organizationId,
@@ -159,15 +137,44 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       confirmedAt: compiled.truth.confirmedAt,
       productLabel: compiled.aggregate.productLabel,
       inscription: compiled.aggregate.inscription,
-      childQuoteSnapshotId: frozen.snapshot.quoteSnapshotId,
-      childQuoteContentHash: frozen.snapshot.contentHash,
-      commercial: frozen.snapshot.commercial,
-      productionInput: frozen.snapshot.productionInput,
+      childQuoteSnapshotId: null,
+      childQuoteContentHash: null,
+      commercial: null,
+      productionInput: freezeProductionInput(
+        compiled.aggregate,
+        compiled.composition,
+        productionOptions,
+      ),
       eicTotal: compiled.eic.total,
       eicCurrency: "EUR",
       eicCompleteness: compiled.eic.completeness,
       truth: compiled.truth,
     };
+    const priced = resolveProductCommercialForRequest(
+      runtime,
+      compiled.eic,
+      body,
+      isOwner(c),
+    );
+    if (priced.ok) {
+      const frozen = freezeQuoteSnapshot(
+        compiled.truth,
+        compiled.aggregate,
+        compiled.composition,
+        compiled.eic,
+        priced.commercialPrice,
+        {
+          createdAt: new Date().toISOString(),
+          ...productionOptions,
+        },
+      );
+      if (frozen.ok) {
+        child.childQuoteSnapshotId = frozen.snapshot.quoteSnapshotId;
+        child.childQuoteContentHash = frozen.snapshot.contentHash;
+        child.commercial = frozen.snapshot.commercial;
+        child.productionInput = frozen.snapshot.productionInput;
+      }
+    }
     saveConfirmedChild(plane.db, child);
     const attached = attachConfirmedChild(definition, child, role, new Date().toISOString());
     if (!attached.ok) {

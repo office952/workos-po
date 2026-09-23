@@ -16,8 +16,6 @@ export type AssemblyMember = {
   confirmedTruthId: string;
   confirmedTruthHash: string;
   confirmedAggregateHash: string;
-  childQuoteSnapshotId: string;
-  childQuoteContentHash: string;
 };
 
 export type AssemblyRelation = {
@@ -89,9 +87,9 @@ export type ConfirmedChildProduct = {
   confirmedAt: string;
   productLabel: string;
   inscription: string;
-  childQuoteSnapshotId: string;
-  childQuoteContentHash: string;
-  commercial: FrozenCommercialOffer;
+  childQuoteSnapshotId: string | null;
+  childQuoteContentHash: string | null;
+  commercial: FrozenCommercialOffer | null;
   productionInput: FrozenProductionInput;
   eicTotal: number;
   eicCurrency: "EUR";

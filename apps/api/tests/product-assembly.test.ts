@@ -197,4 +197,69 @@ describe("product assembly API", () => {
     });
     expect(newAssembly.status).toBe(409);
   });
+
+  it("confirms the assembly when child commercial terms are not usable", async () => {
+    const app = createApp();
+    const customer = await json(
+      await app.request("/api/customers", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ displayName: "Assembly Technical" }),
+      }),
+    );
+    const customerId = (customer.customer as { customerId: string }).customerId;
+    const request = await json(
+      await app.request("/api/requests", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          customerId,
+          title: "Confirmare tehnică",
+          description: "Fără înghețare comercială",
+        }),
+      }),
+    );
+    const requestId = (request.request as { requestId: string }).requestId;
+    const created = await app.request("/api/assemblies", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ requestId }),
+    });
+    const assemblyId = ((await json(created)).assembly as { assemblyId: string }).assemblyId;
+    const acmReview = await reviewId(app, ACM_CASSETTE_NONE_PRODUCT_CODE, acmValues);
+    const lettersReview = await reviewId(app, CANONICAL_PRODUCT_CODE, lettersValues);
+    const unusableTerms = { quoteCommercialTerms: { markupPercent: "bad" } };
+    expect(
+      (
+        await app.request(`/api/assemblies/${assemblyId}/members`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            role: "SUPPORT_PANEL",
+            values: acmValues,
+            reviewId: acmReview,
+            ...unusableTerms,
+          }),
+        })
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await app.request(`/api/assemblies/${assemblyId}/members`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            role: "SIGNAGE_LETTERS",
+            values: lettersValues,
+            reviewId: lettersReview,
+            ...unusableTerms,
+          }),
+        })
+      ).status,
+    ).toBe(200);
+    expect((await app.request(`/api/assemblies/${assemblyId}/confirm`, { method: "POST" })).status).toBe(200);
+    const quoted = await app.request(`/api/assemblies/${assemblyId}/quote`, { method: "POST" });
+    expect(quoted.status).toBe(422);
+    expect((await json(quoted)).error).toBe("incomplete_commercial");
+  });
 });

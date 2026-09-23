@@ -101,7 +101,7 @@ ACM     → ProductDefinition → ProductTruth → ProductAggregate
 LETTERS → ProductDefinition → ProductTruth → ProductAggregate
 ```
 
-The Assembly references immutable child identities / hashes / snapshots. It must not copy child values into a mega ProductDefinition, recalculate child formulas, or flatten child aggregates into `ProductAggregate.components[]`.
+Assembly technical truth references immutable child ProductTruth and ProductAggregate identities and hashes. It does not copy child values, and it does not own child quote identity. Child quote snapshot identity is frozen later, on the assembly quote. The assembly must not recalculate child formulas or flatten child aggregates into `ProductAggregate.components[]`.
 
 ## Product System
 

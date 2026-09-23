@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { projectCommercialPrice } from "../commercial/price.js";
-import { freezeQuoteSnapshot } from "../commercial/quoteSnapshot.js";
+import { DEFAULT_COMMERCIAL_POLICY } from "../commercial/policy.js";
+import { freezeQuoteSnapshot, type FrozenCommercialOffer } from "../commercial/quoteSnapshot.js";
+import type { QuoteCommercialTerms } from "../commercial/quoteTerms.js";
 import { projectPlanningWorkload } from "../execution/workload.js";
 import { codeDefaultProductEnablement } from "../product/productEnablement.js";
 import {
@@ -86,9 +88,14 @@ function confirmedChild(
   values: DraftValues,
   truthId: string,
   organizationId = ORG,
-): ConfirmedChildProduct {
+  quoteTerms?: QuoteCommercialTerms,
+): ConfirmedChildProduct & {
+  childQuoteSnapshotId: string;
+  childQuoteContentHash: string;
+  commercial: FrozenCommercialOffer;
+} {
   const compiled = evaluate(template, schema, values);
-  const price = projectCommercialPrice(compiled.eic);
+  const price = projectCommercialPrice(compiled.eic, DEFAULT_COMMERCIAL_POLICY, quoteTerms);
   const frozen = freezeQuoteSnapshot(
     compiled.truth,
     compiled.aggregate,
@@ -183,6 +190,7 @@ describe("product assembly v1", () => {
     ]);
     expect(confirmed.aggregate.childAggregates).toHaveLength(2);
     expect(confirmed.aggregate.assemblyDemand).toEqual([]);
+    expect(JSON.stringify(confirmed.truth)).not.toContain("childQuoteSnapshotId");
     expect(JSON.stringify(confirmed.truth)).not.toContain("FOREX_BACK");
     expect(JSON.stringify(confirmed.truth)).not.toContain("confirmedAreaMm2");
   });
@@ -244,6 +252,103 @@ describe("product assembly v1", () => {
     expect(first.truth).toEqual(frozen);
     expect(changed.truth.values["root.inscription"]).toBe("NOU");
     expect(ready.letters.truth.values["root.inscription"]).toBe("WORKOS");
+  });
+
+  it("keeps the same technical truth when only the child quote changes", () => {
+    const ready = readyAssembly();
+    const repriced = confirmedChild(
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      lettersValues,
+      ready.letters.truthId,
+      ORG,
+      { markupPercent: 80, discountPercent: 0, adjustmentAmount: 0 },
+    );
+    expect(repriced.truthHash).toBe(ready.letters.truthHash);
+    expect(repriced.aggregateHash).toBe(ready.letters.aggregateHash);
+    expect(repriced.childQuoteContentHash).not.toBe(ready.letters.childQuoteContentHash);
+    expect(repriced.commercial.grossPrice).not.toBe(ready.letters.commercial.grossPrice);
+
+    const first = confirmAssembly(
+      ready.definition,
+      [ready.acm, ready.letters],
+      [],
+      "2026-09-23T11:00:00.000Z",
+    );
+    const second = confirmAssembly(
+      ready.definition,
+      [ready.acm, repriced],
+      [],
+      "2026-09-23T11:05:00.000Z",
+    );
+    if (!first.ok || !second.ok) {
+      throw new Error("technical confirm failed");
+    }
+    expect(second.truth.contentHash).toBe(first.truth.contentHash);
+    expect(JSON.stringify(first.truth)).not.toContain(ready.letters.childQuoteSnapshotId);
+
+    const reattached = attachConfirmedChild(
+      first.definition,
+      repriced,
+      "SIGNAGE_LETTERS",
+      "2026-09-23T11:06:00.000Z",
+    );
+    if (!reattached.ok) {
+      throw new Error(reattached.error);
+    }
+    expect(reattached.definition.status).toBe("CONFIRMED");
+
+    const quoteA = freezeAssemblyQuote({
+      quoteSnapshotId: "asmq-c1",
+      truth: first.truth,
+      children: [ready.acm, ready.letters],
+      createdAt: "2026-09-23T11:10:00.000Z",
+    });
+    const quoteB = freezeAssemblyQuote({
+      quoteSnapshotId: "asmq-c2",
+      truth: first.truth,
+      children: [ready.acm, repriced],
+      createdAt: "2026-09-23T11:10:00.000Z",
+    });
+    if (!quoteA.ok || !quoteB.ok) {
+      throw new Error("quote freeze failed");
+    }
+    expect(quoteA.quote.contentHash).not.toBe(quoteB.quote.contentHash);
+    expect(quoteA.quote.totals.grossPrice).not.toBe(quoteB.quote.totals.grossPrice);
+    expect(quoteA.quote.members.find((item) => item.role === "SIGNAGE_LETTERS")?.childQuoteSnapshotId).toBe(
+      ready.letters.childQuoteSnapshotId,
+    );
+    expect(quoteB.quote.members.find((item) => item.role === "SIGNAGE_LETTERS")?.childQuoteContentHash).toBe(
+      repriced.childQuoteContentHash,
+    );
+
+    const withoutCommercial: ConfirmedChildProduct = {
+      ...ready.letters,
+      childQuoteSnapshotId: null,
+      childQuoteContentHash: null,
+      commercial: null,
+    };
+    const technical = confirmAssembly(
+      ready.definition,
+      [ready.acm, withoutCommercial],
+      [],
+      "2026-09-23T11:00:00.000Z",
+    );
+    expect(technical.ok).toBe(true);
+    if (!technical.ok) {
+      return;
+    }
+    expect(technical.truth.contentHash).toBe(first.truth.contentHash);
+    const blockedQuote = freezeAssemblyQuote({
+      quoteSnapshotId: "asmq-missing",
+      truth: technical.truth,
+      children: [ready.acm, withoutCommercial],
+      createdAt: "2026-09-23T11:10:00.000Z",
+    });
+    expect(blockedQuote.ok).toBe(false);
+    if (!blockedQuote.ok) {
+      expect(blockedQuote.error).toBe("incomplete_commercial");
+    }
   });
 
   it("hashes the same assembly twice to the same truth", () => {

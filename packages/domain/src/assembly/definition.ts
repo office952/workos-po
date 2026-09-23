@@ -165,8 +165,6 @@ export function attachConfirmedChild(
     confirmedTruthId: child.truthId,
     confirmedTruthHash: child.truthHash,
     confirmedAggregateHash: child.aggregateHash,
-    childQuoteSnapshotId: child.childQuoteSnapshotId,
-    childQuoteContentHash: child.childQuoteContentHash,
   };
   const members = [
     ...definition.members.filter((item) => item.role !== role),
@@ -382,21 +380,26 @@ function validateCombination(
       };
     }
     if (
+      child.productCode !== member.productCode ||
+      child.productCode !== productCodeForRole(member.role) ||
+      child.templateCode !== member.templateCode ||
+      child.templateVersion !== member.templateVersion ||
+      child.templateVersion !== templateVersionForRole(member.role)
+    ) {
+      return {
+        ok: false,
+        error: "wrong_template",
+        reasons: ["Produsul confirmat nu este șablonul permis pentru acest rol."],
+      };
+    }
+    if (
       child.truthHash !== member.confirmedTruthHash ||
-      child.aggregateHash !== member.confirmedAggregateHash ||
-      child.childQuoteContentHash !== member.childQuoteContentHash
+      child.aggregateHash !== member.confirmedAggregateHash
     ) {
       return {
         ok: false,
         error: "stale_child",
-        reasons: ["Referința produsului nu mai corespunde confirmării păstrate."],
-      };
-    }
-    if (child.commercial.completeness !== "COMPLETE") {
-      return {
-        ok: false,
-        error: "incomplete_commercial",
-        reasons: ["Prețul comercial al unui produs nu este complet."],
+        reasons: ["Referința produsului nu mai corespunde confirmării tehnice păstrate."],
       };
     }
   }
@@ -420,7 +423,17 @@ function relationsForMembers(members: readonly AssemblyMember[]): AssemblyRelati
 }
 
 function copyMember(member: AssemblyMember): AssemblyMember {
-  return { ...member };
+  return {
+    memberId: member.memberId,
+    role: member.role,
+    productCode: member.productCode,
+    templateCode: member.templateCode,
+    templateVersion: member.templateVersion,
+    organizationId: member.organizationId,
+    confirmedTruthId: member.confirmedTruthId,
+    confirmedTruthHash: member.confirmedTruthHash,
+    confirmedAggregateHash: member.confirmedAggregateHash,
+  };
 }
 
 function copyRelation(relation: AssemblyRelation): AssemblyRelation {
