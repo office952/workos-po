@@ -1,13 +1,16 @@
 # WorkOS Product Assembly Contract V1
 
 Owner-accepted architecture direction for multi-product assemblies.
-This is not runtime Product Truth. The narrow V1 implementation is in review and is not Owner-accepted.
+This is not runtime Product Truth. Narrow V1 is Owner-accepted and integrated.
 
 ```text
 STATUS = OWNER_ACCEPTED_ARCHITECTURE_DIRECTION
-IMPLEMENTATION_STATUS = IMPLEMENTED_IN_REVIEW
-PRODUCT_ASSEMBLY_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = NO
+PRODUCT_ASSEMBLY_CONTRACT_V1 = OWNER_ACCEPTED_DIRECTION
+IMPLEMENTATION_STATUS = COMPLETE / OWNER_ACCEPTED
+PRODUCT_ASSEMBLY_V1 = COMPLETE / OWNER_ACCEPTED
+PRODUCT_ASSEMBLY_IMPLEMENTATION = COMPLETE / INTEGRATED
+OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = YES
+PRODUCT_ASSEMBLY_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PRODUCT_ASSEMBLY_MODEL = TYPED_ASSEMBLY
 ONE_PRODUCT_TRUTH = PRESERVED
 NO_ABSORPTION = CANONICAL
@@ -33,8 +36,8 @@ Living program sequence remains `docs/ROADMAP.md`. Current Letters and ACM Produ
 ```text
 CANONICAL_DIRECTION = Owner-accepted model below
 CURRENT_IMPLEMENTATION = one ProductTemplate → one ProductDefinition / ProductTruth / ProductAggregate → one QuoteSnapshot.productCode
-NOT_IMPLEMENTED = Host Context, Logo child, ACM segmentation, generic assembly graph
-IMPLEMENTED_IN_REVIEW = SIGN_ASSEMBLY_ACM_LETTERS_V1 definition, truth, aggregate, relation, quote, order, production, execution
+NOT_IMPLEMENTED = Host Context, Logo child, ACM segmentation, generic assembly graph, recursive assemblies, CAD positioning, mounting price, mounting hardware
+IMPLEMENTED = SIGN_ASSEMBLY_ACM_LETTERS_V1 definition, truth, aggregate, relation, grouped quote, order, production, execution
 OPEN_DECISION = listed at the end; do not reopen the top-level model
 ```
 
@@ -75,7 +78,7 @@ PROCESS = MOUNT_LETTERS_ON_PANEL then assembly final QC then one packing task
 HOST_CONTEXT = NOT_IN_V1
 LOGO = NOT_IN_V1
 SEGMENTATION = NOT_IN_V1
-OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = NO
+OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = YES
 ```
 
 ## No-absorption law

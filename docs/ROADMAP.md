@@ -84,9 +84,10 @@ MEMBER_DAG_COMPOSITION_CORRECTIONS = DEFERRED / NOT_CAPACITY_BLOCKER
 PLANNING_CAPACITY_CANON = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
 CONFIGURATION_FIRST_CANON = docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md
 PRODUCT_ASSEMBLY_CONTRACT_V1 = OWNER_ACCEPTED_DIRECTION
-PRODUCT_ASSEMBLY_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = NO
-PRODUCT_ASSEMBLY_IMPLEMENTATION = IMPLEMENTED_IN_REVIEW
+PRODUCT_ASSEMBLY_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = YES
+PRODUCT_ASSEMBLY_IMPLEMENTATION = COMPLETE / INTEGRATED
+PRODUCT_ASSEMBLY_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PRODUCT_ASSEMBLY_CANON = docs/architecture/WORKOS_PRODUCT_ASSEMBLY_CONTRACT_V1.md
 CONFIGURATION_FIRST_IMPLEMENTATION = CF1_COMPLETE_AND_CF2_CF3_COMPLETE_AND_CF4_COMPLETE
 CF1_COMMERCIAL_VERTICAL_V1 = COMPLETE
@@ -482,15 +483,37 @@ Organizations can enable or disable shared ProductTemplates for new work through
 
 ## Product Assembly Contract V1
 
-Cross-cutting architecture direction so Configurator design does not invent a mega-template or absorb ACM into Letters BACK. The narrow V1 kind is implemented and awaiting Owner acceptance. It is not a new program and it does not authorize the next wave.
+Cross-cutting architecture direction so Configurator design does not invent a mega-template or absorb ACM into Letters BACK. Narrow V1 is Owner-accepted and integrated. It is not the current program and it does not authorize the next wave.
 
 ```text
 PRODUCT_ASSEMBLY_CONTRACT_V1 = OWNER_ACCEPTED_DIRECTION
-PRODUCT_ASSEMBLY_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = NO
-PRODUCT_ASSEMBLY_IMPLEMENTATION = IMPLEMENTED_IN_REVIEW
+PRODUCT_ASSEMBLY_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = YES
+PRODUCT_ASSEMBLY_IMPLEMENTATION = COMPLETE / INTEGRATED
+PRODUCT_ASSEMBLY_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+PRODUCT_ASSEMBLY_V1_INTEGRATED_COMMIT = 006e60b593a0f522d96b4bcc3c4b317e06a8f75d
 PRODUCT_ASSEMBLY_CANON = docs/architecture/WORKOS_PRODUCT_ASSEMBLY_CONTRACT_V1.md
+ASSEMBLY_KIND = SIGN_ASSEMBLY_ACM_LETTERS_V1
+SUPPORT_PANEL = PRD-ACM-CASSETTE-NONE
+SIGNAGE_LETTERS = PRD-LETTERS-FRONTLIT-PLEXI-AL06
+RELATION = LETTERS_ON_ACM_PANEL
+ONE_PRODUCT_TRUTH = YES
+CHILD_PRODUCT_TRUTH = INDEPENDENT
+NO_ABSORPTION = YES
+TECHNICAL_COMPOSITION_COMMERCIAL_LINES_COUPLED = NO
 ```
+
+Accepted V1 is ACM plus Letters: typed AssemblyDefinition, AssemblyTruth, AssemblyAggregate, `LETTERS_ON_ACM_PANEL`, a grouped assembly quote, an immutable order, production release, and one combined Execution Plan with mount, assembly QC, and final packing. PLN1 compatibility and organization enablement behavior remain. AssemblyTruth references child ProductTruth identity and hash, child ProductAggregate hash, member roles, and relations. AssemblyQuote owns child quote snapshot identity and commercial values. Repricing a child quote is not a technical Assembly change.
+
+Still not implemented: Logo child, Host Context, ACM segmentation, generic graph editor, recursive assemblies, CAD positioning, mounting price, mounting hardware, PLN2, PLN3, and Scheduling.
+
+Product Assembly V1 acceptance advisories, not a correction wave:
+
+- Assembly is not yet a first-class row in `/lucrari`. The operator reaches the Execution Plan from the Assembly flow.
+- repeated "Rezumat ansamblu" heading
+- quote section order could be improved
+- existing narrow navigation clipping
+- execution metadata spacing / "Nealocat" density
 
 ## Product Enablement Admin V1
 

@@ -115,7 +115,9 @@ CURRENT_PROGRAM = PLANNING_WORKLOAD_V1
 CURRENT_PROGRAM_STATUS = PLN1_OWNER_ACCEPTED
 PLN2 = NOT_STARTED
 PLN3 = NOT_STARTED
-PRODUCT_ASSEMBLY_IMPLEMENTATION = NOT_AUTHORIZED
+PRODUCT_ASSEMBLY_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = YES
+PRODUCT_ASSEMBLY_IMPLEMENTATION = COMPLETE / INTEGRATED
 SCHEDULING = NOT_STARTED / OUT_OF_SCOPE_V1
 CF4 = COMPLETE
 CF4_OWNER_ACCEPTED_IMPLEMENTATION = YES
@@ -159,6 +161,6 @@ CUTOVER = HOLD
 REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
 ```
 
-People and Machine Admin V1 is complete and integrated on main through PR #21–#23. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Execution Expansion V1 is Owner-accepted and integrated. Current program is Planning Workload V1. PLN1 is Owner-accepted. PLN2 and PLN3 are not started. Product Assembly implementation is not authorized. Scheduling is out of V1. Next wave is unauthorized.
+People and Machine Admin V1 is complete and integrated on main through PR #21–#23. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Execution Expansion V1 is Owner-accepted and integrated. Current program is Planning Workload V1. PLN1 is Owner-accepted. PLN2 and PLN3 are not started. Product Assembly V1 is Owner-accepted and integrated. It does not replace the Planning program. Scheduling is out of V1. Next wave is unauthorized.
 
 See `docs/PRODUCTION_RUNTIME.md` for the production topology. Do not point proof runtimes at a real HUB MEDIA Cloud root.

@@ -98,10 +98,12 @@ Owner-accepted architecture direction: `docs/architecture/WORKOS_PRODUCT_ASSEMBL
 
 ```text
 PRODUCT_ASSEMBLY_CONTRACT_V1 = OWNER_ACCEPTED_ARCHITECTURE_DIRECTION
-PRODUCT_ASSEMBLY_IMPLEMENTATION = NOT_IMPLEMENTED
+PRODUCT_ASSEMBLY_V1 = COMPLETE / OWNER_ACCEPTED
+PRODUCT_ASSEMBLY_IMPLEMENTATION = COMPLETE / INTEGRATED
+OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = YES
 ```
 
-Typed Product Assembly is canonical direction only. Runtime still compiles, confirms, and freezes one ProductTemplate at a time. This is not implementation authorization.
+Narrow V1 is Owner-accepted and integrated: one ACM panel and one Letters product, related by `LETTERS_ON_ACM_PANEL`. Standalone products still compile, confirm, and freeze one ProductTemplate at a time. Host Context, a Logo child, ACM segmentation, and a generic assembly graph remain unimplemented.
 
 ## Configuration-First
 
@@ -109,4 +111,4 @@ Living architecture for changeable business truth: `docs/architecture/WORKOS_CON
 
 The engine remains the only evaluator. Configuration is domain-owned data with shared resolution semantics. This is not a second Product Truth, not a mega Settings blob, and not an implementation authorization.
 
-People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organization-scoped product availability is configured on `/admin/products`. The server is authoritative for new-work gates. The current Letters and ACM templates remain enabled by an explicit V1 compatibility default; a future unconfigured ProductTemplate fails closed. Historical frozen lifecycle is preserved. Product enablement is not ProductTruth and does not change snapshot schema. Standalone CF5 is not required. Remaining Configuration-First work is domain-by-domain when required. Execution Expansion V1 is Owner-accepted and integrated. Current program is Planning Workload V1. PLN1 is Owner-accepted. PLN2 and PLN3 are not started. Product Assembly implementation is not authorized. Scheduling is out of V1. Next wave is unauthorized.
+People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organization-scoped product availability is configured on `/admin/products`. The server is authoritative for new-work gates. The current Letters and ACM templates remain enabled by an explicit V1 compatibility default; a future unconfigured ProductTemplate fails closed. Historical frozen lifecycle is preserved. Product enablement is not ProductTruth and does not change snapshot schema. Standalone CF5 is not required. Remaining Configuration-First work is domain-by-domain when required. Execution Expansion V1 is Owner-accepted and integrated. Current program is Planning Workload V1. PLN1 is Owner-accepted. PLN2 and PLN3 are not started. Product Assembly V1 is Owner-accepted and integrated. It does not replace the Planning program. Scheduling is out of V1. Next wave is unauthorized.

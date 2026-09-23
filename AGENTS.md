@@ -165,8 +165,10 @@ EXE4_MERGE_COMMIT = e0ddbdac7de5896d683e05782a21f0e55a984b9b
 PR_28 = MERGED
 CURRENT_PROGRAM = PLANNING_WORKLOAD_V1
 CURRENT_PROGRAM_STATUS = PLN1_OWNER_ACCEPTED
-PRODUCT_ASSEMBLY_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = NO
+PRODUCT_ASSEMBLY_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = YES
+PRODUCT_ASSEMBLY_IMPLEMENTATION = COMPLETE / INTEGRATED
+PRODUCT_ASSEMBLY_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
 PLANNING_CAPACITY_V1_PREFLIGHT = COMPLETE
 PLANNING_CAPACITY_V1_OWNER_DECISIONS = SUPERSEDED_IN_PART
@@ -250,7 +252,7 @@ REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
 Living program authority: `docs/ROADMAP.md`.
 Configuration-First architecture: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
-People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Current supported-product People capabilities are mapped; unused catalog capabilities may stay unmapped. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Execution Expansion V1 is Owner-accepted and integrated on main through PR #28. Execution acceptance advisories are recorded on the roadmap and are not a correction wave. Current program is Planning Workload V1. PLN0 workload-first canon is complete. PLN1 planned effort, provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787` are Owner-accepted. PLN1 acceptance advisories are recorded on the roadmap and are not a correction wave. Weekly provider `availableMinutes` and `planningWeek` remain cancelled. PLN2 and PLN3 are not started. Scheduling remains out of V1. Member DAG / composition corrections stay deferred and are not a Planning blocker. Living Planning canon: `docs/architecture/PLANNING_CAPACITY_V1_CANON.md`. Exact merge commits live in `docs/ROADMAP.md`.
+People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Current supported-product People capabilities are mapped; unused catalog capabilities may stay unmapped. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Execution Expansion V1 is Owner-accepted and integrated on main through PR #28. Execution acceptance advisories are recorded on the roadmap and are not a correction wave. Product Assembly V1 is Owner-accepted and integrated. It is cross-cutting work and does not replace Planning Workload V1. Acceptance advisories are recorded on the roadmap and are not a correction wave. Current program is Planning Workload V1. PLN0 workload-first canon is complete. PLN1 planned effort, provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787` are Owner-accepted. PLN1 acceptance advisories are recorded on the roadmap and are not a correction wave. Weekly provider `availableMinutes` and `planningWeek` remain cancelled. PLN2 and PLN3 are not started. Scheduling remains out of V1. Member DAG / composition corrections stay deferred and are not a Planning blocker. Living Planning canon: `docs/architecture/PLANNING_CAPACITY_V1_CANON.md`. Exact merge commits live in `docs/ROADMAP.md`.
 
 ```text
 NO_SILENT_BUSINESS_TRUTH = CANONICAL
