@@ -597,17 +597,32 @@ export function ExecutionPage({
   );
 }
 
-function executionGroups<T extends { scopeLabel: string }>(
+const PREFERRED_ASSEMBLY_SCOPES = ["Panou ACM", "Litere", "Logo", "Ansamblare"] as const;
+
+export function executionGroups<T extends { scopeLabel: string }>(
   tasks: readonly T[],
 ): { label: string | null; tasks: T[] }[] {
   const assembly = tasks.some((task) => task.scopeLabel === "Ansamblare");
   if (!assembly) {
     return [{ label: null, tasks: [...tasks] }];
   }
-  return ["Panou ACM", "Litere", "Ansamblare"]
-    .map((label) => ({
-      label,
-      tasks: tasks.filter((task) => task.scopeLabel === label),
-    }))
-    .filter((group) => group.tasks.length > 0);
+  const ordered: string[] = [];
+  const seen = new Set<string>();
+  for (const label of PREFERRED_ASSEMBLY_SCOPES) {
+    if (tasks.some((task) => task.scopeLabel === label)) {
+      ordered.push(label);
+      seen.add(label);
+    }
+  }
+  for (const task of tasks) {
+    if (seen.has(task.scopeLabel)) {
+      continue;
+    }
+    seen.add(task.scopeLabel);
+    ordered.push(task.scopeLabel);
+  }
+  return ordered.map((label) => ({
+    label,
+    tasks: tasks.filter((task) => task.scopeLabel === label),
+  }));
 }

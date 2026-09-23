@@ -56,6 +56,16 @@ const SCOPE_ROLE: Partial<Record<AssemblyScope["id"], string | null>> = {
   summary: null,
 };
 
+export function assemblyLead(hasLogo: boolean, lettersPresent: boolean): string {
+  if (!hasLogo) {
+    return "Configurează panoul și literele, apoi confirmă ansamblul.";
+  }
+  if (lettersPresent) {
+    return "Configurează panoul, literele și logo-ul, apoi confirmă ansamblul.";
+  }
+  return "Configurează panoul și logo-ul. Literele sunt opționale.";
+}
+
 function assemblyKey(assemblyId: string): string {
   return `assembly:${assemblyId}`;
 }
@@ -100,6 +110,8 @@ export function AssemblyPage() {
   const productCode = scope?.productCode ?? (scope ? SCOPE_PRODUCT[scope.id] : null);
   const role = scope?.role ?? (scope ? SCOPE_ROLE[scope.id] : null);
   const hasLogo = assembly?.scopes.some((item) => item.id === "logo") ?? false;
+  const lettersPresent =
+    assembly?.scopes.some((item) => item.id === "letters" && item.complete) ?? false;
 
   return (
     <SlicePage
@@ -108,11 +120,7 @@ export function AssemblyPage() {
       workspace="stack"
       eyebrow="Ansamblu"
       title={assembly?.label ?? "Panou ACM + litere volumetrice"}
-      lead={
-        hasLogo
-          ? "Configurează panoul și logo-ul. Literele sunt opționale."
-          : "Configurează panoul și literele, apoi confirmă ansamblul."
-      }
+      lead={assemblyLead(hasLogo, lettersPresent)}
     >
       {!assemblyId ? (
         <InlineAlert tone="blocked" title="Ansamblu lipsă">

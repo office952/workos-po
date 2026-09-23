@@ -1675,4 +1675,159 @@ describe("ExecutionPage", () => {
     expect(screen.getByRole("button", { name: "Închide sarcina" })).toBeEnabled();
     expect(screen.getByLabelText("Plexiglas opal 3 mm — consum efectiv")).toHaveValue("0,80");
   });
+
+  it("renders every assembly scope, including Logo and an unexpected extra scope", async () => {
+    const tasks = [
+      ["01", "Debitare semifabricat metalic", "Panou ACM"],
+      ["05", "Debitare foaie CNC", "Litere"],
+      ["15", "Probă uniformitate", "Logo"],
+      ["25", "Montaj litere pe panou", "Ansamblare"],
+      ["26", "Montaj logo pe panou", "Ansamblare"],
+      ["30", "Vopsire suplimentară", "Finisaj"],
+    ] as const;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/operator-session")) {
+          return jsonResponse({ operator: null });
+        }
+        return jsonResponse({
+          executionPlan: {
+            plan: {
+              planId: "exp:v2",
+              productLabel: "Panou ACM + litere + logo volumetric",
+              inscription: "NORD",
+              sourceSnapshotId: "aps:v2",
+            },
+            statusLabel: "Planificat",
+            progress: {
+              total: tasks.length,
+              completed: 0,
+              inProgress: 0,
+              planned: tasks.length,
+              waitingDependencies: 0,
+              noProvider: 0,
+              varianceCount: 0,
+            },
+            tasks: tasks.map(([seqLabel, processLabel, scopeLabel], index) => ({
+              taskId: `task-${index}`,
+              processLabel,
+              scopeLabel,
+              seqLabel,
+              status: "PLANNED",
+              statusLabel: "Planificat",
+              assignmentLabel: "Nealocat",
+              requiresProvider: false,
+              canAssign: false,
+              canAssignProvider: false,
+              canClaimStart: false,
+              canComplete: false,
+              requiresCompletedQuantity: false,
+              measurableQuantity: null,
+              completedQuantityLabel: null,
+              varianceLabel: null,
+              waitingFor: [],
+              eligibleProviders: [],
+            })),
+          },
+        });
+      }),
+    );
+
+    render(<ExecutionPage planId="exp:v2" />);
+    expect(
+      (await screen.findAllByRole("heading", { name: "Panou ACM" })).length,
+    ).toBeGreaterThan(0);
+    const groups = [...document.querySelectorAll("[data-execution-scope]")].map(
+      (node) => node.getAttribute("data-execution-scope"),
+    );
+    expect(groups).toEqual(["Panou ACM", "Litere", "Logo", "Ansamblare", "Finisaj"]);
+    const logo = document.querySelector('[data-execution-scope="Logo"]');
+    expect(logo).not.toBeNull();
+    expect(within(logo as HTMLElement).getByText(/Probă uniformitate/)).toBeInTheDocument();
+    expect(screen.getByText(/Montaj litere pe panou/)).toBeInTheDocument();
+    expect(screen.getByText(/Montaj logo pe panou/)).toBeInTheDocument();
+    expect(document.querySelectorAll(".operational-task--compact")).toHaveLength(tasks.length);
+  });
+
+  it("keeps a non-assembly plan in one list when scopes differ", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/operator-session")) {
+          return jsonResponse({ operator: null });
+        }
+        return jsonResponse({
+          executionPlan: {
+            plan: {
+              planId: "exp:logo",
+              productLabel: "Logo volumetric luminos",
+              inscription: "NORD LOGO",
+              sourceSnapshotId: "aps:logo",
+            },
+            statusLabel: "Planificat",
+            progress: {
+              total: 2,
+              completed: 0,
+              inProgress: 0,
+              planned: 2,
+              waitingDependencies: 0,
+              noProvider: 0,
+              varianceCount: 0,
+            },
+            tasks: [
+              {
+                taskId: "task-face",
+                processLabel: "Debitare față",
+                scopeLabel: "Față",
+                seqLabel: "01",
+                status: "PLANNED",
+                statusLabel: "Planificat",
+                assignmentLabel: "Nealocat",
+                requiresProvider: false,
+                canAssign: false,
+                canAssignProvider: false,
+                canClaimStart: false,
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                measurableQuantity: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+                waitingFor: [],
+                eligibleProviders: [],
+              },
+              {
+                taskId: "task-volume",
+                processLabel: "Formare profil aluminiu",
+                scopeLabel: "Volum",
+                seqLabel: "02",
+                status: "PLANNED",
+                statusLabel: "Planificat",
+                assignmentLabel: "Nealocat",
+                requiresProvider: false,
+                canAssign: false,
+                canAssignProvider: false,
+                canClaimStart: false,
+                canComplete: false,
+                requiresCompletedQuantity: false,
+                measurableQuantity: null,
+                completedQuantityLabel: null,
+                varianceLabel: null,
+                waitingFor: [],
+                eligibleProviders: [],
+              },
+            ],
+          },
+        });
+      }),
+    );
+
+    render(<ExecutionPage planId="exp:1" />);
+    expect((await screen.findAllByText(/Debitare față/)).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Formare profil aluminiu/).length).toBeGreaterThan(0);
+    expect(document.querySelectorAll("[data-execution-scope]")).toHaveLength(0);
+    expect(document.querySelectorAll(".operational-task--compact")).toHaveLength(2);
+  });
 });

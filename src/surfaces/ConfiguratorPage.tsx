@@ -74,6 +74,16 @@ export type ConfiguratorPageProps = ConfiguratorContext & {
 export const INITIAL_PREVIEW_DEBOUNCE_MS = 0;
 export const EDIT_PREVIEW_DEBOUNCE_MS = 250;
 
+function schemaTransportDiffers(sent: DraftValues, corrected: DraftValues): boolean {
+  const keys = new Set([...Object.keys(sent), ...Object.keys(corrected)]);
+  for (const key of keys) {
+    if ((sent[key] ?? null) !== (corrected[key] ?? null)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function profilePresentation(lines: ConfirmTransport["lines"]) {
   const line = selectLineByResource(lines, ALUMINIUM_RETURN_PROFILE_RESOURCE_ID);
   return line ? presentCostLine(line) : null;
@@ -231,7 +241,7 @@ export function ConfiguratorPage({
           const values = schemaRef.current
             ? valuesForTransport(drafts, schemaRef.current)
             : valuesBeforeSchema(drafts);
-          const presented = presentPreview(
+          let presented = presentPreview(
             await postConfigurationPreview(productCode, {
               values,
               ...(requestId ? { requestId } : {}),
@@ -247,6 +257,26 @@ export function ConfiguratorPage({
           }
           if (presented.formSchema) {
             schemaRef.current = presented.formSchema;
+            const corrected = valuesForTransport(drafts, presented.formSchema);
+            if (schemaTransportDiffers(values, corrected)) {
+              presented = presentPreview(
+                await postConfigurationPreview(productCode, {
+                  values: corrected,
+                  ...(requestId ? { requestId } : {}),
+                }),
+              );
+              if (cancelled) {
+                return;
+              }
+              if (!presented) {
+                setPreviewState("error");
+                setPreviewError("Previzualizarea nu poate fi prezentată.");
+                return;
+              }
+              if (presented.formSchema) {
+                schemaRef.current = presented.formSchema;
+              }
+            }
           }
           setPreview(presented);
           setPreviewState("ready");

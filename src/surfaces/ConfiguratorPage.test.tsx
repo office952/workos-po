@@ -11,6 +11,7 @@ import {
 
 const LETTERS_PRODUCT = "PRD-LETTERS-FRONTLIT-PLEXI-AL06";
 const ACM_PRODUCT = "PRD-ACM-CASSETTE-NONE";
+const LOGO_PRODUCT = "PRD-LOGO-FRONTLIT-PLEXI-AL06";
 const LETTERS_ONLY_FIELD = "face.confirmedAreaMm2";
 const ACM_ONLY_FIELD = "face.widthMm";
 
@@ -975,5 +976,105 @@ describe("ConfiguratorPage", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText("product_not_enabled")).not.toBeInTheDocument();
     expect(screen.queryByText(ACM_PRODUCT)).not.toBeInTheDocument();
+  });
+
+  it("reloads a logo draft as a ready select without touching depth", async () => {
+    const logoSchema = {
+      id: "logo-form",
+      sections: [
+        {
+          id: "product",
+          title: "Produs",
+          fields: [
+            {
+              id: "root.inscription",
+              label: "Denumire logo",
+              type: "text",
+              required: true,
+            },
+          ],
+        },
+        {
+          id: "face",
+          title: "Față",
+          fields: [
+            {
+              id: "face.confirmedAreaMm2",
+              label: "Suprafață confirmată (mm²)",
+              type: "number",
+              required: true,
+            },
+          ],
+        },
+        {
+          id: "volume",
+          title: "Volum",
+          fields: [
+            {
+              id: "volume.depthMm",
+              label: "Adâncime volum",
+              type: "select",
+              required: true,
+              options: [{ value: "60", label: "60 mm" }],
+            },
+            {
+              id: "volume.confirmedPerimeterMm",
+              label: "Perimetru confirmat (mm)",
+              type: "number",
+              required: true,
+            },
+          ],
+        },
+      ],
+    };
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/seller")) {
+        return jsonResponse({ configured: true, seller: { legalName: "Isolated" } });
+      }
+      if (!url.endsWith("/preview")) {
+        return jsonResponse({});
+      }
+      const values = JSON.parse(String(init?.body)).values as Record<string, unknown>;
+      const depthIsSelect = values["volume.depthMm"] === "60";
+      return jsonResponse({
+        product: { productCode: LOGO_PRODUCT, label: "Logo volumetric luminos" },
+        values,
+        formSchema: logoSchema,
+        selectedComponents: [],
+        readiness: depthIsSelect ? "ready" : "blocked",
+        missing: depthIsSelect ? [] : [{ label: "Adâncime volum", fieldId: "volume.depthMm" }],
+        reviewId: depthIsSelect ? "crv1:logo-ready" : null,
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    seedOwnedDrafts(
+      {
+        "root.inscription": "NORD LOGO",
+        "face.confirmedAreaMm2": "180000",
+        "volume.depthMm": "60",
+        "volume.confirmedPerimeterMm": "8400",
+      },
+      { productCode: LOGO_PRODUCT },
+    );
+    renderConfigurator({ productCode: LOGO_PRODUCT });
+
+    expect(await screen.findByText("Gata de confirmare")).toBeInTheDocument();
+    expect(screen.queryByText("Lipsesc fapte")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Adâncime volum")).toHaveValue("60");
+    const previewCalls = fetchMock.mock.calls.filter((call) =>
+      String(call[0]).endsWith("/preview"),
+    );
+    expect(previewCalls).toHaveLength(2);
+    const first = JSON.parse(String(previewCalls[0]?.[1]?.body)).values as Record<string, unknown>;
+    const second = JSON.parse(String(previewCalls[1]?.[1]?.body)).values as Record<
+      string,
+      unknown
+    >;
+    expect(first["volume.depthMm"]).toBe(60);
+    expect(second["volume.depthMm"]).toBe("60");
+    expect(second["volume.confirmedPerimeterMm"]).toBe(8400);
+    expect(second["face.confirmedAreaMm2"]).toBe(180000);
+    expect(second["root.inscription"]).toBe("NORD LOGO");
   });
 });
