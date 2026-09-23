@@ -523,6 +523,7 @@ export type ProductSystemRuntime = {
   renameCustomer(customerId: string, displayName: string): CustomerMutationResult;
   retireCustomer(customerId: string): CustomerMutationResult;
   close(): void;
+  assemblyPlane(): { organizationId: string; db: SqliteDatabase };
   organizationId: string | null;
   planeId: string | null;
   assertBoundPlaneIdentity(expected: {
@@ -1153,6 +1154,12 @@ export function createProductSystemRuntimeFromOpenDb(
     },
     close() {
       db.close();
+    },
+    assemblyPlane() {
+      return {
+        organizationId: planeIdentity?.organizationId ?? "single-plane",
+        db,
+      };
     },
     assertBoundPlaneIdentity(expected) {
       assertPlaneIdentity(readOperationalPlaneIdentity(db), expected);

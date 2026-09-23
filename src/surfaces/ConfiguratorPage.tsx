@@ -7,12 +7,13 @@ import {
 import { presentPreview } from "../adapters/previewAdapter";
 import { presentQuoteSnapshot } from "../adapters/quoteAdapter";
 import { postConfigurationConfirm } from "../api/confirm";
-import { TransportError, readTransportErrorCode, readTransportReasons } from "../api/http";
+import { TransportError, postJson, readTransportErrorCode, readTransportReasons } from "../api/http";
 import { postConfigurationPreview } from "../api/preview";
 import { postQuoteSnapshot } from "../api/quote";
 import { LoadingFloor } from "../components/LoadingFloor";
 import { SellerSetupPanel } from "../components/SellerSetupPanel";
 import { invalidateAfterFreezeQuote } from "../data/invalidation";
+import { invalidateResources } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadSellerConfigured } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
@@ -52,7 +53,10 @@ import {
 type PreviewState = "idle" | "pending" | "ready" | "error";
 type ActionState = "idle" | "pending" | "error";
 
-export type ConfiguratorPageProps = ConfiguratorContext;
+export type ConfiguratorPageProps = ConfiguratorContext & {
+  assemblyId?: string | null;
+  memberRole?: "SUPPORT_PANEL" | "SIGNAGE_LETTERS" | null;
+};
 
 export const INITIAL_PREVIEW_DEBOUNCE_MS = 0;
 export const EDIT_PREVIEW_DEBOUNCE_MS = 250;
@@ -96,6 +100,8 @@ export function ConfiguratorPage({
   customerId,
   requestId,
   productCode,
+  assemblyId = null,
+  memberRole = null,
 }: ConfiguratorPageProps) {
   const context: ConfiguratorContext = { customerId, requestId, productCode };
   const stored = readConfiguratorSession();
@@ -280,6 +286,15 @@ export function ConfiguratorPage({
         return;
       }
       setConfirmation(presented);
+      if (assemblyId && memberRole) {
+        await postJson(`/api/assemblies/${encodeURIComponent(assemblyId)}/members`, {
+          role: memberRole,
+          values: currentTransportValues(),
+          reviewId: preview.reviewId,
+          ...(requestId ? { requestId } : {}),
+        });
+        invalidateResources(`assembly:${assemblyId}`);
+      }
       if (presented.pricingMethod) {
         setPricingMethod(presented.pricingMethod);
       }
@@ -768,7 +783,7 @@ export function ConfiguratorPage({
               Completează metoda de preț și calculează prețul înainte de a îngheța oferta.
             </InlineAlert>
           ) : null}
-          {confirmation ? (
+          {confirmation && !assemblyId ? (
             <Button
               disabled={freezePending || freezeBlocked || !validCustomerPrice}
               onClick={() => {
@@ -777,6 +792,13 @@ export function ConfiguratorPage({
             >
               Îngheață oferta
             </Button>
+          ) : null}
+          {assemblyId && confirmation ? (
+            <p>
+              <a className="text-link" href={`/ansamblu?assembly=${encodeURIComponent(assemblyId)}`}>
+                Înapoi la ansamblu
+              </a>
+            </p>
           ) : null}
           {freezePending ? <LoadingIndicator label="Se îngheață oferta" /> : null}
           {freezeError ? (

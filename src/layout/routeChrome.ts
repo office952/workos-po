@@ -64,6 +64,15 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         title: "Catalog de produse",
         lead: "Alege produsul lucrării. Configuratorul primește clientul, cererea și produsul selectat.",
       };
+    case "assembly":
+      return {
+        contextLabel: "Ansamblu",
+        currentHref: "/ansamblu",
+        workspace: "configuration",
+        eyebrow: "Ansamblu",
+        title: "Ansamblu",
+        lead: "Panou ACM și litere volumetrice.",
+      };
     case "configurator":
       return {
         contextLabel: "Configurator",

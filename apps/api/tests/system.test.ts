@@ -146,6 +146,8 @@ describe("system projection API", () => {
       "CUT_CONTOUR_PLOTTER",
       "CUT_LASER_SHEET",
       "CUT_STYROFOAM",
+      "MOUNT_LETTERS_ON_PANEL",
+      "INSPECT_FINISHED_ASSEMBLY",
     ]);
     expect(
       body.processes.find((item) => item.id === "FORM_ALUMINIUM_PROFILE")

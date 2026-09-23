@@ -545,38 +545,43 @@ export function ExecutionPage({
       ) : null}
       {plan ? (
         <Worklist variant="operational" label="Planul de execuție">
-          {plan.tasks.map((task) => {
-            const facts = compactTaskFacts(task);
-            return (
-              <article
-                key={task.taskId}
-                className="operational-task operational-task--compact"
-                data-task-id={task.taskId}
-              >
-                <WorklistRow
-                  variant="operational"
-                  href={executionHref(planId, {
-                    taskId: task.taskId,
-                    jobId: resolvedJobId,
-                  })}
-                  current={task.taskId === currentTask?.taskId}
-                  identity={`${task.seqLabel} ${task.processLabel}`}
-                  identityDetail={presentExecutionNextAction(task, identified)}
-                  context={task.scopeLabel}
-                  state={
-                    <StatusBadge label={task.statusLabel} tone={taskStatusKind(task)} />
-                  }
-                />
-                {facts.length > 0 ? (
-                  <p className="task-row-facts">
-                    {facts.map((fact) => (
-                      <span key={fact}>{fact}</span>
-                    ))}
-                  </p>
-                ) : null}
-              </article>
-            );
-          })}
+          {executionGroups(plan.tasks).map((group) => (
+            <section key={group.label ?? "plan"} data-execution-scope={group.label ?? undefined}>
+              {group.label ? <h2 className="section-label">{group.label}</h2> : null}
+              {group.tasks.map((task) => {
+                const facts = compactTaskFacts(task);
+                return (
+                  <article
+                    key={task.taskId}
+                    className="operational-task operational-task--compact"
+                    data-task-id={task.taskId}
+                  >
+                    <WorklistRow
+                      variant="operational"
+                      href={executionHref(planId, {
+                        taskId: task.taskId,
+                        jobId: resolvedJobId,
+                      })}
+                      current={task.taskId === currentTask?.taskId}
+                      identity={`${task.seqLabel} ${task.processLabel}`}
+                      identityDetail={presentExecutionNextAction(task, identified)}
+                      context={task.scopeLabel}
+                      state={
+                        <StatusBadge label={task.statusLabel} tone={taskStatusKind(task)} />
+                      }
+                    />
+                    {facts.length > 0 ? (
+                      <p className="task-row-facts">
+                        {facts.map((fact) => (
+                          <span key={fact}>{fact}</span>
+                        ))}
+                      </p>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </section>
+          ))}
         </Worklist>
       ) : null}
       {plan ? (
@@ -588,4 +593,19 @@ export function ExecutionPage({
       ) : null}
     </SlicePage>
   );
+}
+
+function executionGroups<T extends { scopeLabel: string }>(
+  tasks: readonly T[],
+): { label: string | null; tasks: T[] }[] {
+  const assembly = tasks.some((task) => task.scopeLabel === "Ansamblare");
+  if (!assembly) {
+    return [{ label: null, tasks: [...tasks] }];
+  }
+  return ["Panou ACM", "Litere", "Ansamblare"]
+    .map((label) => ({
+      label,
+      tasks: tasks.filter((task) => task.scopeLabel === label),
+    }))
+    .filter((group) => group.tasks.length > 0);
 }

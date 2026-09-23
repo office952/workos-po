@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { getJson, postJson } from "../api/http";
 import { CatalogWorkspace } from "../components/CatalogWorkspace";
 import { EmptyState } from "../components/EmptyState";
 import { FilterBar } from "../components/FilterBar";
@@ -13,6 +14,7 @@ import { SlicePage } from "../layout/SlicePage";
 import { presentContextMeta } from "../presentation/contextMeta";
 import { matchesSearch, uniqueLabels } from "../presentation/listFilter";
 import { configuratorHref, parseSpineContext } from "../routing/appRoute";
+import { navigate } from "../routing/navigate";
 import {
   labelsMatchingContext,
   readConfiguratorSession,
@@ -31,6 +33,26 @@ export function CatalogPage() {
   const products = useMemo(() => catalog.data ?? [], [catalog.data]);
   const [query, setQuery] = useState("");
   const [family, setFamily] = useState(ALL);
+  const [offering, setOffering] = useState<{ available: boolean; label: string; summary: string } | null>(
+    null,
+  );
+
+  useEffect(() => {
+    void getJson("/api/assemblies/offering")
+      .then((body) => {
+        const record = body as { available?: unknown; label?: unknown; summary?: unknown };
+        if (record.available === true && typeof record.label === "string") {
+          setOffering({
+            available: true,
+            label: record.label,
+            summary: typeof record.summary === "string" ? record.summary : "",
+          });
+        }
+      })
+      .catch(() => {
+        setOffering(null);
+      });
+  }, []);
 
   useEffect(() => {
     const previous = readConfiguratorSession();
@@ -118,6 +140,23 @@ export function CatalogPage() {
               <EmptyState title="Categoria nu are șabloane care să corespundă." />
             }
           >
+            {offering?.available && requestId ? (
+              <WorklistRow
+                variant="compact"
+                onSelect={() => {
+                  void postJson("/api/assemblies", { requestId }).then((body) => {
+                    const assembly = (body as { assembly?: { assemblyId?: string } }).assembly;
+                    if (assembly?.assemblyId) {
+                      navigate(`/ansamblu?assembly=${encodeURIComponent(assembly.assemblyId)}`);
+                    }
+                  });
+                }}
+                identity={offering.label}
+                identityDetail={offering.summary}
+                context="Ansamblu"
+                actionLabel="Deschide ansamblul"
+              />
+            ) : null}
             {visible.map((product) => (
               <WorklistRow
                 key={product.code}

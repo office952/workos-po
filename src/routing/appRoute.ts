@@ -4,6 +4,7 @@ export type AppRoute =
   | { name: "requests" }
   | { name: "request"; requestId: string }
   | { name: "catalog" }
+  | { name: "assembly" }
   | { name: "configurator" }
   | { name: "quotes" }
   | { name: "quote"; productCode: string; quoteSnapshotId: string }
@@ -51,6 +52,9 @@ export function parseAppRoute(pathname: string): AppRoute {
   }
   if (pathname === "/catalog") {
     return { name: "catalog" };
+  }
+  if (pathname === "/ansamblu") {
+    return { name: "assembly" };
   }
   if (pathname === "/oferte") {
     return { name: "quotes" };
@@ -208,6 +212,10 @@ export function withSpineContext(pathname: string, context: SpineContext): strin
 
 export function catalogHref(context: SpineContext): string {
   return withSpineContext("/catalog", context);
+}
+
+export function assemblyHref(assemblyId: string): string {
+  return `/ansamblu?assembly=${encodeURIComponent(assemblyId)}`;
 }
 
 export function configuratorHref(context: SpineContext): string {

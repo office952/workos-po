@@ -1,11 +1,13 @@
 # WorkOS Product Assembly Contract V1
 
 Owner-accepted architecture direction for multi-product assemblies.
-This is not runtime Product Truth and not implementation authorization.
+This is not runtime Product Truth. The narrow V1 implementation is in review and is not Owner-accepted.
 
 ```text
 STATUS = OWNER_ACCEPTED_ARCHITECTURE_DIRECTION
-IMPLEMENTATION_STATUS = NOT_IMPLEMENTED
+IMPLEMENTATION_STATUS = IMPLEMENTED_IN_REVIEW
+PRODUCT_ASSEMBLY_V1 = IMPLEMENTED_IN_REVIEW
+OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = NO
 PRODUCT_ASSEMBLY_MODEL = TYPED_ASSEMBLY
 ONE_PRODUCT_TRUTH = PRESERVED
 NO_ABSORPTION = CANONICAL
@@ -19,7 +21,8 @@ NEW_CAPABILITY = NO
 OWNERSHIP = PRODUCT + TRUTH_COMPILER
 TECHNICAL_COMPOSITION_COMMERCIAL_LINES_COUPLED = NO
 PROCESS_COMPOSITION_IS_PRODUCT_ASSEMBLY = NO
-CURRENT_QUOTE_SNAPSHOT_ASSEMBLY_SUPPORT = NOT_IMPLEMENTED
+CURRENT_QUOTE_SNAPSHOT_ASSEMBLY_SUPPORT = ADDITIVE_ASSEMBLY_QUOTE
+STANDALONE_QUOTE_SNAPSHOT = UNCHANGED_ONE_PRODUCT
 NO_CLIENT_CODE_FORK = YES
 ```
 
@@ -30,7 +33,8 @@ Living program sequence remains `docs/ROADMAP.md`. Current Letters and ACM Produ
 ```text
 CANONICAL_DIRECTION = Owner-accepted model below
 CURRENT_IMPLEMENTATION = one ProductTemplate → one ProductDefinition / ProductTruth / ProductAggregate → one QuoteSnapshot.productCode
-NOT_IMPLEMENTED = AssemblyDefinition, AssemblyTruth, AssemblyAggregate, Assembly Interface, Host Context
+NOT_IMPLEMENTED = Host Context, Logo child, ACM segmentation, generic assembly graph
+IMPLEMENTED_IN_REVIEW = SIGN_ASSEMBLY_ACM_LETTERS_V1 definition, truth, aggregate, relation, quote, order, production, execution
 OPEN_DECISION = listed at the end; do not reopen the top-level model
 ```
 
@@ -50,13 +54,29 @@ PRODUCT ASSEMBLY
     └── Assembly Interface
 ```
 
-Future conceptual lifecycle, currently `NOT_IMPLEMENTED`:
+Future conceptual lifecycle is implemented for the narrow V1 kind `SIGN_ASSEMBLY_ACM_LETTERS_V1`:
 
 ```text
 AssemblyDefinition → AssemblyTruth → AssemblyAggregate
 ```
 
-Do not add TypeScript types in this wave.
+V1 types live in `packages/domain/src/assembly`. This document remains the architecture authority.
+
+Implemented V1 scope:
+
+```text
+KIND = SIGN_ASSEMBLY_ACM_LETTERS_V1
+MEMBERS = SUPPORT_PANEL PRD-ACM-CASSETTE-NONE + SIGNAGE_LETTERS PRD-LETTERS-FRONTLIT-PLEXI-AL06
+RELATION = LETTERS_ON_ACM_PANEL
+RELATION_FIELDS = relationId, kind, sourceMemberId, targetMemberId
+COMMERCIAL = one grouped assembly, two child sections
+ASSEMBLY_RELATION_COMMERCIAL_PRICE = NONE
+PROCESS = MOUNT_LETTERS_ON_PANEL then assembly final QC then one packing task
+HOST_CONTEXT = NOT_IN_V1
+LOGO = NOT_IN_V1
+SEGMENTATION = NOT_IN_V1
+OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = NO
+```
 
 ## No-absorption law
 
@@ -160,13 +180,15 @@ Configurator owns truth and relations. Process composition derives consequences.
 
 ```text
 TECHNICAL ASSEMBLY != COMMERCIAL QUOTE LINE STRUCTURE
-COMMERCIAL_LINE_POLICY = OPEN_DECISION
-CURRENT_QUOTE_SNAPSHOT_ASSEMBLY_SUPPORT = NOT_IMPLEMENTED
+COMMERCIAL_LINE_POLICY = V1_GROUPED_ASSEMBLY_TWO_CHILD_SECTIONS
+ASSEMBLY_RELATION_COMMERCIAL_PRICE = NONE
+CURRENT_QUOTE_SNAPSHOT_ASSEMBLY_SUPPORT = ADDITIVE_ASSEMBLY_QUOTE
+STANDALONE_QUOTE_SNAPSHOT = UNCHANGED_ONE_PRODUCT
 ```
 
-One Assembly may later appear as one grouped customer line or as multiple lines. Commercial owns presentation. No quote-line strategy here.
+V1 presents one grouped assembly with two child product sections. The relation has no commercial price. Later assemblies may use another grouping only with a new Owner decision.
 
-Future assembly-aware snapshots must preserve assembly identity/version, child truth identities/hashes, child template/version provenance, interface facts/version, and assembly technical provenance. Historical accepted work stays immutable. Current QuoteSnapshot remains one-product. No schema change in this wave.
+Future assembly-aware snapshots preserve assembly identity/version, child truth identities/hashes, child template/version provenance, relation facts, and assembly technical provenance. Historical accepted work stays immutable. The standalone QuoteSnapshot remains one-product. V1 adds a separate assembly quote, order, and production snapshot.
 
 ## Terminology
 

@@ -103,6 +103,8 @@ export const LAMINATE_RIGID_PLATE_ID = "LAMINATE_RIGID_PLATE";
 export const CUT_CONTOUR_PLOTTER_ID = "CUT_CONTOUR_PLOTTER";
 export const CUT_LASER_SHEET_ID = "CUT_LASER_SHEET";
 export const CUT_STYROFOAM_ID = "CUT_STYROFOAM";
+export const MOUNT_LETTERS_ON_PANEL_ID = "MOUNT_LETTERS_ON_PANEL";
+export const INSPECT_FINISHED_ASSEMBLY_ID = "INSPECT_FINISHED_ASSEMBLY";
 
 export const productionCapabilityClasses: readonly ProductionCapabilityClass[] = [
   {
@@ -568,6 +570,36 @@ export const operationalProcesses: readonly OperationalProcess[] = [
     lifecycle: "ACTIVE",
     readiness: "KNOWN_PROCESS",
     readinessNote: "Operație de atelier cunoscută. Fără cerere Letters și fără tarif.",
+  },
+  {
+    id: MOUNT_LETTERS_ON_PANEL_ID,
+    label: "Montaj litere pe panou",
+    description:
+      "Montaj al literelor confirmate pe panoul ACM confirmat. Nu schimbă adevărul niciunui produs și nu are preț comercial propriu.",
+    category: "ASSEMBLY",
+    requiredCapabilityId: "MANUAL_ASSEMBLY",
+    applicableTypeIds: [],
+    outcome: "Litere montate pe panou",
+    resourceIds: [],
+    lifecycle: "PLANNED",
+    readiness: "KNOWN_PROCESS",
+    readinessNote: "Proces de ansamblu. Fără formulă de cost și fără consum de material inventat.",
+    providerRequirement: "NOT_REQUIRED",
+  },
+  {
+    id: INSPECT_FINISHED_ASSEMBLY_ID,
+    label: "Control final",
+    description:
+      "Controlul final al ansamblului după montarea literelor pe panou. Nu înlocuiește controlul unei litere independente.",
+    category: "QUALITY_CONTROL",
+    requiredCapabilityId: "QUALITY_CONTROL",
+    applicableTypeIds: [],
+    outcome: "Ansamblu acceptat vizual",
+    resourceIds: [],
+    lifecycle: "PLANNED",
+    readiness: "PLANNED",
+    readinessNote: "Control de ansamblu. Nu este controlul final al unei litere.",
+    providerRequirement: "NOT_REQUIRED",
   },
 ];
 

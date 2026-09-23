@@ -232,7 +232,7 @@ function readQuoteCommercialTerms(body: unknown): QuoteCommercialTerms | null | 
   return { markupPercent, discountPercent, adjustmentAmount };
 }
 
-function resolveProductCommercialForRequest(
+export function resolveProductCommercialForRequest(
   runtime: ProductSystemRuntime,
   eic: Parameters<typeof projectCommercialPrice>[0],
   body: unknown,
@@ -1240,7 +1240,7 @@ function refuseDisabledNewWork(
   return null;
 }
 
-function compileAcceptedProduct(
+export function compileAcceptedProduct(
   runtime: ProductSystemRuntime,
   productCode: string,
   body: unknown,

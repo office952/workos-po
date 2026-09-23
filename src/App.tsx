@@ -29,6 +29,7 @@ import { configuratorContextKey } from "./session/configuratorSession";
 import { AtelierPage } from "./surfaces/AtelierPage";
 import { AuthGatePage } from "./surfaces/AuthGatePage";
 import { CatalogPage } from "./surfaces/CatalogPage";
+import { AssemblyPage } from "./surfaces/AssemblyPage";
 import { ClientDetailPage } from "./surfaces/ClientDetailPage";
 import { ClientsPage } from "./surfaces/ClientsPage";
 import { ConfiguratorPage } from "./surfaces/ConfiguratorPage";
@@ -74,14 +75,24 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
       return <RequestDetailPage requestId={route.requestId} />;
     case "catalog":
       return <CatalogPage />;
+    case "assembly":
+      return <AssemblyPage />;
     case "configurator": {
       const context = parseSpineContext(search);
+      const assemblyId = new URLSearchParams(search).get("assembly");
+      const memberRole = new URLSearchParams(search).get("role");
       return (
         <ConfiguratorPage
           key={configuratorContextKey(context)}
           customerId={context.customerId}
           requestId={context.requestId}
           productCode={context.productCode}
+          assemblyId={assemblyId}
+          memberRole={
+            memberRole === "SUPPORT_PANEL" || memberRole === "SIGNAGE_LETTERS"
+              ? memberRole
+              : null
+          }
         />
       );
     }
