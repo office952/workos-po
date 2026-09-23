@@ -43,7 +43,8 @@ PRIMARY_USER_JOURNEY_PROOF_DATE = 2026-09-20
 
 PEOPLE_AND_MACHINE_ADMIN_V1 = COMPLETE
 EXECUTION_EXPANSION_V1_IMPLEMENTATION = COMPLETE / INTEGRATED
-EXECUTION_EXPANSION_V1_OWNER_ACCEPTED = NO
+EXECUTION_EXPANSION_V1_OWNER_ACCEPTED = YES
+EXECUTION_EXPANSION_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 EXE1_EXECUTION_READINESS = COMPLETE
 EXE1_INTEGRATED_ON_MAIN = YES
 EXE1_MERGE_COMMIT = 18d5506f062ad0725f0fa3a8b204e5b121bd45b1
@@ -305,7 +306,7 @@ Primary User Journey is complete. Configuration-First remains canonical: changea
 
 Architecture ownership: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
-Product Enablement Admin V1 is complete after Owner acceptance and merge of PR #19. Letters Product Truth V1 and ACM Product Truth V1 remain complete. People and Machine Admin V1 is complete. Standalone CF5 is not required first. Remaining Configuration-First work is domain-by-domain when actual product work requires it. Next program is Execution Expansion V1. Preflight is required. Implementation is not authorized.
+Product Enablement Admin V1 is complete after Owner acceptance and merge of PR #19. Letters Product Truth V1 and ACM Product Truth V1 remain complete. People and Machine Admin V1 is complete. Standalone CF5 is not required first. Remaining Configuration-First work is domain-by-domain when actual product work requires it. Execution Expansion V1 is Owner-accepted and integrated. Current program is Planning Workload V1. PLN1 is Owner-accepted. PLN2 and PLN3 are not started. Next wave is unauthorized.
 
 ```text
 WORKOS = CONFIGURATION-FIRST BUSINESS ENGINE
@@ -413,7 +414,7 @@ After CF4, preferred living sequence:
 5. execution expansion
 6. planning / workload
 
-Letters Product Truth V1, ACM Product Truth V1, Product Enablement Admin V1, and People and Machine Admin V1 are complete. Execution Expansion V1 implementation is complete and integrated. Owner has not accepted Execution Expansion. Living program is Planning Workload V1. PLN1 is Owner-accepted. The previous CAP0 weekly-capacity contract is superseded in part. PLN0 is canon correction only. Weekly provider `availableMinutes` is cancelled. Member DAG / composition corrections remain deferred and are not a Planning blocker. CF5 remains NOT_STARTED and is not selected.
+Letters Product Truth V1, ACM Product Truth V1, Product Enablement Admin V1, and People and Machine Admin V1 are complete. Execution Expansion V1 is Owner-accepted and integrated. Living program is Planning Workload V1. PLN1 is Owner-accepted. The previous CAP0 weekly-capacity contract is superseded in part. PLN0 is canon correction only. Weekly provider `availableMinutes` is cancelled. Member DAG / composition corrections remain deferred and are not a Planning blocker. CF5 remains NOT_STARTED and is not selected.
 
 ## ACM Product Truth V1
 
@@ -598,7 +599,8 @@ These three mappings are current product/process truth, not universal HR policy.
 ```text
 PREVIOUS_PROGRAM = EXECUTION_EXPANSION_V1
 EXECUTION_EXPANSION_V1_IMPLEMENTATION = COMPLETE / INTEGRATED
-EXECUTION_EXPANSION_V1_OWNER_ACCEPTED = NO
+EXECUTION_EXPANSION_V1_OWNER_ACCEPTED = YES
+EXECUTION_EXPANSION_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 EXE1_EXECUTION_READINESS = COMPLETE / MERGED
 EXE1_MERGE_COMMIT = 18d5506f062ad0725f0fa3a8b204e5b121bd45b1
 PR_25 = MERGED
@@ -613,7 +615,27 @@ EXE4_MERGE_COMMIT = e0ddbdac7de5896d683e05782a21f0e55a984b9b
 PR_28 = MERGED
 ```
 
-Execution Expansion V1 implementation is complete and integrated on main. EXE1 replaced hardcoded `executionReadiness = NOT_IMPLEMENTED` with topology-derived READY|BLOCKED. EXE2 made provider assignment explicit and projected Owner-only `canAssignProvider`. EXE3 made the whole plan comprehensible from existing server facts. EXE4 records operator actual consumption through the existing complete contract. Owner has not accepted Execution Expansion. Scheduling and MachineRun remain unimplemented.
+Execution Expansion V1 is Owner-accepted and integrated on main. EXE1 replaced hardcoded `executionReadiness = NOT_IMPLEMENTED` with topology-derived READY|BLOCKED. EXE2 made provider assignment explicit and projected Owner-only `canAssignProvider`. EXE3 made the whole plan comprehensible from existing server facts. EXE4 records operator actual consumption through the existing complete contract. Scheduling and MachineRun remain unimplemented.
+
+Accepted execution contract, unchanged by this acceptance:
+
+```text
+CapabilityProvider != Person != Operator identity
+Eligibility != Assignment
+Assignment != Execution Reality
+EXECUTION_ACTUAL_CONSUMPTION -> MAY_CREATE_INVENTORY_OUT
+INVENTORY_GATES_TASK_START = NO
+INVENTORY_GATES_TASK_COMPLETION = NO
+FROZEN_PRODUCTION_SNAPSHOT = EXECUTION_SOURCE_TRUTH
+LATER_PRODUCT_PRICING_CONFIGURATION_CHANGES_REWRITE_RELEASED_EXECUTION = NO
+```
+
+Execution acceptance advisories, not a correction wave:
+
+- inventory may become negative from real actual consumption; that remains visible status, not an execution blocker
+- composition READY|BLOCKED is not repeated verbatim on `/executie`; task-level block reasons are shown
+- the execution task list can become visually dense
+- Atelier empty-state wording contains minor implementation-oriented language
 
 ## Current program
 

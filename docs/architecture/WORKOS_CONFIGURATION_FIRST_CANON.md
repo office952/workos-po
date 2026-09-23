@@ -64,7 +64,7 @@ DB_MIGRATION_REQUIRED = NO
 CURRENT_PROGRAM = PLANNING_WORKLOAD_V1
 CURRENT_PROGRAM_STATUS = PLN1_OWNER_ACCEPTED
 EXECUTION_EXPANSION_V1_IMPLEMENTATION = COMPLETE / INTEGRATED
-EXECUTION_EXPANSION_V1_OWNER_ACCEPTED = NO
+EXECUTION_EXPANSION_V1_OWNER_ACCEPTED = YES
 PLANNING_CAPACITY_V1_PREFLIGHT = COMPLETE
 PLANNING_CAPACITY_V1_OWNER_DECISIONS = SUPERSEDED_IN_PART
 PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
@@ -993,7 +993,7 @@ After CF4, preferred living sequence is owned by `docs/ROADMAP.md`:
 5. execution expansion
 6. planning / workload
 
-Letters Product Truth V1, ACM Product Truth V1, Product Enablement Admin V1, and People and Machine Admin V1 are complete. Product Enablement is domain-owned organization configuration, not CF5. Execution Expansion V1 implementation is complete and integrated. Owner has not accepted Execution Expansion. Living program is Planning Workload V1. Planning contract lives in docs/architecture/PLANNING_CAPACITY_V1_CANON.md. This document does not authorize Planning implementation.
+Letters Product Truth V1, ACM Product Truth V1, Product Enablement Admin V1, and People and Machine Admin V1 are complete. Product Enablement is domain-owned organization configuration, not CF5. Execution Expansion V1 is Owner-accepted and integrated. Living program is Planning Workload V1. Planning contract lives in docs/architecture/PLANNING_CAPACITY_V1_CANON.md. This document does not authorize Planning implementation.
 
 ```text
 CF1_COMMERCIAL_VERTICAL_V1 = COMPLETE
@@ -1042,7 +1042,7 @@ DB_MIGRATION_REQUIRED = NO
 CURRENT_PROGRAM = PLANNING_WORKLOAD_V1
 CURRENT_PROGRAM_STATUS = PLN1_OWNER_ACCEPTED
 EXECUTION_EXPANSION_V1_IMPLEMENTATION = COMPLETE / INTEGRATED
-EXECUTION_EXPANSION_V1_OWNER_ACCEPTED = NO
+EXECUTION_EXPANSION_V1_OWNER_ACCEPTED = YES
 CF5_OR_LATER = NOT_AUTHORIZED_BY_THIS_DOCUMENT
 PLANNING_IMPLEMENTATION = OWNER_ACCEPTED
 OWNER_ACCEPTED_PLANNING_IMPLEMENTATION = YES

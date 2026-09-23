@@ -108,12 +108,15 @@ NO_CLIENT_CODE_FORK = YES
 ALTERNATIVE_PRODUCT_DELIVERY = NO
 PRIMARY_USER_JOURNEY = COMPLETE
 PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
-CURRENT_PROGRAM = PEOPLE_AND_MACHINE_ADMIN_V1
-CURRENT_PROGRAM_STATUS = COMPLETE
-NEXT_PROGRAM_PRIORITY = EXECUTION_EXPANSION_V1
-NEXT_PROGRAM_STATUS = PREFLIGHT_REQUIRED
-NEXT_PROGRAM_SELECTION = EXECUTION_EXPANSION_V1
-NEXT_PROGRAM_STARTED = NO
+EXECUTION_EXPANSION_V1_IMPLEMENTATION = COMPLETE / INTEGRATED
+EXECUTION_EXPANSION_V1_OWNER_ACCEPTED = YES
+PLN1 = COMPLETE / OWNER_ACCEPTED
+CURRENT_PROGRAM = PLANNING_WORKLOAD_V1
+CURRENT_PROGRAM_STATUS = PLN1_OWNER_ACCEPTED
+PLN2 = NOT_STARTED
+PLN3 = NOT_STARTED
+PRODUCT_ASSEMBLY_IMPLEMENTATION = NOT_AUTHORIZED
+SCHEDULING = NOT_STARTED / OUT_OF_SCOPE_V1
 CF4 = COMPLETE
 CF4_OWNER_ACCEPTED_IMPLEMENTATION = YES
 CF4_INTEGRATED_ON_MAIN = YES
@@ -156,6 +159,6 @@ CUTOVER = HOLD
 REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
 ```
 
-People and Machine Admin V1 is complete and integrated on main through PR #21–#23. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Next program is Execution Expansion V1. Preflight is required. Next wave is unauthorized.
+People and Machine Admin V1 is complete and integrated on main through PR #21–#23. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Execution Expansion V1 is Owner-accepted and integrated. Current program is Planning Workload V1. PLN1 is Owner-accepted. PLN2 and PLN3 are not started. Product Assembly implementation is not authorized. Scheduling is out of V1. Next wave is unauthorized.
 
 See `docs/PRODUCTION_RUNTIME.md` for the production topology. Do not point proof runtimes at a real HUB MEDIA Cloud root.
