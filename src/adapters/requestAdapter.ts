@@ -86,6 +86,7 @@ export function presentRequestDetail(payload: unknown): RequestDetailTransport |
     installationScope: presentInstallationScope(detail?.installationScope),
     installationFacts: presentInstallationFacts(detail?.installationFacts),
     canWriteInstallationFacts: asBoolean(detail?.canWriteInstallationFacts) ?? false,
+    canWriteInstallationPrice: asBoolean(detail?.canWriteInstallationPrice) ?? false,
   };
 }
 
@@ -216,10 +217,14 @@ function presentInstallationScope(
     return null;
   }
   const reasons = Array.isArray(row.incompleteReasons) ? row.incompleteReasons : [];
+  const ownerCost = asRecord(row.ownerInternalCost);
   return {
     label: asString(row.label) ?? "Montaj la locație",
     eicCompleteness: asString(row.eicCompleteness),
     commercialCompleteness: asString(row.commercialCompleteness),
+    commercialNetPrice: asNumber(row.commercialNetPrice),
+    ownerInternalCostLabel: asString(ownerCost?.label),
+    ownerInternalCostTotal: asNumber(ownerCost?.total),
     incompleteReasons: reasons.flatMap((reason) => {
       const item = asRecord(reason);
       if (!item || typeof item.label !== "string") {

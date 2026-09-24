@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { projectCommercialPrice } from "../commercial/price.js";
 import { DEFAULT_COMMERCIAL_POLICY } from "../commercial/policy.js";
-import { freezeQuoteSnapshot } from "../commercial/quoteSnapshot.js";
+import { freezeQuoteSnapshot, freezeSiteInstallationQuoteLine } from "../commercial/quoteSnapshot.js";
+import { projectManualFixedServicePrice } from "../commercial/servicePrice.js";
+import { blankSiteInstallationFacts } from "../installation/facts.js";
 import type { QuoteCommercialTerms } from "../commercial/quoteTerms.js";
 import {
   ACM_CASSETTE_NONE_PRODUCT_CODE,
@@ -28,11 +30,12 @@ import {
 } from "../product/productEnablement.js";
 import { starterFormulaVersionsForType } from "../product/resolveFormulas.js";
 import type { DraftValues, FormSchema, ProductTemplate } from "../product/types.js";
-import { costEvidence } from "../resources/catalog.js";
+import { LAB_SITE_INSTALL_ID, costEvidence } from "../resources/catalog.js";
 import {
   INSPECT_FINISHED_ASSEMBLY_ID,
   INSPECT_FINISHED_LETTER_ID,
   INSPECT_FINISHED_LOGO_ID,
+  INSTALL_AT_SITE_ID,
   MOUNT_LETTERS_ON_PANEL_ID,
   MOUNT_LOGO_ON_PANEL_ID,
   PACK_PRODUCT_ID,
@@ -515,4 +518,190 @@ describe("product assembly v2", () => {
     expect(stale.ok && stale.definition.status).toBe("STALE");
     expect(first.truth).toEqual(frozen);
   });
+
+  it("adds one site-installation line to logo-only and full assemblies", () => {
+    const service = installationLine();
+    expect(service.ok).toBe(true);
+    if (!service.ok) {
+      return;
+    }
+    const logoOnly = quotedAssembly(
+      [ACM_CASSETTE_NONE_PRODUCT_CODE, LOGO_PRODUCT_CODE],
+      [
+        ["SUPPORT_PANEL", acm()],
+        ["SIGNAGE_LOGO", logo()],
+      ],
+      service.line,
+      "logo",
+    );
+    expect(logoOnly.quote.schemaVersion).toBe(2);
+    expect(logoOnly.quote.members.map((item) => item.role)).toEqual(["SUPPORT_PANEL", "SIGNAGE_LOGO"]);
+    expect(logoOnly.installCount).toBe(1);
+    expect(logoOnly.quote.relationCommercialPrice).toBeNull();
+    expect(logoOnly.quote.totals.netPrice).toBe(round(logoOnly.childNet + 180));
+
+    const full = quotedAssembly(
+      [ACM_CASSETTE_NONE_PRODUCT_CODE, LOGO_PRODUCT_CODE, CANONICAL_PRODUCT_CODE],
+      [
+        ["SUPPORT_PANEL", acm()],
+        ["SIGNAGE_LOGO", logo()],
+        ["SIGNAGE_LETTERS", letters()],
+      ],
+      service.line,
+      "full",
+    );
+    expect(full.quote.schemaVersion).toBe(2);
+    expect(full.quote.members).toHaveLength(3);
+    expect(full.installCount).toBe(1);
+    expect(full.quote.relationCommercialPrice).toBeNull();
+    expect(full.quote.totals.netPrice).toBe(round(full.childNet + 180));
+    expect(full.processes.filter((item) => item.processId === MOUNT_LETTERS_ON_PANEL_ID)).toHaveLength(1);
+    expect(full.processes.filter((item) => item.processId === MOUNT_LOGO_ON_PANEL_ID)).toHaveLength(1);
+    expect(full.processes.filter((item) => item.processId === INSPECT_FINISHED_ASSEMBLY_ID)).toHaveLength(1);
+    expect(full.processes.filter((item) => item.processId === PACK_PRODUCT_ID)).toHaveLength(1);
+  });
 });
+
+function installationLine() {
+  return freezeSiteInstallationQuoteLine({
+    label: "Montaj la locație",
+    providerMode: "INTERNAL",
+    requestId: "req-v2",
+    facts: {
+      ...blankSiteInstallationFacts({
+        requestId: "req-v2",
+        createdAt: "2026-09-24T00:00:00.000Z",
+      }),
+      version: 3,
+      street: "Strada Sintetică 3",
+      city: "Oraș Sintetic",
+      measurementStatus: "OFFICE_MEASURED",
+      facadeType: "CONCRETE",
+      fixingMethod: "MECHANICAL_ANCHOR",
+      siteElectrical: "EXCLUDED_CUSTOMER_RESPONSIBILITY",
+      crewSize: 2,
+      plannedDurationHours: 3,
+    },
+    evidence: {
+      resourceId: LAB_SITE_INSTALL_ID,
+      amount: 25,
+      currency: "EUR",
+      perUnit: "person_hour",
+      source: "OWNER_CONFIRMED_WORKSHOP",
+      classification: "OWNER_CONFIRMED",
+      note: "Tarif intern sintetic.",
+    },
+    eic: {
+      completeness: "COMPLETE",
+      calculationStatus: "CALCULABLE",
+      verificationStatus: "CONFIRMED",
+      completenessReasons: [],
+      geometryLabel: null,
+      currency: "EUR",
+      lines: [
+        {
+          resourceId: LAB_SITE_INSTALL_ID,
+          label: "Manoperă montaj la locație",
+          quantity: 6,
+          unit: "person_hour",
+          rate: 25,
+          currency: "EUR",
+          cost: 150,
+          kind: "LABOR",
+          group: "labor",
+        },
+      ],
+      total: 150,
+      excludedComponentLabels: [],
+    },
+    commercial: projectManualFixedServicePrice({ netPrice: 180 }),
+  });
+}
+
+function quotedAssembly(
+  codes: readonly string[],
+  members: ReadonlyArray<readonly ["SUPPORT_PANEL" | "SIGNAGE_LOGO" | "SIGNAGE_LETTERS", ConfirmedChildProduct]>,
+  serviceLine: Extract<ReturnType<typeof installationLine>, { ok: true }>["line"],
+  id: string,
+) {
+  const created = createAssemblyDefinition({
+    assemblyId: `asm-${id}`,
+    organizationId: ORG,
+    requestId: "req-v2",
+    customerId: "cus-v2",
+    resolution: resolution(codes),
+    createdAt: "2026-09-24T06:00:00.000Z",
+    kind: SIGN_ASSEMBLY_ACM_SIGNAGE_V2,
+  });
+  if (!created.ok) {
+    throw new Error(created.error);
+  }
+  let definition = created.definition;
+  for (const [role, item] of members) {
+    const attached = attachConfirmedChild(definition, item, role, definition.updatedAt);
+    if (!attached.ok) {
+      throw new Error(attached.error);
+    }
+    definition = attached.definition;
+  }
+  const children = members.map(([, item]) => item);
+  const confirmed = confirmAssembly(definition, children, [], "2026-09-24T06:10:00.000Z");
+  if (!confirmed.ok) {
+    throw new Error(confirmed.error);
+  }
+  const plain = freezeAssemblyQuote({
+    quoteSnapshotId: `asmq-${id}-plain`,
+    truth: confirmed.truth,
+    children,
+    createdAt: "2026-09-24T06:20:00.000Z",
+  });
+  const quote = freezeAssemblyQuote({
+    quoteSnapshotId: `asmq-${id}`,
+    truth: confirmed.truth,
+    children,
+    createdAt: "2026-09-24T06:20:00.000Z",
+    serviceLine,
+  });
+  if (!plain.ok || !quote.ok) {
+    throw new Error("quote failed");
+  }
+  expect(plain.quote.schemaVersion).toBe(1);
+  expect(plain.quote.serviceLine).toBeUndefined();
+  expect(quote.quote.assemblyTruthHash).toBe(confirmed.truth.contentHash);
+  expect(quote.quote.assemblyTruthHash).toBe(plain.quote.assemblyTruthHash);
+  const order = acceptAssemblyQuote({
+    orderSnapshotId: `asmo-${id}`,
+    quote: quote.quote,
+    children,
+    createdAt: "2026-09-24T06:30:00.000Z",
+  });
+  if (!order.ok) {
+    throw new Error(order.error);
+  }
+  const production = projectAssemblyProduction(order.order, {
+    snapshotId: `asmp-${id}`,
+    createdAt: "2026-09-24T06:40:00.000Z",
+  });
+  if (!production.ok) {
+    throw new Error(production.error);
+  }
+  const processes = [
+    ...production.snapshot.members.flatMap((member) => member.operations),
+    ...production.snapshot.assemblyOperations,
+  ];
+  return {
+    quote: quote.quote,
+    childNet: children.reduce((sum, item) => {
+      if (!item.commercial) {
+        throw new Error("child commercial missing");
+      }
+      return sum + item.commercial.netPrice;
+    }, 0),
+    installCount: processes.filter((item) => item.processId === INSTALL_AT_SITE_ID).length,
+    processes,
+  };
+}
+
+function round(value: number): number {
+  return Math.round(value * 100) / 100;
+}

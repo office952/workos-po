@@ -52,7 +52,7 @@ const lettersValues = {
 };
 
 describe("first real letters pre-quote API", () => {
-  it("lets the owner complete INTERNAL install preview and refuses live v2 freeze", async () => {
+  it("lets the owner complete INTERNAL install preview and freeze a trusted service quote", async () => {
     const app = createApp();
     const enable = await app.request("/api/operational-services/SITE_INSTALLATION", {
       method: "PATCH",
@@ -170,12 +170,12 @@ describe("first real letters pre-quote API", () => {
         requestId,
       }),
     });
-    expect(frozen.status).toBe(422);
-    const refused = await readBody(frozen);
-    expect(refused.error).toBe("service_quote_freeze_not_authorized");
-    expect(refused.reasons).toEqual([
-      "Previzualizarea ofertei cu montaj este pregătită. Înghețarea acestei oferte nu este activată în această etapă.",
-    ]);
+    expect(frozen.status).toBe(200);
+    const frozenBody = await readBody(frozen);
+    const snapshot = frozenBody.quoteSnapshot as JsonObject;
+    expect(snapshot.schemaVersion).toBe(2);
+    const lines = snapshot.lines as JsonObject[];
+    expect(lines.filter((line) => line.kind === "SITE_INSTALLATION" && line.lineVersion === 2)).toHaveLength(1);
 
     const productOnlyCompile = await app.request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/preview`,
@@ -202,7 +202,7 @@ describe("first real letters pre-quote API", () => {
     expect(((await readBody(productFrozen)).quoteSnapshot as JsonObject).schemaVersion).toBe(1);
   });
 
-  it("lets the owner complete SUBCONTRACTED install preview and refuses live v2 freeze", async () => {
+  it("lets the owner complete SUBCONTRACTED install preview and freeze a trusted service quote", async () => {
     const app = createApp();
     const enable = await app.request("/api/operational-services/SITE_INSTALLATION", {
       method: "PATCH",
@@ -298,8 +298,14 @@ describe("first real letters pre-quote API", () => {
         requestId,
       }),
     });
-    expect(frozen.status).toBe(422);
-    expect((await readBody(frozen)).error).toBe("service_quote_freeze_not_authorized");
+    expect(frozen.status).toBe(200);
+    const frozenBody = await readBody(frozen);
+    const snapshot = frozenBody.quoteSnapshot as JsonObject;
+    expect(snapshot.schemaVersion).toBe(2);
+    const lines = snapshot.lines as JsonObject[];
+    const service = lines.find((line) => line.kind === "SITE_INSTALLATION");
+    expect(service?.lineVersion).toBe(2);
+    expect(service?.providerMode).toBe("SUBCONTRACTED");
   });
 });
 

@@ -179,6 +179,13 @@ export type ConfirmTransport = {
   quoteBlocker: string | null;
 };
 
+export type QuoteOfferLineTransport = {
+  kind: string;
+  label: string;
+  netPrice: number | null;
+  currency: string | null;
+};
+
 export type QuoteSnapshotTransport = {
   quoteSnapshotId: string;
   productCode: string;
@@ -195,6 +202,8 @@ export type QuoteSnapshotTransport = {
   total: number | null;
   financialVisible: boolean;
   commercial: CommercialPriceTransport | null;
+  offerLines: QuoteOfferLineTransport[];
+  jobCommercial: CommercialPriceTransport | null;
   stage: string | null;
   stageLabel: string | null;
   nextAction: string | null;
@@ -252,7 +261,10 @@ export type RequestInstallationScopeTransport = {
   label: string;
   eicCompleteness: string | null;
   commercialCompleteness: string | null;
+  commercialNetPrice: number | null;
   incompleteReasons: RequestInstallationReasonTransport[];
+  ownerInternalCostLabel: string | null;
+  ownerInternalCostTotal: number | null;
 };
 
 export type RequestInstallationOfferTransport = {
@@ -322,6 +334,7 @@ export type RequestDetailTransport = {
   installationScope: RequestInstallationScopeTransport | null;
   installationFacts: RequestInstallationFactsTransport | null;
   canWriteInstallationFacts: boolean;
+  canWriteInstallationPrice: boolean;
 };
 
 export type CatalogProductTransport = {
@@ -478,6 +491,24 @@ export type ExecutionPlanProgressTransport = {
   varianceCount: number;
 };
 
+export type SiteInstallationOperationalTransport = {
+  providerModeLabel: string;
+  siteName: string | null;
+  street: string;
+  city: string;
+  surfaceTypeLabel: string;
+  mountingSurfaceWidthMm: number | null;
+  mountingSurfaceHeightMm: number | null;
+  fixingMethodLabel: string;
+  installationElevationMm: number | null;
+  siteElectricalLabel: string;
+  accessNotes: string | null;
+  contactName: string | null;
+  contactPhone: string | null;
+  crewSize: number | null;
+  plannedDurationHours: number | null;
+};
+
 export type ExecutionPlanTransport = {
   planId: string;
   productLabel: string;
@@ -490,6 +521,7 @@ export type ExecutionPlanTransport = {
   sourceSnapshotId: string;
   jobId: string | null;
   tasks: ExecutionTaskTransport[];
+  siteInstallation: SiteInstallationOperationalTransport | null;
 };
 
 export type PlanningWorkloadTaskTransport = {
@@ -554,6 +586,20 @@ export type CostEvidenceRowTransport = {
   amountDisplay: string | null;
   note: string | null;
   lastChangedAt: string | null;
+};
+
+export type OperationalServiceCapabilityTransport = {
+  capabilityId: string;
+  label: string;
+  selectable: boolean;
+  reserved: boolean;
+  offerMode: string | null;
+  offerModeLabel: string;
+};
+
+export type OperationalServicesAdminTransport = {
+  canWrite: boolean;
+  capabilities: OperationalServiceCapabilityTransport[];
 };
 
 export type ResourcesAdminTransport = {

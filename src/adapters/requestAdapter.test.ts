@@ -86,6 +86,7 @@ describe("request adapter", () => {
           persistedModeIncompatible: false,
         },
         canWriteInstallationFacts: false,
+        canWriteInstallationPrice: false,
       },
     });
     expect(detail?.reference).toBe("CRQ-104");

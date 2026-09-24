@@ -25,6 +25,7 @@ import { presentJobLifecycle } from "../presentation/jobLifecycle";
 import { statusTone } from "../presentation/statusTone";
 import { atelierHref, executionHref, jobHref, quoteHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
+import { SiteInstallationContextPanel } from "./SiteInstallationContextPanel";
 
 type JobDetailPageProps = {
   jobId: string;
@@ -252,6 +253,9 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
               </InlineAlert>
             ) : null}
           </SurfacePanel>
+          {jobResource.data?.siteInstallation ? (
+            <SiteInstallationContextPanel context={jobResource.data.siteInstallation} />
+          ) : null}
           <SurfacePanel
             title="Traseu de producție"
             description="Ghid din starea lucrării. Nu este planul de producție."

@@ -86,6 +86,7 @@ describe("Cloud bootstrap policy", () => {
       "SK_LETTER_MODELING",
       "SK_METAL_CUTTING_OPERATOR",
       "SK_PAINTING",
+      "SK_SITE_INSTALLATION",
       "SK_VINYL_APPLICATOR",
     ]);
 

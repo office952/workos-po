@@ -101,6 +101,11 @@ describe("product assembly API", () => {
 
     expect((await app.request(`/api/assemblies/${assemblyId}/confirm`, { method: "POST" })).status).toBe(200);
     expect((await app.request(`/api/assemblies/${assemblyId}/quote`, { method: "POST" })).status).toBe(200);
+    const lockedRequest = await json(await app.request(`/api/requests/${requestId}`));
+    const offer = (lockedRequest.detail as { installationOffer: { selectionLocked: boolean; canChangeSelection: boolean } })
+      .installationOffer;
+    expect(offer.selectionLocked).toBe(true);
+    expect(offer.canChangeSelection).toBe(false);
     const quoted = await json(await app.request(`/api/assemblies/${assemblyId}`));
     const quote = (quoted.assembly as { quote: { grossPrice: number; sections: unknown[] } }).quote;
     expect(quote.sections).toHaveLength(2);

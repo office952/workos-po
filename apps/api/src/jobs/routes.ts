@@ -6,6 +6,7 @@ import {
   materializeExecutionPlanFromSnapshot,
   projectAssemblyProduction,
   projectExecutionPlanView,
+  projectSiteInstallationOperationalView,
   scopeExecutionPlanView,
   scopeOrderSnapshot,
 } from "@workos-final/domain";
@@ -214,7 +215,23 @@ function presentJobDetail(
             : null,
         }
       : null,
+    siteInstallation: siteInstallationForJob(located),
   };
+}
+
+function siteInstallationForJob(located: NonNullable<ReturnType<typeof locateJob>>) {
+  const line = located.order?.lines?.find(
+    (item) => item.kind === "SITE_INSTALLATION" && item.lineVersion === 2,
+  ) ?? located.assembly?.serviceLine;
+  if (!line || line.kind !== "SITE_INSTALLATION" || line.lineVersion !== 2) {
+    return null;
+  }
+  return projectSiteInstallationOperationalView({
+    providerMode: line.providerMode,
+    hostContext: line.hostContext,
+    mountingInterface: line.mountingInterface,
+    siteExecutionContext: line.siteExecutionContext,
+  });
 }
 
 function planningHttpStatus(

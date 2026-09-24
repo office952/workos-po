@@ -1,6 +1,9 @@
 import {
   QUOTE_SNAPSHOT_SCHEMA_VERSION_V2,
+  hasValidQuoteSnapshotContentHash,
+  hasValidQuoteSnapshotIdentity,
   isSupportedQuoteSnapshot,
+  isTrustedFrozenQuoteV2ForOrder,
   type QuoteSnapshot,
 } from "./quoteSnapshot.js";
 
@@ -36,13 +39,18 @@ export function recordQuoteAcceptance(
   options?: { acceptedAt?: string },
 ): QuoteAcceptanceResult {
   if (snapshot.schemaVersion === QUOTE_SNAPSHOT_SCHEMA_VERSION_V2) {
-    return {
-      ok: false,
-      error: "service_quote_not_acceptable",
-      reasons: [SERVICE_QUOTE_NOT_ACCEPTABLE_REASON],
-    };
-  }
-  if (
+    if (
+      !isTrustedFrozenQuoteV2ForOrder(snapshot) ||
+      !hasValidQuoteSnapshotContentHash(snapshot) ||
+      !hasValidQuoteSnapshotIdentity(snapshot)
+    ) {
+      return {
+        ok: false,
+        error: "service_quote_not_acceptable",
+        reasons: [SERVICE_QUOTE_NOT_ACCEPTABLE_REASON],
+      };
+    }
+  } else if (
     !isSupportedQuoteSnapshot(snapshot) ||
     snapshot.quoteSnapshotId.trim() === "" ||
     snapshot.contentHash.trim() === ""

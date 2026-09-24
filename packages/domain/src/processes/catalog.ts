@@ -11,6 +11,7 @@ export const PROCESS_CATEGORIES = [
   "ELECTRICAL",
   "QUALITY_CONTROL",
   "PACKING",
+  "INSTALLATION",
 ] as const;
 export type ProcessCategory = (typeof PROCESS_CATEGORIES)[number];
 
@@ -43,6 +44,7 @@ export const PRODUCTION_CAPABILITY_CLASS_IDS = [
   "STYRO_CUTTING",
   "RIGID_FILM_LAMINATION",
   "PLOTTER_CUTTING",
+  "SITE_INSTALLATION",
 ] as const;
 export type ProductionCapabilityClassId =
   (typeof PRODUCTION_CAPABILITY_CLASS_IDS)[number];
@@ -107,6 +109,7 @@ export const CUT_STYROFOAM_ID = "CUT_STYROFOAM";
 export const MOUNT_LETTERS_ON_PANEL_ID = "MOUNT_LETTERS_ON_PANEL";
 export const MOUNT_LOGO_ON_PANEL_ID = "MOUNT_LOGO_ON_PANEL";
 export const INSPECT_FINISHED_ASSEMBLY_ID = "INSPECT_FINISHED_ASSEMBLY";
+export const INSTALL_AT_SITE_ID = "INSTALL_AT_SITE";
 
 export const productionCapabilityClasses: readonly ProductionCapabilityClass[] = [
   {
@@ -149,6 +152,13 @@ export const productionCapabilityClasses: readonly ProductionCapabilityClass[] =
     id: "QUALITY_CONTROL",
     label: "Control calitate",
     description: "Capabilitate de verificare. Nu este un angajat.",
+    kind: "HUMAN_SKILL",
+  },
+  {
+    id: "SITE_INSTALLATION",
+    label: "Montaj la locație",
+    description:
+      "Capabilitate umană pentru executarea sau verificarea operațională a montajului la locație. Nu este un utilaj.",
     kind: "HUMAN_SKILL",
   },
   {
@@ -633,6 +643,22 @@ export const operationalProcesses: readonly OperationalProcess[] = [
     readinessNote: "Proces de ansamblu. Fără formulă de cost și fără consum de material inventat.",
     providerRequirement: "NOT_REQUIRED",
   },
+  {
+    id: INSTALL_AT_SITE_ID,
+    label: "Montaj la locație",
+    description:
+      "Montaj al lucrării finite pe suportul existent la locație, sau verificarea operațională a montajului subcontractat. Nu este montajul de atelier dintre produsele fabricate.",
+    category: "INSTALLATION",
+    requiredCapabilityId: "SITE_INSTALLATION",
+    applicableTypeIds: [],
+    outcome: "Lucrare montată sau verificată la locație",
+    resourceIds: [],
+    lifecycle: "ACTIVE",
+    readiness: "IMPLEMENTED_PROCESS_FOUNDATION",
+    readinessNote:
+      "Operație umană fără utilaj. Efortul planificat rămâne o introducere separată.",
+    providerRequirement: "NOT_REQUIRED",
+  },
 ];
 
 export function getProductionCapability(
@@ -708,6 +734,8 @@ export function processCategoryLabel(category: ProcessCategory): string {
       return "Control calitate";
     case "PACKING":
       return "Ambalare";
+    case "INSTALLATION":
+      return "Montaj";
     default: {
       const _exhaustive: never = category;
       return _exhaustive;

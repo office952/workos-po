@@ -141,11 +141,20 @@ export function presentAssemblyReview(input: {
     quote: input.quote
       ? {
           label: input.quote.label,
-          sections: input.quote.members.map((member) => ({
-            title: member.roleLabel,
-            inscription: member.inscription,
-            grossPrice: member.commercial.grossPrice,
-          })),
+          sections: [
+            ...input.quote.members.map((member) => ({
+              title: member.roleLabel,
+              inscription: member.inscription,
+              grossPrice: member.commercial.grossPrice,
+            })),
+            ...(input.quote.serviceLine
+              ? [{
+                  title: input.quote.serviceLine.label,
+                  inscription: "Serviciu",
+                  grossPrice: input.quote.serviceLine.commercial.grossPrice,
+                }]
+              : []),
+          ],
           netPrice: input.quote.totals.netPrice,
           vatAmount: input.quote.totals.vatAmount,
           grossPrice: input.quote.totals.grossPrice,

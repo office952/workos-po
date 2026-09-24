@@ -48,6 +48,7 @@ function requestDetail(overrides: Record<string, unknown> = {}) {
     installationScope: null,
     installationFacts: null,
     canWriteInstallationFacts: false,
+    canWriteInstallationPrice: false,
     ...overrides,
   };
 }
@@ -249,6 +250,7 @@ describe("RequestDetailPage", () => {
           plannedDurationHours: null,
         },
         canWriteInstallationFacts: false,
+    canWriteInstallationPrice: false,
       }),
     );
 
@@ -272,6 +274,7 @@ describe("RequestDetailPage", () => {
           availableModes: ["INTERNAL"],
         }),
         canWriteInstallationFacts: true,
+    canWriteInstallationPrice: false,
         installationFacts: null,
       }),
     );
@@ -302,6 +305,7 @@ describe("RequestDetailPage", () => {
         availableModes: ["INTERNAL"],
       }),
       canWriteInstallationFacts: true,
+    canWriteInstallationPrice: false,
     });
     const fetchMock = stubOfferMutation(requestDetail({
       installationOffer: selectableOffer({
@@ -339,6 +343,7 @@ describe("RequestDetailPage", () => {
           availableModes: ["INTERNAL", "SUBCONTRACTED"],
         }),
         canWriteInstallationFacts: true,
+    canWriteInstallationPrice: false,
       }),
     );
 
@@ -365,6 +370,7 @@ describe("RequestDetailPage", () => {
           availableModes: ["INTERNAL", "SUBCONTRACTED"],
         }),
         canWriteInstallationFacts: true,
+    canWriteInstallationPrice: false,
       }),
       requestDetail({
         installationOffer: selectableOffer({
@@ -375,6 +381,7 @@ describe("RequestDetailPage", () => {
           availableModes: ["INTERNAL", "SUBCONTRACTED"],
         }),
         canWriteInstallationFacts: true,
+    canWriteInstallationPrice: false,
       }),
     );
 
@@ -395,6 +402,7 @@ describe("RequestDetailPage", () => {
           availableModes: ["INTERNAL"],
         }),
         canWriteInstallationFacts: true,
+    canWriteInstallationPrice: false,
       }),
     );
 
@@ -412,6 +420,7 @@ describe("RequestDetailPage", () => {
           availableModes: ["INTERNAL"],
         }),
         canWriteInstallationFacts: true,
+    canWriteInstallationPrice: false,
       }),
       requestDetail({
         installationOffer: selectableOffer({
@@ -439,6 +448,7 @@ describe("RequestDetailPage", () => {
           availableModes: ["INTERNAL"],
         }),
         canWriteInstallationFacts: true,
+    canWriteInstallationPrice: false,
         installationFacts: {
           version: 1,
           siteName: "Sediu Nord",
@@ -497,6 +507,7 @@ describe("RequestDetailPage", () => {
           availableModes: ["INTERNAL"],
         }),
         canWriteInstallationFacts: false,
+    canWriteInstallationPrice: false,
         installationFacts: {
           version: 1,
           siteName: "Sediu Nord",
@@ -547,6 +558,7 @@ describe("RequestDetailPage", () => {
           persistedModeIncompatible: false,
         },
         canWriteInstallationFacts: true,
+    canWriteInstallationPrice: false,
       }),
     );
 

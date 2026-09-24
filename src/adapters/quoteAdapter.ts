@@ -1,7 +1,7 @@
 import { presentCostLines } from "./confirmAdapter";
-import type { QuoteSnapshotTransport } from "../api/types";
+import type { QuoteOfferLineTransport, QuoteSnapshotTransport } from "../api/types";
 import { presentCommercialPrice } from "./commercialAdapter";
-import { asRecord, asString } from "./record";
+import { asNumber, asRecord, asString } from "./record";
 
 export function presentQuoteSnapshot(
   payload: unknown,
@@ -44,10 +44,40 @@ export function presentQuoteSnapshot(
     total: typeof eic?.total === "number" ? eic.total : null,
     financialVisible: eic !== null,
     commercial: presentCommercialPrice(snapshot.commercial),
+    offerLines: presentOfferLines(snapshot.lines),
+    jobCommercial: presentCommercialPrice(snapshot.jobCommercial),
     stage: asString(overview?.stage),
     stageLabel: asString(overview?.stageLabel),
     nextAction: asString(overview?.nextAction),
     nextActionLabel: asString(overview?.nextActionLabel),
     orderSnapshotId: asString(overview?.orderSnapshotId) ?? asString(order?.orderSnapshotId),
   };
+}
+
+function presentOfferLines(value: unknown): QuoteOfferLineTransport[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => {
+    const row = asRecord(item);
+    const kind = asString(row?.kind);
+    if (!row || !kind) {
+      return [];
+    }
+    const commercial = asRecord(row.commercial);
+    const label =
+      kind === "SITE_INSTALLATION"
+        ? "Montaj la locație"
+        : kind === "PRODUCT"
+          ? "Produs"
+          : asString(row.label) ?? kind;
+    return [
+      {
+        kind,
+        label,
+        netPrice: asNumber(commercial?.netPrice),
+        currency: asString(commercial?.currency),
+      },
+    ];
+  });
 }

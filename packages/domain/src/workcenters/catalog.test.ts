@@ -407,7 +407,7 @@ describe("live shop-floor map", () => {
     expect(admin.overview.workcenterCount).toBe(12);
     expect(admin.overview.machineCount).toBe(11);
     expect(admin.overview.coveredCapabilityCount).toBe(14);
-    expect(admin.overview.missingCapabilityCount).toBe(3);
+    expect(admin.overview.missingCapabilityCount).toBe(4);
     expect(admin.overview.capacityPlanningState).toBe("NOT_IMPLEMENTED");
     expect(admin.overview.schedulingState).toBe("NOT_IMPLEMENTED");
     expect(admin.overview.executionState).toBe("IMPLEMENTED");

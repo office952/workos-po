@@ -1,4 +1,5 @@
-import type { JobListItemTransport } from "../api/types";
+import type { JobListItemTransport, SiteInstallationOperationalTransport } from "../api/types";
+import { presentSiteInstallation } from "./executionAdapter";
 import { asBoolean, asRecord, asString } from "./record";
 
 export function presentJobList(payload: unknown): JobListItemTransport[] {
@@ -64,6 +65,7 @@ export function presentJobDetail(payload: unknown): {
   requestId: string | null;
   releaseSnapshotId: string | null;
   planId: string | null;
+  siteInstallation: SiteInstallationOperationalTransport | null;
 } | null {
   const record = asRecord(payload);
   const job = presentJobItem(record?.job);
@@ -81,5 +83,6 @@ export function presentJobDetail(payload: unknown): {
     requestId: asString(request?.requestId),
     releaseSnapshotId: asString(release?.releaseSnapshotId) ?? job.releaseSnapshotId,
     planId: asString(execution?.planId) ?? job.planId,
+    siteInstallation: presentSiteInstallation(record?.siteInstallation),
   };
 }

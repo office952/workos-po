@@ -19,10 +19,17 @@ import { financialAccess, scopedRequestDetail } from "../financial/access.js";
 import { httpPathIdentity } from "../httpPathIdentity.js";
 
 function requestDetailFor(c: ApiContext, requestId: string) {
-  return scopedRequestDetail(
+  const detail = scopedRequestDetail(
     getProductSystem(c).readRequestDetail(requestId),
     financialAccess(c, "commercial"),
   );
+  if (!detail) {
+    return null;
+  }
+  return {
+    ...detail,
+    canWriteInstallationPrice: isOwner(c) && detail.canWriteInstallationFacts,
+  };
 }
 
 export function registerRequestRoutes(app: Hono<ApiEnv>): void {

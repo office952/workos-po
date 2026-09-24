@@ -32,6 +32,7 @@ describe("parseAppRoute", () => {
     expect(parseAppRoute("/atelier")).toEqual({ name: "atelier" });
     expect(parseAppRoute("/executie/exp-1")).toEqual({ name: "execution", planId: "exp-1" });
     expect(parseAppRoute("/admin/resources")).toEqual({ name: "admin-resources" });
+    expect(parseAppRoute("/admin/services")).toEqual({ name: "admin-services" });
     expect(parseAppRoute("/admin/commercial")).toEqual({ name: "admin-commercial" });
     expect(parseAppRoute("/admin/technical")).toEqual({ name: "admin-technical" });
     expect(parseAppRoute("/admin/formulas")).toEqual({ name: "admin-formulas" });

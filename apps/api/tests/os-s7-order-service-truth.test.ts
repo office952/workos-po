@@ -5,8 +5,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   CANONICAL_PRODUCT_CODE,
   LAB_SITE_INSTALL_ID,
-  SERVICE_QUOTE_DOCUMENT_NOT_AUTHORIZED,
   SERVICE_QUOTE_NOT_ACCEPTABLE_REASON,
+  blankSiteInstallationFacts,
   compileAggregate,
   compileDefinition,
   compileEic,
@@ -93,7 +93,14 @@ function frozenInstallQuote() {
         label: "Montaj la locație",
         providerMode: "INTERNAL",
         requestId: "req:os-s7-api",
-        technicalConfiguration: {
+        facts: {
+          ...blankSiteInstallationFacts({
+            requestId: "req:os-s7-api",
+            createdAt: "2026-09-02T00:00:00.000Z",
+          }),
+          version: 3,
+          street: "Strada Sintetică 1",
+          city: "Oraș Sintetic",
           measurementStatus: "OFFICE_MEASURED",
           facadeType: "CONCRETE",
           fixingMethod: "MECHANICAL_ANCHOR",
@@ -144,31 +151,22 @@ function frozenInstallQuote() {
 }
 
 describe("OS-S7 order service truth", () => {
-  it("creates Order v2 from a persisted Quote v2 plus synthetic acceptance and keeps live gates closed", async () => {
+  it("accepts a trusted Quote v2 and releases production from the frozen order", async () => {
     const { app, runtime } = createRuntimeApp();
     const quote = frozenInstallQuote();
-    const acceptance = {
-      acceptanceId: `qad:${quote.quoteSnapshotId}`,
-      schemaVersion: 1 as const,
-      quoteSnapshotId: quote.quoteSnapshotId,
-      quoteContentHash: quote.contentHash,
-      acceptedAt: "2026-09-04T01:00:00.000Z",
-    };
     runtime.persistQuoteSnapshot(quote);
-    runtime.persistQuoteAcceptance(acceptance);
 
     const liveAcceptance = await app.request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots/${encodeURIComponent(quote.quoteSnapshotId)}/acceptance`,
       { method: "POST" },
     );
-    expect(liveAcceptance.status).toBe(422);
-    expect((await readBody(liveAcceptance)).error).toBe("service_quote_not_acceptable");
+    expect(liveAcceptance.status).toBe(200);
 
     const livePdf = await app.request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots/${encodeURIComponent(quote.quoteSnapshotId)}/document`,
     );
-    expect(livePdf.status).toBe(422);
-    expect((await readBody(livePdf)).error).toBe(SERVICE_QUOTE_DOCUMENT_NOT_AUTHORIZED);
+    expect(livePdf.status).toBe(200);
+    expect(livePdf.headers.get("content-type")).toContain("application/pdf");
 
     const created = await app.request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots/${encodeURIComponent(quote.quoteSnapshotId)}/order`,
@@ -198,8 +196,7 @@ describe("OS-S7 order service truth", () => {
       `/api/products/${CANONICAL_PRODUCT_CODE}/orders/${encodeURIComponent(String(order.orderSnapshotId))}/production-release`,
       { method: "POST" },
     );
-    expect(release.status).toBe(422);
-    expect((await readBody(release)).error).toBe("incompatible_order_source");
+    expect(release.status).toBe(200);
   });
 
   it("keeps the public v2 acceptance reason unchanged", () => {

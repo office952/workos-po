@@ -273,16 +273,20 @@ function isSiteInstallationSelected(db: SqliteDatabase, requestId: string): bool
   return row !== undefined;
 }
 
-function requestHasLinkedQuotes(db: SqliteDatabase, requestId: string): boolean {
+export function requestHasLinkedQuotes(db: SqliteDatabase, requestId: string): boolean {
   const row = db
     .prepare(
       `
       SELECT 1 AS present
       FROM commercial_request_quote_links
       WHERE request_id = ?
+      UNION ALL
+      SELECT 1 AS present
+      FROM commercial_request_assembly_quote_links
+      WHERE request_id = ?
     `,
     )
-    .get(requestId) as { present: number } | undefined;
+    .get(requestId, requestId) as { present: number } | undefined;
   return row !== undefined;
 }
 

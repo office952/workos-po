@@ -21,6 +21,7 @@ import { SlicePage } from "../layout/SlicePage";
 import { CommercialPricePanel } from "../presentation/commercialPrice";
 import { triggerBrowserDownload } from "../presentation/download";
 import { presentCostLine, selectLineByResource } from "../presentation/costLine";
+import { formatMoney } from "../presentation/format";
 import { presentContextMeta } from "../presentation/contextMeta";
 import { statusTone } from "../presentation/statusTone";
 import { ALUMINIUM_RETURN_PROFILE_RESOURCE_ID } from "../reference/lettersProduct";
@@ -155,6 +156,30 @@ export function QuoteSnapshotPage({
               internalTotal={presentedSnapshot.total}
               internalCurrency={presentedSnapshot.currency}
             />
+            {presentedSnapshot.offerLines.length > 0 ? (
+              <dl className="fact-grid">
+                {presentedSnapshot.offerLines.map((line) => (
+                  <InfoRow
+                    key={`${line.kind}-${line.label}`}
+                    label={line.label}
+                    value={
+                      line.netPrice == null
+                        ? "—"
+                        : formatMoney(line.netPrice, line.currency ?? "EUR")
+                    }
+                  />
+                ))}
+                {presentedSnapshot.jobCommercial?.netPrice != null ? (
+                  <InfoRow
+                    label="Total ofertă"
+                    value={formatMoney(
+                      presentedSnapshot.jobCommercial.netPrice,
+                      presentedSnapshot.jobCommercial.currency ?? "EUR",
+                    )}
+                  />
+                ) : null}
+              </dl>
+            ) : null}
             <dl className="fact-grid">
               <InfoRow label="Produs" value={presentedSnapshot.productLabel} />
               <InfoRow

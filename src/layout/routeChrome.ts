@@ -154,6 +154,15 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         title: "Dovezi de cost",
         lead: "Tarif confirmat pe resursă și calificator. Valoarea salvată este folosită doar la calcule noi.",
       };
+    case "admin-services":
+      return {
+        contextLabel: "Administrare",
+        currentHref: "/admin/services",
+        workspace: "admin",
+        eyebrow: "Administrare",
+        title: "Servicii operaționale",
+        lead: "Modul în care organizația oferă montajul la locație pentru lucrările noi.",
+      };
     case "admin-commercial":
       return {
         contextLabel: "Administrare",

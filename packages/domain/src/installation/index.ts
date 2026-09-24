@@ -65,3 +65,19 @@ export {
   type SiteInstallationFixingMethod,
   type SiteInstallationMeasurementStatus,
 } from "./facts.js";
+export {
+  FROZEN_HOST_CONTEXT_KIND,
+  FROZEN_HOST_CONTEXT_SCHEMA_VERSION,
+  FROZEN_MOUNTING_INTERFACE_KIND,
+  copyFrozenHostContext,
+  freezeSiteInstallationContexts,
+  isFrozenHostContextV1,
+  isFrozenMountingInterfaceV1,
+  isFrozenSiteExecutionContextV1,
+  projectSiteInstallationOperationalView,
+  type FrozenHostContextV1,
+  type FrozenMountingInterfaceV1,
+  type FrozenSiteExecutionContextV1,
+  type FrozenSiteInstallationContexts,
+  type SiteInstallationOperationalView,
+} from "./hostContext.js";

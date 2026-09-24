@@ -151,6 +151,7 @@ export {
   SERVICE_QUOTE_FREEZE_NOT_AUTHORIZED_REASON,
   QUOTE_SNAPSHOT_STATUSES,
   freezeQuoteSnapshot,
+  freezeSiteInstallationQuoteLine,
   isSupportedQuoteSnapshot,
   quoteSnapshotErrorLabel,
   type FrozenCommercialOffer,

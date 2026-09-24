@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { projectCommercialPrice } from "../commercial/price.js";
 import { DEFAULT_COMMERCIAL_POLICY } from "../commercial/policy.js";
-import { freezeQuoteSnapshot, type FrozenCommercialOffer } from "../commercial/quoteSnapshot.js";
+import { freezeQuoteSnapshot, freezeSiteInstallationQuoteLine, type FrozenCommercialOffer } from "../commercial/quoteSnapshot.js";
+import { projectManualFixedServicePrice } from "../commercial/servicePrice.js";
+import { blankSiteInstallationFacts } from "../installation/facts.js";
 import type { QuoteCommercialTerms } from "../commercial/quoteTerms.js";
 import { projectPlanningWorkload } from "../execution/workload.js";
 import { codeDefaultProductEnablement } from "../product/productEnablement.js";
@@ -24,8 +26,8 @@ import {
 import { starterFormulaVersionsForType } from "../product/resolveFormulas.js";
 import type { DraftValues, FormSchema, ProductTemplate } from "../product/types.js";
 import { forexBackContract } from "../product/back.js";
-import { costEvidence } from "../resources/catalog.js";
-import { INSPECT_FINISHED_LETTER_ID, PACK_PRODUCT_ID } from "../processes/catalog.js";
+import { costEvidence, LAB_SITE_INSTALL_ID } from "../resources/catalog.js";
+import { INSPECT_FINISHED_LETTER_ID, INSTALL_AT_SITE_ID, PACK_PRODUCT_ID } from "../processes/catalog.js";
 import {
   acknowledgeAssemblyReview,
   attachConfirmedChild,
@@ -473,6 +475,120 @@ describe("product assembly v1", () => {
       "STEEL_INTERNAL_FRAME",
     ]);
     expect(ACM_CASSETTE_NONE_PRODUCT_CODE).toBe("PRD-ACM-CASSETTE-NONE");
+  });
+
+  it("adds one site-installation line without changing assembly truth", () => {
+    const ready = readyAssembly();
+    const confirmed = confirmAssembly(
+      ready.definition,
+      [ready.acm, ready.letters],
+      [],
+      "2026-09-23T11:00:00.000Z",
+    );
+    if (!confirmed.ok) {
+      throw new Error(confirmed.error);
+    }
+    const service = freezeSiteInstallationQuoteLine({
+      label: "Montaj la locație",
+      providerMode: "INTERNAL",
+      requestId: "req-1",
+      facts: {
+        ...blankSiteInstallationFacts({
+          requestId: "req-1",
+          createdAt: "2026-09-02T00:00:00.000Z",
+        }),
+        version: 3,
+        street: "Strada Sintetică 1",
+        city: "Oraș Sintetic",
+        measurementStatus: "OFFICE_MEASURED",
+        facadeType: "CONCRETE",
+        fixingMethod: "MECHANICAL_ANCHOR",
+        siteElectrical: "EXCLUDED_CUSTOMER_RESPONSIBILITY",
+        crewSize: 2,
+        plannedDurationHours: 3,
+      },
+      evidence: {
+        resourceId: LAB_SITE_INSTALL_ID,
+        amount: 25,
+        currency: "EUR",
+        perUnit: "person_hour",
+        source: "OWNER_CONFIRMED_WORKSHOP",
+        classification: "OWNER_CONFIRMED",
+        note: "Tarif intern sintetic.",
+      },
+      eic: {
+        completeness: "COMPLETE",
+        calculationStatus: "CALCULABLE",
+        verificationStatus: "CONFIRMED",
+        completenessReasons: [],
+        geometryLabel: null,
+        currency: "EUR",
+        lines: [
+          {
+            resourceId: LAB_SITE_INSTALL_ID,
+            label: "Manoperă montaj la locație",
+            quantity: 6,
+            unit: "person_hour",
+            rate: 25,
+            currency: "EUR",
+            cost: 150,
+            kind: "LABOR",
+            group: "labor",
+          },
+        ],
+        total: 150,
+        excludedComponentLabels: [],
+      },
+      commercial: projectManualFixedServicePrice({ netPrice: 180 }),
+    });
+    expect(service.ok).toBe(true);
+    if (!service.ok) {
+      return;
+    }
+    const quote = freezeAssemblyQuote({
+      quoteSnapshotId: "asmq-install",
+      truth: confirmed.truth,
+      children: [ready.acm, ready.letters],
+      createdAt: "2026-09-23T11:10:00.000Z",
+      serviceLine: service.line,
+    });
+    if (!quote.ok) {
+      throw new Error(quote.error);
+    }
+    expect(quote.quote.schemaVersion).toBe(2);
+    expect(quote.quote.serviceLine?.lineVersion).toBe(2);
+    expect(quote.quote.totals.netPrice).toBe(
+      round(ready.acm.commercial.netPrice + ready.letters.commercial.netPrice + 180),
+    );
+    expect(quote.quote.relationCommercialPrice).toBeNull();
+    const plain = confirmAssembly(ready.definition, [ready.acm, ready.letters], [], "2026-09-23T11:00:00.000Z");
+    expect(plain.ok && plain.truth.contentHash).toBe(confirmed.truth.contentHash);
+    const order = acceptAssemblyQuote({
+      orderSnapshotId: "asmo-install",
+      quote: quote.quote,
+      children: [ready.acm, ready.letters],
+      createdAt: "2026-09-23T11:20:00.000Z",
+    });
+    if (!order.ok) {
+      throw new Error(order.error);
+    }
+    expect(order.order.schemaVersion).toBe(2);
+    expect(order.order.serviceLine?.kind).toBe("SITE_INSTALLATION");
+    const production = projectAssemblyProduction(order.order, {
+      snapshotId: "asmp-install",
+      createdAt: "2026-09-23T11:30:00.000Z",
+    });
+    if (!production.ok) {
+      throw new Error(production.error);
+    }
+    const installTasks = production.snapshot.assemblyOperations.filter(
+      (item) => item.processId === INSTALL_AT_SITE_ID,
+    );
+    expect(installTasks).toHaveLength(1);
+    expect(installTasks[0]?.providerRequirement).toBe("NOT_REQUIRED");
+    expect(installTasks[0]?.scopeLabel).toBe("Montaj la locație");
+    expect(production.snapshot.siteInstallation?.street).toBe("Strada Sintetică 1");
+    expect(JSON.stringify(production.snapshot.siteInstallation)).not.toMatch(/rate|subcontract/);
   });
 });
 

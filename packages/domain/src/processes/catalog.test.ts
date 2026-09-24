@@ -75,6 +75,7 @@ describe("operational process catalog", () => {
       INSPECT_FINISHED_ASSEMBLY_ID,
       INSPECT_FINISHED_LOGO_ID,
       MOUNT_LOGO_ON_PANEL_ID,
+      "INSTALL_AT_SITE",
     ]);
   });
 

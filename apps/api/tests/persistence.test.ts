@@ -13,6 +13,7 @@ import {
   freezeOrderSnapshot,
   freezeProductionReleaseFromOrder,
   freezeQuoteSnapshot,
+  blankSiteInstallationFacts,
   LAB_SITE_INSTALL_ID,
   projectCommercialPrice,
   projectManualFixedServicePrice,
@@ -497,7 +498,14 @@ describe("product system persistence", () => {
           label: "Montaj la locație",
           providerMode: "INTERNAL",
           requestId: "req:os-s7-persist",
-          technicalConfiguration: {
+          facts: {
+            ...blankSiteInstallationFacts({
+              requestId: "req:os-s7-persist",
+              createdAt: "2026-09-02T00:00:00.000Z",
+            }),
+            version: 3,
+            street: "Strada Sintetică 1",
+            city: "Oraș Sintetic",
             measurementStatus: "OFFICE_MEASURED",
             facadeType: "CONCRETE",
             fixingMethod: "MECHANICAL_ANCHOR",

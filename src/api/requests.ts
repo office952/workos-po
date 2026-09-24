@@ -33,6 +33,15 @@ export async function patchRequest(
   return patchJson(`/api/requests/${encodeURIComponent(requestId)}`, input);
 }
 
+export async function patchRequestInstallationPrice(
+  requestId: string,
+  netPrice: number,
+): Promise<unknown> {
+  return patchJson(`/api/requests/${encodeURIComponent(requestId)}/installation-price`, {
+    netPrice,
+  });
+}
+
 export async function patchRequestInstallationFacts(
   requestId: string,
   input: { expectedVersion: number } & Record<string, unknown>,

@@ -38,9 +38,22 @@ import {
   isSiteInstallationMeasurementStatus,
   type SiteInstallationElectricalState,
   type SiteInstallationFacadeType,
+  type SiteInstallationFacts,
   type SiteInstallationFixingMethod,
   type SiteInstallationMeasurementStatus,
 } from "../installation/facts.js";
+import {
+  copyFrozenHostContext,
+  copyFrozenMountingInterface,
+  copyFrozenSiteExecutionContext,
+  freezeSiteInstallationContexts,
+  isFrozenHostContextV1,
+  isFrozenMountingInterfaceV1,
+  isFrozenSiteExecutionContextV1,
+  type FrozenHostContextV1,
+  type FrozenMountingInterfaceV1,
+  type FrozenSiteExecutionContextV1,
+} from "../installation/hostContext.js";
 import type { CommercialPolicySource } from "./resolvePolicy.js";
 import type { CommercialPriceProjection } from "./price.js";
 import {
@@ -62,6 +75,7 @@ export type QuoteSnapshotStatus = (typeof QUOTE_SNAPSHOT_STATUSES)[number];
 export const FROZEN_QUOTE_LINE_KINDS = ["PRODUCT", "SITE_INSTALLATION"] as const;
 export type FrozenQuoteLineKind = (typeof FROZEN_QUOTE_LINE_KINDS)[number];
 export const FROZEN_QUOTE_LINE_VERSION = 1 as const;
+export const FROZEN_SITE_INSTALLATION_LINE_VERSION_V2 = 2 as const;
 export const PRODUCT_COMMERCIAL_STRATEGY = PRODUCT_COST_PLUS_STRATEGY;
 export const SERVICE_QUOTE_FREEZE_NOT_AUTHORIZED = "service_quote_freeze_not_authorized";
 export const SERVICE_QUOTE_FREEZE_NOT_AUTHORIZED_REASON =
@@ -129,9 +143,8 @@ export type FrozenProductQuoteLine = {
   commercial: FrozenCommercialOffer;
 };
 
-export type FrozenSiteInstallationQuoteLine = {
+type FrozenSiteInstallationLineBase = {
   kind: "SITE_INSTALLATION";
-  lineVersion: typeof FROZEN_QUOTE_LINE_VERSION;
   scopeId: typeof SITE_INSTALLATION_SCOPE_ID;
   commercialStrategy: typeof MANUAL_FIXED_SERVICE_STRATEGY;
   providerMode: OperationalServiceProviderMode;
@@ -141,9 +154,24 @@ export type FrozenSiteInstallationQuoteLine = {
   commercialUnit: "person_hour" | "job";
   eic: FrozenEicReference;
   commercial: FrozenCommercialOffer;
-  technicalConfiguration: FrozenInstallationTechnicalConfiguration;
   evidence: FrozenServiceEvidenceProvenance;
 };
+
+export type FrozenSiteInstallationQuoteLineV1 = FrozenSiteInstallationLineBase & {
+  lineVersion: typeof FROZEN_QUOTE_LINE_VERSION;
+  technicalConfiguration: FrozenInstallationTechnicalConfiguration;
+};
+
+export type FrozenSiteInstallationQuoteLineV2 = FrozenSiteInstallationLineBase & {
+  lineVersion: typeof FROZEN_SITE_INSTALLATION_LINE_VERSION_V2;
+  hostContext: FrozenHostContextV1;
+  mountingInterface: FrozenMountingInterfaceV1;
+  siteExecutionContext: FrozenSiteExecutionContextV1;
+};
+
+export type FrozenSiteInstallationQuoteLine =
+  | FrozenSiteInstallationQuoteLineV1
+  | FrozenSiteInstallationQuoteLineV2;
 
 export type FrozenQuoteLine = FrozenProductQuoteLine | FrozenSiteInstallationQuoteLine;
 
@@ -153,7 +181,7 @@ export type QuoteInstallationFreezeInput = {
   commercial: CommercialPriceProjection;
   providerMode: OperationalServiceProviderMode;
   requestId: string;
-  technicalConfiguration: FrozenInstallationTechnicalConfiguration;
+  facts: SiteInstallationFacts;
   evidence: CostEvidence;
 };
 
@@ -389,6 +417,53 @@ export function copyFrozenCommercialOffer(
   };
 }
 
+function copyFrozenServiceEvidence(
+  evidence: FrozenServiceEvidenceProvenance,
+): FrozenServiceEvidenceProvenance {
+  return {
+    resourceId: evidence.resourceId,
+    classification: evidence.classification,
+    amount: evidence.amount,
+    currency: evidence.currency,
+    perUnit: evidence.perUnit,
+    ...(evidence.supplierLabel ? { supplierLabel: evidence.supplierLabel } : {}),
+    ...(evidence.validFrom ? { validFrom: evidence.validFrom } : {}),
+    ...(evidence.validUntil ? { validUntil: evidence.validUntil } : {}),
+  };
+}
+
+function copyFrozenSiteInstallationQuoteLine(
+  line: FrozenSiteInstallationQuoteLine,
+): FrozenSiteInstallationQuoteLine {
+  const shared = {
+    kind: "SITE_INSTALLATION" as const,
+    scopeId: line.scopeId,
+    commercialStrategy: line.commercialStrategy,
+    providerMode: line.providerMode,
+    label: line.label,
+    sourceRequestId: line.sourceRequestId,
+    quantity: line.quantity,
+    commercialUnit: line.commercialUnit,
+    eic: copyFrozenEicReference(line.eic),
+    commercial: copyFrozenCommercialOffer(line.commercial),
+    evidence: copyFrozenServiceEvidence(line.evidence),
+  };
+  if (line.lineVersion === FROZEN_SITE_INSTALLATION_LINE_VERSION_V2) {
+    return {
+      ...shared,
+      lineVersion: line.lineVersion,
+      hostContext: copyFrozenHostContext(line.hostContext),
+      mountingInterface: copyFrozenMountingInterface(line.mountingInterface),
+      siteExecutionContext: copyFrozenSiteExecutionContext(line.siteExecutionContext),
+    };
+  }
+  return {
+    ...shared,
+    lineVersion: line.lineVersion,
+    technicalConfiguration: { ...line.technicalConfiguration },
+  };
+}
+
 export function copyFrozenQuoteLine(line: FrozenQuoteLine): FrozenQuoteLine {
   switch (line.kind) {
     case "PRODUCT":
@@ -402,32 +477,7 @@ export function copyFrozenQuoteLine(line: FrozenQuoteLine): FrozenQuoteLine {
         commercial: copyFrozenCommercialOffer(line.commercial),
       };
     case "SITE_INSTALLATION":
-      return {
-        kind: "SITE_INSTALLATION",
-        lineVersion: line.lineVersion,
-        scopeId: line.scopeId,
-        commercialStrategy: line.commercialStrategy,
-        providerMode: line.providerMode,
-        label: line.label,
-        sourceRequestId: line.sourceRequestId,
-        quantity: line.quantity,
-        commercialUnit: line.commercialUnit,
-        eic: copyFrozenEicReference(line.eic),
-        commercial: copyFrozenCommercialOffer(line.commercial),
-        technicalConfiguration: { ...line.technicalConfiguration },
-        evidence: {
-          resourceId: line.evidence.resourceId,
-          classification: line.evidence.classification,
-          amount: line.evidence.amount,
-          currency: line.evidence.currency,
-          perUnit: line.evidence.perUnit,
-          ...(line.evidence.supplierLabel
-            ? { supplierLabel: line.evidence.supplierLabel }
-            : {}),
-          ...(line.evidence.validFrom ? { validFrom: line.evidence.validFrom } : {}),
-          ...(line.evidence.validUntil ? { validUntil: line.evidence.validUntil } : {}),
-        },
-      };
+      return copyFrozenSiteInstallationQuoteLine(line);
     default: {
       const _exhaustive: never = line;
       return _exhaustive;
@@ -570,6 +620,28 @@ function freezeJobQuoteFields(input: {
       reasons: [SERVICE_LINE_INVARIANT_REASON],
     };
   }
+  const contexts = freezeSiteInstallationContexts(
+    input.installation.facts,
+    input.installation.requestId,
+  );
+  if (!contexts) {
+    return {
+      ok: false,
+      error: "unavailable_offer",
+      reasons: [SERVICE_LINE_INVARIANT_REASON],
+    };
+  }
+  if (input.installation.providerMode === "INTERNAL") {
+    const crew = contexts.siteExecutionContext.crewSize ?? 0;
+    const hours = contexts.siteExecutionContext.plannedDurationHours ?? 0;
+    if (quantity.quantity !== crew * hours) {
+      return {
+        ok: false,
+        error: "unavailable_offer",
+        reasons: [SERVICE_LINE_INVARIANT_REASON],
+      };
+    }
+  }
   const installLineCommercial = freezeCommercialOffer(
     installCommercial,
     MANUAL_FIXED_SERVICE_STRATEGY,
@@ -585,36 +657,76 @@ function freezeJobQuoteFields(input: {
       reasons: [SERVICE_LINE_INVARIANT_REASON],
     };
   }
+  const productStrategy =
+    input.productCommercial.commercialStrategy === MANUAL_FIXED_PRODUCT_STRATEGY
+      ? MANUAL_FIXED_PRODUCT_STRATEGY
+      : PRODUCT_COMMERCIAL_STRATEGY;
+  const installationLine: FrozenSiteInstallationQuoteLineV2 = {
+    kind: "SITE_INSTALLATION",
+    lineVersion: FROZEN_SITE_INSTALLATION_LINE_VERSION_V2,
+    scopeId: SITE_INSTALLATION_SCOPE_ID,
+    commercialStrategy: MANUAL_FIXED_SERVICE_STRATEGY,
+    providerMode: input.installation.providerMode,
+    label: input.installation.label,
+    sourceRequestId: input.installation.requestId,
+    quantity: quantity.quantity,
+    commercialUnit: quantity.commercialUnit,
+    eic: freezeEic(input.installation.eic),
+    commercial: installLineCommercial,
+    evidence,
+    hostContext: contexts.hostContext,
+    mountingInterface: contexts.mountingInterface,
+    siteExecutionContext: contexts.siteExecutionContext,
+  };
   return {
     ok: true,
     lines: [
       {
         kind: "PRODUCT",
         lineVersion: FROZEN_QUOTE_LINE_VERSION,
-        commercialStrategy: PRODUCT_COMMERCIAL_STRATEGY,
+        commercialStrategy: productStrategy,
         label: input.productLabel,
         productCode: input.productCode,
         eic: input.productEic,
         commercial: input.productCommercial,
       },
-      {
-        kind: "SITE_INSTALLATION",
-        lineVersion: FROZEN_QUOTE_LINE_VERSION,
-        scopeId: SITE_INSTALLATION_SCOPE_ID,
-        commercialStrategy: MANUAL_FIXED_SERVICE_STRATEGY,
-        providerMode: input.installation.providerMode,
-        label: input.installation.label,
-        sourceRequestId: input.installation.requestId,
-        quantity: quantity.quantity,
-        commercialUnit: quantity.commercialUnit,
-        eic: freezeEic(input.installation.eic),
-        commercial: installLineCommercial,
-        technicalConfiguration: input.installation.technicalConfiguration,
-        evidence,
-      },
+      installationLine,
     ],
     jobCommercial,
   };
+}
+
+export function freezeSiteInstallationQuoteLine(
+  installation: QuoteInstallationFreezeInput,
+):
+  | { ok: true; line: FrozenSiteInstallationQuoteLineV2 }
+  | { ok: false; error: QuoteSnapshotError; reasons: readonly string[] } {
+  if (!isCompleteFrozenCommercial(installation.commercial)) {
+    return {
+      ok: false,
+      error: "unavailable_offer",
+      reasons: [SERVICE_LINE_INVARIANT_REASON],
+    };
+  }
+  const frozen = freezeJobQuoteFields({
+    productCode: installation.requestId,
+    productLabel: installation.label,
+    productEic: freezeEic(installation.eic),
+    productCommercial: freezeCommercialOffer(installation.commercial, MANUAL_FIXED_SERVICE_STRATEGY),
+    installation,
+  });
+  if (!frozen.ok) {
+    return frozen;
+  }
+  const line = frozen.lines.find((item) => item.kind === "SITE_INSTALLATION");
+  if (!line || line.kind !== "SITE_INSTALLATION" || line.lineVersion !== 2) {
+    return {
+      ok: false,
+      error: "unavailable_offer",
+      reasons: [SERVICE_LINE_INVARIANT_REASON],
+    };
+  }
+  return { ok: true, line };
 }
 
 function freezeCommercialOffer(
@@ -667,8 +779,8 @@ function installationLineQuantity(input: QuoteInstallationFreezeInput): {
   commercialUnit: FrozenSiteInstallationQuoteLine["commercialUnit"];
 } | null {
   if (input.providerMode === "INTERNAL") {
-    const crew = input.technicalConfiguration.crewSize;
-    const hours = input.technicalConfiguration.plannedDurationHours;
+    const crew = input.facts.crewSize;
+    const hours = input.facts.plannedDurationHours;
     if (!crew || !hours || crew <= 0 || hours <= 0) {
       return null;
     }
@@ -678,6 +790,23 @@ function installationLineQuantity(input: QuoteInstallationFreezeInput): {
     return { quantity: 1, commercialUnit: "job" };
   }
   return null;
+}
+
+function frozenInstallationContextIsReadable(
+  installation: FrozenSiteInstallationQuoteLine,
+): boolean {
+  if (installation.lineVersion === FROZEN_SITE_INSTALLATION_LINE_VERSION_V2) {
+    return (
+      installation.hostContext.sourceRequestId === installation.sourceRequestId &&
+      isFrozenHostContextV1(installation.hostContext) &&
+      isFrozenMountingInterfaceV1(installation.mountingInterface) &&
+      isFrozenSiteExecutionContextV1(
+        installation.siteExecutionContext,
+        installation.providerMode,
+      )
+    );
+  }
+  return isFrozenInstallationTechnicalConfiguration(installation.technicalConfiguration);
 }
 
 function isFrozenInstallationTechnicalConfiguration(
@@ -765,10 +894,25 @@ function quoteV2ProductLineMirrorsTopLevel(snapshot: QuoteSnapshot): boolean {
 
 function quoteV2InstallationLineIsCoherent(snapshot: QuoteSnapshot): boolean {
   const installation = snapshot.lines?.find((line) => line.kind === "SITE_INSTALLATION");
-  if (!installation || installation.kind !== "SITE_INSTALLATION") {
+  if (
+    !installation ||
+    installation.kind !== "SITE_INSTALLATION" ||
+    installation.lineVersion !== FROZEN_SITE_INSTALLATION_LINE_VERSION_V2
+  ) {
     return false;
   }
-  const facts = installation.technicalConfiguration;
+  if (
+    installation.hostContext.sourceRequestId !== installation.sourceRequestId ||
+    installation.hostContext.sourceFactsVersion < 1 ||
+    !isFrozenHostContextV1(installation.hostContext) ||
+    !isFrozenMountingInterfaceV1(installation.mountingInterface) ||
+    !isFrozenSiteExecutionContextV1(
+      installation.siteExecutionContext,
+      installation.providerMode,
+    )
+  ) {
+    return false;
+  }
   const evidence = installation.evidence;
   const eicTotal = installation.eic.lines.reduce((sum, line) => sum + line.cost, 0);
   if (installation.eic.total !== eicTotal) {
@@ -788,7 +932,8 @@ function quoteV2InstallationLineIsCoherent(snapshot: QuoteSnapshot): boolean {
   }
   if (installation.providerMode === "INTERNAL") {
     const expectedQuantity =
-      (facts.crewSize ?? 0) * (facts.plannedDurationHours ?? 0);
+      (installation.siteExecutionContext.crewSize ?? 0) *
+      (installation.siteExecutionContext.plannedDurationHours ?? 0);
     return (
       installation.commercialUnit === "person_hour" &&
       installation.quantity === expectedQuantity &&
@@ -829,7 +974,8 @@ function isExactQuoteSnapshotV2(snapshot: QuoteSnapshot): boolean {
     return false;
   }
   if (
-    product.commercialStrategy !== PRODUCT_COMMERCIAL_STRATEGY ||
+    (product.commercialStrategy !== PRODUCT_COMMERCIAL_STRATEGY &&
+      product.commercialStrategy !== MANUAL_FIXED_PRODUCT_STRATEGY) ||
     product.lineVersion !== FROZEN_QUOTE_LINE_VERSION ||
     product.productCode.trim() === "" ||
     product.eic.completeness !== "COMPLETE" ||
@@ -841,7 +987,8 @@ function isExactQuoteSnapshotV2(snapshot: QuoteSnapshot): boolean {
   if (
     installation.scopeId !== SITE_INSTALLATION_SCOPE_ID ||
     installation.commercialStrategy !== MANUAL_FIXED_SERVICE_STRATEGY ||
-    installation.lineVersion !== FROZEN_QUOTE_LINE_VERSION ||
+    (installation.lineVersion !== FROZEN_QUOTE_LINE_VERSION &&
+      installation.lineVersion !== FROZEN_SITE_INSTALLATION_LINE_VERSION_V2) ||
     !isOperationalServiceProviderMode(installation.providerMode) ||
     installation.sourceRequestId.trim() === "" ||
     installation.label.trim() === "" ||
@@ -851,7 +998,7 @@ function isExactQuoteSnapshotV2(snapshot: QuoteSnapshot): boolean {
     installation.commercial.currency !== "EUR" ||
     installation.commercialUnit !==
       (installation.providerMode === "INTERNAL" ? "person_hour" : "job") ||
-    !isFrozenInstallationTechnicalConfiguration(installation.technicalConfiguration) ||
+    !frozenInstallationContextIsReadable(installation) ||
     !isFrozenServiceEvidenceProvenance(
       installation.providerMode,
       installation.evidence,

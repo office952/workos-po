@@ -1,4 +1,9 @@
-import type { FrozenCommercialOffer, FrozenJobCommercial } from "../commercial/quoteSnapshot.js";
+import type {
+  FrozenCommercialOffer,
+  FrozenJobCommercial,
+  FrozenSiteInstallationQuoteLineV2,
+} from "../commercial/quoteSnapshot.js";
+import { copyFrozenQuoteLine } from "../commercial/quoteSnapshot.js";
 import { contentHash } from "./canonical.js";
 import {
   ASSEMBLY_RELATION_COMMERCIAL_PRICE,
@@ -13,6 +18,7 @@ export function freezeAssemblyQuote(input: {
   truth: AssemblyTruth;
   children: readonly ConfirmedChildProduct[];
   createdAt: string;
+  serviceLine?: FrozenSiteInstallationQuoteLineV2;
 }): { ok: true; quote: AssemblyQuoteSnapshot } | AssemblyRuleFailure {
   const members = input.truth.members.map((member) => {
     const child = input.children.find((item) => item.truthId === member.confirmedTruthId);
@@ -67,9 +73,15 @@ export function freezeAssemblyQuote(input: {
     input.truth.kind === "SIGN_ASSEMBLY_ACM_SIGNAGE_V2"
       ? [...confirmed].sort((left, right) => quoteMemberRank(left.role) - quoteMemberRank(right.role))
       : confirmed;
-  const totals = sumCommercial(published.map((item) => item.commercial));
+  const serviceLine = input.serviceLine
+    ? copyServiceLine(input.serviceLine)
+    : undefined;
+  const totals = sumCommercial([
+    ...published.map((item) => item.commercial),
+    ...(serviceLine ? [serviceLine.commercial] : []),
+  ]);
   const body = {
-    schemaVersion: 1 as const,
+    schemaVersion: (serviceLine ? 2 : 1) as 1 | 2,
     status: "FROZEN" as const,
     organizationId: input.truth.organizationId,
     requestId: input.truth.requestId,
@@ -85,6 +97,7 @@ export function freezeAssemblyQuote(input: {
     members: published,
     relationCommercialPrice: ASSEMBLY_RELATION_COMMERCIAL_PRICE,
     totals,
+    ...(serviceLine ? { serviceLine } : {}),
   };
   return {
     ok: true,
@@ -158,8 +171,12 @@ export function acceptAssemblyQuote(input: {
       eicCompleteness: child.eicCompleteness,
     });
   }
+  const serviceLine =
+    input.quote.schemaVersion === 2 && input.quote.serviceLine
+      ? copyServiceLine(input.quote.serviceLine)
+      : undefined;
   const body = {
-    schemaVersion: 1 as const,
+    schemaVersion: (serviceLine ? 2 : 1) as 1 | 2,
     status: "FROZEN" as const,
     organizationId: input.quote.organizationId,
     requestId: input.quote.requestId,
@@ -174,6 +191,7 @@ export function acceptAssemblyQuote(input: {
     children: frozenChildren,
     relationCommercialPrice: ASSEMBLY_RELATION_COMMERCIAL_PRICE,
     totals: { ...input.quote.totals },
+    ...(serviceLine ? { serviceLine } : {}),
   };
   return {
     ok: true,
@@ -184,6 +202,16 @@ export function acceptAssemblyQuote(input: {
       contentHash: contentHash(body),
     },
   };
+}
+
+function copyServiceLine(
+  line: FrozenSiteInstallationQuoteLineV2,
+): FrozenSiteInstallationQuoteLineV2 {
+  const copied = copyFrozenQuoteLine(line);
+  if (copied.kind !== "SITE_INSTALLATION" || copied.lineVersion !== 2) {
+    return line;
+  }
+  return copied;
 }
 
 function quoteMemberRank(role: AssemblyQuoteSnapshot["members"][number]["role"]): number {

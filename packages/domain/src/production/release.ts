@@ -1,7 +1,10 @@
 import {
   ORDER_SNAPSHOT_SCHEMA_VERSION,
+  ORDER_SNAPSHOT_SCHEMA_VERSION_V2,
   type OrderSnapshot,
 } from "../commercial/orderSnapshot.js";
+import { projectSiteInstallationOperationalView } from "../installation/hostContext.js";
+import { appendInstallAtSiteOperation } from "./installAtSite.js";
 import {
   ACCEPTED_PRODUCTION_SNAPSHOT_SCHEMA_VERSION,
   FROZEN_PRODUCTION_INPUT_SCHEMA_VERSION,
@@ -28,8 +31,17 @@ export function freezeProductionReleaseFromOrder(
   order: OrderSnapshot,
   options?: { createdAt?: string },
 ): ProductionReleaseResult {
+  const siteInstallation = siteInstallationFromOrder(order);
+  if (order.schemaVersion === ORDER_SNAPSHOT_SCHEMA_VERSION_V2 && !siteInstallation) {
+    return {
+      ok: false,
+      error: "incompatible_order_source",
+      reasons: [INCOMPATIBLE_REASON],
+    };
+  }
   if (
-    order.schemaVersion !== ORDER_SNAPSHOT_SCHEMA_VERSION ||
+    order.schemaVersion !== ORDER_SNAPSHOT_SCHEMA_VERSION &&
+    order.schemaVersion !== ORDER_SNAPSHOT_SCHEMA_VERSION_V2 ||
     order.status !== "FROZEN" ||
     order.orderSnapshotId.trim() === "" ||
     order.contentHash.trim() === "" ||
@@ -56,6 +68,16 @@ export function freezeProductionReleaseFromOrder(
   }
 
   const productionInput = copyFrozenProductionInput(input);
+  const operations = siteInstallation
+    ? appendInstallAtSiteOperation(productionInput.operations)
+    : productionInput.operations;
+  if (!operations) {
+    return {
+      ok: false,
+      error: "missing_production_input",
+      reasons: [MISSING_INPUT_REASON],
+    };
+  }
   const hashedContent = {
     schemaVersion: ACCEPTED_PRODUCTION_SNAPSHOT_SCHEMA_VERSION,
     status: "ACCEPTED" as const,
@@ -77,7 +99,8 @@ export function freezeProductionReleaseFromOrder(
     },
     quantities: order.quantities.map((item) => ({ ...item })),
     requirements: productionInput.requirements,
-    operations: productionInput.operations,
+    operations,
+    ...(siteInstallation ? { siteInstallation } : {}),
     usedTechnicalSettings: productionInput.usedTechnicalSettings,
     usedRecipes: productionInput.usedRecipes,
     ...(productionInput.usedFormulas ? { usedFormulas: productionInput.usedFormulas } : {}),
@@ -157,6 +180,22 @@ export function productionReleaseErrorLabel(error: ProductionReleaseError): stri
       return _exhaustive;
     }
   }
+}
+
+function siteInstallationFromOrder(order: OrderSnapshot) {
+  if (order.schemaVersion !== ORDER_SNAPSHOT_SCHEMA_VERSION_V2) {
+    return null;
+  }
+  const line = order.lines?.find((item) => item.kind === "SITE_INSTALLATION");
+  if (!line || line.kind !== "SITE_INSTALLATION" || line.lineVersion !== 2) {
+    return null;
+  }
+  return projectSiteInstallationOperationalView({
+    providerMode: line.providerMode,
+    hostContext: line.hostContext,
+    mountingInterface: line.mountingInterface,
+    siteExecutionContext: line.siteExecutionContext,
+  });
 }
 
 function deepFreeze<T>(value: T): T {

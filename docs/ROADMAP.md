@@ -98,6 +98,12 @@ PRODUCT_ASSEMBLY_V2 = COMPLETE / OWNER_ACCEPTED
 OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V2 = YES
 VOLUMETRIC_LOGO_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PRODUCT_ASSEMBLY_V2_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+HOST_CONTEXT_V1 = IMPLEMENTED_IN_REVIEW
+OWNER_ACCEPTED_HOST_CONTEXT_V1 = NO
+MOUNTING_INTERFACE_V1 = IMPLEMENTED_IN_REVIEW
+OWNER_ACCEPTED_MOUNTING_INTERFACE_V1 = NO
+SITE_INSTALLATION_VERTICAL_V1 = IMPLEMENTED_IN_REVIEW
+OWNER_ACCEPTED_SITE_INSTALLATION_VERTICAL_V1 = NO
 LOGO_DEFAULT_ENABLEMENT = DISABLED
 PRODUCT_ASSEMBLY_CANON = docs/architecture/WORKOS_PRODUCT_ASSEMBLY_CONTRACT_V1.md
 CONFIGURATION_FIRST_IMPLEMENTATION = CF1_COMPLETE_AND_CF2_CF3_COMPLETE_AND_CF4_COMPLETE
@@ -730,10 +736,16 @@ PLN1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 CAPACITY_IMPLEMENTATION = CANCELLED_WEEKLY_SUPPLY
 SCHEDULING = NOT_STARTED / OUT_OF_SCOPE_V1
 MEMBER_DAG_COMPOSITION_CORRECTIONS = DEFERRED / NOT_CAPACITY_BLOCKER
+HOST_CONTEXT_V1 = IMPLEMENTED_IN_REVIEW
+OWNER_ACCEPTED_HOST_CONTEXT_V1 = NO
+MOUNTING_INTERFACE_V1 = IMPLEMENTED_IN_REVIEW
+OWNER_ACCEPTED_MOUNTING_INTERFACE_V1 = NO
+SITE_INSTALLATION_VERTICAL_V1 = IMPLEMENTED_IN_REVIEW
+OWNER_ACCEPTED_SITE_INSTALLATION_VERTICAL_V1 = NO
 PLANNING_CAPACITY_CANON = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
 ```
 
-Planning Workload V1 is the living program. PLN0 workload-first canon is complete. PLN1 is Owner-accepted: `plannedEffortMinutes`, derived provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787`. `planningWeek` and weekly `availableMinutes` remain cancelled. PLN2 and Operations Control V1 are Owner-accepted. PLN3 is not started. Scheduling is out of V1. Member DAG / composition corrections remain deferred and are not a Planning blocker.
+Planning Workload V1 is the living program. PLN0 workload-first canon is complete. PLN1 is Owner-accepted: `plannedEffortMinutes`, derived provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787`. `planningWeek` and weekly `availableMinutes` remain cancelled. PLN2 and Operations Control V1 are Owner-accepted. PLN3 is not started. Scheduling is out of V1. Member DAG / composition corrections remain deferred and are not a Planning blocker. Host Context V1, Mounting Interface V1, and the site-installation vertical are implemented in review and are not Owner-accepted.
 
 PLN1 acceptance advisories, not a correction wave:
 

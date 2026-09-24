@@ -47,6 +47,7 @@ import {
   ExecutionActualConsumptionFields,
   ExecutionActualConsumptionHistory,
 } from "./ExecutionActualConsumption";
+import { SiteInstallationContextPanel } from "./SiteInstallationContextPanel";
 
 type ExecutionPageProps = {
   planId: string;
@@ -420,6 +421,9 @@ export function ExecutionPage({
                 value={presentExecutionNextAction(currentTask, identified)}
               />
             </dl>
+            {plan?.siteInstallation && currentTask.scopeLabel === "Montaj la locație" ? (
+              <SiteInstallationContextPanel context={plan.siteInstallation} />
+            ) : null}
             {currentTask.operatorRelation === "not_eligible" ? (
               <p>Alt operator trebuie să preia această sarcină.</p>
             ) : null}

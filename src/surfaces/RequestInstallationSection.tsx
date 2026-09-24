@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { presentRequestDetail } from "../adapters/requestAdapter";
 import { TransportError, readTransportErrorCode } from "../api/http";
-import { patchRequest, patchRequestInstallationFacts } from "../api/requests";
+import { patchRequest, patchRequestInstallationFacts, patchRequestInstallationPrice } from "../api/requests";
 import type {
   RequestDetailTransport,
   RequestInstallationFactsTransport,
@@ -28,6 +28,7 @@ import {
   presentInstallationModeOptions,
   presentMeasurementStatusLabel,
 } from "../presentation/installationFacts";
+import { formatMoney } from "../presentation/format";
 
 type RequestInstallationSectionProps = {
   detail: RequestDetailTransport;
@@ -52,6 +53,13 @@ type FactsDraft = {
   crewSize: string;
   plannedDurationHours: string;
 };
+
+function dimensionLabel(width: number | null | undefined, height: number | null | undefined): string {
+  if (width == null && height == null) {
+    return "—";
+  }
+  return `${width ?? "—"} × ${height ?? "—"} mm`;
+}
 
 function draftFromFacts(facts: RequestInstallationFactsTransport | null): FactsDraft {
   return {
@@ -109,19 +117,30 @@ export function RequestInstallationSection({ detail }: RequestInstallationSectio
   const editorKey = String(facts?.version ?? 0);
 
   return (
-    <SurfacePanel title="Montaj" label="Montaj">
+    <SurfacePanel title="Montaj la locație" label="Montaj la locație">
       <RequestInstallationOfferControls detail={detail} offer={offer} />
       {selected ? (
         <>
+          <dl className="fact-grid">
+            <InfoRow label="Stare" value={selected ? "Selectat" : "Neselectat"} />
+            <InfoRow
+              label="Mod"
+              value={presentInstallationModeLabel(offer?.mode ?? null)}
+            />
+            <InfoRow label="Pregătire" value={readinessLabel(detail)} />
+          </dl>
           {detail.installationScope?.incompleteReasons.length ? (
-            <ul className="stack">
-              {detail.installationScope.incompleteReasons.map((reason) => (
-                <li key={reason.id}>{reason.label}</li>
-              ))}
-            </ul>
+            <div className="stack">
+              <p className="ui-note">Blocaje</p>
+              <ul className="stack">
+                {detail.installationScope.incompleteReasons.map((reason) => (
+                  <li key={reason.id}>{reason.label}</li>
+                ))}
+              </ul>
+            </div>
           ) : null}
           {!detail.canWriteInstallationFacts ? (
-            <RequestInstallationFactsReadout facts={facts} />
+            <RequestInstallationFactsReadout facts={facts} mode={offer?.mode ?? null} />
           ) : (
             <RequestInstallationFactsEditor
               key={editorKey}
@@ -129,6 +148,8 @@ export function RequestInstallationSection({ detail }: RequestInstallationSectio
               facts={facts}
             />
           )}
+          <InstallationPriceControl detail={detail} />
+          <InstallationInternalCost detail={detail} />
         </>
       ) : null}
     </SurfacePanel>
@@ -191,12 +212,7 @@ function RequestInstallationOfferControls({
 
   return (
     <div className="stack">
-      {selected ? (
-        <dl className="fact-grid">
-          <InfoRow label="Serviciu" value={offer?.label ?? "Montaj la locație"} />
-          <InfoRow label="Mod" value={presentInstallationModeLabel(offer?.mode ?? null)} />
-        </dl>
-      ) : (
+      {selected ? null : (
         <p>Montajul la locație nu este selectat pe această cerere.</p>
       )}
       {offer?.selectionLocked ? (
@@ -289,10 +305,107 @@ function RequestInstallationOfferControls({
   );
 }
 
+function readinessLabel(detail: RequestDetailTransport): string {
+  const scope = detail.installationScope;
+  if (
+    scope &&
+    scope.incompleteReasons.length === 0 &&
+    scope.eicCompleteness === "COMPLETE" &&
+    scope.commercialCompleteness === "COMPLETE"
+  ) {
+    return "Pregătit pentru ofertă";
+  }
+  return "Incomplet";
+}
+
+function InstallationInternalCost({ detail }: { detail: RequestDetailTransport }) {
+  const scope = detail.installationScope;
+  if (scope?.ownerInternalCostTotal == null || !scope.ownerInternalCostLabel) {
+    return null;
+  }
+  return (
+    <dl className="fact-grid">
+      <InfoRow
+        label={scope.ownerInternalCostLabel}
+        value={formatMoney(scope.ownerInternalCostTotal, "EUR")}
+      />
+    </dl>
+  );
+}
+
+function InstallationPriceControl({ detail }: { detail: RequestDetailTransport }) {
+  const current = detail.installationScope?.commercialNetPrice;
+  const [draft, setDraft] = useState(current?.toString() ?? "");
+  const [saveState, setSaveState] = useState<"idle" | "pending" | "error">("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const locked = !detail.canWriteInstallationPrice;
+
+  async function save(): Promise<void> {
+    const parsed = Number(draft.trim().replace(",", "."));
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      setSaveState("error");
+      setSaveError("Prețul client trebuie să fie un număr pozitiv.");
+      return;
+    }
+    setSaveState("pending");
+    setSaveError(null);
+    try {
+      const presented = presentRequestDetail(
+        await patchRequestInstallationPrice(detail.requestId, parsed),
+      );
+      if (presented) {
+        writeResource(resourceKeys.request(detail.requestId), presented);
+      }
+      invalidateResources(resourceKeys.requests());
+      setSaveState("idle");
+    } catch (error) {
+      setSaveState("error");
+      const code = error instanceof TransportError ? readTransportErrorCode(error.body) : null;
+      setSaveError(
+        code === "forbidden"
+          ? "Doar proprietarul poate seta prețul de montaj."
+          : "Prețul de montaj nu a putut fi salvat.",
+      );
+    }
+  }
+
+  return (
+    <div className="stack">
+      {locked ? (
+        <dl className="fact-grid">
+          <InfoRow
+            label="Preț client montaj (EUR)"
+            value={current == null ? "Neconfirmat" : formatMoney(current, "EUR")}
+          />
+        </dl>
+      ) : (
+        <>
+          <TextField
+            id="install-client-price"
+            label="Preț client montaj (EUR)"
+            value={draft}
+            onChange={setDraft}
+          />
+          <Button disabled={saveState === "pending"} onClick={() => void save()}>
+            Salvează prețul de montaj
+          </Button>
+        </>
+      )}
+      {saveError ? (
+        <InlineAlert tone="error" title="Prețul nu a putut fi salvat">
+          {saveError}
+        </InlineAlert>
+      ) : null}
+    </div>
+  );
+}
+
 function RequestInstallationFactsReadout({
   facts,
+  mode,
 }: {
   facts: RequestInstallationFactsTransport | null;
+  mode: string | null;
 }) {
   return (
     <>
@@ -312,13 +425,33 @@ function RequestInstallationFactsReadout({
           value={presentMeasurementStatusLabel(facts?.measurementStatus ?? "")}
         />
         <InfoRow
-          label="Fațadă"
+          label="Suprafață"
           value={presentFacadeTypeLabel(facts?.facadeType ?? "")}
         />
         <InfoRow
-          label="Prindere"
+          label="Dimensiuni"
+          value={dimensionLabel(facts?.mountingSurfaceWidthMm, facts?.mountingSurfaceHeightMm)}
+        />
+        <InfoRow
+          label="Fixare"
           value={presentFixingMethodLabel(facts?.fixingMethod ?? "")}
         />
+        <InfoRow
+          label="Înălțime montaj"
+          value={facts?.installationElevationMm == null ? "—" : `${facts.installationElevationMm} mm`}
+        />
+        <InfoRow label="Acces" value={facts?.accessNotes || "—"} />
+        {mode === "INTERNAL" ? (
+          <>
+            <InfoRow label="Echipă" value={facts?.crewSize == null ? "—" : String(facts.crewSize)} />
+            <InfoRow
+              label="Durată"
+              value={
+                facts?.plannedDurationHours == null ? "—" : `${facts.plannedDurationHours} h`
+              }
+            />
+          </>
+        ) : null}
         <InfoRow
           label="Racord electric"
           value={presentElectricalStateLabel(facts?.siteElectrical ?? "")}

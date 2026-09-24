@@ -9,6 +9,8 @@ import {
   PACK_PRODUCT_ID,
   processProviderRequirement,
 } from "../processes/catalog.js";
+import { projectSiteInstallationOperationalView } from "../installation/hostContext.js";
+import { appendInstallAtSiteOperation } from "../production/installAtSite.js";
 import type { FrozenProductionOperation } from "../production/snapshot.js";
 import { contentHash } from "./canonical.js";
 import {
@@ -66,6 +68,25 @@ export function projectAssemblyProduction(
       reasons: ["Procesele de ansamblare nu sunt disponibile."],
     };
   }
+  const serviceLine = order.serviceLine?.lineVersion === 2 ? order.serviceLine : undefined;
+  const operations = serviceLine
+    ? appendInstallAtSiteOperation(assemblyOperations)
+    : assemblyOperations;
+  if (!operations) {
+    return {
+      ok: false,
+      error: "missing_relation",
+      reasons: ["Montajul la locație nu poate fi atașat după ambalare."],
+    };
+  }
+  const siteInstallation = serviceLine
+    ? projectSiteInstallationOperationalView({
+        providerMode: serviceLine.providerMode,
+        hostContext: serviceLine.hostContext,
+        mountingInterface: serviceLine.mountingInterface,
+        siteExecutionContext: serviceLine.siteExecutionContext,
+      })
+    : undefined;
   const eicTotal = roundMoney(order.children.reduce((sum, child) => sum + child.eicTotal, 0));
   const eicCompleteness: "COMPLETE" | "PARTIAL" = order.children.every(
     (child) => child.eicCompleteness === "COMPLETE",
@@ -75,7 +96,7 @@ export function projectAssemblyProduction(
   const label =
     order.assemblyKind === SIGN_ASSEMBLY_ACM_LETTERS_V1 ? ASSEMBLY_OFFERING_LABEL : order.label;
   const body = {
-    schemaVersion: 1 as const,
+    schemaVersion: (siteInstallation ? 2 : 1) as 1 | 2,
     status: "ACCEPTED" as const,
     organizationId: order.organizationId,
     sourceOrderSnapshotId: order.orderSnapshotId,
@@ -86,10 +107,11 @@ export function projectAssemblyProduction(
     assemblyKind: order.assemblyKind,
     label,
     members,
-    assemblyOperations,
+    assemblyOperations: operations,
     eicTotal,
     eicCurrency: "EUR" as const,
     eicCompleteness,
+    ...(siteInstallation ? { siteInstallation } : {}),
   };
   return {
     ok: true,

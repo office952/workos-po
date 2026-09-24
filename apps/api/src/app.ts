@@ -58,6 +58,7 @@ const DEV_WEB_ORIGINS = [
   "http://127.0.0.1:5178",
   "http://127.0.0.1:5185",
   "http://127.0.0.1:5187",
+  "http://127.0.0.1:5191",
 ] as const;
 
 export type CreateAppOptions = {

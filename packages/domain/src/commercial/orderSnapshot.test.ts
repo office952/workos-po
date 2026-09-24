@@ -19,6 +19,7 @@ import {
   SVC_SITE_INSTALL_SUBCONTRACT_ID,
 } from "../resources/catalog.js";
 import { compileEic } from "../resources/eic.js";
+import { blankSiteInstallationFacts } from "../installation/facts.js";
 import { DEFAULT_COMMERCIAL_POLICY, type CommercialPolicy } from "./policy.js";
 import { projectCommercialPrice } from "./price.js";
 import { projectManualFixedServicePrice } from "./servicePrice.js";
@@ -422,21 +423,26 @@ describe("order snapshot freeze", () => {
       (current) => mapInstallLine(current, (line) => ({ ...line, commercialUnit: "job" })),
       (current) => mapInstallLine(current, (line) => ({ ...line, quantity: 99 })),
       (current) =>
-        mapInstallLine(current, (line) => ({
-          ...line,
-          technicalConfiguration: {
-            ...line.technicalConfiguration,
-            crewSize: 9,
-          },
-        })),
+        mapInstallLine(current, (line) =>
+          line.lineVersion === 2
+            ? {
+                ...line,
+                siteExecutionContext: { ...line.siteExecutionContext, crewSize: 9 },
+              }
+            : line,
+        ),
       (current) =>
-        mapInstallLine(current, (line) => ({
-          ...line,
-          technicalConfiguration: {
-            ...line.technicalConfiguration,
-            plannedDurationHours: 9,
-          },
-        })),
+        mapInstallLine(current, (line) =>
+          line.lineVersion === 2
+            ? {
+                ...line,
+                siteExecutionContext: {
+                  ...line.siteExecutionContext,
+                  plannedDurationHours: 9,
+                },
+              }
+            : line,
+        ),
       (current) =>
         mapInstallLine(current, (line) => ({
           ...line,
@@ -495,13 +501,14 @@ describe("order snapshot freeze", () => {
     const { quote, acceptance } = frozenAcceptedInstallQuote("INTERNAL");
     const stale = [
       mapInstallLine(quote, (line) => ({ ...line, sourceRequestId: "req:other" })),
-      mapInstallLine(quote, (line) => ({
-        ...line,
-        technicalConfiguration: {
-          ...line.technicalConfiguration,
-          facadeType: "GLASS",
-        },
-      })),
+      mapInstallLine(quote, (line) =>
+        line.lineVersion === 2
+          ? {
+              ...line,
+              hostContext: { ...line.hostContext, surfaceType: "GLASS" },
+            }
+          : line,
+      ),
       { ...quote, quoteSnapshotId: "qts:other:stale" },
     ];
     for (const tampered of stale) {
@@ -563,19 +570,15 @@ function frozenAcceptedInstallQuote(mode: "INTERNAL" | "SUBCONTRACTED") {
   if (!frozen.ok) {
     throw new Error("expected frozen install quote");
   }
-  const liveAcceptance = recordQuoteAcceptance(frozen.snapshot);
-  if (liveAcceptance.ok) {
-    throw new Error("live v2 acceptance must stay refused");
+  const liveAcceptance = recordQuoteAcceptance(frozen.snapshot, {
+    acceptedAt: "2026-09-04T01:00:00.000Z",
+  });
+  if (!liveAcceptance.ok) {
+    throw new Error("trusted service quote must accept");
   }
   return {
     quote: frozen.snapshot,
-    acceptance: {
-      acceptanceId: `qad:${frozen.snapshot.quoteSnapshotId}`,
-      schemaVersion: 1 as const,
-      quoteSnapshotId: frozen.snapshot.quoteSnapshotId,
-      quoteContentHash: frozen.snapshot.contentHash,
-      acceptedAt: "2026-09-04T01:00:00.000Z",
-    },
+    acceptance: liveAcceptance.decision,
   };
 }
 
@@ -587,14 +590,7 @@ function installFreezeInput(
       label: "Montaj la locație",
       providerMode: "INTERNAL",
       requestId: "req:os-s7-internal",
-      technicalConfiguration: {
-        measurementStatus: "OFFICE_MEASURED",
-        facadeType: "CONCRETE",
-        fixingMethod: "MECHANICAL_ANCHOR",
-        siteElectrical: "NOT_APPLICABLE",
-        crewSize: 3,
-        plannedDurationHours: 4,
-      },
+      facts: installFacts("req:os-s7-internal", 3, 4),
       evidence: {
         resourceId: LAB_SITE_INSTALL_ID,
         amount: 25,
@@ -634,14 +630,7 @@ function installFreezeInput(
     label: "Montaj la locație",
     providerMode: "SUBCONTRACTED",
     requestId: "req:os-s7-subcontract",
-    technicalConfiguration: {
-      measurementStatus: "OFFICE_MEASURED",
-      facadeType: "CONCRETE",
-      fixingMethod: "MECHANICAL_ANCHOR",
-      siteElectrical: "NOT_APPLICABLE",
-      crewSize: null,
-      plannedDurationHours: null,
-    },
+    facts: installFacts("req:os-s7-subcontract", null, null),
     evidence: {
       resourceId: SVC_SITE_INSTALL_SUBCONTRACT_ID,
       amount: 180,
@@ -687,6 +676,28 @@ function mapProductLine(
   return {
     ...quote,
     lines: quote.lines?.map((line) => (line.kind === "PRODUCT" ? update(line) : line)),
+  };
+}
+
+function installFacts(
+  requestId: string,
+  crewSize: number | null,
+  plannedDurationHours: number | null,
+) {
+  return {
+    ...blankSiteInstallationFacts({
+      requestId,
+      createdAt: "2026-09-04T00:00:00.000Z",
+    }),
+    version: 3,
+    street: "Strada Sintetică 1",
+    city: "Oraș Sintetic",
+    measurementStatus: "OFFICE_MEASURED" as const,
+    facadeType: "CONCRETE" as const,
+    fixingMethod: "MECHANICAL_ANCHOR" as const,
+    siteElectrical: "NOT_APPLICABLE" as const,
+    crewSize,
+    plannedDurationHours,
   };
 }
 

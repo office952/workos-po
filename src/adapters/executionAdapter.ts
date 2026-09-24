@@ -5,6 +5,7 @@ import type {
   ExecutionPlanTransport,
   ExecutionTaskTransport,
   PlannedResourceTransport,
+  SiteInstallationOperationalTransport,
 } from "../api/types";
 import { asNumber, asRecord, asString, asStringList } from "./record";
 
@@ -33,10 +34,38 @@ export function presentExecutionPlan(payload: unknown): ExecutionPlanTransport |
     progress: presentExecutionProgress(progress),
     sourceSnapshotId: asString(plan.sourceSnapshotId) ?? "",
     jobId: asString(job?.jobId) ?? asString(plan.jobId),
+    siteInstallation: presentSiteInstallation(record?.siteInstallation),
     tasks: tasks.flatMap((item) => {
       const presented = presentExecutionTask(item);
       return presented ? [presented] : [];
     }),
+  };
+}
+
+export function presentSiteInstallation(value: unknown): SiteInstallationOperationalTransport | null {
+  const row = asRecord(value);
+  const street = asString(row?.street);
+  const city = asString(row?.city);
+  const providerModeLabel = asString(row?.providerModeLabel);
+  if (!row || !street || !city || !providerModeLabel) {
+    return null;
+  }
+  return {
+    providerModeLabel,
+    siteName: asString(row.siteName),
+    street,
+    city,
+    surfaceTypeLabel: asString(row.surfaceTypeLabel) ?? "—",
+    mountingSurfaceWidthMm: asNumber(row.mountingSurfaceWidthMm),
+    mountingSurfaceHeightMm: asNumber(row.mountingSurfaceHeightMm),
+    fixingMethodLabel: asString(row.fixingMethodLabel) ?? "—",
+    installationElevationMm: asNumber(row.installationElevationMm),
+    siteElectricalLabel: asString(row.siteElectricalLabel) ?? "—",
+    accessNotes: asString(row.accessNotes),
+    contactName: asString(row.contactName),
+    contactPhone: asString(row.contactPhone),
+    crewSize: asNumber(row.crewSize),
+    plannedDurationHours: asNumber(row.plannedDurationHours),
   };
 }
 

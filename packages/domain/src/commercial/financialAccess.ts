@@ -431,11 +431,20 @@ function scopeFrozenSiteInstallationQuoteLine(
     quantity: line.quantity,
     commercialUnit: line.commercialUnit,
   };
+  if (line.lineVersion === 2) {
+    scoped.hostContext = line.hostContext;
+    scoped.mountingInterface = line.mountingInterface;
+    scoped.siteExecutionContext = {
+      ...line.siteExecutionContext,
+    };
+    delete (scoped.siteExecutionContext as { contactName?: string }).contactName;
+    delete (scoped.siteExecutionContext as { contactPhone?: string }).contactPhone;
+  }
   if (access === "workshop") {
     return scoped;
   }
-  scoped.commercialStrategy = line.commercialStrategy;
   scoped.providerMode = line.providerMode;
+  scoped.commercialStrategy = line.commercialStrategy;
   const commercial = scopeFrozenCommercial(
     line.commercial,
     access,
@@ -447,7 +456,9 @@ function scopeFrozenSiteInstallationQuoteLine(
   }
   if (access === "owner") {
     scoped.sourceRequestId = line.sourceRequestId;
-    scoped.technicalConfiguration = line.technicalConfiguration;
+    if (line.lineVersion === 1) {
+      scoped.technicalConfiguration = line.technicalConfiguration;
+    }
     const eic = scopeEic(line.eic, access);
     if (eic) {
       scoped.eic = eic;

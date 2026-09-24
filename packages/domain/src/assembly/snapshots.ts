@@ -1,4 +1,9 @@
-import type { FrozenCommercialOffer, FrozenJobCommercial } from "../commercial/quoteSnapshot.js";
+import type {
+  FrozenCommercialOffer,
+  FrozenJobCommercial,
+  FrozenSiteInstallationQuoteLineV2,
+} from "../commercial/quoteSnapshot.js";
+import type { SiteInstallationOperationalView } from "../installation/hostContext.js";
 import type { FrozenProductionInput, FrozenProductionOperation } from "../production/snapshot.js";
 import type { AssemblyKind, AssemblyMemberRole } from "./contract.js";
 
@@ -18,7 +23,7 @@ export type AssemblyQuoteMember = {
 
 export type AssemblyQuoteSnapshot = {
   quoteSnapshotId: string;
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   status: "FROZEN";
   organizationId: string;
   requestId: string | null;
@@ -33,6 +38,7 @@ export type AssemblyQuoteSnapshot = {
   members: readonly AssemblyQuoteMember[];
   relationCommercialPrice: null;
   totals: FrozenJobCommercial;
+  serviceLine?: FrozenSiteInstallationQuoteLineV2;
 };
 
 export type AssemblyOrderChild = {
@@ -57,7 +63,7 @@ export type AssemblyOrderChild = {
 
 export type AssemblyOrderSnapshot = {
   orderSnapshotId: string;
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   status: "FROZEN";
   organizationId: string;
   requestId: string | null;
@@ -74,6 +80,7 @@ export type AssemblyOrderSnapshot = {
   children: readonly AssemblyOrderChild[];
   relationCommercialPrice: null;
   totals: FrozenJobCommercial;
+  serviceLine?: FrozenSiteInstallationQuoteLineV2;
 };
 
 export type AssemblyProductionMember = {
@@ -89,7 +96,7 @@ export type AssemblyProductionMember = {
 
 export type AssemblyProductionSnapshot = {
   snapshotId: string;
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   status: "ACCEPTED";
   organizationId: string;
   sourceOrderSnapshotId: string;
@@ -106,4 +113,5 @@ export type AssemblyProductionSnapshot = {
   eicTotal: number;
   eicCurrency: "EUR";
   eicCompleteness: "COMPLETE" | "PARTIAL";
+  siteInstallation?: SiteInstallationOperationalView;
 };

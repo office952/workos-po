@@ -29,6 +29,7 @@ import {
   recipeForProcessScope,
 } from "../resources/recipes.js";
 import type { ResourceRequirement } from "../resources/requirement.js";
+import type { SiteInstallationOperationalView } from "../installation/hostContext.js";
 import { sha256Hex } from "./digest.js";
 
 export const ACCEPTED_PRODUCTION_SNAPSHOT_SCHEMA_VERSION = 1 as const;
@@ -160,6 +161,7 @@ export type AcceptedProductionSnapshot = {
   usedRecipes: readonly FrozenRecipeTrace[];
   usedFormulas?: readonly FrozenFormulaTrace[];
   eic: FrozenEicReference;
+  siteInstallation?: SiteInstallationOperationalView;
 };
 
 export type FrozenProductionWork = {

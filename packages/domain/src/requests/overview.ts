@@ -364,13 +364,14 @@ export function projectRequestDetail(input: {
   serviceOffer?: OrganizationServiceOffer;
   installationFacts?: SiteInstallationFacts | null;
   installationEvidence?: SiteInstallationEvidenceInput;
+  hasLinkedQuotes?: boolean;
   asOf?: string;
 }): RequestDetailProjection {
   const commercialProgress = deriveRequestCommercialProgress(input.quotes);
   const attachments = (input.attachments ?? []).map(projectRequestAttachment);
   const selected = input.request.optionalScopeIds.includes(SITE_INSTALLATION_SCOPE_ID);
   const installationFacts = selected ? (input.installationFacts ?? null) : null;
-  const hasLinkedQuotes = input.quotes.length > 0;
+  const hasLinkedQuotes = input.hasLinkedQuotes ?? input.quotes.length > 0;
   const nextAction = deriveRequestOverviewNextAction({
     status: input.request.status,
     quotes: input.quotes,

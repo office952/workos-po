@@ -13,6 +13,7 @@ import {
   noteRuntimePresent,
   freezeOrderSnapshot,
   freezeQuoteSnapshot,
+  isTrustedFrozenQuoteV2ForOrder,
   projectQuoteDocument,
   CODE_DEFAULT_POLICY_GUIDANCE,
   commercialPolicySourceLabel,
@@ -47,8 +48,6 @@ import {
   projectSiteInstallationScope,
   SERVICE_QUOTE_DOCUMENT_NOT_AUTHORIZED,
   SERVICE_QUOTE_DOCUMENT_NOT_AUTHORIZED_REASON,
-  SERVICE_QUOTE_FREEZE_NOT_AUTHORIZED,
-  SERVICE_QUOTE_FREEZE_NOT_AUTHORIZED_REASON,
   SITE_INSTALLATION_SCOPE_ID,
   siteInstallationEvidenceFromRows,
   siteInstallationFreezeRefusal,
@@ -725,22 +724,34 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         422,
       );
     }
-    const installationForFreeze = requestId
+    const installationReadiness = requestId
+      ? installationReadinessForRequest(runtime, requestId)
+      : null;
+    const installationForFreeze = installationReadiness
       ? projectSiteInstallationScope({
           selected: Boolean(
-            runtime
-              .readCommercialRequest(requestId)
-              ?.optionalScopeIds.includes(SITE_INSTALLATION_SCOPE_ID),
+            installationReadiness.request?.optionalScopeIds.includes(
+              SITE_INSTALLATION_SCOPE_ID,
+            ),
           ),
-          ...installationReadinessForRequest(runtime, requestId).readiness,
+          ...installationReadiness.readiness,
           policy: priced.resolution.policy,
         })
       : null;
-    if (installationForFreeze) {
+    const installationFacts = installationReadiness?.readiness.facts ?? null;
+    const installationMode = installationReadiness?.readiness.providerMode ?? null;
+    const installationEvidence =
+      installationMode === "INTERNAL"
+        ? installationReadiness?.readiness.evidence?.internalLabor
+        : installationReadiness?.readiness.evidence?.subcontract;
+    if (
+      installationForFreeze &&
+      (!installationFacts || !installationMode || !installationEvidence)
+    ) {
       return c.json(
         {
-          error: SERVICE_QUOTE_FREEZE_NOT_AUTHORIZED,
-          reasons: [SERVICE_QUOTE_FREEZE_NOT_AUTHORIZED_REASON],
+          error: "incomplete_offer",
+          reasons: ["Montajul selectat nu are faptele necesare pentru înghețare."],
         },
         422,
       );
@@ -762,6 +773,23 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
           compiled.resolvedTechnicalSettings,
         ),
         formulas: compiled.formulaTraces,
+        ...(installationForFreeze &&
+        installationFacts &&
+        installationMode &&
+        installationEvidence &&
+        requestId
+          ? {
+              installation: {
+                label: installationForFreeze.label,
+                eic: installationForFreeze.eic,
+                commercial: installationForFreeze.commercial,
+                providerMode: installationMode,
+                requestId,
+                facts: installationFacts,
+                evidence: installationEvidence,
+              },
+            }
+          : {}),
       },
     );
     if (!frozen.ok) {
@@ -834,7 +862,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       if (!snapshot || snapshot.productCode !== c.req.param("productCode")) {
         return c.json({ error: "not_found" }, 404);
       }
-      if (snapshot.schemaVersion === 2) {
+      if (snapshot.schemaVersion === 2 && !isTrustedFrozenQuoteV2ForOrder(snapshot)) {
         return c.json(
           {
             error: SERVICE_QUOTE_DOCUMENT_NOT_AUTHORIZED,
@@ -1106,6 +1134,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
             targetDateLabel: job?.targetDateLabel ?? null,
           }
         : null,
+      siteInstallation: snapshot?.siteInstallation ?? assemblyProduction?.siteInstallation ?? null,
     });
   });
 

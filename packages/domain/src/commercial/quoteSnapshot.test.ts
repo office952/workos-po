@@ -23,6 +23,7 @@ import {
 import { DEFAULT_COMMERCIAL_POLICY, type CommercialPolicy } from "./policy.js";
 import { projectCommercialPrice } from "./price.js";
 import { projectManualFixedProductPrice } from "./productPrice.js";
+import { projectQuoteDocument } from "./quoteDocument.js";
 import { projectManualFixedServicePrice } from "./servicePrice.js";
 import {
   PRODUCT_COMMERCIAL_STRATEGY,
@@ -34,6 +35,7 @@ import { freezeOrderSnapshot } from "./orderSnapshot.js";
 import { recordQuoteAcceptance } from "./quoteAcceptance.js";
 import { MANUAL_FIXED_SERVICE_STRATEGY } from "./servicePrice.js";
 import { LAB_SITE_INSTALL_ID } from "../resources/catalog.js";
+import { blankSiteInstallationFacts } from "../installation/facts.js";
 
 const readyValues: DraftValues = {
   "root.inscription": "WORKOS",
@@ -395,7 +397,14 @@ describe("quote snapshot freeze", () => {
         label: "Montaj la locație",
         providerMode: "INTERNAL",
         requestId: "req:prequote-v2",
-        technicalConfiguration: {
+        facts: {
+          ...blankSiteInstallationFacts({
+            requestId: "req:prequote-v2",
+            createdAt: "2026-09-02T00:00:00.000Z",
+          }),
+          version: 3,
+          street: "Strada Sintetică 1",
+          city: "Oraș Sintetic",
           measurementStatus: "OFFICE_MEASURED",
           facadeType: "CONCRETE",
           fixingMethod: "MECHANICAL_ANCHOR",
@@ -446,6 +455,7 @@ describe("quote snapshot freeze", () => {
     expect(withInstall.snapshot.contentHash).not.toBe(productOnly.snapshot.contentHash);
     expect(withInstall.snapshot.commercial.grossPrice).toBe(624.82);
     expect(withInstall.snapshot.jobCommercial?.grossPrice).toBe(866.82);
+    expect(withInstall.snapshot.truth).toEqual(productOnly.snapshot.truth);
     expect(withInstall.snapshot.lines).toHaveLength(2);
     const productLine = withInstall.snapshot.lines?.[0];
     const installLine = withInstall.snapshot.lines?.[1];
@@ -458,15 +468,16 @@ describe("quote snapshot freeze", () => {
       commercialStrategy: MANUAL_FIXED_SERVICE_STRATEGY,
       providerMode: "INTERNAL",
       sourceRequestId: "req:prequote-v2",
+      lineVersion: 2,
       quantity: 12,
       commercialUnit: "person_hour",
-      technicalConfiguration: {
+      hostContext: {
+        sourceFactsVersion: 3,
+        surfaceType: "CONCRETE",
         measurementStatus: "OFFICE_MEASURED",
-        facadeType: "CONCRETE",
+      },
+      mountingInterface: {
         fixingMethod: "MECHANICAL_ANCHOR",
-        siteElectrical: "NOT_APPLICABLE",
-        crewSize: 3,
-        plannedDurationHours: 4,
       },
       evidence: {
         resourceId: LAB_SITE_INSTALL_ID,
@@ -499,10 +510,7 @@ describe("quote snapshot freeze", () => {
           : line,
       ),
     })).toBe(false);
-    expect(recordQuoteAcceptance(withInstall.snapshot)).toMatchObject({
-      ok: false,
-      error: "service_quote_not_acceptable",
-    });
+    expect(recordQuoteAcceptance(withInstall.snapshot).ok).toBe(true);
     const ordered = freezeOrderSnapshot(withInstall.snapshot, {
       acceptanceId: "qad:os-s7",
       schemaVersion: 1,
@@ -517,6 +525,16 @@ describe("quote snapshot freeze", () => {
     expect(ordered.snapshot.schemaVersion).toBe(2);
     expect(ordered.snapshot.lines).toEqual(withInstall.snapshot.lines);
     expect(ordered.snapshot.jobCommercial).toEqual(withInstall.snapshot.jobCommercial);
+    const document = projectQuoteDocument(withInstall.snapshot);
+    expect(document.configuration).toEqual(
+      expect.arrayContaining([{ label: "Montaj la locație", value: "200,00 EUR" }]),
+    );
+    expect(document.configuration.filter((line) => line.label === "Produs")).toHaveLength(1);
+    expect(document.commercial.netLabel).toBe("Total ofertă");
+    expect(document.commercial.netPrice).toBe(withInstall.snapshot.jobCommercial?.netPrice);
+    const documentText = JSON.stringify(document);
+    expect(documentText).not.toMatch(/person_hour|OWNER_CONFIRMED|contentHash|qts:|subcontract/i);
+    expect(documentText).not.toContain("25,00");
   });
 
   it("freezes a manual product price when cost-plus is unavailable", () => {

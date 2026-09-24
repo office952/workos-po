@@ -261,6 +261,56 @@ describe("current operational eligibility", () => {
     ]);
   });
 
+  it("qualifies site installation through the generic skill mapping", () => {
+    const operator = person("Operator Montaj", "per:install");
+    const other = person("Alt Operator", "per:other");
+    const install = skill("SK_SITE_INSTALLATION", "skl:site-installation");
+    const assigned = assignPersonSkill({
+      personId: operator.personId,
+      skillId: install.skillId,
+      personStatus: "ACTIVE",
+      skillStatus: "ACTIVE",
+      existing: [],
+    });
+    expect(assigned.ok).toBe(true);
+    if (!assigned.ok) {
+      return;
+    }
+    const requirements = [{ capabilityId: "SITE_INSTALLATION" as const, skillId: install.skillId }];
+    expect(
+      resolveEligiblePeople({
+        capabilityId: "SITE_INSTALLATION",
+        people: [operator, other],
+        skills: [install],
+        assignments: [assigned.assignment],
+        requirements,
+      }).map((item) => item.personId),
+    ).toEqual(["per:install"]);
+    const retired = retirePersonSkill(assigned.assignment, "2026-09-24T00:00:00.000Z");
+    expect(retired.ok).toBe(true);
+    if (!retired.ok) {
+      return;
+    }
+    expect(
+      resolveEligiblePeople({
+        capabilityId: "SITE_INSTALLATION",
+        people: [operator],
+        skills: [install],
+        assignments: [retired.assignment],
+        requirements,
+      }),
+    ).toEqual([]);
+    expect(
+      diagnoseEligibility({
+        capabilityId: "SITE_INSTALLATION",
+        people: [other],
+        skills: [install],
+        assignments: [],
+        requirements,
+      })[0]?.reason,
+    ).toBe("MISSING_SKILL");
+  });
+
   it("keeps null eligibility permissive and empty mappings fail-closed", () => {
     const ana = person("Ana Noua", "per:ana");
     expect(

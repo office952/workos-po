@@ -176,7 +176,7 @@ function projectOfferLineLabels(snapshot: QuoteSnapshot): QuoteDocumentLine[] {
     return [];
   }
   return snapshot.lines.map((line) => ({
-    label: line.label,
+    label: line.kind === "PRODUCT" ? "Produs" : line.label,
     value: formatCustomerMoneyAmount(line.commercial.netPrice, line.commercial.currency),
   }));
 }
@@ -191,7 +191,7 @@ function projectCommercialLines(snapshot: QuoteSnapshot): QuoteDocumentCommercia
       }
     : snapshot.commercial;
   return {
-    netLabel: "Subtotal",
+    netLabel: snapshot.jobCommercial ? "Total ofertă" : "Subtotal",
     netDisplay: formatCustomerMoney(commercial.netPrice),
     vatLabel: `TVA ${commercial.vatPercent}%`,
     vatDisplay: formatCustomerMoney(commercial.vatAmount),

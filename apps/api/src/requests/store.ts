@@ -20,7 +20,11 @@ import { getCustomer } from "../customers/store.js";
 import { readOrganizationServiceOffer } from "../operationalServices/store.js";
 import type { SqliteDatabase } from "../persistence/sqlite.js";
 import { listActiveCostEvidence } from "../resources/store.js";
-import { deleteInstallationFacts, getInstallationFacts } from "./installationFacts.js";
+import {
+  deleteInstallationFacts,
+  getInstallationFacts,
+  requestHasLinkedQuotes,
+} from "./installationFacts.js";
 
 type OptionalServiceSelection = {
   scopeId: string;
@@ -278,17 +282,25 @@ function isRequestIdentityCollision(error: unknown): boolean {
   );
 }
 
-function requestHasLinkedQuotes(db: SqliteDatabase, requestId: string): boolean {
-  const row = db
-    .prepare(
-      `
-      SELECT 1 AS present
-      FROM commercial_request_quote_links
-      WHERE request_id = ?
-    `,
-    )
-    .get(requestId) as { present: number } | undefined;
-  return row !== undefined;
+export function persistAssemblyQuoteRequestLock(
+  db: SqliteDatabase,
+  requestId: string,
+  assemblyQuoteSnapshotId: string,
+  linkedAt = new Date().toISOString(),
+): { ok: true } | { ok: false; error: "not_found" } {
+  const request = getCommercialRequest(db, requestId);
+  if (!request) {
+    return { ok: false, error: "not_found" };
+  }
+  db.prepare(
+    `
+    INSERT INTO commercial_request_assembly_quote_links (
+      request_id, assembly_quote_snapshot_id, linked_at
+    ) VALUES (?, ?, ?)
+    ON CONFLICT(assembly_quote_snapshot_id) DO NOTHING
+  `,
+  ).run(requestId, assemblyQuoteSnapshotId, linkedAt);
+  return { ok: true };
 }
 
 export function persistUpdatedCommercialRequest(

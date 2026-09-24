@@ -153,6 +153,7 @@ describe("system projection API", () => {
       "INSPECT_FINISHED_ASSEMBLY",
       "INSPECT_FINISHED_LOGO",
       "MOUNT_LOGO_ON_PANEL",
+      "INSTALL_AT_SITE",
     ]);
     expect(
       body.processes.find((item) => item.id === "FORM_ALUMINIUM_PROFILE")
@@ -205,7 +206,7 @@ describe("system projection API", () => {
     expect((body.machines as Array<{ id: string }>).map((item) => item.id)).toContain(
       "MCH-CNC-4020",
     );
-    expect(body.overview.missingCapabilityCount).toBe(3);
+    expect(body.overview.missingCapabilityCount).toBe(4);
     expect(body.overview.workcenterCount).toBe(12);
     expect(body.overview.coveredCapabilityCount).toBe(14);
     expect(body.overview.capacityPlanningState).toBe("NOT_IMPLEMENTED");

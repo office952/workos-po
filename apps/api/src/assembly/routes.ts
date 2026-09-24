@@ -12,6 +12,7 @@ import {
   freezeAssemblyQuote,
   freezeProductionInput,
   freezeQuoteSnapshot,
+  freezeSiteInstallationQuoteLine,
   frozenTechnicalSettingsFromResolved,
   hashProductAggregate,
   hashProductTruth,
@@ -21,6 +22,10 @@ import {
   presentAssemblyReview,
   productCodeForRole,
   projectAssemblyProduction,
+  projectSiteInstallationScope,
+  SITE_INSTALLATION_SCOPE_ID,
+  siteInstallationEvidenceFromRows,
+  siteInstallationFreezeRefusal,
   type AssemblyKind,
   type AssemblyMemberRole,
   type ConfirmedChildProduct,
@@ -46,6 +51,7 @@ import {
   saveAssemblyTruth,
   saveConfirmedChild,
 } from "./store.js";
+import { persistAssemblyQuoteRequestLock } from "../requests/store.js";
 
 export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/assemblies/offering", (c) => {
@@ -273,16 +279,28 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       const child = readConfirmedChild(plane.db, plane.organizationId, member.confirmedTruthId);
       return child ? [child] : [];
     });
+    const service = assemblyServiceLine(runtime, current.truth.requestId);
+    if (!service.ok) {
+      return c.json({ error: service.error, reasons: service.reasons }, 422);
+    }
     const frozen = freezeAssemblyQuote({
       quoteSnapshotId: `asmq:${current.truth.assemblyTruthId}`,
       truth: current.truth,
       children,
       createdAt: new Date().toISOString(),
+      ...(service.line ? { serviceLine: service.line } : {}),
     });
     if (!frozen.ok) {
       return c.json({ error: frozen.error, reasons: frozen.reasons }, 422);
     }
     saveAssemblyQuote(plane.db, frozen.quote);
+    if (current.truth.requestId) {
+      persistAssemblyQuoteRequestLock(
+        plane.db,
+        current.truth.requestId,
+        frozen.quote.quoteSnapshotId,
+      );
+    }
     return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId) });
   });
 
@@ -396,6 +414,60 @@ function loadBundle(runtime: ReturnType<typeof getProductSystem>, assemblyId: st
     production,
     executionPlanId: execution?.plan.planId ?? null,
   };
+}
+
+function assemblyServiceLine(
+  runtime: ReturnType<typeof getProductSystem>,
+  requestId: string | null,
+) {
+  if (!requestId) {
+    return { ok: true, line: null };
+  }
+  const request = runtime.readCommercialRequest(requestId);
+  if (!request?.optionalScopeIds.includes(SITE_INSTALLATION_SCOPE_ID)) {
+    return { ok: true, line: null };
+  }
+  const detail = runtime.readRequestDetail(requestId);
+  const readiness = {
+    facts: detail?.installationFacts ?? null,
+    providerMode: request.siteInstallationMode,
+    evidence: siteInstallationEvidenceFromRows(runtime.listActiveCostEvidence()),
+    manualNetPrice: request.installationManualNetEur ?? null,
+  };
+  const refusal = siteInstallationFreezeRefusal(request.optionalScopeIds, readiness);
+  if (refusal) {
+    return { ok: false, error: refusal.error, reasons: refusal.reasons };
+  }
+  const policyResolution = runtime.resolveCommercialPolicy();
+  const projection = projectSiteInstallationScope({
+    selected: true,
+    ...readiness,
+    ...(policyResolution.ok ? { policy: policyResolution.policy } : {}),
+  });
+  const evidence =
+    readiness.providerMode === "INTERNAL"
+      ? readiness.evidence.internalLabor
+      : readiness.evidence.subcontract;
+  if (!projection || !readiness.facts || !readiness.providerMode || !evidence) {
+    return {
+      ok: false,
+      error: "incomplete_offer",
+      reasons: ["Montajul de ansamblu nu are faptele necesare pentru înghețare."],
+    };
+  }
+  const frozen = freezeSiteInstallationQuoteLine({
+    label: projection.label,
+    eic: projection.eic,
+    commercial: projection.commercial,
+    providerMode: readiness.providerMode,
+    requestId,
+    facts: readiness.facts,
+    evidence,
+  });
+  if (!frozen.ok) {
+    return frozen;
+  }
+  return { ok: true, line: frozen.line };
 }
 
 function readString(body: unknown, key: string): string | null {

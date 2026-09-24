@@ -188,6 +188,7 @@ describe("presentRequestPrimaryAction", () => {
     installationScope: null,
     installationFacts: null,
     canWriteInstallationFacts: false,
+    canWriteInstallationPrice: false,
   };
 
   it("does not show catalog when the next action is OPEN_QUOTE", () => {

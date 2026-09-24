@@ -73,6 +73,12 @@ export const OPERATIONAL_FOUNDATION_SKILLS: readonly TrustedSkillSeed[] = [
     displayLabel: METAL_CUTTING_OPERATOR_SKILL_LABEL,
     description: null,
   },
+  {
+    skillId: "skl:operational:site-installation",
+    code: "SK_SITE_INSTALLATION",
+    displayLabel: "Montaj la locație",
+    description: "Execută sau verifică operațional montajul la locație.",
+  },
 ];
 
 export const OPERATIONAL_FOUNDATION_CAPABILITY_SKILLS: ReadonlyArray<{
@@ -89,4 +95,5 @@ export const OPERATIONAL_FOUNDATION_CAPABILITY_SKILLS: ReadonlyArray<{
   { capabilityId: "VINYL_APPLICATION", skillCode: VINYL_APPLICATOR_SKILL_CODE },
   { capabilityId: "PAINTING", skillCode: PAINTING_SKILL_CODE },
   { capabilityId: "METAL_CUTTING", skillCode: METAL_CUTTING_OPERATOR_SKILL_CODE },
+  { capabilityId: "SITE_INSTALLATION", skillCode: "SK_SITE_INSTALLATION" },
 ];

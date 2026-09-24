@@ -249,6 +249,7 @@ import {
 import {
   getInstallationFacts,
   persistUpdatedInstallationFacts,
+  requestHasLinkedQuotes,
 } from "../requests/installationFacts.js";
 import {
   persistOrganizationServiceOffer,
@@ -1102,6 +1103,7 @@ export function createProductSystemRuntimeFromOpenDb(
         serviceOffer: readOrganizationServiceOffer(db),
         installationFacts: getInstallationFacts(db, request.requestId),
         installationEvidence: siteInstallationEvidenceFromRows(readActiveCostEvidence(db)),
+        hasLinkedQuotes: requestHasLinkedQuotes(db, request.requestId),
       });
     },
     listRequestAttachments(requestId) {
