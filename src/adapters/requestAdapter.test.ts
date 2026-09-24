@@ -129,4 +129,38 @@ describe("request adapter", () => {
     expect(detail?.nextAction).toBe("OPEN_QUOTE");
     expect(detail?.nextActionLabel).toBe("Deschide oferta");
   });
+
+  it("keeps facade and fixing other notes on the installation transport", () => {
+    const populated = presentRequestDetail({
+      detail: {
+        request: { requestId: "req-notes", title: "Note", customerId: "cus-1", status: "NEW" },
+        installationFacts: {
+          version: 2,
+          facadeType: "OTHER",
+          facadeOtherNote: "Panou compozit existent pe structură metalică",
+          fixingMethod: "OTHER",
+          fixingOtherNote: "Bride speciale existente",
+        },
+      },
+    });
+    expect(populated?.installationFacts?.facadeOtherNote).toBe(
+      "Panou compozit existent pe structură metalică",
+    );
+    expect(populated?.installationFacts?.fixingOtherNote).toBe("Bride speciale existente");
+
+    const empty = presentRequestDetail({
+      detail: {
+        request: { requestId: "req-empty", title: "Gol", customerId: "cus-1", status: "NEW" },
+        installationFacts: {
+          version: 1,
+          facadeType: "CONCRETE",
+          facadeOtherNote: null,
+          fixingMethod: "MECHANICAL_ANCHOR",
+          fixingOtherNote: null,
+        },
+      },
+    });
+    expect(empty?.installationFacts?.facadeOtherNote).toBeNull();
+    expect(empty?.installationFacts?.fixingOtherNote).toBeNull();
+  });
 });

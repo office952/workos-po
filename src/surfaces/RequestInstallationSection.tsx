@@ -48,11 +48,15 @@ type FactsDraft = {
   mountingSurfaceHeightMm: string;
   installationElevationMm: string;
   facadeType: string;
+  facadeOtherNote: string;
   fixingMethod: string;
+  fixingOtherNote: string;
   siteElectrical: string;
   crewSize: string;
   plannedDurationHours: string;
 };
+
+const OTHER_NOTE_MESSAGE = "Completează detaliile pentru opțiunea „Altul”.";
 
 function dimensionLabel(width: number | null | undefined, height: number | null | undefined): string {
   if (width == null && height == null) {
@@ -76,7 +80,9 @@ function draftFromFacts(facts: RequestInstallationFactsTransport | null): FactsD
     mountingSurfaceHeightMm: facts?.mountingSurfaceHeightMm?.toString() ?? "",
     installationElevationMm: facts?.installationElevationMm?.toString() ?? "",
     facadeType: facts?.facadeType || "UNCONFIRMED",
+    facadeOtherNote: facts?.facadeOtherNote ?? "",
     fixingMethod: facts?.fixingMethod || "UNCONFIRMED",
+    fixingOtherNote: facts?.fixingOtherNote ?? "",
     siteElectrical: facts?.siteElectrical || "UNCONFIRMED",
     crewSize: facts?.crewSize?.toString() ?? "",
     plannedDurationHours: facts?.plannedDurationHours?.toString() ?? "",
@@ -146,6 +152,7 @@ export function RequestInstallationSection({ detail }: RequestInstallationSectio
               key={editorKey}
               detail={detail}
               facts={facts}
+              mode={offer?.mode ?? null}
             />
           )}
           <InstallationPriceControl detail={detail} />
@@ -428,6 +435,9 @@ function RequestInstallationFactsReadout({
           label="Suprafață"
           value={presentFacadeTypeLabel(facts?.facadeType ?? "")}
         />
+        {facts?.facadeType === "OTHER" ? (
+          <InfoRow label="Tip suprafață — detalii" value={facts.facadeOtherNote || "—"} />
+        ) : null}
         <InfoRow
           label="Dimensiuni"
           value={dimensionLabel(facts?.mountingSurfaceWidthMm, facts?.mountingSurfaceHeightMm)}
@@ -436,6 +446,9 @@ function RequestInstallationFactsReadout({
           label="Fixare"
           value={presentFixingMethodLabel(facts?.fixingMethod ?? "")}
         />
+        {facts?.fixingMethod === "OTHER" ? (
+          <InfoRow label="Metodă de fixare — detalii" value={facts.fixingOtherNote || "—"} />
+        ) : null}
         <InfoRow
           label="Înălțime montaj"
           value={facts?.installationElevationMm == null ? "—" : `${facts.installationElevationMm} mm`}
@@ -464,13 +477,18 @@ function RequestInstallationFactsReadout({
 function RequestInstallationFactsEditor({
   detail,
   facts,
+  mode,
 }: {
   detail: RequestDetailTransport;
   facts: RequestInstallationFactsTransport | null;
+  mode: string | null;
 }) {
   const [draft, setDraft] = useState<FactsDraft>(() => draftFromFacts(facts));
   const [saveState, setSaveState] = useState<"idle" | "pending" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [facadeNoteError, setFacadeNoteError] = useState<string | undefined>(undefined);
+  const [fixingNoteError, setFixingNoteError] = useState<string | undefined>(undefined);
+  const internalMode = mode === "INTERNAL";
 
   async function save(): Promise<void> {
     const width = readOptionalNumber(draft.mountingSurfaceWidthMm);
@@ -478,13 +496,23 @@ function RequestInstallationFactsEditor({
     const elevation = readOptionalNumber(draft.installationElevationMm);
     const crewSize = readOptionalNumber(draft.crewSize);
     const plannedDurationHours = readOptionalNumber(draft.plannedDurationHours);
-    if (
-      [width, height, elevation, crewSize, plannedDurationHours].some((value) =>
-        Number.isNaN(value),
-      )
-    ) {
+    const numericValues = internalMode
+      ? [width, height, elevation, crewSize, plannedDurationHours]
+      : [width, height, elevation];
+    if (numericValues.some((value) => Number.isNaN(value))) {
       setSaveState("error");
       setSaveError("Valorile numerice nu sunt valide.");
+      return;
+    }
+    const facadeNote = draft.facadeOtherNote.trim();
+    const fixingNote = draft.fixingOtherNote.trim();
+    const facadeNoteMissing = draft.facadeType === "OTHER" && facadeNote === "";
+    const fixingNoteMissing = draft.fixingMethod === "OTHER" && fixingNote === "";
+    setFacadeNoteError(facadeNoteMissing ? OTHER_NOTE_MESSAGE : undefined);
+    setFixingNoteError(fixingNoteMissing ? OTHER_NOTE_MESSAGE : undefined);
+    if (facadeNoteMissing || fixingNoteMissing) {
+      setSaveState("error");
+      setSaveError(OTHER_NOTE_MESSAGE);
       return;
     }
     setSaveState("pending");
@@ -506,10 +534,11 @@ function RequestInstallationFactsEditor({
           mountingSurfaceHeightMm: height,
           installationElevationMm: elevation,
           facadeType: draft.facadeType,
+          facadeOtherNote: draft.facadeType === "OTHER" ? facadeNote : null,
           fixingMethod: draft.fixingMethod,
+          fixingOtherNote: draft.fixingMethod === "OTHER" ? fixingNote : null,
           siteElectrical: draft.siteElectrical,
-          crewSize,
-          plannedDurationHours,
+          ...(internalMode ? { crewSize, plannedDurationHours } : {}),
         }),
       );
       if (presented) {
@@ -520,10 +549,16 @@ function RequestInstallationFactsEditor({
     } catch (error) {
       setSaveState("error");
       const code = error instanceof TransportError ? readTransportErrorCode(error.body) : null;
+      if (code === "other_note_required") {
+        setFacadeNoteError(draft.facadeType === "OTHER" ? OTHER_NOTE_MESSAGE : undefined);
+        setFixingNoteError(draft.fixingMethod === "OTHER" ? OTHER_NOTE_MESSAGE : undefined);
+      }
       setSaveError(
         code === "installation_facts_locked"
           ? "Datele de montaj nu mai pot fi editate."
-          : "Datele de montaj nu au putut fi salvate.",
+          : code === "other_note_required"
+            ? OTHER_NOTE_MESSAGE
+            : "Datele de montaj nu au putut fi salvate.",
       );
     }
   }
@@ -619,15 +654,51 @@ function RequestInstallationFactsEditor({
         label="Fațadă"
         value={draft.facadeType}
         options={FACADE_TYPE_OPTIONS}
-        onChange={(value) => setDraft((current) => ({ ...current, facadeType: value }))}
+        onChange={(value) =>
+          setDraft((current) => ({
+            ...current,
+            facadeType: value,
+            facadeOtherNote: value === "OTHER" ? current.facadeOtherNote : "",
+          }))
+        }
       />
+      {draft.facadeType === "OTHER" ? (
+        <TextField
+          id="install-facade-note"
+          label="Tip suprafață — detalii"
+          value={draft.facadeOtherNote}
+          error={facadeNoteError}
+          onChange={(value) => {
+            setFacadeNoteError(undefined);
+            setDraft((current) => ({ ...current, facadeOtherNote: value }));
+          }}
+        />
+      ) : null}
       <SelectField
         id="install-fixing"
         label="Prindere"
         value={draft.fixingMethod}
         options={FIXING_METHOD_OPTIONS}
-        onChange={(value) => setDraft((current) => ({ ...current, fixingMethod: value }))}
+        onChange={(value) =>
+          setDraft((current) => ({
+            ...current,
+            fixingMethod: value,
+            fixingOtherNote: value === "OTHER" ? current.fixingOtherNote : "",
+          }))
+        }
       />
+      {draft.fixingMethod === "OTHER" ? (
+        <TextField
+          id="install-fixing-note"
+          label="Metodă de fixare — detalii"
+          value={draft.fixingOtherNote}
+          error={fixingNoteError}
+          onChange={(value) => {
+            setFixingNoteError(undefined);
+            setDraft((current) => ({ ...current, fixingOtherNote: value }));
+          }}
+        />
+      ) : null}
       <SelectField
         id="install-electrical"
         label="Racord electric"
@@ -635,22 +706,26 @@ function RequestInstallationFactsEditor({
         options={ELECTRICAL_STATE_OPTIONS}
         onChange={(value) => setDraft((current) => ({ ...current, siteElectrical: value }))}
       />
-      <TextField
-        id="install-crew"
-        label="Echipă"
-        inputMode="decimal"
-        value={draft.crewSize}
-        onChange={(value) => setDraft((current) => ({ ...current, crewSize: value }))}
-      />
-      <TextField
-        id="install-duration"
-        label="Durată planificată (ore)"
-        inputMode="decimal"
-        value={draft.plannedDurationHours}
-        onChange={(value) =>
-          setDraft((current) => ({ ...current, plannedDurationHours: value }))
-        }
-      />
+      {internalMode ? (
+        <>
+          <TextField
+            id="install-crew"
+            label="Echipă"
+            inputMode="decimal"
+            value={draft.crewSize}
+            onChange={(value) => setDraft((current) => ({ ...current, crewSize: value }))}
+          />
+          <TextField
+            id="install-duration"
+            label="Durată planificată (ore)"
+            inputMode="decimal"
+            value={draft.plannedDurationHours}
+            onChange={(value) =>
+              setDraft((current) => ({ ...current, plannedDurationHours: value }))
+            }
+          />
+        </>
+      ) : null}
       <Button disabled={saveState === "pending"} onClick={() => void save()}>
         Salvează datele de montaj
       </Button>

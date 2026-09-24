@@ -166,6 +166,39 @@ describe("site installation facts", () => {
     ).toEqual({ ok: false, error: "invalid_site_electrical" });
   });
 
+  it("drops a stale other-note when the selector leaves OTHER", () => {
+    const current = {
+      ...blankSiteInstallationFacts({
+        requestId,
+        createdAt: "2026-09-02T00:00:00.000Z",
+      }),
+      version: 2,
+      facadeType: "OTHER" as const,
+      facadeOtherNote: "Notă veche de fațadă",
+      fixingMethod: "OTHER" as const,
+      fixingOtherNote: "Notă veche de fixare",
+    };
+    const applied = applySiteInstallationFactsPatch({
+      selected: true,
+      hasLinkedQuotes: false,
+      current,
+      requestId,
+      expectedVersion: 2,
+      patch: {
+        facadeType: "CONCRETE",
+        facadeOtherNote: "Notă veche de fațadă",
+        fixingMethod: "MECHANICAL_ANCHOR",
+        fixingOtherNote: "Notă veche de fixare",
+      },
+    });
+    expect(applied.ok).toBe(true);
+    if (!applied.ok) {
+      return;
+    }
+    expect(applied.facts.facadeOtherNote).toBeNull();
+    expect(applied.facts.fixingOtherNote).toBeNull();
+  });
+
   it("refuses write when unselected or locked and does not default to NOT_APPLICABLE", () => {
     expect(
       applySiteInstallationFactsPatch({

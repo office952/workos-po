@@ -506,6 +506,9 @@ function mergeFactsPatch(
     }
     next = { ...next, facadeOtherNote };
   }
+  if (patch.facadeType !== undefined && next.facadeType !== "OTHER") {
+    next = { ...next, facadeOtherNote: null };
+  }
   if (patch.fixingMethod !== undefined) {
     if (!isSiteInstallationFixingMethod(patch.fixingMethod)) {
       return { ok: false, error: "invalid_fixing_method" };
@@ -525,6 +528,9 @@ function mergeFactsPatch(
       return { ok: false, error: "invalid_access_notes" };
     }
     next = { ...next, fixingOtherNote };
+  }
+  if (patch.fixingMethod !== undefined && next.fixingMethod !== "OTHER") {
+    next = { ...next, fixingOtherNote: null };
   }
   if (patch.siteElectrical !== undefined) {
     if (!isSiteInstallationElectricalState(patch.siteElectrical)) {

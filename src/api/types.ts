@@ -305,7 +305,9 @@ export type RequestInstallationFactsTransport = {
   mountingSurfaceHeightMm: number | null;
   installationElevationMm: number | null;
   facadeType: string;
+  facadeOtherNote: string | null;
   fixingMethod: string;
+  fixingOtherNote: string | null;
   siteElectrical: string;
   crewSize: number | null;
   plannedDurationHours: number | null;

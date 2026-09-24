@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetResourceCache } from "../data/resourceCache";
@@ -568,6 +568,100 @@ describe("RequestDetailPage", () => {
     expect(screen.queryByRole("button", { name: "Adaugă montaj" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Elimină montaj" })).toBeEnabled();
   });
+
+  it("saves a populated facade other note and hides it for a normal facade", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubFactsSave(editableInstallationDetail({
+      facadeType: "OTHER",
+      facadeOtherNote: "Panou compozit existent pe structură metalică",
+    }));
+
+    render(<RequestDetailPage requestId="req-1" />);
+    expect(await screen.findByLabelText("Tip suprafață — detalii")).toHaveValue(
+      "Panou compozit existent pe structură metalică",
+    );
+    await user.click(screen.getByRole("button", { name: "Salvează datele de montaj" }));
+    await waitFor(() => expect(readFactsPatches(fetchMock)).toHaveLength(1));
+    expect(readFactsPatches(fetchMock)[0]).toMatchObject({
+      facadeType: "OTHER",
+      facadeOtherNote: "Panou compozit existent pe structură metalică",
+      fixingOtherNote: null,
+    });
+
+    await user.selectOptions(screen.getByLabelText("Fațadă"), "CONCRETE");
+    expect(screen.queryByLabelText("Tip suprafață — detalii")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Salvează datele de montaj" }));
+    await waitFor(() => expect(readFactsPatches(fetchMock)).toHaveLength(2));
+    expect(readFactsPatches(fetchMock)[1]).toMatchObject({
+      facadeType: "CONCRETE",
+      facadeOtherNote: null,
+      fixingMethod: "MECHANICAL_ANCHOR",
+      fixingOtherNote: null,
+    });
+  });
+
+  it("saves a populated fixing other note", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubFactsSave(editableInstallationDetail({
+      fixingMethod: "OTHER",
+      fixingOtherNote: "Bride speciale existente",
+    }));
+
+    render(<RequestDetailPage requestId="req-1" />);
+    expect(await screen.findByLabelText("Metodă de fixare — detalii")).toHaveValue(
+      "Bride speciale existente",
+    );
+    await user.click(screen.getByRole("button", { name: "Salvează datele de montaj" }));
+    await waitFor(() => expect(readFactsPatches(fetchMock)).toHaveLength(1));
+    expect(readFactsPatches(fetchMock)[0]).toMatchObject({
+      fixingMethod: "OTHER",
+      fixingOtherNote: "Bride speciale existente",
+    });
+  });
+
+  it("explains a missing other-option detail instead of a generic save failure", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubFactsSave(editableInstallationDetail());
+
+    render(<RequestDetailPage requestId="req-1" />);
+    await user.selectOptions(await screen.findByLabelText("Fațadă"), "OTHER");
+    await user.click(screen.getByRole("button", { name: "Salvează datele de montaj" }));
+    expect(screen.getAllByText("Completează detaliile pentru opțiunea „Altul”.").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Datele de montaj nu au putut fi salvate.")).not.toBeInTheDocument();
+    expect(readFactsPatches(fetchMock)).toHaveLength(0);
+  });
+
+  it("shows crew only for internal installation and omits it after subcontracting", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubFactsSave(
+      editableInstallationDetail({
+        canChangeMode: true,
+        availableModes: ["INTERNAL", "SUBCONTRACTED"],
+        crewSize: 2,
+        plannedDurationHours: 3,
+      }),
+      editableInstallationDetail({
+        mode: "SUBCONTRACTED",
+        canChangeMode: true,
+        availableModes: ["INTERNAL", "SUBCONTRACTED"],
+        crewSize: 2,
+        plannedDurationHours: 3,
+      }),
+    );
+
+    render(<RequestDetailPage requestId="req-1" />);
+    expect(await screen.findByLabelText("Echipă")).toHaveValue("2");
+    expect(screen.getByLabelText("Durată planificată (ore)")).toHaveValue("3");
+    await user.selectOptions(screen.getByLabelText("Mod montaj"), "SUBCONTRACTED");
+    await waitFor(() => expect(screen.queryByLabelText("Echipă")).not.toBeInTheDocument());
+    expect(screen.queryByLabelText("Durată planificată (ore)")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Subcontractat").length).toBeGreaterThan(0);
+    await user.click(screen.getByRole("button", { name: "Salvează datele de montaj" }));
+    await waitFor(() => expect(readFactsPatches(fetchMock)).toHaveLength(1));
+    const body = readFactsPatches(fetchMock)[0] as Record<string, unknown>;
+    expect(body).not.toHaveProperty("crewSize");
+    expect(body).not.toHaveProperty("plannedDurationHours");
+  });
 });
 
 function selectableOffer(overrides: Record<string, unknown> = {}) {
@@ -597,6 +691,78 @@ function readPatchBodies(fetchMock: ReturnType<typeof vi.fn>): unknown[] {
         String(call[0]).endsWith("/api/requests/req-1") && call[1]?.method === "PATCH",
     )
     .map((call) => JSON.parse(String(call[1]?.body ?? "{}")));
+}
+
+function editableInstallationDetail(overrides: Record<string, unknown> = {}) {
+  const mode = overrides.mode;
+  const canChangeMode = overrides.canChangeMode;
+  const availableModes = overrides.availableModes;
+  const facts = { ...overrides };
+  delete facts.mode;
+  delete facts.canChangeMode;
+  delete facts.availableModes;
+  return requestDetail({
+    installationOffer: selectableOffer({
+      selected: true,
+      mode: mode ?? "INTERNAL",
+      canChangeMode: canChangeMode ?? false,
+      showModeControl: false,
+      availableModes: availableModes ?? ["INTERNAL"],
+    }),
+    canWriteInstallationFacts: true,
+    installationFacts: {
+      version: 1,
+      siteName: null,
+      street: "Strada Sintetică 1",
+      city: "Oraș Sintetic",
+      county: null,
+      postalCode: null,
+      contactName: null,
+      contactPhone: null,
+      accessNotes: null,
+      measurementStatus: "CUSTOMER_PROVIDED",
+      mountingSurfaceWidthMm: null,
+      mountingSurfaceHeightMm: null,
+      installationElevationMm: null,
+      facadeType: "CONCRETE",
+      facadeOtherNote: null,
+      fixingMethod: "MECHANICAL_ANCHOR",
+      fixingOtherNote: null,
+      siteElectrical: "EXCLUDED_CUSTOMER_RESPONSIBILITY",
+      crewSize: 2,
+      plannedDurationHours: 3,
+      ...facts,
+    },
+  });
+}
+
+function readFactsPatches(fetchMock: ReturnType<typeof vi.fn>): unknown[] {
+  return fetchMock.mock.calls
+    .filter(
+      (call) => String(call[0]).includes("/installation-facts") && call[1]?.method === "PATCH",
+    )
+    .map((call) => JSON.parse(String(call[1]?.body ?? "{}")));
+}
+
+function stubFactsSave(initial: unknown, afterModeChange?: unknown) {
+  let current = initial;
+  const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+    const url = String(input);
+    if (
+      url.endsWith("/api/requests/req-1") &&
+      init?.method === "PATCH" &&
+      afterModeChange
+    ) {
+      current = afterModeChange;
+    }
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: async () => ({ detail: current }),
+    });
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
 }
 
 function stubOfferMutation(initial: unknown, next: unknown) {

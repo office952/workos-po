@@ -623,6 +623,7 @@ function freezeJobQuoteFields(input: {
   const contexts = freezeSiteInstallationContexts(
     input.installation.facts,
     input.installation.requestId,
+    input.installation.providerMode,
   );
   if (!contexts) {
     return {

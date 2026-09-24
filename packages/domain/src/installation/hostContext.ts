@@ -66,6 +66,7 @@ const COMPLETABLE_ELECTRICAL = new Set<SiteInstallationElectricalState>([
 export function freezeSiteInstallationContexts(
   facts: SiteInstallationFacts,
   requestId: string,
+  providerMode?: "INTERNAL" | "SUBCONTRACTED",
 ): FrozenSiteInstallationContexts | null {
   if (facts.requestId !== requestId || facts.version < 1) {
     return null;
@@ -119,6 +120,7 @@ export function freezeSiteInstallationContexts(
     fixingMethod: facts.fixingMethod,
     ...optionalText("fixingOtherNote", facts.fixingOtherNote),
   };
+  const includeInternalCrew = providerMode !== "SUBCONTRACTED";
   const siteExecutionContext: FrozenSiteExecutionContextV1 = {
     schemaVersion: FROZEN_SITE_EXECUTION_CONTEXT_SCHEMA_VERSION,
     ...optionalText("siteName", facts.siteName),
@@ -132,8 +134,10 @@ export function freezeSiteInstallationContexts(
     ...optionalText("accessNotes", facts.accessNotes),
     ...(elevation !== undefined ? { installationElevationMm: elevation } : {}),
     siteElectrical: facts.siteElectrical,
-    ...(facts.crewSize && facts.crewSize > 0 ? { crewSize: facts.crewSize } : {}),
-    ...(facts.plannedDurationHours && facts.plannedDurationHours > 0
+    ...(includeInternalCrew && facts.crewSize && facts.crewSize > 0
+      ? { crewSize: facts.crewSize }
+      : {}),
+    ...(includeInternalCrew && facts.plannedDurationHours && facts.plannedDurationHours > 0
       ? { plannedDurationHours: facts.plannedDurationHours }
       : {}),
   };

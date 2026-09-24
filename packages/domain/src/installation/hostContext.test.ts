@@ -86,4 +86,18 @@ describe("frozen host context", () => {
       ),
     ).not.toBeNull();
   });
+
+  it("keeps crew on an internal freeze and omits it from a subcontracted freeze", () => {
+    const internal = freezeSiteInstallationContexts(readyFacts(), "req:synthetic", "INTERNAL");
+    expect(internal?.siteExecutionContext.crewSize).toBe(2);
+    expect(internal?.siteExecutionContext.plannedDurationHours).toBe(3);
+    const subcontracted = freezeSiteInstallationContexts(
+      readyFacts(),
+      "req:synthetic",
+      "SUBCONTRACTED",
+    );
+    expect(subcontracted?.siteExecutionContext).not.toHaveProperty("crewSize");
+    expect(subcontracted?.siteExecutionContext).not.toHaveProperty("plannedDurationHours");
+    expect(subcontracted?.hostContext.surfaceType).toBe("CONCRETE");
+  });
 });
