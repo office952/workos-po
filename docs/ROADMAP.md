@@ -342,7 +342,7 @@ Primary User Journey is complete. Configuration-First remains canonical: changea
 
 Architecture ownership: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
-Product Enablement Admin V1 is complete after Owner acceptance and merge of PR #19. Letters Product Truth V1 and ACM Product Truth V1 remain complete. People and Machine Admin V1 is complete. Standalone CF5 is not required first. Remaining Configuration-First work is domain-by-domain when actual product work requires it. Execution Expansion V1 is Owner-accepted and integrated. Current program is Planning Workload V1. PLN1 is Owner-accepted. PLN2 and Operations Control V1 are Owner-accepted. PLN3 is not started. Next wave is unauthorized.
+Product Enablement Admin V1 is complete after Owner acceptance and merge of PR #19. Letters Product Truth V1 and ACM Product Truth V1 remain complete. People and Machine Admin V1 is complete. Standalone CF5 is not required first. Remaining Configuration-First work is domain-by-domain when actual product work requires it. Execution Expansion V1 is Owner-accepted and integrated. Planning Workload V1 remains Owner-accepted; the living global program is owned by the Current program section of this roadmap. PLN1 is Owner-accepted. PLN2 and Operations Control V1 are Owner-accepted. PLN3 is not started. Next wave is unauthorized.
 
 ```text
 WORKOS = CONFIGURATION-FIRST BUSINESS ENGINE
@@ -450,7 +450,7 @@ After CF4, preferred living sequence:
 5. execution expansion
 6. planning / workload
 
-Letters Product Truth V1, ACM Product Truth V1, Product Enablement Admin V1, and People and Machine Admin V1 are complete. Execution Expansion V1 is Owner-accepted and integrated. Living program is Planning Workload V1. PLN1, PLN2, and Operations Control V1 are Owner-accepted. The previous CAP0 weekly-capacity contract is superseded in part. PLN0 is canon correction only. Weekly provider `availableMinutes` is cancelled. Member DAG / composition corrections remain deferred and are not a Planning blocker. CF5 remains NOT_STARTED and is not selected.
+Letters Product Truth V1, ACM Product Truth V1, Product Enablement Admin V1, and People and Machine Admin V1 are complete. Execution Expansion V1 is Owner-accepted and integrated. Planning Workload V1 is Owner-accepted. The living global program is owned by the Current program section of this roadmap. PLN1, PLN2, and Operations Control V1 are Owner-accepted. The previous CAP0 weekly-capacity contract is superseded in part. PLN0 is canon correction only. Weekly provider `availableMinutes` is cancelled. Member DAG / composition corrections remain deferred and are not a Planning blocker. CF5 remains NOT_STARTED and is not selected.
 
 ## ACM Product Truth V1
 
