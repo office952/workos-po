@@ -327,6 +327,7 @@ export function scopeExecutionPlanView(
     sourceKindLabel: view.sourceKindLabel,
     jobHref: view.jobHref,
     tasks: view.tasks,
+    timeSummary: view.timeSummary,
   };
   if (access === "owner") {
     scoped.actualInternalCost = view.actualInternalCost;

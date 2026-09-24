@@ -10,6 +10,8 @@ import {
   buildActualConsumption,
   type ActualConsumptionLineInput,
 } from "./consumption.js";
+import { parseActualDurationMinutes } from "./actualDuration.js";
+import { activeMachineRun } from "./machineRun.js";
 import { parsePlannedEffortMinutes } from "./plannedEffort.js";
 import {
   COMPLETION_NOTE_MAX_LENGTH,
@@ -48,6 +50,11 @@ export const TASK_MUTATION_ERRORS = [
   "invalid_unit",
   "invalid_resource",
   "invalid_note",
+  "invalid_actual_duration",
+  "machine_run_not_allowed",
+  "machine_run_active",
+  "machine_run_not_found",
+  "machine_run_closed",
 ] as const;
 export type TaskMutationError = (typeof TASK_MUTATION_ERRORS)[number];
 
@@ -59,6 +66,7 @@ export type TaskCompletionInput = {
   completedQuantity?: number;
   note?: string;
   actualConsumption?: readonly ActualConsumptionLineInput[];
+  actualDurationMinutes?: number | null;
 };
 
 export function assignProviderToTask(
@@ -329,6 +337,13 @@ export function completeExecutionTask(
       return { ok: false, error: "wrong_executor" };
     }
   }
+  if (activeMachineRun(task)) {
+    return { ok: false, error: "machine_run_active" };
+  }
+  const duration = parseActualDurationMinutes(input.actualDurationMinutes);
+  if (!duration.ok) {
+    return duration;
+  }
   const completion = buildCompletionEvidence(task, input);
   if (!completion.ok) {
     return completion;
@@ -344,6 +359,7 @@ export function completeExecutionTask(
       ...task,
       status: "COMPLETED",
       completedAt,
+      actualDurationMinutes: duration.actualDurationMinutes,
       completion: completion.evidence,
       actualConsumption: actuals.entries,
     }),

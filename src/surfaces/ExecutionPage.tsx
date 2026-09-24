@@ -4,6 +4,8 @@ import {
   assignTaskProvider,
   completeExecutionTask,
   startExecutionTask,
+  startMachineRun,
+  stopMachineRun,
 } from "../api/lifecycle";
 import type {
   EligibleProviderTransport,
@@ -36,6 +38,7 @@ import {
   canEditActualConsumption,
   collectActualConsumptionInput,
 } from "../presentation/executionActuals";
+import { parseActualDurationDraft } from "../presentation/actualDuration";
 import { presentExecutionCompletionError } from "../presentation/executionCompletionError";
 import {
   presentCurrentTaskRole,
@@ -226,6 +229,7 @@ export function ExecutionPage({
   const [actionState, setActionState] = useState<"idle" | "pending" | "error">("idle");
   const [actionError, setActionError] = useState<string | null>(null);
   const [actualDrafts, setActualDrafts] = useState<Record<string, string>>({});
+  const [durationDrafts, setDurationDrafts] = useState<Record<string, string>>({});
   const [resourceActualDrafts, setResourceActualDrafts] = useState<Record<string, string>>(
     {},
   );
@@ -275,6 +279,44 @@ export function ExecutionPage({
     }
   }
 
+  async function startRun(task: ExecutionTaskTransport): Promise<void> {
+    setActionState("pending");
+    setActionError(null);
+    try {
+      await startMachineRun(task.taskId);
+      setActionState("idle");
+      invalidateAfterExecutionTaskChange(planId);
+    } catch (error) {
+      setActionState("error");
+      setActionError(
+        error instanceof TransportError
+          ? "Rularea utilajului nu poate fi pornită."
+          : "Pornirea utilajului a eșuat.",
+      );
+    }
+  }
+
+  async function stopRun(task: ExecutionTaskTransport): Promise<void> {
+    const machineRunId = task.machineRuns.find((run) => run.active)?.machineRunId;
+    if (!machineRunId) {
+      return;
+    }
+    setActionState("pending");
+    setActionError(null);
+    try {
+      await stopMachineRun(machineRunId);
+      setActionState("idle");
+      invalidateAfterExecutionTaskChange(planId);
+    } catch (error) {
+      setActionState("error");
+      setActionError(
+        error instanceof TransportError
+          ? "Rularea utilajului nu poate fi oprită."
+          : "Oprirea utilajului a eșuat.",
+      );
+    }
+  }
+
   async function start(task: ExecutionTaskTransport): Promise<void> {
     setActionState("pending");
     setActionError(null);
@@ -317,6 +359,15 @@ export function ExecutionPage({
       if (collected.actualConsumption) {
         completionInput.actualConsumption = collected.actualConsumption;
       }
+    }
+    const duration = parseActualDurationDraft(durationDrafts[task.taskId] ?? "");
+    if (!duration.ok) {
+      setActionState("error");
+      setActionError("Timpul efectiv trebuie să fie un număr întreg de minute, zero sau pozitiv.");
+      return;
+    }
+    if (duration.actualDurationMinutes !== undefined) {
+      completionInput.actualDurationMinutes = duration.actualDurationMinutes;
     }
     setActionState("pending");
     setActionError(null);
@@ -409,6 +460,11 @@ export function ExecutionPage({
             <dl className="fact-grid">
               <InfoRow label="Zonă" value={currentTask.scopeLabel} />
               <InfoRow label="Alocare" value={currentTask.assignmentLabel} />
+              <InfoRow label="Timp planificat" value={currentTask.plannedTimeLabel} />
+              <InfoRow label="Timp efectiv" value={currentTask.actualDurationLabel} />
+              {currentTask.timeVarianceLabel ? (
+                <InfoRow label="Diferență timp" value={currentTask.timeVarianceLabel} />
+              ) : null}
               {currentTask.executorLabel || currentTask.startedByLabel ? (
                 <InfoRow
                   label="Operator sarcină"
@@ -493,6 +549,45 @@ export function ExecutionPage({
                   .join(", ")}
               </p>
             ) : null}
+            {(currentTask.canComplete || currentTask.completionBlockedByActiveMachineRun) &&
+            currentTask.status !== "COMPLETED" ? (
+              <TextField
+                id={`actual-duration-${currentTask.taskId}`}
+                label="Timp efectiv (minute)"
+                value={durationDrafts[currentTask.taskId] ?? ""}
+                inputMode="numeric"
+                disabled={actionState === "pending"}
+                onChange={(value) => {
+                  setDurationDrafts((currentDrafts) => ({
+                    ...currentDrafts,
+                    [currentTask.taskId]: value,
+                  }));
+                }}
+              />
+            ) : null}
+            {currentTask.canStartMachineRun ||
+            currentTask.canStopMachineRun ||
+            currentTask.machineRuns.length > 0 ? (
+              <div className="stack" data-testid="machine-run">
+                {currentTask.canStopMachineRun ? (
+                  <>
+                    <p>Utilaj: {currentTask.activeMachineRunLabel}</p>
+                    <p>Pornit la: {currentTask.activeMachineRunStartedLabel}</p>
+                  </>
+                ) : null}
+                {currentTask.machineRuns
+                  .filter((run) => !run.active && run.durationLabel)
+                  .map((run) => (
+                    <p key={run.machineRunId}>{run.durationLabel}</p>
+                  ))}
+                {currentTask.machineRunTotalLabel ? (
+                  <p>Total utilaj — {currentTask.machineRunTotalLabel}</p>
+                ) : null}
+                {currentTask.completionBlockedByActiveMachineRun ? (
+                  <p>Oprește rularea utilajului înainte de a închide sarcina.</p>
+                ) : null}
+              </div>
+            ) : null}
             <div className="cluster">
               {currentTask.canClaimStart ? (
                 <Button
@@ -502,9 +597,29 @@ export function ExecutionPage({
                   Pornește
                 </Button>
               ) : null}
-              {currentTask.canComplete ? (
+              {currentTask.canStartMachineRun ? (
                 <Button
                   disabled={actionState === "pending" || identified !== true}
+                  onClick={() => void startRun(currentTask)}
+                >
+                  Pornește utilajul
+                </Button>
+              ) : null}
+              {currentTask.canStopMachineRun ? (
+                <Button
+                  disabled={actionState === "pending" || identified !== true}
+                  onClick={() => void stopRun(currentTask)}
+                >
+                  Oprește utilajul
+                </Button>
+              ) : null}
+              {currentTask.canComplete || currentTask.completionBlockedByActiveMachineRun ? (
+                <Button
+                  disabled={
+                    actionState === "pending" ||
+                    identified !== true ||
+                    currentTask.completionBlockedByActiveMachineRun
+                  }
                   onClick={() => void complete(currentTask)}
                 >
                   Închide sarcina

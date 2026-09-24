@@ -5,7 +5,10 @@ import { freezeQuoteSnapshot, freezeSiteInstallationQuoteLine, type FrozenCommer
 import { projectManualFixedServicePrice } from "../commercial/servicePrice.js";
 import { blankSiteInstallationFacts } from "../installation/facts.js";
 import type { QuoteCommercialTerms } from "../commercial/quoteTerms.js";
+import { completeExecutionTask, plannedCompletionInput } from "../execution/lifecycle.js";
+import { startMachineRun, stopMachineRun } from "../execution/machineRun.js";
 import { projectPlanningWorkload } from "../execution/workload.js";
+import { createPerson } from "../people/identity.js";
 import { codeDefaultProductEnablement } from "../product/productEnablement.js";
 import {
   ACM_CASSETTE_NONE_PRODUCT_CODE,
@@ -433,6 +436,103 @@ describe("product assembly v1", () => {
     const scopes = new Set(processes.map((item) => item.scopeLabel));
     expect(scopes).toEqual(new Set(["Panou ACM", "Litere", "Ansamblare"]));
     const plan = materializeAssemblyExecutionPlan(production.snapshot);
+    expect(plan.tasks.every((task) => task.actualDurationMinutes === null && task.machineRuns.length === 0)).toBe(true);
+    const truthBefore = confirmed.truth.contentHash;
+    const createdOperator = createPerson("Operator sintetic");
+    if (!createdOperator.ok) {
+      throw new Error(createdOperator.error);
+    }
+    const operator = createdOperator.person;
+    const machineTask = plan.tasks.find((task) => task.requiredCapabilityId === "CNC_ROUTING");
+    const manualTask = plan.tasks.find((task) => task.processId === MOUNT_LETTERS_ON_PANEL_ID);
+    expect(machineTask?.providerRequirement).toBe("REQUIRED");
+    expect(manualTask?.providerRequirement).toBe("NOT_REQUIRED");
+    const preparedAssembly = {
+      ...plan,
+      tasks: plan.tasks.map((task) => {
+        if (task.taskId !== machineTask?.taskId && task.taskId !== manualTask?.taskId) {
+          return task;
+        }
+        return {
+          ...task,
+          status: "IN_PROGRESS" as const,
+          assignedExecutor: { id: operator.personId, label: operator.displayName },
+          assignedProvider:
+            task.taskId === machineTask?.taskId
+              ? { id: "mch:synthetic-cnc", kind: "MACHINE" as const, label: "CNC sintetic" }
+              : task.assignedProvider,
+          plannedEffortMinutes: task.taskId === machineTask?.taskId ? 90 : 40,
+          startedAt: "2026-09-23T12:00:00.000Z",
+        };
+      }),
+    };
+    const refusedManualRun = startMachineRun(
+      preparedAssembly,
+      manualTask?.taskId ?? "",
+      operator.personId,
+      "2026-09-23T12:05:00.000Z",
+      [operator],
+    );
+    expect(refusedManualRun.ok).toBe(false);
+    const startedRun = startMachineRun(
+      preparedAssembly,
+      machineTask?.taskId ?? "",
+      operator.personId,
+      "2026-09-23T12:05:00.000Z",
+      [operator],
+    );
+    expect(startedRun.ok).toBe(true);
+    if (!startedRun.ok) {
+      return;
+    }
+    const active = startedRun.record.tasks
+      .find((task) => task.taskId === machineTask?.taskId)
+      ?.machineRuns.find((run) => run.completedAt === null);
+    expect(active?.machineProviderLabel).toBe("CNC sintetic");
+    const stoppedRun = stopMachineRun(
+      startedRun.record,
+      active?.machineRunId ?? "",
+      operator.personId,
+      "2026-09-23T12:17:00.000Z",
+      [operator],
+    );
+    expect(stoppedRun.ok).toBe(true);
+    if (!stoppedRun.ok) {
+      return;
+    }
+    const machineSource = stoppedRun.record.tasks.find((task) => task.taskId === machineTask?.taskId);
+    const machineCompleted = completeExecutionTask(
+      stoppedRun.record,
+      machineTask?.taskId ?? "",
+      "2026-09-23T12:20:00.000Z",
+      { ...plannedCompletionInput(machineSource!), actualDurationMinutes: 85 },
+      operator.personId,
+    );
+    expect(machineCompleted.ok).toBe(true);
+    const manualCompleted = machineCompleted.ok
+      ? completeExecutionTask(
+          machineCompleted.record,
+          manualTask?.taskId ?? "",
+          "2026-09-23T12:40:00.000Z",
+          {
+            ...plannedCompletionInput(
+              machineCompleted.record.tasks.find((task) => task.taskId === manualTask?.taskId)!,
+            ),
+            actualDurationMinutes: 52,
+          },
+          operator.personId,
+        )
+      : machineCompleted;
+    expect(manualCompleted.ok).toBe(true);
+    if (manualCompleted.ok) {
+      const finishedMachine = manualCompleted.record.tasks.find((task) => task.taskId === machineTask?.taskId);
+      const finishedManual = manualCompleted.record.tasks.find((task) => task.taskId === manualTask?.taskId);
+      expect(finishedMachine?.actualDurationMinutes).toBe(85);
+      expect(finishedMachine?.machineRuns.reduce((sum, run) => sum + (run.durationMinutes ?? 0), 0)).toBe(12);
+      expect(finishedManual?.actualDurationMinutes).toBe(52);
+      expect(finishedManual?.machineRuns).toEqual([]);
+    }
+    expect(confirmed.truth.contentHash).toBe(truthBefore);
     const mountTask = plan.tasks.find((task) => task.processId === MOUNT_LETTERS_ON_PANEL_ID);
     expect(mountTask?.providerRequirement).toBe("NOT_REQUIRED");
     const effort = setAssemblyTaskPlannedEffort(plan, mountTask?.taskId ?? "", 40);
@@ -587,6 +687,54 @@ describe("product assembly v1", () => {
     expect(installTasks).toHaveLength(1);
     expect(installTasks[0]?.providerRequirement).toBe("NOT_REQUIRED");
     expect(installTasks[0]?.scopeLabel).toBe("Montaj la locație");
+    const installPlan = materializeAssemblyExecutionPlan(production.snapshot);
+    const installTask = installPlan.tasks.find((task) => task.processId === INSTALL_AT_SITE_ID);
+    expect(installTask?.actualDurationMinutes).toBeNull();
+    expect(installTask?.machineRuns).toEqual([]);
+    expect(installTask?.providerRequirement).toBe("NOT_REQUIRED");
+    const installer = createPerson("Montator sintetic");
+    if (!installer.ok || !installTask) {
+      throw new Error(installer.ok ? "missing install task" : installer.error);
+    }
+    const installReady = {
+      ...installPlan,
+      tasks: installPlan.tasks.map((task) =>
+        task.taskId === installTask.taskId
+          ? {
+              ...task,
+              status: "IN_PROGRESS" as const,
+              assignedExecutor: { id: installer.person.personId, label: installer.person.displayName },
+              startedAt: "2026-09-23T13:00:00.000Z",
+            }
+          : task,
+      ),
+    };
+    expect(
+      startMachineRun(
+        installReady,
+        installTask.taskId,
+        installer.person.personId,
+        "2026-09-23T13:05:00.000Z",
+        [installer.person],
+      ).ok,
+    ).toBe(false);
+    const installCompleted = completeExecutionTask(
+      installReady,
+      installTask.taskId,
+      "2026-09-23T14:00:00.000Z",
+      {
+        ...plannedCompletionInput(installReady.tasks.find((task) => task.taskId === installTask.taskId)!),
+        actualDurationMinutes: 45,
+      },
+      installer.person.personId,
+    );
+    expect(installCompleted.ok).toBe(true);
+    if (installCompleted.ok) {
+      expect(
+        installCompleted.record.tasks.find((task) => task.taskId === installTask.taskId)?.actualDurationMinutes,
+      ).toBe(45);
+    }
+    expect(service.line.siteExecutionContext.plannedDurationHours).toBe(3);
     expect(production.snapshot.siteInstallation?.street).toBe("Strada Sintetică 1");
     expect(JSON.stringify(production.snapshot.siteInstallation)).not.toMatch(/rate|subcontract/);
   });

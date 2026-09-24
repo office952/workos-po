@@ -40,6 +40,8 @@ export function materializeAssemblyExecutionPlan(
       assignedProvider: null,
       assignedExecutor: null,
       plannedEffortMinutes: null,
+      actualDurationMinutes: null,
+      machineRuns: [],
       startedAt: null,
       completedAt: null,
       completion: null,

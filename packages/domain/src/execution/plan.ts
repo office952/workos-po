@@ -30,6 +30,18 @@ import {
   type ActualInternalCostProjection,
 } from "./actualCost.js";
 import type { ActualConsumptionEntry } from "./consumption.js";
+import {
+  formatMinutesLabel,
+  formatSignedVarianceMinutes,
+  projectExecutionTimeSummary,
+  timeVarianceMinutes,
+  type ExecutionTimeSummary,
+} from "./actualDuration.js";
+import {
+  activeMachineRun,
+  closedMachineRunTotalMinutes,
+  type MachineRun,
+} from "./machineRun.js";
 
 export const EXECUTION_PLAN_SCHEMA_VERSION = 1 as const;
 export const EXECUTION_PLAN_STATUSES = ["PLANNED"] as const;
@@ -117,6 +129,8 @@ export type ExecutionTask = {
   assignedProvider: AssignedExecutionProvider | null;
   assignedExecutor: AssignedExecutionExecutor | null;
   plannedEffortMinutes: number | null;
+  actualDurationMinutes: number | null;
+  machineRuns: readonly MachineRun[];
   startedAt: string | null;
   completedAt: string | null;
   completion: TaskCompletionEvidence | null;
@@ -178,6 +192,16 @@ export type ExecutionTaskView = ExecutionTask & {
   canComplete: boolean;
   hasPlannedResources: boolean;
   canRecordActualConsumption: boolean;
+  plannedTimeLabel: string;
+  actualDurationLabel: string;
+  timeVarianceMinutes: number | null;
+  timeVarianceLabel: string | null;
+  activeMachineRun: MachineRun | null;
+  machineRunTotalMinutes: number | null;
+  machineRunTotalLabel: string | null;
+  canStartMachineRun: boolean;
+  canStopMachineRun: boolean;
+  completionBlockedByActiveMachineRun: boolean;
 };
 
 export type ExecutionPlanProgress = {
@@ -204,6 +228,7 @@ export type ExecutionPlanView = {
   sourceKindLabel: string;
   jobHref: string | null;
   tasks: readonly ExecutionTaskView[];
+  timeSummary: ExecutionTimeSummary;
   actualInternalCost: ActualInternalCostProjection;
 };
 
@@ -248,6 +273,8 @@ export function materializeExecutionPlanFromSnapshot(
       assignedProvider: null,
       assignedExecutor: null,
       plannedEffortMinutes: null,
+      actualDurationMinutes: null,
+      machineRuns: [],
       startedAt: null,
       completedAt: null,
       completion: null,
@@ -335,6 +362,9 @@ export function projectExecutionPlanView(
       assignedExecutor !== null &&
       currentOperatorId !== null &&
       assignedExecutor.id === currentOperatorId;
+    const running = activeMachineRun(task);
+    const machineTotal = closedMachineRunTotalMinutes(task);
+    const variance = timeVarianceMinutes(task.plannedEffortMinutes, task.actualDurationMinutes);
     return {
       ...task,
       assignedExecutor,
@@ -375,12 +405,29 @@ export function projectExecutionPlanView(
         task.status === "IN_PROGRESS" || task.status === "COMPLETED"
           ? assignedExecutor?.label ?? null
           : null,
-      canComplete: ownedByCurrent,
+      canComplete: ownedByCurrent && running === null,
       hasPlannedResources: task.resourceDemands.length > 0,
       canRecordActualConsumption:
         task.status === "IN_PROGRESS" &&
         task.resourceDemands.length > 0 &&
         (currentOperatorId === null || ownedByCurrent),
+      plannedTimeLabel:
+        task.plannedEffortMinutes === null
+          ? "Necunoscut"
+          : formatMinutesLabel(task.plannedEffortMinutes),
+      actualDurationLabel:
+        task.actualDurationMinutes === null
+          ? "Necunoscut"
+          : formatMinutesLabel(task.actualDurationMinutes),
+      timeVarianceMinutes: variance,
+      timeVarianceLabel: variance === null ? null : formatSignedVarianceMinutes(variance),
+      activeMachineRun: running,
+      machineRunTotalMinutes: machineTotal,
+      machineRunTotalLabel: machineTotal === null ? null : formatMinutesLabel(machineTotal),
+      canStartMachineRun:
+        ownedByCurrent && task.assignedProvider?.kind === "MACHINE" && running === null,
+      canStopMachineRun: ownedByCurrent && running !== null,
+      completionBlockedByActiveMachineRun: ownedByCurrent && running !== null,
     };
   });
   const progress = summarizeExecutionProgress(tasks);
@@ -394,6 +441,7 @@ export function projectExecutionPlanView(
     sourceKindLabel: executionSourceKindLabel(sourceKind),
     jobHref: executionJobHref(snapshot),
     tasks,
+    timeSummary: projectExecutionTimeSummary(tasks),
     actualInternalCost: projectActualInternalCost(record, snapshot),
   };
 }

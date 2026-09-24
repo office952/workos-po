@@ -8,6 +8,9 @@ import {
   completeExecutionTask,
   completionFromRow,
   startExecutionTask,
+  startMachineRun,
+  stopMachineRun,
+  type MachineRun,
   type ActualConsumptionEntry,
   type ExecutionPlan,
   type ExecutionPlanRecord,
@@ -67,6 +70,24 @@ type TaskRow = {
   completed_quantity_unit: string | null;
   completion_note: string | null;
   planned_effort_minutes: number | null;
+  actual_duration_minutes: number | null;
+};
+
+type MachineRunRow = {
+  machine_run_id: string;
+  plan_id: string;
+  task_id: string;
+  machine_provider_id: string;
+  machine_provider_label: string;
+  started_at: string;
+  completed_at: string | null;
+  duration_minutes: number | null;
+  started_by_operator_id: string;
+  started_by_operator_label: string;
+  completed_by_operator_id: string | null;
+  completed_by_operator_label: string | null;
+  created_at: string;
+  schema_version: number;
 };
 
 type DependencyRow = {
@@ -160,8 +181,9 @@ export function insertExecutionPlanRecord(
         completed_quantity,
         completed_quantity_unit,
         completion_note,
-        planned_effort_minutes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        planned_effort_minutes,
+        actual_duration_minutes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     );
     const insertDependency = db.prepare(
@@ -204,6 +226,7 @@ export function insertExecutionPlanRecord(
         task.completion?.completedQuantityUnit ?? null,
         task.completion?.note ?? null,
         task.plannedEffortMinutes,
+        task.actualDurationMinutes,
       );
       for (const dependencyId of task.dependsOnTaskIds) {
         insertDependency.run(record.plan.planId, task.taskId, dependencyId);
@@ -406,6 +429,94 @@ export function persistTaskComplete(
   );
 }
 
+export function persistMachineRunStart(
+  db: SqliteDatabase,
+  taskId: string,
+  personId: string,
+  startedAt: string,
+  people: readonly Person[],
+): TaskMutationResult {
+  const run = db.transaction((): TaskMutationResult => {
+    const record = getExecutionPlanByTaskId(db, taskId);
+    if (!record) {
+      return { ok: false, error: "not_found" };
+    }
+    const result = startMachineRun(record, taskId, personId, startedAt, people);
+    if (!result.ok) {
+      return result;
+    }
+    const previous = record.tasks.find((task) => task.taskId === taskId);
+    const next = result.record.tasks.find((task) => task.taskId === taskId);
+    const created = next?.machineRuns.find(
+      (item) => !previous?.machineRuns.some((existing) => existing.machineRunId === item.machineRunId),
+    );
+    if (!created) {
+      return { ok: false, error: "machine_run_not_allowed" };
+    }
+    insertMachineRun(db, created);
+    const stored = getExecutionPlanByTaskId(db, taskId);
+    if (!stored) {
+      return { ok: false, error: "not_found" };
+    }
+    return { ok: true, alreadyApplied: false, record: stored };
+  });
+  return run();
+}
+
+export function persistMachineRunStop(
+  db: SqliteDatabase,
+  machineRunId: string,
+  personId: string,
+  completedAt: string,
+  people: readonly Person[],
+): TaskMutationResult {
+  const run = db.transaction((): TaskMutationResult => {
+    const record = getExecutionPlanByMachineRunId(db, machineRunId);
+    if (!record) {
+      return { ok: false, error: "machine_run_not_found" };
+    }
+    const result = stopMachineRun(record, machineRunId, personId, completedAt, people);
+    if (!result.ok) {
+      return result;
+    }
+    const closed = result.record.tasks
+      .flatMap((task) => task.machineRuns)
+      .find((item) => item.machineRunId === machineRunId);
+    if (!closed || closed.completedAt === null || closed.durationMinutes === null) {
+      return { ok: false, error: "machine_run_not_allowed" };
+    }
+    const written = closeMachineRun(db, closed);
+    if (!written) {
+      return { ok: false, error: "machine_run_closed" };
+    }
+    const stored = getExecutionPlanRecord(db, closed.executionPlanId);
+    if (!stored) {
+      return { ok: false, error: "not_found" };
+    }
+    return { ok: true, alreadyApplied: false, record: stored };
+  });
+  return run();
+}
+
+function getExecutionPlanByMachineRunId(
+  db: SqliteDatabase,
+  machineRunId: string,
+): ExecutionPlanRecord | null {
+  const row = db
+    .prepare(
+      `
+      SELECT plan_id
+      FROM execution_machine_runs
+      WHERE machine_run_id = ?
+    `,
+    )
+    .get(machineRunId) as { plan_id: string } | undefined;
+  if (!row) {
+    return null;
+  }
+  return getExecutionPlanRecord(db, row.plan_id);
+}
+
 function applyMutation(
   db: SqliteDatabase,
   taskId: string,
@@ -495,7 +606,8 @@ function writeTaskOperationalState(
         completion_outcome = ?,
         completed_quantity = ?,
         completed_quantity_unit = ?,
-        completion_note = ?
+        completion_note = ?,
+        actual_duration_minutes = ?
       WHERE task_id = ?
         AND status = ?
         AND IFNULL(assigned_provider_id, '') = ?
@@ -517,6 +629,7 @@ function writeTaskOperationalState(
       next.completion?.completedQuantity ?? null,
       next.completion?.completedQuantityUnit ?? null,
       next.completion?.note ?? null,
+      next.actualDurationMinutes,
       next.taskId,
       previous?.status ?? next.status,
       previous?.assignedProvider?.id ?? "",
@@ -530,6 +643,68 @@ function writeTaskOperationalState(
   writeActualConsumption(db, next);
   writeInventoryOutFromTask(db, next);
   return true;
+}
+
+function insertMachineRun(db: SqliteDatabase, run: MachineRun): void {
+  db.prepare(
+    `
+      INSERT INTO execution_machine_runs (
+        machine_run_id,
+        plan_id,
+        task_id,
+        machine_provider_id,
+        machine_provider_label,
+        started_at,
+        completed_at,
+        duration_minutes,
+        started_by_operator_id,
+        started_by_operator_label,
+        completed_by_operator_id,
+        completed_by_operator_label,
+        created_at,
+        schema_version
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+  ).run(
+    run.machineRunId,
+    run.executionPlanId,
+    run.taskId,
+    run.machineProviderId,
+    run.machineProviderLabel,
+    run.startedAt,
+    run.completedAt,
+    run.durationMinutes,
+    run.startedByOperatorId,
+    run.startedByOperatorLabel,
+    run.completedByOperatorId,
+    run.completedByOperatorLabel,
+    run.createdAt,
+    run.schemaVersion,
+  );
+}
+
+function closeMachineRun(db: SqliteDatabase, run: MachineRun): boolean {
+  const result = db
+    .prepare(
+      `
+      UPDATE execution_machine_runs
+      SET
+        completed_at = ?,
+        duration_minutes = ?,
+        completed_by_operator_id = ?,
+        completed_by_operator_label = ?
+      WHERE machine_run_id = ?
+        AND completed_at IS NULL
+    `,
+    )
+    .run(
+      run.completedAt,
+      run.durationMinutes,
+      run.completedByOperatorId,
+      run.completedByOperatorLabel,
+      run.machineRunId,
+    );
+  return result.changes === 1;
 }
 
 function writeActualConsumption(db: SqliteDatabase, task: ExecutionTask): void {
@@ -593,6 +768,37 @@ function hydrateRecord(db: SqliteDatabase, planRow: PlanRow): ExecutionPlanRecor
     `,
     )
     .all(planRow.plan_id) as ActualConsumptionRow[];
+  const runRows = db
+    .prepare(
+      `
+      SELECT *
+      FROM execution_machine_runs
+      WHERE plan_id = ?
+      ORDER BY started_at, machine_run_id
+    `,
+    )
+    .all(planRow.plan_id) as MachineRunRow[];
+  const runs = new Map<string, MachineRun[]>();
+  for (const row of runRows) {
+    const current = runs.get(row.task_id) ?? [];
+    current.push({
+      machineRunId: row.machine_run_id,
+      executionPlanId: row.plan_id,
+      taskId: row.task_id,
+      machineProviderId: row.machine_provider_id,
+      machineProviderLabel: row.machine_provider_label,
+      startedAt: row.started_at,
+      completedAt: row.completed_at,
+      durationMinutes: row.duration_minutes,
+      startedByOperatorId: row.started_by_operator_id,
+      startedByOperatorLabel: row.started_by_operator_label,
+      completedByOperatorId: row.completed_by_operator_id,
+      completedByOperatorLabel: row.completed_by_operator_label,
+      createdAt: row.created_at,
+      schemaVersion: 1,
+    });
+    runs.set(row.task_id, current);
+  }
   const actuals = new Map<string, ActualConsumptionEntry[]>();
   for (const row of actualRows) {
     const current = actuals.get(row.task_id) ?? [];
@@ -659,6 +865,8 @@ function hydrateRecord(db: SqliteDatabase, planRow: PlanRow): ExecutionPlanRecor
         row.assigned_executor_label,
       ),
       plannedEffortMinutes: row.planned_effort_minutes ?? null,
+      actualDurationMinutes: row.actual_duration_minutes ?? null,
+      machineRuns: runs.get(row.task_id) ?? [],
       startedAt: row.started_at,
       completedAt: row.completed_at,
       completion: completionFromRow(

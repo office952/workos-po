@@ -61,8 +61,8 @@ EXE4 = COMPLETE / MERGED
 EXE4_INTEGRATED_ON_MAIN = YES
 EXE4_MERGE_COMMIT = e0ddbdac7de5896d683e05782a21f0e55a984b9b
 PR_28 = MERGED
-CURRENT_PROGRAM = PLANNING_WORKLOAD_V1
-CURRENT_PROGRAM_STATUS = PLN2_OWNER_ACCEPTED
+CURRENT_PROGRAM = EXECUTION_REALITY_V1
+CURRENT_PROGRAM_STATUS = IMPLEMENTED_IN_REVIEW
 PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
 PLANNING_CAPACITY_V1_PREFLIGHT = COMPLETE
 PLANNING_CAPACITY_V1_OWNER_DECISIONS = SUPERSEDED_IN_PART
@@ -79,6 +79,11 @@ PRODUCT_ASSEMBLY_FIRST_CLASS_JOB = COMPLETE / OWNER_ACCEPTED
 OWNER_ACCEPTED_OPERATIONS_CONTROL_V1 = YES
 OPERATIONS_CONTROL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PLN3 = NOT_STARTED
+EXECUTION_REALITY_V1 = IMPLEMENTED_IN_REVIEW
+OWNER_ACCEPTED_EXECUTION_REALITY_V1 = NO
+ACTUAL_DURATION_V1 = IMPLEMENTED_IN_REVIEW
+MACHINE_RUN_V1 = IMPLEMENTED_IN_REVIEW
+PLANNED_VS_ACTUAL_TIME_V1 = IMPLEMENTED_IN_REVIEW
 PLANNING_IMPLEMENTATION = OWNER_ACCEPTED
 OWNER_ACCEPTED_PLANNING_IMPLEMENTATION = YES
 PLN1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
@@ -766,8 +771,8 @@ Execution acceptance advisories, not a correction wave:
 ## Current program
 
 ```text
-CURRENT_PROGRAM = PLANNING_WORKLOAD_V1
-CURRENT_PROGRAM_STATUS = PLN2_OWNER_ACCEPTED
+CURRENT_PROGRAM = EXECUTION_REALITY_V1
+CURRENT_PROGRAM_STATUS = IMPLEMENTED_IN_REVIEW
 PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
 PLANNING_CAPACITY_V1_PREFLIGHT = COMPLETE
 PLANNING_CAPACITY_V1_OWNER_DECISIONS = SUPERSEDED_IN_PART
@@ -784,6 +789,11 @@ PRODUCT_ASSEMBLY_FIRST_CLASS_JOB = COMPLETE / OWNER_ACCEPTED
 OWNER_ACCEPTED_OPERATIONS_CONTROL_V1 = YES
 OPERATIONS_CONTROL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PLN3 = NOT_STARTED
+EXECUTION_REALITY_V1 = IMPLEMENTED_IN_REVIEW
+OWNER_ACCEPTED_EXECUTION_REALITY_V1 = NO
+ACTUAL_DURATION_V1 = IMPLEMENTED_IN_REVIEW
+MACHINE_RUN_V1 = IMPLEMENTED_IN_REVIEW
+PLANNED_VS_ACTUAL_TIME_V1 = IMPLEMENTED_IN_REVIEW
 PLANNING_IMPLEMENTATION = OWNER_ACCEPTED
 OWNER_ACCEPTED_PLANNING_IMPLEMENTATION = YES
 PLN1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
@@ -802,7 +812,7 @@ SITE_INSTALLATION_VERTICAL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTIO
 PLANNING_CAPACITY_CANON = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
 ```
 
-Planning Workload V1 is the living program. PLN0 workload-first canon is complete. PLN1 is Owner-accepted: `plannedEffortMinutes`, derived provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787`. `planningWeek` and weekly `availableMinutes` remain cancelled. PLN2 and Operations Control V1 are Owner-accepted. PLN3 is not started. Scheduling is out of V1. Member DAG / composition corrections remain deferred and are not a Planning blocker. Host Context V1, Mounting Interface V1, and the site-installation vertical are Owner-accepted. They do not replace this program and they do not authorize the next wave.
+Execution Reality V1 is implemented and in review. It records optional task `actualDurationMinutes` and explicit MachineRun segments. It does not replace Planning. PLN0 workload-first canon is complete. PLN1 is Owner-accepted: `plannedEffortMinutes`, derived provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787`. `planningWeek` and weekly `availableMinutes` remain cancelled. PLN2 and Operations Control V1 are Owner-accepted. PLN3 is not started. Scheduling is out of V1. Member DAG / composition corrections remain deferred and are not a Planning blocker. Host Context V1, Mounting Interface V1, and the site-installation vertical are Owner-accepted. Execution Reality is not Owner-accepted. Next wave is unauthorized.
 
 PLN1 acceptance advisories, not a correction wave:
 

@@ -450,6 +450,21 @@ export type ExecutionTaskCompletionInput = {
     resourceId: string;
     actualQuantity: number;
   }>;
+  actualDurationMinutes?: number;
+};
+
+export type MachineRunTransport = {
+  machineRunId: string;
+  machineProviderLabel: string;
+  startedAtLabel: string;
+  durationMinutes: number | null;
+  durationLabel: string | null;
+  active: boolean;
+};
+
+export type ExecutionTimeSummaryTransport = {
+  plannedKnownLabel: string;
+  actualKnownLabel: string;
 };
 
 export type ExecutionTaskTransport = {
@@ -481,6 +496,20 @@ export type ExecutionTaskTransport = {
   canRecordActualConsumption: boolean;
   plannedResources: PlannedResourceTransport[];
   actualConsumption: ActualConsumptionTransport[];
+  plannedEffortMinutes: number | null;
+  plannedTimeLabel: string;
+  actualDurationMinutes: number | null;
+  actualDurationLabel: string;
+  timeVarianceMinutes: number | null;
+  timeVarianceLabel: string | null;
+  machineRuns: MachineRunTransport[];
+  machineRunTotalMinutes: number | null;
+  machineRunTotalLabel: string | null;
+  canStartMachineRun: boolean;
+  canStopMachineRun: boolean;
+  completionBlockedByActiveMachineRun: boolean;
+  activeMachineRunLabel: string | null;
+  activeMachineRunStartedLabel: string | null;
 };
 
 export type ExecutionPlanProgressTransport = {
@@ -525,6 +554,7 @@ export type ExecutionPlanTransport = {
   sourceSnapshotId: string;
   jobId: string | null;
   tasks: ExecutionTaskTransport[];
+  timeSummary: ExecutionTimeSummaryTransport | null;
   siteInstallation: SiteInstallationOperationalTransport | null;
 };
 

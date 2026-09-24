@@ -695,6 +695,13 @@ export {
   type TaskCompletionInput,
   type TaskMutationError,
   type TaskMutationResult,
+  type ExecutionTimeSummary,
+  type MachineRun,
+  parseActualDurationMinutes,
+  projectExecutionTimeSummary,
+  startMachineRun,
+  stopMachineRun,
+  machineRunDurationMinutes,
 } from "./execution/index.js";
 export {
   INVENTORY_MOVEMENT_TYPES,

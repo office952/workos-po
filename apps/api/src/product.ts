@@ -1228,6 +1228,36 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       { taskId, operatorId: session.person.personId },
     );
   });
+
+  app.post("/api/execution-tasks/:taskId/machine-runs/start", (c) => {
+    const runtime = getProductSystem(c);
+    const session = runtime.resolveOperatorSession(getCookie(c, OPERATOR_SESSION_COOKIE));
+    if (!session.ok) {
+      return c.json({ error: "invalid_session" }, 401);
+    }
+    const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/machine-runs/start");
+    return respondTaskMutation(
+      c,
+      runtime,
+      runtime.startMachineRun(taskId, session.person.personId),
+      { taskId, operatorId: session.person.personId },
+    );
+  });
+
+  app.post("/api/execution-machine-runs/:machineRunId/stop", (c) => {
+    const runtime = getProductSystem(c);
+    const session = runtime.resolveOperatorSession(getCookie(c, OPERATOR_SESSION_COOKIE));
+    if (!session.ok) {
+      return c.json({ error: "invalid_session" }, 401);
+    }
+    const machineRunId = httpPathIdentity(c.req.path, "/api/execution-machine-runs/", "/stop");
+    return respondTaskMutation(
+      c,
+      runtime,
+      runtime.stopMachineRun(machineRunId, session.person.personId),
+      { operatorId: session.person.personId },
+    );
+  });
 }
 
 function confirmFailure(
@@ -1375,6 +1405,7 @@ function readCompletionInput(body: unknown): TaskCompletionInput | null {
     completedQuantity?: unknown;
     note?: unknown;
     actualConsumption?: unknown;
+    actualDurationMinutes?: unknown;
   };
   if (
     "completedQuantity" in record &&
@@ -1393,12 +1424,23 @@ function readCompletionInput(body: unknown): TaskCompletionInput | null {
   if (actualConsumption === null) {
     return null;
   }
+  if (
+    "actualDurationMinutes" in record &&
+    record.actualDurationMinutes !== undefined &&
+    record.actualDurationMinutes !== null &&
+    typeof record.actualDurationMinutes !== "number"
+  ) {
+    return null;
+  }
   return {
     ...(typeof record.completedQuantity === "number"
       ? { completedQuantity: record.completedQuantity }
       : {}),
     ...(typeof record.note === "string" ? { note: record.note } : {}),
     ...(actualConsumption ? { actualConsumption } : {}),
+    ...("actualDurationMinutes" in record
+      ? { actualDurationMinutes: record.actualDurationMinutes as number | null }
+      : {}),
   };
 }
 
@@ -1454,6 +1496,7 @@ function readProviderId(body: unknown): string | null {
 function mutationHttpStatus(error: TaskMutationError): 404 | 409 | 422 {
   switch (error) {
     case "not_found":
+    case "machine_run_not_found":
       return 404;
     case "ineligible_provider":
     case "missing_assignment":
@@ -1470,12 +1513,16 @@ function mutationHttpStatus(error: TaskMutationError): 404 | 409 | 422 {
     case "invalid_resource":
     case "invalid_note":
     case "invalid_planned_effort":
+    case "invalid_actual_duration":
       return 422;
     case "reassignment_locked":
     case "effort_frozen":
     case "already_started_by_other":
     case "dependencies_incomplete":
     case "invalid_transition":
+    case "machine_run_not_allowed":
+    case "machine_run_active":
+    case "machine_run_closed":
       return 409;
     default: {
       const _exhaustive: never = error;

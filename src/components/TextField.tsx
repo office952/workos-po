@@ -7,7 +7,7 @@ type TextFieldProps = {
   hint?: string;
   error?: string;
   disabled?: boolean;
-  inputMode?: "text" | "decimal";
+  inputMode?: "text" | "decimal" | "numeric";
   type?: "text" | "password";
   className?: string;
   onChange: (value: string) => void;

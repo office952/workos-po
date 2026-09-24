@@ -20,6 +20,10 @@ export function presentExecutionCompletionError(error: unknown): string {
       return "Sarcina nu poate fi închisă în starea actuală.";
     case "invalid_payload":
       return "Datele de finalizare nu sunt valide.";
+    case "machine_run_active":
+      return "Oprește rularea utilajului înainte de a închide sarcina.";
+    case "invalid_actual_duration":
+      return "Timpul efectiv trebuie să fie un număr întreg de minute, zero sau pozitiv.";
     default:
       return "Sarcina nu poate fi închisă încă.";
   }

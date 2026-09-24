@@ -72,6 +72,14 @@ export async function startExecutionTask(taskId: string): Promise<unknown> {
   return postJson(`/api/execution-tasks/${encodeURIComponent(taskId)}/start`);
 }
 
+export async function startMachineRun(taskId: string): Promise<unknown> {
+  return postJson(`/api/execution-tasks/${encodeURIComponent(taskId)}/machine-runs/start`);
+}
+
+export async function stopMachineRun(machineRunId: string): Promise<unknown> {
+  return postJson(`/api/execution-machine-runs/${encodeURIComponent(machineRunId)}/stop`);
+}
+
 export async function completeExecutionTask(
   taskId: string,
   input: ExecutionTaskCompletionInput = {},

@@ -14,6 +14,22 @@ export {
   type ExecutionPreviewStatus,
 } from "./preview.js";
 export {
+  parseActualDurationMinutes,
+  projectExecutionTimeSummary,
+  timeVarianceMinutes,
+  type ActualDurationParseResult,
+  type ExecutionTimeSummary,
+} from "./actualDuration.js";
+export {
+  MACHINE_RUN_SCHEMA_VERSION,
+  activeMachineRun,
+  closedMachineRunTotalMinutes,
+  machineRunDurationMinutes,
+  startMachineRun,
+  stopMachineRun,
+  type MachineRun,
+} from "./machineRun.js";
+export {
   EXECUTION_PLAN_SCHEMA_VERSION,
   EXECUTION_PLAN_STATUSES,
   EXECUTION_PROGRESS_STATUSES,

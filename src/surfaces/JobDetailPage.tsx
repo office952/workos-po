@@ -280,22 +280,38 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
               ) : !plan ? (
                 <EmptyState title="Planul de execuție nu există încă." />
               ) : (
-                plan.tasks.map((task) => (
-                  <div key={task.taskId} className="stack">
-                    <p className="section-label">
-                      {task.seqLabel} {task.processLabel}
-                    </p>
-                    <MeasurePair
-                      planned={task.plannedQuantityLabel ?? "Fără cantitate măsurabilă"}
-                      actual={task.completedQuantityLabel ?? "—"}
-                    />
-                    {task.varianceLabel ? (
-                      <p className="worklist-row__detail">{task.varianceLabel}</p>
-                    ) : (
-                      <p className="worklist-row__detail">{task.statusLabel}</p>
-                    )}
-                  </div>
-                ))
+                <>
+                  {plan.timeSummary ? (
+                    <div className="stack">
+                      <p>{plan.timeSummary.plannedKnownLabel}</p>
+                      <p>{plan.timeSummary.actualKnownLabel}</p>
+                    </div>
+                  ) : null}
+                  {plan.tasks.map((task) => (
+                    <div key={task.taskId} className="stack">
+                      <p className="section-label">
+                        {task.seqLabel} {task.processLabel}
+                      </p>
+                      <p className="section-label">Cantitate</p>
+                      <MeasurePair
+                        planned={task.plannedQuantityLabel ?? "Fără cantitate măsurabilă"}
+                        actual={task.completedQuantityLabel ?? "—"}
+                      />
+                      {task.varianceLabel ? (
+                        <p className="worklist-row__detail">{task.varianceLabel}</p>
+                      ) : (
+                        <p className="worklist-row__detail">{task.statusLabel}</p>
+                      )}
+                      <p className="section-label">Timp</p>
+                      <p>Planificat {task.plannedTimeLabel}</p>
+                      <p>Realizat {task.actualDurationLabel}</p>
+                      {task.timeVarianceLabel ? <p>{task.timeVarianceLabel}</p> : null}
+                      {task.machineRunTotalLabel ? (
+                        <p>Total utilaj — {task.machineRunTotalLabel}</p>
+                      ) : null}
+                    </div>
+                  ))}
+                </>
               )}
             </div>
             {plan ? (

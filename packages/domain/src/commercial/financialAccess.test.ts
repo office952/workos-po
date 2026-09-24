@@ -185,6 +185,15 @@ describe("financial access", () => {
       sourceKindLabel: "Comandă",
       jobHref: "/jobs/ord%3A1",
       tasks: [],
+      timeSummary: {
+        plannedKnownMinutes: 0,
+        actualKnownMinutes: 0,
+        plannedKnownTaskCount: 0,
+        actualKnownTaskCount: 0,
+        totalTaskCount: 0,
+        plannedKnownLabel: "Planificat cunoscut: 0 min / 0 din 0 sarcini",
+        actualKnownLabel: "Realizat cunoscut: 0 min / 0 din 0 sarcini",
+      },
       actualInternalCost: {
         status: "UNAVAILABLE" as const,
         statusLabel: "Indisponibil",

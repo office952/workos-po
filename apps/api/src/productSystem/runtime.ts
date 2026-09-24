@@ -140,6 +140,8 @@ import {
   persistAssignedProvider,
   persistPlannedEffort,
   persistClaimAndStart,
+  persistMachineRunStart,
+  persistMachineRunStop,
   persistTaskComplete,
   persistTaskStart,
 } from "../execution/store.js";
@@ -360,6 +362,8 @@ export type ProductSystemRuntime = {
     input?: TaskCompletionInput,
     actorPersonId?: string | null,
   ): TaskMutationResult;
+  startMachineRun(taskId: string, personId: string): TaskMutationResult;
+  stopMachineRun(machineRunId: string, personId: string): TaskMutationResult;
   listOperatorCandidates(): OperatorCandidate[];
   setOperatorPin(
     personId: string,
@@ -1239,6 +1243,24 @@ export function createProductSystemRuntimeFromOpenDb(
         new Date().toISOString(),
         input,
         actorPersonId,
+      );
+    },
+    startMachineRun(taskId, personId) {
+      return persistMachineRunStart(
+        db,
+        taskId,
+        personId,
+        new Date().toISOString(),
+        listPeople(db),
+      );
+    },
+    stopMachineRun(machineRunId, personId) {
+      return persistMachineRunStop(
+        db,
+        machineRunId,
+        personId,
+        new Date().toISOString(),
+        listPeople(db),
       );
     },
     readInventory() {

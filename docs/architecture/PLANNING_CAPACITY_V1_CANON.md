@@ -11,8 +11,8 @@ ONE_PLANNING_CANON = YES
 PARALLEL_PLANNING_TRUTH = NO
 CANON_FILENAME = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
 CANON_FILENAME_RENAME = DEFERRED / NAMING_DEBT
-CURRENT_PROGRAM = PLANNING_WORKLOAD_V1
-CURRENT_PROGRAM_STATUS = PLN2_OWNER_ACCEPTED
+CURRENT_PROGRAM = EXECUTION_REALITY_V1
+CURRENT_PROGRAM_STATUS = IMPLEMENTED_IN_REVIEW
 PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
 PLN0 = COMPLETE
 PLN1 = COMPLETE / OWNER_ACCEPTED
@@ -22,6 +22,11 @@ PRODUCT_ASSEMBLY_FIRST_CLASS_JOB = COMPLETE / OWNER_ACCEPTED
 OWNER_ACCEPTED_OPERATIONS_CONTROL_V1 = YES
 OPERATIONS_CONTROL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PLN3 = NOT_STARTED
+EXECUTION_REALITY_V1 = IMPLEMENTED_IN_REVIEW
+OWNER_ACCEPTED_EXECUTION_REALITY_V1 = NO
+ACTUAL_DURATION_V1 = IMPLEMENTED_IN_REVIEW
+MACHINE_RUN_V1 = IMPLEMENTED_IN_REVIEW
+PLANNED_VS_ACTUAL_TIME_V1 = IMPLEMENTED_IN_REVIEW
 PLANNING_IMPLEMENTATION = OWNER_ACCEPTED
 SCHEDULING = NOT_STARTED / OUT_OF_SCOPE_V1
 OWNER_ACCEPTED_PLANNING_IMPLEMENTATION = YES
@@ -194,7 +199,7 @@ NO_VALUE != 0
 
 Do not treat process-default minutes as V1 authority. Do not treat automatic duration formulas as V1 authority. Those may be future enhancements only, under a later Owner GO.
 
-`plannedEffortMinutes` is not Product Truth, Commercial Price, Estimated Internal Cost, resource quantity, MachineRun actual, HR / Pontaj, or site-installation crew hours.
+`plannedEffortMinutes` is not Product Truth, Commercial Price, Estimated Internal Cost, resource quantity, MachineRun actual, HR / Pontaj, or site-installation crew hours. Execution Reality V1 may record `actualDurationMinutes` and MachineRun duration on the task. Planning does not read those facts and does not rewrite `plannedEffortMinutes` from them.
 
 PLN0 does not define persistence schema or migration fields.
 

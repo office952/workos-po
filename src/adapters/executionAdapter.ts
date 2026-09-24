@@ -4,6 +4,8 @@ import type {
   ExecutionPlanProgressTransport,
   ExecutionPlanTransport,
   ExecutionTaskTransport,
+  ExecutionTimeSummaryTransport,
+  MachineRunTransport,
   PlannedResourceTransport,
   SiteInstallationOperationalTransport,
 } from "../api/types";
@@ -35,6 +37,7 @@ export function presentExecutionPlan(payload: unknown): ExecutionPlanTransport |
     sourceSnapshotId: asString(plan.sourceSnapshotId) ?? "",
     jobId: asString(job?.jobId) ?? asString(plan.jobId),
     siteInstallation: presentSiteInstallation(record?.siteInstallation),
+    timeSummary: presentTimeSummary(planView.timeSummary),
     tasks: tasks.flatMap((item) => {
       const presented = presentExecutionTask(item);
       return presented ? [presented] : [];
@@ -110,6 +113,7 @@ export function presentExecutionTask(value: unknown): ExecutionTaskTransport | n
     canRecordActualConsumption: row.canRecordActualConsumption === true,
     plannedResources: presentPlannedResources(row.resourceDemands ?? row.plannedResources),
     actualConsumption: presentActualConsumption(row.actualConsumption),
+    ...presentTaskTime(row),
   };
 }
 
@@ -229,4 +233,89 @@ function progressLabel(
     return `${progress.completed} / ${progress.total}`;
   }
   return asString(planView.statusLabel) ?? "—";
+}
+
+function presentTimeSummary(value: unknown): ExecutionTimeSummaryTransport | null {
+  const row = asRecord(value);
+  const plannedKnownLabel = asString(row?.plannedKnownLabel);
+  const actualKnownLabel = asString(row?.actualKnownLabel);
+  if (!plannedKnownLabel || !actualKnownLabel) {
+    return null;
+  }
+  return { plannedKnownLabel, actualKnownLabel };
+}
+
+function presentTaskTime(row: Record<string, unknown>): Pick<
+  ExecutionTaskTransport,
+  | "plannedEffortMinutes"
+  | "plannedTimeLabel"
+  | "actualDurationMinutes"
+  | "actualDurationLabel"
+  | "timeVarianceMinutes"
+  | "timeVarianceLabel"
+  | "machineRuns"
+  | "machineRunTotalMinutes"
+  | "machineRunTotalLabel"
+  | "canStartMachineRun"
+  | "canStopMachineRun"
+  | "completionBlockedByActiveMachineRun"
+  | "activeMachineRunLabel"
+  | "activeMachineRunStartedLabel"
+> {
+  const active = asRecord(row.activeMachineRun);
+  const runs = Array.isArray(row.machineRuns) ? row.machineRuns : [];
+  return {
+    plannedEffortMinutes: asNumber(row.plannedEffortMinutes),
+    plannedTimeLabel: asString(row.plannedTimeLabel) ?? "Necunoscut",
+    actualDurationMinutes: asNumber(row.actualDurationMinutes),
+    actualDurationLabel: asString(row.actualDurationLabel) ?? "Necunoscut",
+    timeVarianceMinutes: asNumber(row.timeVarianceMinutes),
+    timeVarianceLabel: asString(row.timeVarianceLabel),
+    machineRuns: runs.flatMap((item, index) => {
+      const run = presentMachineRun(item, index);
+      return run ? [run] : [];
+    }),
+    machineRunTotalMinutes: asNumber(row.machineRunTotalMinutes),
+    machineRunTotalLabel: asString(row.machineRunTotalLabel),
+    canStartMachineRun: row.canStartMachineRun === true,
+    canStopMachineRun: row.canStopMachineRun === true,
+    completionBlockedByActiveMachineRun: row.completionBlockedByActiveMachineRun === true,
+    activeMachineRunLabel: asString(active?.machineProviderLabel),
+    activeMachineRunStartedLabel: formatRunInstant(asString(active?.startedAt)),
+  };
+}
+
+function presentMachineRun(value: unknown, index: number): MachineRunTransport | null {
+  const row = asRecord(value);
+  const machineRunId = asString(row?.machineRunId);
+  const machineProviderLabel = asString(row?.machineProviderLabel);
+  if (!row || !machineRunId || !machineProviderLabel) {
+    return null;
+  }
+  const durationMinutes = asNumber(row.durationMinutes);
+  return {
+    machineRunId,
+    machineProviderLabel,
+    startedAtLabel: formatRunInstant(asString(row.startedAt)) ?? "",
+    durationMinutes,
+    durationLabel:
+      durationMinutes === null ? null : `Rulare ${index + 1} — ${durationMinutes} min`,
+    active: row.completedAt === null || row.completedAt === undefined,
+  };
+}
+
+const runInstantFormat = new Intl.DateTimeFormat("ro-RO", {
+  dateStyle: "short",
+  timeStyle: "short",
+});
+
+function formatRunInstant(value: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return runInstantFormat.format(date);
 }
