@@ -28,6 +28,7 @@ import {
   plannedCompletionInput,
   startExecutionTask,
 } from "./lifecycle.js";
+import { startMachineRun, stopMachineRun } from "./machineRun.js";
 import {
   materializeExecutionPlanFromSnapshot,
   projectExecutionPlanView,
@@ -279,6 +280,74 @@ describe("planned start current eligibility", () => {
       plannedCompletionInput(task!),
     );
     expect(completed.ok).toBe(true);
+  });
+
+  it("lets the assigned operator close an active machine run after losing the skill", () => {
+    const setup = cncOperator("Andrei Goghi", "per:andrei-run");
+    const ready = readyCncTask(setup.person, setup.eligibility);
+    const started = startExecutionTask(
+      ready.record,
+      ready.taskId,
+      "2026-08-17T16:40:00.000Z",
+      [setup.person],
+      setup.eligibility,
+    );
+    expect(started.ok).toBe(true);
+    if (!started.ok) {
+      return;
+    }
+    const running = startMachineRun(
+      started.record,
+      ready.taskId,
+      setup.person.personId,
+      "2026-08-17T16:41:00.000Z",
+      [setup.person],
+    );
+    expect(running.ok).toBe(true);
+    if (!running.ok) {
+      return;
+    }
+    const retired = retirePersonSkill(setup.assignment, "2026-08-17T16:42:00.000Z");
+    expect(retired.ok).toBe(true);
+    if (!retired.ok) {
+      return;
+    }
+    const eligibility: PeopleEligibilityContext = {
+      ...setup.eligibility,
+      assignments: [retired.assignment],
+    };
+    const fresh = planned();
+    const freshTask = backCncTask(fresh);
+    const blockedStart = assignExecutorToTask(
+      fresh,
+      freshTask.taskId,
+      setup.person.personId,
+      [setup.person],
+      eligibility,
+    );
+    expect(blockedStart).toEqual({ ok: false, error: "ineligible_executor" });
+    const run = running.record.tasks.find((item) => item.taskId === ready.taskId)?.machineRuns[0];
+    const stopped = stopMachineRun(
+      running.record,
+      run!.machineRunId,
+      setup.person.personId,
+      "2026-08-17T16:50:00.000Z",
+      [setup.person],
+    );
+    expect(stopped.ok).toBe(true);
+    if (!stopped.ok) {
+      return;
+    }
+    const task = stopped.record.tasks.find((item) => item.taskId === ready.taskId);
+    expect(
+      completeExecutionTask(
+        stopped.record,
+        ready.taskId,
+        "2026-08-17T17:00:00.000Z",
+        plannedCompletionInput(task!),
+        setup.person.personId,
+      ).ok,
+    ).toBe(true);
   });
 
   it("still requires a provider even when the person is skill-eligible", () => {

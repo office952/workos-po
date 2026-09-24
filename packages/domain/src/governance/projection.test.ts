@@ -253,10 +253,10 @@ describe("system governance projection", () => {
       "IMPLEMENTED",
     );
     expect(governance.boundaries.find((item) => item.id === "execution")?.statement).toMatch(
-      /consumul real sunt implementate/,
+      /consumul real și rularea utilajului sunt implementate/,
     );
     expect(governance.boundaries.find((item) => item.id === "execution")?.statement).toMatch(
-      /Programarea și MachineRun nu sunt implementate/,
+      /Programarea nu este implementată/,
     );
     expect(governance.roadmap.find((item) => item.id === "execution")?.state).toBe(
       "IMPLEMENTED",
@@ -277,7 +277,10 @@ describe("system governance projection", () => {
       "NOT_IMPLEMENTED",
     );
     expect(governance.boundaries.find((item) => item.id === "machine-run")?.state).toBe(
-      "NOT_IMPLEMENTED",
+      "IMPLEMENTED",
+    );
+    expect(governance.roadmap.find((item) => item.id === "machine-run")?.state).toBe(
+      "IMPLEMENTED",
     );
   });
 

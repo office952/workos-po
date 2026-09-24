@@ -19,7 +19,7 @@ import type { DraftValues } from "../product/types.js";
 import { compileEic } from "../resources/eic.js";
 import { freezeAcceptedProductionSnapshot } from "../production/snapshot.js";
 import { MCH_CNC_4020_ID } from "../workcenters/catalog.js";
-import { createPerson, type Person } from "../people/identity.js";
+import { createPerson, setPersonAvailability, type Person } from "../people/identity.js";
 import {
   parseActualDurationMinutes,
   timeVarianceMinutes,
@@ -316,5 +316,61 @@ describe("machine runs", () => {
     const completedTask = done.record.tasks.find((item) => item.taskId === taskId);
     expect(completedTask?.actualDurationMinutes).toBe(85);
     expect(completedTask?.machineRuns[0]?.machineProviderLabel).toBe("CNC 4020");
+  });
+
+  it("lets the assigned operator close an active run after becoming unavailable", () => {
+    const { record, taskId, owner } = startedMachineTask();
+    const other = peopleNamed("Alt operator", "per:other-away");
+    const started = startMachineRun(
+      record,
+      taskId,
+      owner.personId,
+      "2026-08-15T16:01:00.000Z",
+      [owner],
+    );
+    expect(started.ok).toBe(true);
+    if (!started.ok) {
+      return;
+    }
+    const away = setPersonAvailability(owner, {
+      availability: "TEMPORARILY_UNAVAILABLE",
+      reason: "Concediu",
+    });
+    expect(away.ok).toBe(true);
+    if (!away.ok) {
+      return;
+    }
+    const run = started.record.tasks.find((item) => item.taskId === taskId)?.machineRuns[0];
+    expect(
+      stopMachineRun(started.record, run!.machineRunId, other.personId, "2026-08-15T16:13:00.000Z", [away.person, other]),
+    ).toEqual({ ok: false, error: "wrong_executor" });
+    const stopped = stopMachineRun(
+      started.record,
+      run!.machineRunId,
+      away.person.personId,
+      "2026-08-15T16:13:00.000Z",
+      [away.person],
+    );
+    expect(stopped.ok).toBe(true);
+    if (!stopped.ok) {
+      return;
+    }
+    const closed = stopped.record.tasks.find((item) => item.taskId === taskId)?.machineRuns[0];
+    expect(closed?.machineProviderLabel).toBe("CNC 4020");
+    expect(closed?.startedByOperatorId).toBe(owner.personId);
+    expect(closed?.completedByOperatorId).toBe(owner.personId);
+    expect(closed?.durationMinutes).toBe(12);
+    expect(
+      startMachineRun(stopped.record, taskId, away.person.personId, "2026-08-15T16:20:00.000Z", [away.person]),
+    ).toEqual({ ok: false, error: "unavailable_person" });
+    const task = stopped.record.tasks.find((item) => item.taskId === taskId);
+    const done = completeExecutionTask(
+      stopped.record,
+      taskId,
+      "2026-08-15T17:00:00.000Z",
+      { ...plannedCompletionInput(task!), actualDurationMinutes: 85 },
+      away.person.personId,
+    );
+    expect(done.ok).toBe(true);
   });
 });

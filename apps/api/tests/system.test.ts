@@ -266,5 +266,18 @@ describe("system projection API", () => {
       "NOT_IMPLEMENTED",
     );
     expect(body.freeze.state).toBe("PLANNED");
+    const governance = body as unknown as {
+      boundaries: Array<{ id: string; state: string }>;
+      roadmap: Array<{ id: string; state: string }>;
+    };
+    expect(governance.boundaries.find((item) => item.id === "machine-run")?.state).toBe(
+      "IMPLEMENTED",
+    );
+    expect(governance.roadmap.find((item) => item.id === "machine-run")?.state).toBe(
+      "IMPLEMENTED",
+    );
+    expect(governance.boundaries.find((item) => item.id === "scheduling")?.state).toBe(
+      "NOT_IMPLEMENTED",
+    );
   });
 });

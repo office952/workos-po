@@ -76,7 +76,7 @@ Repository truth wins over preflight prose. Current domain already uses:
 - in-plan process `seq`, which is not provider queue priority
 - People `AVAILABLE` | `TEMPORARILY_UNAVAILABLE` as operational eligibility, not hours
 - provider lifecycle `ACTIVE` | `PLANNED` | `RETIRED`
-- governance `capacity-planning` as implemented workload planning, with `scheduling` and `machine-run` remaining `NOT_IMPLEMENTED`
+- governance `capacity-planning` as implemented workload planning, with `scheduling` remaining `NOT_IMPLEMENTED` and `machine-run` implemented in review, not Owner-accepted
 
 ## Owner-confirmed production reality
 
@@ -121,8 +121,9 @@ PEOPLE_CAPACITY = OUT
 SCHEDULING = OUT_OF_SCOPE_V1
 CAPACITY_COMMERCIAL_COUPLING = NONE
 FAKE_BACKFILL = FORBIDDEN
-MACHINE_RUN = NOT_IMPLEMENTED
-ACTUAL_DURATION_V1 = NOT_IMPLEMENTED
+MACHINE_RUN_V1 = IMPLEMENTED_IN_REVIEW
+ACTUAL_DURATION_V1 = IMPLEMENTED_IN_REVIEW
+OWNER_ACCEPTED_EXECUTION_REALITY_V1 = NO
 PRODUCTION_PRIORITY = NOT_IMPLEMENTED_V1_INITIAL
 TARGET_DATE = NOT_REQUIRED_FOR_INITIAL_V1
 MANUAL_QUEUE_ORDER = DEFERRED
@@ -405,11 +406,12 @@ Site-installation `plannedDurationHours` remains commercial / installation labor
 ## 12. MachineRun and actual duration
 
 ```text
-MACHINE_RUN = NOT_IMPLEMENTED
-ACTUAL_DURATION_V1 = NOT_IMPLEMENTED
+MACHINE_RUN_V1 = IMPLEMENTED_IN_REVIEW
+ACTUAL_DURATION_V1 = IMPLEMENTED_IN_REVIEW
+OWNER_ACCEPTED_EXECUTION_REALITY_V1 = NO
 ```
 
-`startedAt` / `completedAt` are Execution lifecycle timestamps. They are not automatically machine runtime, productive minutes, or operator labor time.
+Execution Reality records these facts. Planning does not consume them. `startedAt` / `completedAt` are Execution lifecycle timestamps. They are not automatically machine runtime, productive minutes, or operator labor time.
 
 Do not add telemetry, IoT, or runtime counters for Planning V1.
 

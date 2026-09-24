@@ -746,7 +746,7 @@ EXE4_MERGE_COMMIT = e0ddbdac7de5896d683e05782a21f0e55a984b9b
 PR_28 = MERGED
 ```
 
-Execution Expansion V1 is Owner-accepted and integrated on main. EXE1 replaced hardcoded `executionReadiness = NOT_IMPLEMENTED` with topology-derived READY|BLOCKED. EXE2 made provider assignment explicit and projected Owner-only `canAssignProvider`. EXE3 made the whole plan comprehensible from existing server facts. EXE4 records operator actual consumption through the existing complete contract. Scheduling and MachineRun remain unimplemented.
+Execution Expansion V1 is Owner-accepted and integrated on main. EXE1 replaced hardcoded `executionReadiness = NOT_IMPLEMENTED` with topology-derived READY|BLOCKED. EXE2 made provider assignment explicit and projected Owner-only `canAssignProvider`. EXE3 made the whole plan comprehensible from existing server facts. EXE4 records operator actual consumption through the existing complete contract. At that EXE4 acceptance, scheduling and MachineRun were still unimplemented.
 
 Accepted execution contract, unchanged by this acceptance:
 

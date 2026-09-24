@@ -85,7 +85,7 @@ export function startMachineRun(
   if (activeMachineRun(task)) {
     return { ok: false, error: "machine_run_active" };
   }
-  const operator = requireActiveOperator(people, personId);
+  const operator = requireStartEligibleOperator(people, personId);
   if (!operator.ok) {
     return operator;
   }
@@ -144,7 +144,7 @@ export function stopMachineRun(
   if (task.assignedExecutor.id !== personId) {
     return { ok: false, error: "wrong_executor" };
   }
-  const operator = requireActiveOperator(people, personId);
+  const operator = requireRunClosingOperator(people, personId);
   if (!operator.ok) {
     return operator;
   }
@@ -171,7 +171,28 @@ export function stopMachineRun(
   };
 }
 
-function requireActiveOperator(
+function requireStartEligibleOperator(
+  people: readonly Person[],
+  personId: string,
+): { ok: true; person: Person } | { ok: false; error: MachineRunMutationError } {
+  const person = findKnownOperator(people, personId);
+  if (!person.ok) {
+    return person;
+  }
+  if (person.person.availability === "TEMPORARILY_UNAVAILABLE") {
+    return { ok: false, error: "unavailable_person" };
+  }
+  return person;
+}
+
+function requireRunClosingOperator(
+  people: readonly Person[],
+  personId: string,
+): { ok: true; person: Person } | { ok: false; error: MachineRunMutationError } {
+  return findKnownOperator(people, personId);
+}
+
+function findKnownOperator(
   people: readonly Person[],
   personId: string,
 ): { ok: true; person: Person } | { ok: false; error: MachineRunMutationError } {
@@ -181,9 +202,6 @@ function requireActiveOperator(
   }
   if (person.status !== "ACTIVE") {
     return { ok: false, error: "retired_person" };
-  }
-  if (person.availability === "TEMPORARILY_UNAVAILABLE") {
-    return { ok: false, error: "unavailable_person" };
   }
   return { ok: true, person };
 }

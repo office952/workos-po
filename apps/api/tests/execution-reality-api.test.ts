@@ -183,4 +183,74 @@ describe("execution reality API", () => {
     const hidden = await other.request(`/api/execution-plans/${plan.plan.planId}`, { method: "GET" });
     expect(hidden.status).toBe(404);
   });
+
+  it("lets the assigned operator stop an active run after becoming unavailable", async () => {
+    const app = createApp();
+    const plan = await createExecutionPlan(app);
+    const person = await app.request("/api/people", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ displayName: "Operator CNC" }),
+    });
+    const personId = ((await readBody(person)).person as JsonObject).personId as string;
+    const cookie = await sessionCookieViaHttp(app, personId);
+    const other = await app.request("/api/people", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ displayName: "Alt operator" }),
+    });
+    const otherId = ((await readBody(other)).person as JsonObject).personId as string;
+    const otherCookie = await sessionCookieViaHttp(app, otherId);
+    const machineTask = plan.tasks.find((task) =>
+      providersOf(task).some((provider) => provider.kind === "MACHINE"),
+    );
+    if (!machineTask) {
+      throw new Error("missing machine task");
+    }
+    const machineId = String(machineTask.taskId);
+    const machineProvider = providersOf(machineTask).find((provider) => provider.kind === "MACHINE");
+    await app.request(`/api/execution-tasks/${machineId}/provider`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ providerId: machineProvider?.id }),
+    });
+    await app.request(`/api/execution-tasks/${machineId}/executor`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ personId }),
+    });
+    expect((await startTaskAs(app, machineId, cookie)).status).toBe(200);
+    const started = await app.request(`/api/execution-tasks/${machineId}/machine-runs/start`, {
+      method: "POST",
+      headers: { cookie },
+    });
+    expect(started.status).toBe(200);
+    const active = (
+      ((await readBody(started)).executionPlan as { tasks: JsonObject[] }).tasks.find(
+        (task) => task.taskId === machineId,
+      )?.machineRuns as JsonObject[]
+    )[0];
+    const away = await app.request(`/api/people/${personId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        availability: "TEMPORARILY_UNAVAILABLE",
+        unavailableReason: "Concediu",
+      }),
+    });
+    expect(away.status).toBe(200);
+    const refused = await app.request(
+      `/api/execution-machine-runs/${active?.machineRunId}/stop`,
+      { method: "POST", headers: { cookie: otherCookie } },
+    );
+    expect(refused.status).toBe(422);
+    expect((await readBody(refused)).error).toBe("wrong_executor");
+    const stopped = await app.request(
+      `/api/execution-machine-runs/${active?.machineRunId}/stop`,
+      { method: "POST", headers: { cookie } },
+    );
+    expect(stopped.status).toBe(200);
+    const completed = await completeTaskAs(app, machineId, cookie, { completedQuantity: 12.5 });
+    expect(completed.status).toBe(200);
+  });
 });
