@@ -1,4 +1,9 @@
+import {
+  diagnoseAssignedPerson,
+  type PeopleEligibilityContext,
+} from "../people/eligibility.js";
 import { findPerson, type Person } from "../people/identity.js";
+import type { ProductionCapabilityClassId } from "../processes/catalog.js";
 import type { ExecutionPlanRecord, ExecutionTask } from "./plan.js";
 
 type MachineRunMutationError =
@@ -11,7 +16,8 @@ type MachineRunMutationError =
   | "machine_run_closed"
   | "unknown_person"
   | "retired_person"
-  | "unavailable_person";
+  | "unavailable_person"
+  | "ineligible_executor";
 
 type MachineRunMutationResult =
   | { ok: true; record: ExecutionPlanRecord; alreadyApplied: boolean }
@@ -68,6 +74,7 @@ export function startMachineRun(
   personId: string,
   startedAt: string,
   people: readonly Person[],
+  eligibility: PeopleEligibilityContext | null = null,
 ): MachineRunMutationResult {
   const task = findTask(record, taskId);
   if (!task) {
@@ -88,6 +95,15 @@ export function startMachineRun(
   const operator = requireStartEligibleOperator(people, personId);
   if (!operator.ok) {
     return operator;
+  }
+  const capability = requireCurrentCapabilityEligibility(
+    operator.person.personId,
+    task.requiredCapabilityId,
+    people,
+    eligibility,
+  );
+  if (!capability.ok) {
+    return capability;
   }
   const machineProviderId = task.assignedProvider.id.trim();
   const machineProviderLabel = task.assignedProvider.label.trim();
@@ -183,6 +199,41 @@ function requireStartEligibleOperator(
     return { ok: false, error: "unavailable_person" };
   }
   return person;
+}
+
+function requireCurrentCapabilityEligibility(
+  personId: string,
+  capabilityId: string,
+  people: readonly Person[],
+  eligibility: PeopleEligibilityContext | null,
+): { ok: true } | { ok: false; error: MachineRunMutationError } {
+  const diagnosis = diagnoseAssignedPerson({
+    personId,
+    capabilityId: capabilityId as ProductionCapabilityClassId,
+    people,
+    eligibility,
+  });
+  if (!diagnosis) {
+    return { ok: false, error: "unknown_person" };
+  }
+  if (diagnosis.eligible) {
+    return { ok: true };
+  }
+  switch (diagnosis.reason) {
+    case "MISSING_SKILL":
+    case "RETIRED_SKILL":
+    case "CAPABILITY_UNMAPPED":
+    case null:
+      return { ok: false, error: "ineligible_executor" };
+    case "TEMPORARILY_UNAVAILABLE":
+      return { ok: false, error: "unavailable_person" };
+    case "RETIRED":
+      return { ok: false, error: "retired_person" };
+    default: {
+      const _exhaustive: never = diagnosis.reason;
+      return _exhaustive;
+    }
+  }
 }
 
 function requireRunClosingOperator(

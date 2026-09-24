@@ -435,13 +435,14 @@ export function persistMachineRunStart(
   personId: string,
   startedAt: string,
   people: readonly Person[],
+  eligibility: PeopleEligibilityContext | null = null,
 ): TaskMutationResult {
   const run = db.transaction((): TaskMutationResult => {
     const record = getExecutionPlanByTaskId(db, taskId);
     if (!record) {
       return { ok: false, error: "not_found" };
     }
-    const result = startMachineRun(record, taskId, personId, startedAt, people);
+    const result = startMachineRun(record, taskId, personId, startedAt, people, eligibility);
     if (!result.ok) {
       return result;
     }

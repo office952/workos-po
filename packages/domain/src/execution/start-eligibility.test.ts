@@ -302,6 +302,7 @@ describe("planned start current eligibility", () => {
       setup.person.personId,
       "2026-08-17T16:41:00.000Z",
       [setup.person],
+      setup.eligibility,
     );
     expect(running.ok).toBe(true);
     if (!running.ok) {
@@ -346,6 +347,67 @@ describe("planned start current eligibility", () => {
         "2026-08-17T17:00:00.000Z",
         plannedCompletionInput(task!),
         setup.person.personId,
+      ).ok,
+    ).toBe(true);
+  });
+
+  it("blocks a new machine run after the assigned operator loses the required skill", () => {
+    const setup = cncOperator("Andrei Goghi", "per:andrei-new-run");
+    const ready = readyCncTask(setup.person, setup.eligibility);
+    const started = startExecutionTask(
+      ready.record,
+      ready.taskId,
+      "2026-08-17T16:40:00.000Z",
+      [setup.person],
+      setup.eligibility,
+    );
+    expect(started.ok).toBe(true);
+    if (!started.ok) {
+      return;
+    }
+    const retired = retirePersonSkill(setup.assignment, "2026-08-17T16:41:00.000Z");
+    expect(retired.ok).toBe(true);
+    if (!retired.ok) {
+      return;
+    }
+    expect(setup.person.status).toBe("ACTIVE");
+    expect(setup.person.availability).toBe("AVAILABLE");
+    const eligibility: PeopleEligibilityContext = {
+      ...setup.eligibility,
+      assignments: [retired.assignment],
+    };
+    expect(
+      startMachineRun(
+        started.record,
+        ready.taskId,
+        setup.person.personId,
+        "2026-08-17T16:42:00.000Z",
+        [setup.person],
+        eligibility,
+      ),
+    ).toEqual({ ok: false, error: "ineligible_executor" });
+
+    const qualified = cncOperator("Elena CNC", "per:elena-run");
+    const qualifiedReady = readyCncTask(qualified.person, qualified.eligibility);
+    const qualifiedStarted = startExecutionTask(
+      qualifiedReady.record,
+      qualifiedReady.taskId,
+      "2026-08-17T16:43:00.000Z",
+      [qualified.person],
+      qualified.eligibility,
+    );
+    expect(qualifiedStarted.ok).toBe(true);
+    if (!qualifiedStarted.ok) {
+      return;
+    }
+    expect(
+      startMachineRun(
+        qualifiedStarted.record,
+        qualifiedReady.taskId,
+        qualified.person.personId,
+        "2026-08-17T16:44:00.000Z",
+        [qualified.person],
+        qualified.eligibility,
       ).ok,
     ).toBe(true);
   });

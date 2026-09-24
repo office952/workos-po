@@ -1252,6 +1252,7 @@ export function createProductSystemRuntimeFromOpenDb(
         personId,
         new Date().toISOString(),
         listPeople(db),
+        currentEligibility(),
       );
     },
     stopMachineRun(machineRunId, personId) {

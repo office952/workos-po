@@ -1,7 +1,11 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { CANONICAL_PRODUCT_CODE } from "@workos-final/domain";
+import { CANONICAL_PRODUCT_CODE, MCH_CNC_4020_ID } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
 import { resetCloudLoginAttemptGuard } from "../src/cloud/controlPlane.js";
+import { createProductSystemRuntime } from "../src/productSystem/runtime.js";
 import { cleanupCloudTemps } from "./cloud-harness.js";
 import { completeTaskAs, sessionCookieViaHttp, startTaskAs } from "./operator-test-helpers.js";
 
@@ -16,9 +20,14 @@ const readyValues = {
   "volume.confirmedPerimeterMm": 12500,
 };
 
+const isolatedRoots: string[] = [];
+
 afterEach(() => {
   resetCloudLoginAttemptGuard();
   cleanupCloudTemps();
+  for (const dir of isolatedRoots.splice(0)) {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 async function readBody(response: Response): Promise<JsonObject> {
@@ -252,5 +261,83 @@ describe("execution reality API", () => {
     expect(stopped.status).toBe(200);
     const completed = await completeTaskAs(app, machineId, cookie, { completedQuantity: 12.5 });
     expect(completed.status).toBe(200);
+  });
+
+  it("rejects a new machine run after the assigned operator loses the required skill", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "workos-machine-run-skill-"));
+    isolatedRoots.push(dir);
+    const runtime = createProductSystemRuntime(join(dir, "product-system.sqlite"));
+    runtime.materializeTrustedWorkforce();
+    const app = createApp({ productSystem: runtime });
+    const compiled = await readBody(
+      await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/preview`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ values: readyValues }),
+      }),
+    );
+    const accepted = await readBody(
+      await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/accepted-production-snapshot`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ values: readyValues, reviewId: compiled.reviewId }),
+      }),
+    );
+    const snapshotId = (accepted.snapshot as JsonObject).snapshotId as string;
+    const created = await readBody(
+      await app.request(
+        `/api/products/${CANONICAL_PRODUCT_CODE}/accepted-production-snapshots/${snapshotId}/execution-plan`,
+        { method: "POST" },
+      ),
+    );
+    const tasks = (created.executionPlan as { tasks: JsonObject[] }).tasks;
+    const backCnc = tasks.find(
+      (item) => item.processLabel === "Debitare foaie CNC" && item.scopeLabel === "Spate",
+    );
+    const andrei = runtime.listPeople().find((item) => item.displayName === "Andrei Goghi");
+    const cnc = runtime.listSkills().find((item) => item.code === "SK_CNC_OPERATOR");
+    if (!backCnc || !andrei || !cnc) {
+      throw new Error("missing CNC task or operator");
+    }
+    const cookie = await sessionCookieViaHttp(app, andrei.personId);
+    expect(
+      (
+        await app.request(`/api/execution-tasks/${backCnc.taskId}/provider`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ providerId: MCH_CNC_4020_ID }),
+        })
+      ).status,
+    ).toBe(200);
+    expect((await startTaskAs(app, String(backCnc.taskId), cookie)).status).toBe(200);
+    const qualified = await app.request(
+      `/api/execution-tasks/${backCnc.taskId}/machine-runs/start`,
+      { method: "POST", headers: { cookie } },
+    );
+    expect(qualified.status).toBe(200);
+    const active = (
+      ((await readBody(qualified)).executionPlan as { tasks: JsonObject[] }).tasks.find(
+        (task) => task.taskId === backCnc.taskId,
+      )?.machineRuns as JsonObject[]
+    )[0];
+    expect(
+      (
+        await app.request(`/api/execution-machine-runs/${active?.machineRunId}/stop`, {
+          method: "POST",
+          headers: { cookie },
+        })
+      ).status,
+    ).toBe(200);
+    expect(runtime.retirePersonSkill(andrei.personId, cnc.skillId).ok).toBe(true);
+    const person = runtime.getPerson(andrei.personId);
+    expect(person?.status).toBe("ACTIVE");
+    expect(person?.availability).toBe("AVAILABLE");
+    const blocked = await app.request(
+      `/api/execution-tasks/${backCnc.taskId}/machine-runs/start`,
+      { method: "POST", headers: { cookie } },
+    );
+    expect(blocked.status).toBe(422);
+    expect((await readBody(blocked)).error).toBe("ineligible_executor");
+    runtime.close();
   });
 });
