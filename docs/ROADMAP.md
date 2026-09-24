@@ -62,9 +62,9 @@ EXE4_INTEGRATED_ON_MAIN = YES
 EXE4_MERGE_COMMIT = e0ddbdac7de5896d683e05782a21f0e55a984b9b
 PR_28 = MERGED
 CURRENT_PROGRAM = PRODUCTION_PILOT_READINESS_V1
-CURRENT_PROGRAM_STATUS = IMPLEMENTED_IN_REVIEW
-PRODUCTION_PILOT_READINESS_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_PRODUCTION_PILOT_READINESS_V1 = NO
+CURRENT_PROGRAM_STATUS = COMPLETE / OWNER_ACCEPTED
+PRODUCTION_PILOT_READINESS_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_PRODUCTION_PILOT_READINESS_V1 = YES
 PREFLIGHT_ENGINE = SYNTHETICALLY_PROVEN
 REAL_ENVIRONMENT_PREFLIGHT = NOT_RUN
 DEPLOY_PRODUCTION = HOLD
@@ -780,9 +780,9 @@ Execution acceptance advisories, not a correction wave:
 
 ```text
 CURRENT_PROGRAM = PRODUCTION_PILOT_READINESS_V1
-CURRENT_PROGRAM_STATUS = IMPLEMENTED_IN_REVIEW
-PRODUCTION_PILOT_READINESS_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_PRODUCTION_PILOT_READINESS_V1 = NO
+CURRENT_PROGRAM_STATUS = COMPLETE / OWNER_ACCEPTED
+PRODUCTION_PILOT_READINESS_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_PRODUCTION_PILOT_READINESS_V1 = YES
 PREFLIGHT_ENGINE = SYNTHETICALLY_PROVEN
 REAL_ENVIRONMENT_PREFLIGHT = NOT_RUN
 DEPLOY_PRODUCTION = HOLD
@@ -826,7 +826,28 @@ HOST_CONTEXT_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 MOUNTING_INTERFACE_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 SITE_INSTALLATION_VERTICAL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PLANNING_CAPACITY_CANON = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
+PRODUCTION_PILOT_READINESS_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 ```
+
+Production Pilot Readiness V1 is Owner-accepted as the read-only preflight engine. Synthetic proof passed. A real environment preflight has not been run. Acceptance does not authorize deployment, cutover, real Cloud access, or production organization provisioning. New-organization preflight stays blocked by `ADMIN_TOOLING_DEBT`. General SaaS debts remain debt.
+
+```text
+INDEPENDENT_REVIEW = PASS
+P0 = 0
+P1 = 0
+TARGETED_TESTS = PASS
+VERIFY_ALL = PASS
+SYNTHETIC_PREFLIGHT_PROOF = PASS
+READ_ONLY = YES
+OUTPUT_SANITIZATION = PASS
+REAL_DATA_USED = NO
+REAL_ENVIRONMENT_PREFLIGHT = NOT_RUN
+```
+
+Accepted advisories, not a correction wave:
+
+- `GET /api/ready` can be weaker than pilot preflight when an active organization has no operational plane; pilot preflight still blocks that case
+- `api_production_build` proves the supported build contract; deployment packaging remains a future deployment concern
 
 Execution Reality V1 is Owner-accepted and integrated on main. It records optional operator-confirmed task `actualDurationMinutes` and explicit MachineRun segments. Planned effort, lifecycle timestamps, task actual duration, and machine-run duration stay independent. Null actual duration means unknown, not zero. A new machine run requires the assigned operator to be active, available, and currently eligible. Stopping an already-open run stays with that assigned operator and does not re-check later availability or skill. It does not replace Planning. PLN0 workload-first canon is complete. PLN1 is Owner-accepted: `plannedEffortMinutes`, derived provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787`. `planningWeek` and weekly `availableMinutes` remain cancelled. PLN2 and Operations Control V1 are Owner-accepted. PLN3 is not started. Scheduling is out of V1. Member DAG / composition corrections remain deferred and are not a Planning blocker. Host Context V1, Mounting Interface V1, and the site-installation vertical are Owner-accepted. Next wave is unauthorized.
 
