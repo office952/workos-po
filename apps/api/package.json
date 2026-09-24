@@ -13,6 +13,7 @@
     "cloud:configure-providers": "tsx src/cloud/configureProvidersCli.ts",
     "cloud:backup": "tsx src/cloud/backupCli.ts",
     "cloud:restore": "tsx src/cloud/restoreCli.ts",
+    "cloud:pilot-preflight": "tsx src/ops/pilotPreflightCli.ts",
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {

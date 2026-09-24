@@ -23,7 +23,8 @@
     "reference:status": "node scripts/reference-runtime.mjs status",
     "reference:restart": "node scripts/reference-runtime.mjs restart",
     "reference:seed": "node scripts/reference-runtime.mjs seed",
-    "reference:stop": "node scripts/reference-runtime.mjs stop"
+    "reference:stop": "node scripts/reference-runtime.mjs stop",
+    "pilot:preflight": "pnpm --filter @workos-final/api cloud:pilot-preflight"
   },
   "dependencies": {
     "@fontsource/geist-sans": "^5.3.0",

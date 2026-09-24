@@ -217,12 +217,18 @@ export function registerCloudRoutes(app: Hono<ApiEnv>): void {
   });
 }
 
+export const CLOUD_SESSION_COOKIE_CONTRACT = {
+  httpOnly: true,
+  path: "/",
+  sameSite: "Lax",
+} as const;
+
 function setCloudSessionCookie(c: Context<ApiEnv>, rawToken: string): void {
   const env = c.get("env") ?? process.env;
   setCookie(c, CLOUD_SESSION_COOKIE, rawToken, {
-    httpOnly: true,
-    path: "/",
-    sameSite: "Lax",
+    httpOnly: CLOUD_SESSION_COOKIE_CONTRACT.httpOnly,
+    path: CLOUD_SESSION_COOKIE_CONTRACT.path,
+    sameSite: CLOUD_SESSION_COOKIE_CONTRACT.sameSite,
     secure: cookieSecure(env),
     maxAge: CLOUD_SESSION_MAX_AGE_SEC,
   });

@@ -89,6 +89,36 @@ CLEAN SHUTDOWN / BACKUP FINALLY = remove only this operation's lease
 
 `GET /api/ready` is production readiness. In Cloud mode it inspects the Control Plane and **every active Operational Plane**: database present, current migration contract valid, plane identity valid. If any active plane is invalid, readiness is `not_ready` and HTTP 503. The public body stays aggregate booleans. It must not expose paths, emails, organization IDs, plane keys, filenames, or stack traces.
 
+## Pilot preflight
+
+Canonical invocation:
+
+```text
+pnpm pilot:preflight
+```
+
+This command is read-only. It inspects build artifacts, production configuration, the Control Plane, active Operational Planes, the runtime lease, backup/restore support, and provisioning debt. It does not create organizations, migrate databases, acquire or remove a lease, back up, restore, or write a readiness marker.
+
+```text
+PRODUCTION_PILOT_READINESS_V1 = IMPLEMENTED_IN_REVIEW
+OWNER_ACCEPTED_PRODUCTION_PILOT_READINESS_V1 = NO
+PREFLIGHT_ENGINE = SYNTHETICALLY_PROVEN
+REAL_ENVIRONMENT_PREFLIGHT = NOT_RUN
+DEPLOY_PRODUCTION = HOLD
+CUTOVER = HOLD
+REAL_CLOUD_WRITE = HOLD
+REAL_DB_WRITE = HOLD
+FIRST_REAL_BUSINESS_OPERATION = HOLD
+REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
+NEXT_WAVE_AUTHORIZED = NO
+```
+
+Exit `0` means READY. Exit `2` means blocked by configuration or readiness. Exit `3` means inspection failed closed. `--json` prints the same result object. Output must stay free of passwords, tokens, paths, and customer identifiers.
+
+An existing valid organization can be READY while production organization provisioning stays `NOT_READY` / `ADMIN_TOOLING_DEBT`. Requesting a new production organization is blocked until a supported production provisioning mechanism exists. General SaaS debts (signup, email verification, password recovery, MFA, billing, commercial onboarding) are advisories for a controlled pilot. Optional modules such as Site Installation and product enablement are not pilot blockers.
+
+Pilot preflight reuses `evaluateReadiness`. It may be stricter than `GET /api/ready`. It must not report READY when that evaluator reports not ready. Synthetic proof does not authorize a real pilot, deployment, or cutover.
+
 ## Backup and restore
 
 ```text
