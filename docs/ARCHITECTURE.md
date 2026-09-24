@@ -112,15 +112,18 @@ PRODUCT_ASSEMBLY_V2 = COMPLETE / OWNER_ACCEPTED
 OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V2 = YES
 VOLUMETRIC_LOGO_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PRODUCT_ASSEMBLY_V2_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
-HOST_CONTEXT_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_HOST_CONTEXT_V1 = NO
-MOUNTING_INTERFACE_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_MOUNTING_INTERFACE_V1 = NO
-SITE_INSTALLATION_VERTICAL_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_SITE_INSTALLATION_VERTICAL_V1 = NO
+HOST_CONTEXT_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_HOST_CONTEXT_V1 = YES
+MOUNTING_INTERFACE_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_MOUNTING_INTERFACE_V1 = YES
+SITE_INSTALLATION_VERTICAL_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_SITE_INSTALLATION_VERTICAL_V1 = YES
+HOST_CONTEXT_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+MOUNTING_INTERFACE_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+SITE_INSTALLATION_VERTICAL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 ```
 
-Logo V1 is the specific front-lit SKU `PRD-LOGO-FRONTLIT-PLEXI-AL06`. It is disabled until an organization enables it. Assembly V2 is `SIGN_ASSEMBLY_ACM_SIGNAGE_V2`: one ACM, one Logo, and optional Letters. V1 semantics stay in place. Host Context V1 is implemented in review as a frozen projection of SiteInstallationFacts. It is not a product and it is not Owner-accepted. ACM segmentation and a generic assembly graph remain unimplemented. `ProductAggregate.inscription` remains the transport field for the logo designation; the operator label is Denumire logo.
+Logo V1 is the specific front-lit SKU `PRD-LOGO-FRONTLIT-PLEXI-AL06`. It is disabled until an organization enables it. Assembly V2 is `SIGN_ASSEMBLY_ACM_SIGNAGE_V2`: one ACM, one Logo, and optional Letters. V1 semantics stay in place. Host Context V1 is Owner-accepted as a frozen projection of SiteInstallationFacts. It is not a product. Mounting Interface V1 and the site-installation vertical are Owner-accepted. ACM segmentation and a generic assembly graph remain unimplemented. `ProductAggregate.inscription` remains the transport field for the logo designation; the operator label is Denumire logo.
 
 ## Configuration-First
 

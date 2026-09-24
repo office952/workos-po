@@ -175,12 +175,15 @@ PRODUCT_ASSEMBLY_V2 = COMPLETE / OWNER_ACCEPTED
 OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V2 = YES
 VOLUMETRIC_LOGO_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PRODUCT_ASSEMBLY_V2_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
-HOST_CONTEXT_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_HOST_CONTEXT_V1 = NO
-MOUNTING_INTERFACE_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_MOUNTING_INTERFACE_V1 = NO
-SITE_INSTALLATION_VERTICAL_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_SITE_INSTALLATION_VERTICAL_V1 = NO
+HOST_CONTEXT_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_HOST_CONTEXT_V1 = YES
+MOUNTING_INTERFACE_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_MOUNTING_INTERFACE_V1 = YES
+SITE_INSTALLATION_VERTICAL_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_SITE_INSTALLATION_VERTICAL_V1 = YES
+HOST_CONTEXT_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+MOUNTING_INTERFACE_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+SITE_INSTALLATION_VERTICAL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 LOGO_PRODUCT_CODE = PRD-LOGO-FRONTLIT-PLEXI-AL06
 LOGO_DEFAULT_ENABLEMENT = DISABLED
 ASSEMBLY_V2_KIND = SIGN_ASSEMBLY_ACM_SIGNAGE_V2
@@ -272,7 +275,7 @@ REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
 Living program authority: `docs/ROADMAP.md`.
 Configuration-First architecture: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
-People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Current supported-product People capabilities are mapped; unused catalog capabilities may stay unmapped. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Execution Expansion V1 is Owner-accepted and integrated on main through PR #28. Execution acceptance advisories are recorded on the roadmap and are not a correction wave. Product Assembly V1 is Owner-accepted and integrated. It is cross-cutting work and does not replace Planning Workload V1. Acceptance advisories are recorded on the roadmap and are not a correction wave. Volumetric Logo V1 and Product Assembly V2 are Owner-accepted. Their acceptance advisories are recorded and are not a correction wave. Host Context V1, Mounting Interface V1, and the site-installation vertical are implemented in review and are not Owner-accepted. Current program is Planning Workload V1. PLN0 workload-first canon is complete. PLN1 planned effort, provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787` are Owner-accepted. PLN1 acceptance advisories are recorded on the roadmap and are not a correction wave. Weekly provider `availableMinutes` and `planningWeek` remain cancelled. PLN2 and Operations Control V1 are Owner-accepted: one operational job for Product and Assembly, job priority and optional target date, and unassigned planned effort. Acceptance advisories are recorded and are not a correction wave. PLN3 is not started. Scheduling remains out of V1. Member DAG / composition corrections stay deferred and are not a Planning blocker. Living Planning canon: `docs/architecture/PLANNING_CAPACITY_V1_CANON.md`. Exact merge commits live in `docs/ROADMAP.md`.
+People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Current supported-product People capabilities are mapped; unused catalog capabilities may stay unmapped. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Execution Expansion V1 is Owner-accepted and integrated on main through PR #28. Execution acceptance advisories are recorded on the roadmap and are not a correction wave. Product Assembly V1 is Owner-accepted and integrated. It is cross-cutting work and does not replace Planning Workload V1. Acceptance advisories are recorded on the roadmap and are not a correction wave. Volumetric Logo V1 and Product Assembly V2 are Owner-accepted. Their acceptance advisories are recorded and are not a correction wave. Host Context V1, Mounting Interface V1, and the site-installation vertical are Owner-accepted and integrated on main. Host Context is a frozen projection of SiteInstallationFacts and is not a product. Acceptance advisories are recorded on the roadmap and are not a correction wave. Current program is Planning Workload V1. PLN0 workload-first canon is complete. PLN1 planned effort, provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787` are Owner-accepted. PLN1 acceptance advisories are recorded on the roadmap and are not a correction wave. Weekly provider `availableMinutes` and `planningWeek` remain cancelled. PLN2 and Operations Control V1 are Owner-accepted: one operational job for Product and Assembly, job priority and optional target date, and unassigned planned effort. Acceptance advisories are recorded and are not a correction wave. PLN3 is not started. Scheduling remains out of V1. Member DAG / composition corrections stay deferred and are not a Planning blocker. Living Planning canon: `docs/architecture/PLANNING_CAPACITY_V1_CANON.md`. Exact merge commits live in `docs/ROADMAP.md`.
 
 ```text
 NO_SILENT_BUSINESS_TRUTH = CANONICAL

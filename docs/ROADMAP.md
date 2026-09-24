@@ -98,12 +98,15 @@ PRODUCT_ASSEMBLY_V2 = COMPLETE / OWNER_ACCEPTED
 OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V2 = YES
 VOLUMETRIC_LOGO_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PRODUCT_ASSEMBLY_V2_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
-HOST_CONTEXT_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_HOST_CONTEXT_V1 = NO
-MOUNTING_INTERFACE_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_MOUNTING_INTERFACE_V1 = NO
-SITE_INSTALLATION_VERTICAL_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_SITE_INSTALLATION_VERTICAL_V1 = NO
+HOST_CONTEXT_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_HOST_CONTEXT_V1 = YES
+MOUNTING_INTERFACE_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_MOUNTING_INTERFACE_V1 = YES
+SITE_INSTALLATION_VERTICAL_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_SITE_INSTALLATION_VERTICAL_V1 = YES
+HOST_CONTEXT_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+MOUNTING_INTERFACE_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+SITE_INSTALLATION_VERTICAL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 LOGO_DEFAULT_ENABLEMENT = DISABLED
 PRODUCT_ASSEMBLY_CANON = docs/architecture/WORKOS_PRODUCT_ASSEMBLY_CONTRACT_V1.md
 CONFIGURATION_FIRST_IMPLEMENTATION = CF1_COMPLETE_AND_CF2_CF3_COMPLETE_AND_CF4_COMPLETE
@@ -544,7 +547,7 @@ GLOBAL_MOBILE_NAV_CLIPPING = existing shell debt around narrow viewport
 
 Logo V1 reuses the front-lit Letters fabrication stack as this SKU's identity: Plexiglas 3 mm opal, aluminium 0.6 mm, Forex 10 mm, front-lit LED, depths 30/60/80/100. Confirmed area and perimeter are operator totals for the whole set. There is no piece collection. Logo stays disabled until the organization enables it. Assembly V2 adds `LOGO_ON_ACM_PANEL` and, when Letters is present, a separate `MOUNT_LETTERS_ON_PANEL`. `MOUNT_LOGO_ON_PANEL` waits for the panel and the logo, not for Letters.
 
-Still not implemented: Host Context, ACM segmentation, generic graph editor, recursive assemblies, CAD positioning, mounting price, mounting hardware, PLN3, and Scheduling.
+Still not implemented: ACM segmentation, generic graph editor, recursive assemblies, CAD positioning, mounting hardware BOM, PLN3, and Scheduling.
 
 Product Assembly V1 acceptance advisories, not a correction wave:
 
@@ -559,6 +562,57 @@ Logo V1 and Assembly V2 acceptance advisories, not a correction wave:
 - some shared process IDs retain LETTER naming
 - `ProductAggregate.inscription` also transports a generic product designation; the Logo operator label remains Denumire logo
 - existing shell navigation clipping on a narrow viewport
+
+## Host Context, Mounting Interface, and Site Installation V1
+
+Owner-accepted and integrated on main. This does not replace Planning Workload V1 and it does not authorize the next wave.
+
+```text
+HOST_CONTEXT_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_HOST_CONTEXT_V1 = YES
+MOUNTING_INTERFACE_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_MOUNTING_INTERFACE_V1 = YES
+SITE_INSTALLATION_VERTICAL_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_SITE_INSTALLATION_VERTICAL_V1 = YES
+HOST_CONTEXT_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+MOUNTING_INTERFACE_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+SITE_INSTALLATION_VERTICAL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+NEXT_WAVE_AUTHORIZED = NO
+```
+
+Host Context is the existing external site, facade, or customer support. It is not a ProductDefinition, ProductTruth, ProductAggregate, or commercial product line, and it must not be fabricated as a WorkOS product. Mutable authority is SiteInstallationFacts. Frozen authority is FrozenHostContextV1.
+
+Mounting Interface is the technical connection between WorkOS work and that existing host, including V1 fixing semantics. Frozen authority is FrozenMountingInterfaceV1. It is not a product component, an assembly child, a commercial price, a hardware BOM, CAD placement, or structural engineering.
+
+Site installation is an optional organization-configurable operational service. Provider modes are INTERNAL and SUBCONTRACTED. Organization modes remain SERVICE_DISABLED, INTERNAL, SUBCONTRACTED, and BOTH. The client price is MANUAL_FIXED_PER_REQUEST. Internal cost stays separate from that price. There is no automatic installation markup, no relation price, and no installation line on each assembly child.
+
+Accepted lifecycle: Request, SiteInstallationFacts, provider mode, internal or subcontract cost evidence, manual client installation price, Quote, Acceptance, Order, Production Release, Execution, INSTALL_AT_SITE. Frozen downstream truth does not reread mutable request facts. ProductTruth and AssemblyTruth stay unaffected.
+
+A standalone product with installation is the product plus one SITE_INSTALLATION service line. An assembly with installation keeps its child product sections plus exactly one SITE_INSTALLATION service line. Assembly execution remains fabrication, internal assembly mounting, assembly QC, pack, then INSTALL_AT_SITE. MOUNT_LETTERS_ON_PANEL and MOUNT_LOGO_ON_PANEL are not INSTALL_AT_SITE.
+
+SERVICE_DISABLED leaves unrelated product and assembly work unchanged. INTERNAL and SUBCONTRACTED select that provider. BOTH requires an explicit provider-mode choice. A later organization configuration change does not rewrite frozen historical records.
+
+```text
+CUSTOMER_OPERABLE_WITHOUT_CURSOR = YES
+NO_CLIENT_CODE_FORK = YES
+INDEPENDENT_CODE_REVIEW = PASS
+DETERMINISTIC_REGRESSION = PASS
+VERIFY_ALL = PASS
+SYNTHETIC_RUNTIME_PROOF = PASS
+INDEPENDENT_VISUAL_REVIEW = PASS
+P0 = 0
+P1 = 0
+UX-S0 = 0
+UX-S1 = 0
+REAL_DATA_USED = NO
+```
+
+Acceptance advisories, not a correction wave:
+
+- UX-S2-01. Request / Montaj la locație is vertically long on desktop. Later global UI work may move it to the semantic two-column page model.
+- UX-S2-02. Operational installation context at 390px is readable and has no horizontal overflow, and it remains visually dense in two columns. Later responsive work may stack it to one column.
+
+Still out of scope: site electrical INCLUDED or SUBCONTRACTED pricing, mounting hardware BOM, transport and travel pricing, PLN3, Scheduling, CF5, CAD or site positioning, and crew Pontaj or GPS.
 
 ## Product Enablement Admin V1
 
@@ -736,16 +790,19 @@ PLN1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 CAPACITY_IMPLEMENTATION = CANCELLED_WEEKLY_SUPPLY
 SCHEDULING = NOT_STARTED / OUT_OF_SCOPE_V1
 MEMBER_DAG_COMPOSITION_CORRECTIONS = DEFERRED / NOT_CAPACITY_BLOCKER
-HOST_CONTEXT_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_HOST_CONTEXT_V1 = NO
-MOUNTING_INTERFACE_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_MOUNTING_INTERFACE_V1 = NO
-SITE_INSTALLATION_VERTICAL_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_SITE_INSTALLATION_VERTICAL_V1 = NO
+HOST_CONTEXT_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_HOST_CONTEXT_V1 = YES
+MOUNTING_INTERFACE_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_MOUNTING_INTERFACE_V1 = YES
+SITE_INSTALLATION_VERTICAL_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_SITE_INSTALLATION_VERTICAL_V1 = YES
+HOST_CONTEXT_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+MOUNTING_INTERFACE_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+SITE_INSTALLATION_VERTICAL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PLANNING_CAPACITY_CANON = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
 ```
 
-Planning Workload V1 is the living program. PLN0 workload-first canon is complete. PLN1 is Owner-accepted: `plannedEffortMinutes`, derived provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787`. `planningWeek` and weekly `availableMinutes` remain cancelled. PLN2 and Operations Control V1 are Owner-accepted. PLN3 is not started. Scheduling is out of V1. Member DAG / composition corrections remain deferred and are not a Planning blocker. Host Context V1, Mounting Interface V1, and the site-installation vertical are implemented in review and are not Owner-accepted.
+Planning Workload V1 is the living program. PLN0 workload-first canon is complete. PLN1 is Owner-accepted: `plannedEffortMinutes`, derived provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787`. `planningWeek` and weekly `availableMinutes` remain cancelled. PLN2 and Operations Control V1 are Owner-accepted. PLN3 is not started. Scheduling is out of V1. Member DAG / composition corrections remain deferred and are not a Planning blocker. Host Context V1, Mounting Interface V1, and the site-installation vertical are Owner-accepted. They do not replace this program and they do not authorize the next wave.
 
 PLN1 acceptance advisories, not a correction wave:
 

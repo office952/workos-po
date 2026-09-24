@@ -45,12 +45,15 @@ OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V2 = YES
 VOLUMETRIC_LOGO_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PRODUCT_ASSEMBLY_V2_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 ASSEMBLY_V2_KIND = SIGN_ASSEMBLY_ACM_SIGNAGE_V2
-HOST_CONTEXT_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_HOST_CONTEXT_V1 = NO
-MOUNTING_INTERFACE_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_MOUNTING_INTERFACE_V1 = NO
-SITE_INSTALLATION_VERTICAL_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_SITE_INSTALLATION_VERTICAL_V1 = NO
+HOST_CONTEXT_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_HOST_CONTEXT_V1 = YES
+MOUNTING_INTERFACE_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_MOUNTING_INTERFACE_V1 = YES
+SITE_INSTALLATION_VERTICAL_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_SITE_INSTALLATION_VERTICAL_V1 = YES
+HOST_CONTEXT_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+MOUNTING_INTERFACE_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
+SITE_INSTALLATION_VERTICAL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 OPEN_DECISION = listed at the end; do not reopen the top-level model
 ```
 
@@ -149,7 +152,7 @@ V1_FIELD_SET = OPEN_DECISION
 ```
 
 Existing customer ACM facade is Host Context (`type = ACM`). It does not instantiate `PRD-ACM-CASSETTE-NONE`.
-`SiteInstallationFacts` remain the mutable request source. Host Context V1 is a derived projection of those facts, frozen into the commercial and execution chain. It is not ProductTruth and it is not AssemblyTruth.
+`SiteInstallationFacts` remain the mutable request source. Host Context V1 is Owner-accepted as a derived projection of those facts, frozen into the commercial and execution chain. It is not ProductTruth and it is not AssemblyTruth. Frozen downstream truth does not reread mutable request facts.
 
 If WorkOS fabricates the ACM, ACM is a normal child product with its own definition, truth, aggregate, materials, processes, and provenance. The Letters relation belongs to Assembly Interface.
 
@@ -242,5 +245,5 @@ Assemblies are additive. Standalone Letters, ACM, and future simple products rem
 4. Assembly-aware Quote / Order / Production snapshot schema
 5. Commercial line / grouping policy
 6. Detailed ACM segmentation contract
-7. Host Context integration with SiteInstallationFacts
+7. Host Context integration with SiteInstallationFacts — closed; Owner-accepted with Host Context V1
 8. Exact stale / review semantics when a child changes
