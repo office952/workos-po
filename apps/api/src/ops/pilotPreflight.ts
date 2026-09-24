@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
@@ -88,6 +88,119 @@ function check(
   safeDetail?: string,
 ): PilotCheck {
   return safeDetail ? { id, status, summary, safeDetail } : { id, status, summary };
+}
+
+type FrontendBlock =
+  | "INDEX_MISSING"
+  | "INDEX_UNREADABLE"
+  | "ENTRY_SCRIPT_MISSING"
+  | "LOCAL_ASSET_MISSING"
+  | "ASSET_PATH_ESCAPE";
+
+function tagAttr(tag: string, name: string): string | null {
+  const match = new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, "i").exec(tag);
+  return match?.[1] ?? match?.[2] ?? null;
+}
+
+function classifyLocalAsset(
+  raw: string,
+  staticRoot: string,
+): "external" | "escape" | "missing" | "file" {
+  const trimmed = raw.trim();
+  const lower = trimmed.toLowerCase();
+  if (
+    !trimmed ||
+    lower.startsWith("http:") ||
+    lower.startsWith("https:") ||
+    lower.startsWith("data:") ||
+    lower.startsWith("javascript:") ||
+    lower.startsWith("//")
+  ) {
+    return "external";
+  }
+  const withoutHash = trimmed.split("#", 1)[0] ?? "";
+  const pathOnly = withoutHash.split("?", 1)[0] ?? "";
+  const segments = pathOnly.split(/[/\\]/).filter((segment) => segment.length > 0 && segment !== ".");
+  if (segments.length === 0 || segments.some((segment) => segment === "..")) {
+    return "escape";
+  }
+  const candidate = resolve(staticRoot, ...segments);
+  const rel = relative(resolve(staticRoot), candidate);
+  if (rel.startsWith("..") || isAbsolute(rel)) {
+    return "escape";
+  }
+  try {
+    if (!existsSync(candidate) || !statSync(candidate).isFile()) {
+      return "missing";
+    }
+  } catch {
+    return "missing";
+  }
+  return "file";
+}
+
+function isExecutableScript(src: string): boolean {
+  const pathOnly = src.trim().split("#", 1)[0]?.split("?", 1)[0]?.toLowerCase() ?? "";
+  return pathOnly.endsWith(".js") || pathOnly.endsWith(".mjs");
+}
+
+function inspectFrontendBuild(
+  staticRoot: string,
+): { ok: true } | { ok: false; detail: FrontendBlock } {
+  if (!staticRoot) {
+    return { ok: false, detail: "INDEX_MISSING" };
+  }
+  const indexPath = resolve(staticRoot, "index.html");
+  let html = "";
+  try {
+    if (!existsSync(indexPath) || !statSync(indexPath).isFile()) {
+      return { ok: false, detail: "INDEX_MISSING" };
+    }
+    html = readFileSync(indexPath, "utf8");
+  } catch {
+    return { ok: false, detail: "INDEX_UNREADABLE" };
+  }
+
+  const scriptSrcs = [...html.matchAll(/<script\b([^>]*)>/gi)]
+    .map((match) => tagAttr(match[0] ?? "", "src"))
+    .filter((src): src is string => typeof src === "string" && isExecutableScript(src));
+  const styleHrefs = [...html.matchAll(/<link\b([^>]*)>/gi)]
+    .filter((match) => {
+      const rel = (tagAttr(match[0] ?? "", "rel") ?? "").toLowerCase();
+      return rel.split(/\s+/).includes("stylesheet") || rel.split(/\s+/).includes("modulepreload");
+    })
+    .map((match) => tagAttr(match[0] ?? "", "href"))
+    .filter((href): href is string => Boolean(href));
+
+  let escaped = false;
+  let entryFound = false;
+  let supportingMissing = false;
+  for (const src of scriptSrcs) {
+    const kind = classifyLocalAsset(src, staticRoot);
+    if (kind === "escape") {
+      escaped = true;
+    } else if (kind === "file") {
+      entryFound = true;
+    }
+  }
+  for (const href of styleHrefs) {
+    const kind = classifyLocalAsset(href, staticRoot);
+    if (kind === "escape") {
+      escaped = true;
+    } else if (kind === "missing") {
+      supportingMissing = true;
+    }
+  }
+  if (escaped) {
+    return { ok: false, detail: "ASSET_PATH_ESCAPE" };
+  }
+  if (!entryFound) {
+    return { ok: false, detail: "ENTRY_SCRIPT_MISSING" };
+  }
+  if (supportingMissing) {
+    return { ok: false, detail: "LOCAL_ASSET_MISSING" };
+  }
+  return { ok: true };
 }
 
 function rootContains(parent: string, child: string): boolean {
@@ -218,7 +331,10 @@ function inspectOrganizations(controlPlane: ControlPlane): PilotCheck[] {
       bootstrapBlocked = true;
       continue;
     }
-    if (controlPlane.listActiveOwnerMemberships(organization.organizationId).length < 1) {
+    const usableOwners = controlPlane
+      .listActiveOwnerMemberships(organization.organizationId)
+      .filter((membership) => controlPlane.getUser(membership.userId)?.status === "ACTIVE");
+    if (usableOwners.length === 0) {
       ownerBlocked = true;
     }
     const inspected = inspectOperationalPlane(
@@ -248,9 +364,13 @@ function inspectOrganizations(controlPlane: ControlPlane): PilotCheck[] {
       ? check(
           "active_organization_owner",
           "BLOCKED",
-          "An active organization does not have an active owner.",
+          "An active organization does not have an active usable owner.",
         )
-      : check("active_organization_owner", "PASS", "Each active organization has an active owner."),
+      : check(
+          "active_organization_owner",
+          "PASS",
+          "Each active organization has an active usable owner.",
+        ),
   );
   checks.push(
     bootstrapBlocked
@@ -328,11 +448,16 @@ export function evaluateProductionPilotReadiness(
     );
   }
 
-  const indexPath = staticRoot ? resolve(staticRoot, "index.html") : "";
+  const frontend = inspectFrontendBuild(staticRoot);
   checks.push(
-    staticRoot && existsSync(indexPath)
+    frontend.ok
       ? check("frontend_static_build", "PASS", "Frontend production build artifact is present.")
-      : check("frontend_static_build", "BLOCKED", "Frontend production build artifact is missing."),
+      : check(
+          "frontend_static_build",
+          "BLOCKED",
+          "Frontend production build artifact is missing.",
+          frontend.detail,
+        ),
   );
 
   const apiPackagePath = resolve(SOURCE_DIR, "../../package.json");

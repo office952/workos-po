@@ -46,6 +46,20 @@ function productionEnv(input: {
   };
 }
 
+function writeProductionStatic(
+  staticRoot: string,
+  html = `<!doctype html>
+<title>WorkOS</title>
+<script type="module" src="/assets/app.js"></script>
+<link rel="stylesheet" href="/assets/app.css">
+`,
+): void {
+  mkdirSync(join(staticRoot, "assets"), { recursive: true });
+  writeFileSync(join(staticRoot, "index.html"), html);
+  writeFileSync(join(staticRoot, "assets", "app.js"), "export {}\n");
+  writeFileSync(join(staticRoot, "assets", "app.css"), "body{}\n");
+}
+
 async function readyWorld() {
   const fixture = createCloudFixture();
   const created = await addOrganization(fixture, "Pilot Org");
@@ -56,7 +70,7 @@ async function readyWorld() {
     role: "owner",
   });
   const staticRoot = trackTempDir();
-  writeFileSync(join(staticRoot, "index.html"), "<!doctype html><title>WorkOS</title>\n");
+  writeProductionStatic(staticRoot);
   const backupRoot = trackTempDir();
   const cloudRoot = fixture.cloudRoot;
   const planeKey = created.plane.planeKey;
@@ -160,7 +174,7 @@ describe("production pilot preflight", () => {
     const cloudRoot = fixture.cloudRoot;
     fixture.close();
     const staticRoot = trackTempDir();
-    writeFileSync(join(staticRoot, "index.html"), "<!doctype html>\n");
+    writeProductionStatic(staticRoot);
     const noOwner = evaluateProductionPilotReadiness({
       env: productionEnv({ cloudRoot, backupRoot: trackTempDir(), staticRoot }),
     });
@@ -174,7 +188,7 @@ describe("production pilot preflight", () => {
     const provisioningRoot = provisioning.cloudRoot;
     provisioning.close();
     const staticRoot = trackTempDir();
-    writeFileSync(join(staticRoot, "index.html"), "<!doctype html>\n");
+    writeProductionStatic(staticRoot);
     const provisioningResult = evaluateProductionPilotReadiness({
       env: productionEnv({
         cloudRoot: provisioningRoot,
@@ -284,6 +298,146 @@ describe("production pilot preflight", () => {
       expect(existing.advisories).toContain(id);
       expect(existing.checks.find((item) => item.id === id)?.status).toBe("ADVISORY");
     }
+  });
+
+  it("blocks a disabled-only owner and accepts a second usable owner", async () => {
+    const disabledOnly = await readyWorld();
+    const control = new Database(resolveControlPlaneSqlitePath(disabledOnly.cloudRoot));
+    const owner = control.prepare("SELECT user_id, email FROM users").get() as {
+      user_id: string;
+      email: string;
+    };
+    control.prepare("UPDATE users SET status = 'DISABLED'").run();
+    const membership = control
+      .prepare("SELECT status, role FROM organization_memberships")
+      .get() as { status: string; role: string };
+    control.close();
+    expect(membership).toEqual({ status: "ACTIVE", role: "owner" });
+    const blocked = evaluate(disabledOnly);
+    expect(blocked.overallStatus).toBe("BLOCKED");
+    expect(blocked.blockers).toContain("active_organization_owner");
+    assertSanitized(blocked, owner.email);
+    assertSanitized(blocked, owner.user_id);
+    assertSanitized(blocked, disabledOnly.staticRoot);
+
+    const fixture = createCloudFixture();
+    const created = await addOrganization(fixture, "Two Owners");
+    const first = await addUser(fixture, {
+      email: "disabled-owner@example.test",
+      password: OWNER_PASSWORD,
+      organizationId: created.organization.organizationId,
+      role: "owner",
+    });
+    await addUser(fixture, {
+      email: "active-owner@example.test",
+      password: OWNER_PASSWORD,
+      organizationId: created.organization.organizationId,
+      role: "owner",
+    });
+    fixture.controlPlane.db
+      .prepare("UPDATE users SET status = 'DISABLED' WHERE user_id = ?")
+      .run(first.userId);
+    const cloudRoot = fixture.cloudRoot;
+    fixture.close();
+    const staticRoot = trackTempDir();
+    writeProductionStatic(staticRoot);
+    const backupRoot = trackTempDir();
+    const passed = evaluateProductionPilotReadiness({
+      env: productionEnv({ cloudRoot, backupRoot, staticRoot }),
+    });
+    expect(passed.checks.find((item) => item.id === "active_organization_owner")?.status).toBe("PASS");
+    expect(passed.overallStatus).toBe("READY");
+    assertSanitized(passed, first.userId);
+    assertSanitized(passed, "disabled-owner@example.test");
+    assertSanitized(passed, staticRoot);
+  });
+
+  it("requires a local frontend bundle and rejects escapes and external-only scripts", async () => {
+    const world = await readyWorld();
+    const assetPath = join(world.staticRoot, "assets", "app.js");
+
+    const indexOnly = trackTempDir();
+    writeFileSync(join(indexOnly, "index.html"), "<!doctype html><title>WorkOS</title>\n");
+    const only = evaluateProductionPilotReadiness({
+      env: productionEnv({ ...world, staticRoot: indexOnly }),
+    });
+    expect(only.overallStatus).toBe("BLOCKED");
+    expect(only.blockers).toContain("frontend_static_build");
+    expect(only.checks.find((item) => item.id === "frontend_static_build")?.safeDetail).toBe(
+      "ENTRY_SCRIPT_MISSING",
+    );
+    expect(JSON.stringify(only)).not.toContain(indexOnly);
+
+    const missingJs = trackTempDir();
+    mkdirSync(join(missingJs, "assets"));
+    writeFileSync(
+      join(missingJs, "index.html"),
+      `<!doctype html><script type="module" src="/assets/app.js"></script>\n`,
+    );
+    const missing = evaluateProductionPilotReadiness({
+      env: productionEnv({ ...world, staticRoot: missingJs }),
+    });
+    expect(missing.blockers).toContain("frontend_static_build");
+    expect(missing.checks.find((item) => item.id === "frontend_static_build")?.safeDetail).toBe(
+      "ENTRY_SCRIPT_MISSING",
+    );
+    expect(JSON.stringify(missing)).not.toContain(missingJs);
+    expect(JSON.stringify(missing)).not.toContain("app.js");
+
+    const valid = evaluate(world);
+    expect(valid.checks.find((item) => item.id === "frontend_static_build")?.status).toBe("PASS");
+    expect(JSON.stringify(valid)).not.toContain(assetPath);
+    expect(JSON.stringify(valid)).not.toContain(world.staticRoot);
+
+    const escaped = trackTempDir();
+    writeFileSync(
+      join(escaped, "index.html"),
+      `<!doctype html><script type="module" src="../outside.js"></script>\n`,
+    );
+    const escape = evaluateProductionPilotReadiness({
+      env: productionEnv({ ...world, staticRoot: escaped }),
+    });
+    expect(escape.blockers).toContain("frontend_static_build");
+    expect(escape.checks.find((item) => item.id === "frontend_static_build")?.safeDetail).toBe(
+      "ASSET_PATH_ESCAPE",
+    );
+
+    const external = trackTempDir();
+    writeFileSync(
+      join(external, "index.html"),
+      `<!doctype html><script src="https://cdn.example/app.js"></script>\n`,
+    );
+    const cdn = evaluateProductionPilotReadiness({
+      env: productionEnv({ ...world, staticRoot: external }),
+    });
+    expect(cdn.blockers).toContain("frontend_static_build");
+    expect(cdn.checks.find((item) => item.id === "frontend_static_build")?.safeDetail).toBe(
+      "ENTRY_SCRIPT_MISSING",
+    );
+    expect(JSON.stringify(cdn)).not.toContain("cdn.example");
+
+    const withCss = trackTempDir();
+    writeProductionStatic(withCss);
+    const cssOk = evaluateProductionPilotReadiness({
+      env: productionEnv({ ...world, staticRoot: withCss }),
+    });
+    expect(cssOk.checks.find((item) => item.id === "frontend_static_build")?.status).toBe("PASS");
+
+    const missingCss = trackTempDir();
+    mkdirSync(join(missingCss, "assets"));
+    writeFileSync(join(missingCss, "assets", "app.js"), "export {}\n");
+    writeFileSync(
+      join(missingCss, "index.html"),
+      `<!doctype html><script type="module" src="/assets/app.js"></script><link rel="stylesheet" href="/assets/app.css">\n`,
+    );
+    const cssMissing = evaluateProductionPilotReadiness({
+      env: productionEnv({ ...world, staticRoot: missingCss }),
+    });
+    expect(cssMissing.blockers).toContain("frontend_static_build");
+    expect(cssMissing.checks.find((item) => item.id === "frontend_static_build")?.safeDetail).toBe(
+      "LOCAL_ASSET_MISSING",
+    );
+    expect(JSON.stringify(cssMissing)).not.toContain(missingCss);
   });
 
   it("keeps production provisioning refusal and sanitizes CLI inspection errors", async () => {
