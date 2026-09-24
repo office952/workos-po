@@ -1830,4 +1830,81 @@ describe("ExecutionPage", () => {
     expect(document.querySelectorAll("[data-execution-scope]")).toHaveLength(0);
     expect(document.querySelectorAll(".operational-task--compact")).toHaveLength(2);
   });
+
+  it("shows frozen OTHER notes on the site task without reading the request", async () => {
+    const fetchMock = vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      expect(url).not.toContain("/requests/");
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: null });
+      }
+      return jsonResponse({
+        executionPlan: {
+          plan: {
+            planId: "exp:site",
+            productLabel: "Litere",
+            inscription: "ALTUL",
+            sourceSnapshotId: "aps:site",
+          },
+          statusLabel: "Planificat",
+          progress: {
+            total: 1,
+            completed: 0,
+            inProgress: 0,
+            planned: 1,
+            waitingDependencies: 0,
+            noProvider: 0,
+            varianceCount: 0,
+          },
+          tasks: [
+            {
+              taskId: "task-site",
+              processLabel: "Montaj la locație",
+              scopeLabel: "Montaj la locație",
+              seqLabel: "20",
+              status: "PLANNED",
+              statusLabel: "Planificat",
+              assignmentLabel: "Nealocat",
+              requiresProvider: false,
+              canAssign: false,
+              canAssignProvider: false,
+              canClaimStart: false,
+              canComplete: false,
+              requiresCompletedQuantity: false,
+              measurableQuantity: null,
+              completedQuantityLabel: null,
+              varianceLabel: null,
+              waitingFor: [],
+              eligibleProviders: [],
+            },
+          ],
+        },
+        siteInstallation: {
+          providerModeLabel: "Intern",
+          siteName: null,
+          street: "Strada Sintetică 1",
+          city: "Oraș Sintetic",
+          surfaceTypeLabel: "Altul",
+          surfaceOtherNote: "Suprafață sintetică specială",
+          fixingMethodLabel: "Altul",
+          fixingOtherNote: "Fixare sintetică specială",
+          installationElevationMm: null,
+          siteElectricalLabel: "Exclus — responsabilitatea clientului",
+          accessNotes: null,
+          contactName: null,
+          contactPhone: null,
+          crewSize: 2,
+          plannedDurationHours: 3,
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExecutionPage planId="exp:site" taskId="task-site" />);
+    expect(await screen.findByText("Suprafață sintetică specială")).toBeInTheDocument();
+    expect(screen.getByText("Fixare sintetică specială")).toBeInTheDocument();
+    expect(screen.getByText("Tip suprafață — detalii")).toBeInTheDocument();
+    expect(screen.getByText("Metodă de fixare — detalii")).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some((call) => String(call[0]).includes("/requests/"))).toBe(false);
+  });
 });

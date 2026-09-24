@@ -499,9 +499,11 @@ export type SiteInstallationOperationalTransport = {
   street: string;
   city: string;
   surfaceTypeLabel: string;
+  surfaceOtherNote: string | null;
   mountingSurfaceWidthMm: number | null;
   mountingSurfaceHeightMm: number | null;
   fixingMethodLabel: string;
+  fixingOtherNote: string | null;
   installationElevationMm: number | null;
   siteElectricalLabel: string;
   accessNotes: string | null;

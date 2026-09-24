@@ -213,7 +213,61 @@ describe("site installation other values", () => {
       { method: "POST" },
     );
     expect(plan.status).toBe(200);
-    expect(JSON.stringify(await readBody(plan))).toContain("INSTALL_AT_SITE");
+    const createdPlan = await readBody(plan);
+    expect(JSON.stringify(createdPlan)).toContain("INSTALL_AT_SITE");
+    const siteView = (released.snapshot as JsonObject).siteInstallation as JsonObject;
+    expect(siteView.surfaceOtherNote).toBe(FACADE_NOTE);
+    expect(siteView.fixingOtherNote).toBe(FIXING_NOTE);
+
+    const job = await app.request(
+      `/api/jobs/${encodeURIComponent(String(order.orderSnapshotId))}`,
+    );
+    expect(job.status).toBe(200);
+    const jobInstallation = (await readBody(job)).siteInstallation as JsonObject;
+    expect(jobInstallation.surfaceTypeLabel).toBe("Altul");
+    expect(jobInstallation.surfaceOtherNote).toBe(FACADE_NOTE);
+    expect(jobInstallation.fixingMethodLabel).toBe("Altul");
+    expect(jobInstallation.fixingOtherNote).toBe(FIXING_NOTE);
+
+    const planId = String(
+      ((createdPlan.executionPlan as JsonObject).plan as JsonObject).planId,
+    );
+    const readPlan = await app.request(
+      `/api/execution-plans/${encodeURIComponent(planId)}`,
+    );
+    expect(readPlan.status).toBe(200);
+    const executionInstallation = (await readBody(readPlan)).siteInstallation as JsonObject;
+    expect(executionInstallation.surfaceOtherNote).toBe(FACADE_NOTE);
+    expect(executionInstallation.fixingOtherNote).toBe(FIXING_NOTE);
+
+    const current = await app.request(`/api/requests/${encodeURIComponent(requestId)}`);
+    const currentFacts = ((await readBody(current)).detail as JsonObject)
+      .installationFacts as JsonObject;
+    const mutated = await app.request(
+      `/api/requests/${encodeURIComponent(requestId)}/installation-facts`,
+      {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: currentFacts.version,
+          facadeOtherNote: "Notă mutabilă ulterioară",
+          fixingOtherNote: "Fixare mutabilă ulterioară",
+        }),
+      },
+    );
+    expect(mutated.status).toBe(409);
+    const jobAfter = await app.request(
+      `/api/jobs/${encodeURIComponent(String(order.orderSnapshotId))}`,
+    );
+    expect(((await readBody(jobAfter)).siteInstallation as JsonObject).surfaceOtherNote).toBe(
+      FACADE_NOTE,
+    );
+    const planAfter = await app.request(
+      `/api/execution-plans/${encodeURIComponent(planId)}`,
+    );
+    expect(((await readBody(planAfter)).siteInstallation as JsonObject).fixingOtherNote).toBe(
+      FIXING_NOTE,
+    );
   });
 
   it("freezes a subcontracted quote without crew or duration", async () => {

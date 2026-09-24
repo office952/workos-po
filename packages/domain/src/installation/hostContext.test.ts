@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { blankSiteInstallationFacts } from "./facts.js";
-import { freezeSiteInstallationContexts } from "./hostContext.js";
+import {
+  freezeSiteInstallationContexts,
+  projectSiteInstallationOperationalView,
+} from "./hostContext.js";
 
 function readyFacts(overrides: Partial<ReturnType<typeof blankSiteInstallationFacts>> = {}) {
   return {
@@ -99,5 +102,56 @@ describe("frozen host context", () => {
     expect(subcontracted?.siteExecutionContext).not.toHaveProperty("crewSize");
     expect(subcontracted?.siteExecutionContext).not.toHaveProperty("plannedDurationHours");
     expect(subcontracted?.hostContext.surfaceType).toBe("CONCRETE");
+  });
+
+  it("copies OTHER notes into the operational view and omits them for ordinary values", () => {
+    const otherFrozen = freezeSiteInstallationContexts(
+      readyFacts({
+        facadeType: "OTHER",
+        facadeOtherNote: "Suprafață sintetică specială",
+        fixingMethod: "OTHER",
+        fixingOtherNote: "Fixare sintetică specială",
+      }),
+      "req:synthetic",
+      "INTERNAL",
+    );
+    expect(otherFrozen).not.toBeNull();
+    if (!otherFrozen) {
+      return;
+    }
+    const otherView = projectSiteInstallationOperationalView({
+      providerMode: "INTERNAL",
+      hostContext: otherFrozen.hostContext,
+      mountingInterface: otherFrozen.mountingInterface,
+      siteExecutionContext: otherFrozen.siteExecutionContext,
+    });
+    expect(otherView.surfaceTypeLabel).toBe("Altul");
+    expect(otherView.surfaceOtherNote).toBe("Suprafață sintetică specială");
+    expect(otherView.fixingMethodLabel).toBe("Altul");
+    expect(otherView.fixingOtherNote).toBe("Fixare sintetică specială");
+    expect(otherView.crewSize).toBe(2);
+    expect(otherView.plannedDurationHours).toBe(3);
+
+    const ordinaryFrozen = freezeSiteInstallationContexts(
+      readyFacts(),
+      "req:synthetic",
+      "SUBCONTRACTED",
+    );
+    expect(ordinaryFrozen).not.toBeNull();
+    if (!ordinaryFrozen) {
+      return;
+    }
+    const ordinaryView = projectSiteInstallationOperationalView({
+      providerMode: "SUBCONTRACTED",
+      hostContext: ordinaryFrozen.hostContext,
+      mountingInterface: ordinaryFrozen.mountingInterface,
+      siteExecutionContext: ordinaryFrozen.siteExecutionContext,
+    });
+    expect(ordinaryView.surfaceTypeLabel).toBe("Beton");
+    expect(ordinaryView.surfaceOtherNote).toBeNull();
+    expect(ordinaryView.fixingMethodLabel).toBe("Ancoră mecanică");
+    expect(ordinaryView.fixingOtherNote).toBeNull();
+    expect(ordinaryView.crewSize).toBeNull();
+    expect(ordinaryView.plannedDurationHours).toBeNull();
   });
 });

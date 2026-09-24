@@ -213,9 +213,11 @@ export type SiteInstallationOperationalView = {
   street: string;
   city: string;
   surfaceTypeLabel: string;
+  surfaceOtherNote: string | null;
   mountingSurfaceWidthMm: number | null;
   mountingSurfaceHeightMm: number | null;
   fixingMethodLabel: string;
+  fixingOtherNote: string | null;
   installationElevationMm: number | null;
   siteElectricalLabel: string;
   accessNotes: string | null;
@@ -239,9 +241,11 @@ export function projectSiteInstallationOperationalView(input: {
     street: execution.street,
     city: execution.city,
     surfaceTypeLabel: siteInstallationFacadeTypeLabel(input.hostContext.surfaceType),
+    surfaceOtherNote: operationalNote(input.hostContext.surfaceOtherNote),
     mountingSurfaceWidthMm: input.hostContext.mountingSurfaceWidthMm ?? null,
     mountingSurfaceHeightMm: input.hostContext.mountingSurfaceHeightMm ?? null,
     fixingMethodLabel: siteInstallationFixingMethodLabel(input.mountingInterface.fixingMethod),
+    fixingOtherNote: operationalNote(input.mountingInterface.fixingOtherNote),
     installationElevationMm: execution.installationElevationMm ?? null,
     siteElectricalLabel: siteInstallationElectricalStateLabel(execution.siteElectrical),
     accessNotes: execution.accessNotes ?? null,
@@ -267,6 +271,11 @@ export function copyFrozenSiteExecutionContext(
   value: FrozenSiteExecutionContextV1,
 ): FrozenSiteExecutionContextV1 {
   return { ...value };
+}
+
+function operationalNote(value: string | undefined): string | null {
+  const trimmed = value?.trim() ?? "";
+  return trimmed === "" ? null : trimmed;
 }
 
 function optionalPositive(value: number | null): number | undefined {

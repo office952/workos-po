@@ -20,8 +20,14 @@ export function SiteInstallationContextPanel({
         <InfoRow label="Locație" value={context.siteName || "—"} />
         <InfoRow label="Adresă" value={`${context.street}, ${context.city}`} />
         <InfoRow label="Suport" value={context.surfaceTypeLabel} />
+        {context.surfaceOtherNote ? (
+          <InfoRow label="Tip suprafață — detalii" value={context.surfaceOtherNote} />
+        ) : null}
         {dimensions ? <InfoRow label="Dimensiuni" value={dimensions} /> : null}
         <InfoRow label="Fixare" value={context.fixingMethodLabel} />
+        {context.fixingOtherNote ? (
+          <InfoRow label="Metodă de fixare — detalii" value={context.fixingOtherNote} />
+        ) : null}
         <InfoRow
           label="Înălțime"
           value={
