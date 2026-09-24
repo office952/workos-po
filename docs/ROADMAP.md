@@ -62,7 +62,7 @@ EXE4_INTEGRATED_ON_MAIN = YES
 EXE4_MERGE_COMMIT = e0ddbdac7de5896d683e05782a21f0e55a984b9b
 PR_28 = MERGED
 CURRENT_PROGRAM = EXECUTION_REALITY_V1
-CURRENT_PROGRAM_STATUS = IMPLEMENTED_IN_REVIEW
+CURRENT_PROGRAM_STATUS = COMPLETE / OWNER_ACCEPTED
 PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
 PLANNING_CAPACITY_V1_PREFLIGHT = COMPLETE
 PLANNING_CAPACITY_V1_OWNER_DECISIONS = SUPERSEDED_IN_PART
@@ -79,11 +79,12 @@ PRODUCT_ASSEMBLY_FIRST_CLASS_JOB = COMPLETE / OWNER_ACCEPTED
 OWNER_ACCEPTED_OPERATIONS_CONTROL_V1 = YES
 OPERATIONS_CONTROL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PLN3 = NOT_STARTED
-EXECUTION_REALITY_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_EXECUTION_REALITY_V1 = NO
-ACTUAL_DURATION_V1 = IMPLEMENTED_IN_REVIEW
-MACHINE_RUN_V1 = IMPLEMENTED_IN_REVIEW
-PLANNED_VS_ACTUAL_TIME_V1 = IMPLEMENTED_IN_REVIEW
+EXECUTION_REALITY_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_EXECUTION_REALITY_V1 = YES
+ACTUAL_DURATION_V1 = COMPLETE / OWNER_ACCEPTED
+MACHINE_RUN_V1 = COMPLETE / OWNER_ACCEPTED
+PLANNED_VS_ACTUAL_TIME_V1 = COMPLETE / OWNER_ACCEPTED
+EXECUTION_REALITY_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PLANNING_IMPLEMENTATION = OWNER_ACCEPTED
 OWNER_ACCEPTED_PLANNING_IMPLEMENTATION = YES
 PLN1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
@@ -772,7 +773,7 @@ Execution acceptance advisories, not a correction wave:
 
 ```text
 CURRENT_PROGRAM = EXECUTION_REALITY_V1
-CURRENT_PROGRAM_STATUS = IMPLEMENTED_IN_REVIEW
+CURRENT_PROGRAM_STATUS = COMPLETE / OWNER_ACCEPTED
 PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
 PLANNING_CAPACITY_V1_PREFLIGHT = COMPLETE
 PLANNING_CAPACITY_V1_OWNER_DECISIONS = SUPERSEDED_IN_PART
@@ -789,11 +790,12 @@ PRODUCT_ASSEMBLY_FIRST_CLASS_JOB = COMPLETE / OWNER_ACCEPTED
 OWNER_ACCEPTED_OPERATIONS_CONTROL_V1 = YES
 OPERATIONS_CONTROL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PLN3 = NOT_STARTED
-EXECUTION_REALITY_V1 = IMPLEMENTED_IN_REVIEW
-OWNER_ACCEPTED_EXECUTION_REALITY_V1 = NO
-ACTUAL_DURATION_V1 = IMPLEMENTED_IN_REVIEW
-MACHINE_RUN_V1 = IMPLEMENTED_IN_REVIEW
-PLANNED_VS_ACTUAL_TIME_V1 = IMPLEMENTED_IN_REVIEW
+EXECUTION_REALITY_V1 = COMPLETE / OWNER_ACCEPTED
+OWNER_ACCEPTED_EXECUTION_REALITY_V1 = YES
+ACTUAL_DURATION_V1 = COMPLETE / OWNER_ACCEPTED
+MACHINE_RUN_V1 = COMPLETE / OWNER_ACCEPTED
+PLANNED_VS_ACTUAL_TIME_V1 = COMPLETE / OWNER_ACCEPTED
+EXECUTION_REALITY_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 PLANNING_IMPLEMENTATION = OWNER_ACCEPTED
 OWNER_ACCEPTED_PLANNING_IMPLEMENTATION = YES
 PLN1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
@@ -812,7 +814,27 @@ SITE_INSTALLATION_VERTICAL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTIO
 PLANNING_CAPACITY_CANON = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
 ```
 
-Execution Reality V1 is implemented and in review. It records optional task `actualDurationMinutes` and explicit MachineRun segments. It does not replace Planning. PLN0 workload-first canon is complete. PLN1 is Owner-accepted: `plannedEffortMinutes`, derived provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787`. `planningWeek` and weekly `availableMinutes` remain cancelled. PLN2 and Operations Control V1 are Owner-accepted. PLN3 is not started. Scheduling is out of V1. Member DAG / composition corrections remain deferred and are not a Planning blocker. Host Context V1, Mounting Interface V1, and the site-installation vertical are Owner-accepted. Execution Reality is not Owner-accepted. Next wave is unauthorized.
+Execution Reality V1 is Owner-accepted and integrated on main. It records optional operator-confirmed task `actualDurationMinutes` and explicit MachineRun segments. Planned effort, lifecycle timestamps, task actual duration, and machine-run duration stay independent. Null actual duration means unknown, not zero. A new machine run requires the assigned operator to be active, available, and currently eligible. Stopping an already-open run stays with that assigned operator and does not re-check later availability or skill. It does not replace Planning. PLN0 workload-first canon is complete. PLN1 is Owner-accepted: `plannedEffortMinutes`, derived provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787`. `planningWeek` and weekly `availableMinutes` remain cancelled. PLN2 and Operations Control V1 are Owner-accepted. PLN3 is not started. Scheduling is out of V1. Member DAG / composition corrections remain deferred and are not a Planning blocker. Host Context V1, Mounting Interface V1, and the site-installation vertical are Owner-accepted. Next wave is unauthorized.
+
+```text
+INTEGRATED_ON_MAIN = YES
+INDEPENDENT_REVIEW = PASS
+DETERMINISTIC_REGRESSION = PASS
+VERIFY_ALL = PASS
+SYNTHETIC_RUNTIME_PROOF = PASS
+INDEPENDENT_VISUAL_REVIEW = PASS
+P0 = 0
+P1 = 0
+UX-S0 = 0
+UX-S1 = 0
+REAL_DATA_USED = NO
+```
+
+Execution Reality V1 acceptance advisories, not a correction wave:
+
+- ExecutionPage and JobDetailPage are large components; decomposition is maintenance work, not a V1 blocker.
+- Compact execution task lists can be visually dense; global UI/UX redesign is separate.
+- existing mobile navigation debt is outside Execution Reality V1.
 
 PLN1 acceptance advisories, not a correction wave:
 

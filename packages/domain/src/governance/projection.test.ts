@@ -258,6 +258,13 @@ describe("system governance projection", () => {
     expect(governance.boundaries.find((item) => item.id === "execution")?.statement).toMatch(
       /Programarea nu este implementată/,
     );
+    expect(governance.boundaries.find((item) => item.id === "execution")?.statement).toMatch(
+      /Execution Reality V1 este acceptat de Owner/,
+    );
+    expect(governance.boundaries.find((item) => item.id === "machine-run")?.statement).toMatch(
+      /acceptat de Owner în Execution Reality V1/,
+    );
+    expect(JSON.stringify(governance)).not.toContain("nu este acceptată de Owner");
     expect(governance.roadmap.find((item) => item.id === "execution")?.state).toBe(
       "IMPLEMENTED",
     );

@@ -279,5 +279,6 @@ describe("system projection API", () => {
     expect(governance.boundaries.find((item) => item.id === "scheduling")?.state).toBe(
       "NOT_IMPLEMENTED",
     );
+    expect(JSON.stringify(body)).not.toContain("nu este acceptată de Owner");
   });
 });

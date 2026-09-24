@@ -297,7 +297,7 @@ export function projectSystemGovernance(): GovernanceProjection {
         id: "execution",
         label: "Execuție",
         statement:
-          "Planul de execuție, sarcinile, ciclul de viață, consumul real și rularea utilajului sunt implementate. Planificarea workload citește efortul planificat pe furnizor. Programarea nu este implementată. Rularea utilajului nu este acceptată de Owner.",
+          "Planul de execuție, sarcinile, ciclul de viață, consumul real și rularea utilajului sunt implementate. Planificarea workload citește efortul planificat pe furnizor. Programarea nu este implementată. Execution Reality V1 este acceptat de Owner.",
         state: "IMPLEMENTED",
       },
       {
@@ -360,7 +360,7 @@ export function projectSystemGovernance(): GovernanceProjection {
         id: "machine-run",
         label: "MachineRun",
         statement:
-          "Rularea utilajului este un fapt de execuție înregistrat explicit. Nu este programare, capacitate sau telemetrie și nu este acceptată de Owner.",
+          "Rularea utilajului este un fapt de execuție înregistrat explicit și acceptat de Owner în Execution Reality V1. Nu este programare, capacitate sau telemetrie.",
         state: "IMPLEMENTED",
       },
       {
