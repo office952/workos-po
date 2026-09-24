@@ -179,6 +179,8 @@ function inspectFrontendBuild(
     const kind = classifyLocalAsset(src, staticRoot);
     if (kind === "escape") {
       escaped = true;
+    } else if (kind === "missing") {
+      supportingMissing = true;
     } else if (kind === "file") {
       entryFound = true;
     }

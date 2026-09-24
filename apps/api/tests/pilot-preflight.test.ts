@@ -384,6 +384,56 @@ describe("production pilot preflight", () => {
     expect(JSON.stringify(missing)).not.toContain(missingJs);
     expect(JSON.stringify(missing)).not.toContain("app.js");
 
+    const partial = trackTempDir();
+    mkdirSync(join(partial, "assets"));
+    writeFileSync(join(partial, "assets", "app.js"), "export {}\n");
+    writeFileSync(
+      join(partial, "index.html"),
+      `<!doctype html><script type="module" src="/assets/app.js"></script><script type="module" src="/assets/chunk-missing.js"></script>\n`,
+    );
+    const oneMissing = evaluateProductionPilotReadiness({
+      env: productionEnv({ ...world, staticRoot: partial }),
+    });
+    expect(oneMissing.overallStatus).toBe("BLOCKED");
+    expect(oneMissing.blockers).toContain("frontend_static_build");
+    expect(oneMissing.checks.find((item) => item.id === "frontend_static_build")?.safeDetail).toBe(
+      "LOCAL_ASSET_MISSING",
+    );
+    const partialText = JSON.stringify(oneMissing);
+    expect(partialText).not.toContain(partial);
+    expect(partialText).not.toContain("app.js");
+    expect(partialText).not.toContain("chunk-missing.js");
+
+    const both = trackTempDir();
+    mkdirSync(join(both, "assets"));
+    writeFileSync(join(both, "assets", "app.js"), "export {}\n");
+    writeFileSync(join(both, "assets", "chunk.js"), "export {}\n");
+    writeFileSync(
+      join(both, "index.html"),
+      `<!doctype html><script type="module" src="/assets/app.js"></script><script type="module" src="/assets/chunk.js"></script>\n`,
+    );
+    const bothPresent = evaluateProductionPilotReadiness({
+      env: productionEnv({ ...world, staticRoot: both }),
+    });
+    expect(bothPresent.checks.find((item) => item.id === "frontend_static_build")?.status).toBe(
+      "PASS",
+    );
+    expect(JSON.stringify(bothPresent)).not.toContain(both);
+
+    const mixed = trackTempDir();
+    mkdirSync(join(mixed, "assets"));
+    writeFileSync(join(mixed, "assets", "app.js"), "export {}\n");
+    writeFileSync(
+      join(mixed, "index.html"),
+      `<!doctype html><script type="module" src="/assets/app.js"></script><script src="https://cdn.example/extra.js"></script>\n`,
+    );
+    const mixedResult = evaluateProductionPilotReadiness({
+      env: productionEnv({ ...world, staticRoot: mixed }),
+    });
+    expect(mixedResult.checks.find((item) => item.id === "frontend_static_build")?.status).toBe(
+      "PASS",
+    );
+
     const valid = evaluate(world);
     expect(valid.checks.find((item) => item.id === "frontend_static_build")?.status).toBe("PASS");
     expect(JSON.stringify(valid)).not.toContain(assetPath);
