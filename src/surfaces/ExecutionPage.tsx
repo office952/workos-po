@@ -3,6 +3,7 @@ import { TransportError } from "../api/http";
 import {
   assignTaskProvider,
   completeExecutionTask,
+  confirmTaskMaterial,
   startExecutionTask,
   startMachineRun,
   stopMachineRun,
@@ -43,6 +44,7 @@ import { presentExecutionCompletionError } from "../presentation/executionComple
 import {
   presentCurrentTaskRole,
   presentExecutionNextAction,
+  presentExecutionStartError,
 } from "../presentation/executionNextAction";
 import { statusTone } from "../presentation/statusTone";
 import { atelierHref, executionHref, jobHref } from "../routing/appRoute";
@@ -317,6 +319,23 @@ export function ExecutionPage({
     }
   }
 
+  async function confirmMaterial(
+    task: ExecutionTaskTransport,
+    resourceId: string,
+    status: "AVAILABLE" | "NOT_AVAILABLE",
+  ): Promise<void> {
+    setActionState("pending");
+    setActionError(null);
+    try {
+      await confirmTaskMaterial(task.taskId, resourceId, status);
+      setActionState("idle");
+      invalidateAfterExecutionTaskChange(planId);
+    } catch {
+      setActionState("error");
+      setActionError("Confirmarea materialului nu a putut fi salvată.");
+    }
+  }
+
   async function start(task: ExecutionTaskTransport): Promise<void> {
     setActionState("pending");
     setActionError(null);
@@ -326,11 +345,7 @@ export function ExecutionPage({
       invalidateAfterExecutionTaskChange(planId);
     } catch (error) {
       setActionState("error");
-      setActionError(
-        error instanceof TransportError
-          ? "Sarcina nu poate fi începută. Verifică identificarea și eligibilitatea."
-          : "Pornirea a eșuat.",
-      );
+      setActionError(presentExecutionStartError(error));
     }
   }
 
@@ -586,6 +601,43 @@ export function ExecutionPage({
                 {currentTask.completionBlockedByActiveMachineRun ? (
                   <p>Oprește rularea utilajului înainte de a închide sarcina.</p>
                 ) : null}
+              </div>
+            ) : null}
+            {currentTask.materialBlockLabel ? (
+              <InlineAlert tone="error" title="Material">
+                {currentTask.materialBlockLabel}
+              </InlineAlert>
+            ) : null}
+            {currentTask.materialLines && currentTask.materialLines.length > 0 ? (
+              <div className="stack" data-testid="material-readiness">
+                {currentTask.materialLines.map((line) => (
+                  <div key={line.resourceId} className="cluster">
+                    <span>
+                      {line.label} — {line.statusLabel}
+                    </span>
+                    {plan?.canConfirmMaterial && currentTask.status === "PLANNED" ? (
+                      <>
+                        <Button
+                          disabled={actionState === "pending" || line.status === "AVAILABLE"}
+                          onClick={() => void confirmMaterial(currentTask, line.resourceId, "AVAILABLE")}
+                        >
+                          Disponibil
+                        </Button>
+                        <Button
+                          disabled={actionState === "pending" || line.status === "NOT_AVAILABLE"}
+                          onClick={() =>
+                            void confirmMaterial(currentTask, line.resourceId, "NOT_AVAILABLE")
+                          }
+                        >
+                          Indisponibil
+                        </Button>
+                      </>
+                    ) : null}
+                  </div>
+                ))}
+                <p className="ui-note">
+                  Confirmarea este o decizie de execuție. Soldul de stoc nu pornește sarcina.
+                </p>
               </div>
             ) : null}
             <div className="cluster">

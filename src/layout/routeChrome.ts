@@ -163,6 +163,15 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         title: "Servicii operaționale",
         lead: "Modul în care organizația oferă montajul la locație pentru lucrările noi.",
       };
+    case "admin-material-readiness":
+      return {
+        contextLabel: "Administrare",
+        currentHref: "/admin/material-readiness",
+        workspace: "admin",
+        eyebrow: "Administrare",
+        title: "Materiale pentru execuție",
+        lead: "Organizația alege dacă pornirea unei sarcini cere confirmarea materialelor planificate.",
+      };
     case "admin-commercial":
       return {
         contextLabel: "Administrare",

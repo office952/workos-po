@@ -38,6 +38,8 @@ import { fetchRequest, fetchRequests } from "../api/requests";
 import { fetchCommercialPolicy } from "../api/commercialPolicy";
 import { fetchOperationalServices } from "../api/operationalServices";
 import { presentOperationalServices } from "../adapters/operationalServicesAdapter";
+import { fetchMaterialReadiness } from "../api/materialReadiness";
+import { presentMaterialReadiness } from "../adapters/materialReadinessAdapter";
 import { fetchResourcesAdmin } from "../api/resources";
 import { fetchFormulas } from "../api/formulas";
 import { fetchTechnicalSettings } from "../api/technicalSettings";
@@ -168,6 +170,14 @@ export async function loadOperatorCandidates() {
 
 export async function loadOperatorInbox() {
   return presentInboxTasks(await fetchOperatorInbox());
+}
+
+export async function loadMaterialReadinessAdmin() {
+  const presented = presentMaterialReadiness(await fetchMaterialReadiness());
+  if (!presented) {
+    throw new Error("unpresentable");
+  }
+  return presented;
 }
 
 export async function loadOperationalServicesAdmin() {

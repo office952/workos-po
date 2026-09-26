@@ -1116,6 +1116,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       ? runtime.listJobOverview().jobs.find((item) => item.jobId === jobId) ?? null
       : null;
     return c.json({
+      canConfirmMaterial: isOwner(c),
       executionPlan: presentScopedExecutionPlan(
         c,
         projectPlanView(
@@ -1519,6 +1520,7 @@ function mutationHttpStatus(error: TaskMutationError): 404 | 409 | 422 {
     case "effort_frozen":
     case "already_started_by_other":
     case "dependencies_incomplete":
+    case "material_not_ready":
     case "invalid_transition":
     case "machine_run_not_allowed":
     case "machine_run_active":
@@ -1562,6 +1564,7 @@ function projectPlanView(
     runtime.peopleEligibilityContext(),
     currentOperatorId,
     runtime.providerRegistry,
+    runtime.materialReadinessContext(),
   );
 }
 

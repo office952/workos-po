@@ -31,6 +31,15 @@ import {
 } from "./actualCost.js";
 import type { ActualConsumptionEntry } from "./consumption.js";
 import {
+  DISABLED_MATERIAL_READINESS,
+  materialBlockLabel,
+  materialDemandLines,
+  materialParticipation,
+  type MaterialDemandLine,
+  type MaterialParticipation,
+  type MaterialReadinessContext,
+} from "./materialReadiness.js";
+import {
   formatMinutesLabel,
   formatSignedVarianceMinutes,
   projectExecutionTimeSummary,
@@ -166,6 +175,7 @@ export type OperatorTaskRelation =
   | "reserved_other"
   | "owned"
   | "owned_by_other"
+  | "blocked_material"
   | "idle";
 
 export type ExecutionTaskView = ExecutionTask & {
@@ -202,6 +212,9 @@ export type ExecutionTaskView = ExecutionTask & {
   canStartMachineRun: boolean;
   canStopMachineRun: boolean;
   completionBlockedByActiveMachineRun: boolean;
+  materialParticipation: MaterialParticipation;
+  materialBlockLabel: string | null;
+  materialLines: readonly MaterialDemandLine[];
 };
 
 export type ExecutionPlanProgress = {
@@ -310,6 +323,7 @@ export function projectExecutionPlanView(
   eligibility: PeopleEligibilityContext | null = null,
   currentOperatorId: string | null = null,
   providerRegistry: WorkcenterRegistry = workcenterRegistry,
+  material: MaterialReadinessContext = DISABLED_MATERIAL_READINESS,
 ): ExecutionPlanView {
   const byId = new Map(record.tasks.map((task) => [task.taskId, task]));
   const availablePeople = activePeople(people).filter(
@@ -339,14 +353,18 @@ export function projectExecutionPlanView(
     const waitingFor = incompleteDependencyLabels(task, byId);
     const measurableQuantity = measurablePlannedQuantity(task);
     const assignedExecutor = projectAssignedExecutor(task, people);
-    const canClaimStart = canClaimStartTask(
-      task,
-      byId,
-      people,
-      eligibility,
-      currentOperatorId,
-      providerRegistry,
-    );
+    const lines = materialDemandLines(task, material.confirmations);
+    const participation = materialParticipation(material.mode, lines);
+    const materialBlocked = task.status === "PLANNED" && participation === "BLOCKED";
+    const canClaimStart =
+      canClaimStartTask(
+        task,
+        byId,
+        people,
+        eligibility,
+        currentOperatorId,
+        providerRegistry,
+      ) && !materialBlocked;
     const operatorRelation = projectOperatorRelation({
       task,
       assignedExecutor,
@@ -356,6 +374,7 @@ export function projectExecutionPlanView(
       currentOperatorId,
       canClaimStart,
       providerRegistry,
+      materialBlocked,
     });
     const ownedByCurrent =
       task.status === "IN_PROGRESS" &&
@@ -428,6 +447,9 @@ export function projectExecutionPlanView(
         ownedByCurrent && task.assignedProvider?.kind === "MACHINE" && running === null,
       canStopMachineRun: ownedByCurrent && running !== null,
       completionBlockedByActiveMachineRun: ownedByCurrent && running !== null,
+      materialParticipation: participation,
+      materialBlockLabel: materialBlocked ? materialBlockLabel(participation, lines) : null,
+      materialLines: participation === "NOT_ADOPTED" ? [] : lines,
     };
   });
   const progress = summarizeExecutionProgress(tasks);
@@ -751,6 +773,7 @@ function projectOperatorRelation(input: {
   currentOperatorId: string | null;
   canClaimStart: boolean;
   providerRegistry: WorkcenterRegistry;
+  materialBlocked: boolean;
 }): OperatorTaskRelation {
   const { task, assignedExecutor, waitingFor, currentOperatorId, canClaimStart } = input;
   if (task.status === "IN_PROGRESS" || task.status === "COMPLETED") {
@@ -785,6 +808,9 @@ function projectOperatorRelation(input: {
   });
   if (diagnosis?.reason === "TEMPORARILY_UNAVAILABLE") {
     return "unavailable";
+  }
+  if (input.materialBlocked && diagnosis?.eligible) {
+    return "blocked_material";
   }
   return "not_eligible";
 }

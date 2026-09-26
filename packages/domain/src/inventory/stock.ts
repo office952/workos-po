@@ -11,6 +11,9 @@ import type { ActualConsumptionEntry } from "../execution/consumption.js";
 export const INVENTORY_MOVEMENT_TYPES = ["OUT", "ADJUSTMENT"] as const;
 export type InventoryMovementType = (typeof INVENTORY_MOVEMENT_TYPES)[number];
 
+export const INVENTORY_BALANCE_IS_NOT_PRODUCTION_AVAILABILITY =
+  "Soldul derivat din mișcări nu este preț și nu este disponibilitate de producție.";
+
 export const INVENTORY_SOURCE_TYPES = [
   "EXECUTION_ACTUAL_CONSUMPTION",
   "OWNER_ADJUSTMENT",

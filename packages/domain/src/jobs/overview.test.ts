@@ -74,6 +74,9 @@ function taskStub(
     canStartMachineRun: false,
     canStopMachineRun: false,
     completionBlockedByActiveMachineRun: false,
+    materialParticipation: "NOT_ADOPTED",
+    materialBlockLabel: null,
+    materialLines: [],
     ...overrides,
   };
 }

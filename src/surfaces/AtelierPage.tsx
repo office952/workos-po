@@ -57,6 +57,8 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
   const lanes = useMemo(() => tasks.map((task) => presentInboxLane(task)), [tasks]);
   const readyCount = lanes.filter((lane) => lane.lane === "ready").length;
   const nextCount = lanes.filter((lane) => lane.lane === "next").length;
+  const blockedTasks = tasks.filter((task) => task.lane === "blocked_material");
+  const openTasks = tasks.filter((task) => task.lane !== "blocked_material");
   const sessionKnown = session.status === "success";
   const candidatesPending = candidates.status !== "success" && people.length === 0;
 
@@ -214,6 +216,7 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
             <span>Autentificat: {currentSession.displayName}</span>
             <span>{inbox.status === "success" ? `${readyCount} gata` : "Se citește"}</span>
             <span>{inbox.status === "success" ? `${nextCount} urmează` : "…"}</span>
+            {blockedTasks.length > 0 ? <span>{blockedTasks.length} material</span> : null}
           </div>
           {inbox.status !== "success" && tasks.length === 0 ? (
             <LoadingFloor
@@ -242,14 +245,39 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
               ) : null}
             </div>
           ) : null}
-          {tasks.length > 0 ? (
+          {blockedTasks.length > 0 ? (
+            <Worklist
+              variant="operational"
+              label="Material"
+              columns={["Sarcină", "Context", "Pregătire", "Acțiune"]}
+            >
+              {blockedTasks.map((task) => (
+                <WorklistRow
+                  key={task.taskId}
+                  variant="operational"
+                  href={executionHref(task.planId, {
+                    taskId: task.taskId,
+                    jobId: task.jobId ?? jobId,
+                  })}
+                  identity={`${task.processLabel} · ${task.scopeLabel}`}
+                  identityDetail={
+                    task.materialBlockLabel ?? (task.inscription || task.productLabel)
+                  }
+                  context={task.productLabel}
+                  state={<StatusBadge label="Material" tone={statusTone("danger")} />}
+                  actionLabel="Deschide execuția"
+                />
+              ))}
+            </Worklist>
+          ) : null}
+          {openTasks.length > 0 ? (
             <Worklist
               variant="operational"
               label="Sarcini disponibile"
               columns={["Sarcină", "Context", "Pregătire", "Acțiune"]}
             >
-              {tasks.map((task, index) => {
-                const lane = lanes[index] ?? presentInboxLane(task);
+              {openTasks.map((task) => {
+                const lane = presentInboxLane(task);
                 return (
                   <WorklistRow
                     key={task.taskId}

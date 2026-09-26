@@ -2,6 +2,7 @@ export type AdministrationRailId =
   | "commercial"
   | "resources"
   | "services"
+  | "materials"
   | "technical"
   | "formulas"
   | "products"
@@ -17,6 +18,7 @@ const ADMINISTRATION_RAIL = [
   { id: "formulas", label: "Formule de calcul", href: "/admin/formulas" },
   { id: "resources", label: "Dovezi de cost", href: "/admin/resources" },
   { id: "services", label: "Servicii", href: "/admin/services" },
+  { id: "materials", label: "Materiale execuție", href: "/admin/material-readiness" },
 ] as const;
 
 export function administrationRailItems(current: AdministrationRailId) {

@@ -4,6 +4,7 @@ import type {
   ExecutionPlanProgressTransport,
   ExecutionPlanTransport,
   ExecutionTaskTransport,
+  MaterialLineTransport,
   ExecutionTimeSummaryTransport,
   MachineRunTransport,
   PlannedResourceTransport,
@@ -37,6 +38,7 @@ export function presentExecutionPlan(payload: unknown): ExecutionPlanTransport |
     sourceSnapshotId: asString(plan.sourceSnapshotId) ?? "",
     jobId: asString(job?.jobId) ?? asString(plan.jobId),
     siteInstallation: presentSiteInstallation(record?.siteInstallation),
+    canConfirmMaterial: record?.canConfirmMaterial === true,
     timeSummary: presentTimeSummary(planView.timeSummary),
     tasks: tasks.flatMap((item) => {
       const presented = presentExecutionTask(item);
@@ -113,8 +115,33 @@ export function presentExecutionTask(value: unknown): ExecutionTaskTransport | n
     canRecordActualConsumption: row.canRecordActualConsumption === true,
     plannedResources: presentPlannedResources(row.resourceDemands ?? row.plannedResources),
     actualConsumption: presentActualConsumption(row.actualConsumption),
+    materialBlockLabel: asString(row.materialBlockLabel),
+    materialLines: presentMaterialLines(row.materialLines),
     ...presentTaskTime(row),
   };
+}
+
+function presentMaterialLines(value: unknown): MaterialLineTransport[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => {
+    const row = asRecord(item);
+    const resourceId = asString(row?.resourceId);
+    const label = asString(row?.label);
+    const status = asString(row?.status);
+    if (!row || !resourceId || !label || !status) {
+      return [];
+    }
+    return [
+      {
+        resourceId,
+        label,
+        status,
+        statusLabel: asString(row.statusLabel) ?? status,
+      },
+    ];
+  });
 }
 
 function presentExecutorLabel(row: Record<string, unknown>): string | null {

@@ -36,6 +36,11 @@ import {
   type SkillMutationResult,
   projectExecutionPlanView,
   projectOperatorTaskInbox,
+  confirmMaterialReadiness,
+  type MaterialReadinessConfirmation,
+  type MaterialReadinessContext,
+  type MaterialReadinessModeRecord,
+  type MaterialConfirmationError,
   projectAssemblyJobOverviewItem,
   projectJobOverview,
   projectJobOverviewItem,
@@ -254,6 +259,12 @@ import {
   requestHasLinkedQuotes,
 } from "../requests/installationFacts.js";
 import {
+  applyMaterialReadinessMode,
+  readMaterialReadinessContext,
+  readMaterialReadinessMode,
+  upsertMaterialConfirmation,
+} from "../execution/materialReadinessStore.js";
+import {
   persistOrganizationServiceOffer,
   readOperationalServicesAdmin,
   readOrganizationServiceOffer,
@@ -357,6 +368,24 @@ export type ProductSystemRuntime = {
   assignExecutionTaskExecutor(taskId: string, personId: string): TaskMutationResult;
   startExecutionTask(taskId: string): TaskMutationResult;
   claimAndStartExecutionTask(taskId: string, personId: string): TaskMutationResult;
+  materialReadinessContext(): MaterialReadinessContext;
+  readMaterialReadiness(): MaterialReadinessModeRecord;
+  setMaterialReadinessMode(
+    mode: string,
+    actorId: string,
+    updatedAt: string,
+  ):
+    | { ok: true; record: MaterialReadinessModeRecord; alreadyApplied: boolean }
+    | { ok: false; error: "invalid_mode" };
+  confirmExecutionMaterial(input: {
+    taskId: string;
+    resourceId: string;
+    status: string;
+    confirmedBy: string;
+    confirmedAt: string;
+  }):
+    | { ok: true; confirmation: MaterialReadinessConfirmation; alreadyApplied: boolean }
+    | { ok: false; error: MaterialConfirmationError };
   completeExecutionTask(
     taskId: string,
     input?: TaskCompletionInput,
@@ -839,6 +868,39 @@ export function createProductSystemRuntimeFromOpenDb(
         currentProviderRegistry(),
       );
     },
+    materialReadinessContext() {
+      return readMaterialReadinessContext(db);
+    },
+    readMaterialReadiness() {
+      return readMaterialReadinessMode(db);
+    },
+    setMaterialReadinessMode(mode, actorId, updatedAt) {
+      return applyMaterialReadinessMode(db, mode, updatedAt, actorId);
+    },
+    confirmExecutionMaterial(input) {
+      const record = getExecutionPlanByTaskId(db, input.taskId);
+      const task = record?.tasks.find((item) => item.taskId === input.taskId) ?? null;
+      const existing = readMaterialReadinessContext(db).confirmations;
+      const result = confirmMaterialReadiness({
+        task,
+        resourceId: input.resourceId,
+        status: input.status,
+        confirmedBy: input.confirmedBy,
+        confirmedAt: input.confirmedAt,
+        existing,
+      });
+      if (!result.ok) {
+        return result;
+      }
+      if (!result.unchanged) {
+        upsertMaterialConfirmation(db, result.confirmation);
+      }
+      return {
+        ok: true,
+        confirmation: result.confirmation,
+        alreadyApplied: result.unchanged,
+      };
+    },
     listOperatorCandidates() {
       return listOperatorCandidates(db);
     },
@@ -885,6 +947,7 @@ export function createProductSystemRuntimeFromOpenDb(
         eligibility,
         plans,
         providerRegistry: currentProviderRegistry(),
+        material: readMaterialReadinessContext(db),
       });
     },
     listPeople() {
@@ -1373,6 +1436,7 @@ function jobOverviewItems(
             eligibility,
             null,
             providerRegistry,
+            readMaterialReadinessContext(db),
           )
         : null,
     });
@@ -1413,6 +1477,7 @@ function jobOverviewItems(
             eligibility,
             null,
             providerRegistry,
+            readMaterialReadinessContext(db),
           )
         : null,
     });

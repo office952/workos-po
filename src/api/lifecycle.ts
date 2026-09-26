@@ -68,6 +68,17 @@ export async function assignTaskProvider(
   });
 }
 
+export async function confirmTaskMaterial(
+  taskId: string,
+  resourceId: string,
+  status: "AVAILABLE" | "NOT_AVAILABLE",
+): Promise<unknown> {
+  return postJson(
+    `/api/execution-tasks/${encodeURIComponent(taskId)}/material-readiness`,
+    { resourceId, status },
+  );
+}
+
 export async function startExecutionTask(taskId: string): Promise<unknown> {
   return postJson(`/api/execution-tasks/${encodeURIComponent(taskId)}/start`);
 }

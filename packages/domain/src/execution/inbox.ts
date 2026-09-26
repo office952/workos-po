@@ -11,6 +11,10 @@ import {
   type ExecutionPlanView,
   type ExecutionTaskView,
 } from "./plan.js";
+import {
+  DISABLED_MATERIAL_READINESS,
+  type MaterialReadinessContext,
+} from "./materialReadiness.js";
 import type { AcceptedProductionSnapshot } from "../production/snapshot.js";
 import {
   workcenterRegistry,
@@ -21,7 +25,8 @@ export type OperatorInboxLaneKind =
   | "in_progress_mine"
   | "available_ready"
   | "available_needs_provider"
-  | "waiting_dependencies";
+  | "waiting_dependencies"
+  | "blocked_material";
 
 export type OperatorInboxTaskItem = {
   taskId: string;
@@ -40,6 +45,7 @@ export type OperatorInboxTaskItem = {
   waitingForLabels: readonly string[];
   reservedForLabel: string | null;
   canClaimStart: boolean;
+  materialBlockLabel: string | null;
   workspaceHref: string;
   lane: OperatorInboxLaneKind;
   planCreatedAt: string;
@@ -57,11 +63,13 @@ export type OperatorTaskInboxProjection = {
     availableReady: number;
     availableNeedsProvider: number;
     waitingDependencies: number;
+    blockedMaterial: number;
   };
   inProgressMine: readonly OperatorInboxTaskItem[];
   availableReady: readonly OperatorInboxTaskItem[];
   availableNeedsProvider: readonly OperatorInboxTaskItem[];
   waitingDependencies: readonly OperatorInboxTaskItem[];
+  blockedMaterial: readonly OperatorInboxTaskItem[];
   displayOrderNote: string;
 };
 
@@ -81,9 +89,11 @@ export function projectOperatorTaskInbox(input: {
   eligibility: PeopleEligibilityContext | null;
   plans: readonly OperatorInboxPlanSource[];
   providerRegistry?: WorkcenterRegistry;
+  material?: MaterialReadinessContext;
 }): OperatorTaskInboxProjection {
   const { currentOperator, people, eligibility, plans } = input;
   const providerRegistry = input.providerRegistry ?? workcenterRegistry;
+  const material = input.material ?? DISABLED_MATERIAL_READINESS;
   const items: OperatorInboxTaskItem[] = [];
 
   for (const plan of plans) {
@@ -94,6 +104,7 @@ export function projectOperatorTaskInbox(input: {
       eligibility,
       currentOperator.personId,
       providerRegistry,
+      material,
     );
     const byId = new Map(view.tasks.map((task) => [task.taskId, task]));
     for (const task of view.tasks) {
@@ -124,6 +135,7 @@ export function projectOperatorTaskInbox(input: {
   const waitingDependencies = sorted.filter(
     (item) => item.lane === "waiting_dependencies",
   );
+  const blockedMaterial = sorted.filter((item) => item.lane === "blocked_material");
 
   return {
     operator: {
@@ -136,11 +148,13 @@ export function projectOperatorTaskInbox(input: {
       availableReady: availableReady.length,
       availableNeedsProvider: availableNeedsProvider.length,
       waitingDependencies: waitingDependencies.length,
+      blockedMaterial: blockedMaterial.length,
     },
     inProgressMine,
     availableReady,
     availableNeedsProvider,
     waitingDependencies,
+    blockedMaterial,
     displayOrderNote: OPERATOR_INBOX_DISPLAY_ORDER_NOTE,
   };
 }
@@ -203,6 +217,10 @@ function classifyInboxTask(input: {
     }
   }
 
+  if (task.materialParticipation === "BLOCKED") {
+    return toInboxItem(input, "blocked_material");
+  }
+
   return null;
 }
 
@@ -237,6 +255,7 @@ function toInboxItem(
         ? task.assignedExecutor.label
         : null,
     canClaimStart: lane === "available_ready",
+    materialBlockLabel: task.materialBlockLabel,
     workspaceHref: `/execution/${view.plan.planId}?task=${encodeURIComponent(task.taskId)}`,
     lane,
     planCreatedAt,

@@ -22,6 +22,7 @@ import {
   workcenterRegistry,
   type WorkcenterRegistry,
 } from "@workos-final/domain";
+import { readMaterialReadinessContext } from "./materialReadinessStore.js";
 import { writeInventoryOutFromTask } from "../inventory/store.js";
 import type { SqliteDatabase } from "../persistence/sqlite.js";
 
@@ -344,7 +345,15 @@ export function persistTaskStart(
   registry: WorkcenterRegistry = workcenterRegistry,
 ): TaskMutationResult {
   return applyMutation(db, taskId, (record) =>
-    startExecutionTask(record, taskId, startedAt, people, eligibility, registry),
+    startExecutionTask(
+      record,
+      taskId,
+      startedAt,
+      people,
+      eligibility,
+      registry,
+      readMaterialReadinessContext(db),
+    ),
   );
 }
 
@@ -366,6 +375,7 @@ export function persistClaimAndStart(
       people,
       eligibility,
       registry,
+      readMaterialReadinessContext(db),
     ),
   );
 }
