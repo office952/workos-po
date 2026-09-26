@@ -2,6 +2,7 @@ import type { AssemblyMemberRole } from "../assembly/contract.js";
 import { calendarDateFromUtcInstant } from "../calendarDate.js";
 import type { OrderSnapshot } from "../commercial/orderSnapshot.js";
 import {
+  presentActiveExecutionLabel,
   type ExecutionPlanProgress,
   type ExecutionPlanView,
   type ExecutionTaskView,
@@ -113,6 +114,13 @@ export function jobStageLabel(stage: JobStage): string {
       return _exhaustive;
     }
   }
+}
+
+function presentJobStageLabel(stage: JobStage, progress: ExecutionPlanProgress | null): string {
+  if (stage === "EXECUTION_IN_PROGRESS" && progress?.status === "IN_PROGRESS") {
+    return presentActiveExecutionLabel(progress);
+  }
+  return jobStageLabel(stage);
 }
 
 export function jobNextActionLabel(action: JobNextAction): string {
@@ -247,6 +255,9 @@ export function deriveJobAttention(input: {
   // Claim-on-Start: PLANNED + executor null is normal. IN_PROGRESS alone is normal progress.
   // Waiting dependencies are normal DAG flow — not job attention.
   // Provider attention only when absence is a CURRENT blocker (deps done).
+  if (input.tasks.some(isCurrentExternalProviderBlocker)) {
+    return { needsAttention: true, attentionLabel: "Lipsă furnizor extern", overdue };
+  }
   if (input.tasks.some(isCurrentProviderBlocker)) {
     return { needsAttention: true, attentionLabel: "Lipsă utilaj dedicat", overdue };
   }
@@ -257,6 +268,9 @@ export function deriveJobAttention(input: {
 }
 
 function isCurrentProviderBlocker(task: ExecutionTaskView): boolean {
+  if (task.executionMode === "EXTERNAL") {
+    return false;
+  }
   if (task.status !== "PLANNED") {
     return false;
   }
@@ -272,6 +286,15 @@ function isCurrentProviderBlocker(task: ExecutionTaskView): boolean {
   return !task.eligibleProviders.some(
     (item) =>
       item.id === task.assignedProvider?.id && item.kind === task.assignedProvider.kind,
+  );
+}
+
+function isCurrentExternalProviderBlocker(task: ExecutionTaskView): boolean {
+  return (
+    task.executionMode === "EXTERNAL" &&
+    task.status === "PLANNED" &&
+    task.waitingFor.length === 0 &&
+    !task.externalProviderLabel
   );
 }
 
@@ -390,7 +413,7 @@ function projectOperationalJob(input: {
     customerDisplayName: input.customerDisplayName,
     createdAt: input.createdAt,
     stage,
-    stageLabel: jobStageLabel(stage),
+    stageLabel: presentJobStageLabel(stage, progress),
     nextAction,
     nextActionLabel: jobNextActionLabel(nextAction),
     href: jobHref({
@@ -536,9 +559,12 @@ function progressLabel(progress: ExecutionPlanProgress | null): string | null {
   if (!progress) {
     return null;
   }
-  const base = `${progress.completed} / ${progress.total} finalizate`;
+  const parts = [`${progress.completed} / ${progress.total} finalizate`];
   if (progress.inProgress > 0) {
-    return `${base} · ${progress.inProgress} în lucru`;
+    parts.push(`${progress.inProgress} în lucru`);
   }
-  return base;
+  if (progress.outside > 0) {
+    parts.push(`${progress.outside} la furnizor extern`);
+  }
+  return parts.join(" · ");
 }

@@ -1907,4 +1907,76 @@ describe("ExecutionPage", () => {
     expect(screen.getByText("Metodă de fixare — detalii")).toBeInTheDocument();
     expect(fetchMock.mock.calls.some((call) => String(call[0]).includes("/requests/"))).toBe(false);
   });
+
+  it("shows owner external actions from server flags and hides internal start", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/operator-session")) {
+          return jsonResponse({ operator: null });
+        }
+        return jsonResponse({
+          executionPlan: {
+            plan: {
+              planId: "exp:ext",
+              productLabel: "Litere",
+              inscription: "EXTERN",
+              sourceSnapshotId: "aps:ext",
+            },
+            statusLabel: "La furnizor extern",
+            progress: {
+              total: 1,
+              completed: 0,
+              inProgress: 0,
+              outside: 1,
+              planned: 0,
+              waitingDependencies: 0,
+              noProvider: 0,
+              varianceCount: 0,
+            },
+            externalProviderChoices: [{ providerId: "xprov:1", name: "Atelier Extern" }],
+            tasks: [
+              {
+                taskId: "task-ext",
+                processLabel: "Vopsire",
+                scopeLabel: "Față",
+                seqLabel: "02",
+                status: "OUTSIDE",
+                statusLabel: "La furnizor extern",
+                assignmentLabel: "Atelier Extern",
+                executionMode: "EXTERNAL",
+                externalProviderLabel: "Atelier Extern",
+                handedOffAt: "2026-09-26T11:00:00.000Z",
+                requiresProvider: true,
+                canAssign: false,
+                canAssignProvider: false,
+                canClaimStart: false,
+                canComplete: false,
+                canStartMachineRun: false,
+                canExternalize: false,
+                canAssignExternalProvider: false,
+                canHandOffExternal: false,
+                canRecordExternalReturn: true,
+                waitingFor: [],
+                eligibleProviders: [],
+              },
+            ],
+          },
+        });
+      }),
+    );
+
+    render(<ExecutionPage planId="exp:ext" taskId="task-ext" />);
+    expect((await screen.findAllByText("Poate fi înregistrată revenirea")).length).toBeGreaterThan(0);
+    expect(screen.getByText("Următoarea sarcină acționabilă")).toBeInTheDocument();
+    expect(screen.getByText("La furnizor extern 1")).toBeInTheDocument();
+    expect(screen.queryByText("În lucru")).not.toBeInTheDocument();
+    expect(screen.queryByText("În curs 1")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Atelier Extern").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Înregistrează revenirea" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pornește" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Închide sarcina" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pornește utilajul" })).not.toBeInTheDocument();
+  });
 });

@@ -24,6 +24,7 @@ import {
   assignedProviderStillValid,
   plannedExecutorStartError,
   dependenciesCompleted,
+  executionModeOf,
   liveEligibleProviders,
   measurablePlannedQuantity,
   taskRequiresProvider,
@@ -62,6 +63,13 @@ export const TASK_MUTATION_ERRORS = [
   "machine_run_active",
   "machine_run_not_found",
   "machine_run_closed",
+  "external_production_disabled",
+  "task_not_planned",
+  "task_not_external",
+  "external_provider_required",
+  "external_provider_not_found",
+  "external_provider_inactive",
+  "task_not_outside",
 ] as const;
 export type TaskMutationError = (typeof TASK_MUTATION_ERRORS)[number];
 
@@ -88,6 +96,9 @@ export function assignProviderToTask(
   }
   if (task.status !== "PLANNED") {
     return { ok: false, error: "reassignment_locked" };
+  }
+  if (executionModeOf(task) === "EXTERNAL") {
+    return { ok: false, error: "invalid_transition" };
   }
   if (!taskRequiresProvider(task)) {
     return { ok: false, error: "ineligible_provider" };
@@ -131,6 +142,9 @@ export function assignExecutorToTask(
   }
   if (task.status !== "PLANNED") {
     return { ok: false, error: "reassignment_locked" };
+  }
+  if (executionModeOf(task) === "EXTERNAL") {
+    return { ok: false, error: "invalid_transition" };
   }
   const person = findPerson(people, personId);
   if (!person) {
@@ -218,6 +232,9 @@ export function startExecutionTask(
   if (task.status !== "PLANNED") {
     return { ok: false, error: "invalid_transition" };
   }
+  if (executionModeOf(task) === "EXTERNAL") {
+    return { ok: false, error: "invalid_transition" };
+  }
   if (taskRequiresProvider(task)) {
     if (!task.assignedProvider) {
       return { ok: false, error: "missing_assignment" };
@@ -268,6 +285,9 @@ export function claimAndStartExecutionTask(
     return { ok: false, error: "already_started_by_other" };
   }
   if (task.status !== "PLANNED") {
+    return { ok: false, error: "invalid_transition" };
+  }
+  if (executionModeOf(task) === "EXTERNAL") {
     return { ok: false, error: "invalid_transition" };
   }
   if (task.assignedExecutor && task.assignedExecutor.id !== personId) {
@@ -343,6 +363,9 @@ export function completeExecutionTask(
     return { ok: true, record, alreadyApplied: true };
   }
   if (task.status !== "IN_PROGRESS") {
+    return { ok: false, error: "invalid_transition" };
+  }
+  if (executionModeOf(task) === "EXTERNAL") {
     return { ok: false, error: "invalid_transition" };
   }
   if (actorPersonId !== null) {

@@ -72,6 +72,15 @@ type TaskRow = {
   completion_note: string | null;
   planned_effort_minutes: number | null;
   actual_duration_minutes: number | null;
+  execution_mode: string | null;
+  external_provider_id: string | null;
+  external_provider_label: string | null;
+  externalized_at: string | null;
+  externalized_by: string | null;
+  handed_off_at: string | null;
+  handed_off_by: string | null;
+  returned_at: string | null;
+  returned_by: string | null;
 };
 
 type MachineRunRow = {
@@ -183,8 +192,17 @@ export function insertExecutionPlanRecord(
         completed_quantity_unit,
         completion_note,
         planned_effort_minutes,
-        actual_duration_minutes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        actual_duration_minutes,
+        execution_mode,
+        external_provider_id,
+        external_provider_label,
+        externalized_at,
+        externalized_by,
+        handed_off_at,
+        handed_off_by,
+        returned_at,
+        returned_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     );
     const insertDependency = db.prepare(
@@ -228,6 +246,15 @@ export function insertExecutionPlanRecord(
         task.completion?.note ?? null,
         task.plannedEffortMinutes,
         task.actualDurationMinutes,
+        task.executionMode === "EXTERNAL" ? "EXTERNAL" : "INTERNAL",
+        task.externalProviderId ?? null,
+        task.externalProviderLabel ?? null,
+        task.externalizedAt ?? null,
+        task.externalizedBy ?? null,
+        task.handedOffAt ?? null,
+        task.handedOffBy ?? null,
+        task.returnedAt ?? null,
+        task.returnedBy ?? null,
       );
       for (const dependencyId of task.dependsOnTaskIds) {
         insertDependency.run(record.plan.planId, task.taskId, dependencyId);
@@ -248,7 +275,7 @@ export function listOpenExecutionPlanRecords(
       SELECT DISTINCT p.*
       FROM execution_plans p
       INNER JOIN execution_tasks t ON t.plan_id = p.plan_id
-      WHERE t.status IN ('PLANNED', 'IN_PROGRESS')
+      WHERE t.status IN ('PLANNED', 'IN_PROGRESS', 'OUTSIDE')
       ORDER BY p.created_at ASC, p.plan_id ASC
     `,
     )
@@ -319,7 +346,7 @@ export function persistAssignedProvider(
   providerId: string,
   registry: WorkcenterRegistry = workcenterRegistry,
 ): TaskMutationResult {
-  return applyMutation(db, taskId, (record) =>
+  return applyExecutionTaskMutation(db, taskId, (record) =>
     assignProviderToTask(record, taskId, providerId, registry),
   );
 }
@@ -331,7 +358,7 @@ export function persistAssignedExecutor(
   people: readonly Person[],
   eligibility: PeopleEligibilityContext | null = null,
 ): TaskMutationResult {
-  return applyMutation(db, taskId, (record) =>
+  return applyExecutionTaskMutation(db, taskId, (record) =>
     assignExecutorToTask(record, taskId, personId, people, eligibility),
   );
 }
@@ -344,7 +371,7 @@ export function persistTaskStart(
   eligibility: PeopleEligibilityContext | null = null,
   registry: WorkcenterRegistry = workcenterRegistry,
 ): TaskMutationResult {
-  return applyMutation(db, taskId, (record) =>
+  return applyExecutionTaskMutation(db, taskId, (record) =>
     startExecutionTask(
       record,
       taskId,
@@ -366,7 +393,7 @@ export function persistClaimAndStart(
   eligibility: PeopleEligibilityContext | null = null,
   registry: WorkcenterRegistry = workcenterRegistry,
 ): TaskMutationResult {
-  return applyMutation(db, taskId, (record) =>
+  return applyExecutionTaskMutation(db, taskId, (record) =>
     claimAndStartExecutionTask(
       record,
       taskId,
@@ -434,7 +461,7 @@ export function persistTaskComplete(
   input: TaskCompletionInput = {},
   actorPersonId: string | null = null,
 ): TaskMutationResult {
-  return applyMutation(db, taskId, (record) =>
+  return applyExecutionTaskMutation(db, taskId, (record) =>
     completeExecutionTask(record, taskId, completedAt, input, actorPersonId),
   );
 }
@@ -528,7 +555,7 @@ function getExecutionPlanByMachineRunId(
   return getExecutionPlanRecord(db, row.plan_id);
 }
 
-function applyMutation(
+export function applyExecutionTaskMutation(
   db: SqliteDatabase,
   taskId: string,
   mutate: (record: ExecutionPlanRecord) => TaskMutationResult,
@@ -618,13 +645,26 @@ function writeTaskOperationalState(
         completed_quantity = ?,
         completed_quantity_unit = ?,
         completion_note = ?,
-        actual_duration_minutes = ?
+        actual_duration_minutes = ?,
+        execution_mode = ?,
+        external_provider_id = ?,
+        external_provider_label = ?,
+        externalized_at = ?,
+        externalized_by = ?,
+        handed_off_at = ?,
+        handed_off_by = ?,
+        returned_at = ?,
+        returned_by = ?
       WHERE task_id = ?
         AND status = ?
         AND IFNULL(assigned_provider_id, '') = ?
         AND IFNULL(assigned_executor_id, '') = ?
         AND IFNULL(started_at, '') = ?
         AND IFNULL(completed_at, '') = ?
+        AND IFNULL(execution_mode, 'INTERNAL') = ?
+        AND IFNULL(external_provider_id, '') = ?
+        AND IFNULL(handed_off_at, '') = ?
+        AND IFNULL(returned_at, '') = ?
     `,
     )
     .run(
@@ -641,18 +681,33 @@ function writeTaskOperationalState(
       next.completion?.completedQuantityUnit ?? null,
       next.completion?.note ?? null,
       next.actualDurationMinutes,
+      next.executionMode === "EXTERNAL" ? "EXTERNAL" : "INTERNAL",
+      next.externalProviderId ?? null,
+      next.externalProviderLabel ?? null,
+      next.externalizedAt ?? null,
+      next.externalizedBy ?? null,
+      next.handedOffAt ?? null,
+      next.handedOffBy ?? null,
+      next.returnedAt ?? null,
+      next.returnedBy ?? null,
       next.taskId,
       previous?.status ?? next.status,
       previous?.assignedProvider?.id ?? "",
       previous?.assignedExecutor?.id ?? "",
       previous?.startedAt ?? "",
       previous?.completedAt ?? "",
+      previous?.executionMode === "EXTERNAL" ? "EXTERNAL" : "INTERNAL",
+      previous?.externalProviderId ?? "",
+      previous?.handedOffAt ?? "",
+      previous?.returnedAt ?? "",
     );
   if (result.changes !== 1) {
     return false;
   }
   writeActualConsumption(db, next);
-  writeInventoryOutFromTask(db, next);
+  if (next.executionMode !== "EXTERNAL") {
+    writeInventoryOutFromTask(db, next);
+  }
   return true;
 }
 
@@ -888,6 +943,15 @@ function hydrateRecord(db: SqliteDatabase, planRow: PlanRow): ExecutionPlanRecor
       ),
       actualConsumption: actuals.get(row.task_id) ?? [],
       createdAt: row.created_at,
+      executionMode: row.execution_mode === "EXTERNAL" ? "EXTERNAL" : "INTERNAL",
+      externalProviderId: row.external_provider_id,
+      externalProviderLabel: row.external_provider_label,
+      externalizedAt: row.externalized_at,
+      externalizedBy: row.externalized_by,
+      handedOffAt: row.handed_off_at,
+      handedOffBy: row.handed_off_by,
+      returnedAt: row.returned_at,
+      returnedBy: row.returned_by,
     })),
   };
 }

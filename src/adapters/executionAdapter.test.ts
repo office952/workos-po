@@ -156,6 +156,7 @@ describe("presentExecutionPlan", () => {
       total: 4,
       completed: 1,
       inProgress: 1,
+      outside: 0,
       planned: 2,
       waitingDependencies: 1,
       noProvider: 1,

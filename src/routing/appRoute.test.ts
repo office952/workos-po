@@ -36,6 +36,9 @@ describe("parseAppRoute", () => {
     expect(parseAppRoute("/admin/material-readiness")).toEqual({
       name: "admin-material-readiness",
     });
+    expect(parseAppRoute("/admin/external-production")).toEqual({
+      name: "admin-external-production",
+    });
     expect(parseAppRoute("/admin/commercial")).toEqual({ name: "admin-commercial" });
     expect(parseAppRoute("/admin/technical")).toEqual({ name: "admin-technical" });
     expect(parseAppRoute("/admin/formulas")).toEqual({ name: "admin-formulas" });

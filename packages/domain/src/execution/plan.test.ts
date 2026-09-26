@@ -146,6 +146,7 @@ describe("persisted execution plan materialization", () => {
       total: 12,
       completed: 0,
       inProgress: 0,
+      outside: 0,
       planned: 12,
       waitingDependencies: view.tasks.filter((item) => item.waitingFor.length > 0).length,
       noProvider: 0,

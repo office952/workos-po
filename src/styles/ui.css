@@ -605,6 +605,7 @@ a.hit {
 
 .info-row__value {
   font-size: var(--text-value);
+  overflow-wrap: anywhere;
 }
 
 .separator {

@@ -6,6 +6,7 @@ import {
   dependenciesCompleted,
   plannedExecutorStartError,
   projectExecutionPlanView,
+  executionModeOf,
   taskRequiresProvider,
   type ExecutionPlanRecord,
   type ExecutionPlanView,
@@ -172,6 +173,10 @@ function classifyInboxTask(input: {
   providerRegistry: WorkcenterRegistry;
 }): OperatorInboxTaskItem | null {
   const { task, byId, currentOperatorId, people, eligibility } = input;
+
+  if (executionModeOf(task) === "EXTERNAL") {
+    return null;
+  }
 
   if (task.status === "IN_PROGRESS" && task.assignedExecutor?.id === currentOperatorId) {
     return toInboxItem(input, "in_progress_mine");

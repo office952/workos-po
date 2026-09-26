@@ -4,6 +4,10 @@ import {
   assignTaskProvider,
   completeExecutionTask,
   confirmTaskMaterial,
+  handOffExternalTask,
+  markTaskExternal,
+  assignExternalProvider,
+  recordExternalReturn,
   startExecutionTask,
   startMachineRun,
   stopMachineRun,
@@ -26,6 +30,7 @@ import { TextField } from "../components/TextField";
 import { Worklist } from "../components/Worklist";
 import { WorklistRow } from "../components/WorklistRow";
 import { invalidateAfterExecutionTaskChange } from "../data/invalidation";
+import { formatTimestamp } from "../presentation/format";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadExecutionPlan, loadOperatorSession } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
@@ -42,6 +47,7 @@ import {
 import { parseActualDurationDraft } from "../presentation/actualDuration";
 import { presentExecutionCompletionError } from "../presentation/executionCompletionError";
 import {
+  hasViewerExecutionAction,
   presentCurrentTaskRole,
   presentExecutionNextAction,
   presentExecutionStartError,
@@ -64,9 +70,7 @@ function firstActionableTask(
   tasks: readonly ExecutionTaskTransport[],
 ): ExecutionTaskTransport | null {
   return (
-    tasks.find(
-      (task) => task.canComplete || task.canClaimStart || task.canAssignProvider,
-    ) ??
+    tasks.find((task) => hasViewerExecutionAction(task)) ??
     tasks.find((task) => task.status !== "COMPLETED") ??
     tasks[0] ??
     null
@@ -162,6 +166,9 @@ function PlanSummary({
       : null,
     progress && progress.inProgress > 0
       ? { key: "live", label: `În curs ${progress.inProgress}` }
+      : null,
+    progress && progress.outside > 0
+      ? { key: "outside", label: `La furnizor extern ${progress.outside}` }
       : null,
     progress && progress.waitingDependencies > 0
       ? { key: "wait", label: `Așteaptă ${progress.waitingDependencies}` }
@@ -278,6 +285,22 @@ export function ExecutionPage({
           ? "Alocarea utilajului nu este permisă pentru această sarcină."
           : "Alocarea a eșuat.",
       );
+    }
+  }
+
+  async function runExternal(
+    action: () => Promise<unknown>,
+    failure: string,
+  ): Promise<void> {
+    setActionState("pending");
+    setActionError(null);
+    try {
+      await action();
+      setActionState("idle");
+      invalidateAfterExecutionTaskChange(planId);
+    } catch (error) {
+      setActionState("error");
+      setActionError(error instanceof TransportError ? failure : "Acțiunea a eșuat.");
     }
   }
 
@@ -498,7 +521,107 @@ export function ExecutionPage({
             {currentTask.operatorRelation === "not_eligible" ? (
               <p>Alt operator trebuie să preia această sarcină.</p>
             ) : null}
-            {currentTask.requiresCompletedQuantity && currentTask.status !== "COMPLETED" ? (
+            {currentTask.canExternalize ? (
+              <Button
+                disabled={actionState === "pending"}
+                onClick={() =>
+                  void runExternal(
+                    () => markTaskExternal(currentTask.taskId),
+                    "Sarcina nu poate fi marcată pentru execuție externă.",
+                  )
+                }
+              >
+                Marchează pentru execuție externă
+              </Button>
+            ) : null}
+            {currentTask.executionMode === "EXTERNAL" ? (
+              <div className="stack" data-testid="external-production">
+                <InfoRow
+                  label="Furnizor extern"
+                  value={currentTask.externalProviderLabel ?? "Nealocat"}
+                />
+                {currentTask.handedOffAt ? (
+                  <InfoRow
+                    label="Predat la"
+                    value={formatTimestamp(currentTask.handedOffAt) ?? currentTask.handedOffAt}
+                  />
+                ) : null}
+                {currentTask.returnedAt ? (
+                  <InfoRow
+                    label="Revenit la"
+                    value={formatTimestamp(currentTask.returnedAt) ?? currentTask.returnedAt}
+                  />
+                ) : null}
+                {currentTask.externalBlockLabel ? <p>{currentTask.externalBlockLabel}</p> : null}
+                {currentTask.canAssignExternalProvider ? (
+                  <SelectField
+                    id={`external-provider-${currentTask.taskId}`}
+                    label="Furnizor extern"
+                    value={selectedProviderByTask[currentTask.taskId] ?? ""}
+                    disabled={actionState === "pending"}
+                    options={(plan?.externalProviderChoices ?? []).map((provider) => ({
+                      value: provider.providerId,
+                      label: provider.name,
+                    }))}
+                    onChange={(value) => {
+                      setSelectedProviderByTask((current) => ({
+                        ...current,
+                        [currentTask.taskId]: value,
+                      }));
+                    }}
+                  />
+                ) : null}
+                {currentTask.canAssignExternalProvider ? (
+                  <Button
+                    variant="secondary"
+                    disabled={
+                      actionState === "pending" || !selectedProviderByTask[currentTask.taskId]
+                    }
+                    onClick={() =>
+                      void runExternal(
+                        () =>
+                          assignExternalProvider(
+                            currentTask.taskId,
+                            selectedProviderByTask[currentTask.taskId] ?? "",
+                          ),
+                        "Furnizorul extern nu poate fi alocat.",
+                      )
+                    }
+                  >
+                    Alocă furnizorul
+                  </Button>
+                ) : null}
+                {currentTask.canHandOffExternal ? (
+                  <Button
+                    disabled={actionState === "pending"}
+                    onClick={() =>
+                      void runExternal(
+                        () => handOffExternalTask(currentTask.taskId),
+                        "Predarea nu este permisă încă.",
+                      )
+                    }
+                  >
+                    Predă către furnizor
+                  </Button>
+                ) : null}
+                {currentTask.canRecordExternalReturn ? (
+                  <Button
+                    disabled={actionState === "pending"}
+                    onClick={() =>
+                      void runExternal(
+                        () => recordExternalReturn(currentTask.taskId),
+                        "Revenirea nu poate fi înregistrată.",
+                      )
+                    }
+                  >
+                    Înregistrează revenirea
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+            {currentTask.executionMode !== "EXTERNAL" &&
+            currentTask.requiresCompletedQuantity &&
+            currentTask.status !== "COMPLETED" ? (
               <TextField
                 id={`actual-${currentTask.taskId}`}
                 label="Cantitate realizată"
@@ -531,7 +654,8 @@ export function ExecutionPage({
                 actualConsumption={currentTask.actualConsumption}
               />
             )}
-            {currentTask.requiresProvider &&
+            {currentTask.executionMode !== "EXTERNAL" &&
+            currentTask.requiresProvider &&
             currentTask.assignmentLabel === "Nealocat" &&
             currentTask.eligibleProviders.length === 0 &&
             currentTask.status !== "COMPLETED" ? (
@@ -564,7 +688,8 @@ export function ExecutionPage({
                   .join(", ")}
               </p>
             ) : null}
-            {(currentTask.canComplete || currentTask.completionBlockedByActiveMachineRun) &&
+            {currentTask.executionMode !== "EXTERNAL" &&
+            (currentTask.canComplete || currentTask.completionBlockedByActiveMachineRun) &&
             currentTask.status !== "COMPLETED" ? (
               <TextField
                 id={`actual-duration-${currentTask.taskId}`}
@@ -580,9 +705,10 @@ export function ExecutionPage({
                 }}
               />
             ) : null}
-            {currentTask.canStartMachineRun ||
+            {currentTask.executionMode !== "EXTERNAL" &&
+            (currentTask.canStartMachineRun ||
             currentTask.canStopMachineRun ||
-            currentTask.machineRuns.length > 0 ? (
+            currentTask.machineRuns.length > 0) ? (
               <div className="stack" data-testid="machine-run">
                 {currentTask.canStopMachineRun ? (
                   <>

@@ -97,3 +97,21 @@ export async function completeExecutionTask(
 ): Promise<unknown> {
   return postJson(`/api/execution-tasks/${encodeURIComponent(taskId)}/complete`, input);
 }
+
+export async function markTaskExternal(taskId: string): Promise<unknown> {
+  return postJson(`/api/execution-tasks/${encodeURIComponent(taskId)}/external`);
+}
+
+export async function assignExternalProvider(taskId: string, providerId: string): Promise<unknown> {
+  return postJson(`/api/execution-tasks/${encodeURIComponent(taskId)}/external-provider`, {
+    providerId,
+  });
+}
+
+export async function handOffExternalTask(taskId: string): Promise<unknown> {
+  return postJson(`/api/execution-tasks/${encodeURIComponent(taskId)}/hand-off`);
+}
+
+export async function recordExternalReturn(taskId: string): Promise<unknown> {
+  return postJson(`/api/execution-tasks/${encodeURIComponent(taskId)}/external-return`);
+}

@@ -77,6 +77,15 @@ function taskStub(
     materialParticipation: "NOT_ADOPTED",
     materialBlockLabel: null,
     materialLines: [],
+    executionMode: "INTERNAL",
+    externalProviderLabel: null,
+    handedOffAt: null,
+    returnedAt: null,
+    canExternalize: false,
+    canAssignExternalProvider: false,
+    canHandOffExternal: false,
+    canRecordExternalReturn: false,
+    externalBlockLabel: null,
     ...overrides,
   };
 }
@@ -183,7 +192,8 @@ function planView(
     progress: {
       total: 12,
       completed: status === "COMPLETED" ? 12 : status === "IN_PROGRESS" ? 3 : 0,
-      inProgress: status === "IN_PROGRESS" ? 1 : 0,
+      inProgress: extras?.inProgress ?? (status === "IN_PROGRESS" ? 1 : 0),
+      outside: extras?.outside ?? 0,
       planned: status === "COMPLETED" ? 0 : 9,
       waitingDependencies: 0,
       noProvider: extras?.noProvider ?? 0,
@@ -196,6 +206,7 @@ function planView(
     sourceKind: "ORDER",
     sourceKindLabel: "Eliberată din comandă",
     jobHref: "/jobs/ord%3AWORKOS",
+    externalProviderChoices: [],
     timeSummary: {
       plannedKnownMinutes: 0,
       actualKnownMinutes: 0,
@@ -454,5 +465,50 @@ describe("job overview projection", () => {
     });
     expect(done.overdue).toBe(false);
     expect(done.planningEditable).toBe(false);
+  });
+
+  it("names outside custody on the job stage without a new status", () => {
+    const outsideOnly = projectJobOverviewItem({
+      order: order("OUTSIDE-ONLY"),
+      release: release(),
+      planView: planView("IN_PROGRESS", { inProgress: 0, outside: 1 }),
+    });
+    expect(outsideOnly.stage).toBe("EXECUTION_IN_PROGRESS");
+    expect(outsideOnly.stageLabel).toBe("La furnizor extern");
+
+    const internalOnly = projectJobOverviewItem({
+      order: order("INTERNAL-ONLY"),
+      release: release(),
+      planView: planView("IN_PROGRESS", { inProgress: 1, outside: 0 }),
+    });
+    expect(internalOnly.stage).toBe("EXECUTION_IN_PROGRESS");
+    expect(internalOnly.stageLabel).toBe("În lucru");
+
+    const mixed = projectJobOverviewItem({
+      order: order("MIXED"),
+      release: release(),
+      planView: planView("IN_PROGRESS", { inProgress: 1, outside: 2 }),
+    });
+    expect(mixed.stage).toBe("EXECUTION_IN_PROGRESS");
+    expect(mixed.stageLabel).toBe("În lucru · La furnizor extern");
+    expect(mixed.progressLabel).toBe("3 / 12 finalizate · 1 în lucru · 2 la furnizor extern");
+
+    const completed = projectJobOverviewItem({
+      order: order("DONE-COPY"),
+      release: release(),
+      planView: planView("COMPLETED"),
+    });
+    expect(completed.stage).toBe("EXECUTION_COMPLETED");
+    expect(completed.stageLabel).toBe("Finalizată");
+  });
+
+  it("counts outside tasks in job progress without calling them internal work", () => {
+    const item = projectJobOverviewItem({
+      order: order("OUTSIDE"),
+      release: release(),
+      planView: planView("PLANNED", { outside: 1 }),
+    });
+    expect(item.progressLabel).toBe("0 / 12 finalizate · 1 la furnizor extern");
+    expect(item.progressLabel?.includes("în lucru")).toBe(false);
   });
 });

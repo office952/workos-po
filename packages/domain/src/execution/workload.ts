@@ -4,7 +4,7 @@ import {
   operationalPriorityRank,
   type OperationalPriority,
 } from "../jobs/planning.js";
-import { taskRequiresProvider, type AssignedExecutionProvider, type ExecutionPlanRecord, type ExecutionTask, type ExecutionTaskStatus } from "./plan.js";
+import { taskRequiresProvider, executionModeOf, type AssignedExecutionProvider, type ExecutionPlanRecord, type ExecutionTask, type ExecutionTaskStatus } from "./plan.js";
 import { plannedEffortIsUnknown } from "./plannedEffort.js";
 import {
   workcenterRegistry,
@@ -107,7 +107,7 @@ export function projectPlanningWorkload(
   const items: WorkloadTaskItem[] = [];
   for (const source of sources) {
     for (const task of source.record.tasks) {
-      if (!isOpenWorkloadStatus(task.status)) {
+      if (executionModeOf(task) === "EXTERNAL" || !isOpenWorkloadStatus(task.status)) {
         continue;
       }
       items.push(toWorkloadItem(task, source));

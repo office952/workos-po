@@ -2,13 +2,42 @@ import type { ExecutionTaskTransport } from "../api/types";
 import { readTransportErrorCode, TransportError } from "../api/http";
 
 export function hasViewerExecutionAction(task: ExecutionTaskTransport): boolean {
-  return task.canComplete || task.canClaimStart || task.canAssignProvider;
+  return Boolean(
+    task.canComplete ||
+      task.canClaimStart ||
+      task.canAssignProvider ||
+      task.canExternalize ||
+      task.canAssignExternalProvider ||
+      task.canHandOffExternal ||
+      task.canRecordExternalReturn,
+  );
 }
 
 export function presentExecutionNextAction(
   task: ExecutionTaskTransport,
   identified: boolean | null,
 ): string {
+  if (task.executionMode === "EXTERNAL") {
+    if (task.canRecordExternalReturn) {
+      return "Poate fi înregistrată revenirea";
+    }
+    if (task.status === "OUTSIDE") {
+      return "La furnizor extern";
+    }
+    if (task.waitingFor.length > 0) {
+      return `Așteaptă: ${task.waitingFor.join(", ")}`;
+    }
+    if (task.externalBlockLabel) {
+      return task.externalBlockLabel;
+    }
+    if (task.canHandOffExternal) {
+      return "Poate fi predată";
+    }
+    if (task.canRecordExternalReturn) {
+      return "Poate fi înregistrată revenirea";
+    }
+    return task.statusLabel;
+  }
   if (task.waitingFor.length > 0) {
     return `Așteaptă: ${task.waitingFor.join(", ")}`;
   }
