@@ -170,6 +170,7 @@ function presentJobDetail(
         null,
         runtime.providerRegistry,
         runtime.materialReadinessContext(),
+        runtime.externalProductionContext(),
       )
     : null;
   const executionAccess = access === "owner" ? "owner" : "workshop";

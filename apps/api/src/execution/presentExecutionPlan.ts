@@ -10,10 +10,14 @@ export function presentExecutionPlanForViewer(
   canAssignProvider: boolean,
 ): Record<string, unknown> {
   const tasks = Array.isArray(scopedPlan.tasks) ? scopedPlan.tasks : [];
-  return {
+  const presented: Record<string, unknown> = {
     ...scopedPlan,
     tasks: tasks.map((task) => presentExecutionTaskForViewer(task, canAssignProvider)),
   };
+  if (!canAssignProvider) {
+    delete presented.externalProviderChoices;
+  }
+  return presented;
 }
 
 function presentExecutionTaskForViewer(
@@ -27,6 +31,10 @@ function presentExecutionTaskForViewer(
   return {
     ...row,
     canAssignProvider: row.canAssign === true && viewerMayAssign,
+    canExternalize: row.canExternalize === true && viewerMayAssign,
+    canAssignExternalProvider: row.canAssignExternalProvider === true && viewerMayAssign,
+    canHandOffExternal: row.canHandOffExternal === true && viewerMayAssign,
+    canRecordExternalReturn: row.canRecordExternalReturn === true && viewerMayAssign,
     eligibleProviders: presentEligibleProviders(row.eligibleProviders),
   };
 }

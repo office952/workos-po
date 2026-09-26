@@ -7,7 +7,8 @@ export type AdministrationRailId =
   | "formulas"
   | "products"
   | "people"
-  | "workcenters";
+  | "workcenters"
+  | "external-production";
 
 const ADMINISTRATION_RAIL = [
   { id: "products", label: "Produse oferite", href: "/admin/products" },
@@ -19,6 +20,7 @@ const ADMINISTRATION_RAIL = [
   { id: "resources", label: "Dovezi de cost", href: "/admin/resources" },
   { id: "services", label: "Servicii", href: "/admin/services" },
   { id: "materials", label: "Materiale execuție", href: "/admin/material-readiness" },
+  { id: "external-production", label: "Execuție externă", href: "/admin/external-production" },
 ] as const;
 
 export function administrationRailItems(current: AdministrationRailId) {

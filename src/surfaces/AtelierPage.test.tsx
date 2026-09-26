@@ -125,4 +125,53 @@ describe("AtelierPage", () => {
     expect(screen.getByRole("option", { name: "Operator Test" })).toBeInTheDocument();
     expect(screen.queryByText("Nu există operatori configurați")).not.toBeInTheDocument();
   });
+
+  it("does not offer an external custody lane or external owner actions", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/operator-candidates")) {
+          return jsonResponse({
+            candidates: [{ personId: "per:1", displayName: "Andrei", pinConfigured: true }],
+          });
+        }
+        if (url.includes("/operator-session")) {
+          return jsonResponse({ operator: { personId: "per:1", displayName: "Andrei" } });
+        }
+        if (url.includes("/operator-task-inbox")) {
+          return jsonResponse({
+            inbox: {
+              inProgressMine: [],
+              availableReady: [
+                {
+                  taskId: "task-internal",
+                  planId: "exp-a",
+                  jobId: "ord-a",
+                  processLabel: "Debitare",
+                  scopeLabel: "Spate",
+                  statusLabel: "Gata",
+                  productLabel: "Litere",
+                  inscription: "INTERN",
+                  canClaimStart: true,
+                  requiresProvider: false,
+                  lane: "available_ready",
+                },
+              ],
+              availableNeedsProvider: [],
+              waitingDependencies: [],
+            },
+          });
+        }
+        return jsonResponse({});
+      }),
+    );
+    render(<AtelierPage />);
+    expect(await screen.findByText("INTERN")).toBeInTheDocument();
+    expect(screen.queryByText("La furnizor extern")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Predă către furnizor" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Marchează pentru execuție externă" }),
+    ).not.toBeInTheDocument();
+  });
 });

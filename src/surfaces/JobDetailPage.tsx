@@ -309,6 +309,9 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
                       ) : (
                         <p className="worklist-row__detail">{task.statusLabel}</p>
                       )}
+                      {task.executionMode === "EXTERNAL" && task.externalProviderLabel ? (
+                        <p className="worklist-row__detail">{task.externalProviderLabel}</p>
+                      ) : null}
                       <p className="section-label">Timp</p>
                       <p>Planificat {task.plannedTimeLabel}</p>
                       <p>Realizat {task.actualDurationLabel}</p>

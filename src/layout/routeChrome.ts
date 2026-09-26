@@ -172,6 +172,15 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         title: "Materiale pentru execuție",
         lead: "Organizația alege dacă pornirea unei sarcini cere confirmarea materialelor planificate.",
       };
+    case "admin-external-production":
+      return {
+        contextLabel: "Administrare",
+        currentHref: "/admin/external-production",
+        workspace: "admin",
+        eyebrow: "Administrare",
+        title: "Execuție externă",
+        lead: "Organizația alege dacă o sarcină planificată poate fi predată unui furnizor de producție din afara atelierului.",
+      };
     case "admin-commercial":
       return {
         contextLabel: "Administrare",

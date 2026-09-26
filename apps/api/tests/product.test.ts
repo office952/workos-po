@@ -1395,6 +1395,7 @@ describe("product configuration API", () => {
       total: 12,
       completed: 9,
       inProgress: 0,
+      outside: 0,
       planned: 3,
       waitingDependencies: 2,
       noProvider: 0,

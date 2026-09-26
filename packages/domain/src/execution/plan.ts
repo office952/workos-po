@@ -66,9 +66,46 @@ export type ExecutionProgressStatus = (typeof EXECUTION_PROGRESS_STATUSES)[numbe
 export const EXECUTION_TASK_STATUSES = [
   "PLANNED",
   "IN_PROGRESS",
+  "OUTSIDE",
   "COMPLETED",
 ] as const;
 export type ExecutionTaskStatus = (typeof EXECUTION_TASK_STATUSES)[number];
+
+export const EXTERNAL_EXECUTION_MODES = ["INTERNAL", "EXTERNAL"] as const;
+export type ExternalExecutionMode = (typeof EXTERNAL_EXECUTION_MODES)[number];
+
+export type ExternalExecutionProjection = {
+  mode: "DISABLED" | "ENABLED";
+  providers: readonly { providerId: string; name: string; active: boolean }[];
+};
+
+export const DISABLED_EXTERNAL_EXECUTION: ExternalExecutionProjection = {
+  mode: "DISABLED",
+  providers: [],
+};
+
+export function executionModeOf(
+  task: { executionMode?: ExternalExecutionMode | null },
+): ExternalExecutionMode {
+  return task.executionMode === "EXTERNAL" ? "EXTERNAL" : "INTERNAL";
+}
+
+export function externalProviderDisplayLabel(
+  task: Pick<ExecutionTask, "status" | "externalProviderId" | "externalProviderLabel">,
+  providers: readonly { providerId: string; name: string }[],
+): string | null {
+  if (!task.externalProviderId) {
+    return null;
+  }
+  if (task.status === "PLANNED") {
+    return (
+      providers.find((item) => item.providerId === task.externalProviderId)?.name ??
+      task.externalProviderLabel ??
+      null
+    );
+  }
+  return task.externalProviderLabel ?? null;
+}
 
 export const COMPLETION_OUTCOMES = [
   "COMPLETED_AS_PLANNED",
@@ -133,6 +170,15 @@ export type ExecutionTask = {
   requiredCapabilityLabel: string;
   providerRequirement: ProviderRequirement;
   status: ExecutionTaskStatus;
+  executionMode?: ExternalExecutionMode;
+  externalProviderId?: string | null;
+  externalProviderLabel?: string | null;
+  externalizedAt?: string | null;
+  externalizedBy?: string | null;
+  handedOffAt?: string | null;
+  handedOffBy?: string | null;
+  returnedAt?: string | null;
+  returnedBy?: string | null;
   quantities: AcceptedProductionSnapshot["operations"][number]["quantities"];
   resourceDemands: AcceptedProductionSnapshot["operations"][number]["resourceDemands"];
   assignedProvider: AssignedExecutionProvider | null;
@@ -215,12 +261,22 @@ export type ExecutionTaskView = ExecutionTask & {
   materialParticipation: MaterialParticipation;
   materialBlockLabel: string | null;
   materialLines: readonly MaterialDemandLine[];
+  executionMode: ExternalExecutionMode;
+  externalProviderLabel: string | null;
+  handedOffAt: string | null;
+  returnedAt: string | null;
+  canExternalize: boolean;
+  canAssignExternalProvider: boolean;
+  canHandOffExternal: boolean;
+  canRecordExternalReturn: boolean;
+  externalBlockLabel: string | null;
 };
 
 export type ExecutionPlanProgress = {
   total: number;
   completed: number;
   inProgress: number;
+  outside: number;
   planned: number;
   waitingDependencies: number;
   noProvider: number;
@@ -241,6 +297,7 @@ export type ExecutionPlanView = {
   sourceKindLabel: string;
   jobHref: string | null;
   tasks: readonly ExecutionTaskView[];
+  externalProviderChoices: readonly { providerId: string; name: string }[];
   timeSummary: ExecutionTimeSummary;
   actualInternalCost: ActualInternalCostProjection;
 };
@@ -281,6 +338,15 @@ export function materializeExecutionPlanFromSnapshot(
       requiredCapabilityLabel: operation.requiredCapabilityLabel,
       providerRequirement: frozenProviderRequirement(operation.providerRequirement),
       status: "PLANNED" as const,
+      executionMode: "INTERNAL" as const,
+      externalProviderId: null,
+      externalProviderLabel: null,
+      externalizedAt: null,
+      externalizedBy: null,
+      handedOffAt: null,
+      handedOffBy: null,
+      returnedAt: null,
+      returnedBy: null,
       quantities: operation.quantities,
       resourceDemands: operation.resourceDemands,
       assignedProvider: null,
@@ -324,6 +390,7 @@ export function projectExecutionPlanView(
   currentOperatorId: string | null = null,
   providerRegistry: WorkcenterRegistry = workcenterRegistry,
   material: MaterialReadinessContext = DISABLED_MATERIAL_READINESS,
+  external: ExternalExecutionProjection = DISABLED_EXTERNAL_EXECUTION,
 ): ExecutionPlanView {
   const byId = new Map(record.tasks.map((task) => [task.taskId, task]));
   const availablePeople = activePeople(people).filter(
@@ -384,11 +451,34 @@ export function projectExecutionPlanView(
     const running = activeMachineRun(task);
     const machineTotal = closedMachineRunTotalMinutes(task);
     const variance = timeVarianceMinutes(task.plannedEffortMinutes, task.actualDurationMinutes);
+    const mode = executionModeOf(task);
+    const externalLabel = externalProviderDisplayLabel(task, external.providers);
+    const externalPlanned = mode === "EXTERNAL" && task.status === "PLANNED";
+    const dependenciesReady = waitingFor.length === 0;
+    const canExternalize =
+      external.mode === "ENABLED" && task.status === "PLANNED" && mode === "INTERNAL";
+    const canAssignExternalProvider = externalPlanned;
+    const canHandOffExternal =
+      externalPlanned && task.externalProviderId != null && dependenciesReady;
+    const canRecordExternalReturn = mode === "EXTERNAL" && task.status === "OUTSIDE";
+    const externalBlockLabel = externalPlanned
+      ? waitingFor.length > 0
+        ? `Așteaptă: ${waitingFor.join(", ")}`
+        : externalLabel
+          ? null
+          : "Alege furnizorul extern."
+      : null;
+    const internalClaim = mode === "INTERNAL" && canClaimStart;
     return {
       ...task,
       assignedExecutor,
+      executionMode: mode,
+      externalProviderLabel: externalLabel,
+      handedOffAt: task.handedOffAt ?? null,
+      returnedAt: task.returnedAt ?? null,
       statusLabel: executionTaskStatusLabel(task.status),
-      assignmentLabel: task.assignedProvider?.label ?? "Nealocat",
+      assignmentLabel:
+        mode === "EXTERNAL" ? (externalLabel ?? "Nealocat") : (task.assignedProvider?.label ?? "Nealocat"),
       dependsOnLabels,
       waitingFor,
       eligibleProviders,
@@ -405,13 +495,14 @@ export function projectExecutionPlanView(
         frozenProviderRequirement(task.providerRequirement),
       ),
       canAssign:
+        mode === "INTERNAL" &&
         task.status === "PLANNED" &&
         taskRequiresProvider(task) &&
         !task.assignedProvider &&
         eligibleProviders.length > 0,
       canAssignExecutor: false,
-      canStart: canClaimStart,
-      canClaimStart,
+      canStart: internalClaim,
+      canClaimStart: internalClaim,
       startBlockReason: plannedStartBlockReason(
         task,
         byId,
@@ -421,12 +512,13 @@ export function projectExecutionPlanView(
       ),
       operatorRelation,
       startedByLabel:
-        task.status === "IN_PROGRESS" || task.status === "COMPLETED"
+        mode === "INTERNAL" && (task.status === "IN_PROGRESS" || task.status === "COMPLETED")
           ? assignedExecutor?.label ?? null
           : null,
-      canComplete: ownedByCurrent && running === null,
+      canComplete: mode === "INTERNAL" && ownedByCurrent && running === null,
       hasPlannedResources: task.resourceDemands.length > 0,
       canRecordActualConsumption:
+        mode === "INTERNAL" &&
         task.status === "IN_PROGRESS" &&
         task.resourceDemands.length > 0 &&
         (currentOperatorId === null || ownedByCurrent),
@@ -444,12 +536,20 @@ export function projectExecutionPlanView(
       machineRunTotalMinutes: machineTotal,
       machineRunTotalLabel: machineTotal === null ? null : formatMinutesLabel(machineTotal),
       canStartMachineRun:
-        ownedByCurrent && task.assignedProvider?.kind === "MACHINE" && running === null,
-      canStopMachineRun: ownedByCurrent && running !== null,
-      completionBlockedByActiveMachineRun: ownedByCurrent && running !== null,
+        mode === "INTERNAL" &&
+        ownedByCurrent &&
+        task.assignedProvider?.kind === "MACHINE" &&
+        running === null,
+      canStopMachineRun: mode === "INTERNAL" && ownedByCurrent && running !== null,
+      completionBlockedByActiveMachineRun: mode === "INTERNAL" && ownedByCurrent && running !== null,
       materialParticipation: participation,
       materialBlockLabel: materialBlocked ? materialBlockLabel(participation, lines) : null,
       materialLines: participation === "NOT_ADOPTED" ? [] : lines,
+      canExternalize,
+      canAssignExternalProvider,
+      canHandOffExternal,
+      canRecordExternalReturn,
+      externalBlockLabel,
     };
   });
   const progress = summarizeExecutionProgress(tasks);
@@ -458,11 +558,14 @@ export function projectExecutionPlanView(
     plan: record.plan,
     progress,
     progressStatus: progress.status,
-    statusLabel: executionProgressStatusLabel(progress.status),
+    statusLabel: presentActiveExecutionLabel(progress),
     sourceKind,
     sourceKindLabel: executionSourceKindLabel(sourceKind),
     jobHref: executionJobHref(snapshot),
     tasks,
+    externalProviderChoices: external.providers
+      .filter((item) => item.active)
+      .map((item) => ({ providerId: item.providerId, name: item.name })),
     timeSummary: projectExecutionTimeSummary(tasks),
     actualInternalCost: projectActualInternalCost(record, snapshot),
   };
@@ -507,18 +610,25 @@ export function summarizeExecutionProgress(
     | "completion"
     | "assignedExecutor"
     | "requiresProvider"
+    | "executionMode"
   >[],
 ): ExecutionPlanProgress {
   return {
     total: tasks.length,
     completed: tasks.filter((task) => task.status === "COMPLETED").length,
     inProgress: tasks.filter((task) => task.status === "IN_PROGRESS").length,
+    outside: tasks.filter((task) => task.status === "OUTSIDE").length,
     planned: tasks.filter((task) => task.status === "PLANNED").length,
     waitingDependencies: tasks.filter((task) => task.waitingFor.length > 0).length,
     noProvider: tasks.filter(
-      (task) => task.requiresProvider && task.eligibleProviders.length === 0,
+      (task) =>
+        executionModeOf(task) !== "EXTERNAL" &&
+        task.requiresProvider &&
+        task.eligibleProviders.length === 0,
     ).length,
-    noExecutor: tasks.filter((task) => task.assignedExecutor === null).length,
+    noExecutor: tasks.filter(
+      (task) => executionModeOf(task) !== "EXTERNAL" && task.assignedExecutor === null,
+    ).length,
     varianceCount: tasks.filter(
       (task) => task.completion?.outcome === "COMPLETED_WITH_VARIANCE",
     ).length,
@@ -632,6 +742,29 @@ export function executionPlanStatusLabel(status: ExecutionPlanStatus): string {
   }
 }
 
+export function presentActiveExecutionLabel(
+  progress: Pick<ExecutionPlanProgress, "status" | "inProgress" | "outside">,
+): string {
+  switch (progress.status) {
+    case "PLANNED":
+      return "Planificat";
+    case "COMPLETED":
+      return "Finalizat";
+    case "IN_PROGRESS":
+      if (progress.inProgress > 0 && progress.outside > 0) {
+        return "În lucru · La furnizor extern";
+      }
+      if (progress.outside > 0) {
+        return "La furnizor extern";
+      }
+      return "În lucru";
+    default: {
+      const _exhaustive: never = progress.status;
+      return _exhaustive;
+    }
+  }
+}
+
 export function executionProgressStatusLabel(
   status: ExecutionProgressStatus,
 ): string {
@@ -655,6 +788,8 @@ export function executionTaskStatusLabel(status: ExecutionTaskStatus): string {
       return "Planificat";
     case "IN_PROGRESS":
       return "În lucru";
+    case "OUTSIDE":
+      return "La furnizor extern";
     case "COMPLETED":
       return "Finalizat";
     default: {
@@ -745,6 +880,7 @@ function canClaimStartTask(
 ): boolean {
   if (
     task.status !== "PLANNED" ||
+    executionModeOf(task) === "EXTERNAL" ||
     !currentOperatorId ||
     !providerReadyForStart(task, providerRegistry) ||
     !dependenciesCompleted(task, byId)
@@ -776,6 +912,12 @@ function projectOperatorRelation(input: {
   materialBlocked: boolean;
 }): OperatorTaskRelation {
   const { task, assignedExecutor, waitingFor, currentOperatorId, canClaimStart } = input;
+  if (executionModeOf(task) === "EXTERNAL") {
+    if (task.status === "PLANNED" && waitingFor.length > 0) {
+      return "waiting_dependencies";
+    }
+    return "idle";
+  }
   if (task.status === "IN_PROGRESS" || task.status === "COMPLETED") {
     if (!currentOperatorId || !assignedExecutor) {
       return "owned_by_other";

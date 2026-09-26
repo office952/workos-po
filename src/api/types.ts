@@ -520,12 +520,22 @@ export type ExecutionTaskTransport = {
   activeMachineRunStartedLabel: string | null;
   materialBlockLabel?: string | null;
   materialLines?: MaterialLineTransport[];
+  executionMode?: string;
+  externalProviderLabel?: string | null;
+  handedOffAt?: string | null;
+  returnedAt?: string | null;
+  canExternalize?: boolean;
+  canAssignExternalProvider?: boolean;
+  canHandOffExternal?: boolean;
+  canRecordExternalReturn?: boolean;
+  externalBlockLabel?: string | null;
 };
 
 export type ExecutionPlanProgressTransport = {
   total: number;
   completed: number;
   inProgress: number;
+  outside: number;
   planned: number;
   waitingDependencies: number;
   noProvider: number;
@@ -564,6 +574,7 @@ export type ExecutionPlanTransport = {
   sourceSnapshotId: string;
   jobId: string | null;
   tasks: ExecutionTaskTransport[];
+  externalProviderChoices: Array<{ providerId: string; name: string }>;
   timeSummary: ExecutionTimeSummaryTransport | null;
   siteInstallation: SiteInstallationOperationalTransport | null;
   canConfirmMaterial?: boolean;

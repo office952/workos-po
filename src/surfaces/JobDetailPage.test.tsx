@@ -235,4 +235,80 @@ describe("JobDetailPage", () => {
     expect(screen.queryByText("Metodă de fixare — detalii")).not.toBeInTheDocument();
     expect(screen.queryByText("Echipă")).not.toBeInTheDocument();
   });
+
+  it("shows an outside task with its provider and missing-provider attention from the server", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/jobs/job-ext")) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => ({
+              job: {
+                jobId: "job-ext",
+                productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+                productLabel: "Litere volumetrice",
+                inscription: "EXTERN",
+                customerDisplayName: "Client",
+                stage: "EXECUTION_IN_PROGRESS",
+                stageLabel: "La furnizor extern",
+                attentionLabel: "Lipsă furnizor extern",
+                nextAction: "CONTINUE_EXECUTION",
+                nextActionLabel: "Continuă execuția",
+                progressLabel: "0 / 1",
+                orderSnapshotId: "ord-ext",
+                releaseSnapshotId: "rel-ext",
+              },
+              quote: { quoteSnapshotId: "q-ext" },
+              execution: { planId: "exp-ext" },
+            }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            executionPlan: {
+              plan: {
+                planId: "exp-ext",
+                productLabel: "Litere",
+                inscription: "EXTERN",
+                sourceSnapshotId: "aps-ext",
+              },
+              statusLabel: "În lucru",
+              progress: { completed: 0, total: 1 },
+              tasks: [
+                {
+                  taskId: "task-ext",
+                  processLabel: "Vopsire",
+                  scopeLabel: "Față",
+                  seqLabel: "02",
+                  status: "OUTSIDE",
+                  statusLabel: "La furnizor extern",
+                  executionMode: "EXTERNAL",
+                  externalProviderLabel: "Atelier Extern",
+                  assignmentLabel: "Atelier Extern",
+                  requiresProvider: true,
+                  canAssign: false,
+                  canClaimStart: false,
+                  canComplete: false,
+                  requiresCompletedQuantity: false,
+                  waitingFor: [],
+                  eligibleProviders: [],
+                  plannedTimeLabel: "Necunoscut",
+                  actualDurationLabel: "Necunoscut",
+                },
+              ],
+            },
+          }),
+        });
+      }),
+    );
+    render(<JobDetailPage jobId="job-ext" />);
+    expect(await screen.findByText("Lipsă furnizor extern")).toBeInTheDocument();
+    expect(screen.getAllByText("La furnizor extern").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Atelier Extern").length).toBeGreaterThan(0);
+  });
 });

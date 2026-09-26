@@ -172,6 +172,7 @@ describe("financial access", () => {
         total: 1,
         completed: 0,
         inProgress: 0,
+        outside: 0,
         planned: 1,
         waitingDependencies: 0,
         noProvider: 0,
@@ -185,6 +186,7 @@ describe("financial access", () => {
       sourceKindLabel: "Comandă",
       jobHref: "/jobs/ord%3A1",
       tasks: [],
+      externalProviderChoices: [],
       timeSummary: {
         plannedKnownMinutes: 0,
         actualKnownMinutes: 0,

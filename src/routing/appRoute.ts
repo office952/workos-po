@@ -16,6 +16,7 @@ export type AppRoute =
   | { name: "admin-resources" }
   | { name: "admin-services" }
   | { name: "admin-material-readiness" }
+  | { name: "admin-external-production" }
   | { name: "admin-commercial" }
   | { name: "admin-technical" }
   | { name: "admin-formulas" }
@@ -86,6 +87,9 @@ export function parseAppRoute(pathname: string): AppRoute {
   }
   if (pathname === "/admin/material-readiness") {
     return { name: "admin-material-readiness" };
+  }
+  if (pathname === "/admin/external-production") {
+    return { name: "admin-external-production" };
   }
   if (pathname === "/admin/commercial") {
     return { name: "admin-commercial" };

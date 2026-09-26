@@ -1230,6 +1230,54 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
     );
   });
 
+  app.post("/api/execution-tasks/:taskId/external", requireOwnerRole(), (c) => {
+    const runtime = getProductSystem(c);
+    const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/external");
+    return respondTaskMutation(
+      c,
+      runtime,
+      runtime.markExecutionTaskExternal(taskId, actorUserId(c), new Date().toISOString()),
+      { taskId },
+    );
+  });
+
+  app.post("/api/execution-tasks/:taskId/external-provider", requireOwnerRole(), async (c) => {
+    const runtime = getProductSystem(c);
+    const providerId = readProviderId(await c.req.json().catch(() => null));
+    if (!providerId) {
+      return c.json({ error: "invalid_payload" }, 400);
+    }
+    const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/external-provider");
+    return respondTaskMutation(
+      c,
+      runtime,
+      runtime.assignExternalProductionProvider(taskId, providerId),
+      { taskId },
+    );
+  });
+
+  app.post("/api/execution-tasks/:taskId/hand-off", requireOwnerRole(), (c) => {
+    const runtime = getProductSystem(c);
+    const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/hand-off");
+    return respondTaskMutation(
+      c,
+      runtime,
+      runtime.handOffExternalExecutionTask(taskId, actorUserId(c), new Date().toISOString()),
+      { taskId },
+    );
+  });
+
+  app.post("/api/execution-tasks/:taskId/external-return", requireOwnerRole(), (c) => {
+    const runtime = getProductSystem(c);
+    const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/external-return");
+    return respondTaskMutation(
+      c,
+      runtime,
+      runtime.recordExternalExecutionReturn(taskId, actorUserId(c), new Date().toISOString()),
+      { taskId },
+    );
+  });
+
   app.post("/api/execution-tasks/:taskId/machine-runs/start", (c) => {
     const runtime = getProductSystem(c);
     const session = runtime.resolveOperatorSession(getCookie(c, OPERATOR_SESSION_COOKIE));
@@ -1498,6 +1546,7 @@ function mutationHttpStatus(error: TaskMutationError): 404 | 409 | 422 {
   switch (error) {
     case "not_found":
     case "machine_run_not_found":
+    case "external_provider_not_found":
       return 404;
     case "ineligible_provider":
     case "missing_assignment":
@@ -1525,12 +1574,23 @@ function mutationHttpStatus(error: TaskMutationError): 404 | 409 | 422 {
     case "machine_run_not_allowed":
     case "machine_run_active":
     case "machine_run_closed":
+    case "external_production_disabled":
+    case "task_not_planned":
+    case "task_not_external":
+    case "task_not_outside":
+    case "external_provider_inactive":
       return 409;
+    case "external_provider_required":
+      return 422;
     default: {
       const _exhaustive: never = error;
       return _exhaustive;
     }
   }
+}
+
+function actorUserId(c: ApiContext): string {
+  return c.get("cloudUser")?.userId ?? "local";
 }
 
 function readPlannedEffortMinutes(body: unknown): unknown {
@@ -1565,6 +1625,7 @@ function projectPlanView(
     currentOperatorId,
     runtime.providerRegistry,
     runtime.materialReadinessContext(),
+    runtime.externalProductionContext(),
   );
 }
 

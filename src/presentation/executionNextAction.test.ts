@@ -148,10 +148,54 @@ describe("presentExecutionNextAction", () => {
     ).toBe("Lipsește utilajul / zona necesară");
   });
 
+  it("does not describe an external task as a missing machine", () => {
+    expect(
+      presentExecutionNextAction(
+        task({
+          executionMode: "EXTERNAL",
+          status: "PLANNED",
+          statusLabel: "Planificat",
+          requiresProvider: true,
+          assignmentLabel: "Nealocat",
+          externalBlockLabel: "Alege furnizorul extern.",
+        }),
+        true,
+      ),
+    ).toBe("Alege furnizorul extern.");
+    expect(
+      presentExecutionNextAction(
+        task({
+          executionMode: "EXTERNAL",
+          status: "OUTSIDE",
+          statusLabel: "La furnizor extern",
+        }),
+        true,
+      ),
+    ).toBe("La furnizor extern");
+    expect(
+      presentExecutionNextAction(
+        task({
+          executionMode: "EXTERNAL",
+          status: "OUTSIDE",
+          statusLabel: "La furnizor extern",
+          canRecordExternalReturn: true,
+        }),
+        true,
+      ),
+    ).toBe("Poate fi înregistrată revenirea");
+  });
+
   it("does not invent eligibility and distinguishes selected vs actionable copy", () => {
     const blocked = task({ waitingFor: ["Cablare"] });
     const ready = task({ taskId: "task:2", canClaimStart: true });
     expect(hasViewerExecutionAction(blocked)).toBe(false);
+    expect(hasViewerExecutionAction(task({ canExternalize: true }))).toBe(true);
+    expect(hasViewerExecutionAction(task({ canAssignExternalProvider: true }))).toBe(true);
+    expect(hasViewerExecutionAction(task({ canHandOffExternal: true }))).toBe(true);
+    expect(hasViewerExecutionAction(task({ canRecordExternalReturn: true }))).toBe(true);
+    expect(hasViewerExecutionAction(task({ executionMode: "EXTERNAL", status: "OUTSIDE" }))).toBe(
+      false,
+    );
     expect(presentCurrentTaskRole(blocked, ready)).toBe("Sarcina selectată din plan");
     expect(presentCurrentTaskRole(ready, ready)).toBe("Următoarea sarcină acționabilă");
   });

@@ -39,6 +39,7 @@ export function presentExecutionPlan(payload: unknown): ExecutionPlanTransport |
     jobId: asString(job?.jobId) ?? asString(plan.jobId),
     siteInstallation: presentSiteInstallation(record?.siteInstallation),
     canConfirmMaterial: record?.canConfirmMaterial === true,
+    externalProviderChoices: presentExternalProviderChoices(planView.externalProviderChoices),
     timeSummary: presentTimeSummary(planView.timeSummary),
     tasks: tasks.flatMap((item) => {
       const presented = presentExecutionTask(item);
@@ -117,8 +118,34 @@ export function presentExecutionTask(value: unknown): ExecutionTaskTransport | n
     actualConsumption: presentActualConsumption(row.actualConsumption),
     materialBlockLabel: asString(row.materialBlockLabel),
     materialLines: presentMaterialLines(row.materialLines),
+    executionMode: asString(row.executionMode) ?? "INTERNAL",
+    externalProviderLabel: asString(row.externalProviderLabel),
+    handedOffAt: asString(row.handedOffAt),
+    returnedAt: asString(row.returnedAt),
+    canExternalize: row.canExternalize === true,
+    canAssignExternalProvider: row.canAssignExternalProvider === true,
+    canHandOffExternal: row.canHandOffExternal === true,
+    canRecordExternalReturn: row.canRecordExternalReturn === true,
+    externalBlockLabel: asString(row.externalBlockLabel),
     ...presentTaskTime(row),
   };
+}
+
+function presentExternalProviderChoices(
+  value: unknown,
+): Array<{ providerId: string; name: string }> {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => {
+    const row = asRecord(item);
+    const providerId = asString(row?.providerId);
+    const name = asString(row?.name);
+    if (!providerId || !name) {
+      return [];
+    }
+    return [{ providerId, name }];
+  });
 }
 
 function presentMaterialLines(value: unknown): MaterialLineTransport[] {
@@ -158,6 +185,7 @@ function presentExecutionProgress(
   const total = asNumber(progress.total);
   const completed = asNumber(progress.completed);
   const inProgress = asNumber(progress.inProgress);
+  const outside = asNumber(progress.outside) ?? 0;
   const planned = asNumber(progress.planned);
   const waitingDependencies = asNumber(progress.waitingDependencies);
   const noProvider = asNumber(progress.noProvider);
@@ -177,6 +205,7 @@ function presentExecutionProgress(
     total,
     completed,
     inProgress,
+    outside,
     planned,
     waitingDependencies,
     noProvider,

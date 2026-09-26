@@ -41,6 +41,10 @@ import {
   type MaterialReadinessContext,
   type MaterialReadinessModeRecord,
   type MaterialConfirmationError,
+  type ExternalExecutionProjection,
+  type ExternalProductionHandoffModeRecord,
+  type ExternalProductionProvider,
+  type ExternalProviderMutationError,
   projectAssemblyJobOverviewItem,
   projectJobOverview,
   projectJobOverviewItem,
@@ -265,6 +269,18 @@ import {
   upsertMaterialConfirmation,
 } from "../execution/materialReadinessStore.js";
 import {
+  createStoredExternalProductionProvider,
+  externalProductionProjection,
+  listExternalProductionProviders,
+  persistAssignExternalProvider,
+  persistHandOffExternalTask,
+  persistMarkTaskExternal,
+  persistRecordExternalReturn,
+  readExternalProductionHandoffMode,
+  updateStoredExternalProductionProvider,
+  writeExternalProductionHandoffMode,
+} from "../execution/externalProductionStore.js";
+import {
   persistOrganizationServiceOffer,
   readOperationalServicesAdmin,
   readOrganizationServiceOffer,
@@ -386,6 +402,41 @@ export type ProductSystemRuntime = {
   }):
     | { ok: true; confirmation: MaterialReadinessConfirmation; alreadyApplied: boolean }
     | { ok: false; error: MaterialConfirmationError };
+  externalProductionContext(): ExternalExecutionProjection;
+  readExternalProductionHandoff(): ExternalProductionHandoffModeRecord;
+  setExternalProductionHandoffMode(
+    mode: string,
+    actorId: string,
+    updatedAt: string,
+  ):
+    | { ok: true; record: ExternalProductionHandoffModeRecord; alreadyApplied: boolean }
+    | { ok: false; error: "invalid_mode" };
+  listExternalProductionProviders(): ExternalProductionProvider[];
+  createExternalProductionProvider(
+    name: unknown,
+    actorId: string,
+    createdAt: string,
+  ):
+    | { ok: true; provider: ExternalProductionProvider }
+    | { ok: false; error: ExternalProviderMutationError };
+  updateExternalProductionProvider(
+    providerId: string,
+    patch: { name?: unknown; active?: unknown },
+  ):
+    | { ok: true; provider: ExternalProductionProvider; alreadyApplied: boolean }
+    | { ok: false; error: ExternalProviderMutationError | "invalid_payload" };
+  markExecutionTaskExternal(taskId: string, actorId: string, markedAt: string): TaskMutationResult;
+  assignExternalProductionProvider(taskId: string, providerId: string): TaskMutationResult;
+  handOffExternalExecutionTask(
+    taskId: string,
+    actorId: string,
+    handedOffAt: string,
+  ): TaskMutationResult;
+  recordExternalExecutionReturn(
+    taskId: string,
+    actorId: string,
+    returnedAt: string,
+  ): TaskMutationResult;
   completeExecutionTask(
     taskId: string,
     input?: TaskCompletionInput,
@@ -901,6 +952,36 @@ export function createProductSystemRuntimeFromOpenDb(
         alreadyApplied: result.unchanged,
       };
     },
+    externalProductionContext() {
+      return externalProductionProjection(db);
+    },
+    readExternalProductionHandoff() {
+      return readExternalProductionHandoffMode(db);
+    },
+    setExternalProductionHandoffMode(mode, actorId, updatedAt) {
+      return writeExternalProductionHandoffMode(db, mode, updatedAt, actorId);
+    },
+    listExternalProductionProviders() {
+      return listExternalProductionProviders(db);
+    },
+    createExternalProductionProvider(name, actorId, createdAt) {
+      return createStoredExternalProductionProvider(db, name, createdAt, actorId);
+    },
+    updateExternalProductionProvider(providerId, patch) {
+      return updateStoredExternalProductionProvider(db, providerId, patch);
+    },
+    markExecutionTaskExternal(taskId, actorId, markedAt) {
+      return persistMarkTaskExternal(db, taskId, actorId, markedAt);
+    },
+    assignExternalProductionProvider(taskId, providerId) {
+      return persistAssignExternalProvider(db, taskId, providerId);
+    },
+    handOffExternalExecutionTask(taskId, actorId, handedOffAt) {
+      return persistHandOffExternalTask(db, taskId, actorId, handedOffAt);
+    },
+    recordExternalExecutionReturn(taskId, actorId, returnedAt) {
+      return persistRecordExternalReturn(db, taskId, actorId, returnedAt);
+    },
     listOperatorCandidates() {
       return listOperatorCandidates(db);
     },
@@ -1415,6 +1496,7 @@ function jobOverviewItems(
   organizationId: string,
 ) {
   const people = listPeople(db);
+  const external = externalProductionProjection(db);
   const productJobs = listOrderSnapshots(db).map((order) => {
     const release = getAcceptedProductionSnapshotByOrder(db, order.orderSnapshotId);
     const record = release
@@ -1437,6 +1519,7 @@ function jobOverviewItems(
             null,
             providerRegistry,
             readMaterialReadinessContext(db),
+            external,
           )
         : null,
     });
@@ -1478,6 +1561,7 @@ function jobOverviewItems(
             null,
             providerRegistry,
             readMaterialReadinessContext(db),
+            external,
           )
         : null,
     });
