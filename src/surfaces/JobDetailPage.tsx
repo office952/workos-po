@@ -55,6 +55,10 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
   }
   const priority = priorityDraft ?? job?.priority ?? "STANDARD";
   const targetDate = targetDraft ?? job?.targetDate ?? "";
+  const materialAttention = (plan?.tasks ?? [])
+    .map((task) => task.materialBlockLabel)
+    .filter((label): label is string => Boolean(label))
+    .join(" ");
 
   async function release(): Promise<void> {
     if (!job) {
@@ -196,6 +200,9 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
               <InfoRow label="Progres" value={job.progressLabel ?? "—"} />
               <InfoRow label="Atenție" value={job.attentionLabel ?? "Fără atenție specială"} />
               <InfoRow label="Următoarea acțiune" value={job.nextActionLabel} />
+              {materialAttention ? (
+                <InfoRow label="Material" value={materialAttention} />
+              ) : null}
             </dl>
             {job.memberLabels.length > 0 ? (
               <p>{job.memberLabels.join(" · ")}</p>

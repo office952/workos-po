@@ -24,6 +24,7 @@ export const resourceKeys = {
   operatorInbox: () => "operator-inbox",
   resourcesAdmin: () => "resources-admin",
   operationalServicesAdmin: () => "operational-services-admin",
+  materialReadinessAdmin: () => "material-readiness-admin",
   commercialAdmin: () => "commercial-admin",
   technicalAdmin: () => "technical-admin",
   formulasAdmin: () => "formulas-admin",

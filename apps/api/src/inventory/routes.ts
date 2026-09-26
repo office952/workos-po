@@ -1,4 +1,7 @@
-import type { InventoryMutationError } from "@workos-final/domain";
+import {
+  INVENTORY_BALANCE_IS_NOT_PRODUCTION_AVAILABILITY,
+  type InventoryMutationError,
+} from "@workos-final/domain";
 import type { Hono } from "hono";
 import { getProductSystem, type ApiEnv } from "../cloud/context.js";
 import { requireOwnerRole } from "../cloud/middleware.js";
@@ -6,7 +9,10 @@ import { requireOwnerRole } from "../cloud/middleware.js";
 export function registerInventoryRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/inventory", (c) => {
     const runtime = getProductSystem(c);
-    return c.json({ inventory: runtime.readInventory() });
+    return c.json({
+      inventory: runtime.readInventory(),
+      availabilityNote: INVENTORY_BALANCE_IS_NOT_PRODUCTION_AVAILABILITY,
+    });
   });
 
   app.get("/api/inventory/:resourceId", (c) => {

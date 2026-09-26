@@ -50,6 +50,7 @@ export function presentInboxTasks(payload: unknown): InboxTaskTransport[] {
     inbox.availableReady,
     inbox.availableNeedsProvider,
     inbox.waitingDependencies,
+    inbox.blockedMaterial,
   ];
   return lanes.flatMap((lane) => {
     if (!Array.isArray(lane)) {
@@ -73,6 +74,7 @@ export function presentInboxTasks(payload: unknown): InboxTaskTransport[] {
           canClaimStart: row.canClaimStart === true,
           requiresProvider: row.requiresProvider === true,
           lane: asString(row.lane) ?? "",
+          materialBlockLabel: asString(row.materialBlockLabel),
         },
       ];
     });

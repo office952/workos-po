@@ -1,6 +1,6 @@
 import type { InboxTaskTransport } from "../api/types";
 
-export type InboxLane = "ready" | "next";
+export type InboxLane = "ready" | "next" | "blocked";
 
 export type InboxLanePresentation = {
   lane: InboxLane;
@@ -9,6 +9,13 @@ export type InboxLanePresentation = {
 };
 
 export function presentInboxLane(task: InboxTaskTransport): InboxLanePresentation {
+  if (task.lane === "blocked_material") {
+    return {
+      lane: "blocked",
+      laneLabel: "Material",
+      actionLabel: "Deschide execuția",
+    };
+  }
   if (task.canClaimStart) {
     return {
       lane: "ready",

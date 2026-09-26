@@ -27,6 +27,7 @@ import {
   MCH_CNC_CANT_LITERE_ID,
   WC_ASSEMBLY_01_ID,
   createWorkcenterRegistry,
+  workcenterRegistry,
 } from "../workcenters/catalog.js";
 import { createPerson, type Person } from "../people/identity.js";
 import {
@@ -38,9 +39,16 @@ import {
   startExecutionTask,
 } from "./lifecycle.js";
 import {
+  materialDemandLines,
+  materialParticipation,
+  type MaterialReadinessConfirmation,
+  type MaterialReadinessContext,
+} from "./materialReadiness.js";
+import {
   materializeExecutionPlanFromSnapshot,
   projectExecutionPlanView,
 } from "./plan.js";
+import { projectOperatorTaskInbox } from "./inbox.js";
 
 const readyValues: DraftValues = {
   "root.inscription": "WORKOS",
@@ -502,5 +510,209 @@ describe("planned effort mutation", () => {
       ok: false,
       error: "effort_frozen",
     });
+  });
+});
+
+function requiredContext(
+  confirmations: readonly MaterialReadinessConfirmation[] = [],
+): MaterialReadinessContext {
+  return { mode: "REQUIRED", confirmations };
+}
+
+describe("material readiness start gate", () => {
+  it("keeps DISABLED from projecting availability or blocking start", () => {
+    const record = planned();
+    const backCnc = taskBySource(record, "BACK", CUT_SHEET_CNC_ID);
+    const lines = materialDemandLines(backCnc, []);
+    expect(materialParticipation("DISABLED", lines)).toBe("NOT_ADOPTED");
+    const assigned = assignProviderToTask(record, backCnc.taskId, MCH_CNC_4020_ID);
+    if (!assigned.ok) {
+      throw new Error("expected assignment");
+    }
+    const ready = withExecutor(assigned.record, backCnc.taskId);
+    const started = startExecutionTask(
+      ready.record,
+      backCnc.taskId,
+      "2026-08-15T16:00:00.000Z",
+      ready.people,
+      null,
+      workcenterRegistry,
+      { mode: "DISABLED", confirmations: [] },
+    );
+    expect(started.ok).toBe(true);
+    const view = projectExecutionPlanView(
+      ready.record,
+      ready.people,
+      null,
+      null,
+      ready.people[0]!.personId,
+      workcenterRegistry,
+      { mode: "DISABLED", confirmations: [] },
+    );
+    const projected = view.tasks.find((item) => item.taskId === backCnc.taskId);
+    expect(projected?.materialParticipation).toBe("NOT_ADOPTED");
+    expect(projected?.materialBlockLabel).toBeNull();
+    expect(projected?.materialLines).toEqual([]);
+    expect(projected?.canClaimStart).toBe(true);
+  });
+
+  it("blocks REQUIRED material demands until every line is AVAILABLE", () => {
+    const record = planned();
+    const backCnc = taskBySource(record, "BACK", CUT_SHEET_CNC_ID);
+    const lighting = taskByProcess(record, PLACE_LED_MODULES_ID);
+    const lines = materialDemandLines(lighting, []);
+    expect(lines.some((line) => line.resourceId === "MAT-LED-MODULE")).toBe(true);
+    expect(materialParticipation("REQUIRED", lines)).toBe("BLOCKED");
+    const people = testPeople();
+    const lightingReady = withExecutor(record, lighting.taskId, people);
+    const assignedCnc = assignProviderToTask(
+      lightingReady.record,
+      backCnc.taskId,
+      MCH_CNC_4020_ID,
+    );
+    if (!assignedCnc.ok) {
+      throw new Error("expected cnc assignment");
+    }
+    const cncReady = withExecutor(assignedCnc.record, backCnc.taskId, people);
+    const startedCnc = startExecutionTask(
+      cncReady.record,
+      backCnc.taskId,
+      "2026-08-15T16:00:00.000Z",
+      people,
+    );
+    if (!startedCnc.ok) {
+      throw new Error("expected cnc start");
+    }
+    const completedCnc = completeExecutionTask(
+      startedCnc.record,
+      backCnc.taskId,
+      "2026-08-15T16:05:00.000Z",
+      plannedCompletionInput(backCnc),
+    );
+    if (!completedCnc.ok) {
+      throw new Error("expected cnc complete");
+    }
+    const blocked = startExecutionTask(
+      completedCnc.record,
+      lighting.taskId,
+      "2026-08-15T16:10:00.000Z",
+      people,
+      null,
+      workcenterRegistry,
+      requiredContext(),
+    );
+    expect(blocked).toEqual({ ok: false, error: "material_not_ready" });
+    const unavailable = startExecutionTask(
+      completedCnc.record,
+      lighting.taskId,
+      "2026-08-15T16:10:00.000Z",
+      people,
+      null,
+      workcenterRegistry,
+      requiredContext(
+        lines.map((line) => ({
+          taskId: lighting.taskId,
+          resourceId: line.resourceId,
+          status: "NOT_AVAILABLE" as const,
+          confirmedBy: "owner",
+          confirmedAt: "2026-08-15T16:00:00.000Z",
+        })),
+      ),
+    );
+    expect(unavailable).toEqual({ ok: false, error: "material_not_ready" });
+    const confirmed = lines.map((line) => ({
+      taskId: lighting.taskId,
+      resourceId: line.resourceId,
+      status: "AVAILABLE" as const,
+      confirmedBy: "owner",
+      confirmedAt: "2026-08-15T16:00:00.000Z",
+    }));
+    const started = startExecutionTask(
+      completedCnc.record,
+      lighting.taskId,
+      "2026-08-15T16:10:00.000Z",
+      people,
+      null,
+      workcenterRegistry,
+      requiredContext(confirmed),
+    );
+    expect(started.ok).toBe(true);
+    const view = projectExecutionPlanView(
+      completedCnc.record,
+      people,
+      null,
+      null,
+      people[0]!.personId,
+      workcenterRegistry,
+      requiredContext(),
+    );
+    const projected = view.tasks.find((item) => item.taskId === lighting.taskId);
+    expect(projected?.materialParticipation).toBe("BLOCKED");
+    expect(projected?.canClaimStart).toBe(false);
+    expect(projected?.materialBlockLabel).toContain("Materialul nu este confirmat disponibil");
+    const inbox = projectOperatorTaskInbox({
+      currentOperator: people[0]!,
+      people,
+      eligibility: null,
+      plans: [
+        {
+          record: completedCnc.record,
+          snapshot: null,
+          customerDisplayName: null,
+          jobId: "job:1",
+        },
+      ],
+      material: requiredContext(),
+    });
+    expect(inbox.blockedMaterial.some((item) => item.taskId === lighting.taskId)).toBe(true);
+    expect(inbox.availableReady.some((item) => item.taskId === lighting.taskId)).toBe(false);
+    expect(inbox.blockedMaterial.find((item) => item.taskId === lighting.taskId)?.canClaimStart).toBe(
+      false,
+    );
+  });
+
+  it("does not rewind an in-progress task when readiness becomes REQUIRED", () => {
+    const record = planned();
+    const backCnc = taskBySource(record, "BACK", CUT_SHEET_CNC_ID);
+    const assigned = assignProviderToTask(record, backCnc.taskId, MCH_CNC_4020_ID);
+    if (!assigned.ok) {
+      throw new Error("expected assignment");
+    }
+    const ready = withExecutor(assigned.record, backCnc.taskId);
+    const started = startExecutionTask(
+      ready.record,
+      backCnc.taskId,
+      "2026-08-15T16:00:00.000Z",
+      ready.people,
+    );
+    expect(started.ok).toBe(true);
+    if (!started.ok) {
+      return;
+    }
+    const replay = startExecutionTask(
+      started.record,
+      backCnc.taskId,
+      "2026-08-15T17:00:00.000Z",
+      ready.people,
+      null,
+      workcenterRegistry,
+      requiredContext(),
+    );
+    expect(replay).toEqual({ ok: true, record: started.record, alreadyApplied: true });
+    const completed = completeExecutionTask(
+      started.record,
+      backCnc.taskId,
+      "2026-08-15T16:10:00.000Z",
+      plannedCompletionInput(backCnc),
+    );
+    expect(completed.ok).toBe(true);
+  });
+
+  it("treats a REQUIRED task with no material demand as not applicable", () => {
+    const record = planned();
+    const inspect = taskByProcess(record, INSPECT_FINISHED_LETTER_ID);
+    const lines = materialDemandLines(inspect, []);
+    expect(lines).toEqual([]);
+    expect(materialParticipation("REQUIRED", lines)).toBe("NOT_APPLICABLE");
   });
 });

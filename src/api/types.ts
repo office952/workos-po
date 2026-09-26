@@ -419,6 +419,14 @@ export type InboxTaskTransport = {
   canClaimStart: boolean;
   requiresProvider: boolean;
   lane: string;
+  materialBlockLabel?: string | null;
+};
+
+export type MaterialLineTransport = {
+  resourceId: string;
+  label: string;
+  status: string;
+  statusLabel: string;
 };
 
 export type EligibleProviderTransport = {
@@ -510,6 +518,8 @@ export type ExecutionTaskTransport = {
   completionBlockedByActiveMachineRun: boolean;
   activeMachineRunLabel: string | null;
   activeMachineRunStartedLabel: string | null;
+  materialBlockLabel?: string | null;
+  materialLines?: MaterialLineTransport[];
 };
 
 export type ExecutionPlanProgressTransport = {
@@ -556,6 +566,7 @@ export type ExecutionPlanTransport = {
   tasks: ExecutionTaskTransport[];
   timeSummary: ExecutionTimeSummaryTransport | null;
   siteInstallation: SiteInstallationOperationalTransport | null;
+  canConfirmMaterial?: boolean;
 };
 
 export type PlanningWorkloadTaskTransport = {

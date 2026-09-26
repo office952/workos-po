@@ -45,6 +45,7 @@ import { RequestDetailPage } from "./surfaces/RequestDetailPage";
 import { RequestsPage } from "./surfaces/RequestsPage";
 import { CommercialAdminPage } from "./surfaces/CommercialAdminPage";
 import { ResourcesAdminPage } from "./surfaces/ResourcesAdminPage";
+import { MaterialReadinessAdminPage } from "./surfaces/MaterialReadinessAdminPage";
 import { OperationalServicesAdminPage } from "./surfaces/OperationalServicesAdminPage";
 import { FormulasAdminPage } from "./surfaces/FormulasAdminPage";
 import { TechnicalAdminPage } from "./surfaces/TechnicalAdminPage";
@@ -122,6 +123,8 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
       return <ResourcesAdminPage />;
     case "admin-services":
       return <OperationalServicesAdminPage />;
+    case "admin-material-readiness":
+      return <MaterialReadinessAdminPage />;
     case "admin-commercial":
       return <CommercialAdminPage />;
     case "admin-technical":

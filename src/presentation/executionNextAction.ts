@@ -1,4 +1,5 @@
 import type { ExecutionTaskTransport } from "../api/types";
+import { readTransportErrorCode, TransportError } from "../api/http";
 
 export function hasViewerExecutionAction(task: ExecutionTaskTransport): boolean {
   return task.canComplete || task.canClaimStart || task.canAssignProvider;
@@ -17,6 +18,9 @@ export function presentExecutionNextAction(
   }
   if (task.canAssignProvider) {
     return "Alocare utilaj / zonă necesară";
+  }
+  if (task.materialBlockLabel) {
+    return task.materialBlockLabel;
   }
   if (task.canComplete) {
     return "Poate fi închisă";
@@ -66,12 +70,25 @@ function presentOperatorRelation(task: ExecutionTaskTransport): string {
       return "În lucru de tine";
     case "owned_by_other":
       return "În lucru la alt operator";
+    case "blocked_material":
+      return task.materialBlockLabel ?? "Materialul nu este confirmat disponibil.";
     case "idle":
     case null:
       return task.statusLabel;
     default:
       return task.statusLabel;
   }
+}
+
+export function presentExecutionStartError(error: unknown): string {
+  if (!(error instanceof TransportError)) {
+    return "Pornirea a eșuat.";
+  }
+  const code = readTransportErrorCode(error.body);
+  if (code === "material_not_ready") {
+    return "Materialul nu este confirmat disponibil. Sarcina nu poate porni.";
+  }
+  return "Sarcina nu poate fi începută. Verifică identificarea și eligibilitatea.";
 }
 
 export function presentCurrentTaskRole(

@@ -12,6 +12,12 @@ import {
 } from "./consumption.js";
 import { parseActualDurationMinutes } from "./actualDuration.js";
 import { activeMachineRun } from "./machineRun.js";
+import {
+  DISABLED_MATERIAL_READINESS,
+  materialBlocksStart,
+  materialDemandLines,
+  type MaterialReadinessContext,
+} from "./materialReadiness.js";
 import { parsePlannedEffortMinutes } from "./plannedEffort.js";
 import {
   COMPLETION_NOTE_MAX_LENGTH,
@@ -45,6 +51,7 @@ export const TASK_MUTATION_ERRORS = [
   "already_started_by_other",
   "wrong_executor",
   "dependencies_incomplete",
+  "material_not_ready",
   "invalid_transition",
   "invalid_quantity",
   "invalid_unit",
@@ -199,6 +206,7 @@ export function startExecutionTask(
   people: readonly Person[] = [],
   eligibility: PeopleEligibilityContext | null = null,
   registry: WorkcenterRegistry = workcenterRegistry,
+  material: MaterialReadinessContext = DISABLED_MATERIAL_READINESS,
 ): TaskMutationResult {
   const task = findTask(record, taskId);
   if (!task) {
@@ -235,6 +243,7 @@ export function startExecutionTask(
     people,
     eligibility,
     registry,
+    material,
   );
 }
 
@@ -246,6 +255,7 @@ export function claimAndStartExecutionTask(
   people: readonly Person[] = [],
   eligibility: PeopleEligibilityContext | null = null,
   registry: WorkcenterRegistry = workcenterRegistry,
+  material: MaterialReadinessContext = DISABLED_MATERIAL_READINESS,
 ): TaskMutationResult {
   const task = findTask(record, taskId);
   if (!task) {
@@ -299,6 +309,9 @@ export function claimAndStartExecutionTask(
   const byId = taskIndex(record);
   if (!dependenciesCompleted(task, byId)) {
     return { ok: false, error: "dependencies_incomplete" };
+  }
+  if (materialBlocksStart(material.mode, materialDemandLines(task, material.confirmations))) {
+    return { ok: false, error: "material_not_ready" };
   }
   return {
     ok: true,
