@@ -623,7 +623,7 @@ function writePlannedEffortOnly(
   return result.changes === 1;
 }
 
-function writeTaskOperationalState(
+export function writeTaskOperationalState(
   db: SqliteDatabase,
   next: ExecutionTask,
   previous: ExecutionTask | undefined,

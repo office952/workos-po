@@ -24,7 +24,28 @@ export function presentExecutionCompletionError(error: unknown): string {
       return "Oprește rularea utilajului înainte de a închide sarcina.";
     case "invalid_actual_duration":
       return "Timpul efectiv trebuie să fie un număr întreg de minute, zero sau pozitiv.";
+    case "quality_result_required":
+      return "Controlul se închide doar prin acceptare.";
     default:
       return "Sarcina nu poate fi închisă încă.";
+  }
+}
+
+export function presentQualityError(error: unknown): string {
+  if (!(error instanceof TransportError)) {
+    return "Controlul nu a putut fi înregistrat.";
+  }
+  const code = readTransportErrorCode(error.body);
+  switch (code) {
+    case "invalid_note":
+      return "Nota este obligatorie la respingere și la închiderea corecției, cel mult 280 de caractere.";
+    case "quality_correction_open":
+      return "Corecția este deschisă. Controlul nu poate fi înregistrat până se închide.";
+    case "wrong_executor":
+      return "Doar operatorul alocat poate înregistra controlul.";
+    case "forbidden":
+      return "Doar proprietarul organizației poate închide corecția.";
+    default:
+      return "Controlul nu poate fi înregistrat în starea actuală.";
   }
 }

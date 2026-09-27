@@ -529,6 +529,30 @@ export type ExecutionTaskTransport = {
   canHandOffExternal?: boolean;
   canRecordExternalReturn?: boolean;
   externalBlockLabel?: string | null;
+  qualityControl?: boolean;
+  latestQualityResult?: "PASS" | "FAIL" | null;
+  qualityAttemptCount?: number;
+  qualityAttempts?: QualityAttemptTransport[];
+  reworkEpisodes?: ReworkEpisodeTransport[];
+  openReworkEpisode?: ReworkEpisodeTransport | null;
+  canRecordQualityPass?: boolean;
+  canRecordQualityFail?: boolean;
+  canCloseReworkEpisode?: boolean;
+  qualityBlockLabel?: string | null;
+};
+
+export type QualityAttemptTransport = {
+  attemptSeq: number;
+  result: "PASS" | "FAIL";
+  note: string | null;
+  recordedAt: string;
+};
+
+export type ReworkEpisodeTransport = {
+  episodeSeq: number;
+  status: "OPEN" | "CLOSED";
+  correctionNote: string | null;
+  closedAt: string | null;
 };
 
 export type ExecutionPlanProgressTransport = {

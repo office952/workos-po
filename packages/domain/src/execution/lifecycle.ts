@@ -34,6 +34,14 @@ import {
   type ExecutionTask,
   type TaskCompletionEvidence,
 } from "./plan.js";
+import {
+  appendQualityFail,
+  appendQualityPass,
+  closeOpenReworkEpisode,
+  isQualityControlExecutionProcess,
+  parseQualityNote,
+  type QualityControlRecord,
+} from "./qualityControl.js";
 
 export const TASK_MUTATION_ERRORS = [
   "not_found",
@@ -70,11 +78,23 @@ export const TASK_MUTATION_ERRORS = [
   "external_provider_not_found",
   "external_provider_inactive",
   "task_not_outside",
+  "quality_result_required",
+  "quality_correction_open",
+  "quality_control_not_externalizable",
 ] as const;
 export type TaskMutationError = (typeof TASK_MUTATION_ERRORS)[number];
 
 export type TaskMutationResult =
   | { ok: true; record: ExecutionPlanRecord; alreadyApplied: boolean }
+  | { ok: false; error: TaskMutationError };
+
+export type QualityMutationResult =
+  | {
+      ok: true;
+      record: ExecutionPlanRecord;
+      alreadyApplied: boolean;
+      quality: QualityControlRecord;
+    }
   | { ok: false; error: TaskMutationError };
 
 export type TaskCompletionInput = {
@@ -349,6 +369,187 @@ export function claimAndStartExecutionTask(
 }
 
 export function completeExecutionTask(
+  record: ExecutionPlanRecord,
+  taskId: string,
+  completedAt: string,
+  input: TaskCompletionInput = {},
+  actorPersonId: string | null = null,
+): TaskMutationResult {
+  const task = findTask(record, taskId);
+  if (!task) {
+    return { ok: false, error: "not_found" };
+  }
+  if (task.status === "COMPLETED") {
+    return { ok: true, record, alreadyApplied: true };
+  }
+  if (isQualityControlExecutionProcess(task.processId)) {
+    return { ok: false, error: "quality_result_required" };
+  }
+  return applyStandardTaskCompletion(record, taskId, completedAt, input, actorPersonId);
+}
+
+export function recordQualityFail(
+  record: ExecutionPlanRecord,
+  quality: QualityControlRecord,
+  taskId: string,
+  actorPersonId: string,
+  note: unknown,
+  recordedAt: string,
+): QualityMutationResult {
+  const ready = readyQualityMutation(record, quality, taskId, actorPersonId);
+  if (!ready.ok) {
+    return ready;
+  }
+  if (ready.openCorrection) {
+    return { ok: false, error: "quality_correction_open" };
+  }
+  const parsed = parseQualityNote(note, true);
+  if (!parsed.ok || parsed.note === null) {
+    return { ok: false, error: "invalid_note" };
+  }
+  const appended = appendQualityFail(
+    quality,
+    taskId,
+    actorPersonId,
+    parsed.note,
+    recordedAt,
+  );
+  if (!appended.ok) {
+    return appended;
+  }
+  return {
+    ok: true,
+    alreadyApplied: false,
+    record,
+    quality: appended.quality,
+  };
+}
+
+export function recordQualityPass(
+  record: ExecutionPlanRecord,
+  quality: QualityControlRecord,
+  taskId: string,
+  actorPersonId: string,
+  note: unknown,
+  recordedAt: string,
+): QualityMutationResult {
+  const task = findTask(record, taskId);
+  if (!task) {
+    return { ok: false, error: "not_found" };
+  }
+  if (!isQualityControlExecutionProcess(task.processId)) {
+    return { ok: false, error: "invalid_transition" };
+  }
+  if (task.status === "COMPLETED") {
+    return { ok: true, record, alreadyApplied: true, quality };
+  }
+  const ready = readyQualityMutation(record, quality, taskId, actorPersonId);
+  if (!ready.ok) {
+    return ready;
+  }
+  if (ready.openCorrection) {
+    return { ok: false, error: "quality_correction_open" };
+  }
+  const parsed = parseQualityNote(note, false);
+  if (!parsed.ok) {
+    return { ok: false, error: "invalid_note" };
+  }
+  const completed = applyStandardTaskCompletion(
+    record,
+    taskId,
+    recordedAt,
+    plannedCompletionInput(task),
+    actorPersonId,
+  );
+  if (!completed.ok) {
+    return completed;
+  }
+  if (completed.alreadyApplied) {
+    return { ok: true, record: completed.record, alreadyApplied: true, quality };
+  }
+  const appended = appendQualityPass(
+    quality,
+    taskId,
+    actorPersonId,
+    parsed.note,
+    recordedAt,
+  );
+  if (!appended.ok) {
+    return appended;
+  }
+  return {
+    ok: true,
+    alreadyApplied: false,
+    record: completed.record,
+    quality: appended.quality,
+  };
+}
+
+export function closeQualityReworkEpisode(
+  record: ExecutionPlanRecord,
+  quality: QualityControlRecord,
+  taskId: string,
+  correctionNote: unknown,
+  closedBy: string,
+  closedAt: string,
+): QualityMutationResult {
+  const task = findTask(record, taskId);
+  if (!task) {
+    return { ok: false, error: "not_found" };
+  }
+  if (!isQualityControlExecutionProcess(task.processId) || task.status !== "IN_PROGRESS") {
+    return { ok: false, error: "invalid_transition" };
+  }
+  if (executionModeOf(task) === "EXTERNAL") {
+    return { ok: false, error: "invalid_transition" };
+  }
+  const parsed = parseQualityNote(correctionNote, true);
+  if (!parsed.ok || parsed.note === null) {
+    return { ok: false, error: "invalid_note" };
+  }
+  const closed = closeOpenReworkEpisode(quality, taskId, parsed.note, closedBy, closedAt);
+  if (!closed.ok) {
+    return closed;
+  }
+  return {
+    ok: true,
+    alreadyApplied: false,
+    record,
+    quality: closed.quality,
+  };
+}
+
+function readyQualityMutation(
+  record: ExecutionPlanRecord,
+  quality: QualityControlRecord,
+  taskId: string,
+  actorPersonId: string,
+):
+  | { ok: true; openCorrection: boolean }
+  | { ok: false; error: TaskMutationError } {
+  const task = findTask(record, taskId);
+  if (!task) {
+    return { ok: false, error: "not_found" };
+  }
+  if (!isQualityControlExecutionProcess(task.processId)) {
+    return { ok: false, error: "invalid_transition" };
+  }
+  if (task.status !== "IN_PROGRESS") {
+    return { ok: false, error: "invalid_transition" };
+  }
+  if (executionModeOf(task) === "EXTERNAL") {
+    return { ok: false, error: "invalid_transition" };
+  }
+  if (!task.assignedExecutor || task.assignedExecutor.id !== actorPersonId) {
+    return { ok: false, error: "wrong_executor" };
+  }
+  const openCorrection = quality.episodes.some(
+    (episode) => episode.taskId === taskId && episode.status === "OPEN",
+  );
+  return { ok: true, openCorrection };
+}
+
+function applyStandardTaskCompletion(
   record: ExecutionPlanRecord,
   taskId: string,
   completedAt: string,

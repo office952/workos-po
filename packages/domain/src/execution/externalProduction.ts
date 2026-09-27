@@ -1,5 +1,6 @@
 import type { TaskMutationResult } from "./lifecycle.js";
 import { dependenciesCompleted, type ExecutionPlanRecord, type ExecutionTask } from "./plan.js";
+import { isQualityControlExecutionProcess } from "./qualityControl.js";
 
 export const EXTERNAL_PRODUCTION_HANDOFF_MODES = ["DISABLED", "ENABLED"] as const;
 export type ExternalProductionHandoffMode = (typeof EXTERNAL_PRODUCTION_HANDOFF_MODES)[number];
@@ -210,6 +211,9 @@ export function markTaskExternal(
   const task = findTask(record, taskId);
   if (!task) {
     return { ok: false, error: "not_found" };
+  }
+  if (isQualityControlExecutionProcess(task.processId)) {
+    return { ok: false, error: "quality_control_not_externalizable" };
   }
   if (task.executionMode === "EXTERNAL") {
     return { ok: true, record, alreadyApplied: true };

@@ -99,6 +99,7 @@ import {
   type OrderSnapshot,
   type QuoteAcceptanceDecision,
   type QuoteSnapshot,
+  type QualityControlProjectionInput,
   type TaskCompletionInput,
   type TaskMutationResult,
   projectResourcesAdministration,
@@ -154,6 +155,12 @@ import {
   persistTaskComplete,
   persistTaskStart,
 } from "../execution/store.js";
+import {
+  persistQualityCorrectionClose,
+  persistQualityFail,
+  persistQualityPass,
+  readQualityControlForPlan,
+} from "../execution/qualityControlStore.js";
 import {
   persistInventoryAdjustment,
   readInventoryItem,
@@ -441,6 +448,28 @@ export type ProductSystemRuntime = {
     taskId: string,
     input?: TaskCompletionInput,
     actorPersonId?: string | null,
+  ): TaskMutationResult;
+  qualityControlProjection(
+    planId: string,
+    viewerIsOwner: boolean,
+  ): QualityControlProjectionInput;
+  recordQualityFail(
+    taskId: string,
+    actorPersonId: string,
+    note: unknown,
+    recordedAt: string,
+  ): TaskMutationResult;
+  recordQualityPass(
+    taskId: string,
+    actorPersonId: string,
+    note: unknown,
+    recordedAt: string,
+  ): TaskMutationResult;
+  closeQualityReworkEpisode(
+    taskId: string,
+    correctionNote: unknown,
+    closedBy: string,
+    closedAt: string,
   ): TaskMutationResult;
   startMachineRun(taskId: string, personId: string): TaskMutationResult;
   stopMachineRun(machineRunId: string, personId: string): TaskMutationResult;
@@ -1389,6 +1418,27 @@ export function createProductSystemRuntimeFromOpenDb(
         actorPersonId,
       );
     },
+    qualityControlProjection(planId, viewerIsOwner) {
+      return {
+        ...readQualityControlForPlan(db, planId),
+        viewerIsOwner,
+      };
+    },
+    recordQualityFail(taskId, actorPersonId, note, recordedAt) {
+      return persistQualityFail(db, taskId, actorPersonId, note, recordedAt);
+    },
+    recordQualityPass(taskId, actorPersonId, note, recordedAt) {
+      return persistQualityPass(db, taskId, actorPersonId, note, recordedAt);
+    },
+    closeQualityReworkEpisode(taskId, correctionNote, closedBy, closedAt) {
+      return persistQualityCorrectionClose(
+        db,
+        taskId,
+        correctionNote,
+        closedBy,
+        closedAt,
+      );
+    },
     startMachineRun(taskId, personId) {
       return persistMachineRunStart(
         db,
@@ -1520,6 +1570,10 @@ function jobOverviewItems(
             providerRegistry,
             readMaterialReadinessContext(db),
             external,
+            {
+              ...readQualityControlForPlan(db, record.plan.planId),
+              viewerIsOwner: false,
+            },
           )
         : null,
     });
@@ -1562,6 +1616,10 @@ function jobOverviewItems(
             providerRegistry,
             readMaterialReadinessContext(db),
             external,
+            {
+              ...readQualityControlForPlan(db, record.plan.planId),
+              viewerIsOwner: false,
+            },
           )
         : null,
     });

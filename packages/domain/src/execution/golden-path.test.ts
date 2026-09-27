@@ -40,6 +40,7 @@ import {
   assignProviderToTask,
   completeExecutionTask,
   plannedCompletionInput,
+  recordQualityPass,
   startExecutionTask,
   type TaskMutationResult,
 } from "./lifecycle.js";
@@ -48,6 +49,7 @@ import {
   projectExecutionPlanView,
   type ExecutionPlanRecord,
 } from "./plan.js";
+import { isQualityControlExecutionProcess } from "./qualityControl.js";
 
 const readyValues: DraftValues = {
   "root.inscription": "WORKOS",
@@ -136,6 +138,20 @@ function runManual(
     throw new Error(`missing ${taskId}`);
   }
   expect(task.assignedProvider).toBeNull();
+  if (isQualityControlExecutionProcess(task.processId)) {
+    const passed = recordQualityPass(
+      started,
+      { attempts: [], episodes: [] },
+      taskId,
+      people[0]!.personId,
+      undefined,
+      completedAt,
+    );
+    if (!passed.ok) {
+      throw new Error(passed.error);
+    }
+    return passed.record;
+  }
   return unwrap(
     completeExecutionTask(started, taskId, completedAt, plannedCompletionInput(task)),
   );

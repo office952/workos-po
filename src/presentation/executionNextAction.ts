@@ -9,7 +9,10 @@ export function hasViewerExecutionAction(task: ExecutionTaskTransport): boolean 
       task.canExternalize ||
       task.canAssignExternalProvider ||
       task.canHandOffExternal ||
-      task.canRecordExternalReturn,
+      task.canRecordExternalReturn ||
+      task.canRecordQualityPass ||
+      task.canRecordQualityFail ||
+      task.canCloseReworkEpisode,
   );
 }
 
@@ -50,6 +53,9 @@ export function presentExecutionNextAction(
   }
   if (task.materialBlockLabel) {
     return task.materialBlockLabel;
+  }
+  if (task.qualityBlockLabel) {
+    return task.qualityBlockLabel;
   }
   if (task.canComplete) {
     return "Poate fi închisă";

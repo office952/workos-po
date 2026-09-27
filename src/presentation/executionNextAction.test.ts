@@ -77,6 +77,28 @@ describe("presentExecutionNextAction", () => {
     expect(presentExecutionNextAction(task({ canComplete: true }), true)).toBe(
       "Poate fi închisă",
     );
+    expect(
+      presentExecutionNextAction(
+        task({
+          qualityControl: true,
+          canComplete: false,
+          qualityBlockLabel: "Controlul poate fi înregistrat",
+        }),
+        true,
+      ),
+    ).toBe("Controlul poate fi înregistrat");
+    expect(
+      presentExecutionNextAction(
+        task({ qualityControl: true, qualityBlockLabel: "Este necesară corecția" }),
+        true,
+      ),
+    ).toBe("Este necesară corecția");
+    expect(
+      presentExecutionNextAction(
+        task({ qualityControl: true, qualityBlockLabel: "Poate fi verificată din nou" }),
+        true,
+      ),
+    ).toBe("Poate fi verificată din nou");
     expect(presentExecutionNextAction(task({ canClaimStart: true }), true)).toBe(
       "Poate fi pornită",
     );

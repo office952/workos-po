@@ -26,10 +26,28 @@ import { statusTone } from "../presentation/statusTone";
 import { atelierHref, executionHref, jobHref, quoteHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
 import { SiteInstallationContextPanel } from "./SiteInstallationContextPanel";
+import type { ExecutionTaskTransport } from "../api/types";
 
 type JobDetailPageProps = {
   jobId: string;
 };
+
+function jobQualityLabel(task: ExecutionTaskTransport): string {
+  if (task.openReworkEpisode?.status === "OPEN") {
+    const note =
+      task.qualityAttempts?.filter((attempt) => attempt.result === "FAIL").at(-1)?.note ?? null;
+    return note
+      ? `Respins la control. Corecție deschisă. ${note}`
+      : "Respins la control. Corecție deschisă.";
+  }
+  if (task.latestQualityResult === "FAIL") {
+    return "Corecție închisă. Poate fi verificată din nou.";
+  }
+  if (task.latestQualityResult === "PASS") {
+    return "Acceptat la control.";
+  }
+  return task.qualityBlockLabel ?? task.statusLabel;
+}
 
 export function JobDetailPage({ jobId }: JobDetailPageProps) {
   const jobResource = useResource(resourceKeys.job(jobId), () => loadJobDetail(jobId));
@@ -311,6 +329,11 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
                       )}
                       {task.executionMode === "EXTERNAL" && task.externalProviderLabel ? (
                         <p className="worklist-row__detail">{task.externalProviderLabel}</p>
+                      ) : null}
+                      {task.qualityControl ? (
+                        <p className="worklist-row__detail" data-testid="job-quality-state">
+                          {jobQualityLabel(task)}
+                        </p>
                       ) : null}
                       <p className="section-label">Timp</p>
                       <p>Planificat {task.plannedTimeLabel}</p>

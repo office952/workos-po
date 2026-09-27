@@ -35,6 +35,7 @@ function presentExecutionTaskForViewer(
     canAssignExternalProvider: row.canAssignExternalProvider === true && viewerMayAssign,
     canHandOffExternal: row.canHandOffExternal === true && viewerMayAssign,
     canRecordExternalReturn: row.canRecordExternalReturn === true && viewerMayAssign,
+    canCloseReworkEpisode: row.canCloseReworkEpisode === true && viewerMayAssign,
     eligibleProviders: presentEligibleProviders(row.eligibleProviders),
   };
 }

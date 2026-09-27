@@ -8,6 +8,9 @@ import {
   markTaskExternal,
   assignExternalProvider,
   recordExternalReturn,
+  recordQualityFail,
+  recordQualityPass,
+  closeReworkEpisode,
   startExecutionTask,
   startMachineRun,
   stopMachineRun,
@@ -45,7 +48,10 @@ import {
   collectActualConsumptionInput,
 } from "../presentation/executionActuals";
 import { parseActualDurationDraft } from "../presentation/actualDuration";
-import { presentExecutionCompletionError } from "../presentation/executionCompletionError";
+import {
+  presentExecutionCompletionError,
+  presentQualityError,
+} from "../presentation/executionCompletionError";
 import {
   hasViewerExecutionAction,
   presentCurrentTaskRole,
@@ -58,6 +64,7 @@ import {
   ExecutionActualConsumptionFields,
   ExecutionActualConsumptionHistory,
 } from "./ExecutionActualConsumption";
+import { QualityControlPanel } from "./QualityControlPanel";
 import { SiteInstallationContextPanel } from "./SiteInstallationContextPanel";
 
 type ExecutionPageProps = {
@@ -245,6 +252,8 @@ export function ExecutionPage({
   const [selectedProviderByTask, setSelectedProviderByTask] = useState<
     Record<string, string>
   >({});
+  const [qualityNotes, setQualityNotes] = useState<Record<string, string>>({});
+  const [correctionNotes, setCorrectionNotes] = useState<Record<string, string>>({});
 
   function actualQuantityDraft(task: ExecutionTaskTransport): string {
     if (actualDrafts[task.taskId] !== undefined) {
@@ -301,6 +310,49 @@ export function ExecutionPage({
     } catch (error) {
       setActionState("error");
       setActionError(error instanceof TransportError ? failure : "Acțiunea a eșuat.");
+    }
+  }
+
+  async function recordQuality(
+    task: ExecutionTaskTransport,
+    result: "PASS" | "FAIL",
+  ): Promise<void> {
+    const note = (qualityNotes[task.taskId] ?? "").trim();
+    if (result === "FAIL" && note.length === 0) {
+      setActionError("Respingerea cere o notă.");
+      return;
+    }
+    setActionState("pending");
+    setActionError(null);
+    try {
+      if (result === "FAIL") {
+        await recordQualityFail(task.taskId, note);
+      } else {
+        await recordQualityPass(task.taskId, note.length > 0 ? note : undefined);
+      }
+      setActionState("idle");
+      invalidateAfterExecutionTaskChange(planId);
+    } catch (error) {
+      setActionState("error");
+      setActionError(presentQualityError(error));
+    }
+  }
+
+  async function closeCorrection(task: ExecutionTaskTransport): Promise<void> {
+    const note = (correctionNotes[task.taskId] ?? "").trim();
+    if (note.length === 0) {
+      setActionError("Închiderea corecției cere o notă.");
+      return;
+    }
+    setActionState("pending");
+    setActionError(null);
+    try {
+      await closeReworkEpisode(task.taskId, note);
+      setActionState("idle");
+      invalidateAfterExecutionTaskChange(planId);
+    } catch (error) {
+      setActionState("error");
+      setActionError(presentQualityError(error));
     }
   }
 
@@ -766,6 +818,26 @@ export function ExecutionPage({
                 </p>
               </div>
             ) : null}
+            {currentTask.qualityControl ? (
+              <QualityControlPanel
+                task={currentTask}
+                pending={actionState === "pending"}
+                note={qualityNotes[currentTask.taskId] ?? ""}
+                correctionNote={correctionNotes[currentTask.taskId] ?? ""}
+                onNote={(value) => {
+                  setQualityNotes((current) => ({ ...current, [currentTask.taskId]: value }));
+                }}
+                onCorrectionNote={(value) => {
+                  setCorrectionNotes((current) => ({
+                    ...current,
+                    [currentTask.taskId]: value,
+                  }));
+                }}
+                onPass={() => void recordQuality(currentTask, "PASS")}
+                onFail={() => void recordQuality(currentTask, "FAIL")}
+                onCloseCorrection={() => void closeCorrection(currentTask)}
+              />
+            ) : null}
             <div className="cluster">
               {currentTask.canClaimStart ? (
                 <Button
@@ -791,7 +863,8 @@ export function ExecutionPage({
                   Oprește utilajul
                 </Button>
               ) : null}
-              {currentTask.canComplete || currentTask.completionBlockedByActiveMachineRun ? (
+              {!currentTask.qualityControl &&
+              (currentTask.canComplete || currentTask.completionBlockedByActiveMachineRun) ? (
                 <Button
                   disabled={
                     actionState === "pending" ||

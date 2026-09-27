@@ -51,6 +51,17 @@ import {
   closedMachineRunTotalMinutes,
   type MachineRun,
 } from "./machineRun.js";
+import {
+  EMPTY_QUALITY_CONTROL,
+  isQualityControlExecutionProcess,
+  projectQualityControl,
+  taskQualityAttempts,
+  taskReworkEpisodes,
+  type QualityAttempt,
+  type QualityControlProjectionInput,
+  type QualityResult,
+  type ReworkEpisode,
+} from "./qualityControl.js";
 
 export const EXECUTION_PLAN_SCHEMA_VERSION = 1 as const;
 export const EXECUTION_PLAN_STATUSES = ["PLANNED"] as const;
@@ -270,6 +281,16 @@ export type ExecutionTaskView = ExecutionTask & {
   canHandOffExternal: boolean;
   canRecordExternalReturn: boolean;
   externalBlockLabel: string | null;
+  qualityControl: boolean;
+  latestQualityResult: QualityResult | null;
+  qualityAttemptCount: number;
+  qualityAttempts: readonly QualityAttempt[];
+  reworkEpisodes: readonly ReworkEpisode[];
+  openReworkEpisode: ReworkEpisode | null;
+  canRecordQualityPass: boolean;
+  canRecordQualityFail: boolean;
+  canCloseReworkEpisode: boolean;
+  qualityBlockLabel: string | null;
 };
 
 export type ExecutionPlanProgress = {
@@ -391,6 +412,7 @@ export function projectExecutionPlanView(
   providerRegistry: WorkcenterRegistry = workcenterRegistry,
   material: MaterialReadinessContext = DISABLED_MATERIAL_READINESS,
   external: ExternalExecutionProjection = DISABLED_EXTERNAL_EXECUTION,
+  quality: QualityControlProjectionInput = EMPTY_QUALITY_CONTROL,
 ): ExecutionPlanView {
   const byId = new Map(record.tasks.map((task) => [task.taskId, task]));
   const availablePeople = activePeople(people).filter(
@@ -455,8 +477,21 @@ export function projectExecutionPlanView(
     const externalLabel = externalProviderDisplayLabel(task, external.providers);
     const externalPlanned = mode === "EXTERNAL" && task.status === "PLANNED";
     const dependenciesReady = waitingFor.length === 0;
+    const qualityProjection = projectQualityControl({
+      processId: task.processId,
+      status: task.status,
+      executionMode: mode,
+      ownedByCurrent,
+      machineRunActive: running !== null,
+      attempts: taskQualityAttempts(quality, task.taskId),
+      episodes: taskReworkEpisodes(quality, task.taskId),
+      viewerIsOwner: quality.viewerIsOwner,
+    });
     const canExternalize =
-      external.mode === "ENABLED" && task.status === "PLANNED" && mode === "INTERNAL";
+      external.mode === "ENABLED" &&
+      task.status === "PLANNED" &&
+      mode === "INTERNAL" &&
+      !isQualityControlExecutionProcess(task.processId);
     const canAssignExternalProvider = externalPlanned;
     const canHandOffExternal =
       externalPlanned && task.externalProviderId != null && dependenciesReady;
@@ -515,7 +550,11 @@ export function projectExecutionPlanView(
         mode === "INTERNAL" && (task.status === "IN_PROGRESS" || task.status === "COMPLETED")
           ? assignedExecutor?.label ?? null
           : null,
-      canComplete: mode === "INTERNAL" && ownedByCurrent && running === null,
+      canComplete:
+        mode === "INTERNAL" &&
+        ownedByCurrent &&
+        running === null &&
+        !isQualityControlExecutionProcess(task.processId),
       hasPlannedResources: task.resourceDemands.length > 0,
       canRecordActualConsumption:
         mode === "INTERNAL" &&
@@ -550,6 +589,7 @@ export function projectExecutionPlanView(
       canHandOffExternal,
       canRecordExternalReturn,
       externalBlockLabel,
+      ...qualityProjection,
     };
   });
   const progress = summarizeExecutionProgress(tasks);

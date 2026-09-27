@@ -1123,6 +1123,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
           runtime,
           record,
           session.ok ? session.person.personId : null,
+          isOwner(c),
         ),
       ),
       job: jobId
@@ -1208,6 +1209,59 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       runtime,
       runtime.claimAndStartExecutionTask(taskId, session.person.personId),
       { taskId, operatorId: session.person.personId },
+    );
+  });
+
+  app.post("/api/execution-tasks/:taskId/quality-fail", async (c) => {
+    const runtime = getProductSystem(c);
+    const session = runtime.resolveOperatorSession(getCookie(c, OPERATOR_SESSION_COOKIE));
+    if (!session.ok) {
+      return c.json({ error: "invalid_session" }, 401);
+    }
+    const note = readOptionalNote(await c.req.json().catch(() => ({})));
+    if (note === false) {
+      return c.json({ error: "invalid_payload" }, 400);
+    }
+    const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/quality-fail");
+    return respondTaskMutation(
+      c,
+      runtime,
+      runtime.recordQualityFail(taskId, session.person.personId, note, new Date().toISOString()),
+      { taskId, operatorId: session.person.personId },
+    );
+  });
+
+  app.post("/api/execution-tasks/:taskId/quality-pass", async (c) => {
+    const runtime = getProductSystem(c);
+    const session = runtime.resolveOperatorSession(getCookie(c, OPERATOR_SESSION_COOKIE));
+    if (!session.ok) {
+      return c.json({ error: "invalid_session" }, 401);
+    }
+    const note = readOptionalNote(await c.req.json().catch(() => ({})));
+    if (note === false) {
+      return c.json({ error: "invalid_payload" }, 400);
+    }
+    const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/quality-pass");
+    return respondTaskMutation(
+      c,
+      runtime,
+      runtime.recordQualityPass(taskId, session.person.personId, note, new Date().toISOString()),
+      { taskId, operatorId: session.person.personId },
+    );
+  });
+
+  app.post("/api/execution-tasks/:taskId/rework-close", requireOwnerRole(), async (c) => {
+    const runtime = getProductSystem(c);
+    const note = readOptionalNote(await c.req.json().catch(() => ({})));
+    if (note === false) {
+      return c.json({ error: "invalid_payload" }, 400);
+    }
+    const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/rework-close");
+    return respondTaskMutation(
+      c,
+      runtime,
+      runtime.closeQualityReworkEpisode(taskId, note, actorUserId(c), new Date().toISOString()),
+      { taskId },
     );
   });
 
@@ -1443,6 +1497,20 @@ export function compileAcceptedProduct(
   };
 }
 
+function readOptionalNote(body: unknown): unknown | false {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return false;
+  }
+  if (!("note" in body)) {
+    return undefined;
+  }
+  const note = (body as { note: unknown }).note;
+  if (note !== undefined && note !== null && typeof note !== "string") {
+    return false;
+  }
+  return note;
+}
+
 function readCompletionInput(body: unknown): TaskCompletionInput | null {
   if (body === undefined || body === null) {
     return {};
@@ -1582,6 +1650,10 @@ function mutationHttpStatus(error: TaskMutationError): 404 | 409 | 422 {
       return 409;
     case "external_provider_required":
       return 422;
+    case "quality_result_required":
+    case "quality_correction_open":
+    case "quality_control_not_externalizable":
+      return 409;
     default: {
       const _exhaustive: never = error;
       return _exhaustive;
@@ -1616,6 +1688,7 @@ function projectPlanView(
   runtime: ProductSystemRuntime,
   record: ExecutionPlanRecord,
   currentOperatorId: string | null = null,
+  viewerIsOwner = false,
 ) {
   return projectExecutionPlanView(
     record,
@@ -1626,6 +1699,7 @@ function projectPlanView(
     runtime.providerRegistry,
     runtime.materialReadinessContext(),
     runtime.externalProductionContext(),
+    runtime.qualityControlProjection(record.plan.planId, viewerIsOwner),
   );
 }
 
@@ -1657,7 +1731,7 @@ function respondTaskMutation(
     alreadyApplied: result.alreadyApplied,
     executionPlan: presentScopedExecutionPlan(
       c,
-      projectPlanView(runtime, result.record, operatorId),
+      projectPlanView(runtime, result.record, operatorId, isOwner(c)),
     ),
   });
 }

@@ -91,6 +91,21 @@ export async function stopMachineRun(machineRunId: string): Promise<unknown> {
   return postJson(`/api/execution-machine-runs/${encodeURIComponent(machineRunId)}/stop`);
 }
 
+export async function recordQualityFail(taskId: string, note: string): Promise<unknown> {
+  return postJson(`/api/execution-tasks/${encodeURIComponent(taskId)}/quality-fail`, { note });
+}
+
+export async function recordQualityPass(taskId: string, note?: string): Promise<unknown> {
+  return postJson(
+    `/api/execution-tasks/${encodeURIComponent(taskId)}/quality-pass`,
+    note === undefined ? {} : { note },
+  );
+}
+
+export async function closeReworkEpisode(taskId: string, note: string): Promise<unknown> {
+  return postJson(`/api/execution-tasks/${encodeURIComponent(taskId)}/rework-close`, { note });
+}
+
 export async function completeExecutionTask(
   taskId: string,
   input: ExecutionTaskCompletionInput = {},

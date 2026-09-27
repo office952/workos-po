@@ -86,6 +86,16 @@ function taskStub(
     canHandOffExternal: false,
     canRecordExternalReturn: false,
     externalBlockLabel: null,
+    qualityControl: false,
+    latestQualityResult: null,
+    qualityAttemptCount: 0,
+    qualityAttempts: [],
+    reworkEpisodes: [],
+    openReworkEpisode: null,
+    canRecordQualityPass: false,
+    canRecordQualityFail: false,
+    canCloseReworkEpisode: false,
+    qualityBlockLabel: null,
     ...overrides,
   };
 }

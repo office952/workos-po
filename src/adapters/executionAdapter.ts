@@ -8,6 +8,8 @@ import type {
   ExecutionTimeSummaryTransport,
   MachineRunTransport,
   PlannedResourceTransport,
+  QualityAttemptTransport,
+  ReworkEpisodeTransport,
   SiteInstallationOperationalTransport,
 } from "../api/types";
 import { asNumber, asRecord, asString, asStringList } from "./record";
@@ -127,7 +129,69 @@ export function presentExecutionTask(value: unknown): ExecutionTaskTransport | n
     canHandOffExternal: row.canHandOffExternal === true,
     canRecordExternalReturn: row.canRecordExternalReturn === true,
     externalBlockLabel: asString(row.externalBlockLabel),
+    qualityControl: row.qualityControl === true,
+    latestQualityResult: presentQualityResult(row.latestQualityResult),
+    qualityAttemptCount: asNumber(row.qualityAttemptCount) ?? 0,
+    qualityAttempts: presentQualityAttempts(row.qualityAttempts),
+    reworkEpisodes: presentReworkEpisodes(row.reworkEpisodes),
+    openReworkEpisode: presentReworkEpisode(row.openReworkEpisode),
+    canRecordQualityPass: row.canRecordQualityPass === true,
+    canRecordQualityFail: row.canRecordQualityFail === true,
+    canCloseReworkEpisode: row.canCloseReworkEpisode === true,
+    qualityBlockLabel: asString(row.qualityBlockLabel),
     ...presentTaskTime(row),
+  };
+}
+
+function presentQualityResult(value: unknown): "PASS" | "FAIL" | null {
+  return value === "PASS" || value === "FAIL" ? value : null;
+}
+
+function presentQualityAttempts(value: unknown): QualityAttemptTransport[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => {
+    const row = asRecord(item);
+    const attemptSeq = asNumber(row?.attemptSeq);
+    const result = presentQualityResult(row?.result);
+    const recordedAt = asString(row?.recordedAt);
+    if (!row || attemptSeq === null || !result || !recordedAt) {
+      return [];
+    }
+    return [
+      {
+        attemptSeq,
+        result,
+        note: asString(row.note),
+        recordedAt,
+      },
+    ];
+  });
+}
+
+function presentReworkEpisodes(value: unknown): ReworkEpisodeTransport[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => {
+    const episode = presentReworkEpisode(item);
+    return episode ? [episode] : [];
+  });
+}
+
+function presentReworkEpisode(value: unknown): ReworkEpisodeTransport | null {
+  const row = asRecord(value);
+  const episodeSeq = asNumber(row?.episodeSeq);
+  const status = row?.status === "OPEN" || row?.status === "CLOSED" ? row.status : null;
+  if (!row || episodeSeq === null || !status) {
+    return null;
+  }
+  return {
+    episodeSeq,
+    status,
+    correctionNote: asString(row.correctionNote),
+    closedAt: asString(row.closedAt),
   };
 }
 

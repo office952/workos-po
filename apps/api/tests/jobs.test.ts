@@ -123,6 +123,21 @@ async function executeTask(
   expect(started.status).toBe(200);
   const startedView = (await readBody(started)).executionPlan as { tasks: Array<JsonObject> };
   const current = startedView.tasks.find((item) => item.taskId === task.taskId) as JsonObject;
+  if (current.qualityControl === true) {
+    const passed = await app.request(`/api/execution-tasks/${String(task.taskId)}/quality-pass`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        cookie,
+      },
+      body: JSON.stringify({}),
+    });
+    expect(passed.status).toBe(200);
+    return (await readBody(passed)).executionPlan as {
+      progress: JsonObject;
+      tasks: Array<JsonObject>;
+    };
+  }
   const measurable = current.measurableQuantity as JsonObject | undefined;
   const completed = await completeTaskAs(
     app,

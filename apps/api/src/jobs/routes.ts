@@ -171,6 +171,7 @@ function presentJobDetail(
         runtime.providerRegistry,
         runtime.materialReadinessContext(),
         runtime.externalProductionContext(),
+        runtime.qualityControlProjection(record.plan.planId, isOwner(c)),
       )
     : null;
   const executionAccess = access === "owner" ? "owner" : "workshop";
