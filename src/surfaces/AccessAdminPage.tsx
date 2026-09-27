@@ -77,10 +77,15 @@ export function AccessAdminPage() {
     }
     setSaveState("pending");
     setErrorMessage(null);
+    if (password.trim() === "") {
+      setSaveState("error");
+      setErrorMessage("Parola inițială este obligatorie.");
+      return;
+    }
     const result = await postOrganizationAccessUser({
       email: email.trim(),
       role,
-      password: password.length > 0 ? password : undefined,
+      password,
     });
     if (result.ok) {
       const presented = presentOrganizationAccessAdmin(result.body);
@@ -98,11 +103,14 @@ export function AccessAdminPage() {
       return;
     }
     setSaveState("error");
+    const code = readTransportErrorCode(result.body);
     setErrorMessage(
       readTransportReasons(result.body)[0] ??
-        (readTransportErrorCode(result.body) === "forbidden"
+        (code === "forbidden"
           ? "Nu ai dreptul să gestionezi accesul."
-          : "Utilizatorul nu a putut fi adăugat."),
+          : code === "access_identity_unavailable"
+            ? "Adresa nu poate fi adăugată prin această operație."
+            : "Utilizatorul nu a putut fi adăugat."),
     );
   }
 
@@ -227,10 +235,13 @@ export function AccessAdminPage() {
                   type="password"
                   value={password}
                   onChange={setPassword}
-                  hint="Obligatorie pentru un utilizator nou. Dacă emailul există deja în Cloud, parola existentă rămâne neschimbată."
+                  hint="Obligatorie. Creează un utilizator nou pentru această organizație."
                 />
                 <div className="cluster">
-                  <Button type="submit" disabled={pending || email.trim() === ""}>
+                  <Button
+                    type="submit"
+                    disabled={pending || email.trim() === "" || password.trim() === ""}
+                  >
                     Salvează utilizatorul
                   </Button>
                   <Button

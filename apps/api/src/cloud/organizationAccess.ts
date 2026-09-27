@@ -17,13 +17,13 @@ export type OrganizationAccessMember = {
 };
 
 export type OrganizationAccessError =
+  | "access_identity_unavailable"
   | "already_member"
   | "invalid_password"
   | "invalid_payload"
   | "last_owner_removal"
   | "membership_missing"
-  | "password_required"
-  | "user_disabled";
+  | "password_required";
 
 export function isMembershipRole(value: unknown): value is MembershipRole {
   return typeof value === "string" && (MEMBERSHIP_ROLES as readonly string[]).includes(value);
@@ -57,6 +57,12 @@ export function listOrganizationAccessMembers(
   });
 }
 
+/**
+ * Owner-facing membership create for V1.
+ * Creates a NEW Cloud user + membership only.
+ * Never attaches an existing global identity (cross-org attach is deferred /
+ * controlled-operator only). Response contract must not enumerate global identity.
+ */
 export async function addOrganizationAccessMember(
   controlPlane: ControlPlane,
   input: {
@@ -66,7 +72,7 @@ export async function addOrganizationAccessMember(
     password?: string;
   },
 ): Promise<
-  | { ok: true; member: OrganizationAccessMember; attachedExistingUser: boolean }
+  | { ok: true; member: OrganizationAccessMember }
   | { ok: false; error: OrganizationAccessError }
 > {
   const email = normalizeEmail(input.email);
@@ -77,55 +83,32 @@ export async function addOrganizationAccessMember(
     return { ok: false, error: "invalid_payload" };
   }
 
-  const existingBefore = controlPlane.getUserByEmail(email);
-  let hashed:
-    | { passwordHash: Buffer; passwordSalt: Buffer; kdf: string }
-    | undefined;
-  if (!existingBefore) {
-    if (typeof input.password !== "string") {
-      return { ok: false, error: "password_required" };
-    }
-    try {
-      assertCloudPassword(input.password);
-      hashed = await hashCloudPassword(input.password);
-    } catch {
-      return { ok: false, error: "invalid_password" };
-    }
+  // Always require and validate password before existence branching so missing
+  // password cannot become a global-existence oracle.
+  if (typeof input.password !== "string") {
+    return { ok: false, error: "password_required" };
+  }
+  let hashed: { passwordHash: Buffer; passwordSalt: Buffer; kdf: string };
+  try {
+    assertCloudPassword(input.password);
+    hashed = await hashCloudPassword(input.password);
+  } catch {
+    return { ok: false, error: "invalid_password" };
   }
 
   return controlPlane.runImmediateTransaction(() => {
     const existing = controlPlane.getUserByEmail(email);
     if (existing) {
-      if (existing.status !== "ACTIVE") {
-        return { ok: false as const, error: "user_disabled" as const };
-      }
       const current = controlPlane.getActiveMembership(existing.userId, input.organizationId);
       if (current) {
+        // Safe local-state signal: Owner already knows their own org memberships.
         return { ok: false as const, error: "already_member" as const };
       }
-      // Attach existing global Cloud user; never overwrite password.
-      const membership = controlPlane.addMembership({
-        userId: existing.userId,
-        organizationId: input.organizationId,
-        role: input.role,
-      });
-      return {
-        ok: true as const,
-        attachedExistingUser: true,
-        member: {
-          membershipId: membership.membershipId,
-          email: existing.email,
-          role: membership.role,
-          status: membership.status,
-          userStatus: existing.status,
-          createdAt: membership.createdAt,
-        },
-      };
+      // Existing global identity (active/disabled/revoked/foreign membership):
+      // refuse attach without revealing which case applied.
+      return { ok: false as const, error: "access_identity_unavailable" as const };
     }
 
-    if (!hashed) {
-      return { ok: false as const, error: "password_required" as const };
-    }
     const user = controlPlane.insertHashedUser({
       email,
       passwordHash: hashed.passwordHash,
@@ -139,7 +122,6 @@ export async function addOrganizationAccessMember(
     });
     return {
       ok: true as const,
-      attachedExistingUser: false,
       member: {
         membershipId: membership.membershipId,
         email: user.email,

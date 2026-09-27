@@ -338,6 +338,9 @@ describe("organization access membership admin", () => {
         }),
       });
       expect(created.status).toBe(201);
+      const createdBody = (await created.json()) as Record<string, unknown>;
+      expect(createdBody).not.toHaveProperty("attachedExistingUser");
+      expect(JSON.stringify(createdBody)).not.toMatch(/user_disabled|access_identity_unavailable/);
 
       const memberLogin = await loginCloud(
         fixture.app,
@@ -397,6 +400,118 @@ describe("organization access membership admin", () => {
       });
       expect(secondOwner.ok).toBe(true);
 
+      const missingPassword = await fixture.app.request("/api/admin/access/users", {
+        method: "POST",
+        headers: {
+          cookie: ownerCookie,
+          "content-type": "application/json",
+          origin: "http://127.0.0.1:5173",
+        },
+        body: JSON.stringify({
+          email: "needs-password@test.local",
+          role: "member",
+        }),
+      });
+      expect(missingPassword.status).toBe(400);
+      expect(((await missingPassword.json()) as { error?: string }).error).toBe(
+        "password_required",
+      );
+
+      const alreadyMember = await fixture.app.request("/api/admin/access/users", {
+        method: "POST",
+        headers: {
+          cookie: ownerCookie,
+          "content-type": "application/json",
+          origin: "http://127.0.0.1:5173",
+        },
+        body: JSON.stringify({
+          email: "member-a@test.local",
+          role: "member",
+          password: MEMBER_PASSWORD,
+        }),
+      });
+      expect(alreadyMember.status).toBe(409);
+      expect(((await alreadyMember.json()) as { error?: string }).error).toBe("already_member");
+
+      // Existing global ACTIVE user in Org B must not be attachable / enumerable by Org A Owner.
+      const foreignActive = await fixture.app.request("/api/admin/access/users", {
+        method: "POST",
+        headers: {
+          cookie: ownerCookie,
+          "content-type": "application/json",
+          origin: "http://127.0.0.1:5173",
+        },
+        body: JSON.stringify({
+          email: "owner-b@test.local",
+          role: "member",
+          password: MEMBER_PASSWORD,
+        }),
+      });
+      expect(foreignActive.status).toBe(409);
+      const foreignActiveBody = (await foreignActive.json()) as {
+        error?: string;
+        reasons?: string[];
+      };
+      expect(foreignActiveBody.error).toBe("access_identity_unavailable");
+      expect(foreignActiveBody).not.toHaveProperty("attachedExistingUser");
+      expect(JSON.stringify(foreignActiveBody)).not.toMatch(/user_disabled|already exists|Org B/i);
+      expect(foreignActiveBody.reasons?.[0]).toBe(
+        "Adresa nu poate fi adăugată prin această operație.",
+      );
+      expect(
+        fixture.controlPlane.getActiveMembership(
+          ownerB.userId,
+          orgA.organization.organizationId,
+        ),
+      ).toBeNull();
+      expect(
+        fixture.controlPlane.getActiveMembership(
+          ownerB.userId,
+          orgB.organization.organizationId,
+        )?.role,
+      ).toBe("owner");
+      const foreignPasswordIntact = await fixture.controlPlane.verifyLogin(
+        "owner-b@test.local",
+        OWNER_PASSWORD,
+      );
+      expect(foreignPasswordIntact.ok).toBe(true);
+      const foreignPasswordNotOverwritten = await fixture.controlPlane.verifyLogin(
+        "owner-b@test.local",
+        MEMBER_PASSWORD,
+      );
+      expect(foreignPasswordNotOverwritten.ok).toBe(false);
+
+      // Existing global DISABLED user returns the same outward error.
+      const disabledUser = await provisionCloudUser(fixture.controlPlane, {
+        email: "disabled-global@test.local",
+        password: MEMBER_PASSWORD,
+      });
+      fixture.controlPlane.db
+        .prepare(`UPDATE users SET status = 'DISABLED' WHERE user_id = ?`)
+        .run(disabledUser.userId);
+      const foreignDisabled = await fixture.app.request("/api/admin/access/users", {
+        method: "POST",
+        headers: {
+          cookie: ownerCookie,
+          "content-type": "application/json",
+          origin: "http://127.0.0.1:5173",
+        },
+        body: JSON.stringify({
+          email: "disabled-global@test.local",
+          role: "member",
+          password: MEMBER_PASSWORD,
+        }),
+      });
+      expect(foreignDisabled.status).toBe(409);
+      const foreignDisabledBody = (await foreignDisabled.json()) as {
+        error?: string;
+        reasons?: string[];
+      };
+      expect(foreignDisabledBody.error).toBe("access_identity_unavailable");
+      expect(foreignDisabledBody.error).toBe(foreignActiveBody.error);
+      expect(foreignDisabledBody.reasons?.[0]).toBe(foreignActiveBody.reasons?.[0]);
+      expect(JSON.stringify(foreignDisabledBody)).not.toMatch(/user_disabled/);
+
       const memberRow = listOrganizationAccessMembers(
         fixture.controlPlane,
         orgA.organization.organizationId,
@@ -418,20 +533,32 @@ describe("organization access membership admin", () => {
       });
       expect([401, 403]).toContain(afterRevoke.status);
 
-      const attach = await addOrganizationAccessMember(fixture.controlPlane, {
-        organizationId: orgB.organization.organizationId,
-        email: "owner-a@test.local",
-        role: "member",
+      // Same-org revoked membership is not restored via Owner attach; global identity remains.
+      const restoreRevoked = await fixture.app.request("/api/admin/access/users", {
+        method: "POST",
+        headers: {
+          cookie: ownerCookie,
+          "content-type": "application/json",
+          origin: "http://127.0.0.1:5173",
+        },
+        body: JSON.stringify({
+          email: "member-a@test.local",
+          role: "member",
+          password: MEMBER_PASSWORD,
+        }),
       });
-      expect(attach.ok).toBe(true);
-      if (attach.ok) {
-        expect(attach.attachedExistingUser).toBe(true);
-      }
-      const stillOwnerA = await fixture.controlPlane.verifyLogin(
-        "owner-a@test.local",
-        OWNER_PASSWORD,
+      expect(restoreRevoked.status).toBe(409);
+      expect(((await restoreRevoked.json()) as { error?: string }).error).toBe(
+        "access_identity_unavailable",
       );
-      expect(stillOwnerA.ok).toBe(true);
+      const revokedMember = fixture.controlPlane.getUserByEmail("member-a@test.local");
+      expect(revokedMember).toBeTruthy();
+      expect(
+        fixture.controlPlane.getActiveMembership(
+          revokedMember!.userId,
+          orgA.organization.organizationId,
+        ),
+      ).toBeNull();
 
       const rejectsAuthority = await fixture.app.request("/api/admin/access/users", {
         method: "POST",

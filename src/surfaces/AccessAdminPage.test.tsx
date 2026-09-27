@@ -73,7 +73,6 @@ describe("AccessAdminPage", () => {
         status: 201,
         json: async () => ({
           canEdit: true,
-          attachedExistingUser: false,
           members: [
             ...defaultAdmin.members,
             {
@@ -110,5 +109,37 @@ describe("AccessAdminPage", () => {
       role: "member",
       password: "MemberPass12",
     });
+  });
+
+  it("renders a neutral error when identity cannot be added", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => defaultAdmin,
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 409,
+        json: async () => ({
+          error: "access_identity_unavailable",
+          reasons: ["Adresa nu poate fi adăugată prin această operație."],
+          ...defaultAdmin,
+        }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<AccessAdminPage />);
+    await screen.findByText("owner@firma.test");
+    await userEvent.click(screen.getByRole("button", { name: "Adaugă utilizator" }));
+    await userEvent.type(screen.getByLabelText("Email"), "altcineva@firma.test");
+    await userEvent.type(screen.getByLabelText("Parolă inițială"), "MemberPass12");
+    await userEvent.click(screen.getByRole("button", { name: "Salvează utilizatorul" }));
+
+    expect(
+      await screen.findByText("Adresa nu poate fi adăugată prin această operație."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/already exists|user_disabled|dezactivat/i)).not.toBeInTheDocument();
   });
 });

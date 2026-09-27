@@ -11,7 +11,7 @@ export async function fetchOrganizationAccess(): Promise<unknown> {
 export async function postOrganizationAccessUser(body: {
   email: string;
   role: "owner" | "member";
-  password?: string;
+  password: string;
 }): Promise<ReturnType<typeof sendJson>> {
   return sendJson("POST", `${organizationAccessPath()}/users`, body);
 }

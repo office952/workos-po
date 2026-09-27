@@ -7,6 +7,7 @@ import {
   isMembershipRole,
   listOrganizationAccessMembers,
   revokeOrganizationAccessMember,
+  type OrganizationAccessError,
 } from "./organizationAccess.js";
 
 function accessAdminPayload(
@@ -27,24 +28,15 @@ function accessAdminPayload(
   };
 }
 
-function errorStatus(
-  error:
-    | "already_member"
-    | "invalid_password"
-    | "invalid_payload"
-    | "last_owner_removal"
-    | "membership_missing"
-    | "password_required"
-    | "user_disabled",
-): 400 | 403 | 404 | 409 {
+function errorStatus(error: OrganizationAccessError): 400 | 403 | 404 | 409 {
   switch (error) {
     case "invalid_payload":
     case "invalid_password":
     case "password_required":
       return 400;
+    case "access_identity_unavailable":
     case "already_member":
     case "last_owner_removal":
-    case "user_disabled":
       return 409;
     case "membership_missing":
       return 404;
@@ -55,17 +47,10 @@ function errorStatus(
   }
 }
 
-function operatorReason(
-  error:
-    | "already_member"
-    | "invalid_password"
-    | "invalid_payload"
-    | "last_owner_removal"
-    | "membership_missing"
-    | "password_required"
-    | "user_disabled",
-): string {
+function operatorReason(error: OrganizationAccessError): string {
   switch (error) {
+    case "access_identity_unavailable":
+      return "Adresa nu poate fi adăugată prin această operație.";
     case "already_member":
       return "Utilizatorul are deja acces activ în această organizație.";
     case "invalid_password":
@@ -77,9 +62,7 @@ function operatorReason(
     case "membership_missing":
       return "Accesul selectat nu mai este disponibil.";
     case "password_required":
-      return "Pentru un utilizator nou este necesară o parolă inițială.";
-    case "user_disabled":
-      return "Contul existent este dezactivat și nu poate fi atașat.";
+      return "Parola inițială este obligatorie.";
     default: {
       const _exhaustive: never = error;
       return _exhaustive;
@@ -135,11 +118,17 @@ export function registerOrganizationAccessRoutes(app: Hono<ApiEnv>): void {
         400,
       );
     }
+    if (typeof payload.password !== "string") {
+      return c.json(
+        { error: "password_required", reasons: [operatorReason("password_required")] },
+        400,
+      );
+    }
     const result = await addOrganizationAccessMember(controlPlane, {
       organizationId: organization.organizationId,
       email: payload.email,
       role: payload.role,
-      password: typeof payload.password === "string" ? payload.password : undefined,
+      password: payload.password,
     });
     if (!result.ok) {
       return c.json(
@@ -153,7 +142,6 @@ export function registerOrganizationAccessRoutes(app: Hono<ApiEnv>): void {
     }
     return c.json(
       {
-        attachedExistingUser: result.attachedExistingUser,
         member: result.member,
         ...accessAdminPayload(controlPlane, organization.organizationId, true),
       },
