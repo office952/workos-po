@@ -77,6 +77,7 @@ export function invalidateAfterCloudBoundaryChange(): void {
     resourceKeys.technicalAdmin(),
     resourceKeys.formulasAdmin(),
     resourceKeys.productEnablementAdmin(),
+    resourceKeys.organizationAccessAdmin(),
     resourceKeys.peopleAdmin(),
     resourceKeys.workcentersAdmin(),
     resourceKeys.planningWorkload(),
@@ -106,6 +107,10 @@ export function invalidateAfterFormulasChange(): void {
 
 export function invalidateAfterProductEnablementChange(): void {
   invalidateResources(resourceKeys.productEnablementAdmin(), resourceKeys.catalog());
+}
+
+export function invalidateAfterOrganizationAccessChange(): void {
+  invalidateResources(resourceKeys.organizationAccessAdmin());
 }
 
 export function invalidateAfterPeopleAdminChange(): void {

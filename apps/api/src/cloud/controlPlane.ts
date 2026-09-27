@@ -164,6 +164,13 @@ export type ControlPlane = {
     organizationId: string;
     role: MembershipRole;
   }): CloudMembership;
+  getMembership(membershipId: string): CloudMembership | null;
+  revokeMembership(input: {
+    membershipId: string;
+    organizationId: string;
+  }):
+    | { ok: true; membership: CloudMembership }
+    | { ok: false; error: "membership_missing" | "last_owner_removal" };
   listMembershipsForUser(userId: string): CloudMembershipPublic[];
   getActiveMembership(
     userId: string,
@@ -502,6 +509,59 @@ export function createControlPlane(db: SqliteDatabase, cloudRoot: string): Contr
         membership.createdAt,
       );
       return membership;
+    },
+    getMembership(membershipId) {
+      const row = db
+        .prepare(
+          `SELECT membership_id, user_id, organization_id, role, status, created_at
+           FROM organization_memberships
+           WHERE membership_id = ?`,
+        )
+        .get(membershipId) as MembershipRow | undefined;
+      return row ? mapMembership(row) : null;
+    },
+    revokeMembership(input) {
+      const current = db
+        .prepare(
+          `SELECT membership_id, user_id, organization_id, role, status, created_at
+           FROM organization_memberships
+           WHERE membership_id = ? AND organization_id = ?`,
+        )
+        .get(input.membershipId, input.organizationId) as MembershipRow | undefined;
+      if (!current) {
+        return { ok: false as const, error: "membership_missing" as const };
+      }
+      if (current.status === "REVOKED") {
+        return { ok: true as const, membership: mapMembership(current) };
+      }
+      if (current.role === "owner") {
+        const owners = countOwnerMemberships(db, input.organizationId);
+        if (owners <= 1) {
+          return { ok: false as const, error: "last_owner_removal" as const };
+        }
+      }
+      db.prepare(
+        `UPDATE organization_memberships
+         SET status = 'REVOKED'
+         WHERE membership_id = ? AND organization_id = ? AND status = 'ACTIVE'`,
+      ).run(input.membershipId, input.organizationId);
+      const now = new Date().toISOString();
+      db.prepare(
+        `UPDATE platform_sessions
+         SET revoked_at = ?
+         WHERE user_id = ? AND active_organization_id = ? AND revoked_at IS NULL`,
+      ).run(now, current.user_id, input.organizationId);
+      const after = db
+        .prepare(
+          `SELECT membership_id, user_id, organization_id, role, status, created_at
+           FROM organization_memberships
+           WHERE membership_id = ?`,
+        )
+        .get(input.membershipId) as MembershipRow | undefined;
+      if (!after) {
+        return { ok: false as const, error: "membership_missing" as const };
+      }
+      return { ok: true as const, membership: mapMembership(after) };
     },
     listMembershipsForUser(userId) {
       return db

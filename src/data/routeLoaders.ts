@@ -25,6 +25,7 @@ import { presentTechnicalSettingsAdmin } from "../adapters/technicalSettingsAdap
 import { presentPeopleAdmin } from "../adapters/peopleAdapter";
 import { presentWorkcentersAdmin } from "../adapters/workcentersAdapter";
 import { presentProductEnablementAdmin } from "../adapters/productEnablementAdapter";
+import { presentOrganizationAccessAdmin } from "../adapters/organizationAccessAdapter";
 import { fetchProductCatalog } from "../api/catalog";
 import { fetchCustomer, fetchCustomers } from "../api/customers";
 import { fetchHealth } from "../api/health";
@@ -48,6 +49,7 @@ import { fetchTechnicalSettings } from "../api/technicalSettings";
 import { fetchPeopleAdmin } from "../api/people";
 import { fetchWorkcentersAdmin } from "../api/workcenters";
 import { fetchProductEnablement } from "../api/productEnablement";
+import { fetchOrganizationAccess } from "../api/organizationAccess";
 import { fetchSeller } from "../api/seller";
 
 export async function loadHealthPresentation(): Promise<HealthPresentation> {
@@ -232,6 +234,14 @@ export async function loadFormulasAdmin() {
 
 export async function loadProductEnablementAdmin() {
   const presented = presentProductEnablementAdmin(await fetchProductEnablement());
+  if (!presented) {
+    throw new Error("unpresentable");
+  }
+  return presented;
+}
+
+export async function loadOrganizationAccessAdmin() {
+  const presented = presentOrganizationAccessAdmin(await fetchOrganizationAccess());
   if (!presented) {
     throw new Error("unpresentable");
   }

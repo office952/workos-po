@@ -28,10 +28,13 @@ export const NEW_ORGANIZATION_MARKERS = [
 
 const CLIENT_PROVISION_CODES = new Set([
   "already_active",
+  "bootstrap_policy_mismatch",
+  "confirm_required",
   "conflicting_membership",
   "conflicting_user",
   "email_mismatch",
   "incomplete_organization_exists",
+  "intent_required",
   "multiple_incomplete_organizations",
   "organization_missing",
   "organization_not_resumable",
@@ -487,16 +490,14 @@ function alreadyActiveResult(
   };
 }
 
-export async function provisionNewOrganization(input: {
+async function executeNewOrganizationProvision(input: {
   cloudRoot: string;
   displayName: string;
   email: string;
   password: string;
-  bootstrapPolicy?: BootstrapPolicy;
+  bootstrapPolicy: BootstrapPolicy;
   hooks?: ProvisionHooks;
-  env?: NodeJS.ProcessEnv;
 }): Promise<ProvisionResult> {
-  assertCloudProvisionNotProduction(input.env);
   assertCloudPassword(input.password);
   triggerFault(input.hooks, "before_control_plane_open");
   const email = normalizeEmail(input.email);
@@ -511,7 +512,7 @@ export async function provisionNewOrganization(input: {
       triggerFault(input.hooks, "after_org_intent");
       const plane = controlPlane.createPlane({
         organizationId: organization.organizationId,
-        bootstrapPolicy: input.bootstrapPolicy ?? "NEW_ORGANIZATION",
+        bootstrapPolicy: input.bootstrapPolicy,
       });
       return { organization, plane };
     });
@@ -559,15 +560,14 @@ export async function provisionNewOrganization(input: {
   }
 }
 
-export async function resumeOrganizationProvision(input: {
+async function executeResumeOrganizationProvision(input: {
   cloudRoot: string;
   organizationId: string;
   email: string;
   password: string;
   hooks?: ProvisionHooks;
-  env?: NodeJS.ProcessEnv;
+  requireBootstrapPolicy?: BootstrapPolicy;
 }): Promise<ProvisionResult> {
-  assertCloudProvisionNotProduction(input.env);
   assertCloudPassword(input.password);
   const email = normalizeEmail(input.email);
   const controlPlane = openProvisionedControlPlane(input.cloudRoot);
@@ -586,6 +586,12 @@ export async function resumeOrganizationProvision(input: {
       throw new ProvisionConflictError("email_mismatch");
     }
     const plane = assertResumePlane(controlPlane, organization.organizationId);
+    if (
+      input.requireBootstrapPolicy &&
+      plane.bootstrapPolicy !== input.requireBootstrapPolicy
+    ) {
+      throw new ProvisionConflictError("bootstrap_policy_mismatch");
+    }
     assertResumeMemberships(controlPlane, organization.organizationId, email);
     try {
       const paths = ensureOperationalPlane(controlPlane, organization, plane);
@@ -617,4 +623,103 @@ export async function resumeOrganizationProvision(input: {
   } finally {
     controlPlane.close();
   }
+}
+
+/** Dev/local helper path. Refuses production. */
+export async function provisionNewOrganization(input: {
+  cloudRoot: string;
+  displayName: string;
+  email: string;
+  password: string;
+  bootstrapPolicy?: BootstrapPolicy;
+  hooks?: ProvisionHooks;
+  env?: NodeJS.ProcessEnv;
+}): Promise<ProvisionResult> {
+  assertCloudProvisionNotProduction(input.env);
+  return executeNewOrganizationProvision({
+    cloudRoot: input.cloudRoot,
+    displayName: input.displayName,
+    email: input.email,
+    password: input.password,
+    bootstrapPolicy: input.bootstrapPolicy ?? "NEW_ORGANIZATION",
+    hooks: input.hooks,
+  });
+}
+
+/** Dev/local helper path. Refuses production. */
+export async function resumeOrganizationProvision(input: {
+  cloudRoot: string;
+  organizationId: string;
+  email: string;
+  password: string;
+  hooks?: ProvisionHooks;
+  env?: NodeJS.ProcessEnv;
+}): Promise<ProvisionResult> {
+  assertCloudProvisionNotProduction(input.env);
+  return executeResumeOrganizationProvision({
+    cloudRoot: input.cloudRoot,
+    organizationId: input.organizationId,
+    email: input.email,
+    password: input.password,
+    hooks: input.hooks,
+  });
+}
+
+export type ControlledProvisionIntent = "NEW_ORGANIZATION";
+
+export function assertControlledProvisionSafeguards(input: {
+  intent: string;
+  confirmControlledProvision: boolean;
+}): void {
+  if (input.intent !== "NEW_ORGANIZATION") {
+    throw new ProvisionConflictError("intent_required");
+  }
+  if (!input.confirmControlledProvision) {
+    throw new ProvisionConflictError("confirm_required");
+  }
+}
+
+/**
+ * Production-safe controlled operator bootstrap.
+ * Separate from the dev helper: does not use assertCloudProvisionNotProduction,
+ * forces NEW_ORGANIZATION, and requires explicit operator confirmation.
+ */
+export async function provisionControlledOrganization(input: {
+  cloudRoot: string;
+  displayName: string;
+  email: string;
+  password: string;
+  intent: ControlledProvisionIntent;
+  confirmControlledProvision: boolean;
+  hooks?: ProvisionHooks;
+}): Promise<ProvisionResult> {
+  assertControlledProvisionSafeguards(input);
+  return executeNewOrganizationProvision({
+    cloudRoot: input.cloudRoot,
+    displayName: input.displayName,
+    email: input.email,
+    password: input.password,
+    bootstrapPolicy: "NEW_ORGANIZATION",
+    hooks: input.hooks,
+  });
+}
+
+export async function resumeControlledOrganizationProvision(input: {
+  cloudRoot: string;
+  organizationId: string;
+  email: string;
+  password: string;
+  intent: ControlledProvisionIntent;
+  confirmControlledProvision: boolean;
+  hooks?: ProvisionHooks;
+}): Promise<ProvisionResult> {
+  assertControlledProvisionSafeguards(input);
+  return executeResumeOrganizationProvision({
+    cloudRoot: input.cloudRoot,
+    organizationId: input.organizationId,
+    email: input.email,
+    password: input.password,
+    hooks: input.hooks,
+    requireBootstrapPolicy: "NEW_ORGANIZATION",
+  });
 }

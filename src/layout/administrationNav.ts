@@ -6,12 +6,14 @@ export type AdministrationRailId =
   | "technical"
   | "formulas"
   | "products"
+  | "access"
   | "people"
   | "workcenters"
   | "external-production";
 
 const ADMINISTRATION_RAIL = [
   { id: "products", label: "Produse oferite", href: "/admin/products" },
+  { id: "access", label: "Acces", href: "/admin/access" },
   { id: "people", label: "Oameni", href: "/admin/people" },
   { id: "workcenters", label: "Zone și utilaje", href: "/admin/workcenters" },
   { id: "commercial", label: "Valori comerciale", href: "/admin/commercial" },

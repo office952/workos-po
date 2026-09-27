@@ -226,6 +226,7 @@ describe("ask: Owner-approval class", () => {
 
   test("cloud:provision and configure-providers --execute", () => {
     assertAsk("pnpm --filter @workos-final/api cloud:provision");
+    assertAsk("pnpm --filter @workos-final/api cloud:provision-organization");
     assertAsk("pnpm --filter @workos-final/api cloud:configure-providers -- --execute");
   });
 

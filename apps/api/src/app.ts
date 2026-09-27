@@ -8,6 +8,7 @@ import {
   attachSinglePlaneRuntime,
   requireCloudSession,
 } from "./cloud/middleware.js";
+import { registerOrganizationAccessRoutes } from "./cloud/organizationAccessRoutes.js";
 import {
   createRuntimeRegistry,
   type RuntimeRegistry,
@@ -148,6 +149,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<ApiEnv> {
   });
 
   registerCloudRoutes(app);
+  registerOrganizationAccessRoutes(app);
   registerProductRoutes(app);
   registerCommercialPolicyRoutes(app);
   registerTechnicalSettingRoutes(app);

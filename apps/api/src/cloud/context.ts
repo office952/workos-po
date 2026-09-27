@@ -36,6 +36,10 @@ export function getProductSystem(c: ApiContext): ProductSystemRuntime {
   return runtime;
 }
 
+export function getControlPlane(c: ApiContext): ControlPlane | null {
+  return c.get("controlPlane") ?? null;
+}
+
 export function getAccessMode(c: ApiContext): AccessMode {
   return c.get("accessMode") ?? "single_plane";
 }

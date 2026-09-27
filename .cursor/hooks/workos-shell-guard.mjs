@@ -500,7 +500,7 @@ function classifyPnpm(tokens) {
   if (names.has("engine:dev")) {
     return ask("pnpm engine:dev can start a Cloud-capable API process and needs Owner review.");
   }
-  if (names.has("cloud:provision")) {
+  if (names.has("cloud:provision") || names.has("cloud:provision-organization")) {
     return ask("cloud:provision is Owner-controlled Cloud administration.");
   }
   if (names.has("cloud:backup")) {
