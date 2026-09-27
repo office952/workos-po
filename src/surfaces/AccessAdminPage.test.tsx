@@ -18,11 +18,19 @@ const defaultAdmin = {
       userStatus: "ACTIVE",
       createdAt: "2026-01-01T00:00:00.000Z",
     },
+    {
+      membershipId: "mem:member",
+      email: "membru@firma.test",
+      role: "member",
+      status: "ACTIVE",
+      userStatus: "ACTIVE",
+      createdAt: "2026-01-02T00:00:00.000Z",
+    },
   ],
 };
 
 describe("AccessAdminPage", () => {
-  it("renders Owner access admin without exposing internal membership ids in the title", async () => {
+  it("renders Owner access admin without create form or internal membership ids", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -35,7 +43,16 @@ describe("AccessAdminPage", () => {
     render(<AccessAdminPage />);
 
     expect(await screen.findByText("owner@firma.test")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Adaugă utilizator" })).toBeEnabled();
+    expect(screen.getByText("membru@firma.test")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Utilizatorii noi sunt adăugați prin administrarea controlată WorkOS în această versiune/i,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Adaugă utilizator" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Parolă inițială")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Revocă" })).toHaveLength(2);
     expect(screen.getByRole("link", { name: "Produse oferite" })).toHaveAttribute(
       "href",
       "/admin/products",
@@ -43,7 +60,7 @@ describe("AccessAdminPage", () => {
     expect(screen.queryByText("mem:owner")).not.toBeInTheDocument();
   });
 
-  it("hides write controls for members", async () => {
+  it("hides revoke controls for members", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -57,10 +74,11 @@ describe("AccessAdminPage", () => {
 
     expect(await screen.findByText("owner@firma.test")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Adaugă utilizator" })).not.toBeInTheDocument();
-    expect(screen.getByText(/doar un Owner poate adăuga/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Revocă" })).not.toBeInTheDocument();
+    expect(screen.getByText(/doar un Owner poate revoca/i)).toBeInTheDocument();
   });
 
-  it("validates and posts a new user", async () => {
+  it("revokes an eligible membership without calling create users", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
@@ -70,18 +88,16 @@ describe("AccessAdminPage", () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        status: 201,
+        status: 200,
         json: async () => ({
           canEdit: true,
           members: [
-            ...defaultAdmin.members,
             {
-              membershipId: "mem:member",
-              email: "membru@firma.test",
-              role: "member",
-              status: "ACTIVE",
-              userStatus: "ACTIVE",
-              createdAt: "2026-01-02T00:00:00.000Z",
+              ...defaultAdmin.members[0],
+            },
+            {
+              ...defaultAdmin.members[1],
+              status: "REVOKED",
             },
           ],
         }),
@@ -89,57 +105,24 @@ describe("AccessAdminPage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<AccessAdminPage />);
-    await screen.findByText("owner@firma.test");
-    await userEvent.click(screen.getByRole("button", { name: "Adaugă utilizator" }));
-    await userEvent.type(screen.getByLabelText("Email"), "membru@firma.test");
-    await userEvent.type(screen.getByLabelText("Parolă inițială"), "MemberPass12");
-    await userEvent.click(screen.getByRole("button", { name: "Salvează utilizatorul" }));
+    await screen.findByText("membru@firma.test");
+    const revokeButtons = screen.getAllByRole("button", { name: "Revocă" });
+    await userEvent.click(revokeButtons[1]!);
 
-    expect(await screen.findByText("membru@firma.test")).toBeInTheDocument();
-    const createCall = fetchMock.mock.calls.find(
+    expect(await screen.findByText("Acces actualizat")).toBeInTheDocument();
+    const createCall = fetchMock.mock.calls.find((call) =>
+      String(call[0]).includes("/api/admin/access/users"),
+    );
+    expect(createCall).toBeUndefined();
+    const revokeCall = fetchMock.mock.calls.find(
       (call) =>
-        String(call[0]).includes("/api/admin/access/users") &&
+        String(call[0]).includes("/memberships/") &&
+        String(call[0]).includes("revoke") &&
         typeof call[1] === "object" &&
         call[1] !== null &&
         (call[1] as { method?: string }).method === "POST",
     );
-    expect(createCall).toBeTruthy();
-    expect(JSON.parse(String((createCall![1] as { body?: string }).body))).toMatchObject({
-      email: "membru@firma.test",
-      role: "member",
-      password: "MemberPass12",
-    });
-  });
-
-  it("renders a neutral error when identity cannot be added", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => defaultAdmin,
-      })
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 409,
-        json: async () => ({
-          error: "access_identity_unavailable",
-          reasons: ["Adresa nu poate fi adăugată prin această operație."],
-          ...defaultAdmin,
-        }),
-      });
-    vi.stubGlobal("fetch", fetchMock);
-
-    render(<AccessAdminPage />);
-    await screen.findByText("owner@firma.test");
-    await userEvent.click(screen.getByRole("button", { name: "Adaugă utilizator" }));
-    await userEvent.type(screen.getByLabelText("Email"), "altcineva@firma.test");
-    await userEvent.type(screen.getByLabelText("Parolă inițială"), "MemberPass12");
-    await userEvent.click(screen.getByRole("button", { name: "Salvează utilizatorul" }));
-
-    expect(
-      await screen.findByText("Adresa nu poate fi adăugată prin această operație."),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/already exists|user_disabled|dezactivat/i)).not.toBeInTheDocument();
+    expect(revokeCall).toBeTruthy();
+    expect(String(revokeCall![0])).toContain(encodeURIComponent("mem:member"));
   });
 });

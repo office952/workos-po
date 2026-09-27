@@ -1,20 +1,15 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import {
   presentOrganizationAccessAdmin,
   type OrganizationAccessAdminTransport,
 } from "../adapters/organizationAccessAdapter";
 import { readTransportErrorCode, readTransportReasons } from "../api/http";
-import {
-  postOrganizationAccessUser,
-  revokeOrganizationAccessMembership,
-} from "../api/organizationAccess";
+import { revokeOrganizationAccessMembership } from "../api/organizationAccess";
 import { Button } from "../components/Button";
 import { CollectionRail } from "../components/CollectionRail";
 import { InlineAlert } from "../components/InlineAlert";
 import { LoadingFloor } from "../components/LoadingFloor";
-import { SelectField } from "../components/SelectField";
 import { SurfacePanel } from "../components/SurfacePanel";
-import { TextField } from "../components/TextField";
 import { Worklist } from "../components/Worklist";
 import { WorklistRow } from "../components/WorklistRow";
 import { invalidateAfterOrganizationAccessChange } from "../data/invalidation";
@@ -28,11 +23,6 @@ import { formatTimestamp } from "../presentation/format";
 
 type SaveState = "idle" | "pending" | "success" | "error";
 
-const ROLE_OPTIONS = [
-  { value: "member", label: "Membru" },
-  { value: "owner", label: "Owner" },
-] as const;
-
 export function AccessAdminPage() {
   const admin = useResource(
     resourceKeys.organizationAccessAdmin(),
@@ -42,10 +32,6 @@ export function AccessAdminPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [source, setSource] = useState<unknown>(null);
   const [model, setModel] = useState<OrganizationAccessAdminTransport | null>(null);
-  const [showForm, setShowForm] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"owner" | "member">("member");
   const [revokingId, setRevokingId] = useState<string | null>(null);
 
   const loadState =
@@ -70,61 +56,19 @@ export function AccessAdminPage() {
     invalidateAfterOrganizationAccessChange();
   }
 
-  async function createUser(event: FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault();
-    if (!model?.canEdit) {
-      return;
-    }
-    setSaveState("pending");
-    setErrorMessage(null);
-    if (password.trim() === "") {
-      setSaveState("error");
-      setErrorMessage("Parola inițială este obligatorie.");
-      return;
-    }
-    const result = await postOrganizationAccessUser({
-      email: email.trim(),
-      role,
-      password,
-    });
-    if (result.ok) {
-      const presented = presentOrganizationAccessAdmin(result.body);
-      if (!presented) {
-        setSaveState("error");
-        setErrorMessage("Utilizatorul a fost adăugat, dar răspunsul nu poate fi prezentat.");
-        return;
-      }
-      applyAdmin(presented);
-      setEmail("");
-      setPassword("");
-      setRole("member");
-      setShowForm(false);
-      setSaveState("success");
-      return;
-    }
-    setSaveState("error");
-    const code = readTransportErrorCode(result.body);
-    setErrorMessage(
-      readTransportReasons(result.body)[0] ??
-        (code === "forbidden"
-          ? "Nu ai dreptul să gestionezi accesul."
-          : code === "access_identity_unavailable"
-            ? "Adresa nu poate fi adăugată prin această operație."
-            : "Utilizatorul nu a putut fi adăugat."),
-    );
-  }
-
   async function revokeMember(membershipId: string): Promise<void> {
     if (!model?.canEdit) {
       return;
     }
     setRevokingId(membershipId);
+    setSaveState("pending");
     setErrorMessage(null);
     const result = await revokeOrganizationAccessMembership(membershipId);
     setRevokingId(null);
     if (result.ok) {
       const presented = presentOrganizationAccessAdmin(result.body);
       if (!presented) {
+        setSaveState("error");
         setErrorMessage("Accesul a fost revocat, dar răspunsul nu poate fi prezentat.");
         return;
       }
@@ -142,7 +86,6 @@ export function AccessAdminPage() {
   }
 
   const pending = saveState === "pending";
-  const editEnabled = Boolean(model?.canEdit) && !pending;
 
   return (
     <SlicePage
@@ -151,10 +94,10 @@ export function AccessAdminPage() {
       workspace="admin"
       eyebrow="Administrare"
       title="Acces organizație"
-      lead="Gestionează utilizatorii care se pot autentifica în organizație. Conturile de producție (oameni/PIN) rămân separate."
+      lead="Vezi utilizatorii care se pot autentifica în organizație. Conturile de producție (oameni/PIN) rămân separate."
       meta={
         model?.canEdit
-          ? "Doar Owner poate adăuga sau revoca accesul."
+          ? "Doar Owner poate revoca accesul."
           : "Editarea nu este disponibilă pentru acest rol."
       }
     >
@@ -191,71 +134,14 @@ export function AccessAdminPage() {
             </InlineAlert>
           ) : null}
           <SurfacePanel title="Utilizatori cu acces" label="Acces">
+            <InlineAlert tone="pending" title="Adăugare utilizatori">
+              Utilizatorii noi sunt adăugați prin administrarea controlată WorkOS în această
+              versiune.
+            </InlineAlert>
             {!model.canEdit ? (
               <InlineAlert tone="pending" title="Doar citire">
-                Poți vedea utilizatorii, dar doar un Owner poate adăuga sau revoca accesul.
+                Poți vedea utilizatorii, dar doar un Owner poate revoca accesul.
               </InlineAlert>
-            ) : null}
-            {editEnabled ? (
-              <div className="cluster">
-                <Button
-                  onClick={() => {
-                    setShowForm((current) => !current);
-                    setSaveState("idle");
-                    setErrorMessage(null);
-                  }}
-                >
-                  Adaugă utilizator
-                </Button>
-              </div>
-            ) : null}
-            {showForm && editEnabled ? (
-              <form className="stack" onSubmit={(event) => void createUser(event)}>
-                <TextField
-                  id="access-email"
-                  label="Email"
-                  value={email}
-                  onChange={setEmail}
-                />
-                <SelectField
-                  id="access-role"
-                  label="Rol"
-                  value={role}
-                  options={ROLE_OPTIONS.map((item) => ({
-                    value: item.value,
-                    label: item.label,
-                  }))}
-                  onChange={(value) => {
-                    setRole(value === "owner" ? "owner" : "member");
-                  }}
-                />
-                <TextField
-                  id="access-password"
-                  label="Parolă inițială"
-                  type="password"
-                  value={password}
-                  onChange={setPassword}
-                  hint="Obligatorie. Creează un utilizator nou pentru această organizație."
-                />
-                <div className="cluster">
-                  <Button
-                    type="submit"
-                    disabled={pending || email.trim() === "" || password.trim() === ""}
-                  >
-                    Salvează utilizatorul
-                  </Button>
-                  <Button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => {
-                      setShowForm(false);
-                      setPassword("");
-                    }}
-                  >
-                    Renunță
-                  </Button>
-                </div>
-              </form>
             ) : null}
             <Worklist variant="compact" label="Utilizatori">
               {model.members.map((member) => (
