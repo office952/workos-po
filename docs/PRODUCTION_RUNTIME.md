@@ -115,7 +115,7 @@ NEXT_WAVE_AUTHORIZED = NO
 
 Exit `0` means READY. Exit `2` means blocked by configuration or readiness. Exit `3` means inspection failed closed. `--json` prints the same result object. Output must stay free of passwords, tokens, paths, and customer identifiers.
 
-An existing valid organization can be READY while production organization provisioning stays `NOT_READY` / `ADMIN_TOOLING_DEBT`. Requesting a new production organization is blocked until a supported production provisioning mechanism exists. General SaaS debts (signup, email verification, password recovery, MFA, billing, commercial onboarding) are advisories for a controlled pilot. Optional modules such as Site Installation and product enablement are not pilot blockers.
+An existing valid organization can be READY while real production organization provisioning stays deferred (`ADMIN_TOOLING_DEBT`). Controlled operator provisioning of a new organization is implemented and is not blocked by additional-user tooling. A real production cutover remains deferred. General SaaS debts (signup, email verification, password recovery, MFA, billing, commercial onboarding) are advisories for a controlled pilot. Optional modules such as Site Installation and product enablement are not pilot blockers.
 
 Pilot preflight reuses `evaluateReadiness`. It may be stricter than `GET /api/ready`. It must not report READY when that evaluator reports not ready. The preflight engine is Owner-accepted on synthetic proof. A real environment preflight has not been run. This acceptance does not authorize deployment, cutover, or a real Cloud inspection.
 
@@ -187,14 +187,17 @@ Login lockout is per API process. It does not survive restart and is not shared 
 
 Dev provision CLI remains refused when `NODE_ENV=production`.
 
+Controlled organization provisioning is implemented. Additional Cloud users for an existing organization are added with `pnpm cloud:add-organization-user`. That command is platform-operator tooling. It does not add browser user creation. New-organization provisioning is not blocked by additional-user tooling.
+
 ```text
+ADDITIONAL_USER_OPERATOR_TOOLING_V1 = IMPLEMENTED_LOCAL_IN_REVIEW
 PRODUCTION_ORG_PROVISIONING = ADMIN_TOOLING_DEBT
 ADMIN_TOOLING_DEBT = RECORDED_NOT_IMPLEMENTED
 ```
 
 Recorded, not implemented: self-service signup, email verification, password recovery, MFA, billing/subscriptions, production organization provisioning UX, commercial onboarding automation.
 
-Do not enable unrestricted production provisioning in this wave.
+Production cutover and the first real business operation remain deferred. Do not enable unrestricted production provisioning in this wave.
 
 ## Observability
 

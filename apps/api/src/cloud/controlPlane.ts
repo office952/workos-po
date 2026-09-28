@@ -176,6 +176,15 @@ export type ControlPlane = {
     userId: string,
     organizationId: string,
   ): CloudMembership | null;
+  getMembershipForUserInOrganization(
+    userId: string,
+    organizationId: string,
+  ): CloudMembership | null;
+  reactivateRevokedMembership(input: {
+    membershipId: string;
+    organizationId: string;
+    role: MembershipRole;
+  }): CloudMembership | null;
   createPlane(input: {
     organizationId: string;
     bootstrapPolicy: BootstrapPolicy;
@@ -598,6 +607,36 @@ export function createControlPlane(db: SqliteDatabase, cloudRoot: string): Contr
            WHERE user_id = ? AND organization_id = ? AND status = 'ACTIVE'`,
         )
         .get(userId, organizationId) as MembershipRow | undefined;
+      return row ? mapMembership(row) : null;
+    },
+    getMembershipForUserInOrganization(userId, organizationId) {
+      const row = db
+        .prepare(
+          `SELECT membership_id, user_id, organization_id, role, status, created_at
+           FROM organization_memberships
+           WHERE user_id = ? AND organization_id = ?`,
+        )
+        .get(userId, organizationId) as MembershipRow | undefined;
+      return row ? mapMembership(row) : null;
+    },
+    reactivateRevokedMembership(input) {
+      const result = db
+        .prepare(
+          `UPDATE organization_memberships
+           SET role = ?, status = 'ACTIVE'
+           WHERE membership_id = ? AND organization_id = ? AND status = 'REVOKED'`,
+        )
+        .run(input.role, input.membershipId, input.organizationId);
+      if (result.changes !== 1) {
+        return null;
+      }
+      const row = db
+        .prepare(
+          `SELECT membership_id, user_id, organization_id, role, status, created_at
+           FROM organization_memberships
+           WHERE membership_id = ?`,
+        )
+        .get(input.membershipId) as MembershipRow | undefined;
       return row ? mapMembership(row) : null;
     },
     createPlane(input) {

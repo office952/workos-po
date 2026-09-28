@@ -16,9 +16,9 @@ export type OrganizationAccessMember = {
 
 /**
  * Owner /admin/access V1 errors.
- * Owner browser create of global users is disabled for V1 (enumeration-safe).
- * ADDITIONAL_USER_OPERATOR_TOOLING = DEFERRED_FOLLOWUP
- * First Owner remains via controlled organization provisioning only.
+ * Owner browser create of global users stays disabled.
+ * Additional Cloud users are added only by controlled platform-operator tooling.
+ * First Owner remains via controlled organization provisioning.
  */
 export type OrganizationAccessError = "last_owner_removal" | "membership_missing";
 

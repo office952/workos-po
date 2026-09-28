@@ -10,6 +10,7 @@
     "test": "vitest run",
     "cloud:provision": "tsx src/cloud/devProvisionCli.ts",
     "cloud:provision-organization": "tsx src/cloud/controlledProvisionCli.ts",
+    "cloud:add-organization-user": "tsx src/cloud/addOrganizationUserCli.ts",
     "cloud:adopt": "tsx src/cloud/adoptCli.ts",
     "cloud:configure-providers": "tsx src/cloud/configureProvidersCli.ts",
     "cloud:backup": "tsx src/cloud/backupCli.ts",

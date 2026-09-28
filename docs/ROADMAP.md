@@ -66,7 +66,7 @@ CURRENT_PROGRAM_STATUS = IN_PROGRESS
 CONTROLLED_ORGANIZATION_PROVISIONING_V1 = COMPLETE / OWNER_ACCEPTED / INTEGRATED
 CONTROLLED_ORGANIZATION_PROVISIONING_V1_INTEGRATED_ON_MAIN = YES
 CONTROLLED_ORGANIZATION_PROVISIONING_V1_COMMIT = 6ad2f4b78b3dbd72dbb286107c6ac04e8dafcc9c
-ADDITIONAL_USER_OPERATOR_TOOLING = DEFERRED_FOLLOWUP
+ADDITIONAL_USER_OPERATOR_TOOLING_V1 = IMPLEMENTED_LOCAL_IN_REVIEW
 PRODUCTION_PILOT_READINESS_V1 = COMPLETE / OWNER_ACCEPTED
 MATERIAL_READINESS_V5B = COMPLETE / OWNER_ACCEPTED / INTEGRATED
 MATERIAL_READINESS_V5B_PR = 37
@@ -797,7 +797,7 @@ CURRENT_PROGRAM_STATUS = IN_PROGRESS
 CONTROLLED_ORGANIZATION_PROVISIONING_V1 = COMPLETE / OWNER_ACCEPTED / INTEGRATED
 CONTROLLED_ORGANIZATION_PROVISIONING_V1_INTEGRATED_ON_MAIN = YES
 CONTROLLED_ORGANIZATION_PROVISIONING_V1_COMMIT = 6ad2f4b78b3dbd72dbb286107c6ac04e8dafcc9c
-ADDITIONAL_USER_OPERATOR_TOOLING = DEFERRED_FOLLOWUP
+ADDITIONAL_USER_OPERATOR_TOOLING_V1 = IMPLEMENTED_LOCAL_IN_REVIEW
 PRODUCTION_PILOT_READINESS_V1 = COMPLETE / OWNER_ACCEPTED
 MATERIAL_READINESS_V5B = COMPLETE / OWNER_ACCEPTED / INTEGRATED
 MATERIAL_READINESS_V5B_PR = 37
@@ -853,7 +853,7 @@ PLANNING_CAPACITY_CANON = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
 PRODUCTION_PILOT_READINESS_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 ```
 
-Production Pilot Readiness V1 is Owner-accepted as the read-only preflight engine. Synthetic proof passed. A real environment preflight has not been run. Acceptance does not authorize deployment, cutover, real Cloud access, or production organization provisioning. New-organization preflight stays blocked by `ADMIN_TOOLING_DEBT`. General SaaS debts remain debt.
+Production Pilot Readiness V1 is Owner-accepted as the read-only preflight engine. Synthetic proof passed. A real environment preflight has not been run. Acceptance does not authorize deployment, cutover, real Cloud access, or production organization provisioning. Controlled new-organization provisioning is complete and is not blocked by additional-user tooling. Additional user operator tooling V1 is implemented locally and in review. Real production organization provisioning remains deferred, and the read-only preflight still records that production path as unsupported (`ADMIN_TOOLING_DEBT`). General SaaS debts remain debt.
 
 ```text
 INDEPENDENT_REVIEW = PASS

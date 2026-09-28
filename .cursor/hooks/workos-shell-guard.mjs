@@ -503,6 +503,9 @@ function classifyPnpm(tokens) {
   if (names.has("cloud:provision") || names.has("cloud:provision-organization")) {
     return ask("cloud:provision is Owner-controlled Cloud administration.");
   }
+  if (names.has("cloud:add-organization-user")) {
+    return ask("cloud:add-organization-user is Owner-controlled Cloud administration.");
+  }
   if (names.has("cloud:backup")) {
     return ask("cloud:backup is Owner-controlled Cloud administration.");
   }
