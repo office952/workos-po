@@ -1,6 +1,7 @@
 import { createInterface } from "node:readline";
 import { stdin, stderr } from "node:process";
 import { fileURLToPath } from "node:url";
+import type { BootstrapPolicy } from "./controlPlane.js";
 import { assertCloudPassword } from "./password.js";
 import {
   ProvisionConflictError,
@@ -8,6 +9,28 @@ import {
   resumeOrganizationProvision,
   type ProvisionResult,
 } from "./provision.js";
+
+/** Dev provision may only create empty-foundation policies — never ADOPT_EXISTING. */
+export const DEV_PROVISION_BOOTSTRAP_POLICIES = [
+  "NEW_ORGANIZATION",
+  "SYNTHETIC_TEST",
+] as const satisfies readonly BootstrapPolicy[];
+
+export type DevProvisionBootstrapPolicy = (typeof DEV_PROVISION_BOOTSTRAP_POLICIES)[number];
+
+export function parseDevProvisionBootstrapPolicy(
+  value: string | undefined,
+): DevProvisionBootstrapPolicy {
+  if (value === undefined || value === "") {
+    return "NEW_ORGANIZATION";
+  }
+  if (value === "NEW_ORGANIZATION" || value === "SYNTHETIC_TEST") {
+    return value;
+  }
+  throw new Error(
+    `Invalid --bootstrap-policy ${value}. Allowed: NEW_ORGANIZATION | SYNTHETIC_TEST.`,
+  );
+}
 
 type PasswordInput = NodeJS.ReadableStream & {
   isTTY?: boolean;
@@ -103,7 +126,10 @@ function promptHiddenPassword(label: string, input: PasswordInput): Promise<stri
   });
 }
 
-function printProvisionResult(result: ProvisionResult): void {
+function printProvisionResult(
+  result: ProvisionResult,
+  bootstrapPolicy: DevProvisionBootstrapPolicy,
+): void {
   console.log("dev-helper: local Cloud setup only. Not Slice 3 adopt/production bootstrap.");
   if (result.alreadyActive) {
     console.log("already_active");
@@ -112,7 +138,20 @@ function printProvisionResult(result: ProvisionResult): void {
   console.log(`organizationId: ${result.organization.organizationId}`);
   console.log(`status: ${result.organization.status}`);
   console.log(`user: ${result.user.email}`);
+  console.log(`bootstrapPolicy: ${bootstrapPolicy}`);
   console.log(`plane: ${result.paths.sqlitePath}`);
+}
+
+function readOptionalArg(argv: readonly string[], name: string): string | undefined {
+  const index = argv.indexOf(`--${name}`);
+  if (index < 0) {
+    return undefined;
+  }
+  const value = argv[index + 1];
+  if (!value || value.startsWith("--")) {
+    throw new Error(`Missing value for --${name}`);
+  }
+  return value;
 }
 
 export async function runDevProvisionCli(
@@ -139,19 +178,28 @@ export async function runDevProvisionCli(
       password,
       env,
     });
-    printProvisionResult(result);
+    const policy =
+      result.plane.bootstrapPolicy === "SYNTHETIC_TEST" ||
+      result.plane.bootstrapPolicy === "NEW_ORGANIZATION"
+        ? result.plane.bootstrapPolicy
+        : "NEW_ORGANIZATION";
+    printProvisionResult(result, policy);
     return;
   }
   const displayName = readArg(argv, "org");
+  const bootstrapPolicy = parseDevProvisionBootstrapPolicy(
+    readOptionalArg(argv, "bootstrap-policy"),
+  );
   try {
     const result = await provisionNewOrganization({
       cloudRoot,
       displayName,
       email,
       password,
+      bootstrapPolicy,
       env,
     });
-    printProvisionResult(result);
+    printProvisionResult(result, bootstrapPolicy);
   } catch (error) {
     if (error instanceof ProvisionConflictError && error.code === "incomplete_organization_exists") {
       console.error("incomplete_organization_exists");

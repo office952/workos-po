@@ -9,6 +9,11 @@ export function markerPath(root: string): string;
 export function hasSyntheticMarker(root: string): boolean;
 export function looksLikeBusinessStorage(root: string): boolean;
 export function classifyReferenceRoot(root: string): string;
+export function isTrulyEmptyDirectory(root: string): boolean;
 export function assertSafeReferenceRoot(root: string): string;
 export function ensureSyntheticReferenceRoot(root: string): string;
+export function prepareReferenceRootForCommand(
+  command: string,
+  env?: NodeJS.ProcessEnv,
+): string;
 export function isInside(base: string, candidate: string): boolean;

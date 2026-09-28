@@ -1,11 +1,16 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   assertSafeReferenceRoot,
   classifyReferenceRoot,
   ensureSyntheticReferenceRoot,
+  hasSyntheticMarker,
+  isTrulyEmptyDirectory,
+  prepareReferenceRootForCommand,
   resolveReferenceRoot,
 } from "../../../scripts/reference-root.mjs";
 import {
@@ -20,12 +25,38 @@ import {
 } from "../../../scripts/dev-ports.mjs";
 
 const temps: string[] = [];
+const repoRoot = fileURLToPath(new URL("../../..", import.meta.url));
 
 afterEach(() => {
   for (const dir of temps.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+function runReferenceRuntime(
+  command: string,
+  env: NodeJS.ProcessEnv,
+): Promise<{ code: number | null; stderr: string; stdout: string }> {
+  return new Promise((resolvePromise, reject) => {
+    const child = spawn("node", ["scripts/reference-runtime.mjs", command], {
+      cwd: repoRoot,
+      env: { ...process.env, ...env, NODE_ENV: "development" },
+      windowsHide: true,
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk: Buffer) => {
+      stdout += chunk.toString("utf8");
+    });
+    child.stderr.on("data", (chunk: Buffer) => {
+      stderr += chunk.toString("utf8");
+    });
+    child.on("error", reject);
+    child.on("exit", (code) => {
+      resolvePromise({ code, stderr, stdout });
+    });
+  });
+}
 
 describe("reference root classification", () => {
   it("uses WORKOS_REFERENCE_ROOT and refuses production", () => {
@@ -57,9 +88,84 @@ describe("reference root classification", () => {
   it("creates a synthetic marker on an empty root", () => {
     const root = mkdtempSync(join(tmpdir(), "workos-reference-empty-"));
     temps.push(root);
+    expect(isTrulyEmptyDirectory(root)).toBe(true);
     ensureSyntheticReferenceRoot(root);
     expect(classifyReferenceRoot(root)).toBe("SYNTHETIC_REFERENCE");
   });
+
+  it("refuses to claim ownership of a nonempty unmarked root", () => {
+    const root = mkdtempSync(join(tmpdir(), "workos-reference-nonempty-"));
+    temps.push(root);
+    const planted = join(root, "planted-foreign.txt");
+    writeFileSync(planted, "FOREIGN_CONTENT");
+    expect(classifyReferenceRoot(root)).toBe("EMPTY_OR_UNKNOWN");
+    expect(isTrulyEmptyDirectory(root)).toBe(false);
+    expect(() => ensureSyntheticReferenceRoot(root)).toThrow(/nonempty_unmarked/);
+    expect(hasSyntheticMarker(root)).toBe(false);
+    expect(readFileSync(planted, "utf8")).toBe("FOREIGN_CONTENT");
+  });
+});
+
+describe("Owner-facing reference command root policy", () => {
+  it("reset does not mint SYNTHETIC_REFERENCE on a nonempty unmarked root", () => {
+    const root = mkdtempSync(join(tmpdir(), "workos-wrapper-reset-policy-"));
+    temps.push(root);
+    writeFileSync(join(root, "planted.txt"), "KEEP");
+    const prepared = prepareReferenceRootForCommand("reset", {
+      WORKOS_REFERENCE_ROOT: root,
+      NODE_ENV: "development",
+    });
+    expect(prepared).toBe(resolve(root));
+    expect(hasSyntheticMarker(prepared)).toBe(false);
+    expect(readdirSync(prepared).sort()).toEqual(["planted.txt"]);
+  });
+
+  it("start may establish ownership only on absent or truly empty roots", () => {
+    const absent = join(mkdtempSync(join(tmpdir(), "workos-wrapper-absent-base-")), "new-root");
+    temps.push(join(absent, ".."));
+    const created = prepareReferenceRootForCommand("start", {
+      WORKOS_REFERENCE_ROOT: absent,
+      NODE_ENV: "development",
+    });
+    expect(hasSyntheticMarker(created)).toBe(true);
+
+    const nonempty = mkdtempSync(join(tmpdir(), "workos-wrapper-start-nonempty-"));
+    temps.push(nonempty);
+    writeFileSync(join(nonempty, "foreign.bin"), "x");
+    expect(() =>
+      prepareReferenceRootForCommand("start", {
+        WORKOS_REFERENCE_ROOT: nonempty,
+        NODE_ENV: "development",
+      }),
+    ).toThrow(/nonempty_unmarked/);
+    expect(hasSyntheticMarker(nonempty)).toBe(false);
+  });
+});
+
+describe("Owner-facing reference:reset end-to-end", () => {
+  it("refuses nonempty unmarked roots without creating a marker or deleting planted files", async () => {
+    const root = mkdtempSync(join(tmpdir(), "workos-wrapper-reset-e2e-"));
+    temps.push(root);
+    const plantedPath = join(root, "unrelated-owner-file.txt");
+    const plantedBody = "DO_NOT_DELETE_UNRELATED_CONTENT";
+    writeFileSync(plantedPath, plantedBody);
+    const beforeEntries = readdirSync(root).sort();
+
+    const result = await runReferenceRuntime("reset", {
+      WORKOS_REFERENCE_ROOT: root,
+      WORKOS_CLOUD_ROOT: "C:\\should\\not\\be\\used",
+      NODE_ENV: "development",
+    });
+
+    expect(result.code).not.toBe(0);
+    expect(`${result.stderr}\n${result.stdout}`).toMatch(
+      /synthetic_marker_required|owner_review_reset_refused/,
+    );
+    expect(hasSyntheticMarker(root)).toBe(false);
+    expect(existsSync(plantedPath)).toBe(true);
+    expect(readFileSync(plantedPath, "utf8")).toBe(plantedBody);
+    expect(readdirSync(root).sort()).toEqual(beforeEntries);
+  }, 60_000);
 });
 
 describe("protected owner reference port", () => {
