@@ -128,7 +128,7 @@ describe("ProductEnablementAdminPage", () => {
     expect(await screen.findByLabelText("Litere volumetrice față plexi")).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Salvează produsele oferite" })).not.toBeInTheDocument();
     expect(
-      screen.getAllByText("Editarea nu este disponibilă pentru acest rol.").length,
-    ).toBeGreaterThan(0);
+      screen.getByText("Editarea nu este disponibilă pentru acest rol."),
+    ).toBeInTheDocument();
   });
 });

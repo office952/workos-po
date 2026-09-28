@@ -4,6 +4,7 @@ import type {
   ResourcesAdminTransport,
   ResourcesWriteState,
 } from "../api/types";
+import { presentOperatorFacingCopyOrNull } from "../presentation/operatorFacingCopy";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object"
@@ -59,7 +60,10 @@ function presentRow(value: unknown): CostEvidenceRowTransport | null {
     unitLabel: typeof record.unitLabel === "string" ? record.unitLabel : null,
     amountDisplay:
       typeof record.amountDisplay === "string" ? record.amountDisplay : null,
-    note: typeof record.note === "string" ? record.note : null,
+    note:
+      typeof record.note === "string"
+        ? presentOperatorFacingCopyOrNull(record.note)
+        : null,
     lastChangedAt:
       typeof record.lastChangedAt === "string" ? record.lastChangedAt : null,
   };

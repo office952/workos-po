@@ -20,7 +20,7 @@ const ownerPayload = {
       currency: "EUR",
       unitLabel: "m",
       amountDisplay: "3,00 EUR / m · Adâncime volum: 60 mm",
-      note: "Owner-confirmed",
+      note: "Valoare implicită de platformă. Trebuie confirmată de owner.",
       lastChangedAt: "2026-09-01T00:00:00.000Z",
     },
     {
@@ -47,6 +47,9 @@ describe("presentResourcesAdmin", () => {
     const presented = presentResourcesAdmin(ownerPayload);
     expect(presented?.canEdit).toBe(true);
     expect(presented?.writeState).toBe("READY");
+    expect(presented?.rows[0]?.note).toBe(
+      "Valoare implicită de platformă. Trebuie confirmată de proprietar.",
+    );
     expect(
       findCostEvidenceRow(
         presented?.rows ?? [],

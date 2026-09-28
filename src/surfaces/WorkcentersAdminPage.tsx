@@ -31,6 +31,7 @@ import { loadWorkcentersAdmin } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { administrationRailItems } from "../layout/administrationNav";
 import { SlicePage } from "../layout/SlicePage";
+import { presentAdminEditMeta } from "../presentation/adminEditMeta";
 import { statusTone } from "../presentation/statusTone";
 import { adminMachineHref, adminWorkcenterHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
@@ -54,7 +55,7 @@ function mutationMessage(code: string | null, fallback: string): string {
     case "invalid_workcenter":
       return "Zona de lucru nu este valabilă.";
     case "provider_referenced":
-      return "Istoricul de execuție păstrează acest furnizor. Capabilitățile și mutarea nu pot fi schimbate.";
+      return "Istoricul de execuție păstrează această zonă sau utilaj. Capabilitățile și mutarea nu pot fi schimbate.";
     case "has_open_assignment":
       return "Furnizorul este atribuit unei sarcini deschise și nu poate fi retras.";
     case "has_active_machines":
@@ -416,11 +417,13 @@ export function WorkcentersAdminPage({
       eyebrow="Administrare"
       title="Zone și utilaje"
       lead="Configurează zonele de lucru și utilajele. Atelierul citește același registru."
-      meta={
-        model?.canEdit
-          ? "Doar Owner poate adăuga, modifica sau retrage zonele și utilajele."
-          : "Editarea nu este disponibilă pentru acest rol."
-      }
+      meta={presentAdminEditMeta({
+        settled: loadState === "ready" && model !== null,
+        canEdit: Boolean(model?.canEdit),
+        whenEditable:
+          "Doar proprietarul poate adăuga, modifica sau retrage zonele și utilajele.",
+        whenReadOnly: "Editarea nu este disponibilă pentru acest rol.",
+      })}
     >
       {loadState === "loading" ? (
         <>
@@ -500,9 +503,7 @@ export function WorkcentersAdminPage({
                 Adaugă zona
               </Button>
             </SurfacePanel>
-          ) : (
-            <p>Editarea nu este disponibilă pentru acest rol.</p>
-          )}
+          ) : null}
           {selectedWorkcenter ? (
             <WorkcenterDetail
               workcenter={selectedWorkcenter}

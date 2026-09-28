@@ -16,9 +16,28 @@ describe("AccountArea", () => {
     );
 
     expect(screen.getByText("Atelier Alpha")).toHaveAttribute("title", "Atelier Alpha");
-    expect(screen.getByText("owner@example.test")).toHaveAttribute("title", "owner@example.test");
     expect(screen.queryByLabelText("Organizație activă")).not.toBeInTheDocument();
     expect(screen.queryByText("org:a")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cont" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ieși din cont" })).not.toBeInTheDocument();
+  });
+
+  it("opens account menu with theme and logout", async () => {
+    const onLogout = vi.fn();
+    render(
+      <AccountArea
+        organizationName="Atelier Alpha"
+        userLabel="owner@example.test"
+        membershipRole="owner"
+        memberships={[{ organizationId: "org:a", displayName: "Atelier Alpha" }]}
+        currentOrganizationId="org:a"
+        onLogout={onLogout}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Cont" }));
+    expect(screen.getByText("owner@example.test")).toBeInTheDocument();
+    expect(screen.getByLabelText("Aspect")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ieși din cont" })).toBeInTheDocument();
   });
 
@@ -38,6 +57,7 @@ describe("AccountArea", () => {
       />,
     );
 
+    await userEvent.click(screen.getByRole("button", { name: "Cont" }));
     const select = screen.getByLabelText("Organizație activă");
     expect(select.tagName).toBe("SELECT");
     await userEvent.selectOptions(select, "org:b");

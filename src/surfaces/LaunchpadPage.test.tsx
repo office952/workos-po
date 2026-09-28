@@ -44,8 +44,12 @@ describe("LaunchpadPage", () => {
 
     expect(await screen.findByText(/Atelier Alpha/)).toBeInTheDocument();
     expect(screen.getByText(/Proprietar/)).toBeInTheDocument();
-    expect(screen.getByText("Pregătit pentru lucru")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Planificare/ })).toHaveAttribute("href", "/planificare");
+    expect(screen.getByText("Pregătit")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Continuă" })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /Planificare/ })[0]).toHaveAttribute(
+      "href",
+      "/planificare",
+    );
     expect(screen.getByRole("heading", { name: "Comercial" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Operațiuni" })).toBeInTheDocument();
     expect(screen.getByText("Poți modifica setările pentru lucrările noi.")).toBeInTheDocument();

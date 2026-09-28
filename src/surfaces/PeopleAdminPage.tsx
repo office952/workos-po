@@ -31,6 +31,7 @@ import { loadPeopleAdmin } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { administrationRailItems } from "../layout/administrationNav";
 import { SlicePage } from "../layout/SlicePage";
+import { presentAdminEditMeta } from "../presentation/adminEditMeta";
 import { statusTone } from "../presentation/statusTone";
 import { adminPersonHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
@@ -292,11 +293,13 @@ export function PeopleAdminPage({ personId = null }: PeopleAdminPageProps) {
       eyebrow="Administrare"
       title="Oameni"
       lead="Configurează persoanele care pot lucra în producție. Contul de autentificare rămâne separat."
-      meta={
-        model?.canEdit
-          ? "Doar Owner poate adăuga, modifica sau retrage oamenii operaționali."
-          : "Editarea nu este disponibilă pentru acest rol."
-      }
+      meta={presentAdminEditMeta({
+        settled: loadState === "ready" && model !== null,
+        canEdit: Boolean(model?.canEdit),
+        whenEditable:
+          "Doar proprietarul poate adăuga, modifica sau retrage oamenii operaționali.",
+        whenReadOnly: "Editarea nu este disponibilă pentru acest rol.",
+      })}
     >
       {loadState === "loading" ? (
         <>
@@ -372,9 +375,7 @@ export function PeopleAdminPage({ personId = null }: PeopleAdminPageProps) {
                 Adaugă persoana
               </Button>
             </SurfacePanel>
-          ) : (
-            <p>Editarea nu este disponibilă pentru acest rol.</p>
-          )}
+          ) : null}
           {selected ? (
             <SurfacePanel
               title={selected.displayName}

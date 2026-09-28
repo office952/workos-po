@@ -23,6 +23,7 @@ import { loadProductEnablementAdmin } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { administrationRailItems } from "../layout/administrationNav";
 import { SlicePage } from "../layout/SlicePage";
+import { presentAdminEditMeta } from "../presentation/adminEditMeta";
 import { formatTimestamp } from "../presentation/format";
 
 type SaveState = "idle" | "pending" | "success" | "error";
@@ -106,11 +107,12 @@ export function ProductEnablementAdminPage() {
       eyebrow="Administrare"
       title="Produse oferite"
       lead="Alege ce produse apar în catalogul pentru lucrări noi. Ofertele și lucrările vechi rămân deschise."
-      meta={
-        model?.canEdit
-          ? "Doar Owner poate confirma produsele oferite de firmă."
-          : "Editarea nu este disponibilă pentru acest rol."
-      }
+      meta={presentAdminEditMeta({
+        settled: loadState === "ready" && model !== null,
+        canEdit: Boolean(model?.canEdit),
+        whenEditable: "Doar proprietarul poate confirma produsele oferite de firmă.",
+        whenReadOnly: "Editarea nu este disponibilă pentru acest rol.",
+      })}
     >
       {loadState === "loading" ? (
         <>
@@ -213,9 +215,7 @@ export function ProductEnablementAdminPage() {
               >
                 Salvează produsele oferite
               </Button>
-            ) : (
-              <p>Editarea nu este disponibilă pentru acest rol.</p>
-            )}
+            ) : null}
             {pending ? <LoadingIndicator label="Se salvează produsele oferite" /> : null}
           </SurfacePanel>
           <SurfacePanel title="Istoric versiuni" label="Istoric">

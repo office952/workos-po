@@ -21,22 +21,39 @@ import { statusTone } from "../presentation/statusTone";
 import { clientHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
 
-const COLUMNS = ["Client", "Loc", "Stare", "Acțiune"] as const;
+const ALL = "all";
+const COLUMNS = ["Client", "Stare", "Acțiune"] as const;
 
 export function ClientsPage() {
   const customers = useResource(resourceKeys.customers(), loadCustomerList);
   const items = useMemo(() => customers.data ?? [], [customers.data]);
   const [name, setName] = useState("");
   const [query, setQuery] = useState("");
+  const [statusChip, setStatusChip] = useState(ALL);
   const [saveState, setSaveState] = useState<"idle" | "pending" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const statusChips = useMemo(
+    () => [
+      { id: ALL, label: "Toate" },
+      { id: "ACTIVE", label: "Active" },
+    ],
+    [],
+  );
+
   const visible = useMemo(
     () =>
-      items.filter((customer) =>
-        matchesSearch(query, [customer.displayName, customer.city, customer.status]),
-      ),
-    [items, query],
+      items.filter((customer) => {
+        const matchesChip =
+          statusChip === ALL ||
+          (statusChip === "ACTIVE" && customer.status === "ACTIVE") ||
+          customer.status === statusChip;
+        return (
+          matchesChip &&
+          matchesSearch(query, [customer.displayName, customer.city, customer.status])
+        );
+      }),
+    [items, query, statusChip],
   );
 
   async function create(): Promise<void> {
@@ -66,14 +83,17 @@ export function ClientsPage() {
     }
   }
 
+  const resultCount =
+    customers.status === "success" ? `${visible.length} rezultate` : undefined;
+
   return (
     <SlicePage
       contextLabel="Clienți"
       currentHref="/clienti"
       workspace="collection-with-rail"
-      eyebrow="Clienți"
       title="Clienți"
       lead="Alege un client existent sau înregistrează unul nou pentru lucrare."
+      meta={resultCount}
     >
       <SurfacePanel
         variant="flush"
@@ -85,7 +105,9 @@ export function ClientsPage() {
           searchLabel="Caută"
           searchValue={query}
           onSearchChange={setQuery}
-          meta={customers.status === "success" ? `${visible.length} din ${items.length}` : undefined}
+          chips={statusChips}
+          selectedChip={statusChip}
+          onChipChange={setStatusChip}
         />
         <CollectionBody
           status={customers.status}
@@ -111,7 +133,6 @@ export function ClientsPage() {
               variant="commercial"
               href={clientHref(customer.customerId)}
               identity={customer.displayName}
-              context={customer.city ?? "Client"}
               state={
                 <StatusBadge
                   label={customer.status === "ACTIVE" ? "Activ" : customer.status}
@@ -133,6 +154,7 @@ export function ClientsPage() {
         >
           Înregistrează clientul
         </Button>
+        <p className="ui-note">Creează clientul și deschide fișa pentru continuare.</p>
         {saveError ? (
           <InlineAlert tone="error" title="Înregistrarea a eșuat">
             {saveError}

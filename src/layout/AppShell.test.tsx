@@ -1,10 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppShell } from "./AppShell";
 
 describe("AppShell", () => {
-  it("places organization, account, and aspect together", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("places organization, account, and aspect together", async () => {
     render(
       <AppShell
         contextLabel="Clienți"
@@ -29,14 +33,19 @@ describe("AppShell", () => {
     expect(account).not.toBeNull();
     expect(bar?.contains(account)).toBe(true);
     expect(screen.getByText("Atelier Alpha")).toBeInTheDocument();
-    expect(screen.getByText("owner@example.test")).toBeInTheDocument();
     expect(screen.getByText("Proprietar")).toBeInTheDocument();
     expect(screen.queryByText("org:a")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Ieși din cont" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Aspect")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cont" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ieși din cont" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Aspect")).not.toBeInTheDocument();
     expect(document.querySelector(".app-shell__context")).toBeNull();
     expect(screen.getByRole("link", { name: "Clienți" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("navigation", { name: "Navigare principală" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Cont" }));
+    expect(screen.getByText("owner@example.test")).toBeInTheDocument();
+    expect(screen.getByLabelText("Aspect")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ieși din cont" })).toBeInTheDocument();
   });
 
   it("keeps one Administrare entry and discovers Planificare", () => {
@@ -81,6 +90,45 @@ describe("AppShell", () => {
     expect(screen.getByRole("link", { name: "Administrare" })).not.toHaveAttribute(
       "aria-current",
     );
+  });
+
+  it("keeps mid-width overflow destinations under Mai multe", async () => {
+    const media = {
+      matches: true,
+      media: "(max-width: 1024px)",
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+      onchange: null,
+    } as MediaQueryList;
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      configurable: true,
+      value: vi.fn().mockReturnValue(media),
+    });
+
+    render(
+      <AppShell contextLabel="Clienți" mode="slice" currentHref="/catalog">
+        <div>conținut</div>
+      </AppShell>,
+    );
+
+    expect(document.querySelector(".app-shell__nav-compact")).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Clienți" })).toBeInTheDocument();
+    const more = screen.getByRole("button", { name: "Mai multe" });
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(more);
+    expect(more).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("menuitem", { name: "Catalog" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("menuitem", { name: "Oferte" })).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    expect(more).toHaveFocus();
   });
 
   it("moves through the shell from the keyboard", async () => {

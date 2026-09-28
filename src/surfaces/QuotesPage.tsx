@@ -60,9 +60,10 @@ export function QuotesPage() {
     <SlicePage
       contextLabel="Oferte"
       currentHref="/oferte"
-      eyebrow="Oferte"
+      workspace="stack"
       title="Oferte"
       lead="Ofertele înghețate rămân neschimbate după acceptare."
+      meta={quotes.status === "success" ? `${visible.length} rezultate` : undefined}
     >
       <SurfacePanel
         variant="flush"
@@ -77,7 +78,6 @@ export function QuotesPage() {
           chips={chips}
           selectedChip={stageChip}
           onChipChange={setStageChip}
-          meta={quotes.status === "success" ? `${visible.length} din ${items.length}` : undefined}
         />
         <CollectionBody
           status={quotes.status}

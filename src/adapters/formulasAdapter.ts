@@ -1,3 +1,7 @@
+import {
+  presentOperatorFacingCopy,
+  presentOperatorFacingCopyOrNull,
+} from "../presentation/operatorFacingCopy";
 import { asNumber, asRecord, asString } from "./record";
 
 export type FormulaAstTransport =
@@ -72,7 +76,7 @@ export function presentFormulasAdmin(payload: unknown): FormulasAdminTransport |
             resultId: asString(row.resultId) ?? "",
             typeId: asString(row.typeId) ?? "",
             label: asString(row.label) ?? row.formulaId,
-            description: asString(row.description) ?? "",
+            description: presentOperatorFacingCopy(asString(row.description) ?? ""),
             resultUnit: asString(row.resultUnit) ?? "",
             resultValueKind: asString(row.resultValueKind) ?? "",
             allowedOperators: asStringArray(row.allowedOperators),
@@ -80,9 +84,9 @@ export function presentFormulasAdmin(payload: unknown): FormulasAdminTransport |
             allowedJobIds: asStringArray(allowed?.jobInputIds),
             allowedFormulaIds: asStringArray(allowed?.formulaIds),
             expression: presentFormulaAst(row.expression),
-            explanation: asString(row.explanation),
+            explanation: presentOperatorFacingCopyOrNull(asString(row.explanation)),
             source: asString(row.source),
-            sourceLabel: asString(row.sourceLabel),
+            sourceLabel: presentOperatorFacingCopyOrNull(asString(row.sourceLabel)),
             version: asNumber(row.version),
             status: asString(row.status),
             statusLabel: asString(row.statusLabel),
@@ -105,7 +109,7 @@ export function presentFormulasAdmin(payload: unknown): FormulasAdminTransport |
             status: asString(row.status) ?? "",
             statusLabel: asString(row.statusLabel) ?? "",
             source: asString(row.source) ?? "",
-            sourceLabel: asString(row.sourceLabel) ?? "",
+            sourceLabel: presentOperatorFacingCopy(asString(row.sourceLabel) ?? ""),
             createdAt: asString(row.createdAt),
             effectiveFrom: asString(row.effectiveFrom),
           },
@@ -115,7 +119,7 @@ export function presentFormulasAdmin(payload: unknown): FormulasAdminTransport |
   return {
     canEdit: record.canEdit === true,
     resolutionOk: record.resolutionOk !== false,
-    guidance: asString(record.guidance),
+    guidance: presentOperatorFacingCopyOrNull(asString(record.guidance)),
     formulas,
     history,
   };

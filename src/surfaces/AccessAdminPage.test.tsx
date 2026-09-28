@@ -75,7 +75,7 @@ describe("AccessAdminPage", () => {
     expect(await screen.findByText("owner@firma.test")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Adaugă utilizator" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Revocă" })).not.toBeInTheDocument();
-    expect(screen.getByText(/doar un Owner poate revoca/i)).toBeInTheDocument();
+    expect(screen.getByText(/doar proprietarul poate revoca/i)).toBeInTheDocument();
   });
 
   it("revokes an eligible membership without calling create users", async () => {

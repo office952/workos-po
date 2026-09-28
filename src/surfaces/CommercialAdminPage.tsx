@@ -23,6 +23,7 @@ import { loadCommercialPolicyAdmin } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { administrationRailItems } from "../layout/administrationNav";
 import { SlicePage } from "../layout/SlicePage";
+import { presentAdminEditMeta } from "../presentation/adminEditMeta";
 import { formatTimestamp } from "../presentation/format";
 
 type SaveState = "idle" | "pending" | "success" | "error";
@@ -118,11 +119,12 @@ export function CommercialAdminPage() {
       eyebrow="Administrare"
       title="Valori comerciale implicite"
       lead="Aceste valori sunt folosite ca punct de pornire pentru ofertele noi. Pot fi modificate individual pe fiecare ofertă. Salvarea creează o versiune nouă. Ofertele înghețate rămân neschimbate."
-      meta={
-        model?.canEdit
-          ? "Doar Owner poate confirma politica organizației."
-          : "Editarea nu este disponibilă pentru acest rol."
-      }
+      meta={presentAdminEditMeta({
+        settled: loadState === "ready" && model !== null,
+        canEdit: Boolean(model?.canEdit),
+        whenEditable: "Doar proprietarul poate confirma politica organizației.",
+        whenReadOnly: "Editarea nu este disponibilă pentru acest rol.",
+      })}
     >
       {loadState === "loading" ? (
         <>
@@ -233,9 +235,7 @@ export function CommercialAdminPage() {
               >
                 Salvează politica
               </Button>
-            ) : (
-              <p>Editarea nu este disponibilă pentru acest rol.</p>
-            )}
+            ) : null}
             {pending ? <LoadingIndicator label="Se salvează politica comercială" /> : null}
           </SurfacePanel>
           <SurfacePanel title="Istoric versiuni" label="Istoric">

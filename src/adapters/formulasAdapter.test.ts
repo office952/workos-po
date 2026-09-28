@@ -57,4 +57,46 @@ describe("formulasAdapter", () => {
     expect(presentFormulaAst({ kind: "EVAL", code: "1+1" })).toBeNull();
     expect(presentFormulasAdmin(null)).toBeNull();
   });
+
+  it("maps English owner wording in operator-facing formula copy", () => {
+    const presented = presentFormulasAdmin({
+      canEdit: true,
+      resolutionOk: true,
+      guidance: "Doar ownerul confirmă.",
+      formulas: [
+        {
+          formulaId: "LIGHTING_FRONT_LED.ledModuleQuantity",
+          resultId: "ledModuleQuantity",
+          typeId: "LIGHTING_FRONT_LED",
+          label: "Cantitate module LED",
+          description:
+            "Formula poate fi schimbată de owner fără editare de sursă.",
+          resultUnit: "buc",
+          resultValueKind: "COUNT",
+          allowedOperators: [],
+          allowedReferences: {
+            configSettingIds: [],
+            jobInputIds: [],
+            formulaIds: [],
+          },
+          expression: null,
+          explanation: null,
+          source: "PLATFORM_STARTER",
+          sourceLabel: "Achiziție confirmată de owner",
+          version: 1,
+          status: "ACTIVE",
+          statusLabel: "Activă",
+          effectiveFrom: "2026-09-21T00:00:00.000Z",
+        },
+      ],
+      history: [],
+    });
+    expect(presented?.guidance).toBe("Doar proprietarul confirmă.");
+    expect(presented?.formulas[0]?.description).toBe(
+      "Formula poate fi schimbată de proprietar fără editare de sursă.",
+    );
+    expect(presented?.formulas[0]?.sourceLabel).toBe(
+      "Achiziție confirmată de proprietar",
+    );
+  });
 });

@@ -11,6 +11,7 @@ import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { formatTimestamp } from "../presentation/format";
 import { matchesSearch, uniqueLabels } from "../presentation/listFilter";
+import { presentRequestRegistryStatus } from "../presentation/requestListStatus";
 import { statusTone } from "../presentation/statusTone";
 import { presentRequestWorklistAction } from "../presentation/worklistAction";
 import { requestHref } from "../routing/appRoute";
@@ -24,35 +25,48 @@ export function RequestsPage() {
   const [query, setQuery] = useState("");
   const [statusChip, setStatusChip] = useState(ALL);
 
+  const registryRows = useMemo(
+    () =>
+      items.map((item) => ({
+        item,
+        registry: presentRequestRegistryStatus({
+          status: item.status,
+          statusLabel: item.statusLabel,
+          contextLabel: item.contextLabel,
+        }),
+      })),
+    [items],
+  );
+
   const statusChips = useMemo(
     () => [
       { id: ALL, label: "Toate" },
-      ...uniqueLabels(items.map((item) => item.statusLabel)).map((label) => ({
+      ...uniqueLabels(registryRows.map((row) => row.registry.stateLabel)).map((label) => ({
         id: label,
         label,
       })),
     ],
-    [items],
+    [registryRows],
   );
 
   const visible = useMemo(
     () =>
-      items.filter((item) => {
-        const matchesChip = statusChip === ALL || item.statusLabel === statusChip;
+      registryRows.filter(({ item, registry }) => {
+        const matchesChip = statusChip === ALL || registry.stateLabel === statusChip;
         return (
           matchesChip &&
           matchesSearch(query, [
             item.title,
             item.reference,
             item.customerDisplayName,
-            item.contextLabel,
-            item.statusLabel,
+            registry.supportLabel,
+            registry.stateLabel,
             item.nextActionLabel,
             item.attentionLabel,
           ])
         );
       }),
-    [items, query, statusChip],
+    [registryRows, query, statusChip],
   );
 
   return (
@@ -60,9 +74,9 @@ export function RequestsPage() {
       contextLabel="Cereri"
       currentHref="/cereri"
       workspace="stack"
-      eyebrow="Cereri"
       title="Cereri de ofertă"
       lead="Deschide cererea lucrării și continuă către pasul canonic."
+      meta={requests.status === "success" ? `${visible.length} rezultate` : undefined}
     >
       <SurfacePanel
         variant="flush"
@@ -77,7 +91,6 @@ export function RequestsPage() {
           chips={statusChips}
           selectedChip={statusChip}
           onChipChange={setStatusChip}
-          meta={requests.status === "success" ? `${visible.length} din ${items.length}` : undefined}
         />
         <CollectionBody
           status={requests.status}
@@ -102,7 +115,7 @@ export function RequestsPage() {
           }
           filteredEmpty={<EmptyState title="Nicio cerere nu corespunde filtrului." />}
         >
-          {visible.map((item) => {
+          {visible.map(({ item, registry }) => {
             const action = presentRequestWorklistAction(item);
             return (
               <WorklistRow
@@ -120,8 +133,8 @@ export function RequestsPage() {
                     .join(" · ") || undefined
                 }
                 context={item.customerDisplayName ?? "Fără client"}
-                support={item.contextLabel ?? ""}
-                state={<StatusBadge label={item.statusLabel} tone={statusTone("workflow")} />}
+                support={registry.supportLabel}
+                state={<StatusBadge label={registry.stateLabel} tone={statusTone("workflow")} />}
                 meta={formatTimestamp(item.createdAt) ?? ""}
                 actionLabel={action.actionLabel}
               />

@@ -126,6 +126,7 @@ type CollectionBodyProps = {
   errorBody: string;
   empty: ReactNode;
   filteredEmpty: ReactNode;
+  footerLabel?: string;
   children: ReactNode;
 };
 
@@ -141,9 +142,15 @@ export function CollectionBody({
   errorBody,
   empty,
   filteredEmpty,
+  footerLabel,
   children,
 }: CollectionBodyProps) {
   const view = collectionViewState(status, itemCount, visibleCount);
+  const footer =
+    footerLabel ??
+    (view === "ready" || view === "refreshing"
+      ? `${visibleCount} din ${itemCount}`
+      : undefined);
 
   switch (view) {
     case "error":
@@ -170,14 +177,17 @@ export function CollectionBody({
     case "refreshing":
     case "ready":
       return (
-        <Worklist
-          variant={variant}
-          label={worklistLabel}
-          columns={columns}
-          busy={view === "refreshing"}
-        >
-          {children}
-        </Worklist>
+        <>
+          <Worklist
+            variant={variant}
+            label={worklistLabel}
+            columns={columns}
+            busy={view === "refreshing"}
+          >
+            {children}
+          </Worklist>
+          {footer ? <p className="worklist-footer">{footer}</p> : null}
+        </>
       );
     default: {
       const exhaustive: never = view;

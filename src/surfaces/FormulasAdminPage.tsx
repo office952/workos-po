@@ -23,6 +23,7 @@ import { loadFormulasAdmin } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { administrationRailItems } from "../layout/administrationNav";
 import { SlicePage } from "../layout/SlicePage";
+import { presentAdminEditMeta } from "../presentation/adminEditMeta";
 import { formatTimestamp } from "../presentation/format";
 import { FormulaAstEditor } from "./FormulaAstEditor";
 
@@ -104,11 +105,13 @@ export function FormulasAdminPage() {
       eyebrow="Administrare"
       title="Formule de calcul"
       lead="Aceste formule sunt folosite la calculul tehnic al lucrărilor noi. Lucrările înghețate rămân neschimbate."
-      meta={
-        model?.canEdit
-          ? "Doar Owner poate confirma formulele de calcul ale organizației."
-          : "Editarea nu este disponibilă pentru acest rol."
-      }
+      meta={presentAdminEditMeta({
+        settled: loadState === "ready" && model !== null,
+        canEdit: Boolean(model?.canEdit),
+        whenEditable:
+          "Doar proprietarul poate confirma formulele de calcul ale organizației.",
+        whenReadOnly: "Editarea nu este disponibilă pentru acest rol.",
+      })}
     >
       {loadState === "loading" ? (
         <>
@@ -198,17 +201,20 @@ export function FormulasAdminPage() {
                   }}
                 />
                 {model.canEdit ? (
-                  <Button
-                    disabled={pending}
-                    onClick={() => {
-                      void save(formula.formulaId);
-                    }}
-                  >
-                    Salvează formula
-                  </Button>
-                ) : (
-                  <p>Editarea nu este disponibilă pentru acest rol.</p>
-                )}
+                  <>
+                    <Button
+                      disabled={pending}
+                      onClick={() => {
+                        void save(formula.formulaId);
+                      }}
+                    >
+                      Salvează formula
+                    </Button>
+                    <p className="ui-note">
+                      Salvarea creează o versiune nouă folosită doar la calculele următoare.
+                    </p>
+                  </>
+                ) : null}
               </div>
             ))}
             {pending ? <LoadingIndicator label="Se salvează formula de calcul" /> : null}

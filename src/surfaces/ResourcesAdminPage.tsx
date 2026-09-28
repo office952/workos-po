@@ -25,6 +25,7 @@ import { loadResourcesAdmin } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { administrationRailItems } from "../layout/administrationNav";
 import { SlicePage } from "../layout/SlicePage";
+import { presentAdminEditMeta } from "../presentation/adminEditMeta";
 import { formatMoney, formatTimestamp } from "../presentation/format";
 import { statusTone } from "../presentation/statusTone";
 import {
@@ -146,11 +147,12 @@ export function ResourcesAdminPage() {
       eyebrow="Administrare"
       title="Dovezi de cost"
       lead="Tarif confirmat pe resursă și calificator. Valoarea salvată este folosită doar la calcule noi."
-      meta={
-        canEdit
-          ? "Doar Owner poate modifica tariful."
-          : "Editarea nu este disponibilă pentru acest rol."
-      }
+      meta={presentAdminEditMeta({
+        settled: loadState === "ready",
+        canEdit,
+        whenEditable: "Doar proprietarul poate modifica tariful.",
+        whenReadOnly: "Editarea nu este disponibilă pentru acest rol.",
+      })}
     >
       {loadState === "loading" ? (
         <>
@@ -254,6 +256,9 @@ export function ResourcesAdminPage() {
                     >
                       Salvează
                     </Button>
+                    <p className="ui-note">
+                      Tariful salvat se folosește doar la calculele noi.
+                    </p>
                   </>
                 ) : (
                   <InlineAlert tone="blocked" title="Modificare indisponibilă">
