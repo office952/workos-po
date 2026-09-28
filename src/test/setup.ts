@@ -13,4 +13,8 @@ afterEach(() => {
   setCloudUnauthorizedHandler(null);
   restoreCloudUnauthorizedExpiry();
   sessionStorage.clear();
+  localStorage.removeItem("workos-color-scheme");
+  delete document.documentElement.dataset.theme;
+  delete document.documentElement.dataset.resolvedTheme;
+  document.documentElement.style.colorScheme = "";
 });

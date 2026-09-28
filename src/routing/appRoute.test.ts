@@ -18,7 +18,8 @@ import {
 
 describe("parseAppRoute", () => {
   it("maps the slice paths", () => {
-    expect(parseAppRoute("/")).toEqual({ name: "clients" });
+    expect(parseAppRoute("/")).toEqual({ name: "home" });
+    expect(parseAppRoute("/admin")).toEqual({ name: "admin" });
     expect(parseAppRoute("/clienti")).toEqual({ name: "clients" });
     expect(parseAppRoute("/configurator")).toEqual({ name: "configurator" });
     expect(parseAppRoute("/clienti/cus-1")).toEqual({ name: "client", customerId: "cus-1" });
@@ -89,14 +90,17 @@ describe("parseAppRoute", () => {
         productCode: "PRD-OTHER",
       }),
     ).toBe("/configurator?customer=cus-1&request=req-1&product=PRD-OTHER");
-    expect(canonicalLocation("/", "")).toBe("/clienti");
+    expect(canonicalLocation("/", "")).toBeNull();
     expect(canonicalLocation("/", "?product=PRD-OTHER")).toBe(
       "/configurator?product=PRD-OTHER",
     );
     expect(navItemCurrent("/clienti", "/clienti")).toBe(true);
     expect(navItemCurrent("/configurator", "/configurator")).toBe(true);
-    expect(navItemCurrent("/", "/clienti")).toBe(true);
+    expect(navItemCurrent("/", "/clienti")).toBe(false);
+    expect(navItemCurrent("/", "/")).toBe(true);
     expect(navItemCurrent("/", "/configurator")).toBe(false);
+    expect(navItemCurrent("/admin/products", "/admin")).toBe(true);
+    expect(navItemCurrent("/admin/products", "/admin/resources")).toBe(false);
     expect(navItemCurrent("/quotes/PRD-X/q-1", "/oferte")).toBe(true);
     expect(navItemCurrent("/quotes/PRD-X/q-1", "/lucrari")).toBe(false);
     expect(navItemCurrent("/cereri/req-1", "/cereri")).toBe(true);

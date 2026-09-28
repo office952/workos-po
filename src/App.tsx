@@ -5,8 +5,8 @@ import { resourceKeys } from "./data/resourceKeys";
 import { loadHealthPresentation } from "./data/routeLoaders";
 import type { AccountAreaProps } from "./layout/AccountArea";
 import { AppShell } from "./layout/AppShell";
-import { PageHeader } from "./layout/PageHeader";
 import { PageRegion } from "./layout/PageRegion";
+import { StateNotice } from "./components/StateNotice";
 import { RouteLoadingPage } from "./layout/RouteLoadingPage";
 import { presentRouteChrome } from "./layout/routeChrome";
 import {
@@ -23,7 +23,11 @@ import {
   sameOriginNavigation,
   type AppLocation,
 } from "./routing/navigate";
-import { intendedReturnPath, resolveCloudAuthGate } from "./session/cloudAuth";
+import {
+  isAuthEntryPath,
+  resolveCloudAuthGate,
+  resolvePostAuthenticationPath,
+} from "./session/cloudAuth";
 import { CloudSessionProvider, useCloudSession } from "./session/CloudSessionContext";
 import { configuratorContextKey } from "./session/configuratorSession";
 import { AtelierPage } from "./surfaces/AtelierPage";
@@ -54,6 +58,9 @@ import { PeopleAdminPage } from "./surfaces/PeopleAdminPage";
 import { WorkcentersAdminPage } from "./surfaces/WorkcentersAdminPage";
 import { ProductEnablementAdminPage } from "./surfaces/ProductEnablementAdminPage";
 import { AccessAdminPage } from "./surfaces/AccessAdminPage";
+import { AdminHomePage } from "./surfaces/AdminHomePage";
+import { LaunchpadPage } from "./surfaces/LaunchpadPage";
+import { ThemeSync } from "./theme/ThemeControl";
 
 function syncCanonicalLocation(): AppLocation {
   const next = canonicalLocation(window.location.pathname, window.location.search);
@@ -69,6 +76,8 @@ function operatorContext(route: AppRoute): string {
 
 function renderRoute(route: AppRoute, search: string): ReactNode {
   switch (route.name) {
+    case "home":
+      return <LaunchpadPage />;
     case "clients":
       return <ClientsPage />;
     case "client":
@@ -121,6 +130,8 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
           jobId={parseJobContext(search)}
         />
       );
+    case "admin":
+      return <AdminHomePage />;
     case "admin-resources":
       return <ResourcesAdminPage />;
     case "admin-services":
@@ -159,13 +170,12 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
     case "unknown":
       return (
         <PageRegion>
-          <PageHeader
+          <StateNotice
+            kind="empty"
             title="Pagină inexistentă"
-            lead="Această adresă nu există în aplicație."
+            reason="Această adresă nu există în aplicație."
+            action={<a className="text-link" href="/">Înapoi la pagina principală</a>}
           />
-          <div className="page-region">
-            <a href="/clienti">Înapoi la clienți</a>
-          </div>
         </PageRegion>
       );
     default: {
@@ -182,6 +192,7 @@ function presentAccount(cloud: ReturnType<typeof useCloudSession>): AccountAreaP
   return {
     organizationName: cloud.organization.displayName,
     userLabel: cloud.user.email,
+    membershipRole: cloud.organization.membershipRole,
     memberships: cloud.memberships,
     currentOrganizationId: cloud.organization.organizationId,
     onSwitchOrganization: (organizationId) => cloud.switchOrganization(organizationId),
@@ -192,6 +203,7 @@ function presentAccount(cloud: ReturnType<typeof useCloudSession>): AccountAreaP
 export function App() {
   return (
     <CloudSessionProvider>
+      <ThemeSync />
       <AppRuntime />
     </CloudSessionProvider>
   );
@@ -230,13 +242,29 @@ function AppRuntime() {
   }, []);
 
   const gate = resolveCloudAuthGate(cloud);
+
+  useEffect(() => {
+    if (gate !== "authenticated") {
+      return;
+    }
+    const landing = resolvePostAuthenticationPath(location.pathname, location.search);
+    const current = `${location.pathname}${location.search}`;
+    if (landing !== current) {
+      navigate(landing, "replace");
+    }
+  }, [gate, location.pathname, location.search]);
+
   if (gate !== "authenticated") {
     return (
       <AuthGatePage
         kind={gate}
-        returnPath={intendedReturnPath(location.pathname, location.search)}
+        returnPath={resolvePostAuthenticationPath(location.pathname, location.search)}
       />
     );
+  }
+
+  if (isAuthEntryPath(location.pathname)) {
+    return <RouteLoadingPage route={{ name: "home" }} />;
   }
 
   return <AuthenticatedApp location={location} account={presentAccount(cloud)} />;
@@ -271,15 +299,7 @@ function AuthenticatedApp({
   }
 
   if (loadState === "ready" && (!health || health.kind === "incompatible")) {
-    return (
-      <FailClosedPage
-        reason={
-          health?.kind === "incompatible"
-            ? health.reason
-            : "Contractul API nu a putut fi verificat."
-        }
-      />
-    );
+    return <FailClosedPage />;
   }
 
   return (

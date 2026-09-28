@@ -55,7 +55,11 @@ describe("presentCloudSession", () => {
       mode: "cloud",
       authConfigured: true,
       user: { email: "owner@example.test" },
-      organization: { organizationId: "org:a", displayName: "Atelier Alpha" },
+      organization: {
+        organizationId: "org:a",
+        displayName: "Atelier Alpha",
+        membershipRole: "owner",
+      },
       memberships: [{ organizationId: "org:a", displayName: "Atelier Alpha" }],
     });
     expect(JSON.stringify(presented)).not.toContain("sess:secret");

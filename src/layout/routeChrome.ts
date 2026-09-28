@@ -19,6 +19,24 @@ export type RouteChrome = {
 
 export function presentRouteChrome(route: AppRoute): RouteChrome {
   switch (route.name) {
+    case "home":
+      return {
+        contextLabel: "WorkOS",
+        currentHref: "/",
+        workspace: "launchpad",
+        eyebrow: "WorkOS",
+        title: "WorkOS",
+        lead: "Punctul de pornire. De aici intri în comercial, operațiuni sau administrare.",
+      };
+    case "admin":
+      return {
+        contextLabel: "Administrare",
+        currentHref: "/admin",
+        workspace: "admin",
+        eyebrow: "Administrare",
+        title: "Administrare",
+        lead: "Alege domeniul de setări al organizației.",
+      };
     case "clients":
       return {
         contextLabel: "Clienți",
@@ -143,7 +161,7 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         workspace: "operational",
         eyebrow: "Execuție",
         title: "Execuție",
-        lead: "Planul vine de la motorul de producție. Operatorul pornește și închide sarcinile eligibile.",
+        lead: "Pornește și închide sarcinile pe care le poți lucra.",
       };
     case "admin-resources":
       return {
@@ -278,7 +296,7 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         workspace: "stack",
         eyebrow: "Fundație",
         title: "Fundație",
-        lead: "Se verifică contractul API.",
+        lead: "Se încarcă verificarea.",
       };
     case "unknown":
       return {
@@ -302,6 +320,7 @@ export function loadingFloorVariantFor(
   switch (workspace) {
     case "stack":
     case "collection-with-rail":
+    case "launchpad":
       return "registry";
     case "object":
       return "object";

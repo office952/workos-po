@@ -1,7 +1,10 @@
+import { Fragment } from "react";
+
 type ContextRailItemModel = {
   id: string;
   label: string;
   secondary?: string;
+  group?: string;
   current?: boolean;
   selected?: boolean;
   href?: string;
@@ -72,19 +75,33 @@ export function ContextRailItem({
   return <p className={railItemClassName(false, current || selected)}>{body}</p>;
 }
 
+function railRows(items: readonly ContextRailItemModel[]) {
+  const rows: { item: ContextRailItemModel; showGroup: boolean }[] = [];
+  for (const item of items) {
+    const previous = rows[rows.length - 1]?.item.group;
+    rows.push({
+      item,
+      showGroup: Boolean(item.group) && item.group !== previous,
+    });
+  }
+  return rows;
+}
+
 export function ContextRail({ label, items, inert = false }: ContextRailProps) {
   return (
     <div className="context-rail" role="group" aria-label={label} inert={inert || undefined}>
-      {items.map((item) => (
-        <ContextRailItem
-          key={item.id}
-          label={item.label}
-          secondary={item.secondary}
-          current={item.current}
-          selected={item.selected}
-          href={item.href}
-          onSelect={item.onSelect}
-        />
+      {railRows(items).map(({ item, showGroup }) => (
+        <Fragment key={item.id}>
+          {showGroup ? <p className="context-rail__group">{item.group}</p> : null}
+          <ContextRailItem
+            label={item.label}
+            secondary={item.secondary}
+            current={item.current}
+            selected={item.selected}
+            href={item.href}
+            onSelect={item.onSelect}
+          />
+        </Fragment>
       ))}
     </div>
   );

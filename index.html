@@ -5,6 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>WorkOS</title>
+    <script>
+      (function () {
+        var preference = "system";
+        try {
+          var stored = localStorage.getItem("workos-color-scheme");
+          if (stored === "light" || stored === "dark" || stored === "system") {
+            preference = stored;
+          }
+        } catch (error) {
+          preference = "system";
+        }
+        var dark =
+          window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+        var resolved =
+          preference === "dark" || (preference === "system" && dark) ? "dark" : "light";
+        document.documentElement.dataset.theme = preference;
+        document.documentElement.dataset.resolvedTheme = resolved;
+        document.documentElement.style.colorScheme = resolved;
+      })();
+    </script>
     <style>
       html,
       body,

@@ -485,7 +485,7 @@ export function ExecutionPage({
       workspace="operational"
       eyebrow="Execuție"
       title={plan?.inscription || plan?.productLabel || "Execuție"}
-      lead="Planul vine de la motorul de producție. Operatorul pornește și închide sarcinile pe care le poate lucra."
+      lead="Pornește și închide sarcinile pe care le poți lucra."
       meta={
         plan
           ? [

@@ -1,4 +1,5 @@
 export type AppRoute =
+  | { name: "home" }
   | { name: "clients" }
   | { name: "client"; customerId: string }
   | { name: "requests" }
@@ -13,6 +14,7 @@ export type AppRoute =
   | { name: "planning" }
   | { name: "atelier" }
   | { name: "execution"; planId: string }
+  | { name: "admin" }
   | { name: "admin-resources" }
   | { name: "admin-services" }
   | { name: "admin-material-readiness" }
@@ -37,7 +39,10 @@ export type SpineContext = {
 };
 
 export function parseAppRoute(pathname: string): AppRoute {
-  if (pathname === "/" || pathname === "/clienti") {
+  if (pathname === "/") {
+    return { name: "home" };
+  }
+  if (pathname === "/clienti") {
     return { name: "clients" };
   }
   if (pathname === "/configurator") {
@@ -79,6 +84,9 @@ export function parseAppRoute(pathname: string): AppRoute {
   const execution = pathname.match(/^\/executie\/([^/]+)$/);
   if (execution) {
     return { name: "execution", planId: decodeURIComponent(execution[1]) };
+  }
+  if (pathname === "/admin") {
+    return { name: "admin" };
   }
   if (pathname === "/admin/resources") {
     return { name: "admin-resources" };
@@ -246,7 +254,7 @@ export function canonicalLocation(pathname: string, search: string): string | nu
   if (context.customerId || context.requestId || context.productCode) {
     return `/configurator${search}`;
   }
-  return `/clienti${search}`;
+  return null;
 }
 
 export function parseCustomerContext(search: string): string | null {
@@ -269,7 +277,7 @@ export function parseSpineContext(search: string): SpineContext {
   };
 }
 
-export const ADMINISTRATION_HREF = "/admin/resources";
+export const ADMINISTRATION_HREF = "/admin";
 
 export function isAdministrationPath(pathname: string): boolean {
   const path = pathname.split("?")[0] ?? pathname;
@@ -279,9 +287,6 @@ export function isAdministrationPath(pathname: string): boolean {
 export function navItemCurrent(currentHref: string, href: string): boolean {
   const path = currentHref.split("?")[0] ?? currentHref;
   if (href === path) {
-    return true;
-  }
-  if (href === "/clienti" && path === "/") {
     return true;
   }
   if (href === "/oferte" && path.startsWith("/quotes/")) {

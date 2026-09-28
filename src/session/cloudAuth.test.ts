@@ -2,9 +2,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   consumeCloudSessionExpiredMark,
   intendedReturnPath,
+  isAuthEntryPath,
   loginErrorLabel,
   rememberCloudAuthenticated,
   resolveCloudAuthGate,
+  resolvePostAuthenticationPath,
   safeAppPath,
 } from "./cloudAuth";
 
@@ -28,6 +30,25 @@ describe("intendedReturnPath", () => {
   });
 });
 
+describe("resolvePostAuthenticationPath", () => {
+  it("sends auth-entry paths to the Launchpad", () => {
+    expect(isAuthEntryPath("/login")).toBe(true);
+    expect(isAuthEntryPath("/login/")).toBe(true);
+    expect(isAuthEntryPath("/clienti")).toBe(false);
+    expect(resolvePostAuthenticationPath("/login")).toBe("/");
+    expect(resolvePostAuthenticationPath("/login/")).toBe("/");
+    expect(resolvePostAuthenticationPath("/login", "?next=1")).toBe("/");
+  });
+
+  it("preserves valid product deep links and leaves arbitrary unknowns alone", () => {
+    expect(resolvePostAuthenticationPath("/clienti")).toBe("/clienti");
+    expect(resolvePostAuthenticationPath("/planificare", "?week=1")).toBe(
+      "/planificare?week=1",
+    );
+    expect(resolvePostAuthenticationPath("/pagina-inexistenta")).toBe("/pagina-inexistenta");
+  });
+});
+
 describe("resolveCloudAuthGate", () => {
   const base = {
     ready: true,
@@ -35,7 +56,11 @@ describe("resolveCloudAuthGate", () => {
     mode: "cloud" as const,
     authConfigured: true,
     user: { email: "owner@example.test" },
-    organization: { organizationId: "org:a", displayName: "Atelier Alpha" },
+    organization: {
+      organizationId: "org:a",
+      displayName: "Atelier Alpha",
+      membershipRole: "owner" as const,
+    },
     sessionExpired: false,
   };
 

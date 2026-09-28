@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import { BrandMark } from "../components/BrandMark";
 import { navItemCurrent } from "../routing/appRoute";
+import { ThemeControl } from "../theme/ThemeControl";
 import { AccountArea, type AccountAreaProps } from "./AccountArea";
+import { GLOBAL_NAV, HOME_HREF } from "./globalNav";
 import { SkipLink } from "./SkipLink";
 
 type AppShellProps = {
@@ -20,17 +22,6 @@ const PROOF_NAV = [
   { id: "more", label: "Mai multe" },
 ] as const;
 
-const SLICE_NAV = [
-  { id: "clients", label: "Clienți", href: "/clienti" },
-  { id: "requests", label: "Cereri", href: "/cereri" },
-  { id: "catalog", label: "Catalog", href: "/catalog" },
-  { id: "configurator", label: "Configurator", href: "/configurator" },
-  { id: "quotes", label: "Oferte", href: "/oferte" },
-  { id: "jobs", label: "Lucrări", href: "/lucrari" },
-  { id: "atelier", label: "Atelier", href: "/atelier" },
-  { id: "administration", label: "Administrare", href: "/admin/resources" },
-] as const;
-
 export function AppShell({
   contextLabel,
   children,
@@ -38,56 +29,76 @@ export function AppShell({
   mode = "proof",
   account = null,
 }: AppShellProps) {
-  const items = mode === "slice" ? SLICE_NAV : PROOF_NAV;
   const path = currentHref ?? "/";
+  const homeHref = mode === "slice" ? HOME_HREF : "/foundation";
+  const homeCurrent = mode === "slice" && (path === "/" || path === "");
 
   return (
     <div className="app-shell">
       <SkipLink />
       <header className="app-shell__bar">
-        <a className="app-shell__brand" href={mode === "slice" ? "/clienti" : "/foundation"} aria-label="WorkOS">
+        <a
+          className="app-shell__brand"
+          href={homeHref}
+          aria-label="WorkOS"
+          aria-current={homeCurrent ? "page" : undefined}
+        >
           <BrandMark />
           <span className="app-shell__wordmark">WorkOS</span>
         </a>
         {mode === "slice" ? <span className="app-shell__rule" aria-hidden="true" /> : null}
         <nav className="app-shell__nav" aria-label="Navigare principală">
-          {items.map((item) => {
-            const href = "href" in item ? item.href : undefined;
-            const current =
-              href !== undefined &&
-              (mode === "proof"
-                ? "current" in item && item.current
-                : navItemCurrent(path, href));
-            if (!href) {
-              return (
-                <span
-                  key={item.id}
-                  className="app-shell__nav-item"
-                  aria-disabled="true"
-                >
-                  {item.label}
-                </span>
-              );
-            }
-            return (
-              <a
-                key={item.id}
-                className="app-shell__nav-item"
-                href={href}
-                aria-current={current ? "page" : undefined}
-              >
-                {item.label}
-              </a>
-            );
-          })}
+          {mode === "slice"
+            ? GLOBAL_NAV.map((group) => (
+                <div key={group.id} className="app-shell__nav-group" role="group" aria-label={group.label}>
+                  {group.items.length > 1 ? (
+                    <span className="app-shell__nav-kicker">{group.label}</span>
+                  ) : null}
+                  {group.items.map((item) => {
+                    const current = navItemCurrent(path, item.href);
+                    return (
+                      <a
+                        key={item.id}
+                        className="app-shell__nav-item"
+                        href={item.href}
+                        aria-current={current ? "page" : undefined}
+                      >
+                        {item.label}
+                      </a>
+                    );
+                  })}
+                </div>
+              ))
+            : PROOF_NAV.map((item) => {
+                const href = "href" in item ? item.href : undefined;
+                const current = href !== undefined && "current" in item && item.current;
+                if (!href) {
+                  return (
+                    <span key={item.id} className="app-shell__nav-item" aria-disabled="true">
+                      {item.label}
+                    </span>
+                  );
+                }
+                return (
+                  <a
+                    key={item.id}
+                    className="app-shell__nav-item"
+                    href={href}
+                    aria-current={current ? "page" : undefined}
+                  >
+                    {item.label}
+                  </a>
+                );
+              })}
         </nav>
-        {account ? (
-          <div className="app-shell__account">
+        <div className="app-shell__account">
+          <ThemeControl />
+          {account ? (
             <AccountArea {...account} />
-          </div>
-        ) : (
-          <p className="app-shell__context">{contextLabel}</p>
-        )}
+          ) : (
+            <p className="app-shell__context">{contextLabel}</p>
+          )}
+        </div>
       </header>
       {children}
     </div>

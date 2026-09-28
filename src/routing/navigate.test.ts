@@ -6,11 +6,12 @@ afterEach(() => {
 });
 
 describe("navigate", () => {
-  it("rewrites the empty path to clients and pushes history", () => {
-    expect(resolveAppHref("/")).toBe("/clienti");
+  it("keeps the empty path as the landing page", () => {
+    expect(resolveAppHref("/")).toBe("/");
     expect(resolveAppHref("/?product=PRD-1")).toBe("/configurator?product=PRD-1");
+    navigate("/cereri");
     navigate("/");
-    expect(`${window.location.pathname}${window.location.search}`).toBe("/clienti");
+    expect(`${window.location.pathname}${window.location.search}`).toBe("/");
   });
 
   it("ignores modified clicks and hash-only links", () => {
