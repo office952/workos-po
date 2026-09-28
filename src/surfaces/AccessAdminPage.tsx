@@ -19,6 +19,7 @@ import { loadOrganizationAccessAdmin } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { administrationRailItems } from "../layout/administrationNav";
 import { SlicePage } from "../layout/SlicePage";
+import { presentAdminEditMeta } from "../presentation/adminEditMeta";
 import { formatTimestamp } from "../presentation/format";
 
 type SaveState = "idle" | "pending" | "success" | "error";
@@ -95,11 +96,12 @@ export function AccessAdminPage() {
       eyebrow="Administrare"
       title="Acces organizație"
       lead="Vezi utilizatorii care se pot autentifica în organizație. Conturile de producție (oameni/PIN) rămân separate."
-      meta={
-        model?.canEdit
-          ? "Doar proprietarul poate revoca accesul."
-          : "Editarea nu este disponibilă pentru acest rol."
-      }
+      meta={presentAdminEditMeta({
+        settled: loadState === "ready" && model !== null,
+        canEdit: Boolean(model?.canEdit),
+        whenEditable: "Doar proprietarul poate revoca accesul.",
+        whenReadOnly: "Editarea nu este disponibilă pentru acest rol.",
+      })}
     >
       {loadState === "loading" ? (
         <>

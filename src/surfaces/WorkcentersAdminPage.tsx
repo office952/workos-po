@@ -31,6 +31,7 @@ import { loadWorkcentersAdmin } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { administrationRailItems } from "../layout/administrationNav";
 import { SlicePage } from "../layout/SlicePage";
+import { presentAdminEditMeta } from "../presentation/adminEditMeta";
 import { statusTone } from "../presentation/statusTone";
 import { adminMachineHref, adminWorkcenterHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
@@ -416,11 +417,13 @@ export function WorkcentersAdminPage({
       eyebrow="Administrare"
       title="Zone și utilaje"
       lead="Configurează zonele de lucru și utilajele. Atelierul citește același registru."
-      meta={
-        model?.canEdit
-          ? "Doar proprietarul poate adăuga, modifica sau retrage zonele și utilajele."
-          : "Editarea nu este disponibilă pentru acest rol."
-      }
+      meta={presentAdminEditMeta({
+        settled: loadState === "ready" && model !== null,
+        canEdit: Boolean(model?.canEdit),
+        whenEditable:
+          "Doar proprietarul poate adăuga, modifica sau retrage zonele și utilajele.",
+        whenReadOnly: "Editarea nu este disponibilă pentru acest rol.",
+      })}
     >
       {loadState === "loading" ? (
         <>

@@ -112,6 +112,7 @@ describe("RequestsPage", () => {
         reference: "CER-C4D4C0E8",
         customerId: "cus-2",
         customerDisplayName: "NORD MARKET DEMO SRL",
+        status: "NEW",
         statusLabel: "Nouă",
         commercialProgressLabel: "Ofertă creată",
         createdAt: "2026-09-21T19:27:00.000Z",
@@ -131,5 +132,7 @@ describe("RequestsPage", () => {
       "href",
       "/quotes/PRD-ACM-CASSETTE-NONE/qts%3APRD-ACM-CASSETTE-NONE%3Aabffbb338a5a65fc2f9c69d41798d58f4fb73d27e4941df6a05052bddb2ca6d4",
     );
+    expect(screen.getByText("Ofertă creată", { selector: ".status" })).toBeInTheDocument();
+    expect(screen.queryByText("Nouă")).not.toBeInTheDocument();
   });
 });

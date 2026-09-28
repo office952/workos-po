@@ -161,6 +161,9 @@ describe("FormulasAdminPage", () => {
     vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => undefined)));
     render(<FormulasAdminPage />);
     expect(screen.getByText("Se încarcă formulele de calcul")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Editarea nu este disponibilă pentru acest rol."),
+    ).not.toBeInTheDocument();
   });
 
   it("blocks member edits", async () => {
@@ -173,7 +176,9 @@ describe("FormulasAdminPage", () => {
       }),
     );
     render(<FormulasAdminPage />);
-    expect(await screen.findByText("Editarea nu este disponibilă pentru acest rol.")).toBeInTheDocument();
+    expect(
+      (await screen.findAllByText("Editarea nu este disponibilă pentru acest rol.")).length,
+    ).toBeGreaterThan(0);
     expect(screen.getAllByLabelText("Tip expresie")[0]).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Salvează formula" })).not.toBeInTheDocument();
   });

@@ -16,6 +16,7 @@ import { loadCustomer, loadJobList, loadRequestList } from "../data/routeLoaders
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { formatTimestamp } from "../presentation/format";
+import { presentRequestRegistryStatus } from "../presentation/requestListStatus";
 import { statusTone } from "../presentation/statusTone";
 import { presentRequestWorklistAction } from "../presentation/worklistAction";
 import { catalogHref, clientHref, requestHref } from "../routing/appRoute";
@@ -147,6 +148,11 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
         >
           {mine.map((item) => {
             const action = presentRequestWorklistAction(item);
+            const registry = presentRequestRegistryStatus({
+              status: item.status,
+              statusLabel: item.statusLabel,
+              contextLabel: item.contextLabel,
+            });
             return (
               <WorklistRow
                 key={item.requestId}
@@ -163,8 +169,8 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
                     .filter(Boolean)
                     .join(" · ") || undefined
                 }
-                context={item.contextLabel ?? item.statusLabel}
-                state={<StatusBadge label={item.statusLabel} tone={statusTone("workflow")} />}
+                context={registry.supportLabel}
+                state={<StatusBadge label={registry.stateLabel} tone={statusTone("workflow")} />}
                 actionLabel={action.actionLabel}
               />
             );

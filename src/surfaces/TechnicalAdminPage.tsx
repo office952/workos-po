@@ -23,6 +23,7 @@ import { loadTechnicalSettingsAdmin } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { administrationRailItems } from "../layout/administrationNav";
 import { SlicePage } from "../layout/SlicePage";
+import { presentAdminEditMeta } from "../presentation/adminEditMeta";
 import { formatTimestamp } from "../presentation/format";
 
 type SaveState = "idle" | "pending" | "success" | "alreadyApplied" | "error";
@@ -122,11 +123,13 @@ export function TechnicalAdminPage() {
       eyebrow="Administrare"
       title="Setări tehnice"
       lead="Aceste valori sunt folosite la calculul tehnic al lucrărilor noi. Lucrările înghețate rămân neschimbate."
-      meta={
-        model?.canEdit
-          ? "Doar proprietarul poate confirma setările tehnice ale organizației."
-          : "Editarea nu este disponibilă pentru acest rol."
-      }
+      meta={presentAdminEditMeta({
+        settled: loadState === "ready" && model !== null,
+        canEdit: Boolean(model?.canEdit),
+        whenEditable:
+          "Doar proprietarul poate confirma setările tehnice ale organizației.",
+        whenReadOnly: "Editarea nu este disponibilă pentru acest rol.",
+      })}
     >
       {loadState === "loading" ? (
         <>
