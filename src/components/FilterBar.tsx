@@ -17,6 +17,7 @@ type FilterBarProps = {
   meta?: string;
   /** Search-first toolbar rhythm for dense registries. */
   variant?: "default" | "toolbar";
+  searchPlaceholder?: string;
 };
 
 export function FilterBar({
@@ -29,7 +30,9 @@ export function FilterBar({
   onChipChange,
   meta,
   variant = "default",
+  searchPlaceholder,
 }: FilterBarProps) {
+  const toolbar = variant === "toolbar";
   const chipGroup =
     chips.length > 0 && onChipChange ? (
       <div className="filter-bar__chips" role="group" aria-label="Filtre">
@@ -50,13 +53,14 @@ export function FilterBar({
         id={searchId}
         label={searchLabel}
         value={searchValue}
+        placeholder={searchPlaceholder}
+        labelVisuallyHidden={toolbar}
         onChange={onSearchChange}
       />
     </div>
   );
 
   const count = meta ? <p className="filter-bar__meta">{meta}</p> : null;
-  const toolbar = variant === "toolbar";
 
   return (
     <div

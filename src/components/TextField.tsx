@@ -10,6 +10,8 @@ type TextFieldProps = {
   inputMode?: "text" | "decimal" | "numeric";
   type?: "text" | "password";
   className?: string;
+  placeholder?: string;
+  labelVisuallyHidden?: boolean;
   onChange: (value: string) => void;
 };
 
@@ -23,15 +25,25 @@ export function TextField({
   inputMode = "text",
   type = "text",
   className,
+  placeholder,
+  labelVisuallyHidden = false,
   onChange,
 }: TextFieldProps) {
   return (
-    <FieldFrame id={id} label={label} hint={hint} error={error} className={className}>
+    <FieldFrame
+      id={id}
+      label={label}
+      hint={hint}
+      error={error}
+      className={className}
+      labelVisuallyHidden={labelVisuallyHidden}
+    >
       <input
         id={id}
         className="field__control"
         type={type}
         value={value}
+        placeholder={placeholder}
         inputMode={inputMode}
         disabled={disabled}
         aria-invalid={Boolean(error)}

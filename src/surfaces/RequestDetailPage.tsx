@@ -107,7 +107,7 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
             <RequestInstallationSection detail={detail} />
           </div>
           <aside className="stack request-detail__rail" aria-label="Continuare">
-            <SurfacePanel variant="quiet" title="Continuare" label="Continuare">
+            <SurfacePanel title="Continuare" label="Continuare">
               <dl className="fact-grid fact-grid--rail">
                 <InfoRow
                   label="Progres comercial"

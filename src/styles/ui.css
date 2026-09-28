@@ -2277,35 +2277,38 @@ button.context-rail__item:focus-visible {
 
 /* Cereri V1 — scoped presentation surfaces */
 
-[data-surface="cereri-registry"] > .page-header {
-  min-height: 0;
-  padding-block: var(--space-16) var(--space-12);
-}
-
+[data-surface="cereri-registry"] > .page-header,
 [data-surface="cereri-detail"] > .page-header {
   min-height: 0;
   padding-block: var(--space-16) var(--space-12);
 }
 
-.page-workspace[data-surface="cereri-registry"] {
-  max-width: var(--composed-workspace-max);
+[data-surface="cereri-registry"] > .page-region,
+[data-surface="cereri-detail"] > .page-region {
+  padding-top: var(--space-12);
+}
+
+.page-workspace[data-surface="cereri-registry"],
+.page-workspace[data-surface="cereri-detail"] {
+  width: 100%;
+  max-width: none;
 }
 
 .page-workspace[data-surface="cereri-detail"] {
-  grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
-  max-width: var(--composed-workspace-max);
+  grid-template-columns: minmax(0, 1fr) minmax(22rem, 25rem);
   column-gap: var(--space-24);
+  row-gap: var(--space-16);
 }
 
 .page-workspace[data-surface="cereri-registry"] .worklist--registry .worklist__head,
 .page-workspace[data-surface="cereri-registry"] .worklist--registry .worklist-row {
   grid-template-columns:
-    minmax(14rem, 2.2fr)
-    minmax(10rem, 1.25fr)
-    minmax(8rem, 0.95fr)
-    minmax(5.5rem, 0.55fr)
-    minmax(6rem, 0.55fr)
-    minmax(6.5rem, 0.7fr);
+    minmax(12rem, 2.8fr)
+    minmax(9rem, 1.9fr)
+    minmax(8rem, 1.7fr)
+    minmax(5rem, 0.9fr)
+    minmax(6.5rem, 1.3fr)
+    minmax(6.5rem, 1fr);
   padding-block: var(--space-8);
 }
 
@@ -2327,24 +2330,30 @@ button.context-rail__item:focus-visible {
 }
 
 .filter-bar--toolbar {
-  grid-template-columns: minmax(14rem, 22rem) minmax(0, 1fr) auto;
-  align-items: end;
+  grid-template-columns: minmax(18.75rem, 22.5rem) minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: var(--target-min);
 }
 
 .filter-bar--toolbar .filter-bar__search {
-  max-width: none;
+  width: 100%;
+  max-width: 22.5rem;
   justify-self: start;
+}
+
+.filter-bar--toolbar .filter-bar__search .field {
+  gap: 0;
 }
 
 .filter-bar--toolbar .filter-bar__chips {
   justify-self: start;
-  align-self: end;
-  padding-bottom: var(--space-4);
+  align-self: center;
+  padding-bottom: 0;
 }
 
 .filter-bar--toolbar .filter-bar__meta {
-  align-self: end;
-  padding-bottom: var(--space-8);
+  align-self: center;
+  padding-bottom: 0;
 }
 
 .fact-grid--rail {
@@ -2427,7 +2436,11 @@ button.context-rail__item:focus-visible {
 
 @media (max-width: 1280px) {
   .page-workspace[data-surface="cereri-detail"] {
-    grid-template-columns: minmax(0, 1.7fr) minmax(14rem, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(20rem, 22rem);
+  }
+
+  .filter-bar--toolbar {
+    grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr) auto;
   }
 }
 
@@ -2438,16 +2451,15 @@ button.context-rail__item:focus-visible {
 
   .filter-bar--toolbar .filter-bar__search {
     order: 1;
+    max-width: none;
   }
 
   .filter-bar--toolbar .filter-bar__chips {
     order: 2;
-    padding-bottom: 0;
   }
 
   .filter-bar--toolbar .filter-bar__meta {
     order: 3;
-    padding-bottom: 0;
     justify-self: start;
   }
 

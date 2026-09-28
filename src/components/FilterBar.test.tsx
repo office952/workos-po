@@ -34,12 +34,13 @@ describe("FilterBar", () => {
     expect(onChipChange).toHaveBeenCalledWith("all");
   });
 
-  it("places search before chips in toolbar variant", () => {
+  it("places search before chips in toolbar variant with accessible hidden label", () => {
     const { container } = render(
       <FilterBar
         variant="toolbar"
         searchId="cereri-cauta"
-        searchLabel="Caută după client, referință…"
+        searchLabel="Caută"
+        searchPlaceholder="Client, referință sau titlu"
         searchValue=""
         onSearchChange={vi.fn()}
         chips={[
@@ -59,5 +60,10 @@ describe("FilterBar", () => {
     expect(children[1]).toContain("filter-bar__chips");
     expect(children[2]).toContain("filter-bar__meta");
     expect(screen.getByText("11 cereri")).toBeInTheDocument();
+
+    const search = screen.getByLabelText("Caută");
+    expect(search).toHaveAttribute("placeholder", "Client, referință sau titlu");
+    const label = container.querySelector('label[for="cereri-cauta"]');
+    expect(label?.className).toContain("u-visually-hidden");
   });
 });

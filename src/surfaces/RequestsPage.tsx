@@ -106,7 +106,8 @@ export function RequestsPage() {
         <FilterBar
           variant="toolbar"
           searchId="cereri-cauta"
-          searchLabel="Caută după client, referință…"
+          searchLabel="Caută"
+          searchPlaceholder="Client, referință sau titlu"
           searchValue={query}
           onSearchChange={setQuery}
           chips={chips}
