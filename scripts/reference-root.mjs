@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, relative, resolve } from "node:path";
 
@@ -60,6 +60,18 @@ export function looksLikeBusinessStorage(root) {
   );
 }
 
+/**
+ * True only for an existing directory with zero entries.
+ * ABSENT paths are not empty directories.
+ */
+export function isTrulyEmptyDirectory(root) {
+  const resolved = resolve(root);
+  if (!existsSync(resolved)) {
+    return false;
+  }
+  return readdirSync(resolved).length === 0;
+}
+
 export function classifyReferenceRoot(root) {
   const resolved = resolve(root);
   if (!existsSync(resolved)) {
@@ -85,16 +97,53 @@ export function assertSafeReferenceRoot(root) {
   return classification;
 }
 
+/**
+ * Non-destructive ownership establishment for create/start/provision paths.
+ * May create and mark ABSENT or truly empty unmarked directories only.
+ * Never claims ownership of an existing nonempty unmarked directory.
+ */
 export function ensureSyntheticReferenceRoot(root) {
   const classification = assertSafeReferenceRoot(root);
-  if (classification === "ABSENT" || classification === "EMPTY_OR_UNKNOWN") {
+  if (classification === "ABSENT") {
     mkdirSync(root, { recursive: true });
     writeFileSync(markerPath(root), MARKER_BODY);
+  } else if (classification === "EMPTY_OR_UNKNOWN") {
+    if (!isTrulyEmptyDirectory(root)) {
+      throw new Error("reference_root_nonempty_unmarked");
+    }
+    writeFileSync(markerPath(root), MARKER_BODY);
+  } else if (classification === "SYNTHETIC_REFERENCE") {
+    // Already proven owned — no further claim needed.
+  } else {
+    throw new Error("reference_root_unclassified");
   }
   if (!hasSyntheticMarker(root)) {
     throw new Error("reference_root_unclassified");
   }
   return root;
+}
+
+/**
+ * Owner-facing command root policy.
+ * Destructive reset / read-only commands never mint SYNTHETIC_REFERENCE.
+ * Create/start may establish ownership only through safe create semantics.
+ */
+export function prepareReferenceRootForCommand(command, env = process.env) {
+  const root = resolveReferenceRoot(env);
+  switch (command) {
+    case "reset":
+    case "status":
+    case "stop":
+    case "seed":
+      // Ownership proof must already exist for destructive reset.
+      // Status/stop/seed must not silently claim foreign roots.
+      return root;
+    case "start":
+    case "restart":
+      return ensureSyntheticReferenceRoot(root);
+    default:
+      return root;
+  }
 }
 
 export function isInside(base, candidate) {

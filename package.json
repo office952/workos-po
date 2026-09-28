@@ -23,10 +23,12 @@
     "reference:status": "node scripts/reference-runtime.mjs status",
     "reference:restart": "node scripts/reference-runtime.mjs restart",
     "reference:seed": "node scripts/reference-runtime.mjs seed",
+    "reference:reset": "node scripts/reference-runtime.mjs reset",
     "reference:stop": "node scripts/reference-runtime.mjs stop",
     "pilot:preflight": "pnpm --filter @workos-final/api cloud:pilot-preflight",
     "cloud:provision-organization": "pnpm --filter @workos-final/api cloud:provision-organization",
-    "cloud:add-organization-user": "pnpm --filter @workos-final/api cloud:add-organization-user"
+    "cloud:add-organization-user": "pnpm --filter @workos-final/api cloud:add-organization-user",
+    "cloud:owner-review": "pnpm --filter @workos-final/api cloud:owner-review"
   },
   "dependencies": {
     "@fontsource/geist-sans": "^5.3.0",

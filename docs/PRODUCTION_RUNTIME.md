@@ -235,6 +235,9 @@ This is local engineering infrastructure. It is not production, not real Cloud, 
 REFERENCE_URL = http://127.0.0.1:8787
 REFERENCE_PORT = 8787
 REFERENCE_CLASSIFICATION = SYNTHETIC_REFERENCE
+ORGANIZATION = WorkOS Test
+BOOTSTRAP_POLICY = SYNTHETIC_TEST
+FIXTURE_KIND = OWNER_REVIEW_V1
 REAL_HUB_MEDIA = NO
 REAL_CLOUD = NO
 ```
@@ -252,7 +255,22 @@ Engineering commands:
 - `pnpm reference:status`
 - `pnpm reference:restart`
 - `pnpm reference:seed`
+- `pnpm reference:reset`
 - `pnpm reference:stop`
+
+`reference:reset` rebuilds only the isolated synthetic reference Cloud root. It does **not** auto-claim arbitrary existing roots: the Owner-facing wrapper resolves the target path and classifies it read-only — it never writes `SYNTHETIC_REFERENCE` immediately before a wipe. Destructive reset requires prior synthetic ownership proof (a proven `SYNTHETIC_REFERENCE` marker); an absent path may be created as create-only; an existing unmarked directory — empty or nonempty — is refused and left untouched. Unmarked nonempty roots are hard-refused. It also hard-refuses production, unclassified business storage, OWNER_REVIEW_V1 planes that are not `SYNTHETIC_TEST`, and arbitrary organization id/name selectors. Narrow legacy exception: a root that already carries a valid `SYNTHETIC_REFERENCE` marker and a pre-OWNER_REVIEW_V1 synthetic identity may still be wiped and upgraded even if its plane was originally `NEW_ORGANIZATION`. Initial create/provision (`reference:start`) may establish ownership only through safe create semantics (absent path or truly empty unmarked directory). After reset, run `reference:start` then `reference:seed`.
+
+`reference:seed` populates the deterministic Owner-review connected dataset (clients, requests, quotes, jobs, assembly E2E, planning, Atelier tasks) through canonical Cloud HTTP APIs. It does not use direct SQL insertion.
+
+Synthetic Owner-review login (local reference root only; not production credentials):
+
+```text
+Email:         owner@workos.test
+Password:      workos1234
+Organization:  WorkOS Test
+Also seeded:   comercial@workos.test, productie@workos.test (member)
+Operator PIN:  246810 (atelier people)
+```
 
 `reference:start` and `reference:restart` always run `pnpm build` before launching a new reference process. `reference:status` does not rebuild. The launched process command line includes `--workos-reference-runtime`. `reference:stop` / `reference:restart` terminate only a recorded `SYNTHETIC_REFERENCE` process on port 8787 whose live command line contains that marker. If the command line cannot be read, or the marker is absent, the process is not killed.
 

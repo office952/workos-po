@@ -6,8 +6,7 @@ import {
   REFERENCE_HOST,
   REFERENCE_PORT,
   REFERENCE_URL,
-  ensureSyntheticReferenceRoot,
-  resolveReferenceRoot,
+  prepareReferenceRootForCommand,
 } from "./reference-root.mjs";
 import {
   REFERENCE_LAUNCH_PNPM_ARGS,
@@ -20,9 +19,6 @@ const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const IDENTITY_NAME = ".reference-identity.json";
 const PID_NAME = "reference-runtime.pid.json";
 const LOG_NAME = "reference-runtime.log";
-const DEFAULT_EMAIL = "ref@workos.local";
-const DEFAULT_PASSWORD = "workos1234";
-const DEFAULT_ORG = "WorkOS Reference Demo";
 const useWindowsShell = process.platform === "win32";
 
 function fail(code, detail) {
@@ -43,6 +39,26 @@ function spawnPnpm(args, options) {
     windowsHide: true,
     shell: useWindowsShell,
     ...options,
+  });
+}
+
+function runOwnerReviewCli(cliArgs, env) {
+  return new Promise((resolvePromise, reject) => {
+    const child = spawnPnpm(
+      ["--filter", "@workos-final/api", "cloud:owner-review", "--", ...cliArgs],
+      {
+        env,
+        stdio: "inherit",
+      },
+    );
+    child.on("error", reject);
+    child.on("exit", (code, signal) => {
+      if (signal || code !== 0) {
+        reject(new Error(`owner_review_cli_failed:${cliArgs[0]}:${code ?? signal}`));
+        return;
+      }
+      resolvePromise();
+    });
   });
 }
 
@@ -177,45 +193,19 @@ function readRecordedPid(root) {
   return { ...recorded, pid };
 }
 
-function provisionWithExistingCli(root, identity, env) {
-  return new Promise((resolvePromise, reject) => {
-    const child = spawnPnpm(
-      [
-        "--filter",
-        "@workos-final/api",
-        "cloud:provision",
-        "--",
-        "--root",
-        shellArg(root),
-        "--org",
-        shellArg(identity.organization),
-        "--email",
-        shellArg(identity.email),
-        "--password-stdin",
-      ],
-      {
-        env,
-        stdio: ["pipe", "inherit", "inherit"],
-      },
-    );
-    child.stdin.write(identity.password);
-    child.stdin.end();
-    child.on("error", reject);
-    child.on("exit", (code, signal) => {
-      if (signal || code !== 0) {
-        reject(new Error("reference_provision_failed"));
-        return;
-      }
-      resolvePromise();
-    });
-  });
-}
-
 async function ensureIdentity(root, env) {
   const existing = readJson(identityPath(root));
   const planeExists = existsSync(controlPlanePath(root));
-  if (existing && planeExists) {
-    return existing;
+  if (
+    existing &&
+    planeExists &&
+    existing.fixtureKind === "OWNER_REVIEW_V1" &&
+    existing.bootstrapPolicy === "SYNTHETIC_TEST" &&
+    existing.organization === "WorkOS Test" &&
+    existing.SYNTHETIC_ONLY === "YES"
+  ) {
+    await runOwnerReviewCli(["provision", "--root", root], env);
+    return readJson(identityPath(root)) ?? existing;
   }
   if (planeExists && !existing) {
     fail(
@@ -223,16 +213,17 @@ async function ensureIdentity(root, env) {
       "Reference root already has a Control Plane without a synthetic identity file.",
     );
   }
-  const identity = {
-    classification: "SYNTHETIC_REFERENCE",
-    SYNTHETIC_REFERENCE_DATA: "YES",
-    REAL_DATA: "NO",
-    email: DEFAULT_EMAIL,
-    password: DEFAULT_PASSWORD,
-    organization: DEFAULT_ORG,
-  };
-  await provisionWithExistingCli(root, identity, env);
-  writeJson(identityPath(root), identity);
+  if (planeExists && existing && existing.fixtureKind !== "OWNER_REVIEW_V1") {
+    fail(
+      "reference_identity_legacy",
+      "Existing reference identity is not OWNER_REVIEW_V1. Run: pnpm reference:reset",
+    );
+  }
+  await runOwnerReviewCli(["provision", "--root", root], env);
+  const identity = readJson(identityPath(root));
+  if (!identity) {
+    fail("reference_identity_missing", root);
+  }
   return identity;
 }
 
@@ -403,385 +394,27 @@ function stopOwned(root) {
   return true;
 }
 
-async function cookieJarFetch(url, options, jar) {
-  const headers = { ...(options.headers ?? {}) };
-  if (jar.cookie) {
-    headers.cookie = jar.cookie;
-  }
-  const response = await fetch(url, { ...options, headers });
-  const setCookie = response.headers.getSetCookie?.() ?? [];
-  if (setCookie.length > 0) {
-    jar.cookie = setCookie.map((entry) => entry.split(";")[0]).join("; ");
-  }
-  return response;
-}
-
-async function login(jar, identity) {
-  const response = await cookieJarFetch(
-    `${REFERENCE_URL}/api/cloud/login`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify({
-        email: identity.email,
-        password: identity.password,
-      }),
-    },
-    jar,
-  );
-  const body = await response.json();
-  if (!response.ok) {
-    throw new Error(`reference_login_failed:${body.error ?? response.status}`);
-  }
-  return body;
-}
-
-async function api(jar, method, path, body) {
-  const response = await cookieJarFetch(
-    `${REFERENCE_URL}${path}`,
-    {
-      method,
-      headers: {
-        accept: "application/json",
-        ...(body === undefined ? {} : { "content-type": "application/json" }),
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    },
-    jar,
-  );
-  const payload = await response.json().catch(() => null);
-  return { ok: response.ok, status: response.status, body: payload };
-}
-
-function lettersValues(inscription) {
-  return {
-    "root.inscription": inscription,
-    "face.finish": "none",
-    "face.confirmedAreaMm2": 250000,
-    "volume.depthMm": "60",
-    "volume.finish": "none",
-    "volume.confirmedPerimeterMm": 12500,
-  };
-}
-
-function acmValues(inscription) {
-  return {
-    "root.inscription": inscription,
-    "face.widthMm": 1000,
-    "face.heightMm": 500,
-    "face.cassetteDepthMm": 40,
-  };
-}
-
-async function ensureCustomer(jar, displayName) {
-  const listed = await api(jar, "GET", "/api/customers");
-  const customers = listed.body?.customers ?? [];
-  const existing = customers.find((item) => item.displayName === displayName);
-  if (existing) {
-    return existing;
-  }
-  const created = await api(jar, "POST", "/api/customers", { displayName });
-  if (!created.ok) {
-    throw new Error(`reference_customer_failed:${displayName}`);
-  }
-  return created.body.customer;
-}
-
-async function ensureRequest(jar, customerId, title, description) {
-  const listed = await api(jar, "GET", "/api/requests");
-  const requests = listed.body?.overview?.requests ?? [];
-  const existing = requests.find(
-    (item) => item.customerId === customerId && item.title === title,
-  );
-  if (existing) {
-    return existing;
-  }
-  const created = await api(jar, "POST", "/api/requests", {
-    customerId,
-    title,
-    description,
-  });
-  if (!created.ok) {
-    throw new Error(`reference_request_failed:${title}`);
-  }
-  return created.body.request ?? created.body.detail?.request ?? created.body;
-}
-
-async function ensureSeller(jar) {
-  const current = await api(jar, "GET", "/api/seller");
-  if (current.body?.configured && current.body?.seller) {
-    return current.body.seller;
-  }
-  const saved = await api(jar, "PATCH", "/api/seller", {
-    legalName: "WorkOS Reference Demo SRL",
-    brand: "WorkOS Reference Demo",
-    fiscalId: "RO00000000",
-    tradeRegister: "J00/0000/2000",
-    address: "Strada Demo 1",
-    locality: "București",
-    iban: "RO00RNCB0000000000000001",
-    bank: "Banca Demo",
-  });
-  if (!saved.ok) {
-    throw new Error("reference_seller_failed");
-  }
-  return saved.body.seller;
-}
-
-async function freezeQuote(jar, productCode, values, customerId, requestId) {
-  const previewed = await api(jar, "POST", `/api/products/${productCode}/preview`, {
-    values,
-    requestId,
-  });
-  if (!previewed.ok) {
-    throw new Error(`reference_preview_failed:${productCode}`);
-  }
-  const frozen = await api(jar, "POST", `/api/products/${productCode}/quote-snapshots`, {
-    values,
-    reviewId: previewed.body.reviewId,
-    customerId,
-    requestId,
-  });
-  if (!frozen.ok) {
-    throw new Error(`reference_quote_failed:${productCode}:${frozen.body?.error ?? frozen.status}`);
-  }
-  return frozen.body.quoteSnapshot;
-}
-
-async function quotesForRequest(jar, requestId) {
-  const listed = await api(jar, "GET", "/api/quotes");
-  const quotes = listed.body?.overview?.quotes ?? [];
-  return quotes.filter((item) => item.requestId === requestId);
-}
-
-async function ensureFrozenQuote(jar, productCode, values, customerId, requestId) {
-  const existing = await quotesForRequest(jar, requestId);
-  if (existing.length > 0) {
-    return existing[0];
-  }
-  return freezeQuote(jar, productCode, values, customerId, requestId);
-}
-
-async function ensureAcceptedOrder(jar, productCode, quoteSnapshotId) {
-  const acceptance = await api(
-    jar,
-    "POST",
-    `/api/products/${productCode}/quote-snapshots/${quoteSnapshotId}/acceptance`,
-  );
-  if (!acceptance.ok && acceptance.status !== 409) {
-    throw new Error(`reference_accept_failed:${acceptance.body?.error ?? acceptance.status}`);
-  }
-  const order = await api(
-    jar,
-    "POST",
-    `/api/products/${productCode}/quote-snapshots/${quoteSnapshotId}/order`,
-  );
-  if (!order.ok && order.status !== 409) {
-    throw new Error(`reference_order_failed:${order.body?.error ?? order.status}`);
-  }
-  return order.body?.orderSnapshot ?? acceptance.body?.orderSnapshot;
-}
-
-async function ensureExecutionPlan(jar, productCode, orderSnapshotId) {
-  const release = await api(
-    jar,
-    "POST",
-    `/api/products/${productCode}/orders/${orderSnapshotId}/production-release`,
-  );
-  if (!release.ok && release.status !== 409) {
-    throw new Error(`reference_release_failed:${release.body?.error ?? release.status}`);
-  }
-  const snapshotId =
-    release.body?.snapshot?.snapshotId ??
-    (await api(jar, "GET", `/api/products/${productCode}/orders/${orderSnapshotId}/production-release`))
-      .body?.snapshot?.snapshotId;
-  if (!snapshotId) {
-    throw new Error("reference_release_missing");
-  }
-  const plan = await api(
-    jar,
-    "POST",
-    `/api/products/${productCode}/accepted-production-snapshots/${snapshotId}/execution-plan`,
-  );
-  if (!plan.ok && plan.status !== 409) {
-    throw new Error(`reference_plan_failed:${plan.body?.error ?? plan.status}`);
-  }
-  return plan.body?.executionPlan;
-}
-
-async function ensureCncProvider(jar) {
-  const admin = await api(jar, "GET", "/api/workcenters");
-  const machines = admin.body?.machines ?? [];
-  const existing = machines.find(
-    (item) =>
-      item.label === "CNC Router DEMO" ||
-      (Array.isArray(item.capabilityIds) && item.capabilityIds.includes("CNC_ROUTING")),
-  );
-  if (existing) {
-    if (existing.lifecycle !== "ACTIVE") {
-      const activated = await api(jar, "PATCH", `/api/machines/${encodeURIComponent(existing.id)}`, {
-        lifecycle: "ACTIVE",
-      });
-      if (activated.ok && activated.body?.machine) {
-        return activated.body.machine;
-      }
-    }
-    return existing;
-  }
-  const workcenters = admin.body?.workcenters ?? [];
-  let workcenter =
-    workcenters.find((item) => item.label === "Zonă CNC DEMO") ??
-    workcenters.find((item) => item.lifecycle === "ACTIVE") ??
-    workcenters[0];
-  if (!workcenter) {
-    const created = await api(jar, "POST", "/api/workcenters", {
-      label: "Zonă CNC DEMO",
-      lifecycle: "ACTIVE",
-      capabilityIds: ["CNC_ROUTING"],
-    });
-    if (!created.ok) {
-      throw new Error("reference_workcenter_failed");
-    }
-    workcenter = created.body.workcenter;
-  } else if (workcenter.lifecycle !== "ACTIVE") {
-    const activated = await api(jar, "PATCH", `/api/workcenters/${encodeURIComponent(workcenter.id)}`, {
-      lifecycle: "ACTIVE",
-    });
-    if (activated.ok && activated.body?.workcenter) {
-      workcenter = activated.body.workcenter;
-    }
-  }
-  const machine = await api(jar, "POST", "/api/machines", {
-    label: "CNC Router DEMO",
-    workcenterId: workcenter.id,
-    lifecycle: "ACTIVE",
-    capabilityIds: ["CNC_ROUTING"],
-  });
-  if (!machine.ok) {
-    throw new Error(`reference_machine_failed:${machine.body?.error ?? machine.status}`);
-  }
-  return machine.body.machine;
-}
-
-async function refreshExecutionPlan(jar, plan) {
-  const planId = plan?.plan?.planId ?? plan?.planId;
-  if (!planId) {
-    return plan;
-  }
-  const refreshed = await api(jar, "GET", `/api/execution-plans/${encodeURIComponent(planId)}`);
-  return refreshed.body?.executionPlan ?? plan;
-}
-
-async function applyPlanningSeed(jar, plan, provider) {
-  const live = await refreshExecutionPlan(jar, plan);
-  const tasks = live?.tasks ?? [];
-  const providerTasks = tasks.filter((task) => {
-    const eligible = Array.isArray(task.eligibleProviders) ? task.eligibleProviders : [];
-    return (
-      task.requiresProvider !== false &&
-      (task.canAssign === true ||
-        task.requiredCapabilityId === "CNC_ROUTING" ||
-        String(task.requiredCapabilityLabel ?? "").toLowerCase().includes("cnc") ||
-        eligible.some((item) => item.id === provider?.id))
-    );
-  });
-  const assignable = (
-    providerTasks.length >= 3 ? providerTasks : tasks.filter((task) => task.canAssign)
-  ).slice();
-  const chosen = assignable.slice(0, 3);
-  const efforts = chosen.length >= 3 ? [45, 135, null] : [45, null];
-  for (const [index, task] of chosen.entries()) {
-    if (!task.assignedProvider && provider?.id) {
-      await api(jar, "POST", `/api/execution-tasks/${encodeURIComponent(task.taskId)}/provider`, {
-        providerId: provider.id,
-      });
-    }
-    if (efforts[index] !== null && (task.plannedEffortMinutes == null || task.plannedEffortMinutes === undefined)) {
-      await api(jar, "POST", `/api/execution-tasks/${encodeURIComponent(task.taskId)}/planned-effort`, {
-        plannedEffortMinutes: efforts[index],
-      });
-    }
-  }
-}
-
-async function seedCommand(root) {
+async function seedCommand(root, env) {
   if (!(await healthOk())) {
     fail("reference_seed_runtime_down", `Start the reference runtime first: ${REFERENCE_URL}`);
   }
   const identity = readJson(identityPath(root));
-  if (!identity) {
-    fail("reference_identity_missing", root);
+  if (!identity || identity.fixtureKind !== "OWNER_REVIEW_V1") {
+    fail(
+      "reference_identity_missing",
+      "Owner-review identity required. Run: pnpm reference:reset",
+    );
   }
-  const jar = { cookie: "" };
-  await login(jar, identity);
-  await ensureSeller(jar);
+  await runOwnerReviewCli(["seed", "--root", root, "--base-url", REFERENCE_URL], env);
+}
 
-  const alpha = await ensureCustomer(jar, "ALPHA CLIMA DEMO SRL");
-  const nord = await ensureCustomer(jar, "NORD MARKET DEMO SRL");
-  const urban = await ensureCustomer(jar, "URBAN PHARMA DEMO SRL");
-  const sign = await ensureCustomer(jar, "SIGN PRO DEMO SRL");
-
-  const alphaRequest = await ensureRequest(
-    jar,
-    alpha.customerId,
-    "Litere volumetrice receptie",
-    "Litere volumetrice frontlit pentru receptie ALPHA CLIMA DEMO.",
-  );
-  const nordRequest = await ensureRequest(
-    jar,
-    nord.customerId,
-    "Caseta ACM iluminata",
-    "Caseta ACM pentru NORD MARKET DEMO, date sintetice.",
-  );
-  const urbanRequest = await ensureRequest(
-    jar,
-    urban.customerId,
-    "Litere volumetrice fatada",
-    "Litere volumetrice pentru fatada URBAN PHARMA DEMO.",
-  );
-  await ensureRequest(
-    jar,
-    sign.customerId,
-    "Cerere noua fara oferta",
-    "Cerere sintetica SIGN PRO DEMO, fără ofertă.",
-  );
-
-  const letters = "PRD-LETTERS-FRONTLIT-PLEXI-AL06";
-  const acm = "PRD-ACM-CASSETTE-NONE";
-
-  const nordQuote = await ensureFrozenQuote(
-    jar,
-    acm,
-    acmValues("Caseta NORD DEMO"),
-    nord.customerId,
-    nordRequest.requestId,
-  );
-  const urbanQuote = await ensureFrozenQuote(
-    jar,
-    letters,
-    lettersValues("Litere URBAN DEMO"),
-    urban.customerId,
-    urbanRequest.requestId,
-  );
-  const alphaQuote = await ensureFrozenQuote(
-    jar,
-    letters,
-    lettersValues("Litere ALPHA DEMO"),
-    alpha.customerId,
-    alphaRequest.requestId,
-  );
-
-  await ensureAcceptedOrder(jar, letters, urbanQuote.quoteSnapshotId);
-  const alphaOrder = await ensureAcceptedOrder(jar, letters, alphaQuote.quoteSnapshotId);
-  const plan = await ensureExecutionPlan(jar, letters, alphaOrder.orderSnapshotId);
-  const provider = await ensureCncProvider(jar);
-  await applyPlanningSeed(jar, plan, provider);
-
-  console.log("REFERENCE_DATASET_SEEDED = YES");
+async function resetCommand(root, env) {
+  stopOwned(root);
+  await runOwnerReviewCli(["reset", "--root", root], env);
+  console.log("REFERENCE_RUNTIME_RESET = YES");
   console.log("SYNTHETIC_REFERENCE_DATA = YES");
-  console.log("DIRECT_SQL_SEED = NO");
-  console.log(`customers: ALPHA/NORD/URBAN/SIGN`);
-  console.log(`quotes: nord=${nordQuote.quoteSnapshotId} urban=${urbanQuote.quoteSnapshotId} alpha=${alphaQuote.quoteSnapshotId}`);
+  console.log("REAL_DATA = NO");
+  console.log("Next: pnpm reference:start && pnpm reference:seed");
 }
 
 const command = process.argv[2] ?? "status";
@@ -791,7 +424,9 @@ if (process.env.NODE_ENV === "production") {
 
 const env = { ...process.env, NODE_ENV: "development" };
 delete env.WORKOS_CLOUD_ROOT;
-const root = ensureSyntheticReferenceRoot(resolveReferenceRoot(env));
+// Reset / status / stop / seed resolve only — never mint SYNTHETIC_REFERENCE.
+// Start / restart may establish ownership via safe create semantics only.
+const root = prepareReferenceRootForCommand(command, env);
 
 try {
   if (command === "start") {
@@ -804,7 +439,9 @@ try {
     stopOwned(root);
     await startCommand(root, env);
   } else if (command === "seed") {
-    await seedCommand(root);
+    await seedCommand(root, env);
+  } else if (command === "reset") {
+    await resetCommand(root, env);
   } else {
     fail("reference_command_unknown", command);
   }
