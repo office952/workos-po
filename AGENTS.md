@@ -141,6 +141,7 @@ ONE_WORKOS_CODEBASE = YES
 ONE_BUSINESS_ENGINE = YES
 ONE_PRODUCT_TRUTH = YES
 NO_CLIENT_CODE_FORK = YES
+CUSTOMER_OPERABLE_WITHOUT_CURSOR = YES
 ALTERNATIVE_PRODUCT_DELIVERY = NO
 PRIMARY_USER_JOURNEY = COMPLETE
 PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
@@ -164,7 +165,12 @@ EXE4_INTEGRATED_ON_MAIN = YES
 EXE4_MERGE_COMMIT = e0ddbdac7de5896d683e05782a21f0e55a984b9b
 PR_28 = MERGED
 CURRENT_PROGRAM = WORKOS_PRODUCT_COMPLETION_V1
-CURRENT_PROGRAM_STATUS = IN_PROGRESS
+CURRENT_PROGRAM_STATUS = COMPLETE / OWNER_ACCEPTED
+WORKOS_PRODUCT_COMPLETION_V1 = COMPLETE / OWNER_ACCEPTED
+WORKOS_PRODUCT_COMPLETION_V1_REAL_V1_BLOCKERS = NONE
+WORKOS_PRODUCT_COMPLETION_V1_P0 = 0
+WORKOS_PRODUCT_COMPLETION_V1_P1 = 0
+PRODUCT_V1_IMPLEMENTATION = CLOSED
 CONTROLLED_ORGANIZATION_PROVISIONING_V1 = COMPLETE / OWNER_ACCEPTED / INTEGRATED
 CONTROLLED_ORGANIZATION_PROVISIONING_V1_INTEGRATED_ON_MAIN = YES
 CONTROLLED_ORGANIZATION_PROVISIONING_V1_COMMIT = 6ad2f4b78b3dbd72dbb286107c6ac04e8dafcc9c
@@ -187,6 +193,8 @@ REAL_ENVIRONMENT_PREFLIGHT = NOT_RUN
 DEPLOY_PRODUCTION = HOLD
 CUTOVER = HOLD
 FIRST_REAL_BUSINESS_OPERATION = HOLD
+NEXT_PROGRAM = REAL_ENVIRONMENT_PREFLIGHT / PRODUCTION_PILOT
+NEXT_PROGRAM_STATUS = NOT_STARTED / OWNER_GO_REQUIRED
 EXECUTION_REALITY_V1 = COMPLETE / OWNER_ACCEPTED
 OWNER_ACCEPTED_EXECUTION_REALITY_V1 = YES
 ACTUAL_DURATION_V1 = COMPLETE / OWNER_ACCEPTED
@@ -303,7 +311,7 @@ REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
 Living program authority: `docs/ROADMAP.md`.
 Configuration-First architecture: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
-People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Current supported-product People capabilities are mapped; unused catalog capabilities may stay unmapped. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Execution Expansion V1 is Owner-accepted and integrated on main through PR #28. Execution acceptance advisories are recorded on the roadmap and are not a correction wave. Product Assembly V1 is Owner-accepted and integrated. It is cross-cutting work and does not replace Planning Workload V1. Acceptance advisories are recorded on the roadmap and are not a correction wave. Volumetric Logo V1 and Product Assembly V2 are Owner-accepted. Their acceptance advisories are recorded and are not a correction wave. Host Context V1, Mounting Interface V1, and the site-installation vertical are Owner-accepted and integrated on main. Host Context is a frozen projection of SiteInstallationFacts and is not a product. Acceptance advisories are recorded on the roadmap and are not a correction wave. Current program is WorkOS Product Completion V1. Controlled Organization Provisioning V1 is Owner-accepted and integrated on main at `6ad2f4b78b3dbd72dbb286107c6ac04e8dafcc9c`. Additional User Operator Tooling V1 is Owner-accepted and integrated on main at `47d18c3134e1239c3934a995541a9ca352587084`. Self-service signup, email verification, password recovery, MFA, billing, production cutover, and first real business operation remain deferred. Production Pilot Readiness V1 remains Owner-accepted as a synthetically proven read-only preflight engine. A real environment preflight has not been run. Execution Reality V1 remains Owner-accepted. Acceptance advisories are recorded on the roadmap and are not a correction wave. PLN0 workload-first canon is complete. PLN1 planned effort, provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787` are Owner-accepted. PLN1 acceptance advisories are recorded on the roadmap and are not a correction wave. Weekly provider `availableMinutes` and `planningWeek` remain cancelled. PLN2 and Operations Control V1 are Owner-accepted: one operational job for Product and Assembly, job priority and optional target date, and unassigned planned effort. Acceptance advisories are recorded and are not a correction wave. PLN3 is not started. Scheduling remains out of V1. Member DAG / composition corrections stay deferred and are not a Planning blocker. Living Planning canon: `docs/architecture/PLANNING_CAPACITY_V1_CANON.md`. Exact merge commits live in `docs/ROADMAP.md`.
+People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Current supported-product People capabilities are mapped; unused catalog capabilities may stay unmapped. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Execution Expansion V1 is Owner-accepted and integrated on main through PR #28. Execution acceptance advisories are recorded on the roadmap and are not a correction wave. Product Assembly V1 is Owner-accepted and integrated. It is cross-cutting work and does not replace Planning Workload V1. Acceptance advisories are recorded on the roadmap and are not a correction wave. Volumetric Logo V1 and Product Assembly V2 are Owner-accepted. Their acceptance advisories are recorded and are not a correction wave. Host Context V1, Mounting Interface V1, and the site-installation vertical are Owner-accepted and integrated on main. Host Context is a frozen projection of SiteInstallationFacts and is not a product. Acceptance advisories are recorded on the roadmap and are not a correction wave. WorkOS Product Completion V1 is Owner-accepted and closed. Product V1 implementation is closed. Real V1 blockers are none. Controlled Organization Provisioning V1 is Owner-accepted and integrated on main at `6ad2f4b78b3dbd72dbb286107c6ac04e8dafcc9c`. Additional User Operator Tooling V1 is Owner-accepted and integrated on main at `47d18c3134e1239c3934a995541a9ca352587084`. Self-service signup, email verification, password recovery, MFA, billing, production organization provisioning UX, commercial onboarding automation, production cutover, and first real business operation remain deferred and nonblocking. Production Pilot Readiness V1 remains Owner-accepted as a synthetically proven read-only preflight engine. A real environment preflight has not been run. Next program direction is Real Environment Preflight / Production Pilot; it is not started and requires a later Owner GO. This closure does not authorize real Cloud access, real Cloud writes, production deployment, cutover, or the first real business operation. Execution Reality V1 remains Owner-accepted. Acceptance advisories are recorded on the roadmap and are not a correction wave. PLN0 workload-first canon is complete. PLN1 planned effort, provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787` are Owner-accepted. PLN1 acceptance advisories are recorded on the roadmap and are not a correction wave. Weekly provider `availableMinutes` and `planningWeek` remain cancelled. PLN2 and Operations Control V1 are Owner-accepted: one operational job for Product and Assembly, job priority and optional target date, and unassigned planned effort. Acceptance advisories are recorded and are not a correction wave. PLN3 is not started. Scheduling remains out of V1. Member DAG / composition corrections stay deferred and are not a Planning blocker. Living Planning canon: `docs/architecture/PLANNING_CAPACITY_V1_CANON.md`. Exact merge commits live in `docs/ROADMAP.md`.
 
 ```text
 NO_SILENT_BUSINESS_TRUTH = CANONICAL

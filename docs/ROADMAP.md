@@ -35,6 +35,7 @@ ONE_WORKOS_CODEBASE = YES
 ONE_BUSINESS_ENGINE = YES
 ONE_PRODUCT_TRUTH = YES
 NO_CLIENT_CODE_FORK = YES
+CUSTOMER_OPERABLE_WITHOUT_CURSOR = YES
 ALTERNATIVE_PRODUCT_DELIVERY = NO
 
 PRIMARY_USER_JOURNEY = COMPLETE
@@ -62,7 +63,12 @@ EXE4_INTEGRATED_ON_MAIN = YES
 EXE4_MERGE_COMMIT = e0ddbdac7de5896d683e05782a21f0e55a984b9b
 PR_28 = MERGED
 CURRENT_PROGRAM = WORKOS_PRODUCT_COMPLETION_V1
-CURRENT_PROGRAM_STATUS = IN_PROGRESS
+CURRENT_PROGRAM_STATUS = COMPLETE / OWNER_ACCEPTED
+WORKOS_PRODUCT_COMPLETION_V1 = COMPLETE / OWNER_ACCEPTED
+WORKOS_PRODUCT_COMPLETION_V1_REAL_V1_BLOCKERS = NONE
+WORKOS_PRODUCT_COMPLETION_V1_P0 = 0
+WORKOS_PRODUCT_COMPLETION_V1_P1 = 0
+PRODUCT_V1_IMPLEMENTATION = CLOSED
 CONTROLLED_ORGANIZATION_PROVISIONING_V1 = COMPLETE / OWNER_ACCEPTED / INTEGRATED
 CONTROLLED_ORGANIZATION_PROVISIONING_V1_INTEGRATED_ON_MAIN = YES
 CONTROLLED_ORGANIZATION_PROVISIONING_V1_COMMIT = 6ad2f4b78b3dbd72dbb286107c6ac04e8dafcc9c
@@ -85,6 +91,8 @@ REAL_ENVIRONMENT_PREFLIGHT = NOT_RUN
 DEPLOY_PRODUCTION = HOLD
 CUTOVER = HOLD
 FIRST_REAL_BUSINESS_OPERATION = HOLD
+NEXT_PROGRAM = REAL_ENVIRONMENT_PREFLIGHT / PRODUCTION_PILOT
+NEXT_PROGRAM_STATUS = NOT_STARTED / OWNER_GO_REQUIRED
 PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
 PLANNING_CAPACITY_V1_PREFLIGHT = COMPLETE
 PLANNING_CAPACITY_V1_OWNER_DECISIONS = SUPERSEDED_IN_PART
@@ -254,10 +262,13 @@ AUTH → CLIENT → CERERE → CONFIGURATOR → OFERTA → ACCEPTANCE → LUCRAR
 ```
 
 ```text
+CONTROLLED_PLATFORM_OPERATOR_PROVISIONING = IMPLEMENTED
+CUSTOMER_SELF_SERVICE_PROVISIONING_UX = DEFERRED
+PRODUCTION_ORG_PROVISIONING_UX = DEFERRED / ADMIN_TOOLING_DEBT / NONBLOCKING
 ADMIN_TOOLING_DEBT = RECORDED_NOT_IMPLEMENTED
 ```
 
-Recorded, not implemented: self-service signup, email verification, password recovery, MFA, billing/subscriptions, production organization provisioning UX, commercial onboarding automation. People Admin V1 and Machine/Workcenter Admin V1 are complete. Do not build remaining admin debt without a later Owner GO.
+Controlled platform operator provisioning (`pnpm cloud:provision-organization`) and additional Cloud users (`pnpm cloud:add-organization-user`) are implemented. Recorded deferred admin debt remains nonblocking: self-service signup, email verification, password recovery, MFA, billing/subscriptions, production organization provisioning UX, commercial onboarding automation. People Admin V1 and Machine/Workcenter Admin V1 are complete. Do not build remaining admin debt without a later Owner GO.
 
 ## Authority after engine consolidation
 
@@ -795,7 +806,15 @@ Execution acceptance advisories, not a correction wave:
 
 ```text
 CURRENT_PROGRAM = WORKOS_PRODUCT_COMPLETION_V1
-CURRENT_PROGRAM_STATUS = IN_PROGRESS
+CURRENT_PROGRAM_STATUS = COMPLETE / OWNER_ACCEPTED
+WORKOS_PRODUCT_COMPLETION_V1 = COMPLETE / OWNER_ACCEPTED
+WORKOS_PRODUCT_COMPLETION_V1_REAL_V1_BLOCKERS = NONE
+WORKOS_PRODUCT_COMPLETION_V1_P0 = 0
+WORKOS_PRODUCT_COMPLETION_V1_P1 = 0
+PRODUCT_V1_IMPLEMENTATION = CLOSED
+PRIMARY_USER_JOURNEY = COMPLETE
+CUSTOMER_OPERABLE_WITHOUT_CURSOR = YES
+NO_CLIENT_CODE_FORK = YES
 CONTROLLED_ORGANIZATION_PROVISIONING_V1 = COMPLETE / OWNER_ACCEPTED / INTEGRATED
 CONTROLLED_ORGANIZATION_PROVISIONING_V1_INTEGRATED_ON_MAIN = YES
 CONTROLLED_ORGANIZATION_PROVISIONING_V1_COMMIT = 6ad2f4b78b3dbd72dbb286107c6ac04e8dafcc9c
@@ -816,6 +835,8 @@ REAL_ENVIRONMENT_PREFLIGHT = NOT_RUN
 DEPLOY_PRODUCTION = HOLD
 CUTOVER = HOLD
 FIRST_REAL_BUSINESS_OPERATION = HOLD
+NEXT_PROGRAM = REAL_ENVIRONMENT_PREFLIGHT / PRODUCTION_PILOT
+NEXT_PROGRAM_STATUS = NOT_STARTED / OWNER_GO_REQUIRED
 PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
 PLANNING_CAPACITY_V1_PREFLIGHT = COMPLETE
 PLANNING_CAPACITY_V1_OWNER_DECISIONS = SUPERSEDED_IN_PART
@@ -857,7 +878,7 @@ PLANNING_CAPACITY_CANON = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
 PRODUCTION_PILOT_READINESS_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
 ```
 
-Production Pilot Readiness V1 is Owner-accepted as the read-only preflight engine. Synthetic proof passed. A real environment preflight has not been run. Acceptance does not authorize deployment, cutover, real Cloud access, or production organization provisioning. Controlled new-organization provisioning is complete. Additional User Operator Tooling V1 is Owner-accepted and integrated on main at `47d18c3134e1239c3934a995541a9ca352587084`. Self-service signup, email verification, password recovery, MFA, and billing remain deferred. Real production organization provisioning, cutover, and first real business operation remain deferred, and the read-only preflight still records that production path as unsupported (`ADMIN_TOOLING_DEBT`). General SaaS debts remain debt.
+WorkOS Product Completion V1 is Owner-accepted and closed. Product V1 implementation is closed. Real V1 blockers are none. Production Pilot Readiness V1 remains Owner-accepted as the read-only preflight engine. Synthetic proof passed. A real environment preflight has not been run. This closure does not authorize deployment, cutover, real Cloud access, real Cloud writes, or production organization creation. Controlled platform operator provisioning (`pnpm cloud:provision-organization`) and additional Cloud users (`pnpm cloud:add-organization-user`) are implemented. Customer self-service / production organization provisioning UX remains deferred nonblocking admin debt. Self-service signup, email verification, password recovery, MFA, billing, commercial onboarding automation, cutover, and first real business operation remain deferred and nonblocking. Next program direction is Real Environment Preflight / Production Pilot; it is not started and requires a later Owner GO.
 
 ```text
 INDEPENDENT_REVIEW = PASS
