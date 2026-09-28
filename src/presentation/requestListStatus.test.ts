@@ -2,41 +2,37 @@ import { describe, expect, it } from "vitest";
 import { presentRequestRegistryStatus } from "./requestListStatus";
 
 describe("presentRequestRegistryStatus", () => {
-  it("replaces misleading Nouă when commercial progress already exists", () => {
+  it("keeps canonical Request state separate from commercial progress", () => {
     expect(
       presentRequestRegistryStatus({
-        status: "NEW",
         statusLabel: "Nouă",
         contextLabel: "Ofertă creată",
       }),
-    ).toEqual({ stateLabel: "Ofertă creată", supportLabel: "" });
+    ).toEqual({ stateLabel: "Nouă", commercialProgressLabel: "Ofertă creată" });
 
     expect(
       presentRequestRegistryStatus({
-        status: "NEW",
         statusLabel: "Nouă",
         contextLabel: "Comandă creată",
       }),
-    ).toEqual({ stateLabel: "Comandă creată", supportLabel: "" });
+    ).toEqual({ stateLabel: "Nouă", commercialProgressLabel: "Comandă creată" });
   });
 
   it("keeps workflow status when there is no commercial progress", () => {
     expect(
       presentRequestRegistryStatus({
-        status: "NEW",
         statusLabel: "Nouă",
         contextLabel: null,
       }),
-    ).toEqual({ stateLabel: "Nouă", supportLabel: "" });
+    ).toEqual({ stateLabel: "Nouă", commercialProgressLabel: "—" });
   });
 
   it("keeps both labels when workflow status is not Nouă", () => {
     expect(
       presentRequestRegistryStatus({
-        status: "READY_FOR_QUOTE",
         statusLabel: "Gata de ofertă",
         contextLabel: "Ofertă creată",
       }),
-    ).toEqual({ stateLabel: "Gata de ofertă", supportLabel: "Ofertă creată" });
+    ).toEqual({ stateLabel: "Gata de ofertă", commercialProgressLabel: "Ofertă creată" });
   });
 });

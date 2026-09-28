@@ -51,7 +51,7 @@ export function RequestAttachmentsSection({
   }
 
   return (
-    <SurfacePanel title="Atașamente" label="Atașamente">
+    <SurfacePanel title="Fișiere și dovezi" label="Fișiere și dovezi">
       {attachments.length === 0 ? (
         <EmptyState title="Nu există atașamente." />
       ) : (

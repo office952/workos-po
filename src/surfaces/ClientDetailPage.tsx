@@ -149,7 +149,6 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
           {mine.map((item) => {
             const action = presentRequestWorklistAction(item);
             const registry = presentRequestRegistryStatus({
-              status: item.status,
               statusLabel: item.statusLabel,
               contextLabel: item.contextLabel,
             });
@@ -169,7 +168,11 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
                     .filter(Boolean)
                     .join(" · ") || undefined
                 }
-                context={registry.supportLabel}
+                context={
+                  registry.commercialProgressLabel === "—"
+                    ? undefined
+                    : registry.commercialProgressLabel
+                }
                 state={<StatusBadge label={registry.stateLabel} tone={statusTone("workflow")} />}
                 actionLabel={action.actionLabel}
               />

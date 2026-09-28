@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { InlineAlert } from "../components/InlineAlert";
+import { InfoRow } from "../components/InfoRow";
 import { LoadingFloor } from "../components/LoadingFloor";
 import { StatusBadge } from "../components/StatusBadge";
 import { SurfacePanel } from "../components/SurfacePanel";
@@ -7,10 +8,10 @@ import { resourceKeys } from "../data/resourceKeys";
 import { loadJobList, loadRequestDetail } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
-import { presentContextMeta } from "../presentation/contextMeta";
+import { formatTimestamp } from "../presentation/format";
 import { statusTone } from "../presentation/statusTone";
 import { presentRequestPrimaryAction } from "../presentation/worklistAction";
-import { quoteHref, requestHref } from "../routing/appRoute";
+import { clientHref, quoteHref, requestHref } from "../routing/appRoute";
 import {
   readConfiguratorSession,
   writeConfiguratorSession,
@@ -32,6 +33,10 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
   );
   const detail = request.data;
   const primary = detail ? presentRequestPrimaryAction(detail) : null;
+  const createdLabel = formatTimestamp(detail?.createdAt ?? null);
+  const headerTitle = detail?.reference || detail?.title || "Cerere";
+  const headerLead =
+    detail && detail.reference && detail.reference !== detail.title ? detail.title : undefined;
 
   useEffect(() => {
     if (!detail) {
@@ -43,7 +48,7 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
       customerId: detail.customerId,
       requestId: detail.requestId,
       customerLabel: detail.customerDisplayName,
-      requestLabel: detail.title,
+      requestLabel: detail.reference || detail.title,
     });
   }, [detail]);
 
@@ -53,9 +58,22 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
       currentHref={requestHref(requestId)}
       workspace="object"
       eyebrow="Cerere"
-      title={detail?.title ?? "Cerere"}
-      lead={detail?.commercialProgressLabel ?? detail?.description ?? undefined}
-      meta={presentContextMeta([detail?.reference, detail?.customerDisplayName])}
+      title={headerTitle}
+      lead={headerLead}
+      meta={
+        detail ? (
+          <>
+            {detail.customerId && detail.customerDisplayName ? (
+              <a className="text-link" href={clientHref(detail.customerId)}>
+                {detail.customerDisplayName}
+              </a>
+            ) : (
+              (detail.customerDisplayName ?? "Fără client")
+            )}
+            {createdLabel ? <> · Creată {createdLabel}</> : null}
+          </>
+        ) : undefined
+      }
       status={
         detail ? (
           <StatusBadge label={detail.statusLabel} tone={statusTone("workflow")} />
@@ -76,30 +94,50 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
       ) : null}
       {detail ? (
         <>
-          <SurfacePanel title="Descriere" label="Descriere">
-            <p>{detail.description || "Fără descriere."}</p>
-          </SurfacePanel>
-          {detail.linkedOffers.length > 0 ? (
-            <SurfacePanel variant="quiet" title="Oferte legate" label="Oferte legate">
-              {detail.linkedOffers.map((offer) => (
-                <p key={offer.quoteSnapshotId}>
-                  <a className="text-link" href={quoteHref(offer.productCode, offer.quoteSnapshotId)}>
-                    {offer.reference ? `Deschide oferta ${offer.reference}` : "Deschide oferta"}
-                  </a>
-                </p>
-              ))}
+          <div className="stack">
+            <SurfacePanel title="Ce dorește clientul" label="Ce dorește clientul">
+              <p>{detail.description || "Fără descriere."}</p>
             </SurfacePanel>
-          ) : null}
-          <LinkedJobs title="Lucrări din cerere" jobs={requestJobs} />
-          <RequestAttachmentsSection
-            requestId={detail.requestId}
-            attachments={detail.attachments}
-            canUploadAttachments={detail.canUploadAttachments}
-          />
-          <RequestInstallationSection detail={detail} />
+            <RequestAttachmentsSection
+              requestId={detail.requestId}
+              attachments={detail.attachments}
+              canUploadAttachments={detail.canUploadAttachments}
+            />
+            <RequestInstallationSection detail={detail} />
+          </div>
+          <aside className="stack" aria-label="Continuare">
+            <SurfacePanel variant="quiet" title="Continuare" label="Continuare">
+              <dl className="fact-grid">
+                <InfoRow
+                  label="Progres comercial"
+                  value={detail.commercialProgressLabel?.trim() || "—"}
+                />
+              </dl>
+              {primary ? (
+                <p className="ui-note">Urmează: {primary.actionLabel}</p>
+              ) : (
+                <p className="ui-note">Nu există o continuare canonică pe această cerere.</p>
+              )}
+            </SurfacePanel>
+            {detail.linkedOffers.length > 0 ? (
+              <SurfacePanel variant="quiet" title="Oferte legate" label="Oferte legate">
+                {detail.linkedOffers.map((offer) => (
+                  <p key={offer.quoteSnapshotId}>
+                    <a
+                      className="text-link"
+                      href={quoteHref(offer.productCode, offer.quoteSnapshotId)}
+                    >
+                      {offer.reference ? `Deschide oferta ${offer.reference}` : "Deschide oferta"}
+                    </a>
+                  </p>
+                ))}
+              </SurfacePanel>
+            ) : null}
+            <LinkedJobs title="Lucrări legate" jobs={requestJobs} />
+          </aside>
         </>
       ) : request.status !== "error" ? (
-        <SurfacePanel title="Descriere" label="Descriere" busy>
+        <SurfacePanel title="Ce dorește clientul" label="Ce dorește clientul" busy>
           <LoadingFloor variant="facts" label="Se citește cererea" />
         </SurfacePanel>
       ) : null}

@@ -8,7 +8,7 @@ import { CollectionBody } from "../components/LoadingFloor";
 import { SurfacePanel } from "../components/SurfacePanel";
 import { WorklistRow } from "../components/WorklistRow";
 import { resourceKeys } from "../data/resourceKeys";
-import { loadCatalogProducts } from "../data/routeLoaders";
+import { loadCatalogProducts, loadRequestList } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { presentContextMeta } from "../presentation/contextMeta";
@@ -30,7 +30,10 @@ export function CatalogPage() {
   const customerId = context.customerId ?? stored.customerId;
   const requestId = context.requestId ?? stored.requestId;
   const catalog = useResource(resourceKeys.catalog(), loadCatalogProducts);
+  const requests = useResource(resourceKeys.requests(), loadRequestList);
   const products = useMemo(() => catalog.data ?? [], [catalog.data]);
+  const contextRequest =
+    (requests.data ?? []).find((item) => item.requestId === requestId) ?? null;
   const [query, setQuery] = useState("");
   const [family, setFamily] = useState(ALL);
   const [offerings, setOfferings] = useState<
@@ -91,15 +94,33 @@ export function CatalogPage() {
 
   useEffect(() => {
     const previous = readConfiguratorSession();
+    const matched = labelsMatchingContext(previous, { customerId, requestId });
+    const customerLabel =
+      matched.customerLabel ?? contextRequest?.customerDisplayName ?? null;
+    const requestLabel =
+      matched.requestLabel ??
+      contextRequest?.reference ??
+      contextRequest?.title ??
+      null;
     writeConfiguratorSession({
       ...previous,
       customerId,
       requestId,
-      ...labelsMatchingContext(previous, { customerId, requestId }),
+      customerLabel,
+      requestLabel,
     });
-  }, [customerId, requestId]);
+  }, [contextRequest, customerId, requestId]);
 
-  const labels = labelsMatchingContext(stored, { customerId, requestId });
+  const sessionLabels = labelsMatchingContext(stored, { customerId, requestId });
+  const labels = {
+    customerLabel:
+      sessionLabels.customerLabel ?? contextRequest?.customerDisplayName ?? null,
+    requestLabel:
+      sessionLabels.requestLabel ??
+      contextRequest?.reference ??
+      contextRequest?.title ??
+      null,
+  };
 
   const families = useMemo(
     () => uniqueLabels(products.map((product) => product.familyLabel)),

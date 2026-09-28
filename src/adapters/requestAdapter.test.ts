@@ -108,7 +108,7 @@ describe("request adapter", () => {
     expect(JSON.stringify(detail)).not.toMatch(/Nu adăuga montaj|Montajul nu face parte/);
   });
 
-  it("derives OPEN_QUOTE from linked offers when the envelope omits nextAction", () => {
+  it("does not invent OPEN_QUOTE when the envelope omits nextAction", () => {
     const detail = presentRequestDetail({
       detail: {
         request: {
@@ -126,8 +126,27 @@ describe("request adapter", () => {
         ],
       },
     });
-    expect(detail?.nextAction).toBe("OPEN_QUOTE");
-    expect(detail?.nextActionLabel).toBe("Deschide oferta");
+    expect(detail?.nextAction).toBe("");
+    expect(detail?.nextActionLabel).toBe("");
+  });
+
+  it("does not invent CHOOSE_PRODUCT when READY_FOR_QUOTE lacks nextAction", () => {
+    const detail = presentRequestDetail({
+      detail: {
+        request: {
+          requestId: "req-3",
+          title: "Litere",
+          customerId: "cus-3",
+          status: "READY_FOR_QUOTE",
+        },
+        statusLabel: "Gata de ofertă",
+        linkedOffers: [],
+      },
+    });
+    expect(detail?.nextAction).toBe("");
+    expect(detail?.nextActionLabel).toBe("");
+    expect(detail?.nextAction).not.toBe("CHOOSE_PRODUCT");
+    expect(detail?.nextAction).not.toBe("OPEN_QUOTE");
   });
 
   it("keeps facade and fixing other notes on the installation transport", () => {
