@@ -264,7 +264,16 @@ function AppRuntime() {
   }
 
   if (isAuthEntryPath(location.pathname)) {
-    return <RouteLoadingPage route={{ name: "home" }} />;
+    return (
+      <AppShell
+        contextLabel="WorkOS"
+        mode="slice"
+        currentHref="/"
+        account={presentAccount(cloud)}
+      >
+        <RouteLoadingPage route={{ name: "home" }} />
+      </AppShell>
+    );
   }
 
   return <AuthenticatedApp location={location} account={presentAccount(cloud)} />;
@@ -298,9 +307,7 @@ function AuthenticatedApp({
     return <FoundationProofPage />;
   }
 
-  if (loadState === "ready" && (!health || health.kind === "incompatible")) {
-    return <FailClosedPage />;
-  }
+  const incompatible = loadState === "ready" && (!health || health.kind === "incompatible");
 
   return (
     <AppShell
@@ -311,6 +318,8 @@ function AuthenticatedApp({
     >
       {loadState === "loading" ? (
         <RouteLoadingPage route={route} />
+      ) : incompatible ? (
+        <FailClosedPage />
       ) : (
         renderRoute(route, location.search)
       )}

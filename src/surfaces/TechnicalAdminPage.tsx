@@ -124,7 +124,7 @@ export function TechnicalAdminPage() {
       lead="Aceste valori sunt folosite la calculul tehnic al lucrărilor noi. Lucrările înghețate rămân neschimbate."
       meta={
         model?.canEdit
-          ? "Doar Owner poate confirma setările tehnice ale organizației."
+          ? "Doar proprietarul poate confirma setările tehnice ale organizației."
           : "Editarea nu este disponibilă pentru acest rol."
       }
     >

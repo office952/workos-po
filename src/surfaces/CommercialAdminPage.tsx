@@ -120,7 +120,7 @@ export function CommercialAdminPage() {
       lead="Aceste valori sunt folosite ca punct de pornire pentru ofertele noi. Pot fi modificate individual pe fiecare ofertă. Salvarea creează o versiune nouă. Ofertele înghețate rămân neschimbate."
       meta={
         model?.canEdit
-          ? "Doar Owner poate confirma politica organizației."
+          ? "Doar proprietarul poate confirma politica organizației."
           : "Editarea nu este disponibilă pentru acest rol."
       }
     >

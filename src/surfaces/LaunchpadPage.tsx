@@ -10,11 +10,8 @@ export function LaunchpadPage() {
   const cloud = useCloudSession();
   const organizationName = cloud.organization?.displayName ?? null;
   const roleLabel = membershipRoleLabel(cloud.organization?.membershipRole);
-  const userLabel = cloud.user?.email ?? null;
-  const meta = [organizationName, roleLabel, userLabel ? `Cont ${userLabel}` : null]
-    .filter((part): part is string => Boolean(part))
-    .join(" · ");
   const owner = cloud.organization?.membershipRole === "owner";
+  const identity = [organizationName, roleLabel].filter((part): part is string => Boolean(part)).join(" · ");
 
   return (
     <SlicePage
@@ -23,10 +20,33 @@ export function LaunchpadPage() {
       workspace="launchpad"
       title={chrome.title}
       lead={chrome.lead}
-      meta={meta || undefined}
-      status={<StatusBadge label="Pregătit pentru lucru" tone="ready" />}
+      meta={identity || undefined}
+      status={<StatusBadge label="Pregătit" tone="ready" />}
     >
       <div className="launchpad">
+        <section className="launchpad__attention" aria-label="Continuă munca">
+          <h2 className="launchpad__heading">Continuă</h2>
+          <ul className="launchpad__list launchpad__list--attention">
+            <li>
+              <a className="launchpad__link" href="/cereri">
+                <span className="launchpad__link-label">Cereri</span>
+                <span className="launchpad__link-purpose">Deschide o cerere de ofertă în curs.</span>
+              </a>
+            </li>
+            <li>
+              <a className="launchpad__link" href="/lucrari">
+                <span className="launchpad__link-label">Lucrări</span>
+                <span className="launchpad__link-purpose">Continuă lucrările eliberate.</span>
+              </a>
+            </li>
+            <li>
+              <a className="launchpad__link" href="/planificare">
+                <span className="launchpad__link-label">Planificare</span>
+                <span className="launchpad__link-purpose">Vezi efortul pe zone și utilaje.</span>
+              </a>
+            </li>
+          </ul>
+        </section>
         {GLOBAL_NAV.map((group) => (
           <section key={group.id} className="launchpad__section" aria-labelledby={`launch-${group.id}`}>
             <h2 id={`launch-${group.id}`} className="launchpad__heading">

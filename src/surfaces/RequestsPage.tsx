@@ -60,9 +60,9 @@ export function RequestsPage() {
       contextLabel="Cereri"
       currentHref="/cereri"
       workspace="stack"
-      eyebrow="Cereri"
       title="Cereri de ofertă"
       lead="Deschide cererea lucrării și continuă către pasul canonic."
+      meta={requests.status === "success" ? `${visible.length} rezultate` : undefined}
     >
       <SurfacePanel
         variant="flush"
@@ -77,7 +77,6 @@ export function RequestsPage() {
           chips={statusChips}
           selectedChip={statusChip}
           onChipChange={setStatusChip}
-          meta={requests.status === "success" ? `${visible.length} din ${items.length}` : undefined}
         />
         <CollectionBody
           status={requests.status}

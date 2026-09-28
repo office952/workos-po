@@ -106,7 +106,7 @@ export function FormulasAdminPage() {
       lead="Aceste formule sunt folosite la calculul tehnic al lucrărilor noi. Lucrările înghețate rămân neschimbate."
       meta={
         model?.canEdit
-          ? "Doar Owner poate confirma formulele de calcul ale organizației."
+          ? "Doar proprietarul poate confirma formulele de calcul ale organizației."
           : "Editarea nu este disponibilă pentru acest rol."
       }
     >
@@ -198,14 +198,19 @@ export function FormulasAdminPage() {
                   }}
                 />
                 {model.canEdit ? (
-                  <Button
-                    disabled={pending}
-                    onClick={() => {
-                      void save(formula.formulaId);
-                    }}
-                  >
-                    Salvează formula
-                  </Button>
+                  <>
+                    <Button
+                      disabled={pending}
+                      onClick={() => {
+                        void save(formula.formulaId);
+                      }}
+                    >
+                      Salvează formula
+                    </Button>
+                    <p className="ui-note">
+                      Salvarea creează o versiune nouă folosită doar la calculele următoare.
+                    </p>
+                  </>
                 ) : (
                   <p>Editarea nu este disponibilă pentru acest rol.</p>
                 )}

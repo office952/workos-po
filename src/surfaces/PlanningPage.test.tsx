@@ -101,7 +101,7 @@ describe("PlanningPage", () => {
     expect(screen.getByText("Timp cunoscut 3h")).toBeInTheDocument();
     expect(screen.getByText("Fără estimare 1 sarcină")).toBeInTheDocument();
     expect(screen.getByText(/Client Ansamblu · Urgentă · 15.10.2026 · Ansamblare/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Alocă furnizorul în execuție" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Alocă zona sau utilajul în execuție" })).toHaveAttribute(
       "href",
       "/executie/exp:1?task=task:open&job=job-1",
     );

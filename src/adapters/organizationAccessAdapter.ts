@@ -15,7 +15,7 @@ export type OrganizationAccessAdminTransport = {
 };
 
 function roleLabel(role: "owner" | "member"): string {
-  return role === "owner" ? "Owner" : "Membru";
+  return role === "owner" ? "Proprietar" : "Membru";
 }
 
 function statusLabel(status: "ACTIVE" | "REVOKED"): string {

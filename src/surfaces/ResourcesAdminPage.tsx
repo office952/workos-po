@@ -148,7 +148,7 @@ export function ResourcesAdminPage() {
       lead="Tarif confirmat pe resursă și calificator. Valoarea salvată este folosită doar la calcule noi."
       meta={
         canEdit
-          ? "Doar Owner poate modifica tariful."
+          ? "Doar proprietarul poate modifica tariful."
           : "Editarea nu este disponibilă pentru acest rol."
       }
     >
@@ -254,6 +254,9 @@ export function ResourcesAdminPage() {
                     >
                       Salvează
                     </Button>
+                    <p className="ui-note">
+                      Tariful salvat se folosește doar la calculele noi.
+                    </p>
                   </>
                 ) : (
                   <InlineAlert tone="blocked" title="Modificare indisponibilă">

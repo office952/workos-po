@@ -108,7 +108,7 @@ export function ProductEnablementAdminPage() {
       lead="Alege ce produse apar în catalogul pentru lucrări noi. Ofertele și lucrările vechi rămân deschise."
       meta={
         model?.canEdit
-          ? "Doar Owner poate confirma produsele oferite de firmă."
+          ? "Doar proprietarul poate confirma produsele oferite de firmă."
           : "Editarea nu este disponibilă pentru acest rol."
       }
     >

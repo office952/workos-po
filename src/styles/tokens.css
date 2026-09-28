@@ -70,6 +70,9 @@
 
   --page-gutter: var(--gutter-desktop);
   --workspace-width: 100%;
+  --composed-band-max: 72rem;
+  --composed-workspace-max: 90rem;
+  --admin-workspace-max: 90rem;
   --readable-text-width: 42rem;
   --worklist-min: 0;
   --detail-main-min: 0;

@@ -97,7 +97,7 @@ export function AccessAdminPage() {
       lead="Vezi utilizatorii care se pot autentifica în organizație. Conturile de producție (oameni/PIN) rămân separate."
       meta={
         model?.canEdit
-          ? "Doar Owner poate revoca accesul."
+          ? "Doar proprietarul poate revoca accesul."
           : "Editarea nu este disponibilă pentru acest rol."
       }
     >
@@ -140,7 +140,7 @@ export function AccessAdminPage() {
             </InlineAlert>
             {!model.canEdit ? (
               <InlineAlert tone="pending" title="Doar citire">
-                Poți vedea utilizatorii, dar doar un Owner poate revoca accesul.
+                Poți vedea utilizatorii, dar doar proprietarul poate revoca accesul.
               </InlineAlert>
             ) : null}
             <Worklist variant="compact" label="Utilizatori">

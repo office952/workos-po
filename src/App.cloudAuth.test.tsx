@@ -4,6 +4,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { notifyCloudUnauthorizedUnlessPublic } from "./session/sessionExpiryBridge";
 
+async function openAccountMenu(): Promise<void> {
+  await userEvent.click(screen.getByRole("button", { name: "Cont" }));
+}
+
 function jsonResponse(body: unknown, status = 200) {
   return Promise.resolve({
     ok: status >= 200 && status < 300,
@@ -137,6 +141,7 @@ describe("App Cloud auth integration", () => {
     await userEvent.type(screen.getByLabelText("Parolă"), "OwnerPass12");
     await userEvent.click(screen.getByRole("button", { name: "Intră" }));
     expect(await screen.findByText("Atelier Alpha")).toBeInTheDocument();
+    await openAccountMenu();
     expect(screen.getByText("owner@example.test")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Clienți" })).toBeInTheDocument();
     expect(screen.queryByText("OwnerPass12")).not.toBeInTheDocument();
@@ -226,6 +231,7 @@ describe("App Cloud auth integration", () => {
     render(<App />);
 
     expect(await screen.findByText("Atelier Alpha")).toBeInTheDocument();
+    await openAccountMenu();
     expect(screen.getByText("owner@example.test")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Clienți" })).toBeInTheDocument();
     expect(screen.queryByLabelText("Organizație activă")).not.toBeInTheDocument();
@@ -280,6 +286,8 @@ describe("App Cloud auth integration", () => {
     window.history.replaceState({}, "", "/clienti");
 
     render(<App />);
+    expect(await screen.findByText("Atelier Alpha")).toBeInTheDocument();
+    await openAccountMenu();
     const select = await screen.findByLabelText("Organizație activă");
     await userEvent.selectOptions(select, "org:b");
     await waitFor(() => {
@@ -307,6 +315,7 @@ describe("App Cloud auth integration", () => {
 
     render(<App />);
     expect(await screen.findByText("Atelier Alpha")).toBeInTheDocument();
+    await openAccountMenu();
     await userEvent.click(screen.getByRole("button", { name: "Ieși din cont" }));
     expect(await screen.findByRole("heading", { name: "Autentificare" })).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([url, init]) => String(url).endsWith("/api/cloud/logout") && String(init?.method) === "POST")).toBe(true);
@@ -335,6 +344,7 @@ describe("App Cloud auth integration", () => {
 
     const first = render(<App />);
     expect(await screen.findByText("Atelier Alpha")).toBeInTheDocument();
+    await openAccountMenu();
     await userEvent.click(screen.getByRole("button", { name: "Ieși din cont" }));
     expect(await screen.findByRole("heading", { name: "Autentificare" })).toBeInTheDocument();
     first.unmount();
@@ -367,6 +377,7 @@ describe("App Cloud auth integration", () => {
 
     render(<App />);
     expect(await screen.findByText("Atelier Alpha")).toBeInTheDocument();
+    await openAccountMenu();
     await userEvent.click(screen.getByRole("button", { name: "Ieși din cont" }));
     expect(await screen.findByRole("heading", { name: "Autentificare" })).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText("Email"), "owner@example.test");
@@ -456,6 +467,7 @@ describe("App Cloud auth integration", () => {
     render(<App />);
 
     expect(await screen.findByText("Atelier Alpha")).toBeInTheDocument();
+    await openAccountMenu();
     expect(screen.getByText("owner@example.test")).toBeInTheDocument();
     expect(await screen.findByText("Neidentificat")).toBeInTheDocument();
     expect(screen.getByLabelText("PIN")).toBeInTheDocument();
@@ -476,7 +488,9 @@ describe("App Cloud auth integration", () => {
     window.history.replaceState({}, "", "/clienti");
 
     render(<App />);
-    expect(await screen.findByText("owner@example.test")).toBeInTheDocument();
+    expect(await screen.findByText("Atelier Alpha")).toBeInTheDocument();
+    await openAccountMenu();
+    expect(screen.getByText("owner@example.test")).toBeInTheDocument();
     expect(setLocal).not.toHaveBeenCalled();
     expect(window.sessionStorage.getItem("workos-ui20.cloud.wasAuthenticated")).toBe("1");
     expect(window.sessionStorage.getItem("workos-ui20.cloud.wasAuthenticated")).not.toMatch(

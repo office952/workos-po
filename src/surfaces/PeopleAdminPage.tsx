@@ -294,7 +294,7 @@ export function PeopleAdminPage({ personId = null }: PeopleAdminPageProps) {
       lead="Configurează persoanele care pot lucra în producție. Contul de autentificare rămâne separat."
       meta={
         model?.canEdit
-          ? "Doar Owner poate adăuga, modifica sau retrage oamenii operaționali."
+          ? "Doar proprietarul poate adăuga, modifica sau retrage oamenii operaționali."
           : "Editarea nu este disponibilă pentru acest rol."
       }
     >

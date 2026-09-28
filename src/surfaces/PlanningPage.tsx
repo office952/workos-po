@@ -126,7 +126,7 @@ export function PlanningPage() {
             variant="flush"
             label="Lucru nealocat"
             title="Lucru nealocat"
-            description="Sarcini deschise care cer un furnizor, dar nu au alocare."
+            description="Sarcini deschise care cer o zonă sau un utilaj, dar nu au alocare."
           >
             {unassigned.length === 0 ? (
               <EmptyState title="Nu există sarcini nealocate." />
@@ -152,7 +152,7 @@ export function PlanningPage() {
                     />
                     <p className="ui-note">
                       <a className="text-link" href={task.executionHref}>
-                        Alocă furnizorul în execuție
+                        Alocă zona sau utilajul în execuție
                       </a>
                     </p>
                   </div>
@@ -163,10 +163,10 @@ export function PlanningPage() {
 
           <div className="planner-floor">
             {providers.length === 0 ? (
-              <SurfacePanel variant="flush" label="Furnizori" title="Zone și utilaje">
+              <SurfacePanel variant="flush" label="Zone și utilaje" title="Zone și utilaje">
                 <EmptyState
                   title="Nu există zone sau utilaje active."
-                  description="Configurați furnizorii în administrare. Execuția rămâne disponibilă."
+                  description="Configurează zonele și utilajele în administrare. Execuția rămâne disponibilă."
                 />
               </SurfacePanel>
             ) : (
@@ -185,7 +185,7 @@ export function PlanningPage() {
                   }
                 >
                   {group.tasks.length === 0 ? (
-                    <EmptyState title="Nicio sarcină deschisă pe acest furnizor." />
+                    <EmptyState title="Nicio sarcină deschisă pe această zonă sau utilaj." />
                   ) : (
                     <Worklist
                       label={`Sarcini ${group.provider.label}`}

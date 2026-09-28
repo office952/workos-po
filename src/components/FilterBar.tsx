@@ -28,15 +28,7 @@ export function FilterBar({
   meta,
 }: FilterBarProps) {
   return (
-    <div className="filter-bar">
-      <div className="filter-bar__search">
-        <TextField
-          id={searchId}
-          label={searchLabel}
-          value={searchValue}
-          onChange={onSearchChange}
-        />
-      </div>
+    <div className="filter-bar filter-bar--registry">
       {chips.length > 0 && onChipChange ? (
         <div className="filter-bar__chips" role="group" aria-label="Filtre">
           {chips.map((chip) => (
@@ -49,6 +41,14 @@ export function FilterBar({
           ))}
         </div>
       ) : null}
+      <div className="filter-bar__search">
+        <TextField
+          id={searchId}
+          label={searchLabel}
+          value={searchValue}
+          onChange={onSearchChange}
+        />
+      </div>
       {meta ? <p className="filter-bar__meta">{meta}</p> : null}
     </div>
   );
