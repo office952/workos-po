@@ -142,7 +142,7 @@ describe("RequestDetailPage", () => {
     expect(screen.queryByRole("link", { name: "Deschide oferta" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Alege produs" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Deschide oferta OF-1" })).toBeInTheDocument();
-    expect(screen.getByText("Nu există o continuare canonică pe această cerere.")).toBeInTheDocument();
+    expect(screen.getByText("Nicio acțiune disponibilă")).toBeInTheDocument();
   });
 
   it("works without a nextAction primary CTA", async () => {
@@ -158,7 +158,7 @@ describe("RequestDetailPage", () => {
     expect(await screen.findByRole("heading", { name: "CRQ-104" })).toBeInTheDocument();
     expect(screen.getByText("Gata de ofertă")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Alege produs" })).not.toBeInTheDocument();
-    expect(screen.getByText("Nu există o continuare canonică pe această cerere.")).toBeInTheDocument();
+    expect(screen.getByText("Nicio acțiune disponibilă")).toBeInTheDocument();
   });
 
   it("shows the empty attachments state and hides upload when forbidden", async () => {
@@ -170,9 +170,9 @@ describe("RequestDetailPage", () => {
     );
 
     render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByText("Nu există atașamente.")).toBeInTheDocument();
+    expect(await screen.findByText("Nu există fișiere atașate.")).toBeInTheDocument();
     expect(screen.getByText("Încărcarea nu este permisă pe această cerere.")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Încarcă fișier")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Alege fișier")).not.toBeInTheDocument();
   });
 
   it("lists attachments and keeps the server download href", async () => {
@@ -229,8 +229,9 @@ describe("RequestDetailPage", () => {
 
     const file = new File(["x"], "nou.pdf", { type: "application/pdf" });
     render(<RequestDetailPage requestId="req-1" />);
-    const input = await screen.findByLabelText("Încarcă fișier");
+    const input = await screen.findByLabelText("Alege fișier");
     await userEvent.setup().upload(input, file);
+    expect(screen.getByText("nou.pdf")).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole("button", { name: "Încarcă" }));
     expect(await screen.findByRole("link", { name: "nou.pdf" })).toBeInTheDocument();
     expect(
@@ -238,6 +239,16 @@ describe("RequestDetailPage", () => {
         (call) => String(call[0]).endsWith("/attachments") && call[1]?.method === "POST",
       ),
     ).toBe(true);
+  });
+
+  it("presents Romanian file-picker labels instead of native browser copy", async () => {
+    stubDetail(requestDetail({ canUploadAttachments: true, attachments: [] }));
+
+    render(<RequestDetailPage requestId="req-1" />);
+    expect(await screen.findByLabelText("Alege fișier")).toBeInTheDocument();
+    expect(screen.getByText("Niciun fișier selectat")).toBeInTheDocument();
+    expect(screen.queryByText(/Choose File/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/No file chosen/i)).not.toBeInTheDocument();
   });
 
   it("shows selected installation facts as editable and frozen when locked", async () => {

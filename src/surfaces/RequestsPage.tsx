@@ -79,11 +79,17 @@ export function RequestsPage() {
     [filter, query, registryRows],
   );
 
+  const countMeta =
+    requests.status === "success"
+      ? `${visible.length} ${visible.length === 1 ? "cerere" : "cereri"}`
+      : undefined;
+
   return (
     <SlicePage
       contextLabel="Cereri"
       currentHref="/cereri"
       workspace="stack"
+      surface="cereri-registry"
       title="Cereri"
       lead="Registrul cererilor de ofertă. Deschide obiectul sau continuă pasul canonic."
       action={
@@ -98,8 +104,9 @@ export function RequestsPage() {
         busy={requests.status === "loading" && items.length === 0}
       >
         <FilterBar
+          variant="toolbar"
           searchId="cereri-cauta"
-          searchLabel="Caută"
+          searchLabel="Caută după client, referință…"
           searchValue={query}
           onSearchChange={setQuery}
           chips={chips}
@@ -110,7 +117,7 @@ export function RequestsPage() {
               setFilter(next.id);
             }
           }}
-          meta={requests.status === "success" ? `${visible.length} din ${items.length}` : undefined}
+          meta={countMeta}
         />
         <CollectionBody
           status={requests.status}

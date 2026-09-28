@@ -57,6 +57,7 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
       contextLabel="Cerere"
       currentHref={requestHref(requestId)}
       workspace="object"
+      surface="cereri-detail"
       eyebrow="Cerere"
       title={headerTitle}
       lead={headerLead}
@@ -94,7 +95,7 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
       ) : null}
       {detail ? (
         <>
-          <div className="stack">
+          <div className="stack request-detail__main">
             <SurfacePanel title="Ce dorește clientul" label="Ce dorește clientul">
               <p>{detail.description || "Fără descriere."}</p>
             </SurfacePanel>
@@ -105,19 +106,18 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
             />
             <RequestInstallationSection detail={detail} />
           </div>
-          <aside className="stack" aria-label="Continuare">
+          <aside className="stack request-detail__rail" aria-label="Continuare">
             <SurfacePanel variant="quiet" title="Continuare" label="Continuare">
-              <dl className="fact-grid">
+              <dl className="fact-grid fact-grid--rail">
                 <InfoRow
                   label="Progres comercial"
                   value={detail.commercialProgressLabel?.trim() || "—"}
                 />
+                <InfoRow
+                  label="Următorul pas"
+                  value={primary ? primary.actionLabel : "Nicio acțiune disponibilă"}
+                />
               </dl>
-              {primary ? (
-                <p className="ui-note">Urmează: {primary.actionLabel}</p>
-              ) : (
-                <p className="ui-note">Nu există o continuare canonică pe această cerere.</p>
-              )}
             </SurfacePanel>
             {detail.linkedOffers.length > 0 ? (
               <SurfacePanel variant="quiet" title="Oferte legate" label="Oferte legate">

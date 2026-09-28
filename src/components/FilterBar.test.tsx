@@ -33,4 +33,31 @@ describe("FilterBar", () => {
     await userEvent.setup().click(screen.getByRole("button", { name: "Toate" }));
     expect(onChipChange).toHaveBeenCalledWith("all");
   });
+
+  it("places search before chips in toolbar variant", () => {
+    const { container } = render(
+      <FilterBar
+        variant="toolbar"
+        searchId="cereri-cauta"
+        searchLabel="Caută după client, referință…"
+        searchValue=""
+        onSearchChange={vi.fn()}
+        chips={[
+          { id: "all", label: "Toate" },
+          { id: "needs-action", label: "Necesită acțiune" },
+        ]}
+        selectedChip="all"
+        onChipChange={vi.fn()}
+        meta="11 cereri"
+      />,
+    );
+
+    const bar = container.querySelector(".filter-bar--toolbar");
+    expect(bar?.className).toContain("filter-bar--toolbar");
+    const children = [...(bar?.children ?? [])].map((node) => node.className);
+    expect(children[0]).toContain("filter-bar__search");
+    expect(children[1]).toContain("filter-bar__chips");
+    expect(children[2]).toContain("filter-bar__meta");
+    expect(screen.getByText("11 cereri")).toBeInTheDocument();
+  });
 });

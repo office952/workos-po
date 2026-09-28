@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import { presentRequestDetail } from "../adapters/requestAdapter";
 import { TransportError } from "../api/http";
 import { uploadRequestAttachment } from "../api/requests";
@@ -22,6 +22,8 @@ export function RequestAttachmentsSection({
   attachments,
   canUploadAttachments,
 }: RequestAttachmentsSectionProps) {
+  const inputId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "pending" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -39,6 +41,9 @@ export function RequestAttachmentsSection({
       }
       invalidateResources(resourceKeys.requests());
       setFile(null);
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
       setSaveState("idle");
     } catch (error) {
       setSaveState("error");
@@ -53,39 +58,43 @@ export function RequestAttachmentsSection({
   return (
     <SurfacePanel title="Fișiere și dovezi" label="Fișiere și dovezi">
       {attachments.length === 0 ? (
-        <EmptyState title="Nu există atașamente." />
+        <EmptyState title="Nu există fișiere atașate." />
       ) : (
-        <ul className="stack">
+        <ul className="attachment-list">
           {attachments.map((attachment) => (
-            <li key={attachment.attachmentId}>
-              <p>
-                <a className="text-link" href={attachment.downloadHref}>
-                  {attachment.originalFileName}
-                </a>
-              </p>
-              <p className="worklist-row__detail">
+            <li key={attachment.attachmentId} className="attachment-list__row">
+              <a className="text-link" href={attachment.downloadHref}>
+                {attachment.originalFileName}
+              </a>
+              <span className="attachment-list__meta">
                 {[attachment.sizeLabel, formatTimestamp(attachment.createdAt)]
                   .filter(Boolean)
                   .join(" · ")}
-              </p>
+              </span>
             </li>
           ))}
         </ul>
       )}
       {canUploadAttachments ? (
-        <div className="stack">
-          <label className="field" htmlFor="request-attachment">
-            <span className="field__label">Încarcă fișier</span>
-            <input
-              id="request-attachment"
-              className="field__control"
-              type="file"
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-            />
-          </label>
-          <Button disabled={!file || saveState === "pending"} onClick={() => void upload()}>
-            Încarcă
-          </Button>
+        <div className="file-picker">
+          <input
+            ref={inputRef}
+            id={inputId}
+            className="file-picker__input"
+            type="file"
+            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+          />
+          <div className="file-picker__controls">
+            <label className="button button--secondary file-picker__choose" htmlFor={inputId}>
+              Alege fișier
+            </label>
+            <span className="file-picker__name" aria-live="polite">
+              {file ? file.name : "Niciun fișier selectat"}
+            </span>
+            <Button disabled={!file || saveState === "pending"} onClick={() => void upload()}>
+              Încarcă
+            </Button>
+          </div>
         </div>
       ) : (
         <p className="ui-note">Încărcarea nu este permisă pe această cerere.</p>

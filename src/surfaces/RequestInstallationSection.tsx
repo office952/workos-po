@@ -123,7 +123,11 @@ export function RequestInstallationSection({ detail }: RequestInstallationSectio
   const editorKey = String(facts?.version ?? 0);
 
   return (
-    <SurfacePanel title="Montaj la locație" label="Montaj la locație">
+    <SurfacePanel
+      title="Montaj la locație"
+      label="Montaj la locație"
+      variant={selected ? "default" : "quiet"}
+    >
       <RequestInstallationOfferControls detail={detail} offer={offer} />
       {selected ? (
         <>
@@ -220,7 +224,7 @@ function RequestInstallationOfferControls({
   return (
     <div className="stack">
       {selected ? null : (
-        <p>Montajul la locație nu este selectat pe această cerere.</p>
+        <p className="ui-note ui-note--plain">Montajul la locație nu este selectat pe această cerere.</p>
       )}
       {offer?.selectionLocked ? (
         <p className="ui-note">Selecția de montaj nu mai poate fi modificată.</p>
