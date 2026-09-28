@@ -66,10 +66,19 @@ describe("AppShell", () => {
     ).toBe(false);
     expect(screen.getByRole("link", { name: "Clienți" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Cereri" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Catalog" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Catalog" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Oferte" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Lucrări" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Planificare" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Atelier" })).toBeInTheDocument();
+    expect(document.querySelector(".app-shell__nav-kicker")).toBeNull();
+    expect(screen.queryByText("Comercial")).not.toBeInTheDocument();
+    expect(screen.queryByText("Operațiuni")).not.toBeInTheDocument();
+    expect(document.querySelector(".app-shell__bar")).toHaveAttribute(
+      "data-shell-contract",
+      "single-row",
+    );
+    expect(screen.queryByRole("button", { name: "Mai multe" })).not.toBeInTheDocument();
 
     rerender(
       <AppShell contextLabel="Administrare" mode="slice" currentHref="/admin/products">
@@ -92,40 +101,74 @@ describe("AppShell", () => {
     );
   });
 
-  it("keeps mid-width overflow destinations under Mai multe", async () => {
-    const media = {
-      matches: true,
-      media: "(max-width: 1024px)",
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-      addListener: () => undefined,
-      removeListener: () => undefined,
-      dispatchEvent: () => false,
-      onchange: null,
-    } as MediaQueryList;
-    Object.defineProperty(window, "matchMedia", {
-      writable: true,
-      configurable: true,
-      value: vi.fn().mockReturnValue(media),
+  it("keeps contextual routes current without putting Catalog in the primary row", () => {
+    const { rerender } = render(
+      <AppShell contextLabel="Cereri" mode="slice" currentHref="/cereri/req-1">
+        <div>conținut</div>
+      </AppShell>,
+    );
+    expect(screen.getByRole("link", { name: "Cereri" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Clienți" })).not.toHaveAttribute("aria-current");
+
+    rerender(
+      <AppShell contextLabel="Client" mode="slice" currentHref="/clienti/cus-1">
+        <div>conținut</div>
+      </AppShell>,
+    );
+    expect(screen.getByRole("link", { name: "Clienți" })).toHaveAttribute("aria-current", "page");
+
+    rerender(
+      <AppShell contextLabel="Execuție" mode="slice" currentHref="/executie/plan-1">
+        <div>conținut</div>
+      </AppShell>,
+    );
+    expect(screen.getByRole("link", { name: "Atelier" })).toHaveAttribute("aria-current", "page");
+
+    rerender(
+      <AppShell contextLabel="Catalog" mode="slice" currentHref="/catalog?customer=cus-1&request=req-1">
+        <div>conținut</div>
+      </AppShell>,
+    );
+    expect(screen.queryByRole("link", { name: "Catalog" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Cereri" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("opens Mai multe from ArrowDown only when the measured row overflows", async () => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) {
+      return this.classList.contains("app-shell__nav-row") ? 280 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
+      if (this.hasAttribute("data-nav-probe") || this.hasAttribute("data-nav-more-probe")) {
+        return 80;
+      }
+      return 0;
     });
 
     render(
-      <AppShell contextLabel="Clienți" mode="slice" currentHref="/catalog">
+      <AppShell contextLabel="Clienți" mode="slice" currentHref="/oferte">
         <div>conținut</div>
       </AppShell>,
     );
 
-    expect(document.querySelector(".app-shell__nav-compact")).not.toBeNull();
     expect(screen.getByRole("link", { name: "Clienți" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Cereri" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Oferte" })).not.toBeInTheDocument();
     const more = screen.getByRole("button", { name: "Mai multe" });
     expect(more).toHaveAttribute("aria-expanded", "false");
-    await userEvent.click(more);
+    more.focus();
+    await userEvent.keyboard("{ArrowDown}");
     expect(more).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("menuitem", { name: "Catalog" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    expect(screen.getByRole("menuitem", { name: "Oferte" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Oferte" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("menuitem", { name: "Oferte" })).toHaveFocus();
+    expect(screen.queryByRole("menuitem", { name: "Catalog" })).not.toBeInTheDocument();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(screen.getByRole("menuitem", { name: "Lucrări" })).toHaveFocus();
+    await userEvent.keyboard("{End}");
+    expect(screen.getByRole("menuitem", { name: "Administrare" })).toHaveFocus();
+    await userEvent.keyboard("{Home}");
+    expect(screen.getByRole("menuitem", { name: "Oferte" })).toHaveFocus();
+    await userEvent.keyboard("{ArrowUp}");
+    expect(screen.getByRole("menuitem", { name: "Administrare" })).toHaveFocus();
     await userEvent.keyboard("{Escape}");
     expect(more).toHaveAttribute("aria-expanded", "false");
     expect(more).toHaveFocus();

@@ -169,7 +169,8 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
     <SlicePage
       contextLabel="Lucrare"
       currentHref={jobHref(jobId)}
-      workspace="traveler"
+      layout="OPERATIONAL"
+      variant="execution-focus"
       eyebrow="Lucrare"
       title={job?.inscription || job?.productLabel || "Lucrare"}
       lead="Eliberează producția, materializează planul și compară planificat cu realizat."

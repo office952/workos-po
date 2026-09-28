@@ -36,7 +36,8 @@ describe("ClientDetailPage", () => {
 
     render(<ClientDetailPage customerId="cus-1" />);
     expect(await screen.findByRole("heading", { name: "Atelier Nord" })).toBeInTheDocument();
-    expect(document.querySelector(".page-workspace--object")).not.toBeNull();
+    expect(document.querySelector(".page-workspace")).toHaveAttribute("data-layout", "OBJECT_DETAIL");
+    expect(document.querySelector(".page-workspace")).toHaveAttribute("data-layout-variant", "standard");
     expect(screen.getByRole("heading", { name: "Cerere nouă" })).toBeInTheDocument();
     expect(screen.getByText("Deschide catalogul pentru acest client")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Context client" })).not.toBeInTheDocument();

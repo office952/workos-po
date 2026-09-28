@@ -60,7 +60,7 @@ export function QuotesPage() {
     <SlicePage
       contextLabel="Oferte"
       currentHref="/oferte"
-      workspace="stack"
+      layout="REGISTRY"
       title="Oferte"
       lead="Ofertele înghețate rămân neschimbate după acceptare."
       meta={quotes.status === "success" ? `${visible.length} rezultate` : undefined}

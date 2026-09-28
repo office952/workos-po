@@ -92,7 +92,7 @@ export function AccessAdminPage() {
     <SlicePage
       contextLabel="Administrare"
       currentHref="/admin/access"
-      workspace="admin"
+      layout="ADMIN_MASTER_DETAIL"
       eyebrow="Administrare"
       title="Acces organizație"
       lead="Vezi utilizatorii care se pot autentifica în organizație. Conturile de producție (oameni/PIN) rămân separate."

@@ -3,8 +3,6 @@ export type GlobalNavItem = {
   label: string;
   href: string;
   purpose: string;
-  /** Mid-width priority row (768–1024). Overflow items live under “Mai multe”. */
-  midWidthPriority: boolean;
 };
 
 export type GlobalNavGroup = {
@@ -16,39 +14,35 @@ export type GlobalNavGroup = {
 
 export const HOME_HREF = "/";
 
+export const PRIMARY_NAV_GAP_PX = 8;
+
+/**
+ * Continuation groups for the start page. The shell renders `globalNavItems()`
+ * as one primary row and does not show these labels in the header.
+ */
 export const GLOBAL_NAV: readonly GlobalNavGroup[] = [
   {
     id: "commercial",
     label: "Comercial",
-    summary: "Clienți, cereri, catalog și oferte.",
+    summary: "Clienți, cereri și oferte.",
     items: [
       {
         id: "clients",
         label: "Clienți",
         href: "/clienti",
         purpose: "Deschide registrul sau înregistrează un client.",
-        midWidthPriority: true,
       },
       {
         id: "requests",
         label: "Cereri",
         href: "/cereri",
         purpose: "Deschide o cerere de ofertă.",
-        midWidthPriority: true,
-      },
-      {
-        id: "catalog",
-        label: "Catalog",
-        href: "/catalog",
-        purpose: "Alege produsul pentru lucrare.",
-        midWidthPriority: false,
       },
       {
         id: "quotes",
         label: "Oferte",
         href: "/oferte",
         purpose: "Vezi ofertele înghețate.",
-        midWidthPriority: false,
       },
     ],
   },
@@ -62,21 +56,18 @@ export const GLOBAL_NAV: readonly GlobalNavGroup[] = [
         label: "Lucrări",
         href: "/lucrari",
         purpose: "Continuă lucrările eliberate.",
-        midWidthPriority: true,
       },
       {
         id: "planning",
         label: "Planificare",
         href: "/planificare",
         purpose: "Vezi efortul planificat pe zone și utilaje.",
-        midWidthPriority: true,
       },
       {
         id: "atelier",
         label: "Atelier",
         href: "/atelier",
         purpose: "Identifică operatorul și preia sarcina disponibilă.",
-        midWidthPriority: true,
       },
     ],
   },
@@ -90,7 +81,6 @@ export const GLOBAL_NAV: readonly GlobalNavGroup[] = [
         label: "Administrare",
         href: "/admin",
         purpose: "Deschide setările organizației.",
-        midWidthPriority: true,
       },
     ],
   },
@@ -100,10 +90,44 @@ export function globalNavItems(): readonly GlobalNavItem[] {
   return GLOBAL_NAV.flatMap((group) => group.items);
 }
 
-export function midWidthPriorityItems(): readonly GlobalNavItem[] {
-  return globalNavItems().filter((item) => item.midWidthPriority);
-}
+export function primaryNavVisibleCount(input: {
+  containerWidth: number;
+  itemWidths: readonly number[];
+  moreWidth: number;
+  gap?: number;
+}): number {
+  const gap = input.gap ?? PRIMARY_NAV_GAP_PX;
+  const { containerWidth, itemWidths, moreWidth } = input;
+  if (containerWidth <= 0 || itemWidths.length === 0) {
+    return itemWidths.length;
+  }
 
-export function midWidthOverflowItems(): readonly GlobalNavItem[] {
-  return globalNavItems().filter((item) => !item.midWidthPriority);
+  const widthOf = (count: number, includeMore: boolean): number => {
+    let width = 0;
+    for (let index = 0; index < count; index += 1) {
+      width += itemWidths[index] ?? 0;
+      if (index > 0) {
+        width += gap;
+      }
+    }
+    if (includeMore && count < itemWidths.length) {
+      if (count > 0) {
+        width += gap;
+      }
+      width += moreWidth;
+    }
+    return width;
+  };
+
+  if (widthOf(itemWidths.length, false) <= containerWidth) {
+    return itemWidths.length;
+  }
+
+  for (let count = itemWidths.length - 1; count >= 1; count -= 1) {
+    if (widthOf(count, true) <= containerWidth) {
+      return count;
+    }
+  }
+
+  return 1;
 }

@@ -120,7 +120,8 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
     <SlicePage
       contextLabel="Atelier"
       currentHref={atelierHref({ jobId })}
-      workspace="operational"
+      layout="OPERATIONAL"
+      variant="queue"
       eyebrow="Atelier"
       title="Atelier"
       lead={

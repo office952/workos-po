@@ -6,24 +6,24 @@ import {
   quoteHref,
   requestHref,
 } from "../routing/appRoute";
-import type { PageWorkspace } from "./SlicePage";
+import { layoutForRouteName, type LayoutVariant, type StructuralLayoutId } from "./pageLayout";
 
 export type RouteChrome = {
   contextLabel: string;
   currentHref: string;
-  workspace: PageWorkspace;
+  layout: StructuralLayoutId;
+  variant?: LayoutVariant;
   eyebrow: string;
   title: string;
   lead: string;
 };
 
-export function presentRouteChrome(route: AppRoute): RouteChrome {
+function routeChromeCopy(route: AppRoute): Omit<RouteChrome, "layout" | "variant"> {
   switch (route.name) {
     case "home":
       return {
         contextLabel: "WorkOS",
         currentHref: "/",
-        workspace: "launchpad",
         eyebrow: "WorkOS",
         title: "WorkOS",
         lead: "Punctul de pornire. De aici intri în comercial, operațiuni sau administrare.",
@@ -32,7 +32,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Administrare",
         currentHref: "/admin",
-        workspace: "admin",
         eyebrow: "Administrare",
         title: "Administrare",
         lead: "Alege domeniul de setări al organizației.",
@@ -41,7 +40,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Clienți",
         currentHref: "/clienti",
-        workspace: "collection-with-rail",
         eyebrow: "Clienți",
         title: "Clienți",
         lead: "Alege un client existent sau înregistrează unul nou pentru lucrare.",
@@ -50,7 +48,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Client",
         currentHref: clientHref(route.customerId),
-        workspace: "object",
         eyebrow: "Client",
         title: "Client",
         lead: "Deschide o cerere existentă sau creează cererea pentru această lucrare.",
@@ -59,7 +56,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Cereri",
         currentHref: "/cereri",
-        workspace: "stack",
         eyebrow: "Cereri",
         title: "Cereri",
         lead: "Registrul cererilor de ofertă. Deschide obiectul sau continuă pasul canonic.",
@@ -68,7 +64,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Cerere",
         currentHref: requestHref(route.requestId),
-        workspace: "object",
         eyebrow: "Cerere",
         title: "Cerere",
         lead: "Se încarcă detaliile cererii și următorul pas disponibil.",
@@ -77,7 +72,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Catalog",
         currentHref: "/catalog",
-        workspace: "catalog",
         eyebrow: "Catalog",
         title: "Catalog de produse",
         lead: "Alege produsul lucrării. Configuratorul primește clientul, cererea și produsul selectat.",
@@ -86,7 +80,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Ansamblu",
         currentHref: "/ansamblu",
-        workspace: "configuration",
         eyebrow: "Ansamblu",
         title: "Ansamblu",
         lead: "Panou ACM și litere volumetrice.",
@@ -95,7 +88,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Configurator",
         currentHref: "/configurator",
-        workspace: "configuration",
         eyebrow: "Configurator",
         title: "Configurator",
         lead: "Completează faptele confirmate, verifică costul intern și prețul clientului, apoi îngheață oferta.",
@@ -104,7 +96,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Oferte",
         currentHref: "/oferte",
-        workspace: "stack",
         eyebrow: "Oferte",
         title: "Oferte",
         lead: "Ofertele înghețate rămân neschimbate după acceptare.",
@@ -113,7 +104,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Ofertă",
         currentHref: quoteHref(route.productCode, route.quoteSnapshotId),
-        workspace: "object",
         eyebrow: "Ofertă",
         title: "Ofertă înghețată",
         lead: "Înregistrare comercială înghețată. Acceptarea păstrează această versiune.",
@@ -122,7 +112,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Lucrări",
         currentHref: "/lucrari",
-        workspace: "stack",
         eyebrow: "Lucrări",
         title: "Lucrări",
         lead: "Continuă eliberarea, planul de execuție sau lucrarea finalizată.",
@@ -131,7 +120,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Planificare",
         currentHref: "/planificare",
-        workspace: "operational",
         eyebrow: "Planificare",
         title: "Planificare",
         lead: "Ce lucru este acum pe fiecare zonă sau utilaj și cât timp estimat avem.",
@@ -140,7 +128,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Lucrare",
         currentHref: jobHref(route.jobId),
-        workspace: "traveler",
         eyebrow: "Lucrare",
         title: "Lucrare",
         lead: "Eliberează producția, materializează planul și compară planificat cu realizat.",
@@ -149,7 +136,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Atelier",
         currentHref: "/atelier",
-        workspace: "operational",
         eyebrow: "Atelier",
         title: "Atelier",
         lead: "Identifică operatorul, apoi preia sarcina disponibilă.",
@@ -158,7 +144,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Execuție",
         currentHref: executionHref(route.planId),
-        workspace: "operational",
         eyebrow: "Execuție",
         title: "Execuție",
         lead: "Pornește și închide sarcinile pe care le poți lucra.",
@@ -167,7 +152,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Administrare",
         currentHref: "/admin/resources",
-        workspace: "admin",
         eyebrow: "Administrare",
         title: "Dovezi de cost",
         lead: "Tarif confirmat pe resursă și calificator. Valoarea salvată este folosită doar la calcule noi.",
@@ -176,7 +160,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Administrare",
         currentHref: "/admin/services",
-        workspace: "admin",
         eyebrow: "Administrare",
         title: "Servicii operaționale",
         lead: "Modul în care organizația oferă montajul la locație pentru lucrările noi.",
@@ -185,7 +168,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Administrare",
         currentHref: "/admin/material-readiness",
-        workspace: "admin",
         eyebrow: "Administrare",
         title: "Materiale pentru execuție",
         lead: "Organizația alege dacă pornirea unei sarcini cere confirmarea materialelor planificate.",
@@ -194,7 +176,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Administrare",
         currentHref: "/admin/external-production",
-        workspace: "admin",
         eyebrow: "Administrare",
         title: "Execuție externă",
         lead: "Organizația alege dacă o sarcină planificată poate fi predată unui furnizor de producție din afara atelierului.",
@@ -203,7 +184,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Administrare",
         currentHref: "/admin/commercial",
-        workspace: "admin",
         eyebrow: "Administrare",
         title: "Valori comerciale implicite",
         lead: "Aceste valori sunt folosite ca punct de pornire pentru ofertele noi. Pot fi modificate individual pe fiecare ofertă.",
@@ -212,7 +192,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Administrare",
         currentHref: "/admin/technical",
-        workspace: "admin",
         eyebrow: "Administrare",
         title: "Setări tehnice",
         lead: "Aceste valori sunt folosite la calculul tehnic al lucrărilor noi. Lucrările înghețate rămân neschimbate.",
@@ -221,7 +200,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Administrare",
         currentHref: "/admin/formulas",
-        workspace: "admin",
         eyebrow: "Administrare",
         title: "Formule de calcul",
         lead: "Aceste formule sunt folosite la calculul tehnic al lucrărilor noi. Lucrările înghețate rămân neschimbate.",
@@ -230,7 +208,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Administrare",
         currentHref: "/admin/products",
-        workspace: "admin",
         eyebrow: "Administrare",
         title: "Produse oferite",
         lead: "Alege ce produse apar în catalogul pentru lucrări noi. Ofertele și lucrările vechi rămân deschise.",
@@ -239,7 +216,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Administrare",
         currentHref: "/admin/access",
-        workspace: "admin",
         eyebrow: "Administrare",
         title: "Acces organizație",
         lead: "Gestionează utilizatorii care se pot autentifica în organizație. Conturile de producție (oameni/PIN) rămân separate.",
@@ -248,7 +224,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Administrare",
         currentHref: "/admin/people",
-        workspace: "admin",
         eyebrow: "Administrare",
         title: "Oameni",
         lead: "Configurează persoanele care pot lucra în producție. Contul de autentificare rămâne separat.",
@@ -257,7 +232,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Administrare",
         currentHref: `/admin/people/${encodeURIComponent(route.personId)}`,
-        workspace: "admin",
         eyebrow: "Administrare",
         title: "Oameni",
         lead: "Configurează persoanele care pot lucra în producție. Contul de autentificare rămâne separat.",
@@ -266,7 +240,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Administrare",
         currentHref: "/admin/workcenters",
-        workspace: "admin",
         eyebrow: "Administrare",
         title: "Zone și utilaje",
         lead: "Configurează zonele de lucru și utilajele. Atelierul citește același registru.",
@@ -275,7 +248,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Administrare",
         currentHref: `/admin/workcenters/${encodeURIComponent(route.workcenterId)}`,
-        workspace: "admin",
         eyebrow: "Administrare",
         title: "Zone și utilaje",
         lead: "Configurează zonele de lucru și utilajele. Atelierul citește același registru.",
@@ -284,7 +256,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Administrare",
         currentHref: `/admin/workcenters/${encodeURIComponent(route.workcenterId)}/machines/${encodeURIComponent(route.machineId)}`,
-        workspace: "admin",
         eyebrow: "Administrare",
         title: "Zone și utilaje",
         lead: "Configurează zonele de lucru și utilajele. Atelierul citește același registru.",
@@ -293,7 +264,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Fundație",
         currentHref: "/foundation",
-        workspace: "stack",
         eyebrow: "Fundație",
         title: "Fundație",
         lead: "Se încarcă verificarea.",
@@ -302,7 +272,6 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Operator",
         currentHref: route.path,
-        workspace: "stack",
         eyebrow: "Operator",
         title: "Pagină inexistentă",
         lead: "Această adresă nu există în aplicație.",
@@ -314,29 +283,9 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
   }
 }
 
-export function loadingFloorVariantFor(
-  workspace: PageWorkspace,
-): "registry" | "object" | "form" | "operational" | "admin" | "traveler" {
-  switch (workspace) {
-    case "stack":
-    case "collection-with-rail":
-    case "launchpad":
-      return "registry";
-    case "object":
-      return "object";
-    case "configuration":
-    case "catalog":
-      return "form";
-    case "traveler":
-      return "traveler";
-    case "operational":
-    case "operational-gate":
-      return "operational";
-    case "admin":
-      return "admin";
-    default: {
-      const exhaustive: never = workspace;
-      return exhaustive;
-    }
-  }
+export function presentRouteChrome(route: AppRoute): RouteChrome {
+  return {
+    ...routeChromeCopy(route),
+    ...layoutForRouteName(route.name),
+  };
 }

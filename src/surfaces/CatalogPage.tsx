@@ -143,7 +143,7 @@ export function CatalogPage() {
     <SlicePage
       contextLabel="Catalog"
       currentHref="/catalog"
-      workspace="catalog"
+      layout="WORKBENCH"
       eyebrow="Catalog"
       title="Catalog de produse"
       lead="Alege produsul lucrării. Configuratorul primește clientul, cererea și produsul selectat."

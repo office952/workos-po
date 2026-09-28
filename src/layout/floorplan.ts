@@ -1,5 +1,6 @@
-import type { PageWorkspace } from "./SlicePage";
+import type { StructuralLayoutId } from "./pageLayout";
 
+/** Compatibility attribute derived from the canonical layout. Not a second selector. */
 export type FloorplanId =
   | "authentication"
   | "launchpad"
@@ -10,27 +11,22 @@ export type FloorplanId =
   | "admin-settings"
   | "operational-workspace";
 
-export function floorplanForWorkspace(workspace: PageWorkspace): FloorplanId {
-  switch (workspace) {
-    case "stack":
-      return "list-report";
-    case "collection-with-rail":
-      return "master-detail";
-    case "object":
-    case "traveler":
-      return "object-detail";
-    case "configuration":
-    case "catalog":
-      return "form-configuration";
-    case "operational":
-    case "operational-gate":
-      return "operational-workspace";
-    case "admin":
-      return "admin-settings";
-    case "launchpad":
+export function floorplanForLayout(layout: StructuralLayoutId): FloorplanId {
+  switch (layout) {
+    case "START_CONTINUATION":
       return "launchpad";
+    case "REGISTRY":
+      return "list-report";
+    case "OBJECT_DETAIL":
+      return "object-detail";
+    case "WORKBENCH":
+      return "form-configuration";
+    case "OPERATIONAL":
+      return "operational-workspace";
+    case "ADMIN_MASTER_DETAIL":
+      return "admin-settings";
     default: {
-      const exhaustive: never = workspace;
+      const exhaustive: never = layout;
       return exhaustive;
     }
   }

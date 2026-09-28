@@ -42,7 +42,8 @@ describe("RequestsPage", () => {
     ]);
 
     render(<RequestsPage />);
-    expect(document.querySelector(".page-workspace--stack")).not.toBeNull();
+    expect(document.querySelector(".page-workspace")).toHaveAttribute("data-layout", "REGISTRY");
+    expect(document.querySelector("[data-surface]")).toBeNull();
     expect(document.querySelector(".ui-panel--flush")).not.toBeNull();
     expect(await screen.findByText("CRQ-104")).toBeInTheDocument();
     expect(screen.getByText("Litere vitrină")).toBeInTheDocument();

@@ -53,7 +53,7 @@ export function OperationalServicesAdminPage() {
     <SlicePage
       contextLabel="Administrare"
       currentHref="/admin/services"
-      workspace="admin"
+      layout="ADMIN_MASTER_DETAIL"
       eyebrow="Administrare"
       title="Servicii operaționale"
       lead="Modul în care organizația oferă montajul la locație pentru lucrările noi."

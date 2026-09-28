@@ -118,7 +118,8 @@ export function QuoteSnapshotPage({
     <SlicePage
       contextLabel="Ofertă"
       currentHref={quoteHref(productCode, quoteSnapshotId)}
-      workspace="object"
+      layout="OBJECT_DETAIL"
+      variant="record-document"
       eyebrow="Ofertă"
       title={presentedSnapshot?.productLabel ?? "Ofertă înghețată"}
       lead="Înregistrare comercială înghețată. Acceptarea păstrează această versiune."

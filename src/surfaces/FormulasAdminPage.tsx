@@ -101,7 +101,7 @@ export function FormulasAdminPage() {
     <SlicePage
       contextLabel="Administrare"
       currentHref="/admin/formulas"
-      workspace="admin"
+      layout="ADMIN_MASTER_DETAIL"
       eyebrow="Administrare"
       title="Formule de calcul"
       lead="Aceste formule sunt folosite la calculul tehnic al lucrărilor noi. Lucrările înghețate rămân neschimbate."
