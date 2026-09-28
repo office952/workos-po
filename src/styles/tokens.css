@@ -62,7 +62,13 @@
 
   --control-visual-height: 32px;
   --target-min: 44px;
-  --shell-height: 64px;
+  --shell-bar-padding-block: var(--space-8);
+  --shell-nav-row-height: var(--target-min);
+  --shell-nav-max-rows: 2;
+  /* Fixed outer header: padding + two designed nav rows. Height does not follow wrap count. */
+  --shell-height: calc(
+    (var(--shell-bar-padding-block) * 2) + (var(--shell-nav-row-height) * var(--shell-nav-max-rows))
+  );
   --page-header-height: 124px;
   --gutter-desktop: 48px;
   --gutter-mid: 32px;

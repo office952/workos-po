@@ -15,10 +15,12 @@ export type GlobalNavGroup = {
 export const HOME_HREF = "/";
 
 export const PRIMARY_NAV_GAP_PX = 8;
+/** Designed wrap capacity inside the fixed header. Outer height does not follow row count. */
+export const PRIMARY_NAV_MAX_ROWS = 2;
 
 /**
  * Continuation groups for the start page. The shell renders `globalNavItems()`
- * as one primary row and does not show these labels in the header.
+ * as one primary nav and does not show these labels in the header.
  */
 export const GLOBAL_NAV: readonly GlobalNavGroup[] = [
   {
@@ -90,41 +92,67 @@ export function globalNavItems(): readonly GlobalNavItem[] {
   return GLOBAL_NAV.flatMap((group) => group.items);
 }
 
+function primaryNavFitsInRows(input: {
+  containerWidth: number;
+  widths: readonly number[];
+  gap: number;
+  maxRows: number;
+}): boolean {
+  const { containerWidth, widths, gap, maxRows } = input;
+  if (widths.length === 0) {
+    return true;
+  }
+  let row = 0;
+  let used = 0;
+  for (const width of widths) {
+    if (width > containerWidth) {
+      return false;
+    }
+    if (used === 0) {
+      used = width;
+      continue;
+    }
+    if (used + gap + width <= containerWidth) {
+      used += gap + width;
+      continue;
+    }
+    row += 1;
+    if (row >= maxRows) {
+      return false;
+    }
+    used = width;
+  }
+  return true;
+}
+
 export function primaryNavVisibleCount(input: {
   containerWidth: number;
   itemWidths: readonly number[];
   moreWidth: number;
   gap?: number;
+  maxRows?: number;
 }): number {
   const gap = input.gap ?? PRIMARY_NAV_GAP_PX;
+  const maxRows = input.maxRows ?? PRIMARY_NAV_MAX_ROWS;
   const { containerWidth, itemWidths, moreWidth } = input;
   if (containerWidth <= 0 || itemWidths.length === 0) {
     return itemWidths.length;
   }
 
-  const widthOf = (count: number, includeMore: boolean): number => {
-    let width = 0;
-    for (let index = 0; index < count; index += 1) {
-      width += itemWidths[index] ?? 0;
-      if (index > 0) {
-        width += gap;
-      }
-    }
+  const fits = (count: number, includeMore: boolean): boolean => {
+    const widths = itemWidths.slice(0, count);
     if (includeMore && count < itemWidths.length) {
-      if (count > 0) {
-        width += gap;
-      }
-      width += moreWidth;
+      widths.push(moreWidth);
     }
-    return width;
+    return primaryNavFitsInRows({ containerWidth, widths, gap, maxRows });
   };
 
-  if (widthOf(itemWidths.length, false) <= containerWidth) {
+  if (fits(itemWidths.length, false)) {
     return itemWidths.length;
   }
 
   for (let count = itemWidths.length - 1; count >= 1; count -= 1) {
-    if (widthOf(count, true) <= containerWidth) {
+    if (fits(count, true)) {
       return count;
     }
   }

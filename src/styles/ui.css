@@ -40,7 +40,7 @@
   min-height: var(--shell-height);
   max-height: var(--shell-height);
   max-width: 100%;
-  padding: 0 var(--page-gutter);
+  padding: var(--shell-bar-padding-block) var(--page-gutter);
   background: var(--color-shell);
   border-bottom: var(--stroke) solid var(--color-border-subtle);
 }
@@ -49,6 +49,7 @@
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
+  align-self: center;
   gap: 9px;
   min-height: var(--target-min);
   color: inherit;
@@ -75,6 +76,7 @@
   width: 1px;
   height: 28px;
   flex: none;
+  align-self: center;
   background: var(--color-border);
 }
 
@@ -82,31 +84,36 @@
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
+  align-self: stretch;
   gap: 0 var(--space-8);
   flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
-  height: 100%;
+  max-height: 100%;
 }
 
 .app-shell__nav-row {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
+  align-content: center;
   gap: 0 var(--space-8);
   position: relative;
   min-width: 0;
   max-width: 100%;
-  height: 100%;
+  max-height: 100%;
+  width: 100%;
 }
 
 .app-shell__nav-links {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
+  align-content: center;
   gap: 0 var(--space-8);
   min-width: 0;
-  overflow: hidden;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .app-shell__nav-measure {
@@ -122,6 +129,8 @@
 
 .app-shell__more {
   position: relative;
+  flex: 0 0 auto;
+  align-self: center;
 }
 
 .app-shell__more-trigger[data-active]::after {
@@ -230,6 +239,7 @@
   flex: 0 1 auto;
   flex-wrap: nowrap;
   align-items: center;
+  align-self: center;
   justify-content: flex-end;
   gap: var(--space-12);
   margin-left: auto;

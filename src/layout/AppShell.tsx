@@ -15,6 +15,7 @@ import {
   globalNavItems,
   HOME_HREF,
   PRIMARY_NAV_GAP_PX,
+  PRIMARY_NAV_MAX_ROWS,
   primaryNavVisibleCount,
   type GlobalNavItem,
 } from "./globalNav";
@@ -215,6 +216,7 @@ function useFittedNavCount(itemCount: number): {
         itemWidths: probes.map((probe) => probe.offsetWidth),
         moreWidth: moreProbe?.offsetWidth ?? 0,
         gap: Number.isFinite(columnGap) ? columnGap : PRIMARY_NAV_GAP_PX,
+        maxRows: PRIMARY_NAV_MAX_ROWS,
       });
       setVisibleCount(count);
     };
@@ -257,8 +259,8 @@ function PrimaryNav({ path }: { path: string }) {
         {visible.map((item) => (
           <NavLink key={item.id} item={item} path={path} />
         ))}
+        {overflow.length > 0 ? <MidWidthMoreMenu path={path} items={overflow} /> : null}
       </div>
-      {overflow.length > 0 ? <MidWidthMoreMenu path={path} items={overflow} /> : null}
     </div>
   );
 }
@@ -275,9 +277,9 @@ export function AppShell({
   const homeCurrent = mode === "slice" && (path === "/" || path === "");
 
   return (
-    <div className="app-shell" data-nav-mode="row">
+    <div className="app-shell" data-nav-mode="wrap">
       <SkipLink />
-      <header className="app-shell__bar" data-shell-contract="single-row">
+      <header className="app-shell__bar" data-shell-contract="fixed-height-multirow">
         <a
           className="app-shell__brand"
           href={homeHref}

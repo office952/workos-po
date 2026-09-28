@@ -16,29 +16,31 @@ describe("global navigation", () => {
     expect(items.some((item) => item.href === "/catalog" || item.label === "Catalog")).toBe(false);
   });
 
-  it("shows every item when the row is wide enough and does not reserve Mai multe", () => {
+  it("shows every item when two designed wrap rows are enough", () => {
     expect(
       primaryNavVisibleCount({
-        containerWidth: 900,
+        containerWidth: 400,
         itemWidths: [80, 80, 80, 80, 80, 80, 80],
         moreWidth: 90,
         gap: 8,
+        maxRows: 2,
       }),
     ).toBe(7);
   });
 
-  it("moves only the tail into overflow when the measured row is narrow", () => {
+  it("keeps Mai multe only when items exceed the fixed two-row capacity", () => {
     expect(
       primaryNavVisibleCount({
-        containerWidth: 280,
+        containerWidth: 200,
         itemWidths: [80, 80, 80, 80, 80, 80, 80],
         moreWidth: 72,
         gap: 8,
+        maxRows: 2,
       }),
-    ).toBe(2);
+    ).toBe(3);
   });
 
-  it("keeps the full row when width has not been measured", () => {
+  it("keeps the full set when width has not been measured", () => {
     expect(
       primaryNavVisibleCount({
         containerWidth: 0,

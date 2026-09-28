@@ -76,7 +76,7 @@ describe("AppShell", () => {
     expect(screen.queryByText("Operațiuni")).not.toBeInTheDocument();
     expect(document.querySelector(".app-shell__bar")).toHaveAttribute(
       "data-shell-contract",
-      "single-row",
+      "fixed-height-multirow",
     );
     expect(screen.queryByRole("button", { name: "Mai multe" })).not.toBeInTheDocument();
 
@@ -133,9 +133,9 @@ describe("AppShell", () => {
     expect(screen.getByRole("link", { name: "Cereri" })).not.toHaveAttribute("aria-current");
   });
 
-  it("opens Mai multe from ArrowDown only when the measured row overflows", async () => {
+  it("opens Mai multe from ArrowDown only when items exceed the fixed wrap capacity", async () => {
     vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) {
-      return this.classList.contains("app-shell__nav-row") ? 280 : 0;
+      return this.classList.contains("app-shell__nav-row") ? 200 : 0;
     });
     vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
       if (this.hasAttribute("data-nav-probe") || this.hasAttribute("data-nav-more-probe")) {
@@ -152,26 +152,37 @@ describe("AppShell", () => {
 
     expect(screen.getByRole("link", { name: "Clienți" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Cereri" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Oferte" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Oferte" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Lucrări" })).not.toBeInTheDocument();
     const more = screen.getByRole("button", { name: "Mai multe" });
     expect(more).toHaveAttribute("aria-expanded", "false");
     more.focus();
     await userEvent.keyboard("{ArrowDown}");
     expect(more).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("menuitem", { name: "Oferte" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("menuitem", { name: "Oferte" })).toHaveFocus();
+    expect(screen.getByRole("menuitem", { name: "Lucrări" })).toHaveFocus();
     expect(screen.queryByRole("menuitem", { name: "Catalog" })).not.toBeInTheDocument();
     await userEvent.keyboard("{ArrowDown}");
-    expect(screen.getByRole("menuitem", { name: "Lucrări" })).toHaveFocus();
+    expect(screen.getByRole("menuitem", { name: "Planificare" })).toHaveFocus();
     await userEvent.keyboard("{End}");
     expect(screen.getByRole("menuitem", { name: "Administrare" })).toHaveFocus();
     await userEvent.keyboard("{Home}");
-    expect(screen.getByRole("menuitem", { name: "Oferte" })).toHaveFocus();
+    expect(screen.getByRole("menuitem", { name: "Lucrări" })).toHaveFocus();
     await userEvent.keyboard("{ArrowUp}");
     expect(screen.getByRole("menuitem", { name: "Administrare" })).toHaveFocus();
     await userEvent.keyboard("{Escape}");
     expect(more).toHaveAttribute("aria-expanded", "false");
     expect(more).toHaveFocus();
+  });
+
+  it("keeps a fixed multi-row shell height contract", () => {
+    render(
+      <AppShell contextLabel="Clienți" mode="slice" currentHref="/clienti">
+        <div>conținut</div>
+      </AppShell>,
+    );
+    const bar = document.querySelector(".app-shell__bar");
+    expect(bar).toHaveAttribute("data-shell-contract", "fixed-height-multirow");
+    expect(document.querySelector(".app-shell")).toHaveAttribute("data-nav-mode", "wrap");
   });
 
   it("moves through the shell from the keyboard", async () => {
