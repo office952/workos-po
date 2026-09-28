@@ -69,7 +69,21 @@
   --shell-height: calc(
     (var(--shell-bar-padding-block) * 2) + (var(--shell-nav-row-height) * var(--shell-nav-max-rows))
   );
-  --page-header-height: 124px;
+  --page-header-padding-block: var(--space-12);
+  --page-header-slot-gap: var(--space-6);
+  --page-header-eyebrow-slot: 1rem;
+  --page-header-title-slot: 2.1rem;
+  --page-header-lead-slot: 1.3125rem;
+  --page-header-meta-slot: 1.125rem;
+  /* Fixed page-context chrome: padding + four reserved copy slots + three slot gaps. */
+  --page-header-height: calc(
+    (var(--page-header-padding-block) * 2) +
+      var(--page-header-eyebrow-slot) +
+      var(--page-header-title-slot) +
+      var(--page-header-lead-slot) +
+      var(--page-header-meta-slot) +
+      (var(--page-header-slot-gap) * 3)
+  );
   --gutter-desktop: 48px;
   --gutter-mid: 32px;
   --gutter-compact: 24px;
