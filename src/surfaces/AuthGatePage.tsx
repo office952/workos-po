@@ -6,8 +6,14 @@ import { FieldFrame } from "../components/FieldFrame";
 import { InlineAlert } from "../components/InlineAlert";
 import { LoadingIndicator } from "../components/LoadingIndicator";
 import { SelectField } from "../components/SelectField";
-import { loginErrorLabel, type CloudAuthGateKind } from "../session/cloudAuth";
+import { navigate } from "../routing/navigate";
+import {
+  loginErrorLabel,
+  resolvePostAuthenticationPath,
+  type CloudAuthGateKind,
+} from "../session/cloudAuth";
 import { useCloudSession } from "../session/CloudSessionContext";
+import { ThemeControl } from "../theme/ThemeControl";
 
 type AuthGatePageProps = {
   kind: CloudAuthGateKind;
@@ -34,6 +40,14 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
       if (result.ok) {
         setPassword("");
         setChoices(null);
+        const landing = resolvePostAuthenticationPath(
+          window.location.pathname,
+          window.location.search,
+        );
+        const current = `${window.location.pathname}${window.location.search}`;
+        if (landing !== current) {
+          navigate(landing, "replace");
+        }
         return;
       }
       if (result.error === "organization_selection_required" && result.memberships.length > 0) {
@@ -51,7 +65,7 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
   }
 
   return (
-    <div className="auth-gate">
+    <div className="auth-gate" data-floorplan="authentication">
       <a className="skip-link" href="#autentificare">
         Sari la autentificare
       </a>
@@ -60,6 +74,7 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
           <BrandMark />
           <span className="app-shell__wordmark">WorkOS</span>
         </span>
+        <ThemeControl />
       </header>
       <main id="autentificare" className="auth-gate__main" tabIndex={-1}>
         {renderGateBody({

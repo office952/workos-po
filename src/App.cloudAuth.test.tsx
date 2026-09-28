@@ -142,6 +142,56 @@ describe("App Cloud auth integration", () => {
     expect(screen.queryByText("OwnerPass12")).not.toBeInTheDocument();
   });
 
+  it("lands on Launchpad after login from /login instead of Pagină inexistentă", async () => {
+    let session: unknown = { mode: "cloud", user: null, organization: null, memberships: [] };
+    installFetch((url, method) => {
+      if (url.endsWith("/api/cloud/login") && method === "POST") {
+        session = authenticatedSession;
+        return authenticatedSession;
+      }
+      if (url.endsWith("/api/cloud/session")) {
+        return session;
+      }
+      if (url.endsWith("/api/health")) {
+        return health;
+      }
+      return { customers: [] };
+    });
+    window.history.replaceState({}, "", "/login");
+
+    render(<App />);
+    expect(await screen.findByRole("heading", { name: "Autentificare" })).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Email"), "owner@example.test");
+    await userEvent.type(screen.getByLabelText("Parolă"), "OwnerPass12");
+    await userEvent.click(screen.getByRole("button", { name: "Intră" }));
+    expect(await screen.findByRole("heading", { name: "WorkOS" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Comercial" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Operațiuni" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Administrare" })).toBeInTheDocument();
+    expect(screen.queryByText("Pagină inexistentă")).not.toBeInTheDocument();
+    expect(window.location.pathname).toBe("/");
+  });
+
+  it("keeps an authenticated session on /login from rendering Pagină inexistentă", async () => {
+    installFetch((url) => {
+      if (url.endsWith("/api/cloud/session")) {
+        return authenticatedSession;
+      }
+      if (url.endsWith("/api/health")) {
+        return health;
+      }
+      return { customers: [] };
+    });
+    window.history.replaceState({}, "", "/login");
+
+    render(<App />);
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/");
+    });
+    expect(await screen.findByRole("heading", { name: "Comercial" })).toBeInTheDocument();
+    expect(screen.queryByText("Pagină inexistentă")).not.toBeInTheDocument();
+  });
+
   it("shows the Cloud login gate when the session is empty", async () => {
     installFetch((url) => {
       if (url.endsWith("/api/cloud/session")) {

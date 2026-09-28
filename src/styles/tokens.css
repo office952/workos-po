@@ -26,6 +26,7 @@
   --color-info-soft: rgb(37 99 235 / 12%);
   --color-shell: #ffffff;
   --color-shell-ink: #1a1d21;
+  color-scheme: light;
 
   --font-sans: "IBM Plex Sans", "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
@@ -84,6 +85,37 @@
   --motion-navigate: 160ms;
   --motion-edit: 100ms;
   --ease-work: cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+:root[data-resolved-theme="dark"] {
+  --color-azure-a1: #3d7ee6;
+  --color-azure-a0: #5b93ea;
+  --color-azure-a2: #2f6bc4;
+  --color-text-primary: #e7e9ed;
+  --color-text-secondary: #b7bec7;
+  --color-text-kicker: #9aa3ad;
+  --color-text-muted: #8b939e;
+  --color-selection-edge: #8b939e;
+  --color-selection-fill: #243041;
+  --color-focus-ring: #b9d2ff;
+  --color-canvas: #14171c;
+  --color-surface: #1c2128;
+  --color-surface-raised: #252b33;
+  --color-surface-alt: #20262e;
+  --color-border-subtle: #2c333c;
+  --color-border: #3a424c;
+  --color-border-strong: #4e5864;
+  --color-danger: #f0a8a0;
+  --color-warning: #e6c07a;
+  --color-success: #8dcea8;
+  --color-info: #9ec1ff;
+  --color-danger-soft: rgb(240 168 160 / 16%);
+  --color-warning-soft: rgb(230 192 122 / 16%);
+  --color-success-soft: rgb(141 206 168 / 16%);
+  --color-info-soft: rgb(158 193 255 / 16%);
+  --color-shell: #1c2128;
+  --color-shell-ink: #e7e9ed;
+  color-scheme: dark;
 }
 
 @media (max-width: 1280px) {

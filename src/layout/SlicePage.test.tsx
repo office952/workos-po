@@ -63,5 +63,6 @@ describe("SlicePage", () => {
     expect(workspace?.className).toContain("page-workspace--density-standard");
     expect(workspace?.className).not.toContain("page-workspace--catalog");
     expect(workspace?.className).not.toContain("floorplan");
+    expect(workspace).toHaveAttribute("data-floorplan", "form-configuration");
   });
 });

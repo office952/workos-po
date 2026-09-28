@@ -33,5 +33,6 @@ describe("routeChrome layout contract", () => {
     expect(loadingFloorVariantFor("operational")).toBe("operational");
     expect(loadingFloorVariantFor("operational-gate")).toBe("operational");
     expect(loadingFloorVariantFor("admin")).toBe("admin");
+    expect(loadingFloorVariantFor("launchpad")).toBe("registry");
   });
 });

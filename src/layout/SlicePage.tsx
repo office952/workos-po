@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { floorplanForWorkspace, type FloorplanId } from "./floorplan";
 import { PageHeader } from "./PageHeader";
 import { PageRegion } from "./PageRegion";
 
@@ -11,7 +12,8 @@ export type PageWorkspace =
   | "traveler"
   | "operational"
   | "operational-gate"
-  | "admin";
+  | "admin"
+  | "launchpad";
 
 export type PageDensity = "compact" | "standard" | "operational";
 
@@ -28,6 +30,7 @@ function densityFor(workspace: PageWorkspace): PageDensity {
     case "collection-with-rail":
     case "catalog":
     case "admin":
+    case "launchpad":
       return "compact";
     default: {
       const exhaustive: never = workspace;
@@ -46,6 +49,7 @@ type SlicePageProps = {
   status?: ReactNode;
   action?: ReactNode;
   workspace?: PageWorkspace;
+  floorplan?: FloorplanId;
   children: ReactNode;
 };
 
@@ -57,8 +61,10 @@ export function SlicePage({
   status,
   action,
   workspace = "stack",
+  floorplan,
   children,
 }: SlicePageProps) {
+  const quiet = workspace === "operational" || workspace === "operational-gate";
   return (
     <PageRegion>
       <PageHeader
@@ -68,10 +74,12 @@ export function SlicePage({
         meta={meta}
         status={status}
         action={action}
+        quiet={quiet}
       />
       <div className="page-region">
         <div
           className={`page-workspace page-workspace--${workspace} page-workspace--density-${densityFor(workspace)}`}
+          data-floorplan={floorplan ?? floorplanForWorkspace(workspace)}
         >
           {children}
         </div>

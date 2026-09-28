@@ -1,25 +1,27 @@
-import { InlineAlert } from "../components/InlineAlert";
+import { Button } from "../components/Button";
+import { StateNotice } from "../components/StateNotice";
 import { AppShell } from "../layout/AppShell";
-import { PageHeader } from "../layout/PageHeader";
 import { PageRegion } from "../layout/PageRegion";
 
-type FailClosedPageProps = {
-  reason: string;
-};
-
-export function FailClosedPage({ reason }: FailClosedPageProps) {
+export function FailClosedPage() {
   return (
-    <AppShell contextLabel="Contract: incompatibil" mode="slice" currentHref="/clienti">
+    <AppShell contextLabel="WorkOS" mode="slice" currentHref="/">
       <PageRegion>
-        <PageHeader
-          title="Contract API incompatibil"
-          lead="Aplicația nu continuă până când contractul API este confirmat."
+        <StateNotice
+          kind="blocked"
+          title="WorkOS nu poate continua"
+          reason="Aplicația nu a putut confirma că este pregătită pentru lucru. Reîncearcă."
+          action={
+            <Button
+              variant="secondary"
+              onClick={() => {
+                window.location.reload();
+              }}
+            >
+              Reîncearcă
+            </Button>
+          }
         />
-        <div className="page-region">
-          <InlineAlert tone="blocked" title="Sistem indisponibil">
-            {reason}
-          </InlineAlert>
-        </div>
       </PageRegion>
     </AppShell>
   );

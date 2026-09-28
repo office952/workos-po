@@ -7,6 +7,7 @@ type PageHeaderProps = {
   meta?: string;
   status?: ReactNode;
   action?: ReactNode;
+  quiet?: boolean;
 };
 
 function sameOperatorLabel(left: string, right: string): boolean {
@@ -20,12 +21,13 @@ export function PageHeader({
   meta,
   status,
   action,
+  quiet = false,
 }: PageHeaderProps) {
   const showEyebrow = Boolean(eyebrow && !sameOperatorLabel(eyebrow, title));
   const hasAside = status != null || action != null;
 
   return (
-    <div className="page-header">
+    <div className={quiet ? "page-header page-header--quiet" : "page-header"}>
       <div className="page-header__copy">
         {showEyebrow ? <p className="page-header__eyebrow">{eyebrow}</p> : null}
         <h1 className="page-header__title">{title}</h1>

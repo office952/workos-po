@@ -1,10 +1,14 @@
 import { useState } from "react";
-import type { CloudMembershipPresentation } from "../adapters/cloudSessionAdapter";
+import {
+  membershipRoleLabel,
+  type CloudMembershipPresentation,
+} from "../adapters/cloudSessionAdapter";
 import { Button } from "../components/Button";
 
 export type AccountAreaProps = {
   organizationName: string;
   userLabel: string;
+  membershipRole?: "owner" | "member" | null;
   memberships: readonly CloudMembershipPresentation[];
   currentOrganizationId: string;
   onSwitchOrganization?: (organizationId: string) => Promise<unknown>;
@@ -14,6 +18,7 @@ export type AccountAreaProps = {
 export function AccountArea({
   organizationName,
   userLabel,
+  membershipRole = null,
   memberships,
   currentOrganizationId,
   onSwitchOrganization,
@@ -22,6 +27,7 @@ export function AccountArea({
   const [busy, setBusy] = useState(false);
   const [switchError, setSwitchError] = useState<string | null>(null);
   const canSwitch = memberships.length > 1 && onSwitchOrganization !== undefined;
+  const roleLabel = membershipRoleLabel(membershipRole);
 
   async function logout(): Promise<void> {
     setBusy(true);
@@ -87,6 +93,7 @@ export function AccountArea({
         <p className="account-area__user" title={userLabel}>
           {userLabel}
         </p>
+        {roleLabel ? <p className="account-area__role">{roleLabel}</p> : null}
         {switchError ? (
           <p className="account-area__error" role="alert">
             {switchError}

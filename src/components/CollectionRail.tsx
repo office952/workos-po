@@ -4,7 +4,9 @@ import { SurfacePanel } from "./SurfacePanel";
 type CollectionItem = {
   id: string;
   label: string;
+  group?: string;
   selected?: boolean;
+  current?: boolean;
   href?: string;
 };
 
@@ -21,7 +23,9 @@ export function CollectionRail({ label, items }: CollectionRailProps) {
         items={items.map((item) => ({
           id: item.id,
           label: item.label,
+          group: item.group,
           selected: item.selected,
+          current: item.current,
           href: item.href,
         }))}
       />

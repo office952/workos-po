@@ -40,6 +40,27 @@ export function intendedReturnPath(pathname: string, search = ""): string {
   return safeAppPath(combined) ?? "/";
 }
 
+/** Auth entry URLs that are not product routes after a successful session. */
+const AUTH_ENTRY_PATHS = new Set(["/login"]);
+
+export function isAuthEntryPath(pathname: string): boolean {
+  const path = pathname.split("?")[0] ?? pathname;
+  const normalized = path.length > 1 && path.endsWith("/") ? path.slice(0, -1) : path;
+  return AUTH_ENTRY_PATHS.has(normalized);
+}
+
+/**
+ * Where to land after authentication succeeds.
+ * Auth-entry paths such as `/login` go to Launchpad `/`.
+ * Valid product deep links are preserved. Arbitrary unknown paths stay unknown.
+ */
+export function resolvePostAuthenticationPath(pathname: string, search = ""): string {
+  if (isAuthEntryPath(pathname)) {
+    return "/";
+  }
+  return intendedReturnPath(pathname, search);
+}
+
 export function rememberCloudAuthenticated(): void {
   try {
     sessionStorage.setItem(WAS_AUTHENTICATED_KEY, "1");

@@ -9,6 +9,7 @@ export type CloudUserPresentation = {
 export type CloudOrganizationPresentation = {
   organizationId: string;
   displayName: string;
+  membershipRole: "owner" | "member" | null;
 };
 
 export type CloudMembershipPresentation = {
@@ -48,7 +49,29 @@ function presentOrganization(value: unknown): CloudOrganizationPresentation | nu
   if (!organizationId || !displayName) {
     return null;
   }
-  return { organizationId, displayName };
+  return {
+    organizationId,
+    displayName,
+    membershipRole: presentRole(record?.role),
+  };
+}
+
+export function membershipRoleLabel(
+  role: CloudOrganizationPresentation["membershipRole"] | undefined,
+): string | null {
+  switch (role) {
+    case "owner":
+      return "Proprietar";
+    case "member":
+      return "Membru";
+    case null:
+    case undefined:
+      return null;
+    default: {
+      const exhaustive: never = role;
+      return exhaustive;
+    }
+  }
 }
 
 export function presentCloudMemberships(value: unknown): CloudMembershipPresentation[] {

@@ -24,7 +24,7 @@ export function RouteLoadingPage({ route }: RouteLoadingPageProps) {
       <SurfacePanel variant="flush" label={chrome.title} busy>
         <LoadingFloor
           variant={floor}
-          label="Se verifică contractul API."
+          label="Se încarcă pagina."
         />
       </SurfacePanel>
     </SlicePage>
