@@ -61,8 +61,8 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         currentHref: "/cereri",
         workspace: "stack",
         eyebrow: "Cereri",
-        title: "Cereri de ofertă",
-        lead: "Deschide cererea lucrării și continuă către catalog.",
+        title: "Cereri",
+        lead: "Registrul cererilor de ofertă. Deschide obiectul sau continuă pasul canonic.",
       };
     case "request":
       return {

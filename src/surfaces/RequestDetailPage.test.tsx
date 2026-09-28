@@ -76,13 +76,19 @@ describe("RequestDetailPage", () => {
     stubDetail(requestDetail());
 
     render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByRole("heading", { name: "Litere vitrină" })).toBeInTheDocument();
-    expect(screen.getByText(/Atelier Nord/)).toBeInTheDocument();
-    expect(screen.getByText(/CRQ-104/)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "CRQ-104" })).toBeInTheDocument();
+    expect(screen.getByText("Litere vitrină")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Atelier Nord" })).toHaveAttribute(
+      "href",
+      "/clienti/cus-1",
+    );
+    expect(screen.getByText(/Creată/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Alege produs" })).toHaveAttribute(
       "href",
       "/catalog?customer=cus-1&request=req-1",
     );
+    expect(screen.getByRole("heading", { name: "Ce dorește clientul" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Continuare" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Cerere", level: 2 })).not.toBeInTheDocument();
     expect(screen.queryByText(/Nu adăuga montaj/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Montajul nu face parte/i)).not.toBeInTheDocument();
@@ -113,11 +119,13 @@ describe("RequestDetailPage", () => {
     expect(screen.getByRole("link", { name: "Deschide oferta OF-1" })).toBeInTheDocument();
   });
 
-  it("uses linked offers as OPEN_QUOTE when the envelope omits nextAction", async () => {
+  it("does not invent OPEN_QUOTE or CHOOSE_PRODUCT when nextAction is absent", async () => {
     stubDetail(
       requestDetail({
         nextAction: undefined,
         nextActionLabel: undefined,
+        status: "READY_FOR_QUOTE",
+        statusLabel: "Gata de ofertă",
         commercialProgressLabel: "Ofertă creată",
         linkedOffers: [
           {
@@ -130,11 +138,27 @@ describe("RequestDetailPage", () => {
     );
 
     render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByRole("link", { name: "Deschide oferta" })).toHaveAttribute(
-      "href",
-      "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
-    );
+    expect(await screen.findByRole("heading", { name: "CRQ-104" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Deschide oferta" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Alege produs" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Deschide oferta OF-1" })).toBeInTheDocument();
+    expect(screen.getByText("Nicio acțiune disponibilă")).toBeInTheDocument();
+  });
+
+  it("works without a nextAction primary CTA", async () => {
+    stubDetail(
+      requestDetail({
+        nextAction: undefined,
+        nextActionLabel: undefined,
+        linkedOffers: [],
+      }),
+    );
+
+    render(<RequestDetailPage requestId="req-1" />);
+    expect(await screen.findByRole("heading", { name: "CRQ-104" })).toBeInTheDocument();
+    expect(screen.getByText("Gata de ofertă")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Alege produs" })).not.toBeInTheDocument();
+    expect(screen.getByText("Nicio acțiune disponibilă")).toBeInTheDocument();
   });
 
   it("shows the empty attachments state and hides upload when forbidden", async () => {
@@ -146,9 +170,9 @@ describe("RequestDetailPage", () => {
     );
 
     render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByText("Nu există atașamente.")).toBeInTheDocument();
+    expect(await screen.findByText("Nu există fișiere atașate.")).toBeInTheDocument();
     expect(screen.getByText("Încărcarea nu este permisă pe această cerere.")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Încarcă fișier")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Alege fișier")).not.toBeInTheDocument();
   });
 
   it("lists attachments and keeps the server download href", async () => {
@@ -205,8 +229,9 @@ describe("RequestDetailPage", () => {
 
     const file = new File(["x"], "nou.pdf", { type: "application/pdf" });
     render(<RequestDetailPage requestId="req-1" />);
-    const input = await screen.findByLabelText("Încarcă fișier");
+    const input = await screen.findByLabelText("Alege fișier");
     await userEvent.setup().upload(input, file);
+    expect(screen.getByText("nou.pdf")).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole("button", { name: "Încarcă" }));
     expect(await screen.findByRole("link", { name: "nou.pdf" })).toBeInTheDocument();
     expect(
@@ -214,6 +239,16 @@ describe("RequestDetailPage", () => {
         (call) => String(call[0]).endsWith("/attachments") && call[1]?.method === "POST",
       ),
     ).toBe(true);
+  });
+
+  it("presents Romanian file-picker labels instead of native browser copy", async () => {
+    stubDetail(requestDetail({ canUploadAttachments: true, attachments: [] }));
+
+    render(<RequestDetailPage requestId="req-1" />);
+    expect(await screen.findByLabelText("Alege fișier")).toBeInTheDocument();
+    expect(screen.getByText("Niciun fișier selectat")).toBeInTheDocument();
+    expect(screen.queryByText(/Choose File/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/No file chosen/i)).not.toBeInTheDocument();
   });
 
   it("shows selected installation facts as editable and frozen when locked", async () => {

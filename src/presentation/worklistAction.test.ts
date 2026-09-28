@@ -220,6 +220,23 @@ describe("presentRequestPrimaryAction", () => {
       }),
     ).toBeNull();
   });
+
+  it("does not invent a primary action when nextAction is absent", () => {
+    expect(
+      presentRequestPrimaryAction({
+        ...detail,
+        nextAction: "",
+        nextActionLabel: "",
+        linkedOffers: [
+          {
+            quoteSnapshotId: "q-1",
+            productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+            reference: "OF-1",
+          },
+        ],
+      }),
+    ).toBeNull();
+  });
 });
 
 describe("presentQuoteWorklistAction", () => {

@@ -4,7 +4,7 @@ type PageHeaderProps = {
   eyebrow?: string;
   title: string;
   lead?: string;
-  meta?: string;
+  meta?: ReactNode;
   status?: ReactNode;
   action?: ReactNode;
   quiet?: boolean;

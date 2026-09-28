@@ -6,6 +6,8 @@ export type FieldFrameProps = {
   hint?: string;
   error?: string;
   className?: string;
+  /** Keep accessible name while hiding the visible label. */
+  labelVisuallyHidden?: boolean;
   children: ReactNode;
 };
 
@@ -26,15 +28,19 @@ export function FieldFrame({
   hint,
   error,
   className,
+  labelVisuallyHidden = false,
   children,
 }: FieldFrameProps) {
   const classes = ["field", error ? "field--invalid" : null, className]
     .filter(Boolean)
     .join(" ");
+  const labelClass = labelVisuallyHidden
+    ? "field__label u-visually-hidden"
+    : "field__label";
 
   return (
     <div className={classes}>
-      <label className="field__label" htmlFor={id}>
+      <label className={labelClass} htmlFor={id}>
         {label}
       </label>
       {children}

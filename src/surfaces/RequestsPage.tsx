@@ -10,27 +10,47 @@ import { loadRequestList } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { formatTimestamp } from "../presentation/format";
-import { matchesSearch, uniqueLabels } from "../presentation/listFilter";
+import { matchesSearch } from "../presentation/listFilter";
 import { presentRequestRegistryStatus } from "../presentation/requestListStatus";
 import { statusTone } from "../presentation/statusTone";
 import { presentRequestWorklistAction } from "../presentation/worklistAction";
 import { requestHref } from "../routing/appRoute";
 
-const ALL = "all";
-const COLUMNS = ["Cerere", "Client", "Context", "Stare", "Creată", "Acțiune"] as const;
+const FILTERS = [
+  { id: "all", label: "Toate" },
+  { id: "needs-action", label: "Necesită acțiune" },
+] as const;
+
+type RequestListFilter = (typeof FILTERS)[number]["id"];
+
+const COLUMNS = ["Cerere", "Client", "Progres comercial", "Stare", "Creată", "Acțiune"] as const;
 
 export function RequestsPage() {
   const requests = useResource(resourceKeys.requests(), loadRequestList);
   const items = useMemo(() => requests.data ?? [], [requests.data]);
   const [query, setQuery] = useState("");
-  const [statusChip, setStatusChip] = useState(ALL);
+  const [filter, setFilter] = useState<RequestListFilter>("all");
+
+  const attentionCount = useMemo(
+    () => items.filter((item) => item.needsAttention).length,
+    [items],
+  );
+
+  const chips = useMemo(
+    () =>
+      FILTERS.map((item) =>
+        item.id === "needs-action" && attentionCount > 0
+          ? { ...item, label: `Necesită acțiune (${attentionCount})` }
+          : { ...item },
+      ),
+    [attentionCount],
+  );
 
   const registryRows = useMemo(
     () =>
       items.map((item) => ({
         item,
         registry: presentRequestRegistryStatus({
-          status: item.status,
           statusLabel: item.statusLabel,
           contextLabel: item.contextLabel,
         }),
@@ -38,45 +58,45 @@ export function RequestsPage() {
     [items],
   );
 
-  const statusChips = useMemo(
-    () => [
-      { id: ALL, label: "Toate" },
-      ...uniqueLabels(registryRows.map((row) => row.registry.stateLabel)).map((label) => ({
-        id: label,
-        label,
-      })),
-    ],
-    [registryRows],
-  );
-
   const visible = useMemo(
     () =>
       registryRows.filter(({ item, registry }) => {
-        const matchesChip = statusChip === ALL || registry.stateLabel === statusChip;
+        const matchesChip =
+          filter === "all" || (filter === "needs-action" && item.needsAttention);
         return (
           matchesChip &&
           matchesSearch(query, [
             item.title,
             item.reference,
             item.customerDisplayName,
-            registry.supportLabel,
+            registry.commercialProgressLabel,
             registry.stateLabel,
             item.nextActionLabel,
             item.attentionLabel,
           ])
         );
       }),
-    [registryRows, query, statusChip],
+    [filter, query, registryRows],
   );
+
+  const countMeta =
+    requests.status === "success"
+      ? `${visible.length} ${visible.length === 1 ? "cerere" : "cereri"}`
+      : undefined;
 
   return (
     <SlicePage
       contextLabel="Cereri"
       currentHref="/cereri"
       workspace="stack"
-      title="Cereri de ofertă"
-      lead="Deschide cererea lucrării și continuă către pasul canonic."
-      meta={requests.status === "success" ? `${visible.length} rezultate` : undefined}
+      surface="cereri-registry"
+      title="Cereri"
+      lead="Registrul cererilor de ofertă. Deschide obiectul sau continuă pasul canonic."
+      action={
+        <a className="hit" href="/clienti">
+          <span className="button button--primary">Cerere nouă</span>
+        </a>
+      }
     >
       <SurfacePanel
         variant="flush"
@@ -84,13 +104,21 @@ export function RequestsPage() {
         busy={requests.status === "loading" && items.length === 0}
       >
         <FilterBar
+          variant="toolbar"
           searchId="cereri-cauta"
           searchLabel="Caută"
+          searchPlaceholder="Client, referință sau titlu"
           searchValue={query}
           onSearchChange={setQuery}
-          chips={statusChips}
-          selectedChip={statusChip}
-          onChipChange={setStatusChip}
+          chips={chips}
+          selectedChip={filter}
+          onChipChange={(id) => {
+            const next = FILTERS.find((item) => item.id === id);
+            if (next) {
+              setFilter(next.id);
+            }
+          }}
+          meta={countMeta}
         />
         <CollectionBody
           status={requests.status}
@@ -133,7 +161,7 @@ export function RequestsPage() {
                     .join(" · ") || undefined
                 }
                 context={item.customerDisplayName ?? "Fără client"}
-                support={registry.supportLabel}
+                support={registry.commercialProgressLabel}
                 state={<StatusBadge label={registry.stateLabel} tone={statusTone("workflow")} />}
                 meta={formatTimestamp(item.createdAt) ?? ""}
                 actionLabel={action.actionLabel}

@@ -45,11 +45,13 @@ type SlicePageProps = {
   eyebrow?: string;
   title: string;
   lead?: string;
-  meta?: string;
+  meta?: ReactNode;
   status?: ReactNode;
   action?: ReactNode;
   workspace?: PageWorkspace;
   floorplan?: FloorplanId;
+  /** Scoped presentation surface; does not invent a new workspace contract. */
+  surface?: "cereri-registry" | "cereri-detail";
   children: ReactNode;
 };
 
@@ -62,26 +64,30 @@ export function SlicePage({
   action,
   workspace = "stack",
   floorplan,
+  surface,
   children,
 }: SlicePageProps) {
   const quiet = workspace === "operational" || workspace === "operational-gate";
   return (
     <PageRegion>
-      <PageHeader
-        eyebrow={eyebrow}
-        title={title}
-        lead={lead}
-        meta={meta}
-        status={status}
-        action={action}
-        quiet={quiet}
-      />
-      <div className="page-region">
-        <div
-          className={`page-workspace page-workspace--${workspace} page-workspace--density-${densityFor(workspace)}`}
-          data-floorplan={floorplan ?? floorplanForWorkspace(workspace)}
-        >
-          {children}
+      <div data-surface={surface}>
+        <PageHeader
+          eyebrow={eyebrow}
+          title={title}
+          lead={lead}
+          meta={meta}
+          status={status}
+          action={action}
+          quiet={quiet}
+        />
+        <div className="page-region">
+          <div
+            className={`page-workspace page-workspace--${workspace} page-workspace--density-${densityFor(workspace)}`}
+            data-floorplan={floorplan ?? floorplanForWorkspace(workspace)}
+            data-surface={surface}
+          >
+            {children}
+          </div>
         </div>
       </div>
     </PageRegion>

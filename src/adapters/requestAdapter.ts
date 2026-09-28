@@ -60,8 +60,6 @@ export function presentRequestDetail(payload: unknown): RequestDetailTransport |
   const next = presentRequestNextAction({
     nextAction: asString(detail?.nextAction),
     nextActionLabel: asString(detail?.nextActionLabel),
-    linkedOfferCount: linkedOffers.length,
-    status,
   });
   return {
     requestId: request.requestId,
@@ -99,8 +97,6 @@ export function presentCreatedRequestId(payload: unknown): string | null {
 function presentRequestNextAction(input: {
   nextAction: string | null;
   nextActionLabel: string | null;
-  linkedOfferCount: number;
-  status: string | null;
 }): { nextAction: string; nextActionLabel: string } {
   if (input.nextAction) {
     return {
@@ -108,21 +104,10 @@ function presentRequestNextAction(input: {
       nextActionLabel: input.nextActionLabel || labelForRequestNextAction(input.nextAction),
     };
   }
-  if (input.linkedOfferCount > 0) {
-    return {
-      nextAction: "OPEN_QUOTE",
-      nextActionLabel: input.nextActionLabel || "Deschide oferta",
-    };
-  }
-  if (input.status === "READY_FOR_QUOTE") {
-    return {
-      nextAction: "CHOOSE_PRODUCT",
-      nextActionLabel: input.nextActionLabel || "Alege produs",
-    };
-  }
+  // Fail closed: do not invent OPEN_QUOTE / CHOOSE_PRODUCT / OPEN_REQUEST.
   return {
-    nextAction: "OPEN_REQUEST",
-    nextActionLabel: input.nextActionLabel || "Deschide",
+    nextAction: "",
+    nextActionLabel: "",
   };
 }
 

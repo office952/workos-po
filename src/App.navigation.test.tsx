@@ -58,7 +58,7 @@ describe("App navigation", () => {
     const firstCustomerReads = customerReads();
 
     await userEvent.setup().click(screen.getByRole("link", { name: "Cereri" }));
-    expect(await screen.findByRole("heading", { name: "Cereri de ofertă" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Cereri" })).toBeInTheDocument();
     expect(document.querySelector(".app-shell__bar")).toBe(shell);
 
     window.history.back();
@@ -70,7 +70,7 @@ describe("App navigation", () => {
     expect(customerReads()).toBe(firstCustomerReads);
 
     await userEvent.setup().click(screen.getByRole("link", { name: "Cereri" }));
-    expect(await screen.findByRole("heading", { name: "Cereri de ofertă" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Cereri" })).toBeInTheDocument();
     window.history.back();
     window.dispatchEvent(new PopStateEvent("popstate"));
     await waitFor(() => {
