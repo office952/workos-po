@@ -116,8 +116,8 @@ describe("WorkcentersAdminPage", () => {
     expect(screen.queryByRole("button", { name: "Salvează zona" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Retrage utilajul" })).not.toBeInTheDocument();
     expect(
-      screen.getAllByText("Editarea nu este disponibilă pentru acest rol.").length,
-    ).toBeGreaterThan(0);
+      screen.getByText("Editarea nu este disponibilă pentru acest rol."),
+    ).toBeInTheDocument();
   });
 
   it("creates a workcenter and a machine, then assigns CNC coverage", async () => {

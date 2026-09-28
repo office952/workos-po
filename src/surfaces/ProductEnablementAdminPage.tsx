@@ -215,9 +215,7 @@ export function ProductEnablementAdminPage() {
               >
                 Salvează produsele oferite
               </Button>
-            ) : (
-              <p>Editarea nu este disponibilă pentru acest rol.</p>
-            )}
+            ) : null}
             {pending ? <LoadingIndicator label="Se salvează produsele oferite" /> : null}
           </SurfacePanel>
           <SurfacePanel title="Istoric versiuni" label="Istoric">

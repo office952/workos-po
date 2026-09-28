@@ -503,9 +503,7 @@ export function WorkcentersAdminPage({
                 Adaugă zona
               </Button>
             </SurfacePanel>
-          ) : (
-            <p>Editarea nu este disponibilă pentru acest rol.</p>
-          )}
+          ) : null}
           {selectedWorkcenter ? (
             <WorkcenterDetail
               workcenter={selectedWorkcenter}

@@ -177,8 +177,8 @@ describe("FormulasAdminPage", () => {
     );
     render(<FormulasAdminPage />);
     expect(
-      (await screen.findAllByText("Editarea nu este disponibilă pentru acest rol.")).length,
-    ).toBeGreaterThan(0);
+      await screen.findByText("Editarea nu este disponibilă pentru acest rol."),
+    ).toBeInTheDocument();
     expect(screen.getAllByLabelText("Tip expresie")[0]).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Salvează formula" })).not.toBeInTheDocument();
   });

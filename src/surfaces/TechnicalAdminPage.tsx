@@ -231,9 +231,7 @@ export function TechnicalAdminPage() {
               >
                 Salvează setările
               </Button>
-            ) : (
-              <p>Editarea nu este disponibilă pentru acest rol.</p>
-            )}
+            ) : null}
             {pending ? <LoadingIndicator label="Se salvează setările tehnice" /> : null}
           </SurfacePanel>
           <SurfacePanel title="Istoric versiuni" label="Istoric">

@@ -104,8 +104,8 @@ describe("PeopleAdminPage", () => {
     expect(screen.queryByRole("button", { name: "Atribuie calificarea" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Configurează PIN" })).not.toBeInTheDocument();
     expect(
-      screen.getAllByText("Editarea nu este disponibilă pentru acest rol.").length,
-    ).toBeGreaterThan(0);
+      screen.getByText("Editarea nu este disponibilă pentru acest rol."),
+    ).toBeInTheDocument();
   });
 
   it("creates a person, assigns a skill, and configures PIN without disclosing it", async () => {

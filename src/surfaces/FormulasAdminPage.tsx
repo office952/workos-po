@@ -214,9 +214,7 @@ export function FormulasAdminPage() {
                       Salvarea creează o versiune nouă folosită doar la calculele următoare.
                     </p>
                   </>
-                ) : (
-                  <p>Editarea nu este disponibilă pentru acest rol.</p>
-                )}
+                ) : null}
               </div>
             ))}
             {pending ? <LoadingIndicator label="Se salvează formula de calcul" /> : null}

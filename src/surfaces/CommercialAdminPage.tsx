@@ -235,9 +235,7 @@ export function CommercialAdminPage() {
               >
                 Salvează politica
               </Button>
-            ) : (
-              <p>Editarea nu este disponibilă pentru acest rol.</p>
-            )}
+            ) : null}
             {pending ? <LoadingIndicator label="Se salvează politica comercială" /> : null}
           </SurfacePanel>
           <SurfacePanel title="Istoric versiuni" label="Istoric">

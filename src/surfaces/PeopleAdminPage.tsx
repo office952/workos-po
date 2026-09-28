@@ -375,9 +375,7 @@ export function PeopleAdminPage({ personId = null }: PeopleAdminPageProps) {
                 Adaugă persoana
               </Button>
             </SurfacePanel>
-          ) : (
-            <p>Editarea nu este disponibilă pentru acest rol.</p>
-          )}
+          ) : null}
           {selected ? (
             <SurfacePanel
               title={selected.displayName}
