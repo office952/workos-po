@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
 
 export type SignLightingMode = "face" | "halo" | "combined";
 type SignLightSource = "cool" | "warm" | "rgb";
@@ -13,6 +13,9 @@ const LIGHT_RGB: Record<Exclude<SignLightSource, "rgb"> | RgbPreset, string> = {
   cyan: "45 224 238",
 };
 
+const MODES: readonly SignLightingMode[] = ["face", "halo", "combined"];
+const SOURCES: readonly SignLightSource[] = ["cool", "warm", "rgb"];
+
 function clamp(value: number, min = 0, max = 1): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -22,6 +25,44 @@ function smoothstep(edge0: number, edge1: number, value: number): number {
   return x * x * (3 - 2 * x);
 }
 
+function lightingBand(energy: number, reference75: number, highGain: number): number {
+  const reference = smoothstep(0.02, 0.75, energy) * reference75;
+  const high = smoothstep(0.75, 1, energy) * highGain;
+  return clamp(reference + high);
+}
+
+export function resolveSignLighting(
+  intensity: number,
+  mode: SignLightingMode,
+  power: boolean,
+): {
+  faceFill: number;
+  faceGlow: number;
+  coreFill: number;
+  coreGlow: number;
+  haloTight: number;
+  haloNear: number;
+  haloMid: number;
+  haloFar: number;
+  cableLive: number;
+} {
+  const energy = power ? clamp(intensity / 100) : 0;
+  const faceEnabled = mode === "face" || mode === "combined";
+  const haloEnabled = mode === "halo" || mode === "combined";
+
+  return {
+    faceFill: faceEnabled ? lightingBand(energy, 0.76, 0.16) : 0,
+    faceGlow: faceEnabled ? lightingBand(energy, 0.38, 0.1) : 0,
+    coreFill: faceEnabled ? lightingBand(energy, 0.38, 0.14) : 0,
+    coreGlow: faceEnabled ? lightingBand(energy, 0.2, 0.08) : 0,
+    haloTight: haloEnabled ? lightingBand(energy, 0.98, 0.02) : 0,
+    haloNear: haloEnabled ? lightingBand(energy, 0.75, 0.1) : 0,
+    haloMid: haloEnabled ? lightingBand(energy, 0.295, 0.035) : 0,
+    haloFar: haloEnabled ? lightingBand(energy, 0.07, 0.01) : 0,
+    cableLive: power ? 0.12 + smoothstep(0, 1, energy) * 0.08 : 0,
+  };
+}
+
 type SignLightDemoProps = {
   power: boolean;
   onPowerChange: (power: boolean) => void;
@@ -29,35 +70,65 @@ type SignLightDemoProps = {
   onSelectAngajat?: () => void;
 };
 
+function moveRadio<T extends string>(
+  event: ReactKeyboardEvent<HTMLButtonElement>,
+  values: readonly T[],
+  current: T,
+  setValue: (value: T) => void,
+): void {
+  const delta =
+    event.key === "ArrowRight" || event.key === "ArrowDown"
+      ? 1
+      : event.key === "ArrowLeft" || event.key === "ArrowUp"
+        ? -1
+        : 0;
+  if (delta === 0) {
+    return;
+  }
+  event.preventDefault();
+  const currentIndex = values.indexOf(current);
+  const nextIndex = (currentIndex + delta + values.length) % values.length;
+  const next = values[nextIndex];
+  setValue(next);
+  const group = event.currentTarget.closest('[role="radiogroup"]');
+  const target = group?.querySelector<HTMLButtonElement>(`[data-radio-value="${next}"]`);
+  target?.focus();
+}
+
 export function SignLightDemo({
   power,
   onPowerChange,
   onSelectSocietate,
   onSelectAngajat,
 }: SignLightDemoProps) {
-  const [intensity, setIntensity] = useState(72);
-  const [mode, setMode] = useState<SignLightingMode>("combined");
+  const [intensity, setIntensity] = useState(75);
+  const [mode, setMode] = useState<SignLightingMode>("face");
   const [source, setSource] = useState<SignLightSource>("warm");
   const [rgbPreset, setRgbPreset] = useState<RgbPreset>("blue");
 
   const activeColor = source === "rgb" ? rgbPreset : source;
-  const energy = power ? intensity / 100 : 0;
   const faceEnabled = mode === "face" || mode === "combined";
   const haloEnabled = mode === "halo" || mode === "combined";
+  const lighting = useMemo(
+    () => resolveSignLighting(intensity, mode, power),
+    [intensity, mode, power],
+  );
 
   const lightingStyle = useMemo(
     () =>
       ({
         "--sign-light-rgb": LIGHT_RGB[activeColor],
-        "--sign-face-fill": faceEnabled ? clamp(smoothstep(0.04, 0.96, energy) * 0.98) : 0,
-        "--sign-face-glow": faceEnabled ? clamp(Math.pow(energy, 1.35) * 0.52) : 0,
-        "--sign-halo-tight": haloEnabled ? clamp(Math.pow(energy, 0.78)) : 0,
-        "--sign-halo-near": haloEnabled ? clamp(Math.pow(energy, 1.05) * 0.94) : 0,
-        "--sign-halo-mid": haloEnabled ? clamp(Math.pow(energy, 1.55) * 0.46) : 0,
-        "--sign-halo-far": haloEnabled ? clamp(Math.pow(energy, 2.25) * 0.13) : 0,
-        "--sign-cable-live": power ? clamp(0.18 + energy * 0.58) : 0,
+        "--sign-face-fill": lighting.faceFill,
+        "--sign-face-glow": lighting.faceGlow,
+        "--sign-core-fill": lighting.coreFill,
+        "--sign-core-glow": lighting.coreGlow,
+        "--sign-halo-tight": lighting.haloTight,
+        "--sign-halo-near": lighting.haloNear,
+        "--sign-halo-mid": lighting.haloMid,
+        "--sign-halo-far": lighting.haloFar,
+        "--sign-cable-live": lighting.cableLive,
       }) as CSSProperties,
-    [activeColor, energy, faceEnabled, haloEnabled, power],
+    [activeColor, lighting],
   );
 
   return (
@@ -66,6 +137,7 @@ export function SignLightDemo({
       aria-label="Demonstrație iluminare WorkOS"
       data-power={power ? "on" : "off"}
       data-mode={mode}
+      data-source={source}
       style={lightingStyle}
     >
       <div className="sign-demo__stage">
@@ -88,6 +160,11 @@ export function SignLightDemo({
             />
           </svg>
 
+          <div className="sign-demo__feed-notes" aria-hidden="true">
+            <span>Power Feed / PUNCT MONTAJ</span>
+            <span>Power Feed / COTA 0</span>
+          </div>
+
           <div
             className="sign-demo__word"
             data-power={power ? "on" : "off"}
@@ -102,14 +179,15 @@ export function SignLightDemo({
             <span className="sign-demo__word-face" aria-hidden="true">
               WorkOS
             </span>
+            <span className="sign-demo__word-core" aria-hidden="true">
+              WorkOS
+            </span>
           </div>
-
-          <span className="sign-demo__mount-note">PUNCT MONTAJ / SIGN ASSEMBLY</span>
         </div>
 
         <p className="sign-demo__lead">
-          Platforma integrată pentru gestiunea clienților, cererilor, configuratorului, ofertelor și
-          producției în atelier. O sursă de adevăr, un singur produs.
+          Platforma integrată pentru gestionarea clienților și cererilor, configurarea produselor,
+          ofertare și producție în atelier. O singură sursă de adevăr. Un singur produs.
         </p>
 
         <div className="sign-demo__journeys" aria-label="Căi de acces">
@@ -146,21 +224,24 @@ export function SignLightDemo({
         <div className="sign-controller__header">
           <div>
             <span className="sign-controller__title">WORKOS SIGN CONTROLLER</span>
-            <span className="sign-controller__spec">FATA / HALO · 12VDC</span>
+            <span className="sign-controller__spec">FATA / HALO · RGB+CCT</span>
           </div>
           <div className="sign-controller__status" aria-live="polite">
             <span className="sign-controller__status-dot" data-active={power ? "" : undefined} />
-            <span>{power ? "SIGN LIGHT / ON" : "SIGN LIGHT / OFF"}</span>
+            <span>{power ? "DC READY" : "STANDBY"}</span>
           </div>
         </div>
 
-        <fieldset className="sign-controller__group">
+        <fieldset className="sign-controller__group" disabled={!power}>
           <legend>Mod iluminare</legend>
           <div className="sign-controller__segmented" role="radiogroup" aria-label="Mod iluminare">
             <button
               type="button"
               role="radio"
+              data-radio-value="face"
               aria-checked={mode === "face"}
+              disabled={!power}
+              onKeyDown={(event) => moveRadio(event, MODES, mode, setMode)}
               onClick={() => setMode("face")}
             >
               FATA
@@ -168,7 +249,10 @@ export function SignLightDemo({
             <button
               type="button"
               role="radio"
+              data-radio-value="halo"
               aria-checked={mode === "halo"}
+              disabled={!power}
+              onKeyDown={(event) => moveRadio(event, MODES, mode, setMode)}
               onClick={() => setMode("halo")}
             >
               HALO
@@ -176,7 +260,10 @@ export function SignLightDemo({
             <button
               type="button"
               role="radio"
+              data-radio-value="combined"
               aria-checked={mode === "combined"}
+              disabled={!power}
+              onKeyDown={(event) => moveRadio(event, MODES, mode, setMode)}
               onClick={() => setMode("combined")}
             >
               FATA + HALO
@@ -184,7 +271,7 @@ export function SignLightDemo({
           </div>
         </fieldset>
 
-        <div className="sign-controller__dimmer">
+        <div className="sign-controller__dimmer" data-disabled={!power ? "" : undefined}>
           <div className="sign-controller__dimmer-head">
             <label htmlFor="sign-light-intensity">Intensitate</label>
             <output htmlFor="sign-light-intensity">{intensity}%</output>
@@ -196,18 +283,23 @@ export function SignLightDemo({
             max="100"
             step="1"
             value={intensity}
+            disabled={!power}
             aria-label="Intensitate iluminare"
+            aria-valuetext={`${intensity}%`}
             onChange={(event) => setIntensity(Number(event.target.value))}
           />
         </div>
 
-        <fieldset className="sign-controller__group">
+        <fieldset className="sign-controller__group" disabled={!power}>
           <legend>Sursă lumină</legend>
           <div className="sign-controller__source" role="radiogroup" aria-label="Sursă lumină">
             <button
               type="button"
               role="radio"
+              data-radio-value="cool"
               aria-checked={source === "cool"}
+              disabled={!power}
+              onKeyDown={(event) => moveRadio(event, SOURCES, source, setSource)}
               onClick={() => setSource("cool")}
             >
               <span className="sign-controller__swatch sign-controller__swatch--cool" />
@@ -216,7 +308,10 @@ export function SignLightDemo({
             <button
               type="button"
               role="radio"
+              data-radio-value="warm"
               aria-checked={source === "warm"}
+              disabled={!power}
+              onKeyDown={(event) => moveRadio(event, SOURCES, source, setSource)}
               onClick={() => setSource("warm")}
             >
               <span className="sign-controller__swatch sign-controller__swatch--warm" />
@@ -225,7 +320,10 @@ export function SignLightDemo({
             <button
               type="button"
               role="radio"
+              data-radio-value="rgb"
               aria-checked={source === "rgb"}
+              disabled={!power}
+              onKeyDown={(event) => moveRadio(event, SOURCES, source, setSource)}
               onClick={() => setSource("rgb")}
             >
               <span className="sign-controller__rgb-dots" aria-hidden="true">
@@ -239,7 +337,7 @@ export function SignLightDemo({
         </fieldset>
 
         {source === "rgb" ? (
-          <fieldset className="sign-controller__rgb">
+          <fieldset className="sign-controller__rgb" disabled={!power}>
             <legend>Culoare RGB</legend>
             <div role="radiogroup" aria-label="Culoare RGB">
               {(["blue", "red", "magenta", "cyan"] as const).map((preset) => (
@@ -250,6 +348,7 @@ export function SignLightDemo({
                   aria-label={preset}
                   aria-checked={rgbPreset === preset}
                   data-preset={preset}
+                  disabled={!power}
                   onClick={() => setRgbPreset(preset)}
                 />
               ))}
