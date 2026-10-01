@@ -190,7 +190,7 @@ describe("AuthGatePage", () => {
     expect(power).toHaveAttribute("aria-checked", "true");
 
     const dimmer = screen.getByRole("slider", { name: "Intensitate iluminare" });
-    expect(dimmer).toHaveValue("72");
+    expect(dimmer).toHaveValue(72);
 
     const halo = screen.getByRole("radio", { name: "HALO" });
     await userEvent.click(halo);
