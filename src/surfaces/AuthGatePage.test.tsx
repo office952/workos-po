@@ -174,4 +174,37 @@ describe("AuthGatePage", () => {
     expect(screen.queryByText("wrong-pass")).not.toBeInTheDocument();
     expect(screen.queryByText("invalid_credentials")).not.toBeInTheDocument();
   });
+
+  it("offers a functional signage lighting controller without replacing authentication", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => jsonResponse({ mode: "cloud", user: null })));
+
+    render(
+      <CloudSessionProvider>
+        <AuthGatePage kind="unauthenticated" />
+      </CloudSessionProvider>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Autentificare" })).toBeInTheDocument();
+
+    const power = screen.getByRole("switch", { name: "Alimentare iluminare WorkOS" });
+    expect(power).toHaveAttribute("aria-checked", "true");
+
+    const dimmer = screen.getByRole("slider", { name: "Intensitate iluminare" });
+    expect(dimmer).toHaveValue("72");
+
+    const halo = screen.getByRole("radio", { name: "HALO" });
+    await userEvent.click(halo);
+    expect(halo).toHaveAttribute("aria-checked", "true");
+
+    const rgb = screen.getByRole("radio", { name: "RGB" });
+    await userEvent.click(rgb);
+    expect(screen.getByRole("radio", { name: "magenta" })).toBeInTheDocument();
+
+    await userEvent.click(power);
+    expect(power).toHaveAttribute("aria-checked", "false");
+
+    expect(screen.getByLabelText("Email")).toBeInTheDocument();
+    expect(screen.getByLabelText("Parolă")).toBeInTheDocument();
+  });
+
 });
