@@ -2601,11 +2601,15 @@ button.context-rail__item:focus-visible {
 }
 
 .sign-demo__word-material {
+  position: relative;
+  z-index: 1;
   color: var(--color-text-primary);
   opacity: 0.96;
 }
 
 .sign-demo__word-face {
+  position: relative;
+  z-index: 2;
   color: rgb(var(--sign-light-rgb));
   opacity: var(--sign-face-fill);
   filter:
@@ -2614,7 +2618,9 @@ button.context-rail__item:focus-visible {
 }
 
 .sign-demo__word-halo {
-  color: transparent;
+  position: relative;
+  z-index: 0;
+  color: rgb(var(--sign-light-rgb));
   opacity: 1;
   filter:
     drop-shadow(0 0 4px rgb(var(--sign-light-rgb) / var(--sign-halo-tight)))
