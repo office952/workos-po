@@ -48,7 +48,6 @@ export function resolveSignLighting(
 } {
   const energy = power ? clamp(intensity / 100) : 0;
   const faceEnabled = mode === "face" || mode === "combined";
-  const haloEnabled = mode === "halo" || mode === "combined";
 
   return {
     faceFill: faceEnabled ? lightingBand(energy, 0.76, 0.16) : 0,
