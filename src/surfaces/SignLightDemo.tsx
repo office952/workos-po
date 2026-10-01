@@ -1,6 +1,6 @@
 import { useMemo, useState, type CSSProperties } from "react";
 
-type SignLightingMode = "face" | "halo" | "combined";
+export type SignLightingMode = "face" | "halo" | "combined";
 type SignLightSource = "cool" | "warm" | "rgb";
 type RgbPreset = "blue" | "red" | "magenta" | "cyan";
 
@@ -22,8 +22,19 @@ function smoothstep(edge0: number, edge1: number, value: number): number {
   return x * x * (3 - 2 * x);
 }
 
-export function SignLightDemo() {
-  const [power, setPower] = useState(true);
+type SignLightDemoProps = {
+  power: boolean;
+  onPowerChange: (power: boolean) => void;
+  onSelectSocietate?: () => void;
+  onSelectAngajat?: () => void;
+};
+
+export function SignLightDemo({
+  power,
+  onPowerChange,
+  onSelectSocietate,
+  onSelectAngajat,
+}: SignLightDemoProps) {
   const [intensity, setIntensity] = useState(72);
   const [mode, setMode] = useState<SignLightingMode>("combined");
   const [source, setSource] = useState<SignLightSource>("warm");
@@ -50,9 +61,15 @@ export function SignLightDemo() {
   );
 
   return (
-    <section className="sign-demo" aria-label="Demonstrație iluminare WorkOS" style={lightingStyle}>
+    <section
+      className="sign-demo"
+      aria-label="Demonstrație iluminare WorkOS"
+      data-power={power ? "on" : "off"}
+      data-mode={mode}
+      style={lightingStyle}
+    >
       <div className="sign-demo__stage">
-        <p className="sign-demo__kicker">PRODUCȚIE PUBLICITARĂ · CONFIGURARE · EXECUȚIE</p>
+        <p className="sign-demo__kicker">FABRICAȚIE · PRODUCȚIE · MANAGEMENT</p>
 
         <div className="sign-demo__assembly" aria-label="Firmă luminoasă WorkOS">
           <svg
@@ -71,7 +88,13 @@ export function SignLightDemo() {
             />
           </svg>
 
-          <div className="sign-demo__word" data-power={power ? "on" : "off"}>
+          <div
+            className="sign-demo__word"
+            data-power={power ? "on" : "off"}
+            data-mode={mode}
+            data-face-emission={faceEnabled && power ? "on" : "off"}
+            data-halo-only={mode === "halo" && power ? "" : undefined}
+          >
             <span className="sign-demo__word-material">WorkOS</span>
             <span className="sign-demo__word-halo" aria-hidden="true">
               WorkOS
@@ -85,8 +108,38 @@ export function SignLightDemo() {
         </div>
 
         <p className="sign-demo__lead">
-          Un singur flux, de la cerere și configurare la ofertă, producție și execuție.
+          Platforma integrată pentru gestiunea clienților, cererilor, configuratorului, ofertelor și
+          producției în atelier. O sursă de adevăr, un singur produs.
         </p>
+
+        <div className="sign-demo__journeys" aria-label="Căi de acces">
+          <button
+            type="button"
+            className="sign-demo__journey"
+            data-tone="societate"
+            onClick={onSelectSocietate}
+          >
+            <span className="sign-demo__journey-mark" aria-hidden="true" />
+            <span className="sign-demo__journey-kicker">SOCIETATE</span>
+            <span className="sign-demo__journey-label">Clienți · Oferte · Administrare</span>
+            <span className="sign-demo__journey-arrow" aria-hidden="true">
+              →
+            </span>
+          </button>
+          <button
+            type="button"
+            className="sign-demo__journey"
+            data-tone="angajat"
+            onClick={onSelectAngajat}
+          >
+            <span className="sign-demo__journey-mark" aria-hidden="true" />
+            <span className="sign-demo__journey-kicker">ANGAJAT</span>
+            <span className="sign-demo__journey-label">Execuție · Plan de lucru · Urmărire</span>
+            <span className="sign-demo__journey-arrow" aria-hidden="true">
+              →
+            </span>
+          </button>
+        </div>
       </div>
 
       <div className="sign-controller" aria-label="Panou control iluminare">
@@ -215,7 +268,7 @@ export function SignLightDemo() {
             role="switch"
             aria-checked={power}
             aria-label="Alimentare iluminare WorkOS"
-            onClick={() => setPower((current) => !current)}
+            onClick={() => onPowerChange(!power)}
           >
             <span className="sign-controller__switch-track" aria-hidden="true">
               <span className="sign-controller__switch-knob" />
