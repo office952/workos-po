@@ -2471,3 +2471,561 @@ button.context-rail__item:focus-visible {
     margin-left: 0;
   }
 }
+
+
+/* WorkOS Login — signage-production brand demo */
+
+.auth-gate {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 28% 40%, rgb(32 102 207 / 5%), transparent 38%),
+    var(--color-canvas);
+}
+
+.auth-gate__main {
+  display: grid;
+  grid-template-columns: minmax(34rem, 1.15fr) minmax(22rem, 0.75fr);
+  gap: clamp(2rem, 5vw, 6rem);
+  align-items: center;
+  width: 100%;
+  max-width: 96rem;
+  margin: 0 auto;
+  padding: clamp(2rem, 5vh, 4.5rem) var(--page-gutter);
+}
+
+.auth-gate__access {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.auth-gate__access-kicker,
+.auth-gate__eyebrow {
+  margin: 0;
+  color: var(--color-text-kicker);
+  font-family: var(--font-mono);
+  font-size: var(--text-eyebrow);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+}
+
+.auth-gate__card {
+  width: min(100%, 27rem);
+  margin-left: auto;
+  border-color: var(--color-border-strong);
+  box-shadow: inset 0 2px 0 var(--color-azure-a1);
+}
+
+.auth-gate__card .ui-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  padding: var(--space-24);
+}
+
+.auth-gate__title {
+  font-size: 1.45rem;
+  line-height: 1.15;
+}
+
+.auth-gate__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-16);
+  padding: var(--space-12) var(--page-gutter);
+  border-top: var(--stroke) solid var(--color-border-subtle);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-eyebrow);
+}
+
+.sign-demo {
+  --sign-light-rgb: 255 202 112;
+  --sign-face-fill: 0.7;
+  --sign-face-glow: 0.28;
+  --sign-halo-tight: 0.72;
+  --sign-halo-near: 0.55;
+  --sign-halo-mid: 0.22;
+  --sign-halo-far: 0.05;
+  --sign-cable-live: 0.5;
+  position: relative;
+  display: grid;
+  gap: var(--space-24);
+  min-width: 0;
+  max-width: 46rem;
+}
+
+.sign-demo__stage {
+  position: relative;
+  min-height: 17rem;
+  padding: var(--space-16) 0 0;
+}
+
+.sign-demo__kicker,
+.sign-demo__mount-note,
+.sign-controller,
+.sign-controller button,
+.sign-controller input {
+  font-family: var(--font-mono);
+}
+
+.sign-demo__kicker {
+  margin: 0 0 var(--space-24);
+  color: var(--color-text-kicker);
+  font-size: var(--text-eyebrow);
+  letter-spacing: var(--tracking-eyebrow);
+}
+
+.sign-demo__assembly {
+  position: relative;
+  min-height: 9.5rem;
+}
+
+.sign-demo__word {
+  position: relative;
+  z-index: 2;
+  display: inline-grid;
+  grid-template-areas: "word";
+  margin-left: clamp(0rem, 2vw, 1.25rem);
+}
+
+.sign-demo__word > span {
+  grid-area: word;
+  font-family: var(--font-brand);
+  font-size: clamp(4.2rem, 8vw, 7rem);
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.055em;
+  user-select: none;
+}
+
+.sign-demo__word-material {
+  color: var(--color-text-primary);
+  opacity: 0.96;
+}
+
+.sign-demo__word-face {
+  color: rgb(var(--sign-light-rgb));
+  opacity: var(--sign-face-fill);
+  filter:
+    drop-shadow(0 0 2px rgb(var(--sign-light-rgb) / var(--sign-face-glow)))
+    drop-shadow(0 0 6px rgb(var(--sign-light-rgb) / calc(var(--sign-face-glow) * 0.48)));
+}
+
+.sign-demo__word-halo {
+  color: transparent;
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 4px rgb(var(--sign-light-rgb) / var(--sign-halo-tight)))
+    drop-shadow(0 0 10px rgb(var(--sign-light-rgb) / var(--sign-halo-near)))
+    drop-shadow(0 0 22px rgb(var(--sign-light-rgb) / var(--sign-halo-mid)))
+    drop-shadow(0 0 42px rgb(var(--sign-light-rgb) / var(--sign-halo-far)));
+}
+
+.sign-demo__word[data-power="off"] .sign-demo__word-face,
+.sign-demo__word[data-power="off"] .sign-demo__word-halo {
+  opacity: 0;
+}
+
+.sign-demo__cable {
+  position: absolute;
+  inset: -2.25rem -1rem auto -1.25rem;
+  z-index: 1;
+  width: calc(100% + 2.25rem);
+  height: 14rem;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.sign-demo__cable-base,
+.sign-demo__cable-live {
+  fill: none;
+  stroke-width: 1.3;
+  vector-effect: non-scaling-stroke;
+}
+
+.sign-demo__cable-base {
+  stroke: var(--color-border-strong);
+}
+
+.sign-demo__cable-live {
+  stroke: rgb(var(--sign-light-rgb) / var(--sign-cable-live));
+  filter: drop-shadow(0 0 3px rgb(var(--sign-light-rgb) / calc(var(--sign-cable-live) * 0.5)));
+  transition:
+    stroke var(--motion-navigate) var(--ease-work),
+    filter var(--motion-navigate) var(--ease-work);
+}
+
+.sign-demo__mount-note {
+  position: absolute;
+  left: 1.3rem;
+  bottom: 0.35rem;
+  color: var(--color-text-muted);
+  font-size: 0.56rem;
+  letter-spacing: 0.06em;
+}
+
+.sign-demo__lead {
+  max-width: 34rem;
+  margin: var(--space-16) 0 0;
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.sign-controller {
+  position: relative;
+  display: grid;
+  gap: var(--space-16);
+  padding: var(--space-16);
+  border: var(--stroke) solid var(--color-border-strong);
+  background:
+    linear-gradient(var(--color-surface-alt), var(--color-surface-alt)) padding-box,
+    var(--color-surface-alt);
+  border-radius: var(--radius-control);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 2%);
+}
+
+.sign-controller::before,
+.sign-controller::after {
+  content: "";
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border: var(--stroke) solid var(--color-border-strong);
+  border-radius: 50%;
+  background: var(--color-canvas);
+}
+
+.sign-controller::before {
+  left: -3px;
+  top: 50%;
+}
+
+.sign-controller::after {
+  right: -3px;
+  top: 38%;
+}
+
+.sign-controller__header,
+.sign-controller__dimmer-head,
+.sign-controller__power {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+}
+
+.sign-controller__header > div:first-child,
+.sign-controller__power > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sign-controller__title,
+.sign-controller__power-title {
+  color: var(--color-text-primary);
+  font-size: 0.66rem;
+  letter-spacing: 0.05em;
+}
+
+.sign-controller__spec,
+.sign-controller__status,
+.sign-controller__power-state {
+  color: var(--color-text-muted);
+  font-size: 0.58rem;
+}
+
+.sign-controller__status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  text-transform: uppercase;
+}
+
+.sign-controller__status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-border-strong);
+}
+
+.sign-controller__status-dot[data-active] {
+  background: rgb(var(--sign-light-rgb));
+  box-shadow: 0 0 7px rgb(var(--sign-light-rgb) / 70%);
+}
+
+.sign-controller__group,
+.sign-controller__rgb {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.sign-controller__group legend,
+.sign-controller__rgb legend,
+.sign-controller__dimmer-head label {
+  margin-bottom: var(--space-6);
+  color: var(--color-text-kicker);
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sign-controller__segmented,
+.sign-controller__source {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.sign-controller__segmented {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sign-controller__source {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sign-controller__segmented button,
+.sign-controller__source button,
+.sign-controller__rgb button {
+  min-height: 2.25rem;
+  border: var(--stroke) solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.63rem;
+  cursor: pointer;
+}
+
+.sign-controller__segmented button:hover,
+.sign-controller__source button:hover,
+.sign-controller__rgb button:hover {
+  border-color: var(--color-selection-edge);
+  color: var(--color-text-primary);
+}
+
+.sign-controller__segmented button:focus-visible,
+.sign-controller__source button:focus-visible,
+.sign-controller__rgb button:focus-visible,
+.sign-controller__switch:focus-visible,
+.sign-controller input[type="range"]:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.sign-controller__segmented button[aria-checked="true"],
+.sign-controller__source button[aria-checked="true"] {
+  border-color: rgb(var(--sign-light-rgb));
+  color: var(--color-text-primary);
+  box-shadow: inset 0 -2px 0 rgb(var(--sign-light-rgb));
+}
+
+.sign-controller__source button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+}
+
+.sign-controller__swatch {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.sign-controller__swatch--cool {
+  background: rgb(199 222 255);
+}
+
+.sign-controller__swatch--warm {
+  background: rgb(255 202 112);
+}
+
+.sign-controller__rgb-dots {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.sign-controller__rgb-dots i,
+.sign-controller__rgb button {
+  border-radius: 50%;
+}
+
+.sign-controller__rgb-dots i {
+  width: 5px;
+  height: 5px;
+}
+
+.sign-controller__rgb-dots i:nth-child(1) {
+  background: rgb(255 64 72);
+}
+
+.sign-controller__rgb-dots i:nth-child(2) {
+  background: rgb(45 224 238);
+}
+
+.sign-controller__rgb-dots i:nth-child(3) {
+  background: rgb(40 112 255);
+}
+
+.sign-controller__dimmer {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.sign-controller__dimmer-head output {
+  color: rgb(var(--sign-light-rgb));
+  font-size: 0.65rem;
+}
+
+.sign-controller input[type="range"] {
+  width: 100%;
+  accent-color: rgb(var(--sign-light-rgb));
+  cursor: pointer;
+}
+
+.sign-controller__rgb > div {
+  display: flex;
+  gap: var(--space-8);
+}
+
+.sign-controller__rgb button {
+  width: 2rem;
+  min-height: 2rem;
+  padding: 0;
+}
+
+.sign-controller__rgb button[data-preset="blue"] {
+  background: rgb(40 112 255);
+}
+
+.sign-controller__rgb button[data-preset="red"] {
+  background: rgb(255 64 72);
+}
+
+.sign-controller__rgb button[data-preset="magenta"] {
+  background: rgb(255 62 210);
+}
+
+.sign-controller__rgb button[data-preset="cyan"] {
+  background: rgb(45 224 238);
+}
+
+.sign-controller__rgb button[aria-checked="true"] {
+  box-shadow:
+    0 0 0 2px var(--color-canvas),
+    0 0 0 4px var(--color-focus-ring);
+}
+
+.sign-controller__power {
+  padding-top: var(--space-12);
+  border-top: var(--stroke) solid var(--color-border);
+}
+
+.sign-controller__switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: var(--target-min);
+  padding: 0 var(--space-8);
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  cursor: pointer;
+}
+
+.sign-controller__switch-track {
+  position: relative;
+  width: 1.8rem;
+  height: 2.75rem;
+  border: var(--stroke) solid var(--color-border-strong);
+  background: var(--color-surface);
+}
+
+.sign-controller__switch-track::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--color-border-strong);
+}
+
+.sign-controller__switch-knob {
+  position: absolute;
+  left: 50%;
+  top: 1.72rem;
+  width: 0.8rem;
+  height: 0.8rem;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: var(--color-selection-edge);
+  transition:
+    top var(--motion-edit) var(--ease-work),
+    background-color var(--motion-edit) var(--ease-work),
+    box-shadow var(--motion-edit) var(--ease-work);
+}
+
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-knob {
+  top: 0.34rem;
+  background: rgb(var(--sign-light-rgb));
+  box-shadow: 0 0 8px rgb(var(--sign-light-rgb) / 55%);
+}
+
+@media (max-width: 1024px) {
+  .auth-gate__main {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 48rem;
+  }
+
+  .auth-gate__card {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .sign-demo {
+    max-width: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .auth-gate__brand .theme-control {
+    display: none;
+  }
+
+  .auth-gate__main {
+    padding-top: var(--space-24);
+  }
+
+  .sign-demo__stage {
+    min-height: 12.5rem;
+  }
+
+  .sign-demo__word > span {
+    font-size: clamp(3.2rem, 16vw, 5rem);
+  }
+
+  .sign-controller__segmented,
+  .sign-controller__source {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .auth-gate__footer {
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sign-demo__cable-live,
+  .sign-controller__switch-knob {
+    transition: none;
+  }
+}
