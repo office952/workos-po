@@ -51,6 +51,13 @@ export function AuthTechnicalFrame({
   const activeAccess = accessMode === "idle" ? null : accessMode;
   const showAccess =
     activeAccess !== null && (kind === "unauthenticated" || kind === "session_expired");
+  const showWorkbench = kind === "unauthenticated" || kind === "session_expired";
+  const bayState =
+    activeAccess === "societate"
+      ? "AUTH BAY · SOCIETATE"
+      : activeAccess === "angajat"
+        ? "AUTH BAY · ANGAJAT"
+        : "AUTH BAY · STANDBY";
 
   useEffect(() => {
     if (!showAccess) {
@@ -62,7 +69,10 @@ export function AuthTechnicalFrame({
     }
     node.focus({ preventScroll: true });
     if (typeof node.scrollIntoView === "function") {
-      node.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      const reduced =
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      node.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
     }
   }, [showAccess, activeAccess, kind]);
 
@@ -72,10 +82,15 @@ export function AuthTechnicalFrame({
       <div className="auth-tech__frame">
         <div className="auth-tech__meta auth-tech__meta--top">
           <span>WorkOS · AUTH_FRAME · REV.04</span>
-          <span>VECTOR WORKBENCH</span>
+          <span>{bayState}</span>
         </div>
 
-        <div className="auth-tech__viewport">
+        <div
+          className="auth-tech__viewport"
+          data-auth-active={showAccess ? "" : undefined}
+        >
+          {showWorkbench ? <AuthWorkbenchGraphic active={showAccess} /> : null}
+
           {showAccess && activeAccess ? (
             <section
               ref={panelRef}
@@ -104,10 +119,6 @@ export function AuthTechnicalFrame({
           ) : (
             <GateStatusBody kind={kind} onRetry={onRetry} />
           )}
-
-          {!showAccess && (kind === "unauthenticated" || kind === "session_expired") ? (
-            <AuthWorkbenchGraphic />
-          ) : null}
         </div>
 
         <div className="auth-tech__meta auth-tech__meta--bottom">
@@ -120,17 +131,29 @@ export function AuthTechnicalFrame({
   );
 }
 
-function AuthWorkbenchGraphic() {
+function AuthWorkbenchGraphic({ active }: { active: boolean }) {
   return (
-    <div className="auth-tech__workbench" aria-hidden="true">
+    <div className="auth-tech__workbench" data-active={active ? "" : undefined} aria-hidden="true">
       <div className="auth-tech__rings">
         <span className="auth-tech__ring auth-tech__ring--outer" />
         <span className="auth-tech__ring auth-tech__ring--mid" />
-        <span className="auth-tech__ring auth-tech__ring--inner" />
         <span className="auth-tech__target" />
         <span className="auth-tech__crosshair auth-tech__crosshair--x" />
         <span className="auth-tech__crosshair auth-tech__crosshair--y" />
       </div>
+      <svg className="auth-tech__comet" viewBox="0 0 360 240" preserveAspectRatio="none">
+        <path
+          className="auth-tech__comet-glow"
+          pathLength="1"
+          d="M72 96 C132 88 168 104 208 138 C238 164 262 190 286 208"
+        />
+        <path
+          className="auth-tech__comet-core"
+          pathLength="1"
+          d="M72 96 C132 88 168 104 208 138 C238 164 262 190 286 208"
+        />
+        <circle className="auth-tech__comet-head" cx="286" cy="208" r="3" />
+      </svg>
       <div className="auth-tech__measure">
         <span />
         <em>150 px</em>
