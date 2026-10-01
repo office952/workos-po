@@ -14,6 +14,7 @@ import {
 } from "../session/cloudAuth";
 import { useCloudSession } from "../session/CloudSessionContext";
 import { ThemeControl } from "../theme/ThemeControl";
+import { SignLightDemo } from "./SignLightDemo";
 
 type AuthGatePageProps = {
   kind: CloudAuthGateKind;
@@ -77,26 +78,34 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
         <ThemeControl />
       </header>
       <main id="autentificare" className="auth-gate__main" tabIndex={-1}>
-        {renderGateBody({
-          kind,
-          email,
-          password,
-          busy,
-          error,
-          errorId,
-          choices,
-          organizationId,
-          expiredNotice,
-          returnPath,
-          onEmail: setEmail,
-          onPassword: setPassword,
-          onOrganization: setOrganizationId,
-          onSubmit: submit,
-          onRetry: () => {
-            void refresh();
-          },
-        })}
+        <SignLightDemo />
+        <div className="auth-gate__access">
+          <p className="auth-gate__access-kicker">AUTH / ORGANIZATION ACCESS</p>
+          {renderGateBody({
+            kind,
+            email,
+            password,
+            busy,
+            error,
+            errorId,
+            choices,
+            organizationId,
+            expiredNotice,
+            returnPath,
+            onEmail: setEmail,
+            onPassword: setPassword,
+            onOrganization: setOrganizationId,
+            onSubmit: submit,
+            onRetry: () => {
+              void refresh();
+            },
+          })}
+        </div>
       </main>
+      <footer className="auth-gate__footer">
+        <span>WorkOS © 2026</span>
+        <span>PUBLICITATE · CONFIGURARE · PRODUCȚIE · EXECUȚIE</span>
+      </footer>
     </div>
   );
 }
@@ -158,6 +167,7 @@ function renderGateBody(input: {
       return (
         <form className="auth-gate__card ui-panel" onSubmit={input.onSubmit}>
           <div className="ui-panel__body">
+            <p className="auth-gate__eyebrow">WORKOS / AUTH FRAME</p>
             <h1 className="auth-gate__title">Autentificare</h1>
             <p className="auth-gate__lead">
               Intră cu email-ul și parola organizației. Identificarea operatorului se face
