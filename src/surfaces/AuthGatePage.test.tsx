@@ -220,13 +220,15 @@ describe("AuthGatePage", () => {
 
     const power = screen.getByRole("switch", { name: "Alimentare iluminare WorkOS" });
     expect(power).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("slider", { name: "Intensitate iluminare" })).toBeDisabled();
 
     await userEvent.click(power);
     expect(power).toHaveAttribute("aria-checked", "true");
     expect(root).toHaveAttribute("data-scene", "night");
+    expect(window.localStorage.getItem("workos-color-scheme")).toBe("dark");
 
     const dimmer = screen.getByRole("slider", { name: "Intensitate iluminare" });
-    expect(dimmer).toHaveValue("72");
+    expect(dimmer).toHaveValue("75");
 
     const face = screen.getByRole("radio", { name: "FATA" });
     const halo = screen.getByRole("radio", { name: "HALO" });
