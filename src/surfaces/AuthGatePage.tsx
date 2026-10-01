@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import type { CloudMembershipPresentation } from "../adapters/cloudSessionAdapter";
 import { BrandMark } from "../components/BrandMark";
 import { Button } from "../components/Button";
@@ -9,6 +9,12 @@ import {
   type CloudAuthGateKind,
 } from "../session/cloudAuth";
 import { useCloudSession } from "../session/CloudSessionContext";
+import {
+  COLOR_SCHEME_EVENT,
+  readColorSchemePreference,
+  resolveColorScheme,
+  writeColorSchemePreference,
+} from "../theme/colorScheme";
 import {
   AuthTechnicalFrame,
   type AuthAccessMode,
@@ -28,12 +34,37 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
   const [error, setError] = useState<string | null>(null);
   const [choices, setChoices] = useState<CloudMembershipPresentation[] | null>(null);
   const [organizationId, setOrganizationId] = useState("");
-  const [power, setPower] = useState(false);
+  const [power, setPower] = useState(() => {
+    const preference = readColorSchemePreference();
+    const prefersDark =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return resolveColorScheme(preference, prefersDark) === "dark";
+  });
   const [accessMode, setAccessMode] = useState<AuthAccessMode>("idle");
   const expiredNotice = kind === "session_expired" || sessionExpired;
   const scene = power ? "night" : "day";
   const resolvedAccess: AuthAccessMode =
     kind === "session_expired" && accessMode === "idle" ? "societate" : accessMode;
+
+  useEffect(() => {
+    const syncPowerFromPreference = () => {
+      const preference = readColorSchemePreference();
+      const prefersDark =
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches;
+      setPower(resolveColorScheme(preference, prefersDark) === "dark");
+    };
+    window.addEventListener(COLOR_SCHEME_EVENT, syncPowerFromPreference);
+    return () => {
+      window.removeEventListener(COLOR_SCHEME_EVENT, syncPowerFromPreference);
+    };
+  }, []);
+
+  function setPresentationPower(nextPower: boolean): void {
+    setPower(nextPower);
+    writeColorSchemePreference(nextPower ? "dark" : "light");
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -100,7 +131,7 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
         <div className="auth-gate__login-choices" role="group" aria-label="Tip autentificare">
           <Button
             type="button"
-            variant="secondary"
+            variant={resolvedAccess === "angajat" ? "primary" : "secondary"}
             aria-pressed={resolvedAccess === "angajat"}
             onClick={() => openAccess("angajat")}
           >
@@ -108,7 +139,7 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
           </Button>
           <Button
             type="button"
-            variant="primary"
+            variant={resolvedAccess === "societate" ? "primary" : "secondary"}
             aria-pressed={resolvedAccess === "societate"}
             onClick={() => openAccess("societate")}
           >
@@ -119,7 +150,7 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
       <main id="autentificare" className="auth-gate__main" tabIndex={-1}>
         <SignLightDemo
           power={power}
-          onPowerChange={setPower}
+          onPowerChange={setPresentationPower}
           onSelectSocietate={() => openAccess("societate")}
           onSelectAngajat={() => openAccess("angajat")}
         />
