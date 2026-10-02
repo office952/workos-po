@@ -3861,3 +3861,21 @@ button.context-rail__item:focus-visible {
     0 0 0 2px var(--color-canvas),
     0 0 0 4px rgb(var(--login-control-accent) / 82%);
 }
+
+.auth-gate .field__control:focus-visible,
+.auth-gate .hit:focus-visible {
+  outline-color: rgb(var(--login-control-accent));
+}
+
+.auth-gate[data-scene="day"] .field__control:focus-visible,
+.auth-gate[data-scene="day"] .hit:focus-visible {
+  outline-color: #4f4d48;
+}
+
+.auth-tech__panel .button--ghost {
+  color: rgb(var(--login-control-accent));
+}
+
+.auth-gate[data-scene="day"] .auth-tech__panel .button--ghost {
+  color: #4f4d48;
+}
