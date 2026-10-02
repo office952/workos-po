@@ -80,15 +80,18 @@ export function AuthTechnicalFrame({
     <aside className="auth-tech" aria-label="Cadru tehnic Auth Frame">
       <div className="auth-tech__grid" aria-hidden="true" />
       <div className="auth-tech__frame">
-        <div className="auth-tech__meta auth-tech__meta--top">
-          <span>WorkOS · AUTH_FRAME · REV.04</span>
+        <div className="auth-tech__bay-label">
           <span>{bayState}</span>
+          <i aria-hidden="true" />
         </div>
 
         <div
           className="auth-tech__viewport"
           data-auth-active={showAccess ? "" : undefined}
         >
+          <span className="auth-tech__frame-label" aria-hidden="true">
+            WorkOS · AUTH_FRAME · REV.04
+          </span>
           {showWorkbench ? <AuthWorkbenchGraphic active={showAccess} /> : null}
 
           {showAccess && activeAccess ? (
@@ -121,10 +124,10 @@ export function AuthTechnicalFrame({
           )}
         </div>
 
-        <div className="auth-tech__meta auth-tech__meta--bottom">
-          <span>VECTOR WORKBENCH · SIGNAGE PRODUCTION</span>
-          <span>500 px · SCALA 1:1</span>
-          <span>v4.1</span>
+        <div className="auth-tech__bottom-meta">
+          <span className="auth-tech__bottom-left">VECTOR WORKBENCH · SIGNAGE PRODUCTION</span>
+          <span className="auth-tech__bottom-center">500 px · SCALA 1:1</span>
+          <span className="auth-tech__bottom-right">v4.1</span>
         </div>
       </div>
     </aside>
