@@ -153,7 +153,7 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
             type="button"
             variant={resolvedAccess === "angajat" ? "primary" : "secondary"}
             aria-pressed={resolvedAccess === "angajat"}
-            onClick={() => openAccess("angajat")}
+            onClick={() => resolvedAccess === "angajat" ? closeAccess() : openAccess("angajat")}
           >
             Login Angajat
           </Button>
@@ -161,7 +161,7 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
             type="button"
             variant={resolvedAccess === "societate" ? "primary" : "secondary"}
             aria-pressed={resolvedAccess === "societate"}
-            onClick={() => openAccess("societate")}
+            onClick={() => resolvedAccess === "societate" ? closeAccess() : openAccess("societate")}
           >
             Login Societate
           </Button>
