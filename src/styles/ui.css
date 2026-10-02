@@ -7658,3 +7658,121 @@ button.context-rail__item:focus-visible {
       rgb(139 135 126) 100%
     );
 }
+
+
+/* LOGIN V1 RUNTIME POLISH 2026-10-03 */
+/* Runtime capture polish:
+   1) OFF controller must read as intentionally inactive, not washed out.
+   2) The hardware toggle needs more physical presence.
+   3) All WorkOS workbench glyphs need more breathing room than the first runtime pass.
+   4) Dark workbench instrumentation is lifted slightly so the letter does not become a watermark. */
+
+@media (min-width: 1025px) {
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo[data-power="off"]
+    .sign-controller__header,
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo[data-power="off"]
+    .sign-controller__group,
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo[data-power="off"]
+    .sign-controller__dimmer,
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo[data-power="off"]
+    .sign-controller__rgb {
+    opacity: 0.24;
+    filter: blur(0.32px);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-controller__segmented button,
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-controller__source button {
+    color: rgb(96 94 89);
+    border-color: rgb(180 179 173 / 68%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__title,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__spec,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__label,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__channel {
+    color: rgb(88 86 81);
+  }
+}
+
+/* Give every glyph ~14% more breathing room while preserving the validated center.
+   Scale lives inside the inspection animation so rotation and scale never fight over transform. */
+@keyframes wb3-inspect {
+  0%, 68% { transform: scale(0.86) rotate(0deg); }
+  73% { transform: scale(0.86) rotate(-1.8deg); }
+  77% { transform: scale(0.86) rotate(-1.8deg); }
+  80% { transform: scale(0.86) rotate(0.65deg); }
+  83% { transform: scale(0.86) rotate(0.65deg); }
+  86%, 100% { transform: scale(0.86) rotate(0deg); }
+}
+
+.auth-workbench-v3__object {
+  transform-box: view-box;
+  transform-origin: 274px 329px;
+}
+
+/* Dark scene: increase instrument presence without making the AUTH bay decorative. */
+.auth-gate[data-scene="night"] .auth-workbench-v3__crop {
+  stroke: rgb(var(--wb-accent) / 74%);
+}
+
+.auth-gate[data-scene="night"] .auth-workbench-v3__orbit {
+  stroke: rgb(var(--wb-line) / 64%);
+}
+
+.auth-gate[data-scene="night"] .auth-workbench-v3__ticks {
+  stroke: rgb(var(--wb-muted) / 46%);
+}
+
+.auth-gate[data-scene="night"] .auth-workbench-v3__verify {
+  stroke: rgb(var(--wb-muted) / 82%);
+}
+
+.auth-gate[data-scene="night"] .auth-workbench-v3__projection {
+  stroke: rgb(var(--wb-muted) / 54%);
+}
+
+/* Final physical bat-toggle sizing. The hit target stays 44x72; only the hardware grows. */
+.sign-controller__switch-plate {
+  left: 4px;
+  top: 4px;
+  width: 36px;
+  height: 64px;
+}
+
+.sign-controller__switch-collar {
+  width: 14px;
+  height: 14px;
+}
+
+.sign-controller__switch-lever {
+  width: 24px;
+  height: 42px;
+}
+
+.sign-controller__switch-stem {
+  top: -22px;
+  width: 5px;
+  height: 31px;
+}
+
+.sign-controller__switch-knob,
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-knob,
+.sign-controller__switch[aria-checked="false"] .sign-controller__switch-knob {
+  top: -31px !important;
+  width: 17px !important;
+  height: 17px !important;
+}
+
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-lever {
+  transform: rotate(-26deg);
+}
+
+.sign-controller__switch[aria-checked="false"] .sign-controller__switch-lever {
+  transform: rotate(26deg);
+}
