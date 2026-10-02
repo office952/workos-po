@@ -208,6 +208,7 @@ export function SignLightDemo({
           Platforma integrată pentru gestionarea clienților și cererilor, configurarea produselor,
           ofertare și producție în atelier. O singură sursă de adevăr. Un singur produs.
         </p>
+      </div>
 
       <div className="sign-controller" aria-label="Panou control iluminare">
         <div className="sign-controller__header">
