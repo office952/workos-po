@@ -25,6 +25,7 @@ type AuthTechnicalFrameProps = {
   onOrganization: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onRetry: () => void;
+  onCloseAccess: () => void;
 };
 
 export function AuthTechnicalFrame({
