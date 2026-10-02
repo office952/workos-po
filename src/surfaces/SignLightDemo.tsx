@@ -170,18 +170,40 @@ export function SignLightDemo({ power, onPowerChange }: SignLightDemoProps) {
 
       <svg
         className="sign-demo__infrastructure"
-        viewBox="0 0 640 720"
+        viewBox="0 0 720 816"
         preserveAspectRatio="none"
         aria-hidden="true"
       >
-        <path
-          className="sign-demo__infra-base"
-          d="M18 694 C18 658 52 644 52 610 V560 C52 530 68 510 96 510 H290 C322 510 336 492 336 462 V408 C336 382 356 366 382 366 H522 C548 366 560 350 560 324 V110 C560 82 546 68 520 68 H390 C372 68 362 78 362 96 H120"
-        />
-        <path
-          className="sign-demo__infra-live"
-          d="M18 694 C18 658 52 644 52 610 V560 C52 530 68 510 96 510 H290 C322 510 336 492 336 462 V408 C336 382 356 366 382 366 H522 C548 366 560 350 560 324 V110 C560 82 546 68 520 68 H390 C372 68 362 78 362 96 H120"
-        />
+        <g transform="translate(148 80)">
+          <path
+            className="sign-demo__infra-base"
+            d="M 462 374 C 469 374 474 374 480 374 C 490 374 498 366 498 356 L 498 16 C 498 6 492 0 482 0 L 362 0 C 340 0 324 16 324 36 L 30 36 C 12 36 0 42 0 52 L 0 101"
+          />
+          <path
+            className="sign-demo__infra-live"
+            d="M 462 374 C 469 374 474 374 480 374 C 490 374 498 366 498 356 L 498 16 C 498 6 492 0 482 0 L 362 0 C 340 0 324 16 324 36 L 30 36 C 12 36 0 42 0 52 L 0 101"
+          />
+        </g>
+        <g transform="translate(63 454)">
+          <path
+            className="sign-demo__infra-base"
+            d="M 273 226 L 287 226 C 312 226 329 204 329 175 C 329 158 323 145 312 135 C 303 127 293 125 281 125 L 31 125 C 12 125 0 109 0 85 L 0 26 C 0 11 5 0 13 0"
+          />
+          <path
+            className="sign-demo__infra-live"
+            d="M 273 226 L 287 226 C 312 226 329 204 329 175 C 329 158 323 145 312 135 C 303 127 293 125 281 125 L 31 125 C 12 125 0 109 0 85 L 0 26 C 0 11 5 0 13 0"
+          />
+        </g>
+        <g transform="translate(-8 680)">
+          <path
+            className="sign-demo__infra-base"
+            d="M 0 165 L 26 165 C 32 165 36 161 36 155 L 36 133 C 36 103 48 74 68 53 L 78 43 C 81 40 83 37 84 33 L 84 0"
+          />
+          <path
+            className="sign-demo__infra-live"
+            d="M 0 165 L 26 165 C 32 165 36 161 36 155 L 36 133 C 36 103 48 74 68 53 L 78 43 C 81 40 83 37 84 33 L 84 0"
+          />
+        </g>
       </svg>
 
       <div className="sign-demo__stage">
