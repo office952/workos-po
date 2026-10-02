@@ -121,7 +121,7 @@ function moveRadio<T extends string>(
   target?.focus();
 }
 
-export function SignLightDemo({ power, onPowerChange }: SignLightDemoProps) {
+export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDemoProps) {
   const [intensity, setIntensity] = useState(75);
   const [mode, setMode] = useState<SignLightingMode>("face");
   const [source, setSource] = useState<SignLightSource>("warm");
@@ -133,6 +133,14 @@ export function SignLightDemo({ power, onPowerChange }: SignLightDemoProps) {
   const faceRgb = source === "rgb" ? LIGHT_RGB[rgbPreset] : FACE_RGB[source];
   const coreRgb = source === "rgb" ? LIGHT_RGB[rgbPreset] : CORE_RGB[source];
   const modeLabel = mode === "face" ? "FATA" : mode === "halo" ? "HALO" : "FATA + HALO";
+  const sceneLabel =
+    accessMode === "societate"
+      ? `${power ? "DARK" : "LIGHT"} · AUTH SOCIETATE`
+      : accessMode === "angajat"
+        ? `${power ? "DARK" : "LIGHT"} · AUTH ANGAJAT`
+        : power
+          ? `DARK / SIGN ON · ${modeLabel}`
+          : "LIGHT / SIGN OFF";
   const lighting = useMemo(
     () => resolveSignLighting(intensity, mode, power),
     [intensity, mode, power],
@@ -168,7 +176,7 @@ export function SignLightDemo({ power, onPowerChange }: SignLightDemoProps) {
       style={lightingStyle}
     >
       <p className="sign-demo__scene-state" aria-hidden="true">
-        {power ? `DARK / SIGN ON · ${modeLabel}` : "LIGHT / SIGN OFF"}
+        {sceneLabel}
       </p>
 
       <svg
