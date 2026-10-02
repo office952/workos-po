@@ -25,7 +25,6 @@ type AuthTechnicalFrameProps = {
   onOrganization: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onRetry: () => void;
-  onCloseAccess: () => void;
 };
 
 export function AuthTechnicalFrame({
@@ -44,7 +43,6 @@ export function AuthTechnicalFrame({
   onOrganization,
   onSubmit,
   onRetry,
-  onCloseAccess,
 }: AuthTechnicalFrameProps) {
   const panelRef = useRef<HTMLElement | null>(null);
   const errorId = useId();
@@ -116,7 +114,6 @@ export function AuthTechnicalFrame({
                 onPassword={onPassword}
                 onOrganization={onOrganization}
                 onSubmit={onSubmit}
-                onCloseAccess={onCloseAccess}
               />
             </section>
           ) : (
@@ -261,7 +258,6 @@ function AuthAccessForm(input: {
   onPassword: (value: string) => void;
   onOrganization: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onCloseAccess: () => void;
 }) {
   const copy = accessCopy(input.accessMode);
 
@@ -284,12 +280,13 @@ function AuthAccessForm(input: {
         <p className="u-visually-hidden">După autentificare revii la pagina cerută.</p>
       ) : null}
 
-      <FieldFrame id="cloud-email" label="Email">
+      <FieldFrame id="cloud-email" label="Adresă email">
         <input
           id="cloud-email"
           className="field__control"
           type="email"
           autoComplete="username"
+          placeholder={input.accessMode === "societate" ? "contact@firma.ro" : "prenume.nume@firma.ro"}
           value={input.email}
           disabled={input.busy}
           required
@@ -337,11 +334,19 @@ function AuthAccessForm(input: {
           disabled={input.busy}
           aria-busy={input.busy || undefined}
         >
-          {input.busy ? "Se autentifică…" : "Intră"}
+          {input.busy ? "Se autentifică…" : "Autentificare"}
         </Button>
-        <Button type="button" variant="ghost" onClick={input.onCloseAccess}>
-          Înapoi
-        </Button>
+      </div>
+
+      <div className="auth-tech__roles" aria-label="Tipuri de acces WorkOS">
+        <div className="auth-tech__role">
+          <span>SOCIETATE</span>
+          <strong>Clienți · Oferte · Administrare</strong>
+        </div>
+        <div className="auth-tech__role">
+          <span>ANGAJAT</span>
+          <strong>Execuție · Plan de lucru · Urmărire</strong>
+        </div>
       </div>
     </form>
   );
@@ -355,15 +360,15 @@ function accessCopy(mode: Exclude<AuthAccessMode, "idle">): {
   switch (mode) {
     case "societate":
       return {
-        eyebrow: "WORKOS / AUTH FRAME · SOCIETATE",
+        eyebrow: "WORKOS / AUTH FRAME",
         title: "Acces Societate",
-        lead: "Intră cu email-ul și parola organizației. Identificarea operatorului se face separat, din Atelier, cu PIN.",
+        lead: "Autentifică-te pentru accesul la mediul de lucru al organizației.",
       };
     case "angajat":
       return {
-        eyebrow: "WORKOS / AUTH FRAME · ANGAJAT",
+        eyebrow: "WORKOS / AUTH FRAME",
         title: "Acces Angajat",
-        lead: "Autentificați-vă cu contul de angajat pentru acces atelier.",
+        lead: "Autentifică-te cu contul de angajat pentru accesul la Atelier.",
       };
     default: {
       const exhaustive: never = mode;
