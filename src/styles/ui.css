@@ -2129,7 +2129,7 @@ button.context-rail__item:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: var(--space-2);
+  gap: var(--space-4);
   min-width: 0;
 }
 
@@ -2138,10 +2138,69 @@ button.context-rail__item:focus-visible {
   font-size: var(--text-meta);
 }
 
-.theme-control__select {
-  width: auto;
-  min-width: 7.5rem;
-  max-width: 10rem;
+.theme-control__switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: var(--target-min);
+  padding: 0 var(--space-8);
+  border: var(--stroke) solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--text-meta);
+  cursor: pointer;
+}
+
+.theme-control__switch:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.theme-control__track {
+  position: relative;
+  display: inline-block;
+  width: 1.75rem;
+  height: 2.5rem;
+  border: var(--stroke) solid var(--color-border-strong);
+  background: var(--color-surface-raised);
+}
+
+.theme-control__track::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0.45rem;
+  bottom: 0.45rem;
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--color-border-strong);
+}
+
+.theme-control__knob {
+  position: absolute;
+  left: 50%;
+  top: 1.35rem;
+  width: 0.8rem;
+  height: 0.8rem;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #2066cf;
+  box-shadow: 0 0 0 1px rgb(67 137 236 / 58%);
+  transition: top var(--motion-edit) var(--ease-work);
+}
+
+.theme-control__switch[aria-checked="true"] .theme-control__knob {
+  top: 0.65rem;
+}
+
+.theme-control__state {
+  min-width: 2.6rem;
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  letter-spacing: 0.04em;
 }
 
 .launchpad,
