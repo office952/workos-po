@@ -5696,3 +5696,208 @@ button.context-rail__item:focus-visible {
     transform: none;
   }
 }
+
+/* LOGIN V1 AUTH WORKBENCH FIGMA VECTOR */
+@media (min-width: 1025px) {
+  .auth-tech__workbench {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 548px;
+    height: 676px;
+    opacity: 1;
+    transform: none;
+    pointer-events: none;
+  }
+
+  .auth-tech__blueprint {
+    position: absolute;
+    inset: 0;
+    width: 548px;
+    height: 676px;
+    overflow: visible;
+  }
+
+  .auth-tech__blueprint-base,
+  .auth-tech__blueprint-dynamic,
+  .auth-tech__comet-trail {
+    fill: none;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .auth-tech__blueprint-base {
+    stroke: var(--login-scene-frame);
+    stroke-width: 1;
+    opacity: 0.18;
+  }
+
+  .auth-tech__blueprint-dynamic {
+    stroke: rgb(var(--login-control-accent));
+  }
+
+  .auth-tech__arc--a {
+    stroke-width: 1.1;
+    opacity: 0.60;
+  }
+
+  .auth-tech__arc--b {
+    stroke-width: 1;
+    opacity: 0.38;
+  }
+
+  .auth-tech__handle {
+    stroke-width: 1;
+    opacity: 0.52;
+  }
+
+  .auth-tech__node {
+    fill: rgb(var(--login-control-accent));
+    stroke: none;
+    opacity: 0.72;
+  }
+
+  .auth-tech__node--main {
+    opacity: 1;
+  }
+
+  .auth-tech__tick {
+    stroke-width: 1;
+    opacity: 0.40;
+  }
+
+  .auth-tech__comet-trail {
+    stroke: rgb(var(--login-control-accent));
+  }
+
+  .auth-tech__comet-glow,
+  .auth-tech__comet-core,
+  .auth-tech__comet-echo {
+    fill: none;
+    stroke-linecap: round;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+  }
+
+  .auth-tech__comet-glow {
+    stroke-width: 5;
+    opacity: 0.55;
+    filter: blur(4px);
+  }
+
+  .auth-tech__comet-core {
+    stroke-width: 1.15;
+    opacity: 0.82;
+  }
+
+  .auth-tech__comet-echo {
+    stroke-width: 0.8;
+    opacity: 0.42;
+  }
+
+  .auth-tech__comet-head {
+    fill: rgb(238 194 103);
+    stroke: none;
+    filter: drop-shadow(0 0 5px rgb(224 177 82 / 58%));
+  }
+
+  .auth-tech__measure {
+    position: absolute;
+    left: 122px;
+    top: 458px;
+    width: 304px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 10px;
+    color: var(--login-scene-muted);
+    opacity: 0.62;
+  }
+
+  .auth-tech__measure > span {
+    height: 1px;
+    background: var(--login-scene-frame);
+    opacity: 0.46;
+  }
+
+  .auth-tech__measure em {
+    font-family: var(--font-mono);
+    font-size: 7px;
+    font-style: normal;
+    line-height: 10px;
+  }
+
+  .auth-tech__viewport[data-auth-active] .auth-tech__workbench {
+    opacity: 0.10;
+    transform: none;
+  }
+
+  .auth-tech__viewport[data-auth-active] .auth-tech__comet-glow,
+  .auth-tech__viewport[data-auth-active] .auth-tech__comet-core,
+  .auth-tech__viewport[data-auth-active] .auth-tech__comet-echo {
+    animation: auth-workbench-comet 300ms var(--ease-work) both;
+  }
+
+  .auth-tech__viewport[data-auth-active] .auth-tech__comet-head {
+    animation: auth-workbench-head 300ms var(--ease-work) both;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__blueprint-base {
+    stroke: rgb(128 133 140 / 34%);
+    opacity: 0.72;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__blueprint-dynamic {
+    stroke: rgb(95 92 85 / 32%);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__node {
+    fill: rgb(95 92 85 / 52%);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__comet-trail {
+    opacity: 0;
+  }
+}
+
+@keyframes auth-workbench-comet {
+  from {
+    stroke-dasharray: 0.05 0.95;
+    stroke-dashoffset: 0.85;
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  to {
+    stroke-dasharray: 0.38 0.62;
+    stroke-dashoffset: 0.08;
+    opacity: 0;
+  }
+}
+
+@keyframes auth-workbench-head {
+  from {
+    opacity: 0;
+    transform: translate(-34px, -54px) scale(0.72);
+  }
+  55% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-tech__comet-glow,
+  .auth-tech__comet-core,
+  .auth-tech__comet-echo,
+  .auth-tech__comet-head {
+    animation: none !important;
+  }
+
+  .auth-tech__viewport[data-auth-active] .auth-tech__comet-trail {
+    opacity: 0;
+  }
+}
