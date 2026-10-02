@@ -7236,3 +7236,18 @@ button.context-rail__item:focus-visible {
     opacity: 0.04 !important;
   }
 }
+
+
+/* LOGIN V1 AUTH VECTOR WORKBENCH V2 RESPONSIVE */
+@media (max-width: 1024px) {
+  .auth-workbench-v2 {
+    width: min(100%, 34rem);
+    height: auto;
+    aspect-ratio: 548 / 676;
+  }
+
+  .auth-workbench-v2__svg {
+    width: 100%;
+    height: 100%;
+  }
+}
