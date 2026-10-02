@@ -126,67 +126,133 @@ export function AuthTechnicalFrame({
 }
 
 function AuthWorkbenchGraphic({ active }: { active: boolean }) {
+  const anchors = [
+    [299, 170],
+    [172, 330],
+    [292, 488],
+    [390, 228],
+    [301, 235],
+    [390, 331],
+    [307, 434],
+    [222, 331],
+  ] as const;
+
   return (
-    <div className="auth-tech__workbench" data-active={active ? "" : undefined} aria-hidden="true">
+    <div
+      className="auth-tech__workbench auth-workbench-v2"
+      data-active={active ? "" : undefined}
+      aria-hidden="true"
+    >
       <svg
-        className="auth-tech__blueprint"
+        className="auth-workbench-v2__svg"
         viewBox="0 0 548 676"
         preserveAspectRatio="xMidYMid meet"
       >
-        <g className="auth-tech__blueprint-base">
-          <path d="M24 166 H66 M24 166 V208" />
-          <path d="M482 166 H524 M524 166 V208" />
-          <path d="M24 450 V492 H66" />
-          <path d="M482 492 H524 V450" />
-          <path d="M274 166 V492" />
-          <path d="M24 329 H524" />
-          <circle cx="274" cy="329" r="100" />
-          <rect x="199" y="254" width="150" height="150" />
-          <circle cx="274" cy="329" r="3" />
+        <g className="auth-workbench-v2__ambient">
+          <path
+            className="auth-workbench-v2__crop"
+            d="M76 136V108H104 M442 108H470V136 M76 518V546H104 M442 546H470V518"
+          />
+          <path
+            className="auth-workbench-v2__orbit auth-workbench-v2__orbit--primary"
+            d="M170 414A142 142 0 0 1 386 224 M196 444A164 164 0 0 0 410 290"
+          />
+          <circle className="auth-workbench-v2__orbit auth-workbench-v2__orbit--secondary" cx="274" cy="329" r="165" />
+          <g className="auth-workbench-v2__ticks">
+            <path d="M274 151V163 M356 173L350 184 M414 232L403 238 M437 314H425 M414 396L403 390 M356 455L350 444 M274 478V466 M192 455L198 444 M134 396L145 390 M111 314H123 M134 232L145 238 M192 173L198 184" />
+          </g>
         </g>
 
-        <g className="auth-tech__blueprint-dynamic">
+        <g className="auth-workbench-v2__object">
+          <g transform="translate(94 132)">
+            <path
+              className="auth-workbench-v2__back"
+              fillRule="evenodd"
+              d="M205 38C132 38 72 101 78 198C78 296 132 355 200 355C243 355 276 334 296 298L296 350L346 350L346 45L296 45L296 96C272 57 242 38 205 38ZM207 103C255 103 296 145 296 199C296 257 259 302 213 302C164 302 122 264 128 199C128 140 159 103 207 103Z"
+            />
+            <path className="auth-workbench-v2__side auth-workbench-v2__side--top" d="M205 38C242 38 272 57 296 96L307 104C282 65 252 46 216 46Z" />
+            <path className="auth-workbench-v2__side auth-workbench-v2__side--stem" d="M296 45H346L357 53H307ZM296 96L307 104V358L296 350Z" />
+            <path className="auth-workbench-v2__side auth-workbench-v2__side--lower" d="M200 355C243 355 276 334 296 298L307 306C286 343 253 364 211 364Z" />
+            <path className="auth-workbench-v2__side auth-workbench-v2__side--inner" d="M213 302C259 302 296 257 296 199L307 207C307 265 270 310 224 310Z" />
+
+            <path
+              className="auth-workbench-v2__face auth-workbench-v2__face--base"
+              fillRule="evenodd"
+              d="M205 38C132 38 78 101 78 198C78 296 128 356 198 356C239 356 273 335 296 299L296 350L346 350L346 45L296 45L296 96C272 57 242 38 205 38ZM207 103C255 103 296 145 296 199C296 257 259 302 213 302C164 302 128 262 128 199C128 142 159 103 207 103Z"
+            />
+            <path
+              className="auth-workbench-v2__face auth-workbench-v2__face--repaired"
+              fillRule="evenodd"
+              d="M205 38C132 38 72 101 78 198C78 296 132 355 200 355C243 355 276 334 296 298L296 350L346 350L346 45L296 45L296 96C272 57 242 38 205 38ZM207 103C255 103 296 145 296 199C296 257 259 302 213 302C164 302 122 264 128 199C128 140 159 103 207 103Z"
+            />
+
+            <path className="auth-workbench-v2__local auth-workbench-v2__local--one-before" d="M205 38C132 38 78 101 78 198C78 296 128 356 198 356" />
+            <path className="auth-workbench-v2__local auth-workbench-v2__local--one-after" d="M205 38C132 38 72 101 78 198C78 296 132 355 198 356" />
+            <path className="auth-workbench-v2__local auth-workbench-v2__local--two-before" d="M213 302C164 302 128 262 128 199C128 142 159 103 207 103" />
+            <path className="auth-workbench-v2__local auth-workbench-v2__local--two-after" d="M213 302C164 302 122 264 128 199C128 140 159 103 207 103" />
+            <path className="auth-workbench-v2__local auth-workbench-v2__local--three-before" d="M78 198C78 296 128 356 198 356C239 356 273 335 296 299" />
+            <path className="auth-workbench-v2__local auth-workbench-v2__local--three-after" d="M78 198C78 296 132 355 200 355C243 355 276 334 296 298" />
+          </g>
+
+          <g className="auth-workbench-v2__nodes">
+            {anchors.map(([x, y], index) => (
+              <rect
+                key={`${x}-${y}`}
+                className={`auth-workbench-v2__anchor auth-workbench-v2__anchor--${index + 1}`}
+                x={x - 2.5}
+                y={y - 2.5}
+                width="5"
+                height="5"
+              />
+            ))}
+          </g>
+
+          <g className="auth-workbench-v2__edit auth-workbench-v2__edit--one">
+            <rect className="auth-workbench-v2__selected" x="168.5" y="326.5" width="7" height="7" />
+            <path className="auth-workbench-v2__handle-line" d="M172 330V255 M172 330V405" />
+            <circle className="auth-workbench-v2__handle-end auth-workbench-v2__handle-end--one" cx="172" cy="255" r="2.5" />
+            <circle className="auth-workbench-v2__handle-end" cx="172" cy="405" r="2.5" />
+          </g>
+
+          <g className="auth-workbench-v2__edit auth-workbench-v2__edit--two">
+            <rect className="auth-workbench-v2__selected" x="218.5" y="327.5" width="7" height="7" />
+            <path className="auth-workbench-v2__handle-line" d="M222 331V274 M222 331V388" />
+            <circle className="auth-workbench-v2__handle-end" cx="222" cy="274" r="2.5" />
+            <circle className="auth-workbench-v2__handle-end auth-workbench-v2__handle-end--two" cx="222" cy="388" r="2.5" />
+          </g>
+
+          <g className="auth-workbench-v2__edit auth-workbench-v2__edit--three">
+            <rect className="auth-workbench-v2__selected auth-workbench-v2__selected--nudge" x="288.5" y="484.5" width="7" height="7" />
+            <path className="auth-workbench-v2__handle-line" d="M292 488H235 M292 488H333" />
+            <circle className="auth-workbench-v2__handle-end" cx="235" cy="488" r="2.5" />
+            <circle className="auth-workbench-v2__handle-end auth-workbench-v2__handle-end--three" cx="333" cy="488" r="2.5" />
+          </g>
+
+          <rect className="auth-workbench-v2__cusp" x="386.5" y="224.5" width="7" height="7" />
+          <path className="auth-workbench-v2__cusp-segment" d="M390 228L390 177L440 177" />
+
+          <path className="auth-workbench-v2__projection auth-workbench-v2__projection--one" d="M299 170L310 178" />
+          <path className="auth-workbench-v2__projection auth-workbench-v2__projection--two" d="M390 228L401 236" />
+          <path className="auth-workbench-v2__projection auth-workbench-v2__projection--three" d="M294 487L305 495" />
+          <path className="auth-workbench-v2__projection auth-workbench-v2__projection--four" d="M390 331L401 339" />
+          <path className="auth-workbench-v2__depth-cue" d="M404 210L438 234" />
+
           <path
-            className="auth-tech__arc auth-tech__arc--a"
-            d="M178.005 366.004 C161.005 330.004 163.005 289.004 186.005 255.004 C209.005 222.004 249.005 207.004 288.005 215.004"
+            className="auth-workbench-v2__verify"
+            fillRule="evenodd"
+            d="M299 170C226 170 166 233 172 330C172 428 226 487 294 487C337 487 370 466 390 430L390 482H440V177H390V228C366 189 336 170 299 170ZM301 235C349 235 390 277 390 331C390 389 353 434 307 434C258 434 216 396 222 331C222 272 253 235 301 235Z"
           />
-          <path
-            className="auth-tech__arc auth-tech__arc--b"
-            d="M318 227 C354 249 376 289 374 331 C372 370 350 405 316 424"
-          />
-          <path className="auth-tech__handle" d="M199 282 L291 316" />
-          <circle className="auth-tech__node auth-tech__node--main" cx="274" cy="330" r="3" />
-          <circle className="auth-tech__node" cx="199" cy="282" r="2.5" />
-          <circle className="auth-tech__node" cx="370" cy="294" r="2.5" />
-          <path className="auth-tech__tick" d="M182 238 H200 M182 238 V256" />
-          <path className="auth-tech__tick" d="M348 421 H366 M366 404 V422" />
         </g>
 
-        <g className="auth-tech__comet-trail">
-          <path
-            className="auth-tech__comet-glow"
-            pathLength="1"
-            d="M176 246 C212 250 244 267 270 294 C301 326 326 365 340 410"
-          />
-          <path
-            className="auth-tech__comet-core"
-            pathLength="1"
-            d="M176 246 C212 250 244 267 270 294 C301 326 326 365 340 410"
-          />
-          <path
-            className="auth-tech__comet-echo"
-            pathLength="1"
-            d="M183 250 C219 254 251 271 277 298 C308 330 333 369 347 414"
-          />
-          <circle className="auth-tech__comet-head" cx="340" cy="410" r="3" />
+        <g className="auth-workbench-v2__cursor">
+          <path d="M0 0V17.5L4.4 12.9L7.6 20L10.6 18.6L7.4 11.7H14Z" />
+        </g>
+
+        <g className="auth-workbench-v2__sweep">
+          <path d="M274 329L378 329" />
+          <circle cx="378" cy="329" r="2" />
         </g>
       </svg>
-
-      <div className="auth-tech__measure">
-        <span />
-        <em>150 px</em>
-        <span />
-      </div>
     </div>
   );
 }
