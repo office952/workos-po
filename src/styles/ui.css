@@ -4202,7 +4202,7 @@ button.context-rail__item:focus-visible {
 }
 
 .auth-tech__grid {
-  inset-left: clamp(1.25rem, 2.5vw, 2.25rem);
+  left: clamp(1.25rem, 2.5vw, 2.25rem);
   background-size: 48px 48px;
   opacity: 0.34;
 }
@@ -4368,5 +4368,53 @@ button.context-rail__item:focus-visible {
   .auth-gate[data-access="societate"] .auth-tech__frame,
   .auth-gate[data-access="angajat"] .auth-tech__frame {
     min-height: 0;
+  }
+}
+
+.sign-demo__scene-state {
+  position: fixed;
+  z-index: 20;
+  top: 0.95rem;
+  left: 50%;
+  margin: 0;
+  transform: translateX(-50%);
+  color: var(--login-scene-muted);
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.sign-controller__status-dot[data-active] {
+  background: rgb(var(--login-control-accent));
+  box-shadow: 0 0 5px rgb(var(--login-control-accent) / 45%);
+}
+
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet {
+  opacity: 0.32;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet-glow,
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet-core,
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet-head {
+  animation: none;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet-glow {
+  opacity: 0.55;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet-core {
+  opacity: 0.8;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet-head {
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .sign-demo__scene-state {
+    display: none;
   }
 }
