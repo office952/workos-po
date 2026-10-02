@@ -3938,3 +3938,435 @@ button.context-rail__item:focus-visible {
 .auth-gate[data-scene="day"] .auth-tech__panel .button--ghost {
   color: #4f4d48;
 }
+
+/* LOGIN V1 RUNTIME PARITY PASS 2026-10-02 */
+.auth-gate__main {
+  width: min(100%, 1440px);
+  grid-template-columns: minmax(0, 1.16fr) minmax(30rem, 0.84fr);
+  gap: clamp(2rem, 4vw, 4.5rem);
+  padding-top: clamp(2.2rem, 4.2vh, 3.5rem);
+  padding-bottom: clamp(1.5rem, 3vh, 2.5rem);
+}
+
+.sign-demo {
+  max-width: 43rem;
+  gap: 1.15rem;
+  align-content: start;
+}
+
+.sign-demo__stage {
+  min-height: 15.8rem;
+  padding-top: 0.6rem;
+}
+
+.sign-demo__kicker {
+  margin-bottom: 1.35rem;
+}
+
+.sign-demo__assembly {
+  min-height: 8.25rem;
+}
+
+.sign-demo__word {
+  margin-left: 0;
+}
+
+.sign-demo__word > span {
+  font-size: clamp(4.6rem, 6.1vw, 6rem);
+  line-height: 0.88;
+  letter-spacing: -0.06em;
+}
+
+.sign-demo__lead {
+  max-width: 31rem;
+  margin-top: 0.9rem;
+  font-size: 0.92rem;
+  line-height: 1.48;
+}
+
+.sign-demo__journeys {
+  display: none !important;
+}
+
+.sign-demo__cable {
+  inset: -2.45rem -1rem auto -1.2rem;
+  width: calc(100% + 2.2rem);
+  height: 13.5rem;
+}
+
+.sign-demo__cable-base {
+  stroke-width: 1.05;
+  opacity: 0.34;
+}
+
+.auth-gate[data-scene="day"] .sign-demo__cable-base {
+  opacity: 0.40;
+}
+
+.sign-demo__feed-notes {
+  left: 4.85rem;
+  top: -0.05rem;
+  font-size: 0.46rem;
+  opacity: 0.74;
+}
+
+.sign-controller {
+  width: min(100%, 34rem);
+  gap: 0.65rem;
+  padding: 0.78rem 0.85rem 0.72rem;
+  border-color: rgb(121 91 42 / 62%);
+  border-radius: 0;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--login-scene-canvas) 96%, transparent);
+}
+
+.sign-controller::before,
+.sign-controller::after {
+  width: 4px;
+  height: 4px;
+  opacity: 0.72;
+}
+
+.sign-controller__header {
+  gap: 0.75rem;
+}
+
+.sign-controller__title {
+  font-size: 0.58rem;
+}
+
+.sign-controller__spec,
+.sign-controller__status {
+  font-size: 0.49rem;
+}
+
+.sign-controller__status-dot {
+  width: 5px;
+  height: 5px;
+}
+
+.sign-controller__group legend,
+.sign-controller__rgb legend,
+.sign-controller__dimmer-head label {
+  margin-bottom: 0.3rem;
+  font-size: 0.49rem;
+}
+
+.sign-controller__segmented,
+.sign-controller__source {
+  gap: 0.42rem;
+}
+
+.sign-controller__segmented button,
+.sign-controller__source button {
+  min-height: 1.9rem;
+  padding-inline: 0.45rem;
+  font-size: 0.54rem;
+}
+
+.sign-controller__dimmer {
+  gap: 0.25rem;
+}
+
+.sign-controller__dimmer-head output {
+  font-size: 0.56rem;
+}
+
+.sign-controller input[type="range"] {
+  height: 0.8rem;
+}
+
+.sign-controller__rgb {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.sign-controller__rgb legend {
+  margin: 0;
+}
+
+.sign-controller__rgb > div {
+  display: flex;
+  gap: 0.38rem;
+}
+
+.sign-controller__rgb button {
+  width: 1.05rem;
+  min-height: 1.05rem;
+  height: 1.05rem;
+  border-width: 1px;
+}
+
+.sign-controller__rgb button[aria-checked="true"] {
+  box-shadow:
+    0 0 0 1px var(--color-canvas),
+    0 0 0 2px rgb(var(--login-control-accent) / 78%);
+}
+
+.sign-power-panel {
+  position: relative;
+  width: 16.2rem;
+  margin-top: 0.65rem;
+  padding: 0.75rem 0.8rem 0.72rem;
+  border: 1px solid rgb(121 91 42 / 62%);
+  background: color-mix(in srgb, var(--login-scene-canvas) 97%, transparent);
+}
+
+.sign-power-panel::before {
+  content: "";
+  position: absolute;
+  left: -3px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  transform: translateY(-50%);
+  border: 1px solid rgb(121 91 42 / 72%);
+  border-radius: 50%;
+  background: var(--login-scene-canvas);
+}
+
+.sign-power-panel__copy {
+  display: grid;
+  gap: 0.15rem;
+  margin-bottom: 0.55rem;
+}
+
+.sign-power-panel__body {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.sign-power-panel__psu {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 0.12rem 0.7rem;
+  min-width: 5.7rem;
+  padding: 0.48rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--login-scene-frame) 58%, transparent);
+  color: var(--login-scene-muted);
+  font-family: var(--font-mono);
+  font-size: 0.45rem;
+}
+
+.sign-power-panel__psu > span {
+  grid-column: 1 / -1;
+}
+
+.sign-power-panel__psu small {
+  font-size: 0.42rem;
+}
+
+.sign-power-panel__ready {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--login-scene-muted);
+  font-family: var(--font-mono);
+  font-size: 0.47rem;
+  white-space: nowrap;
+}
+
+.sign-power-panel__ready-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--login-scene-frame);
+}
+
+.sign-power-panel__ready[data-active] .sign-power-panel__ready-dot {
+  background: rgb(var(--login-control-accent));
+  box-shadow: 0 0 5px rgb(var(--login-control-accent) / 50%);
+}
+
+.sign-controller__switch {
+  padding-inline: 0.15rem;
+}
+
+.sign-controller__switch-track {
+  width: 1.55rem;
+  height: 2.35rem;
+}
+
+.sign-controller__switch-knob {
+  width: 0.76rem;
+  height: 0.76rem;
+}
+
+.auth-tech {
+  min-height: 0;
+  padding-left: clamp(1.25rem, 2.5vw, 2.25rem);
+}
+
+.auth-tech__grid {
+  inset-left: clamp(1.25rem, 2.5vw, 2.25rem);
+  background-size: 48px 48px;
+  opacity: 0.34;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__grid {
+  background-size: 31px 31px;
+  opacity: 0.52;
+}
+
+.auth-tech__frame {
+  min-height: 37.5rem;
+  max-height: 42rem;
+  padding: 0.9rem;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  border-color: color-mix(in srgb, var(--login-scene-frame) 72%, transparent);
+  background: color-mix(in srgb, var(--login-scene-canvas) 97%, transparent);
+}
+
+.auth-tech__viewport {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.auth-tech__workbench {
+  width: min(100%, 24rem);
+  opacity: 0.68;
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__workbench {
+  opacity: 0.72;
+  transform: none;
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__rings {
+  width: 188px;
+  height: 188px;
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__ring--outer {
+  opacity: 0.32;
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__ring--mid {
+  inset: 33px;
+  opacity: 0.26;
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__target {
+  width: 44px;
+  height: 44px;
+  opacity: 0.42;
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__crosshair {
+  opacity: 0.20;
+}
+
+.auth-tech__measure {
+  opacity: 0.72;
+}
+
+.auth-tech__meta {
+  font-size: 0.49rem;
+}
+
+.auth-tech__viewport::before,
+.auth-tech__viewport::after {
+  content: "";
+  position: absolute;
+  inset: 12% 10%;
+  pointer-events: none;
+  opacity: 0.20;
+}
+
+.auth-tech__viewport::before {
+  background:
+    linear-gradient(90deg, transparent 49.85%, var(--login-scene-frame) 50%, transparent 50.15%),
+    linear-gradient(transparent 49.85%, var(--login-scene-frame) 50%, transparent 50.15%);
+}
+
+.auth-tech__viewport::after {
+  inset: auto 8% 12% auto;
+  width: 5.4rem;
+  height: 4.1rem;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 0 7px,
+    color-mix(in srgb, var(--login-scene-frame) 30%, transparent) 7px 8px
+  );
+}
+
+.auth-gate[data-scene="night"] .sign-demo__word-face {
+  filter:
+    drop-shadow(0 0 1.5px rgb(var(--sign-light-rgb) / calc(var(--sign-face-glow) * 0.9)))
+    drop-shadow(0 0 4px rgb(var(--sign-light-rgb) / calc(var(--sign-face-glow) * 0.36)));
+}
+
+.auth-gate[data-scene="night"] .sign-demo__word-core {
+  filter: drop-shadow(0 0 1.2px rgb(var(--sign-light-rgb) / calc(var(--sign-core-glow) * 0.75)));
+}
+
+.auth-gate[data-scene="night"] .sign-demo__word-halo {
+  filter:
+    drop-shadow(0 0 3px rgb(var(--sign-light-rgb) / var(--sign-halo-tight)))
+    drop-shadow(0 0 8px rgb(var(--sign-light-rgb) / var(--sign-halo-near)))
+    drop-shadow(0 0 18px rgb(var(--sign-light-rgb) / var(--sign-halo-mid)))
+    drop-shadow(0 0 34px rgb(var(--sign-light-rgb) / var(--sign-halo-far)));
+}
+
+@media (max-width: 1280px) {
+  .auth-gate__main {
+    grid-template-columns: minmax(0, 1.08fr) minmax(26rem, 0.92fr);
+    gap: 2rem;
+  }
+
+  .sign-demo {
+    max-width: none;
+  }
+
+  .sign-controller {
+    width: 100%;
+  }
+}
+
+@media (max-width: 1024px) {
+  .auth-gate__main {
+    grid-template-columns: 1fr;
+    max-width: 50rem;
+  }
+
+  .auth-tech__frame {
+    min-height: 31rem;
+    max-height: none;
+  }
+
+  .sign-controller {
+    width: min(100%, 36rem);
+  }
+}
+
+@media (max-width: 768px) {
+  .sign-demo__stage {
+    min-height: 13.5rem;
+  }
+
+  .sign-demo__word > span {
+    font-size: clamp(3.5rem, 15vw, 5rem);
+  }
+
+  .sign-controller {
+    width: 100%;
+  }
+
+  .sign-controller__segmented,
+  .sign-controller__source {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .sign-power-panel {
+    width: min(100%, 17rem);
+  }
+
+  .auth-gate[data-access="societate"] .auth-tech__frame,
+  .auth-gate[data-access="angajat"] .auth-tech__frame {
+    min-height: 0;
+  }
+}
