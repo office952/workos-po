@@ -5661,3 +5661,38 @@ button.context-rail__item:focus-visible {
       linear-gradient(rgb(128 133 140 / 34%), rgb(128 133 140 / 34%)) right bottom / 1px 18px no-repeat;
   }
 }
+
+/* LOGIN V1 DESKTOP SCENE SCALE */
+@media (min-width: 1025px) {
+  .auth-gate {
+    position: relative;
+  }
+
+  .auth-gate__main {
+    position: absolute;
+    left: 50%;
+    top: 49px;
+    width: 1440px;
+    max-width: none;
+    height: 816px;
+    min-height: 816px;
+    margin: 0;
+    padding: 0;
+    transform: translateX(-50%) scale(var(--login-stage-scale, 1));
+    transform-origin: top center;
+  }
+
+  .auth-gate__footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+  }
+}
+
+@media (max-width: 1024px) {
+  .auth-gate__main {
+    transform: none;
+  }
+}
