@@ -17,14 +17,25 @@ describe("SignLightDemo lighting curves", () => {
     const reference = resolveSignLighting(75, "halo", true);
     const peak = resolveSignLighting(100, "halo", true);
 
-    expect(reference.haloTight).toBeGreaterThan(0.95);
-    expect(reference.haloNear).toBeGreaterThan(0.7);
-    expect(reference.haloFar).toBeLessThan(0.08);
+    expect(reference.haloTight).toBeCloseTo(0.9831462502, 6);
+    expect(reference.haloNear).toBeCloseTo(0.7525049448, 6);
+    expect(reference.haloMid).toBeCloseTo(0.294754923, 6);
+    expect(reference.haloFar).toBeCloseTo(0.0698283836, 6);
     expect(peak.haloTight - reference.haloTight).toBeLessThan(0.03);
     expect(peak.haloFar - reference.haloFar).toBeLessThan(0.02);
     expect(peak.haloNear - reference.haloNear).toBeGreaterThan(
       peak.haloFar - reference.haloFar,
     );
+  });
+
+  it("matches the Lighting Lab 2 warm 75 face/core benchmark", () => {
+    const face = resolveSignLighting(75, "face", true);
+
+    expect(face.faceFill).toBe(1);
+    expect(face.faceGlowTight).toBeCloseTo(0.3750684559, 6);
+    expect(face.faceGlowNear).toBeCloseTo(0.1295126379, 6);
+    expect(face.coreFill).toBeCloseTo(0.3751134872, 6);
+    expect(face.coreGlow).toBeCloseTo(0.2044193596, 6);
   });
 
   it("keeps HALO faces off and FATA rear halo off", () => {
