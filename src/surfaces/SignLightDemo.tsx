@@ -13,6 +13,16 @@ const LIGHT_RGB: Record<Exclude<SignLightSource, "rgb"> | RgbPreset, string> = {
   cyan: "45 224 238",
 };
 
+const FACE_RGB: Record<Exclude<SignLightSource, "rgb">, string> = {
+  cool: "232 240 252",
+  warm: "244 224 183",
+};
+
+const CORE_RGB: Record<Exclude<SignLightSource, "rgb">, string> = {
+  cool: "250 252 255",
+  warm: "255 244 216",
+};
+
 const MODES: readonly SignLightingMode[] = ["face", "halo", "combined"];
 const SOURCES: readonly SignLightSource[] = ["cool", "warm", "rgb"];
 const RGB_PRESETS: readonly RgbPreset[] = ["blue", "red", "magenta", "cyan"];
@@ -117,6 +127,9 @@ export function SignLightDemo({ power, onPowerChange }: SignLightDemoProps) {
 
   const activeColor = source === "rgb" ? rgbPreset : source;
   const faceEnabled = mode === "face" || mode === "combined";
+  const haloEnabled = mode === "halo" || mode === "combined";
+  const faceRgb = source === "rgb" ? LIGHT_RGB[rgbPreset] : FACE_RGB[source];
+  const coreRgb = source === "rgb" ? LIGHT_RGB[rgbPreset] : CORE_RGB[source];
   const modeLabel = mode === "face" ? "FATA" : mode === "halo" ? "HALO" : "FATA + HALO";
   const lighting = useMemo(
     () => resolveSignLighting(intensity, mode, power),
@@ -127,6 +140,8 @@ export function SignLightDemo({ power, onPowerChange }: SignLightDemoProps) {
     () =>
       ({
         "--sign-light-rgb": LIGHT_RGB[activeColor],
+        "--sign-face-rgb": faceRgb,
+        "--sign-core-rgb": coreRgb,
         "--sign-face-fill": lighting.faceFill,
         "--sign-face-glow": lighting.faceGlow,
         "--sign-core-fill": lighting.coreFill,
@@ -137,7 +152,7 @@ export function SignLightDemo({ power, onPowerChange }: SignLightDemoProps) {
         "--sign-halo-far": lighting.haloFar,
         "--sign-cable-live": lighting.cableLive,
       }) as CSSProperties,
-    [activeColor, lighting],
+    [activeColor, coreRgb, faceRgb, lighting],
   );
 
   return (
@@ -152,25 +167,27 @@ export function SignLightDemo({ power, onPowerChange }: SignLightDemoProps) {
       <p className="sign-demo__scene-state" aria-hidden="true">
         {power ? `DARK / SIGN ON · ${modeLabel}` : "LIGHT / SIGN OFF"}
       </p>
+
+      <svg
+        className="sign-demo__infrastructure"
+        viewBox="0 0 640 720"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <path
+          className="sign-demo__infra-base"
+          d="M18 694 C18 658 52 644 52 610 V560 C52 530 68 510 96 510 H290 C322 510 336 492 336 462 V408 C336 382 356 366 382 366 H522 C548 366 560 350 560 324 V110 C560 82 546 68 520 68 H390 C372 68 362 78 362 96 H120"
+        />
+        <path
+          className="sign-demo__infra-live"
+          d="M18 694 C18 658 52 644 52 610 V560 C52 530 68 510 96 510 H290 C322 510 336 492 336 462 V408 C336 382 356 366 382 366 H522 C548 366 560 350 560 324 V110 C560 82 546 68 520 68 H390 C372 68 362 78 362 96 H120"
+        />
+      </svg>
+
       <div className="sign-demo__stage">
         <p className="sign-demo__kicker">FABRICAȚIE · PRODUCȚIE · MANAGEMENT</p>
 
         <div className="sign-demo__assembly" aria-label="Firmă luminoasă WorkOS">
-          <svg
-            className="sign-demo__cable"
-            viewBox="0 0 640 230"
-            aria-hidden="true"
-            preserveAspectRatio="none"
-          >
-            <path
-              className="sign-demo__cable-base"
-              d="M18 208 C90 208 84 142 150 142 H310 C350 142 350 88 390 88 H604 C622 88 622 66 622 52"
-            />
-            <path
-              className="sign-demo__cable-live"
-              d="M18 208 C90 208 84 142 150 142 H310 C350 142 350 88 390 88 H604 C622 88 622 66 622 52"
-            />
-          </svg>
 
           <div className="sign-demo__feed-notes" aria-hidden="true">
             <span>Power Feed / PUNCT MONTAJ</span>
@@ -209,13 +226,18 @@ export function SignLightDemo({ power, onPowerChange }: SignLightDemoProps) {
             <span className="sign-controller__title">WORKOS SIGN CONTROLLER</span>
             <span className="sign-controller__spec">FATA / HALO · RGB+CCT</span>
           </div>
-          <div className="sign-controller__status" aria-live="polite">
-            <span className="sign-controller__status-dot" data-active={power ? "" : undefined} />
-            <span>{power ? "DC READY" : "STANDBY"}</span>
+          <div className="sign-controller__channel" aria-live="polite">
+            <span className="sign-controller__channel-label">CHANNEL STATUS</span>
+            <span className="sign-controller__channel-states">
+              <span data-active={power && faceEnabled ? "" : undefined}>FACE</span>
+              <i data-active={power && faceEnabled ? "" : undefined} />
+              <span data-active={power && haloEnabled ? "" : undefined}>HALO</span>
+              <i data-active={power && haloEnabled ? "" : undefined} />
+            </span>
           </div>
         </div>
 
-        <fieldset className="sign-controller__group" disabled={!power}>
+        <fieldset className="sign-controller__group sign-controller__group--mode" disabled={!power}>
           <legend>Mod iluminare</legend>
           <div className="sign-controller__segmented" role="radiogroup" aria-label="Mod iluminare">
             <button
@@ -274,7 +296,7 @@ export function SignLightDemo({ power, onPowerChange }: SignLightDemoProps) {
           />
         </div>
 
-        <fieldset className="sign-controller__group" disabled={!power}>
+        <fieldset className="sign-controller__group sign-controller__group--source" disabled={!power}>
           <legend>Sursă lumină</legend>
           <div className="sign-controller__source" role="radiogroup" aria-label="Sursă lumină">
             <button
