@@ -5901,3 +5901,54 @@ button.context-rail__item:focus-visible {
     opacity: 0;
   }
 }
+
+/* LOGIN V1 AUTH WORKBENCH OPACITY CALIBRATION */
+@media (min-width: 1025px) {
+  .auth-tech__blueprint-base {
+    opacity: 0.045;
+  }
+
+  .auth-tech__arc--a {
+    opacity: 0.52;
+  }
+
+  .auth-tech__arc--b {
+    opacity: 0.33;
+  }
+
+  .auth-tech__handle {
+    opacity: 0.45;
+  }
+
+  .auth-tech__node {
+    opacity: 0.62;
+  }
+
+  .auth-tech__node--main {
+    opacity: 0.9;
+  }
+
+  .auth-tech__tick {
+    opacity: 0.34;
+  }
+
+  .auth-tech__comet-glow {
+    opacity: 0.46;
+  }
+
+  .auth-tech__comet-core {
+    opacity: 0.76;
+  }
+
+  .auth-tech__comet-echo {
+    opacity: 0.34;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__blueprint-base {
+    opacity: 0.11;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__blueprint-dynamic {
+    opacity: 0.26;
+  }
+}
