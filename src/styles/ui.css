@@ -7193,3 +7193,347 @@ button.context-rail__item:focus-visible {
     height: 100%;
   }
 }
+
+
+/* LOGIN V1 LIGHT-OFF POLISH + PHYSICAL POWER SWITCH */
+/* Owner direction: LIGHT/OFF remains a white entry scene with a dark technical AUTH bay.
+   The physical PSU switch is rendered as an industrial toggle, not a software pill. */
+@media (min-width: 1025px) {
+  .auth-gate[data-scene="day"][data-access="idle"] {
+    background: rgb(255 255 255);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-gate__brand,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-gate__footer {
+    background: rgb(255 255 255);
+    border-color: rgb(216 216 211);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo::after {
+    opacity: 0.075;
+    background-image:
+      linear-gradient(rgb(222 221 216 / 42%) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(222 221 216 / 42%) 1px, transparent 1px);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__kicker,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__feed-notes {
+    color: rgb(110 108 102);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__lead {
+    color: rgb(82 82 78);
+    opacity: 0.9;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__word-material {
+    color: rgb(8 8 8);
+    text-shadow: none;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__word-face,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__word-core,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__word-halo {
+    opacity: 0 !important;
+    filter: none !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__infra-base {
+    stroke: rgb(173 171 165);
+    stroke-width: 0.95;
+    opacity: 0.42;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__infra-live {
+    opacity: 0;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller {
+    background: rgb(255 255 255);
+    border-color: rgb(205 205 200 / 72%);
+    box-shadow:
+      inset 0 0 0 1px rgb(255 255 255 / 86%),
+      0 1px 0 rgb(255 255 255);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller::before,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller::after {
+    background: rgb(255 255 255);
+    border-color: rgb(190 189 183 / 62%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo[data-power="off"] .sign-controller__header,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo[data-power="off"] .sign-controller__group,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo[data-power="off"] .sign-controller__dimmer,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo[data-power="off"] .sign-controller__rgb {
+    opacity: 0.13;
+    filter: blur(0.75px);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__segmented button,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__source button {
+    color: rgb(116 114 108);
+    border-color: rgb(194 193 188 / 58%);
+    background: rgb(255 255 255);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-power-panel {
+    background: rgb(255 255 255);
+    border-color: rgb(191 190 184 / 70%);
+    box-shadow: none;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-power-panel::after {
+    content: "";
+    position: absolute;
+    left: -1px;
+    right: -1px;
+    top: -1px;
+    height: 2px;
+    background: rgb(61 61 58);
+    opacity: 0.9;
+    pointer-events: none;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__power-title,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__power-state,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-power-panel__psu,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-power-panel__ready {
+    color: rgb(65 64 60);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-power-panel__psu {
+    background: rgb(249 249 248);
+    border-color: rgb(194 193 188 / 78%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-power-panel__ready-dot {
+    background: rgb(97 98 95);
+    box-shadow: none;
+  }
+
+  /* The light entry state deliberately keeps the AUTH bay dark.
+     It is the product/workbench window, not a second white card. */
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__frame {
+    background: rgb(30 29 27);
+    border-color: rgb(116 93 55 / 58%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__viewport::before {
+    opacity: 0.28;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__viewport::after {
+    opacity: 0.20;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__grid {
+    background-image:
+      linear-gradient(rgb(103 99 91 / 22%) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(103 99 91 / 22%) 1px, transparent 1px);
+    background-size: 42px 42px;
+    opacity: 0.78;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__bay-label {
+    color: rgb(144 120 79 / 84%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__bay-label i {
+    background: rgb(133 106 62 / 82%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__frame-label,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__bottom-meta {
+    color: rgb(118 114 106 / 68%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3 {
+    --wb-accent: 151 114 56;
+    --wb-line: 113 91 57;
+    --wb-muted: 121 116 107;
+    --wb-face: 47 42 36;
+    --wb-face-repaired: 57 49 39;
+    --wb-back: 25 22 18;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__anchor,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__handle-end {
+    fill: rgb(30 29 27);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__cursor path {
+    fill: rgb(190 181 164);
+    stroke: rgb(31 27 22);
+  }
+}
+
+/* Physical mains toggle.
+   44px hit box; 34x62 metal plate preserves the accepted panel geometry. */
+.sign-controller__switch {
+  width: 44px !important;
+  height: 72px !important;
+  left: 11px !important;
+  top: 45px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  overflow: visible;
+  isolation: isolate;
+}
+
+.sign-controller__switch-plate {
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  width: 34px;
+  height: 62px;
+  border: 1px solid rgb(116 92 50 / 74%);
+  background: rgb(18 15 12);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 3%),
+    inset 0 -8px 12px rgb(0 0 0 / 16%);
+}
+
+.sign-controller__switch-screw {
+  position: absolute;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border: 1px solid rgb(128 116 96 / 64%);
+  border-radius: 50%;
+  background: rgb(38 32 25);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 22%);
+}
+
+.sign-controller__switch-screw--top {
+  top: 5px;
+}
+
+.sign-controller__switch-screw--bottom {
+  bottom: 5px;
+}
+
+.sign-controller__switch-collar {
+  position: absolute;
+  left: 50%;
+  top: 31px;
+  width: 17px;
+  height: 17px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgb(125 109 84 / 82%);
+  border-radius: 50%;
+  background: rgb(29 24 18);
+  box-shadow:
+    inset 0 0 0 3px rgb(12 10 8),
+    0 0 0 1px rgb(0 0 0 / 18%);
+}
+
+.sign-controller__switch-lever {
+  position: absolute;
+  left: 50%;
+  top: 31px;
+  width: 18px;
+  height: 34px;
+  transform-origin: 50% 0;
+  transition: transform var(--motion-navigate) var(--ease-work);
+  pointer-events: none;
+}
+
+.sign-controller__switch-stem {
+  position: absolute;
+  left: 50%;
+  top: -17px;
+  width: 3px;
+  height: 23px;
+  transform: translateX(-50%);
+  border: 1px solid rgb(118 109 96 / 72%);
+  background: rgb(163 155 141);
+  box-shadow: 1px 0 0 rgb(255 255 255 / 18%);
+}
+
+.sign-controller__switch-knob,
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-knob,
+.sign-controller__switch[aria-checked="false"] .sign-controller__switch-knob {
+  position: absolute !important;
+  left: 50% !important;
+  top: -23px !important;
+  width: 15px !important;
+  height: 15px !important;
+  transform: translateX(-50%) !important;
+  border: 1px solid rgb(10 54 123 / 82%);
+  border-radius: 50%;
+  background: rgb(32 102 207);
+  box-shadow:
+    inset 0 0 0 2px rgb(255 255 255 / 12%),
+    0 2px 3px rgb(0 0 0 / 28%);
+}
+
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-lever {
+  transform: rotate(-17deg);
+}
+
+.sign-controller__switch[aria-checked="false"] .sign-controller__switch-lever {
+  transform: rotate(17deg);
+}
+
+.sign-controller__switch-state,
+.sign-controller__switch > span:last-child {
+  position: absolute;
+  left: 50px !important;
+  top: 26px !important;
+  width: 28px;
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: 6px !important;
+  line-height: 9px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sign-controller__switch:active .sign-controller__switch-lever {
+  transform: scale(0.96);
+}
+
+.sign-controller__switch:active .sign-controller__switch-knob {
+  transform: translateX(-50%) !important;
+}
+
+.sign-controller__switch:focus-visible {
+  outline: 2px solid rgb(var(--color-action-rgb, 32 102 207) / 72%);
+  outline-offset: 2px;
+}
+
+.auth-gate[data-scene="day"] .sign-controller__switch-plate {
+  border-color: rgb(174 173 168 / 92%);
+  background: rgb(249 249 247);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255),
+    inset 0 -8px 12px rgb(0 0 0 / 3%);
+}
+
+.auth-gate[data-scene="day"] .sign-controller__switch-screw {
+  border-color: rgb(169 168 163 / 92%);
+  background: rgb(226 225 220);
+}
+
+.auth-gate[data-scene="day"] .sign-controller__switch-collar {
+  border-color: rgb(149 146 138 / 92%);
+  background: rgb(219 216 208);
+  box-shadow:
+    inset 0 0 0 3px rgb(247 246 242),
+    0 0 0 1px rgb(0 0 0 / 8%);
+}
+
+.auth-gate[data-scene="day"] .sign-controller__switch-stem {
+  border-color: rgb(132 129 121 / 82%);
+  background: rgb(181 178 169);
+  box-shadow: 1px 0 0 rgb(255 255 255 / 70%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sign-controller__switch-lever {
+    transition: none !important;
+  }
+}
