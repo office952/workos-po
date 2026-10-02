@@ -7776,3 +7776,264 @@ button.context-rail__item:focus-visible {
 .sign-controller__switch[aria-checked="false"] .sign-controller__switch-lever {
   transform: rotate(26deg);
 }
+
+
+/* LOGIN V1 LIGHT-STANDBY CLEAN PASS */
+/* Runtime-directed correction:
+   LIGHT/OFF is one coherent light scene.
+   AUTH bay becomes a pale technical drafting surface.
+   Sign controller stays sharp but intentionally de-emphasized.
+   Power switch reads physically as UP=ON / DOWN=OFF. */
+
+@media (min-width: 1025px) {
+  /* --- LIGHT AUTH BAY: pale engineering surface, never a black slab --- */
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__frame {
+    background: rgb(248 247 243) !important;
+    border-color: rgb(198 195 185 / 82%) !important;
+    box-shadow:
+      inset 0 0 0 1px rgb(255 255 255 / 86%),
+      0 1px 0 rgb(255 255 255 / 72%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__viewport::before {
+    opacity: 0.10 !important;
+    background:
+      linear-gradient(90deg, transparent 0 49.85%, rgb(114 108 98 / 18%) 49.9% 50.1%, transparent 50.15%),
+      linear-gradient(transparent 0 49.85%, rgb(114 108 98 / 18%) 49.9% 50.1%, transparent 50.15%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__viewport::after {
+    opacity: 0.06 !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__grid {
+    background-image:
+      linear-gradient(rgb(166 162 153 / 18%) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(166 162 153 / 18%) 1px, transparent 1px) !important;
+    background-size: 42px 42px;
+    opacity: 0.46 !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__bay-label {
+    color: rgb(110 89 57 / 76%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__bay-label i {
+    background: rgb(123 98 60 / 70%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__frame-label,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__bottom-meta {
+    color: rgb(102 99 92 / 62%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3 {
+    --wb-accent: 118 94 55;
+    --wb-line: 127 121 110;
+    --wb-muted: 115 111 103;
+    --wb-face: 211 206 196;
+    --wb-face-repaired: 184 176 162;
+    --wb-back: 159 151 137;
+    opacity: 0.82;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__anchor,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__handle-end {
+    fill: rgb(248 247 243) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__cursor path {
+    fill: rgb(82 78 71) !important;
+    stroke: rgb(248 247 243) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__crop {
+    stroke: rgb(123 98 60 / 48%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__orbit {
+    stroke: rgb(128 122 111 / 38%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__ticks,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__verify,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__projection {
+    stroke: rgb(121 116 107 / 44%) !important;
+  }
+
+  /* --- OFF CONTROLLER: crisp/parked, no blur --- */
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo[data-power="off"]
+    .sign-controller__header {
+    opacity: 0.52 !important;
+    filter: none !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo[data-power="off"]
+    .sign-controller__group,
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo[data-power="off"]
+    .sign-controller__dimmer,
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo[data-power="off"]
+    .sign-controller__rgb {
+    opacity: 0.36 !important;
+    filter: none !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller {
+    border-color: rgb(205 203 197 / 74%) !important;
+    background: rgb(253 253 251) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__segmented button,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__source button {
+    color: rgb(123 120 113) !important;
+    border-color: rgb(208 206 200 / 76%) !important;
+    background: rgb(252 252 250) !important;
+    box-shadow: none !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__segmented button[aria-pressed="true"],
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__source button[aria-pressed="true"] {
+    color: rgb(104 101 95) !important;
+    border-color: rgb(189 186 178 / 82%) !important;
+    background: rgb(248 247 243) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__dimmer input[type="range"] {
+    opacity: 0.48;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__title,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__spec,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__label,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__channel {
+    color: rgb(116 112 104) !important;
+  }
+}
+
+/* --- PHYSICAL TOGGLE: UP = ON, DOWN = OFF --- */
+.sign-controller__switch-plate {
+  left: 4px !important;
+  top: 3px !important;
+  width: 36px !important;
+  height: 66px !important;
+}
+
+.sign-controller__switch-plate::before,
+.sign-controller__switch-plate::after {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 5px;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  pointer-events: none;
+}
+
+.sign-controller__switch-plate::before {
+  content: "ON";
+  top: 9px;
+  color: rgb(126 118 105 / 74%);
+}
+
+.sign-controller__switch-plate::after {
+  content: "OFF";
+  bottom: 9px;
+  color: rgb(126 118 105 / 74%);
+}
+
+.sign-controller__switch-collar {
+  top: 33px !important;
+  width: 13px !important;
+  height: 13px !important;
+}
+
+.sign-controller__switch-lever {
+  left: 50% !important;
+  top: 33px !important;
+  width: 24px !important;
+  height: 40px !important;
+  transform-origin: 50% 0 !important;
+  transition:
+    transform var(--motion-navigate) var(--ease-work),
+    filter var(--motion-fast) var(--ease-work);
+}
+
+.sign-controller__switch-stem {
+  left: 50% !important;
+  top: -24px !important;
+  width: 4px !important;
+  height: 30px !important;
+  transform: translateX(-50%) !important;
+}
+
+.sign-controller__switch-knob,
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-knob,
+.sign-controller__switch[aria-checked="false"] .sign-controller__switch-knob {
+  left: 50% !important;
+  top: -33px !important;
+  width: 16px !important;
+  height: 16px !important;
+  transform: translateX(-50%) !important;
+}
+
+/* ON points physically upward; OFF flips the lever through the pivot and points downward. */
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-lever {
+  transform: rotate(0deg) !important;
+}
+
+.sign-controller__switch[aria-checked="false"] .sign-controller__switch-lever {
+  transform: rotate(180deg) !important;
+}
+
+/* Blue is the energized cue. OFF becomes neutral hardware. */
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-knob {
+  border-color: rgb(11 51 108 / 92%) !important;
+  background:
+    radial-gradient(circle at 36% 30%, rgb(82 151 245) 0 16%, rgb(32 102 207) 42%, rgb(19 74 157) 100%) !important;
+  box-shadow:
+    inset -1px -2px 2px rgb(7 42 100 / 40%),
+    inset 1px 1px 1px rgb(255 255 255 / 30%),
+    0 2px 3px rgb(0 0 0 / 28%) !important;
+}
+
+.sign-controller__switch[aria-checked="false"] .sign-controller__switch-knob {
+  border-color: rgb(111 108 101 / 86%) !important;
+  background:
+    radial-gradient(circle at 36% 30%, rgb(213 210 201) 0 18%, rgb(148 144 135) 48%, rgb(100 96 89) 100%) !important;
+  box-shadow:
+    inset -1px -2px 2px rgb(63 60 55 / 26%),
+    inset 1px 1px 1px rgb(255 255 255 / 30%),
+    0 2px 3px rgb(0 0 0 / 18%) !important;
+}
+
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-plate::before {
+  color: rgb(32 102 207 / 92%);
+}
+
+.sign-controller__switch[aria-checked="false"] .sign-controller__switch-plate::after {
+  color: rgb(88 85 79 / 94%);
+}
+
+.auth-gate[data-scene="day"] .sign-controller__switch-plate {
+  background: rgb(250 249 246) !important;
+  border-color: rgb(181 178 170 / 94%) !important;
+}
+
+.auth-gate[data-scene="day"] .sign-controller__switch-collar {
+  background: rgb(188 185 176) !important;
+  border-color: rgb(137 133 124 / 88%) !important;
+  box-shadow:
+    inset 0 0 0 2px rgb(242 240 235),
+    0 0 0 1px rgb(0 0 0 / 8%) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sign-controller__switch-lever {
+    transition: none !important;
+  }
+}
