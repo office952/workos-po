@@ -6014,3 +6014,36 @@ button.context-rail__item:focus-visible {
     transition: none;
   }
 }
+
+/* LOGIN V1 FIGMA TO CSS BLUR CALIBRATION */
+/*
+  Figma DROP_SHADOW radius and CSS drop-shadow blur do not render 1:1.
+  Keep the Lighting Lab 2 alpha/energy curves, but map the visual blur
+  radius to roughly half for browser parity.
+*/
+.sign-demo__word-face {
+  filter:
+    drop-shadow(0 0 3.3203518391px rgb(var(--sign-light-rgb) / var(--sign-face-glow-tight)))
+    drop-shadow(0 0 6.6868162155px rgb(var(--sign-light-rgb) / var(--sign-face-glow-near)));
+}
+
+.sign-demo__word-core {
+  filter:
+    drop-shadow(0 0 1.7619880438px rgb(var(--sign-light-rgb) / var(--sign-core-glow)));
+}
+
+.auth-gate[data-scene="night"] .sign-demo__word-halo {
+  filter:
+    drop-shadow(0 0 3.5689697266px rgb(var(--sign-light-rgb) / var(--sign-halo-tight)))
+    drop-shadow(0 0 9.783741951px rgb(var(--sign-light-rgb) / var(--sign-halo-near)))
+    drop-shadow(0 0 22.28166008px rgb(var(--sign-light-rgb) / var(--sign-halo-mid)))
+    drop-shadow(0 0 38.686927796px rgb(var(--sign-light-rgb) / var(--sign-halo-far)));
+}
+
+.sign-demo__word[data-mode="combined"] .sign-demo__word-halo {
+  opacity: 0.92;
+}
+
+.sign-demo__word[data-halo-only] .sign-demo__word-halo {
+  opacity: 1;
+}
