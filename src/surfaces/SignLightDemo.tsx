@@ -205,36 +205,6 @@ export function SignLightDemo({
           ofertare și producție în atelier. O singură sursă de adevăr. Un singur produs.
         </p>
 
-        <div className="sign-demo__journeys" aria-label="Căi de acces">
-          <button
-            type="button"
-            className="sign-demo__journey"
-            data-tone="societate"
-            onClick={onSelectSocietate}
-          >
-            <span className="sign-demo__journey-mark" aria-hidden="true" />
-            <span className="sign-demo__journey-kicker">SOCIETATE</span>
-            <span className="sign-demo__journey-label">Clienți · Oferte · Administrare</span>
-            <span className="sign-demo__journey-arrow" aria-hidden="true">
-              →
-            </span>
-          </button>
-          <button
-            type="button"
-            className="sign-demo__journey"
-            data-tone="angajat"
-            onClick={onSelectAngajat}
-          >
-            <span className="sign-demo__journey-mark" aria-hidden="true" />
-            <span className="sign-demo__journey-kicker">ANGAJAT</span>
-            <span className="sign-demo__journey-label">Execuție · Plan de lucru · Urmărire</span>
-            <span className="sign-demo__journey-arrow" aria-hidden="true">
-              →
-            </span>
-          </button>
-        </div>
-      </div>
-
       <div className="sign-controller" aria-label="Panou control iluminare">
         <div className="sign-controller__header">
           <div>
@@ -374,11 +344,14 @@ export function SignLightDemo({
           </fieldset>
         ) : null}
 
-        <div className="sign-controller__power">
-          <div>
-            <span className="sign-controller__power-title">POWER PANEL / 12V PSU</span>
-            <span className="sign-controller__power-state">{power ? "DC READY" : "DC OFF"}</span>
-          </div>
+      </div>
+
+      <div className="sign-power-panel" aria-label="Panou alimentare 12V">
+        <div className="sign-power-panel__copy">
+          <span className="sign-controller__power-title">POWER PANEL / 12V PSU</span>
+          <span className="sign-controller__power-state">{power ? "DC READY" : "DC OFF"}</span>
+        </div>
+        <div className="sign-power-panel__body">
           <button
             type="button"
             className="sign-controller__switch"
@@ -392,6 +365,15 @@ export function SignLightDemo({
             </span>
             <span>{power ? "ON" : "OFF"}</span>
           </button>
+          <div className="sign-power-panel__psu" aria-hidden="true">
+            <span>AC → DC</span>
+            <small>230VAC</small>
+            <small>12VDC</small>
+          </div>
+          <div className="sign-power-panel__ready" data-active={power ? "" : undefined}>
+            <span className="sign-power-panel__ready-dot" aria-hidden="true" />
+            <span>{power ? "DC READY" : "DC OFF"}</span>
+          </div>
         </div>
       </div>
     </section>
