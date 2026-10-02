@@ -4775,3 +4775,671 @@ button.context-rail__item:focus-visible {
     display: none;
   }
 }
+
+/* LOGIN V1 FIDELITY RECONSTRUCTION */
+@media (min-width: 1025px) {
+  .auth-gate {
+    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .auth-gate__brand {
+    flex: 0 0 49px;
+    min-height: 49px;
+    height: 49px;
+    padding: 0 3.75rem 0 3.375rem;
+  }
+
+  .auth-gate__brand .app-shell__wordmark {
+    font-size: 1.15rem;
+  }
+
+  .auth-gate__login-choices {
+    gap: 0.55rem;
+  }
+
+  .auth-gate__login-choices .button {
+    min-height: 34px;
+    padding-inline: 1rem;
+    border-radius: 0;
+    font-size: 0.82rem;
+  }
+
+  .auth-gate__main {
+    position: relative;
+    flex: 1 1 auto;
+    width: min(100%, 1440px);
+    max-width: 1440px;
+    min-height: 0;
+    height: calc(100vh - 84px);
+    margin: 0 auto;
+    padding: 0;
+    display: block;
+  }
+
+  .auth-gate__footer {
+    flex: 0 0 35px;
+    min-height: 35px;
+    height: 35px;
+    align-items: center;
+    padding: 0 24px;
+  }
+
+  .sign-demo {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 640px;
+    height: 816px;
+    max-width: none;
+    display: block;
+    isolation: isolate;
+  }
+
+  .sign-demo::after {
+    left: 24px;
+    top: 43px;
+    width: 640px;
+    height: 280px;
+    opacity: 0.12;
+    background-size: 42px 42px;
+  }
+
+  .sign-demo__scene-state {
+    position: fixed;
+    top: 18px;
+    left: 50%;
+    font-size: 7.5px;
+    letter-spacing: 0;
+  }
+
+  .sign-demo__stage {
+    position: static;
+    min-height: 0;
+    padding: 0;
+  }
+
+  .sign-demo__kicker {
+    position: absolute;
+    left: 76px;
+    top: 47px;
+    width: 260px;
+    margin: 0;
+    font-size: 8px;
+    line-height: 15px;
+    letter-spacing: 0;
+  }
+
+  .sign-demo__assembly {
+    position: static;
+    min-height: 0;
+  }
+
+  .sign-demo__word {
+    position: absolute;
+    left: 76px;
+    top: 101px;
+    margin: 0;
+  }
+
+  .sign-demo__word > span {
+    width: 510px;
+    font-size: 84px;
+    line-height: 84px;
+    letter-spacing: -0.055em;
+  }
+
+  .sign-demo__lead {
+    position: absolute;
+    left: 76px;
+    top: 211px;
+    width: 468px;
+    max-width: none;
+    margin: 0;
+    font-size: 15px;
+    line-height: 24px;
+    opacity: 0.88;
+  }
+
+  .sign-demo__feed-notes {
+    left: 160px;
+    top: 79px;
+    gap: 0;
+    font-size: 6px;
+    line-height: 12px;
+    opacity: 0.48;
+  }
+
+  .sign-demo__infrastructure {
+    left: 0;
+    top: 31px;
+    width: 646px;
+    height: 734px;
+    z-index: 1;
+  }
+
+  .sign-demo__infra-base {
+    stroke: rgb(99 89 77);
+    stroke-width: 1.05;
+    opacity: 0.22;
+  }
+
+  .sign-demo__infra-live {
+    stroke: rgb(var(--login-control-accent));
+    stroke-width: 0.8;
+    opacity: calc(var(--sign-cable-live) * 0.55);
+  }
+
+  .sign-controller {
+    position: absolute;
+    left: 76px;
+    top: 341px;
+    width: 552px;
+    height: 148px;
+    display: block;
+    padding: 0;
+    border: 1px solid rgb(120 92 48 / 72%);
+    background: rgb(13 12 9);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .sign-controller::before,
+  .sign-controller::after {
+    width: 10px;
+    height: 10px;
+    background: transparent;
+    border-color: rgb(120 92 48 / 72%);
+  }
+
+  .sign-controller::before {
+    left: -6px;
+    top: 55px;
+  }
+
+  .sign-controller::after {
+    right: -6px;
+    top: 55px;
+  }
+
+  .sign-controller__header {
+    position: absolute;
+    inset: 0;
+    display: block;
+  }
+
+  .sign-controller__header > div:first-child {
+    position: absolute;
+    left: 16px;
+    top: 9px;
+    display: block;
+  }
+
+  .sign-controller__title {
+    display: block;
+    font-size: 7.8px;
+    line-height: 11px;
+  }
+
+  .sign-controller__spec {
+    display: block;
+    margin-top: 2px;
+    font-size: 5.8px;
+    line-height: 8px;
+  }
+
+  .sign-controller__channel {
+    position: absolute;
+    left: 338px;
+    top: 10px;
+    width: 145px;
+    min-width: 0;
+    justify-items: start;
+    gap: 2px;
+    font-size: 5.8px;
+  }
+
+  .sign-controller__channel-label {
+    line-height: 8px;
+  }
+
+  .sign-controller__channel-states {
+    grid-template-columns: auto 5px auto 5px;
+    gap: 7px;
+    line-height: 8px;
+  }
+
+  .sign-controller__group--mode {
+    position: absolute;
+    left: 18px;
+    top: 33px;
+    width: 374px;
+  }
+
+  .sign-controller__group--mode legend {
+    margin: 0 0 4px;
+    font-size: 6.2px;
+    line-height: 9px;
+  }
+
+  .sign-controller__segmented {
+    display: grid;
+    grid-template-columns: 110px 110px 138px;
+    gap: 8px;
+  }
+
+  .sign-controller__segmented button {
+    min-height: 32px;
+    height: 32px;
+    padding: 0 10px;
+    justify-content: flex-start;
+    text-align: left;
+    border-radius: 0;
+    font-size: 8.2px;
+    line-height: 11px;
+  }
+
+  .sign-controller__dimmer {
+    position: absolute;
+    left: 18px;
+    top: 94px;
+    width: 292px;
+    display: block;
+  }
+
+  .sign-controller__dimmer-head {
+    position: relative;
+    display: block;
+    margin: 0;
+  }
+
+  .sign-controller__dimmer-head label {
+    display: block;
+    margin: 0;
+    font-size: 6.5px;
+    line-height: 8px;
+  }
+
+  .sign-controller__dimmer-head output {
+    position: absolute;
+    left: 256px;
+    top: 8px;
+    width: 36px;
+    font-size: 7.6px;
+    line-height: 11px;
+    opacity: 0.42;
+  }
+
+  .sign-controller input[type="range"] {
+    position: absolute;
+    left: 88px;
+    top: 11px;
+    width: 158px;
+    height: 9px;
+    margin: 0;
+    padding: 0;
+    accent-color: rgb(var(--login-control-accent));
+  }
+
+  .sign-controller__group--source {
+    position: absolute;
+    left: 324px;
+    top: 93px;
+    width: 210px;
+    align-self: auto;
+  }
+
+  .sign-controller__group--source legend {
+    margin: 0 0 4px;
+    font-size: 6.2px;
+    line-height: 8px;
+  }
+
+  .sign-controller__source {
+    display: grid;
+    grid-template-columns: 70px 78px 58px;
+    gap: 4px;
+  }
+
+  .sign-controller__source button {
+    min-height: 24px;
+    height: 24px;
+    padding: 0 6px;
+    border-radius: 0;
+    font-size: 5.5px;
+    line-height: 7px;
+    justify-content: flex-start;
+  }
+
+  .sign-controller__rgb {
+    display: none;
+  }
+
+  .sign-power-panel {
+    position: absolute;
+    left: 76px;
+    top: 565px;
+    width: 260px;
+    height: 132px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid rgb(120 92 48 / 78%);
+    background: rgb(14 12 10);
+  }
+
+  .sign-power-panel::before {
+    left: -6px;
+    top: 66px;
+    width: 10px;
+    height: 10px;
+  }
+
+  .sign-power-panel__copy {
+    position: absolute;
+    left: 16px;
+    top: 10px;
+    margin: 0;
+    gap: 0;
+  }
+
+  .sign-controller__power-title {
+    font-size: 17px;
+    line-height: 17px;
+    transform: scale(0.46);
+    transform-origin: left top;
+    white-space: nowrap;
+  }
+
+  .sign-controller__power-state {
+    position: absolute;
+    top: 24px;
+    left: 0;
+    font-size: 6px;
+    white-space: nowrap;
+  }
+
+  .sign-power-panel__body {
+    position: static;
+    display: block;
+  }
+
+  .sign-controller__switch {
+    position: absolute;
+    left: 16px;
+    top: 50px;
+    width: 34px;
+    height: 62px;
+    min-height: 0;
+    padding: 0;
+    border: 1px solid rgb(120 92 48 / 72%);
+    background: rgb(17 14 11);
+  }
+
+  .sign-controller__switch > span:last-child {
+    position: absolute;
+    left: 43px;
+    top: 11px;
+    font-size: 6px;
+  }
+
+  .sign-controller__switch-track {
+    position: absolute;
+    left: 15px;
+    top: 10px;
+    width: 3px;
+    height: 40px;
+    border: 0;
+    background: rgb(115 102 82);
+  }
+
+  .sign-controller__switch-track::before {
+    display: none;
+  }
+
+  .sign-controller__switch-knob,
+  .sign-controller__switch[aria-checked="true"] .sign-controller__switch-knob {
+    left: 50%;
+    top: 5px;
+    width: 18px;
+    height: 18px;
+    transform: translate(-50%, -50%);
+  }
+
+  .sign-controller__switch[aria-checked="false"] .sign-controller__switch-knob {
+    top: 35px;
+  }
+
+  .sign-power-panel__psu {
+    position: absolute;
+    left: 72px;
+    top: 50px;
+    width: 94px;
+    height: 58px;
+    min-width: 0;
+    padding: 0;
+    border: 1px solid rgb(120 92 48 / 70%);
+    display: block;
+    font-size: 5px;
+  }
+
+  .sign-power-panel__psu > span {
+    position: absolute;
+    left: 12px;
+    top: 10px;
+  }
+
+  .sign-power-panel__psu small:nth-of-type(1) {
+    position: absolute;
+    left: 12px;
+    bottom: 8px;
+  }
+
+  .sign-power-panel__psu small:nth-of-type(2) {
+    position: absolute;
+    right: 12px;
+    bottom: 8px;
+  }
+
+  .sign-power-panel__ready {
+    position: absolute;
+    left: 192px;
+    top: 76px;
+    font-size: 5px;
+  }
+
+  .sign-power-panel__ready-dot {
+    width: 8px;
+    height: 8px;
+  }
+
+  .auth-tech {
+    position: absolute;
+    left: 720px;
+    top: 39px;
+    width: 720px;
+    height: 767px;
+    min-height: 0;
+    padding: 0;
+    border-left: 1px solid var(--login-scene-line);
+    display: block;
+  }
+
+  .auth-tech__grid {
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-size: 32px 32px;
+    opacity: 0.42;
+  }
+
+  .auth-tech__frame {
+    position: absolute;
+    left: 64px;
+    top: 28px;
+    width: 548px;
+    height: 676px;
+    min-height: 676px;
+    max-height: 676px;
+    padding: 0;
+    display: block;
+    border: 1px solid rgb(120 92 48 / 46%);
+    background: rgb(11 10 9 / 88%);
+  }
+
+  .auth-tech__bay-label {
+    position: absolute;
+    left: 22px;
+    top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: rgb(var(--login-control-accent) / 72%);
+    font-family: var(--font-mono);
+    font-size: 7px;
+    line-height: 10px;
+  }
+
+  .auth-tech__bay-label i {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: rgb(var(--login-control-accent) / 74%);
+  }
+
+  .auth-tech__viewport {
+    position: absolute;
+    inset: 0;
+    display: block;
+    min-height: 0;
+  }
+
+  .auth-tech__frame-label {
+    position: absolute;
+    left: 28px;
+    top: 172px;
+    color: var(--login-scene-muted);
+    font-family: var(--font-mono);
+    font-size: 7.5px;
+    line-height: 10px;
+    opacity: 0.72;
+  }
+
+  .auth-tech__workbench {
+    position: absolute;
+    left: 122px;
+    top: 202px;
+    width: 304px;
+    height: 330px;
+    display: block;
+    opacity: 1;
+    transform: none;
+  }
+
+  .auth-tech__rings {
+    position: absolute;
+    left: 74px;
+    top: 50px;
+    width: 164px;
+    height: 164px;
+  }
+
+  .auth-tech__ring--outer {
+    inset: 0;
+    opacity: 0.38;
+  }
+
+  .auth-tech__ring--mid {
+    inset: 26px;
+    opacity: 0.32;
+  }
+
+  .auth-tech__target {
+    width: 40px;
+    height: 40px;
+    opacity: 0.44;
+  }
+
+  .auth-tech__crosshair--x {
+    width: 304px;
+    left: -70px;
+  }
+
+  .auth-tech__crosshair--y {
+    height: 304px;
+    top: -70px;
+  }
+
+  .auth-tech__comet {
+    position: absolute;
+    left: 76px;
+    top: 52px;
+    width: 164px;
+    height: 164px;
+    transform: none;
+    opacity: 0.82;
+  }
+
+  .auth-tech__measure {
+    position: absolute;
+    left: 0;
+    top: 256px;
+    width: 304px;
+    opacity: 0.62;
+  }
+
+  .auth-tech__bottom-meta {
+    position: absolute;
+    left: 0;
+    top: 498px;
+    width: 100%;
+    height: 40px;
+    color: var(--login-scene-muted);
+    font-family: var(--font-mono);
+    font-size: 7.5px;
+    line-height: 10px;
+    opacity: 0.62;
+  }
+
+  .auth-tech__bottom-left {
+    position: absolute;
+    left: 28px;
+    top: 0;
+  }
+
+  .auth-tech__bottom-center {
+    position: absolute;
+    left: 236px;
+    top: 18px;
+    width: 76px;
+    text-align: center;
+  }
+
+  .auth-tech__bottom-right {
+    position: absolute;
+    right: 26px;
+    top: 0;
+  }
+
+  .auth-tech__panel {
+    position: absolute;
+    z-index: 4;
+    left: 76px;
+    top: 56px;
+    width: 396px;
+    min-height: 566px;
+    padding: 24px;
+    overflow: auto;
+  }
+}
+
+@media (min-width: 1025px) and (max-height: 860px) {
+  .auth-gate {
+    overflow: auto;
+  }
+
+  .auth-gate__main {
+    height: 816px;
+    min-height: 816px;
+  }
+}
