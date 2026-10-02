@@ -15,6 +15,7 @@ const LIGHT_RGB: Record<Exclude<SignLightSource, "rgb"> | RgbPreset, string> = {
 
 const MODES: readonly SignLightingMode[] = ["face", "halo", "combined"];
 const SOURCES: readonly SignLightSource[] = ["cool", "warm", "rgb"];
+const RGB_PRESETS: readonly RgbPreset[] = ["blue", "red", "magenta", "cyan"];
 
 function clamp(value: number, min = 0, max = 1): number {
   return Math.min(max, Math.max(min, value));
@@ -69,6 +70,21 @@ type SignLightDemoProps = {
   onSelectSocietate?: () => void;
   onSelectAngajat?: () => void;
 };
+
+function moveRange(
+  event: ReactKeyboardEvent<HTMLInputElement>,
+  value: number,
+  setValue: (value: number) => void,
+): void {
+  let next: number | null = null;
+  if (event.key === "Home") next = 0;
+  if (event.key === "End") next = 100;
+  if (event.key === "PageDown") next = Math.max(0, value - 10);
+  if (event.key === "PageUp") next = Math.min(100, value + 10);
+  if (next === null) return;
+  event.preventDefault();
+  setValue(next);
+}
 
 function moveRadio<T extends string>(
   event: ReactKeyboardEvent<HTMLButtonElement>,
@@ -286,6 +302,7 @@ export function SignLightDemo({
             aria-label="Intensitate iluminare"
             aria-valuetext={`${intensity}%`}
             onChange={(event) => setIntensity(Number(event.target.value))}
+            onKeyDown={(event) => moveRange(event, intensity, setIntensity)}
           />
         </div>
 
@@ -339,7 +356,7 @@ export function SignLightDemo({
           <fieldset className="sign-controller__rgb" disabled={!power}>
             <legend>Culoare RGB</legend>
             <div role="radiogroup" aria-label="Culoare RGB">
-              {(["blue", "red", "magenta", "cyan"] as const).map((preset) => (
+              {RGB_PRESETS.map((preset) => (
                 <button
                   key={preset}
                   type="button"
@@ -347,7 +364,9 @@ export function SignLightDemo({
                   aria-label={preset}
                   aria-checked={rgbPreset === preset}
                   data-preset={preset}
+                  data-radio-value={preset}
                   disabled={!power}
+                  onKeyDown={(event) => moveRadio(event, RGB_PRESETS, rgbPreset, setRgbPreset)}
                   onClick={() => setRgbPreset(preset)}
                 />
               ))}
