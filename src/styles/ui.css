@@ -6047,3 +6047,17 @@ button.context-rail__item:focus-visible {
 .sign-demo__word[data-halo-only] .sign-demo__word-halo {
   opacity: 1;
 }
+
+/* LOGIN V1 COMBINED MODE FINAL MICRO-CALIBRATION */
+/* Preserve standalone FATA and HALO benchmarks; only temper the combined state. */
+.sign-demo__word[data-mode="combined"] .sign-demo__word-face {
+  opacity: calc(var(--sign-face-fill) * 0.91);
+}
+
+.sign-demo__word[data-mode="combined"] .sign-demo__word-core {
+  opacity: calc(var(--sign-core-fill) * 0.92);
+}
+
+.sign-demo__word[data-mode="combined"] .sign-demo__word-halo {
+  opacity: 0.89;
+}
