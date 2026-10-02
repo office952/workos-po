@@ -6855,7 +6855,7 @@ button.context-rail__item:focus-visible {
 .auth-workbench-v3__projection--3 { animation-delay: 140ms; }
 
 .auth-workbench-v3__cursor {
-  opacity: 0;
+  opacity: 1;
 }
 
 .auth-workbench-v3__cursor path {
