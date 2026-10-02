@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import type { CloudMembershipPresentation } from "../adapters/cloudSessionAdapter";
 import { BrandMark } from "../components/BrandMark";
 import { Button } from "../components/Button";
@@ -42,10 +42,29 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
     return resolveColorScheme(preference, prefersDark) === "dark";
   });
   const [accessMode, setAccessMode] = useState<AuthAccessMode>("idle");
+  const [sceneScale, setSceneScale] = useState(1);
   const expiredNotice = kind === "session_expired" || sessionExpired;
   const scene = power ? "night" : "day";
   const resolvedAccess: AuthAccessMode =
     kind === "session_expired" && accessMode === "idle" ? "societate" : accessMode;
+
+  useEffect(() => {
+    const updateSceneScale = () => {
+      if (window.innerWidth <= 1024) {
+        setSceneScale(1);
+        return;
+      }
+      const availableWidth = window.innerWidth;
+      const availableHeight = Math.max(0, window.innerHeight - 84);
+      const nextScale = Math.min(availableWidth / 1440, availableHeight / 816, 1.5);
+      setSceneScale(Math.max(0.72, nextScale));
+    };
+    updateSceneScale();
+    window.addEventListener("resize", updateSceneScale);
+    return () => {
+      window.removeEventListener("resize", updateSceneScale);
+    };
+  }, []);
 
   useEffect(() => {
     const syncPowerFromPreference = () => {
@@ -119,6 +138,7 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
       data-floorplan="authentication"
       data-scene={scene}
       data-access={resolvedAccess}
+      style={{ "--login-stage-scale": sceneScale } as CSSProperties}
     >
       <a className="skip-link" href="#autentificare">
         Sari la autentificare
