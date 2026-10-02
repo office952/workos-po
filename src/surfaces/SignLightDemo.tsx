@@ -48,6 +48,7 @@ export function resolveSignLighting(
 } {
   const energy = power ? clamp(intensity / 100) : 0;
   const faceEnabled = mode === "face" || mode === "combined";
+  const haloEnabled = mode === "halo" || mode === "combined";
 
   return {
     faceFill: faceEnabled ? lightingBand(energy, 0.76, 0.16) : 0,
@@ -107,7 +108,6 @@ export function SignLightDemo({
 
   const activeColor = source === "rgb" ? rgbPreset : source;
   const faceEnabled = mode === "face" || mode === "combined";
-  const haloEnabled = mode === "halo" || mode === "combined";
   const lighting = useMemo(
     () => resolveSignLighting(intensity, mode, power),
     [intensity, mode, power],
