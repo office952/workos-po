@@ -37,7 +37,7 @@ describe("AccountArea", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Cont" }));
     expect(screen.getByText("owner@example.test")).toBeInTheDocument();
-    expect(screen.getByLabelText("Aspect")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Schimbă prezentarea WorkOS" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ieși din cont" })).toBeInTheDocument();
   });
 
