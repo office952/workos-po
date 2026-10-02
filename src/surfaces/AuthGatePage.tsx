@@ -151,8 +151,6 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
         <SignLightDemo
           power={power}
           onPowerChange={setPresentationPower}
-          onSelectSocietate={() => openAccess("societate")}
-          onSelectAngajat={() => openAccess("angajat")}
         />
         <AuthTechnicalFrame
           kind={kind}
