@@ -5952,3 +5952,65 @@ button.context-rail__item:focus-visible {
     opacity: 0.26;
   }
 }
+
+/* LOGIN V1 LIGHTING LAB 2 EXACT BENCHMARK */
+.sign-demo__word-face {
+  color: rgb(var(--sign-face-rgb));
+  opacity: var(--sign-face-fill);
+  filter:
+    drop-shadow(0 0 6.6407036781px rgb(var(--sign-light-rgb) / var(--sign-face-glow-tight)))
+    drop-shadow(0 0 13.373632431px rgb(var(--sign-light-rgb) / var(--sign-face-glow-near)));
+}
+
+.sign-demo__word-core {
+  color: rgb(var(--sign-core-rgb));
+  opacity: var(--sign-core-fill);
+  filter:
+    drop-shadow(0 0 3.5239760876px rgb(var(--sign-light-rgb) / var(--sign-core-glow)));
+}
+
+.auth-gate[data-scene="night"] .sign-demo__word-halo {
+  color: rgb(44 36 25);
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 7.1379394531px rgb(var(--sign-light-rgb) / var(--sign-halo-tight)))
+    drop-shadow(0 0 19.567483902px rgb(var(--sign-light-rgb) / var(--sign-halo-near)))
+    drop-shadow(0 0 44.56332016px rgb(var(--sign-light-rgb) / var(--sign-halo-mid)))
+    drop-shadow(0 0 77.373855591px rgb(var(--sign-light-rgb) / var(--sign-halo-far)));
+}
+
+.sign-demo__word[data-mode="face"] .sign-demo__word-halo {
+  opacity: 0;
+  filter: none;
+}
+
+.sign-demo__word[data-halo-only] .sign-demo__word-material {
+  color: #050505;
+  opacity: 1;
+}
+
+.sign-demo__word[data-halo-only] .sign-demo__word-halo {
+  color: rgb(44 36 25);
+}
+
+.sign-demo__word[data-mode="combined"] .sign-demo__word-material,
+.sign-demo__word[data-mode="face"] .sign-demo__word-material {
+  opacity: 0;
+}
+
+.sign-demo__word-face,
+.sign-demo__word-core,
+.sign-demo__word-halo {
+  transition:
+    color var(--motion-edit) var(--ease-work),
+    opacity var(--motion-edit) var(--ease-work),
+    filter var(--motion-navigate) var(--ease-work);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sign-demo__word-face,
+  .sign-demo__word-core,
+  .sign-demo__word-halo {
+    transition: none;
+  }
+}
