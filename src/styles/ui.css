@@ -4418,3 +4418,360 @@ button.context-rail__item:focus-visible {
     display: none;
   }
 }
+
+/* LOGIN V1 RUNTIME PARITY PASS 2 */
+.auth-gate__main {
+  grid-template-columns: minmax(0, 1fr) minmax(31rem, 1fr);
+  gap: 2.25rem;
+  width: 100%;
+  max-width: 90rem;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.sign-demo {
+  max-width: none;
+  gap: 1rem;
+  isolation: isolate;
+}
+
+.sign-demo::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: 0;
+  top: 0.7rem;
+  width: min(100%, 39rem);
+  height: 33rem;
+  background-image:
+    linear-gradient(var(--login-scene-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--login-scene-grid) 1px, transparent 1px);
+  background-size: 42px 42px;
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.sign-demo__stage,
+.sign-controller,
+.sign-power-panel {
+  position: relative;
+  z-index: 2;
+}
+
+.sign-demo__stage {
+  min-height: 16.6rem;
+  padding-top: 0.85rem;
+}
+
+.sign-demo__assembly {
+  min-height: 8.5rem;
+}
+
+.sign-demo__word {
+  margin-left: 0;
+}
+
+.sign-demo__word > span {
+  font-size: clamp(4.8rem, 6.35vw, 6.35rem);
+}
+
+.sign-demo__word[data-face-emission="on"] .sign-demo__word-material {
+  opacity: 0;
+}
+
+.sign-demo__word-face {
+  color: rgb(var(--sign-face-rgb));
+  filter:
+    drop-shadow(0 0 1.5px rgb(var(--sign-light-rgb) / calc(var(--sign-face-glow) * 0.82)))
+    drop-shadow(0 0 4px rgb(var(--sign-light-rgb) / calc(var(--sign-face-glow) * 0.34)));
+}
+
+.sign-demo__word-core {
+  color: rgb(var(--sign-core-rgb));
+  filter: drop-shadow(0 0 1.25px rgb(var(--sign-light-rgb) / calc(var(--sign-core-glow) * 0.66)));
+}
+
+.sign-demo__word[data-halo-only] .sign-demo__word-material {
+  color: #050505;
+  opacity: 1;
+}
+
+.sign-demo__word[data-halo-only] .sign-demo__word-face,
+.sign-demo__word[data-halo-only] .sign-demo__word-core {
+  opacity: 0;
+  filter: none;
+}
+
+.sign-demo__infrastructure {
+  position: absolute;
+  z-index: 1;
+  left: -1.6rem;
+  top: 2.2rem;
+  width: min(calc(100% + 1.6rem), 42rem);
+  height: 43rem;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.sign-demo__infra-base,
+.sign-demo__infra-live {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sign-demo__infra-base {
+  stroke: var(--login-scene-frame);
+  stroke-width: 1.05;
+  opacity: 0.28;
+}
+
+.sign-demo__infra-live {
+  stroke: rgb(var(--login-control-accent));
+  stroke-width: 0.8;
+  opacity: var(--sign-cable-live);
+}
+
+.auth-gate[data-scene="day"] .sign-demo__infra-base {
+  opacity: 0.34;
+}
+
+.sign-demo__feed-notes {
+  left: 4.6rem;
+  top: -0.1rem;
+  opacity: 0.72;
+}
+
+.sign-controller {
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(10.5rem, 0.82fr);
+  grid-template-areas:
+    "header header"
+    "mode source"
+    "dimmer source"
+    "rgb rgb";
+  column-gap: 1rem;
+  row-gap: 0.65rem;
+  width: min(100%, 34rem);
+  padding: 0.8rem 0.9rem 0.75rem;
+}
+
+.sign-controller__header {
+  grid-area: header;
+}
+
+.sign-controller__group--mode {
+  grid-area: mode;
+}
+
+.sign-controller__dimmer {
+  grid-area: dimmer;
+  align-self: end;
+}
+
+.sign-controller__group--source {
+  grid-area: source;
+  align-self: end;
+}
+
+.sign-controller__rgb {
+  grid-area: rgb;
+}
+
+.sign-controller__channel {
+  display: grid;
+  justify-items: end;
+  gap: 0.2rem;
+  min-width: 8.5rem;
+  color: var(--login-scene-muted);
+  font-family: var(--font-mono);
+  font-size: 0.46rem;
+  letter-spacing: 0.05em;
+}
+
+.sign-controller__channel-label {
+  color: var(--login-scene-muted);
+}
+
+.sign-controller__channel-states {
+  display: inline-grid;
+  grid-template-columns: auto 5px auto 5px;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sign-controller__channel-states > span[data-active] {
+  color: rgb(var(--login-control-accent));
+}
+
+.sign-controller__channel-states > i {
+  display: block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--login-scene-frame);
+}
+
+.sign-controller__channel-states > i[data-active] {
+  background: rgb(var(--login-control-accent));
+  box-shadow: 0 0 4px rgb(var(--login-control-accent) / 46%);
+}
+
+.sign-controller__segmented {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sign-controller__source {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sign-controller__segmented button,
+.sign-controller__source button {
+  min-height: 1.8rem;
+  font-size: 0.51rem;
+}
+
+.sign-controller__dimmer-head {
+  margin-bottom: 0.1rem;
+}
+
+.sign-controller input[type="range"] {
+  height: 0.72rem;
+}
+
+.sign-power-panel {
+  width: 16.8rem;
+  margin-top: 3.1rem;
+  padding: 0.8rem 0.85rem 0.76rem;
+}
+
+.sign-power-panel__body {
+  gap: 0.75rem;
+}
+
+.sign-power-panel__psu {
+  min-width: 5.9rem;
+  padding: 0.52rem 0.58rem;
+}
+
+.auth-tech {
+  min-height: 0;
+  padding-left: 1.85rem;
+}
+
+.auth-tech__grid {
+  left: 1.85rem;
+}
+
+.auth-tech__frame {
+  width: 100%;
+  min-height: 41rem;
+  max-height: 44rem;
+  padding: 1rem;
+}
+
+.auth-tech__workbench {
+  width: min(100%, 27rem);
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__rings {
+  width: 208px;
+  height: 208px;
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__ring--outer {
+  opacity: 0.4;
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__ring--mid {
+  inset: 36px;
+  opacity: 0.34;
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__target {
+  width: 46px;
+  height: 46px;
+  opacity: 0.5;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet {
+  width: min(82%, 24rem);
+  opacity: 0.46;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet-glow {
+  opacity: 0.68;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet-core {
+  opacity: 0.94;
+}
+
+.auth-tech__measure {
+  width: 88%;
+}
+
+@media (max-width: 1280px) {
+  .auth-gate__main {
+    grid-template-columns: minmax(0, 1.02fr) minmax(27rem, 0.98fr);
+    gap: 1.75rem;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  .sign-controller {
+    width: 100%;
+  }
+
+  .auth-tech {
+    padding-left: 1.25rem;
+  }
+
+  .auth-tech__grid {
+    left: 1.25rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  .auth-gate__main {
+    grid-template-columns: 1fr;
+    max-width: 50rem;
+  }
+
+  .sign-demo__infrastructure {
+    height: 40rem;
+  }
+
+  .auth-tech {
+    padding-left: 0;
+  }
+
+  .auth-tech__grid {
+    left: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .sign-controller {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "mode"
+      "dimmer"
+      "source"
+      "rgb";
+  }
+
+  .sign-controller__channel {
+    min-width: 0;
+  }
+
+  .sign-power-panel {
+    margin-top: 1.25rem;
+  }
+
+  .sign-demo__infrastructure {
+    display: none;
+  }
+}
