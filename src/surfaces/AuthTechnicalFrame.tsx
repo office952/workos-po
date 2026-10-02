@@ -137,26 +137,60 @@ export function AuthTechnicalFrame({
 function AuthWorkbenchGraphic({ active }: { active: boolean }) {
   return (
     <div className="auth-tech__workbench" data-active={active ? "" : undefined} aria-hidden="true">
-      <div className="auth-tech__rings">
-        <span className="auth-tech__ring auth-tech__ring--outer" />
-        <span className="auth-tech__ring auth-tech__ring--mid" />
-        <span className="auth-tech__target" />
-        <span className="auth-tech__crosshair auth-tech__crosshair--x" />
-        <span className="auth-tech__crosshair auth-tech__crosshair--y" />
-      </div>
-      <svg className="auth-tech__comet" viewBox="0 0 360 240" preserveAspectRatio="none">
-        <path
-          className="auth-tech__comet-glow"
-          pathLength="1"
-          d="M72 96 C132 88 168 104 208 138 C238 164 262 190 286 208"
-        />
-        <path
-          className="auth-tech__comet-core"
-          pathLength="1"
-          d="M72 96 C132 88 168 104 208 138 C238 164 262 190 286 208"
-        />
-        <circle className="auth-tech__comet-head" cx="286" cy="208" r="3" />
+      <svg
+        className="auth-tech__blueprint"
+        viewBox="0 0 548 676"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <g className="auth-tech__blueprint-base">
+          <path d="M24 166 H66 M24 166 V208" />
+          <path d="M482 166 H524 M524 166 V208" />
+          <path d="M24 450 V492 H66" />
+          <path d="M482 492 H524 V450" />
+          <path d="M274 166 V492" />
+          <path d="M24 329 H524" />
+          <circle cx="274" cy="329" r="100" />
+          <rect x="199" y="254" width="150" height="150" />
+          <circle cx="274" cy="329" r="3" />
+        </g>
+
+        <g className="auth-tech__blueprint-dynamic">
+          <path
+            className="auth-tech__arc auth-tech__arc--a"
+            d="M178.005 366.004 C161.005 330.004 163.005 289.004 186.005 255.004 C209.005 222.004 249.005 207.004 288.005 215.004"
+          />
+          <path
+            className="auth-tech__arc auth-tech__arc--b"
+            d="M318 227 C354 249 376 289 374 331 C372 370 350 405 316 424"
+          />
+          <path className="auth-tech__handle" d="M199 282 L291 316" />
+          <circle className="auth-tech__node auth-tech__node--main" cx="274" cy="330" r="3" />
+          <circle className="auth-tech__node" cx="199" cy="282" r="2.5" />
+          <circle className="auth-tech__node" cx="370" cy="294" r="2.5" />
+          <path className="auth-tech__tick" d="M182 238 H200 M182 238 V256" />
+          <path className="auth-tech__tick" d="M348 421 H366 M366 404 V422" />
+        </g>
+
+        <g className="auth-tech__comet-trail">
+          <path
+            className="auth-tech__comet-glow"
+            pathLength="1"
+            d="M176 246 C212 250 244 267 270 294 C301 326 326 365 340 410"
+          />
+          <path
+            className="auth-tech__comet-core"
+            pathLength="1"
+            d="M176 246 C212 250 244 267 270 294 C301 326 326 365 340 410"
+          />
+          <path
+            className="auth-tech__comet-echo"
+            pathLength="1"
+            d="M183 250 C219 254 251 271 277 298 C308 330 333 369 347 414"
+          />
+          <circle className="auth-tech__comet-head" cx="340" cy="410" r="3" />
+        </g>
       </svg>
+
       <div className="auth-tech__measure">
         <span />
         <em>150 px</em>
