@@ -3769,3 +3769,95 @@ button.context-rail__item:focus-visible {
     display: none;
   }
 }
+
+/* LOGIN V1 COLOR DISCIPLINE SELF-REVIEW */
+.auth-gate {
+  --login-control-accent: 184 135 43;
+  --login-control-accent-soft: 121 91 42;
+}
+
+.sign-controller__segmented button[aria-checked="true"],
+.sign-controller__source button[aria-checked="true"],
+.auth-gate[data-scene="night"] .sign-controller__segmented button[aria-checked="true"],
+.auth-gate[data-scene="night"] .sign-controller__source button[aria-checked="true"] {
+  border-color: rgb(var(--login-control-accent) / 88%);
+  color: var(--login-scene-ink);
+  box-shadow: inset 0 -2px 0 rgb(var(--login-control-accent) / 78%);
+}
+
+.sign-controller__dimmer-head output {
+  color: rgb(var(--login-control-accent));
+}
+
+.sign-controller input[type="range"] {
+  accent-color: rgb(var(--login-control-accent));
+}
+
+.sign-demo__journey-mark,
+.sign-demo__journey[data-tone="angajat"] .sign-demo__journey-mark {
+  background: rgb(var(--login-control-accent));
+}
+
+.sign-demo__journey:focus-visible,
+.sign-controller__segmented button:focus-visible,
+.sign-controller__source button:focus-visible,
+.sign-controller__rgb button:focus-visible,
+.sign-controller__switch:focus-visible,
+.sign-controller input[type="range"]:focus-visible {
+  outline-color: rgb(var(--login-control-accent));
+}
+
+.auth-gate__login-choices .hit[aria-pressed="true"] .button--primary {
+  background: #161717;
+  border-color: #161717;
+  color: #fff;
+}
+
+.auth-gate[data-scene="night"] .auth-gate__login-choices .hit[aria-pressed="true"] .button--primary {
+  background: rgb(var(--login-control-accent) / 82%);
+  border-color: rgb(var(--login-control-accent) / 92%);
+  color: #fff7e7;
+}
+
+.auth-gate__login-choices .hit[aria-pressed="false"] .button--secondary {
+  background: var(--login-scene-canvas);
+  border-color: color-mix(in srgb, var(--login-scene-frame) 70%, transparent);
+  color: var(--login-scene-ink);
+}
+
+.auth-gate[data-scene="night"] .auth-gate__login-choices .hit[aria-pressed="false"] .button--secondary {
+  background: rgb(14 12 9 / 96%);
+  border-color: rgb(var(--login-control-accent-soft) / 68%);
+  color: rgb(181 169 145);
+}
+
+.auth-gate[data-scene="day"] .auth-tech__panel .auth-gate__submit .button--primary {
+  background: #161717;
+  border-color: #161717;
+  color: #fff;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__panel .auth-gate__submit .button--primary {
+  background: rgb(var(--login-control-accent) / 84%);
+  border-color: rgb(var(--login-control-accent) / 94%);
+  color: #fff7e7;
+}
+
+.auth-gate[data-scene="day"] .auth-tech__target::after {
+  background: #5f5c55;
+}
+
+.auth-gate[data-scene="day"] .auth-tech__ring,
+.auth-gate[data-scene="day"] .auth-tech__target {
+  border-color: rgb(95 92 85 / 28%);
+}
+
+.auth-gate[data-scene="day"] .auth-tech__crosshair {
+  background: rgb(95 92 85 / 18%);
+}
+
+.sign-controller__rgb button[aria-checked="true"] {
+  box-shadow:
+    0 0 0 2px var(--color-canvas),
+    0 0 0 4px rgb(var(--login-control-accent) / 82%);
+}
