@@ -6410,3 +6410,220 @@ button.context-rail__item:focus-visible {
     height: 816px;
   }
 }
+
+/* LOGIN V1 MOTION PASS 1 */
+/* Semantic motion only: POWER -> cable -> sign -> AUTH acknowledgement. */
+.sign-demo[data-power-transition] .sign-demo__infra-live {
+  stroke-dasharray: 0.1 0.9;
+  stroke-linecap: round;
+}
+
+.sign-demo[data-power-transition="on"] .sign-demo__infrastructure > g:nth-child(3) .sign-demo__infra-live {
+  animation: login-power-cable-on 360ms var(--ease-work) 0ms both;
+}
+
+.sign-demo[data-power-transition="on"] .sign-demo__infrastructure > g:nth-child(2) .sign-demo__infra-live {
+  animation: login-power-cable-on 360ms var(--ease-work) 70ms both;
+}
+
+.sign-demo[data-power-transition="on"] .sign-demo__infrastructure > g:nth-child(1) .sign-demo__infra-live {
+  animation: login-power-cable-on 360ms var(--ease-work) 140ms both;
+}
+
+.sign-demo[data-power-transition="off"] .sign-demo__infrastructure > g:nth-child(1) .sign-demo__infra-live {
+  animation: login-power-cable-off 320ms var(--ease-work) 0ms both;
+}
+
+.sign-demo[data-power-transition="off"] .sign-demo__infrastructure > g:nth-child(2) .sign-demo__infra-live {
+  animation: login-power-cable-off 320ms var(--ease-work) 55ms both;
+}
+
+.sign-demo[data-power-transition="off"] .sign-demo__infrastructure > g:nth-child(3) .sign-demo__infra-live {
+  animation: login-power-cable-off 320ms var(--ease-work) 110ms both;
+}
+
+.sign-demo[data-power-transition="on"] .sign-power-panel__ready-dot {
+  animation: login-power-ready-ack 360ms var(--ease-work) both;
+}
+
+.sign-demo[data-power-transition="off"] .sign-power-panel__ready-dot {
+  animation: login-power-off-ack 260ms var(--ease-work) both;
+}
+
+@keyframes login-power-cable-on {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  24% {
+    opacity: 0.18;
+  }
+  62% {
+    opacity: 0.72;
+  }
+  100% {
+    stroke-dashoffset: 0.02;
+    opacity: var(--sign-cable-live);
+  }
+}
+
+@keyframes login-power-cable-off {
+  0% {
+    stroke-dashoffset: 0.02;
+    opacity: var(--sign-cable-live);
+  }
+  45% {
+    opacity: 0.44;
+  }
+  100% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+}
+
+@keyframes login-power-ready-ack {
+  0% {
+    transform: scale(0.82);
+    opacity: 0.35;
+  }
+  55% {
+    transform: scale(1.18);
+    opacity: 1;
+    box-shadow: 0 0 9px rgb(var(--login-control-accent) / 66%);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes login-power-off-ack {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0.35;
+    transform: scale(0.82);
+  }
+}
+
+/* Standby workbench: one restrained sweep, long quiet interval. */
+.auth-gate[data-scene="night"] .auth-tech__workbench:not([data-active]) .auth-tech__comet-glow,
+.auth-gate[data-scene="night"] .auth-tech__workbench:not([data-active]) .auth-tech__comet-core,
+.auth-gate[data-scene="night"] .auth-tech__workbench:not([data-active]) .auth-tech__comet-echo {
+  animation: login-auth-standby-trace 6.4s var(--ease-work) infinite;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__workbench:not([data-active]) .auth-tech__comet-head {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: login-auth-standby-head 6.4s var(--ease-work) infinite;
+}
+
+@keyframes login-auth-standby-trace {
+  0%,
+  68% {
+    stroke-dasharray: 0.05 0.95;
+    stroke-dashoffset: 0.9;
+    opacity: 0;
+  }
+  72% {
+    opacity: 0.18;
+  }
+  79% {
+    stroke-dasharray: 0.22 0.78;
+    stroke-dashoffset: 0.42;
+    opacity: 0.72;
+  }
+  86% {
+    stroke-dasharray: 0.36 0.64;
+    stroke-dashoffset: 0.08;
+    opacity: 0.24;
+  }
+  90%,
+  100% {
+    stroke-dasharray: 0.05 0.95;
+    stroke-dashoffset: 0.02;
+    opacity: 0;
+  }
+}
+
+@keyframes login-auth-standby-head {
+  0%,
+  68% {
+    opacity: 0;
+    transform: translate(-38px, -58px) scale(0.72);
+  }
+  73% {
+    opacity: 0.3;
+  }
+  82% {
+    opacity: 1;
+    transform: translate(-7px, -12px) scale(0.92);
+  }
+  87% {
+    opacity: 0.45;
+    transform: translate(0, 0) scale(1);
+  }
+  90%,
+  100% {
+    opacity: 0;
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+/* AUTH reveal keeps the technical frame fixed and changes only hierarchy. */
+.auth-tech__viewport[data-auth-active] .auth-tech__panel {
+  animation: login-auth-panel-reveal var(--motion-navigate) var(--ease-work) both;
+}
+
+.auth-tech__viewport[data-auth-active] .auth-tech__blueprint {
+  transition:
+    opacity var(--motion-navigate) var(--ease-work),
+    filter var(--motion-navigate) var(--ease-work);
+  filter: saturate(0.82);
+}
+
+@keyframes login-auth-panel-reveal {
+  from {
+    opacity: 0;
+    transform: scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Press feedback stays mechanical and brief. */
+.sign-controller__switch:active .sign-controller__switch-knob {
+  transform: translate(-50%, -50%) scale(0.9);
+}
+
+.auth-gate__login-choices .button:active {
+  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sign-demo[data-power-transition] .sign-demo__infra-live,
+  .sign-demo[data-power-transition] .sign-power-panel__ready-dot,
+  .auth-tech__workbench:not([data-active]) .auth-tech__comet-glow,
+  .auth-tech__workbench:not([data-active]) .auth-tech__comet-core,
+  .auth-tech__workbench:not([data-active]) .auth-tech__comet-echo,
+  .auth-tech__workbench:not([data-active]) .auth-tech__comet-head,
+  .auth-tech__viewport[data-auth-active] .auth-tech__panel {
+    animation: none !important;
+  }
+
+  .auth-tech__viewport[data-auth-active] .auth-tech__blueprint,
+  .auth-gate__login-choices .button,
+  .sign-controller__switch-knob {
+    transition: none !important;
+  }
+
+  .auth-gate__login-choices .button:active,
+  .sign-controller__switch:active .sign-controller__switch-knob {
+    transform: none;
+  }
+}
