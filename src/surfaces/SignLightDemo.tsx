@@ -6,7 +6,7 @@ type RgbPreset = "blue" | "red" | "magenta" | "cyan";
 
 const LIGHT_RGB: Record<Exclude<SignLightSource, "rgb"> | RgbPreset, string> = {
   cool: "199 222 255",
-  warm: "255 202 112",
+  warm: "233 184 86",
   blue: "40 112 255",
   red: "255 64 72",
   magenta: "255 62 210",
@@ -15,12 +15,12 @@ const LIGHT_RGB: Record<Exclude<SignLightSource, "rgb"> | RgbPreset, string> = {
 
 const FACE_RGB: Record<Exclude<SignLightSource, "rgb">, string> = {
   cool: "232 240 252",
-  warm: "244 224 183",
+  warm: "193 181 154",
 };
 
 const CORE_RGB: Record<Exclude<SignLightSource, "rgb">, string> = {
   cool: "250 252 255",
-  warm: "255 244 216",
+  warm: "255 217 143",
 };
 
 const MODES: readonly SignLightingMode[] = ["face", "halo", "combined"];
@@ -48,7 +48,8 @@ export function resolveSignLighting(
   power: boolean,
 ): {
   faceFill: number;
-  faceGlow: number;
+  faceGlowTight: number;
+  faceGlowNear: number;
   coreFill: number;
   coreGlow: number;
   haloTight: number;
@@ -62,14 +63,15 @@ export function resolveSignLighting(
   const haloEnabled = mode === "halo" || mode === "combined";
 
   return {
-    faceFill: faceEnabled ? lightingBand(energy, 0.76, 0.16) : 0,
-    faceGlow: faceEnabled ? lightingBand(energy, 0.38, 0.1) : 0,
-    coreFill: faceEnabled ? lightingBand(energy, 0.38, 0.14) : 0,
-    coreGlow: faceEnabled ? lightingBand(energy, 0.2, 0.08) : 0,
-    haloTight: haloEnabled ? lightingBand(energy, 0.98, 0.02) : 0,
-    haloNear: haloEnabled ? lightingBand(energy, 0.75, 0.1) : 0,
-    haloMid: haloEnabled ? lightingBand(energy, 0.295, 0.035) : 0,
-    haloFar: haloEnabled ? lightingBand(energy, 0.07, 0.01) : 0,
+    faceFill: faceEnabled ? lightingBand(energy, 1, 0) : 0,
+    faceGlowTight: faceEnabled ? lightingBand(energy, 0.3750684559, 0.075) : 0,
+    faceGlowNear: faceEnabled ? lightingBand(energy, 0.1295126379, 0.03) : 0,
+    coreFill: faceEnabled ? lightingBand(energy, 0.3751134872, 0.07) : 0,
+    coreGlow: faceEnabled ? lightingBand(energy, 0.2044193596, 0.04) : 0,
+    haloTight: haloEnabled ? lightingBand(energy, 0.9831462502, 0.0168537498) : 0,
+    haloNear: haloEnabled ? lightingBand(energy, 0.7525049448, 0.12) : 0,
+    haloMid: haloEnabled ? lightingBand(energy, 0.294754923, 0.045) : 0,
+    haloFar: haloEnabled ? lightingBand(energy, 0.0698283836, 0.008) : 0,
     cableLive: power ? 0.12 + smoothstep(0, 1, energy) * 0.08 : 0,
   };
 }
@@ -143,7 +145,8 @@ export function SignLightDemo({ power, onPowerChange }: SignLightDemoProps) {
         "--sign-face-rgb": faceRgb,
         "--sign-core-rgb": coreRgb,
         "--sign-face-fill": lighting.faceFill,
-        "--sign-face-glow": lighting.faceGlow,
+        "--sign-face-glow-tight": lighting.faceGlowTight,
+        "--sign-face-glow-near": lighting.faceGlowNear,
         "--sign-core-fill": lighting.coreFill,
         "--sign-core-glow": lighting.coreGlow,
         "--sign-halo-tight": lighting.haloTight,
