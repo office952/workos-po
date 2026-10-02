@@ -171,6 +171,7 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
         <SignLightDemo
           power={power}
           onPowerChange={setPresentationPower}
+          accessMode={resolvedAccess}
         />
         <AuthTechnicalFrame
           kind={kind}
