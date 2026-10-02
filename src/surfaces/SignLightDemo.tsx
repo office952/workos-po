@@ -67,8 +67,6 @@ export function resolveSignLighting(
 type SignLightDemoProps = {
   power: boolean;
   onPowerChange: (power: boolean) => void;
-  onSelectSocietate?: () => void;
-  onSelectAngajat?: () => void;
 };
 
 function moveRange(
@@ -111,12 +109,7 @@ function moveRadio<T extends string>(
   target?.focus();
 }
 
-export function SignLightDemo({
-  power,
-  onPowerChange,
-  onSelectSocietate,
-  onSelectAngajat,
-}: SignLightDemoProps) {
+export function SignLightDemo({ power, onPowerChange }: SignLightDemoProps) {
   const [intensity, setIntensity] = useState(75);
   const [mode, setMode] = useState<SignLightingMode>("face");
   const [source, setSource] = useState<SignLightSource>("warm");
