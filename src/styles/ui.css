@@ -5575,3 +5575,89 @@ button.context-rail__item:focus-visible {
     opacity: 0.58;
   }
 }
+
+/* LOGIN V1 01A GEOMETRY CALIBRATION */
+@media (min-width: 1025px) {
+  .sign-demo__word > span {
+    font-size: 86px;
+    line-height: 84px;
+  }
+
+  .sign-demo__infrastructure {
+    left: 0;
+    top: 0;
+    width: 720px;
+    height: 816px;
+  }
+
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__header,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__group,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__dimmer,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb {
+    opacity: 0.18;
+    filter: blur(1.05px);
+  }
+
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__group,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__dimmer,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb {
+    pointer-events: none;
+  }
+
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller {
+    box-shadow: none;
+  }
+
+  .auth-tech__bay-label {
+    left: 24px;
+    top: 20px;
+  }
+
+  .auth-tech__workbench {
+    left: 108px;
+    top: 202px;
+    width: 304px;
+    height: 330px;
+  }
+
+  .auth-tech__rings {
+    left: 54px;
+    top: 33px;
+    width: 164px;
+    height: 164px;
+    background:
+      linear-gradient(var(--login-scene-frame), var(--login-scene-frame)) left top / 18px 1px no-repeat,
+      linear-gradient(var(--login-scene-frame), var(--login-scene-frame)) left top / 1px 18px no-repeat,
+      linear-gradient(var(--login-scene-frame), var(--login-scene-frame)) right top / 18px 1px no-repeat,
+      linear-gradient(var(--login-scene-frame), var(--login-scene-frame)) right top / 1px 18px no-repeat,
+      linear-gradient(var(--login-scene-frame), var(--login-scene-frame)) left bottom / 18px 1px no-repeat,
+      linear-gradient(var(--login-scene-frame), var(--login-scene-frame)) left bottom / 1px 18px no-repeat,
+      linear-gradient(var(--login-scene-frame), var(--login-scene-frame)) right bottom / 18px 1px no-repeat,
+      linear-gradient(var(--login-scene-frame), var(--login-scene-frame)) right bottom / 1px 18px no-repeat;
+  }
+
+  .auth-tech__comet {
+    left: 68px;
+    top: 44px;
+    width: 164px;
+    height: 164px;
+  }
+
+  .auth-tech__measure {
+    left: 0;
+    top: 256px;
+    width: 304px;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__rings {
+    background:
+      linear-gradient(rgb(128 133 140 / 34%), rgb(128 133 140 / 34%)) left top / 18px 1px no-repeat,
+      linear-gradient(rgb(128 133 140 / 34%), rgb(128 133 140 / 34%)) left top / 1px 18px no-repeat,
+      linear-gradient(rgb(128 133 140 / 34%), rgb(128 133 140 / 34%)) right top / 18px 1px no-repeat,
+      linear-gradient(rgb(128 133 140 / 34%), rgb(128 133 140 / 34%)) right top / 1px 18px no-repeat,
+      linear-gradient(rgb(128 133 140 / 34%), rgb(128 133 140 / 34%)) left bottom / 18px 1px no-repeat,
+      linear-gradient(rgb(128 133 140 / 34%), rgb(128 133 140 / 34%)) left bottom / 1px 18px no-repeat,
+      linear-gradient(rgb(128 133 140 / 34%), rgb(128 133 140 / 34%)) right bottom / 18px 1px no-repeat,
+      linear-gradient(rgb(128 133 140 / 34%), rgb(128 133 140 / 34%)) right bottom / 1px 18px no-repeat;
+  }
+}
