@@ -1,4 +1,11 @@
-import { useMemo, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 
 export type SignLightingMode = "face" | "halo" | "combined";
 type SignLightSource = "cool" | "warm" | "rgb";
@@ -79,6 +86,7 @@ export function resolveSignLighting(
 type SignLightDemoProps = {
   power: boolean;
   onPowerChange: (power: boolean) => void;
+  accessMode: "idle" | "societate" | "angajat";
 };
 
 function moveRange(
@@ -123,6 +131,8 @@ function moveRadio<T extends string>(
 
 export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDemoProps) {
   const [intensity, setIntensity] = useState(75);
+  const [powerTransition, setPowerTransition] = useState<"on" | "off" | null>(null);
+  const previousPower = useRef(power);
   const [mode, setMode] = useState<SignLightingMode>("face");
   const [source, setSource] = useState<SignLightSource>("warm");
   const [rgbPreset, setRgbPreset] = useState<RgbPreset>("blue");
@@ -145,6 +155,16 @@ export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDem
     () => resolveSignLighting(intensity, mode, power),
     [intensity, mode, power],
   );
+
+  useEffect(() => {
+    if (previousPower.current === power) {
+      return;
+    }
+    previousPower.current = power;
+    setPowerTransition(power ? "on" : "off");
+    const timer = window.setTimeout(() => setPowerTransition(null), 440);
+    return () => window.clearTimeout(timer);
+  }, [power]);
 
   const lightingStyle = useMemo(
     () =>
@@ -173,6 +193,7 @@ export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDem
       data-power={power ? "on" : "off"}
       data-mode={mode}
       data-source={source}
+      data-power-transition={powerTransition ?? undefined}
       style={lightingStyle}
     >
       <p className="sign-demo__scene-state" aria-hidden="true">
@@ -192,6 +213,7 @@ export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDem
           />
           <path
             className="sign-demo__infra-live"
+            pathLength="1"
             d="M 462 374 C 469 374 474 374 480 374 C 490 374 498 366 498 356 L 498 16 C 498 6 492 0 482 0 L 362 0 C 340 0 324 16 324 36 L 30 36 C 12 36 0 42 0 52 L 0 101"
           />
         </g>
@@ -202,6 +224,7 @@ export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDem
           />
           <path
             className="sign-demo__infra-live"
+            pathLength="1"
             d="M 273 226 L 287 226 C 312 226 329 204 329 175 C 329 158 323 145 312 135 C 303 127 293 125 281 125 L 31 125 C 12 125 0 109 0 85 L 0 26 C 0 11 5 0 13 0"
           />
         </g>
@@ -212,6 +235,7 @@ export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDem
           />
           <path
             className="sign-demo__infra-live"
+            pathLength="1"
             d="M 0 165 L 26 165 C 32 165 36 161 36 155 L 36 133 C 36 103 48 74 68 53 L 78 43 C 81 40 83 37 84 33 L 84 0"
           />
         </g>
