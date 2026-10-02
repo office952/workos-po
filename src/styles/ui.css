@@ -6367,3 +6367,46 @@ button.context-rail__item:focus-visible {
     opacity: 0.10;
   }
 }
+
+/* LOGIN V1 ZERO-SCROLL CONTRACT */
+/* Login is a single-screen instrument. No page, bay or form scrollbar is allowed. */
+.auth-gate {
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+.auth-gate__main {
+  overflow: hidden;
+}
+
+.auth-tech,
+.auth-tech__frame,
+.auth-tech__viewport,
+.auth-tech__panel {
+  overflow: hidden !important;
+  scrollbar-width: none;
+}
+
+.auth-tech__panel::-webkit-scrollbar {
+  display: none;
+}
+
+@media (min-width: 1025px) {
+  .auth-tech__panel {
+    overflow: hidden !important;
+  }
+}
+
+@media (min-width: 1025px) and (max-height: 860px) {
+  .auth-gate {
+    overflow: hidden !important;
+  }
+
+  .auth-gate__main {
+    min-height: 816px;
+    height: 816px;
+  }
+}
