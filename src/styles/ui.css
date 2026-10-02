@@ -5443,3 +5443,135 @@ button.context-rail__item:focus-visible {
     min-height: 816px;
   }
 }
+
+/* LOGIN V1 LIGHT/OFF FIGMA PARITY */
+@media (min-width: 1025px) {
+  .auth-gate[data-scene="day"] .sign-controller {
+    background: rgb(254 254 255);
+    border-color: rgb(171 171 166 / 42%);
+  }
+
+  .auth-gate[data-scene="day"] .sign-controller::before,
+  .auth-gate[data-scene="day"] .sign-controller::after {
+    border-color: rgb(171 171 166 / 42%);
+    background: rgb(254 254 255);
+  }
+
+  .auth-gate[data-scene="day"] .sign-controller__title,
+  .auth-gate[data-scene="day"] .sign-controller__spec,
+  .auth-gate[data-scene="day"] .sign-controller__channel,
+  .auth-gate[data-scene="day"] .sign-controller__group legend,
+  .auth-gate[data-scene="day"] .sign-controller__dimmer-head,
+  .auth-gate[data-scene="day"] .sign-controller__segmented button,
+  .auth-gate[data-scene="day"] .sign-controller__source button {
+    color: rgb(105 104 100);
+  }
+
+  .auth-gate[data-scene="day"] .sign-controller__segmented button,
+  .auth-gate[data-scene="day"] .sign-controller__source button {
+    background: transparent;
+    border-color: rgb(171 171 166 / 38%);
+  }
+
+  .auth-gate[data-scene="day"] .sign-controller input[type="range"] {
+    accent-color: rgb(168 163 153);
+  }
+
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller > * {
+    opacity: 0.28;
+    filter: blur(0.55px);
+  }
+
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__group,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__dimmer,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb {
+    opacity: 1;
+    filter: none;
+  }
+
+  .auth-gate[data-scene="day"] .sign-power-panel {
+    background: rgb(255 255 255);
+    border-color: rgb(171 171 166 / 52%);
+  }
+
+  .auth-gate[data-scene="day"] .sign-power-panel::before {
+    background: rgb(255 255 255);
+    border-color: rgb(171 171 166 / 72%);
+  }
+
+  .auth-gate[data-scene="day"] .sign-controller__power-title,
+  .auth-gate[data-scene="day"] .sign-controller__power-state,
+  .auth-gate[data-scene="day"] .sign-power-panel__psu,
+  .auth-gate[data-scene="day"] .sign-power-panel__ready {
+    color: rgb(77 76 72);
+  }
+
+  .auth-gate[data-scene="day"] .sign-controller__switch {
+    background: rgb(255 255 255);
+    border-color: rgb(171 171 166 / 72%);
+  }
+
+  .auth-gate[data-scene="day"] .sign-controller__switch-track {
+    background: rgb(115 102 82 / 78%);
+  }
+
+  .auth-gate[data-scene="day"] .sign-power-panel__psu {
+    background: rgb(255 255 255);
+    border-color: rgb(171 171 166 / 58%);
+  }
+
+  .auth-gate[data-scene="day"] .sign-power-panel__ready-dot {
+    background: rgb(96 96 92);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__frame {
+    background: rgb(255 255 255 / 74%);
+    border-color: rgb(128 133 140 / 48%);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__bay-label {
+    color: rgb(97 97 92 / 86%);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__bay-label i {
+    background: rgb(74 75 73 / 86%);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__frame-label,
+  .auth-gate[data-scene="day"] .auth-tech__bottom-meta {
+    color: rgb(160 157 153);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__ring,
+  .auth-gate[data-scene="day"] .auth-tech__target {
+    border-color: rgb(128 133 140 / 34%);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__crosshair {
+    background: rgb(128 133 140 / 24%);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__target::after {
+    background: rgb(66 67 66 / 88%);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__comet {
+    opacity: 0;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__viewport::before {
+    opacity: 0.16;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__viewport::after {
+    opacity: 0.12;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__grid {
+    background-image:
+      linear-gradient(rgb(200 197 192 / 28%) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(200 197 192 / 28%) 1px, transparent 1px);
+    background-size: 42px 42px;
+    opacity: 0.58;
+  }
+}
