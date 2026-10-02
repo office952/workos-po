@@ -66,12 +66,6 @@ export function AuthTechnicalFrame({
       return;
     }
     node.focus({ preventScroll: true });
-    if (typeof node.scrollIntoView === "function") {
-      const reduced =
-        typeof window.matchMedia === "function" &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      node.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
-    }
   }, [showAccess, activeAccess, kind]);
 
   return (
