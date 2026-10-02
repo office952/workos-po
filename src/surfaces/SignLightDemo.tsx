@@ -124,6 +124,7 @@ export function SignLightDemo({
 
   const activeColor = source === "rgb" ? rgbPreset : source;
   const faceEnabled = mode === "face" || mode === "combined";
+  const modeLabel = mode === "face" ? "FATA" : mode === "halo" ? "HALO" : "FATA + HALO";
   const lighting = useMemo(
     () => resolveSignLighting(intensity, mode, power),
     [intensity, mode, power],
@@ -155,6 +156,9 @@ export function SignLightDemo({
       data-source={source}
       style={lightingStyle}
     >
+      <p className="sign-demo__scene-state" aria-hidden="true">
+        {power ? `DARK / SIGN ON · ${modeLabel}` : "LIGHT / SIGN OFF"}
+      </p>
       <div className="sign-demo__stage">
         <p className="sign-demo__kicker">FABRICAȚIE · PRODUCȚIE · MANAGEMENT</p>
 
