@@ -8037,3 +8037,78 @@ button.context-rail__item:focus-visible {
     transition: none !important;
   }
 }
+
+
+/* LOGIN V1 LIGHT AUTH BAY IVORY FINAL */
+/* Owner-approved direction from runtime review:
+   the LIGHT/OFF AUTH bay is warm ivory, not gray.
+   Layout, motion, controller and DARK states stay unchanged. */
+@media (min-width: 1025px) {
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__frame {
+    background: rgb(252 249 240) !important;
+    border-color: rgb(211 204 190 / 92%) !important;
+    box-shadow:
+      inset 0 0 0 1px rgb(255 255 255 / 92%),
+      0 1px 0 rgb(255 255 255 / 76%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__grid {
+    background-image:
+      linear-gradient(rgb(185 177 163 / 13%) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(185 177 163 / 13%) 1px, transparent 1px) !important;
+    opacity: 0.34 !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__viewport::before {
+    opacity: 0.08 !important;
+    background:
+      linear-gradient(90deg, transparent 0 49.85%, rgb(151 141 124 / 14%) 49.9% 50.1%, transparent 50.15%),
+      linear-gradient(transparent 0 49.85%, rgb(151 141 124 / 14%) 49.9% 50.1%, transparent 50.15%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__viewport::after {
+    opacity: 0.045 !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__bay-label {
+    color: rgb(126 100 61 / 72%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__bay-label i {
+    background: rgb(132 105 64 / 66%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__frame-label,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__bottom-meta {
+    color: rgb(119 112 101 / 55%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3 {
+    --wb-accent: 139 112 71;
+    --wb-line: 154 145 130;
+    --wb-muted: 143 136 125;
+    --wb-face: 205 197 184;
+    --wb-face-repaired: 188 178 162;
+    --wb-back: 170 160 145;
+    opacity: 0.78;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__anchor,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__handle-end {
+    fill: rgb(252 249 240) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__crop {
+    stroke: rgb(139 112 71 / 42%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__orbit {
+    stroke: rgb(151 143 130 / 30%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__ticks,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__verify,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__projection {
+    stroke: rgb(145 137 124 / 34%) !important;
+  }
+}
