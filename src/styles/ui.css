@@ -8449,3 +8449,25 @@ button.context-rail__item:focus-visible {
     transition: none !important;
   }
 }
+
+
+/* LOGIN V1 AUTH WORKBENCH WORD SILHOUETTE FIX
+   Keep a stable full WorkOS reference behind the single-glyph inspection cycle.
+   The animated vector glyph remains the focal object; the reference never changes geometry. */
+.auth-workbench-v3__word-silhouette {
+  fill: rgb(var(--wb-face-repaired) / 18%);
+  font-family: var(--font-brand);
+  font-size: 88px;
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  pointer-events: none;
+  user-select: none;
+}
+
+.auth-gate[data-scene="day"] .auth-workbench-v3__word-silhouette {
+  fill: rgb(var(--wb-face-repaired) / 22%);
+}
+
+.auth-tech__viewport[data-auth-active] .auth-workbench-v3__word-silhouette {
+  opacity: 0.32;
+}
