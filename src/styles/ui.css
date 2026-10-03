@@ -8112,3 +8112,109 @@ button.context-rail__item:focus-visible {
     stroke: rgb(145 137 124 / 34%) !important;
   }
 }
+
+
+/* LOGIN V1 POWER TOGGLE MECHANICAL ALIGNMENT FINAL */
+/* Runtime repair from Owner capture:
+   the visual hardware aligns exactly with the PSU module row.
+   The lever, pivot and cap are one continuous mechanical assembly. */
+@media (min-width: 1025px) {
+  .sign-controller__switch {
+    left: 12px !important;
+    top: 45px !important;
+    width: 44px !important;
+    height: 72px !important;
+    overflow: visible;
+  }
+
+  /* Visual mounting plate aligns to x=16 / y=50, same top line as the PSU block. */
+  .sign-controller__switch-plate {
+    left: 4px !important;
+    top: 5px !important;
+    width: 36px !important;
+    height: 58px !important;
+    box-sizing: border-box;
+  }
+
+  .sign-controller__switch-screw {
+    left: 5px !important;
+    margin-left: 0 !important;
+    width: 3px !important;
+    height: 3px !important;
+  }
+
+  .sign-controller__switch-screw--top {
+    top: 5px !important;
+  }
+
+  .sign-controller__switch-screw--bottom {
+    bottom: 5px !important;
+  }
+
+  .sign-controller__switch-plate::before {
+    top: 7px !important;
+  }
+
+  .sign-controller__switch-plate::after {
+    bottom: 7px !important;
+  }
+
+  /* Pivot is the single geometric center of the plate. */
+  .sign-controller__switch-collar {
+    left: 50% !important;
+    top: 29px !important;
+    width: 13px !important;
+    height: 13px !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 3;
+  }
+
+  /* Lever rotates around the exact center of the collar. */
+  .sign-controller__switch-lever {
+    left: 50% !important;
+    top: 29px !important;
+    width: 20px !important;
+    height: 29px !important;
+    margin-left: -10px;
+    transform-origin: 50% 0 !important;
+    z-index: 2;
+  }
+
+  /* Stem terminates in the pivot and overlaps the cap: no visual gap. */
+  .sign-controller__switch-stem {
+    left: 50% !important;
+    top: -18px !important;
+    width: 4px !important;
+    height: 19px !important;
+    transform: translateX(-50%) !important;
+    border-radius: 2px;
+  }
+
+  .sign-controller__switch-knob,
+  .sign-controller__switch[aria-checked="true"] .sign-controller__switch-knob,
+  .sign-controller__switch[aria-checked="false"] .sign-controller__switch-knob {
+    left: 50% !important;
+    top: -25px !important;
+    width: 14px !important;
+    height: 14px !important;
+    transform: translateX(-50%) !important;
+  }
+
+  /* Physical semantics: ON up, OFF down, same axis through the pivot. */
+  .sign-controller__switch[aria-checked="true"] .sign-controller__switch-lever {
+    transform: rotate(0deg) !important;
+  }
+
+  .sign-controller__switch[aria-checked="false"] .sign-controller__switch-lever {
+    transform: rotate(180deg) !important;
+  }
+
+  /* Plate labels already communicate state; remove the detached duplicate word. */
+  .sign-controller__switch-state {
+    display: none !important;
+  }
+
+  .sign-controller__switch:active .sign-controller__switch-lever {
+    filter: brightness(0.94);
+  }
+}
