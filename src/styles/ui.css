@@ -8471,3 +8471,65 @@ button.context-rail__item:focus-visible {
 .auth-tech__viewport[data-auth-active] .auth-workbench-v3__word-silhouette {
   opacity: 0.32;
 }
+
+
+/* LOGIN V1 HALO LAYERING — CONTOUR-FIRST
+   Split the rear emission into independent text silhouettes.
+   Each layer follows the exact WorkOS glyph shape; no scaled ellipse/blob is introduced. */
+.sign-demo__word-halo {
+  color: transparent !important;
+  opacity: 1;
+  filter: none !important;
+  text-shadow: none;
+  pointer-events: none;
+  will-change: opacity, text-shadow;
+}
+
+.sign-demo__word-halo--tight {
+  z-index: 1;
+  text-shadow:
+    0 0 2.5px rgb(var(--sign-light-rgb) / var(--sign-halo-tight)),
+    0 0 4px rgb(var(--sign-light-rgb) / calc(var(--sign-halo-tight) * 0.44));
+}
+
+.sign-demo__word-halo--near {
+  z-index: 0;
+  text-shadow:
+    0 0 8px rgb(var(--sign-light-rgb) / var(--sign-halo-near)),
+    0 0 12px rgb(var(--sign-light-rgb) / calc(var(--sign-halo-near) * 0.36));
+}
+
+.sign-demo__word-halo--mid {
+  z-index: -1;
+  text-shadow:
+    0 0 18px rgb(var(--sign-light-rgb) / var(--sign-halo-mid)),
+    0 0 24px rgb(var(--sign-light-rgb) / calc(var(--sign-halo-mid) * 0.30));
+}
+
+.sign-demo__word-halo--far {
+  z-index: -2;
+  text-shadow:
+    0 0 30px rgb(var(--sign-light-rgb) / var(--sign-halo-far)),
+    0 0 42px rgb(var(--sign-light-rgb) / calc(var(--sign-halo-far) * 0.24));
+}
+
+.sign-demo__word[data-mode="combined"] .sign-demo__word-halo {
+  opacity: 0.86;
+}
+
+.sign-demo__word[data-halo-only] .sign-demo__word-halo {
+  opacity: 1;
+}
+
+.sign-demo__word[data-mode="face"] .sign-demo__word-halo,
+.sign-demo__word[data-power="off"] .sign-demo__word-halo {
+  opacity: 0 !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sign-demo__word-halo {
+    transition: none !important;
+  }
+}

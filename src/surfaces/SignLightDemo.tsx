@@ -259,7 +259,16 @@ export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDem
             data-halo-only={mode === "halo" && power ? "" : undefined}
           >
             <span className="sign-demo__word-material">WorkOS</span>
-            <span className="sign-demo__word-halo" aria-hidden="true">
+            <span className="sign-demo__word-halo sign-demo__word-halo--far" aria-hidden="true">
+              WorkOS
+            </span>
+            <span className="sign-demo__word-halo sign-demo__word-halo--mid" aria-hidden="true">
+              WorkOS
+            </span>
+            <span className="sign-demo__word-halo sign-demo__word-halo--near" aria-hidden="true">
+              WorkOS
+            </span>
+            <span className="sign-demo__word-halo sign-demo__word-halo--tight" aria-hidden="true">
               WorkOS
             </span>
             <span className="sign-demo__word-face" aria-hidden="true">
