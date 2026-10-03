@@ -60,6 +60,7 @@ export function JobsPage() {
     <SlicePage
       contextLabel="Lucrări"
       currentHref="/lucrari"
+      layout="REGISTRY"
       eyebrow="Lucrări"
       title="Lucrări"
       lead="Continuă eliberarea, planul de execuție sau lucrarea finalizată."

@@ -431,7 +431,7 @@ export function ConfiguratorPage({
     <SlicePage
       contextLabel="Configurator"
       currentHref="/configurator"
-      workspace="configuration"
+      layout="WORKBENCH"
       eyebrow="Configurator"
       title={preview?.product.label ?? "Configurator"}
       lead="Completează faptele confirmate, verifică costul intern și prețul clientului, apoi îngheață oferta."

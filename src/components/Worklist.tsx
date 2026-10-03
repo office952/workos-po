@@ -24,7 +24,7 @@ export function Worklist({
       aria-busy={busy || undefined}
     >
       {columns && columns.length > 0 ? (
-        <div className="worklist__head" aria-hidden="true">
+        <div className="worklist__head">
           {columns.map((column) => (
             <span key={column}>{column}</span>
           ))}

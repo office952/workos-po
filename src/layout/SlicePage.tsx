@@ -1,43 +1,12 @@
 import type { ReactNode } from "react";
-import { floorplanForWorkspace, type FloorplanId } from "./floorplan";
+import { floorplanForLayout } from "./floorplan";
 import { PageHeader } from "./PageHeader";
+import {
+  densityForLayout,
+  type LayoutVariant,
+  type StructuralLayoutId,
+} from "./pageLayout";
 import { PageRegion } from "./PageRegion";
-
-export type PageWorkspace =
-  | "stack"
-  | "collection-with-rail"
-  | "object"
-  | "configuration"
-  | "catalog"
-  | "traveler"
-  | "operational"
-  | "operational-gate"
-  | "admin"
-  | "launchpad";
-
-export type PageDensity = "compact" | "standard" | "operational";
-
-function densityFor(workspace: PageWorkspace): PageDensity {
-  switch (workspace) {
-    case "operational":
-    case "operational-gate":
-      return "operational";
-    case "object":
-    case "configuration":
-    case "traveler":
-      return "standard";
-    case "stack":
-    case "collection-with-rail":
-    case "catalog":
-    case "admin":
-    case "launchpad":
-      return "compact";
-    default: {
-      const exhaustive: never = workspace;
-      return exhaustive;
-    }
-  }
-}
 
 type SlicePageProps = {
   contextLabel: string;
@@ -48,10 +17,8 @@ type SlicePageProps = {
   meta?: ReactNode;
   status?: ReactNode;
   action?: ReactNode;
-  workspace?: PageWorkspace;
-  floorplan?: FloorplanId;
-  /** Scoped presentation surface; does not invent a new workspace contract. */
-  surface?: "cereri-registry" | "cereri-detail";
+  layout: StructuralLayoutId;
+  variant?: LayoutVariant;
   children: ReactNode;
 };
 
@@ -62,15 +29,20 @@ export function SlicePage({
   meta,
   status,
   action,
-  workspace = "stack",
-  floorplan,
-  surface,
+  layout,
+  variant,
   children,
 }: SlicePageProps) {
-  const quiet = workspace === "operational" || workspace === "operational-gate";
+  const density = densityForLayout(layout);
+  const quiet = layout === "OPERATIONAL";
   return (
     <PageRegion>
-      <div data-surface={surface}>
+      <div
+        className="page-frame"
+        data-layout={layout}
+        data-layout-variant={variant}
+        data-density={density}
+      >
         <PageHeader
           eyebrow={eyebrow}
           title={title}
@@ -82,9 +54,11 @@ export function SlicePage({
         />
         <div className="page-region">
           <div
-            className={`page-workspace page-workspace--${workspace} page-workspace--density-${densityFor(workspace)}`}
-            data-floorplan={floorplan ?? floorplanForWorkspace(workspace)}
-            data-surface={surface}
+            className="page-workspace"
+            data-layout={layout}
+            data-layout-variant={variant}
+            data-density={density}
+            data-floorplan={floorplanForLayout(layout)}
           >
             {children}
           </div>

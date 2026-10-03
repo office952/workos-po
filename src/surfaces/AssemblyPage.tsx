@@ -117,7 +117,7 @@ export function AssemblyPage() {
     <SlicePage
       contextLabel="Ansamblu"
       currentHref="/ansamblu"
-      workspace="stack"
+      layout="WORKBENCH"
       eyebrow="Ansamblu"
       title={assembly?.label ?? "Panou ACM + litere volumetrice"}
       lead={assemblyLead(hasLogo, lettersPresent)}

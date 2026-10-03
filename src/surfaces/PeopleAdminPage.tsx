@@ -289,7 +289,7 @@ export function PeopleAdminPage({ personId = null }: PeopleAdminPageProps) {
     <SlicePage
       contextLabel="Administrare"
       currentHref="/admin/people"
-      workspace="admin"
+      layout="ADMIN_MASTER_DETAIL"
       eyebrow="Administrare"
       title="Oameni"
       lead="Configurează persoanele care pot lucra în producție. Contul de autentificare rămâne separat."

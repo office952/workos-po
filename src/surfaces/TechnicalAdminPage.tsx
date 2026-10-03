@@ -119,7 +119,7 @@ export function TechnicalAdminPage() {
     <SlicePage
       contextLabel="Administrare"
       currentHref="/admin/technical"
-      workspace="admin"
+      layout="ADMIN_MASTER_DETAIL"
       eyebrow="Administrare"
       title="Setări tehnice"
       lead="Aceste valori sunt folosite la calculul tehnic al lucrărilor noi. Lucrările înghețate rămân neschimbate."

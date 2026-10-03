@@ -88,8 +88,7 @@ export function RequestsPage() {
     <SlicePage
       contextLabel="Cereri"
       currentHref="/cereri"
-      workspace="stack"
-      surface="cereri-registry"
+      layout="REGISTRY"
       title="Cereri"
       lead="Registrul cererilor de ofertă. Deschide obiectul sau continuă pasul canonic."
       action={

@@ -142,7 +142,7 @@ export function ExternalProductionAdminPage() {
     <SlicePage
       contextLabel="Administrare"
       currentHref="/admin/external-production"
-      workspace="admin"
+      layout="ADMIN_MASTER_DETAIL"
       eyebrow="Administrare"
       title="Execuție externă"
       lead="Organizația alege dacă o sarcină planificată poate fi predată unui furnizor de producție din afara atelierului. Nu este serviciu de montaj și nu este o zonă de lucru."

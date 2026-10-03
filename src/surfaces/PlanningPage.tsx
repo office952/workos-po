@@ -83,7 +83,8 @@ export function PlanningPage() {
     <SlicePage
       contextLabel="Planificare"
       currentHref="/planificare"
-      workspace="operational"
+      layout="OPERATIONAL"
+      variant="queue"
       eyebrow="Planificare"
       title="Planificare"
       lead="Ce lucru este acum pe fiecare zonă sau utilaj și cât timp estimat avem."

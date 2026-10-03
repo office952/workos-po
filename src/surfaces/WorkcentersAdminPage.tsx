@@ -413,7 +413,7 @@ export function WorkcentersAdminPage({
     <SlicePage
       contextLabel="Administrare"
       currentHref="/admin/workcenters"
-      workspace="admin"
+      layout="ADMIN_MASTER_DETAIL"
       eyebrow="Administrare"
       title="Zone și utilaje"
       lead="Configurează zonele de lucru și utilajele. Atelierul citește același registru."

@@ -115,7 +115,7 @@ export function CommercialAdminPage() {
     <SlicePage
       contextLabel="Administrare"
       currentHref="/admin/commercial"
-      workspace="admin"
+      layout="ADMIN_MASTER_DETAIL"
       eyebrow="Administrare"
       title="Valori comerciale implicite"
       lead="Aceste valori sunt folosite ca punct de pornire pentru ofertele noi. Pot fi modificate individual pe fiecare ofertă. Salvarea creează o versiune nouă. Ofertele înghețate rămân neschimbate."

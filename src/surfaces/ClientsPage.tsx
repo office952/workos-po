@@ -90,7 +90,7 @@ export function ClientsPage() {
     <SlicePage
       contextLabel="Clienți"
       currentHref="/clienti"
-      workspace="collection-with-rail"
+      layout="REGISTRY"
       title="Clienți"
       lead="Alege un client existent sau înregistrează unul nou pentru lucrare."
       meta={resultCount}
