@@ -43,10 +43,10 @@ function smoothstep(edge0: number, edge1: number, value: number): number {
   return x * x * (3 - 2 * x);
 }
 
-function lightingBand(energy: number, reference75: number, highGain: number): number {
+function lightingBand(energy: number, reference75: number, peak100: number): number {
   const reference = smoothstep(0.02, 0.75, energy) * reference75;
-  const high = smoothstep(0.75, 1, energy) * highGain;
-  return clamp(reference + high);
+  const peakProgress = smoothstep(0.75, 1, energy);
+  return clamp(reference + (peak100 - reference75) * peakProgress);
 }
 
 export function resolveSignLighting(
@@ -70,15 +70,15 @@ export function resolveSignLighting(
   const haloEnabled = mode === "halo" || mode === "combined";
 
   return {
-    faceFill: faceEnabled ? lightingBand(energy, 1, 0) : 0,
-    faceGlowTight: faceEnabled ? lightingBand(energy, 0.3750684559, 0.075) : 0,
-    faceGlowNear: faceEnabled ? lightingBand(energy, 0.1295126379, 0.03) : 0,
-    coreFill: faceEnabled ? lightingBand(energy, 0.3751134872, 0.07) : 0,
-    coreGlow: faceEnabled ? lightingBand(energy, 0.2044193596, 0.04) : 0,
-    haloTight: haloEnabled ? lightingBand(energy, 0.9831462502, 0.0168537498) : 0,
-    haloNear: haloEnabled ? lightingBand(energy, 0.7525049448, 0.12) : 0,
-    haloMid: haloEnabled ? lightingBand(energy, 0.294754923, 0.045) : 0,
-    haloFar: haloEnabled ? lightingBand(energy, 0.0698283836, 0.008) : 0,
+    faceFill: faceEnabled ? lightingBand(energy, 1, 1) : 0,
+    faceGlowTight: faceEnabled ? lightingBand(energy, 0.3750684559, 0.52) : 0,
+    faceGlowNear: faceEnabled ? lightingBand(energy, 0.1295126379, 0.24) : 0,
+    coreFill: faceEnabled ? lightingBand(energy, 0.3751134872, 0.48) : 0,
+    coreGlow: faceEnabled ? lightingBand(energy, 0.2044193596, 0.32) : 0,
+    haloTight: haloEnabled ? lightingBand(energy, 0.82, 0.98) : 0,
+    haloNear: haloEnabled ? lightingBand(energy, 0.62, 0.86) : 0,
+    haloMid: haloEnabled ? lightingBand(energy, 0.28, 0.48) : 0,
+    haloFar: haloEnabled ? lightingBand(energy, 0.065, 0.14) : 0,
     cableLive: power ? 0.12 + smoothstep(0, 1, energy) * 0.08 : 0,
   };
 }
@@ -193,6 +193,8 @@ export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDem
       data-power={power ? "on" : "off"}
       data-mode={mode}
       data-source={source}
+      data-intensity={intensity}
+      data-light-color={activeColor}
       data-power-transition={powerTransition ?? undefined}
       style={lightingStyle}
     >
@@ -255,6 +257,7 @@ export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDem
             className="sign-demo__word"
             data-power={power ? "on" : "off"}
             data-mode={mode}
+            data-intensity={intensity}
             data-face-emission={faceEnabled && power ? "on" : "off"}
             data-halo-only={mode === "halo" && power ? "" : undefined}
           >

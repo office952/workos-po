@@ -8475,54 +8475,75 @@ button.context-rail__item:focus-visible {
 }
 
 
-/* LOGIN V1 HALO LAYERING — CONTOUR-FIRST
-   Split the rear emission into independent text silhouettes.
-   Each layer follows the exact WorkOS glyph shape; no scaled ellipse/blob is introduced. */
+/* LOGIN V1 HALO OPTICAL SYSTEM — COHERENT PASS
+   Canonical browser implementation for the Login sign:
+   tight contour -> near diffusion -> mid diffusion -> far wall spill.
+   All four layers use the same WorkOS glyph geometry and never scale the sign. */
+.sign-demo__word {
+  isolation: isolate;
+  overflow: visible;
+}
+
 .sign-demo__word-halo {
   color: transparent !important;
   opacity: 1;
   filter: none !important;
   text-shadow: none;
   pointer-events: none;
+  user-select: none;
   will-change: opacity, text-shadow;
+  transition:
+    opacity var(--motion-edit) var(--ease-work),
+    text-shadow var(--motion-navigate) var(--ease-work);
 }
 
 .sign-demo__word-halo--tight {
   z-index: 1;
   text-shadow:
     0 0 2.5px rgb(var(--sign-light-rgb) / var(--sign-halo-tight)),
-    0 0 4px rgb(var(--sign-light-rgb) / calc(var(--sign-halo-tight) * 0.44));
+    0 0 4px rgb(var(--sign-light-rgb) / calc(var(--sign-halo-tight) * 0.42));
 }
 
 .sign-demo__word-halo--near {
   z-index: 0;
   text-shadow:
-    0 0 8px rgb(var(--sign-light-rgb) / var(--sign-halo-near)),
-    0 0 12px rgb(var(--sign-light-rgb) / calc(var(--sign-halo-near) * 0.36));
+    0 0 7px rgb(var(--sign-light-rgb) / var(--sign-halo-near)),
+    0 0 11px rgb(var(--sign-light-rgb) / calc(var(--sign-halo-near) * 0.34));
 }
 
 .sign-demo__word-halo--mid {
   z-index: -1;
   text-shadow:
-    0 0 18px rgb(var(--sign-light-rgb) / var(--sign-halo-mid)),
-    0 0 24px rgb(var(--sign-light-rgb) / calc(var(--sign-halo-mid) * 0.30));
+    0 0 15px rgb(var(--sign-light-rgb) / var(--sign-halo-mid)),
+    0 0 24px rgb(var(--sign-light-rgb) / calc(var(--sign-halo-mid) * 0.28));
 }
 
 .sign-demo__word-halo--far {
   z-index: -2;
   text-shadow:
-    0 0 30px rgb(var(--sign-light-rgb) / var(--sign-halo-far)),
-    0 0 42px rgb(var(--sign-light-rgb) / calc(var(--sign-halo-far) * 0.24));
+    0 0 28px rgb(var(--sign-light-rgb) / var(--sign-halo-far)),
+    0 0 40px rgb(var(--sign-light-rgb) / calc(var(--sign-halo-far) * 0.22));
 }
 
+/* HALO keeps the physical sign dark while rear emission remains contour-shaped. */
+.sign-demo__word[data-halo-only] .sign-demo__word-material {
+  color: #050505 !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+
+.sign-demo__word[data-halo-only] .sign-demo__word-face,
+.sign-demo__word[data-halo-only] .sign-demo__word-core {
+  opacity: 0 !important;
+  filter: none !important;
+}
+
+/* Combined mode keeps both channels readable instead of washing the front face out. */
 .sign-demo__word[data-mode="combined"] .sign-demo__word-halo {
-  opacity: 0.86;
+  opacity: 0.84;
 }
 
-.sign-demo__word[data-halo-only] .sign-demo__word-halo {
-  opacity: 1;
-}
-
+/* FATA and OFF must have zero rear emission. */
 .sign-demo__word[data-mode="face"] .sign-demo__word-halo,
 .sign-demo__word[data-power="off"] .sign-demo__word-halo {
   opacity: 0 !important;
