@@ -7,14 +7,14 @@
     <title>WorkOS</title>
     <script>
       (function () {
-        var preference = "system";
+        var preference = "light";
         try {
           var stored = localStorage.getItem("workos-color-scheme");
           if (stored === "light" || stored === "dark" || stored === "system") {
             preference = stored;
           }
         } catch (error) {
-          preference = "system";
+          preference = "light";
         }
         var dark =
           window.matchMedia &&

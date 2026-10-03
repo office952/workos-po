@@ -37,14 +37,14 @@ describe("AppShell", () => {
     expect(screen.queryByText("org:a")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cont" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ieși din cont" })).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Aspect")).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "Schimbă prezentarea WorkOS" })).not.toBeInTheDocument();
     expect(document.querySelector(".app-shell__context")).toBeNull();
     expect(screen.getByRole("link", { name: "Clienți" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("navigation", { name: "Navigare principală" })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Cont" }));
     expect(screen.getByText("owner@example.test")).toBeInTheDocument();
-    expect(screen.getByLabelText("Aspect")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Schimbă prezentarea WorkOS" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ieși din cont" })).toBeInTheDocument();
   });
 

@@ -11,7 +11,7 @@ describe("color scheme", () => {
 
   it("ignores an unknown stored preference", () => {
     const storage = { getItem: () => "neon" };
-    expect(readColorSchemePreference(storage)).toBe("system");
+    expect(readColorSchemePreference(storage)).toBe("light");
   });
 
   it("applies the resolved theme on the document", () => {

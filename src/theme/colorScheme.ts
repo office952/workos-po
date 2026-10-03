@@ -12,9 +12,9 @@ export function readColorSchemePreference(
       return value;
     }
   } catch {
-    return "system";
+    return "light";
   }
-  return "system";
+  return "light";
 }
 
 export function resolveColorScheme(

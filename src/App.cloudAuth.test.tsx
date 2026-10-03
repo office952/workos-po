@@ -8,6 +8,17 @@ async function openAccountMenu(): Promise<void> {
   await userEvent.click(screen.getByRole("button", { name: "Cont" }));
 }
 
+async function openSocietateLogin(): Promise<void> {
+  await userEvent.click(await screen.findByRole("button", { name: "Login Societate" }));
+  expect(await screen.findByRole("heading", { name: "Acces Societate" })).toBeInTheDocument();
+}
+
+async function expectLoginGate(): Promise<void> {
+  expect(await screen.findByRole("button", { name: "Login Societate" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Login Angajat" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Cadru tehnic Auth Frame")).toBeInTheDocument();
+}
+
 function jsonResponse(body: unknown, status = 200) {
   return Promise.resolve({
     ok: status >= 200 && status < 300,
@@ -90,7 +101,7 @@ describe("App Cloud auth integration", () => {
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: "Clienți" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Autentificare" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Login Societate" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ieși din cont" })).not.toBeInTheDocument();
   });
 
@@ -113,9 +124,9 @@ describe("App Cloud auth integration", () => {
 
     render(<App />);
     expect(screen.getByRole("heading", { name: "Se încarcă" })).toBeInTheDocument();
-    expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Adresă email")).not.toBeInTheDocument();
     releaseSession(null);
-    expect(await screen.findByRole("heading", { name: "Autentificare" })).toBeInTheDocument();
+    await expectLoginGate();
   });
 
   it("enters the application after a successful Cloud login", async () => {
@@ -136,10 +147,11 @@ describe("App Cloud auth integration", () => {
     window.history.replaceState({}, "", "/clienti");
 
     render(<App />);
-    expect(await screen.findByRole("heading", { name: "Autentificare" })).toBeInTheDocument();
-    await userEvent.type(screen.getByLabelText("Email"), "owner@example.test");
+    await expectLoginGate();
+    await openSocietateLogin();
+    await userEvent.type(screen.getByLabelText("Adresă email"), "owner@example.test");
     await userEvent.type(screen.getByLabelText("Parolă"), "OwnerPass12");
-    await userEvent.click(screen.getByRole("button", { name: "Intră" }));
+    await userEvent.click(screen.getByRole("button", { name: "Autentificare" }));
     expect(await screen.findByText("Atelier Alpha")).toBeInTheDocument();
     await openAccountMenu();
     expect(screen.getByText("owner@example.test")).toBeInTheDocument();
@@ -165,10 +177,11 @@ describe("App Cloud auth integration", () => {
     window.history.replaceState({}, "", "/login");
 
     render(<App />);
-    expect(await screen.findByRole("heading", { name: "Autentificare" })).toBeInTheDocument();
-    await userEvent.type(screen.getByLabelText("Email"), "owner@example.test");
+    await expectLoginGate();
+    await openSocietateLogin();
+    await userEvent.type(screen.getByLabelText("Adresă email"), "owner@example.test");
     await userEvent.type(screen.getByLabelText("Parolă"), "OwnerPass12");
-    await userEvent.click(screen.getByRole("button", { name: "Intră" }));
+    await userEvent.click(screen.getByRole("button", { name: "Autentificare" }));
     expect(await screen.findByRole("heading", { name: "WorkOS" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Comercial" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Operațiuni" })).toBeInTheDocument();
@@ -208,7 +221,7 @@ describe("App Cloud auth integration", () => {
 
     render(<App />);
 
-    expect(await screen.findByRole("heading", { name: "Autentificare" })).toBeInTheDocument();
+    await expectLoginGate();
     expect(screen.queryByRole("heading", { name: "Clienți" })).not.toBeInTheDocument();
     expect(screen.queryByText("/api/cloud/session")).not.toBeInTheDocument();
   });
@@ -317,7 +330,7 @@ describe("App Cloud auth integration", () => {
     expect(await screen.findByText("Atelier Alpha")).toBeInTheDocument();
     await openAccountMenu();
     await userEvent.click(screen.getByRole("button", { name: "Ieși din cont" }));
-    expect(await screen.findByRole("heading", { name: "Autentificare" })).toBeInTheDocument();
+    await expectLoginGate();
     expect(fetchMock.mock.calls.some(([url, init]) => String(url).endsWith("/api/cloud/logout") && String(init?.method) === "POST")).toBe(true);
     notifyCloudUnauthorizedUnlessPublic("/api/customers", 401);
     notifyCloudUnauthorizedUnlessPublic("/api/requests", 401);
@@ -346,11 +359,11 @@ describe("App Cloud auth integration", () => {
     expect(await screen.findByText("Atelier Alpha")).toBeInTheDocument();
     await openAccountMenu();
     await userEvent.click(screen.getByRole("button", { name: "Ieși din cont" }));
-    expect(await screen.findByRole("heading", { name: "Autentificare" })).toBeInTheDocument();
+    await expectLoginGate();
     first.unmount();
 
     render(<App />);
-    expect(await screen.findByRole("heading", { name: "Autentificare" })).toBeInTheDocument();
+    await expectLoginGate();
     expect(screen.queryByText("Sesiunea a expirat. Autentifică-te din nou.")).not.toBeInTheDocument();
   });
 
@@ -379,13 +392,14 @@ describe("App Cloud auth integration", () => {
     expect(await screen.findByText("Atelier Alpha")).toBeInTheDocument();
     await openAccountMenu();
     await userEvent.click(screen.getByRole("button", { name: "Ieși din cont" }));
-    expect(await screen.findByRole("heading", { name: "Autentificare" })).toBeInTheDocument();
-    await userEvent.type(screen.getByLabelText("Email"), "owner@example.test");
+    await expectLoginGate();
+    await openSocietateLogin();
+    await userEvent.type(screen.getByLabelText("Adresă email"), "owner@example.test");
     await userEvent.type(screen.getByLabelText("Parolă"), "OwnerPass12");
-    await userEvent.click(screen.getByRole("button", { name: "Intră" }));
+    await userEvent.click(screen.getByRole("button", { name: "Autentificare" }));
     expect(await screen.findByText("Atelier Alpha")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Clienți" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Autentificare" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Login Societate" })).not.toBeInTheDocument();
   });
 
   it("turns a protected 401 into the expired-session gate", async () => {
@@ -434,7 +448,7 @@ describe("App Cloud auth integration", () => {
 
     render(<App />);
     expect(await screen.findByRole("heading", { name: "Autentificare indisponibilă" })).toBeInTheDocument();
-    expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Adresă email")).not.toBeInTheDocument();
   });
 
   it("does not treat a Cloud user as an Atelier operator", async () => {

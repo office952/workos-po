@@ -2129,7 +2129,7 @@ button.context-rail__item:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: var(--space-2);
+  gap: var(--space-4);
   min-width: 0;
 }
 
@@ -2138,10 +2138,69 @@ button.context-rail__item:focus-visible {
   font-size: var(--text-meta);
 }
 
-.theme-control__select {
-  width: auto;
-  min-width: 7.5rem;
-  max-width: 10rem;
+.theme-control__switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: var(--target-min);
+  padding: 0 var(--space-8);
+  border: var(--stroke) solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--text-meta);
+  cursor: pointer;
+}
+
+.theme-control__switch:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.theme-control__track {
+  position: relative;
+  display: inline-block;
+  width: 1.75rem;
+  height: 2.5rem;
+  border: var(--stroke) solid var(--color-border-strong);
+  background: var(--color-surface-raised);
+}
+
+.theme-control__track::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0.45rem;
+  bottom: 0.45rem;
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--color-border-strong);
+}
+
+.theme-control__knob {
+  position: absolute;
+  left: 50%;
+  top: 1.35rem;
+  width: 0.8rem;
+  height: 0.8rem;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #2066cf;
+  box-shadow: 0 0 0 1px rgb(67 137 236 / 58%);
+  transition: top var(--motion-edit) var(--ease-work);
+}
+
+.theme-control__switch[aria-checked="true"] .theme-control__knob {
+  top: 0.65rem;
+}
+
+.theme-control__state {
+  min-width: 2.6rem;
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  letter-spacing: 0.04em;
 }
 
 .launchpad,
@@ -2469,5 +2528,6047 @@ button.context-rail__item:focus-visible {
 
   .file-picker__controls .button:last-child {
     margin-left: 0;
+  }
+}
+
+
+/* WorkOS Login — signage-production brand demo */
+
+.auth-gate {
+  --login-scene-canvas: #f7f6f3;
+  --login-scene-ink: #0d0c0b;
+  --login-scene-muted: #6e6b67;
+  --login-scene-line: #e4e2de;
+  --login-scene-grid: rgb(200 197 192 / 35%);
+  --login-scene-frame: #c8c5c0;
+  min-height: 100vh;
+  background: var(--login-scene-canvas);
+  color: var(--login-scene-ink);
+  transition:
+    background-color var(--motion-navigate) var(--ease-work),
+    color var(--motion-navigate) var(--ease-work);
+}
+
+.auth-gate[data-scene="night"] {
+  --login-scene-canvas: #121110;
+  --login-scene-ink: #f4f1ec;
+  --login-scene-muted: #9a958e;
+  --login-scene-line: #2a2724;
+  --login-scene-grid: rgb(90 86 80 / 35%);
+  --login-scene-frame: #5c574f;
+  background:
+    radial-gradient(circle at 28% 38%, rgb(var(--sign-light-rgb, 255 202 112) / 8%), transparent 42%),
+    var(--login-scene-canvas);
+}
+
+.auth-gate__brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  min-height: 49px;
+  padding: 0 var(--page-gutter);
+  border-bottom: var(--stroke) solid var(--login-scene-line);
+  background: color-mix(in srgb, var(--login-scene-canvas) 88%, white);
+}
+
+.auth-gate[data-scene="night"] .auth-gate__brand {
+  background: color-mix(in srgb, var(--login-scene-canvas) 92%, black);
+}
+
+.auth-gate__login-choices {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.auth-gate__login-choices .button {
+  min-height: 32px;
+  padding-inline: 0.85rem;
+  font-size: 0.8125rem;
+}
+
+.auth-gate__main {
+  display: grid;
+  grid-template-columns: minmax(22rem, 0.95fr) minmax(26rem, 1.15fr);
+  gap: clamp(1.5rem, 4vw, 4rem);
+  align-items: stretch;
+  width: 100%;
+  max-width: 96rem;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 4vh, 3rem) var(--page-gutter);
+}
+
+.auth-gate__access {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.auth-gate__access-kicker,
+.auth-gate__eyebrow {
+  margin: 0;
+  color: var(--login-scene-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-eyebrow);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+}
+
+.auth-gate__card {
+  width: min(100%, 27rem);
+  margin-left: auto;
+  border-color: var(--color-border-strong);
+  box-shadow: inset 0 2px 0 var(--color-azure-a1);
+}
+
+.auth-gate__card .ui-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  padding: var(--space-24);
+}
+
+.auth-gate__title {
+  margin: 0;
+  color: var(--login-scene-ink);
+  font-size: 1.45rem;
+  line-height: 1.15;
+}
+
+.auth-gate__lead {
+  margin: 0;
+  color: var(--login-scene-muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.auth-gate__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.auth-gate__submit {
+  min-width: 8rem;
+}
+
+.auth-gate__submit .button {
+  width: 100%;
+}
+
+.auth-gate__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-16);
+  padding: var(--space-12) var(--page-gutter);
+  border-top: var(--stroke) solid var(--login-scene-line);
+  color: var(--login-scene-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-eyebrow);
+}
+
+.auth-tech {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 32rem;
+  border-left: var(--stroke) solid var(--login-scene-line);
+  padding-left: clamp(1rem, 3vw, 2.5rem);
+}
+
+.auth-tech__grid {
+  position: absolute;
+  inset: 0 0 0 clamp(1rem, 3vw, 2.5rem);
+  background-image:
+    linear-gradient(var(--login-scene-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--login-scene-grid) 1px, transparent 1px);
+  background-size: 42px 42px;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.auth-tech__frame {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: auto minmax(18rem, 1fr) auto;
+  gap: var(--space-12);
+  min-height: 28rem;
+  padding: var(--space-16);
+  border: 0.8px solid var(--login-scene-frame);
+  background: color-mix(in srgb, var(--login-scene-canvas) 94%, transparent);
+}
+
+.auth-tech__frame::before,
+.auth-tech__frame::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 0.8px solid var(--login-scene-frame);
+  pointer-events: none;
+}
+
+.auth-tech__frame::before {
+  top: -1px;
+  left: -1px;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.auth-tech__frame::after {
+  right: -1px;
+  bottom: -1px;
+  border-left: 0;
+  border-top: 0;
+}
+
+.auth-tech__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-12);
+  color: var(--login-scene-muted);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.auth-tech__viewport {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 18rem;
+}
+
+.auth-tech__workbench {
+  display: grid;
+  gap: var(--space-16);
+  place-items: center;
+  width: min(100%, 22rem);
+}
+
+.auth-tech__rings {
+  position: relative;
+  width: 150px;
+  height: 150px;
+}
+
+.auth-tech__ring,
+.auth-tech__target,
+.auth-tech__crosshair {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  border: 0.75px solid var(--color-azure-a1);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.auth-tech__ring--outer {
+  inset: 0;
+  opacity: 0.35;
+}
+
+.auth-tech__ring--mid {
+  inset: 20px;
+  opacity: 0.55;
+}
+
+.auth-tech__ring--inner {
+  inset: 40px;
+  opacity: 0.8;
+}
+
+.auth-tech__target {
+  width: 40px;
+  height: 40px;
+  border-width: 0.75px;
+  background: color-mix(in srgb, var(--color-azure-a1) 8%, transparent);
+}
+
+.auth-tech__target::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-azure-a1);
+}
+
+.auth-tech__crosshair--x,
+.auth-tech__crosshair--y {
+  border: 0;
+  background: color-mix(in srgb, var(--color-azure-a1) 55%, transparent);
+}
+
+.auth-tech__crosshair--x {
+  width: 100%;
+  height: 0.75px;
+}
+
+.auth-tech__crosshair--y {
+  width: 0.75px;
+  height: 100%;
+}
+
+.auth-tech__measure {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  color: var(--login-scene-muted);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+}
+
+.auth-tech__measure span {
+  height: 0.75px;
+  background: var(--login-scene-frame);
+}
+
+.auth-tech__measure em {
+  font-style: normal;
+}
+
+.auth-tech__panel,
+.auth-tech__status {
+  width: min(100%, 26rem);
+  display: grid;
+  gap: var(--space-16);
+}
+
+.auth-tech__panel {
+  outline: none;
+}
+
+.auth-tech__form,
+.auth-tech__form-head {
+  display: grid;
+  gap: var(--space-12);
+}
+
+.auth-tech__actions {
+  margin-top: var(--space-4);
+}
+
+.sign-demo {
+  --sign-light-rgb: 255 202 112;
+  --sign-face-fill: 0.7;
+  --sign-face-glow: 0.28;
+  --sign-halo-tight: 0.72;
+  --sign-halo-near: 0.55;
+  --sign-halo-mid: 0.22;
+  --sign-halo-far: 0.05;
+  --sign-cable-live: 0.5;
+  position: relative;
+  display: grid;
+  gap: var(--space-24);
+  min-width: 0;
+  max-width: 46rem;
+}
+
+.sign-demo__stage {
+  position: relative;
+  min-height: 17rem;
+  padding: var(--space-16) 0 0;
+}
+
+.sign-demo__kicker,
+.sign-demo__mount-note,
+.sign-controller,
+.sign-controller button,
+.sign-controller input,
+.sign-demo__journey-kicker {
+  font-family: var(--font-mono);
+}
+
+.sign-demo__kicker {
+  margin: 0 0 var(--space-24);
+  color: var(--login-scene-muted);
+  font-size: var(--text-eyebrow);
+  letter-spacing: var(--tracking-eyebrow);
+}
+
+.sign-demo__assembly {
+  position: relative;
+  min-height: 9.5rem;
+}
+
+.sign-demo__word {
+  position: relative;
+  z-index: 2;
+  display: inline-grid;
+  grid-template-areas: "word";
+  margin-left: clamp(0rem, 2vw, 1.25rem);
+  isolation: isolate;
+  overflow: visible;
+}
+
+.sign-demo__word > span {
+  grid-area: word;
+  font-family: var(--font-brand);
+  font-size: clamp(4.2rem, 8vw, 7rem);
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.055em;
+  user-select: none;
+}
+
+.sign-demo__word-material {
+  position: relative;
+  z-index: 3;
+  color: color-mix(in srgb, var(--login-scene-ink) 14%, var(--login-scene-canvas));
+  opacity: 0.72;
+  transition:
+    color var(--motion-navigate) var(--ease-work),
+    opacity var(--motion-navigate) var(--ease-work);
+}
+
+.auth-gate[data-scene="day"] .sign-demo__word-material {
+  color: color-mix(in srgb, var(--login-scene-ink) 12%, var(--login-scene-canvas));
+  opacity: 0.42;
+}
+
+.auth-gate[data-scene="night"] .sign-demo__word-material {
+  color: #050505;
+  opacity: 1;
+}
+
+.sign-demo__word-face {
+  position: relative;
+  z-index: 2;
+  color: rgb(var(--sign-light-rgb));
+  opacity: var(--sign-face-fill);
+  filter:
+    drop-shadow(0 0 2px rgb(var(--sign-light-rgb) / var(--sign-face-glow)))
+    drop-shadow(0 0 6px rgb(var(--sign-light-rgb) / calc(var(--sign-face-glow) * 0.48)));
+}
+
+.sign-demo__word-halo {
+  position: relative;
+  z-index: 1;
+  /* Opaque black plate: drop-shadows derive from letter geometry, not luminous face fill. */
+  color: #050505;
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 4px rgb(var(--sign-light-rgb) / var(--sign-halo-tight)))
+    drop-shadow(0 0 10px rgb(var(--sign-light-rgb) / var(--sign-halo-near)))
+    drop-shadow(0 0 22px rgb(var(--sign-light-rgb) / var(--sign-halo-mid)))
+    drop-shadow(0 0 42px rgb(var(--sign-light-rgb) / var(--sign-halo-far)));
+}
+
+.sign-demo__word[data-power="off"] .sign-demo__word-face,
+.sign-demo__word[data-power="off"] .sign-demo__word-halo {
+  opacity: 0;
+  filter: none;
+}
+
+.sign-demo__word[data-halo-only] .sign-demo__word-face {
+  opacity: 0;
+  filter: none;
+}
+
+.sign-demo__word[data-halo-only] .sign-demo__word-material {
+  color: #050505;
+  opacity: 1;
+}
+
+.sign-demo__cable {
+  position: absolute;
+  inset: -2.25rem -1rem auto -1.25rem;
+  z-index: 1;
+  width: calc(100% + 2.25rem);
+  height: 14rem;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.sign-demo__cable-base,
+.sign-demo__cable-live {
+  fill: none;
+  stroke-width: 1.3;
+  vector-effect: non-scaling-stroke;
+}
+
+.sign-demo__cable-base {
+  stroke: var(--login-scene-frame);
+  opacity: 0.55;
+}
+
+.sign-demo__cable-live {
+  stroke: rgb(var(--sign-light-rgb) / var(--sign-cable-live));
+  filter: drop-shadow(0 0 3px rgb(var(--sign-light-rgb) / calc(var(--sign-cable-live) * 0.5)));
+  transition:
+    stroke var(--motion-navigate) var(--ease-work),
+    filter var(--motion-navigate) var(--ease-work);
+}
+
+.sign-demo__mount-note {
+  position: absolute;
+  left: 1.3rem;
+  bottom: 0.35rem;
+  color: var(--login-scene-muted);
+  font-size: 0.56rem;
+  letter-spacing: 0.06em;
+}
+
+.sign-demo__lead {
+  max-width: 34rem;
+  margin: var(--space-16) 0 0;
+  color: var(--login-scene-muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.sign-demo__journeys {
+  display: grid;
+  gap: var(--space-16);
+  margin-top: var(--space-24);
+  max-width: 28rem;
+}
+
+.sign-demo__journey {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  grid-template-areas:
+    "mark kicker kicker arrow"
+    "mark label label arrow";
+  column-gap: var(--space-8);
+  row-gap: 0.15rem;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sign-demo__journey:focus-visible {
+  outline: 2px solid var(--color-azure-a1);
+  outline-offset: 4px;
+}
+
+.sign-demo__journey-mark {
+  grid-area: mark;
+  width: 5px;
+  height: 5px;
+  background: var(--color-azure-a1);
+}
+
+.sign-demo__journey[data-tone="angajat"] .sign-demo__journey-mark {
+  background: #1a7a52;
+}
+
+.sign-demo__journey-kicker {
+  grid-area: kicker;
+  color: var(--login-scene-muted);
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+}
+
+.sign-demo__journey-label {
+  grid-area: label;
+  color: var(--login-scene-ink);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.sign-demo__journey-arrow {
+  grid-area: arrow;
+  color: var(--login-scene-muted);
+  font-size: 1rem;
+}
+
+.sign-controller {
+  position: relative;
+  display: grid;
+  gap: var(--space-16);
+  padding: var(--space-16);
+  border: var(--stroke) solid var(--login-scene-frame);
+  background: color-mix(in srgb, var(--login-scene-canvas) 92%, transparent);
+  border-radius: var(--radius-control);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 2%);
+}
+
+.sign-controller::before,
+.sign-controller::after {
+  content: "";
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border: var(--stroke) solid var(--color-border-strong);
+  border-radius: 50%;
+  background: var(--color-canvas);
+}
+
+.sign-controller::before {
+  left: -3px;
+  top: 50%;
+}
+
+.sign-controller::after {
+  right: -3px;
+  top: 38%;
+}
+
+.sign-controller__header,
+.sign-controller__dimmer-head,
+.sign-controller__power {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+}
+
+.sign-controller__header > div:first-child,
+.sign-controller__power > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sign-controller__title,
+.sign-controller__power-title {
+  color: var(--color-text-primary);
+  font-size: 0.66rem;
+  letter-spacing: 0.05em;
+}
+
+.sign-controller__spec,
+.sign-controller__status,
+.sign-controller__power-state {
+  color: var(--color-text-muted);
+  font-size: 0.58rem;
+}
+
+.sign-controller__status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  text-transform: uppercase;
+}
+
+.sign-controller__status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-border-strong);
+}
+
+.sign-controller__status-dot[data-active] {
+  background: rgb(var(--sign-light-rgb));
+  box-shadow: 0 0 7px rgb(var(--sign-light-rgb) / 70%);
+}
+
+.sign-controller__group,
+.sign-controller__rgb {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.sign-controller__group legend,
+.sign-controller__rgb legend,
+.sign-controller__dimmer-head label {
+  margin-bottom: var(--space-6);
+  color: var(--color-text-kicker);
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sign-controller__segmented,
+.sign-controller__source {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.sign-controller__segmented {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sign-controller__source {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sign-controller__segmented button,
+.sign-controller__source button,
+.sign-controller__rgb button {
+  min-height: 2.25rem;
+  border: var(--stroke) solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.63rem;
+  cursor: pointer;
+}
+
+.sign-controller__segmented button:hover,
+.sign-controller__source button:hover,
+.sign-controller__rgb button:hover {
+  border-color: var(--color-selection-edge);
+  color: var(--color-text-primary);
+}
+
+.sign-controller__segmented button:focus-visible,
+.sign-controller__source button:focus-visible,
+.sign-controller__rgb button:focus-visible,
+.sign-controller__switch:focus-visible,
+.sign-controller input[type="range"]:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.sign-controller__segmented button[aria-checked="true"],
+.sign-controller__source button[aria-checked="true"] {
+  border-color: rgb(var(--sign-light-rgb));
+  color: var(--color-text-primary);
+  box-shadow: inset 0 -2px 0 rgb(var(--sign-light-rgb));
+}
+
+.sign-controller__source button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+}
+
+.sign-controller__swatch {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.sign-controller__swatch--cool {
+  background: rgb(199 222 255);
+}
+
+.sign-controller__swatch--warm {
+  background: rgb(255 202 112);
+}
+
+.sign-controller__rgb-dots {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.sign-controller__rgb-dots i,
+.sign-controller__rgb button {
+  border-radius: 50%;
+}
+
+.sign-controller__rgb-dots i {
+  width: 5px;
+  height: 5px;
+}
+
+.sign-controller__rgb-dots i:nth-child(1) {
+  background: rgb(255 64 72);
+}
+
+.sign-controller__rgb-dots i:nth-child(2) {
+  background: rgb(45 224 238);
+}
+
+.sign-controller__rgb-dots i:nth-child(3) {
+  background: rgb(40 112 255);
+}
+
+.sign-controller__dimmer {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.sign-controller__dimmer-head output {
+  color: rgb(var(--sign-light-rgb));
+  font-size: 0.65rem;
+}
+
+.sign-controller input[type="range"] {
+  width: 100%;
+  accent-color: rgb(var(--sign-light-rgb));
+  cursor: pointer;
+}
+
+.sign-controller__rgb > div {
+  display: flex;
+  gap: var(--space-8);
+}
+
+.sign-controller__rgb button {
+  width: 2rem;
+  min-height: 2rem;
+  padding: 0;
+}
+
+.sign-controller__rgb button[data-preset="blue"] {
+  background: rgb(40 112 255);
+}
+
+.sign-controller__rgb button[data-preset="red"] {
+  background: rgb(255 64 72);
+}
+
+.sign-controller__rgb button[data-preset="magenta"] {
+  background: rgb(255 62 210);
+}
+
+.sign-controller__rgb button[data-preset="cyan"] {
+  background: rgb(45 224 238);
+}
+
+.sign-controller__rgb button[aria-checked="true"] {
+  box-shadow:
+    0 0 0 2px var(--color-canvas),
+    0 0 0 4px var(--color-focus-ring);
+}
+
+.sign-controller__power {
+  padding-top: var(--space-12);
+  border-top: var(--stroke) solid var(--color-border);
+}
+
+.sign-controller__switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: var(--target-min);
+  padding: 0 var(--space-8);
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  cursor: pointer;
+}
+
+.sign-controller__switch-track {
+  position: relative;
+  width: 1.8rem;
+  height: 2.75rem;
+  border: var(--stroke) solid var(--color-border-strong);
+  background: var(--color-surface);
+}
+
+.sign-controller__switch-track::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--color-border-strong);
+}
+
+.sign-controller__switch-knob {
+  position: absolute;
+  left: 50%;
+  top: 1.72rem;
+  width: 0.8rem;
+  height: 0.8rem;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: var(--color-selection-edge);
+  transition:
+    top var(--motion-edit) var(--ease-work),
+    background-color var(--motion-edit) var(--ease-work),
+    box-shadow var(--motion-edit) var(--ease-work);
+}
+
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-knob {
+  top: 0.34rem;
+  background: rgb(var(--sign-light-rgb));
+  box-shadow: 0 0 8px rgb(var(--sign-light-rgb) / 55%);
+}
+
+@media (max-width: 1024px) {
+  .auth-gate__main {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 48rem;
+  }
+
+  .auth-gate__card {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .auth-tech {
+    border-left: 0;
+    padding-left: 0;
+    border-top: var(--stroke) solid var(--login-scene-line);
+    padding-top: var(--space-24);
+  }
+
+  .sign-demo {
+    max-width: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .auth-gate__brand {
+    flex-wrap: wrap;
+    min-height: auto;
+    padding-block: var(--space-8);
+  }
+
+  .auth-gate__login-choices {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .auth-gate__login-choices .button {
+    flex: 1 1 auto;
+  }
+
+  .auth-gate__main {
+    padding-top: var(--space-16);
+  }
+
+  .auth-gate[data-access="societate"] .sign-demo,
+  .auth-gate[data-access="angajat"] .sign-demo {
+    order: 2;
+  }
+
+  .auth-gate[data-access="societate"] .auth-tech,
+  .auth-gate[data-access="angajat"] .auth-tech {
+    order: 1;
+    border-top: 0;
+    padding-top: 0;
+    border-bottom: var(--stroke) solid var(--login-scene-line);
+    padding-bottom: var(--space-24);
+  }
+
+  .sign-demo__stage {
+    min-height: 12.5rem;
+  }
+
+  .sign-demo__word > span {
+    font-size: clamp(3.2rem, 16vw, 5rem);
+  }
+
+  .sign-controller__segmented,
+  .sign-controller__source {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .auth-gate__footer {
+    flex-direction: column;
+  }
+
+  .auth-tech {
+    min-height: 0;
+  }
+
+  .auth-tech__frame {
+    min-height: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-gate,
+  .sign-demo__word-material,
+  .sign-demo__cable-live,
+  .sign-controller__switch-knob {
+    transition: none;
+  }
+}
+
+/* LOGIN V1 FINAL CONTRACT */
+.auth-gate__main {
+  width: min(100%, 1440px);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(25rem, 0.82fr);
+  gap: clamp(1.5rem, 3vw, 3.5rem);
+  align-items: stretch;
+}
+
+.auth-gate[data-scene="day"] .sign-demo__word-material {
+  color: #11110f;
+  opacity: 1;
+}
+
+.auth-gate[data-scene="night"] .sign-controller,
+.auth-gate[data-scene="night"] .sign-controller__switch-track {
+  border-color: rgb(121 91 42 / 78%);
+  background: rgb(14 12 9 / 96%);
+}
+
+.auth-gate[data-scene="night"] .sign-controller__segmented button,
+.auth-gate[data-scene="night"] .sign-controller__source button {
+  border-color: rgb(112 86 45 / 68%);
+  color: rgb(181 169 145);
+}
+
+.auth-gate[data-scene="night"] .sign-controller__segmented button[aria-checked="true"],
+.auth-gate[data-scene="night"] .sign-controller__source button[aria-checked="true"] {
+  border-color: rgb(var(--sign-light-rgb) / 82%);
+  box-shadow: inset 0 -2px 0 rgb(var(--sign-light-rgb) / 72%);
+}
+
+.sign-demo[data-power="off"] .sign-controller__group,
+.sign-demo[data-power="off"] .sign-controller__dimmer,
+.sign-demo[data-power="off"] .sign-controller__rgb {
+  opacity: 0.28;
+  filter: blur(0.55px);
+  pointer-events: none;
+}
+
+.sign-demo[data-power="on"] .sign-controller__group,
+.sign-demo[data-power="on"] .sign-controller__dimmer,
+.sign-demo[data-power="on"] .sign-controller__rgb {
+  opacity: 1;
+  filter: none;
+  transition:
+    opacity var(--motion-navigate) var(--ease-work),
+    filter var(--motion-navigate) var(--ease-work);
+}
+
+.sign-demo__word-core {
+  position: relative;
+  z-index: 4;
+  color: rgb(var(--sign-light-rgb));
+  opacity: var(--sign-core-fill);
+  filter: drop-shadow(0 0 2px rgb(var(--sign-light-rgb) / var(--sign-core-glow)));
+}
+
+.sign-demo__word[data-power="off"] .sign-demo__word-core,
+.sign-demo__word[data-halo-only] .sign-demo__word-core {
+  opacity: 0;
+  filter: none;
+}
+
+.sign-demo__word[data-halo-only] .sign-demo__word-material {
+  color: #050505;
+  opacity: 1;
+}
+
+.sign-demo__word[data-halo-only] .sign-demo__word-halo {
+  color: #050505;
+}
+
+.sign-demo__cable-base {
+  opacity: 0.48;
+}
+
+.auth-gate[data-scene="night"] .sign-demo__cable-base {
+  opacity: 0.34;
+}
+
+.sign-demo__cable-live {
+  opacity: var(--sign-cable-live);
+  filter: none;
+}
+
+.sign-demo__feed-notes {
+  position: absolute;
+  z-index: 3;
+  left: clamp(5.5rem, 12vw, 10rem);
+  top: 0.55rem;
+  display: grid;
+  gap: 0.15rem;
+  color: var(--login-scene-muted);
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  line-height: 1.2;
+  letter-spacing: 0.045em;
+  pointer-events: none;
+}
+
+.sign-controller__switch-knob,
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-knob {
+  background: #2066cf;
+  box-shadow: 0 0 0 1px rgb(67 137 236 / 58%);
+}
+
+.sign-controller :disabled {
+  cursor: not-allowed;
+}
+
+.auth-tech__grid {
+  background-image:
+    linear-gradient(var(--login-scene-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--login-scene-grid) 1px, transparent 1px);
+  background-size: 84px 84px;
+  opacity: 0.18;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__grid {
+  background-image: radial-gradient(circle, rgb(125 105 72 / 22%) 0 1px, transparent 1.2px);
+  background-size: 32px 32px;
+  opacity: 0.42;
+}
+
+.auth-tech__viewport {
+  overflow: hidden;
+}
+
+.auth-tech__workbench {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  align-content: center;
+  justify-items: center;
+  opacity: 0.42;
+  transition:
+    opacity var(--motion-navigate) var(--ease-work),
+    transform var(--motion-navigate) var(--ease-work);
+}
+
+.auth-tech__viewport[data-auth-active] .auth-tech__workbench {
+  opacity: 0.1;
+  transform: scale(0.985);
+}
+
+.auth-tech__rings {
+  width: 150px;
+  height: 150px;
+}
+
+.auth-tech__ring,
+.auth-tech__target {
+  border-color: color-mix(in srgb, var(--login-scene-frame) 82%, transparent);
+}
+
+.auth-tech__ring--outer {
+  opacity: 0.2;
+}
+
+.auth-tech__ring--mid {
+  inset: 28px;
+  opacity: 0.14;
+}
+
+.auth-tech__ring--inner {
+  display: none;
+}
+
+.auth-tech__target {
+  width: 38px;
+  height: 38px;
+  background: transparent;
+  opacity: 0.2;
+}
+
+.auth-tech__target::after {
+  width: 4px;
+  height: 4px;
+  background: rgb(184 135 43 / 75%);
+}
+
+.auth-tech__crosshair {
+  opacity: 0.11;
+  background: var(--login-scene-frame);
+}
+
+.auth-tech__panel,
+.auth-tech__status {
+  position: relative;
+  z-index: 3;
+}
+
+.auth-tech__panel {
+  padding: clamp(1.25rem, 2.2vw, 2rem);
+  border: var(--stroke) solid color-mix(in srgb, var(--login-scene-frame) 72%, transparent);
+  background: color-mix(in srgb, var(--login-scene-canvas) 97%, transparent);
+}
+
+.auth-tech__comet {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: min(78%, 22rem);
+  height: min(58%, 15rem);
+  transform: translate(-50%, -50%);
+  overflow: visible;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.auth-tech__workbench[data-active] .auth-tech__comet {
+  opacity: 1;
+}
+
+.auth-tech__comet-glow,
+.auth-tech__comet-core {
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 0.22 0.78;
+  stroke-dashoffset: 0.22;
+}
+
+.auth-tech__comet-glow {
+  stroke: rgb(184 135 43 / 22%);
+  stroke-width: 7;
+  filter: blur(5px);
+}
+
+.auth-tech__comet-core {
+  stroke: rgb(224 177 82 / 72%);
+  stroke-width: 1.15;
+}
+
+.auth-tech__comet-head {
+  fill: rgb(238 194 103);
+  filter: drop-shadow(0 0 6px rgb(224 177 82 / 42%));
+}
+
+.auth-tech__workbench[data-active] .auth-tech__comet-glow,
+.auth-tech__workbench[data-active] .auth-tech__comet-core {
+  animation: auth-comet-trace 300ms var(--ease-work) both;
+}
+
+.auth-tech__workbench[data-active] .auth-tech__comet-head {
+  animation: auth-comet-head 300ms var(--ease-work) both;
+}
+
+@keyframes auth-comet-trace {
+  from {
+    stroke-dashoffset: 0.98;
+    opacity: 0;
+  }
+  55% {
+    opacity: 1;
+  }
+  to {
+    stroke-dashoffset: 0.22;
+    opacity: 0;
+  }
+}
+
+@keyframes auth-comet-head {
+  from {
+    opacity: 0;
+    transform: translate(-54px, -34px) scale(0.75);
+  }
+  55% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+@media (max-width: 1280px) {
+  .auth-gate__main {
+    grid-template-columns: minmax(0, 1.06fr) minmax(23rem, 0.94fr);
+    gap: var(--space-24);
+  }
+
+  .sign-demo__word > span {
+    font-size: clamp(4rem, 7.4vw, 6.2rem);
+  }
+}
+
+@media (max-width: 1024px) {
+  .auth-gate__main {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 48rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .auth-gate__main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-20);
+  }
+
+  .auth-gate[data-access="societate"] .auth-tech,
+  .auth-gate[data-access="angajat"] .auth-tech {
+    order: 1;
+  }
+
+  .auth-gate[data-access="societate"] .sign-demo,
+  .auth-gate[data-access="angajat"] .sign-demo {
+    order: 2;
+  }
+
+  .auth-gate[data-access="societate"] .auth-tech__frame,
+  .auth-gate[data-access="angajat"] .auth-tech__frame {
+    min-height: auto;
+  }
+
+  .auth-gate[data-access="societate"] .auth-tech__viewport,
+  .auth-gate[data-access="angajat"] .auth-tech__viewport {
+    min-height: 0;
+  }
+
+  .auth-gate[data-access="societate"] .auth-tech__panel,
+  .auth-gate[data-access="angajat"] .auth-tech__panel {
+    width: 100%;
+  }
+
+  .sign-demo__feed-notes {
+    left: 4.75rem;
+    top: 0.35rem;
+    font-size: 0.48rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-tech__workbench,
+  .auth-tech__comet-glow,
+  .auth-tech__comet-core,
+  .auth-tech__comet-head {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .auth-tech__comet {
+    display: none;
+  }
+}
+
+/* LOGIN V1 COLOR DISCIPLINE SELF-REVIEW */
+.auth-gate {
+  --login-control-accent: 184 135 43;
+  --login-control-accent-soft: 121 91 42;
+}
+
+.sign-controller__segmented button[aria-checked="true"],
+.sign-controller__source button[aria-checked="true"],
+.auth-gate[data-scene="night"] .sign-controller__segmented button[aria-checked="true"],
+.auth-gate[data-scene="night"] .sign-controller__source button[aria-checked="true"] {
+  border-color: rgb(var(--login-control-accent) / 88%);
+  color: var(--login-scene-ink);
+  box-shadow: inset 0 -2px 0 rgb(var(--login-control-accent) / 78%);
+}
+
+.sign-controller__dimmer-head output {
+  color: rgb(var(--login-control-accent));
+}
+
+.sign-controller input[type="range"] {
+  accent-color: rgb(var(--login-control-accent));
+}
+
+.sign-demo__journey-mark,
+.sign-demo__journey[data-tone="angajat"] .sign-demo__journey-mark {
+  background: rgb(var(--login-control-accent));
+}
+
+.sign-demo__journey:focus-visible,
+.sign-controller__segmented button:focus-visible,
+.sign-controller__source button:focus-visible,
+.sign-controller__rgb button:focus-visible,
+.sign-controller__switch:focus-visible,
+.sign-controller input[type="range"]:focus-visible {
+  outline-color: rgb(var(--login-control-accent));
+}
+
+.auth-gate__login-choices .hit[aria-pressed="true"] .button--primary {
+  background: #161717;
+  border-color: #161717;
+  color: #fff;
+}
+
+.auth-gate[data-scene="night"] .auth-gate__login-choices .hit[aria-pressed="true"] .button--primary {
+  background: rgb(var(--login-control-accent) / 82%);
+  border-color: rgb(var(--login-control-accent) / 92%);
+  color: #fff7e7;
+}
+
+.auth-gate__login-choices .hit[aria-pressed="false"] .button--secondary {
+  background: var(--login-scene-canvas);
+  border-color: color-mix(in srgb, var(--login-scene-frame) 70%, transparent);
+  color: var(--login-scene-ink);
+}
+
+.auth-gate[data-scene="night"] .auth-gate__login-choices .hit[aria-pressed="false"] .button--secondary {
+  background: rgb(14 12 9 / 96%);
+  border-color: rgb(var(--login-control-accent-soft) / 68%);
+  color: rgb(181 169 145);
+}
+
+.auth-gate[data-scene="day"] .auth-tech__panel .auth-gate__submit .button--primary {
+  background: #161717;
+  border-color: #161717;
+  color: #fff;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__panel .auth-gate__submit .button--primary {
+  background: rgb(var(--login-control-accent) / 84%);
+  border-color: rgb(var(--login-control-accent) / 94%);
+  color: #fff7e7;
+}
+
+.auth-gate[data-scene="day"] .auth-tech__target::after {
+  background: #5f5c55;
+}
+
+.auth-gate[data-scene="day"] .auth-tech__ring,
+.auth-gate[data-scene="day"] .auth-tech__target {
+  border-color: rgb(95 92 85 / 28%);
+}
+
+.auth-gate[data-scene="day"] .auth-tech__crosshair {
+  background: rgb(95 92 85 / 18%);
+}
+
+.sign-controller__rgb button[aria-checked="true"] {
+  box-shadow:
+    0 0 0 2px var(--color-canvas),
+    0 0 0 4px rgb(var(--login-control-accent) / 82%);
+}
+
+.auth-gate .field__control:focus-visible,
+.auth-gate .hit:focus-visible {
+  outline-color: rgb(var(--login-control-accent));
+}
+
+.auth-gate[data-scene="day"] .field__control:focus-visible,
+.auth-gate[data-scene="day"] .hit:focus-visible {
+  outline-color: #4f4d48;
+}
+
+.auth-tech__panel .button--ghost {
+  color: rgb(var(--login-control-accent));
+}
+
+.auth-gate[data-scene="day"] .auth-tech__panel .button--ghost {
+  color: #4f4d48;
+}
+
+/* LOGIN V1 RUNTIME PARITY PASS 2026-10-02 */
+.auth-gate__main {
+  width: min(100%, 1440px);
+  grid-template-columns: minmax(0, 1.16fr) minmax(30rem, 0.84fr);
+  gap: clamp(2rem, 4vw, 4.5rem);
+  padding-top: clamp(2.2rem, 4.2vh, 3.5rem);
+  padding-bottom: clamp(1.5rem, 3vh, 2.5rem);
+}
+
+.sign-demo {
+  max-width: 43rem;
+  gap: 1.15rem;
+  align-content: start;
+}
+
+.sign-demo__stage {
+  min-height: 15.8rem;
+  padding-top: 0.6rem;
+}
+
+.sign-demo__kicker {
+  margin-bottom: 1.35rem;
+}
+
+.sign-demo__assembly {
+  min-height: 8.25rem;
+}
+
+.sign-demo__word {
+  margin-left: 0;
+}
+
+.sign-demo__word > span {
+  font-size: clamp(4.6rem, 6.1vw, 6rem);
+  line-height: 0.88;
+  letter-spacing: -0.06em;
+}
+
+.sign-demo__lead {
+  max-width: 31rem;
+  margin-top: 0.9rem;
+  font-size: 0.92rem;
+  line-height: 1.48;
+}
+
+.sign-demo__journeys {
+  display: none !important;
+}
+
+.sign-demo__cable {
+  inset: -2.45rem -1rem auto -1.2rem;
+  width: calc(100% + 2.2rem);
+  height: 13.5rem;
+}
+
+.sign-demo__cable-base {
+  stroke-width: 1.05;
+  opacity: 0.34;
+}
+
+.auth-gate[data-scene="day"] .sign-demo__cable-base {
+  opacity: 0.40;
+}
+
+.sign-demo__feed-notes {
+  left: 4.85rem;
+  top: -0.05rem;
+  font-size: 0.46rem;
+  opacity: 0.74;
+}
+
+.sign-controller {
+  width: min(100%, 34rem);
+  gap: 0.65rem;
+  padding: 0.78rem 0.85rem 0.72rem;
+  border-color: rgb(121 91 42 / 62%);
+  border-radius: 0;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--login-scene-canvas) 96%, transparent);
+}
+
+.sign-controller::before,
+.sign-controller::after {
+  width: 4px;
+  height: 4px;
+  opacity: 0.72;
+}
+
+.sign-controller__header {
+  gap: 0.75rem;
+}
+
+.sign-controller__title {
+  font-size: 0.58rem;
+}
+
+.sign-controller__spec,
+.sign-controller__status {
+  font-size: 0.49rem;
+}
+
+.sign-controller__status-dot {
+  width: 5px;
+  height: 5px;
+}
+
+.sign-controller__group legend,
+.sign-controller__rgb legend,
+.sign-controller__dimmer-head label {
+  margin-bottom: 0.3rem;
+  font-size: 0.49rem;
+}
+
+.sign-controller__segmented,
+.sign-controller__source {
+  gap: 0.42rem;
+}
+
+.sign-controller__segmented button,
+.sign-controller__source button {
+  min-height: 1.9rem;
+  padding-inline: 0.45rem;
+  font-size: 0.54rem;
+}
+
+.sign-controller__dimmer {
+  gap: 0.25rem;
+}
+
+.sign-controller__dimmer-head output {
+  font-size: 0.56rem;
+}
+
+.sign-controller input[type="range"] {
+  height: 0.8rem;
+}
+
+.sign-controller__rgb {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.sign-controller__rgb legend {
+  margin: 0;
+}
+
+.sign-controller__rgb > div {
+  display: flex;
+  gap: 0.38rem;
+}
+
+.sign-controller__rgb button {
+  width: 1.05rem;
+  min-height: 1.05rem;
+  height: 1.05rem;
+  border-width: 1px;
+}
+
+.sign-controller__rgb button[aria-checked="true"] {
+  box-shadow:
+    0 0 0 1px var(--color-canvas),
+    0 0 0 2px rgb(var(--login-control-accent) / 78%);
+}
+
+.sign-power-panel {
+  position: relative;
+  width: 16.2rem;
+  margin-top: 0.65rem;
+  padding: 0.75rem 0.8rem 0.72rem;
+  border: 1px solid rgb(121 91 42 / 62%);
+  background: color-mix(in srgb, var(--login-scene-canvas) 97%, transparent);
+}
+
+.sign-power-panel::before {
+  content: "";
+  position: absolute;
+  left: -3px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  transform: translateY(-50%);
+  border: 1px solid rgb(121 91 42 / 72%);
+  border-radius: 50%;
+  background: var(--login-scene-canvas);
+}
+
+.sign-power-panel__copy {
+  display: grid;
+  gap: 0.15rem;
+  margin-bottom: 0.55rem;
+}
+
+.sign-power-panel__body {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.sign-power-panel__psu {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 0.12rem 0.7rem;
+  min-width: 5.7rem;
+  padding: 0.48rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--login-scene-frame) 58%, transparent);
+  color: var(--login-scene-muted);
+  font-family: var(--font-mono);
+  font-size: 0.45rem;
+}
+
+.sign-power-panel__psu > span {
+  grid-column: 1 / -1;
+}
+
+.sign-power-panel__psu small {
+  font-size: 0.42rem;
+}
+
+.sign-power-panel__ready {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--login-scene-muted);
+  font-family: var(--font-mono);
+  font-size: 0.47rem;
+  white-space: nowrap;
+}
+
+.sign-power-panel__ready-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--login-scene-frame);
+}
+
+.sign-power-panel__ready[data-active] .sign-power-panel__ready-dot {
+  background: rgb(var(--login-control-accent));
+  box-shadow: 0 0 5px rgb(var(--login-control-accent) / 50%);
+}
+
+.sign-controller__switch {
+  padding-inline: 0.15rem;
+}
+
+.sign-controller__switch-track {
+  width: 1.55rem;
+  height: 2.35rem;
+}
+
+.sign-controller__switch-knob {
+  width: 0.76rem;
+  height: 0.76rem;
+}
+
+.auth-tech {
+  min-height: 0;
+  padding-left: clamp(1.25rem, 2.5vw, 2.25rem);
+}
+
+.auth-tech__grid {
+  left: clamp(1.25rem, 2.5vw, 2.25rem);
+  background-size: 48px 48px;
+  opacity: 0.34;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__grid {
+  background-size: 31px 31px;
+  opacity: 0.52;
+}
+
+.auth-tech__frame {
+  min-height: 37.5rem;
+  max-height: 42rem;
+  padding: 0.9rem;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  border-color: color-mix(in srgb, var(--login-scene-frame) 72%, transparent);
+  background: color-mix(in srgb, var(--login-scene-canvas) 97%, transparent);
+}
+
+.auth-tech__viewport {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.auth-tech__workbench {
+  width: min(100%, 24rem);
+  opacity: 0.68;
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__workbench {
+  opacity: 0.72;
+  transform: none;
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__rings {
+  width: 188px;
+  height: 188px;
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__ring--outer {
+  opacity: 0.32;
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__ring--mid {
+  inset: 33px;
+  opacity: 0.26;
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__target {
+  width: 44px;
+  height: 44px;
+  opacity: 0.42;
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__crosshair {
+  opacity: 0.20;
+}
+
+.auth-tech__measure {
+  opacity: 0.72;
+}
+
+.auth-tech__meta {
+  font-size: 0.49rem;
+}
+
+.auth-tech__viewport::before,
+.auth-tech__viewport::after {
+  content: "";
+  position: absolute;
+  inset: 12% 10%;
+  pointer-events: none;
+  opacity: 0.20;
+}
+
+.auth-tech__viewport::before {
+  background:
+    linear-gradient(90deg, transparent 49.85%, var(--login-scene-frame) 50%, transparent 50.15%),
+    linear-gradient(transparent 49.85%, var(--login-scene-frame) 50%, transparent 50.15%);
+}
+
+.auth-tech__viewport::after {
+  inset: auto 8% 12% auto;
+  width: 5.4rem;
+  height: 4.1rem;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 0 7px,
+    color-mix(in srgb, var(--login-scene-frame) 30%, transparent) 7px 8px
+  );
+}
+
+.auth-gate[data-scene="night"] .sign-demo__word-face {
+  filter:
+    drop-shadow(0 0 1.5px rgb(var(--sign-light-rgb) / calc(var(--sign-face-glow) * 0.9)))
+    drop-shadow(0 0 4px rgb(var(--sign-light-rgb) / calc(var(--sign-face-glow) * 0.36)));
+}
+
+.auth-gate[data-scene="night"] .sign-demo__word-core {
+  filter: drop-shadow(0 0 1.2px rgb(var(--sign-light-rgb) / calc(var(--sign-core-glow) * 0.75)));
+}
+
+.auth-gate[data-scene="night"] .sign-demo__word-halo {
+  filter:
+    drop-shadow(0 0 3px rgb(var(--sign-light-rgb) / var(--sign-halo-tight)))
+    drop-shadow(0 0 8px rgb(var(--sign-light-rgb) / var(--sign-halo-near)))
+    drop-shadow(0 0 18px rgb(var(--sign-light-rgb) / var(--sign-halo-mid)))
+    drop-shadow(0 0 34px rgb(var(--sign-light-rgb) / var(--sign-halo-far)));
+}
+
+@media (max-width: 1280px) {
+  .auth-gate__main {
+    grid-template-columns: minmax(0, 1.08fr) minmax(26rem, 0.92fr);
+    gap: 2rem;
+  }
+
+  .sign-demo {
+    max-width: none;
+  }
+
+  .sign-controller {
+    width: 100%;
+  }
+}
+
+@media (max-width: 1024px) {
+  .auth-gate__main {
+    grid-template-columns: 1fr;
+    max-width: 50rem;
+  }
+
+  .auth-tech__frame {
+    min-height: 31rem;
+    max-height: none;
+  }
+
+  .sign-controller {
+    width: min(100%, 36rem);
+  }
+}
+
+@media (max-width: 768px) {
+  .sign-demo__stage {
+    min-height: 13.5rem;
+  }
+
+  .sign-demo__word > span {
+    font-size: clamp(3.5rem, 15vw, 5rem);
+  }
+
+  .sign-controller {
+    width: 100%;
+  }
+
+  .sign-controller__segmented,
+  .sign-controller__source {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .sign-power-panel {
+    width: min(100%, 17rem);
+  }
+
+  .auth-gate[data-access="societate"] .auth-tech__frame,
+  .auth-gate[data-access="angajat"] .auth-tech__frame {
+    min-height: 0;
+  }
+}
+
+.sign-demo__scene-state {
+  position: fixed;
+  z-index: 20;
+  top: 0.95rem;
+  left: 50%;
+  margin: 0;
+  transform: translateX(-50%);
+  color: var(--login-scene-muted);
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.sign-controller__status-dot[data-active] {
+  background: rgb(var(--login-control-accent));
+  box-shadow: 0 0 5px rgb(var(--login-control-accent) / 45%);
+}
+
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet {
+  opacity: 0.32;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet-glow,
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet-core,
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet-head {
+  animation: none;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet-glow {
+  opacity: 0.55;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet-core {
+  opacity: 0.8;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet-head {
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .sign-demo__scene-state {
+    display: none;
+  }
+}
+
+/* LOGIN V1 RUNTIME PARITY PASS 2 */
+.auth-gate__main {
+  grid-template-columns: minmax(0, 1fr) minmax(31rem, 1fr);
+  gap: 2.25rem;
+  width: 100%;
+  max-width: 90rem;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.sign-demo {
+  max-width: none;
+  gap: 1rem;
+  isolation: isolate;
+}
+
+.sign-demo::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: 0;
+  top: 0.7rem;
+  width: min(100%, 39rem);
+  height: 33rem;
+  background-image:
+    linear-gradient(var(--login-scene-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--login-scene-grid) 1px, transparent 1px);
+  background-size: 42px 42px;
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.sign-demo__stage,
+.sign-controller,
+.sign-power-panel {
+  position: relative;
+  z-index: 2;
+}
+
+.sign-demo__stage {
+  min-height: 16.6rem;
+  padding-top: 0.85rem;
+}
+
+.sign-demo__assembly {
+  min-height: 8.5rem;
+}
+
+.sign-demo__word {
+  margin-left: 0;
+}
+
+.sign-demo__word > span {
+  font-size: clamp(4.8rem, 6.35vw, 6.35rem);
+}
+
+.sign-demo__word[data-face-emission="on"] .sign-demo__word-material {
+  opacity: 0;
+}
+
+.sign-demo__word-face {
+  color: rgb(var(--sign-face-rgb));
+  filter:
+    drop-shadow(0 0 1.5px rgb(var(--sign-light-rgb) / calc(var(--sign-face-glow) * 0.82)))
+    drop-shadow(0 0 4px rgb(var(--sign-light-rgb) / calc(var(--sign-face-glow) * 0.34)));
+}
+
+.sign-demo__word-core {
+  color: rgb(var(--sign-core-rgb));
+  filter: drop-shadow(0 0 1.25px rgb(var(--sign-light-rgb) / calc(var(--sign-core-glow) * 0.66)));
+}
+
+.sign-demo__word[data-halo-only] .sign-demo__word-material {
+  color: #050505;
+  opacity: 1;
+}
+
+.sign-demo__word[data-halo-only] .sign-demo__word-face,
+.sign-demo__word[data-halo-only] .sign-demo__word-core {
+  opacity: 0;
+  filter: none;
+}
+
+.sign-demo__infrastructure {
+  position: absolute;
+  z-index: 1;
+  left: -1.6rem;
+  top: 2.2rem;
+  width: min(calc(100% + 1.6rem), 42rem);
+  height: 43rem;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.sign-demo__infra-base,
+.sign-demo__infra-live {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sign-demo__infra-base {
+  stroke: var(--login-scene-frame);
+  stroke-width: 1.05;
+  opacity: 0.28;
+}
+
+.sign-demo__infra-live {
+  stroke: rgb(var(--login-control-accent));
+  stroke-width: 0.8;
+  opacity: var(--sign-cable-live);
+}
+
+.auth-gate[data-scene="day"] .sign-demo__infra-base {
+  opacity: 0.34;
+}
+
+.sign-demo__feed-notes {
+  left: 4.6rem;
+  top: -0.1rem;
+  opacity: 0.72;
+}
+
+.sign-controller {
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(10.5rem, 0.82fr);
+  grid-template-areas:
+    "header header"
+    "mode source"
+    "dimmer source"
+    "rgb rgb";
+  column-gap: 1rem;
+  row-gap: 0.65rem;
+  width: min(100%, 34rem);
+  padding: 0.8rem 0.9rem 0.75rem;
+}
+
+.sign-controller__header {
+  grid-area: header;
+}
+
+.sign-controller__group--mode {
+  grid-area: mode;
+}
+
+.sign-controller__dimmer {
+  grid-area: dimmer;
+  align-self: end;
+}
+
+.sign-controller__group--source {
+  grid-area: source;
+  align-self: end;
+}
+
+.sign-controller__rgb {
+  grid-area: rgb;
+}
+
+.sign-controller__channel {
+  display: grid;
+  justify-items: end;
+  gap: 0.2rem;
+  min-width: 8.5rem;
+  color: var(--login-scene-muted);
+  font-family: var(--font-mono);
+  font-size: 0.46rem;
+  letter-spacing: 0.05em;
+}
+
+.sign-controller__channel-label {
+  color: var(--login-scene-muted);
+}
+
+.sign-controller__channel-states {
+  display: inline-grid;
+  grid-template-columns: auto 5px auto 5px;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sign-controller__channel-states > span[data-active] {
+  color: rgb(var(--login-control-accent));
+}
+
+.sign-controller__channel-states > i {
+  display: block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--login-scene-frame);
+}
+
+.sign-controller__channel-states > i[data-active] {
+  background: rgb(var(--login-control-accent));
+  box-shadow: 0 0 4px rgb(var(--login-control-accent) / 46%);
+}
+
+.sign-controller__segmented {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sign-controller__source {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sign-controller__segmented button,
+.sign-controller__source button {
+  min-height: 1.8rem;
+  font-size: 0.51rem;
+}
+
+.sign-controller__dimmer-head {
+  margin-bottom: 0.1rem;
+}
+
+.sign-controller input[type="range"] {
+  height: 0.72rem;
+}
+
+.sign-power-panel {
+  width: 16.8rem;
+  margin-top: 3.1rem;
+  padding: 0.8rem 0.85rem 0.76rem;
+}
+
+.sign-power-panel__body {
+  gap: 0.75rem;
+}
+
+.sign-power-panel__psu {
+  min-width: 5.9rem;
+  padding: 0.52rem 0.58rem;
+}
+
+.auth-tech {
+  min-height: 0;
+  padding-left: 1.85rem;
+}
+
+.auth-tech__grid {
+  left: 1.85rem;
+}
+
+.auth-tech__frame {
+  width: 100%;
+  min-height: 41rem;
+  max-height: 44rem;
+  padding: 1rem;
+}
+
+.auth-tech__workbench {
+  width: min(100%, 27rem);
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__rings {
+  width: 208px;
+  height: 208px;
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__ring--outer {
+  opacity: 0.4;
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__ring--mid {
+  inset: 36px;
+  opacity: 0.34;
+}
+
+.auth-tech__viewport:not([data-auth-active]) .auth-tech__target {
+  width: 46px;
+  height: 46px;
+  opacity: 0.5;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet {
+  width: min(82%, 24rem);
+  opacity: 0.46;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet-glow {
+  opacity: 0.68;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__viewport:not([data-auth-active]) .auth-tech__comet-core {
+  opacity: 0.94;
+}
+
+.auth-tech__measure {
+  width: 88%;
+}
+
+@media (max-width: 1280px) {
+  .auth-gate__main {
+    grid-template-columns: minmax(0, 1.02fr) minmax(27rem, 0.98fr);
+    gap: 1.75rem;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  .sign-controller {
+    width: 100%;
+  }
+
+  .auth-tech {
+    padding-left: 1.25rem;
+  }
+
+  .auth-tech__grid {
+    left: 1.25rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  .auth-gate__main {
+    grid-template-columns: 1fr;
+    max-width: 50rem;
+  }
+
+  .sign-demo__infrastructure {
+    height: 40rem;
+  }
+
+  .auth-tech {
+    padding-left: 0;
+  }
+
+  .auth-tech__grid {
+    left: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .sign-controller {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "mode"
+      "dimmer"
+      "source"
+      "rgb";
+  }
+
+  .sign-controller__channel {
+    min-width: 0;
+  }
+
+  .sign-power-panel {
+    margin-top: 1.25rem;
+  }
+
+  .sign-demo__infrastructure {
+    display: none;
+  }
+}
+
+/* LOGIN V1 FIDELITY RECONSTRUCTION */
+@media (min-width: 1025px) {
+  .auth-gate {
+    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .auth-gate__brand {
+    flex: 0 0 49px;
+    min-height: 49px;
+    height: 49px;
+    padding: 0 3.75rem 0 3.375rem;
+  }
+
+  .auth-gate__brand .app-shell__wordmark {
+    font-size: 1.15rem;
+  }
+
+  .auth-gate__login-choices {
+    gap: 0.55rem;
+  }
+
+  .auth-gate__login-choices .button {
+    min-height: 34px;
+    padding-inline: 1rem;
+    border-radius: 0;
+    font-size: 0.82rem;
+  }
+
+  .auth-gate__main {
+    position: relative;
+    flex: 1 1 auto;
+    width: min(100%, 1440px);
+    max-width: 1440px;
+    min-height: 0;
+    height: calc(100vh - 84px);
+    margin: 0 auto;
+    padding: 0;
+    display: block;
+  }
+
+  .auth-gate__footer {
+    flex: 0 0 35px;
+    min-height: 35px;
+    height: 35px;
+    align-items: center;
+    padding: 0 24px;
+  }
+
+  .sign-demo {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 640px;
+    height: 816px;
+    max-width: none;
+    display: block;
+    isolation: isolate;
+  }
+
+  .sign-demo::after {
+    left: 24px;
+    top: 43px;
+    width: 640px;
+    height: 280px;
+    opacity: 0.12;
+    background-size: 42px 42px;
+  }
+
+  .sign-demo__scene-state {
+    position: fixed;
+    top: 18px;
+    left: 50%;
+    font-size: 7.5px;
+    letter-spacing: 0;
+  }
+
+  .sign-demo__stage {
+    position: static;
+    min-height: 0;
+    padding: 0;
+  }
+
+  .sign-demo__kicker {
+    position: absolute;
+    left: 76px;
+    top: 47px;
+    width: 260px;
+    margin: 0;
+    font-size: 8px;
+    line-height: 15px;
+    letter-spacing: 0;
+  }
+
+  .sign-demo__assembly {
+    position: static;
+    min-height: 0;
+  }
+
+  .sign-demo__word {
+    position: absolute;
+    left: 76px;
+    top: 101px;
+    margin: 0;
+  }
+
+  .sign-demo__word > span {
+    width: 510px;
+    font-size: 84px;
+    line-height: 84px;
+    letter-spacing: -0.055em;
+  }
+
+  .sign-demo__lead {
+    position: absolute;
+    left: 76px;
+    top: 211px;
+    width: 468px;
+    max-width: none;
+    margin: 0;
+    font-size: 15px;
+    line-height: 24px;
+    opacity: 0.88;
+  }
+
+  .sign-demo__feed-notes {
+    left: 160px;
+    top: 79px;
+    gap: 0;
+    font-size: 6px;
+    line-height: 12px;
+    opacity: 0.48;
+  }
+
+  .sign-demo__infrastructure {
+    left: 0;
+    top: 31px;
+    width: 646px;
+    height: 734px;
+    z-index: 1;
+  }
+
+  .sign-demo__infra-base {
+    stroke: rgb(99 89 77);
+    stroke-width: 1.05;
+    opacity: 0.22;
+  }
+
+  .sign-demo__infra-live {
+    stroke: rgb(var(--login-control-accent));
+    stroke-width: 0.8;
+    opacity: calc(var(--sign-cable-live) * 0.55);
+  }
+
+  .sign-controller {
+    position: absolute;
+    left: 76px;
+    top: 341px;
+    width: 552px;
+    height: 148px;
+    display: block;
+    padding: 0;
+    border: 1px solid rgb(120 92 48 / 72%);
+    background: rgb(13 12 9);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .sign-controller::before,
+  .sign-controller::after {
+    width: 10px;
+    height: 10px;
+    background: transparent;
+    border-color: rgb(120 92 48 / 72%);
+  }
+
+  .sign-controller::before {
+    left: -6px;
+    top: 55px;
+  }
+
+  .sign-controller::after {
+    right: -6px;
+    top: 55px;
+  }
+
+  .sign-controller__header {
+    position: absolute;
+    inset: 0;
+    display: block;
+  }
+
+  .sign-controller__header > div:first-child {
+    position: absolute;
+    left: 16px;
+    top: 9px;
+    display: block;
+  }
+
+  .sign-controller__title {
+    display: block;
+    font-size: 7.8px;
+    line-height: 11px;
+  }
+
+  .sign-controller__spec {
+    display: block;
+    margin-top: 2px;
+    font-size: 5.8px;
+    line-height: 8px;
+  }
+
+  .sign-controller__channel {
+    position: absolute;
+    left: 338px;
+    top: 10px;
+    width: 145px;
+    min-width: 0;
+    justify-items: start;
+    gap: 2px;
+    font-size: 5.8px;
+  }
+
+  .sign-controller__channel-label {
+    line-height: 8px;
+  }
+
+  .sign-controller__channel-states {
+    grid-template-columns: auto 5px auto 5px;
+    gap: 7px;
+    line-height: 8px;
+  }
+
+  .sign-controller__group--mode {
+    position: absolute;
+    left: 18px;
+    top: 33px;
+    width: 374px;
+  }
+
+  .sign-controller__group--mode legend {
+    margin: 0 0 4px;
+    font-size: 6.2px;
+    line-height: 9px;
+  }
+
+  .sign-controller__segmented {
+    display: grid;
+    grid-template-columns: 110px 110px 138px;
+    gap: 8px;
+  }
+
+  .sign-controller__segmented button {
+    min-height: 32px;
+    height: 32px;
+    padding: 0 10px;
+    justify-content: flex-start;
+    text-align: left;
+    border-radius: 0;
+    font-size: 8.2px;
+    line-height: 11px;
+  }
+
+  .sign-controller__dimmer {
+    position: absolute;
+    left: 18px;
+    top: 94px;
+    width: 292px;
+    display: block;
+  }
+
+  .sign-controller__dimmer-head {
+    position: relative;
+    display: block;
+    margin: 0;
+  }
+
+  .sign-controller__dimmer-head label {
+    display: block;
+    margin: 0;
+    font-size: 6.5px;
+    line-height: 8px;
+  }
+
+  .sign-controller__dimmer-head output {
+    position: absolute;
+    left: 256px;
+    top: 8px;
+    width: 36px;
+    font-size: 7.6px;
+    line-height: 11px;
+    opacity: 0.42;
+  }
+
+  .sign-controller input[type="range"] {
+    position: absolute;
+    left: 88px;
+    top: 11px;
+    width: 158px;
+    height: 9px;
+    margin: 0;
+    padding: 0;
+    accent-color: rgb(var(--login-control-accent));
+  }
+
+  .sign-controller__group--source {
+    position: absolute;
+    left: 324px;
+    top: 93px;
+    width: 210px;
+    align-self: auto;
+  }
+
+  .sign-controller__group--source legend {
+    margin: 0 0 4px;
+    font-size: 6.2px;
+    line-height: 8px;
+  }
+
+  .sign-controller__source {
+    display: grid;
+    grid-template-columns: 70px 78px 58px;
+    gap: 4px;
+  }
+
+  .sign-controller__source button {
+    min-height: 24px;
+    height: 24px;
+    padding: 0 6px;
+    border-radius: 0;
+    font-size: 5.5px;
+    line-height: 7px;
+    justify-content: flex-start;
+  }
+
+  .sign-controller__rgb {
+    display: none;
+  }
+
+  .sign-power-panel {
+    position: absolute;
+    left: 76px;
+    top: 565px;
+    width: 260px;
+    height: 132px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid rgb(120 92 48 / 78%);
+    background: rgb(14 12 10);
+  }
+
+  .sign-power-panel::before {
+    left: -6px;
+    top: 66px;
+    width: 10px;
+    height: 10px;
+  }
+
+  .sign-power-panel__copy {
+    position: absolute;
+    left: 16px;
+    top: 10px;
+    margin: 0;
+    gap: 0;
+  }
+
+  .sign-controller__power-title {
+    font-size: 17px;
+    line-height: 17px;
+    transform: scale(0.46);
+    transform-origin: left top;
+    white-space: nowrap;
+  }
+
+  .sign-controller__power-state {
+    position: absolute;
+    top: 24px;
+    left: 0;
+    font-size: 6px;
+    white-space: nowrap;
+  }
+
+  .sign-power-panel__body {
+    position: static;
+    display: block;
+  }
+
+  .sign-controller__switch {
+    position: absolute;
+    left: 16px;
+    top: 50px;
+    width: 34px;
+    height: 62px;
+    min-height: 0;
+    padding: 0;
+    border: 1px solid rgb(120 92 48 / 72%);
+    background: rgb(17 14 11);
+  }
+
+  .sign-controller__switch > span:last-child {
+    position: absolute;
+    left: 43px;
+    top: 11px;
+    font-size: 6px;
+  }
+
+  .sign-controller__switch-track {
+    position: absolute;
+    left: 15px;
+    top: 10px;
+    width: 3px;
+    height: 40px;
+    border: 0;
+    background: rgb(115 102 82);
+  }
+
+  .sign-controller__switch-track::before {
+    display: none;
+  }
+
+  .sign-controller__switch-knob,
+  .sign-controller__switch[aria-checked="true"] .sign-controller__switch-knob {
+    left: 50%;
+    top: 5px;
+    width: 18px;
+    height: 18px;
+    transform: translate(-50%, -50%);
+  }
+
+  .sign-controller__switch[aria-checked="false"] .sign-controller__switch-knob {
+    top: 35px;
+  }
+
+  .sign-power-panel__psu {
+    position: absolute;
+    left: 72px;
+    top: 50px;
+    width: 94px;
+    height: 58px;
+    min-width: 0;
+    padding: 0;
+    border: 1px solid rgb(120 92 48 / 70%);
+    display: block;
+    font-size: 5px;
+  }
+
+  .sign-power-panel__psu > span {
+    position: absolute;
+    left: 12px;
+    top: 10px;
+  }
+
+  .sign-power-panel__psu small:nth-of-type(1) {
+    position: absolute;
+    left: 12px;
+    bottom: 8px;
+  }
+
+  .sign-power-panel__psu small:nth-of-type(2) {
+    position: absolute;
+    right: 12px;
+    bottom: 8px;
+  }
+
+  .sign-power-panel__ready {
+    position: absolute;
+    left: 192px;
+    top: 76px;
+    font-size: 5px;
+  }
+
+  .sign-power-panel__ready-dot {
+    width: 8px;
+    height: 8px;
+  }
+
+  .auth-tech {
+    position: absolute;
+    left: 720px;
+    top: 39px;
+    width: 720px;
+    height: 767px;
+    min-height: 0;
+    padding: 0;
+    border-left: 1px solid var(--login-scene-line);
+    display: block;
+  }
+
+  .auth-tech__grid {
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-size: 32px 32px;
+    opacity: 0.42;
+  }
+
+  .auth-tech__frame {
+    position: absolute;
+    left: 64px;
+    top: 28px;
+    width: 548px;
+    height: 676px;
+    min-height: 676px;
+    max-height: 676px;
+    padding: 0;
+    display: block;
+    border: 1px solid rgb(120 92 48 / 46%);
+    background: rgb(11 10 9 / 88%);
+  }
+
+  .auth-tech__bay-label {
+    position: absolute;
+    left: 22px;
+    top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: rgb(var(--login-control-accent) / 72%);
+    font-family: var(--font-mono);
+    font-size: 7px;
+    line-height: 10px;
+  }
+
+  .auth-tech__bay-label i {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: rgb(var(--login-control-accent) / 74%);
+  }
+
+  .auth-tech__viewport {
+    position: absolute;
+    inset: 0;
+    display: block;
+    min-height: 0;
+  }
+
+  .auth-tech__frame-label {
+    position: absolute;
+    left: 28px;
+    top: 172px;
+    color: var(--login-scene-muted);
+    font-family: var(--font-mono);
+    font-size: 7.5px;
+    line-height: 10px;
+    opacity: 0.72;
+  }
+
+  .auth-tech__workbench {
+    position: absolute;
+    left: 122px;
+    top: 202px;
+    width: 304px;
+    height: 330px;
+    display: block;
+    opacity: 1;
+    transform: none;
+  }
+
+  .auth-tech__rings {
+    position: absolute;
+    left: 74px;
+    top: 50px;
+    width: 164px;
+    height: 164px;
+  }
+
+  .auth-tech__ring--outer {
+    inset: 0;
+    opacity: 0.38;
+  }
+
+  .auth-tech__ring--mid {
+    inset: 26px;
+    opacity: 0.32;
+  }
+
+  .auth-tech__target {
+    width: 40px;
+    height: 40px;
+    opacity: 0.44;
+  }
+
+  .auth-tech__crosshair--x {
+    width: 304px;
+    left: -70px;
+  }
+
+  .auth-tech__crosshair--y {
+    height: 304px;
+    top: -70px;
+  }
+
+  .auth-tech__comet {
+    position: absolute;
+    left: 76px;
+    top: 52px;
+    width: 164px;
+    height: 164px;
+    transform: none;
+    opacity: 0.82;
+  }
+
+  .auth-tech__measure {
+    position: absolute;
+    left: 0;
+    top: 256px;
+    width: 304px;
+    opacity: 0.62;
+  }
+
+  .auth-tech__bottom-meta {
+    position: absolute;
+    left: 0;
+    top: 498px;
+    width: 100%;
+    height: 40px;
+    color: var(--login-scene-muted);
+    font-family: var(--font-mono);
+    font-size: 7.5px;
+    line-height: 10px;
+    opacity: 0.62;
+  }
+
+  .auth-tech__bottom-left {
+    position: absolute;
+    left: 28px;
+    top: 0;
+  }
+
+  .auth-tech__bottom-center {
+    position: absolute;
+    left: 236px;
+    top: 18px;
+    width: 76px;
+    text-align: center;
+  }
+
+  .auth-tech__bottom-right {
+    position: absolute;
+    right: 26px;
+    top: 0;
+  }
+
+  .auth-tech__panel {
+    position: absolute;
+    z-index: 4;
+    left: 76px;
+    top: 56px;
+    width: 396px;
+    min-height: 566px;
+    padding: 24px;
+    overflow: auto;
+  }
+}
+
+@media (min-width: 1025px) and (max-height: 860px) {
+  .auth-gate {
+    overflow: auto;
+  }
+
+  .auth-gate__main {
+    height: 816px;
+    min-height: 816px;
+  }
+}
+
+/* LOGIN V1 LIGHT/OFF FIGMA PARITY */
+@media (min-width: 1025px) {
+  .auth-gate[data-scene="day"] .sign-controller {
+    background: rgb(254 254 255);
+    border-color: rgb(171 171 166 / 42%);
+  }
+
+  .auth-gate[data-scene="day"] .sign-controller::before,
+  .auth-gate[data-scene="day"] .sign-controller::after {
+    border-color: rgb(171 171 166 / 42%);
+    background: rgb(254 254 255);
+  }
+
+  .auth-gate[data-scene="day"] .sign-controller__title,
+  .auth-gate[data-scene="day"] .sign-controller__spec,
+  .auth-gate[data-scene="day"] .sign-controller__channel,
+  .auth-gate[data-scene="day"] .sign-controller__group legend,
+  .auth-gate[data-scene="day"] .sign-controller__dimmer-head,
+  .auth-gate[data-scene="day"] .sign-controller__segmented button,
+  .auth-gate[data-scene="day"] .sign-controller__source button {
+    color: rgb(105 104 100);
+  }
+
+  .auth-gate[data-scene="day"] .sign-controller__segmented button,
+  .auth-gate[data-scene="day"] .sign-controller__source button {
+    background: transparent;
+    border-color: rgb(171 171 166 / 38%);
+  }
+
+  .auth-gate[data-scene="day"] .sign-controller input[type="range"] {
+    accent-color: rgb(168 163 153);
+  }
+
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller > * {
+    opacity: 0.28;
+    filter: blur(0.55px);
+  }
+
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__group,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__dimmer,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb {
+    opacity: 1;
+    filter: none;
+  }
+
+  .auth-gate[data-scene="day"] .sign-power-panel {
+    background: rgb(255 255 255);
+    border-color: rgb(171 171 166 / 52%);
+  }
+
+  .auth-gate[data-scene="day"] .sign-power-panel::before {
+    background: rgb(255 255 255);
+    border-color: rgb(171 171 166 / 72%);
+  }
+
+  .auth-gate[data-scene="day"] .sign-controller__power-title,
+  .auth-gate[data-scene="day"] .sign-controller__power-state,
+  .auth-gate[data-scene="day"] .sign-power-panel__psu,
+  .auth-gate[data-scene="day"] .sign-power-panel__ready {
+    color: rgb(77 76 72);
+  }
+
+  .auth-gate[data-scene="day"] .sign-controller__switch {
+    background: rgb(255 255 255);
+    border-color: rgb(171 171 166 / 72%);
+  }
+
+  .auth-gate[data-scene="day"] .sign-controller__switch-track {
+    background: rgb(115 102 82 / 78%);
+  }
+
+  .auth-gate[data-scene="day"] .sign-power-panel__psu {
+    background: rgb(255 255 255);
+    border-color: rgb(171 171 166 / 58%);
+  }
+
+  .auth-gate[data-scene="day"] .sign-power-panel__ready-dot {
+    background: rgb(96 96 92);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__frame {
+    background: rgb(255 255 255 / 74%);
+    border-color: rgb(128 133 140 / 48%);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__bay-label {
+    color: rgb(97 97 92 / 86%);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__bay-label i {
+    background: rgb(74 75 73 / 86%);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__frame-label,
+  .auth-gate[data-scene="day"] .auth-tech__bottom-meta {
+    color: rgb(160 157 153);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__ring,
+  .auth-gate[data-scene="day"] .auth-tech__target {
+    border-color: rgb(128 133 140 / 34%);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__crosshair {
+    background: rgb(128 133 140 / 24%);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__target::after {
+    background: rgb(66 67 66 / 88%);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__comet {
+    opacity: 0;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__viewport::before {
+    opacity: 0.16;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__viewport::after {
+    opacity: 0.12;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__grid {
+    background-image:
+      linear-gradient(rgb(200 197 192 / 28%) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(200 197 192 / 28%) 1px, transparent 1px);
+    background-size: 42px 42px;
+    opacity: 0.58;
+  }
+}
+
+/* LOGIN V1 01A GEOMETRY CALIBRATION */
+@media (min-width: 1025px) {
+  .sign-demo__word > span {
+    font-size: 86px;
+    line-height: 84px;
+  }
+
+  .sign-demo__infrastructure {
+    left: 0;
+    top: 0;
+    width: 720px;
+    height: 816px;
+  }
+
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__header,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__group,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__dimmer,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb {
+    opacity: 0.18;
+    filter: blur(1.05px);
+  }
+
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__group,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__dimmer,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb {
+    pointer-events: none;
+  }
+
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller {
+    box-shadow: none;
+  }
+
+  .auth-tech__bay-label {
+    left: 24px;
+    top: 20px;
+  }
+
+  .auth-tech__workbench {
+    left: 108px;
+    top: 202px;
+    width: 304px;
+    height: 330px;
+  }
+
+  .auth-tech__rings {
+    left: 54px;
+    top: 33px;
+    width: 164px;
+    height: 164px;
+    background:
+      linear-gradient(var(--login-scene-frame), var(--login-scene-frame)) left top / 18px 1px no-repeat,
+      linear-gradient(var(--login-scene-frame), var(--login-scene-frame)) left top / 1px 18px no-repeat,
+      linear-gradient(var(--login-scene-frame), var(--login-scene-frame)) right top / 18px 1px no-repeat,
+      linear-gradient(var(--login-scene-frame), var(--login-scene-frame)) right top / 1px 18px no-repeat,
+      linear-gradient(var(--login-scene-frame), var(--login-scene-frame)) left bottom / 18px 1px no-repeat,
+      linear-gradient(var(--login-scene-frame), var(--login-scene-frame)) left bottom / 1px 18px no-repeat,
+      linear-gradient(var(--login-scene-frame), var(--login-scene-frame)) right bottom / 18px 1px no-repeat,
+      linear-gradient(var(--login-scene-frame), var(--login-scene-frame)) right bottom / 1px 18px no-repeat;
+  }
+
+  .auth-tech__comet {
+    left: 68px;
+    top: 44px;
+    width: 164px;
+    height: 164px;
+  }
+
+  .auth-tech__measure {
+    left: 0;
+    top: 256px;
+    width: 304px;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__rings {
+    background:
+      linear-gradient(rgb(128 133 140 / 34%), rgb(128 133 140 / 34%)) left top / 18px 1px no-repeat,
+      linear-gradient(rgb(128 133 140 / 34%), rgb(128 133 140 / 34%)) left top / 1px 18px no-repeat,
+      linear-gradient(rgb(128 133 140 / 34%), rgb(128 133 140 / 34%)) right top / 18px 1px no-repeat,
+      linear-gradient(rgb(128 133 140 / 34%), rgb(128 133 140 / 34%)) right top / 1px 18px no-repeat,
+      linear-gradient(rgb(128 133 140 / 34%), rgb(128 133 140 / 34%)) left bottom / 18px 1px no-repeat,
+      linear-gradient(rgb(128 133 140 / 34%), rgb(128 133 140 / 34%)) left bottom / 1px 18px no-repeat,
+      linear-gradient(rgb(128 133 140 / 34%), rgb(128 133 140 / 34%)) right bottom / 18px 1px no-repeat,
+      linear-gradient(rgb(128 133 140 / 34%), rgb(128 133 140 / 34%)) right bottom / 1px 18px no-repeat;
+  }
+}
+
+/* LOGIN V1 DESKTOP SCENE SCALE */
+@media (min-width: 1025px) {
+  .auth-gate {
+    position: relative;
+  }
+
+  .auth-gate__main {
+    position: absolute;
+    left: 50%;
+    top: 49px;
+    width: 1440px;
+    max-width: none;
+    height: 816px;
+    min-height: 816px;
+    margin: 0;
+    padding: 0;
+    transform: translateX(-50%) scale(var(--login-stage-scale, 1));
+    transform-origin: top center;
+  }
+
+  .auth-gate__footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+  }
+}
+
+@media (max-width: 1024px) {
+  .auth-gate__main {
+    transform: none;
+  }
+}
+
+/* LOGIN V1 AUTH WORKBENCH FIGMA VECTOR */
+@media (min-width: 1025px) {
+  .auth-tech__workbench {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 548px;
+    height: 676px;
+    opacity: 1;
+    transform: none;
+    pointer-events: none;
+  }
+
+  .auth-tech__blueprint {
+    position: absolute;
+    inset: 0;
+    width: 548px;
+    height: 676px;
+    overflow: visible;
+  }
+
+  .auth-tech__blueprint-base,
+  .auth-tech__blueprint-dynamic,
+  .auth-tech__comet-trail {
+    fill: none;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .auth-tech__blueprint-base {
+    stroke: var(--login-scene-frame);
+    stroke-width: 1;
+    opacity: 0.18;
+  }
+
+  .auth-tech__blueprint-dynamic {
+    stroke: rgb(var(--login-control-accent));
+  }
+
+  .auth-tech__arc--a {
+    stroke-width: 1.1;
+    opacity: 0.60;
+  }
+
+  .auth-tech__arc--b {
+    stroke-width: 1;
+    opacity: 0.38;
+  }
+
+  .auth-tech__handle {
+    stroke-width: 1;
+    opacity: 0.52;
+  }
+
+  .auth-tech__node {
+    fill: rgb(var(--login-control-accent));
+    stroke: none;
+    opacity: 0.72;
+  }
+
+  .auth-tech__node--main {
+    opacity: 1;
+  }
+
+  .auth-tech__tick {
+    stroke-width: 1;
+    opacity: 0.40;
+  }
+
+  .auth-tech__comet-trail {
+    stroke: rgb(var(--login-control-accent));
+  }
+
+  .auth-tech__comet-glow,
+  .auth-tech__comet-core,
+  .auth-tech__comet-echo {
+    fill: none;
+    stroke-linecap: round;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+  }
+
+  .auth-tech__comet-glow {
+    stroke-width: 5;
+    opacity: 0.55;
+    filter: blur(4px);
+  }
+
+  .auth-tech__comet-core {
+    stroke-width: 1.15;
+    opacity: 0.82;
+  }
+
+  .auth-tech__comet-echo {
+    stroke-width: 0.8;
+    opacity: 0.42;
+  }
+
+  .auth-tech__comet-head {
+    fill: rgb(238 194 103);
+    stroke: none;
+    filter: drop-shadow(0 0 5px rgb(224 177 82 / 58%));
+  }
+
+  .auth-tech__measure {
+    position: absolute;
+    left: 122px;
+    top: 458px;
+    width: 304px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 10px;
+    color: var(--login-scene-muted);
+    opacity: 0.62;
+  }
+
+  .auth-tech__measure > span {
+    height: 1px;
+    background: var(--login-scene-frame);
+    opacity: 0.46;
+  }
+
+  .auth-tech__measure em {
+    font-family: var(--font-mono);
+    font-size: 7px;
+    font-style: normal;
+    line-height: 10px;
+  }
+
+  .auth-tech__viewport[data-auth-active] .auth-tech__workbench {
+    opacity: 0.10;
+    transform: none;
+  }
+
+  .auth-tech__viewport[data-auth-active] .auth-tech__comet-glow,
+  .auth-tech__viewport[data-auth-active] .auth-tech__comet-core,
+  .auth-tech__viewport[data-auth-active] .auth-tech__comet-echo {
+    animation: auth-workbench-comet 300ms var(--ease-work) both;
+  }
+
+  .auth-tech__viewport[data-auth-active] .auth-tech__comet-head {
+    animation: auth-workbench-head 300ms var(--ease-work) both;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__blueprint-base {
+    stroke: rgb(128 133 140 / 34%);
+    opacity: 0.72;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__blueprint-dynamic {
+    stroke: rgb(95 92 85 / 32%);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__node {
+    fill: rgb(95 92 85 / 52%);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__comet-trail {
+    opacity: 0;
+  }
+}
+
+@keyframes auth-workbench-comet {
+  from {
+    stroke-dasharray: 0.05 0.95;
+    stroke-dashoffset: 0.85;
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  to {
+    stroke-dasharray: 0.38 0.62;
+    stroke-dashoffset: 0.08;
+    opacity: 0;
+  }
+}
+
+@keyframes auth-workbench-head {
+  from {
+    opacity: 0;
+    transform: translate(-34px, -54px) scale(0.72);
+  }
+  55% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-tech__comet-glow,
+  .auth-tech__comet-core,
+  .auth-tech__comet-echo,
+  .auth-tech__comet-head {
+    animation: none !important;
+  }
+
+  .auth-tech__viewport[data-auth-active] .auth-tech__comet-trail {
+    opacity: 0;
+  }
+}
+
+/* LOGIN V1 AUTH WORKBENCH OPACITY CALIBRATION */
+@media (min-width: 1025px) {
+  .auth-tech__blueprint-base {
+    opacity: 0.045;
+  }
+
+  .auth-tech__arc--a {
+    opacity: 0.52;
+  }
+
+  .auth-tech__arc--b {
+    opacity: 0.33;
+  }
+
+  .auth-tech__handle {
+    opacity: 0.45;
+  }
+
+  .auth-tech__node {
+    opacity: 0.62;
+  }
+
+  .auth-tech__node--main {
+    opacity: 0.9;
+  }
+
+  .auth-tech__tick {
+    opacity: 0.34;
+  }
+
+  .auth-tech__comet-glow {
+    opacity: 0.46;
+  }
+
+  .auth-tech__comet-core {
+    opacity: 0.76;
+  }
+
+  .auth-tech__comet-echo {
+    opacity: 0.34;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__blueprint-base {
+    opacity: 0.11;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__blueprint-dynamic {
+    opacity: 0.26;
+  }
+}
+
+/* LOGIN V1 LIGHTING LAB 2 EXACT BENCHMARK */
+.sign-demo__word-face {
+  color: rgb(var(--sign-face-rgb));
+  opacity: var(--sign-face-fill);
+  filter:
+    drop-shadow(0 0 6.6407036781px rgb(var(--sign-light-rgb) / var(--sign-face-glow-tight)))
+    drop-shadow(0 0 13.373632431px rgb(var(--sign-light-rgb) / var(--sign-face-glow-near)));
+}
+
+.sign-demo__word-core {
+  color: rgb(var(--sign-core-rgb));
+  opacity: var(--sign-core-fill);
+  filter:
+    drop-shadow(0 0 3.5239760876px rgb(var(--sign-light-rgb) / var(--sign-core-glow)));
+}
+
+.auth-gate[data-scene="night"] .sign-demo__word-halo {
+  color: rgb(44 36 25);
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 7.1379394531px rgb(var(--sign-light-rgb) / var(--sign-halo-tight)))
+    drop-shadow(0 0 19.567483902px rgb(var(--sign-light-rgb) / var(--sign-halo-near)))
+    drop-shadow(0 0 44.56332016px rgb(var(--sign-light-rgb) / var(--sign-halo-mid)))
+    drop-shadow(0 0 77.373855591px rgb(var(--sign-light-rgb) / var(--sign-halo-far)));
+}
+
+.sign-demo__word[data-mode="face"] .sign-demo__word-halo {
+  opacity: 0;
+  filter: none;
+}
+
+.sign-demo__word[data-halo-only] .sign-demo__word-material {
+  color: #050505;
+  opacity: 1;
+}
+
+.sign-demo__word[data-halo-only] .sign-demo__word-halo {
+  color: rgb(44 36 25);
+}
+
+.sign-demo__word[data-mode="combined"] .sign-demo__word-material,
+.sign-demo__word[data-mode="face"] .sign-demo__word-material {
+  opacity: 0;
+}
+
+.sign-demo__word-face,
+.sign-demo__word-core,
+.sign-demo__word-halo {
+  transition:
+    color var(--motion-edit) var(--ease-work),
+    opacity var(--motion-edit) var(--ease-work),
+    filter var(--motion-navigate) var(--ease-work);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sign-demo__word-face,
+  .sign-demo__word-core,
+  .sign-demo__word-halo {
+    transition: none;
+  }
+}
+
+/* LOGIN V1 FIGMA TO CSS BLUR CALIBRATION */
+/*
+  Figma DROP_SHADOW radius and CSS drop-shadow blur do not render 1:1.
+  Keep the Lighting Lab 2 alpha/energy curves, but map the visual blur
+  radius to roughly half for browser parity.
+*/
+.sign-demo__word-face {
+  filter:
+    drop-shadow(0 0 3.3203518391px rgb(var(--sign-light-rgb) / var(--sign-face-glow-tight)))
+    drop-shadow(0 0 6.6868162155px rgb(var(--sign-light-rgb) / var(--sign-face-glow-near)));
+}
+
+.sign-demo__word-core {
+  filter:
+    drop-shadow(0 0 1.7619880438px rgb(var(--sign-light-rgb) / var(--sign-core-glow)));
+}
+
+.auth-gate[data-scene="night"] .sign-demo__word-halo {
+  filter:
+    drop-shadow(0 0 3.5689697266px rgb(var(--sign-light-rgb) / var(--sign-halo-tight)))
+    drop-shadow(0 0 9.783741951px rgb(var(--sign-light-rgb) / var(--sign-halo-near)))
+    drop-shadow(0 0 22.28166008px rgb(var(--sign-light-rgb) / var(--sign-halo-mid)))
+    drop-shadow(0 0 38.686927796px rgb(var(--sign-light-rgb) / var(--sign-halo-far)));
+}
+
+.sign-demo__word[data-mode="combined"] .sign-demo__word-halo {
+  opacity: 0.92;
+}
+
+.sign-demo__word[data-halo-only] .sign-demo__word-halo {
+  opacity: 1;
+}
+
+/* LOGIN V1 COMBINED MODE FINAL MICRO-CALIBRATION */
+/* Preserve standalone FATA and HALO benchmarks; only temper the combined state. */
+.sign-demo__word[data-mode="combined"] .sign-demo__word-face {
+  opacity: calc(var(--sign-face-fill) * 0.91);
+}
+
+.sign-demo__word[data-mode="combined"] .sign-demo__word-core {
+  opacity: calc(var(--sign-core-fill) * 0.92);
+}
+
+.sign-demo__word[data-mode="combined"] .sign-demo__word-halo {
+  opacity: 0.89;
+}
+
+/* LOGIN V1 AUTH FORM FIGMA PARITY */
+@media (min-width: 1025px) {
+  .auth-tech__panel {
+    width: 396px;
+    height: 566px;
+    min-height: 566px;
+    max-height: 566px;
+    padding: 24px;
+    overflow: auto;
+    display: block;
+    border-radius: 0;
+    box-shadow: inset 0 3px 0 #1a1c1e;
+    scrollbar-width: thin;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__panel {
+    background-color: rgb(251 250 248 / 98%);
+    border-color: rgb(87 87 82 / 22%);
+    background-image:
+      linear-gradient(#d0c7ba, #d0c7ba),
+      linear-gradient(#d0c7ba, #d0c7ba),
+      linear-gradient(#d0c7ba, #d0c7ba),
+      linear-gradient(#d0c7ba, #d0c7ba),
+      linear-gradient(#d0c7ba, #d0c7ba),
+      linear-gradient(#d0c7ba, #d0c7ba),
+      linear-gradient(#d0c7ba, #d0c7ba),
+      linear-gradient(#d0c7ba, #d0c7ba);
+    background-repeat: no-repeat;
+    background-position:
+      12px 12px,
+      12px 12px,
+      calc(100% - 26px) 12px,
+      calc(100% - 13px) 12px,
+      12px calc(100% - 13px),
+      12px calc(100% - 26px),
+      calc(100% - 26px) calc(100% - 13px),
+      calc(100% - 13px) calc(100% - 26px);
+    background-size:
+      14px 1px,
+      1px 14px,
+      14px 1px,
+      1px 14px,
+      14px 1px,
+      1px 14px,
+      14px 1px,
+      1px 14px;
+  }
+
+  .auth-gate[data-scene="night"] .auth-tech__panel {
+    background-color: rgb(14 12 10 / 98.5%);
+    border-color: rgb(120 92 48 / 64%);
+    box-shadow: inset 0 3px 0 rgb(120 92 48);
+    background-image:
+      linear-gradient(rgb(120 92 48 / 62%), rgb(120 92 48 / 62%)),
+      linear-gradient(rgb(120 92 48 / 62%), rgb(120 92 48 / 62%)),
+      linear-gradient(rgb(120 92 48 / 62%), rgb(120 92 48 / 62%)),
+      linear-gradient(rgb(120 92 48 / 62%), rgb(120 92 48 / 62%)),
+      linear-gradient(rgb(120 92 48 / 62%), rgb(120 92 48 / 62%)),
+      linear-gradient(rgb(120 92 48 / 62%), rgb(120 92 48 / 62%)),
+      linear-gradient(rgb(120 92 48 / 62%), rgb(120 92 48 / 62%)),
+      linear-gradient(rgb(120 92 48 / 62%), rgb(120 92 48 / 62%));
+    background-repeat: no-repeat;
+    background-position:
+      12px 12px,
+      12px 12px,
+      calc(100% - 26px) 12px,
+      calc(100% - 13px) 12px,
+      12px calc(100% - 13px),
+      12px calc(100% - 26px),
+      calc(100% - 26px) calc(100% - 13px),
+      calc(100% - 13px) calc(100% - 26px);
+    background-size:
+      14px 1px,
+      1px 14px,
+      14px 1px,
+      1px 14px,
+      14px 1px,
+      1px 14px,
+      14px 1px,
+      1px 14px;
+  }
+
+  .auth-tech__form,
+  .auth-tech__form-head {
+    display: block;
+  }
+
+  .auth-tech__form-head {
+    position: relative;
+    height: 134px;
+  }
+
+  .auth-tech__form-head .auth-gate__eyebrow {
+    position: absolute;
+    left: 30px;
+    top: 4px;
+    margin: 0;
+    width: 180px;
+    color: #7f776a;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 400;
+    line-height: 12px;
+    letter-spacing: 0;
+  }
+
+  .auth-tech__form-head .auth-gate__eyebrow::before {
+    content: "";
+    position: absolute;
+    left: -26px;
+    top: 2px;
+    width: 5px;
+    height: 5px;
+    border: 1px solid currentColor;
+  }
+
+  .auth-tech__form-head .auth-gate__title {
+    position: absolute;
+    left: 0;
+    top: 54px;
+    margin: 0;
+    width: 300px;
+    color: #141414;
+    font-family: var(--font-brand);
+    font-size: 25px;
+    font-weight: 600;
+    line-height: 31px;
+    letter-spacing: 0;
+  }
+
+  .auth-tech__form-head .auth-gate__lead {
+    position: absolute;
+    left: 0;
+    top: 92px;
+    width: 330px;
+    margin: 0;
+    color: #575754;
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  .auth-gate[data-scene="night"] .auth-tech__form-head .auth-gate__eyebrow {
+    color: rgb(209 201 184 / 88%);
+  }
+
+  .auth-gate[data-scene="night"] .auth-tech__form-head .auth-gate__title {
+    color: rgb(242 232 209);
+  }
+
+  .auth-gate[data-scene="night"] .auth-tech__form-head .auth-gate__lead {
+    color: rgb(209 201 184 / 78%);
+  }
+
+  .auth-tech__form > .field {
+    display: grid;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .auth-tech__form > .field + .field {
+    margin-top: 20px;
+  }
+
+  .auth-tech__form .field__label,
+  .auth-tech__form .select-field__label {
+    margin: 0;
+    color: #52575c;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 500;
+    line-height: 12px;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .auth-gate[data-scene="night"] .auth-tech__form .field__label,
+  .auth-gate[data-scene="night"] .auth-tech__form .select-field__label {
+    color: rgb(120 92 48);
+  }
+
+  .auth-tech__form .field__control,
+  .auth-tech__form select {
+    min-height: 44px;
+    height: 44px;
+    padding-inline: 13px;
+    border-radius: 0;
+    font-size: 13px;
+    line-height: 16px;
+    box-shadow: none;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__form .field__control,
+  .auth-gate[data-scene="day"] .auth-tech__form select {
+    background: rgb(243 239 231);
+    border-color: rgb(207 198 184);
+    color: #242321;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__form .field__control::placeholder {
+    color: rgb(142 136 125);
+    opacity: 1;
+  }
+
+  .auth-gate[data-scene="night"] .auth-tech__form .field__control,
+  .auth-gate[data-scene="night"] .auth-tech__form select {
+    background: rgb(18 16 13);
+    border-color: rgb(120 92 48 / 56%);
+    color: rgb(209 201 184 / 88%);
+  }
+
+  .auth-gate[data-scene="night"] .auth-tech__form .field__control::placeholder {
+    color: rgb(209 201 184 / 88%);
+    opacity: 1;
+  }
+
+  .auth-tech__actions {
+    display: block;
+    margin-top: 22px;
+    padding: 0;
+  }
+
+  .auth-tech__actions .auth-gate__submit,
+  .auth-tech__actions .auth-gate__submit .button {
+    width: 100%;
+  }
+
+  .auth-tech__actions .auth-gate__submit .button {
+    min-height: 44px;
+    height: 44px;
+    border-radius: 0;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__actions .auth-gate__submit .button--primary {
+    background: #1a1c1e;
+    border-color: #1a1c1e;
+    color: #fff;
+  }
+
+  .auth-gate[data-scene="night"] .auth-tech__actions .auth-gate__submit .button--primary {
+    background: rgb(184 135 43 / 84%);
+    border-color: rgb(184 135 43 / 94%);
+    color: rgb(209 201 184 / 88%);
+  }
+
+  .auth-tech__roles {
+    margin-top: 28px;
+    border-top: 1px solid #cfc6b8;
+  }
+
+  .auth-tech__role {
+    min-height: 68px;
+    padding: 20px 0 11px;
+    border-bottom: 1px solid #cfc6b8;
+  }
+
+  .auth-tech__role span {
+    display: block;
+    margin-bottom: 6px;
+    color: #52575c;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 500;
+    line-height: 12px;
+  }
+
+  .auth-tech__role strong {
+    display: block;
+    color: #171512;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 17px;
+  }
+
+  .auth-tech__role:nth-child(2) span {
+    color: rgb(31 122 88);
+  }
+
+  .auth-gate[data-scene="night"] .auth-tech__roles {
+    border-top-color: rgb(74 63 49);
+  }
+
+  .auth-gate[data-scene="night"] .auth-tech__role {
+    border-bottom-color: rgb(74 63 49);
+  }
+
+  .auth-gate[data-scene="night"] .auth-tech__role span,
+  .auth-gate[data-scene="night"] .auth-tech__role strong {
+    color: rgb(209 201 184 / 88%);
+  }
+
+  .auth-gate[data-scene="night"] .auth-tech__role:nth-child(2) span {
+    color: rgb(120 92 48);
+  }
+
+  .auth-tech__viewport[data-auth-active] .auth-tech__blueprint {
+    opacity: 0.10;
+  }
+
+  .auth-tech__viewport[data-auth-active] .auth-tech__measure,
+  .auth-tech__viewport[data-auth-active] ~ .auth-tech__bottom-meta {
+    opacity: 0.10;
+  }
+}
+
+/* LOGIN V1 ZERO-SCROLL CONTRACT */
+/* Login is a single-screen instrument. No page, bay or form scrollbar is allowed. */
+.auth-gate {
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+.auth-gate__main {
+  overflow: hidden;
+}
+
+.auth-tech,
+.auth-tech__frame,
+.auth-tech__viewport,
+.auth-tech__panel {
+  overflow: hidden !important;
+  scrollbar-width: none;
+}
+
+.auth-tech__panel::-webkit-scrollbar {
+  display: none;
+}
+
+@media (min-width: 1025px) {
+  .auth-tech__panel {
+    overflow: hidden !important;
+  }
+}
+
+@media (min-width: 1025px) and (max-height: 860px) {
+  .auth-gate {
+    overflow: hidden !important;
+  }
+
+  .auth-gate__main {
+    min-height: 816px;
+    height: 816px;
+  }
+}
+
+/* LOGIN V1 MOTION PASS 1 */
+/* Semantic motion only: POWER -> cable -> sign -> AUTH acknowledgement. */
+.sign-demo[data-power-transition] .sign-demo__infra-live {
+  stroke-dasharray: 0.1 0.9;
+  stroke-linecap: round;
+}
+
+.sign-demo[data-power-transition="on"] .sign-demo__infrastructure > g:nth-child(3) .sign-demo__infra-live {
+  animation: login-power-cable-on 360ms var(--ease-work) 0ms both;
+}
+
+.sign-demo[data-power-transition="on"] .sign-demo__infrastructure > g:nth-child(2) .sign-demo__infra-live {
+  animation: login-power-cable-on 360ms var(--ease-work) 70ms both;
+}
+
+.sign-demo[data-power-transition="on"] .sign-demo__infrastructure > g:nth-child(1) .sign-demo__infra-live {
+  animation: login-power-cable-on 360ms var(--ease-work) 140ms both;
+}
+
+.sign-demo[data-power-transition="off"] .sign-demo__infrastructure > g:nth-child(1) .sign-demo__infra-live {
+  animation: login-power-cable-off 320ms var(--ease-work) 0ms both;
+}
+
+.sign-demo[data-power-transition="off"] .sign-demo__infrastructure > g:nth-child(2) .sign-demo__infra-live {
+  animation: login-power-cable-off 320ms var(--ease-work) 55ms both;
+}
+
+.sign-demo[data-power-transition="off"] .sign-demo__infrastructure > g:nth-child(3) .sign-demo__infra-live {
+  animation: login-power-cable-off 320ms var(--ease-work) 110ms both;
+}
+
+.sign-demo[data-power-transition="on"] .sign-power-panel__ready-dot {
+  animation: login-power-ready-ack 360ms var(--ease-work) both;
+}
+
+.sign-demo[data-power-transition="off"] .sign-power-panel__ready-dot {
+  animation: login-power-off-ack 260ms var(--ease-work) both;
+}
+
+@keyframes login-power-cable-on {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  24% {
+    opacity: 0.18;
+  }
+  62% {
+    opacity: 0.72;
+  }
+  100% {
+    stroke-dashoffset: 0.02;
+    opacity: var(--sign-cable-live);
+  }
+}
+
+@keyframes login-power-cable-off {
+  0% {
+    stroke-dashoffset: 0.02;
+    opacity: var(--sign-cable-live);
+  }
+  45% {
+    opacity: 0.44;
+  }
+  100% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+}
+
+@keyframes login-power-ready-ack {
+  0% {
+    transform: scale(0.82);
+    opacity: 0.35;
+  }
+  55% {
+    transform: scale(1.18);
+    opacity: 1;
+    box-shadow: 0 0 9px rgb(var(--login-control-accent) / 66%);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes login-power-off-ack {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0.35;
+    transform: scale(0.82);
+  }
+}
+
+/* Standby workbench: one restrained sweep, long quiet interval. */
+.auth-gate[data-scene="night"] .auth-tech__workbench:not([data-active]) .auth-tech__comet-glow,
+.auth-gate[data-scene="night"] .auth-tech__workbench:not([data-active]) .auth-tech__comet-core,
+.auth-gate[data-scene="night"] .auth-tech__workbench:not([data-active]) .auth-tech__comet-echo {
+  animation: login-auth-standby-trace 6.4s var(--ease-work) infinite;
+}
+
+.auth-gate[data-scene="night"] .auth-tech__workbench:not([data-active]) .auth-tech__comet-head {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: login-auth-standby-head 6.4s var(--ease-work) infinite;
+}
+
+@keyframes login-auth-standby-trace {
+  0%,
+  68% {
+    stroke-dasharray: 0.05 0.95;
+    stroke-dashoffset: 0.9;
+    opacity: 0;
+  }
+  72% {
+    opacity: 0.18;
+  }
+  79% {
+    stroke-dasharray: 0.22 0.78;
+    stroke-dashoffset: 0.42;
+    opacity: 0.72;
+  }
+  86% {
+    stroke-dasharray: 0.36 0.64;
+    stroke-dashoffset: 0.08;
+    opacity: 0.24;
+  }
+  90%,
+  100% {
+    stroke-dasharray: 0.05 0.95;
+    stroke-dashoffset: 0.02;
+    opacity: 0;
+  }
+}
+
+@keyframes login-auth-standby-head {
+  0%,
+  68% {
+    opacity: 0;
+    transform: translate(-38px, -58px) scale(0.72);
+  }
+  73% {
+    opacity: 0.3;
+  }
+  82% {
+    opacity: 1;
+    transform: translate(-7px, -12px) scale(0.92);
+  }
+  87% {
+    opacity: 0.45;
+    transform: translate(0, 0) scale(1);
+  }
+  90%,
+  100% {
+    opacity: 0;
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+/* AUTH reveal keeps the technical frame fixed and changes only hierarchy. */
+.auth-tech__viewport[data-auth-active] .auth-tech__panel {
+  animation: login-auth-panel-reveal var(--motion-navigate) var(--ease-work) both;
+}
+
+.auth-tech__viewport[data-auth-active] .auth-tech__blueprint {
+  transition:
+    opacity var(--motion-navigate) var(--ease-work),
+    filter var(--motion-navigate) var(--ease-work);
+  filter: saturate(0.82);
+}
+
+@keyframes login-auth-panel-reveal {
+  from {
+    opacity: 0;
+    transform: scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Press feedback stays mechanical and brief. */
+.sign-controller__switch:active .sign-controller__switch-knob {
+  transform: translate(-50%, -50%) scale(0.9);
+}
+
+.auth-gate__login-choices .button:active {
+  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sign-demo[data-power-transition] .sign-demo__infra-live,
+  .sign-demo[data-power-transition] .sign-power-panel__ready-dot,
+  .auth-tech__workbench:not([data-active]) .auth-tech__comet-glow,
+  .auth-tech__workbench:not([data-active]) .auth-tech__comet-core,
+  .auth-tech__workbench:not([data-active]) .auth-tech__comet-echo,
+  .auth-tech__workbench:not([data-active]) .auth-tech__comet-head,
+  .auth-tech__viewport[data-auth-active] .auth-tech__panel {
+    animation: none !important;
+  }
+
+  .auth-tech__viewport[data-auth-active] .auth-tech__blueprint,
+  .auth-gate__login-choices .button,
+  .sign-controller__switch-knob {
+    transition: none !important;
+  }
+
+  .auth-gate__login-choices .button:active,
+  .sign-controller__switch:active .sign-controller__switch-knob {
+    transform: none;
+  }
+}
+
+
+/* LOGIN V1 AUTH WORKOS LETTER LOOP V3 */
+.auth-workbench-v3 {
+  --wb-accent: 184 135 43;
+  --wb-line: 126 103 66;
+  --wb-muted: 141 132 118;
+  --wb-face: 32 25 17;
+  --wb-face-repaired: 54 43 29;
+  --wb-back: 23 19 14;
+  isolation: isolate;
+}
+
+.auth-gate[data-scene="day"] .auth-workbench-v3 {
+  --wb-accent: 95 92 85;
+  --wb-line: 128 133 140;
+  --wb-muted: 112 109 103;
+  --wb-face: 67 63 57;
+  --wb-face-repaired: 78 73 65;
+  --wb-back: 112 106 96;
+}
+
+.auth-workbench-v3__svg {
+  position: absolute;
+  inset: 0;
+  width: 548px;
+  height: 676px;
+  overflow: hidden;
+}
+
+.auth-workbench-v3__svg * {
+  vector-effect: non-scaling-stroke;
+}
+
+.auth-workbench-v3__crop,
+.auth-workbench-v3__orbit,
+.auth-workbench-v3__ticks,
+.auth-workbench-v3__verify,
+.auth-workbench-v3__handle-line,
+.auth-workbench-v3__align-guide,
+.auth-workbench-v3__projection,
+.auth-workbench-v3__sweep path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.auth-workbench-v3__crop {
+  stroke: rgb(var(--wb-accent) / 62%);
+  stroke-width: 1;
+  opacity: 0.12;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: wb3-crop 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__orbit {
+  fill: none;
+  stroke: rgb(var(--wb-line) / 48%);
+  stroke-width: 0.8;
+  transform-origin: 274px 329px;
+}
+
+.auth-workbench-v3__orbit--primary {
+  stroke-dasharray: 3 9;
+  animation: wb3-orbit-primary 9s linear infinite;
+}
+
+.auth-workbench-v3__orbit--secondary {
+  stroke-dasharray: 2 12;
+  animation: wb3-orbit-secondary 9s linear infinite;
+}
+
+.auth-workbench-v3__ticks {
+  stroke: rgb(var(--wb-muted) / 34%);
+  stroke-width: 0.8;
+  transform-origin: 274px 329px;
+  animation: wb3-ticks 9s linear infinite;
+}
+
+.auth-workbench-v3__letter {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.auth-workbench-v3__letter--1 { animation: wb3-slot-1 54s linear infinite; }
+.auth-workbench-v3__letter--2 { animation: wb3-slot-2 54s linear infinite; }
+.auth-workbench-v3__letter--3 { animation: wb3-slot-3 54s linear infinite; }
+.auth-workbench-v3__letter--4 { animation: wb3-slot-4 54s linear infinite; }
+.auth-workbench-v3__letter--5 { animation: wb3-slot-5 54s linear infinite; }
+.auth-workbench-v3__letter--6 { animation: wb3-slot-6 54s linear infinite; }
+
+.auth-workbench-v3__object {
+  transform-origin: 274px 329px;
+  animation: wb3-inspect 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__face {
+  stroke: none;
+}
+
+.auth-workbench-v3__face--defect {
+  fill: rgb(var(--wb-face));
+  opacity: 1;
+  animation: wb3-face-defect 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__face--repaired {
+  fill: rgb(var(--wb-face-repaired));
+  opacity: 0;
+  animation: wb3-face-repaired 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__anchor {
+  fill: rgb(var(--login-scene-canvas-rgb, 18 17 16));
+  stroke: rgb(var(--wb-muted) / 76%);
+  stroke-width: 1;
+  opacity: 0;
+  animation: wb3-anchors 9s var(--ease-work) infinite;
+}
+
+.auth-gate[data-scene="day"] .auth-workbench-v3__anchor {
+  fill: rgb(247 246 243);
+}
+
+.auth-workbench-v3__edit {
+  opacity: 0;
+  animation: wb3-edit 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__selected {
+  fill: rgb(var(--wb-accent));
+  stroke: rgb(239 205 137 / 94%);
+  stroke-width: 1;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.auth-gate[data-scene="day"] .auth-workbench-v3__selected {
+  stroke: rgb(68 66 62 / 78%);
+}
+
+.auth-workbench-v3__selected--corner {
+  transform: rotate(45deg);
+}
+
+.auth-workbench-v3__letter--1 .auth-workbench-v3__selected {
+  animation: wb3-selected-w 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__letter--2 .auth-workbench-v3__selected {
+  animation: wb3-selected-o 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__letter--3 .auth-workbench-v3__selected {
+  animation: wb3-selected-r 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__letter--4 .auth-workbench-v3__selected {
+  animation: wb3-selected-k 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__letter--5 .auth-workbench-v3__selected {
+  animation: wb3-selected-O 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__letter--6 .auth-workbench-v3__selected {
+  animation: wb3-selected-s 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__handle-line,
+.auth-workbench-v3__align-guide {
+  stroke: rgb(var(--wb-muted) / 72%);
+  stroke-width: 0.8;
+}
+
+.auth-workbench-v3__align-guide {
+  stroke-dasharray: 4 4;
+}
+
+.auth-workbench-v3__handle-end {
+  fill: rgb(var(--login-scene-canvas-rgb, 18 17 16));
+  stroke: rgb(var(--wb-accent) / 92%);
+  stroke-width: 1;
+}
+
+.auth-gate[data-scene="day"] .auth-workbench-v3__handle-end {
+  fill: rgb(247 246 243);
+}
+
+.auth-workbench-v3__edit--vertical .auth-workbench-v3__handle-end--active {
+  animation: wb3-handle-vertical 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__edit--diag .auth-workbench-v3__handle-end--active {
+  animation: wb3-handle-diag 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__edit--diag2 .auth-workbench-v3__handle-end--active {
+  animation: wb3-handle-diag2 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__verify {
+  fill: none;
+  stroke: rgb(var(--wb-muted) / 72%);
+  stroke-width: 1.05;
+  opacity: 0;
+  animation: wb3-verify 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__back {
+  fill: rgb(var(--wb-back));
+  opacity: 0;
+  animation: wb3-back 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__projection {
+  stroke: rgb(var(--wb-muted) / 42%);
+  stroke-width: 0.8;
+  stroke-dasharray: 3 4;
+  opacity: 0;
+  animation: wb3-projection 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__projection--2 { animation-delay: 70ms; }
+.auth-workbench-v3__projection--3 { animation-delay: 140ms; }
+
+.auth-workbench-v3__cursor {
+  opacity: 1;
+}
+
+.auth-workbench-v3__cursor path {
+  fill: rgb(210 200 182);
+  stroke: rgb(23 19 14);
+  stroke-width: 1.1;
+  transform-origin: 0 0;
+  animation: wb3-cursor-opacity 9s var(--ease-work) infinite;
+}
+
+.auth-gate[data-scene="day"] .auth-workbench-v3__cursor path {
+  fill: rgb(72 69 64);
+  stroke: rgb(247 246 243);
+}
+
+.auth-workbench-v3__cursor--corner path {
+  animation:
+    wb3-cursor-opacity 9s var(--ease-work) infinite,
+    wb3-cursor-corner 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__cursor--vertical path {
+  animation:
+    wb3-cursor-opacity 9s var(--ease-work) infinite,
+    wb3-cursor-vertical 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__cursor--diag path {
+  animation:
+    wb3-cursor-opacity 9s var(--ease-work) infinite,
+    wb3-cursor-diag 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__cursor--diag2 path {
+  animation:
+    wb3-cursor-opacity 9s var(--ease-work) infinite,
+    wb3-cursor-diag2 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__sweep {
+  opacity: 0;
+  transform-origin: 274px 329px;
+  animation:
+    wb3-sweep-opacity 9s var(--ease-work) infinite,
+    wb3-sweep-turn 9s var(--ease-work) infinite;
+}
+
+.auth-workbench-v3__sweep path {
+  stroke: rgb(var(--wb-accent) / 42%);
+  stroke-width: 0.8;
+}
+
+.auth-workbench-v3__sweep circle {
+  fill: rgb(var(--wb-accent) / 68%);
+}
+
+.auth-tech__viewport[data-auth-active] .auth-workbench-v3 {
+  opacity: 0.10;
+  filter: saturate(0.72);
+}
+
+@keyframes wb3-slot-1 {
+  0%, 16.25% { opacity: 1; }
+  16.66%, 99.7% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes wb3-slot-2 {
+  0%, 16.25% { opacity: 0; }
+  16.66%, 32.92% { opacity: 1; }
+  33.33%, 100% { opacity: 0; }
+}
+
+@keyframes wb3-slot-3 {
+  0%, 32.92% { opacity: 0; }
+  33.33%, 49.58% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes wb3-slot-4 {
+  0%, 49.58% { opacity: 0; }
+  50%, 66.25% { opacity: 1; }
+  66.66%, 100% { opacity: 0; }
+}
+
+@keyframes wb3-slot-5 {
+  0%, 66.25% { opacity: 0; }
+  66.66%, 82.92% { opacity: 1; }
+  83.33%, 100% { opacity: 0; }
+}
+
+@keyframes wb3-slot-6 {
+  0%, 82.92% { opacity: 0; }
+  83.33%, 99.58% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes wb3-crop {
+  0%, 8% { opacity: 0.07; transform: scale(1); }
+  13%, 48% { opacity: 0.22; transform: scale(0.985); }
+  54%, 62% { opacity: 0.32; transform: scale(1.012); }
+  68%, 82% { opacity: 0.28; transform: scale(1); }
+  94%, 100% { opacity: 0.07; transform: scale(1); }
+}
+
+@keyframes wb3-orbit-primary {
+  0% { opacity: 0.04; transform: rotate(-4deg); }
+  52% { opacity: 0.08; }
+  68% { opacity: 0.18; }
+  82% { opacity: 0.11; }
+  100% { opacity: 0.04; transform: rotate(9deg); }
+}
+
+@keyframes wb3-orbit-secondary {
+  0% { opacity: 0.03; transform: rotate(5deg); }
+  55% { opacity: 0.05; }
+  70% { opacity: 0.12; }
+  84% { opacity: 0.07; }
+  100% { opacity: 0.03; transform: rotate(-5deg); }
+}
+
+@keyframes wb3-ticks {
+  0%, 52% { opacity: 0.03; transform: rotate(2deg); }
+  68% { opacity: 0.11; }
+  83% { opacity: 0.06; }
+  100% { opacity: 0.03; transform: rotate(-4deg); }
+}
+
+@keyframes wb3-face-defect {
+  0%, 33% { opacity: 1; }
+  40%, 85% { opacity: 0.12; }
+  95%, 100% { opacity: 1; }
+}
+
+@keyframes wb3-face-repaired {
+  0%, 33% { opacity: 0; }
+  40%, 86% { opacity: 1; }
+  95%, 100% { opacity: 0; }
+}
+
+@keyframes wb3-anchors {
+  0%, 11% { opacity: 0; }
+  14%, 45% { opacity: 0.40; }
+  49%, 100% { opacity: 0; }
+}
+
+@keyframes wb3-edit {
+  0%, 16% { opacity: 0; }
+  19%, 39% { opacity: 1; }
+  42%, 100% { opacity: 0; }
+}
+
+@keyframes wb3-selected-w {
+  0%, 27% { transform: translateY(9px) rotate(45deg); }
+  35%, 100% { transform: translateY(0) rotate(45deg); }
+}
+
+@keyframes wb3-selected-o {
+  0%, 27% { transform: translateX(-8px); }
+  35%, 100% { transform: translateX(0); }
+}
+
+@keyframes wb3-selected-r {
+  0%, 27% { transform: translate(7px, -5px); }
+  35%, 100% { transform: translate(0, 0); }
+}
+
+@keyframes wb3-selected-k {
+  0%, 27% { transform: translate(6px, -4px) rotate(45deg); }
+  35%, 100% { transform: translate(0, 0) rotate(45deg); }
+}
+
+@keyframes wb3-selected-O {
+  0%, 27% { transform: translateX(8px); }
+  35%, 100% { transform: translateX(0); }
+}
+
+@keyframes wb3-selected-s {
+  0%, 27% { transform: translate(-6px, 5px); }
+  35%, 100% { transform: translate(0, 0); }
+}
+
+@keyframes wb3-handle-vertical {
+  0%, 26% { transform: translateY(0); }
+  34%, 100% { transform: translateY(-8px); }
+}
+
+@keyframes wb3-handle-diag {
+  0%, 26% { transform: translate(0, 0); }
+  34%, 100% { transform: translate(6px, -4px); }
+}
+
+@keyframes wb3-handle-diag2 {
+  0%, 26% { transform: translate(0, 0); }
+  34%, 100% { transform: translate(-5px, 5px); }
+}
+
+@keyframes wb3-verify {
+  0%, 43% { opacity: 0; }
+  46%, 55% { opacity: 0.56; }
+  59%, 87% { opacity: 0; }
+  90%, 95% { opacity: 0.30; }
+  98%, 100% { opacity: 0; }
+}
+
+@keyframes wb3-back {
+  0%, 56% { opacity: 0; }
+  62%, 80% { opacity: 0.72; }
+  86%, 100% { opacity: 0; }
+}
+
+@keyframes wb3-projection {
+  0%, 57% { opacity: 0; }
+  60%, 67% { opacity: 0.40; }
+  71%, 100% { opacity: 0; }
+}
+
+@keyframes wb3-inspect {
+  0%, 68% { transform: rotate(0deg); }
+  73% { transform: rotate(-1.8deg); }
+  77% { transform: rotate(-1.8deg); }
+  80% { transform: rotate(0.65deg); }
+  83% { transform: rotate(0.65deg); }
+  86%, 100% { transform: rotate(0deg); }
+}
+
+@keyframes wb3-cursor-opacity {
+  0%, 8% { opacity: 0; }
+  11%, 41% { opacity: 0.94; }
+  44%, 100% { opacity: 0; }
+}
+
+@keyframes wb3-cursor-corner {
+  0%, 12% { transform: translate(46px, -38px); }
+  18%, 22% { transform: translate(0, 0); }
+  30% { transform: translate(0, 8px); }
+  35%, 100% { transform: translate(0, 0); }
+}
+
+@keyframes wb3-cursor-vertical {
+  0%, 12% { transform: translate(46px, -38px); }
+  18%, 22% { transform: translate(0, 0); }
+  30% { transform: translate(0, -58px); }
+  35% { transform: translate(0, -66px); }
+  40%, 100% { transform: translate(0, 0); }
+}
+
+@keyframes wb3-cursor-diag {
+  0%, 12% { transform: translate(46px, -38px); }
+  18%, 22% { transform: translate(0, 0); }
+  30% { transform: translate(46px, -36px); }
+  35% { transform: translate(52px, -40px); }
+  40%, 100% { transform: translate(0, 0); }
+}
+
+@keyframes wb3-cursor-diag2 {
+  0%, 12% { transform: translate(46px, -38px); }
+  18%, 22% { transform: translate(0, 0); }
+  30% { transform: translate(-44px, 34px); }
+  35% { transform: translate(-49px, 39px); }
+  40%, 100% { transform: translate(0, 0); }
+}
+
+@keyframes wb3-sweep-opacity {
+  0%, 69% { opacity: 0; }
+  72%, 80% { opacity: 0.28; }
+  84%, 100% { opacity: 0; }
+}
+
+@keyframes wb3-sweep-turn {
+  0%, 69% { transform: rotate(-18deg); }
+  74% { transform: rotate(-5deg); }
+  79% { transform: rotate(10deg); }
+  84%, 100% { transform: rotate(17deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-workbench-v3 *,
+  .auth-workbench-v3__object,
+  .auth-workbench-v3__letter,
+  .auth-workbench-v3__sweep {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .auth-workbench-v3__letter {
+    opacity: 0 !important;
+  }
+
+  .auth-workbench-v3__letter--1 {
+    opacity: 1 !important;
+  }
+
+  .auth-workbench-v3__face--defect,
+  .auth-workbench-v3__anchor,
+  .auth-workbench-v3__edit,
+  .auth-workbench-v3__back,
+  .auth-workbench-v3__projection,
+  .auth-workbench-v3__cursor,
+  .auth-workbench-v3__sweep {
+    opacity: 0 !important;
+  }
+
+  .auth-workbench-v3__face--repaired {
+    opacity: 1 !important;
+  }
+
+  .auth-workbench-v3__verify {
+    opacity: 0.34 !important;
+  }
+
+  .auth-workbench-v3__crop {
+    opacity: 0.12 !important;
+  }
+
+  .auth-workbench-v3__orbit--primary {
+    opacity: 0.08 !important;
+  }
+
+  .auth-workbench-v3__orbit--secondary,
+  .auth-workbench-v3__ticks {
+    opacity: 0.04 !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  .auth-workbench-v3 {
+    width: min(100%, 34rem);
+    height: auto;
+    aspect-ratio: 548 / 676;
+  }
+
+  .auth-workbench-v3__svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+
+/* LOGIN V1 LIGHT-OFF POLISH + PHYSICAL POWER SWITCH */
+/* Owner direction: LIGHT/OFF remains a white entry scene with a dark technical AUTH bay.
+   The physical PSU switch is rendered as an industrial toggle, not a software pill. */
+@media (min-width: 1025px) {
+  .auth-gate[data-scene="day"][data-access="idle"] {
+    background: rgb(255 255 255);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-gate__brand,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-gate__footer {
+    background: rgb(255 255 255);
+    border-color: rgb(216 216 211);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo::after {
+    opacity: 0.075;
+    background-image:
+      linear-gradient(rgb(222 221 216 / 42%) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(222 221 216 / 42%) 1px, transparent 1px);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__kicker,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__feed-notes {
+    color: rgb(110 108 102);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__lead {
+    color: rgb(82 82 78);
+    opacity: 0.9;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__word-material {
+    color: rgb(8 8 8);
+    text-shadow: none;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__word-face,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__word-core,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__word-halo {
+    opacity: 0 !important;
+    filter: none !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__infra-base {
+    stroke: rgb(173 171 165);
+    stroke-width: 0.95;
+    opacity: 0.42;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__infra-live {
+    opacity: 0;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller {
+    background: rgb(255 255 255);
+    border-color: rgb(205 205 200 / 72%);
+    box-shadow:
+      inset 0 0 0 1px rgb(255 255 255 / 86%),
+      0 1px 0 rgb(255 255 255);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller::before,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller::after {
+    background: rgb(255 255 255);
+    border-color: rgb(190 189 183 / 62%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo[data-power="off"] .sign-controller__header,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo[data-power="off"] .sign-controller__group,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo[data-power="off"] .sign-controller__dimmer,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo[data-power="off"] .sign-controller__rgb {
+    opacity: 0.13;
+    filter: blur(0.75px);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__segmented button,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__source button {
+    color: rgb(116 114 108);
+    border-color: rgb(194 193 188 / 58%);
+    background: rgb(255 255 255);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-power-panel {
+    background: rgb(255 255 255);
+    border-color: rgb(191 190 184 / 70%);
+    box-shadow: none;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-power-panel::after {
+    content: "";
+    position: absolute;
+    left: -1px;
+    right: -1px;
+    top: -1px;
+    height: 2px;
+    background: rgb(61 61 58);
+    opacity: 0.9;
+    pointer-events: none;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__power-title,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__power-state,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-power-panel__psu,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-power-panel__ready {
+    color: rgb(65 64 60);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-power-panel__psu {
+    background: rgb(249 249 248);
+    border-color: rgb(194 193 188 / 78%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-power-panel__ready-dot {
+    background: rgb(97 98 95);
+    box-shadow: none;
+  }
+
+  /* The light entry state deliberately keeps the AUTH bay dark.
+     It is the product/workbench window, not a second white card. */
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__frame {
+    background: rgb(30 29 27);
+    border-color: rgb(116 93 55 / 58%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__viewport::before {
+    opacity: 0.28;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__viewport::after {
+    opacity: 0.20;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__grid {
+    background-image:
+      linear-gradient(rgb(103 99 91 / 22%) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(103 99 91 / 22%) 1px, transparent 1px);
+    background-size: 42px 42px;
+    opacity: 0.78;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__bay-label {
+    color: rgb(144 120 79 / 84%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__bay-label i {
+    background: rgb(133 106 62 / 82%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__frame-label,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__bottom-meta {
+    color: rgb(118 114 106 / 68%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3 {
+    --wb-accent: 151 114 56;
+    --wb-line: 113 91 57;
+    --wb-muted: 121 116 107;
+    --wb-face: 47 42 36;
+    --wb-face-repaired: 57 49 39;
+    --wb-back: 25 22 18;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__anchor,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__handle-end {
+    fill: rgb(30 29 27);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__cursor path {
+    fill: rgb(190 181 164);
+    stroke: rgb(31 27 22);
+  }
+}
+
+/* Physical mains toggle.
+   44px hit box; 34x62 metal plate preserves the accepted panel geometry. */
+.sign-controller__switch {
+  width: 44px !important;
+  height: 72px !important;
+  left: 11px !important;
+  top: 45px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  overflow: visible;
+  isolation: isolate;
+}
+
+.sign-controller__switch-plate {
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  width: 34px;
+  height: 62px;
+  border: 1px solid rgb(116 92 50 / 74%);
+  background: rgb(18 15 12);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 3%),
+    inset 0 -8px 12px rgb(0 0 0 / 16%);
+}
+
+.sign-controller__switch-screw {
+  position: absolute;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border: 1px solid rgb(128 116 96 / 64%);
+  border-radius: 50%;
+  background: rgb(38 32 25);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 22%);
+}
+
+.sign-controller__switch-screw--top {
+  top: 5px;
+}
+
+.sign-controller__switch-screw--bottom {
+  bottom: 5px;
+}
+
+.sign-controller__switch-collar {
+  position: absolute;
+  left: 50%;
+  top: 31px;
+  width: 17px;
+  height: 17px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgb(125 109 84 / 82%);
+  border-radius: 50%;
+  background: rgb(29 24 18);
+  box-shadow:
+    inset 0 0 0 3px rgb(12 10 8),
+    0 0 0 1px rgb(0 0 0 / 18%);
+}
+
+.sign-controller__switch-lever {
+  position: absolute;
+  left: 50%;
+  top: 31px;
+  width: 18px;
+  height: 34px;
+  transform-origin: 50% 0;
+  transition: transform var(--motion-navigate) var(--ease-work);
+  pointer-events: none;
+}
+
+.sign-controller__switch-stem {
+  position: absolute;
+  left: 50%;
+  top: -17px;
+  width: 3px;
+  height: 23px;
+  transform: translateX(-50%);
+  border: 1px solid rgb(118 109 96 / 72%);
+  background: rgb(163 155 141);
+  box-shadow: 1px 0 0 rgb(255 255 255 / 18%);
+}
+
+.sign-controller__switch-knob,
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-knob,
+.sign-controller__switch[aria-checked="false"] .sign-controller__switch-knob {
+  position: absolute !important;
+  left: 50% !important;
+  top: -23px !important;
+  width: 15px !important;
+  height: 15px !important;
+  transform: translateX(-50%) !important;
+  border: 1px solid rgb(10 54 123 / 82%);
+  border-radius: 50%;
+  background: rgb(32 102 207);
+  box-shadow:
+    inset 0 0 0 2px rgb(255 255 255 / 12%),
+    0 2px 3px rgb(0 0 0 / 28%);
+}
+
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-lever {
+  transform: rotate(-17deg);
+}
+
+.sign-controller__switch[aria-checked="false"] .sign-controller__switch-lever {
+  transform: rotate(17deg);
+}
+
+.sign-controller__switch-state,
+.sign-controller__switch > span:last-child {
+  position: absolute;
+  left: 50px !important;
+  top: 26px !important;
+  width: 28px;
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: 6px !important;
+  line-height: 9px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sign-controller__switch:active .sign-controller__switch-lever {
+  transform: scale(0.96);
+}
+
+.sign-controller__switch:active .sign-controller__switch-knob {
+  transform: translateX(-50%) !important;
+}
+
+.sign-controller__switch:focus-visible {
+  outline: 2px solid rgb(var(--color-action-rgb, 32 102 207) / 72%);
+  outline-offset: 2px;
+}
+
+.auth-gate[data-scene="day"] .sign-controller__switch-plate {
+  border-color: rgb(174 173 168 / 92%);
+  background: rgb(249 249 247);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255),
+    inset 0 -8px 12px rgb(0 0 0 / 3%);
+}
+
+.auth-gate[data-scene="day"] .sign-controller__switch-screw {
+  border-color: rgb(169 168 163 / 92%);
+  background: rgb(226 225 220);
+}
+
+.auth-gate[data-scene="day"] .sign-controller__switch-collar {
+  border-color: rgb(149 146 138 / 92%);
+  background: rgb(219 216 208);
+  box-shadow:
+    inset 0 0 0 3px rgb(247 246 242),
+    0 0 0 1px rgb(0 0 0 / 8%);
+}
+
+.auth-gate[data-scene="day"] .sign-controller__switch-stem {
+  border-color: rgb(132 129 121 / 82%);
+  background: rgb(181 178 169);
+  box-shadow: 1px 0 0 rgb(255 255 255 / 70%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sign-controller__switch-lever {
+    transition: none !important;
+  }
+}
+
+
+/* LOGIN V1 LIGHT-OFF RUNTIME REPAIR */
+/* Runtime capture repair: keep the physical WorkOS sign visible when power is OFF.
+   This intentionally overrides the generic FACE material suppression used by lit states. */
+@media (min-width: 1025px) {
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo__word[data-power="off"]
+    .sign-demo__word-material {
+    color: rgb(8 8 8) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    filter: none !important;
+    text-shadow: none !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__word {
+    z-index: 5;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-demo__lead {
+    opacity: 0.84;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller {
+    border-color: rgb(198 197 192 / 76%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo[data-power="off"]
+    .sign-controller__header,
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo[data-power="off"]
+    .sign-controller__group,
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo[data-power="off"]
+    .sign-controller__dimmer {
+    opacity: 0.17;
+    filter: blur(0.55px);
+  }
+}
+
+/* Physical bat-toggle refinement.
+   The visible hardware is a small metal pivot with a stem and blue cap, not a radio-style circle. */
+.sign-controller__switch-collar {
+  width: 12px;
+  height: 12px;
+  border-color: rgb(125 109 84 / 74%);
+  background: rgb(22 19 15);
+  box-shadow:
+    inset 0 0 0 2px rgb(7 6 5 / 82%),
+    0 0 0 1px rgb(0 0 0 / 20%);
+}
+
+.sign-controller__switch-lever {
+  top: 31px;
+  width: 22px;
+  height: 38px;
+  transform-origin: 50% 0;
+}
+
+.sign-controller__switch-stem {
+  top: -20px;
+  width: 4px;
+  height: 27px;
+  border: 0;
+  border-radius: 2px;
+  background:
+    linear-gradient(
+      90deg,
+      rgb(102 98 90) 0%,
+      rgb(192 186 174) 38%,
+      rgb(225 220 209) 58%,
+      rgb(125 120 111) 100%
+    );
+  box-shadow:
+    1px 0 0 rgb(255 255 255 / 20%),
+    0 2px 2px rgb(0 0 0 / 20%);
+}
+
+.sign-controller__switch-knob,
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-knob,
+.sign-controller__switch[aria-checked="false"] .sign-controller__switch-knob {
+  top: -28px !important;
+  width: 14px !important;
+  height: 14px !important;
+  border: 1px solid rgb(11 51 108 / 90%);
+  background:
+    radial-gradient(circle at 36% 30%, rgb(82 151 245) 0 16%, rgb(32 102 207) 42%, rgb(19 74 157) 100%);
+  box-shadow:
+    inset -1px -2px 2px rgb(7 42 100 / 40%),
+    inset 1px 1px 1px rgb(255 255 255 / 30%),
+    0 2px 3px rgb(0 0 0 / 28%);
+}
+
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-lever {
+  transform: rotate(-24deg);
+}
+
+.sign-controller__switch[aria-checked="false"] .sign-controller__switch-lever {
+  transform: rotate(24deg);
+}
+
+.auth-gate[data-scene="day"] .sign-controller__switch-collar {
+  border-color: rgb(143 140 132 / 92%);
+  background: rgb(191 188 180);
+  box-shadow:
+    inset 0 0 0 2px rgb(241 239 234),
+    0 0 0 1px rgb(0 0 0 / 10%);
+}
+
+.auth-gate[data-scene="day"] .sign-controller__switch-stem {
+  background:
+    linear-gradient(
+      90deg,
+      rgb(121 118 111) 0%,
+      rgb(194 191 182) 34%,
+      rgb(231 228 220) 56%,
+      rgb(139 135 126) 100%
+    );
+}
+
+
+/* LOGIN V1 RUNTIME POLISH 2026-10-03 */
+/* Runtime capture polish:
+   1) OFF controller must read as intentionally inactive, not washed out.
+   2) The hardware toggle needs more physical presence.
+   3) All WorkOS workbench glyphs need more breathing room than the first runtime pass.
+   4) Dark workbench instrumentation is lifted slightly so the letter does not become a watermark. */
+
+@media (min-width: 1025px) {
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo[data-power="off"]
+    .sign-controller__header,
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo[data-power="off"]
+    .sign-controller__group,
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo[data-power="off"]
+    .sign-controller__dimmer,
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo[data-power="off"]
+    .sign-controller__rgb {
+    opacity: 0.24;
+    filter: blur(0.32px);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-controller__segmented button,
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-controller__source button {
+    color: rgb(96 94 89);
+    border-color: rgb(180 179 173 / 68%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__title,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__spec,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__label,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__channel {
+    color: rgb(88 86 81);
+  }
+}
+
+/* Give every glyph ~14% more breathing room while preserving the validated center.
+   Scale lives inside the inspection animation so rotation and scale never fight over transform. */
+@keyframes wb3-inspect {
+  0%, 68% { transform: scale(0.86) rotate(0deg); }
+  73% { transform: scale(0.86) rotate(-1.8deg); }
+  77% { transform: scale(0.86) rotate(-1.8deg); }
+  80% { transform: scale(0.86) rotate(0.65deg); }
+  83% { transform: scale(0.86) rotate(0.65deg); }
+  86%, 100% { transform: scale(0.86) rotate(0deg); }
+}
+
+.auth-workbench-v3__object {
+  transform-box: view-box;
+  transform-origin: 274px 329px;
+}
+
+/* Dark scene: increase instrument presence without making the AUTH bay decorative. */
+.auth-gate[data-scene="night"] .auth-workbench-v3__crop {
+  stroke: rgb(var(--wb-accent) / 74%);
+}
+
+.auth-gate[data-scene="night"] .auth-workbench-v3__orbit {
+  stroke: rgb(var(--wb-line) / 64%);
+}
+
+.auth-gate[data-scene="night"] .auth-workbench-v3__ticks {
+  stroke: rgb(var(--wb-muted) / 46%);
+}
+
+.auth-gate[data-scene="night"] .auth-workbench-v3__verify {
+  stroke: rgb(var(--wb-muted) / 82%);
+}
+
+.auth-gate[data-scene="night"] .auth-workbench-v3__projection {
+  stroke: rgb(var(--wb-muted) / 54%);
+}
+
+/* Final physical bat-toggle sizing. The hit target stays 44x72; only the hardware grows. */
+.sign-controller__switch-plate {
+  left: 4px;
+  top: 4px;
+  width: 36px;
+  height: 64px;
+}
+
+.sign-controller__switch-collar {
+  width: 14px;
+  height: 14px;
+}
+
+.sign-controller__switch-lever {
+  width: 24px;
+  height: 42px;
+}
+
+.sign-controller__switch-stem {
+  top: -22px;
+  width: 5px;
+  height: 31px;
+}
+
+.sign-controller__switch-knob,
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-knob,
+.sign-controller__switch[aria-checked="false"] .sign-controller__switch-knob {
+  top: -31px !important;
+  width: 17px !important;
+  height: 17px !important;
+}
+
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-lever {
+  transform: rotate(-26deg);
+}
+
+.sign-controller__switch[aria-checked="false"] .sign-controller__switch-lever {
+  transform: rotate(26deg);
+}
+
+
+/* LOGIN V1 LIGHT-STANDBY CLEAN PASS */
+/* Runtime-directed correction:
+   LIGHT/OFF is one coherent light scene.
+   AUTH bay becomes a pale technical drafting surface.
+   Sign controller stays sharp but intentionally de-emphasized.
+   Power switch reads physically as UP=ON / DOWN=OFF. */
+
+@media (min-width: 1025px) {
+  /* --- LIGHT AUTH BAY: pale engineering surface, never a black slab --- */
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__frame {
+    background: rgb(248 247 243) !important;
+    border-color: rgb(198 195 185 / 82%) !important;
+    box-shadow:
+      inset 0 0 0 1px rgb(255 255 255 / 86%),
+      0 1px 0 rgb(255 255 255 / 72%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__viewport::before {
+    opacity: 0.10 !important;
+    background:
+      linear-gradient(90deg, transparent 0 49.85%, rgb(114 108 98 / 18%) 49.9% 50.1%, transparent 50.15%),
+      linear-gradient(transparent 0 49.85%, rgb(114 108 98 / 18%) 49.9% 50.1%, transparent 50.15%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__viewport::after {
+    opacity: 0.06 !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__grid {
+    background-image:
+      linear-gradient(rgb(166 162 153 / 18%) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(166 162 153 / 18%) 1px, transparent 1px) !important;
+    background-size: 42px 42px;
+    opacity: 0.46 !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__bay-label {
+    color: rgb(110 89 57 / 76%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__bay-label i {
+    background: rgb(123 98 60 / 70%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__frame-label,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__bottom-meta {
+    color: rgb(102 99 92 / 62%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3 {
+    --wb-accent: 118 94 55;
+    --wb-line: 127 121 110;
+    --wb-muted: 115 111 103;
+    --wb-face: 211 206 196;
+    --wb-face-repaired: 184 176 162;
+    --wb-back: 159 151 137;
+    opacity: 0.82;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__anchor,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__handle-end {
+    fill: rgb(248 247 243) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__cursor path {
+    fill: rgb(82 78 71) !important;
+    stroke: rgb(248 247 243) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__crop {
+    stroke: rgb(123 98 60 / 48%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__orbit {
+    stroke: rgb(128 122 111 / 38%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__ticks,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__verify,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__projection {
+    stroke: rgb(121 116 107 / 44%) !important;
+  }
+
+  /* --- OFF CONTROLLER: crisp/parked, no blur --- */
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo[data-power="off"]
+    .sign-controller__header {
+    opacity: 0.52 !important;
+    filter: none !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo[data-power="off"]
+    .sign-controller__group,
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo[data-power="off"]
+    .sign-controller__dimmer,
+  .auth-gate[data-scene="day"][data-access="idle"]
+    .sign-demo[data-power="off"]
+    .sign-controller__rgb {
+    opacity: 0.36 !important;
+    filter: none !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller {
+    border-color: rgb(205 203 197 / 74%) !important;
+    background: rgb(253 253 251) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__segmented button,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__source button {
+    color: rgb(123 120 113) !important;
+    border-color: rgb(208 206 200 / 76%) !important;
+    background: rgb(252 252 250) !important;
+    box-shadow: none !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__segmented button[aria-pressed="true"],
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__source button[aria-pressed="true"] {
+    color: rgb(104 101 95) !important;
+    border-color: rgb(189 186 178 / 82%) !important;
+    background: rgb(248 247 243) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__dimmer input[type="range"] {
+    opacity: 0.48;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__title,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__spec,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__label,
+  .auth-gate[data-scene="day"][data-access="idle"] .sign-controller__channel {
+    color: rgb(116 112 104) !important;
+  }
+}
+
+/* --- PHYSICAL TOGGLE: UP = ON, DOWN = OFF --- */
+.sign-controller__switch-plate {
+  left: 4px !important;
+  top: 3px !important;
+  width: 36px !important;
+  height: 66px !important;
+}
+
+.sign-controller__switch-plate::before,
+.sign-controller__switch-plate::after {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 5px;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  pointer-events: none;
+}
+
+.sign-controller__switch-plate::before {
+  content: "ON";
+  top: 9px;
+  color: rgb(126 118 105 / 74%);
+}
+
+.sign-controller__switch-plate::after {
+  content: "OFF";
+  bottom: 9px;
+  color: rgb(126 118 105 / 74%);
+}
+
+.sign-controller__switch-collar {
+  top: 33px !important;
+  width: 13px !important;
+  height: 13px !important;
+}
+
+.sign-controller__switch-lever {
+  left: 50% !important;
+  top: 33px !important;
+  width: 24px !important;
+  height: 40px !important;
+  transform-origin: 50% 0 !important;
+  transition:
+    transform var(--motion-navigate) var(--ease-work),
+    filter var(--motion-fast) var(--ease-work);
+}
+
+.sign-controller__switch-stem {
+  left: 50% !important;
+  top: -24px !important;
+  width: 4px !important;
+  height: 30px !important;
+  transform: translateX(-50%) !important;
+}
+
+.sign-controller__switch-knob,
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-knob,
+.sign-controller__switch[aria-checked="false"] .sign-controller__switch-knob {
+  left: 50% !important;
+  top: -33px !important;
+  width: 16px !important;
+  height: 16px !important;
+  transform: translateX(-50%) !important;
+}
+
+/* ON points physically upward; OFF flips the lever through the pivot and points downward. */
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-lever {
+  transform: rotate(0deg) !important;
+}
+
+.sign-controller__switch[aria-checked="false"] .sign-controller__switch-lever {
+  transform: rotate(180deg) !important;
+}
+
+/* Blue is the energized cue. OFF becomes neutral hardware. */
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-knob {
+  border-color: rgb(11 51 108 / 92%) !important;
+  background:
+    radial-gradient(circle at 36% 30%, rgb(82 151 245) 0 16%, rgb(32 102 207) 42%, rgb(19 74 157) 100%) !important;
+  box-shadow:
+    inset -1px -2px 2px rgb(7 42 100 / 40%),
+    inset 1px 1px 1px rgb(255 255 255 / 30%),
+    0 2px 3px rgb(0 0 0 / 28%) !important;
+}
+
+.sign-controller__switch[aria-checked="false"] .sign-controller__switch-knob {
+  border-color: rgb(111 108 101 / 86%) !important;
+  background:
+    radial-gradient(circle at 36% 30%, rgb(213 210 201) 0 18%, rgb(148 144 135) 48%, rgb(100 96 89) 100%) !important;
+  box-shadow:
+    inset -1px -2px 2px rgb(63 60 55 / 26%),
+    inset 1px 1px 1px rgb(255 255 255 / 30%),
+    0 2px 3px rgb(0 0 0 / 18%) !important;
+}
+
+.sign-controller__switch[aria-checked="true"] .sign-controller__switch-plate::before {
+  color: rgb(32 102 207 / 92%);
+}
+
+.sign-controller__switch[aria-checked="false"] .sign-controller__switch-plate::after {
+  color: rgb(88 85 79 / 94%);
+}
+
+.auth-gate[data-scene="day"] .sign-controller__switch-plate {
+  background: rgb(250 249 246) !important;
+  border-color: rgb(181 178 170 / 94%) !important;
+}
+
+.auth-gate[data-scene="day"] .sign-controller__switch-collar {
+  background: rgb(188 185 176) !important;
+  border-color: rgb(137 133 124 / 88%) !important;
+  box-shadow:
+    inset 0 0 0 2px rgb(242 240 235),
+    0 0 0 1px rgb(0 0 0 / 8%) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sign-controller__switch-lever {
+    transition: none !important;
+  }
+}
+
+
+/* LOGIN V1 LIGHT AUTH BAY IVORY FINAL */
+/* Owner-approved direction from runtime review:
+   the LIGHT/OFF AUTH bay is warm ivory, not gray.
+   Layout, motion, controller and DARK states stay unchanged. */
+@media (min-width: 1025px) {
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__frame {
+    background: rgb(252 249 240) !important;
+    border-color: rgb(211 204 190 / 92%) !important;
+    box-shadow:
+      inset 0 0 0 1px rgb(255 255 255 / 92%),
+      0 1px 0 rgb(255 255 255 / 76%);
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__grid {
+    background-image:
+      linear-gradient(rgb(185 177 163 / 13%) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(185 177 163 / 13%) 1px, transparent 1px) !important;
+    opacity: 0.34 !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__viewport::before {
+    opacity: 0.08 !important;
+    background:
+      linear-gradient(90deg, transparent 0 49.85%, rgb(151 141 124 / 14%) 49.9% 50.1%, transparent 50.15%),
+      linear-gradient(transparent 0 49.85%, rgb(151 141 124 / 14%) 49.9% 50.1%, transparent 50.15%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__viewport::after {
+    opacity: 0.045 !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__bay-label {
+    color: rgb(126 100 61 / 72%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__bay-label i {
+    background: rgb(132 105 64 / 66%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__frame-label,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-tech__bottom-meta {
+    color: rgb(119 112 101 / 55%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3 {
+    --wb-accent: 139 112 71;
+    --wb-line: 154 145 130;
+    --wb-muted: 143 136 125;
+    --wb-face: 205 197 184;
+    --wb-face-repaired: 188 178 162;
+    --wb-back: 170 160 145;
+    opacity: 0.78;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__anchor,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__handle-end {
+    fill: rgb(252 249 240) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__crop {
+    stroke: rgb(139 112 71 / 42%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__orbit {
+    stroke: rgb(151 143 130 / 30%) !important;
+  }
+
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__ticks,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__verify,
+  .auth-gate[data-scene="day"][data-access="idle"] .auth-workbench-v3__projection {
+    stroke: rgb(145 137 124 / 34%) !important;
+  }
+}
+
+
+/* LOGIN V1 POWER TOGGLE MECHANICAL ALIGNMENT FINAL */
+/* Runtime repair from Owner capture:
+   the visual hardware aligns exactly with the PSU module row.
+   The lever, pivot and cap are one continuous mechanical assembly. */
+@media (min-width: 1025px) {
+  .sign-controller__switch {
+    left: 12px !important;
+    top: 45px !important;
+    width: 44px !important;
+    height: 72px !important;
+    overflow: visible;
+  }
+
+  /* Visual mounting plate aligns to x=16 / y=50, same top line as the PSU block. */
+  .sign-controller__switch-plate {
+    left: 4px !important;
+    top: 5px !important;
+    width: 36px !important;
+    height: 58px !important;
+    box-sizing: border-box;
+  }
+
+  .sign-controller__switch-screw {
+    left: 5px !important;
+    margin-left: 0 !important;
+    width: 3px !important;
+    height: 3px !important;
+  }
+
+  .sign-controller__switch-screw--top {
+    top: 5px !important;
+  }
+
+  .sign-controller__switch-screw--bottom {
+    bottom: 5px !important;
+  }
+
+  .sign-controller__switch-plate::before {
+    top: 7px !important;
+  }
+
+  .sign-controller__switch-plate::after {
+    bottom: 7px !important;
+  }
+
+  /* Pivot is the single geometric center of the plate. */
+  .sign-controller__switch-collar {
+    left: 50% !important;
+    top: 29px !important;
+    width: 13px !important;
+    height: 13px !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 3;
+  }
+
+  /* Lever rotates around the exact center of the collar. */
+  .sign-controller__switch-lever {
+    left: 50% !important;
+    top: 29px !important;
+    width: 20px !important;
+    height: 29px !important;
+    margin-left: -10px;
+    transform-origin: 50% 0 !important;
+    z-index: 2;
+  }
+
+  /* Stem terminates in the pivot and overlaps the cap: no visual gap. */
+  .sign-controller__switch-stem {
+    left: 50% !important;
+    top: -18px !important;
+    width: 4px !important;
+    height: 19px !important;
+    transform: translateX(-50%) !important;
+    border-radius: 2px;
+  }
+
+  .sign-controller__switch-knob,
+  .sign-controller__switch[aria-checked="true"] .sign-controller__switch-knob,
+  .sign-controller__switch[aria-checked="false"] .sign-controller__switch-knob {
+    left: 50% !important;
+    top: -25px !important;
+    width: 14px !important;
+    height: 14px !important;
+    transform: translateX(-50%) !important;
+  }
+
+  /* Physical semantics: ON up, OFF down, same axis through the pivot. */
+  .sign-controller__switch[aria-checked="true"] .sign-controller__switch-lever {
+    transform: rotate(0deg) !important;
+  }
+
+  .sign-controller__switch[aria-checked="false"] .sign-controller__switch-lever {
+    transform: rotate(180deg) !important;
+  }
+
+  /* Plate labels already communicate state; remove the detached duplicate word. */
+  .sign-controller__switch-state {
+    display: none !important;
+  }
+
+  .sign-controller__switch:active .sign-controller__switch-lever {
+    filter: brightness(0.94);
+  }
+}
+
+
+/* LOGIN V1 POWER TOGGLE REBUILD V2 */
+/* Fresh semantic toggle implementation. It intentionally uses new class names so
+   legacy switch CSS cannot disassemble the mechanical geometry. */
+.sign-power-toggle {
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 72px;
+  min-width: 44px;
+  min-height: 72px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  isolation: isolate;
+}
+
+.sign-power-toggle__plate {
+  position: absolute;
+  inset: 5px 4px 9px;
+  box-sizing: border-box;
+  border: 1px solid rgb(116 92 50 / 74%);
+  background: rgb(18 15 12);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 3%),
+    inset 0 -7px 10px rgb(0 0 0 / 15%);
+}
+
+.sign-power-toggle__label {
+  position: absolute;
+  right: 4px;
+  z-index: 1;
+  font-family: var(--font-mono);
+  font-size: 4.75px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: rgb(136 124 103 / 62%);
+  pointer-events: none;
+}
+
+.sign-power-toggle__label--on {
+  top: 5px;
+}
+
+.sign-power-toggle__label--off {
+  bottom: 5px;
+}
+
+.sign-power-toggle__screw {
+  position: absolute;
+  left: 4px;
+  width: 3px;
+  height: 3px;
+  border: 1px solid rgb(126 115 96 / 58%);
+  border-radius: 50%;
+  background: rgb(38 32 25);
+}
+
+.sign-power-toggle__screw--top {
+  top: 5px;
+}
+
+.sign-power-toggle__screw--bottom {
+  bottom: 5px;
+}
+
+.sign-power-toggle__pivot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgb(132 116 90 / 84%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 37% 34%, rgb(126 119 105) 0 18%, rgb(54 47 37) 52%, rgb(20 17 13) 100%);
+  box-shadow:
+    inset 0 0 0 2px rgb(8 7 6 / 72%),
+    0 0 0 1px rgb(0 0 0 / 18%);
+}
+
+.sign-power-toggle__lever {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 4;
+  width: 18px;
+  height: 34px;
+  transform-origin: 50% 50%;
+  pointer-events: none;
+  transition: transform var(--motion-navigate) var(--ease-work);
+}
+
+.sign-power-toggle__stem {
+  position: absolute;
+  left: 50%;
+  top: -22px;
+  width: 4px;
+  height: 24px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background:
+    linear-gradient(
+      90deg,
+      rgb(93 90 84) 0%,
+      rgb(183 177 166) 34%,
+      rgb(224 219 208) 58%,
+      rgb(116 111 103) 100%
+    );
+  box-shadow:
+    1px 0 0 rgb(255 255 255 / 18%),
+    0 2px 2px rgb(0 0 0 / 18%);
+}
+
+.sign-power-toggle__cap {
+  position: absolute;
+  left: 50%;
+  top: -31px;
+  width: 15px;
+  height: 15px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  border: 1px solid rgb(11 51 108 / 88%);
+  background:
+    radial-gradient(circle at 36% 30%, rgb(82 151 245) 0 16%, rgb(32 102 207) 42%, rgb(19 74 157) 100%);
+  box-shadow:
+    inset -1px -2px 2px rgb(7 42 100 / 40%),
+    inset 1px 1px 1px rgb(255 255 255 / 30%),
+    0 2px 3px rgb(0 0 0 / 28%);
+}
+
+/* Mechanical semantics: a real bat toggle moves around the pivot on one axis.
+   ON is up/right; OFF is down/left. */
+.sign-power-toggle[aria-checked="true"] .sign-power-toggle__lever {
+  transform: translate(-50%, -50%) rotate(34deg);
+}
+
+.sign-power-toggle[aria-checked="false"] .sign-power-toggle__lever {
+  transform: translate(-50%, -50%) rotate(214deg);
+}
+
+.sign-power-toggle[aria-checked="true"] .sign-power-toggle__label--on {
+  color: rgb(32 102 207 / 94%);
+}
+
+.sign-power-toggle[aria-checked="false"] .sign-power-toggle__label--off {
+  color: rgb(126 118 105 / 92%);
+}
+
+.sign-power-toggle[aria-checked="false"] .sign-power-toggle__cap {
+  border-color: rgb(106 102 94 / 82%);
+  background:
+    radial-gradient(circle at 36% 30%, rgb(193 188 177) 0 18%, rgb(132 127 117) 48%, rgb(84 80 73) 100%);
+  box-shadow:
+    inset -1px -2px 2px rgb(50 47 43 / 24%),
+    inset 1px 1px 1px rgb(255 255 255 / 28%),
+    0 2px 3px rgb(0 0 0 / 16%);
+}
+
+.sign-power-toggle:active .sign-power-toggle__lever {
+  filter: brightness(0.94);
+}
+
+.sign-power-toggle:focus-visible {
+  outline: 2px solid rgb(var(--color-action-rgb, 32 102 207) / 72%);
+  outline-offset: 2px;
+}
+
+.auth-gate[data-scene="day"] .sign-power-toggle__plate {
+  border-color: rgb(180 176 167 / 92%);
+  background: rgb(250 249 246);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255),
+    inset 0 -7px 10px rgb(0 0 0 / 3%);
+}
+
+.auth-gate[data-scene="day"] .sign-power-toggle__screw {
+  border-color: rgb(164 161 153 / 88%);
+  background: rgb(226 223 215);
+}
+
+.auth-gate[data-scene="day"] .sign-power-toggle__pivot {
+  border-color: rgb(145 140 130 / 88%);
+  background:
+    radial-gradient(circle at 37% 34%, rgb(222 218 208) 0 18%, rgb(178 173 162) 52%, rgb(123 118 109) 100%);
+  box-shadow:
+    inset 0 0 0 2px rgb(244 242 237 / 88%),
+    0 0 0 1px rgb(0 0 0 / 8%);
+}
+
+.auth-gate[data-scene="day"] .sign-power-toggle__stem {
+  background:
+    linear-gradient(
+      90deg,
+      rgb(116 113 106) 0%,
+      rgb(190 186 176) 34%,
+      rgb(229 226 218) 58%,
+      rgb(135 131 122) 100%
+    );
+}
+
+.auth-gate[data-scene="day"] .sign-power-toggle__label {
+  color: rgb(118 113 104 / 62%);
+}
+
+@media (min-width: 1025px) {
+  .sign-power-toggle {
+    position: absolute;
+    left: 12px;
+    top: 45px;
+    width: 44px;
+    height: 72px;
+    min-height: 0;
+  }
+
+  .sign-power-toggle__plate {
+    inset: 5px 4px 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sign-power-toggle__lever {
+    transition: none !important;
+  }
+}
+
+
+/* LOGIN V1 AUTH WORKBENCH STABLE WORD REFERENCE
+   Runtime proof showed that the single-glyph repair cycle dominated the bay.
+   Keep the full WorkOS word as the stable visual reference and demote the
+   animated glyph to a smaller inspection overlay. */
+.auth-workbench-v3__word-silhouette {
+  fill: rgb(var(--wb-face-repaired) / 42%);
+  font-family: var(--font-brand);
+  font-size: 104px;
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  pointer-events: none;
+  user-select: none;
+}
+
+.auth-gate[data-scene="day"] .auth-workbench-v3__word-silhouette {
+  fill: rgb(var(--wb-face-repaired) / 48%);
+}
+
+.auth-workbench-v3__inspection-layer {
+  opacity: 0.54;
+  pointer-events: none;
+}
+
+.auth-workbench-v3__letter {
+  transform-box: view-box;
+  transform-origin: 274px 329px;
+  transform: scale(0.62);
+}
+
+.auth-tech__viewport[data-auth-active] .auth-workbench-v3__word-silhouette {
+  opacity: 0.24;
+}
+
+.auth-tech__viewport[data-auth-active] .auth-workbench-v3__inspection-layer {
+  opacity: 0.28;
+}
+
+
+/* LOGIN V1 HALO OPTICAL SYSTEM — COHERENT PASS
+   Canonical browser implementation for the Login sign:
+   tight contour -> near diffusion -> mid diffusion -> far wall spill.
+   All four layers use the same WorkOS glyph geometry and never scale the sign. */
+.sign-demo__word {
+  isolation: isolate;
+  overflow: visible;
+}
+
+.sign-demo__word-halo {
+  color: transparent !important;
+  opacity: 1;
+  filter: none !important;
+  text-shadow: none;
+  pointer-events: none;
+  user-select: none;
+  will-change: opacity, text-shadow;
+  transition:
+    opacity var(--motion-edit) var(--ease-work),
+    text-shadow var(--motion-navigate) var(--ease-work);
+}
+
+.sign-demo__word-halo--tight {
+  z-index: 1;
+  text-shadow:
+    0 0 2.5px rgb(var(--sign-light-rgb) / var(--sign-halo-tight)),
+    0 0 4px rgb(var(--sign-light-rgb) / calc(var(--sign-halo-tight) * 0.42));
+}
+
+.sign-demo__word-halo--near {
+  z-index: 0;
+  text-shadow:
+    0 0 7px rgb(var(--sign-light-rgb) / var(--sign-halo-near)),
+    0 0 11px rgb(var(--sign-light-rgb) / calc(var(--sign-halo-near) * 0.34));
+}
+
+.sign-demo__word-halo--mid {
+  z-index: -1;
+  text-shadow:
+    0 0 15px rgb(var(--sign-light-rgb) / var(--sign-halo-mid)),
+    0 0 24px rgb(var(--sign-light-rgb) / calc(var(--sign-halo-mid) * 0.28));
+}
+
+.sign-demo__word-halo--far {
+  z-index: -2;
+  text-shadow:
+    0 0 28px rgb(var(--sign-light-rgb) / var(--sign-halo-far)),
+    0 0 40px rgb(var(--sign-light-rgb) / calc(var(--sign-halo-far) * 0.22));
+}
+
+/* HALO keeps the physical sign dark while rear emission remains contour-shaped. */
+.sign-demo__word[data-halo-only] .sign-demo__word-material {
+  color: #050505 !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+
+.sign-demo__word[data-halo-only] .sign-demo__word-face,
+.sign-demo__word[data-halo-only] .sign-demo__word-core {
+  opacity: 0 !important;
+  filter: none !important;
+}
+
+/* Combined mode keeps both channels readable instead of washing the front face out. */
+.sign-demo__word[data-mode="combined"] .sign-demo__word-halo {
+  opacity: 0.84;
+}
+
+/* FATA and OFF must have zero rear emission. */
+.sign-demo__word[data-mode="face"] .sign-demo__word-halo,
+.sign-demo__word[data-power="off"] .sign-demo__word-halo {
+  opacity: 0 !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sign-demo__word-halo {
+    transition: none !important;
   }
 }
