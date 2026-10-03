@@ -230,6 +230,17 @@ function AuthWorkbenchGraphic({ active }: { active: boolean }) {
           />
         </g>
 
+        <g className="auth-workbench-v3__word-silhouette" opacity="0.18">
+          {WORKOS_WORKBENCH_GLYPHS.map((spec) => (
+            <path
+              key={`silhouette-${spec.glyph}`}
+              transform={`translate(${spec.x} ${spec.y})`}
+              d={spec.path}
+              fill="rgb(var(--wb-face-repaired))"
+            />
+          ))}
+        </g>
+
         {WORKOS_WORKBENCH_GLYPHS.map((spec, index) => (
           <g
             key={spec.glyph}
