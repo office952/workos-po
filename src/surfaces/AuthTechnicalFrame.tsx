@@ -239,11 +239,12 @@ function AuthWorkbenchGraphic({ active }: { active: boolean }) {
           WorkOS
         </text>
 
-        {WORKOS_WORKBENCH_GLYPHS.map((spec, index) => (
-          <g
-            key={spec.glyph}
-            className={`auth-workbench-v3__letter auth-workbench-v3__letter--${index + 1}`}
-          >
+        <g className="auth-workbench-v3__inspection-layer">
+          {WORKOS_WORKBENCH_GLYPHS.map((spec, index) => (
+            <g
+              key={spec.glyph}
+              className={`auth-workbench-v3__letter auth-workbench-v3__letter--${index + 1}`}
+            >
             <g className="auth-workbench-v3__object">
               <path
                 className="auth-workbench-v3__back"
@@ -341,7 +342,8 @@ function AuthWorkbenchGraphic({ active }: { active: boolean }) {
               ))}
             </g>
           </g>
-        ))}
+          ))}
+        </g>
 
         <g className="auth-workbench-v3__sweep">
           <path d="M274 329L378 329" />

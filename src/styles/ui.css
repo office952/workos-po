@@ -8453,13 +8453,14 @@ button.context-rail__item:focus-visible {
 }
 
 
-/* LOGIN V1 AUTH WORKBENCH WORD SILHOUETTE FIX
-   Keep a stable full WorkOS reference behind the single-glyph inspection cycle.
-   The animated vector glyph remains the focal object; the reference never changes geometry. */
+/* LOGIN V1 AUTH WORKBENCH STABLE WORD REFERENCE
+   Runtime proof showed that the single-glyph repair cycle dominated the bay.
+   Keep the full WorkOS word as the stable visual reference and demote the
+   animated glyph to a smaller inspection overlay. */
 .auth-workbench-v3__word-silhouette {
-  fill: rgb(var(--wb-face-repaired) / 18%);
+  fill: rgb(var(--wb-face-repaired) / 42%);
   font-family: var(--font-brand);
-  font-size: 88px;
+  font-size: 104px;
   font-weight: 700;
   letter-spacing: -0.055em;
   pointer-events: none;
@@ -8467,11 +8468,26 @@ button.context-rail__item:focus-visible {
 }
 
 .auth-gate[data-scene="day"] .auth-workbench-v3__word-silhouette {
-  fill: rgb(var(--wb-face-repaired) / 22%);
+  fill: rgb(var(--wb-face-repaired) / 48%);
+}
+
+.auth-workbench-v3__inspection-layer {
+  opacity: 0.54;
+  pointer-events: none;
+}
+
+.auth-workbench-v3__letter {
+  transform-box: view-box;
+  transform-origin: 274px 329px;
+  transform: scale(0.62);
 }
 
 .auth-tech__viewport[data-auth-active] .auth-workbench-v3__word-silhouette {
-  opacity: 0.32;
+  opacity: 0.24;
+}
+
+.auth-tech__viewport[data-auth-active] .auth-workbench-v3__inspection-layer {
+  opacity: 0.28;
 }
 
 
