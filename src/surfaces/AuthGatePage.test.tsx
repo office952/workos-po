@@ -43,7 +43,7 @@ describe("AuthGatePage", () => {
     expect(screen.getByRole("button", { name: "Login Societate" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Login Angajat" })).toBeInTheDocument();
     expect(screen.getByLabelText("Cadru tehnic Auth Frame")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Adresă email")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Parolă")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Autentificare" })).not.toBeInTheDocument();
   });
@@ -61,9 +61,9 @@ describe("AuthGatePage", () => {
 
     const frame = screen.getByLabelText("Cadru tehnic Auth Frame");
     expect(within(frame).getByRole("heading", { name: "Acces Societate" })).toBeInTheDocument();
-    expect(within(frame).getByLabelText("Email")).toBeInTheDocument();
+    expect(within(frame).getByLabelText("Adresă email")).toBeInTheDocument();
     expect(within(frame).getByLabelText("Parolă")).toBeInTheDocument();
-    expect(within(frame).getByRole("button", { name: "Intră" })).toBeInTheDocument();
+    expect(within(frame).getByRole("button", { name: "Autentificare" })).toBeInTheDocument();
   });
 
   it("reveals Angajat auth content inside the technical frame", async () => {
@@ -78,7 +78,7 @@ describe("AuthGatePage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Login Angajat" }));
 
     expect(screen.getByRole("heading", { name: "Acces Angajat" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Email")).toBeInTheDocument();
+    expect(screen.getByLabelText("Adresă email")).toBeInTheDocument();
     expect(screen.getByLabelText("Parolă")).toBeInTheDocument();
   });
 
@@ -129,9 +129,9 @@ describe("AuthGatePage", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Login Societate" }));
-    await userEvent.type(screen.getByLabelText("Email"), "owner@example.test");
+    await userEvent.type(screen.getByLabelText("Adresă email"), "owner@example.test");
     await userEvent.type(screen.getByLabelText("Parolă"), "OwnerPass12");
-    await userEvent.click(screen.getByRole("button", { name: "Intră" }));
+    await userEvent.click(screen.getByRole("button", { name: "Autentificare" }));
 
     expect(await screen.findByLabelText("Organizație")).toBeInTheDocument();
     expect(screen.getByText("Alege organizația pentru acest cont.")).toBeInTheDocument();
@@ -160,7 +160,7 @@ describe("AuthGatePage", () => {
 
     expect(screen.getByRole("heading", { name: "Autentificare indisponibilă" })).toBeInTheDocument();
     expect(screen.getByText(/nu este o problemă de email sau parolă/i)).toBeInTheDocument();
-    expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Adresă email")).not.toBeInTheDocument();
   });
 
   it("shows session expiry without treating it as a wrong password", () => {
@@ -173,7 +173,7 @@ describe("AuthGatePage", () => {
     );
 
     expect(screen.getByText("Sesiunea a expirat. Autentifică-te din nou.")).toBeInTheDocument();
-    expect(screen.getByLabelText("Email")).toBeInTheDocument();
+    expect(screen.getByLabelText("Adresă email")).toBeInTheDocument();
     expect(screen.queryByText("Email sau parolă greșită.")).not.toBeInTheDocument();
   });
 
@@ -195,9 +195,9 @@ describe("AuthGatePage", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Login Societate" }));
-    await userEvent.type(screen.getByLabelText("Email"), "owner@example.test");
+    await userEvent.type(screen.getByLabelText("Adresă email"), "owner@example.test");
     await userEvent.type(screen.getByLabelText("Parolă"), "wrong-pass");
-    await userEvent.click(screen.getByRole("button", { name: "Intră" }));
+    await userEvent.click(screen.getByRole("button", { name: "Autentificare" }));
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Email sau parolă greșită.");
@@ -250,9 +250,9 @@ describe("AuthGatePage", () => {
     await userEvent.click(rgb);
     expect(screen.getByRole("radio", { name: "magenta" })).toBeInTheDocument();
 
-    expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Adresă email")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Login Societate" }));
-    expect(screen.getByLabelText("Email")).toBeInTheDocument();
+    expect(screen.getByLabelText("Adresă email")).toBeInTheDocument();
     expect(screen.getByLabelText("Parolă")).toBeInTheDocument();
   });
 });
