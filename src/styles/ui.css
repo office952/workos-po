@@ -2906,6 +2906,8 @@ button.context-rail__item:focus-visible {
   display: inline-grid;
   grid-template-areas: "word";
   margin-left: clamp(0rem, 2vw, 1.25rem);
+  isolation: isolate;
+  overflow: visible;
 }
 
 .sign-demo__word > span {
