@@ -431,22 +431,24 @@ export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDem
         <div className="sign-power-panel__body">
           <button
             type="button"
-            className="sign-controller__switch"
+            className="sign-power-toggle"
             role="switch"
             aria-checked={power}
             aria-label="Alimentare iluminare WorkOS"
             onClick={() => onPowerChange(!power)}
           >
-            <span className="sign-controller__switch-plate" aria-hidden="true">
-              <span className="sign-controller__switch-screw sign-controller__switch-screw--top" />
-              <span className="sign-controller__switch-screw sign-controller__switch-screw--bottom" />
-              <span className="sign-controller__switch-collar" />
-              <span className="sign-controller__switch-lever">
-                <span className="sign-controller__switch-stem" />
-                <span className="sign-controller__switch-knob" />
+            <span className="sign-power-toggle__plate" aria-hidden="true">
+              <span className="sign-power-toggle__label sign-power-toggle__label--on">ON</span>
+              <span className="sign-power-toggle__label sign-power-toggle__label--off">OFF</span>
+              <span className="sign-power-toggle__screw sign-power-toggle__screw--top" />
+              <span className="sign-power-toggle__screw sign-power-toggle__screw--bottom" />
+              <span className="sign-power-toggle__pivot">
+                <span className="sign-power-toggle__lever">
+                  <span className="sign-power-toggle__stem" />
+                  <span className="sign-power-toggle__cap" />
+                </span>
               </span>
             </span>
-            <span className="sign-controller__switch-state">{power ? "ON" : "OFF"}</span>
           </button>
           <div className="sign-power-panel__psu" aria-hidden="true">
             <span>AC → DC</span>
