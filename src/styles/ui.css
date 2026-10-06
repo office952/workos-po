@@ -9720,3 +9720,51 @@ button.context-rail__item:focus-visible {
     display: none;
   }
 }
+
+
+/* FINAL LIGHT READABILITY CALIBRATION */
+
+/* In day mode the sign is intentionally powered off, but the engineering
+   controls must remain legible. Disabled means unavailable, not washed out. */
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__group,
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__dimmer,
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb {
+  opacity: 0.62;
+  filter: none;
+}
+
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__group legend,
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__dimmer-head,
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb legend {
+  color: #686259;
+}
+
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__segmented button,
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__source button,
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb button {
+  border-color: #bbb5ab;
+  color: #777168;
+  background: #f3f1eb;
+}
+
+.auth-gate[data-scene="day"] .auth-tech__workbench {
+  opacity: 0.58;
+}
+
+.auth-gate[data-scene="day"] .auth-workbench-v3__crop {
+  opacity: 0.20;
+}
+
+.auth-gate[data-scene="day"] .auth-workbench-v3__orbit {
+  stroke: rgb(var(--wb-line) / 60%);
+}
+
+.auth-gate[data-scene="day"] .auth-workbench-v3__ticks {
+  stroke: rgb(var(--wb-muted) / 46%);
+}
+
+.auth-gate[data-scene="day"] .auth-tech__bottom-meta,
+.auth-gate[data-scene="day"] .auth-tech__frame-label,
+.auth-gate[data-scene="day"] .auth-tech__bay-label {
+  color: #716b62;
+}
