@@ -1,4 +1,4 @@
-﻿.skip-link {
+.skip-link {
   position: absolute;
   left: var(--page-gutter);
   top: calc(var(--shell-height) + var(--space-8));
@@ -2334,7 +2334,7 @@ button.context-rail__item:focus-visible {
   border-left-color: var(--color-selection-edge);
 }
 
-/* Cereri V1 â€” scoped presentation surfaces */
+/* Cereri V1 — scoped presentation surfaces */
 
 [data-surface="cereri-registry"] > .page-header,
 [data-surface="cereri-detail"] > .page-header {
@@ -2532,7 +2532,7 @@ button.context-rail__item:focus-visible {
 }
 
 
-/* WorkOS Login â€” signage-production brand demo */
+/* WorkOS Login — signage-production brand demo */
 
 .auth-gate {
   --login-scene-canvas: #f7f6f3;
@@ -8443,7 +8443,7 @@ button.context-rail__item:focus-visible {
    Do not restore a static WorkOS word behind scaled multi-glyph overlay. */
 
 
-/* LOGIN V1 HALO OPTICAL SYSTEM â€” COHERENT PASS
+/* LOGIN V1 HALO OPTICAL SYSTEM — COHERENT PASS
    Canonical browser implementation for the Login sign:
    tight contour -> near diffusion -> mid diffusion -> far wall spill.
    All four layers use the same WorkOS glyph geometry and never scale the sign. */
@@ -8628,7 +8628,7 @@ button.context-rail__item:focus-visible {
   background: color-mix(in srgb, var(--login-scene-canvas) 88%, transparent);
 }
 
-/* Shared fluid resets â€” compact, phone, and fluid desktop */
+/* Shared fluid resets — compact, phone, and fluid desktop */
 .auth-gate[data-scene-fit="reflow"] {
   height: auto !important;
   max-height: none !important;
@@ -9191,7 +9191,7 @@ button.context-rail__item:focus-visible {
   }
 }
 
-/* FAMILY C â€” phone */
+/* FAMILY C — phone */
 .auth-gate[data-layout="phone"] .auth-gate__brand {
   flex-wrap: wrap;
 }
