@@ -10,7 +10,6 @@ import { BrandMark } from "../components/BrandMark";
 import { navItemCurrent } from "../routing/appRoute";
 import { AccountArea, type AccountAreaProps } from "./AccountArea";
 import {
-  GLOBAL_NAV,
   HOME_HREF,
   globalNavItems,
   midWidthOverflowItems,
