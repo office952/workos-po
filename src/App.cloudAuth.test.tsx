@@ -16,7 +16,7 @@ async function openSocietateLogin(): Promise<void> {
 async function expectLoginGate(): Promise<void> {
   expect(await screen.findByRole("button", { name: "Login Societate" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Login Angajat" })).toBeInTheDocument();
-  expect(screen.getByLabelText("Cadru tehnic Auth Frame")).toBeInTheDocument();
+  expect(screen.getByLabelText("Panou autentificare WorkOS")).toBeInTheDocument();
 }
 
 function jsonResponse(body: unknown, status = 200) {

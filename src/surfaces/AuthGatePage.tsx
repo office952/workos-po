@@ -42,6 +42,9 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
     return resolveColorScheme(preference, prefersDark) === "dark";
   });
   const [accessMode, setAccessMode] = useState<AuthAccessMode>("idle");
+  const [layoutFamily, setLayoutFamily] = useState<"desktop" | "compact" | "phone">("desktop");
+  const [sceneFit, setSceneFit] = useState<"scaled" | "reflow">("scaled");
+  const [detailTier, setDetailTier] = useState<"full" | "high" | "medium" | "low" | "essential">("full");
   const [sceneScale, setSceneScale] = useState(1);
   const expiredNotice = kind === "session_expired" || sessionExpired;
   const scene = power ? "night" : "day";
@@ -49,20 +52,42 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
     kind === "session_expired" && accessMode === "idle" ? "societate" : accessMode;
 
   useEffect(() => {
-    const updateSceneScale = () => {
-      if (window.innerWidth <= 1024) {
+    const updateLayout = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      if (width < 480) {
+        setLayoutFamily("phone");
+        setSceneFit("reflow");
+        setDetailTier("essential");
         setSceneScale(1);
         return;
       }
-      const availableWidth = window.innerWidth;
-      const availableHeight = Math.max(0, window.innerHeight - 84);
-      const nextScale = Math.min(availableWidth / 1440, availableHeight / 816, 1.5);
-      setSceneScale(Math.max(0.72, nextScale));
+      if (width < 768) {
+        setLayoutFamily("phone");
+        setSceneFit("reflow");
+        setDetailTier("low");
+        setSceneScale(1);
+        return;
+      }
+      if (width < 1152) {
+        setLayoutFamily("compact");
+        setSceneFit("reflow");
+        setDetailTier("medium");
+        setSceneScale(1);
+        return;
+      }
+      const widthScale = width / 1440;
+      const heightScale = (height - 84) / 816;
+      const nextScale = Math.min(Math.max(Math.min(widthScale, heightScale), 0.72), 1.5);
+      setLayoutFamily("desktop");
+      setSceneFit("scaled");
+      setDetailTier(width >= 1440 ? "full" : "high");
+      setSceneScale(nextScale);
     };
-    updateSceneScale();
-    window.addEventListener("resize", updateSceneScale);
+    updateLayout();
+    window.addEventListener("resize", updateLayout);
     return () => {
-      window.removeEventListener("resize", updateSceneScale);
+      window.removeEventListener("resize", updateLayout);
     };
   }, []);
 
@@ -138,6 +163,9 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
       data-floorplan="authentication"
       data-scene={scene}
       data-access={resolvedAccess}
+      data-layout={layoutFamily}
+      data-scene-fit={sceneFit}
+      data-detail={detailTier}
       style={{ "--login-stage-scale": sceneScale } as CSSProperties}
     >
       <a className="skip-link" href="#autentificare">
@@ -168,6 +196,7 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
         </div>
       </header>
       <main id="autentificare" className="auth-gate__main" tabIndex={-1}>
+        <div className="auth-gate__stage">
         <SignLightDemo
           power={power}
           onPowerChange={setPresentationPower}
@@ -193,6 +222,7 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
           }}
           onCloseAccess={closeAccess}
         />
+        </div>
       </main>
       <footer className="auth-gate__footer">
         <span>WorkOS © 2026</span>
