@@ -10,6 +10,8 @@ PERSISTENCE_IMPLEMENTATION_AUTHORITY = workos-po/apps/api
 SOURCE_CODE = workos-po
 REAL_BUSINESS_DATA = external persistent WorkOS data root / Operational Planes
 PRESENTATION_DESIGN_AUTHORITY = Owner-accepted WorkOs-F design
+PRESENTATION_VISUAL_LANGUAGE_AUTHORITY = docs/architecture/WORKOS_VISUAL_LANGUAGE_CANON_V1.md
+PRESENTATION_STYLE_ARCHITECTURE_AUTHORITY = docs/architecture/WORKOS_UI_STYLE_ARCHITECTURE_V1.md
 ```
 
 Historical provenance, not continuing development pins:
@@ -132,10 +134,26 @@ The root frontend must consume supported contracts. It must not independently im
 
 ## Presentation truth
 
-Owned by Owner-accepted WorkOs-F design:
+Owner-accepted WorkOs-F remains the protected design authority for the surfaces/nodes it actually covers:
 
 - File: WorkOs-F
 - File key: `M3Klzg7sulrtLSyxJBf3Vd`
+
+Future and materially redesigned WorkOS surfaces also follow:
+- visual language: `docs/architecture/WORKOS_VISUAL_LANGUAGE_CANON_V1.md`;
+- stylesheet ownership: `docs/architecture/WORKOS_UI_STYLE_ARCHITECTURE_V1.md`.
+
+Presentation decision order is:
+
+```text
+explicit Owner decision
+-> WorkOS visual-language canon
+-> accepted Figma authority for covered surfaces
+-> runtime behavior/evidence
+-> historical UI reference
+```
+
+This does not silently invalidate protected Figma nodes.
 
 See `docs/FIGMA_AUTHORITY.md`.
 

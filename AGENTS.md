@@ -113,6 +113,27 @@ Copying the engine did not copy or migrate real customer data.
 
 Normal operator UI does not expose internal jargon: hashes, DTO names, raw codes, service names, compiler vocabulary, raw provenance, debug objects, or internal JSON.
 
+## Visual / UI canon
+
+Future UI/UX work follows:
+
+```text
+VISUAL_LANGUAGE_CANON = docs/architecture/WORKOS_VISUAL_LANGUAGE_CANON_V1.md
+UI_STYLE_ARCHITECTURE_CANON = docs/architecture/WORKOS_UI_STYLE_ARCHITECTURE_V1.md
+VISUAL_IDENTITY = INDUSTRIAL_HARDWARE_FUTURE_INTELLIGENCE
+```
+
+Core presentation rules:
+- real industrial context first; future intelligence through capability, orchestration, instrumentation, and control;
+- no generic SaaS dashboard, card soup, decorative cyberpunk, or gratuitous gradients;
+- dark and light are the same product character, with calibrated theme contrast;
+- narrower screens progressively remove secondary detail before shrinking primary function into illegibility;
+- operator task stays primary; visual spectacle must never hide the job to be done;
+- no new major surface should add bulk to `src/styles/ui.css`; new surfaces use explicit modular stylesheet ownership;
+- do not introduce a replacement component library or styling framework without explicit Owner GO.
+
+Cereri de oferta is the first major post-login surface intended to apply both canons.
+
 ## Tooling advisory
 
 ```text
