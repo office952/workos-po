@@ -19,9 +19,9 @@
   grid-template-areas:
     "copy aside"
     "instrument instrument";
-  gap: 20px 28px;
+  gap: 16px 28px;
   min-height: 0;
-  padding: 28px var(--page-gutter) 0;
+  padding: 24px var(--page-gutter) 0;
   overflow: hidden;
   background: var(--color-surface);
   border-bottom: 0;
@@ -87,19 +87,11 @@
 }
 
 [data-surface="cereri-registry"] > .page-header .page-header__lead {
-  max-width: 50rem;
-  margin-top: 10px;
-  color: var(--color-text-secondary);
-  font-size: 0.98rem;
-  line-height: 1.5;
+  display: none;
 }
 
 [data-surface="cereri-registry"] > .page-header .page-header__meta {
-  margin-top: 11px;
-  color: var(--color-text-kicker);
-  font-size: 0.66rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  display: none;
 }
 
 [data-surface="cereri-registry"] > .page-header .page-header__aside {
@@ -133,13 +125,13 @@
 .requests-instrument {
   display: grid;
   grid-template-columns: minmax(0, 1fr) repeat(3, minmax(7.75rem, 10rem));
-  min-height: 78px;
-  border: 1px solid var(--color-border-strong);
-  border-bottom: 0;
-  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  min-height: 68px;
+  border-top: 1px solid var(--color-border-strong);
+  border-bottom: 1px solid var(--color-border-strong);
+  background: color-mix(in srgb, var(--color-surface) 72%, transparent);
   box-shadow:
     inset 3px 0 0 var(--requests-tech-amber),
-    inset 0 1px 0 color-mix(in srgb, var(--shell-ink) 5%, transparent);
+    inset 0 1px 0 color-mix(in srgb, var(--shell-ink) 4%, transparent);
 }
 
 .requests-instrument__identity {
@@ -147,13 +139,12 @@
   grid-template-columns: 8px minmax(0, 1fr);
   grid-template-areas:
     "signal kicker"
-    "signal title"
-    ". note";
+    "signal title";
   align-content: center;
   column-gap: 11px;
   row-gap: 2px;
   min-width: 0;
-  padding: 13px 18px 13px 22px;
+  padding: 10px 18px 10px 22px;
 }
 
 .requests-instrument__signal {
@@ -186,18 +177,12 @@
   font-weight: 650;
 }
 
-.requests-instrument__note {
-  grid-area: note;
-  color: var(--color-text-secondary);
-  font-size: var(--text-meta);
-}
-
 .requests-instrument__metric {
   position: relative;
   display: grid;
   align-content: center;
   min-width: 0;
-  padding: 12px 16px;
+  padding: 10px 16px;
   border-left: 1px solid var(--color-border-subtle);
   background: color-mix(in srgb, var(--color-surface-raised) 88%, transparent);
 }
@@ -227,10 +212,10 @@
 }
 
 .requests-instrument__metric-value {
-  margin-top: 4px;
+  margin-top: 2px;
   color: var(--color-text-primary);
   font-family: var(--font-mono);
-  font-size: 1.55rem;
+  font-size: 1.4rem;
   line-height: 1;
   font-weight: 650;
 }
