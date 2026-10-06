@@ -9778,3 +9778,29 @@ button.context-rail__item:focus-visible {
 .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb-chip {
   opacity: 0.64;
 }
+
+
+/* Explicitly override the historical desktop OFF blur in light mode.
+   The state remains inactive, but its engineering labels stay readable. */
+@media (min-width: 1025px) {
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__header {
+    opacity: 0.68 !important;
+    filter: none !important;
+  }
+
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__group,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__dimmer,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb {
+    opacity: 0.76 !important;
+    filter: none !important;
+  }
+
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__segmented button:disabled,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__source button:disabled,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb button:disabled {
+    opacity: 1 !important;
+    color: #59544d !important;
+    -webkit-text-fill-color: #59544d;
+    border-color: #918a80 !important;
+  }
+}
