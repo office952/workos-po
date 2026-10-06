@@ -17,6 +17,7 @@ import {
   type GlobalNavItem,
 } from "./globalNav";
 import { SkipLink } from "./SkipLink";
+import "../styles/themes/workos-machine.css";
 import "../styles/layout/app-shell-v2.css";
 
 type AppShellProps = {
@@ -35,32 +36,44 @@ const PROOF_NAV = [
   { id: "more", label: "Mai multe" },
 ] as const;
 
-const MIDWIDTH_QUERY = "(max-width: 1024px)";
+const TABLET_QUERY = "(max-width: 1151px)";
+const PHONE_QUERY = "(max-width: 767px)";
 
-function useMidWidthNav(): boolean {
-  const [compact, setCompact] = useState(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-      return false;
-    }
-    return window.matchMedia(MIDWIDTH_QUERY).matches;
-  });
+type NavMode = "desktop" | "tablet" | "phone";
+
+function resolveNavMode(): NavMode {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return "desktop";
+  }
+  if (window.matchMedia(PHONE_QUERY).matches) {
+    return "phone";
+  }
+  if (window.matchMedia(TABLET_QUERY).matches) {
+    return "tablet";
+  }
+  return "desktop";
+}
+
+function useResponsiveNavMode(): NavMode {
+  const [mode, setMode] = useState<NavMode>(resolveNavMode);
 
   useEffect(() => {
     if (typeof window.matchMedia !== "function") {
       return;
     }
-    const media = window.matchMedia(MIDWIDTH_QUERY);
-    const sync = () => {
-      setCompact(media.matches);
-    };
+    const tablet = window.matchMedia(TABLET_QUERY);
+    const phone = window.matchMedia(PHONE_QUERY);
+    const sync = () => setMode(resolveNavMode());
     sync();
-    media.addEventListener("change", sync);
+    tablet.addEventListener("change", sync);
+    phone.addEventListener("change", sync);
     return () => {
-      media.removeEventListener("change", sync);
+      tablet.removeEventListener("change", sync);
+      phone.removeEventListener("change", sync);
     };
   }, []);
 
-  return compact;
+  return mode;
 }
 
 function NavLink({
@@ -195,14 +208,18 @@ export function AppShell({
   const path = currentHref ?? "/";
   const homeHref = mode === "slice" ? HOME_HREF : "/foundation";
   const homeCurrent = mode === "slice" && (path === "/" || path === "");
-  const compactNav = useMidWidthNav();
+  const navMode = useResponsiveNavMode();
   const priorityItems = midWidthPriorityItems();
   const overflowItems = midWidthOverflowItems();
 
   const flatItems = globalNavItems();
+  const currentNavItem = flatItems.find((item) => navItemCurrent(path, item.href));
+  const phoneOverflowItems = currentNavItem
+    ? flatItems.filter((item) => item.id !== currentNavItem.id)
+    : flatItems;
 
   return (
-    <div className="app-shell" data-nav-mode={compactNav ? "midwidth" : "desktop"}>
+    <div className="app-shell" data-nav-mode={navMode}>
       <SkipLink />
       <header className="app-shell__bar">
         <div className="app-shell__utility">
@@ -239,7 +256,13 @@ export function AppShell({
         <div className="app-shell__command">
           <nav className="app-shell__nav" aria-label="Navigare principală">
             {mode === "slice" ? (
-              compactNav ? (
+              navMode === "desktop" ? (
+                <div className="app-shell__nav-desktop">
+                  {flatItems.map((item, index) => (
+                    <NavLink key={item.id} item={item} path={path} index={index} />
+                  ))}
+                </div>
+              ) : navMode === "tablet" ? (
                 <div className="app-shell__nav-compact">
                   {priorityItems.map((item, index) => (
                     <NavLink key={item.id} item={item} path={path} index={index} />
@@ -249,10 +272,11 @@ export function AppShell({
                   ) : null}
                 </div>
               ) : (
-                <div className="app-shell__nav-desktop">
-                  {flatItems.map((item, index) => (
-                    <NavLink key={item.id} item={item} path={path} index={index} />
-                  ))}
+                <div className="app-shell__nav-mobile">
+                  {currentNavItem ? (
+                    <NavLink item={currentNavItem} path={path} />
+                  ) : null}
+                  <MidWidthMoreMenu path={path} items={phoneOverflowItems} />
                 </div>
               )
             ) : (
