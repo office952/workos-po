@@ -45,7 +45,7 @@ jobs:
 
       - name: Capture login visual states
         run: |
-          cat > /tmp/capture-login.mjs <<'EOF'
+          cat > capture-login.mjs <<'EOF'
           import { chromium } from "playwright";
           import fs from "node:fs/promises";
 
@@ -121,7 +121,7 @@ jobs:
 
           await browser.close();
           EOF
-          node /tmp/capture-login.mjs
+          node capture-login.mjs
 
       - uses: actions/upload-artifact@v4
         with:
