@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import "../styles/surfaces/requests.css";
 import { EmptyState } from "../components/EmptyState";
 import { FilterBar } from "../components/FilterBar";
 import { CollectionBody } from "../components/LoadingFloor";
@@ -90,14 +91,42 @@ export function RequestsPage() {
       currentHref="/cereri"
       workspace="stack"
       surface="cereri-registry"
-      title="Cereri"
-      lead="Registrul cererilor de ofertă. Deschide obiectul sau continuă pasul canonic."
+      title="Cereri de ofertă"
+      lead="Registrul operațional pentru cererile comerciale. Vezi ce a intrat, ce necesită atenție și continuă pasul următor."
       action={
         <a className="hit" href="/clienti">
           <span className="button button--primary">Cerere nouă</span>
         </a>
       }
     >
+      <section className="requests-console" aria-label="Stare registru cereri">
+        <div className="requests-console__identity">
+          <span className="requests-console__kicker">Registru operațional</span>
+          <strong className="requests-console__title">Cereri active în flux</strong>
+          <span className="requests-console__note">
+            Semnalele de atenție vin din starea canonică a cererii.
+          </span>
+        </div>
+        <div className="requests-console__metric">
+          <span className="requests-console__metric-label">Total</span>
+          <strong className="requests-console__metric-value">
+            {requests.status === "success" ? items.length : "—"}
+          </strong>
+        </div>
+        <div
+          className={
+            attentionCount > 0
+              ? "requests-console__metric requests-console__metric--attention"
+              : "requests-console__metric"
+          }
+        >
+          <span className="requests-console__metric-label">Necesită acțiune</span>
+          <strong className="requests-console__metric-value">
+            {requests.status === "success" ? attentionCount : "—"}
+          </strong>
+        </div>
+      </section>
+
       <SurfacePanel
         variant="flush"
         label="Cereri"
@@ -146,26 +175,31 @@ export function RequestsPage() {
           {visible.map(({ item, registry }) => {
             const action = presentRequestWorklistAction(item);
             return (
-              <WorklistRow
+              <div
                 key={item.requestId}
-                variant="registry"
-                detailHref={requestHref(item.requestId)}
-                actionHref={action.actionHref}
-                identity={item.reference || item.title}
-                identityDetail={
-                  [
-                    item.reference && item.reference !== item.title ? item.title : null,
-                    item.attentionLabel,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ") || undefined
-                }
-                context={item.customerDisplayName ?? "Fără client"}
-                support={registry.commercialProgressLabel}
-                state={<StatusBadge label={registry.stateLabel} tone={statusTone("workflow")} />}
-                meta={formatTimestamp(item.createdAt) ?? ""}
-                actionLabel={action.actionLabel}
-              />
+                className="requests-row-shell"
+                data-attention={item.needsAttention ? "true" : "false"}
+              >
+                <WorklistRow
+                  variant="registry"
+                  detailHref={requestHref(item.requestId)}
+                  actionHref={action.actionHref}
+                  identity={item.reference || item.title}
+                  identityDetail={
+                    [
+                      item.reference && item.reference !== item.title ? item.title : null,
+                      item.attentionLabel,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || undefined
+                  }
+                  context={item.customerDisplayName ?? "Fără client"}
+                  support={registry.commercialProgressLabel}
+                  state={<StatusBadge label={registry.stateLabel} tone={statusTone("workflow")} />}
+                  meta={formatTimestamp(item.createdAt) ?? ""}
+                  actionLabel={action.actionLabel}
+                />
+              </div>
             );
           })}
         </CollectionBody>
