@@ -66,14 +66,40 @@ jobs:
             const page = await context.newPage();
 
             await page.route("**/api/**", async (route) => {
+              const url = route.request().url();
+              if (url.endsWith("/api/cloud/session")) {
+                await route.fulfill({
+                  status: 200,
+                  contentType: "application/json",
+                  body: JSON.stringify({
+                    mode: "cloud",
+                    user: null,
+                    organization: null,
+                    memberships: [],
+                  }),
+                });
+                return;
+              }
+              if (url.endsWith("/api/health")) {
+                await route.fulfill({
+                  status: 200,
+                  contentType: "application/json",
+                  body: JSON.stringify({
+                    status: "ok",
+                    service: "workos-final-api",
+                    apiContractId: "workos-ui-contract-v1",
+                  }),
+                });
+                return;
+              }
               await route.fulfill({
-                status: 401,
+                status: 200,
                 contentType: "application/json",
-                body: JSON.stringify({ error: "unauthenticated" }),
+                body: JSON.stringify({}),
               });
             });
 
-            await page.goto("http://127.0.0.1:4173/", { waitUntil: "networkidle" });
+            await page.goto("http://127.0.0.1:4173/", { waitUntil: "domcontentloaded" });
             await page.locator(".auth-gate").waitFor({ state: "visible" });
             return { context, page };
           }
