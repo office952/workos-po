@@ -11,161 +11,6 @@
   --requests-signal-soft: var(--shell-signal-soft);
 }
 
-[data-surface="cereri-registry"] > .page-header {
-  position: relative;
-  overflow: hidden;
-  border-bottom-color: var(--color-border);
-}
-
-[data-surface="cereri-registry"] > .page-header::after {
-  content: "";
-  position: absolute;
-  left: var(--page-gutter);
-  right: var(--page-gutter);
-  bottom: 0;
-  height: 1px;
-  background: var(--requests-tech-amber-line);
-  pointer-events: none;
-}
-
-[data-surface="cereri-registry"] > .page-header .page-header__copy {
-  box-shadow: inset 3px 0 0 var(--requests-tech-amber);
-}
-
-[data-surface="cereri-registry"] > .page-header .page-header__title {
-  font-family: var(--font-brand);
-  letter-spacing: -0.025em;
-}
-
-[data-surface="cereri-registry"] > .page-header .page-header__lead {
-  max-width: 48rem;
-}
-
-[data-surface="cereri-registry"] .page-header__action .button--primary {
-  min-width: 8.5rem;
-  border-color: color-mix(in srgb, var(--shell-signal) 28%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--shell-signal) 14%, transparent);
-}
-
-.requests-console {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) repeat(3, minmax(7.5rem, auto));
-  align-items: stretch;
-  margin-bottom: var(--space-12);
-  overflow: hidden;
-  border: 1px solid var(--color-border-strong);
-  border-left: 0;
-  background: var(--color-surface);
-  border-radius: 0;
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--requests-tech-amber) 24%, transparent);
-}
-
-.requests-console::before {
-  content: "";
-  width: 3px;
-  background: var(--requests-tech-amber);
-  position: absolute;
-  inset: 0 auto 0 0;
-}
-
-.requests-console__identity {
-  display: grid;
-  grid-template-columns: 7px minmax(0, 1fr);
-  grid-template-areas:
-    "signal kicker"
-    "signal title"
-    ". note";
-  align-content: center;
-  column-gap: 10px;
-  row-gap: 2px;
-  min-width: 0;
-  padding: var(--space-12) var(--space-16) var(--space-12) calc(var(--space-16) + 4px);
-}
-
-.requests-console__signal {
-  grid-area: signal;
-  align-self: center;
-  width: 6px;
-  height: 6px;
-  background: var(--requests-signal);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--requests-signal) 46%, transparent);
-}
-
-.requests-console__kicker {
-  grid-area: kicker;
-}
-
-.requests-console__title {
-  grid-area: title;
-}
-
-.requests-console__note {
-  grid-area: note;
-}
-
-.requests-console__kicker,
-.requests-console__metric-label {
-  color: var(--color-text-kicker);
-  font-family: var(--font-mono);
-  font-size: var(--text-eyebrow);
-  font-weight: 600;
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-}
-
-.requests-console__title {
-  color: var(--color-text-primary);
-  font-size: var(--text-section);
-  font-weight: 600;
-}
-
-.requests-console__note {
-  color: var(--color-text-secondary);
-  font-size: var(--text-meta);
-}
-
-.requests-console__metric {
-  position: relative;
-  display: grid;
-  align-content: center;
-  min-width: 0;
-  padding: var(--space-8) var(--space-16);
-  border-left: var(--stroke) solid var(--color-border-subtle);
-  background: var(--color-surface-raised);
-}
-
-.requests-console__metric::before {
-  content: "";
-  position: absolute;
-  top: var(--space-8);
-  bottom: var(--space-8);
-  left: 0;
-  width: 2px;
-  background: transparent;
-}
-
-.requests-console__metric--attention {
-  background: var(--requests-tech-amber-soft);
-}
-
-.requests-console__metric--signal {
-  background: var(--requests-signal-soft);
-}
-
-.requests-console__metric--attention::before {
-  background: var(--requests-tech-amber);
-}
-
-.requests-console__metric-value {
-  margin-top: 2px;
-  color: var(--color-text-primary);
-  font-family: var(--font-mono);
-  font-size: 1.35rem;
-  line-height: 1;
-  font-weight: 600;
-}
-
 [data-surface="cereri-registry"] .ui-panel--flush {
   overflow: hidden;
   border-color: var(--color-border);
@@ -362,30 +207,6 @@
 }
 
 :root[data-resolved-theme="dark"] [data-surface="cereri-registry"] > .page-header,
-:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .requests-console,
-:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .filter-bar--toolbar,
-:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .worklist--registry {
-  background: var(--color-surface);
-}
-
-:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .requests-console {
-  border-color: var(--color-border-strong);
-}
-
-:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .requests-console__metric,
-:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .worklist__head,
-:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .worklist-footer {
-  background: var(--color-surface-raised);
-}
-
-:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .requests-console__metric--attention {
-  background: var(--requests-tech-amber-soft);
-}
-
-:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .requests-console__metric--signal {
-  background: var(--requests-signal-soft);
-}
-
 :root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .requests-row-shell[data-attention="true"] .worklist-row {
   background: color-mix(in srgb, var(--requests-tech-amber) 7%, var(--color-surface));
 }
@@ -411,12 +232,7 @@
   [data-surface="cereri-registry"] .worklist-row__meta {
     display: none;
   }
-
-  .requests-console {
-    grid-template-columns: minmax(0, 1fr) repeat(3, minmax(6.25rem, auto));
-  }
-
-  .requests-console__note {
+.requests-console__note {
     max-width: 32rem;
   }
 }
@@ -429,21 +245,11 @@
   [data-surface="cereri-registry"] > .page-header .page-header__lead {
     max-width: 36rem;
   }
-
-  .requests-console {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .requests-console__identity {
+.requests-console__identity {
     grid-column: 1 / -1;
     border-bottom: var(--stroke) solid var(--color-border-subtle);
   }
-
-  .requests-console__metric {
-    border-left: 0;
-  }
-
-  .requests-console__metric + .requests-console__metric {
+.requests-console__metric + .requests-console__metric {
     border-left: var(--stroke) solid var(--color-border-subtle);
   }
 }
@@ -457,12 +263,7 @@
     left: var(--page-gutter);
     right: var(--page-gutter);
   }
-
-  .requests-console__note {
-    display: none;
-  }
-
-  [data-surface="cereri-registry"] .worklist__head {
+[data-surface="cereri-registry"] .worklist__head {
     display: none;
   }
 
@@ -548,20 +349,10 @@
     width: auto;
     text-align: left;
   }
-
-  .requests-console__identity {
-    padding-inline: var(--space-12);
-  }
-
-  .requests-console__metric {
+.requests-console__metric {
     padding-inline: var(--space-8);
   }
-
-  .requests-console__metric-label {
-    font-size: 0.55rem;
-  }
-
-  .requests-console__metric-value {
+.requests-console__metric-value {
     font-size: 1.1rem;
   }
 
