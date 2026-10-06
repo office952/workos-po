@@ -4551,8 +4551,7 @@ button.context-rail__item:focus-visible {
   grid-template-areas:
     "header header"
     "mode source"
-    "dimmer source"
-    "rgb rgb";
+    "dimmer source";
   column-gap: 1rem;
   row-gap: 0.65rem;
   width: min(100%, 34rem);
@@ -4761,8 +4760,7 @@ button.context-rail__item:focus-visible {
       "header"
       "mode"
       "dimmer"
-      "source"
-      "rgb";
+      "source";
   }
 
   .sign-controller__channel {
@@ -8745,6 +8743,16 @@ button.context-rail__item:focus-visible {
   max-width: 38rem;
 }
 
+.auth-gate[data-scene-fit="reflow"] .sign-rgb-remote {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  width: min(100%, 18.75rem) !important;
+  height: auto !important;
+  max-width: 18.75rem;
+  margin-top: 0.55rem;
+}
+
 .auth-gate[data-scene-fit="reflow"] .sign-demo__word {
   overflow: visible;
 }
@@ -8793,8 +8801,7 @@ button.context-rail__item:focus-visible {
   grid-template-areas:
     "header header"
     "mode source"
-    "dimmer source"
-    "rgb rgb";
+    "dimmer source";
   padding: 0.75rem 0.85rem 0.7rem;
 }
 
@@ -9144,7 +9151,9 @@ button.context-rail__item:focus-visible {
 @media (min-width: 834px) and (max-width: 1151px) {
   .auth-gate[data-layout="compact"] .sign-demo__control-power {
     grid-template-columns: minmax(0, 1.35fr) 2.4rem minmax(13rem, 0.9fr);
-    grid-template-areas: "controller rail psu";
+    grid-template-areas:
+      "controller rail psu"
+      "remote remote remote";
     align-items: stretch;
     width: 100%;
     max-width: none;
@@ -9244,8 +9253,7 @@ button.context-rail__item:focus-visible {
     "header"
     "mode"
     "dimmer"
-    "source"
-    "rgb" !important;
+    "source" !important;
   padding: 0.7rem 0.75rem 0.65rem;
 }
 
@@ -9331,7 +9339,12 @@ button.context-rail__item:focus-visible {
   justify-items: center;
 }
 
-.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo,
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo__control-power,
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo__lead,
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo__kicker,
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo__infrastructure,
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-rgb-remote,
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-rgb-signal,
 .auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__bay-label,
 .auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__bottom-meta,
 .auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__frame-label,
@@ -9452,8 +9465,7 @@ button.context-rail__item:focus-visible {
 .auth-gate[data-detail="medium"] .sign-demo[data-source="rgb"] .sign-controller {
   grid-template-areas:
     "mode source"
-    "dimmer source"
-    "rgb rgb" !important;
+    "dimmer source" !important;
 }
 
 .auth-gate[data-detail="low"] .sign-demo__feed-notes,
@@ -9510,8 +9522,7 @@ button.context-rail__item:focus-visible {
   grid-template-areas:
     "mode"
     "dimmer"
-    "source"
-    "rgb" !important;
+    "source" !important;
 }
 
 .auth-gate[data-detail="low"] .sign-power-panel,
@@ -9531,3 +9542,853 @@ button.context-rail__item:focus-visible {
 }
 
 
+
+
+/* LOGIN FINAL LIGHT / RGB / ACCESS CLARITY PASS */
+
+/* Keep the dark composition as the visual authority. Light mode uses the same
+   geometry and hierarchy, with stronger material separation and calibrated
+   contrast instead of a redesign. */
+.auth-gate[data-scene="day"] {
+  --login-scene-canvas: #f2f0eb;
+  --login-scene-ink: #181715;
+  --login-scene-muted: #5d5952;
+  --login-scene-line: #d2cec6;
+  --login-scene-grid: rgb(116 109 99 / 18%);
+  --login-scene-frame: #a9a39a;
+  --login-control-accent: 154 108 28;
+  --login-control-accent-soft: 126 94 42;
+}
+
+.auth-gate[data-scene="day"] .auth-gate__brand {
+  background: #ebe8e1;
+  border-bottom-color: #c8c3b9;
+}
+
+.auth-gate[data-scene="day"] .auth-tech__frame {
+  background: #eeebe4;
+  border-color: #aaa49a;
+}
+
+.auth-gate[data-scene="day"] .auth-tech__grid {
+  opacity: 0.84;
+}
+
+.auth-gate[data-scene="day"] .sign-controller,
+.auth-gate[data-scene="day"] .sign-power-panel {
+  background: #ece8df;
+  border-color: rgb(var(--login-control-accent-soft) / 72%);
+}
+
+.auth-gate[data-scene="day"] .sign-controller__title,
+.auth-gate[data-scene="day"] .sign-controller__power-title,
+.auth-gate[data-scene="day"] .auth-tech__role span,
+.auth-gate[data-scene="day"] .auth-gate__title {
+  color: #181715;
+}
+
+.auth-gate[data-scene="day"] .sign-controller__spec,
+.auth-gate[data-scene="day"] .sign-controller__status,
+.auth-gate[data-scene="day"] .sign-controller__power-state,
+.auth-gate[data-scene="day"] .auth-tech__role strong,
+.auth-gate[data-scene="day"] .auth-gate__lead,
+.auth-gate[data-scene="day"] .auth-gate__access-kicker,
+.auth-gate[data-scene="day"] .auth-gate__eyebrow {
+  color: #5d5952;
+}
+
+.auth-gate[data-scene="day"] .field__control {
+  background: #f8f7f3;
+  color: #181715;
+  border-color: #aaa49a;
+}
+
+.auth-gate[data-scene="day"] .field__control::placeholder {
+  color: #817b72;
+}
+
+.auth-gate[data-scene="day"] .field__control:hover {
+  border-color: #847e75;
+}
+
+.auth-gate[data-scene="day"] .field__control:focus-visible {
+  border-color: #5a554d;
+  outline-color: #5a554d;
+}
+
+/* Access remains visually obvious without turning the page into a generic SaaS
+   login card. The controls read as a dedicated access rail in both themes. */
+.auth-gate__login-choices {
+  position: relative;
+  padding: 3px;
+  border: 1px solid color-mix(in srgb, var(--login-scene-frame) 78%, transparent);
+  background: color-mix(in srgb, var(--login-scene-canvas) 92%, transparent);
+}
+
+.auth-gate__login-choices::before {
+  content: "";
+  width: 3px;
+  align-self: stretch;
+  background: rgb(var(--login-control-accent) / 88%);
+}
+
+.auth-gate__login-choices .hit {
+  min-width: 0;
+  min-height: 0;
+}
+
+.auth-gate__login-choices .button {
+  min-height: 34px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.auth-gate[data-scene="night"] .auth-gate__login-choices {
+  background: rgb(9 8 7 / 72%);
+  border-color: rgb(var(--login-control-accent-soft) / 52%);
+}
+
+.auth-gate[data-scene="day"] .auth-gate__login-choices {
+  background: #e7e3db;
+  border-color: #b9b3a9;
+}
+
+.auth-gate[data-scene="day"] .auth-gate__login-choices .hit[aria-pressed="false"] .button--secondary {
+  background: #f5f3ee;
+  border-color: #aaa49a;
+  color: #24221f;
+}
+
+.auth-gate[data-scene="day"] .auth-gate__login-choices .hit[aria-pressed="false"]:hover .button--secondary {
+  background: #ded9cf;
+  border-color: #817b72;
+}
+
+/* RGB behaves like one ordered spectrum rail. The existing semantic order is
+   preserved: red -> orange -> yellow -> green -> cyan -> blue -> violet -> magenta. */
+.sign-controller__rgb > div[role="radiogroup"] {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(1.25rem, 1fr));
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.sign-controller__rgb button {
+  width: 100%;
+  min-width: 0;
+  min-height: 1.45rem;
+  height: 1.45rem;
+  padding: 0.18rem;
+  justify-content: center;
+  border-color: color-mix(in srgb, var(--login-scene-frame) 76%, transparent);
+  background: color-mix(in srgb, var(--login-scene-canvas) 90%, transparent);
+}
+
+.sign-controller__rgb-chip {
+  width: 0.72rem;
+  height: 0.72rem;
+  border-radius: 1px;
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 22%),
+    0 0 0 1px rgb(255 255 255 / 16%);
+}
+
+.sign-controller__rgb button[aria-checked="true"] {
+  border-color: rgb(var(--login-control-accent) / 92%);
+  box-shadow:
+    0 0 0 1px var(--login-scene-canvas),
+    0 0 0 3px rgb(var(--login-control-accent) / 72%);
+}
+
+.auth-gate[data-scene="day"] .sign-controller__rgb button {
+  background: #f6f4ef;
+  border-color: #a9a39a;
+}
+
+.auth-gate[data-scene="day"] .sign-controller__rgb button:hover {
+  background: #e5e0d7;
+  border-color: #7c766d;
+}
+
+.auth-gate[data-scene="day"] .sign-controller__rgb-chip {
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 30%),
+    0 0 0 1px rgb(255 255 255 / 72%);
+}
+
+/* Compact keeps the same logical spectrum, but allows two rows before the
+   interface becomes too narrow. Auth-active behavior remains unchanged. */
+@media (max-width: 767px) {
+  .sign-controller__rgb > div[role="radiogroup"] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .auth-gate__login-choices {
+    padding: 3px;
+  }
+
+  .auth-gate__login-choices::before {
+    display: none;
+  }
+}
+
+
+/* FINAL LIGHT READABILITY CALIBRATION */
+
+/* In day mode the sign is intentionally powered off, but the engineering
+   controls must remain legible. Disabled means unavailable, not washed out. */
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__group,
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__dimmer,
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb {
+  opacity: 1;
+  filter: none;
+}
+
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__group legend,
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__dimmer-head,
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb legend {
+  color: #4f4a44;
+}
+
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__segmented button,
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__source button,
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb button {
+  border-color: #918a80;
+  color: #59544d;
+  background: #f0ede6;
+}
+
+.auth-gate[data-scene="day"] .auth-tech__workbench {
+  opacity: 0.58;
+}
+
+.auth-gate[data-scene="day"] .auth-workbench-v3__crop {
+  opacity: 0.20;
+}
+
+.auth-gate[data-scene="day"] .auth-workbench-v3__orbit {
+  stroke: rgb(var(--wb-line) / 60%);
+}
+
+.auth-gate[data-scene="day"] .auth-workbench-v3__ticks {
+  stroke: rgb(var(--wb-muted) / 46%);
+}
+
+.auth-gate[data-scene="day"] .auth-tech__bottom-meta,
+.auth-gate[data-scene="day"] .auth-tech__frame-label,
+.auth-gate[data-scene="day"] .auth-tech__bay-label {
+  color: #716b62;
+}
+
+
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller button:disabled,
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller input:disabled {
+  opacity: 1;
+}
+
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb-chip {
+  opacity: 0.64;
+}
+
+
+/* Explicitly override the historical desktop OFF blur in light mode.
+   The state remains inactive, but its engineering labels stay readable. */
+@media (min-width: 1025px) {
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__header {
+    opacity: 0.85 !important;
+    filter: none !important;
+  }
+
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__group,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__dimmer,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb {
+    opacity: 1 !important;
+    filter: none !important;
+  }
+
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__segmented button:disabled,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__source button:disabled,
+  .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb button:disabled {
+    opacity: 1 !important;
+    color: #59544d !important;
+    -webkit-text-fill-color: #59544d;
+    border-color: #918a80 !important;
+  }
+}
+
+/* RGB wireless remote — separate device, not an inline controller rail. */
+.sign-controller__rgb-link {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0.18rem;
+  color: var(--login-scene-muted);
+  font-size: 0.46rem;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.sign-controller__rgb-link[data-live] {
+  color: rgb(var(--sign-light-rgb) / 88%);
+}
+
+.sign-rgb-signal,
+.sign-rgb-remote {
+  font-family: var(--font-mono);
+}
+
+.sign-rgb-signal {
+  display: none;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.sign-rgb-signal__arc,
+.sign-rgb-signal__dash {
+  fill: none;
+  stroke: rgb(var(--sign-light-rgb) / 0.34);
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.sign-rgb-signal__arc {
+  stroke-width: 1.15;
+  stroke-dasharray: 5 7;
+}
+
+.sign-rgb-signal__dash {
+  stroke-width: 0.7;
+  stroke-dasharray: 1.5 6;
+  opacity: 0.55;
+}
+
+.sign-demo[data-power="on"][data-rgb-link="active"] .sign-rgb-signal__arc {
+  animation: sign-rgb-carrier 1.6s var(--ease-work) infinite;
+}
+
+.sign-rgb-remote {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  gap: 0.55rem;
+  width: min(100%, 18.5rem);
+  margin-top: 0.7rem;
+  padding: 0.7rem 0.75rem 0.62rem;
+  border: var(--stroke) solid rgb(121 91 42 / 68%);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 3%), transparent 42%),
+    color-mix(in srgb, var(--login-scene-canvas) 94%, #0b0a08);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 3%),
+    0 10px 18px rgb(0 0 0 / 12%);
+}
+
+.sign-rgb-remote::before,
+.sign-rgb-remote::after {
+  content: "";
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border: var(--stroke) solid rgb(121 91 42 / 72%);
+  border-radius: 50%;
+  background: var(--login-scene-canvas);
+}
+
+.sign-rgb-remote::before {
+  left: -3px;
+  top: 1.15rem;
+}
+
+.sign-rgb-remote::after {
+  right: -3px;
+  top: 1.15rem;
+}
+
+.sign-rgb-remote__antenna {
+  position: absolute;
+  right: 0.85rem;
+  top: -0.55rem;
+  width: 0.42rem;
+  height: 0.55rem;
+  border: var(--stroke) solid rgb(121 91 42 / 78%);
+  background: color-mix(in srgb, var(--login-scene-canvas) 70%, #111);
+}
+
+.sign-rgb-remote__antenna::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -0.28rem;
+  width: 5px;
+  height: 5px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: rgb(var(--sign-light-rgb));
+  box-shadow: 0 0 6px rgb(var(--sign-light-rgb) / 55%);
+}
+
+.sign-rgb-remote__head,
+.sign-rgb-remote__status {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sign-rgb-remote__title,
+.sign-rgb-remote__band,
+.sign-rgb-remote__status {
+  color: var(--login-scene-muted);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.sign-rgb-remote__title {
+  color: var(--login-scene-ink);
+  font-size: 0.58rem;
+}
+
+.sign-rgb-remote__band,
+.sign-rgb-remote__status {
+  font-size: 0.46rem;
+}
+
+.sign-rgb-remote__pad {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.sign-rgb-remote__pad legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.sign-rgb-remote__pad [role="radiogroup"] {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.38rem;
+}
+
+.sign-rgb-remote__pad button {
+  display: grid;
+  justify-items: center;
+  gap: 0.22rem;
+  min-height: 2.15rem;
+  padding: 0.32rem 0.2rem 0.28rem;
+  border: var(--stroke) solid color-mix(in srgb, var(--login-scene-frame) 78%, transparent);
+  background: color-mix(in srgb, var(--login-scene-canvas) 82%, #10100e);
+  color: var(--login-scene-ink);
+  cursor: pointer;
+}
+
+.sign-rgb-remote__pad button:hover {
+  border-color: rgb(var(--login-control-accent) / 70%);
+}
+
+.sign-rgb-remote__pad button:focus-visible {
+  outline: var(--focus-width) solid rgb(var(--login-control-accent));
+  outline-offset: 2px;
+}
+
+.sign-rgb-remote__chip {
+  width: 0.78rem;
+  height: 0.78rem;
+  border-radius: 1px;
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 28%),
+    0 0 0 1px rgb(255 255 255 / 14%);
+}
+
+.sign-rgb-remote__name {
+  font-size: 0.48rem;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.sign-rgb-remote__pad button[data-preset="red"] .sign-rgb-remote__chip { background: rgb(255 56 64); }
+.sign-rgb-remote__pad button[data-preset="orange"] .sign-rgb-remote__chip { background: rgb(255 122 36); }
+.sign-rgb-remote__pad button[data-preset="yellow"] .sign-rgb-remote__chip { background: rgb(242 201 48); }
+.sign-rgb-remote__pad button[data-preset="green"] .sign-rgb-remote__chip { background: rgb(46 196 92); }
+.sign-rgb-remote__pad button[data-preset="cyan"] .sign-rgb-remote__chip { background: rgb(45 224 238); }
+.sign-rgb-remote__pad button[data-preset="blue"] .sign-rgb-remote__chip { background: rgb(40 112 255); }
+.sign-rgb-remote__pad button[data-preset="violet"] .sign-rgb-remote__chip { background: rgb(148 74 255); }
+.sign-rgb-remote__pad button[data-preset="magenta"] .sign-rgb-remote__chip { background: rgb(255 62 210); }
+
+.sign-rgb-remote__pad button[aria-checked="true"] {
+  border-color: rgb(var(--sign-light-rgb) / 88%);
+  box-shadow:
+    inset 0 -2px 0 rgb(var(--sign-light-rgb) / 70%),
+    0 0 0 1px var(--login-scene-canvas);
+}
+
+.sign-rgb-remote__status {
+  margin: 0;
+  align-items: center;
+}
+
+.sign-rgb-remote__status i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--login-scene-frame);
+}
+
+.sign-rgb-remote__status i[data-live] {
+  background: rgb(var(--sign-light-rgb));
+  box-shadow: 0 0 5px rgb(var(--sign-light-rgb) / 55%);
+}
+
+.sign-demo[data-power="off"] .sign-rgb-remote {
+  opacity: 0.42;
+}
+
+.auth-gate[data-scene="day"] .sign-rgb-remote {
+  border-color: #a9a39a;
+  background: #f4f1ea;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 72%),
+    0 8px 16px rgb(24 22 18 / 8%);
+}
+
+.auth-gate[data-scene="day"] .sign-rgb-remote::before,
+.auth-gate[data-scene="day"] .sign-rgb-remote::after,
+.auth-gate[data-scene="day"] .sign-rgb-remote__antenna {
+  border-color: #9b948a;
+  background: #f4f1ea;
+}
+
+.auth-gate[data-scene="day"] .sign-rgb-remote__pad button {
+  background: #f7f5f0;
+  border-color: #a9a39a;
+}
+
+.auth-gate[data-scene="day"] .sign-rgb-remote__pad button:hover {
+  background: #e8e3d9;
+  border-color: #7c766d;
+}
+
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-rgb-remote {
+  opacity: 1;
+}
+
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-rgb-remote__pad button:disabled {
+  color: #59544d;
+  border-color: #918a80;
+  background: #f0ede6;
+}
+
+.auth-gate[data-scene="night"] .sign-rgb-remote {
+  border-color: rgb(121 91 42 / 78%);
+  background: rgb(14 12 9 / 96%);
+}
+
+@keyframes sign-rgb-carrier {
+  from {
+    stroke-dashoffset: 18;
+    opacity: 0.22;
+  }
+  50% {
+    opacity: 0.55;
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: 0.28;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sign-demo[data-power="on"][data-rgb-link="active"] .sign-rgb-signal__arc {
+    animation: none;
+  }
+}
+
+@media (min-width: 1025px) {
+  .sign-controller__rgb-link {
+    position: absolute;
+    left: 0;
+    top: 28px;
+    margin: 0;
+    font-size: 5.6px;
+    letter-spacing: 0.08em;
+  }
+
+  .sign-rgb-signal {
+    display: block;
+    position: absolute;
+    left: 468px;
+    top: 338px;
+    width: 168px;
+    height: 236px;
+    z-index: 3;
+  }
+
+  .sign-rgb-remote {
+    position: absolute;
+    left: 428px;
+    top: 565px;
+    width: 200px;
+    height: 132px;
+    margin: 0;
+    padding: 0.5rem 0.58rem 0.42rem;
+    gap: 0.38rem;
+  }
+
+  .sign-rgb-remote__pad button {
+    min-height: 1.45rem;
+    padding: 0.16rem 0.1rem 0.12rem;
+  }
+
+  .sign-rgb-remote__name {
+    display: none;
+  }
+
+  .auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .sign-demo[data-source="rgb"] .sign-controller {
+    height: 148px;
+  }
+
+  .auth-gate[data-layout="desktop"]:is([data-access="societate"], [data-access="angajat"]) .sign-rgb-signal {
+    opacity: 0.32;
+  }
+
+  .auth-gate[data-layout="desktop"]:is([data-access="societate"], [data-access="angajat"]) .sign-rgb-remote {
+    opacity: 0.82;
+  }
+}
+
+.auth-gate[data-layout="compact"] .sign-rgb-remote {
+  grid-area: remote;
+  width: min(100%, 22rem);
+  margin-top: 0.55rem;
+}
+
+.auth-gate[data-layout="compact"] .sign-rgb-signal {
+  display: block;
+  position: relative;
+  width: min(16rem, 70%);
+  height: 2.4rem;
+  margin: 0.15rem 0 0.05rem 1rem;
+  opacity: 0.72;
+}
+
+.auth-gate[data-layout="phone"] .sign-rgb-signal,
+.auth-gate[data-detail="low"] .sign-rgb-signal,
+.auth-gate[data-detail="essential"] .sign-rgb-signal,
+.auth-gate[data-detail="medium"] .sign-rgb-remote__band,
+.auth-gate[data-detail="low"] .sign-rgb-remote__band,
+.auth-gate[data-detail="essential"] .sign-rgb-remote__band,
+.auth-gate[data-detail="low"] .sign-rgb-remote__name,
+.auth-gate[data-detail="essential"] .sign-rgb-remote__name,
+.auth-gate[data-layout="phone"] .sign-rgb-remote__name,
+.auth-gate[data-layout="phone"] .sign-rgb-remote__band {
+  display: none;
+}
+
+.auth-gate[data-layout="phone"] .sign-rgb-remote {
+  width: min(100%, 18.75rem) !important;
+  max-width: 18.75rem;
+  margin-top: 0.45rem;
+  padding: 0.55rem 0.6rem 0.5rem;
+}
+
+.auth-gate[data-layout="phone"] .sign-rgb-remote__pad button {
+  min-height: 1.85rem;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-rgb-signal {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  width: min(18rem, 80%) !important;
+  height: 2.6rem !important;
+  margin: 0.2rem 0 0.05rem 0.85rem;
+}
+
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-rgb-remote,
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-rgb-signal,
+.auth-gate[data-layout="phone"]:is([data-access="societate"], [data-access="angajat"]) .sign-rgb-remote,
+.auth-gate[data-layout="phone"]:is([data-access="societate"], [data-access="angajat"]) .sign-rgb-signal {
+  display: none !important;
+}
+
+/* LOGIN FINAL LOGIC + LIGHT CLARITY
+   Wireless: remote -> controller. Power: cable -> sign.
+   Light parks RGB. Auth keeps left identity. Panel has no inner scroll. */
+
+.sign-demo[data-power="on"]:not([data-power-transition]) .sign-demo__infra-live {
+  stroke-dasharray: 0.07 0.17;
+  animation: sign-power-carrier 2.8s linear infinite;
+}
+
+@keyframes sign-power-carrier {
+  to {
+    stroke-dashoffset: -0.24;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sign-demo[data-power="on"]:not([data-power-transition]) .sign-demo__infra-live {
+    animation: none;
+    stroke-dasharray: none;
+  }
+}
+
+.auth-gate[data-scene="day"] .sign-demo__word-material,
+.auth-gate[data-scene="day"] .sign-demo__word[data-power="off"] .sign-demo__word-material {
+  color: #121110 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.auth-gate[data-scene="day"] .sign-demo__word-face,
+.auth-gate[data-scene="day"] .sign-demo__word-core,
+.auth-gate[data-scene="day"] .sign-demo__word-halo {
+  opacity: 0 !important;
+  filter: none !important;
+}
+
+.auth-gate[data-scene="day"] .sign-demo__lead {
+  color: #4f4b45;
+}
+
+.auth-gate[data-scene="day"] .sign-demo__kicker,
+.auth-gate[data-scene="day"] .sign-demo__feed-notes {
+  color: #6a655e;
+}
+
+.auth-gate[data-scene="day"] .sign-demo__infra-base {
+  stroke: #9a948a;
+  opacity: 0.48;
+}
+
+.auth-gate[data-scene="day"] .auth-tech__frame {
+  background: #f4f1ea;
+  border-color: #9e978c;
+}
+
+.auth-gate[data-scene="day"] .auth-gate__login-choices {
+  background: #e4e0d8;
+  border-color: #b3ada2;
+}
+
+.auth-gate[data-scene="day"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo__lead,
+.auth-gate[data-scene="day"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo__kicker,
+.auth-gate[data-scene="day"]:is([data-access="societate"], [data-access="angajat"]) .sign-controller,
+.auth-gate[data-scene="day"]:is([data-access="societate"], [data-access="angajat"]) .sign-power-panel {
+  opacity: 0.78;
+}
+
+.auth-gate[data-scene="day"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo__word {
+  opacity: 0.92;
+}
+
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo {
+  display: block !important;
+  opacity: 0.62;
+}
+
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo__feed-notes,
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo__scene-state {
+  display: none !important;
+}
+
+@media (min-width: 1025px) {
+  .auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .auth-tech__panel,
+  .auth-gate[data-scene="day"] .auth-tech__panel {
+    overflow: hidden !important;
+    height: 508px;
+    min-height: 508px;
+    max-height: 508px;
+    padding: 18px 20px 16px;
+  }
+
+  .auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .auth-tech__form-head,
+  .auth-gate[data-scene="day"] .auth-tech__form-head {
+    height: 96px;
+  }
+
+  .auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .auth-tech__form-head .auth-gate__title,
+  .auth-gate[data-scene="day"] .auth-tech__form-head .auth-gate__title {
+    top: 32px;
+    font-size: 22px;
+    line-height: 26px;
+  }
+
+  .auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .auth-tech__form-head .auth-gate__lead,
+  .auth-gate[data-scene="day"] .auth-tech__form-head .auth-gate__lead {
+    top: 64px;
+    font-size: 13px;
+    line-height: 18px;
+    width: 312px;
+  }
+
+  .auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .auth-tech__form > .field,
+  .auth-gate[data-scene="day"] .auth-tech__form > .field {
+    margin-top: 12px;
+    gap: 7px;
+  }
+
+  .auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .auth-tech__form > .field + .field,
+  .auth-gate[data-scene="day"] .auth-tech__form > .field + .field {
+    margin-top: 12px;
+  }
+
+  .auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .auth-tech__form .field__control,
+  .auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .auth-tech__form select,
+  .auth-gate[data-scene="day"] .auth-tech__form .field__control,
+  .auth-gate[data-scene="day"] .auth-tech__form select {
+    min-height: 40px;
+    height: 40px;
+  }
+
+  .auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .auth-tech__actions,
+  .auth-gate[data-scene="day"] .auth-tech__actions {
+    margin-top: 14px;
+  }
+
+  .auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .auth-tech__actions .auth-gate__submit .button,
+  .auth-gate[data-scene="day"] .auth-tech__actions .auth-gate__submit .button {
+    min-height: 40px;
+    height: 40px;
+  }
+
+  .auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .auth-tech__roles,
+  .auth-gate[data-scene="day"] .auth-tech__roles {
+    margin-top: 14px;
+  }
+
+  .auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .auth-tech__role,
+  .auth-gate[data-scene="day"] .auth-tech__role {
+    min-height: 44px;
+    padding: 10px 0 8px;
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__panel {
+    background-color: #f6f3ec;
+    border-color: #8f877c;
+    box-shadow:
+      inset 0 2px 0 #1c1b19,
+      0 10px 22px rgb(28 24 18 / 6%);
+  }
+
+  .auth-gate[data-scene="day"] .auth-tech__form .field__control,
+  .auth-gate[data-scene="day"] .auth-tech__form select {
+    background: #fffcf7;
+    border-color: #9a9287;
+    color: #161513;
+  }
+
+  .auth-gate[data-scene="night"] .auth-tech__panel {
+    overflow: hidden !important;
+  }
+}
+
+.auth-gate[data-layout="desktop"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__panel {
+  z-index: 6;
+}
+
+.sign-rgb-signal__dash {
+  display: none;
+}
