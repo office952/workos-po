@@ -183,12 +183,20 @@ export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDem
     () => resolveSignLighting(intensity, mode, power),
     [intensity, mode, power],
   );
+  const selectedRgbLabel =
+    SIGN_RGB_PRESETS.find((preset) => preset.id === rgbPreset)?.label ?? "";
 
   useEffect(() => {
     if (previousPower.current === power) {
       return;
     }
+    const turningOff = previousPower.current && !power;
     previousPower.current = power;
+    if (turningOff) {
+      setSource("warm");
+      setRgbPreset("blue");
+      setMode("face");
+    }
     setPowerTransition(power ? "on" : "off");
     const timer = window.setTimeout(() => setPowerTransition(null), 440);
     return () => window.clearTimeout(timer);
@@ -221,6 +229,7 @@ export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDem
       data-power={power ? "on" : "off"}
       data-mode={mode}
       data-source={source}
+      data-rgb-link={source === "rgb" ? "active" : undefined}
       data-intensity={intensity}
       data-light-color={activeColor}
       data-power-transition={powerTransition ?? undefined}
@@ -333,6 +342,11 @@ export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDem
               <span data-active={power && haloEnabled ? "" : undefined}>HALO</span>
               <i data-active={power && haloEnabled ? "" : undefined} />
             </span>
+            {source === "rgb" ? (
+              <span className="sign-controller__rgb-link" data-live={power ? "" : undefined}>
+                RGB LINK ACTIVE
+              </span>
+            ) : null}
           </div>
         </div>
 
@@ -440,35 +454,53 @@ export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDem
             </button>
           </div>
         </fieldset>
-
-        {source === "rgb" ? (
-          <fieldset className="sign-controller__rgb" disabled={!power}>
-            <legend>Culoare RGB</legend>
-            <div role="radiogroup" aria-label="Culoare RGB">
-              {SIGN_RGB_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  role="radio"
-                  aria-label={preset.label}
-                  aria-checked={rgbPreset === preset.id}
-                  data-preset={preset.id}
-                  data-radio-value={preset.id}
-                  disabled={!power}
-                  onKeyDown={(event) =>
-                    moveRadio(event, RGB_PRESET_IDS, rgbPreset, setRgbPreset)
-                  }
-                  onClick={() => setRgbPreset(preset.id)}
-                >
-                  <span className="sign-controller__rgb-chip" aria-hidden="true" />
-                  <span className="sign-controller__rgb-name">{preset.label}</span>
-                </button>
-              ))}
-            </div>
-          </fieldset>
-        ) : null}
-
       </div>
+
+      {source === "rgb" ? (
+        <>
+          <svg className="sign-rgb-signal" viewBox="0 0 160 240" aria-hidden="true">
+            <path className="sign-rgb-signal__arc" d="M 132 214 C 128 168 108 118 74 64" />
+            <path className="sign-rgb-signal__arc" d="M 142 208 C 136 158 114 108 66 52" />
+            <path className="sign-rgb-signal__arc" d="M 150 200 C 142 148 118 96 58 42" />
+          </svg>
+          <aside className="sign-rgb-remote" aria-label="Telecomandă RGB">
+            <span className="sign-rgb-remote__antenna" aria-hidden="true" />
+            <div className="sign-rgb-remote__head">
+              <span className="sign-rgb-remote__title">RGB REMOTE</span>
+              <span className="sign-rgb-remote__band">2.4 GHz · WIRELESS</span>
+            </div>
+            <fieldset className="sign-rgb-remote__pad" disabled={!power}>
+              <legend>Culoare RGB</legend>
+              <div role="radiogroup" aria-label="Culoare RGB">
+                {SIGN_RGB_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    role="radio"
+                    aria-label={preset.label}
+                    aria-checked={rgbPreset === preset.id}
+                    data-preset={preset.id}
+                    data-radio-value={preset.id}
+                    disabled={!power}
+                    onKeyDown={(event) =>
+                      moveRadio(event, RGB_PRESET_IDS, rgbPreset, setRgbPreset)
+                    }
+                    onClick={() => setRgbPreset(preset.id)}
+                  >
+                    <span className="sign-rgb-remote__chip" aria-hidden="true" />
+                    <span className="sign-rgb-remote__name">{preset.label}</span>
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <p className="sign-rgb-remote__status">
+              <i data-live={power ? "" : undefined} aria-hidden="true" />
+              <span>{power ? "TX LIVE" : "STANDBY"}</span>
+              <span>{selectedRgbLabel}</span>
+            </p>
+          </aside>
+        </>
+      ) : null}
 
       <svg
         className="sign-demo__power-rail"

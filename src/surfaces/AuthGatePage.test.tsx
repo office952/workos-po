@@ -277,6 +277,9 @@ describe("AuthGatePage", () => {
     const rgb = screen.getByRole("radio", { name: "RGB" });
     await userEvent.click(rgb);
     expect(screen.getByRole("radiogroup", { name: "Culoare RGB" })).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "Telecomandă RGB" })).toBeInTheDocument();
+    expect(document.querySelector(".sign-controller .sign-rgb-remote")).toBeNull();
+    expect(screen.getByText("RGB LINK ACTIVE")).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Roșu" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Verde" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Albastru" })).toBeInTheDocument();
@@ -294,10 +297,13 @@ describe("AuthGatePage", () => {
     expect(demo).toHaveAttribute("data-light-color", "green");
     expect((demo as HTMLElement).style.getPropertyValue("--sign-light-rgb")).toBe("46 196 92");
 
-    await userEvent.click(screen.getByRole("radio", { name: "ALB CALD" }));
+    await userEvent.click(power);
+    expect(power).toHaveAttribute("aria-checked", "false");
     expect(demo).toHaveAttribute("data-source", "warm");
     expect(demo).toHaveAttribute("data-light-color", "warm");
     expect(screen.queryByRole("radiogroup", { name: "Culoare RGB" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("complementary", { name: "Telecomandă RGB" })).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "ALB CALD" })).toHaveAttribute("aria-checked", "true");
 
     expect(document.querySelector(".sign-demo__infrastructure--desktop")).not.toBeNull();
     expect(document.querySelector(".sign-demo__power-rail")).not.toBeNull();
