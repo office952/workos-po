@@ -9729,22 +9729,22 @@ button.context-rail__item:focus-visible {
 .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__group,
 .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__dimmer,
 .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb {
-  opacity: 0.78;
+  opacity: 1;
   filter: none;
 }
 
 .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__group legend,
 .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__dimmer-head,
 .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb legend {
-  color: #59544d;
+  color: #4f4a44;
 }
 
 .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__segmented button,
 .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__source button,
 .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb button {
-  border-color: #aaa49a;
-  color: #625d56;
-  background: #f1eee8;
+  border-color: #918a80;
+  color: #59544d;
+  background: #f0ede6;
 }
 
 .auth-gate[data-scene="day"] .auth-tech__workbench {
@@ -9767,4 +9767,14 @@ button.context-rail__item:focus-visible {
 .auth-gate[data-scene="day"] .auth-tech__frame-label,
 .auth-gate[data-scene="day"] .auth-tech__bay-label {
   color: #716b62;
+}
+
+
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller button:disabled,
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller input:disabled {
+  opacity: 1;
+}
+
+.auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb-chip {
+  opacity: 0.64;
 }
