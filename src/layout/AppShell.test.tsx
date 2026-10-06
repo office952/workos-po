@@ -93,20 +93,21 @@ describe("AppShell", () => {
   });
 
   it("keeps mid-width overflow destinations under Mai multe", async () => {
-    const media = {
-      matches: true,
-      media: "(max-width: 1024px)",
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-      addListener: () => undefined,
-      removeListener: () => undefined,
-      dispatchEvent: () => false,
-      onchange: null,
-    } as MediaQueryList;
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       configurable: true,
-      value: vi.fn().mockReturnValue(media),
+      value: vi.fn((query: string) =>
+        ({
+          matches: query === "(max-width: 1151px)",
+          media: query,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+          addListener: () => undefined,
+          removeListener: () => undefined,
+          dispatchEvent: () => false,
+          onchange: null,
+        }) as MediaQueryList,
+      ),
     });
 
     render(
@@ -129,6 +130,40 @@ describe("AppShell", () => {
     await userEvent.keyboard("{Escape}");
     expect(more).toHaveAttribute("aria-expanded", "false");
     expect(more).toHaveFocus();
+  });
+
+  it("keeps only the current destination plus overflow on phone", async () => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      configurable: true,
+      value: vi.fn((query: string) =>
+        ({
+          matches: true,
+          media: query,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+          addListener: () => undefined,
+          removeListener: () => undefined,
+          dispatchEvent: () => false,
+          onchange: null,
+        }) as MediaQueryList,
+      ),
+    });
+
+    render(
+      <AppShell contextLabel="Cereri" mode="slice" currentHref="/cereri">
+        <div>conținut</div>
+      </AppShell>,
+    );
+
+    expect(document.querySelector(".app-shell__nav-mobile")).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Cereri" })).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByRole("link", { name: "Clienți" })).not.toBeInTheDocument();
+
+    const more = screen.getByRole("button", { name: "Mai multe" });
+    await userEvent.click(more);
+    expect(screen.getByRole("menuitem", { name: "Clienți" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Atelier" })).toBeInTheDocument();
   });
 
   it("moves through the shell from the keyboard", async () => {
