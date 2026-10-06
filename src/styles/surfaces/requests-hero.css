@@ -19,12 +19,16 @@
   grid-template-areas:
     "copy aside"
     "instrument instrument";
-  gap: 16px 28px;
+  gap: 18px 28px;
   min-height: 0;
-  padding: 24px var(--page-gutter) 0;
+  margin: 18px var(--page-gutter) 0;
+  padding: 24px 24px 0;
   overflow: hidden;
-  background: var(--color-surface);
-  border-bottom: 0;
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  border: 1px solid var(--color-border-strong);
+  box-shadow:
+    inset 3px 0 0 var(--requests-tech-amber),
+    0 18px 44px color-mix(in srgb, var(--shell-overlay-shadow) 34%, transparent);
 }
 
 [data-surface="cereri-registry"] > .page-header::before {
@@ -32,7 +36,7 @@
   position: absolute;
   inset: 0;
   z-index: -2;
-  background: var(--color-canvas);
+  background: color-mix(in srgb, var(--color-canvas) 74%, var(--color-surface));
 }
 
 [data-surface="cereri-registry"] > .page-header::after {
@@ -63,11 +67,7 @@
 [data-surface="cereri-registry"] > .page-header .page-header__copy::after {
   content: "";
   position: absolute;
-  left: 0;
-  bottom: -11px;
-  width: min(32rem, 72%);
-  height: 1px;
-  background: var(--requests-tech-amber-line);
+  display: none;
 }
 
 [data-surface="cereri-registry"] > .page-header .page-header__eyebrow {
@@ -124,57 +124,12 @@
 
 .requests-instrument {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) repeat(3, minmax(7.75rem, 10rem));
-  min-height: 68px;
+  grid-template-columns: repeat(3, minmax(8rem, 1fr));
+  justify-self: stretch;
+  min-height: 64px;
+  margin-inline: -24px;
   border-top: 1px solid var(--color-border-strong);
-  border-bottom: 1px solid var(--color-border-strong);
-  background: color-mix(in srgb, var(--color-surface) 72%, transparent);
-  box-shadow:
-    inset 3px 0 0 var(--requests-tech-amber),
-    inset 0 1px 0 color-mix(in srgb, var(--shell-ink) 4%, transparent);
-}
-
-.requests-instrument__identity {
-  display: grid;
-  grid-template-columns: 8px minmax(0, 1fr);
-  grid-template-areas:
-    "signal kicker"
-    "signal title";
-  align-content: center;
-  column-gap: 11px;
-  row-gap: 2px;
-  min-width: 0;
-  padding: 10px 18px 10px 22px;
-}
-
-.requests-instrument__signal {
-  grid-area: signal;
-  align-self: center;
-  width: 6px;
-  height: 6px;
-  background: var(--requests-signal);
-  box-shadow: 0 0 10px var(--shell-live-shadow);
-}
-
-.requests-instrument__kicker,
-.requests-instrument__metric-label {
-  color: var(--color-text-kicker);
-  font-family: var(--font-mono);
-  font-size: var(--text-eyebrow);
-  font-weight: 650;
-  letter-spacing: 0.095em;
-  text-transform: uppercase;
-}
-
-.requests-instrument__kicker {
-  grid-area: kicker;
-}
-
-.requests-instrument__title {
-  grid-area: title;
-  color: var(--color-text-primary);
-  font-size: 0.92rem;
-  font-weight: 650;
+  background: color-mix(in srgb, var(--color-surface-raised) 72%, transparent);
 }
 
 .requests-instrument__metric {
@@ -182,9 +137,13 @@
   display: grid;
   align-content: center;
   min-width: 0;
-  padding: 10px 16px;
+  padding: 11px 24px;
   border-left: 1px solid var(--color-border-subtle);
   background: color-mix(in srgb, var(--color-surface-raised) 88%, transparent);
+}
+
+ .requests-instrument__metric:first-child {
+  border-left: 0;
 }
 
 .requests-instrument__metric::before {
@@ -247,8 +206,9 @@
 
 @media (max-width: 1439px) {
   [data-surface="cereri-registry"] > .page-header {
-    padding-top: 22px;
-    gap: 18px 22px;
+    margin-top: 14px;
+    padding: 22px 20px 0;
+    gap: 16px 22px;
   }
 
   [data-surface="cereri-registry"] > .page-header .page-header__title {
@@ -256,7 +216,8 @@
   }
 
   .requests-instrument {
-    grid-template-columns: minmax(0, 1fr) repeat(3, minmax(6.7rem, 8.25rem));
+    grid-template-columns: repeat(3, minmax(6.7rem, 1fr));
+    margin-inline: -20px;
   }
 }
 
@@ -267,11 +228,7 @@
   }
 
   .requests-instrument {
-    grid-template-columns: minmax(0, 1fr) repeat(3, minmax(6.25rem, auto));
-  }
-
-  .requests-instrument__note {
-    display: none;
+    grid-template-columns: repeat(3, minmax(6.25rem, 1fr));
   }
 }
 
@@ -283,7 +240,8 @@
       "aside"
       "instrument";
     gap: 14px;
-    padding: 18px var(--page-gutter) 0;
+    margin: 12px var(--page-gutter) 0;
+    padding: 18px 16px 0;
   }
 
   [data-surface="cereri-registry"] > .page-header .page-header__copy::after {
@@ -297,11 +255,7 @@
 
   .requests-instrument {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .requests-instrument__identity {
-    grid-column: 1 / -1;
-    border-bottom: 1px solid var(--color-border-subtle);
+    margin-inline: -16px;
   }
 
   .requests-instrument__metric {
