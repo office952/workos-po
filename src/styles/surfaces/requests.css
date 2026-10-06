@@ -310,10 +310,10 @@
   [data-surface="cereri-registry"] .worklist--registry .worklist__head,
   [data-surface="cereri-registry"] .worklist--registry .worklist-row {
     grid-template-columns:
-      minmax(13rem, 1.7fr)
-      minmax(10rem, 1.2fr)
-      minmax(7.5rem, 0.72fr)
-      minmax(8.5rem, 0.78fr);
+      minmax(12rem, 1.55fr)
+      minmax(9rem, 1.1fr)
+      minmax(6.5rem, 0.68fr)
+      minmax(10.5rem, 0.95fr);
   }
 
   [data-surface="cereri-registry"] .worklist__head > :nth-child(3),
@@ -325,6 +325,12 @@
 
   [data-surface="cereri-registry"] .filter-bar--toolbar {
     grid-template-columns: minmax(13rem, 1fr) auto auto;
+  }
+
+  [data-surface="cereri-registry"] .worklist-row__next {
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: normal;
   }
 }
 
