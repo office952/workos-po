@@ -440,13 +440,14 @@
   }
 
   [data-surface="cereri-registry"] .worklist--registry .worklist-row {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
-      "identity identity"
-      "context context"
-      "support state"
-      "meta action";
-    gap: 4px var(--space-12);
+      "identity"
+      "context"
+      "support"
+      "state"
+      "action";
+    gap: 4px;
     min-height: 0;
     padding: var(--space-12);
   }
@@ -468,25 +469,26 @@
 
   [data-surface="cereri-registry"] .worklist-row__state {
     grid-area: state;
-    align-self: end;
-    justify-self: end;
+    align-self: start;
+    justify-self: start;
+    padding-top: 2px;
   }
 
   [data-surface="cereri-registry"] .worklist-row__meta {
-    grid-area: meta;
-    display: block;
+    display: none;
   }
 
   [data-surface="cereri-registry"] .worklist-row__action {
     grid-area: action;
-    align-self: end;
-    justify-self: end;
+    align-self: start;
+    justify-self: start;
     min-width: 0;
+    padding-top: 2px;
   }
 
   [data-surface="cereri-registry"] .worklist-row__next {
     white-space: normal;
-    text-align: right;
+    text-align: left;
   }
 
   [data-surface="cereri-registry"] .filter-bar--toolbar {
