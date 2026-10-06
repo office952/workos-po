@@ -67,7 +67,7 @@ jobs:
             page.on("console", (message) => console.log("[browser console]", message.type(), message.text()));
             page.on("pageerror", (error) => console.log("[browser pageerror]", error.message));
 
-            await page.route("**/api/**", async (route) => {
+            await page.route("http://127.0.0.1:4173/api/**", async (route) => {
               const url = route.request().url();
               if (url.endsWith("/api/cloud/session")) {
                 await route.fulfill({
