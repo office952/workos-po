@@ -4,94 +4,8 @@
 */
 
 .app-shell {
-  --shell-chassis: #f0ede7;
-  --shell-deck: #e7e2d9;
-  --shell-panel: #f7f4ee;
-  --shell-panel-strong: #ddd6ca;
-  --shell-edge: #c9c0b1;
-  --shell-edge-strong: #a99d8d;
-  --shell-ink: #171512;
-  --shell-muted: #6f685e;
-  --shell-brass: #8b6427;
-  --shell-brass-soft: rgb(139 100 39 / 12%);
-  --shell-signal: #356d60;
-  --shell-signal-soft: rgb(53 109 96 / 12%);
-  --shell-fault: #a7493f;
   --shell-height: 100px;
-
-  --color-canvas: #efebe4;
-  --color-surface: #f7f4ee;
-  --color-surface-raised: #ebe6dd;
-  --color-surface-alt: #e6e0d6;
-  --color-border-subtle: #d8d0c4;
-  --color-border: #c8beb0;
-  --color-border-strong: #a99d8d;
-  --color-text-primary: #171512;
-  --color-text-secondary: #5f594f;
-  --color-text-kicker: #746b5f;
-  --color-text-muted: #81786c;
-  --color-shell: var(--shell-chassis);
-  --color-shell-ink: var(--shell-ink);
-  --color-azure-a1: #356d60;
-  --color-azure-a0: #2f7867;
-  --color-azure-a2: #295a50;
-  --color-focus-ring: #356d60;
-  --color-selection-edge: #8b6427;
-  --color-selection-fill: rgb(139 100 39 / 9%);
-  --color-warning: #9c6820;
-  --color-warning-soft: rgb(156 104 32 / 13%);
-  --color-success: #356d60;
-  --color-success-soft: rgb(53 109 96 / 13%);
-  --color-info: #526f69;
-  --color-info-soft: rgb(82 111 105 / 13%);
-  --color-danger: #a7493f;
-  --color-danger-soft: rgb(167 73 63 / 12%);
-
   background: var(--color-canvas);
-}
-
-:root[data-resolved-theme="dark"] .app-shell {
-  --shell-chassis: #0d0c0b;
-  --shell-deck: #121110;
-  --shell-panel: #171512;
-  --shell-panel-strong: #1e1b17;
-  --shell-edge: #2a2724;
-  --shell-edge-strong: #5c574f;
-  --shell-ink: #f4f1ec;
-  --shell-muted: #9a958e;
-  --shell-brass: #b8872b;
-  --shell-brass-soft: rgb(184 135 43 / 12%);
-  --shell-signal: #8fc8b5;
-  --shell-signal-soft: rgb(143 200 181 / 10%);
-  --shell-fault: #dc766b;
-
-  --color-canvas: #121110;
-  --color-surface: #171512;
-  --color-surface-raised: #1d1a17;
-  --color-surface-alt: #211e1a;
-  --color-border-subtle: #2a2724;
-  --color-border: #37322d;
-  --color-border-strong: #5c574f;
-  --color-text-primary: #f4f1ec;
-  --color-text-secondary: #b8b0a5;
-  --color-text-kicker: #9a958e;
-  --color-text-muted: #837d75;
-  --color-shell: #0d0c0b;
-  --color-shell-ink: #f4f1ec;
-  --color-azure-a1: #8fc8b5;
-  --color-azure-a0: #a1d6c4;
-  --color-azure-a2: #76ad9b;
-  --color-focus-ring: #d6ad62;
-  --color-selection-edge: #b8872b;
-  --color-selection-fill: rgb(184 135 43 / 11%);
-  --color-warning: #d6a04b;
-  --color-warning-soft: rgb(214 160 75 / 14%);
-  --color-success: #8fc8b5;
-  --color-success-soft: rgb(143 200 181 / 12%);
-  --color-info: #a5c5bb;
-  --color-info-soft: rgb(165 197 187 / 11%);
-  --color-danger: #dc766b;
-  --color-danger-soft: rgb(220 118 107 / 13%);
 }
 
 /* Chassis: two physical rails, not a SaaS navigation bar. */
@@ -104,7 +18,7 @@
   background: var(--shell-chassis);
   border: 0;
   border-bottom: 1px solid var(--shell-edge-strong);
-  box-shadow: inset 0 -1px 0 rgb(255 255 255 / 3%);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--shell-ink) 4%, transparent);
 }
 
 .app-shell__utility {
@@ -118,7 +32,7 @@
 }
 
 :root[data-resolved-theme="dark"] .app-shell__utility {
-  background: #100f0d;
+  background: color-mix(in srgb, var(--shell-chassis) 72%, black);
 }
 
 .app-shell .app-shell__brand {
@@ -208,7 +122,7 @@
   width: 6px;
   height: 6px;
   background: var(--shell-signal);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--shell-signal) 42%, transparent);
+  box-shadow: 0 0 8px var(--shell-live-shadow);
 }
 
 .app-shell__route-kicker {
@@ -281,7 +195,7 @@
   border-color: var(--shell-edge-strong);
   border-radius: 0;
   background: var(--shell-panel);
-  box-shadow: 0 18px 48px rgb(0 0 0 / 28%);
+  box-shadow: 0 18px 48px var(--shell-overlay-shadow);
 }
 
 /* Primary command rail: flat destinations, no visible business taxonomy. */
@@ -360,7 +274,7 @@
   height: 4px;
   background: var(--shell-signal);
   border-radius: 0;
-  box-shadow: 0 0 6px color-mix(in srgb, var(--shell-signal) 45%, transparent);
+  box-shadow: 0 0 6px var(--shell-live-shadow);
 }
 
 .app-shell__nav-index {
@@ -393,7 +307,7 @@
   width: 5px;
   height: 5px;
   background: var(--shell-signal);
-  box-shadow: 0 0 7px color-mix(in srgb, var(--shell-signal) 50%, transparent);
+  box-shadow: 0 0 7px var(--shell-live-shadow);
 }
 
 .app-shell .app-shell__more-menu {
@@ -450,11 +364,7 @@
 .app-shell .button--primary {
   border-color: var(--shell-signal);
   background: var(--shell-signal);
-  color: #08110e;
-}
-
-:root[data-resolved-theme="light"] .app-shell .button--primary {
-  color: #fff;
+  color: var(--shell-button-ink);
 }
 
 .app-shell .hit:not(:disabled):hover .button--primary {
@@ -470,7 +380,7 @@
   border-radius: 1px;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1439px) {
   .app-shell__utility {
     grid-template-columns: minmax(11rem, auto) minmax(10rem, 1fr) auto;
   }
@@ -489,7 +399,7 @@
   }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1151px) {
   .app-shell {
     --shell-height: 96px;
   }
@@ -522,12 +432,13 @@
   }
 
   .app-shell .app-shell__nav-compact {
-    overflow-x: auto;
-    scrollbar-width: none;
+    overflow: visible;
   }
 
-  .app-shell .app-shell__nav-compact::-webkit-scrollbar {
-    display: none;
+  .app-shell .app-shell__nav-mobile {
+    display: flex;
+    align-items: stretch;
+    min-height: 47px;
   }
 
   .app-shell__system-state {
@@ -543,7 +454,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .app-shell {
     --shell-height: 92px;
   }
@@ -584,13 +495,37 @@
 
   .app-shell__command {
     min-height: 46px;
-    padding-inline: 6px;
+    padding-inline: 10px;
+  }
+
+  .app-shell .app-shell__nav {
+    width: 100%;
+  }
+
+  .app-shell .app-shell__nav-mobile {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .app-shell .app-shell__nav-mobile > .app-shell__nav-item:first-child {
+    flex: 1 1 auto;
+    justify-content: flex-start;
+  }
+
+  .app-shell .app-shell__nav-mobile .app-shell__more {
+    flex: 0 0 auto;
   }
 
   .app-shell .app-shell__nav-item {
     min-height: 45px;
-    padding-inline: 9px;
-    font-size: 0.59rem;
+    padding-inline: 11px;
+    font-size: 0.61rem;
+  }
+
+  .app-shell .app-shell__more-menu {
+    right: 0;
+    left: auto;
+    width: min(18rem, calc(100vw - 20px));
   }
 
   .app-shell .account-area__trigger {
