@@ -91,8 +91,14 @@ export function RequestsPage() {
       currentHref="/cereri"
       workspace="stack"
       surface="cereri-registry"
+      eyebrow="Intrare comercială / registru activ"
       title="Cereri de ofertă"
-      lead="Registrul operațional pentru cererile comerciale. Vezi ce a intrat, ce necesită atenție și continuă pasul următor."
+      lead="Un singur flux pentru ce intră în firmă: identifică cererea, citește starea și continuă următorul pas sigur."
+      meta={
+        requests.status === "success"
+          ? `${items.length} în registru · ${attentionCount} necesită acțiune · ${visible.length} afișate`
+          : "Sincronizare registru"
+      }
       action={
         <a className="hit" href="/clienti">
           <span className="button button--primary">Cerere nouă</span>
@@ -101,10 +107,11 @@ export function RequestsPage() {
     >
       <section className="requests-console" aria-label="Stare registru cereri">
         <div className="requests-console__identity">
-          <span className="requests-console__kicker">Registru operațional</span>
-          <strong className="requests-console__title">Cereri active în flux</strong>
+          <span className="requests-console__signal" aria-hidden="true" />
+          <span className="requests-console__kicker">Coada operațională</span>
+          <strong className="requests-console__title">Intrare comercială</strong>
           <span className="requests-console__note">
-            Semnalele de atenție vin din starea canonică a cererii.
+            Starea și următorul pas vin din adevărul curent al cererii.
           </span>
         </div>
         <div className="requests-console__metric">
@@ -123,6 +130,12 @@ export function RequestsPage() {
           <span className="requests-console__metric-label">Necesită acțiune</span>
           <strong className="requests-console__metric-value">
             {requests.status === "success" ? attentionCount : "—"}
+          </strong>
+        </div>
+        <div className="requests-console__metric requests-console__metric--signal">
+          <span className="requests-console__metric-label">Afișate</span>
+          <strong className="requests-console__metric-value">
+            {requests.status === "success" ? visible.length : "—"}
           </strong>
         </div>
       </section>
