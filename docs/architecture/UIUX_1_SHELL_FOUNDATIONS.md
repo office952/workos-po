@@ -44,3 +44,19 @@ These operator strings stay for a later wave:
 - UIUX-3: job detail copy that names the execution engine; foundation proof copy that names the API contract
 - UIUX-4: admin page copy that says "Owner" instead of proprietar; deep admin page structure
 - UIUX-5: final global polish beyond this shell
+
+
+## Visual language evolution
+
+The accepted shell remains valid. Future surface work now follows:
+
+- `docs/architecture/WORKOS_VISUAL_LANGUAGE_CANON_V1.md`
+- `docs/architecture/WORKOS_UI_STYLE_ARCHITECTURE_V1.md`
+
+The shell should read as a calm industrial operating system: real production context with advanced orchestration, not a generic SaaS dashboard.
+
+Dark and light remain one system. Responsive behavior follows progressive detail reduction: remove secondary instrumentation before compressing the operator's primary task into illegibility.
+
+Cereri de oferta is the first post-login surface designated to apply this visual language and modular stylesheet ownership deliberately.
+
+`src/styles/ui.css` remains historical/shared runtime code. New major surfaces do not use it as their default styling destination.
