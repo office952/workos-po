@@ -1,0 +1,518 @@
+/* WorkOS Requests V1
+   Industrial hardware. Future intelligence.
+   Surface-owned styling: Cereri de oferta registry.
+*/
+
+[data-surface="cereri-registry"] {
+  --requests-tech-amber: #a87522;
+  --requests-tech-amber-soft: rgb(168 117 34 / 12%);
+  --requests-tech-amber-line: rgb(168 117 34 / 34%);
+  --requests-surface-deep: #111418;
+  --requests-surface-deep-2: #181d23;
+  --requests-ink-on-deep: #eef1f4;
+  --requests-muted-on-deep: #9ea7b1;
+}
+
+:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] {
+  --requests-tech-amber: #d6a249;
+  --requests-tech-amber-soft: rgb(214 162 73 / 13%);
+  --requests-tech-amber-line: rgb(214 162 73 / 34%);
+}
+
+[data-surface="cereri-registry"] > .page-header {
+  position: relative;
+  overflow: hidden;
+  border-bottom-color: var(--color-border);
+}
+
+[data-surface="cereri-registry"] > .page-header::after {
+  content: "";
+  position: absolute;
+  left: var(--page-gutter);
+  right: var(--page-gutter);
+  bottom: 0;
+  height: 1px;
+  background: var(--requests-tech-amber-line);
+  pointer-events: none;
+}
+
+[data-surface="cereri-registry"] > .page-header .page-header__copy {
+  box-shadow: inset 3px 0 0 var(--requests-tech-amber);
+}
+
+[data-surface="cereri-registry"] > .page-header .page-header__title {
+  font-family: var(--font-brand);
+  letter-spacing: -0.025em;
+}
+
+[data-surface="cereri-registry"] > .page-header .page-header__lead {
+  max-width: 48rem;
+}
+
+[data-surface="cereri-registry"] .page-header__action .button--primary {
+  min-width: 8.5rem;
+  border-color: rgb(255 255 255 / 10%);
+  box-shadow: 0 0 0 1px rgb(32 102 207 / 10%);
+}
+
+.requests-console {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(7rem, auto) minmax(9rem, auto);
+  align-items: stretch;
+  margin-bottom: var(--space-12);
+  overflow: hidden;
+  border: var(--stroke) solid var(--color-border);
+  border-left: 3px solid var(--requests-tech-amber);
+  background: var(--color-surface);
+  border-radius: var(--radius-panel);
+}
+
+.requests-console__identity {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--space-12) var(--space-16);
+}
+
+.requests-console__kicker,
+.requests-console__metric-label {
+  color: var(--color-text-kicker);
+  font-family: var(--font-mono);
+  font-size: var(--text-eyebrow);
+  font-weight: 600;
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+}
+
+.requests-console__title {
+  color: var(--color-text-primary);
+  font-size: var(--text-section);
+  font-weight: 600;
+}
+
+.requests-console__note {
+  color: var(--color-text-secondary);
+  font-size: var(--text-meta);
+}
+
+.requests-console__metric {
+  position: relative;
+  display: grid;
+  align-content: center;
+  min-width: 0;
+  padding: var(--space-8) var(--space-16);
+  border-left: var(--stroke) solid var(--color-border-subtle);
+  background: var(--color-surface-raised);
+}
+
+.requests-console__metric::before {
+  content: "";
+  position: absolute;
+  top: var(--space-8);
+  bottom: var(--space-8);
+  left: 0;
+  width: 2px;
+  background: transparent;
+}
+
+.requests-console__metric--attention {
+  background: var(--requests-tech-amber-soft);
+}
+
+.requests-console__metric--attention::before {
+  background: var(--requests-tech-amber);
+}
+
+.requests-console__metric-value {
+  margin-top: 2px;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: 1.35rem;
+  line-height: 1;
+  font-weight: 600;
+}
+
+[data-surface="cereri-registry"] .ui-panel--flush {
+  overflow: hidden;
+  border-color: var(--color-border);
+  box-shadow: none;
+}
+
+[data-surface="cereri-registry"] .filter-bar--toolbar {
+  min-height: 3.75rem;
+  background: var(--color-surface);
+  border-bottom-color: var(--color-border);
+}
+
+[data-surface="cereri-registry"] .filter-bar__search .field__control {
+  background: var(--color-surface-raised);
+  border-color: var(--color-border-strong);
+}
+
+[data-surface="cereri-registry"] .filter-bar__search .field__control:focus-visible {
+  background: var(--color-surface);
+}
+
+[data-surface="cereri-registry"] .filter-chip {
+  position: relative;
+  min-height: 2.25rem;
+  padding-inline: var(--space-8);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  letter-spacing: 0.02em;
+}
+
+[data-surface="cereri-registry"] .filter-chip[aria-pressed="true"] {
+  border-bottom-color: var(--requests-tech-amber);
+  color: var(--color-text-primary);
+}
+
+[data-surface="cereri-registry"] .filter-chip[aria-pressed="true"]::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  margin-right: var(--space-6);
+  background: var(--requests-tech-amber);
+  border-radius: 50%;
+}
+
+[data-surface="cereri-registry"] .filter-bar__meta {
+  font-family: var(--font-mono);
+  color: var(--color-text-kicker);
+}
+
+[data-surface="cereri-registry"] .worklist--registry {
+  background: var(--color-surface);
+}
+
+[data-surface="cereri-registry"] .worklist__head {
+  min-height: 2.25rem;
+  padding-block: var(--space-6);
+  background: var(--color-surface-raised);
+  border-bottom-color: var(--color-border);
+  color: var(--color-text-kicker);
+  font-family: var(--font-mono);
+  font-size: var(--text-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+[data-surface="cereri-registry"] .worklist__body {
+  position: relative;
+}
+
+.requests-row-shell {
+  display: contents;
+}
+
+[data-surface="cereri-registry"] .worklist-row {
+  position: relative;
+  min-height: 3.7rem;
+  padding-block: var(--space-8);
+  border-bottom-color: var(--color-border-subtle);
+  transition:
+    background-color var(--motion-edit) var(--ease-work),
+    box-shadow var(--motion-edit) var(--ease-work);
+}
+
+[data-surface="cereri-registry"] .worklist-row::before {
+  content: "";
+  position: absolute;
+  top: var(--space-8);
+  bottom: var(--space-8);
+  left: 0;
+  width: 2px;
+  background: transparent;
+}
+
+[data-surface="cereri-registry"] .requests-row-shell[data-attention="true"] .worklist-row {
+  background: color-mix(in srgb, var(--requests-tech-amber-soft) 52%, var(--color-surface));
+}
+
+[data-surface="cereri-registry"] .requests-row-shell[data-attention="true"] .worklist-row::before {
+  background: var(--requests-tech-amber);
+}
+
+[data-surface="cereri-registry"] .worklist-row:has(.worklist-row__object:hover),
+[data-surface="cereri-registry"] .worklist-row:has(.worklist-row__next:hover) {
+  background: var(--color-surface-raised);
+}
+
+[data-surface="cereri-registry"] .requests-row-shell[data-attention="true"] .worklist-row:has(.worklist-row__object:hover),
+[data-surface="cereri-registry"] .requests-row-shell[data-attention="true"] .worklist-row:has(.worklist-row__next:hover) {
+  background: var(--requests-tech-amber-soft);
+}
+
+[data-surface="cereri-registry"] .worklist-row__identity {
+  min-width: 0;
+}
+
+[data-surface="cereri-registry"] .worklist-row__title {
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  font-weight: 600;
+  letter-spacing: 0.015em;
+}
+
+[data-surface="cereri-registry"] .worklist-row__detail {
+  max-width: 38rem;
+  color: var(--color-text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  line-height: 1.35;
+}
+
+[data-surface="cereri-registry"] .requests-row-shell[data-attention="true"] .worklist-row__detail {
+  color: var(--color-text-primary);
+}
+
+[data-surface="cereri-registry"] .worklist-row__context {
+  color: var(--color-text-primary);
+  font-size: var(--text-label);
+  font-weight: 500;
+}
+
+[data-surface="cereri-registry"] .worklist-row__support {
+  color: var(--color-text-secondary);
+}
+
+[data-surface="cereri-registry"] .worklist-row__meta {
+  color: var(--color-text-kicker);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+}
+
+[data-surface="cereri-registry"] .worklist-row__state .status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 2px var(--space-6);
+  border: var(--stroke) solid var(--color-border-strong);
+  border-radius: 2px;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: var(--text-status);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+[data-surface="cereri-registry"] .worklist-row__next {
+  position: relative;
+  padding-right: 1rem;
+  color: var(--color-azure-a1);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  font-weight: 600;
+}
+
+[data-surface="cereri-registry"] .worklist-row__next::after {
+  content: "→";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-51%);
+}
+
+[data-surface="cereri-registry"] .worklist-row__object:focus-visible,
+[data-surface="cereri-registry"] .worklist-row__next:focus-visible {
+  outline-offset: 3px;
+}
+
+[data-surface="cereri-registry"] .worklist-footer {
+  background: var(--color-surface-raised);
+  color: var(--color-text-kicker);
+  font-family: var(--font-mono);
+}
+
+:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] > .page-header {
+  background: #181c22;
+}
+
+:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .requests-console {
+  background: #171b20;
+  border-color: #3b434d;
+}
+
+:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .requests-console__metric {
+  background: #1d232a;
+}
+
+:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .requests-console__metric--attention {
+  background: rgb(214 162 73 / 10%);
+}
+
+:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .filter-bar--toolbar,
+:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .worklist--registry {
+  background: #181d23;
+}
+
+:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .worklist__head,
+:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .worklist-footer {
+  background: #20262e;
+}
+
+:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .requests-row-shell[data-attention="true"] .worklist-row {
+  background: rgb(214 162 73 / 7%);
+}
+
+:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .requests-row-shell[data-attention="true"] .worklist-row:has(.worklist-row__object:hover),
+:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] .requests-row-shell[data-attention="true"] .worklist-row:has(.worklist-row__next:hover) {
+  background: rgb(214 162 73 / 12%);
+}
+
+@media (max-width: 1100px) {
+  [data-surface="cereri-registry"] .worklist--registry .worklist__head,
+  [data-surface="cereri-registry"] .worklist--registry .worklist-row {
+    grid-template-columns:
+      minmax(11rem, 2.3fr)
+      minmax(8rem, 1.6fr)
+      minmax(5.75rem, 0.85fr)
+      minmax(6.5rem, 1.15fr)
+      minmax(6.25rem, 0.9fr);
+  }
+
+  [data-surface="cereri-registry"] .worklist__head > :nth-child(3),
+  [data-surface="cereri-registry"] .worklist-row__support {
+    display: none;
+  }
+
+  .requests-console {
+    grid-template-columns: minmax(0, 1fr) minmax(6.5rem, auto) minmax(8rem, auto);
+  }
+}
+
+@media (max-width: 820px) {
+  .requests-console {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .requests-console__note {
+    display: none;
+  }
+
+  [data-surface="cereri-registry"] .worklist--registry .worklist__head,
+  [data-surface="cereri-registry"] .worklist--registry .worklist-row {
+    grid-template-columns:
+      minmax(10rem, 2fr)
+      minmax(8rem, 1.35fr)
+      minmax(5.5rem, 0.8fr)
+      minmax(6rem, 0.9fr);
+  }
+
+  [data-surface="cereri-registry"] .worklist__head > :nth-child(5),
+  [data-surface="cereri-registry"] .worklist-row__meta {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  [data-surface="cereri-registry"] > .page-header {
+    padding-bottom: var(--space-16);
+  }
+
+  [data-surface="cereri-registry"] > .page-header::after {
+    left: var(--page-gutter);
+    right: var(--page-gutter);
+  }
+
+  .requests-console {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .requests-console__identity {
+    grid-column: 1 / -1;
+    border-bottom: var(--stroke) solid var(--color-border-subtle);
+  }
+
+  .requests-console__metric {
+    border-left: 0;
+  }
+
+  .requests-console__metric + .requests-console__metric {
+    border-left: var(--stroke) solid var(--color-border-subtle);
+  }
+
+  [data-surface="cereri-registry"] .worklist__head {
+    display: none;
+  }
+
+  [data-surface="cereri-registry"] .worklist--registry .worklist-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "identity action"
+      "context action"
+      "support state"
+      "meta state";
+    gap: 3px var(--space-12);
+    min-height: 0;
+    padding: var(--space-12);
+  }
+
+  [data-surface="cereri-registry"] .worklist-row__identity {
+    grid-area: identity;
+  }
+
+  [data-surface="cereri-registry"] .worklist-row__context {
+    grid-area: context;
+    color: var(--color-text-secondary);
+  }
+
+  [data-surface="cereri-registry"] .worklist-row__support {
+    grid-area: support;
+    display: block;
+    padding-top: 2px;
+  }
+
+  [data-surface="cereri-registry"] .worklist-row__state {
+    grid-area: state;
+    align-self: end;
+    justify-self: end;
+  }
+
+  [data-surface="cereri-registry"] .worklist-row__meta {
+    grid-area: meta;
+    display: block;
+  }
+
+  [data-surface="cereri-registry"] .worklist-row__action {
+    grid-area: action;
+    align-self: start;
+    justify-self: end;
+  }
+
+  [data-surface="cereri-registry"] .filter-bar--toolbar {
+    gap: var(--space-6);
+    padding-block: var(--space-12);
+  }
+
+  [data-surface="cereri-registry"] .filter-bar__chips {
+    gap: var(--space-6);
+  }
+}
+
+@media (max-width: 420px) {
+  .requests-console__metric {
+    padding-inline: var(--space-12);
+  }
+
+  .requests-console__metric-value {
+    font-size: 1.15rem;
+  }
+
+  [data-surface="cereri-registry"] .worklist-row__detail {
+    max-width: 18rem;
+  }
+
+  [data-surface="cereri-registry"] .worklist-row__next {
+    max-width: 7.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-surface="cereri-registry"] .worklist-row {
+    transition: none;
+  }
+}
