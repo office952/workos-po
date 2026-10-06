@@ -3,7 +3,7 @@ export type GlobalNavItem = {
   label: string;
   href: string;
   purpose: string;
-  /** Mid-width priority row (768–1024). Overflow items live under “Mai multe”. */
+  /** Tablet priority row (768–1151). Overflow items live under “Mai multe”. */
   midWidthPriority: boolean;
 };
 
@@ -69,7 +69,7 @@ export const GLOBAL_NAV: readonly GlobalNavGroup[] = [
         label: "Planificare",
         href: "/planificare",
         purpose: "Vezi efortul planificat pe zone și utilaje.",
-        midWidthPriority: true,
+        midWidthPriority: false,
       },
       {
         id: "atelier",
@@ -90,7 +90,7 @@ export const GLOBAL_NAV: readonly GlobalNavGroup[] = [
         label: "Administrare",
         href: "/admin",
         purpose: "Deschide setările organizației.",
-        midWidthPriority: true,
+        midWidthPriority: false,
       },
     ],
   },
