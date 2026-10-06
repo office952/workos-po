@@ -48,6 +48,7 @@ type SlicePageProps = {
   meta?: ReactNode;
   status?: ReactNode;
   action?: ReactNode;
+  instrument?: ReactNode;
   workspace?: PageWorkspace;
   floorplan?: FloorplanId;
   /** Scoped presentation surface; does not invent a new workspace contract. */
@@ -62,6 +63,7 @@ export function SlicePage({
   meta,
   status,
   action,
+  instrument,
   workspace = "stack",
   floorplan,
   surface,
@@ -78,6 +80,7 @@ export function SlicePage({
           meta={meta}
           status={status}
           action={action}
+          instrument={instrument}
           quiet={quiet}
         />
         <div className="page-region">
