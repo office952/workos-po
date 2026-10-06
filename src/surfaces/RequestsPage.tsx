@@ -82,8 +82,8 @@ export function RequestsPage() {
   );
 
   const countMeta =
-    requests.status === "success"
-      ? `${visible.length} ${visible.length === 1 ? "cerere" : "cereri"}`
+    requests.status === "success" && (query.trim().length > 0 || filter !== "all")
+      ? `${visible.length} din ${items.length}`
       : undefined;
 
   return (
@@ -92,14 +92,8 @@ export function RequestsPage() {
       currentHref="/cereri"
       workspace="stack"
       surface="cereri-registry"
-      eyebrow="Intrare comercială / registru activ"
+      eyebrow="Registru comercial"
       title="Cereri de ofertă"
-      lead="Un singur flux pentru ce intră în firmă: identifică cererea, citește starea și continuă următorul pas sigur."
-      meta={
-        requests.status === "success"
-          ? `Registru sincronizat · ${visible.length} afișate`
-          : "Sincronizare registru"
-      }
       action={
         <a className="hit" href="/clienti">
           <span className="button button--primary">Cerere nouă</span>
@@ -109,11 +103,8 @@ export function RequestsPage() {
         <section className="requests-instrument" aria-label="Stare registru cereri">
           <div className="requests-instrument__identity">
             <span className="requests-instrument__signal" aria-hidden="true" />
-            <span className="requests-instrument__kicker">Coada operațională</span>
-            <strong className="requests-instrument__title">Intrare comercială</strong>
-            <span className="requests-instrument__note">
-              Starea și următorul pas vin din adevărul curent al cererii.
-            </span>
+            <span className="requests-instrument__kicker">Registru activ</span>
+            <strong className="requests-instrument__title">Cereri în flux</strong>
           </div>
           <div className="requests-instrument__metric">
             <span className="requests-instrument__metric-label">Total</span>
