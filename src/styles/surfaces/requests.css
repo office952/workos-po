@@ -466,7 +466,7 @@
   }
 
   [data-surface="cereri-registry"] .worklist--registry .worklist-row {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(7.5rem, 9rem);
     grid-template-areas:
       "identity identity"
       "context context"
@@ -502,13 +502,18 @@
   [data-surface="cereri-registry"] .worklist-row__action {
     grid-area: action;
     align-self: center;
-    justify-self: end;
+    justify-self: stretch;
     min-width: 0;
+    width: 100%;
     padding-top: 2px;
+    text-align: right;
   }
 
   [data-surface="cereri-registry"] .worklist-row__next {
-    white-space: nowrap;
+    width: 100%;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: normal;
     text-align: right;
   }
 
