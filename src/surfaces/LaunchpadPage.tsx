@@ -17,7 +17,7 @@ export function LaunchpadPage() {
     <SlicePage
       contextLabel={chrome.contextLabel}
       currentHref={chrome.currentHref}
-      workspace="launchpad"
+      layout="START_CONTINUATION"
       title={chrome.title}
       lead={chrome.lead}
       meta={identity || undefined}

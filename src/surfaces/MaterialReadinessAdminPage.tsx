@@ -60,7 +60,7 @@ export function MaterialReadinessAdminPage() {
     <SlicePage
       contextLabel="Administrare"
       currentHref="/admin/material-readiness"
-      workspace="admin"
+      layout="ADMIN_MASTER_DETAIL"
       eyebrow="Administrare"
       title="Materiale pentru execuție"
       lead="Organizația alege dacă pornirea unei sarcini cere confirmarea materialelor planificate. Nu este stoc și nu este un serviciu comercial."

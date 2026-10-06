@@ -1,7 +1,8 @@
 import { LoadingFloor } from "../components/LoadingFloor";
 import { SurfacePanel } from "../components/SurfacePanel";
 import type { AppRoute } from "../routing/appRoute";
-import { loadingFloorVariantFor, presentRouteChrome } from "./routeChrome";
+import { loadingFloorForRoute } from "./pageLayout";
+import { presentRouteChrome } from "./routeChrome";
 import { SlicePage } from "./SlicePage";
 
 type RouteLoadingPageProps = {
@@ -10,13 +11,14 @@ type RouteLoadingPageProps = {
 
 export function RouteLoadingPage({ route }: RouteLoadingPageProps) {
   const chrome = presentRouteChrome(route);
-  const floor = loadingFloorVariantFor(chrome.workspace);
+  const floor = loadingFloorForRoute(route.name);
 
   return (
     <SlicePage
       contextLabel={chrome.contextLabel}
       currentHref={chrome.currentHref}
-      workspace={chrome.workspace}
+      layout={chrome.layout}
+      variant={chrome.variant}
       eyebrow={chrome.eyebrow}
       title={chrome.title}
       lead={chrome.lead}

@@ -98,7 +98,8 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
     <SlicePage
       contextLabel="Client"
       currentHref={clientHref(customerId)}
-      workspace="object"
+      layout="OBJECT_DETAIL"
+      variant="standard"
       eyebrow="Client"
       title={customer.data?.displayName ?? "Client"}
       lead="Deschide o cerere existentă sau creează cererea pentru această lucrare."

@@ -143,7 +143,7 @@ export function ResourcesAdminPage() {
     <SlicePage
       contextLabel="Administrare"
       currentHref="/admin/resources"
-      workspace="admin"
+      layout="ADMIN_MASTER_DETAIL"
       eyebrow="Administrare"
       title="Dovezi de cost"
       lead="Tarif confirmat pe resursă și calificator. Valoarea salvată este folosită doar la calcule noi."

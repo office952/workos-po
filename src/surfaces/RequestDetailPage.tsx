@@ -56,8 +56,8 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
     <SlicePage
       contextLabel="Cerere"
       currentHref={requestHref(requestId)}
-      workspace="object"
-      surface="cereri-detail"
+      layout="OBJECT_DETAIL"
+      variant="standard"
       eyebrow="Cerere"
       title={headerTitle}
       lead={headerLead}

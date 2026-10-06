@@ -103,7 +103,7 @@ export function ProductEnablementAdminPage() {
     <SlicePage
       contextLabel="Administrare"
       currentHref="/admin/products"
-      workspace="admin"
+      layout="ADMIN_MASTER_DETAIL"
       eyebrow="Administrare"
       title="Produse oferite"
       lead="Alege ce produse apar în catalogul pentru lucrări noi. Ofertele și lucrările vechi rămân deschise."

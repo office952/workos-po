@@ -16,7 +16,7 @@ export function AdminHomePage() {
     <SlicePage
       contextLabel={chrome.contextLabel}
       currentHref={chrome.currentHref}
-      workspace="admin"
+      layout="ADMIN_MASTER_DETAIL"
       title={chrome.title}
       lead={
         owner

@@ -29,8 +29,8 @@ describe("ClientsPage", () => {
     vi.stubGlobal("location", { ...window.location, assign });
 
     render(<ClientsPage />);
-    expect(document.querySelector(".page-workspace--collection-with-rail")).not.toBeNull();
-    expect(document.querySelector(".page-workspace--object")).toBeNull();
+    expect(document.querySelector(".page-workspace")).toHaveAttribute("data-layout", "REGISTRY");
+    expect(document.querySelector("[data-layout='OBJECT_DETAIL']")).toBeNull();
     await userEvent.setup().type(await screen.findByLabelText("Denumire"), "Atelier Nord");
     await userEvent.setup().click(screen.getByRole("button", { name: "Înregistrează clientul" }));
 

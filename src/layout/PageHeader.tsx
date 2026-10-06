@@ -7,6 +7,7 @@ type PageHeaderProps = {
   meta?: ReactNode;
   status?: ReactNode;
   action?: ReactNode;
+  /** Visual tone only. Must not change PageHeader geometry. */
   quiet?: boolean;
 };
 
@@ -24,22 +25,32 @@ export function PageHeader({
   quiet = false,
 }: PageHeaderProps) {
   const showEyebrow = Boolean(eyebrow && !sameOperatorLabel(eyebrow, title));
-  const hasAside = status != null || action != null;
 
   return (
-    <div className={quiet ? "page-header page-header--quiet" : "page-header"}>
+    <div
+      className={quiet ? "page-header page-header--quiet" : "page-header"}
+      data-page-header-contract="fixed"
+    >
       <div className="page-header__copy">
-        {showEyebrow ? <p className="page-header__eyebrow">{eyebrow}</p> : null}
+        <p className="page-header__eyebrow" data-empty={showEyebrow ? undefined : "true"}>
+          {showEyebrow ? eyebrow : null}
+        </p>
         <h1 className="page-header__title">{title}</h1>
-        {lead ? <p className="page-header__lead">{lead}</p> : null}
-        {meta ? <p className="page-header__meta">{meta}</p> : null}
+        <p className="page-header__lead" data-empty={lead ? undefined : "true"}>
+          {lead ?? null}
+        </p>
+        <p className="page-header__meta" data-empty={meta == null ? "true" : undefined}>
+          {meta ?? null}
+        </p>
       </div>
-      {hasAside ? (
-        <div className="page-header__aside">
-          {status ? <div className="page-header__status">{status}</div> : null}
-          {action ? <div className="page-header__action">{action}</div> : null}
+      <div className="page-header__aside" aria-hidden={status == null && action == null ? true : undefined}>
+        <div className="page-header__status" data-empty={status == null ? "true" : undefined}>
+          {status ?? null}
         </div>
-      ) : null}
+        <div className="page-header__action" data-empty={action == null ? "true" : undefined}>
+          {action ?? null}
+        </div>
+      </div>
     </div>
   );
 }

@@ -734,7 +734,7 @@ describe("ConfiguratorPage", () => {
     installFetch({ rate: 3, cost: 37.5 });
     renderConfigurator({ requestId: null });
     expect(await screen.findByLabelText("Textul literelor")).toBeInTheDocument();
-    expect(document.querySelector(".page-workspace--configuration")).not.toBeNull();
+    expect(document.querySelector(".page-workspace")).toHaveAttribute("data-layout", "WORKBENCH");
     expect(document.querySelector(".ui-panel")).not.toBeNull();
     expect(document.querySelector(".floorplan")).toBeNull();
     expect(document.querySelector(".floorplan--form")).toBeNull();

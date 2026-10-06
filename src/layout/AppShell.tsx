@@ -1,19 +1,22 @@
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { BrandMark } from "../components/BrandMark";
 import { navItemCurrent } from "../routing/appRoute";
 import { AccountArea, type AccountAreaProps } from "./AccountArea";
 import {
-  GLOBAL_NAV,
+  globalNavItems,
   HOME_HREF,
-  midWidthOverflowItems,
-  midWidthPriorityItems,
+  PRIMARY_NAV_GAP_PX,
+  PRIMARY_NAV_MAX_ROWS,
+  primaryNavVisibleCount,
   type GlobalNavItem,
 } from "./globalNav";
 import { SkipLink } from "./SkipLink";
@@ -33,34 +36,6 @@ const PROOF_NAV = [
   { id: "atelier", label: "Atelier" },
   { id: "more", label: "Mai multe" },
 ] as const;
-
-const MIDWIDTH_QUERY = "(max-width: 1024px)";
-
-function useMidWidthNav(): boolean {
-  const [compact, setCompact] = useState(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-      return false;
-    }
-    return window.matchMedia(MIDWIDTH_QUERY).matches;
-  });
-
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") {
-      return;
-    }
-    const media = window.matchMedia(MIDWIDTH_QUERY);
-    const sync = () => {
-      setCompact(media.matches);
-    };
-    sync();
-    media.addEventListener("change", sync);
-    return () => {
-      media.removeEventListener("change", sync);
-    };
-  }, []);
-
-  return compact;
-}
 
 function NavLink({
   item,
@@ -98,13 +73,24 @@ function MidWidthMoreMenu({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const itemRefs = useRef<Array<HTMLAnchorElement | null>>([]);
   const menuId = useId();
   const overflowCurrent = items.some((item) => navItemCurrent(path, item.href));
+
+  function focusItem(index: number): void {
+    const nodes = itemRefs.current.filter((node): node is HTMLAnchorElement => node != null);
+    if (nodes.length === 0) {
+      return;
+    }
+    const next = (index + nodes.length) % nodes.length;
+    nodes[next]?.focus();
+  }
 
   useEffect(() => {
     if (!open) {
       return;
     }
+    focusItem(0);
     function onPointerDown(event: MouseEvent) {
       if (!rootRef.current?.contains(event.target as Node)) {
         setOpen(false);
@@ -126,9 +112,36 @@ function MidWidthMoreMenu({
   }, [open]);
 
   function onButtonKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>): void {
-    if (event.key === "ArrowDown" && !open) {
+    if (event.key === "ArrowDown") {
       event.preventDefault();
-      setOpen(true);
+      if (open) {
+        focusItem(0);
+      } else {
+        setOpen(true);
+      }
+    }
+  }
+
+  function onMenuKeyDown(event: ReactKeyboardEvent<HTMLDivElement>): void {
+    const nodes = itemRefs.current.filter((node): node is HTMLAnchorElement => node != null);
+    const current = nodes.findIndex((node) => node === document.activeElement);
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      focusItem(current < 0 ? 0 : current + 1);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      focusItem(current < 0 ? nodes.length - 1 : current - 1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      focusItem(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      focusItem(nodes.length - 1);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      setOpen(false);
+      buttonRef.current?.focus();
     }
   }
 
@@ -155,10 +168,14 @@ function MidWidthMoreMenu({
           className="app-shell__more-menu"
           role="menu"
           aria-label="Destinații suplimentare"
+          onKeyDown={onMenuKeyDown}
         >
-          {items.map((item) => (
+          {items.map((item, index) => (
             <a
               key={item.id}
+              ref={(node) => {
+                itemRefs.current[index] = node;
+              }}
               className="app-shell__more-item"
               role="menuitem"
               href={item.href}
@@ -177,6 +194,77 @@ function MidWidthMoreMenu({
   );
 }
 
+function useFittedNavCount(itemCount: number): {
+  rowRef: RefObject<HTMLDivElement | null>;
+  visibleCount: number;
+} {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [visibleCount, setVisibleCount] = useState(itemCount);
+
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    if (!row) {
+      return;
+    }
+
+    const measure = () => {
+      const probes = [...row.querySelectorAll<HTMLElement>("[data-nav-probe]")];
+      const moreProbe = row.querySelector<HTMLElement>("[data-nav-more-probe]");
+      const columnGap = Number.parseFloat(getComputedStyle(row).columnGap);
+      const count = primaryNavVisibleCount({
+        containerWidth: row.clientWidth,
+        itemWidths: probes.map((probe) => probe.offsetWidth),
+        moreWidth: moreProbe?.offsetWidth ?? 0,
+        gap: Number.isFinite(columnGap) ? columnGap : PRIMARY_NAV_GAP_PX,
+        maxRows: PRIMARY_NAV_MAX_ROWS,
+      });
+      setVisibleCount(count);
+    };
+
+    measure();
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      measure();
+    });
+    observer.observe(row);
+    return () => {
+      observer.disconnect();
+    };
+  }, [itemCount]);
+
+  return { rowRef, visibleCount };
+}
+
+function PrimaryNav({ path }: { path: string }) {
+  const items = globalNavItems();
+  const { rowRef, visibleCount } = useFittedNavCount(items.length);
+  const visible = items.slice(0, visibleCount);
+  const overflow = items.slice(visibleCount);
+
+  return (
+    <div className="app-shell__nav-row" ref={rowRef}>
+      <div className="app-shell__nav-measure" aria-hidden="true">
+        {items.map((item) => (
+          <span key={item.id} className="app-shell__nav-item" data-nav-probe="">
+            {item.label}
+          </span>
+        ))}
+        <span className="app-shell__nav-item" data-nav-more-probe="">
+          Mai multe
+        </span>
+      </div>
+      <div className="app-shell__nav-links">
+        {visible.map((item) => (
+          <NavLink key={item.id} item={item} path={path} />
+        ))}
+        {overflow.length > 0 ? <MidWidthMoreMenu path={path} items={overflow} /> : null}
+      </div>
+    </div>
+  );
+}
+
 export function AppShell({
   contextLabel,
   children,
@@ -187,14 +275,11 @@ export function AppShell({
   const path = currentHref ?? "/";
   const homeHref = mode === "slice" ? HOME_HREF : "/foundation";
   const homeCurrent = mode === "slice" && (path === "/" || path === "");
-  const compactNav = useMidWidthNav();
-  const priorityItems = midWidthPriorityItems();
-  const overflowItems = midWidthOverflowItems();
 
   return (
-    <div className="app-shell" data-nav-mode={compactNav ? "midwidth" : "desktop"}>
+    <div className="app-shell" data-nav-mode="wrap">
       <SkipLink />
-      <header className="app-shell__bar">
+      <header className="app-shell__bar" data-shell-contract="fixed-height-multirow">
         <a
           className="app-shell__brand"
           href={homeHref}
@@ -207,34 +292,7 @@ export function AppShell({
         {mode === "slice" ? <span className="app-shell__rule" aria-hidden="true" /> : null}
         <nav className="app-shell__nav" aria-label="Navigare principală">
           {mode === "slice" ? (
-            compactNav ? (
-              <div className="app-shell__nav-compact">
-                {priorityItems.map((item) => (
-                  <NavLink key={item.id} item={item} path={path} />
-                ))}
-                {overflowItems.length > 0 ? (
-                  <MidWidthMoreMenu path={path} items={overflowItems} />
-                ) : null}
-              </div>
-            ) : (
-              <div className="app-shell__nav-desktop">
-                {GLOBAL_NAV.map((group) => (
-                  <div
-                    key={group.id}
-                    className="app-shell__nav-group"
-                    role="group"
-                    aria-label={group.label}
-                  >
-                    {group.items.length > 1 ? (
-                      <span className="app-shell__nav-kicker">{group.label}</span>
-                    ) : null}
-                    {group.items.map((item) => (
-                      <NavLink key={item.id} item={item} path={path} />
-                    ))}
-                  </div>
-                ))}
-              </div>
-            )
+            <PrimaryNav path={path} />
           ) : (
             PROOF_NAV.map((item) => {
               const href = "href" in item ? item.href : undefined;

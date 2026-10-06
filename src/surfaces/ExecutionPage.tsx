@@ -482,7 +482,8 @@ export function ExecutionPage({
     <SlicePage
       contextLabel="Execuție"
       currentHref={executionHref(planId, { taskId, jobId: resolvedJobId })}
-      workspace="operational"
+      layout="OPERATIONAL"
+      variant="execution-focus"
       eyebrow="Execuție"
       title={plan?.inscription || plan?.productLabel || "Execuție"}
       lead="Pornește și închide sarcinile pe care le poți lucra."

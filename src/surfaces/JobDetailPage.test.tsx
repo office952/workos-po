@@ -39,7 +39,11 @@ describe("JobDetailPage", () => {
 
     render(<JobDetailPage jobId="job-1" />);
     expect(await screen.findByRole("heading", { name: "NORD" })).toBeInTheDocument();
-    expect(document.querySelector(".page-workspace--traveler")).not.toBeNull();
+    expect(document.querySelector(".page-workspace")).toHaveAttribute("data-layout", "OPERATIONAL");
+    expect(document.querySelector(".page-workspace")).toHaveAttribute(
+      "data-layout-variant",
+      "execution-focus",
+    );
     expect(screen.getByRole("heading", { name: "Identitate" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Traseu de producție" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Planificat și realizat" })).toBeInTheDocument();
