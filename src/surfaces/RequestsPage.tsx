@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import "../styles/surfaces/requests.css";
+import "../styles/surfaces/requests-hero.css";
 import { EmptyState } from "../components/EmptyState";
 import { FilterBar } from "../components/FilterBar";
 import { CollectionBody } from "../components/LoadingFloor";
