@@ -9331,13 +9331,11 @@ button.context-rail__item:focus-visible {
   justify-items: center;
 }
 
-.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo__control-power,
-.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo__lead,
-.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo__kicker,
-.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo__power-rail,
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo,
 .auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__bay-label,
 .auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__bottom-meta,
 .auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__frame-label,
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__roles,
 .auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-workbench-v3,
 .auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__grid {
   display: none !important;
@@ -9393,6 +9391,19 @@ button.context-rail__item:focus-visible {
   width: 100% !important;
   margin: 0;
   padding: 1rem 0.95rem 1.05rem;
+}
+
+/* Final auth polish: once the user chooses a login path, authentication owns the canvas. */
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-gate__footer span:last-child,
+.auth-gate[data-layout="phone"]:is([data-access="societate"], [data-access="angajat"]) .auth-gate__footer span:last-child {
+  display: none;
+}
+
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__frame::before,
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__frame::after,
+.auth-gate[data-layout="phone"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__frame::before,
+.auth-gate[data-layout="phone"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__frame::after {
+  display: none;
 }
 
 @media (max-width: 360px) {
