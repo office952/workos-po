@@ -45,7 +45,7 @@ describe("RequestsPage", () => {
     expect(document.querySelector(".page-workspace--stack")).not.toBeNull();
     expect(screen.getByRole("heading", { name: "Cereri de ofertă" })).toBeInTheDocument();
     expect(screen.getByText("Coada operațională")).toBeInTheDocument();
-    expect(screen.getByText("Intrare comercială", { selector: ".requests-console__title" })).toBeInTheDocument();
+    expect(screen.getByText("Intrare comercială", { selector: ".requests-instrument__title" })).toBeInTheDocument();
     expect(document.querySelector(".ui-panel--flush")).not.toBeNull();
     expect(await screen.findByText("CRQ-104")).toBeInTheDocument();
     expect(screen.getByText("Litere vitrină")).toBeInTheDocument();
@@ -55,8 +55,8 @@ describe("RequestsPage", () => {
     expect(screen.getByText("Progres comercial")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Cerere nouă" })).toHaveAttribute("href", "/clienti");
     expect(screen.getByText("Total")).toBeInTheDocument();
-    expect(screen.getByText("Necesită acțiune", { selector: ".requests-console__metric-label" })).toBeInTheDocument();
-    expect(screen.getByText("Afișate", { selector: ".requests-console__metric-label" })).toBeInTheDocument();
+    expect(screen.getByText("Necesită acțiune", { selector: ".requests-instrument__metric-label" })).toBeInTheDocument();
+    expect(screen.getByText("Afișate", { selector: ".requests-instrument__metric-label" })).toBeInTheDocument();
   });
 
   it("keeps canonical Request state separate from commercial progress", async () => {
