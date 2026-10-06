@@ -9729,22 +9729,22 @@ button.context-rail__item:focus-visible {
 .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__group,
 .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__dimmer,
 .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb {
-  opacity: 0.62;
+  opacity: 0.78;
   filter: none;
 }
 
 .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__group legend,
 .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__dimmer-head,
 .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb legend {
-  color: #686259;
+  color: #59544d;
 }
 
 .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__segmented button,
 .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__source button,
 .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb button {
-  border-color: #bbb5ab;
-  color: #777168;
-  background: #f3f1eb;
+  border-color: #aaa49a;
+  color: #625d56;
+  background: #f1eee8;
 }
 
 .auth-gate[data-scene="day"] .auth-tech__workbench {
