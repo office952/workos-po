@@ -529,6 +529,26 @@
 }
 
 @media (max-width: 479px) {
+  [data-surface="cereri-registry"] .worklist--registry .worklist-row {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "identity"
+      "context"
+      "state"
+      "action";
+  }
+
+  [data-surface="cereri-registry"] .worklist-row__action {
+    justify-self: start;
+    width: auto;
+    text-align: left;
+  }
+
+  [data-surface="cereri-registry"] .worklist-row__next {
+    width: auto;
+    text-align: left;
+  }
+
   .requests-console__identity {
     padding-inline: var(--space-12);
   }
