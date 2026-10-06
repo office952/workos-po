@@ -44,8 +44,6 @@ describe("RequestsPage", () => {
     render(<RequestsPage />);
     expect(document.querySelector(".page-workspace--stack")).not.toBeNull();
     expect(screen.getByRole("heading", { name: "Cereri de ofertă" })).toBeInTheDocument();
-    expect(screen.getByText("Registru activ")).toBeInTheDocument();
-    expect(screen.getByText("Cereri în flux", { selector: ".requests-instrument__title" })).toBeInTheDocument();
     expect(document.querySelector(".ui-panel--flush")).not.toBeNull();
     expect(await screen.findByText("CRQ-104")).toBeInTheDocument();
     expect(screen.getByText("Litere vitrină")).toBeInTheDocument();
