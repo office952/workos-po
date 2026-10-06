@@ -101,11 +101,6 @@ export function RequestsPage() {
       }
       instrument={
         <section className="requests-instrument" aria-label="Stare registru cereri">
-          <div className="requests-instrument__identity">
-            <span className="requests-instrument__signal" aria-hidden="true" />
-            <span className="requests-instrument__kicker">Registru activ</span>
-            <strong className="requests-instrument__title">Cereri în flux</strong>
-          </div>
           <div className="requests-instrument__metric">
             <span className="requests-instrument__metric-label">Total</span>
             <strong className="requests-instrument__metric-value">
