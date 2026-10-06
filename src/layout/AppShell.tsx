@@ -12,11 +12,13 @@ import { AccountArea, type AccountAreaProps } from "./AccountArea";
 import {
   GLOBAL_NAV,
   HOME_HREF,
+  globalNavItems,
   midWidthOverflowItems,
   midWidthPriorityItems,
   type GlobalNavItem,
 } from "./globalNav";
 import { SkipLink } from "./SkipLink";
+import "../styles/layout/app-shell-v2.css";
 
 type AppShellProps = {
   contextLabel: string;
@@ -67,11 +69,13 @@ function NavLink({
   path,
   className = "app-shell__nav-item",
   onNavigate,
+  index,
 }: {
   item: GlobalNavItem;
   path: string;
   className?: string;
   onNavigate?: () => void;
+  index?: number;
 }) {
   const current = navItemCurrent(path, item.href);
   return (
@@ -83,7 +87,12 @@ function NavLink({
         onNavigate?.();
       }}
     >
-      {item.label}
+      {typeof index === "number" ? (
+        <span className="app-shell__nav-index" aria-hidden="true">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+      ) : null}
+      <span className="app-shell__nav-label">{item.label}</span>
     </a>
   );
 }
@@ -191,80 +200,90 @@ export function AppShell({
   const priorityItems = midWidthPriorityItems();
   const overflowItems = midWidthOverflowItems();
 
+  const flatItems = globalNavItems();
+
   return (
     <div className="app-shell" data-nav-mode={compactNav ? "midwidth" : "desktop"}>
       <SkipLink />
       <header className="app-shell__bar">
-        <a
-          className="app-shell__brand"
-          href={homeHref}
-          aria-label="WorkOS"
-          aria-current={homeCurrent ? "page" : undefined}
-        >
-          <BrandMark />
-          <span className="app-shell__wordmark">WorkOS</span>
-        </a>
-        {mode === "slice" ? <span className="app-shell__rule" aria-hidden="true" /> : null}
-        <nav className="app-shell__nav" aria-label="Navigare principală">
-          {mode === "slice" ? (
-            compactNav ? (
-              <div className="app-shell__nav-compact">
-                {priorityItems.map((item) => (
-                  <NavLink key={item.id} item={item} path={path} />
-                ))}
-                {overflowItems.length > 0 ? (
-                  <MidWidthMoreMenu path={path} items={overflowItems} />
-                ) : null}
-              </div>
+        <div className="app-shell__utility">
+          <a
+            className="app-shell__brand"
+            href={homeHref}
+            aria-label="WorkOS"
+            aria-current={homeCurrent ? "page" : undefined}
+          >
+            <span className="app-shell__brand-mark">
+              <BrandMark />
+            </span>
+            <span className="app-shell__brand-copy">
+              <span className="app-shell__wordmark">WorkOS</span>
+              <span className="app-shell__brand-system">production control system</span>
+            </span>
+          </a>
+
+          <div className="app-shell__route">
+            <span className="app-shell__route-signal" aria-hidden="true" />
+            <span className="app-shell__route-kicker">Canal activ</span>
+            <strong className="app-shell__route-name">{contextLabel}</strong>
+          </div>
+
+          <div className="app-shell__account">
+            {account ? (
+              <AccountArea {...account} />
             ) : (
-              <div className="app-shell__nav-desktop">
-                {GLOBAL_NAV.map((group) => (
-                  <div
-                    key={group.id}
-                    className="app-shell__nav-group"
-                    role="group"
-                    aria-label={group.label}
-                  >
-                    {group.items.length > 1 ? (
-                      <span className="app-shell__nav-kicker">{group.label}</span>
-                    ) : null}
-                    {group.items.map((item) => (
-                      <NavLink key={item.id} item={item} path={path} />
-                    ))}
-                  </div>
-                ))}
-              </div>
-            )
-          ) : (
-            PROOF_NAV.map((item) => {
-              const href = "href" in item ? item.href : undefined;
-              const current = href !== undefined && "current" in item && item.current;
-              if (!href) {
+              <p className="app-shell__context">{contextLabel}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="app-shell__command">
+          <nav className="app-shell__nav" aria-label="Navigare principală">
+            {mode === "slice" ? (
+              compactNav ? (
+                <div className="app-shell__nav-compact">
+                  {priorityItems.map((item, index) => (
+                    <NavLink key={item.id} item={item} path={path} index={index} />
+                  ))}
+                  {overflowItems.length > 0 ? (
+                    <MidWidthMoreMenu path={path} items={overflowItems} />
+                  ) : null}
+                </div>
+              ) : (
+                <div className="app-shell__nav-desktop">
+                  {flatItems.map((item, index) => (
+                    <NavLink key={item.id} item={item} path={path} index={index} />
+                  ))}
+                </div>
+              )
+            ) : (
+              PROOF_NAV.map((item) => {
+                const href = "href" in item ? item.href : undefined;
+                const current = href !== undefined && "current" in item && item.current;
+                if (!href) {
+                  return (
+                    <span key={item.id} className="app-shell__nav-item" aria-disabled="true">
+                      <span className="app-shell__nav-label">{item.label}</span>
+                    </span>
+                  );
+                }
                 return (
-                  <span key={item.id} className="app-shell__nav-item" aria-disabled="true">
-                    {item.label}
-                  </span>
+                  <a
+                    key={item.id}
+                    className="app-shell__nav-item"
+                    href={href}
+                    aria-current={current ? "page" : undefined}
+                  >
+                    <span className="app-shell__nav-label">{item.label}</span>
+                  </a>
                 );
-              }
-              return (
-                <a
-                  key={item.id}
-                  className="app-shell__nav-item"
-                  href={href}
-                  aria-current={current ? "page" : undefined}
-                >
-                  {item.label}
-                </a>
-              );
-            })
-          )}
-        </nav>
-        <div className="app-shell__account">
-          {account ? (
-            <AccountArea {...account} />
-          ) : (
-            <p className="app-shell__context">{contextLabel}</p>
-          )}
+              })
+            )}
+          </nav>
+          <div className="app-shell__system-state" aria-label="Stare sistem">
+            <span className="app-shell__system-dot" aria-hidden="true" />
+            <span>WORKOS / LIVE</span>
+          </div>
         </div>
       </header>
       {children}
