@@ -43,6 +43,9 @@ describe("RequestsPage", () => {
 
     render(<RequestsPage />);
     expect(document.querySelector(".page-workspace--stack")).not.toBeNull();
+    expect(screen.getByRole("heading", { name: "Cereri de ofertă" })).toBeInTheDocument();
+    expect(screen.getByText("Registru operațional")).toBeInTheDocument();
+    expect(screen.getByText("Cereri active în flux")).toBeInTheDocument();
     expect(document.querySelector(".ui-panel--flush")).not.toBeNull();
     expect(await screen.findByText("CRQ-104")).toBeInTheDocument();
     expect(screen.getByText("Litere vitrină")).toBeInTheDocument();
@@ -51,6 +54,8 @@ describe("RequestsPage", () => {
     expect(screen.getByText("Creată")).toBeInTheDocument();
     expect(screen.getByText("Progres comercial")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Cerere nouă" })).toHaveAttribute("href", "/clienti");
+    expect(screen.getByText("Total")).toBeInTheDocument();
+    expect(screen.getByText("Necesită acțiune", { selector: ".requests-console__metric-label" })).toBeInTheDocument();
   });
 
   it("keeps canonical Request state separate from commercial progress", async () => {
