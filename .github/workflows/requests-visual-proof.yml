@@ -1,0 +1,206 @@
+name: Requests Visual Proof
+
+on:
+  push:
+    branches:
+      - ui/requests-future-industrial-v1
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Test requests surface
+        run: pnpm exec vitest run src/surfaces/RequestsPage.test.tsx
+
+      - name: Build
+        run: pnpm build
+
+      - name: Install Playwright locally for visual proof
+        run: |
+          pnpm add -Dw playwright@1.55.0
+          pnpm exec playwright install --with-deps chromium
+
+      - name: Start Vite
+        run: |
+          pnpm dev --host 127.0.0.1 --port 4173 > /tmp/workos-vite.log 2>&1 &
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/workos-vite.log
+          exit 1
+
+      - name: Capture requests visual states
+        run: |
+          cat > capture-requests.mjs <<'EOF'
+          import { chromium } from "playwright";
+          import fs from "node:fs/promises";
+
+          const out = "artifacts/requests-visual-proof";
+          await fs.mkdir(out, { recursive: true });
+
+          const session = {
+            mode: "cloud",
+            user: { userId: "usr:review", email: "owner@workos.test" },
+            organization: {
+              organizationId: "org:review",
+              displayName: "HUB MEDIA · REVIEW",
+              slug: "hub-media-review",
+              role: "owner",
+            },
+            memberships: [
+              {
+                organizationId: "org:review",
+                displayName: "HUB MEDIA · REVIEW",
+                slug: "hub-media-review",
+                role: "owner",
+                status: "ACTIVE",
+              },
+            ],
+          };
+
+          const requests = [
+            {
+              requestId: "req-1",
+              title: "Litere volumetrice — PURE CLIMATE SOLUTIONS",
+              reference: "CER-E5D190D8",
+              customerId: "cus-1",
+              customerDisplayName: "PURE CLIMATE SOLUTIONS S.R.L.",
+              status: "NEW",
+              statusLabel: "Nouă",
+              commercialProgressLabel: "Fără ofertă",
+              createdAt: "2026-10-06T08:42:00.000Z",
+              nextAction: "CHOOSE_PRODUCT",
+              nextActionLabel: "Alege produs",
+              needsAttention: true,
+              attentionLabel: "Necesită configurare",
+            },
+            {
+              requestId: "req-2",
+              title: "Casetă luminoasă fațadă",
+              reference: "CER-4A71B902",
+              customerId: "cus-2",
+              customerDisplayName: "NORD MARKET SRL",
+              status: "NEW",
+              statusLabel: "Nouă",
+              commercialProgressLabel: "Ofertă creată",
+              createdAt: "2026-10-05T13:18:00.000Z",
+              nextAction: "OPEN_QUOTE",
+              nextActionLabel: "Deschide oferta",
+              nextActionHref: "/quotes/qts%3APRD-ACM-CASSETTE-NONE%3Areview",
+              needsAttention: true,
+              attentionLabel: "Urmează oferta",
+              linkedQuoteSnapshotId: "qts:PRD-ACM-CASSETTE-NONE:review",
+              linkedQuoteProductCode: "PRD-ACM-CASSETTE-NONE",
+            },
+            {
+              requestId: "req-3",
+              title: "Colantare vitrină",
+              reference: "CER-8C21D4F1",
+              customerId: "cus-3",
+              customerDisplayName: "MAISON 51",
+              status: "NEW",
+              statusLabel: "Nouă",
+              commercialProgressLabel: "În lucru",
+              createdAt: "2026-10-04T09:06:00.000Z",
+              nextAction: "OPEN_REQUEST",
+              nextActionLabel: "Deschide",
+              needsAttention: false,
+            },
+            {
+              requestId: "req-4",
+              title: "Totem dublă față",
+              reference: "CER-73BF104A",
+              customerId: "cus-4",
+              customerDisplayName: "CARDIO NEURO CONSULT",
+              status: "NEW",
+              statusLabel: "Nouă",
+              commercialProgressLabel: "Fără ofertă",
+              createdAt: "2026-10-02T15:44:00.000Z",
+              nextAction: "OPEN_REQUEST",
+              nextActionLabel: "Deschide",
+              needsAttention: false,
+            },
+          ];
+
+          const browser = await chromium.launch({ headless: true });
+
+          async function shot(name, width, height, scheme) {
+            const context = await browser.newContext({
+              viewport: { width, height },
+              colorScheme: scheme,
+              deviceScaleFactor: 1,
+            });
+            await context.addInitScript((value) => {
+              localStorage.setItem("workos-color-scheme", value);
+            }, scheme);
+            const page = await context.newPage();
+
+            await page.route("http://127.0.0.1:4173/api/**", async (route) => {
+              const url = route.request().url();
+              if (url.endsWith("/api/cloud/session")) {
+                await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(session) });
+                return;
+              }
+              if (url.endsWith("/api/health")) {
+                await route.fulfill({
+                  status: 200,
+                  contentType: "application/json",
+                  body: JSON.stringify({ status: "ok", service: "workos-final-api", apiContractId: "workos-ui-contract-v1" }),
+                });
+                return;
+              }
+              if (url.endsWith("/api/requests")) {
+                await route.fulfill({
+                  status: 200,
+                  contentType: "application/json",
+                  body: JSON.stringify({ overview: { requests } }),
+                });
+                return;
+              }
+              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({}) });
+            });
+
+            await page.goto("http://127.0.0.1:4173/cereri", { waitUntil: "domcontentloaded" });
+            await page.getByRole("heading", { name: "Cereri de ofertă" }).waitFor();
+            await page.waitForTimeout(500);
+            await page.screenshot({ path: `${out}/${name}.png`, fullPage: true });
+            await context.close();
+          }
+
+          await shot("REQUESTS_V1__01_DESKTOP_DARK_1920x1080", 1920, 1080, "dark");
+          await shot("REQUESTS_V1__02_DESKTOP_LIGHT_1920x1080", 1920, 1080, "light");
+          await shot("REQUESTS_V1__03_LAPTOP_DARK_1366x768", 1366, 768, "dark");
+          await shot("REQUESTS_V1__04_TABLET_LIGHT_1024x768", 1024, 768, "light");
+          await shot("REQUESTS_V1__05_PHONE_DARK_390x844", 390, 844, "dark");
+
+          await browser.close();
+          EOF
+          node capture-requests.mjs
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: requests-visual-proof
+          path: artifacts/requests-visual-proof/*.png
+          if-no-files-found: error
+          retention-days: 3
