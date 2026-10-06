@@ -9531,3 +9531,192 @@ button.context-rail__item:focus-visible {
 }
 
 
+
+
+/* LOGIN FINAL LIGHT / RGB / ACCESS CLARITY PASS */
+
+/* Keep the dark composition as the visual authority. Light mode uses the same
+   geometry and hierarchy, with stronger material separation and calibrated
+   contrast instead of a redesign. */
+.auth-gate[data-scene="day"] {
+  --login-scene-canvas: #f2f0eb;
+  --login-scene-ink: #181715;
+  --login-scene-muted: #5d5952;
+  --login-scene-line: #d2cec6;
+  --login-scene-grid: rgb(116 109 99 / 18%);
+  --login-scene-frame: #a9a39a;
+  --login-control-accent: 154 108 28;
+  --login-control-accent-soft: 126 94 42;
+}
+
+.auth-gate[data-scene="day"] .auth-gate__brand {
+  background: #ebe8e1;
+  border-bottom-color: #c8c3b9;
+}
+
+.auth-gate[data-scene="day"] .auth-tech__frame {
+  background: #eeebe4;
+  border-color: #aaa49a;
+}
+
+.auth-gate[data-scene="day"] .auth-tech__grid {
+  opacity: 0.84;
+}
+
+.auth-gate[data-scene="day"] .sign-controller,
+.auth-gate[data-scene="day"] .sign-power-panel {
+  background: #ece8df;
+  border-color: rgb(var(--login-control-accent-soft) / 72%);
+}
+
+.auth-gate[data-scene="day"] .sign-controller__title,
+.auth-gate[data-scene="day"] .sign-controller__power-title,
+.auth-gate[data-scene="day"] .auth-tech__role span,
+.auth-gate[data-scene="day"] .auth-gate__title {
+  color: #181715;
+}
+
+.auth-gate[data-scene="day"] .sign-controller__spec,
+.auth-gate[data-scene="day"] .sign-controller__status,
+.auth-gate[data-scene="day"] .sign-controller__power-state,
+.auth-gate[data-scene="day"] .auth-tech__role strong,
+.auth-gate[data-scene="day"] .auth-gate__lead,
+.auth-gate[data-scene="day"] .auth-gate__access-kicker,
+.auth-gate[data-scene="day"] .auth-gate__eyebrow {
+  color: #5d5952;
+}
+
+.auth-gate[data-scene="day"] .field__control {
+  background: #f8f7f3;
+  color: #181715;
+  border-color: #aaa49a;
+}
+
+.auth-gate[data-scene="day"] .field__control::placeholder {
+  color: #817b72;
+}
+
+.auth-gate[data-scene="day"] .field__control:hover {
+  border-color: #847e75;
+}
+
+.auth-gate[data-scene="day"] .field__control:focus-visible {
+  border-color: #5a554d;
+  outline-color: #5a554d;
+}
+
+/* Access remains visually obvious without turning the page into a generic SaaS
+   login card. The controls read as a dedicated access rail in both themes. */
+.auth-gate__login-choices {
+  position: relative;
+  padding: 3px;
+  border: 1px solid color-mix(in srgb, var(--login-scene-frame) 78%, transparent);
+  background: color-mix(in srgb, var(--login-scene-canvas) 92%, transparent);
+}
+
+.auth-gate__login-choices::before {
+  content: "";
+  width: 3px;
+  align-self: stretch;
+  background: rgb(var(--login-control-accent) / 88%);
+}
+
+.auth-gate__login-choices .hit {
+  min-width: 0;
+  min-height: 0;
+}
+
+.auth-gate__login-choices .button {
+  min-height: 34px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.auth-gate[data-scene="night"] .auth-gate__login-choices {
+  background: rgb(9 8 7 / 72%);
+  border-color: rgb(var(--login-control-accent-soft) / 52%);
+}
+
+.auth-gate[data-scene="day"] .auth-gate__login-choices {
+  background: #e7e3db;
+  border-color: #b9b3a9;
+}
+
+.auth-gate[data-scene="day"] .auth-gate__login-choices .hit[aria-pressed="false"] .button--secondary {
+  background: #f5f3ee;
+  border-color: #aaa49a;
+  color: #24221f;
+}
+
+.auth-gate[data-scene="day"] .auth-gate__login-choices .hit[aria-pressed="false"]:hover .button--secondary {
+  background: #ded9cf;
+  border-color: #817b72;
+}
+
+/* RGB behaves like one ordered spectrum rail. The existing semantic order is
+   preserved: red -> orange -> yellow -> green -> cyan -> blue -> violet -> magenta. */
+.sign-controller__rgb > div[role="radiogroup"] {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(1.25rem, 1fr));
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.sign-controller__rgb button {
+  width: 100%;
+  min-width: 0;
+  min-height: 1.45rem;
+  height: 1.45rem;
+  padding: 0.18rem;
+  justify-content: center;
+  border-color: color-mix(in srgb, var(--login-scene-frame) 76%, transparent);
+  background: color-mix(in srgb, var(--login-scene-canvas) 90%, transparent);
+}
+
+.sign-controller__rgb-chip {
+  width: 0.72rem;
+  height: 0.72rem;
+  border-radius: 1px;
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 22%),
+    0 0 0 1px rgb(255 255 255 / 16%);
+}
+
+.sign-controller__rgb button[aria-checked="true"] {
+  border-color: rgb(var(--login-control-accent) / 92%);
+  box-shadow:
+    0 0 0 1px var(--login-scene-canvas),
+    0 0 0 3px rgb(var(--login-control-accent) / 72%);
+}
+
+.auth-gate[data-scene="day"] .sign-controller__rgb button {
+  background: #f6f4ef;
+  border-color: #a9a39a;
+}
+
+.auth-gate[data-scene="day"] .sign-controller__rgb button:hover {
+  background: #e5e0d7;
+  border-color: #7c766d;
+}
+
+.auth-gate[data-scene="day"] .sign-controller__rgb-chip {
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 30%),
+    0 0 0 1px rgb(255 255 255 / 72%);
+}
+
+/* Compact keeps the same logical spectrum, but allows two rows before the
+   interface becomes too narrow. Auth-active behavior remains unchanged. */
+@media (max-width: 767px) {
+  .sign-controller__rgb > div[role="radiogroup"] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .auth-gate__login-choices {
+    padding: 3px;
+  }
+
+  .auth-gate__login-choices::before {
+    display: none;
+  }
+}
