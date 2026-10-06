@@ -1,272 +1,74 @@
-/* Requests hero / operational instrumentation
-   Desktop-first visual layer for the Cereri pilot.
-   No business-state branching lives here.
-*/
-
-[data-surface="cereri-registry"] {
-  --requests-tech-amber: var(--shell-brass);
-  --requests-tech-amber-soft: var(--shell-brass-soft);
-  --requests-tech-amber-line: color-mix(in srgb, var(--requests-tech-amber) 42%, transparent);
-  --requests-signal: var(--shell-signal);
-  --requests-signal-soft: var(--shell-signal-soft);
-}
-
+/* Requests orientation and filter instrument. Shared geometry across themes. */
 [data-surface="cereri-registry"] > .page-header {
   position: relative;
   isolation: isolate;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    "copy aside"
-    "instrument instrument";
-  gap: 18px 28px;
-  min-height: 0;
-  margin: 18px var(--page-gutter) 0;
-  padding: 24px 24px 0;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
-  border: 1px solid var(--color-border-strong);
-  box-shadow:
-    inset 3px 0 0 var(--requests-tech-amber),
-    0 18px 44px color-mix(in srgb, var(--shell-overlay-shadow) 34%, transparent);
+  grid-template-columns: minmax(20rem, 1fr) auto auto;
+  grid-template-areas: "copy instrument aside";
+  align-items: center;
+  gap: 36px;
+  margin: 0 var(--page-gutter);
+  min-height: 128px;
+  padding: 30px 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-border-strong);
+  background: transparent;
+  box-shadow: none;
 }
-
-[data-surface="cereri-registry"] > .page-header::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -2;
-  background: color-mix(in srgb, var(--color-canvas) 74%, var(--color-surface));
-}
-
 [data-surface="cereri-registry"] > .page-header::after {
   content: "";
   position: absolute;
-  inset: 0;
   z-index: -1;
-  background: var(--shell-brass);
-  opacity: 0.09;
-  -webkit-mask: url("../../assets/workos-routing-grid.svg") center / min(62rem, 74vw) auto no-repeat;
-  mask: url("../../assets/workos-routing-grid.svg") center / min(62rem, 74vw) auto no-repeat;
+  inset: 0 25% 0 22%;
+  background: var(--color-text-primary);
+  opacity: 0.055;
+  mask: url("../../assets/workos-routing-grid.svg") center / 700px auto no-repeat;
   pointer-events: none;
 }
-
-:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] > .page-header::after {
-  opacity: 0.14;
-}
-
-[data-surface="cereri-registry"] > .page-header .page-header__copy {
-  grid-area: copy;
-  position: relative;
-  align-self: end;
-  max-width: 64rem;
-  padding: 0 0 0 18px;
-  box-shadow: inset 3px 0 0 var(--requests-tech-amber);
-}
-
-[data-surface="cereri-registry"] > .page-header .page-header__copy::after {
-  content: "";
-  position: absolute;
-  display: none;
-}
-
-[data-surface="cereri-registry"] > .page-header .page-header__eyebrow {
-  margin-bottom: 8px;
-  color: var(--requests-tech-amber);
-  font-size: 0.63rem;
-  letter-spacing: 0.13em;
-}
-
-[data-surface="cereri-registry"] > .page-header .page-header__title {
-  max-width: 48rem;
-  font-family: var(--font-brand);
-  font-size: clamp(2rem, 2.45vw, 2.9rem);
-  font-weight: 650;
-  line-height: 1.02;
-  letter-spacing: -0.04em;
-}
-
-[data-surface="cereri-registry"] > .page-header .page-header__lead {
-  display: none;
-}
-
-[data-surface="cereri-registry"] > .page-header .page-header__meta {
-  display: none;
-}
-
-[data-surface="cereri-registry"] > .page-header .page-header__aside {
-  grid-area: aside;
-  align-self: start;
-  padding-top: 2px;
-}
-
-[data-surface="cereri-registry"] .page-header__action .button--primary {
-  min-width: 9.25rem;
-  min-height: 2.7rem;
-  border: 1px solid color-mix(in srgb, var(--shell-signal) 42%, var(--shell-edge));
-  border-radius: 0;
-  background: var(--shell-signal);
-  color: var(--shell-button-ink);
-  box-shadow:
-    inset 0 -2px 0 color-mix(in srgb, var(--shell-signal-deep) 55%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--shell-signal) 10%, transparent);
-  font-family: var(--font-mono);
-  font-size: 0.69rem;
-  font-weight: 700;
-  letter-spacing: 0.055em;
-  text-transform: uppercase;
-}
-
-.page-header__instrument {
-  grid-area: instrument;
-  min-width: 0;
-}
-
-.requests-instrument {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(8rem, 1fr));
-  justify-self: stretch;
-  min-height: 64px;
-  margin-inline: -24px;
-  border-top: 1px solid var(--color-border-strong);
-  background: color-mix(in srgb, var(--color-surface-raised) 72%, transparent);
-}
-
+[data-surface="cereri-registry"] .page-header__copy { grid-area: copy; padding: 0; box-shadow: none; }
+[data-surface="cereri-registry"] .page-header__eyebrow { margin: 0 0 10px; color: var(--color-text-secondary); font-size: 11px; letter-spacing: 0.14em; }
+[data-surface="cereri-registry"] .page-header__title { font-family: var(--font-brand); font-size: clamp(30px, 2.3vw, 42px); line-height: 1.15; font-weight: 550; letter-spacing: -0.045em; }
+[data-surface="cereri-registry"] .page-header__aside { grid-area: aside; align-self: center; }
+[data-surface="cereri-registry"] .page-header__instrument { grid-area: instrument; min-width: 0; }
+.requests-instrument { display: flex; align-items: stretch; gap: 12px; }
 .requests-instrument__metric {
-  position: relative;
-  display: grid;
-  align-content: center;
-  min-width: 0;
-  padding: 11px 24px;
-  border-left: 1px solid var(--color-border-subtle);
-  background: color-mix(in srgb, var(--color-surface-raised) 88%, transparent);
+  position: relative; display: flex; align-items: center; gap: 14px; min-height: 72px; padding: 10px 20px;
+  border: 1px solid transparent; border-bottom-color: var(--color-border); background: transparent;
+  color: var(--color-text-primary); text-align: left; cursor: pointer;
 }
-
- .requests-instrument__metric:first-child {
-  border-left: 0;
+.requests-instrument__metric:hover { background: var(--color-surface-raised); }
+.requests-instrument__metric[aria-pressed="true"] { border-bottom-color: var(--color-text-primary); background: color-mix(in srgb, var(--color-surface-raised) 60%, transparent); }
+.requests-instrument__metric--attention[data-attention="true"] { color: var(--requests-amber); }
+.requests-instrument__metric--attention[aria-pressed="true"] { border-bottom-color: var(--requests-amber); }
+.requests-instrument__metric-value { font: 400 36px/1 var(--font-mono); letter-spacing: -0.06em; }
+.requests-instrument__metric-label { max-width: 90px; font: 500 13px/1.4 var(--font-sans); }
+.requests-new {
+  display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 48px; padding: 0 22px;
+  border: 1px solid var(--shell-signal); background: var(--shell-signal); color: var(--shell-button-ink);
+  font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap;
 }
-
-.requests-instrument__metric::before {
-  content: "";
-  position: absolute;
-  inset: 11px auto 11px 0;
-  width: 2px;
-  background: transparent;
-}
-
-.requests-instrument__metric--attention {
-  background: var(--requests-tech-amber-soft);
-}
-
-.requests-instrument__metric--attention::before {
-  background: var(--requests-tech-amber);
-}
-
-.requests-instrument__metric--signal {
-  background: var(--requests-signal-soft);
-}
-
-.requests-instrument__metric--signal::before {
-  background: var(--requests-signal);
-}
-
-.requests-instrument__metric-value {
-  margin-top: 2px;
-  color: var(--color-text-primary);
-  font-family: var(--font-mono);
-  font-size: 1.4rem;
-  line-height: 1;
-  font-weight: 650;
-}
-
-[data-surface="cereri-registry"] > .page-region {
-  position: relative;
-  padding-top: 18px;
-  background: var(--color-canvas);
-}
-
-[data-surface="cereri-registry"] > .page-region::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--shell-ink);
-  opacity: 0.025;
-  -webkit-mask: url("../../assets/workos-routing-grid.svg") right top / 44rem auto no-repeat;
-  mask: url("../../assets/workos-routing-grid.svg") right top / 44rem auto no-repeat;
-  pointer-events: none;
-}
-
-:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] > .page-region::before {
-  opacity: 0.045;
-}
-
-[data-surface="cereri-registry"] > .page-region > * {
-  position: relative;
-}
-
+.requests-new > span { font: 400 24px/1 var(--font-sans); }
+.requests-new:hover { background: var(--shell-signal-strong); border-color: var(--shell-signal-strong); }
+[data-surface="cereri-registry"] > .page-region { padding-top: 0; background: transparent; }
 @media (max-width: 1439px) {
-  [data-surface="cereri-registry"] > .page-header {
-    margin-top: 14px;
-    padding: 22px 20px 0;
-    gap: 16px 22px;
-  }
-
-  [data-surface="cereri-registry"] > .page-header .page-header__title {
-    font-size: clamp(1.85rem, 2.5vw, 2.35rem);
-  }
-
-  .requests-instrument {
-    grid-template-columns: repeat(3, minmax(6.7rem, 1fr));
-    margin-inline: -20px;
-  }
+  [data-surface="cereri-registry"] > .page-header { gap: 20px; grid-template-columns: minmax(0, 1fr) auto auto; min-height: 128px; }
+  .requests-instrument__metric { padding-inline: 12px; gap: 10px; }
+  .requests-instrument__metric-value { font-size: 30px; }
 }
-
 @media (max-width: 1151px) {
-  [data-surface="cereri-registry"] > .page-header {
-    grid-template-columns: minmax(0, 1fr) auto;
-    padding-top: 20px;
-  }
-
-  .requests-instrument {
-    grid-template-columns: repeat(3, minmax(6.25rem, 1fr));
-  }
+  [data-surface="cereri-registry"] > .page-header { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "copy aside" "instrument instrument"; gap: 18px; padding-block: 26px 20px; }
+  .requests-instrument { gap: 16px; }
+  .requests-instrument__metric { min-height: 56px; }
+  .requests-instrument__metric-label { max-width: none; }
 }
-
 @media (max-width: 767px) {
-  [data-surface="cereri-registry"] > .page-header {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "copy"
-      "aside"
-      "instrument";
-    gap: 14px;
-    margin: 12px var(--page-gutter) 0;
-    padding: 18px 16px 0;
-  }
-
-  [data-surface="cereri-registry"] > .page-header .page-header__copy::after {
-    width: 100%;
-  }
-
-  [data-surface="cereri-registry"] > .page-header .page-header__aside {
-    justify-self: start;
-    padding-top: 0;
-  }
-
-  .requests-instrument {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    margin-inline: -16px;
-  }
-
-  .requests-instrument__metric {
-    border-left: 0;
-  }
-
-  .requests-instrument__metric + .requests-instrument__metric {
-    border-left: 1px solid var(--color-border-subtle);
-  }
-
-  .requests-instrument__metric-value {
-    font-size: 1.2rem;
-  }
+  [data-surface="cereri-registry"] > .page-header { gap: 18px 12px; padding-block: 24px 16px; }
+  [data-surface="cereri-registry"] .page-header__title { font-size: 29px; max-width: 240px; }
+  [data-surface="cereri-registry"] .page-header__eyebrow { font-size: 10px; }
+  .requests-new { width: 44px; min-height: 44px; padding: 0; font-size: 0; gap: 0; }
+  .requests-new > span { font-size: 26px; }
+  .requests-instrument { display: grid; grid-template-columns: 1fr 1.4fr; gap: 12px; }
+  .requests-instrument__metric { padding: 10px; }
+  .requests-instrument__metric-value { font-size: 28px; }
+  .requests-instrument__metric-label { font-size: 12px; }
 }

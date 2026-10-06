@@ -54,8 +54,9 @@ jobs:
           cat > capture-requests.mjs <<'EOF'
           import { chromium } from "playwright";
           import fs from "node:fs/promises";
+          import assert from "node:assert/strict";
 
-          const out = "artifacts/requests-visual-proof";
+          const out = "artifacts/requests-redesign-v2";
           await fs.mkdir(out, { recursive: true });
 
           const session = {
@@ -182,16 +183,33 @@ jobs:
 
             await page.goto("http://127.0.0.1:4173/cereri", { waitUntil: "domcontentloaded" });
             await page.getByRole("heading", { name: "Cereri de ofertă" }).waitFor();
-            await page.waitForTimeout(500);
+            await page.getByRole("link", { name: /CER-E5D190D8/ }).waitFor();
+            await page.evaluate(() => document.fonts.ready);
+            assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Overflow at ${width}`);
             await page.screenshot({ path: `${out}/${name}.png`, fullPage: true });
+            if (width === 1920 && scheme === "dark") {
+              await page.getByRole("combobox", { name: "Ordine" }).selectOption("oldest");
+              assert.match(await page.locator("tbody tr").first().innerText(), /Totem dublă față/);
+              await page.screenshot({ path: `${out}/REQUESTS_V2__06_SORT_OLDEST_1920x1080.png`, fullPage: true });
+              await page.getByRole("button", { name: /Necesită acțiune/ }).click();
+              assert.equal(await page.locator("tbody tr").count(), 2);
+              await page.screenshot({ path: `${out}/REQUESTS_V2__07_ATTENTION_1920x1080.png`, fullPage: true });
+              await page.getByRole("searchbox", { name: "Caută" }).fill("inexistent");
+              await page.getByText("Nicio cerere nu corespunde filtrului.").waitFor();
+              await page.getByRole("button", { name: /Resetează filtrele/ }).click();
+              assert.equal(await page.locator("tbody tr").count(), 4);
+              await page.getByRole("button", { name: "Rânduri compacte" }).click();
+              assert.equal(await page.getByRole("button", { name: "Rânduri compacte" }).getAttribute("aria-pressed"), "true");
+              await page.screenshot({ path: `${out}/REQUESTS_V2__08_COMPACT_1920x1080.png`, fullPage: true });
+            }
             await context.close();
           }
 
-          await shot("REQUESTS_V1__01_DESKTOP_DARK_1920x1080", 1920, 1080, "dark");
-          await shot("REQUESTS_V1__02_DESKTOP_LIGHT_1920x1080", 1920, 1080, "light");
-          await shot("REQUESTS_V1__03_LAPTOP_DARK_1366x768", 1366, 768, "dark");
-          await shot("REQUESTS_V1__04_TABLET_LIGHT_1024x768", 1024, 768, "light");
-          await shot("REQUESTS_V1__05_PHONE_DARK_390x844", 390, 844, "dark");
+          await shot("REQUESTS_V2__01_DESKTOP_DARK_1920x1080", 1920, 1080, "dark");
+          await shot("REQUESTS_V2__02_DESKTOP_LIGHT_1920x1080", 1920, 1080, "light");
+          await shot("REQUESTS_V2__03_LAPTOP_DARK_1366x768", 1366, 768, "dark");
+          await shot("REQUESTS_V2__04_TABLET_LIGHT_1024x768", 1024, 768, "light");
+          await shot("REQUESTS_V2__05_PHONE_DARK_390x844", 390, 844, "dark");
 
           await browser.close();
           EOF
@@ -200,7 +218,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: requests-visual-proof
-          path: artifacts/requests-visual-proof/*.png
+          name: requests-redesign-v2
+          path: artifacts/requests-redesign-v2/*.png
           if-no-files-found: error
           retention-days: 3

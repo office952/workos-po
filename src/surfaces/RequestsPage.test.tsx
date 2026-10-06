@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RequestsPage } from "./RequestsPage";
@@ -25,7 +25,48 @@ function stubRequests(requests: unknown[]) {
 }
 
 describe("RequestsPage", () => {
-  it("keeps the collection workspace and prefers request identity over title", async () => {
+  it("sorts chronologically in both directions and keeps unknown dates last", async () => {
+    stubRequests([
+      { requestId: "old", title: "Veche", statusLabel: "Nouă", createdAt: "2026-09-01T10:00:00Z", nextAction: "OPEN_REQUEST" },
+      { requestId: "unknown", title: "Fără dată", statusLabel: "Nouă", createdAt: "invalid", nextAction: "OPEN_REQUEST" },
+      { requestId: "new", title: "Recentă", statusLabel: "Nouă", createdAt: "2026-10-01T10:00:00Z", nextAction: "OPEN_REQUEST" },
+    ]);
+    render(<RequestsPage />);
+    await screen.findByRole("link", { name: "Recentă" });
+    const titles = () => within(screen.getByRole("table")).getAllByRole("row").slice(1).map((row) => within(row).getAllByRole("link")[0].textContent);
+    expect(titles()).toEqual(["Recentă", "Veche", "Fără dată"]);
+    await userEvent.setup().selectOptions(screen.getByRole("combobox", { name: "Ordine" }), "oldest");
+    expect(titles()).toEqual(["Veche", "Recentă", "Fără dată"]);
+    expect(screen.getByRole("columnheader", { name: /Creată/ })).toHaveAttribute("aria-sort", "ascending");
+  });
+
+  it("combines attention and search and resets a filtered empty result", async () => {
+    stubRequests([
+      { requestId: "a", title: "Litere", customerDisplayName: "Nord", statusLabel: "Nouă", needsAttention: true, nextAction: "OPEN_REQUEST" },
+      { requestId: "b", title: "Totem", customerDisplayName: "Nord", statusLabel: "Nouă", needsAttention: false, nextAction: "OPEN_REQUEST" },
+    ]);
+    const user = userEvent.setup();
+    render(<RequestsPage />);
+    await screen.findByRole("link", { name: "Litere" });
+    await user.click(screen.getByRole("button", { name: /Necesită acțiune/ }));
+    await user.type(screen.getByRole("searchbox", { name: "Caută" }), "Totem");
+    expect(screen.getByText("Nicio cerere nu corespunde filtrului.")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("0 din 2");
+    await user.click(screen.getByRole("button", { name: /Resetează filtrele/ }));
+    expect(screen.getByRole("searchbox", { name: "Caută" })).toHaveValue("");
+    expect(screen.getByRole("link", { name: "Totem" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("2 din 2");
+  });
+
+  it("keeps failures and empty registries distinct from business counts", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new Error("Offline"))));
+    render(<RequestsPage />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Cererile nu au putut fi citite");
+    expect(screen.queryByRole("link", { name: "Alege produs" })).not.toBeInTheDocument();
+    expect(screen.getAllByText("—")).toHaveLength(2);
+  });
+
+  it("presents the work title and reference in an accessible register", async () => {
     stubRequests([
       {
         requestId: "req-1",
@@ -44,8 +85,9 @@ describe("RequestsPage", () => {
     render(<RequestsPage />);
     expect(document.querySelector(".page-workspace--stack")).not.toBeNull();
     expect(screen.getByRole("heading", { name: "Cereri de ofertă" })).toBeInTheDocument();
-    expect(document.querySelector(".ui-panel--flush")).not.toBeNull();
     expect(await screen.findByText("CRQ-104")).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "Lista de cereri" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Litere vitrină.*CRQ-104/ })).toHaveAttribute("href", "/cereri/req-1");
     expect(screen.getByText("Litere vitrină")).toBeInTheDocument();
     expect(document.querySelector(".requests-card")).toBeNull();
     expect(screen.queryByText("Actualizat")).not.toBeInTheDocument();
@@ -54,7 +96,7 @@ describe("RequestsPage", () => {
     expect(screen.getByRole("link", { name: "Cerere nouă" })).toHaveAttribute("href", "/clienti");
     expect(screen.getByText("Total")).toBeInTheDocument();
     expect(screen.getByText("Necesită acțiune", { selector: ".requests-instrument__metric-label" })).toBeInTheDocument();
-    expect(screen.getByText("Afișate", { selector: ".requests-instrument__metric-label" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("1 din 1");
   });
 
   it("keeps canonical Request state separate from commercial progress", async () => {
