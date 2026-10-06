@@ -334,6 +334,7 @@
 
 [data-surface="cereri-registry"] .worklist-row__next {
   position: relative;
+  box-sizing: border-box;
   padding-right: 1rem;
   color: var(--color-azure-a1);
   font-family: var(--font-mono);
