@@ -7,6 +7,7 @@ type PageHeaderProps = {
   meta?: ReactNode;
   status?: ReactNode;
   action?: ReactNode;
+  instrument?: ReactNode;
   quiet?: boolean;
 };
 
@@ -21,6 +22,7 @@ export function PageHeader({
   meta,
   status,
   action,
+  instrument,
   quiet = false,
 }: PageHeaderProps) {
   const showEyebrow = Boolean(eyebrow && !sameOperatorLabel(eyebrow, title));
@@ -40,6 +42,7 @@ export function PageHeader({
           {action ? <div className="page-header__action">{action}</div> : null}
         </div>
       ) : null}
+      {instrument ? <div className="page-header__instrument">{instrument}</div> : null}
     </div>
   );
 }
