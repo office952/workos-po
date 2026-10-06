@@ -1,0 +1,333 @@
+/* Requests hero / operational instrumentation
+   Desktop-first visual layer for the Cereri pilot.
+   No business-state branching lives here.
+*/
+
+[data-surface="cereri-registry"] {
+  --requests-tech-amber: var(--shell-brass);
+  --requests-tech-amber-soft: var(--shell-brass-soft);
+  --requests-tech-amber-line: color-mix(in srgb, var(--requests-tech-amber) 42%, transparent);
+  --requests-signal: var(--shell-signal);
+  --requests-signal-soft: var(--shell-signal-soft);
+}
+
+[data-surface="cereri-registry"] > .page-header {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "copy aside"
+    "instrument instrument";
+  gap: 20px 28px;
+  min-height: 0;
+  padding: 28px var(--page-gutter) 0;
+  overflow: hidden;
+  background: var(--color-surface);
+  border-bottom: 0;
+}
+
+[data-surface="cereri-registry"] > .page-header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: var(--color-canvas);
+}
+
+[data-surface="cereri-registry"] > .page-header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--shell-brass);
+  opacity: 0.09;
+  -webkit-mask: url("../../assets/workos-routing-grid.svg") center / min(62rem, 74vw) auto no-repeat;
+  mask: url("../../assets/workos-routing-grid.svg") center / min(62rem, 74vw) auto no-repeat;
+  pointer-events: none;
+}
+
+:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] > .page-header::after {
+  opacity: 0.14;
+}
+
+[data-surface="cereri-registry"] > .page-header .page-header__copy {
+  grid-area: copy;
+  position: relative;
+  align-self: end;
+  max-width: 64rem;
+  padding: 0 0 0 18px;
+  box-shadow: inset 3px 0 0 var(--requests-tech-amber);
+}
+
+[data-surface="cereri-registry"] > .page-header .page-header__copy::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -11px;
+  width: min(32rem, 72%);
+  height: 1px;
+  background: var(--requests-tech-amber-line);
+}
+
+[data-surface="cereri-registry"] > .page-header .page-header__eyebrow {
+  margin-bottom: 8px;
+  color: var(--requests-tech-amber);
+  font-size: 0.63rem;
+  letter-spacing: 0.13em;
+}
+
+[data-surface="cereri-registry"] > .page-header .page-header__title {
+  max-width: 48rem;
+  font-family: var(--font-brand);
+  font-size: clamp(2rem, 2.45vw, 2.9rem);
+  font-weight: 650;
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+
+[data-surface="cereri-registry"] > .page-header .page-header__lead {
+  max-width: 50rem;
+  margin-top: 10px;
+  color: var(--color-text-secondary);
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+[data-surface="cereri-registry"] > .page-header .page-header__meta {
+  margin-top: 11px;
+  color: var(--color-text-kicker);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+[data-surface="cereri-registry"] > .page-header .page-header__aside {
+  grid-area: aside;
+  align-self: start;
+  padding-top: 2px;
+}
+
+[data-surface="cereri-registry"] .page-header__action .button--primary {
+  min-width: 9.25rem;
+  min-height: 2.7rem;
+  border: 1px solid color-mix(in srgb, var(--shell-signal) 42%, var(--shell-edge));
+  border-radius: 0;
+  background: var(--shell-signal);
+  color: var(--shell-button-ink);
+  box-shadow:
+    inset 0 -2px 0 color-mix(in srgb, var(--shell-signal-deep) 55%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--shell-signal) 10%, transparent);
+  font-family: var(--font-mono);
+  font-size: 0.69rem;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.page-header__instrument {
+  grid-area: instrument;
+  min-width: 0;
+}
+
+.requests-instrument {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(3, minmax(7.75rem, 10rem));
+  min-height: 78px;
+  border: 1px solid var(--color-border-strong);
+  border-bottom: 0;
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  box-shadow:
+    inset 3px 0 0 var(--requests-tech-amber),
+    inset 0 1px 0 color-mix(in srgb, var(--shell-ink) 5%, transparent);
+}
+
+.requests-instrument__identity {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr);
+  grid-template-areas:
+    "signal kicker"
+    "signal title"
+    ". note";
+  align-content: center;
+  column-gap: 11px;
+  row-gap: 2px;
+  min-width: 0;
+  padding: 13px 18px 13px 22px;
+}
+
+.requests-instrument__signal {
+  grid-area: signal;
+  align-self: center;
+  width: 6px;
+  height: 6px;
+  background: var(--requests-signal);
+  box-shadow: 0 0 10px var(--shell-live-shadow);
+}
+
+.requests-instrument__kicker,
+.requests-instrument__metric-label {
+  color: var(--color-text-kicker);
+  font-family: var(--font-mono);
+  font-size: var(--text-eyebrow);
+  font-weight: 650;
+  letter-spacing: 0.095em;
+  text-transform: uppercase;
+}
+
+.requests-instrument__kicker {
+  grid-area: kicker;
+}
+
+.requests-instrument__title {
+  grid-area: title;
+  color: var(--color-text-primary);
+  font-size: 0.92rem;
+  font-weight: 650;
+}
+
+.requests-instrument__note {
+  grid-area: note;
+  color: var(--color-text-secondary);
+  font-size: var(--text-meta);
+}
+
+.requests-instrument__metric {
+  position: relative;
+  display: grid;
+  align-content: center;
+  min-width: 0;
+  padding: 12px 16px;
+  border-left: 1px solid var(--color-border-subtle);
+  background: color-mix(in srgb, var(--color-surface-raised) 88%, transparent);
+}
+
+.requests-instrument__metric::before {
+  content: "";
+  position: absolute;
+  inset: 11px auto 11px 0;
+  width: 2px;
+  background: transparent;
+}
+
+.requests-instrument__metric--attention {
+  background: var(--requests-tech-amber-soft);
+}
+
+.requests-instrument__metric--attention::before {
+  background: var(--requests-tech-amber);
+}
+
+.requests-instrument__metric--signal {
+  background: var(--requests-signal-soft);
+}
+
+.requests-instrument__metric--signal::before {
+  background: var(--requests-signal);
+}
+
+.requests-instrument__metric-value {
+  margin-top: 4px;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: 1.55rem;
+  line-height: 1;
+  font-weight: 650;
+}
+
+[data-surface="cereri-registry"] > .page-region {
+  position: relative;
+  padding-top: 18px;
+  background: var(--color-canvas);
+}
+
+[data-surface="cereri-registry"] > .page-region::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--shell-ink);
+  opacity: 0.025;
+  -webkit-mask: url("../../assets/workos-routing-grid.svg") right top / 44rem auto no-repeat;
+  mask: url("../../assets/workos-routing-grid.svg") right top / 44rem auto no-repeat;
+  pointer-events: none;
+}
+
+:root[data-resolved-theme="dark"] [data-surface="cereri-registry"] > .page-region::before {
+  opacity: 0.045;
+}
+
+[data-surface="cereri-registry"] > .page-region > * {
+  position: relative;
+}
+
+@media (max-width: 1439px) {
+  [data-surface="cereri-registry"] > .page-header {
+    padding-top: 22px;
+    gap: 18px 22px;
+  }
+
+  [data-surface="cereri-registry"] > .page-header .page-header__title {
+    font-size: clamp(1.85rem, 2.5vw, 2.35rem);
+  }
+
+  .requests-instrument {
+    grid-template-columns: minmax(0, 1fr) repeat(3, minmax(6.7rem, 8.25rem));
+  }
+}
+
+@media (max-width: 1151px) {
+  [data-surface="cereri-registry"] > .page-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-top: 20px;
+  }
+
+  .requests-instrument {
+    grid-template-columns: minmax(0, 1fr) repeat(3, minmax(6.25rem, auto));
+  }
+
+  .requests-instrument__note {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  [data-surface="cereri-registry"] > .page-header {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "copy"
+      "aside"
+      "instrument";
+    gap: 14px;
+    padding: 18px var(--page-gutter) 0;
+  }
+
+  [data-surface="cereri-registry"] > .page-header .page-header__copy::after {
+    width: 100%;
+  }
+
+  [data-surface="cereri-registry"] > .page-header .page-header__aside {
+    justify-self: start;
+    padding-top: 0;
+  }
+
+  .requests-instrument {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .requests-instrument__identity {
+    grid-column: 1 / -1;
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+
+  .requests-instrument__metric {
+    border-left: 0;
+  }
+
+  .requests-instrument__metric + .requests-instrument__metric {
+    border-left: 1px solid var(--color-border-subtle);
+  }
+
+  .requests-instrument__metric-value {
+    font-size: 1.2rem;
+  }
+}
