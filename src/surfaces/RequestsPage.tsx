@@ -96,7 +96,7 @@ export function RequestsPage() {
       lead="Un singur flux pentru ce intră în firmă: identifică cererea, citește starea și continuă următorul pas sigur."
       meta={
         requests.status === "success"
-          ? `${items.length} în registru · ${attentionCount} necesită acțiune · ${visible.length} afișate`
+          ? `Registru sincronizat · ${visible.length} afișate`
           : "Sincronizare registru"
       }
       action={
@@ -104,42 +104,43 @@ export function RequestsPage() {
           <span className="button button--primary">Cerere nouă</span>
         </a>
       }
+      instrument={
+        <section className="requests-instrument" aria-label="Stare registru cereri">
+          <div className="requests-instrument__identity">
+            <span className="requests-instrument__signal" aria-hidden="true" />
+            <span className="requests-instrument__kicker">Coada operațională</span>
+            <strong className="requests-instrument__title">Intrare comercială</strong>
+            <span className="requests-instrument__note">
+              Starea și următorul pas vin din adevărul curent al cererii.
+            </span>
+          </div>
+          <div className="requests-instrument__metric">
+            <span className="requests-instrument__metric-label">Total</span>
+            <strong className="requests-instrument__metric-value">
+              {requests.status === "success" ? items.length : "—"}
+            </strong>
+          </div>
+          <div
+            className={
+              attentionCount > 0
+                ? "requests-instrument__metric requests-instrument__metric--attention"
+                : "requests-instrument__metric"
+            }
+          >
+            <span className="requests-instrument__metric-label">Necesită acțiune</span>
+            <strong className="requests-instrument__metric-value">
+              {requests.status === "success" ? attentionCount : "—"}
+            </strong>
+          </div>
+          <div className="requests-instrument__metric requests-instrument__metric--signal">
+            <span className="requests-instrument__metric-label">Afișate</span>
+            <strong className="requests-instrument__metric-value">
+              {requests.status === "success" ? visible.length : "—"}
+            </strong>
+          </div>
+        </section>
+      }
     >
-      <section className="requests-console" aria-label="Stare registru cereri">
-        <div className="requests-console__identity">
-          <span className="requests-console__signal" aria-hidden="true" />
-          <span className="requests-console__kicker">Coada operațională</span>
-          <strong className="requests-console__title">Intrare comercială</strong>
-          <span className="requests-console__note">
-            Starea și următorul pas vin din adevărul curent al cererii.
-          </span>
-        </div>
-        <div className="requests-console__metric">
-          <span className="requests-console__metric-label">Total</span>
-          <strong className="requests-console__metric-value">
-            {requests.status === "success" ? items.length : "—"}
-          </strong>
-        </div>
-        <div
-          className={
-            attentionCount > 0
-              ? "requests-console__metric requests-console__metric--attention"
-              : "requests-console__metric"
-          }
-        >
-          <span className="requests-console__metric-label">Necesită acțiune</span>
-          <strong className="requests-console__metric-value">
-            {requests.status === "success" ? attentionCount : "—"}
-          </strong>
-        </div>
-        <div className="requests-console__metric requests-console__metric--signal">
-          <span className="requests-console__metric-label">Afișate</span>
-          <strong className="requests-console__metric-value">
-            {requests.status === "success" ? visible.length : "—"}
-          </strong>
-        </div>
-      </section>
-
       <SurfacePanel
         variant="flush"
         label="Cereri"
