@@ -130,6 +130,12 @@ jobs:
 
           await shot("03-desktop-light-idle-1920x1080", 1920, 1080, "light");
 
+          await shot("03b-desktop-light-rgb-1920x1080", 1920, 1080, "light", async (page) => {
+            await page.getByRole("switch", { name: "Alimentare iluminare WorkOS" }).click();
+            await page.getByRole("radio", { name: "RGB" }).click();
+            await page.getByRole("radiogroup", { name: "Culoare RGB" }).waitFor();
+          });
+
           await shot("04-desktop-dark-login-societate-1920x1080", 1920, 1080, "dark", async (page) => {
             await page.getByRole("button", { name: "Login Societate" }).click();
             await page.getByLabel("Adresă email").waitFor();
