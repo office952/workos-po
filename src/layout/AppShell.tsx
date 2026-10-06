@@ -238,9 +238,21 @@ export function AppShell({
             </span>
           </a>
 
+          {mode === "slice" && navMode === "desktop" ? (
+            <nav className="app-shell__nav app-shell__nav--inline" aria-label="Navigare principală">
+              <div className="app-shell__nav-desktop">
+                {flatItems.map((item, index) => (
+                  <NavLink key={item.id} item={item} path={path} index={index} />
+                ))}
+              </div>
+            </nav>
+          ) : null}
+
           <div className="app-shell__route">
             <span className="app-shell__route-signal" aria-hidden="true" />
-            <span className="app-shell__route-kicker">Canal activ</span>
+            <span className="app-shell__route-kicker">
+              Canal activ <span className="app-shell__route-live">/ live</span>
+            </span>
             <strong className="app-shell__route-name">{contextLabel}</strong>
           </div>
 
@@ -253,6 +265,7 @@ export function AppShell({
           </div>
         </div>
 
+        {mode !== "slice" || navMode !== "desktop" ? (
         <div className="app-shell__command">
           <nav className="app-shell__nav" aria-label="Navigare principală">
             {mode === "slice" ? (
@@ -308,6 +321,7 @@ export function AppShell({
             <span>WORKOS / LIVE</span>
           </div>
         </div>
+        ) : null}
       </header>
       {children}
     </div>
