@@ -56,7 +56,7 @@ jobs:
           import fs from "node:fs/promises";
           import assert from "node:assert/strict";
 
-          const out = "artifacts/requests-redesign-v2";
+          const out = "artifacts/requests-intake-v3";
           await fs.mkdir(out, { recursive: true });
 
           const session = {
@@ -155,6 +155,9 @@ jobs:
               localStorage.setItem("workos-color-scheme", value);
             }, scheme);
             const page = await context.newPage();
+            const errors = [];
+            page.on("pageerror", (error) => errors.push(error.message));
+            page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
 
             await page.route("http://127.0.0.1:4173/api/**", async (route) => {
               const url = route.request().url();
@@ -185,31 +188,101 @@ jobs:
             await page.getByRole("heading", { name: "Cereri de ofertă" }).waitFor();
             await page.getByRole("link", { name: /CER-E5D190D8/ }).waitFor();
             await page.evaluate(() => document.fonts.ready);
+            await page.locator(".requests-intake img").evaluate((img) => img.decode());
+            assert.equal(await page.getByRole("button", { name: "Următor" }).isDisabled(), true);
+            assert.equal(await page.getByRole("button", { name: "Anterior" }).isDisabled(), true);
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Overflow at ${width}`);
-            await page.screenshot({ path: `${out}/${name}.png`, fullPage: true });
+            await page.screenshot({ path: `${out}/${name}.png`, fullPage: true, animations: "disabled" });
             if (width === 1920 && scheme === "dark") {
               await page.getByRole("combobox", { name: "Ordine" }).selectOption("oldest");
               assert.match(await page.locator("tbody tr").first().innerText(), /Totem dublă față/);
-              await page.screenshot({ path: `${out}/REQUESTS_V2__06_SORT_OLDEST_1920x1080.png`, fullPage: true });
+              await page.screenshot({ path: `${out}/REQUESTS_V3__06_SORT_OLDEST_1920x1080.png`, fullPage: true, animations: "disabled" });
               await page.getByRole("button", { name: /Necesită acțiune/ }).click();
               assert.equal(await page.locator("tbody tr").count(), 2);
-              await page.screenshot({ path: `${out}/REQUESTS_V2__07_ATTENTION_1920x1080.png`, fullPage: true });
+              await page.screenshot({ path: `${out}/REQUESTS_V3__07_ATTENTION_1920x1080.png`, fullPage: true, animations: "disabled" });
               await page.getByRole("searchbox", { name: "Caută" }).fill("inexistent");
               await page.getByText("Nicio cerere nu corespunde filtrului.").waitFor();
               await page.getByRole("button", { name: /Resetează filtrele/ }).click();
               assert.equal(await page.locator("tbody tr").count(), 4);
               await page.getByRole("button", { name: "Rânduri compacte" }).click();
               assert.equal(await page.getByRole("button", { name: "Rânduri compacte" }).getAttribute("aria-pressed"), "true");
-              await page.screenshot({ path: `${out}/REQUESTS_V2__08_COMPACT_1920x1080.png`, fullPage: true });
+              await page.screenshot({ path: `${out}/REQUESTS_V3__08_COMPACT_1920x1080.png`, fullPage: true, animations: "disabled" });
             }
+            assert.deepEqual(errors, [], "Browser console/page errors");
             await context.close();
           }
 
-          await shot("REQUESTS_V2__01_DESKTOP_DARK_1920x1080", 1920, 1080, "dark");
-          await shot("REQUESTS_V2__02_DESKTOP_LIGHT_1920x1080", 1920, 1080, "light");
-          await shot("REQUESTS_V2__03_LAPTOP_DARK_1366x768", 1366, 768, "dark");
-          await shot("REQUESTS_V2__04_TABLET_LIGHT_1024x768", 1024, 768, "light");
-          await shot("REQUESTS_V2__05_PHONE_DARK_390x844", 390, 844, "dark");
+          await shot("REQUESTS_V3__01_DESKTOP_DARK_1920x1080", 1920, 1080, "dark");
+          await shot("REQUESTS_V3__02_DESKTOP_LIGHT_1920x1080", 1920, 1080, "light");
+          await shot("REQUESTS_V3__03_LAPTOP_DARK_1366x768", 1366, 768, "dark");
+          await shot("REQUESTS_V3__04_TABLET_LIGHT_1024x768", 1024, 768, "light");
+          await shot("REQUESTS_V3__05_PHONE_DARK_390x844", 390, 844, "dark");
+
+          const context = await browser.newContext({ viewport: { width: 1920, height: 1080 }, reducedMotion: "reduce" });
+          await context.addInitScript(() => localStorage.setItem("workos-color-scheme", "dark"));
+          const page = await context.newPage();
+          const reviewRows = Array.from({ length: 23 }, (_, index) => ({
+            ...requests[index % requests.length],
+            requestId: `review-${index + 1}`,
+            reference: `REV-${String(index + 1).padStart(3, "0")}`,
+            title: `Cerere de review ${String(index + 1).padStart(2, "0")}`,
+            createdAt: new Date(Date.UTC(2026, 9, 6, 12) - index * 60_000).toISOString(),
+          }));
+          const errors = [];
+          page.on("pageerror", (error) => errors.push(error.message));
+          await page.route("http://127.0.0.1:4173/api/**", async (route) => {
+            const url = route.request().url();
+            const body = url.endsWith("/cloud/session") ? session : url.endsWith("/requests") ? { overview: { requests: reviewRows } } : { status: "ok", service: "workos-final-api", apiContractId: "workos-ui-contract-v1" };
+            await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+          });
+          await page.goto("http://127.0.0.1:4173/cereri");
+          await page.getByRole("link", { name: /REV-001/ }).waitFor();
+          await page.locator(".requests-intake img").evaluate((img) => img.decode());
+          assert.equal(await page.locator("tbody tr").count(), 10);
+          assert.equal(await page.locator(".requests-pagination__range").innerText(), "1–10 din 23 cereri");
+          assert.equal(await page.locator(".requests-intake img").evaluate((img) => getComputedStyle(img).animationName), "none");
+          await page.screenshot({ path: `${out}/REQUESTS_V3__09_PAGINATION_PAGE_1.png`, fullPage: true, animations: "disabled" });
+          await page.getByRole("button", { name: "Următor" }).focus();
+          await page.keyboard.press("Enter");
+          assert.equal(await page.locator(".requests-pagination__range").innerText(), "11–20 din 23 cereri");
+          assert.match(await page.locator("tbody tr").first().innerText(), /review 11/);
+          await page.screenshot({ path: `${out}/REQUESTS_V3__10_PAGINATION_PAGE_2.png`, fullPage: true, animations: "disabled" });
+          await page.getByRole("button", { name: "Pagina 3", exact: true }).click();
+          assert.equal(await page.locator("tbody tr").count(), 3);
+          assert.equal(await page.getByRole("button", { name: "Următor" }).isDisabled(), true);
+          await page.getByRole("combobox", { name: "Pe pagină" }).selectOption("20");
+          assert.equal(await page.locator("tbody tr").count(), 20);
+          await page.getByRole("searchbox", { name: "Caută" }).fill("review 23");
+          assert.equal(await page.locator("tbody tr").count(), 1);
+          assert.equal(await page.getByRole("button", { name: "Pagina 1", exact: true }).getAttribute("aria-current"), "page");
+          assert.deepEqual(errors, []);
+          await page.setViewportSize({ width: 390, height: 844 });
+          await page.getByRole("searchbox", { name: "Caută" }).fill("");
+          await page.getByRole("combobox", { name: "Pe pagină" }).selectOption("10");
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+          await page.screenshot({ path: `${out}/REQUESTS_V3__11_PHONE_PAGINATION.png`, fullPage: true, animations: "disabled" });
+          const longReview = Array.from({ length: 200 }, (_, index) => ({ ...reviewRows[index % reviewRows.length], requestId: `long-review-${index}`, reference: `REV-LONG-${index}`, title: `Cerere review extins ${index}` }));
+          await page.route("http://127.0.0.1:4173/api/requests", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ overview: { requests: longReview } }) }));
+          await page.reload();
+          await page.getByRole("button", { name: "Pagina 20", exact: true }).waitFor();
+          await page.getByRole("button", { name: "Pagina 20", exact: true }).click();
+          for (let i = 0; i < 10; i++) await page.getByRole("button", { name: "Anterior" }).click();
+          assert.equal(await page.getByRole("button", { name: "Pagina 10", exact: true }).getAttribute("aria-current"), "page");
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+          await page.screenshot({ path: `${out}/REQUESTS_V3__14_PHONE_MANY_PAGES.png`, fullPage: true, animations: "disabled" });
+          await page.route("http://127.0.0.1:4173/api/requests", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ overview: { requests: [] } }) }));
+          await page.setViewportSize({ width: 1920, height: 1080 });
+          await page.reload();
+          await page.getByText("Nu există cereri").waitFor();
+          assert.equal(await page.getByRole("navigation", { name: "Paginare cereri" }).count(), 0);
+          assert.equal(await page.getByRole("link", { name: /Ultima intrare/ }).count(), 0);
+          await page.screenshot({ path: `${out}/REQUESTS_V3__12_EMPTY.png`, fullPage: true, animations: "disabled" });
+          await page.route("http://127.0.0.1:4173/api/requests", (route) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "synthetic-unavailable" }) }));
+          await page.reload();
+          await page.getByRole("alert").waitFor();
+          assert.equal(await page.getByRole("navigation", { name: "Paginare cereri" }).count(), 0);
+          await page.screenshot({ path: `${out}/REQUESTS_V3__13_ERROR.png`, fullPage: true, animations: "disabled" });
+          await context.close();
 
           await browser.close();
           EOF
@@ -218,7 +291,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: requests-redesign-v2
-          path: artifacts/requests-redesign-v2/*.png
+          name: requests-intake-v3
+          path: artifacts/requests-intake-v3/*.png
           if-no-files-found: error
           retention-days: 3

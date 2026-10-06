@@ -1,7 +1,10 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RequestsPage } from "./RequestsPage";
+import { writeResource } from "../data/resourceCache";
+import { resourceKeys } from "../data/resourceKeys";
+import { presentRequestList } from "../adapters/requestAdapter";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -25,6 +28,80 @@ function stubRequests(requests: unknown[]) {
 }
 
 describe("RequestsPage", () => {
+  const manyRequests = (length: number) => Array.from({ length }, (_, index) => ({
+    requestId: `page-${index + 1}`,
+    title: `Cerere ${String(index + 1).padStart(2, "0")}`,
+    reference: `CER-PAGE-${index + 1}`,
+    statusLabel: "Nouă",
+    createdAt: new Date(Date.UTC(2026, 9, 6, 12) - index * 60_000).toISOString(),
+    needsAttention: index % 2 === 0,
+    nextAction: "OPEN_REQUEST",
+  }));
+
+  it("paginates all results with correct boundaries and resets page size", async () => {
+    stubRequests(manyRequests(23));
+    const user = userEvent.setup();
+    render(<RequestsPage />);
+    await screen.findByRole("link", { name: /Cerere 01.*CER-PAGE-1/ });
+    const table = within(screen.getByRole("table"));
+    expect(table.getAllByRole("row")).toHaveLength(11);
+    expect(screen.getByRole("status")).toHaveTextContent("1–10 din 23 cereri");
+    expect(screen.getByRole("button", { name: "Anterior" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Următor" }));
+    expect(table.getByRole("link", { name: /Cerere 11.*CER-PAGE-11/ })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("11–20 din 23 cereri");
+    await user.click(screen.getByRole("button", { name: "Următor" }));
+    expect(table.getAllByRole("row")).toHaveLength(4);
+    expect(screen.getByRole("status")).toHaveTextContent("21–23 din 23 cereri");
+    expect(screen.getByRole("button", { name: "Pagina 3" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Următor" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Anterior" }));
+    expect(screen.getByRole("status")).toHaveTextContent("11–20 din 23 cereri");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Pe pagină" }), "20");
+    expect(table.getAllByRole("row")).toHaveLength(21);
+    expect(screen.getByRole("status")).toHaveTextContent("1–20 din 23 cereri");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Pe pagină" }), "50");
+    expect(table.getAllByRole("row")).toHaveLength(24);
+    expect(screen.getByRole("button", { name: "Următor" })).toBeDisabled();
+  });
+
+  it("searches beyond the current page and applies sort and attention before pagination", async () => {
+    stubRequests(manyRequests(23));
+    const user = userEvent.setup();
+    render(<RequestsPage />);
+    await screen.findByRole("link", { name: /Cerere 01.*CER-PAGE-1/ });
+    await user.click(screen.getByRole("button", { name: "Pagina 3" }));
+    await user.type(screen.getByRole("searchbox", { name: "Caută" }), "Cerere 02");
+    expect(screen.getByRole("status")).toHaveTextContent("1–1 din 1 cereri");
+    expect(screen.getByRole("button", { name: "Pagina 1" })).toHaveAttribute("aria-current", "page");
+    await user.clear(screen.getByRole("searchbox", { name: "Caută" }));
+    await user.click(screen.getByRole("button", { name: "Pagina 2" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Ordine" }), "oldest");
+    const rows = within(screen.getByRole("table")).getAllByRole("row");
+    expect(rows[1]).toHaveTextContent("Cerere 23");
+    expect(screen.getByRole("button", { name: "Pagina 1" })).toHaveAttribute("aria-current", "page");
+    await user.click(screen.getByRole("button", { name: "Pagina 2" }));
+    await user.click(screen.getByRole("button", { name: /Necesită acțiune/ }));
+    expect(screen.getByRole("status")).toHaveTextContent("1–10 din 12 cereri");
+    expect(screen.getByRole("link", { name: "Ultima intrare: Cerere 01" })).toHaveAttribute("href", "/cereri/page-1");
+  });
+
+  it("clamps a page when the refreshed collection shrinks and removes pagination when empty", async () => {
+    stubRequests(manyRequests(23));
+    const user = userEvent.setup();
+    render(<RequestsPage />);
+    await screen.findByRole("link", { name: /Cerere 01.*CER-PAGE-1/ });
+    await user.click(screen.getByRole("button", { name: "Pagina 3" }));
+    act(() => writeResource(resourceKeys.requests(), presentRequestList({ overview: { requests: manyRequests(4) } })));
+    expect(screen.getByRole("status")).toHaveTextContent("1–4 din 4 cereri");
+    expect(screen.getByRole("button", { name: "Următor" })).toBeDisabled();
+    act(() => writeResource(resourceKeys.requests(), presentRequestList({ overview: { requests: manyRequests(23) } })));
+    expect(screen.getByRole("status")).toHaveTextContent("1–10 din 23 cereri");
+    act(() => writeResource(resourceKeys.requests(), []));
+    expect(screen.queryByRole("navigation", { name: "Paginare cereri" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Ultima intrare/ })).not.toBeInTheDocument();
+  });
+
   it("sorts chronologically in both directions and keeps unknown dates last", async () => {
     stubRequests([
       {
@@ -102,7 +179,7 @@ describe("RequestsPage", () => {
     );
     expect(screen.getByRole("searchbox", { name: "Caută" })).toHaveValue("");
     expect(screen.getByRole("link", { name: "Totem" })).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("2 din 2");
+    expect(screen.getByRole("status")).toHaveTextContent("1–2 din 2 cereri");
   });
 
   it("does not present a failed load as an empty registry", async () => {
@@ -151,14 +228,14 @@ describe("RequestsPage", () => {
     expect(
       screen.getByRole("heading", { name: "Cereri de ofertă" }),
     ).toBeInTheDocument();
-    expect(await screen.findByText("CRQ-104")).toBeInTheDocument();
+    expect(await within(screen.getByRole("table")).findByText("CRQ-104")).toBeInTheDocument();
     expect(
       screen.getByRole("table", { name: "Lista de cereri" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /Litere vitrină.*CRQ-104/ }),
     ).toHaveAttribute("href", "/cereri/req-1");
-    expect(screen.getByText("Litere vitrină")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("Litere vitrină")).toBeInTheDocument();
     expect(document.querySelector(".requests-card")).toBeNull();
     expect(screen.queryByText("Actualizat")).not.toBeInTheDocument();
     expect(screen.getByText("Creată")).toBeInTheDocument();
@@ -173,7 +250,7 @@ describe("RequestsPage", () => {
         selector: ".requests-instrument__metric-label",
       }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("1 din 1");
+    expect(screen.getByRole("status")).toHaveTextContent("1–1 din 1 cereri");
   });
 
   it("keeps canonical Request state separate from commercial progress", async () => {
@@ -231,13 +308,13 @@ describe("RequestsPage", () => {
     ]);
 
     render(<RequestsPage />);
-    expect(await screen.findByText("CRQ-1")).toBeInTheDocument();
-    expect(screen.getByText("CRQ-2")).toBeInTheDocument();
+    expect(await within(screen.getByRole("table")).findByText("CRQ-1")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("CRQ-2")).toBeInTheDocument();
     await userEvent
       .setup()
       .click(screen.getByRole("button", { name: /Necesită acțiune/ }));
-    expect(screen.getByText("CRQ-1")).toBeInTheDocument();
-    expect(screen.queryByText("CRQ-2")).not.toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("CRQ-1")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).queryByText("CRQ-2")).not.toBeInTheDocument();
   });
 
   it("opens request identity while OPEN_QUOTE opens the quote", async () => {

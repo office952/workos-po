@@ -1,194 +1,89 @@
-/* Requests orientation and filter instrument. Shared geometry across themes. */
-[data-surface="cereri-registry"] > .page-header {
+/* Selected intake concept: title and counts left, physical receipt right.
+   Hardware is an image asset; the receipt carries live presentation data. */
+div[data-surface="cereri-registry"] > .page-header {
   position: relative;
   isolation: isolate;
   display: grid;
-  grid-template-columns: minmax(20rem, 1fr) auto auto;
-  grid-template-areas: "copy instrument aside";
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr);
+  grid-template-areas: "copy aside" "instrument aside";
   align-items: center;
-  gap: 36px;
+  gap: 20px 64px;
   margin: 0 var(--page-gutter);
-  min-height: 128px;
-  padding: 30px 0;
+  min-height: 320px;
+  padding: 42px 0 32px;
   border: 0;
-  border-bottom: 1px solid var(--color-border-strong);
+  border-bottom: 1px solid var(--color-border);
   background: transparent;
   box-shadow: none;
 }
-[data-surface="cereri-registry"] > .page-header::after {
+div[data-surface="cereri-registry"] > .page-header::after {
   content: "";
   position: absolute;
   z-index: -1;
-  inset: 0 25% 0 22%;
+  inset: 4% 0 4% 38%;
   background: var(--color-text-primary);
-  opacity: 0.055;
-  mask: url("../../assets/workos-routing-grid.svg") center / 700px auto
-    no-repeat;
+  opacity: 0.09;
+  mask: url("../../assets/workos-routing-grid.svg") center / 900px auto no-repeat;
   pointer-events: none;
 }
-[data-surface="cereri-registry"] .page-header__copy {
-  grid-area: copy;
-  padding: 0;
-  box-shadow: none;
+[data-surface="cereri-registry"] .page-header__copy { grid-area: copy; max-width: 640px; padding: 0 0 16px; border-bottom: 1px solid var(--color-border); box-shadow: none; }
+[data-surface="cereri-registry"] .page-header__eyebrow { margin: 0 0 14px; color: var(--color-text-secondary); font: 400 11px var(--font-mono); letter-spacing: 0.19em; }
+[data-surface="cereri-registry"] .page-header__title { color: var(--requests-display-ink); font-family: var(--font-brand); font-size: clamp(36px, 4.2vw, 78px); line-height: 1.06; font-weight: 600; letter-spacing: -0.055em; }
+[data-surface="cereri-registry"] .page-header__aside { grid-area: aside; width: 100%; align-self: center; }
+[data-surface="cereri-registry"] .page-header__action { width: 100%; }
+[data-surface="cereri-registry"] .page-header__instrument { grid-area: instrument; min-width: 0; }
+.requests-instrument { display: flex; align-items: stretch; gap: 20px; }
+.requests-instrument__metric { display: flex; align-items: center; gap: 16px; min-height: 58px; padding: 8px 18px; border: 1px solid transparent; background: transparent; color: var(--color-text-primary); text-align: left; cursor: pointer; }
+.requests-instrument__metric:first-child { padding-left: 0; }
+.requests-instrument__metric + .requests-instrument__metric { border-left-color: var(--color-border-strong); }
+.requests-instrument__metric:hover { background: var(--color-surface-raised); }
+.requests-instrument__metric[aria-pressed="true"] { border-bottom-color: var(--color-text-secondary); }
+.requests-instrument__metric--attention[data-attention="true"] { color: var(--requests-amber); }
+.requests-instrument__metric--attention[aria-pressed="true"] { border-bottom-color: var(--requests-amber); }
+.requests-instrument__metric-value { font: 400 44px/1 var(--font-mono); letter-spacing: -0.06em; }
+.requests-instrument__metric-label { max-width: 90px; font: 500 13px/1.4 var(--font-sans); }
+.requests-intake { display: flex; align-items: center; justify-content: center; gap: 24px; width: 100%; }
+.requests-intake__device { position: relative; width: min(100%, 760px); min-width: 0; aspect-ratio: 3.77; }
+.requests-intake__device > img { position: absolute; top: -32%; display: block; width: 100%; height: auto; }
+.requests-intake__sheet { position: absolute; left: 13%; right: 13%; top: 39%; bottom: 9%; display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 10px 10px 0; color: #252119; text-decoration: none; overflow: hidden; }
+.requests-intake__meta { display: flex; justify-content: space-between; gap: 12px; font: 400 11px/1.25 var(--font-mono); }
+.requests-intake__sheet strong { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font: 600 clamp(13px, 1vw, 18px)/1.25 var(--font-sans); }
+.requests-intake__sheet:hover { text-decoration: underline; text-underline-offset: 3px; }
+.requests-intake__sheet:focus-visible { outline: 2px solid #252119; outline-offset: -2px; }
+.requests-intake__sheet--idle { align-items: center; font: 400 12px var(--font-mono); }
+.requests-intake__label { color: var(--color-text-secondary); font: 400 10px/1.8 var(--font-mono); letter-spacing: 0.12em; }
+.requests-new { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 48px; padding: 0 22px; border: 1px solid var(--shell-signal); background: var(--shell-signal); color: var(--shell-button-ink); font: 600 14px var(--font-sans); text-decoration: none; white-space: nowrap; }
+.requests-new > svg { flex: 0 0 auto; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; }
+.requests-new:hover { background: var(--shell-signal-strong); border-color: var(--shell-signal-strong); }
+[data-surface="cereri-registry"] > .page-region { padding-top: 0; background: transparent; }
+@media (prefers-reduced-motion: no-preference) {
+  .requests-intake__device > img { animation: requests-receipt-reveal 480ms ease-out both; }
+  .requests-intake__sheet { animation: requests-receipt-ink 180ms 300ms ease-out both; }
 }
-[data-surface="cereri-registry"] .page-header__eyebrow {
-  margin: 0 0 10px;
-  color: var(--color-text-secondary);
-  font-size: 11px;
-  letter-spacing: 0.14em;
-}
-[data-surface="cereri-registry"] .page-header__title {
-  font-family: var(--font-brand);
-  font-size: clamp(30px, 2.3vw, 42px);
-  line-height: 1.15;
-  font-weight: 550;
-  letter-spacing: -0.045em;
-}
-[data-surface="cereri-registry"] .page-header__aside {
-  grid-area: aside;
-  align-self: center;
-}
-[data-surface="cereri-registry"] .page-header__instrument {
-  grid-area: instrument;
-  min-width: 0;
-}
-.requests-instrument {
-  display: flex;
-  align-items: stretch;
-  gap: 12px;
-}
-.requests-instrument__metric {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-height: 72px;
-  padding: 10px 20px;
-  border: 1px solid transparent;
-  border-bottom-color: var(--color-border);
-  background: transparent;
-  color: var(--color-text-primary);
-  text-align: left;
-  cursor: pointer;
-}
-.requests-instrument__metric:hover {
-  background: var(--color-surface-raised);
-}
-.requests-instrument__metric[aria-pressed="true"] {
-  border-bottom-color: var(--color-text-primary);
-  background: color-mix(in srgb, var(--color-surface-raised) 60%, transparent);
-}
-.requests-instrument__metric--attention[data-attention="true"] {
-  color: var(--requests-amber);
-}
-.requests-instrument__metric--attention[aria-pressed="true"] {
-  border-bottom-color: var(--requests-amber);
-}
-.requests-instrument__metric-value {
-  font: 400 36px/1 var(--font-mono);
-  letter-spacing: -0.06em;
-}
-.requests-instrument__metric-label {
-  max-width: 90px;
-  font: 500 13px/1.4 var(--font-sans);
-}
-.requests-new {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  min-height: 48px;
-  padding: 0 22px;
-  border: 1px solid var(--shell-signal);
-  background: var(--shell-signal);
-  color: var(--shell-button-ink);
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-}
-.requests-new > svg {
-  flex: 0 0 auto;
-  width: 20px;
-  height: 20px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.5;
-}
-.requests-new:hover {
-  background: var(--shell-signal-strong);
-  border-color: var(--shell-signal-strong);
-}
-[data-surface="cereri-registry"] > .page-region {
-  padding-top: 0;
-  background: transparent;
-}
+@keyframes requests-receipt-reveal { from { clip-path: inset(0 0 27% 0); } to { clip-path: inset(0); } }
+@keyframes requests-receipt-ink { from { opacity: 0; } to { opacity: 1; } }
 @media (max-width: 1439px) {
-  [data-surface="cereri-registry"] > .page-header {
-    gap: 20px;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    min-height: 128px;
-  }
-  .requests-instrument__metric {
-    padding-inline: 12px;
-    gap: 10px;
-  }
-  .requests-instrument__metric-value {
-    font-size: 30px;
-  }
+  div[data-surface="cereri-registry"] > .page-header { min-height: 230px; gap: 16px 32px; padding-block: 28px 24px; }
+  .requests-intake { gap: 12px; }
+  .requests-intake__label { display: none; }
+  .requests-intake__sheet { gap: 8px; }
+  .requests-intake__meta { font-size: 9px; }
 }
 @media (max-width: 1151px) {
-  [data-surface="cereri-registry"] > .page-header {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: "copy aside" "instrument instrument";
-    gap: 18px;
-    padding-block: 26px 20px;
-  }
-  .requests-instrument {
-    gap: 16px;
-  }
-  .requests-instrument__metric {
-    min-height: 56px;
-  }
-  .requests-instrument__metric-label {
-    max-width: none;
-  }
+  div[data-surface="cereri-registry"] > .page-header { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 200px; gap: 12px 24px; }
+  .requests-instrument { gap: 10px; }
+  .requests-instrument__metric { min-height: 48px; padding-inline: 10px; gap: 10px; }
+  .requests-instrument__metric-value { font-size: 30px; }
+  .requests-instrument__metric-label { font-size: 12px; }
+  .requests-intake__sheet { gap: 5px; padding-top: 6px; }
+  .requests-intake__meta > span:last-child { display: none; }
 }
 @media (max-width: 767px) {
-  [data-surface="cereri-registry"] > .page-header {
-    gap: 18px 12px;
-    padding-block: 24px 16px;
-  }
-  [data-surface="cereri-registry"] .page-header__title {
-    font-size: 29px;
-    max-width: 240px;
-  }
-  [data-surface="cereri-registry"] .page-header__eyebrow {
-    font-size: 10px;
-  }
-  .requests-new {
-    width: 44px;
-    min-height: 44px;
-    padding: 0;
-    font-size: 0;
-    gap: 0;
-  }
-  .requests-new > svg {
-    width: 24px;
-    height: 24px;
-  }
-  .requests-instrument {
-    display: grid;
-    grid-template-columns: 1fr 1.4fr;
-    gap: 12px;
-  }
-  .requests-instrument__metric {
-    padding: 10px;
-  }
-  .requests-instrument__metric-value {
-    font-size: 28px;
-  }
-  .requests-instrument__metric-label {
-    font-size: 12px;
-  }
+  div[data-surface="cereri-registry"] > .page-header { grid-template-columns: minmax(0, 1fr); grid-template-areas: "copy" "instrument"; min-height: 0; padding-block: 26px 16px; gap: 16px; }
+  [data-surface="cereri-registry"] .page-header__title { font-size: 34px; }
+  [data-surface="cereri-registry"] .page-header__aside { display: none; }
+  div[data-surface="cereri-registry"] > .page-header::after { display: none; }
+  [data-surface="cereri-registry"] .page-header__copy { padding-bottom: 0; border: 0; }
+  .requests-instrument__metric { min-height: 48px; }
+  .requests-new { min-height: 44px; padding-inline: 16px; }
 }

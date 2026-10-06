@@ -15,6 +15,7 @@ import { presentRequestRegistryStatus } from "../presentation/requestListStatus"
 import { statusTone } from "../presentation/statusTone";
 import { presentRequestWorklistAction } from "../presentation/worklistAction";
 import { requestHref } from "../routing/appRoute";
+import intakeImage from "../assets/request-intake.webp";
 
 type RequestFilter = "all" | "needs-action";
 type RequestSort = "newest" | "oldest";
@@ -32,6 +33,12 @@ export function RequestsPage() {
   const [filter, setFilter] = useState<RequestFilter>("all");
   const [sort, setSort] = useState<RequestSort>("newest");
   const [compact, setCompact] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const latest = useMemo(() => {
+    const dated = items.filter((item) => timestamp(item.createdAt) !== null);
+    return dated.sort((a, b) => timestamp(b.createdAt)! - timestamp(a.createdAt)!)[0];
+  }, [items]);
   const attentionCount = useMemo(
     () => items.filter((item) => item.needsAttention).length,
     [items],
@@ -73,11 +80,20 @@ export function RequestsPage() {
     visible.length,
   );
   const hasFilter = query.trim().length > 0 || filter !== "all";
+  const pageCount = Math.max(1, Math.ceil(visible.length / pageSize));
+  // Persist a clamped page so a later refresh cannot jump back to an old page.
+  if (page > pageCount) setPage(pageCount);
+  const currentPage = Math.min(page, pageCount);
+  const offset = (currentPage - 1) * pageSize;
+  const pageRows = visible.slice(offset, offset + pageSize);
+  const pageNumbers = [...new Set([1, currentPage - 1, currentPage, currentPage + 1, pageCount])]
+    .filter((number) => number >= 1 && number <= pageCount).sort((a, b) => a - b);
   const count = (value: number) =>
     requests.status === "success" ? String(value).padStart(2, "0") : "—";
   function resetFilters() {
     setQuery("");
     setFilter("all");
+    setPage(1);
   }
 
   return (
@@ -89,12 +105,26 @@ export function RequestsPage() {
       eyebrow="Registru comercial"
       title="Cereri de ofertă"
       action={
-        <a className="requests-new" href="/clienti">
-          <svg aria-hidden="true" viewBox="0 0 24 24">
-            <path d="M12 5v14M5 12h14" />
-          </svg>{" "}
-          Cerere nouă
-        </a>
+        <div className="requests-intake" aria-label="Registru de intrare">
+          <div className="requests-intake__device">
+            <img src={intakeImage} alt="" width="1800" height="430" />
+            {requests.status === "success" && latest ? (
+              <a className="requests-intake__sheet" href={requestHref(latest.requestId)}
+                aria-label={`Ultima intrare: ${latest.title || latest.reference}`}>
+                <span className="requests-intake__meta">
+                  <span>{latest.reference}</span>
+                  <span>{formatTimestamp(latest.createdAt)?.split(",")[0]}</span>
+                </span>
+                <strong>{latest.title || latest.reference}</strong>
+              </a>
+            ) : (
+              <span className="requests-intake__sheet requests-intake__sheet--idle">
+                Registru de intrare
+              </span>
+            )}
+          </div>
+          <span className="requests-intake__label" aria-hidden="true">WORKOS<br />REQUEST<br />INTAKE</span>
+        </div>
       }
       instrument={
         <div
@@ -106,7 +136,7 @@ export function RequestsPage() {
             type="button"
             className="requests-instrument__metric"
             aria-pressed={filter === "all"}
-            onClick={() => setFilter("all")}
+            onClick={() => { setFilter("all"); setPage(1); }}
           >
             <strong className="requests-instrument__metric-value">
               {count(items.length)}
@@ -118,7 +148,7 @@ export function RequestsPage() {
             className="requests-instrument__metric requests-instrument__metric--attention"
             data-attention={attentionCount > 0}
             aria-pressed={filter === "needs-action"}
-            onClick={() => setFilter("needs-action")}
+            onClick={() => { setFilter("needs-action"); setPage(1); }}
           >
             <strong className="requests-instrument__metric-value">
               {count(attentionCount)}
@@ -149,7 +179,7 @@ export function RequestsPage() {
               type="search"
               placeholder="Caută client, referință sau lucrare"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => { setQuery(event.target.value); setPage(1); }}
             />
           </div>
           <div className="requests-toolbar__controls">
@@ -158,7 +188,7 @@ export function RequestsPage() {
               <select
                 id="cereri-ordine"
                 value={sort}
-                onChange={(event) => setSort(event.target.value as RequestSort)}
+                onChange={(event) => { setSort(event.target.value as RequestSort); setPage(1); }}
               >
                 <option value="newest">Cele mai noi</option>
                 <option value="oldest">Cele mai vechi</option>
@@ -176,13 +206,17 @@ export function RequestsPage() {
               </svg>
               <span>{compact ? "Compact" : "Confort"}</span>
             </button>
+            <a className="requests-new" href="/clienti">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+              Cerere nouă
+            </a>
           </div>
         </div>
-        <div className="requests-register__strip">
+        <div className={hasFilter || requests.status !== "success" || items.length === 0 ? "requests-register__strip" : "u-visually-hidden"}>
           <h2>
             {filter === "needs-action" ? "Necesită acțiune" : "Lista de cereri"}
           </h2>
-          <span className="requests-result" role="status">
+          <span className="requests-result" role={visible.length === 0 || requests.status !== "success" ? "status" : undefined}>
             {requests.status === "success"
               ? `${visible.length} din ${items.length}`
               : "Se citesc cererile"}
@@ -281,7 +315,7 @@ export function RequestsPage() {
                         ))}
                       </tr>
                     ))
-                  : visible.map(({ item, registry }) => {
+                  : pageRows.map(({ item, registry }) => {
                       const action = presentRequestWorklistAction(item);
                       return (
                         <tr
@@ -342,7 +376,7 @@ export function RequestsPage() {
                               href={action.actionHref}
                             >
                               {action.actionLabel}
-                              <span aria-hidden="true">↗</span>
+                              <span aria-hidden="true">→</span>
                             </a>
                           </td>
                         </tr>
@@ -351,6 +385,31 @@ export function RequestsPage() {
               </tbody>
             </table>
           </div>
+        )}
+        {requests.status === "success" && visible.length > 0 && (
+          <nav className="requests-pagination" aria-label="Paginare cereri">
+            <span className="requests-pagination__range" role="status">
+              {offset + 1}–{Math.min(offset + pageSize, visible.length)} din {visible.length} cereri
+            </span>
+            <label className="requests-pagination__size" htmlFor="cereri-pe-pagina">
+              Pe pagină
+              <select id="cereri-pe-pagina" value={pageSize}
+                onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}>
+                <option value={10}>10</option><option value={20}>20</option><option value={50}>50</option>
+              </select>
+            </label>
+            <div className="requests-pagination__pages">
+              <button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Anterior</button>
+              {pageNumbers.map((number, index) => (
+                <span className="requests-pagination__step" key={number}>
+                  {index > 0 && number - pageNumbers[index - 1] > 1 && <span aria-hidden="true">…</span>}
+                  <button type="button" aria-label={`Pagina ${number}`} aria-current={number === currentPage ? "page" : undefined}
+                    onClick={() => setPage(number)}>{number}</button>
+                </span>
+              ))}
+              <button type="button" disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)}>Următor</button>
+            </div>
+          </nav>
         )}
       </section>
     </SlicePage>
