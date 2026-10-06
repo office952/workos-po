@@ -9784,14 +9784,14 @@ button.context-rail__item:focus-visible {
    The state remains inactive, but its engineering labels stay readable. */
 @media (min-width: 1025px) {
   .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__header {
-    opacity: 0.68 !important;
+    opacity: 0.85 !important;
     filter: none !important;
   }
 
   .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__group,
   .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__dimmer,
   .auth-gate[data-scene="day"] .sign-demo[data-power="off"] .sign-controller__rgb {
-    opacity: 0.76 !important;
+    opacity: 1 !important;
     filter: none !important;
   }
 
