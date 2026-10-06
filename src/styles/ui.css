@@ -1,4 +1,4 @@
-.skip-link {
+﻿.skip-link {
   position: absolute;
   left: var(--page-gutter);
   top: calc(var(--shell-height) + var(--space-8));
@@ -2334,7 +2334,7 @@ button.context-rail__item:focus-visible {
   border-left-color: var(--color-selection-edge);
 }
 
-/* Cereri V1 — scoped presentation surfaces */
+/* Cereri V1 â€” scoped presentation surfaces */
 
 [data-surface="cereri-registry"] > .page-header,
 [data-surface="cereri-detail"] > .page-header {
@@ -2532,7 +2532,7 @@ button.context-rail__item:focus-visible {
 }
 
 
-/* WorkOS Login — signage-production brand demo */
+/* WorkOS Login â€” signage-production brand demo */
 
 .auth-gate {
   --login-scene-canvas: #f7f6f3;
@@ -6722,6 +6722,7 @@ button.context-rail__item:focus-visible {
 .auth-workbench-v3__letter--6 { animation: wb3-slot-6 54s linear infinite; }
 
 .auth-workbench-v3__object {
+  transform-box: view-box;
   transform-origin: 274px 329px;
   animation: wb3-inspect 9s var(--ease-work) infinite;
 }
@@ -7702,21 +7703,6 @@ button.context-rail__item:focus-visible {
   }
 }
 
-/* Give every glyph ~14% more breathing room while preserving the validated center.
-   Scale lives inside the inspection animation so rotation and scale never fight over transform. */
-@keyframes wb3-inspect {
-  0%, 68% { transform: scale(0.86) rotate(0deg); }
-  73% { transform: scale(0.86) rotate(-1.8deg); }
-  77% { transform: scale(0.86) rotate(-1.8deg); }
-  80% { transform: scale(0.86) rotate(0.65deg); }
-  83% { transform: scale(0.86) rotate(0.65deg); }
-  86%, 100% { transform: scale(0.86) rotate(0deg); }
-}
-
-.auth-workbench-v3__object {
-  transform-box: view-box;
-  transform-origin: 274px 329px;
-}
 
 /* Dark scene: increase instrument presence without making the AUTH bay decorative. */
 .auth-gate[data-scene="night"] .auth-workbench-v3__crop {
@@ -8453,45 +8439,11 @@ button.context-rail__item:focus-visible {
 }
 
 
-/* LOGIN V1 AUTH WORKBENCH STABLE WORD REFERENCE
-   Runtime proof showed that the single-glyph repair cycle dominated the bay.
-   Keep the full WorkOS word as the stable visual reference and demote the
-   animated glyph to a smaller inspection overlay. */
-.auth-workbench-v3__word-silhouette {
-  fill: rgb(var(--wb-face-repaired) / 42%);
-  font-family: var(--font-brand);
-  font-size: 104px;
-  font-weight: 700;
-  letter-spacing: -0.055em;
-  pointer-events: none;
-  user-select: none;
-}
-
-.auth-gate[data-scene="day"] .auth-workbench-v3__word-silhouette {
-  fill: rgb(var(--wb-face-repaired) / 48%);
-}
-
-.auth-workbench-v3__inspection-layer {
-  opacity: 0.54;
-  pointer-events: none;
-}
-
-.auth-workbench-v3__letter {
-  transform-box: view-box;
-  transform-origin: 274px 329px;
-  transform: scale(0.62);
-}
-
-.auth-tech__viewport[data-auth-active] .auth-workbench-v3__word-silhouette {
-  opacity: 0.24;
-}
-
-.auth-tech__viewport[data-auth-active] .auth-workbench-v3__inspection-layer {
-  opacity: 0.28;
-}
+/* Historical exclusive glyph cycle: one letter visible via wb3-slot-* (54s).
+   Do not restore a static WorkOS word behind scaled multi-glyph overlay. */
 
 
-/* LOGIN V1 HALO OPTICAL SYSTEM — COHERENT PASS
+/* LOGIN V1 HALO OPTICAL SYSTEM â€” COHERENT PASS
    Canonical browser implementation for the Login sign:
    tight contour -> near diffusion -> mid diffusion -> far wall spill.
    All four layers use the same WorkOS glyph geometry and never scale the sign. */
@@ -8572,3 +8524,999 @@ button.context-rail__item:focus-visible {
     transition: none !important;
   }
 }
+
+
+
+/* LOGIN RESPONSIVE COMPOSITION
+   Hybrid: desktop proportional scene scale + progressive detail reduction.
+   Family A >=1152 scaled 1440x816 instrument (fit width/height).
+   Family B 768-1151 product-first reflow, medium detail.
+   Family C <768 vertical reflow; low 480-767, essential <480.
+   Never reorder auth/workbench before the sign. */
+
+.auth-gate[data-layout] .sign-demo,
+.auth-gate[data-layout] .auth-tech,
+.auth-gate[data-access="societate"] .sign-demo,
+.auth-gate[data-access="angajat"] .sign-demo,
+.auth-gate[data-access="societate"] .auth-tech,
+.auth-gate[data-access="angajat"] .auth-tech {
+  order: 0 !important;
+}
+
+.sign-demo__product,
+.sign-demo__control-power {
+  min-width: 0;
+}
+
+.sign-demo__power-rail {
+  display: none;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.sign-demo__power-rail .sign-demo__infra-base,
+.sign-demo__power-rail .sign-demo__infra-live {
+  fill: none;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  stroke-width: 1.35;
+}
+
+.sign-demo__power-rail-path--horizontal {
+  display: none;
+}
+
+.sign-controller__rgb {
+  display: grid;
+}
+
+.sign-controller__rgb > div[role="radiogroup"] {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.42rem;
+}
+
+.sign-controller__rgb button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.4rem;
+  width: auto;
+  min-height: 2.25rem;
+  height: auto;
+  padding: 0.35rem 0.45rem;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--login-scene-canvas) 88%, transparent);
+}
+
+.sign-controller__rgb-chip {
+  width: 0.72rem;
+  height: 0.72rem;
+  flex: 0 0 auto;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 28%);
+}
+
+.sign-controller__rgb-name {
+  font-size: 0.62rem;
+  line-height: 1;
+  color: var(--login-scene-ink);
+}
+
+.sign-controller__rgb button[data-preset="red"] .sign-controller__rgb-chip { background: rgb(255 56 64); }
+.sign-controller__rgb button[data-preset="orange"] .sign-controller__rgb-chip { background: rgb(255 122 36); }
+.sign-controller__rgb button[data-preset="yellow"] .sign-controller__rgb-chip { background: rgb(242 201 48); }
+.sign-controller__rgb button[data-preset="green"] .sign-controller__rgb-chip { background: rgb(46 196 92); }
+.sign-controller__rgb button[data-preset="cyan"] .sign-controller__rgb-chip { background: rgb(45 224 238); }
+.sign-controller__rgb button[data-preset="blue"] .sign-controller__rgb-chip { background: rgb(40 112 255); }
+.sign-controller__rgb button[data-preset="violet"] .sign-controller__rgb-chip { background: rgb(148 74 255); }
+.sign-controller__rgb button[data-preset="magenta"] .sign-controller__rgb-chip { background: rgb(255 62 210); }
+
+.sign-controller__rgb button[aria-checked="true"] {
+  border-color: rgb(var(--sign-light-rgb) / 88%);
+  box-shadow: inset 0 -2px 0 rgb(var(--sign-light-rgb) / 78%);
+}
+
+.sign-controller__rgb button[data-preset="red"],
+.sign-controller__rgb button[data-preset="orange"],
+.sign-controller__rgb button[data-preset="yellow"],
+.sign-controller__rgb button[data-preset="green"],
+.sign-controller__rgb button[data-preset="cyan"],
+.sign-controller__rgb button[data-preset="blue"],
+.sign-controller__rgb button[data-preset="violet"],
+.sign-controller__rgb button[data-preset="magenta"] {
+  background: color-mix(in srgb, var(--login-scene-canvas) 88%, transparent);
+}
+
+/* Shared fluid resets â€” compact, phone, and fluid desktop */
+.auth-gate[data-scene-fit="reflow"] {
+  height: auto !important;
+  max-height: none !important;
+  min-height: 100dvh;
+  overflow: visible !important;
+  overscroll-behavior-y: contain;
+}
+
+.auth-gate[data-scene-fit="reflow"] .auth-gate__brand {
+  position: sticky;
+  top: 0;
+  z-index: 80;
+  height: auto !important;
+  min-height: 49px;
+  overflow: visible;
+  gap: 0.75rem;
+}
+
+.auth-gate[data-scene-fit="reflow"] .auth-gate__login-choices {
+  display: flex;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.auth-gate[data-scene-fit="reflow"] .auth-gate__login-choices .button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.auth-gate[data-scene-fit="reflow"] .auth-gate__main,
+.auth-gate[data-scene-fit="reflow"] .auth-gate__stage,
+.auth-gate[data-scene-fit="reflow"] .sign-demo,
+.auth-gate[data-scene-fit="reflow"] .auth-tech,
+.auth-gate[data-scene-fit="reflow"] .auth-tech__frame,
+.auth-gate[data-scene-fit="reflow"] .auth-tech__viewport,
+.auth-gate[data-scene-fit="reflow"] .auth-tech__panel {
+  overflow: visible !important;
+}
+
+.auth-gate[data-scene-fit="reflow"] .auth-gate__main {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0.85rem clamp(0.85rem, 2.2vw, 2.5rem) 1.35rem;
+  transform: none !important;
+  grid-template-columns: none !important;
+}
+
+.auth-gate[data-scene-fit="reflow"] .auth-gate__stage {
+  position: relative;
+  display: grid;
+  gap: clamp(1rem, 2.4vh, 1.75rem);
+  width: 100%;
+  max-width: 90rem;
+  margin: 0 auto;
+  transform: none !important;
+}
+
+.auth-gate[data-scene-fit="reflow"] .auth-gate__footer {
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  height: auto !important;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-demo,
+.auth-gate[data-scene-fit="reflow"] .auth-tech {
+  position: relative !important;
+  inset: auto !important;
+  left: auto !important;
+  top: auto !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-width: none;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-demo {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-demo__infrastructure--desktop,
+.auth-gate[data-scene-fit="reflow"] .sign-demo__infrastructure {
+  display: none !important;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-demo__power-rail {
+  display: block;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-demo__kicker,
+.auth-gate[data-scene-fit="reflow"] .sign-demo__word,
+.auth-gate[data-scene-fit="reflow"] .sign-demo__lead,
+.auth-gate[data-scene-fit="reflow"] .sign-controller,
+.auth-gate[data-scene-fit="reflow"] .sign-power-panel,
+.auth-gate[data-scene-fit="reflow"] .sign-demo__stage,
+.auth-gate[data-scene-fit="reflow"] .sign-demo__assembly,
+.auth-gate[data-scene-fit="reflow"] .sign-demo[data-source="rgb"] .sign-controller {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  width: min(100%, 38rem) !important;
+  height: auto !important;
+  max-width: 38rem;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-demo__word {
+  overflow: visible;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-demo__word > span {
+  width: auto !important;
+  font-size: clamp(3.6rem, 5.8vw, 5.4rem) !important;
+  line-height: 0.92 !important;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-demo__stage,
+.auth-gate[data-scene-fit="reflow"] .sign-demo__assembly {
+  min-height: 0 !important;
+  padding: 0;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-demo__lead {
+  margin: 0.65rem 0 0;
+  max-width: min(34rem, 100%);
+  overflow: visible;
+  white-space: normal;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-demo__control-power {
+  display: grid;
+  gap: 0;
+  width: min(100%, 38rem);
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-demo__power-rail {
+  width: 2.5rem;
+  height: 2.75rem;
+  margin: 0.15rem 0 0.15rem 1.6rem;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-demo__power-rail-path--vertical {
+  display: block;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-controller,
+.auth-gate[data-scene-fit="reflow"] .sign-demo[data-source="rgb"] .sign-controller {
+  display: grid !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  grid-template-columns: minmax(0, 1.2fr) minmax(9rem, 0.8fr);
+  grid-template-areas:
+    "header header"
+    "mode source"
+    "dimmer source"
+    "rgb rgb";
+  padding: 0.75rem 0.85rem 0.7rem;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-controller > *,
+.auth-gate[data-scene-fit="reflow"] .sign-controller__group--mode,
+.auth-gate[data-scene-fit="reflow"] .sign-controller__group--source,
+.auth-gate[data-scene-fit="reflow"] .sign-controller__dimmer,
+.auth-gate[data-scene-fit="reflow"] .sign-controller__header,
+.auth-gate[data-scene-fit="reflow"] .sign-controller__rgb,
+.auth-gate[data-scene-fit="reflow"] .sign-controller__channel {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  width: auto !important;
+  height: auto !important;
+  inset: auto !important;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-controller__rgb {
+  display: grid !important;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-controller__rgb legend {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-controller__rgb > div[role="radiogroup"] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-controller__segmented,
+.auth-gate[data-scene-fit="reflow"] .sign-controller__source {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-controller input[type="range"] {
+  position: static !important;
+  width: 100% !important;
+  left: auto !important;
+  top: auto !important;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-power-panel {
+  width: min(100%, 20rem) !important;
+  height: auto !important;
+  margin: 0;
+  padding: 0.7rem 0.8rem 0.65rem !important;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-power-panel__copy,
+.auth-gate[data-scene-fit="reflow"] .sign-power-panel__body,
+.auth-gate[data-scene-fit="reflow"] .sign-power-panel__psu,
+.auth-gate[data-scene-fit="reflow"] .sign-power-panel__ready,
+.auth-gate[data-scene-fit="reflow"] .sign-controller__power-title,
+.auth-gate[data-scene-fit="reflow"] .sign-controller__power-state {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
+  width: auto !important;
+  height: auto !important;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-power-panel__copy {
+  display: grid;
+  gap: 0.15rem;
+  margin-bottom: 0.45rem;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-controller__power-title {
+  font-size: 0.66rem !important;
+  line-height: 1.2 !important;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-controller__power-state {
+  font-size: 0.58rem !important;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-power-panel__body {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-power-panel__psu {
+  display: grid !important;
+  min-width: 5.5rem;
+  padding: 0.45rem 0.5rem;
+  font-size: 0.5rem;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-power-panel__psu > span,
+.auth-gate[data-scene-fit="reflow"] .sign-power-panel__psu small {
+  position: static !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: auto !important;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-power-toggle {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+}
+
+.auth-gate[data-scene-fit="reflow"] .sign-demo__power-rail {
+  width: 3rem;
+  height: 3.25rem;
+  margin: 0.2rem 0 0.25rem 2.1rem;
+}
+
+.auth-gate[data-scene-fit="reflow"] .auth-tech {
+  padding: 0;
+  border-left: 0;
+}
+
+.auth-gate[data-scene-fit="reflow"] .auth-tech__frame {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, auto) auto;
+}
+
+.auth-gate[data-scene-fit="reflow"] .auth-tech__viewport {
+  position: relative !important;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  gap: 0.85rem;
+}
+
+.auth-gate[data-scene-fit="reflow"] .auth-tech__workbench,
+.auth-gate[data-scene-fit="reflow"] .auth-workbench-v3 {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  inset: auto !important;
+  width: min(100%, 22rem) !important;
+  max-width: 22rem;
+  height: auto !important;
+  aspect-ratio: 548 / 676;
+  margin: 0 auto;
+  opacity: 1;
+  transform: none;
+}
+
+.auth-gate[data-scene-fit="reflow"] .auth-workbench-v3__svg {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.auth-gate[data-scene-fit="reflow"] .auth-tech__bottom-meta,
+.auth-gate[data-scene-fit="reflow"] .auth-tech__bottom-left,
+.auth-gate[data-scene-fit="reflow"] .auth-tech__bottom-center,
+.auth-gate[data-scene-fit="reflow"] .auth-tech__bottom-right,
+.auth-gate[data-scene-fit="reflow"] .auth-tech__frame-label,
+.auth-gate[data-scene-fit="reflow"] .auth-tech__bay-label {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  right: auto !important;
+  width: auto !important;
+  height: auto !important;
+}
+
+.auth-gate[data-scene-fit="reflow"] .auth-tech__bottom-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.4rem 0.15rem 0;
+}
+
+/* FAMILY A — desktop proportional scene scale (>=1152) */
+.auth-gate[data-layout="desktop"][data-scene-fit="scaled"] {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+}
+
+.auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .auth-gate__brand {
+  position: relative;
+  z-index: 80;
+  flex-wrap: nowrap;
+  height: 49px !important;
+  min-height: 49px;
+  padding-inline: clamp(1rem, 2.4vw, 3.75rem) clamp(0.85rem, 2vw, 3.375rem);
+  overflow: visible;
+}
+
+.auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .auth-gate__login-choices {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .auth-gate__login-choices .button {
+  min-height: 34px;
+  padding-inline: clamp(0.55rem, 1vw, 1rem);
+  font-size: clamp(0.72rem, 0.9vw, 0.82rem);
+  white-space: nowrap;
+}
+
+.auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .auth-gate__main {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: calc(816px * var(--login-stage-scale, 1)) !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+  transform: none !important;
+}
+
+.auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .auth-gate__stage {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1440px;
+  height: 816px;
+  margin: 0;
+  transform: translateX(-50%) scale(var(--login-stage-scale, 1));
+  transform-origin: top center;
+}
+
+.auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .auth-gate__footer {
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+}
+
+.auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .sign-demo__power-rail {
+  display: none !important;
+}
+
+.auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .sign-demo__infrastructure--desktop,
+.auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .sign-demo__infrastructure {
+  display: block;
+}
+
+.auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .sign-demo[data-source="rgb"] .sign-controller {
+  height: 186px;
+}
+
+.auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .sign-controller__rgb {
+  display: block !important;
+  position: absolute;
+  left: 18px;
+  top: 124px;
+  width: 516px;
+  z-index: 2;
+}
+
+.auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .sign-controller__rgb legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .sign-controller__rgb > div[role="radiogroup"] {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .sign-controller__rgb button {
+  min-height: 28px;
+  height: 28px;
+  padding: 0;
+  justify-content: center;
+}
+
+.auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .sign-controller__rgb-name {
+  display: none;
+}
+
+.auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .sign-controller__rgb-chip {
+  width: 14px;
+  height: 14px;
+}
+
+.auth-gate[data-layout="desktop"][data-scene-fit="scaled"] .auth-tech__panel {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+/* FAMILY B — compact / tablet product-first */
+.auth-gate[data-layout="compact"] .auth-gate__stage {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "product"
+    "tech";
+  max-width: 58rem;
+}
+
+.auth-gate[data-layout="compact"] .sign-demo {
+  grid-area: product;
+}
+
+.auth-gate[data-layout="compact"] .auth-tech {
+  grid-area: tech;
+}
+
+.auth-gate[data-layout="compact"] .sign-demo__word > span {
+  font-size: clamp(3.4rem, 8vw, 4.6rem) !important;
+}
+
+.auth-gate[data-layout="compact"] .auth-tech__panel {
+  position: relative !important;
+  inset: auto !important;
+  width: min(100%, 24rem) !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0;
+  padding: 1rem 1.1rem 1.15rem;
+  overflow: visible !important;
+  scroll-margin-top: 7.5rem;
+}
+
+.auth-gate[data-layout="compact"] .auth-tech__viewport[data-auth-active] {
+  grid-template-rows: auto auto;
+}
+
+.auth-gate[data-layout="compact"] .auth-tech__viewport[data-auth-active] .auth-workbench-v3 {
+  max-width: 16rem;
+  opacity: 0.78;
+}
+
+@media (min-width: 834px) and (max-width: 1151px) {
+  .auth-gate[data-layout="compact"] .sign-demo__control-power {
+    grid-template-columns: minmax(0, 1.35fr) 2.4rem minmax(13rem, 0.9fr);
+    grid-template-areas: "controller rail psu";
+    align-items: stretch;
+    width: 100%;
+    max-width: none;
+  }
+
+  .auth-gate[data-layout="compact"] .sign-controller,
+  .auth-gate[data-layout="compact"] .sign-demo[data-source="rgb"] .sign-controller {
+    grid-area: controller;
+    width: 100% !important;
+    max-width: none;
+  }
+
+  .auth-gate[data-layout="compact"] .sign-demo__power-rail {
+    grid-area: rail;
+    width: 100%;
+    height: auto;
+    min-height: 4.5rem;
+    margin: 1.5rem 0 0;
+    align-self: stretch;
+  }
+
+  .auth-gate[data-layout="compact"] .sign-demo__power-rail-path--vertical {
+    display: none;
+  }
+
+  .auth-gate[data-layout="compact"] .sign-demo__power-rail-path--horizontal {
+    display: block;
+  }
+
+  .auth-gate[data-layout="compact"] .sign-power-panel {
+    grid-area: psu;
+    width: 100% !important;
+    max-width: none;
+    align-self: stretch;
+  }
+}
+
+@media (max-height: 700px) {
+  .auth-gate[data-layout="compact"] .sign-demo__lead {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* FAMILY C â€” phone */
+.auth-gate[data-layout="phone"] .auth-gate__brand {
+  flex-wrap: wrap;
+}
+
+.auth-gate[data-layout="phone"] .auth-gate__login-choices {
+  width: 100%;
+  justify-content: stretch;
+}
+
+.auth-gate[data-layout="phone"] .auth-gate__login-choices .button {
+  flex: 1 1 9rem;
+  min-height: 44px;
+}
+
+.auth-gate[data-layout="phone"] .auth-gate__stage {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "product"
+    "tech";
+  max-width: 28rem;
+}
+
+.auth-gate[data-layout="phone"] .sign-demo {
+  grid-area: product;
+}
+
+.auth-gate[data-layout="phone"] .auth-tech {
+  grid-area: tech;
+}
+
+.auth-gate[data-layout="phone"] .sign-demo__kicker,
+.auth-gate[data-layout="phone"] .sign-demo__word,
+.auth-gate[data-layout="phone"] .sign-demo__lead,
+.auth-gate[data-layout="phone"] .sign-controller,
+.auth-gate[data-layout="phone"] .sign-power-panel,
+.auth-gate[data-layout="phone"] .sign-demo__stage,
+.auth-gate[data-layout="phone"] .sign-demo__assembly {
+  width: 100% !important;
+  max-width: none;
+}
+
+.auth-gate[data-layout="phone"] .sign-demo__word > span {
+  font-size: clamp(3.15rem, 18vw, 4.1rem) !important;
+}
+
+.auth-gate[data-layout="phone"] .sign-controller,
+.auth-gate[data-layout="phone"] .sign-demo[data-source="rgb"] .sign-controller {
+  grid-template-columns: 1fr !important;
+  grid-template-areas:
+    "header"
+    "mode"
+    "dimmer"
+    "source"
+    "rgb" !important;
+  padding: 0.7rem 0.75rem 0.65rem;
+}
+
+.auth-gate[data-layout="phone"] .sign-controller__segmented,
+.auth-gate[data-layout="phone"] .sign-controller__source {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.auth-gate[data-layout="phone"] .sign-controller__segmented button,
+.auth-gate[data-layout="phone"] .sign-controller__source button {
+  min-height: 2.15rem;
+  font-size: 0.58rem;
+  padding-inline: 0.35rem;
+}
+
+.auth-gate[data-layout="phone"] .sign-controller__rgb > div[role="radiogroup"] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.auth-gate[data-layout="phone"] .sign-controller__rgb-name {
+  display: none;
+}
+
+.auth-gate[data-layout="phone"] .sign-demo__control-power {
+  width: 100%;
+}
+
+.auth-gate[data-layout="phone"] .sign-demo__power-rail {
+  height: 2.6rem;
+  margin-left: 1.1rem;
+}
+
+.auth-gate[data-layout="phone"] .sign-power-panel {
+  width: 100% !important;
+}
+
+.auth-gate[data-layout="phone"] .auth-tech__panel {
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0;
+  padding: 0.9rem 0.95rem 1rem;
+  overflow: visible !important;
+  scroll-margin-top: 7.5rem;
+}
+
+.auth-gate[data-layout="compact"] .auth-tech__role span,
+.auth-gate[data-layout="phone"] .auth-tech__role span {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.auth-gate[data-layout="compact"] .auth-tech__role strong,
+.auth-gate[data-layout="phone"] .auth-tech__role strong {
+  display: block;
+}
+
+.auth-gate[data-layout="phone"] .auth-tech__viewport[data-auth-active] .auth-workbench-v3 {
+  max-width: 14rem;
+  opacity: 0.72;
+}
+
+.auth-gate[data-layout="phone"] .auth-workbench-v3 {
+  max-width: 18rem;
+}
+
+.auth-gate[data-layout="phone"] .auth-gate__footer span:last-child {
+  display: none;
+}
+
+/* AUTH-ACTIVE: tablet/phone become a login panel, not a showcase */
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-gate__stage,
+.auth-gate[data-layout="phone"]:is([data-access="societate"], [data-access="angajat"]) .auth-gate__stage {
+  grid-template-areas:
+    "tech"
+    "product";
+  gap: 0.85rem;
+}
+
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-gate__stage {
+  justify-items: center;
+}
+
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo__control-power,
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo__lead,
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo__kicker,
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo__power-rail,
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__bay-label,
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__bottom-meta,
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__frame-label,
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-workbench-v3,
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__grid {
+  display: none !important;
+}
+
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__viewport,
+.auth-gate[data-layout="phone"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__viewport {
+  display: block;
+  min-height: 0;
+  place-items: unset;
+}
+
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding-inline: clamp(1.25rem, 4vw, 2.75rem);
+}
+
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__frame {
+  width: min(100%, 34rem) !important;
+  max-width: 34rem;
+  margin-inline: auto;
+}
+
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__panel {
+  width: 100% !important;
+  margin: 0;
+  padding: 1.35rem 1.5rem 1.45rem;
+}
+
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo {
+  opacity: 0.72;
+  max-width: 22rem;
+  margin-inline: auto;
+}
+
+.auth-gate[data-layout="compact"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo__word > span {
+  font-size: clamp(2.4rem, 6vw, 3.2rem) !important;
+}
+
+.auth-gate[data-layout="phone"]:is([data-access="societate"], [data-access="angajat"]) .sign-demo,
+.auth-gate[data-layout="phone"]:is([data-access="societate"], [data-access="angajat"]) .auth-workbench-v3,
+.auth-gate[data-layout="phone"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__bay-label,
+.auth-gate[data-layout="phone"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__bottom-meta,
+.auth-gate[data-layout="phone"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__frame-label,
+.auth-gate[data-layout="phone"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__grid,
+.auth-gate[data-layout="phone"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__roles {
+  display: none !important;
+}
+
+.auth-gate[data-layout="phone"]:is([data-access="societate"], [data-access="angajat"]) .auth-tech__panel {
+  width: 100% !important;
+  margin: 0;
+  padding: 1rem 0.95rem 1.05rem;
+}
+
+@media (max-width: 360px) {
+  .auth-gate[data-layout="phone"] .sign-demo__word > span {
+    font-size: clamp(3rem, 17vw, 3.6rem) !important;
+  }
+
+  .auth-gate[data-layout="phone"] .sign-demo__power-rail {
+    height: 2.15rem;
+    margin-left: 0.85rem;
+  }
+}
+
+/* PROGRESSIVE DETAIL REDUCTION
+   full: keep everything
+   high: hide microcopy and extra ticks
+   medium: hide decorative chrome; keep all controls
+   low/essential: keep function only; drop unreadably small decoration */
+
+.auth-gate[data-detail="high"] .sign-demo__feed-notes,
+.auth-gate[data-detail="high"] .auth-tech__frame-label,
+.auth-gate[data-detail="high"] .auth-workbench-v3__ticks,
+.auth-gate[data-detail="high"] .auth-workbench-v3__orbit--secondary {
+  display: none !important;
+}
+
+.auth-gate[data-detail="medium"] .sign-demo__feed-notes,
+.auth-gate[data-detail="medium"] .sign-demo__scene-state,
+.auth-gate[data-detail="medium"] .sign-demo__kicker,
+.auth-gate[data-detail="medium"] .sign-controller__header,
+.auth-gate[data-detail="medium"] .sign-controller__spec,
+.auth-gate[data-detail="medium"] .sign-controller__channel,
+.auth-gate[data-detail="medium"] .sign-controller__title,
+.auth-gate[data-detail="medium"] .sign-controller__group legend,
+.auth-gate[data-detail="medium"] .sign-power-panel__psu small,
+.auth-gate[data-detail="medium"] .auth-tech__frame-label,
+.auth-gate[data-detail="medium"] .auth-tech__bottom-meta,
+.auth-gate[data-detail="medium"] .auth-workbench-v3__crop,
+.auth-gate[data-detail="medium"] .auth-workbench-v3__ticks,
+.auth-gate[data-detail="medium"] .auth-workbench-v3__orbit--secondary,
+.auth-gate[data-detail="medium"] .auth-workbench-v3__projection {
+  display: none !important;
+}
+
+.auth-gate[data-detail="medium"] .sign-controller,
+.auth-gate[data-detail="medium"] .sign-demo[data-source="rgb"] .sign-controller {
+  grid-template-areas:
+    "mode source"
+    "dimmer source"
+    "rgb rgb" !important;
+}
+
+.auth-gate[data-detail="low"] .sign-demo__feed-notes,
+.auth-gate[data-detail="low"] .sign-demo__scene-state,
+.auth-gate[data-detail="low"] .sign-demo__kicker,
+.auth-gate[data-detail="low"] .sign-demo__lead,
+.auth-gate[data-detail="low"] .sign-controller__header,
+.auth-gate[data-detail="low"] .sign-controller__spec,
+.auth-gate[data-detail="low"] .sign-controller__channel,
+.auth-gate[data-detail="low"] .sign-controller__title,
+.auth-gate[data-detail="low"] .sign-controller__group legend,
+.auth-gate[data-detail="low"] .sign-controller__rgb legend,
+.auth-gate[data-detail="low"] .sign-controller__rgb-name,
+.auth-gate[data-detail="low"] .sign-power-panel__psu,
+.auth-gate[data-detail="low"] .sign-controller__power-title,
+.auth-gate[data-detail="low"] .auth-tech__frame-label,
+.auth-gate[data-detail="low"] .auth-tech__bottom-meta,
+.auth-gate[data-detail="low"] .auth-tech__bay-label,
+.auth-gate[data-detail="low"] .auth-workbench-v3__ambient,
+.auth-gate[data-detail="low"] .auth-workbench-v3__projection,
+.auth-gate[data-detail="low"] .auth-workbench-v3__align-guide {
+  display: none !important;
+}
+
+.auth-gate[data-detail="essential"] .sign-demo__feed-notes,
+.auth-gate[data-detail="essential"] .sign-demo__scene-state,
+.auth-gate[data-detail="essential"] .sign-demo__kicker,
+.auth-gate[data-detail="essential"] .sign-demo__lead,
+.auth-gate[data-detail="essential"] .sign-controller__header,
+.auth-gate[data-detail="essential"] .sign-controller__spec,
+.auth-gate[data-detail="essential"] .sign-controller__channel,
+.auth-gate[data-detail="essential"] .sign-controller__title,
+.auth-gate[data-detail="essential"] .sign-controller__group legend,
+.auth-gate[data-detail="essential"] .sign-controller__rgb legend,
+.auth-gate[data-detail="essential"] .sign-controller__rgb-name,
+.auth-gate[data-detail="essential"] .sign-power-panel__psu,
+.auth-gate[data-detail="essential"] .sign-controller__power-title,
+.auth-gate[data-detail="essential"] .auth-tech__frame-label,
+.auth-gate[data-detail="essential"] .auth-tech__bottom-meta,
+.auth-gate[data-detail="essential"] .auth-tech__bay-label,
+.auth-gate[data-detail="essential"] .auth-tech__roles,
+.auth-gate[data-detail="essential"] .auth-workbench-v3__ambient,
+.auth-gate[data-detail="essential"] .auth-workbench-v3__projection,
+.auth-gate[data-detail="essential"] .auth-workbench-v3__align-guide,
+.auth-gate[data-detail="essential"] .auth-workbench-v3__handle-line,
+.auth-gate[data-detail="essential"] .auth-workbench-v3__handle-end {
+  display: none !important;
+}
+
+.auth-gate[data-detail="low"] .sign-controller,
+.auth-gate[data-detail="low"] .sign-demo[data-source="rgb"] .sign-controller,
+.auth-gate[data-detail="essential"] .sign-controller,
+.auth-gate[data-detail="essential"] .sign-demo[data-source="rgb"] .sign-controller {
+  grid-template-areas:
+    "mode"
+    "dimmer"
+    "source"
+    "rgb" !important;
+}
+
+.auth-gate[data-detail="low"] .sign-power-panel,
+.auth-gate[data-detail="essential"] .sign-power-panel {
+  width: 100% !important;
+  min-height: 0;
+  padding: 0.55rem 0.7rem !important;
+}
+
+.auth-gate[data-detail="low"] .sign-power-panel__body,
+.auth-gate[data-detail="essential"] .sign-power-panel__body {
+  grid-template-columns: auto auto;
+}
+
+.auth-gate[data-detail="essential"] .sign-demo__word > span {
+  font-size: clamp(3.1rem, 18vw, 3.7rem) !important;
+}
+
+

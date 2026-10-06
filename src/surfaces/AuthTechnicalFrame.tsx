@@ -53,10 +53,10 @@ export function AuthTechnicalFrame({
   const showWorkbench = kind === "unauthenticated" || kind === "session_expired";
   const bayState =
     activeAccess === "societate"
-      ? "AUTH BAY · SOCIETATE"
+      ? "Societate"
       : activeAccess === "angajat"
-        ? "AUTH BAY · ANGAJAT"
-        : "AUTH BAY · STANDBY";
+        ? "Angajat"
+        : "Pregătit";
 
   useEffect(() => {
     if (!showAccess) {
@@ -66,11 +66,21 @@ export function AuthTechnicalFrame({
     if (!node) {
       return;
     }
+    const compact =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(max-width: 1151px)").matches;
+    const email = node.querySelector<HTMLInputElement>("#cloud-email");
+    if (compact) {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      email?.focus({ preventScroll: true });
+      return;
+    }
     node.focus({ preventScroll: true });
+    email?.focus({ preventScroll: true });
   }, [showAccess, activeAccess, kind]);
 
   return (
-    <aside className="auth-tech" aria-label="Cadru tehnic Auth Frame">
+    <aside className="auth-tech" aria-label="Panou autentificare WorkOS">
       <div className="auth-tech__grid" aria-hidden="true" />
       <div className="auth-tech__frame">
         <div className="auth-tech__bay-label">
@@ -83,13 +93,14 @@ export function AuthTechnicalFrame({
           data-auth-active={showAccess ? "" : undefined}
         >
           <span className="auth-tech__frame-label" aria-hidden="true">
-            WorkOS · AUTH_FRAME · REV.04
+            WorkOS
           </span>
           {showWorkbench ? <AuthWorkbenchGraphic active={showAccess} /> : null}
 
           {showAccess && activeAccess ? (
             <section
               ref={panelRef}
+              id="auth-access-panel"
               className="auth-tech__panel"
               tabIndex={-1}
               aria-labelledby="auth-tech-title"
@@ -117,8 +128,8 @@ export function AuthTechnicalFrame({
         </div>
 
         <div className="auth-tech__bottom-meta">
-          <span className="auth-tech__bottom-left">VECTOR WORKBENCH · SIGNAGE PRODUCTION</span>
-          <span className="auth-tech__bottom-center">500 px · SCALA 1:1</span>
+          <span className="auth-tech__bottom-left">Semnalistică</span>
+          <span className="auth-tech__bottom-center">WorkOS</span>
           <span className="auth-tech__bottom-right">v4.1</span>
         </div>
       </div>
@@ -142,7 +153,7 @@ type WorkbenchGlyphSpec = {
   handle: "corner" | "vertical" | "diag" | "diag2";
 };
 
-const WORKOS_WORKBENCH_GLYPHS: readonly WorkbenchGlyphSpec[] = [
+export const WORKOS_WORKBENCH_GLYPHS: readonly WorkbenchGlyphSpec[] = [
   {
     glyph: "W",
     x: 131.48,
@@ -230,17 +241,8 @@ function AuthWorkbenchGraphic({ active }: { active: boolean }) {
           />
         </g>
 
-        <text
-          className="auth-workbench-v3__word-silhouette"
-          x="274"
-          y="348"
-          textAnchor="middle"
-        >
-          WorkOS
-        </text>
 
-        <g className="auth-workbench-v3__inspection-layer">
-          {WORKOS_WORKBENCH_GLYPHS.map((spec, index) => (
+        {WORKOS_WORKBENCH_GLYPHS.map((spec, index) => (
             <g
               key={spec.glyph}
               className={`auth-workbench-v3__letter auth-workbench-v3__letter--${index + 1}`}
@@ -342,8 +344,7 @@ function AuthWorkbenchGraphic({ active }: { active: boolean }) {
               ))}
             </g>
           </g>
-          ))}
-        </g>
+        ))}
 
         <g className="auth-workbench-v3__sweep">
           <path d="M274 329L378 329" />
@@ -517,13 +518,13 @@ function accessCopy(mode: Exclude<AuthAccessMode, "idle">): {
   switch (mode) {
     case "societate":
       return {
-        eyebrow: "WORKOS / AUTH FRAME",
+        eyebrow: "Autentificare",
         title: "Acces Societate",
         lead: "Autentifică-te pentru accesul la mediul de lucru al organizației.",
       };
     case "angajat":
       return {
-        eyebrow: "WORKOS / AUTH FRAME",
+        eyebrow: "Autentificare",
         title: "Acces Angajat",
         lead: "Autentifică-te cu contul de angajat pentru accesul la Atelier.",
       };

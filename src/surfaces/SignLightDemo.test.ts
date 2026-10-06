@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveSignLighting } from "./SignLightDemo";
+import { resolveSignLighting, SIGN_RGB_PRESETS } from "./SignLightDemo";
 
 describe("SignLightDemo lighting curves", () => {
   it("keeps all emission off at zero energy", () => {
@@ -85,5 +85,20 @@ describe("SignLightDemo lighting curves", () => {
   it("clamps intensity outside the 0 to 100 range", () => {
     expect(resolveSignLighting(-20, "halo", true).haloTight).toBe(0);
     expect(resolveSignLighting(140, "halo", true).haloTight).toBeCloseTo(0.98, 6);
+  });
+
+  it("exposes eight distinct RGB lighting presets", () => {
+    expect(SIGN_RGB_PRESETS.map((preset) => preset.id)).toEqual([
+      "red",
+      "orange",
+      "yellow",
+      "green",
+      "cyan",
+      "blue",
+      "violet",
+      "magenta",
+    ]);
+    const unique = new Set(SIGN_RGB_PRESETS.map((preset) => preset.rgb));
+    expect(unique.size).toBe(8);
   });
 });

@@ -9,15 +9,44 @@ import {
 
 export type SignLightingMode = "face" | "halo" | "combined";
 type SignLightSource = "cool" | "warm" | "rgb";
-type RgbPreset = "blue" | "red" | "magenta" | "cyan";
+export type SignRgbPreset =
+  | "red"
+  | "orange"
+  | "yellow"
+  | "green"
+  | "cyan"
+  | "blue"
+  | "violet"
+  | "magenta";
 
-const LIGHT_RGB: Record<Exclude<SignLightSource, "rgb"> | RgbPreset, string> = {
+export const SIGN_RGB_PRESETS: readonly {
+  id: SignRgbPreset;
+  label: string;
+  rgb: string;
+}[] = [
+  { id: "red", label: "Roșu", rgb: "255 56 64" },
+  { id: "orange", label: "Portocaliu", rgb: "255 122 36" },
+  { id: "yellow", label: "Galben", rgb: "242 201 48" },
+  { id: "green", label: "Verde", rgb: "46 196 92" },
+  { id: "cyan", label: "Cyan", rgb: "45 224 238" },
+  { id: "blue", label: "Albastru", rgb: "40 112 255" },
+  { id: "violet", label: "Violet", rgb: "148 74 255" },
+  { id: "magenta", label: "Magenta", rgb: "255 62 210" },
+];
+
+const RGB_PRESET_IDS: readonly SignRgbPreset[] = SIGN_RGB_PRESETS.map((preset) => preset.id);
+
+const LIGHT_RGB: Record<Exclude<SignLightSource, "rgb"> | SignRgbPreset, string> = {
   cool: "199 222 255",
   warm: "233 184 86",
-  blue: "40 112 255",
-  red: "255 64 72",
-  magenta: "255 62 210",
+  red: "255 56 64",
+  orange: "255 122 36",
+  yellow: "242 201 48",
+  green: "46 196 92",
   cyan: "45 224 238",
+  blue: "40 112 255",
+  violet: "148 74 255",
+  magenta: "255 62 210",
 };
 
 const FACE_RGB: Record<Exclude<SignLightSource, "rgb">, string> = {
@@ -32,7 +61,6 @@ const CORE_RGB: Record<Exclude<SignLightSource, "rgb">, string> = {
 
 const MODES: readonly SignLightingMode[] = ["face", "halo", "combined"];
 const SOURCES: readonly SignLightSource[] = ["cool", "warm", "rgb"];
-const RGB_PRESETS: readonly RgbPreset[] = ["blue", "red", "magenta", "cyan"];
 
 function clamp(value: number, min = 0, max = 1): number {
   return Math.min(max, Math.max(min, value));
@@ -135,7 +163,7 @@ export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDem
   const previousPower = useRef(power);
   const [mode, setMode] = useState<SignLightingMode>("face");
   const [source, setSource] = useState<SignLightSource>("warm");
-  const [rgbPreset, setRgbPreset] = useState<RgbPreset>("blue");
+  const [rgbPreset, setRgbPreset] = useState<SignRgbPreset>("blue");
 
   const activeColor = source === "rgb" ? rgbPreset : source;
   const faceEnabled = mode === "face" || mode === "combined";
@@ -203,7 +231,7 @@ export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDem
       </p>
 
       <svg
-        className="sign-demo__infrastructure"
+        className="sign-demo__infrastructure sign-demo__infrastructure--desktop"
         viewBox="0 0 720 816"
         preserveAspectRatio="none"
         aria-hidden="true"
@@ -243,6 +271,7 @@ export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDem
         </g>
       </svg>
 
+      <div className="sign-demo__product">
       <div className="sign-demo__stage">
         <p className="sign-demo__kicker">FABRICAȚIE · PRODUCȚIE · MANAGEMENT</p>
 
@@ -289,6 +318,7 @@ export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDem
         </p>
       </div>
 
+      <div className="sign-demo__control-power">
       <div className="sign-controller" aria-label="Panou control iluminare">
         <div className="sign-controller__header">
           <div>
@@ -415,25 +445,54 @@ export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDem
           <fieldset className="sign-controller__rgb" disabled={!power}>
             <legend>Culoare RGB</legend>
             <div role="radiogroup" aria-label="Culoare RGB">
-              {RGB_PRESETS.map((preset) => (
+              {SIGN_RGB_PRESETS.map((preset) => (
                 <button
-                  key={preset}
+                  key={preset.id}
                   type="button"
                   role="radio"
-                  aria-label={preset}
-                  aria-checked={rgbPreset === preset}
-                  data-preset={preset}
-                  data-radio-value={preset}
+                  aria-label={preset.label}
+                  aria-checked={rgbPreset === preset.id}
+                  data-preset={preset.id}
+                  data-radio-value={preset.id}
                   disabled={!power}
-                  onKeyDown={(event) => moveRadio(event, RGB_PRESETS, rgbPreset, setRgbPreset)}
-                  onClick={() => setRgbPreset(preset)}
-                />
+                  onKeyDown={(event) =>
+                    moveRadio(event, RGB_PRESET_IDS, rgbPreset, setRgbPreset)
+                  }
+                  onClick={() => setRgbPreset(preset.id)}
+                >
+                  <span className="sign-controller__rgb-chip" aria-hidden="true" />
+                  <span className="sign-controller__rgb-name">{preset.label}</span>
+                </button>
               ))}
             </div>
           </fieldset>
         ) : null}
 
       </div>
+
+      <svg
+        className="sign-demo__power-rail"
+        viewBox="0 0 80 64"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <g className="sign-demo__power-rail-path sign-demo__power-rail-path--vertical">
+          <path className="sign-demo__infra-base" d="M28 2 H52 M40 2 V62 M28 62 H52" />
+          <path
+            className="sign-demo__infra-live"
+            pathLength="1"
+            d="M28 2 H52 M40 2 V62 M28 62 H52"
+          />
+        </g>
+        <g className="sign-demo__power-rail-path sign-demo__power-rail-path--horizontal">
+          <path className="sign-demo__infra-base" d="M2 20 V44 M2 32 H78 M78 20 V44" />
+          <path
+            className="sign-demo__infra-live"
+            pathLength="1"
+            d="M2 20 V44 M2 32 H78 M78 20 V44"
+          />
+        </g>
+      </svg>
 
       <div className="sign-power-panel" aria-label="Panou alimentare 12V">
         <div className="sign-power-panel__copy">
@@ -472,6 +531,8 @@ export function SignLightDemo({ power, onPowerChange, accessMode }: SignLightDem
             <span>{power ? "DC READY" : "DC OFF"}</span>
           </div>
         </div>
+      </div>
+      </div>
       </div>
     </section>
   );
