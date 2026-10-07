@@ -160,8 +160,32 @@ export function quoteHref(productCode: string, quoteSnapshotId: string): string 
   return `/quotes/${encodeURIComponent(productCode)}/${encodeURIComponent(quoteSnapshotId)}`;
 }
 
-export function clientHref(customerId: string): string {
-  return `/clienti/${encodeURIComponent(customerId)}`;
+export const CLIENT_HUB_SECTIONS = [
+  "prezentare",
+  "lucrari",
+  "cereri",
+  "documente",
+  "fotografii",
+  "portofoliu",
+  "fisiere",
+] as const;
+
+export type ClientHubSection = (typeof CLIENT_HUB_SECTIONS)[number];
+
+export function parseClientHubSection(search: string): ClientHubSection {
+  const value = readSearchParam(search, "sectiune");
+  if (value && (CLIENT_HUB_SECTIONS as readonly string[]).includes(value)) {
+    return value as ClientHubSection;
+  }
+  return "prezentare";
+}
+
+export function clientHref(customerId: string, section?: ClientHubSection): string {
+  const path = `/clienti/${encodeURIComponent(customerId)}`;
+  if (!section || section === "prezentare") {
+    return path;
+  }
+  return `${path}?sectiune=${encodeURIComponent(section)}`;
 }
 
 export function requestHref(requestId: string): string {

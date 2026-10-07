@@ -8,6 +8,10 @@ export async function fetchCustomer(customerId: string): Promise<unknown> {
   return getJson(`/api/customers/${encodeURIComponent(customerId)}`);
 }
 
+export async function fetchCustomerWorkspace(customerId: string): Promise<unknown> {
+  return getJson(`/api/customers/${encodeURIComponent(customerId)}/workspace`);
+}
+
 export async function createCustomer(
   displayName: string,
   profile: { city?: string; notes?: string } = {},

@@ -3,6 +3,7 @@ export const resourceKeys = {
   seller: () => "seller",
   customers: () => "customers",
   customer: (customerId: string) => `customer:${customerId}`,
+  customerWorkspace: (customerId: string) => `customer-workspace:${customerId}`,
   requests: () => "requests",
   request: (requestId: string) => `request:${requestId}`,
   catalog: () => "catalog",

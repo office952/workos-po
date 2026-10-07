@@ -215,7 +215,51 @@ export type CustomerTransport = {
   customerId: string;
   displayName: string;
   status: string;
+  statusLabel: string;
   city: string | null;
+  cui: string | null;
+  contactName: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  notes: string | null;
+};
+
+export type CustomerRegistryItemTransport = CustomerTransport & {
+  openRequestCount: number;
+  quoteCount: number;
+  jobCount: number;
+  needsAttention: boolean;
+  attentionLabel: string | null;
+};
+
+export type CustomerRegistryTransport = {
+  summary: {
+    total: number;
+    active: number;
+    retired: number;
+    needsAttention: number;
+  };
+  customers: CustomerRegistryItemTransport[];
+};
+
+export type CustomerWorkspaceSummaryTransport = {
+  requestCount: number;
+  openRequestCount: number;
+  requestNeedsAction: number;
+  quoteCount: number;
+  quoteNeedsAction: number;
+  jobCount: number;
+  jobNeedsAction: number;
+};
+
+export type CustomerWorkspaceTransport = {
+  customer: CustomerTransport;
+  canCreateRequest: boolean;
+  summary: CustomerWorkspaceSummaryTransport;
+  requests: RequestListItemTransport[];
+  quotes: QuoteListItemTransport[];
+  jobs: JobListItemTransport[];
 };
 
 export type RequestListItemTransport = {

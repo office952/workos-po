@@ -77,4 +77,73 @@ describe("CatalogPage", () => {
     });
     expect(screen.getByText(/CRQ-105/)).toBeInTheDocument();
   });
+
+  it("does not keep request A when catalog is opened for customer B", async () => {
+    window.history.replaceState({}, "", "/catalog?customer=cus-B");
+    sessionStorage.setItem(
+      "workos-ui20.configurator.v1",
+      JSON.stringify({
+        drafts: {},
+        draftContext: { productCode: null, requestId: "req-A", customerId: "cus-A" },
+        customerId: "cus-A",
+        requestId: "req-A",
+        productCode: null,
+        customerLabel: "Client A",
+        requestLabel: "Cerere A",
+      }),
+    );
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.endsWith("/requests")) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => ({
+              overview: {
+                requests: [
+                  {
+                    requestId: "req-A",
+                    title: "Litere",
+                    customerId: "cus-A",
+                    customerDisplayName: "Client A",
+                    statusLabel: "Nouă",
+                    nextAction: "CHOOSE_PRODUCT",
+                    nextActionLabel: "Alege produs",
+                  },
+                ],
+              },
+            }),
+          });
+        }
+        return Promise.resolve({ ok: true, status: 200, json: async () => ({ products: [], offerings: [] }) });
+      }),
+    );
+
+    render(<CatalogPage />);
+    await waitFor(() => {
+      const stored = JSON.parse(sessionStorage.getItem("workos-ui20.configurator.v1") ?? "{}") as {
+        customerId: string | null;
+        requestId: string | null;
+      };
+      expect(stored.customerId).toBe("cus-B");
+      expect(stored.requestId).toBeNull();
+    });
+    expect(screen.queryByText("Client A")).not.toBeInTheDocument();
+    expect(screen.queryByText("Cerere A")).not.toBeInTheDocument();
+  });
 });

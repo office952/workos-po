@@ -1,0 +1,303 @@
+/* Clienți owns the commercial registry. Hub styles live in client-hub.css. */
+[data-surface="clients-registry"] {
+  --clients-action-width: 132px;
+  --clients-panel: color-mix(in srgb, var(--color-surface) 96%, var(--color-info));
+}
+
+.clients-register {
+  min-width: 0;
+  background: transparent;
+}
+
+.clients-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 0;
+}
+
+.clients-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(740px, 52%);
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  background: var(--clients-panel);
+}
+
+.clients-search:focus-within {
+  border-color: var(--color-focus-ring);
+  outline: 1px solid var(--color-focus-ring);
+}
+
+.clients-search svg {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.clients-search input {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: 400 14px var(--font-sans);
+}
+
+.clients-search input::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 1;
+}
+
+.clients-search input:focus-visible {
+  outline: 0;
+}
+
+.clients-register__strip {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0 12px;
+}
+
+.clients-register__strip h2 {
+  margin: 0;
+  font: 550 16px/1.3 var(--font-sans);
+}
+
+.clients-result {
+  color: var(--color-text-secondary);
+  font: 400 13px var(--font-mono);
+}
+
+.clients-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.clients-table th,
+.clients-table td {
+  height: 88px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.clients-table th {
+  height: 44px;
+  padding-block: 10px;
+  color: var(--color-text-secondary);
+  font: 500 12px/1.3 var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+.clients-table__identity {
+  width: 42%;
+}
+
+.clients-table__place {
+  width: 22%;
+}
+
+.clients-table__state {
+  width: 16%;
+}
+
+.clients-table__action {
+  width: calc(var(--clients-action-width) + 40px);
+  text-align: right;
+}
+
+.clients-table tbody tr:hover,
+.clients-table tbody tr:focus-within {
+  background: var(--color-surface-raised);
+}
+
+.clients-table tbody tr[data-selected="true"] {
+  background: var(--color-surface-raised);
+}
+
+.clients-table tbody tr[data-selected="true"] > td {
+  box-shadow: inset 0 -1px var(--shell-signal);
+}
+
+.clients-table tbody tr[data-attention="true"] > td:first-child {
+  box-shadow: inset 3px 0 var(--color-warning);
+}
+
+.clients-object {
+  display: grid;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.clients-object:hover .clients-object__title,
+.clients-object:focus-visible .clients-object__title {
+  color: var(--shell-signal);
+}
+
+.clients-object:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 4px;
+}
+
+.clients-object__title {
+  color: var(--color-text-primary);
+  font: 550 18px/1.35 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.clients-object__detail {
+  color: var(--color-text-secondary);
+  font: 400 12px/1.4 var(--font-sans);
+}
+
+.clients-place {
+  color: var(--color-text-primary);
+  font: 450 15px/1.5 var(--font-sans);
+}
+
+.clients-table .status {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.clients-next {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: var(--clients-action-width);
+  height: 44px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border-strong);
+  color: var(--shell-signal);
+  background: transparent;
+  font: 550 13px/1.3 var(--font-sans);
+  text-decoration: none;
+  text-align: left;
+}
+
+.clients-next:hover,
+.clients-next:focus-visible {
+  border-color: var(--shell-signal);
+  background: var(--shell-signal-soft);
+}
+
+.clients-next:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.clients-feedback {
+  padding: 40px 20px;
+}
+
+.clients-create {
+  display: grid;
+  gap: 12px;
+}
+
+.clients-instrument {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.clients-instrument__metric {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 6px 14px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.clients-instrument__metric + .clients-instrument__metric {
+  border-left-color: var(--color-border-strong);
+}
+
+.clients-instrument__metric:hover,
+.clients-instrument__metric:focus-visible {
+  background: var(--color-surface-raised);
+}
+
+.clients-instrument__metric:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.clients-instrument__metric[aria-pressed="true"] {
+  border-bottom-color: var(--color-text-secondary);
+}
+
+.clients-instrument__metric--attention[data-attention="true"] {
+  color: var(--color-warning);
+}
+
+.clients-instrument__metric-value {
+  font: 400 28px/1 var(--font-mono);
+  letter-spacing: -0.04em;
+}
+
+.clients-instrument__metric-label {
+  max-width: 90px;
+  font: 500 13px/1.4 var(--font-sans);
+}
+
+@media (max-width: 1151px) {
+  .clients-table__place {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  [data-surface="clients-registry"] {
+    --clients-action-width: 148px;
+  }
+
+  .clients-toolbar {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .clients-search {
+    width: 100%;
+  }
+
+  .clients-table th,
+  .clients-table td {
+    height: auto;
+    padding: 14px 12px;
+  }
+
+  .clients-object__title {
+    font-size: 16px;
+  }
+
+  .clients-table__action {
+    width: calc(var(--clients-action-width) + 24px);
+  }
+}

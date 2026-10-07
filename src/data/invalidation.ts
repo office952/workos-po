@@ -6,7 +6,12 @@ export function invalidateAfterCreateCustomer(): void {
 }
 
 export function invalidateAfterCreateRequest(customerId: string): void {
-  invalidateResources(resourceKeys.requests(), resourceKeys.customer(customerId));
+  invalidateResources(
+    resourceKeys.requests(),
+    resourceKeys.customer(customerId),
+    resourceKeys.customerWorkspace(customerId),
+    resourceKeys.customers(),
+  );
 }
 
 export function invalidateAfterRequestDetailChange(requestId: string): void {

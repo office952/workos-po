@@ -124,6 +124,7 @@ type CollectionBodyProps = {
   variant?: WorklistVariant;
   errorTitle: string;
   errorBody: string;
+  errorAction?: ReactNode;
   empty: ReactNode;
   filteredEmpty: ReactNode;
   footerLabel?: string;
@@ -140,6 +141,7 @@ export function CollectionBody({
   variant = "commercial",
   errorTitle,
   errorBody,
+  errorAction,
   empty,
   filteredEmpty,
   footerLabel,
@@ -156,7 +158,10 @@ export function CollectionBody({
     case "error":
       return (
         <div className="ui-panel__pad">
-          <ErrorState title={errorTitle}>{errorBody}</ErrorState>
+            <ErrorState title={errorTitle}>
+              {errorBody}
+              {errorAction}
+            </ErrorState>
         </div>
       );
     case "loading":

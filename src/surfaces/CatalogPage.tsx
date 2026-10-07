@@ -18,6 +18,7 @@ import { navigate } from "../routing/navigate";
 import {
   labelsMatchingContext,
   readConfiguratorSession,
+  resolveOwnedSpine,
   writeConfiguratorSession,
 } from "../session/configuratorSession";
 
@@ -27,10 +28,15 @@ const COLUMNS = ["Produs", "Familie", "Acțiune"] as const;
 export function CatalogPage() {
   const context = parseSpineContext(window.location.search);
   const stored = readConfiguratorSession();
-  const customerId = context.customerId ?? stored.customerId;
-  const requestId = context.requestId ?? stored.requestId;
   const catalog = useResource(resourceKeys.catalog(), loadCatalogProducts);
   const requests = useResource(resourceKeys.requests(), loadRequestList);
+  const owned = resolveOwnedSpine({
+    url: context,
+    stored,
+    requests: requests.status === "success" ? requests.data ?? [] : null,
+  });
+  const customerId = owned.customerId;
+  const requestId = owned.requestId;
   const products = useMemo(() => catalog.data ?? [], [catalog.data]);
   const contextRequest =
     (requests.data ?? []).find((item) => item.requestId === requestId) ?? null;

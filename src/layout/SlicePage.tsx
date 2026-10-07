@@ -52,7 +52,7 @@ type SlicePageProps = {
   workspace?: PageWorkspace;
   floorplan?: FloorplanId;
   /** Scoped presentation surface; does not invent a new workspace contract. */
-  surface?: "cereri-registry" | "cereri-detail";
+  surface?: "cereri-registry" | "cereri-detail" | "clients-registry" | "client-hub";
   children: ReactNode;
 };
 

@@ -1,12 +1,15 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  bindConfiguratorSessionToCustomer,
   labelsMatchingContext,
   lastQuoteOwnedByContext,
   ownedDraftsForContext,
   clearConfiguratorSession,
   readConfiguratorSession,
+  resolveOwnedSpine,
   writeConfiguratorSession,
   type ConfiguratorContext,
+  type ConfiguratorSession,
 } from "./configuratorSession";
 
 const LETTERS = "PRD-LETTERS-FRONTLIT-PLEXI-AL06";
@@ -143,5 +146,73 @@ describe("lastQuoteOwnedByContext", () => {
     expect(lastQuoteOwnedByContext(quote, context(ACM, "req-A", "cus-A"))).toEqual(quote);
     expect(lastQuoteOwnedByContext(quote, context(ACM, "req-B", "cus-B"))).toBeNull();
     expect(lastQuoteOwnedByContext(quote, context(LETTERS, "req-A", "cus-A"))).toBeNull();
+  });
+});
+
+const session = (
+  customerId: string | null,
+  requestId: string | null,
+): ConfiguratorSession => ({
+  drafts: { widthMm: "1200" },
+  draftContext: context(ACM, requestId, customerId),
+  customerId,
+  requestId,
+  productCode: ACM,
+  lastQuote: null,
+  customerLabel: customerId === "cus-A" ? "Client A" : "Client B",
+  requestLabel: requestId === "req-A" ? "Cerere A" : "Cerere B",
+});
+
+describe("bindConfiguratorSessionToCustomer", () => {
+  it("keeps the request when the same customer is opened again", () => {
+    const next = bindConfiguratorSessionToCustomer(session("cus-A", "req-A"), "cus-A", "Client A");
+    expect(next.requestId).toBe("req-A");
+    expect(next.requestLabel).toBe("Cerere A");
+    expect(next.drafts).toEqual({ widthMm: "1200" });
+  });
+
+  it("does not keep customer A request after opening customer B", () => {
+    const next = bindConfiguratorSessionToCustomer(session("cus-A", "req-A"), "cus-B", "Client B");
+    expect(next.customerId).toBe("cus-B");
+    expect(next.requestId).toBeNull();
+    expect(next.requestLabel).toBeNull();
+    expect(next.drafts).toEqual({ widthMm: "1200" });
+  });
+});
+
+describe("resolveOwnedSpine", () => {
+  const requests = [
+    { requestId: "req-A", customerId: "cus-A" },
+    { requestId: "req-B", customerId: "cus-B" },
+  ];
+
+  it("keeps a verified customer A request through catalog", () => {
+    expect(
+      resolveOwnedSpine({
+        url: { customerId: "cus-A", requestId: "req-A", productCode: null },
+        stored: session("cus-A", "req-A"),
+        requests,
+      }),
+    ).toEqual({ customerId: "cus-A", requestId: "req-A", productCode: null });
+  });
+
+  it("drops customer A request when catalog falls back to customer B", () => {
+    expect(
+      resolveOwnedSpine({
+        url: { customerId: "cus-B", requestId: null, productCode: null },
+        stored: session("cus-A", "req-A"),
+        requests,
+      }),
+    ).toEqual({ customerId: "cus-B", requestId: null, productCode: null });
+  });
+
+  it("does not pair a URL customer with another customer's stored request", () => {
+    expect(
+      resolveOwnedSpine({
+        url: { customerId: "cus-B", requestId: null, productCode: null },
+        stored: session("cus-A", "req-A"),
+        requests: null,
+      }),
+    ).toEqual({ customerId: "cus-B", requestId: null, productCode: null });
   });
 });

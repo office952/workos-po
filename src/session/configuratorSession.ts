@@ -178,6 +178,76 @@ export function labelsMatchingContext(
   };
 }
 
+export function bindConfiguratorSessionToCustomer(
+  stored: ConfiguratorSession,
+  customerId: string,
+  customerLabel: string | null,
+): ConfiguratorSession {
+  if (stored.customerId === customerId) {
+    return {
+      ...stored,
+      customerId,
+      customerLabel: customerLabel ?? stored.customerLabel ?? null,
+    };
+  }
+  return {
+    ...stored,
+    customerId,
+    customerLabel,
+    requestId: null,
+    requestLabel: null,
+  };
+}
+
+export type OwnedRequestRef = {
+  requestId: string;
+  customerId: string;
+};
+
+export function resolveOwnedSpine(input: {
+  url: SpineContext;
+  stored: Pick<ConfiguratorSession, "customerId" | "requestId">;
+  requests: readonly OwnedRequestRef[] | null;
+}): SpineContext {
+  const productCode = input.url.productCode;
+  const ownerOf = (requestId: string | null): string | null => {
+    if (!requestId || !input.requests) {
+      return null;
+    }
+    return input.requests.find((item) => item.requestId === requestId)?.customerId ?? null;
+  };
+
+  const urlCustomer = input.url.customerId;
+  const urlRequest = input.url.requestId;
+  if (urlRequest) {
+    const owner = ownerOf(urlRequest);
+    if (owner) {
+      if (urlCustomer && urlCustomer !== owner) {
+        return { customerId: urlCustomer, requestId: null, productCode };
+      }
+      return { customerId: urlCustomer ?? owner, requestId: urlRequest, productCode };
+    }
+    if (input.requests) {
+      return { customerId: urlCustomer ?? input.stored.customerId, requestId: null, productCode };
+    }
+    const customerId = urlCustomer ?? input.stored.customerId;
+    const requestId =
+      !customerId || input.stored.customerId === customerId ? urlRequest : null;
+    return { customerId, requestId, productCode };
+  }
+
+  const customerId = urlCustomer ?? input.stored.customerId;
+  if (!customerId) {
+    return { customerId: null, requestId: null, productCode };
+  }
+  const storedRequest =
+    input.stored.customerId === customerId ? input.stored.requestId : null;
+  if (storedRequest && input.requests && ownerOf(storedRequest) !== customerId) {
+    return { customerId, requestId: null, productCode };
+  }
+  return { customerId, requestId: storedRequest, productCode };
+}
+
 export function writeConfiguratorSession(next: ConfiguratorSession): void {
   if (typeof sessionStorage === "undefined") {
     return;
