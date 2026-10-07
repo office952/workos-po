@@ -62,10 +62,8 @@ div[data-surface="cereri-registry"] > .page-header::after {
 [data-surface="cereri-registry"] > .page-region { padding-top: 0; background: transparent; }
 @media (prefers-reduced-motion: no-preference) {
   .requests-intake__device > img { animation: requests-receipt-reveal 480ms ease-out both; }
-  .requests-intake__sheet { animation: requests-receipt-ink 180ms 300ms ease-out both; }
 }
 @keyframes requests-receipt-reveal { from { clip-path: inset(0 0 27% 0); } to { clip-path: inset(0); } }
-@keyframes requests-receipt-ink { from { opacity: 0; } to { opacity: 1; } }
 @media (max-width: 1439px) {
   div[data-surface="cereri-registry"] > .page-header { min-height: 230px; gap: 16px 32px; padding-block: 28px 24px; }
   .requests-intake { grid-template-columns: minmax(0, 760px); gap: 12px; }

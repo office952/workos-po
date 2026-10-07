@@ -213,15 +213,6 @@ jobs:
               if (sheet.getBoundingClientRect().height < 40) throw new Error("Receipt text container has no usable height");
             });
             assert.equal(await page.getByRole("button", { name: "Următor" }).isDisabled(), true);
-            if (width === 1366 || width === 1024) {
-              console.log("INTAKE_GEOMETRY", JSON.stringify(await page.evaluate(() => {
-                const selectors = [".requests-intake__device", ".requests-intake__device img", ".requests-intake__sheet", ".requests-intake__meta", ".requests-intake__sheet strong"];
-                return { width: innerWidth, elements: selectors.map((selector) => {
-                  const el = document.querySelector(selector), rect = el.getBoundingClientRect(), css = getComputedStyle(el);
-                  return { selector, text: el.innerText, rect: rect.toJSON(), display: css.display, visibility: css.visibility, opacity: css.opacity, color: css.color, font: css.font, z: css.zIndex, hit: document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)?.className };
-                }) };
-              })));
-            }
             assert.equal(await page.getByRole("button", { name: "Anterior" }).isDisabled(), true);
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Overflow at ${width}`);
             await page.screenshot({ path: `${out}/${name}.png`, fullPage: true });
