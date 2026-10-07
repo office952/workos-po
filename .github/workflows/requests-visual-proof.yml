@@ -200,6 +200,13 @@ jobs:
               await texture.decode();
               if (texture.naturalWidth < 1900) throw new Error("Surface texture is undersized");
             });
+            await page.locator(".requests-intake").evaluate(async (intake) => {
+              const animations = intake.getAnimations({ subtree: true })
+                .filter((animation) => Number.isFinite(animation.effect.getComputedTiming().iterations));
+              await Promise.all(animations.map((animation) => animation.finished.catch(() => {})));
+              const sheet = intake.querySelector(".requests-intake__sheet");
+              if (getComputedStyle(sheet).opacity !== "1") throw new Error("Receipt captured before its entrance completed");
+            });
             assert.equal(await page.getByRole("button", { name: "Următor" }).isDisabled(), true);
             assert.equal(await page.getByRole("button", { name: "Anterior" }).isDisabled(), true);
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Overflow at ${width}`);
