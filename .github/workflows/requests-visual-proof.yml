@@ -191,8 +191,6 @@ jobs:
             await page.getByRole("link", { name: /CER-E5D190D8/ }).waitFor();
             await page.evaluate(() => document.fonts.ready);
             if (width >= 768) await page.locator(".requests-intake img").evaluate((img) => img.decode());
-            if (width >= 768) await page.waitForFunction(() => performance.getEntriesByType("resource")
-              .some((entry) => entry.name.includes("request-intake-surface") && entry.encodedBodySize > 0));
             if (width >= 768) await page.evaluate(() => {
               const header = document.querySelector('[data-surface="cereri-registry"] > .page-header');
               const surface = getComputedStyle(header, "::after");
@@ -215,6 +213,8 @@ jobs:
             assert.equal(await page.getByRole("button", { name: "Anterior" }).isDisabled(), true);
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Overflow at ${width}`);
             await page.screenshot({ path: `${out}/${name}.png`, fullPage: true });
+            if (width >= 768) await page.waitForFunction(() => performance.getEntriesByType("resource")
+              .some((entry) => entry.name.includes("request-intake-surface") && entry.encodedBodySize > 0));
             const assets = await page.evaluate(() => performance.getEntriesByType("resource")
               .filter((entry) => entry.name.includes("request-intake") && !new URL(entry.name).searchParams.has("import"))
               .map((entry) => ({ url: entry.name, bytes: entry.encodedBodySize, transfer: entry.transferSize, duration: entry.duration })));
