@@ -208,6 +208,9 @@ jobs:
               await Promise.all(animations.map((animation) => animation.finished.catch(() => {})));
               const sheet = intake.querySelector(".requests-intake__sheet");
               if (getComputedStyle(sheet).opacity !== "1") throw new Error("Receipt captured before its entrance completed");
+              const device = intake.querySelector(".requests-intake__device").getBoundingClientRect();
+              if (Math.abs(device.width / device.height - 3.77) > 0.05) throw new Error("Intake aspect ratio collapsed in responsive layout");
+              if (sheet.getBoundingClientRect().height < 40) throw new Error("Receipt text container has no usable height");
             });
             assert.equal(await page.getByRole("button", { name: "Următor" }).isDisabled(), true);
             assert.equal(await page.getByRole("button", { name: "Anterior" }).isDisabled(), true);

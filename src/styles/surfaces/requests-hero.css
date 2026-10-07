@@ -46,7 +46,7 @@ div[data-surface="cereri-registry"] > .page-header::after {
 .requests-instrument__metric--attention[aria-pressed="true"] { border-bottom-color: var(--requests-amber); }
 .requests-instrument__metric-value { font: 400 44px/1 var(--font-mono); letter-spacing: -0.06em; }
 .requests-instrument__metric-label { max-width: 90px; font: 500 13px/1.4 var(--font-sans); }
-.requests-intake { display: flex; align-items: center; justify-content: center; gap: 24px; width: 100%; }
+.requests-intake { display: grid; grid-template-columns: minmax(0, 760px) max-content; align-items: center; justify-content: center; gap: 24px; width: 100%; }
 .requests-intake__device { position: relative; width: min(100%, 760px); min-width: 0; aspect-ratio: 3.77; }
 .requests-intake__device > img { position: absolute; z-index: 0; top: -32%; display: block; width: 100%; height: auto; }
 .requests-intake__sheet { position: absolute; z-index: 1; left: 13%; right: 13%; top: 39%; bottom: 9%; display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 10px 10px 0; color: #252119; text-decoration: none; overflow: hidden; }
@@ -68,7 +68,7 @@ div[data-surface="cereri-registry"] > .page-header::after {
 @keyframes requests-receipt-ink { from { opacity: 0; } to { opacity: 1; } }
 @media (max-width: 1439px) {
   div[data-surface="cereri-registry"] > .page-header { min-height: 230px; gap: 16px 32px; padding-block: 28px 24px; }
-  .requests-intake { gap: 12px; }
+  .requests-intake { grid-template-columns: minmax(0, 760px); gap: 12px; }
   .requests-intake__label { display: none; }
   .requests-intake__sheet { gap: 8px; }
   .requests-intake__meta { font-size: 9px; }
