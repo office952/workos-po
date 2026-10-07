@@ -21,9 +21,13 @@ div[data-surface="cereri-registry"] > .page-header::after {
   position: absolute;
   z-index: -1;
   inset: 0 calc(-1 * var(--page-gutter));
-  background: url("../../assets/request-intake-surface.webp") center / cover no-repeat;
   opacity: 0.52;
   pointer-events: none;
+}
+@media (min-width: 768px) {
+  div[data-surface="cereri-registry"] > .page-header::after {
+    background: url("../../assets/request-intake-surface.webp") center / cover no-repeat;
+  }
 }
 [data-resolved-theme="light"] div[data-surface="cereri-registry"] > .page-header::after {
   filter: invert(1) grayscale(1);

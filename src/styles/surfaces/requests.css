@@ -208,6 +208,14 @@
 .requests-table tbody tr:focus-within {
   background: var(--color-surface-raised);
 }
+.requests-table tbody tr[data-preview="true"] { cursor: pointer; }
+.requests-table tbody tr[data-selected="true"] { background: var(--color-surface-raised); }
+.requests-table tbody tr[data-selected="true"] > td {
+  box-shadow: inset 0 -1px var(--shell-signal);
+}
+.requests-table tbody tr[data-selected="true"][data-attention="true"] > td:first-child {
+  box-shadow: inset 3px 0 var(--requests-amber), inset 0 -1px var(--shell-signal);
+}
 .requests-table tbody tr[data-attention="true"] > td:first-child {
   box-shadow: inset 3px 0 var(--requests-amber);
 }

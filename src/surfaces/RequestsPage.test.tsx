@@ -38,6 +38,66 @@ describe("RequestsPage", () => {
     nextAction: "OPEN_REQUEST",
   }));
 
+  it("previews an explicitly selected row without changing navigation or reacting to hover", async () => {
+    stubRequests(manyRequests(23));
+    const user = userEvent.setup();
+    render(<RequestsPage />);
+    await screen.findByRole("link", { name: "Ultima intrare: Cerere 01" });
+    const row = screen.getByRole("row", { name: "Previzualizează cererea: Cerere 02" });
+    await user.hover(row);
+    expect(screen.getByRole("link", { name: "Ultima intrare: Cerere 01" })).toBeInTheDocument();
+    await user.click(within(row).getByText("Fără client"));
+    expect(screen.getByRole("link", { name: "Cerere selectată: Cerere 02" })).toHaveAttribute("href", "/cereri/page-2");
+    expect(row).toHaveAttribute("aria-selected", "true");
+    const first = screen.getByRole("row", { name: "Previzualizează cererea: Cerere 01" });
+    const identity = within(first).getByRole("link", { name: /Cerere 01/ });
+    identity.addEventListener("click", (event) => event.preventDefault());
+    await user.click(identity);
+    const next = within(first).getByRole("link", { name: "Deschide" });
+    next.addEventListener("click", (event) => event.preventDefault());
+    await user.click(next);
+    expect(identity).toHaveAttribute("href", "/cereri/page-1");
+    expect(next).toHaveAttribute("href", "/cereri/page-1");
+    expect(screen.getByRole("link", { name: "Cerere selectată: Cerere 02" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Următor" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Ordine" }), "oldest");
+    await user.type(screen.getByRole("searchbox", { name: "Caută" }), "Cerere 23");
+    expect(screen.getByRole("link", { name: "Cerere selectată: Cerere 02" })).toBeInTheDocument();
+    act(() => writeResource(resourceKeys.requests(), presentRequestList({ overview: { requests: manyRequests(1) } })));
+    expect(screen.getByRole("link", { name: "Ultima intrare: Cerere 01" })).toBeInTheDocument();
+    act(() => writeResource(resourceKeys.requests(), presentRequestList({ overview: { requests: manyRequests(23) } })));
+    expect(screen.queryByRole("link", { name: "Cerere selectată: Cerere 02" })).not.toBeInTheDocument();
+  });
+
+  it("supports Enter and Space on a row while preserving its table semantics", async () => {
+    stubRequests(manyRequests(3));
+    const user = userEvent.setup();
+    render(<RequestsPage />);
+    const row = await screen.findByRole("row", { name: "Previzualizează cererea: Cerere 02" });
+    row.focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("link", { name: "Cerere selectată: Cerere 02" })).toBeInTheDocument();
+    screen.getByRole("row", { name: "Previzualizează cererea: Cerere 03" }).focus();
+    await user.keyboard(" ");
+    expect(screen.getByRole("link", { name: "Cerere selectată: Cerere 03" })).toBeInTheDocument();
+  });
+
+  it("does not mount decorative images or invisible row actions on a phone and responds to viewport changes", async () => {
+    const media = { matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() };
+    vi.stubGlobal("matchMedia", vi.fn(() => media));
+    stubRequests(manyRequests(2));
+    render(<RequestsPage />);
+    await screen.findByRole("link", { name: /Cerere 01.*CER-PAGE-1/ });
+    expect(document.querySelector(".requests-intake img")).toBeNull();
+    const row = within(screen.getByRole("table")).getAllByRole("row")[1];
+    expect(row).not.toHaveAttribute("tabindex");
+    act(() => { media.matches = true; media.addEventListener.mock.calls[0][1](); });
+    expect(document.querySelector(".requests-intake img")).not.toBeNull();
+    expect(row).toHaveAttribute("tabindex", "0");
+    act(() => { media.matches = false; media.addEventListener.mock.calls[0][1](); });
+    expect(document.querySelector(".requests-intake img")).toBeNull();
+  });
+
   it("paginates all results with correct boundaries and resets page size", async () => {
     stubRequests(manyRequests(23));
     const user = userEvent.setup();

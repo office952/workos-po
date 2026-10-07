@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -120,5 +120,32 @@ describe("same-origin static frontend", () => {
     expect(response.headers.get("strict-transport-security")).toBe(
       "max-age=31536000; includeSubDomains",
     );
+  });
+});
+
+
+describe("versioned public image caching", () => {
+  it("caches only existing hashed images and revalidates HTML fallback and unversioned assets", async () => {
+    const root = mkdtempSync(join(tmpdir(), "workos-static-images-"));
+    try {
+      mkdirSync(join(root, "assets"));
+      writeFileSync(join(root, "index.html"), "<!doctype html><title>WorkOS</title>");
+      writeFileSync(join(root, "assets", "request-intake-Abc_1234.webp"), "synthetic-image");
+      writeFileSync(join(root, "assets", "request-intake.webp"), "unversioned-image");
+      const app = createApp({ staticRoot: root });
+      const image = await app.request("/assets/request-intake-Abc_1234.webp");
+      expect(image.headers.get("content-type")).toBe("image/webp");
+      expect(image.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
+      expect(await image.text()).toBe("synthetic-image");
+      for (const path of ["/cereri", "/assets/missing-Abc_1234.webp", "/assets/request-intake.webp"]) {
+        const response = await app.request(path);
+        expect(response.headers.get("cache-control")).toBe("no-cache");
+      }
+      const api = await app.request("/api/not-an-endpoint");
+      expect(api.status).toBe(404);
+      expect(api.headers.get("cache-control") ?? "").not.toContain("immutable");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

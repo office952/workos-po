@@ -37,9 +37,9 @@ jobs:
           pnpm add -Dw playwright@1.55.0
           pnpm exec playwright install --with-deps chromium
 
-      - name: Start Vite
+      - name: Start production frontend preview
         run: |
-          pnpm dev --host 127.0.0.1 --port 4173 > /tmp/workos-vite.log 2>&1 &
+          pnpm preview --host 127.0.0.1 --port 4173 > /tmp/workos-vite.log 2>&1 &
           for i in {1..60}; do
             if curl -fsS http://127.0.0.1:4173/ >/dev/null; then
               exit 0
@@ -56,7 +56,7 @@ jobs:
           import fs from "node:fs/promises";
           import assert from "node:assert/strict";
 
-          const out = "artifacts/requests-intake-v4";
+          const out = "artifacts/requests-intake-v5";
           await fs.mkdir(out, { recursive: true });
 
           const session = {
@@ -145,12 +145,13 @@ jobs:
 
           const browser = await chromium.launch({ headless: true });
 
-          async function shot(name, width, height, scheme) {
+          const assetEvidence = [];
+          async function shot(name, width, height, scheme, deviceScaleFactor = 1) {
             const context = await browser.newContext({
               timezoneId: "Europe/Bucharest",
               viewport: { width, height },
               colorScheme: scheme,
-              deviceScaleFactor: 1,
+              deviceScaleFactor,
             });
             await context.addInitScript((value) => {
               localStorage.setItem("workos-color-scheme", value);
@@ -189,8 +190,8 @@ jobs:
             await page.getByRole("heading", { name: "Cereri de ofertă" }).waitFor();
             await page.getByRole("link", { name: /CER-E5D190D8/ }).waitFor();
             await page.evaluate(() => document.fonts.ready);
-            await page.locator(".requests-intake img").evaluate((img) => img.decode());
-            await page.evaluate(async () => {
+            if (width >= 768) await page.locator(".requests-intake img").evaluate((img) => img.decode());
+            if (width >= 768) await page.evaluate(async () => {
               const header = document.querySelector('[data-surface="cereri-registry"] > .page-header');
               const surface = getComputedStyle(header, "::after");
               const imageUrl = surface.backgroundImage.match(/url\(["']?(.*?)["']?\)/)?.[1];
@@ -200,7 +201,7 @@ jobs:
               await texture.decode();
               if (texture.naturalWidth < 1900) throw new Error("Surface texture is undersized");
             });
-            await page.locator(".requests-intake").evaluate(async (intake) => {
+            if (width >= 768) await page.locator(".requests-intake").evaluate(async (intake) => {
               // The decorative intake is intentionally hidden on phone layouts.
               if (intake.getClientRects().length === 0) return;
               const animations = intake.getAnimations({ subtree: true })
@@ -216,30 +217,80 @@ jobs:
             assert.equal(await page.getByRole("button", { name: "Anterior" }).isDisabled(), true);
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Overflow at ${width}`);
             await page.screenshot({ path: `${out}/${name}.png`, fullPage: true });
-            if (width === 1920 && scheme === "dark") {
+            const assets = await page.evaluate(() => performance.getEntriesByType("resource")
+              .filter((entry) => entry.name.includes("request-intake") && !new URL(entry.name).searchParams.has("import"))
+              .map((entry) => ({ url: entry.name, bytes: entry.encodedBodySize, transfer: entry.transferSize, duration: entry.duration })));
+            assetEvidence.push({ name, width, deviceScaleFactor, assets });
+            if (width < 768) {
+              assert.equal(await page.locator(".requests-intake img").count(), 0);
+              assert.equal(assets.length, 0, "Phone downloaded hidden decoration");
+              assert.equal(await page.locator("tbody tr[tabindex]").count(), 0);
+            } else {
+              assert.equal(await page.locator(".requests-intake img").evaluate((img) => img.currentSrc.includes("1520")), deviceScaleFactor === 2);
+            }
+            if (width === 1920 && scheme === "dark" && deviceScaleFactor === 1) {
               await page.getByRole("combobox", { name: "Ordine" }).selectOption("oldest");
               assert.match(await page.locator("tbody tr").first().innerText(), /Totem dublă față/);
-              await page.screenshot({ path: `${out}/REQUESTS_V4__06_SORT_OLDEST_1920x1080.png`, fullPage: true });
+              await page.screenshot({ path: `${out}/REQUESTS_V5__06_SORT_OLDEST_1920x1080.png`, fullPage: true });
               await page.getByRole("button", { name: /Necesită acțiune/ }).click();
               assert.equal(await page.locator("tbody tr").count(), 2);
-              await page.screenshot({ path: `${out}/REQUESTS_V4__07_ATTENTION_1920x1080.png`, fullPage: true });
+              await page.screenshot({ path: `${out}/REQUESTS_V5__07_ATTENTION_1920x1080.png`, fullPage: true });
               await page.getByRole("searchbox", { name: "Caută" }).fill("inexistent");
               await page.getByText("Nicio cerere nu corespunde filtrului.").waitFor();
               await page.getByRole("button", { name: /Resetează filtrele/ }).click();
               assert.equal(await page.locator("tbody tr").count(), 4);
               await page.getByRole("button", { name: "Rânduri compacte" }).click();
               assert.equal(await page.getByRole("button", { name: "Rânduri compacte" }).getAttribute("aria-pressed"), "true");
-              await page.screenshot({ path: `${out}/REQUESTS_V4__08_COMPACT_1920x1080.png`, fullPage: true });
+              await page.screenshot({ path: `${out}/REQUESTS_V5__08_COMPACT_1920x1080.png`, fullPage: true });
+            }
+            if (width === 1920 && deviceScaleFactor === 1) {
+              await page.getByRole("combobox", { name: "Ordine" }).selectOption("newest");
+              if (await page.getByRole("button", { name: "Rânduri compacte" }).getAttribute("aria-pressed") === "true") {
+                await page.getByRole("button", { name: "Rânduri compacte" }).click();
+              }
+              const row = page.getByRole("row", { name: "Previzualizează cererea: Casetă luminoasă fațadă" });
+              await row.hover();
+              assert.equal(await page.locator(".requests-intake__sheet").getAttribute("href"), "/cereri/req-1");
+              const imageBefore = await page.locator(".requests-intake img").evaluate((img) => img.currentSrc);
+              const imageLoadsBefore = (await page.evaluate(() => performance.getEntriesByType("resource").filter((entry) => entry.name.includes("request-intake") && !entry.name.includes("?import")))).length;
+              await row.locator(".requests-table__client").click();
+              assert.equal(await row.getAttribute("aria-selected"), "true");
+              assert.equal(await page.locator(".requests-intake__sheet").getAttribute("href"), "/cereri/req-2");
+              await page.screenshot({ path: `${out}/REQUESTS_V5__${scheme === "dark" ? "15_SELECTED_DARK" : "16_SELECTED_LIGHT"}.png`, fullPage: true });
+              const third = page.getByRole("row", { name: "Previzualizează cererea: Colantare vitrină" });
+              await third.focus();
+              await page.keyboard.press("Space");
+              assert.equal(await page.locator(".requests-intake__sheet").getAttribute("href"), "/cereri/req-3");
+              await row.focus();
+              await page.keyboard.press("Enter");
+              assert.equal(await page.locator(".requests-intake__sheet").getAttribute("href"), "/cereri/req-2");
+              assert.equal(await page.locator(".requests-intake img").evaluate((img) => img.currentSrc), imageBefore);
+              assert.equal((await page.evaluate(() => performance.getEntriesByType("resource").filter((entry) => entry.name.includes("request-intake") && !entry.name.includes("?import")))).length, imageLoadsBefore);
+              await page.getByRole("button", { name: /Necesită acțiune/ }).click();
+              await page.getByRole("searchbox", { name: "Caută" }).fill("inexistent");
+              assert.equal(await page.locator(".requests-intake__sheet").getAttribute("href"), "/cereri/req-2");
+              await page.getByRole("button", { name: /Resetează filtrele/ }).click();
+              // Real navigation through a row link must not become preview selection.
+              await page.locator(".requests-object").filter({ hasText: "Colantare vitrină" }).click();
+              await page.waitForURL("**/cereri/req-3");
+              await page.goto("http://127.0.0.1:4173/cereri");
+              await page.getByRole("link", { name: /Ultima intrare/ }).waitFor();
+              await page.getByRole("row", { name: "Previzualizează cererea: Casetă luminoasă fațadă" }).locator(".requests-table__client").click();
+              await page.getByRole("link", { name: /Cerere selectată/ }).click();
+              await page.waitForURL("**/cereri/req-2");
             }
             assert.deepEqual(errors, [], "Browser console/page errors");
             await context.close();
           }
 
-          await shot("REQUESTS_V4__01_DESKTOP_DARK_1920x1080", 1920, 1080, "dark");
-          await shot("REQUESTS_V4__02_DESKTOP_LIGHT_1920x1080", 1920, 1080, "light");
-          await shot("REQUESTS_V4__03_LAPTOP_DARK_1366x768", 1366, 768, "dark");
-          await shot("REQUESTS_V4__04_TABLET_LIGHT_1024x768", 1024, 768, "light");
-          await shot("REQUESTS_V4__05_PHONE_DARK_390x844", 390, 844, "dark");
+          await shot("REQUESTS_V5__01_DESKTOP_DARK_1920x1080", 1920, 1080, "dark");
+          await shot("REQUESTS_V5__02_DESKTOP_LIGHT_1920x1080", 1920, 1080, "light");
+          await shot("REQUESTS_V5__03_LAPTOP_DARK_1366x768", 1366, 768, "dark");
+          await shot("REQUESTS_V5__04_TABLET_LIGHT_1024x768", 1024, 768, "light");
+          await shot("REQUESTS_V5__05_PHONE_DARK_390x844", 390, 844, "dark");
+
+          await shot("REQUESTS_V5__17_RETINA_DARK_1920x1080", 1920, 1080, "dark", 2);
+          await fs.writeFile(`${out}/IMAGE_LOADING_EVIDENCE.json`, JSON.stringify(assetEvidence, null, 2));
 
           const context = await browser.newContext({ timezoneId: "Europe/Bucharest", viewport: { width: 1920, height: 1080 }, reducedMotion: "reduce" });
           await context.addInitScript(() => localStorage.setItem("workos-color-scheme", "dark"));
@@ -264,12 +315,12 @@ jobs:
           assert.equal(await page.locator("tbody tr").count(), 10);
           assert.equal(await page.locator(".requests-pagination__range").innerText(), "1–10 din 23 cereri");
           assert.equal(await page.locator(".requests-intake img").evaluate((img) => getComputedStyle(img).animationName), "none");
-          await page.screenshot({ path: `${out}/REQUESTS_V4__09_PAGINATION_PAGE_1.png`, fullPage: true, animations: "disabled" });
+          await page.screenshot({ path: `${out}/REQUESTS_V5__09_PAGINATION_PAGE_1.png`, fullPage: true, animations: "disabled" });
           await page.getByRole("button", { name: "Următor" }).focus();
           await page.keyboard.press("Enter");
           assert.equal(await page.locator(".requests-pagination__range").innerText(), "11–20 din 23 cereri");
           assert.match(await page.locator("tbody tr").first().innerText(), /review 11/);
-          await page.screenshot({ path: `${out}/REQUESTS_V4__10_PAGINATION_PAGE_2.png`, fullPage: true, animations: "disabled" });
+          await page.screenshot({ path: `${out}/REQUESTS_V5__10_PAGINATION_PAGE_2.png`, fullPage: true, animations: "disabled" });
           await page.getByRole("button", { name: "Pagina 3", exact: true }).click();
           assert.equal(await page.locator("tbody tr").count(), 3);
           assert.equal(await page.getByRole("button", { name: "Următor" }).isDisabled(), true);
@@ -283,7 +334,7 @@ jobs:
           await page.getByRole("searchbox", { name: "Caută" }).fill("");
           await page.getByRole("combobox", { name: "Pe pagină" }).selectOption("10");
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-          await page.screenshot({ path: `${out}/REQUESTS_V4__11_PHONE_PAGINATION.png`, fullPage: true, animations: "disabled" });
+          await page.screenshot({ path: `${out}/REQUESTS_V5__11_PHONE_PAGINATION.png`, fullPage: true, animations: "disabled" });
           const longReview = Array.from({ length: 200 }, (_, index) => ({ ...reviewRows[index % reviewRows.length], requestId: `long-review-${index}`, reference: `REV-LONG-${index}`, title: `Cerere review extins ${index}` }));
           await page.route("http://127.0.0.1:4173/api/requests", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ overview: { requests: longReview } }) }));
           await page.reload();
@@ -292,19 +343,19 @@ jobs:
           for (let i = 0; i < 10; i++) await page.getByRole("button", { name: "Anterior" }).click();
           assert.equal(await page.getByRole("button", { name: "Pagina 10", exact: true }).getAttribute("aria-current"), "page");
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-          await page.screenshot({ path: `${out}/REQUESTS_V4__14_PHONE_MANY_PAGES.png`, fullPage: true, animations: "disabled" });
+          await page.screenshot({ path: `${out}/REQUESTS_V5__14_PHONE_MANY_PAGES.png`, fullPage: true, animations: "disabled" });
           await page.route("http://127.0.0.1:4173/api/requests", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ overview: { requests: [] } }) }));
           await page.setViewportSize({ width: 1920, height: 1080 });
           await page.reload();
           await page.getByText("Nu există cereri").waitFor();
           assert.equal(await page.getByRole("navigation", { name: "Paginare cereri" }).count(), 0);
           assert.equal(await page.getByRole("link", { name: /Ultima intrare/ }).count(), 0);
-          await page.screenshot({ path: `${out}/REQUESTS_V4__12_EMPTY.png`, fullPage: true, animations: "disabled" });
+          await page.screenshot({ path: `${out}/REQUESTS_V5__12_EMPTY.png`, fullPage: true, animations: "disabled" });
           await page.route("http://127.0.0.1:4173/api/requests", (route) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "synthetic-unavailable" }) }));
           await page.reload();
           await page.getByRole("alert").waitFor();
           assert.equal(await page.getByRole("navigation", { name: "Paginare cereri" }).count(), 0);
-          await page.screenshot({ path: `${out}/REQUESTS_V4__13_ERROR.png`, fullPage: true, animations: "disabled" });
+          await page.screenshot({ path: `${out}/REQUESTS_V5__13_ERROR.png`, fullPage: true, animations: "disabled" });
           await context.close();
 
           await browser.close();
@@ -314,7 +365,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: requests-intake-v4
-          path: artifacts/requests-intake-v4/*.png
+          name: requests-intake-v5
+          path: |
+            artifacts/requests-intake-v5/*.png
+            artifacts/requests-intake-v5/*.json
           if-no-files-found: error
           retention-days: 3

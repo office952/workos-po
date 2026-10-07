@@ -1,3 +1,19 @@
+# Follow-up: explicit receipt selection and image delivery, 2026-10-07
+
+Owner GO authorizes using the physical receipt as a selected-request preview and optimizing its image delivery. Default receipt remains the latest dated request. Hover only highlights; clicking non-link row content selects; Enter/Space on the row selects; identity, next-action and paper links retain navigation. Selection is presentation state independent of filter/sort/page and falls back to latest when its request is removed. Phone layouts omit both the hardware DOM and row-preview interaction.
+
+Responsive WebP assets reuse the existing hardware pixels: 760 × 324 (20,352 bytes), 1520 × 648 (87,122 bytes). The matching drafting surface remains 2172 × 724 and is recompressed to 22,792 bytes. Maximum image payload is 43,144 bytes at 1× desktop and 109,914 bytes at 2× desktop, versus 227,652 bytes previously. The original 1920px source is retained in Git but is no longer imported into the runtime build. Text updates do not change image URLs or replay the hardware animation. Async decoding is used; visible imagery is not lazy-loaded. CSS limits the texture URL to non-phone viewports.
+
+The canonical static frontend server now supplies correct image MIME types and one-year immutable caching only for existing versioned public images under /assets. HTML, missing-asset SPA fallback and unversioned assets revalidate. API responses are unaffected. These are transport/cache changes only; no persistence or business changes.
+
+Focused verification: 16 Requests + 5 AppShell tests and 8 API origin/static tests passed locally; production build passed. Seventeen production-frontend Chromium captures and image resource evidence are pending GitHub Actions. The earlier comparison below remains historical until this follow-up is visually checked.
+
+final result: blocked
+
+Pending follow-up capture inspection. Interactive Work Mode cloud preview also remains blocked by ERR_BLOCKED_BY_CLIENT, as previously observed.
+
+---
+
 # Cereri — original intake concept and surface refinement, 2026-10-07
 
 **Scope and visual truth**

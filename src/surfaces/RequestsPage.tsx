@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "../styles/surfaces/requests.css";
 import "../styles/surfaces/requests-hero.css";
 import { EmptyState } from "../components/EmptyState";
@@ -15,10 +15,26 @@ import { presentRequestRegistryStatus } from "../presentation/requestListStatus"
 import { statusTone } from "../presentation/statusTone";
 import { presentRequestWorklistAction } from "../presentation/worklistAction";
 import { requestHref } from "../routing/appRoute";
-import intakeImage from "../assets/request-intake.webp";
+import intakeImage from "../assets/request-intake-760.webp";
+import intakeImageRetina from "../assets/request-intake-1520.webp";
 
 type RequestFilter = "all" | "needs-action";
 type RequestSort = "newest" | "oldest";
+
+function useIntakeViewport() {
+  const [visible, setVisible] = useState(() =>
+    typeof window.matchMedia !== "function" || window.matchMedia("(min-width: 768px)").matches,
+  );
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const media = window.matchMedia("(min-width: 768px)");
+    const update = () => setVisible(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  return visible;
+}
 
 function timestamp(value: string | null): number | null {
   if (!value) return null;
@@ -35,10 +51,16 @@ export function RequestsPage() {
   const [compact, setCompact] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const showIntake = useIntakeViewport();
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const latest = useMemo(() => {
     const dated = items.filter((item) => timestamp(item.createdAt) !== null);
     return dated.sort((a, b) => timestamp(b.createdAt)! - timestamp(a.createdAt)!)[0];
   }, [items]);
+  const selected = items.find((item) => item.requestId === selectedRequestId);
+  // Forget a removed selection so it cannot return unexpectedly on a later refresh.
+  if (selectedRequestId && requests.status === "success" && !selected) setSelectedRequestId(null);
+  const receipt = selected ?? latest;
   const attentionCount = useMemo(
     () => items.filter((item) => item.needsAttention).length,
     [items],
@@ -104,18 +126,20 @@ export function RequestsPage() {
       surface="cereri-registry"
       eyebrow="Registru comercial"
       title="Cereri de ofertă"
-      action={
-        <div className="requests-intake" aria-label="Registru de intrare">
+      action={showIntake ? (
+        <div id="cereri-intake" className="requests-intake" aria-label="Registru de intrare">
           <div className="requests-intake__device">
-            <img src={intakeImage} alt="" width="1800" height="430" />
-            {requests.status === "success" && latest ? (
-              <a className="requests-intake__sheet" href={requestHref(latest.requestId)}
-                aria-label={`Ultima intrare: ${latest.title || latest.reference}`}>
+            <img src={intakeImage} srcSet={`${intakeImage} 760w, ${intakeImageRetina} 1520w`}
+              sizes="(min-width: 1152px) 760px, calc(50vw - 44px)"
+              alt="" width="760" height="324" decoding="async" />
+            {requests.status === "success" && receipt ? (
+              <a className="requests-intake__sheet" href={requestHref(receipt.requestId)}
+                aria-label={`${selected ? "Cerere selectată" : "Ultima intrare"}: ${receipt.title || receipt.reference}`}>
                 <span className="requests-intake__meta">
-                  <span>{latest.reference}</span>
-                  <span>{formatTimestamp(latest.createdAt)?.split(",")[0]}</span>
+                  <span>{receipt.reference}</span>
+                  <span>{formatTimestamp(receipt.createdAt)?.split(",")[0]}</span>
                 </span>
-                <strong>{latest.title || latest.reference}</strong>
+                <strong>{receipt.title || receipt.reference}</strong>
               </a>
             ) : (
               <span className="requests-intake__sheet requests-intake__sheet--idle">
@@ -124,8 +148,11 @@ export function RequestsPage() {
             )}
           </div>
           <span className="requests-intake__label" aria-hidden="true">WORKOS<br />REQUEST<br />INTAKE</span>
+          <span className="u-visually-hidden" aria-live="polite" aria-atomic="true">
+            {selected ? `Fișa afișează: ${selected.title || selected.reference}` : ""}
+          </span>
         </div>
-      }
+      ) : undefined}
       instrument={
         <div
           className="requests-instrument"
@@ -321,6 +348,25 @@ export function RequestsPage() {
                         <tr
                           key={item.requestId}
                           data-attention={item.needsAttention}
+                          data-preview={showIntake}
+                          data-selected={showIntake && selected?.requestId === item.requestId}
+                          tabIndex={showIntake ? 0 : undefined}
+                          aria-selected={showIntake ? selected?.requestId === item.requestId : undefined}
+                          aria-label={showIntake ? `Previzualizează cererea: ${item.title || item.reference}` : undefined}
+                          aria-controls={showIntake ? "cereri-intake" : undefined}
+                          onClick={(event) => {
+                            if (!showIntake || !(event.target instanceof Element)) return;
+                            if (event.target.closest("a, button, input, select, textarea")) return;
+                            if (window.getSelection()?.toString()) return;
+                            setSelectedRequestId(item.requestId);
+                          }}
+                          onKeyDown={(event) => {
+                            if (!showIntake || event.target !== event.currentTarget) return;
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              setSelectedRequestId(item.requestId);
+                            }
+                          }}
                         >
                           <td className="requests-table__identity">
                             <a
