@@ -17,7 +17,7 @@ import { SlicePage } from "../layout/SlicePage";
 import { configuratorHref, requestHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
 import { readConfiguratorSession, writeConfiguratorSession } from "../session/configuratorSession";
-import "../styles/surfaces/product-system.css";
+import "../styles/surfaces/request-intake.css";
 
 export function NewRequestPage() {
   const customers = useResource(resourceKeys.customerIntake(), loadCustomerList);
@@ -39,6 +39,8 @@ export function NewRequestPage() {
   const allCustomers = [...(customers.data ?? []), ...lookupCustomers.filter(c => !(customers.data ?? []).some(item => item.customerId === c.customerId))];
   const selected = allCustomers.find(c => c.customerId === customerId) ?? workspace.data?.customer;
   const visibleCustomers = allCustomers.filter(c => c.customerId === customerId || [c.displayName, c.cui, c.city].some(value => value?.toLocaleLowerCase("ro").includes(query.toLocaleLowerCase("ro"))));
+  const selectedProduct = catalog.data?.find(product => product.code === productCode);
+  const canSave = !pending && !lookupPending && Boolean(title.trim() && description.trim()) && (newCustomer ? Boolean(name.trim()) : workspace.data?.canCreateRequest === true);
 
   async function lookup() {
     const scope = ++generation.current;
@@ -94,31 +96,44 @@ export function NewRequestPage() {
     } finally { saving.current = false; if (scope === generation.current) setPending(false); }
   }
 
-  return <SlicePage contextLabel="Cereri" currentHref="/cereri/noua" workspace="stack" headerVariant="pilot" eyebrow="Registru comercial" title="Cerere nouă" lead="Alege clientul, descrie lucrarea și selectează produsul. Poți decide produsul și mai târziu.">
-    <a className="text-link" href="/cereri">← Toate cererile</a>
+  const undecidedChoice = <button type="button" disabled={pending} aria-pressed={productCode === null} onClick={() => setProductCode(null)}>
+    <span><strong>Momentan indecis</strong><span>Aleg produsul ulterior din cerere.</span></span>
+    <span className="product-picker__action">{productCode === null ? "Selectat" : "Alege"}</span>
+  </button>;
+
+  return <SlicePage contextLabel="Cereri" currentHref="/cereri/noua" workspace="stack" surface="cereri-intake" eyebrow="Registru comercial" title="Cerere nouă" lead="Alege clientul, descrie lucrarea și selectează produsul. Poți decide produsul și mai târziu." action={<a className="text-link request-intake__back" href="/cereri">← Toate cererile</a>}>
     <form className="request-intake-form" onSubmit={e => { e.preventDefault(); void save(); }}>
-      <fieldset disabled={pending || lookupPending}><legend>1. Client</legend>
-        <div className="request-intake-form__actions"><Button variant="secondary" aria-pressed={!newCustomer} onClick={() => { setNewCustomer(false); setError(null); }}>Client existent</Button><Button variant="secondary" aria-pressed={newCustomer} onClick={() => { setNewCustomer(true); setCustomerId(""); setNotice(null); setError(null); }}>Adaugă client rapid</Button></div>
+      <div className="request-intake-form__context">
+      <fieldset className="request-intake-form__section" disabled={pending || lookupPending}><legend>1. Client</legend>
+        <div className="request-intake-form__modes"><Button variant="secondary" aria-pressed={!newCustomer} onClick={() => { setNewCustomer(false); setError(null); }}>Client existent</Button><Button variant="secondary" aria-pressed={newCustomer} onClick={() => { setNewCustomer(true); setCustomerId(""); setNotice(null); setError(null); }}>Adaugă client rapid</Button></div>
         {newCustomer ? <>
-          <label>CUI<input value={cui} disabled={lookupPending} onChange={e => { setCui(e.target.value); setNotice(null); }} placeholder="Cu sau fără RO" /></label><Button variant="secondary" disabled={!cui.trim() || lookupPending} onClick={() => void lookup()}>{lookupPending ? "Se verifică…" : "Preia datele după CUI"}</Button>
-          <div className="request-intake-form__fields"><label>Denumire client<input required value={name} disabled={lookupPending} onChange={e => setName(e.target.value)} /></label><label>Localitate<input value={city} disabled={lookupPending} onChange={e => setCity(e.target.value)} /></label><label>Adresă<input value={address} disabled={lookupPending} onChange={e => setAddress(e.target.value)} /></label></div>
+          <div className="request-intake-form__lookup"><label>CUI<input value={cui} disabled={lookupPending} onChange={e => { setCui(e.target.value); setNotice(null); }} placeholder="Cu sau fără RO" aria-describedby="request-intake-cui-hint" /></label><Button variant="secondary" disabled={!cui.trim() || lookupPending} onClick={() => void lookup()}>{lookupPending ? "Se verifică…" : "Preia datele după CUI"}</Button></div>
+          <p id="request-intake-cui-hint" className="request-intake__hint">Verificăm întâi dacă firma există deja. Dacă preluarea nu este disponibilă, poți completa datele manual.</p>
+          <div className="request-intake-form__fields"><label>Denumire client<input required value={name} disabled={lookupPending} onChange={e => setName(e.target.value)} /></label><label>Localitate<input value={city} disabled={lookupPending} onChange={e => setCity(e.target.value)} /></label><label className="request-intake-form__wide-field">Adresă<input value={address} disabled={lookupPending} onChange={e => setAddress(e.target.value)} /></label></div>
         </> : <>
-          <label>Caută client<input type="search" value={query} onChange={e => setQuery(e.target.value)} /></label>
+          <label>Caută client<input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Nume, CUI sau localitate" /></label>
           <label>Client existent<select value={customerId} required onChange={e => { setCustomerId(e.target.value); setError(null); }}><option value="">Selectează clientul</option>{visibleCustomers.map(c => <option key={c.customerId} value={c.customerId}>{c.displayName}{c.cui ? ` · ${c.cui}` : ""}{c.status === "RETIRED" ? " · Retras" : ""}</option>)}</select></label>
+          {customers.status === "loading" && !customers.data && <p className="request-intake__hint" role="status">Se încarcă lista clienților…</p>}
+          {customerId && selected && <div className="request-intake__client" role="group" aria-label="Client selectat"><strong>{selected.displayName}</strong><span>{[selected.cui ? `CUI ${selected.cui}` : null, selected.city].filter(Boolean).join(" · ")}</span>{workspace.status === "loading" && <span role="status">Se verifică clientul…</span>}</div>}
           {customers.status === "error" && <InlineAlert tone="error" title="Clienții nu au putut fi citiți"><Button variant="secondary" onClick={() => invalidateResources(resourceKeys.customerIntake())}>Reîncearcă</Button></InlineAlert>}
           {customerId && workspace.status === "error" && <InlineAlert tone="error" title="Clientul nu a putut fi verificat"><Button variant="secondary" onClick={() => invalidateResources(resourceKeys.customerWorkspace(customerId))}>Reîncearcă verificarea</Button></InlineAlert>}
           {customerId && workspace.data?.canCreateRequest === false && <p>Nu poți crea o cerere pentru acest client.</p>}
         </>}
-        {notice && <p role="status">{notice}</p>}
+        {notice && <p className="request-intake__notice" role="status">{notice}</p>}
       </fieldset>
-      <fieldset disabled={pending}><legend>2. Lucrarea solicitată</legend><label>Titlu cerere<input required value={title} onChange={e => setTitle(e.target.value)} /></label><label>Descriere<textarea required value={description} onChange={e => setDescription(e.target.value)} /></label></fieldset>
-      <fieldset disabled={pending}><legend>3. Produs</legend><Button variant="secondary" aria-pressed={productCode === null} onClick={() => setProductCode(null)}>Momentan indecis</Button>
-        <p className="ui-note">{productCode ? "După salvare vei configura produsul pentru această cerere." : "Cererea poate fi salvată fără produs. Alegerea se face ulterior din cerere."}</p>
-        {catalog.data && <ProductPicker products={catalog.data} selectedCode={productCode} disabled={pending} onChoose={p => setProductCode(p.code)} />}
+      <fieldset className="request-intake-form__section request-intake-form__brief" disabled={pending}><legend>2. Lucrarea solicitată</legend><label>Titlu cerere<input required value={title} onChange={e => setTitle(e.target.value)} placeholder="Ce trebuie realizat?" /></label><label>Descriere<textarea required value={description} onChange={e => setDescription(e.target.value)} placeholder="Descrie lucrarea și cerințele cunoscute." aria-describedby="request-intake-brief-hint" /></label><p id="request-intake-brief-hint" className="request-intake__hint">Detaliile tehnice se completează la configurarea produsului.</p></fieldset>
+      </div>
+      <fieldset className="request-intake-form__section request-intake-form__products" disabled={pending}><legend>3. Produs de pornire</legend>
+        <p className="request-intake__hint">Alege produsul de configurat sau continuă cu „Momentan indecis”. Poți adăuga alte produse în aceeași cerere.</p>
+        {catalog.data ? <ProductPicker variant="choices" products={catalog.data} leadingChoice={undecidedChoice} selectedCode={productCode} actionLabel="Alege" disabled={pending} onChoose={p => setProductCode(p.code)} /> : <div className="product-picker product-picker--choices"><ul className="product-picker__list"><li>{undecidedChoice}</li></ul></div>}
+        {catalog.status === "loading" && !catalog.data && <p className="request-intake__hint" role="status">Se încarcă produsele disponibile…</p>}
         {catalog.status === "error" && <InlineAlert tone="error" title="Produsele nu au putut fi citite">Poți salva cererea cu produsul momentan indecis.<Button variant="secondary" onClick={() => invalidateResources(resourceKeys.catalog())}>Reîncearcă</Button></InlineAlert>}
       </fieldset>
       {error && <InlineAlert tone="error" title="Verifică înainte de continuare">{error}</InlineAlert>}
-      <div className="request-intake-form__actions"><Button type="submit" disabled={pending || lookupPending || !title.trim() || !description.trim() || (newCustomer ? !name.trim() : workspace.data?.canCreateRequest !== true)}>{pending ? "Se salvează…" : productCode ? "Creează cererea și configurează" : "Salvează cererea"}</Button><a className="text-link" href="/cereri">Înapoi la cereri</a></div>
+      <div className="request-intake-form__footer">
+        <div className="request-intake__summary"><strong>{newCustomer ? name.trim() || "Client nou" : (customerId && selected?.displayName) || "Client de selectat"} · {productCode ? selectedProduct?.label ?? "Produs selectat" : "Momentan indecis"}</strong><p className="request-intake__hint">{productCode ? "Cererea se salvează înainte de configurarea produsului." : "După salvare poți alege produsul din cerere."}</p></div>
+        <div className="request-intake-form__actions"><a className="text-link" href="/cereri">Anulează</a><Button type="submit" disabled={!canSave}>{pending ? "Se salvează…" : productCode ? "Creează cererea și configurează" : "Salvează cererea"}</Button></div>
+      </div>
     </form>
   </SlicePage>;
 }

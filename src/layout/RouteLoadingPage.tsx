@@ -18,7 +18,7 @@ export function RouteLoadingPage({ route }: RouteLoadingPageProps) {
       contextLabel={chrome.contextLabel}
       currentHref={chrome.currentHref}
       workspace={chrome.workspace}
-      surface={chrome.pilot?.surface}
+      surface={chrome.surface ?? chrome.pilot?.surface}
       headerVariant={chrome.pilot ? "pilot" : "default"}
       eyebrow={chrome.eyebrow}
       title={chrome.title}

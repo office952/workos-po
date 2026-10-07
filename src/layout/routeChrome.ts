@@ -15,6 +15,7 @@ export type RouteChrome = {
   eyebrow: string;
   title: string;
   lead: string;
+  surface?: PageSurface;
   pilot?: { surface: PageSurface; metrics?: readonly string[] };
 };
 
@@ -79,7 +80,7 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         pilot: { surface: "cereri-detail" },
       };
     case "new-request":
-      return { contextLabel: "Cereri", currentHref: "/cereri/noua", workspace: "stack", eyebrow: "Registru comercial", title: "Cerere nouă", lead: "Alege clientul, descrie lucrarea și selectează produsul sau momentan indecis." };
+      return { contextLabel: "Cereri", currentHref: "/cereri/noua", workspace: "stack", surface: "cereri-intake", eyebrow: "Registru comercial", title: "Cerere nouă", lead: "Alege clientul, descrie lucrarea și selectează produsul. Poți decide produsul și mai târziu." };
     case "catalog":
       return {
         contextLabel: "Catalog",

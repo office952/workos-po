@@ -39,7 +39,7 @@ function densityFor(workspace: PageWorkspace): PageDensity {
   }
 }
 
-export type PageSurface = "cereri-registry" | "cereri-detail" | "clients-registry" | "client-hub"
+export type PageSurface = "cereri-registry" | "cereri-detail" | "cereri-intake" | "clients-registry" | "client-hub"
   | "catalog-registry" | "configuration-workbench" | "assembly-workbench"
   | "quotes-registry" | "quote-detail";
 

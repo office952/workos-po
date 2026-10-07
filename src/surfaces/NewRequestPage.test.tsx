@@ -70,4 +70,44 @@ describe("request intake", () => {
     await act(async () => release(await json({ request: { requestId: "req-old" } }, 201)));
     expect(window.location.pathname).toBe("/cereri");
   });
+
+  it("returns from a chosen product to undecided and updates the continuation", async () => {
+    window.history.replaceState({}, "", "/cereri/noua?customer=cus-1");
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo, init?: RequestInit) => init?.method === "POST" ? json({ request: { requestId: "req-undecided" } }, 201) : reads(input)));
+    render(<NewRequestPage />); await brief();
+    await userEvent.click(await screen.findByRole("button", { name: /Litere test/ }));
+    expect(screen.getByRole("button", { name: "Creează cererea și configurează" })).toBeEnabled();
+    expect(screen.queryByLabelText("Caută produs")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Momentan indecis/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Salvează cererea" }));
+    await waitFor(() => expect(window.location.pathname).toBe("/cereri/req-undecided"));
+  });
+
+  it("allows manual client registration after an unavailable CUI lookup", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("fiscal-lookup")) return json({}, 503);
+      if (init?.method === "POST") { calls.push(url); return url === "/api/customers" ? json({ customer }, 201) : json({ request: { requestId: "req-manual" } }, 201); }
+      return reads(input);
+    }));
+    render(<NewRequestPage />);
+    await userEvent.click(screen.getByRole("button", { name: "Adaugă client rapid" }));
+    await userEvent.type(screen.getByLabelText("CUI"), "12345678");
+    await userEvent.click(screen.getByRole("button", { name: "Preia datele după CUI" }));
+    await screen.findByText(/Verificarea CUI nu este disponibilă/);
+    await userEvent.type(screen.getByLabelText("Denumire client"), "Client manual");
+    await brief(); await userEvent.click(screen.getByRole("button", { name: "Salvează cererea" }));
+    await waitFor(() => expect(window.location.pathname).toBe("/cereri/req-manual"));
+    expect(calls).toEqual(["/api/customers", "/api/requests"]);
+  });
+
+  it("does not allow the selected client's summary to bypass server permission", async () => {
+    window.history.replaceState({}, "", "/cereri/noua?customer=cus-1");
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => String(input).endsWith("/workspace") ? json({ workspace: { customer, canCreateRequest: false, summary: {}, requests: [], quotes: [], jobs: [] } }) : reads(input)));
+    render(<NewRequestPage />); await brief();
+    expect(screen.getByLabelText("Client selectat")).toHaveTextContent("Client test");
+    expect(screen.getByRole("button", { name: "Salvează cererea" })).toBeDisabled();
+    expect(screen.getByText("Nu poți crea o cerere pentru acest client.")).toBeInTheDocument();
+  });
 });

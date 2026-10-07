@@ -1,0 +1,236 @@
+/* New request owns its form layout. Register and Configurator styling stay separate. */
+[data-surface="cereri-intake"] > .page-header {
+  min-height: 0;
+  align-items: flex-start;
+  margin: 0 var(--page-gutter);
+  padding: 32px 0 24px;
+  border: 0;
+  background: transparent;
+}
+[data-surface="cereri-intake"] .page-header__copy {
+  padding: 0;
+  box-shadow: none;
+}
+[data-surface="cereri-intake"] .page-header__eyebrow {
+  margin-bottom: 12px;
+  color: var(--color-text-secondary);
+}
+[data-surface="cereri-intake"] .page-header__title {
+  font: 600 clamp(34px, 3.5vw, 56px)/1.08 var(--font-brand);
+  letter-spacing: -0.045em;
+}
+[data-surface="cereri-intake"] .page-header__lead {
+  max-width: none;
+  margin-top: 12px;
+}
+[data-surface="cereri-intake"] .page-header__aside {
+  display: flex;
+  padding-top: 28px;
+}
+.request-intake__back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.page-workspace[data-surface="cereri-intake"] {
+  display: block;
+  width: 100%;
+  max-width: none;
+}
+.request-intake-form {
+  display: grid;
+  gap: 28px;
+  width: 100%;
+  min-width: 0;
+}
+.request-intake-form__context {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: stretch;
+  gap: 28px;
+}
+.request-intake-form__section {
+  min-width: 0;
+  margin: 0;
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.request-intake-form legend {
+  padding: 0 8px;
+  font: 600 19px/1.4 var(--font-sans);
+}
+.request-intake-form label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin-bottom: 16px;
+  font: 500 14px/1.4 var(--font-sans);
+}
+.request-intake-form input,
+.request-intake-form select,
+.request-intake-form textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  color: var(--color-text-primary);
+  background: var(--color-canvas);
+  font: 400 14px/1.5 var(--font-sans);
+}
+.request-intake-form input::placeholder,
+.request-intake-form textarea::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 1;
+}
+.request-intake-form textarea {
+  min-height: 152px;
+  resize: vertical;
+}
+.request-intake-form input:focus-visible,
+.request-intake-form select:focus-visible,
+.request-intake-form textarea:focus-visible,
+[data-surface="cereri-intake"] .product-picker button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+.request-intake-form__brief {
+  display: flex;
+  flex-direction: column;
+}
+.request-intake-form__brief label:last-of-type {
+  flex: 1;
+  grid-template-rows: auto 1fr;
+}
+.request-intake-form__modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 20px;
+}
+.request-intake-form__modes .hit[aria-pressed="true"] .button {
+  border-color: var(--shell-signal);
+  color: var(--shell-signal);
+  background: var(--shell-signal-soft);
+}
+.request-intake-form__lookup {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.request-intake-form__lookup label {
+  flex: 1 1 12rem;
+  margin: 0;
+}
+.request-intake-form__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+  margin-top: 20px;
+}
+.request-intake-form__wide-field {
+  grid-column: 1 / -1;
+}
+.request-intake__hint {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.5 var(--font-sans);
+}
+.request-intake__client {
+  display: grid;
+  gap: 4px;
+  padding: 16px 18px;
+  border-left: 3px solid var(--shell-signal);
+  background: var(--shell-signal-soft);
+  overflow-wrap: anywhere;
+}
+.request-intake__client span {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+.request-intake__notice {
+  margin: 16px 0 0;
+  color: var(--shell-signal);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.request-intake-form__products > .request-intake__hint {
+  margin-bottom: 20px;
+}
+[data-surface="cereri-intake"] .product-picker--choices .product-picker__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: 16px;
+  margin-bottom: 0;
+}
+[data-surface="cereri-intake"] .product-picker--choices .product-picker__list button {
+  height: 100%;
+  min-height: 112px;
+  padding: 18px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+}
+[data-surface="cereri-intake"] .product-picker--choices .product-picker__list button:hover:not(:disabled),
+[data-surface="cereri-intake"] .product-picker--choices .product-picker__list button[aria-pressed="true"] {
+  border-color: var(--shell-signal);
+  background: var(--shell-signal-soft);
+}
+[data-surface="cereri-intake"] .product-picker__list strong {
+  font: 600 16px/1.4 var(--font-sans);
+}
+[data-surface="cereri-intake"] .product-picker__action {
+  color: var(--shell-signal);
+  font-weight: 500;
+}
+.request-intake-form__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px 28px;
+  padding: 20px 0;
+  border-top: 1px solid var(--color-border-strong);
+}
+.request-intake__summary {
+  flex: 1 1 24rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.request-intake-form__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+.request-intake-form__actions > a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+}
+.request-intake-form__actions .button {
+  white-space: normal;
+  text-align: center;
+}
+@media (max-width: 1023px) {
+  .request-intake-form__context { grid-template-columns: minmax(0, 1fr); }
+  .request-intake-form__brief textarea { min-height: 152px; }
+}
+@media (max-width: 767px) {
+  [data-surface="cereri-intake"] > .page-header { flex-direction: column; gap: 4px; padding-block: 24px 12px; }
+  [data-surface="cereri-intake"] .page-header__aside { padding-top: 0; }
+  .request-intake-form, .request-intake-form__context { gap: 20px; }
+  .request-intake-form__section { padding: 16px; }
+  .request-intake-form__fields { grid-template-columns: minmax(0, 1fr); }
+  .request-intake-form input, .request-intake-form select, .request-intake-form textarea { font-size: 16px; }
+  .request-intake-form__lookup > .hit { width: 100%; }
+  .request-intake-form__lookup .button { width: 100%; white-space: normal; }
+  .request-intake-form__actions { width: 100%; flex-direction: column; align-items: stretch; gap: 12px; }
+  .request-intake-form__actions > a { order: 1; }
+  .request-intake-form__actions .button { width: 100%; }
+  [data-surface="cereri-intake"] .product-picker--choices .product-picker__list { gap: 12px; }
+}

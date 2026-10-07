@@ -2,7 +2,7 @@
 
 Date: 2026-10-07. Repository: `office952/workos-po`. Branch: `feat/product-system-request-coherence`. Parent/checkpoint: `3046aa700fcd8cb8384ed63497fad62f83b79aaa`; prior UI base: `b5071b6acb59025edbdf82338c5c3613dcd7a5d3`.
 
-Functional source reviewed by Cursor: `4a100f38bb75111a5a6f491aec2c5c829357aed0`. Subsequent documentation-only commits record evidence; they do not change the reviewed product implementation.
+Functional coherence baseline reviewed by Cursor: `4a100f38bb75111a5a6f491aec2c5c829357aed0`. Evidence documentation at `7d40fc5` did not change that implementation. The later request-intake presentation stage is recorded separately below; the baseline's runtime results are not new proof for the later UI.
 
 ## Result
 
@@ -65,4 +65,30 @@ Review disposition: functional verification is sufficient to close this candidat
 
 ## Integration boundary
 
-Source branch only. No merge, deploy, real Cloud/business-data write, new schema/migration/seed or main change. Cursor's checkpoint remains preserved. Candidate is code-verified with scoped synthetic runtime verification reported by Cursor; Owner visual acceptance and integration/deployment are pending.
+Source branch only. No merge, deploy, real Cloud/business-data write, new schema/migration/seed or main change. Cursor's checkpoint remains preserved. The functional coherence baseline has scoped synthetic runtime verification reported by Cursor. The subsequent request-intake UI remains a source candidate pending its own browser verification; Owner visual acceptance and integration/deployment remain pending.
+
+## Request-intake UX stage — 2026-10-08
+
+Owner instruction: implement the request area first, then the Configurator, in separate reviewable stages. Preserve the existing Cereri de oferta register's industrial visual character and use the whole desktop width. The Owner approved the direction of the new-request simulation, not runtime acceptance of this implementation.
+
+Source base: `7d40fc5c5763ae3359cadf27b956be109dd9c19e`, same active branch. Scope is `/cereri/noua` and its collection presentation/loading chrome. The register, request detail, Configurator and domain/API are not redesigned here.
+
+Changes:
+- Compact request-specific header; full-width desktop client/brief columns, stacked below 1024px. The loading route uses the same presentation surface.
+- Dedicated `request-intake.css`, using existing WorkOS theme roles. Old intake rules and the 1000px cap were removed from `product-system.css`.
+- Existing-client search/selection summary and explicit quick-registration/CUI controls; lookup fallback, duplicate refusal and server-owned `canCreateRequest` remain intact.
+- Product and undecided choices share the selection area. Small collections omit unnecessary search/taxonomy controls; large collections reuse existing search/filter/pagination, including 100-product tests. Default picker presentation remains for Catalog and request detail.
+- Footer reflects selected client/product and the real next action. Request persistence still precedes navigation to configuration; no product definitions, pricing or readiness calculations moved into UI.
+
+Checks for this stage:
+- Frontend typecheck passed.
+- Frontend lint passed: zero errors, the same 11 existing fast-refresh warnings.
+- Five focused suites passed: **33 tests**, including chosen→undecided continuation, manual registration after unavailable CUI lookup, server permission enforcement, delayed/pending guards and 100-product selection.
+- Catalog and RequestDetail compatibility suites passed: **28 tests**. Total for this stage: **61 tests / 7 suites**; no full-suite rerun or live API run is claimed.
+- Engine typecheck and lint passed; engine source is unchanged.
+- Build passed: `index-DGtXxywo.js`, `index-BNiL2VLI.css`. Existing bundle-size advisory remains.
+- Source diff whitespace check passed.
+
+Browser status: **BLOCKED / NOT PROVEN**. No Chromium executable was installed in this workspace; Playwright's browser download failed with invalid/truncated ZIP responses. No geometry, dark/light screenshots, keyboard acceptance or Windows-runtime proof is claimed for this stage. Static responsive rules do not replace browser proof. The Owner's existing UI/API processes and all real data remain untouched. The Windows preview at 5185 still serves the earlier candidate until its clean review checkout is explicitly updated and rebuilt.
+
+Next gate: update only the existing synthetic candidate checkout to this source commit; prove `/cereri/noua` at 1920, 1440, **768**, 390 and 320px, both themes, customer/CUI paths, product→undecided selection, focus and save navigation. Verify the preserved register as well. Do not extend this review to Configurator redesign, offer freeze/order/production, migrations/seeds, real data or Owner reference ports.
