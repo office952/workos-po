@@ -147,6 +147,7 @@ jobs:
 
           async function shot(name, width, height, scheme) {
             const context = await browser.newContext({
+              timezoneId: "Europe/Bucharest",
               viewport: { width, height },
               colorScheme: scheme,
               deviceScaleFactor: 1,
@@ -228,7 +229,7 @@ jobs:
           await shot("REQUESTS_V4__04_TABLET_LIGHT_1024x768", 1024, 768, "light");
           await shot("REQUESTS_V4__05_PHONE_DARK_390x844", 390, 844, "dark");
 
-          const context = await browser.newContext({ viewport: { width: 1920, height: 1080 }, reducedMotion: "reduce" });
+          const context = await browser.newContext({ timezoneId: "Europe/Bucharest", viewport: { width: 1920, height: 1080 }, reducedMotion: "reduce" });
           await context.addInitScript(() => localStorage.setItem("workos-color-scheme", "dark"));
           const page = await context.newPage();
           const reviewRows = Array.from({ length: 23 }, (_, index) => ({

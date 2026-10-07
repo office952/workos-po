@@ -22,7 +22,7 @@ div[data-surface="cereri-registry"] > .page-header::after {
   z-index: -1;
   inset: 0 calc(-1 * var(--page-gutter));
   background: url("../../assets/request-intake-surface.webp") center / cover no-repeat;
-  opacity: 0.72;
+  opacity: 0.52;
   pointer-events: none;
 }
 [data-resolved-theme="light"] div[data-surface="cereri-registry"] > .page-header::after {
