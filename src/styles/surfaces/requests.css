@@ -4,6 +4,7 @@
   --requests-amber: var(--color-warning);
   --requests-ink: var(--color-text-primary);
   --requests-display-ink: var(--color-text-primary);
+  --requests-action-width: 160px;
   --requests-panel: color-mix(
     in srgb,
     var(--color-surface) 96%,
@@ -126,21 +127,19 @@
   gap: 16px;
   min-height: 46px;
   padding: 0 20px;
-  border: 1px solid var(--color-border);
-  border-bottom: 0;
-  background: var(--color-surface-raised);
+  background: transparent;
 }
 .requests-register__strip h2 {
   margin: 0;
   color: var(--requests-ink);
-  font: 600 14px var(--font-sans);
+  font: 500 13px var(--font-sans);
 }
 .requests-result {
   color: var(--color-text-secondary);
   font: 400 12px var(--font-mono);
 }
 .requests-reset {
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 6px;
   border: 0;
   background: transparent;
@@ -184,7 +183,7 @@
   border-bottom: 0;
 }
 .requests-table__identity {
-  width: 31%;
+  width: auto;
 }
 .requests-table__client {
   width: 20%;
@@ -199,7 +198,7 @@
   width: 12%;
 }
 .requests-table__action {
-  width: 12%;
+  width: calc(var(--requests-action-width) + 40px);
 }
 .requests-table tbody tr {
   transition: background-color 120ms ease;
@@ -289,9 +288,11 @@ tr[data-attention="true"] .requests-attention {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  min-height: 42px;
+  width: var(--requests-action-width);
+  height: 44px;
+  min-height: 44px;
   max-width: 100%;
-  padding: 10px 12px;
+  padding: 6px 12px;
   border: 1px solid var(--color-border-strong);
   color: var(--shell-signal);
   background: transparent;
@@ -299,7 +300,11 @@ tr[data-attention="true"] .requests-attention {
   text-decoration: none;
   text-align: left;
 }
-.requests-next > span {
+.requests-next__label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.requests-next__arrow {
   flex: 0 0 auto;
   font-size: 17px;
 }
@@ -323,9 +328,16 @@ tr[data-attention="true"] .requests-next {
   gap: 5px;
 }
 .requests-feedback {
-  padding: 56px 24px;
-  border: 1px solid var(--color-border);
-  background: var(--requests-panel);
+  padding: 40px 20px;
+  border-top: 1px solid var(--color-border-strong);
+  background: transparent;
+}
+.requests-table .requests-no-results td {
+  height: 180px;
+  padding: 32px 20px;
+}
+.requests-table .requests-no-results:hover {
+  background: transparent;
 }
 .requests-skeleton td > span {
   display: block;
@@ -339,7 +351,7 @@ tr[data-attention="true"] .requests-next {
     padding-inline: 16px;
   }
   .requests-table__identity {
-    width: 29%;
+    width: auto;
   }
   .requests-table__client {
     width: 18%;
@@ -348,7 +360,7 @@ tr[data-attention="true"] .requests-next {
     width: 13%;
   }
   .requests-table__action {
-    width: 15%;
+    width: calc(var(--requests-action-width) + 32px);
   }
   .requests-object__title {
     font-size: 16px;
@@ -359,7 +371,7 @@ tr[data-attention="true"] .requests-next {
     display: none;
   }
   .requests-table__identity {
-    width: 32%;
+    width: auto;
   }
   .requests-table__client {
     width: 20%;
@@ -371,7 +383,7 @@ tr[data-attention="true"] .requests-next {
     width: 9%;
   }
   .requests-table__action {
-    width: 19%;
+    width: calc(var(--requests-action-width) + 32px);
   }
   .requests-toolbar__controls {
     gap: 10px;
@@ -384,6 +396,9 @@ tr[data-attention="true"] .requests-next {
   }
 }
 @media (max-width: 767px) {
+  [data-surface="cereri-registry"] {
+    --requests-action-width: 148px;
+  }
   .requests-toolbar {
     flex-wrap: wrap;
     gap: 12px;
@@ -408,8 +423,8 @@ tr[data-attention="true"] .requests-next {
     display: inline;
   }
   .requests-register__strip {
-    gap: 10px;
-    padding: 12px;
+    gap: 4px 10px;
+    padding: 0;
     flex-wrap: wrap;
   }
   .requests-register__strip .requests-reset {
@@ -431,6 +446,16 @@ tr[data-attention="true"] .requests-next {
   }
   .requests-table tbody tr:last-child {
     border-bottom: 0;
+  }
+  .requests-table tbody .requests-no-results {
+    display: block;
+    padding: 28px 0;
+    border-top: 1px solid var(--color-border-strong);
+  }
+  .requests-table .requests-no-results td {
+    display: block;
+    height: auto;
+    padding: 0;
   }
   .requests-table tbody tr[data-attention="true"] {
     box-shadow: inset 3px 0 var(--requests-amber);
@@ -462,7 +487,6 @@ tr[data-attention="true"] .requests-next {
     align-self: center;
   }
   .requests-next {
-    max-width: 150px;
     gap: 8px;
   }
   .requests-client {

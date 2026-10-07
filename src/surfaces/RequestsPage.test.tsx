@@ -234,6 +234,9 @@ describe("RequestsPage", () => {
       screen.getByText("Nicio cerere nu corespunde filtrului."),
     ).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("0 din 2");
+    // An empty filter result stays in the register, retaining its column anchors.
+    expect(within(screen.getByRole("table")).getAllByRole("columnheader")).toHaveLength(6);
+    expect(document.querySelector(".requests-feedback")).toBeNull();
     await user.click(
       screen.getByRole("button", { name: /Resetează filtrele/ }),
     );
@@ -336,7 +339,11 @@ describe("RequestsPage", () => {
     expect(
       await screen.findByText("Nouă", { selector: ".status" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Ofertă creată")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("Ofertă creată")).toBeInTheDocument();
+    const receipt = screen.getByRole("link", { name: "Ultima intrare: Caseta" });
+    expect(within(receipt).getByText("NORD MARKET DEMO SRL")).toBeInTheDocument();
+    expect(within(receipt).getByText("Stare: Nouă")).toBeInTheDocument();
+    expect(within(receipt).getByText("Ofertă creată")).toBeInTheDocument();
   });
 
   it("filters Necesită acțiune from canonical needsAttention", async () => {

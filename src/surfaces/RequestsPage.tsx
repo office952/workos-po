@@ -61,6 +61,7 @@ export function RequestsPage() {
   // Forget a removed selection so it cannot return unexpectedly on a later refresh.
   if (selectedRequestId && requests.status === "success" && !selected) setSelectedRequestId(null);
   const receipt = selected ?? latest;
+  const receiptRegistry = receipt ? presentRequestRegistryStatus(receipt) : null;
   const attentionCount = useMemo(
     () => items.filter((item) => item.needsAttention).length,
     [items],
@@ -139,15 +140,32 @@ export function RequestsPage() {
                   <span>{receipt.reference}</span>
                   <span>{formatTimestamp(receipt.createdAt)?.split(",")[0]}</span>
                 </span>
-                <strong>{receipt.title || receipt.reference}</strong>
+                <strong title={receipt.title || receipt.reference || undefined}>
+                  {receipt.title || receipt.reference}
+                </strong>
+                <span className="requests-intake__client" title={receipt.customerDisplayName || undefined}>
+                  {receipt.customerDisplayName || "Fără client"}
+                </span>
+                <span className="requests-intake__progress">
+                  <span>Stare: {receiptRegistry?.stateLabel}</span>
+                  {receiptRegistry?.commercialProgressLabel !== "—" && (
+                    <span>{receiptRegistry?.commercialProgressLabel}</span>
+                  )}
+                </span>
               </a>
             ) : (
               <span className="requests-intake__sheet requests-intake__sheet--idle">
                 Registru de intrare
               </span>
             )}
+            {requests.status === "success" && receipt && (
+              <span className="requests-intake__hint" aria-hidden="true">
+                <span>{selected ? "Cerere selectată" : "Ultima intrare"}</span>
+                <span>Selectează un rând pentru previzualizare</span>
+              </span>
+            )}
           </div>
-          <span className="requests-intake__label" aria-hidden="true">WORKOS<br />REQUEST<br />INTAKE</span>
+          <span className="requests-intake__label" aria-hidden="true">WORKOS<br />REGISTRU<br />INTRARE</span>
           <span className="u-visually-hidden" aria-live="polite" aria-atomic="true">
             {selected ? `Fișa afișează: ${selected.title || selected.reference}` : ""}
           </span>
@@ -239,7 +257,7 @@ export function RequestsPage() {
             </a>
           </div>
         </div>
-        <div className={hasFilter || requests.status !== "success" || items.length === 0 ? "requests-register__strip" : "u-visually-hidden"}>
+        <div className="requests-register__strip">
           <h2>
             {filter === "needs-action" ? "Necesită acțiune" : "Lista de cereri"}
           </h2>
@@ -273,21 +291,6 @@ export function RequestsPage() {
                 <a className="text-link" href="/clienti">
                   Începe de la un client
                 </a>
-              }
-            />
-          </div>
-        ) : view === "filtered-empty" ? (
-          <div className="requests-feedback">
-            <EmptyState
-              title="Nicio cerere nu corespunde filtrului."
-              action={
-                <button
-                  type="button"
-                  className="requests-reset"
-                  onClick={resetFilters}
-                >
-                  Afișează toate cererile
-                </button>
               }
             />
           </div>
@@ -328,7 +331,23 @@ export function RequestsPage() {
                 </tr>
               </thead>
               <tbody>
-                {view === "loading"
+                {view === "filtered-empty" ? (
+                  <tr className="requests-no-results">
+                    <td colSpan={6}>
+                      <EmptyState
+                        title="Nicio cerere nu corespunde filtrului."
+                        description={filter === "needs-action" && !query.trim()
+                          ? "Nu sunt cereri care necesită acțiune în registrul curent."
+                          : "Schimbă căutarea sau resetează filtrele pentru a reveni la registru."}
+                        action={
+                          <button type="button" className="requests-reset" onClick={resetFilters}>
+                            Afișează toate cererile
+                          </button>
+                        }
+                      />
+                    </td>
+                  </tr>
+                ) : view === "loading"
                   ? Array.from({ length: 4 }, (_, index) => (
                       <tr
                         key={index}
@@ -421,8 +440,8 @@ export function RequestsPage() {
                               className="requests-next"
                               href={action.actionHref}
                             >
-                              {action.actionLabel}
-                              <span aria-hidden="true">→</span>
+                              <span className="requests-next__label">{action.actionLabel}</span>
+                              <span className="requests-next__arrow" aria-hidden="true">→</span>
                             </a>
                           </td>
                         </tr>

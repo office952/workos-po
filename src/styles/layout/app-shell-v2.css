@@ -112,6 +112,8 @@
     "signal name";
   column-gap: 9px;
   align-items: center;
+  align-content: center;
+  row-gap: 4px;
   min-width: 0;
   padding: 0 16px;
   border-left: 1px solid var(--shell-edge);
@@ -155,6 +157,7 @@
   display: flex;
   align-items: center;
   margin-left: 0;
+  min-width: 0;
   padding-left: 18px;
   border-left: 1px solid var(--shell-edge);
 }
@@ -177,7 +180,8 @@
 }
 
 .app-shell .account-area__trigger {
-  min-height: 30px;
+  flex: 0 0 auto;
+  min-height: 44px;
   border-color: var(--shell-edge-strong);
   border-radius: 0;
   background: var(--shell-panel);
@@ -431,6 +435,14 @@
   .app-shell__nav-index {
     display: none;
   }
+
+  .app-shell .account-area__org {
+    max-width: 10rem;
+  }
+
+  .app-shell .account-area__role {
+    display: none;
+  }
 }
 
 @media (max-width: 1151px) {
@@ -563,13 +575,8 @@
   }
 
   .app-shell .account-area__trigger {
-    min-width: 42px;
+    min-width: 52px;
     padding-inline: 8px;
-    font-size: 0;
-  }
-
-  .app-shell .account-area__trigger::after {
-    content: "CT";
     font-size: 0.58rem;
   }
 }

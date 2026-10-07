@@ -56,7 +56,7 @@ jobs:
           import fs from "node:fs/promises";
           import assert from "node:assert/strict";
 
-          const out = "artifacts/requests-intake-v5";
+          const out = "artifacts/requests-intake-v6";
           await fs.mkdir(out, { recursive: true });
 
           const session = {
@@ -146,7 +146,25 @@ jobs:
           const browser = await chromium.launch({ headless: true });
 
           const assetEvidence = [];
-          async function shot(name, width, height, scheme, deviceScaleFactor = 1) {
+          const geometryEvidence = [];
+          async function anchors(page) {
+            return page.evaluate(() => Object.fromEntries([
+              ".app-shell__brand", ".app-shell__nav", ".app-shell__route", ".app-shell__account",
+              ".page-header", ".requests-toolbar", ".requests-table thead",
+            ].map((selector) => {
+              const { x, y, width, height } = document.querySelector(selector).getBoundingClientRect();
+              return [selector, { x, y, width, height }];
+            })));
+          }
+          function assertStable(before, after) {
+            for (const selector of Object.keys(before)) {
+              for (const axis of ["x", "y", "width", "height"]) {
+                assert.ok(Math.abs(before[selector][axis] - after[selector][axis]) < 0.5,
+                  `Filter moved ${selector} ${axis}: ${before[selector][axis]} -> ${after[selector][axis]}`);
+              }
+            }
+          }
+          async function shot(name, width, height, scheme, deviceScaleFactor = 1, stress = false) {
             const context = await browser.newContext({
               timezoneId: "Europe/Bucharest",
               viewport: { width, height },
@@ -169,7 +187,9 @@ jobs:
             await page.route("http://127.0.0.1:4173/api/**", async (route) => {
               const url = route.request().url();
               if (url.endsWith("/api/cloud/session")) {
-                await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(session) });
+                const body = stress ? { ...session, organization: { ...session.organization,
+                  displayName: "HUB MEDIA PRODUCTION SI SERVICII PUBLICITARE S.R.L." } } : session;
+                await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
                 return;
               }
               if (url.endsWith("/api/health")) {
@@ -184,7 +204,11 @@ jobs:
                 await route.fulfill({
                   status: 200,
                   contentType: "application/json",
-                  body: JSON.stringify({ overview: { requests } }),
+                  body: JSON.stringify({ overview: { requests: stress ? requests.map((item, index) => index === 0 ? {
+                    ...item,
+                    title: "Litere volumetrice pentru intrarea principala si receptia centrului de prezentare PURE CLIMATE SOLUTIONS",
+                    customerDisplayName: "PURE CLIMATE SOLUTIONS PRODUCTIE SI SERVICII INDUSTRIALE S.R.L.",
+                  } : item) : requests } }),
                 });
                 return;
               }
@@ -217,6 +241,30 @@ jobs:
             assert.equal(await page.getByRole("button", { name: "Următor" }).isDisabled(), true);
             assert.equal(await page.getByRole("button", { name: "Anterior" }).isDisabled(), true);
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Overflow at ${width}`);
+            const geometry = await page.evaluate(() => {
+              const buttons = [...document.querySelectorAll(".requests-next")].map((button) => {
+                const rect = button.getBoundingClientRect();
+                return { label: button.textContent.trim(), width: rect.width, height: rect.height };
+              });
+              const sheet = document.querySelector(".requests-intake__sheet");
+              const children = sheet ? [...sheet.children].filter((child) => getComputedStyle(child).display !== "none") : [];
+              return { buttons, sheet: sheet ? {
+                height: sheet.clientHeight, scrollHeight: sheet.scrollHeight,
+                visibleLinesFit: children.every((child) => child.getBoundingClientRect().bottom <= sheet.getBoundingClientRect().bottom + 1),
+                fontFamily: getComputedStyle(sheet).fontFamily,
+              } : null, account: document.querySelector(".account-area__trigger").getBoundingClientRect().height };
+            });
+            for (const button of geometry.buttons) {
+              assert.equal(button.width, width < 768 ? 148 : 160, `Nonstandard action width at ${width}: ${button.label}`);
+              assert.equal(button.height, 44, `Nonstandard action height at ${width}: ${button.label}`);
+            }
+            assert.ok(geometry.account >= 44, "Account target smaller than 44px");
+            if (geometry.sheet) {
+              assert.ok(geometry.sheet.scrollHeight <= geometry.sheet.height + 1, `Clipped receipt at ${width}`);
+              assert.equal(geometry.sheet.visibleLinesFit, true, `Receipt line outside paper at ${width}`);
+              assert.match(geometry.sheet.fontFamily, /IBM Plex Mono/);
+            }
+            geometryEvidence.push({ name, width, stress, ...geometry });
             await page.screenshot({ path: `${out}/${name}.png`, fullPage: true });
             if (textureResponse) await (await textureResponse).finished();
             // Read bytes already received by Chromium; this makes no extra image request.
@@ -235,22 +283,22 @@ jobs:
             } else {
               assert.equal(await page.locator(".requests-intake img").evaluate((img) => img.currentSrc.includes("1520")), deviceScaleFactor === 2);
             }
-            if (width === 1920 && scheme === "dark" && deviceScaleFactor === 1) {
+            if (width === 1920 && scheme === "dark" && deviceScaleFactor === 1 && !stress) {
               await page.getByRole("combobox", { name: "Ordine" }).selectOption("oldest");
               assert.match(await page.locator("tbody tr").first().innerText(), /Totem dublă față/);
-              await page.screenshot({ path: `${out}/REQUESTS_V5__06_SORT_OLDEST_1920x1080.png`, fullPage: true });
+              await page.screenshot({ path: `${out}/REQUESTS_V6__06_SORT_OLDEST_1920x1080.png`, fullPage: true });
               await page.getByRole("button", { name: /Necesită acțiune/ }).click();
               assert.equal(await page.locator("tbody tr").count(), 2);
-              await page.screenshot({ path: `${out}/REQUESTS_V5__07_ATTENTION_1920x1080.png`, fullPage: true });
+              await page.screenshot({ path: `${out}/REQUESTS_V6__07_ATTENTION_1920x1080.png`, fullPage: true });
               await page.getByRole("searchbox", { name: "Caută" }).fill("inexistent");
               await page.getByText("Nicio cerere nu corespunde filtrului.").waitFor();
               await page.getByRole("button", { name: /Resetează filtrele/ }).click();
               assert.equal(await page.locator("tbody tr").count(), 4);
               await page.getByRole("button", { name: "Rânduri compacte" }).click();
               assert.equal(await page.getByRole("button", { name: "Rânduri compacte" }).getAttribute("aria-pressed"), "true");
-              await page.screenshot({ path: `${out}/REQUESTS_V5__08_COMPACT_1920x1080.png`, fullPage: true });
+              await page.screenshot({ path: `${out}/REQUESTS_V6__08_COMPACT_1920x1080.png`, fullPage: true });
             }
-            if (width === 1920 && deviceScaleFactor === 1) {
+            if (width === 1920 && deviceScaleFactor === 1 && !stress) {
               await page.getByRole("combobox", { name: "Ordine" }).selectOption("newest");
               if (await page.getByRole("button", { name: "Rânduri compacte" }).getAttribute("aria-pressed") === "true") {
                 await page.getByRole("button", { name: "Rânduri compacte" }).click();
@@ -264,7 +312,7 @@ jobs:
               assert.equal(await row.getAttribute("aria-selected"), "true");
               assert.equal(await page.locator(".requests-intake img").evaluate((img) => img.getAnimations().some((animation) => animation.playState === "running")), false, "Selection replayed the entrance animation");
               assert.equal(await page.locator(".requests-intake__sheet").getAttribute("href"), "/cereri/req-2");
-              await page.screenshot({ path: `${out}/REQUESTS_V5__${scheme === "dark" ? "15_SELECTED_DARK" : "16_SELECTED_LIGHT"}.png`, fullPage: true });
+              await page.screenshot({ path: `${out}/REQUESTS_V6__${scheme === "dark" ? "15_SELECTED_DARK" : "16_SELECTED_LIGHT"}.png`, fullPage: true });
               const third = page.getByRole("row", { name: "Previzualizează cererea: Colantare vitrină" });
               await third.focus();
               await page.keyboard.press("Space");
@@ -291,13 +339,20 @@ jobs:
             await context.close();
           }
 
-          await shot("REQUESTS_V5__01_DESKTOP_DARK_1920x1080", 1920, 1080, "dark");
-          await shot("REQUESTS_V5__02_DESKTOP_LIGHT_1920x1080", 1920, 1080, "light");
-          await shot("REQUESTS_V5__03_LAPTOP_DARK_1366x768", 1366, 768, "dark");
-          await shot("REQUESTS_V5__04_TABLET_LIGHT_1024x768", 1024, 768, "light");
-          await shot("REQUESTS_V5__05_PHONE_DARK_390x844", 390, 844, "dark");
+          await shot("REQUESTS_V6__01_DESKTOP_DARK_1920x1080", 1920, 1080, "dark");
+          await shot("REQUESTS_V6__02_DESKTOP_LIGHT_1920x1080", 1920, 1080, "light");
+          await shot("REQUESTS_V6__03_LAPTOP_DARK_1366x768", 1366, 768, "dark");
+          await shot("REQUESTS_V6__04_TABLET_LIGHT_1024x768", 1024, 768, "light");
+          await shot("REQUESTS_V6__05_PHONE_DARK_390x844", 390, 844, "dark");
 
-          await shot("REQUESTS_V5__17_RETINA_DARK_1920x1080", 1920, 1080, "dark", 2);
+          await shot("REQUESTS_V6__17_RETINA_DARK_1920x1080", 1920, 1080, "dark", 2);
+          await shot("REQUESTS_V6__18_STRESS_DESKTOP", 1920, 1080, "dark", 1, true);
+          await shot("REQUESTS_V6__19_STRESS_LAPTOP", 1366, 768, "light", 1, true);
+          await shot("REQUESTS_V6__20_STRESS_1280", 1280, 800, "dark", 1, true);
+          await shot("REQUESTS_V6__21_STRESS_1152", 1152, 800, "dark", 1, true);
+          await shot("REQUESTS_V6__22_STRESS_TABLET", 1024, 768, "dark", 1, true);
+          await shot("REQUESTS_V6__23_STRESS_768", 768, 1024, "light", 1, true);
+          await shot("REQUESTS_V6__24_PHONE_320", 320, 740, "light", 1, true);
           await fs.writeFile(`${out}/IMAGE_LOADING_EVIDENCE.json`, JSON.stringify(assetEvidence, null, 2));
 
           const context = await browser.newContext({ timezoneId: "Europe/Bucharest", viewport: { width: 1920, height: 1080 }, reducedMotion: "reduce" });
@@ -323,7 +378,24 @@ jobs:
           assert.equal(await page.locator("tbody tr").count(), 10);
           assert.equal(await page.locator(".requests-pagination__range").innerText(), "1–10 din 23 cereri");
           assert.equal(await page.locator(".requests-intake img").evaluate((img) => getComputedStyle(img).animationName), "none");
-          await page.screenshot({ path: `${out}/REQUESTS_V5__09_PAGINATION_PAGE_1.png`, fullPage: true, animations: "disabled" });
+          await page.evaluate(() => window.scrollTo(0, 0));
+          const beforeFilter = await anchors(page);
+          const scrollBefore = await page.evaluate(() => document.documentElement.scrollHeight > innerHeight);
+          await page.getByRole("searchbox", { name: "Caută" }).fill("nu-exista-review");
+          await page.getByText("Nicio cerere nu corespunde filtrului.").waitFor();
+          await page.evaluate(() => window.scrollTo(0, 0));
+          const emptyFilter = await anchors(page);
+          assertStable(beforeFilter, emptyFilter);
+          assert.equal(await page.getByRole("columnheader").count(), 6);
+          assert.equal(await page.locator(".requests-feedback").count(), 0);
+          const scrollAfter = await page.evaluate(() => document.documentElement.scrollHeight > innerHeight);
+          assert.equal(scrollBefore, true);
+          assert.equal(scrollAfter, false);
+          await page.screenshot({ path: `${out}/REQUESTS_V6__25_FILTER_EMPTY_STABLE.png`, fullPage: true, animations: "disabled" });
+          await page.getByRole("button", { name: /Resetează filtrele/ }).click();
+          assertStable(beforeFilter, await anchors(page));
+          geometryEvidence.push({ name: "scrollbar_and_filter_stability", beforeFilter, emptyFilter, scrollBefore, scrollAfter });
+          await page.screenshot({ path: `${out}/REQUESTS_V6__09_PAGINATION_PAGE_1.png`, fullPage: true, animations: "disabled" });
           await page.getByRole("button", { name: "Următor" }).focus();
           await page.keyboard.press("Enter");
           assert.equal(await page.locator(".requests-pagination__range").innerText(), "11–20 din 23 cereri");
@@ -338,7 +410,7 @@ jobs:
             complete: document.querySelector(".requests-intake img").complete,
             clip: getComputedStyle(document.querySelector(".requests-intake img")).clipPath,
           }))));
-          await page.screenshot({ path: `${out}/REQUESTS_V5__10_PAGINATION_PAGE_2.png`, fullPage: true, animations: "disabled" });
+          await page.screenshot({ path: `${out}/REQUESTS_V6__10_PAGINATION_PAGE_2.png`, fullPage: true, animations: "disabled" });
           await page.getByRole("button", { name: "Pagina 3", exact: true }).click();
           assert.equal(await page.locator("tbody tr").count(), 3);
           assert.equal(await page.getByRole("button", { name: "Următor" }).isDisabled(), true);
@@ -352,7 +424,7 @@ jobs:
           await page.getByRole("searchbox", { name: "Caută" }).fill("");
           await page.getByRole("combobox", { name: "Pe pagină" }).selectOption("10");
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-          await page.screenshot({ path: `${out}/REQUESTS_V5__11_PHONE_PAGINATION.png`, fullPage: true, animations: "disabled" });
+          await page.screenshot({ path: `${out}/REQUESTS_V6__11_PHONE_PAGINATION.png`, fullPage: true, animations: "disabled" });
           const longReview = Array.from({ length: 200 }, (_, index) => ({ ...reviewRows[index % reviewRows.length], requestId: `long-review-${index}`, reference: `REV-LONG-${index}`, title: `Cerere review extins ${index}` }));
           await page.route("http://127.0.0.1:4173/api/requests", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ overview: { requests: longReview } }) }));
           await page.reload();
@@ -361,21 +433,22 @@ jobs:
           for (let i = 0; i < 10; i++) await page.getByRole("button", { name: "Anterior" }).click();
           assert.equal(await page.getByRole("button", { name: "Pagina 10", exact: true }).getAttribute("aria-current"), "page");
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-          await page.screenshot({ path: `${out}/REQUESTS_V5__14_PHONE_MANY_PAGES.png`, fullPage: true, animations: "disabled" });
+          await page.screenshot({ path: `${out}/REQUESTS_V6__14_PHONE_MANY_PAGES.png`, fullPage: true, animations: "disabled" });
           await page.route("http://127.0.0.1:4173/api/requests", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ overview: { requests: [] } }) }));
           await page.setViewportSize({ width: 1920, height: 1080 });
           await page.reload();
           await page.getByText("Nu există cereri").waitFor();
           assert.equal(await page.getByRole("navigation", { name: "Paginare cereri" }).count(), 0);
           assert.equal(await page.getByRole("link", { name: /Ultima intrare/ }).count(), 0);
-          await page.screenshot({ path: `${out}/REQUESTS_V5__12_EMPTY.png`, fullPage: true, animations: "disabled" });
+          await page.screenshot({ path: `${out}/REQUESTS_V6__12_EMPTY.png`, fullPage: true, animations: "disabled" });
           await page.route("http://127.0.0.1:4173/api/requests", (route) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "synthetic-unavailable" }) }));
           await page.reload();
           await page.getByRole("alert").waitFor();
           assert.equal(await page.getByRole("navigation", { name: "Paginare cereri" }).count(), 0);
-          await page.screenshot({ path: `${out}/REQUESTS_V5__13_ERROR.png`, fullPage: true, animations: "disabled" });
+          await page.screenshot({ path: `${out}/REQUESTS_V6__13_ERROR.png`, fullPage: true, animations: "disabled" });
           await context.close();
 
+          await fs.writeFile(`${out}/GEOMETRY_EVIDENCE.json`, JSON.stringify(geometryEvidence, null, 2));
           await browser.close();
           EOF
           node capture-requests.mjs
@@ -383,9 +456,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: requests-intake-v5
+          name: requests-intake-v6
           path: |
-            artifacts/requests-intake-v5/*.png
-            artifacts/requests-intake-v5/*.json
+            artifacts/requests-intake-v6/*.png
+            artifacts/requests-intake-v6/*.json
           if-no-files-found: error
           retention-days: 3

@@ -51,13 +51,79 @@ div[data-surface="cereri-registry"] > .page-header::after {
 .requests-instrument__metric-value { font: 400 44px/1 var(--font-mono); letter-spacing: -0.06em; }
 .requests-instrument__metric-label { max-width: 90px; font: 500 13px/1.4 var(--font-sans); }
 .requests-intake { display: grid; grid-template-columns: minmax(0, 760px) max-content; align-items: center; justify-content: center; gap: 24px; width: 100%; }
-.requests-intake__device { position: relative; width: min(100%, 760px); min-width: 0; aspect-ratio: 3.77; }
+.requests-intake__device { position: relative; width: min(100%, 760px); min-width: 0; aspect-ratio: 3.77; container-type: inline-size; }
 .requests-intake__device > img { position: absolute; z-index: 0; top: -32%; display: block; width: 100%; height: auto; }
-.requests-intake__sheet { position: absolute; z-index: 1; left: 13%; right: 13%; top: 39%; bottom: 9%; display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 10px 10px 0; color: #252119; text-decoration: none; overflow: hidden; }
-.requests-intake__meta { display: flex; justify-content: space-between; gap: 12px; font: 400 11px/1.25 var(--font-mono); }
-.requests-intake__sheet strong { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font: 600 clamp(13px, 1vw, 18px)/1.25 var(--font-sans); }
-.requests-intake__sheet:hover { text-decoration: underline; text-underline-offset: 3px; }
-.requests-intake__sheet:focus-visible { outline: 2px solid #252119; outline-offset: -2px; }
+.requests-intake__sheet {
+  position: absolute;
+  z-index: 1;
+  left: 13%;
+  right: 13%;
+  top: 29%;
+  bottom: 6%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 7px;
+  padding: 5px 10px;
+  color: #373027;
+  font-family: var(--font-mono);
+  text-decoration: none;
+  overflow: hidden;
+}
+.requests-intake__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 10px;
+  line-height: 1.3;
+}
+.requests-intake__sheet strong {
+  display: -webkit-box;
+  flex: 0 0 auto;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font: 500 clamp(13px, 2.2cqi, 17px)/1.3 var(--font-mono);
+  letter-spacing: -0.04em;
+}
+.requests-intake__client {
+  display: block;
+  flex: 0 0 auto;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.requests-intake__progress {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 6px;
+  border-top: 1px dashed rgb(55 48 39 / 28%);
+  font-size: 10px;
+  line-height: 1.3;
+}
+.requests-intake__progress > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.requests-intake__sheet:hover { color: #211c15; }
+.requests-intake__sheet:focus-visible { outline: 2px solid #373027; outline-offset: -2px; }
+.requests-intake__hint {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 9%;
+  right: 9%;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--color-text-secondary);
+  font: 400 10px/1.4 var(--font-mono);
+}
+.requests-intake__hint > span:first-child { flex: 0 0 auto; }
+.requests-intake__hint > span:last-child { text-align: right; }
 .requests-intake__sheet--idle { align-items: center; font: 400 12px var(--font-mono); }
 .requests-intake__label { color: var(--color-text-secondary); font: 400 10px/1.8 var(--font-mono); letter-spacing: 0.12em; }
 .requests-new { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 48px; padding: 0 22px; border: 1px solid var(--shell-signal); background: var(--shell-signal); color: var(--shell-button-ink); font: 600 14px var(--font-sans); text-decoration: none; white-space: nowrap; }
@@ -72,8 +138,6 @@ div[data-surface="cereri-registry"] > .page-header::after {
   div[data-surface="cereri-registry"] > .page-header { min-height: 230px; gap: 16px 32px; padding-block: 28px 24px; }
   .requests-intake { grid-template-columns: minmax(0, 760px); gap: 12px; }
   .requests-intake__label { display: none; }
-  .requests-intake__sheet { gap: 8px; }
-  .requests-intake__meta { font-size: 9px; }
 }
 @media (max-width: 1151px) {
   div[data-surface="cereri-registry"] > .page-header { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 200px; gap: 12px 24px; }
@@ -81,7 +145,15 @@ div[data-surface="cereri-registry"] > .page-header::after {
   .requests-instrument__metric { min-height: 48px; padding-inline: 10px; gap: 10px; }
   .requests-instrument__metric-value { font-size: 30px; }
   .requests-instrument__metric-label { font-size: 12px; }
-  .requests-intake__sheet { gap: 5px; padding-top: 6px; }
+  .requests-intake__hint > span:last-child { display: none; }
+}
+@container (max-width: 620px) {
+  .requests-intake__sheet { gap: 5px; padding-block: 3px; }
+  .requests-intake__meta { font-size: 9px; }
+  .requests-intake__progress { display: none; }
+}
+@container (max-width: 480px) {
+  .requests-intake__client { display: none; }
   .requests-intake__meta > span:last-child { display: none; }
 }
 @media (max-width: 767px) {
