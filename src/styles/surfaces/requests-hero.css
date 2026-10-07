@@ -20,11 +20,15 @@ div[data-surface="cereri-registry"] > .page-header::after {
   content: "";
   position: absolute;
   z-index: -1;
-  inset: 4% 0 4% 38%;
-  background: var(--color-text-primary);
-  opacity: 0.09;
-  mask: url("../../assets/workos-routing-grid.svg") center / 900px auto no-repeat;
+  inset: 0 calc(-1 * var(--page-gutter));
+  background: url("../../assets/request-intake-surface.webp") center / cover no-repeat;
+  opacity: 0.72;
   pointer-events: none;
+}
+[data-resolved-theme="light"] div[data-surface="cereri-registry"] > .page-header::after {
+  filter: invert(1) grayscale(1);
+  mix-blend-mode: multiply;
+  opacity: 0.46;
 }
 [data-surface="cereri-registry"] .page-header__copy { grid-area: copy; max-width: 640px; padding: 0 0 16px; border-bottom: 1px solid var(--color-border); box-shadow: none; }
 [data-surface="cereri-registry"] .page-header__eyebrow { margin: 0 0 14px; color: var(--color-text-secondary); font: 400 11px var(--font-mono); letter-spacing: 0.19em; }
