@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "../styles/surfaces/requests.css";
 import "../styles/surfaces/requests-hero.css";
 import { EmptyState } from "../components/EmptyState";
@@ -46,6 +46,7 @@ export function RequestsPage() {
   const requests = useResource(resourceKeys.requests(), loadRequestList);
   const items = useMemo(() => requests.data ?? [], [requests.data]);
   const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
   const [filter, setFilter] = useState<RequestFilter>("all");
   const [sort, setSort] = useState<RequestSort>("newest");
   const [compact, setCompact] = useState(false);
@@ -117,6 +118,7 @@ export function RequestsPage() {
     setQuery("");
     setFilter("all");
     setPage(1);
+    searchRef.current?.focus();
   }
 
   return (
@@ -137,8 +139,8 @@ export function RequestsPage() {
               <a className="requests-intake__sheet" href={requestHref(receipt.requestId)}
                 aria-label={`${selected ? "Cerere selectată" : "Ultima intrare"}: ${receipt.title || receipt.reference}`}>
                 <span className="requests-intake__meta">
-                  <span>{receipt.reference}</span>
-                  <span>{formatTimestamp(receipt.createdAt)?.split(",")[0]}</span>
+                  <span>{receipt.reference || "—"}</span>
+                  <span>{formatTimestamp(receipt.createdAt)?.split(",")[0] || "—"}</span>
                 </span>
                 <strong title={receipt.title || receipt.reference || undefined}>
                   {receipt.title || receipt.reference}
@@ -220,6 +222,7 @@ export function RequestsPage() {
               Caută
             </label>
             <input
+              ref={searchRef}
               id="cereri-cauta"
               type="search"
               placeholder="Caută client, referință sau lucrare"

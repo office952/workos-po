@@ -241,6 +241,7 @@ describe("RequestsPage", () => {
       screen.getByRole("button", { name: /Resetează filtrele/ }),
     );
     expect(screen.getByRole("searchbox", { name: "Caută" })).toHaveValue("");
+    expect(screen.getByRole("searchbox", { name: "Caută" })).toHaveFocus();
     expect(screen.getByRole("link", { name: "Totem" })).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("1–2 din 2 cereri");
   });

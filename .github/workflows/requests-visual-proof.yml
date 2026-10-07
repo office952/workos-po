@@ -283,6 +283,19 @@ jobs:
             } else {
               assert.equal(await page.locator(".requests-intake img").evaluate((img) => img.currentSrc.includes("1520")), deviceScaleFactor === 2);
             }
+            if ((width === 1920 && scheme === "dark" && deviceScaleFactor === 1 && !stress) || width === 390) {
+              const beforeAccount = width >= 768 ? await anchors(page) : null;
+              await page.getByRole("button", { name: "Cont", exact: true }).click();
+              const menu = page.getByRole("menu", { name: "Cont", exact: true });
+              assert.equal(await menu.isVisible(), true);
+              const rect = await menu.boundingBox();
+              assert.ok(rect.x >= 0 && rect.x + rect.width <= width, "Account menu outside viewport");
+              if (beforeAccount) assertStable(beforeAccount, await anchors(page));
+              await page.screenshot({ path: `${out}/REQUESTS_V6__${width === 390 ? "27_ACCOUNT_PHONE" : "26_ACCOUNT_DESKTOP"}.png`, fullPage: true });
+              await page.keyboard.press("Escape");
+              assert.equal(await menu.count(), 0);
+              assert.equal(await page.getByRole("button", { name: "Cont", exact: true }).evaluate((button) => button === document.activeElement), true);
+            }
             if (width === 1920 && scheme === "dark" && deviceScaleFactor === 1 && !stress) {
               await page.getByRole("combobox", { name: "Ordine" }).selectOption("oldest");
               assert.match(await page.locator("tbody tr").first().innerText(), /Totem dublă față/);
@@ -306,8 +319,12 @@ jobs:
               const row = page.getByRole("row", { name: "Previzualizează cererea: Casetă luminoasă fațadă" });
               await row.hover();
               assert.equal(await page.locator(".requests-intake__sheet").getAttribute("href"), "/cereri/req-1");
+              // Settle responses caused by preceding filters/full-page captures
+              // before isolating the explicit selection's network activity.
+              await page.waitForLoadState("networkidle");
               const imageBefore = await page.locator(".requests-intake img").evaluate((img) => img.currentSrc);
               const imageLoadsBefore = imageResponses.length;
+              const assetsBefore = imageResponses.map((response) => response.url());
               await row.locator(".requests-table__client").click();
               assert.equal(await row.getAttribute("aria-selected"), "true");
               assert.equal(await page.locator(".requests-intake img").evaluate((img) => img.getAnimations().some((animation) => animation.playState === "running")), false, "Selection replayed the entrance animation");
@@ -321,7 +338,9 @@ jobs:
               await page.keyboard.press("Enter");
               assert.equal(await page.locator(".requests-intake__sheet").getAttribute("href"), "/cereri/req-2");
               assert.equal(await page.locator(".requests-intake img").evaluate((img) => img.currentSrc), imageBefore);
-              assert.equal(imageResponses.length, imageLoadsBefore);
+              await page.waitForLoadState("networkidle");
+              assert.equal(imageResponses.length, imageLoadsBefore,
+                `Selection changed image requests: ${JSON.stringify({ before: assetsBefore, after: imageResponses.map((response) => response.url()) })}`);
               await page.getByRole("button", { name: /Necesită acțiune/ }).click();
               await page.getByRole("searchbox", { name: "Caută" }).fill("inexistent");
               assert.equal(await page.locator(".requests-intake__sheet").getAttribute("href"), "/cereri/req-2");
