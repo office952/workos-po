@@ -148,6 +148,14 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
           <StatusBadge label={customer.statusLabel} tone={statusTone("workflow")} />
         ) : null
       }
+      action={<a className="client-hub__back" href="/clienti">← Toți clienții</a>}
+      instrument={workspace.data ? (
+        <ul className="client-hub__counts" aria-label="Relația cu clientul">
+          <li><a href={clientHref(customerId, "cereri")}><strong>{workspace.data.summary.requestCount}</strong><span>Cereri</span></a></li>
+          <li><a href={clientHref(customerId, "cereri")}><strong>{workspace.data.summary.quoteCount}</strong><span>Oferte</span></a></li>
+          <li><a href={clientHref(customerId, "lucrari")}><strong>{workspace.data.summary.jobCount}</strong><span>Lucrări</span></a></li>
+        </ul>
+      ) : null}
     >
       <div className="client-hub">
         <nav className="client-hub__nav" aria-label="Secțiuni client">
@@ -180,12 +188,13 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
           </ErrorState>
         ) : null}
         {workspace.data && section === "prezentare" ? (
-          <>
-            <SurfacePanel title="Identitate" label="Identitate client">
-              <dl className="client-hub__facts">
-                <div>
-                  <dt>Denumire</dt>
-                  <dd>{customer?.displayName}</dd>
+          <div className="client-hub__layout">
+            <div className="client-hub__main">
+              <SurfacePanel title="Identitate" label="Identitate client">
+                <dl className="client-hub__facts">
+                  <div>
+                    <dt>Denumire</dt>
+                    <dd>{customer?.displayName}</dd>
                 </div>
                 <div>
                   <dt>Stare</dt>
@@ -217,30 +226,9 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
                 </div>
               </dl>
             </SurfacePanel>
-            <SurfacePanel title="Relația curentă" label="Sumar relație">
-              <ul className="client-hub__counts">
-                <li>
-                  <a href={clientHref(customerId, "cereri")}>
-                    <strong>{workspace.data.summary.requestCount}</strong>
-                    <span>Cereri</span>
-                  </a>
-                </li>
-                <li>
-                  <a href={clientHref(customerId, "cereri")}>
-                    <strong>{workspace.data.summary.quoteCount}</strong>
-                    <span>Oferte</span>
-                  </a>
-                </li>
-                <li>
-                  <a href={clientHref(customerId, "lucrari")}>
-                    <strong>{workspace.data.summary.jobCount}</strong>
-                    <span>Lucrări</span>
-                  </a>
-                </li>
-              </ul>
-            </SurfacePanel>
-            {createForm}
-          </>
+            </div>
+            {createForm ? <aside className="client-hub__create" aria-label="Creare cerere">{createForm}</aside> : null}
+          </div>
         ) : null}
         {workspace.data && section === "lucrari" ? (
           <HubCollection
@@ -252,23 +240,25 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
           />
         ) : null}
         {workspace.data && section === "cereri" ? (
-          <>
-            <HubCollection
-              title="Cereri"
-              emptyTitle="Nu există cereri"
-              emptyBody="Creează cererea lucrării pentru acest client."
-              columns={["Cerere", "Stare", "Acțiune"]}
-              rows={workspace.data.requests.map((item) => requestRow(item))}
-            />
-            <HubCollection
-              title="Oferte"
-              emptyTitle="Nu există oferte"
-              emptyBody="Ofertele acestui client vor apărea aici."
-              columns={["Ofertă", "Stare", "Acțiune"]}
-              rows={workspace.data.quotes.map((item) => quoteRow(item))}
-            />
-            {createForm}
-          </>
+          <div className="client-hub__layout">
+            <div className="client-hub__main client-hub__collections">
+              <HubCollection
+                title="Cereri"
+                emptyTitle="Nu există cereri"
+                emptyBody="Creează cererea lucrării pentru acest client."
+                columns={["Cerere", "Stare", "Acțiune"]}
+                rows={workspace.data.requests.map((item) => requestRow(item))}
+              />
+              <HubCollection
+                title="Oferte"
+                emptyTitle="Nu există oferte"
+                emptyBody="Ofertele acestui client vor apărea aici."
+                columns={["Ofertă", "Stare", "Acțiune"]}
+                rows={workspace.data.quotes.map((item) => quoteRow(item))}
+              />
+            </div>
+            {createForm ? <aside className="client-hub__create" aria-label="Creare cerere">{createForm}</aside> : null}
+          </div>
         ) : null}
         {workspace.data && section in CLIENT_HUB_FUTURE_COPY ? (
           <SurfacePanel
@@ -369,8 +359,8 @@ function HubCollection({
           <caption className="u-visually-hidden">{title}</caption>
           <thead>
             <tr>
-              {columns.map((column) => (
-                <th key={column} scope="col">
+              {columns.map((column, index) => (
+                <th key={column} scope="col" className={index === 0 ? "clients-table__identity" : index === 1 ? "clients-table__state" : "clients-table__action"}>
                   {column}
                 </th>
               ))}

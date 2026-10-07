@@ -120,6 +120,7 @@ export function ClientsPage() {
       lead="Găsește clientul și continuă lucrarea din fișa lui."
       meta={registry.status === "success" ? `${visible.length} rezultate` : undefined}
       instrument={
+        <>
         <div className="clients-instrument" role="group" aria-label="Filtre registru clienți">
           <button
             type="button"
@@ -161,17 +162,6 @@ export function ClientsPage() {
             <span className="clients-instrument__metric-label">Necesită acțiune</span>
           </button>
         </div>
-      }
-    >
-      <section className="clients-register" aria-label="Registru clienți">
-        {registry.status === "error" && registry.data ? (
-          <InlineAlert tone="error" title="Lista nu a putut fi actualizată">
-            Datele afișate sunt de la ultima citire reușită.
-            <Button variant="secondary" onClick={() => invalidateResources(resourceKeys.customers())}>
-              Reîncearcă
-            </Button>
-          </InlineAlert>
-        ) : null}
         <div className="clients-toolbar">
           <div className="clients-search">
             <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -191,6 +181,18 @@ export function ClientsPage() {
             />
           </div>
         </div>
+        </>
+      }
+    >
+      <section className="clients-register" aria-label="Registru clienți">
+        {registry.status === "error" && registry.data ? (
+          <InlineAlert tone="error" title="Lista nu a putut fi actualizată">
+            Datele afișate sunt de la ultima citire reușită.
+            <Button variant="secondary" onClick={() => invalidateResources(resourceKeys.customers())}>
+              Reîncearcă
+            </Button>
+          </InlineAlert>
+        ) : null}
         <div className="clients-register__strip">
           <h2>{statusChip === "attention" ? "Necesită acțiune" : "Lista de clienți"}</h2>
           <span className="clients-result" role={view !== "ready" ? "status" : undefined}>
