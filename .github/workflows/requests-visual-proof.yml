@@ -321,12 +321,19 @@ jobs:
               assert.equal(await page.locator(".requests-intake__sheet").getAttribute("href"), "/cereri/req-1");
               // Settle responses caused by preceding filters/full-page captures
               // before isolating the explicit selection's network activity.
+              await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+              await page.locator(".requests-intake img").evaluate(async (img) => {
+                await Promise.all(img.getAnimations().map((animation) => animation.finished.catch(() => {})));
+                window.__receiptImageBeforeSelection = img;
+              });
               await page.waitForLoadState("networkidle");
               const imageBefore = await page.locator(".requests-intake img").evaluate((img) => img.currentSrc);
               const imageLoadsBefore = imageResponses.length;
               const assetsBefore = imageResponses.map((response) => response.url());
               await row.locator(".requests-table__client").click();
               assert.equal(await row.getAttribute("aria-selected"), "true");
+              assert.equal(await page.locator(".requests-intake img").evaluate((img) => img === window.__receiptImageBeforeSelection), true,
+                "Selection replaced the hardware DOM element");
               assert.equal(await page.locator(".requests-intake img").evaluate((img) => img.getAnimations().some((animation) => animation.playState === "running")), false, "Selection replayed the entrance animation");
               assert.equal(await page.locator(".requests-intake__sheet").getAttribute("href"), "/cereri/req-2");
               await page.screenshot({ path: `${out}/REQUESTS_V6__${scheme === "dark" ? "15_SELECTED_DARK" : "16_SELECTED_LIGHT"}.png`, fullPage: true });
