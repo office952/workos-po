@@ -51,5 +51,14 @@ export function useResource<T>(
     });
   }, [key, staleMs]);
 
+  useEffect(() => {
+    if (!key || snapshot.status !== "idle") {
+      return;
+    }
+    void loadResource(key, () => fetcherRef.current(), { staleMs }).catch(() => {
+      // A session boundary discards values while preserving this subscription.
+    });
+  }, [key, snapshot.status, staleMs]);
+
   return snapshot;
 }

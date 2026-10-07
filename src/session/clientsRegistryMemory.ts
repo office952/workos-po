@@ -31,7 +31,9 @@ export function readClientsRegistryMemory(): ClientsRegistryMemory {
     }
     return {
       query: typeof record.query === "string" ? record.query : "",
-      statusChip: typeof record.statusChip === "string" ? record.statusChip : "all",
+      statusChip: ["all", "attention", "ACTIVE", "RETIRED"].includes(String(record.statusChip))
+        ? String(record.statusChip)
+        : "all",
       selectedId: typeof record.selectedId === "string" && record.selectedId !== "" ? record.selectedId : null,
     };
   } catch {
@@ -43,5 +45,19 @@ export function writeClientsRegistryMemory(next: ClientsRegistryMemory): void {
   if (typeof sessionStorage === "undefined") {
     return;
   }
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // Registry preferences must not prevent reading customers.
+  }
+}
+
+export function clearClientsRegistryMemory(): void {
+  if (typeof sessionStorage !== "undefined") {
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // Session isolation does not depend on preference storage being available.
+    }
+  }
 }

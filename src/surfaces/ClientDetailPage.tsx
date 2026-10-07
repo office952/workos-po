@@ -52,9 +52,11 @@ type ClientDetailPageProps = {
 };
 
 export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
-  const workspace = useResource(resourceKeys.customerWorkspace(customerId), () =>
+  const loaded = useResource(resourceKeys.customerWorkspace(customerId), () =>
     loadCustomerWorkspace(customerId),
   );
+  const access = presentResourceAccess(loaded.error);
+  const workspace = access === "denied" ? { ...loaded, data: undefined } : loaded;
   const customer = workspace.data?.customer;
   const section = parseClientHubSection(window.location.search);
   const [title, setTitle] = useState("");
@@ -63,13 +65,13 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!customer) {
+    if (!customer || workspace.status !== "success") {
       return;
     }
     writeConfiguratorSession(
       bindConfiguratorSessionToCustomer(readConfiguratorSession(), customerId, customer.displayName),
     );
-  }, [customer, customerId]);
+  }, [customer, customerId, workspace.status]);
 
   async function create(): Promise<void> {
     if (title.trim() === "" || description.trim() === "") {
@@ -102,9 +104,8 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
     }
   }
 
-  const access = presentResourceAccess(workspace.error);
   const createForm =
-    customer && (workspace.data?.canCreateRequest ?? customer.status === "ACTIVE") ? (
+    workspace.status === "success" && workspace.data?.canCreateRequest === true ? (
       <SurfacePanel title="Cerere nouă" label="Cerere nouă">
         <TextField id="request-title" label="Titlu" value={title} onChange={setTitle} />
         <TextField
@@ -127,7 +128,7 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
           </InlineAlert>
         ) : null}
         <p className="ui-note">
-          Clientul rămâne contextul. Cererea pornește fluxul comercial și operațional.
+          Cererea va fi înregistrată pentru acest client.
         </p>
       </SurfacePanel>
     ) : null;
@@ -140,7 +141,7 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
       surface="client-hub"
       eyebrow="Client"
       title={customer?.displayName ?? "Client"}
-      lead="Hubul relației comerciale. Identitatea rămâne fișa clientului."
+      lead="Datele clientului, cererile, ofertele și lucrările sale."
       meta={customer?.city ?? undefined}
       status={
         customer ? (
@@ -160,14 +161,16 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
             </a>
           ))}
         </nav>
-        {workspace.status === "loading" && !workspace.data ? (
+        {(workspace.status === "idle" || workspace.status === "loading") && !workspace.data ? (
           <p role="status">Se citește hubul clientului</p>
         ) : null}
-        {workspace.status === "error" && !workspace.data ? (
+        {workspace.status === "error" ? (
           <ErrorState title={access === "denied" ? "Acces refuzat" : "Clientul nu a putut fi citit"}>
             {access === "denied"
               ? "Nu ai acces la acest client în organizația curentă."
-              : "Identitatea clientului nu este disponibilă."}
+              : workspace.data
+                ? "Actualizarea a eșuat. Datele afișate sunt de la ultima citire reușită."
+                : "Datele clientului nu sunt disponibile."}
             <Button
               variant="secondary"
               onClick={() => invalidateResources(resourceKeys.customerWorkspace(customerId))}
@@ -225,7 +228,7 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
                 <li>
                   <a href={clientHref(customerId, "cereri")}>
                     <strong>{workspace.data.summary.quoteCount}</strong>
-                    <span>Oferte verificate</span>
+                    <span>Oferte</span>
                   </a>
                 </li>
                 <li>
@@ -259,8 +262,8 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
             />
             <HubCollection
               title="Oferte"
-              emptyTitle="Nu există oferte verificate"
-              emptyBody="Ofertele apar doar dacă motorul le leagă de acest client."
+              emptyTitle="Nu există oferte"
+              emptyBody="Ofertele acestui client vor apărea aici."
               columns={["Ofertă", "Stare", "Acțiune"]}
               rows={workspace.data.quotes.map((item) => quoteRow(item))}
             />

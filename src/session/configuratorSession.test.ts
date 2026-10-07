@@ -186,6 +186,22 @@ describe("resolveOwnedSpine", () => {
     { requestId: "req-B", customerId: "cus-B" },
   ];
 
+  it("does not publish any unverified request while retaining the stored session", () => {
+    const stored = session("cus-A", "req-A");
+    expect(resolveOwnedSpine({ url: { customerId: null, requestId: "req-B", productCode: null }, stored, requests: null }).requestId).toBeNull();
+    expect(resolveOwnedSpine({ url: { customerId: "cus-A", requestId: null, productCode: null }, stored, requests: null }).requestId).toBeNull();
+    expect(stored.requestId).toBe("req-A");
+  });
+
+  it("uses a request's verified owner rather than another stored customer", () => {
+    expect(resolveOwnedSpine({ url: { customerId: null, requestId: "req-B", productCode: null }, stored: session("cus-A", "req-A"), requests }))
+      .toEqual({ customerId: "cus-B", requestId: "req-B", productCode: null });
+  });
+
+  it("rejects incompatible explicit customer and request identities", () => {
+    expect(resolveOwnedSpine({ url: { customerId: "cus-A", requestId: "req-B", productCode: null }, stored: session("cus-A", "req-A"), requests }).requestId).toBeNull();
+  });
+
   it("keeps a verified customer A request through catalog", () => {
     expect(
       resolveOwnedSpine({

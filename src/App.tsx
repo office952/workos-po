@@ -29,6 +29,7 @@ import {
   resolvePostAuthenticationPath,
 } from "./session/cloudAuth";
 import { CloudSessionProvider, useCloudSession } from "./session/CloudSessionContext";
+import { cloudSessionScope } from "./session/cloudSessionScope";
 import { configuratorContextKey } from "./session/configuratorSession";
 import { AtelierPage } from "./surfaces/AtelierPage";
 import { AuthGatePage } from "./surfaces/AuthGatePage";
@@ -276,7 +277,7 @@ function AppRuntime() {
     );
   }
 
-  return <AuthenticatedApp location={location} account={presentAccount(cloud)} />;
+  return <AuthenticatedApp key={cloudSessionScope(cloud)} location={location} account={presentAccount(cloud)} />;
 }
 
 function AuthenticatedApp({

@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -24,7 +25,10 @@ import {
   rememberCloudAuthenticated,
 } from "./cloudAuth";
 import { clearConfiguratorSession } from "./configuratorSession";
+import { clearClientsRegistryMemory } from "./clientsRegistryMemory";
+import { cloudSessionScope, readRememberedCloudScope, rememberCloudScope } from "./cloudSessionScope";
 import {
+  advanceCloudBoundaryVersion,
   restoreCloudUnauthorizedExpiry,
   setCloudUnauthorizedHandler,
   suppressCloudUnauthorizedExpiry,
@@ -55,8 +59,10 @@ type CloudSessionState = CloudSessionPresentation & {
 const CloudSessionContext = createContext<CloudSessionState | null>(null);
 
 function forgetOrganizationBoundState(): void {
-  clearConfiguratorSession();
+  advanceCloudBoundaryVersion();
   invalidateAfterCloudBoundaryChange();
+  clearConfiguratorSession();
+  clearClientsRegistryMemory();
 }
 
 export function CloudSessionProvider({ children }: { children: ReactNode }) {
@@ -64,8 +70,16 @@ export function CloudSessionProvider({ children }: { children: ReactNode }) {
   const [unavailable, setUnavailable] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [session, setSession] = useState<CloudSessionPresentation>(emptySession);
+  const scopeRef = useRef<string | null | undefined>(undefined);
 
   const applySession = useCallback((current: CloudSessionPresentation) => {
+    const nextScope = cloudSessionScope(current);
+    const previousScope = scopeRef.current === undefined ? readRememberedCloudScope() : scopeRef.current;
+    if (previousScope !== nextScope) {
+      forgetOrganizationBoundState();
+    }
+    scopeRef.current = nextScope;
+    rememberCloudScope(nextScope);
     setSession(current);
     if (current.user && current.organization) {
       restoreCloudUnauthorizedExpiry();
@@ -75,6 +89,11 @@ export function CloudSessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const markSessionExpired = useCallback(() => {
+    if (scopeRef.current !== null) {
+      scopeRef.current = null;
+      rememberCloudScope(null);
+      forgetOrganizationBoundState();
+    }
     setSessionExpired(true);
     setSession((current) => ({
       ...current,
@@ -158,16 +177,17 @@ export function CloudSessionProvider({ children }: { children: ReactNode }) {
       throw new Error("cloud_logout_failed");
     }
     clearCloudAuthenticatedMark();
+    scopeRef.current = null;
+    rememberCloudScope(null);
     forgetOrganizationBoundState();
     const current = await fetchCloudSession().catch(() => emptySession);
-    setSession(current);
-  }, []);
+    applySession(current);
+  }, [applySession]);
 
   const switchOrganization = useCallback(
     async (organizationId: string) => {
       const result = await switchCloudOrganization(organizationId);
       if (result.ok) {
-        forgetOrganizationBoundState();
         applySession(result.session);
       }
       return result;

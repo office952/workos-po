@@ -231,9 +231,7 @@ export function resolveOwnedSpine(input: {
       return { customerId: urlCustomer ?? input.stored.customerId, requestId: null, productCode };
     }
     const customerId = urlCustomer ?? input.stored.customerId;
-    const requestId =
-      !customerId || input.stored.customerId === customerId ? urlRequest : null;
-    return { customerId, requestId, productCode };
+    return { customerId, requestId: null, productCode };
   }
 
   const customerId = urlCustomer ?? input.stored.customerId;
@@ -242,6 +240,9 @@ export function resolveOwnedSpine(input: {
   }
   const storedRequest =
     input.stored.customerId === customerId ? input.stored.requestId : null;
+  if (!input.requests) {
+    return { customerId, requestId: null, productCode };
+  }
   if (storedRequest && input.requests && ownerOf(storedRequest) !== customerId) {
     return { customerId, requestId: null, productCode };
   }
@@ -259,5 +260,9 @@ export function clearConfiguratorSession(): void {
   if (typeof sessionStorage === "undefined") {
     return;
   }
-  sessionStorage.removeItem(STORAGE_KEY);
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // The in-memory resource cache is discarded independently at a session boundary.
+  }
 }

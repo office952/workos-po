@@ -1,7 +1,8 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { resetResourceCache } from "../data/resourceCache";
+import { invalidateResources, readResource, resetResourceCache } from "../data/resourceCache";
+import { resourceKeys } from "../data/resourceKeys";
 import {
   readConfiguratorSession,
   writeConfiguratorSession,
@@ -50,6 +51,44 @@ function workspace(customerId: string, displayName: string, extras: Record<strin
 }
 
 describe("ClientDetailPage", () => {
+  it.each([401, 403])("hides an already loaded client after a %i refresh", async (status) => {
+    const fetchMock = vi.fn(() => jsonResponse(200, workspace("cus-1", "Atelier Nord")));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ClientDetailPage customerId="cus-1" />);
+    await screen.findByRole("heading", { name: "Atelier Nord" });
+    fetchMock.mockImplementation(() => jsonResponse(status, { error: "denied" }));
+    act(() => invalidateResources(resourceKeys.customerWorkspace("cus-1")));
+    expect(await screen.findByText("Acces refuzat")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Atelier Nord" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Creează cererea" })).not.toBeInTheDocument();
+    expect(readResource(resourceKeys.customerWorkspace("cus-1")).data).toBeUndefined();
+  });
+
+  it("explains stale data after a temporary refresh failure and retries", async () => {
+    const fetchMock = vi.fn(() => jsonResponse(200, workspace("cus-1", "Atelier Nord")));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ClientDetailPage customerId="cus-1" />);
+    await screen.findByRole("heading", { name: "Atelier Nord" });
+    fetchMock.mockImplementation(() => jsonResponse(503, {}));
+    act(() => invalidateResources(resourceKeys.customerWorkspace("cus-1")));
+    expect(await screen.findByText(/Datele afișate sunt de la ultima citire reușită/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Atelier Nord" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Creează cererea" })).not.toBeInTheDocument();
+    fetchMock.mockImplementation(() => jsonResponse(200, workspace("cus-1", "Atelier actualizat")));
+    await userEvent.click(screen.getByRole("button", { name: "Reîncearcă" }));
+    expect(await screen.findByRole("heading", { name: "Atelier actualizat" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Creează cererea" })).toBeInTheDocument();
+  });
+
+  it("does not offer request creation for a retired client", async () => {
+    const payload = workspace("cus-1", "Atelier Nord");
+    payload.workspace.customer.status = "RETIRED";
+    payload.workspace.canCreateRequest = false;
+    vi.stubGlobal("fetch", vi.fn(() => jsonResponse(200, payload)));
+    render(<ClientDetailPage customerId="cus-1" />);
+    await screen.findByRole("heading", { name: "Atelier Nord" });
+    expect(screen.queryByRole("button", { name: "Creează cererea" })).not.toBeInTheDocument();
+  });
   it("keeps the object workspace and local sections", async () => {
     window.history.replaceState({}, "", "/clienti/cus-1");
     vi.stubGlobal(
@@ -81,7 +120,7 @@ describe("ClientDetailPage", () => {
       vi.fn(() => jsonResponse(200, workspace("cus-1", "Atelier Nord"))),
     );
     render(<ClientDetailPage customerId="cus-1" />);
-    expect(await screen.findByText(/Facturi, contracte și anexe/)).toBeInTheDocument();
+    expect(await screen.findByText(/Facturile, contractele și anexele/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /încarcă|semnează|emite/i })).not.toBeInTheDocument();
   });
 

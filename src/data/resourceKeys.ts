@@ -4,6 +4,7 @@ export const resourceKeys = {
   customers: () => "customers",
   customer: (customerId: string) => `customer:${customerId}`,
   customerWorkspace: (customerId: string) => `customer-workspace:${customerId}`,
+  customerWorkspacePrefix: () => "customer-workspace:",
   requests: () => "requests",
   request: (requestId: string) => `request:${requestId}`,
   catalog: () => "catalog",

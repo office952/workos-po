@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getJson, postJson } from "../api/http";
+import { Button } from "../components/Button";
 import { CatalogWorkspace } from "../components/CatalogWorkspace";
 import { EmptyState } from "../components/EmptyState";
 import { FilterBar } from "../components/FilterBar";
@@ -8,6 +9,7 @@ import { CollectionBody } from "../components/LoadingFloor";
 import { SurfacePanel } from "../components/SurfacePanel";
 import { WorklistRow } from "../components/WorklistRow";
 import { resourceKeys } from "../data/resourceKeys";
+import { invalidateResources } from "../data/resourceCache";
 import { loadCatalogProducts, loadRequestList } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
@@ -37,6 +39,8 @@ export function CatalogPage() {
   });
   const customerId = owned.customerId;
   const requestId = owned.requestId;
+  const ownershipVerified = requests.status === "success";
+  const canConfigure = ownershipVerified && Boolean(customerId && requestId);
   const products = useMemo(() => catalog.data ?? [], [catalog.data]);
   const contextRequest =
     (requests.data ?? []).find((item) => item.requestId === requestId) ?? null;
@@ -99,6 +103,9 @@ export function CatalogPage() {
   }, []);
 
   useEffect(() => {
+    if (!ownershipVerified) {
+      return;
+    }
     const previous = readConfiguratorSession();
     const matched = labelsMatchingContext(previous, { customerId, requestId });
     const customerLabel =
@@ -115,7 +122,7 @@ export function CatalogPage() {
       customerLabel,
       requestLabel,
     });
-  }, [contextRequest, customerId, requestId]);
+  }, [contextRequest, customerId, requestId, ownershipVerified]);
 
   const sessionLabels = labelsMatchingContext(stored, { customerId, requestId });
   const labels = {
@@ -154,15 +161,27 @@ export function CatalogPage() {
       title="Catalog de produse"
       lead="Alege produsul lucrării. Configuratorul primește clientul, cererea și produsul selectat."
       meta={
-        presentContextMeta([labels.customerLabel, labels.requestLabel]) ??
+        (ownershipVerified ? presentContextMeta([labels.customerLabel, labels.requestLabel]) : null) ??
         (customerId && requestId
           ? "Clientul și cererea rămân contextul acestei configurări."
           : undefined)
       }
     >
-      {!customerId || !requestId ? (
+      {requests.status === "idle" || requests.status === "loading" ? (
+        <InlineAlert tone="pending" title="Se verifică cererea">
+          Configurarea va fi disponibilă după verificarea clientului și a cererii.
+        </InlineAlert>
+      ) : requests.status === "error" ? (
+        <InlineAlert tone="error" title="Cererea nu a putut fi verificată">
+          <Button variant="secondary" onClick={() => invalidateResources(resourceKeys.requests())}>
+            Reîncearcă
+          </Button>
+          <a className="text-link" href="/cereri">Înapoi la cereri</a>
+        </InlineAlert>
+      ) : !canConfigure ? (
         <InlineAlert tone="blocked" title="Context incomplet">
           Catalogul are nevoie de un client și o cerere înainte de configurare.
+          <a className="text-link" href="/cereri">Alege cererea</a>
         </InlineAlert>
       ) : null}
       <CatalogWorkspace
@@ -203,7 +222,7 @@ export function CatalogPage() {
             }
           >
             {offerings.map((item) =>
-              requestId ? (
+              canConfigure && requestId ? (
                 <WorklistRow
                   key={item.kind}
                   variant="compact"
@@ -226,15 +245,15 @@ export function CatalogPage() {
               <WorklistRow
                 key={product.code}
                 variant="compact"
-                href={configuratorHref({
+                href={canConfigure ? configuratorHref({
                   customerId,
                   requestId,
                   productCode: product.code,
-                })}
+                }) : undefined}
                 identity={product.label}
                 identityDetail={product.description || undefined}
                 context={product.familyLabel ?? "Produs"}
-                actionLabel="Deschide configurația"
+                actionLabel={canConfigure ? "Deschide configurația" : "Selectează cererea"}
               />
             ))}
           </CollectionBody>

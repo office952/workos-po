@@ -16,18 +16,18 @@ export const CLIENT_HUB_FUTURE_COPY: Record<
 > = {
   documente: {
     title: "Documentele nu sunt disponibile în această etapă",
-    body: "Facturi, contracte și anexe sunt tipuri distincte. Anexele rămân legate de documentul părinte. Plata nu înseamnă factură emisă, iar acceptarea unei oferte nu înseamnă contract semnat.",
+    body: "Facturile, contractele și anexele acestui client vor fi disponibile aici într-o etapă următoare.",
   },
   fotografii: {
-    title: "Fotografiile vor apărea când vor avea sursă",
-    body: "Fotografiile rămân legate de lucrarea din care provin. Hubul nu copiază fișiere și nu deschide încărcare fără contract.",
+    title: "Fotografiile nu sunt disponibile în această etapă",
+    body: "Fotografiile lucrărilor acestui client vor fi disponibile aici.",
   },
   portofoliu: {
-    title: "Portofoliul nu este publicat din această etapă",
-    body: "Portofoliul va selecta din rezultate existente, fără copii de active și fără publicare externă implicită.",
+    title: "Portofoliul nu este disponibil în această etapă",
+    body: "Lucrările alese pentru portofoliul acestui client vor apărea aici.",
   },
   fisiere: {
-    title: "Fișierele rămân la obiectul original",
-    body: "Hubul va agrega referințe. Obiectul original și versiunea rămân sursa. Nu există un motor separat de documente aici.",
+    title: "Fișierele nu sunt disponibile în această etapă",
+    body: "Fișierele cererilor și lucrărilor acestui client vor fi accesibile aici.",
   },
 };

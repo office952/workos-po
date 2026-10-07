@@ -109,7 +109,7 @@ export function presentCustomerWorkspace(payload: unknown): CustomerWorkspaceTra
     return null;
   }
   const customer = presentCustomer(workspace.customer ?? workspace);
-  if (!customer) {
+  if (!customer || typeof workspace.canCreateRequest !== "boolean") {
     return null;
   }
   const summary = asRecord(workspace.summary);
@@ -133,7 +133,7 @@ export function presentCustomerWorkspace(payload: unknown): CustomerWorkspaceTra
     : [];
   return {
     customer,
-    canCreateRequest: asBoolean(workspace.canCreateRequest) ?? customer.status === "ACTIVE",
+    canCreateRequest: workspace.canCreateRequest,
     summary: {
       requestCount: asNumber(summary?.requestCount) ?? requests.length,
       openRequestCount: asNumber(summary?.openRequestCount) ?? requests.length,

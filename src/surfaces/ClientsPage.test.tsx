@@ -1,7 +1,9 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { resetResourceCache } from "../data/resourceCache";
+import { invalidateResources, resetResourceCache } from "../data/resourceCache";
+import { resourceKeys } from "../data/resourceKeys";
+import { readClientsRegistryMemory } from "../session/clientsRegistryMemory";
 import { ClientsPage } from "./ClientsPage";
 
 afterEach(() => {
@@ -19,6 +21,26 @@ function jsonResponse(status: number, body: unknown) {
 }
 
 describe("ClientsPage", () => {
+  it.each([401, 403])("hides a cached registry and its create form after a %i refresh", async (status) => {
+    const fetchMock = vi.fn(() => jsonResponse(200, { registry: { customers: [{ customerId: "cus-1", displayName: "Atelier Nord", status: "ACTIVE" }] } }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ClientsPage />);
+    await screen.findByRole("link", { name: /Atelier Nord/ });
+    fetchMock.mockImplementation(() => jsonResponse(status, {}));
+    act(() => invalidateResources(resourceKeys.customers()));
+    expect(await screen.findByText("Acces refuzat")).toBeInTheDocument();
+    expect(screen.queryByText("Atelier Nord")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Înregistrează clientul" })).not.toBeInTheDocument();
+  });
+
+  it("remembers the client opened using the row action", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => jsonResponse(200, { registry: { customers: [{ customerId: "cus-1", displayName: "Atelier Nord", status: "ACTIVE" }] } })));
+    render(<ClientsPage />);
+    const link = await screen.findByRole("link", { name: /Deschide/ });
+    link.addEventListener("click", (event) => event.preventDefault());
+    await userEvent.click(link);
+    expect(readClientsRegistryMemory().selectedId).toBe("cus-1");
+  });
   it("creates a customer through the public customers API", async () => {
     const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
       const url = String(input);
@@ -67,8 +89,8 @@ describe("ClientsPage", () => {
     const links = await screen.findAllByRole("link", { name: /Atelier Nord/ });
     expect(links.some((link) => link.getAttribute("href") === "/clienti/cus-1")).toBe(true);
     expect(links.some((link) => link.getAttribute("href") === "/clienti/cus-2")).toBe(true);
-    expect(screen.getByText("Cluj")).toBeInTheDocument();
-    expect(screen.getByText("Iași")).toBeInTheDocument();
+    expect(screen.getAllByText("Cluj").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Iași").length).toBeGreaterThan(0);
   });
 
   it("keeps search when the registry is shown again", async () => {

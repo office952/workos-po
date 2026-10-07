@@ -30,7 +30,9 @@ import {
 const ALL = "all";
 
 export function ClientsPage() {
-  const registry = useResource(resourceKeys.customers(), loadCustomerRegistry);
+  const loaded = useResource(resourceKeys.customers(), loadCustomerRegistry);
+  const access = presentResourceAccess(loaded.error);
+  const registry = access === "denied" ? { ...loaded, data: undefined } : loaded;
   const items = useMemo(() => registry.data?.customers ?? [], [registry.data]);
   const summary = registry.data?.summary;
   const remembered = readClientsRegistryMemory();
@@ -104,7 +106,6 @@ export function ClientsPage() {
   }
 
   const view = collectionViewState(registry.status, items.length, visible.length);
-  const access = presentResourceAccess(registry.error);
   const count = (value: number | undefined) =>
     registry.status === "success" && value !== undefined ? String(value).padStart(2, "0") : "—";
 
@@ -116,7 +117,7 @@ export function ClientsPage() {
       surface="clients-registry"
       eyebrow="Registru comercial"
       title="Clienți"
-      lead="Identifică clientul după fișă, nu după nume. Selectarea deschide hubul relației."
+      lead="Găsește clientul și continuă lucrarea din fișa lui."
       meta={registry.status === "success" ? `${visible.length} rezultate` : undefined}
       instrument={
         <div className="clients-instrument" role="group" aria-label="Filtre registru clienți">
@@ -145,7 +146,7 @@ export function ClientsPage() {
             onClick={() => setStatusChip("RETIRED")}
           >
             <strong className="clients-instrument__metric-value">{count(summary?.retired)}</strong>
-            <span className="clients-instrument__metric-label">Retrasi</span>
+            <span className="clients-instrument__metric-label">Retrași</span>
           </button>
           <button
             type="button"
@@ -163,6 +164,14 @@ export function ClientsPage() {
       }
     >
       <section className="clients-register" aria-label="Registru clienți">
+        {registry.status === "error" && registry.data ? (
+          <InlineAlert tone="error" title="Lista nu a putut fi actualizată">
+            Datele afișate sunt de la ultima citire reușită.
+            <Button variant="secondary" onClick={() => invalidateResources(resourceKeys.customers())}>
+              Reîncearcă
+            </Button>
+          </InlineAlert>
+        ) : null}
         <div className="clients-toolbar">
           <div className="clients-search">
             <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -199,7 +208,7 @@ export function ClientsPage() {
             >
               {access === "denied"
                 ? "Nu ai acces la registrul de clienți în această organizație."
-                : "Clienții nu sunt disponibili în acest runtime."}
+                : "Lista de clienți nu este disponibilă momentan."}
               <Button
                 variant="secondary"
                 onClick={() => invalidateResources(resourceKeys.customers())}
@@ -253,7 +262,7 @@ export function ClientsPage() {
                           customer.attentionLabel,
                         ]
                           .filter(Boolean)
-                          .join(" · ") || "Identificat prin fișa clientului"}
+                          .join(" · ") || customer.cui || customer.city || "Date de contact necompletate"}
                       </span>
                     </a>
                   </td>
@@ -267,7 +276,11 @@ export function ClientsPage() {
                     />
                   </td>
                   <td className="clients-table__action">
-                    <a className="clients-next" href={clientHref(customer.customerId)}>
+                    <a
+                      className="clients-next"
+                      href={clientHref(customer.customerId)}
+                      onClick={() => setSelectedId(customer.customerId)}
+                    >
                       <span>Deschide</span>
                       <span aria-hidden="true">→</span>
                     </a>
@@ -278,7 +291,7 @@ export function ClientsPage() {
           </table>
         )}
       </section>
-      <SurfacePanel title="Client nou" label="Client nou">
+      {registry.status === "success" ? <SurfacePanel title="Client nou" label="Client nou">
         <div className="clients-create">
           <TextField id="customer-name" label="Denumire" value={name} onChange={setName} />
           <Button
@@ -296,7 +309,7 @@ export function ClientsPage() {
             </InlineAlert>
           ) : null}
         </div>
-      </SurfacePanel>
+      </SurfacePanel> : null}
     </SlicePage>
   );
 }

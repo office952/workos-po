@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { getJson, postJson } from "../api/http";
+import { invalidateCustomerProjections } from "../data/invalidation";
 import { Button } from "../components/Button";
 import { InfoRow } from "../components/InfoRow";
 import { InlineAlert } from "../components/InlineAlert";
@@ -99,6 +100,7 @@ export function AssemblyPage() {
       if (assemblyId) {
         writeResource(assemblyKey(assemblyId), body.assembly);
       }
+      invalidateCustomerProjections();
     } catch {
       setError("Acțiunea nu a putut fi finalizată.");
     } finally {

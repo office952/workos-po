@@ -1,3 +1,5 @@
+import { TransportError } from "../api/http";
+
 export type ResourceStatus = "idle" | "loading" | "success" | "error";
 
 export type ResourceSnapshot<T> = {
@@ -142,7 +144,10 @@ export async function loadResource<T>(
       }
       entry.snapshot = {
         status: "error",
-        data: entry.snapshot.data,
+        data:
+          error instanceof TransportError && (error.status === 401 || error.status === 403)
+            ? undefined
+            : entry.snapshot.data,
         error,
         updatedAt: Date.now(),
       };
@@ -209,6 +214,16 @@ export function resetResourceCache(): void {
     entry.listeners.clear();
   }
   entries.clear();
+}
+
+/** Discard session-bound values and old responses without disconnecting mounted readers. */
+export function discardResourceCache(): void {
+  for (const entry of entries.values()) {
+    entry.generation += 1;
+    entry.inflight = null;
+    entry.snapshot = { ...idleSnapshot };
+    notify(entry);
+  }
 }
 
 export function hasUsableData<T>(snapshot: ResourceSnapshot<T>): boolean {
