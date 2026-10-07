@@ -45,12 +45,22 @@ Technical edits still clear confirmation. Both technical confirmation and commer
 
 Creation is explicitly labelled, has pending/error feedback, and disables duplicate clicks. A context epoch suppresses late navigation after leaving/changing the context. Pending state is discarded when context changes, including A → B → A. A late request may have created a server object; ignoring its response is not a rollback or an idempotency guarantee.
 
+## Commercial flow recovery (post-b5071b6)
+
+Owner decision 2026-10-07 recovers the Catalog → context → Configurator → verified price → freeze path without changing product domain, formulas, tenancy, roles, or commercial lifecycle.
+
+- Bare Catalog is consultable without loading the full request registry and without tacitly applying the last session request. Remembered context may be proposed; using it requires an explicit action. Choosing a product without verified context opens assisted client/request completion (existing create-request contract only on explicit create).
+- Catalog presentation keeps family/category from the server tree, with local search, filters, result count, reset, and local pagination (initial page size 20). Optional detail uses only returned projection fields.
+- Seller issuer loading separates fetch error from confirmed unconfigured state. Catalog consultation is not blocked by issuer readiness.
+- Customer price freshness is presentation state: commercial-term edits after a server result mark the previous amount stale and disable freeze until recalculation against current terms. Late confirm responses do not validate a newer draft.
+- Deep Configurator workbench redesign (construction ↔ representation ↔ properties) remains a separate later intervention.
+
 ## Limits and next work
 
 - The assembly projection does not supply authoritative customer/request context to its configuration links; the existing session continuity remains. Do not infer ownership from labels or add a second truth.
 - No new editable formula module, uploads, document signing, invoicing, portfolio or client-specific fork.
 - No engine, persistence, auth or protected-checkout changes; no seed/reset, real data mutation, merge or deployment.
-- Next after Owner review: Lucrări, then Planificare/Atelier/Execuție. Larger functional gaps stay separate from this UI wave.
+- Configurator workbench redesign and later Lucrări / Planificare / Atelier / Execuție remain outside this recovery.
 
 ## Verification of this candidate
 

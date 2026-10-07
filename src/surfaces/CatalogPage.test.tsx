@@ -101,7 +101,11 @@ describe("CatalogPage", () => {
     }));
     render(<CatalogPage />);
     await screen.findByText("Produs test");
-    expect(screen.queryByRole("link", { name: /Produs test/ })).not.toBeInTheDocument();
+    const productBefore = screen.getByRole("button", { name: /Produs test/ });
+    await userEvent.click(productBefore);
+    expect(screen.getByRole("dialog", { name: "Completează contextul comercial" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Anulează" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     const assembly = await screen.findByRole("button", { name: /Ansamblu test/ });
     expect(assembly).toBeDisabled();
     await userEvent.click(assembly);
@@ -114,12 +118,12 @@ describe("CatalogPage", () => {
     } else {
       await act(async () => { release({ ok: true, status: 200, json: async () => body }); });
     }
-    const link = await screen.findByRole("link", { name: /Produs test/ });
-    const href = new URL(link.getAttribute("href")!, window.location.origin);
+    await userEvent.click(await screen.findByRole("button", { name: /Produs test/ }));
+    expect(window.location.pathname).toBe("/configurator");
+    const href = new URL(window.location.href);
     expect(href.searchParams.get("customer")).toBe("cus-B");
     expect(href.searchParams.get("request")).toBe("req-B");
-    expect(await screen.findByText("Ansamblu test")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Ansamblu test/ })).toBeEnabled();
+    expect(href.searchParams.get("product")).toBe("PRD-TEST");
     expect(readConfiguratorSession().drafts).toEqual({ widthMm: "1200" });
   });
   it("retains customer and request labels from list context without visiting detail", async () => {
@@ -257,6 +261,112 @@ describe("CatalogPage", () => {
     expect(screen.queryByText("Client A")).not.toBeInTheDocument();
     expect(screen.queryByText("Cerere A")).not.toBeInTheDocument();
   });
+
+  it("keeps bare catalog consultable without tacit session context and recovers choice after cancel", async () => {
+    writeConfiguratorSession({
+      customerId: "cus-A",
+      requestId: "req-A",
+      productCode: null,
+      drafts: {},
+      draftContext: { customerId: "cus-A", requestId: "req-A", productCode: null },
+      lastQuote: null,
+      customerLabel: "Client A",
+      requestLabel: "Cerere A",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.endsWith("/product-catalog")) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => ({
+              tree: [
+                {
+                  kind: "family",
+                  label: "Familie Demo",
+                  children: [
+                    {
+                      kind: "category",
+                      label: "Categorie Demo",
+                      children: [
+                        {
+                          kind: "product",
+                          code: "PRD-DEMO",
+                          label: "Produs demo",
+                          description: "Descriere demo",
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            }),
+          });
+        }
+        if (url.endsWith("/requests")) {
+          throw new Error("requests must not gate bare catalog");
+        }
+        return catalogResponse(input);
+      }),
+    );
+    render(<CatalogPage />);
+    expect(await screen.findByText("Context reținut din sesiune")).toBeInTheDocument();
+    expect(screen.queryByText("← Înapoi la cerere")).not.toBeInTheDocument();
+    expect(screen.queryByText("Context incomplet")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Produs demo/ }));
+    expect(screen.getByRole("dialog", { name: "Completează contextul comercial" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Anulează" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Produs demo/ })).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/");
+  });
+
+  it("paginates a 100-product synthetic projection and clamps after filter", async () => {
+    const products = Array.from({ length: 100 }, (_, index) => ({
+      kind: "product" as const,
+      code: `PRD-${String(index + 1).padStart(3, "0")}`,
+      label: `Produs ${index + 1}`,
+      description: index % 2 === 0 ? "Alpha" : "Beta",
+    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.endsWith("/product-catalog")) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => ({
+              tree: [
+                {
+                  kind: "family",
+                  label: "Familie Mare",
+                  children: [
+                    { kind: "category", label: "Categorie A", children: products.slice(0, 50) },
+                    { kind: "category", label: "Categorie B", children: products.slice(50) },
+                  ],
+                },
+              ],
+            }),
+          });
+        }
+        return catalogResponse(input);
+      }),
+    );
+    render(<CatalogPage />);
+    expect(await screen.findByText("Produs 1")).toBeInTheDocument();
+    expect(screen.queryByText("Produs 21")).not.toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Paginare catalog" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Pagina 2" }));
+    expect(screen.getByText("Produs 21")).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("Categorie"), "Categorie B");
+    expect(screen.getByText("Produs 51")).toBeInTheDocument();
+    expect(screen.queryByText("Produs 1")).not.toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Caută"), "inexistent");
+    expect(screen.getByText("Niciun produs nu corespunde filtrului.")).toBeInTheDocument();
+  });
 });
 
 function catalogResponse(input: RequestInfo) {
@@ -265,6 +375,10 @@ function catalogResponse(input: RequestInfo) {
     ? { overview: { requests: [{ requestId: "req-1", customerId: "cus-1", title: "Cerere test", statusLabel: "Nouă" }] } }
     : url.endsWith("/assemblies/offering")
       ? { offerings: [{ kind: "SIGN_ASSEMBLY_ACM_SIGNAGE_V2", available: true, label: "Ansamblu test", summary: "Panou și litere" }] }
-      : { products: [] };
+      : url.endsWith("/product-catalog")
+        ? { tree: [] }
+        : url.endsWith("/customers")
+          ? { customers: [] }
+        : { tree: [] };
   return Promise.resolve({ ok: true, status: 200, json: async () => payload });
 }

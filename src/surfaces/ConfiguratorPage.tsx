@@ -13,12 +13,14 @@ import { postQuoteSnapshot } from "../api/quote";
 import { LoadingFloor } from "../components/LoadingFloor";
 import "../styles/surfaces/commercial.css";
 import "../styles/surfaces/configuration-workbench.css";
+import { CatalogContextDialog } from "../components/CatalogContextDialog";
 import { SellerSetupPanel } from "../components/SellerSetupPanel";
 import { invalidateAfterFreezeQuote } from "../data/invalidation";
 import { invalidateResources } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadSellerConfigured } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
+import { navigate } from "../routing/navigate";
 import type {
   ConfirmTransport,
   DraftValues,
@@ -41,7 +43,7 @@ import { CommercialPricePanel } from "../presentation/commercialPrice";
 import { CostCompletenessIssues } from "../presentation/costCompleteness";
 import { presentCostLine, selectLineByResource } from "../presentation/costLine";
 import { ALUMINIUM_RETURN_PROFILE_RESOURCE_ID } from "../reference/lettersProduct";
-import { catalogHref, quoteHref } from "../routing/appRoute";
+import { catalogHref, configuratorHref, quoteHref } from "../routing/appRoute";
 import {
   labelsMatchingContext,
   lastQuoteOwnedByContext,
@@ -51,6 +53,17 @@ import {
   type ConfiguratorContext,
   type FrozenQuoteRef,
 } from "../session/configuratorSession";
+
+function commercialResultKey(input: {
+  pricingMethod: "PRODUCT_COST_PLUS" | "MANUAL_FIXED_PRODUCT";
+  markupDraft: string;
+  discountDraft: string;
+  adjustmentDraft: string;
+  manualNetDraft: string;
+  reviewId: string | null;
+}): string {
+  return JSON.stringify(input);
+}
 
 type PreviewState = "idle" | "pending" | "ready" | "error";
 type ActionState = "idle" | "pending" | "error";
@@ -139,6 +152,7 @@ export function ConfiguratorPage({
   const [confirmState, setConfirmState] = useState<ActionState>("idle");
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<ConfirmTransport | null>(null);
+  const [pricedResultKey, setPricedResultKey] = useState<string | null>(null);
   const [freezeState, setFreezeState] = useState<ActionState>("idle");
   const [freezeError, setFreezeError] = useState<string | null>(null);
   const [manualNetDraft, setManualNetDraft] = useState("");
@@ -149,6 +163,7 @@ export function ConfiguratorPage({
   const [quoteDiscountDraft, setQuoteDiscountDraft] = useState("");
   const [quoteAdjustmentDraft, setQuoteAdjustmentDraft] = useState("");
   const [termsOrigin, setTermsOrigin] = useState<"defaults" | "quote">("defaults");
+  const [contextRecoveryOpen, setContextRecoveryOpen] = useState(false);
   const seller = useResource(resourceKeys.seller(), loadSellerConfigured);
   const sellerConfigured = seller.status === "success" ? seller.data : null;
   const [lastQuote, setLastQuote] = useState<FrozenQuoteRef | null>(() =>
@@ -157,6 +172,7 @@ export function ConfiguratorPage({
 
   const schemaRef = useRef<PresentedFormSchema | null>(null);
   const draftsDirtyRef = useRef(false);
+  const confirmGeneration = useRef(0);
   const draftKey = JSON.stringify(drafts);
   const activeProduct = preview?.product.code ?? productCode;
   const visibleLastQuote = lastQuoteOwnedByContext(lastQuote, context);
@@ -212,6 +228,17 @@ export function ConfiguratorPage({
     return schemaRef.current
       ? valuesForTransport(drafts, schemaRef.current)
       : valuesBeforeSchema(drafts);
+  }
+
+  function currentCommercialResultKey(reviewId: string | null = preview?.reviewId ?? null): string {
+    return commercialResultKey({
+      pricingMethod,
+      markupDraft: quoteMarkupDraft,
+      discountDraft: quoteDiscountDraft,
+      adjustmentDraft: quoteAdjustmentDraft,
+      manualNetDraft: pricingMethod === "MANUAL_FIXED_PRODUCT" ? manualNetDraft : "",
+      reviewId,
+    });
   }
 
   useEffect(() => {
@@ -305,6 +332,7 @@ export function ConfiguratorPage({
     draftsDirtyRef.current = true;
     setDrafts((current) => ({ ...current, [fieldId]: value }));
     setConfirmation(null);
+    setPricedResultKey(null);
     setConfirmState("idle");
     setFreezeState("idle");
   }
@@ -313,6 +341,8 @@ export function ConfiguratorPage({
     if (!preview?.reviewId || !activeProduct) {
       return;
     }
+    const generation = ++confirmGeneration.current;
+    const sentKey = currentCommercialResultKey(preview.reviewId);
     setConfirmState("pending");
     setConfirmError(null);
     try {
@@ -325,12 +355,45 @@ export function ConfiguratorPage({
         }),
         preview.reviewId,
       );
+      if (generation !== confirmGeneration.current) {
+        return;
+      }
       if (!presented) {
         setConfirmState("error");
         setConfirmError("Confirmarea nu poate fi prezentată.");
         return;
       }
       setConfirmation(presented);
+      const editedDuringFlight = currentCommercialResultKey(preview.reviewId) !== sentKey;
+      if (editedDuringFlight) {
+        setPricedResultKey(sentKey);
+      } else {
+        const nextMethod = presented.pricingMethod ?? pricingMethod;
+        const nextTerms = presented.quoteCommercialTerms ??
+          presented.organizationDefaults ??
+          currentQuoteTerms();
+        if (presented.pricingMethod) {
+          setPricingMethod(presented.pricingMethod);
+        }
+        if (presented.quoteCommercialTerms) {
+          applyQuoteTerms(presented.quoteCommercialTerms, presented.quoteTermsFromDefaults);
+        } else if (presented.organizationDefaults) {
+          applyQuoteTerms(presented.organizationDefaults, true);
+        }
+        setPricedResultKey(
+          commercialResultKey({
+            pricingMethod: nextMethod,
+            markupDraft: nextTerms ? String(nextTerms.markupPercent) : quoteMarkupDraft,
+            discountDraft: nextTerms ? String(nextTerms.discountPercent) : quoteDiscountDraft,
+            adjustmentDraft: nextTerms ? String(nextTerms.adjustmentAmount) : quoteAdjustmentDraft,
+            manualNetDraft:
+              nextMethod === "MANUAL_FIXED_PRODUCT"
+                ? String(presented.commercial?.netPrice ?? manualNetDraft)
+                : "",
+            reviewId: preview.reviewId,
+          }),
+        );
+      }
       if (assemblyId && memberRole) {
         await postJson(`/api/assemblies/${encodeURIComponent(assemblyId)}/members`, {
           role: memberRole,
@@ -338,18 +401,16 @@ export function ConfiguratorPage({
           reviewId: preview.reviewId,
           ...(requestId ? { requestId } : {}),
         });
+        if (generation !== confirmGeneration.current) {
+          return;
+        }
         invalidateResources(`assembly:${assemblyId}`);
-      }
-      if (presented.pricingMethod) {
-        setPricingMethod(presented.pricingMethod);
-      }
-      if (presented.quoteCommercialTerms) {
-        applyQuoteTerms(presented.quoteCommercialTerms, presented.quoteTermsFromDefaults);
-      } else if (presented.organizationDefaults) {
-        applyQuoteTerms(presented.organizationDefaults, true);
       }
       setConfirmState("idle");
     } catch (error) {
+      if (generation !== confirmGeneration.current) {
+        return;
+      }
       setConfirmState("error");
       setConfirmError(
         error instanceof TransportError
@@ -368,12 +429,30 @@ export function ConfiguratorPage({
     }
     if (sellerConfigured !== true) {
       setFreezeState("error");
-      setFreezeError("Datele firmei trebuie configurate înainte de a crea oferta.");
+      setFreezeError(
+        seller.status === "error"
+          ? "Nu am putut verifica datele firmei emitente."
+          : "Datele firmei emitente lipsesc.",
+      );
       return;
     }
     if (!customerId) {
       setFreezeState("error");
       setFreezeError("Selectează un client înainte de a crea oferta.");
+      return;
+    }
+    if (confirmState === "pending" || pricedResultKey !== currentCommercialResultKey()) {
+      setFreezeState("error");
+      setFreezeError("Calculează din nou prețul înainte de a îngheța oferta.");
+      return;
+    }
+    const customerPriceReady =
+      confirmation.commercial?.completeness === "COMPLETE" &&
+      confirmation.commercial.netPrice !== null &&
+      confirmation.commercial.unavailableReasons.length === 0;
+    if (!customerPriceReady) {
+      setFreezeState("error");
+      setFreezeError("Prețul clientului nu este gata pentru înghețare.");
       return;
     }
     setFreezeState("pending");
@@ -411,11 +490,18 @@ export function ConfiguratorPage({
   const ready = preview?.readiness === "ready" && preview.reviewId !== null;
   const confirmPending = confirmState === "pending";
   const freezePending = freezeState === "pending";
-  const freezeBlocked = sellerConfigured !== true || customerId === null;
-  const validCustomerPrice =
+  const priceIsCurrent =
+    pricedResultKey !== null && pricedResultKey === currentCommercialResultKey();
+  const serverCustomerPriceReady =
     confirmation?.commercial?.completeness === "COMPLETE" &&
     confirmation.commercial.netPrice !== null &&
     confirmation.commercial.unavailableReasons.length === 0;
+  const validCustomerPrice = Boolean(serverCustomerPriceReady && priceIsCurrent);
+  const freezeBlocked =
+    sellerConfigured !== true ||
+    customerId === null ||
+    confirmPending ||
+    !validCustomerPrice;
   const calculatedUnavailable = Boolean(
     confirmation && !confirmation.calculatedPriceAvailable,
   );
@@ -553,6 +639,17 @@ export function ConfiguratorPage({
           {previewState === "pending" ? (
             <LoadingIndicator label="Se actualizează previzualizarea" />
           ) : null}
+          {seller.status === "error" ? (
+            <InlineAlert tone="error" title="Nu am putut verifica datele firmei emitente">
+              Emiterea ofertei așteaptă verificarea. Consultarea și pregătirea tehnică pot continua.
+              <Button
+                variant="secondary"
+                onClick={() => invalidateResources(resourceKeys.seller())}
+              >
+                Reîncearcă
+              </Button>
+            </InlineAlert>
+          ) : null}
           {sellerConfigured === false ? (
             <SellerSetupPanel
               onSaved={() => {
@@ -560,16 +657,15 @@ export function ConfiguratorPage({
               }}
             />
           ) : null}
-          {customerId === null ? (
-            <InlineAlert tone="blocked" title="Client lipsă">
-              Selectează un client înainte de a crea oferta. Poți pregăti prețul ofertei
-              și fără client, dar înghețarea rămâne blocată.
-            </InlineAlert>
-          ) : null}
-          {requestId === null ? (
-            <InlineAlert tone="blocked" title="Cerere lipsă">
-              Leagă configurația de o cerere înainte de oferta lucrării. Termenii
-              comerciali pot fi pregătiți și fără cerere.
+          {customerId === null || requestId === null ? (
+            <InlineAlert tone="blocked" title="Context comercial incomplet">
+              Completează clientul și cererea pentru a continua traseul asistat către ofertă.
+              Draftul tehnic local rămâne disponibil.
+              {productCode ? (
+                <Button variant="secondary" onClick={() => setContextRecoveryOpen(true)}>
+                  Completează contextul
+                </Button>
+              ) : null}
             </InlineAlert>
           ) : null}
           {preview?.readiness === "blocked" ? (
@@ -800,7 +896,7 @@ export function ConfiguratorPage({
                   void confirm();
                 }}
               >
-                {validCustomerPrice ? "Actualizează prețul" : "Calculează prețul"}
+                {serverCustomerPriceReady ? "Actualizează prețul" : "Calculează prețul"}
               </Button>
             </>
           )}
@@ -842,14 +938,20 @@ export function ConfiguratorPage({
           ) : (
             <p>Prețul clientului apare după calculul de pe server.</p>
           )}
-          {priceNotReady && !calculatedUnavailable ? (
+          {confirmation && serverCustomerPriceReady && !priceIsCurrent ? (
+            <InlineAlert tone="blocked" title="Preț neactualizat">
+              Termenii comerciali s-au schimbat față de ultimul calcul. Suma afișată mai jos este
+              rezultatul precedent; actualizează prețul înainte de înghețare.
+            </InlineAlert>
+          ) : null}
+          {priceNotReady && !calculatedUnavailable && priceIsCurrent ? (
             <InlineAlert tone="blocked" title="Prețul nu este gata">
               Completează metoda de preț și calculează prețul înainte de a îngheța oferta.
             </InlineAlert>
           ) : null}
           {confirmation && !assemblyId ? (
             <Button
-              disabled={freezePending || freezeBlocked || !validCustomerPrice}
+              disabled={freezePending || freezeBlocked}
               onClick={() => {
                 void freeze();
               }}
@@ -885,6 +987,38 @@ export function ConfiguratorPage({
         </SurfacePanel>
       </div>
       </section>
+      {contextRecoveryOpen && productCode ? (
+        <CatalogContextDialog
+          productLabel={preview?.product.label ?? productCode}
+          onDismiss={() => setContextRecoveryOpen(false)}
+          onConfirm={(selection) => {
+            const previous = readConfiguratorSession();
+            writeConfiguratorSession({
+              ...previous,
+              drafts,
+              draftContext: {
+                customerId: selection.customerId,
+                requestId: selection.requestId,
+                productCode,
+              },
+              customerId: selection.customerId,
+              requestId: selection.requestId,
+              customerLabel: selection.customerLabel,
+              requestLabel: selection.requestLabel,
+              productCode,
+              lastQuote,
+            });
+            setContextRecoveryOpen(false);
+            navigate(
+              configuratorHref({
+                customerId: selection.customerId,
+                requestId: selection.requestId,
+                productCode,
+              }),
+            );
+          }}
+        />
+      ) : null}
     </SlicePage>
   );
 }

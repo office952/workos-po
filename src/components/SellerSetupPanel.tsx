@@ -40,8 +40,8 @@ export function SellerSetupPanel({ onSaved }: SellerSetupPanelProps) {
   }
 
   return (
-    <InlineAlert tone="blocked" title="Datele firmei lipsesc">
-      Datele firmei trebuie configurate înainte de a crea oferta.
+    <InlineAlert tone="blocked" title="Datele firmei emitente lipsesc">
+      Datele firmei emitente trebuie configurate înainte de a crea oferta.
       <TextField
         id="seller-legal-name"
         label="Denumire firmă"

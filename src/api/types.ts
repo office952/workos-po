@@ -388,6 +388,7 @@ export type CatalogProductTransport = {
   label: string;
   description: string;
   familyLabel: string | null;
+  categoryLabel: string | null;
 };
 
 export type QuoteListItemTransport = {

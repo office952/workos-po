@@ -70,11 +70,7 @@ export async function loadHealthPresentation(): Promise<HealthPresentation> {
 }
 
 export async function loadSellerConfigured(): Promise<boolean> {
-  try {
-    return presentSellerConfigured(await fetchSeller());
-  } catch {
-    return false;
-  }
+  return presentSellerConfigured(await fetchSeller());
 }
 
 export async function loadCustomerList() {

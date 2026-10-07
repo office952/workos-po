@@ -381,9 +381,7 @@ describe("ConfiguratorPage", () => {
     );
     renderConfigurator({ customerId: null, requestId: null });
     await confirmReady();
-    expect(
-      screen.getByText(/Selectează un client înainte de a crea oferta/),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Context comercial incomplet")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeDisabled();
     expect(
       fetchMock.mock.calls.some(
@@ -395,6 +393,54 @@ describe("ConfiguratorPage", () => {
     expect(
       fetchMock.mock.calls.some((call) => String(call[0]).endsWith("/quote-snapshots")),
     ).toBe(false);
+  });
+
+  it("marks customer price stale after commercial term edits and blocks freeze until recalculation", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    renderConfigurator();
+    const user = await confirmReady();
+    expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeEnabled();
+    const markup = screen.getByLabelText("Adaos pentru această ofertă (%)");
+    await user.clear(markup);
+    await user.type(markup, "48");
+    expect(screen.getByText("Preț neactualizat")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Actualizează prețul" }));
+    await waitFor(() => {
+      expect(screen.queryByText("Preț neactualizat")).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeEnabled();
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/confirm")).length).toBeGreaterThan(1);
+  });
+
+  it("distinguishes seller fetch error from missing issuer data", async () => {
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      void init;
+      const url = String(input);
+      if (url.endsWith("/preview")) {
+        return jsonResponse(previewBody);
+      }
+      if (url.endsWith("/confirm")) {
+        return jsonResponse(confirmBody({ rate: 3, cost: 37.5 }));
+      }
+      if (url.endsWith("/seller")) {
+        return jsonResponse({ error: "denied" }, 503);
+      }
+      return jsonResponse({});
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    renderConfigurator();
+    const user = await confirmReady();
+    expect(
+      await screen.findByText("Nu am putut verifica datele firmei emitente"),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Denumire firmă")).not.toBeInTheDocument();
+    expect(screen.queryByText("Datele firmei emitente lipsesc")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Îngheață oferta" }));
+    expect(fetchMock.mock.calls.some((call) => String(call[0]).endsWith("/quote-snapshots"))).toBe(
+      false,
+    );
   });
 
   it("blocks freeze when seller is missing and does not update seller", async () => {
@@ -411,7 +457,7 @@ describe("ConfiguratorPage", () => {
     renderConfigurator({ requestId: null });
     await confirmReady();
     expect(
-      screen.getByText("Datele firmei trebuie configurate înainte de a crea oferta."),
+      screen.getByText("Datele firmei emitente trebuie configurate înainte de a crea oferta."),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeDisabled();
     expect(

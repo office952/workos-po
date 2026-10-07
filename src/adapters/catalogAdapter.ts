@@ -15,10 +15,14 @@ export function presentCatalogProducts(payload: unknown): CatalogProductTranspor
   if (!Array.isArray(tree)) {
     return [];
   }
-  return walkCatalog(tree, null);
+  return walkCatalog(tree, null, null);
 }
 
-function walkCatalog(nodes: unknown[], familyLabel: string | null): CatalogProductTransport[] {
+function walkCatalog(
+  nodes: unknown[],
+  familyLabel: string | null,
+  categoryLabel: string | null,
+): CatalogProductTransport[] {
   return nodes.flatMap((node) => {
     const record = asRecord(node) as CatalogWalkNode | null;
     if (!record) {
@@ -31,11 +35,18 @@ function walkCatalog(nodes: unknown[], familyLabel: string | null): CatalogProdu
           label: record.label,
           description: asString(record.description) ?? "",
           familyLabel,
+          categoryLabel,
         },
       ];
     }
     const nextFamily =
       record.kind === "family" && typeof record.label === "string" ? record.label : familyLabel;
-    return Array.isArray(record.children) ? walkCatalog(record.children, nextFamily) : [];
+    const nextCategory =
+      record.kind === "category" && typeof record.label === "string"
+        ? record.label
+        : categoryLabel;
+    return Array.isArray(record.children)
+      ? walkCatalog(record.children, nextFamily, nextCategory)
+      : [];
   });
 }
