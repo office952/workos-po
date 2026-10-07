@@ -32,9 +32,9 @@ export function PageHeader({
   const hasAside = status != null || action != null;
 
   return (
-    <div className={["page-header", quiet && "page-header--quiet", variant === "pilot" && "page-header--pilot"].filter(Boolean).join(" ")}>
+    <div className={["page-header", quiet && "page-header--quiet", variant === "pilot" && "page-header--pilot", variant === "pilot" && hasAside && "page-header--pilot-aside"].filter(Boolean).join(" ")}>
       <div className="page-header__copy">
-        {showEyebrow ? <p className="page-header__eyebrow">{eyebrow}</p> : null}
+        {showEyebrow || (variant === "pilot" && eyebrow) ? <p className="page-header__eyebrow" aria-hidden={showEyebrow ? undefined : true}>{showEyebrow ? eyebrow : "\u00a0"}</p> : null}
         <h1 className="page-header__title">{title}</h1>
         {lead ? <p className="page-header__lead">{lead}</p> : null}
         {meta ? <p className="page-header__meta">{meta}</p> : null}

@@ -311,7 +311,7 @@ describe("RequestsPage", () => {
     expect(screen.getByText("Total")).toBeInTheDocument();
     expect(
       screen.getByText("Necesită acțiune", {
-        selector: ".requests-instrument__metric-label",
+        selector: ".pilot-instrument__metric-label",
       }),
     ).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("1–1 din 1 cereri");

@@ -27,6 +27,7 @@ import { statusTone } from "../presentation/statusTone";
 import { ALUMINIUM_RETURN_PROFILE_RESOURCE_ID } from "../reference/lettersProduct";
 import { clientHref, jobHref, quoteHref, requestHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
+import "../styles/surfaces/commercial.css";
 
 type QuoteSnapshotPageProps = {
   productCode: string;
@@ -118,27 +119,31 @@ export function QuoteSnapshotPage({
     <SlicePage
       contextLabel="Ofertă"
       currentHref={quoteHref(productCode, quoteSnapshotId)}
-      workspace="object"
+      workspace="stack"
+      surface="quote-detail"
+      headerVariant="pilot"
       eyebrow="Ofertă"
-      title={presentedSnapshot?.productLabel ?? "Ofertă înghețată"}
+      title={presentedEnvelope?.reference || presentedSnapshot?.productLabel || "Ofertă înghețată"}
       lead="Înregistrare comercială înghețată. Acceptarea păstrează această versiune."
       meta={presentContextMeta([
         presentedSnapshot?.customerDisplayName,
         presentedSnapshot?.requestReference,
         presentedSnapshot?.inscription,
       ])}
-      status={
-        stageLabel ? <StatusBadge label={stageLabel} tone={statusTone("workflow")} /> : null
-      }
-      action={
+    >
+      <div className="commercial-toolbar">
+        <div className="commercial-toolbar__context">
+          <a className="text-link" href="/oferte">← Toate ofertele</a>
+          {stageLabel ? <StatusBadge label={stageLabel} tone={statusTone("workflow")} /> : null}
+        </div>
         <QuoteEnvelopeAction
           envelope={presentedEnvelope}
           pending={actionState === "pending"}
           onAccept={() => void accept()}
           onCreateOrder={() => void createOrder()}
         />
-      }
-    >
+      </div>
+      <div className="commercial-object">
       {snapshot.status === "error" && !presentedSnapshot ? (
         <InlineAlert tone="error" title="Oferta nu a putut fi citită">
           Identitatea ofertei nu este disponibilă în runtime-ul izolat.
@@ -153,8 +158,9 @@ export function QuoteSnapshotPage({
           <>
             <CommercialPricePanel
               commercial={presentedSnapshot.commercial}
-              internalTotal={presentedSnapshot.total}
+              internalTotal={null}
               internalCurrency={presentedSnapshot.currency}
+              showInternalCost={false}
             />
             {presentedSnapshot.offerLines.length > 0 ? (
               <dl className="fact-grid">
@@ -198,21 +204,6 @@ export function QuoteSnapshotPage({
                 value={presentQuoteAcceptanceFact(presentedEnvelope?.stage ?? null)}
               />
             </dl>
-            {presented ? (
-              <div className="equation" data-testid="frozen-profile-cost">
-                <p className="equation__label">{presented.label}</p>
-                <p className="equation__value">{presented.equationLabel}</p>
-                <p className="ui-note">
-                  Linia internă nu este preț de vânzare și rămâne înghețată pe această
-                  ofertă.
-                </p>
-              </div>
-            ) : (
-              <InlineAlert tone="blocked" title="Linie de profil indisponibilă">
-                Oferta nu expune linia de cost intern pentru acest rol sau profilul
-                lipsește din înregistrarea înghețată.
-              </InlineAlert>
-            )}
             <p>
               <Button
                 variant="secondary"
@@ -237,6 +228,25 @@ export function QuoteSnapshotPage({
           <LoadingFloor variant="facts" label="Se citește oferta înghețată" />
         ) : null}
       </SurfacePanel>
+      {presentedSnapshot?.financialVisible ? (
+        <details className="quote-analysis">
+          <summary>Cost intern · analiza versiunii înghețate</summary>
+          <CommercialPricePanel
+            commercial={presentedSnapshot.commercial}
+            internalTotal={presentedSnapshot.total}
+            internalCurrency={presentedSnapshot.currency}
+            internalCompleteness={presentedSnapshot.completeness}
+            showCustomerPrice={false}
+          />
+          {presented ? (
+            <div className="equation" data-testid="frozen-profile-cost">
+              <p className="equation__label">{presented.label}</p>
+              <p className="equation__value">{presented.equationLabel}</p>
+              <p className="ui-note">Linia internă nu este preț de vânzare și rămâne înghețată pe această ofertă.</p>
+            </div>
+          ) : null}
+        </details>
+      ) : null}
       <SurfacePanel variant="quiet" title="Stare și următorul pas">
         <p className="ui-note">
           Acceptarea și lucrarea rămân pe această versiune înghețată. Nu se reconstruiește
@@ -256,7 +266,7 @@ export function QuoteSnapshotPage({
             </a>
           </p>
         ) : null}
-        {orderSnapshotId ? (
+        {orderSnapshotId && presentedEnvelope?.nextAction !== "OPEN_ORDER" ? (
           <p>
             <a className="text-link" href={jobHref(orderSnapshotId)}>
               {presentedEnvelope?.nextAction === "OPEN_ORDER"
@@ -266,6 +276,7 @@ export function QuoteSnapshotPage({
           </p>
         ) : null}
       </SurfacePanel>
+      </div>
     </SlicePage>
   );
 }

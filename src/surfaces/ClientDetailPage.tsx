@@ -167,24 +167,20 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
       headerVariant="pilot"
       eyebrow="Client"
       title={customer?.displayName ?? "Client"}
-      meta={
-        <>
-        <a className="client-hub__back" href="/clienti">← Toți clienții</a>
-        {customer ? (
-          <StatusBadge label={customer.statusLabel} tone={statusTone("workflow")} />
-        ) : null}
-        </>
-      }
-      instrument={workspace.data ? (
+      instrument={
         <ul className="pilot-instrument client-hub__counts" aria-label="Relația cu clientul">
-          <li><a className="pilot-instrument__metric" href={clientHref(customerId, "cereri")}><strong className="pilot-instrument__metric-value">{workspace.data.summary.requestCount}</strong><span className="pilot-instrument__metric-label">Cereri</span></a></li>
-          <li><a className="pilot-instrument__metric" href={clientHref(customerId, "cereri")}><strong className="pilot-instrument__metric-value">{workspace.data.summary.quoteCount}</strong><span className="pilot-instrument__metric-label">Oferte</span></a></li>
-          <li><a className="pilot-instrument__metric" href={clientHref(customerId, "lucrari")}><strong className="pilot-instrument__metric-value">{workspace.data.summary.jobCount}</strong><span className="pilot-instrument__metric-label">Lucrări</span></a></li>
+          <li><a className="pilot-instrument__metric" href={clientHref(customerId, "cereri")}><strong className="pilot-instrument__metric-value">{workspace.data?.summary.requestCount ?? "—"}</strong><span className="pilot-instrument__metric-label">Cereri</span></a></li>
+          <li><a className="pilot-instrument__metric" href={clientHref(customerId, "cereri")}><strong className="pilot-instrument__metric-value">{workspace.data?.summary.quoteCount ?? "—"}</strong><span className="pilot-instrument__metric-label">Oferte</span></a></li>
+          <li><a className="pilot-instrument__metric" href={clientHref(customerId, "lucrari")}><strong className="pilot-instrument__metric-value">{workspace.data?.summary.jobCount ?? "—"}</strong><span className="pilot-instrument__metric-label">Lucrări</span></a></li>
         </ul>
-      ) : null}
+      }
     >
       <div className="client-hub">
         <div className="client-hub__toolbar">
+        <div className="client-hub__context">
+          <a className="client-hub__back" href="/clienti">← Toți clienții</a>
+          {customer ? <StatusBadge label={customer.statusLabel} tone={statusTone("workflow")} /> : null}
+        </div>
         <nav className="client-hub__nav" aria-label="Secțiuni client">
           {CLIENT_HUB_SECTIONS.map((item) => (
             <a

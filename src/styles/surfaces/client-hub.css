@@ -63,6 +63,14 @@
   flex: 1 1 36rem;
 }
 
+.client-hub__context {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+}
+
 .client-hub__nav a {
   display: inline-flex;
   align-items: center;

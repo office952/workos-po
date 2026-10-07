@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { invalidateResources, resetResourceCache } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
-import { readClientsRegistryMemory } from "../session/clientsRegistryMemory";
+import { readClientsRegistryMemory, writeClientsRegistryMemory } from "../session/clientsRegistryMemory";
 import { ClientsPage } from "./ClientsPage";
 
 afterEach(() => {
@@ -44,6 +44,14 @@ describe("ClientsPage", () => {
     const link = await screen.findByRole("link", { name: /Deschide/ });
     link.addEventListener("click", (event) => event.preventDefault());
     await userEvent.click(link);
+    expect(readClientsRegistryMemory().selectedId).toBe("cus-1");
+  });
+  it("restores context without painting the previously opened client as selected", async () => {
+    writeClientsRegistryMemory({ query: "", statusChip: "all", selectedId: "cus-1" });
+    vi.stubGlobal("fetch", vi.fn(() => jsonResponse(200, { registry: { customers: [{ customerId: "cus-1", displayName: "Atelier Nord", status: "ACTIVE" }] } })));
+    render(<ClientsPage />);
+    const link = await screen.findByRole("link", { name: /Atelier Nord/ });
+    expect(link.closest("tr")).not.toHaveAttribute("data-selected");
     expect(readClientsRegistryMemory().selectedId).toBe("cus-1");
   });
   it("creates a customer through the public customers API", async () => {

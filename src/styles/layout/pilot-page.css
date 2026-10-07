@@ -1,11 +1,15 @@
-/* Cereri is the structural reference: display title, counts below, toolbar in body.
-   This opt-in presentation variant leaves the accepted Cereri assets untouched. */
+/* One geometry owner for the Cereri pilot and its sibling pages.
+   Reserve two title lines so short titles do not move counts or the toolbar. */
 div > .page-header.page-header--pilot {
+  --pilot-title-size: clamp(36px, 4.2vw, 78px);
   position: relative;
+  isolation: isolate;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas: "copy" "instrument";
-  align-content: center;
+  grid-template-rows: minmax(calc(2.12 * var(--pilot-title-size) + 46px), auto) auto;
+  align-items: start;
+  align-content: start;
   gap: 20px;
   margin: 0 var(--page-gutter);
   min-height: 320px;
@@ -15,19 +19,27 @@ div > .page-header.page-header--pilot {
   background: transparent;
   box-shadow: none;
 }
+div > .page-header.page-header--pilot-aside {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr);
+  grid-template-areas: "copy aside" "instrument instrument";
+  column-gap: 64px;
+}
 .page-header.page-header--pilot .page-header__copy {
   grid-area: copy;
+  align-self: stretch;
   max-width: 640px;
   padding: 0 0 16px;
   border-bottom: 1px solid var(--color-border);
   box-shadow: none;
 }
-.page-header--pilot .page-header__eyebrow { margin: 0 0 14px; color: var(--color-text-secondary); font: 400 11px var(--font-mono); letter-spacing: 0.19em; }
-.page-header--pilot .page-header__title { color: var(--color-text-primary); font: 600 clamp(36px, 4.2vw, 78px)/1.06 var(--font-brand); letter-spacing: -0.055em; }
+.page-header--pilot .page-header__eyebrow { margin: 0 0 14px; color: var(--color-text-secondary); font: 400 11px/1 var(--font-mono); letter-spacing: 0.19em; }
+.page-header--pilot .page-header__title { color: var(--color-text-primary); font: 600 var(--pilot-title-size)/1.06 var(--font-brand); letter-spacing: -0.055em; }
 [data-resolved-theme="dark"] .page-header--pilot .page-header__title { color: #eee6d7; }
 .page-header--pilot .page-header__instrument { grid-area: instrument; min-width: 0; }
+.page-header--pilot .page-header__aside { grid-area: aside; contain: size; display: flex; align-items: center; width: 100%; align-self: stretch; }
+.page-header--pilot .page-header__action { width: 100%; }
 .page-header--pilot .page-header__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; }
-.page-header--pilot + .page-region { padding-top: 0; }
+div > .page-header.page-header--pilot + .page-region { padding-top: 0; }
 .pilot-instrument { display: flex; flex-wrap: wrap; align-items: stretch; gap: 20px; margin: 0; padding: 0; list-style: none; }
 .pilot-instrument__metric { display: flex; align-items: center; gap: 16px; min-height: 58px; padding: 8px 18px; border: 1px solid transparent; background: transparent; color: var(--color-text-primary); text-align: left; cursor: pointer; text-decoration: none; }
 .pilot-instrument > .pilot-instrument__metric:first-child, .pilot-instrument > li:first-child > .pilot-instrument__metric { padding-left: 0; }
@@ -37,24 +49,26 @@ div > .page-header.page-header--pilot {
 .pilot-instrument__metric[aria-pressed="true"] { border-bottom-color: var(--color-text-secondary); }
 .pilot-instrument__metric--attention[data-attention="true"] { color: var(--color-warning); }
 .pilot-instrument__metric--attention[aria-pressed="true"] { border-bottom-color: var(--color-warning); }
-.pilot-instrument__metric-value { font: 400 44px/1 var(--font-mono); letter-spacing: -0.06em; }
+.pilot-instrument__metric-value { min-width: 2ch; font: 400 44px/1 var(--font-mono); letter-spacing: -0.06em; }
 .pilot-instrument__metric-label { max-width: 90px; font: 500 13px/1.4 var(--font-sans); }
 .pilot-create { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 12px; min-height: 48px; padding: 0 22px; border: 1px solid var(--shell-signal); background: var(--shell-signal); color: var(--shell-button-ink); font: 600 14px var(--font-sans); text-decoration: none; white-space: nowrap; cursor: pointer; }
 .pilot-create > svg { flex: 0 0 auto; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; }
 .pilot-create:hover { background: var(--shell-signal-strong); border-color: var(--shell-signal-strong); }
 @media (max-width: 1439px) {
   div > .page-header.page-header--pilot { min-height: 230px; gap: 16px; padding-block: 28px 24px; }
+  div > .page-header.page-header--pilot-aside { column-gap: 32px; }
 }
 @media (max-width: 1151px) {
   div > .page-header.page-header--pilot { min-height: 200px; gap: 12px; }
+  div > .page-header.page-header--pilot-aside { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 24px; }
   .pilot-instrument { gap: 10px; }
   .pilot-instrument__metric { min-height: 48px; padding-inline: 10px; gap: 10px; }
   .pilot-instrument__metric-value { font-size: 30px; }
   .pilot-instrument__metric-label { font-size: 12px; }
 }
 @media (max-width: 767px) {
-  div > .page-header.page-header--pilot { min-height: 0; padding-block: 26px 16px; gap: 16px; }
-  .page-header--pilot .page-header__title { font-size: 34px; }
+  div > .page-header.page-header--pilot { --pilot-title-size: 34px; grid-template-columns: minmax(0, 1fr); grid-template-areas: "copy" "instrument"; grid-template-rows: minmax(calc(2.12 * var(--pilot-title-size) + 30px), auto) auto; min-height: 0; padding-block: 26px 16px; gap: 16px; }
+  .page-header--pilot .page-header__aside { display: none; }
   .page-header.page-header--pilot .page-header__copy { padding-bottom: 0; border: 0; }
   .pilot-create { min-height: 44px; padding-inline: 16px; }
 }

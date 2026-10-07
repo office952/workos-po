@@ -127,6 +127,7 @@ export function RequestsPage() {
       currentHref="/cereri"
       workspace="stack"
       surface="cereri-registry"
+      headerVariant="pilot"
       eyebrow="Registru comercial"
       title="Cereri de ofertă"
       action={showIntake ? (
@@ -175,32 +176,32 @@ export function RequestsPage() {
       ) : undefined}
       instrument={
         <div
-          className="requests-instrument"
+          className="pilot-instrument"
           role="group"
           aria-label="Filtre registru cereri"
         >
           <button
             type="button"
-            className="requests-instrument__metric"
+            className="pilot-instrument__metric"
             aria-pressed={filter === "all"}
             onClick={() => { setFilter("all"); setPage(1); }}
           >
-            <strong className="requests-instrument__metric-value">
+            <strong className="pilot-instrument__metric-value">
               {count(items.length)}
             </strong>
-            <span className="requests-instrument__metric-label">Total</span>
+            <span className="pilot-instrument__metric-label">Total</span>
           </button>
           <button
             type="button"
-            className="requests-instrument__metric requests-instrument__metric--attention"
+            className="pilot-instrument__metric pilot-instrument__metric--attention"
             data-attention={attentionCount > 0}
             aria-pressed={filter === "needs-action"}
             onClick={() => { setFilter("needs-action"); setPage(1); }}
           >
-            <strong className="requests-instrument__metric-value">
+            <strong className="pilot-instrument__metric-value">
               {count(attentionCount)}
             </strong>
-            <span className="requests-instrument__metric-label">
+            <span className="pilot-instrument__metric-label">
               Necesită acțiune
             </span>
           </button>

@@ -51,6 +51,17 @@ function workspace(customerId: string, displayName: string, extras: Record<strin
 }
 
 describe("ClientDetailPage", () => {
+  it("reserves client metrics during loading instead of presenting false zero counts", async () => {
+    let release!: (response: unknown) => void;
+    vi.stubGlobal("fetch", vi.fn(() => new Promise((resolve) => { release = resolve; })));
+    render(<ClientDetailPage customerId="cus-1" />);
+    expect(document.querySelectorAll(".pilot-instrument__metric-value")).toHaveLength(3);
+    expect([...document.querySelectorAll(".pilot-instrument__metric-value")].map((node) => node.textContent)).toEqual(["—", "—", "—"]);
+    await waitFor(() => expect(release).toBeTypeOf("function"));
+    await act(async () => release(await jsonResponse(200, workspace("cus-1", "Atelier Nord"))));
+    expect(await screen.findByRole("heading", { name: "Atelier Nord" })).toBeInTheDocument();
+    expect([...document.querySelectorAll(".pilot-instrument__metric-value")].map((node) => node.textContent)).toEqual(["0", "0", "0"]);
+  });
   it.each([401, 403])("hides an already loaded client after a %i refresh", async (status) => {
     const fetchMock = vi.fn(() => jsonResponse(200, workspace("cus-1", "Atelier Nord")));
     vi.stubGlobal("fetch", fetchMock);

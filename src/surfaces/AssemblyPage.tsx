@@ -5,6 +5,8 @@ import { Button } from "../components/Button";
 import { InfoRow } from "../components/InfoRow";
 import { InlineAlert } from "../components/InlineAlert";
 import { SurfacePanel } from "../components/SurfacePanel";
+import { LoadingFloor } from "../components/LoadingFloor";
+import "../styles/surfaces/commercial.css";
 import { writeResource } from "../data/resourceCache";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
@@ -90,7 +92,7 @@ export function AssemblyPage() {
   const assembly = loaded.data ?? null;
 
   async function run(path: string): Promise<void> {
-    if (!assemblyId) {
+    if (!assemblyId || pending) {
       return;
     }
     setPending(true);
@@ -120,10 +122,15 @@ export function AssemblyPage() {
       contextLabel="Ansamblu"
       currentHref="/ansamblu"
       workspace="stack"
+      surface="assembly-workbench"
+      headerVariant="pilot"
       eyebrow="Ansamblu"
       title={assembly?.label ?? "Panou ACM + litere volumetrice"}
       lead={assemblyLead(hasLogo, lettersPresent)}
     >
+      <div className="commercial-toolbar">
+        <a className="text-link" href="/catalog">← Înapoi la catalog</a>
+      </div>
       {!assemblyId ? (
         <InlineAlert tone="blocked" title="Ansamblu lipsă">
           Deschide ansamblul din catalog, dintr-o cerere.
@@ -140,11 +147,11 @@ export function AssemblyPage() {
         </InlineAlert>
       ) : null}
       {assembly ? (
-        <>
-          <div className="filter-bar" role="tablist" aria-label="Părțile ansamblului">
+        <div className="commercial-object">
+          <div className="filter-bar filter-bar--toolbar" role="group" aria-label="Părțile ansamblului">
             <div className="filter-bar__chips">
               {assembly.scopes.map((item) => (
-                <Button key={item.id} onClick={() => setScopeId(item.id)}>
+                <Button variant="secondary" aria-pressed={scope?.id === item.id} key={item.id} onClick={() => setScopeId(item.id)}>
                   {item.title}
                 </Button>
               ))}
@@ -236,8 +243,8 @@ export function AssemblyPage() {
               </a>
             </p>
           ) : null}
-        </>
-      ) : null}
+        </div>
+      ) : assemblyId && loaded.status === "loading" ? <LoadingFloor variant="facts" label="Se citește ansamblul" /> : null}
     </SlicePage>
   );
 }

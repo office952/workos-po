@@ -6,9 +6,12 @@ describe("routeChrome layout contract", () => {
     expect(presentRouteChrome({ name: "configurator" }).workspace).toBe("configuration");
   });
 
-  it("loads Clienți as a collection with a bounded create rail", () => {
-    expect(presentRouteChrome({ name: "clients" }).workspace).toBe("collection-with-rail");
-    expect(loadingFloorVariantFor("collection-with-rail")).toBe("registry");
+  it("loads Clienți in the pilot registry without a permanent creation rail", () => {
+    const chrome = presentRouteChrome({ name: "clients" });
+    expect(chrome.workspace).toBe("stack");
+    expect(loadingFloorVariantFor(chrome.workspace)).toBe("registry");
+    expect(chrome.pilot?.surface).toBe("clients-registry");
+    expect(chrome.pilot?.metrics).toEqual(["Total", "Activi", "Retrași", "Necesită acțiune"]);
   });
 
   it("loads Request with neutral copy that does not invent catalog or installation truth", () => {

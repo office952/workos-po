@@ -269,6 +269,36 @@ async function confirmReady() {
 }
 
 describe("ConfiguratorPage", () => {
+  it("keeps technical drafts and commercial terms while moving between work areas", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    renderConfigurator();
+    const user = await confirmReady();
+    const markup = screen.getByLabelText("Adaos pentru această ofertă (%)");
+    await user.clear(markup);
+    await user.type(markup, "42");
+    const confirms = () => fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/confirm"));
+    expect(confirms()).toHaveLength(1);
+    await user.click(screen.getByRole("link", { name: "Pregătire ofertă" }));
+    expect(markup).toHaveValue("42");
+    expect(confirms()).toHaveLength(1);
+    await user.click(screen.getByRole("link", { name: "Configurație" }));
+    await user.type(screen.getByLabelText("Textul literelor"), "NORD");
+    expect(screen.queryByTestId("profile-cost")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Îngheață oferta" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Textul literelor")).toHaveValue("NORD");
+  });
+
+  it("persists an assembly member only through explicit configuration confirmation", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    renderConfigurator({ assemblyId: "asm:1", memberRole: "SIGNAGE_LETTERS" });
+    await screen.findByLabelText("Textul literelor");
+    await userEvent.click(screen.getByRole("link", { name: "Pregătire ofertă" }));
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/members"))).toBe(false);
+    await confirmReady();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/assemblies/asm%3A1/members", expect.objectContaining({ method: "POST" })));
+    expect(screen.queryByRole("button", { name: "Îngheață oferta" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Înapoi la ansamblu" })).toHaveAttribute("href", "/ansamblu?assembly=asm%3A1");
+  });
   it("sends configuration values to preview and keeps reviewId on confirm", async () => {
     const fetchMock = installFetch({ rate: 3, cost: 37.5 });
     window.history.replaceState(

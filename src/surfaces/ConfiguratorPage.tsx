@@ -11,6 +11,8 @@ import { TransportError, postJson, readTransportErrorCode, readTransportReasons 
 import { postConfigurationPreview } from "../api/preview";
 import { postQuoteSnapshot } from "../api/quote";
 import { LoadingFloor } from "../components/LoadingFloor";
+import "../styles/surfaces/commercial.css";
+import "../styles/surfaces/configuration-workbench.css";
 import { SellerSetupPanel } from "../components/SellerSetupPanel";
 import { invalidateAfterFreezeQuote } from "../data/invalidation";
 import { invalidateResources } from "../data/resourceCache";
@@ -432,28 +434,34 @@ export function ConfiguratorPage({
       contextLabel="Configurator"
       currentHref="/configurator"
       workspace="configuration"
-      eyebrow="Configurator"
-      title={preview?.product.label ?? "Configurator"}
+      surface="configuration-workbench"
+      headerVariant="pilot"
+      eyebrow="Pregătire produs"
+      title="Configurator"
       lead="Completează faptele confirmate, verifică costul intern și prețul clientului, apoi îngheață oferta."
       meta={presentContextMeta([
         labelsMatchingContext(stored, context).customerLabel,
         labelsMatchingContext(stored, context).requestLabel,
         "Costul intern nu este preț de vânzare.",
       ])}
-      action={
-        <Button
-          disabled={!ready || confirmPending || previewState === "pending" || !productCode}
-          onClick={() => {
-            void confirm();
-          }}
-        >
-          Confirmă configurația
-        </Button>
-      }
     >
-      <div id="configuratie">
+      <div className="commercial-toolbar">
+        <a className="text-link" href={catalogHref({ customerId, requestId, productCode: null })}>← Înapoi la catalog</a>
+        <nav className="configuration-jump" aria-label="Etapele configurării">
+          <a href="#configuratie">Configurație</a>
+          <a href="#pregatire-oferta">Pregătire ofertă</a>
+        </nav>
+      </div>
+      <div className="configuration-construction">
+      <nav className="configuration-outline" aria-label="Secțiunile produsului">
+        <span className="section-label">Produs</span>
+        {preview?.formSchema?.sections.map((section, index) => (
+          <a key={section.id} href={`#config-section-${index}`}>{section.title}</a>
+        ))}
+      </nav>
+      <div id="configuratie" className="configuration-editor">
       <SurfacePanel
-        title="Configurație"
+        title={preview?.product.label ?? "Configurație"}
         label="Configurare"
         status={
           <StatusBadge
@@ -510,8 +518,8 @@ export function ConfiguratorPage({
             ))}
           </dl>
         ) : null}
-        {preview?.formSchema?.sections.map((section) => (
-          <fieldset key={section.id} className="stack fieldset">
+        {preview?.formSchema?.sections.map((section, index) => (
+          <fieldset key={section.id} id={`config-section-${index}`} className="stack fieldset">
             <legend className="fieldset__legend">{section.title}</legend>
             {section.fields.map((field) =>
               field.type === "select" ? (
@@ -540,7 +548,7 @@ export function ConfiguratorPage({
         ))}
       </SurfacePanel>
       </div>
-      <div className="stack">
+      <div className="stack configuration-review">
         <SurfacePanel variant="quiet" title="Stare și acțiune" label="Stare">
           {previewState === "pending" ? (
             <LoadingIndicator label="Se actualizează previzualizarea" />
@@ -589,6 +597,12 @@ export function ConfiguratorPage({
               {confirmError}
             </InlineAlert>
           ) : null}
+          <Button
+            disabled={!ready || confirmPending || previewState === "pending" || !productCode}
+            onClick={() => void confirm()}
+          >
+            Confirmă configurația
+          </Button>
         </SurfacePanel>
         <SurfacePanel title="Cost intern" label="Cost">
           {!confirmation ? (
@@ -610,14 +624,6 @@ export function ConfiguratorPage({
               </div>
             </div>
           ) : null}
-          {confirmation?.financialVisible &&
-          !profile &&
-          confirmation.costCompletenessIssues.length === 0 ? (
-            <InlineAlert tone="blocked" title="Profilul nu are tarif">
-              {confirmation.completenessReasons.join(" ") ||
-                "Nu există o linie de cost pentru acest profil."}
-            </InlineAlert>
-          ) : null}
           {confirmation ? (
             <CommercialPricePanel
               commercial={confirmation.commercial}
@@ -634,6 +640,14 @@ export function ConfiguratorPage({
             <CostCompletenessIssues issues={confirmation.costCompletenessIssues} />
           ) : null}
         </SurfacePanel>
+      </div>
+      </div>
+      <section id="pregatire-oferta" className="configuration-commercial" aria-labelledby="pregatire-oferta-title">
+        <div className="configuration-commercial__heading">
+          <h2 id="pregatire-oferta-title">Pregătire ofertă</h2>
+          <p>Termenii și prețul clientului pentru configurația confirmată.</p>
+        </div>
+        <div className="configuration-commercial__grid">
         <SurfacePanel title="Cum stabilești prețul acestei oferte" label="Preț">
           {!confirmation ? (
             <p>După confirmarea configurației alegi metoda de preț pentru această ofertă.</p>
@@ -857,17 +871,20 @@ export function ConfiguratorPage({
             </InlineAlert>
           ) : null}
           {visibleLastQuote ? (
-            <p>
+            <section className="quote-result" aria-label="Ultima ofertă înghețată">
+              <h3>Ultima ofertă înghețată</h3>
+              <p>Această versiune rămâne neschimbată când editezi configurația.</p>
               <a
-                className="text-link"
+                className="pilot-create"
                 href={quoteHref(visibleLastQuote.productCode, visibleLastQuote.quoteSnapshotId)}
               >
                 Deschide oferta înghețată
               </a>
-            </p>
+            </section>
           ) : null}
         </SurfacePanel>
       </div>
+      </section>
     </SlicePage>
   );
 }

@@ -39,6 +39,10 @@ function densityFor(workspace: PageWorkspace): PageDensity {
   }
 }
 
+export type PageSurface = "cereri-registry" | "cereri-detail" | "clients-registry" | "client-hub"
+  | "catalog-registry" | "configuration-workbench" | "assembly-workbench"
+  | "quotes-registry" | "quote-detail";
+
 type SlicePageProps = {
   contextLabel: string;
   currentHref: string;
@@ -53,7 +57,7 @@ type SlicePageProps = {
   workspace?: PageWorkspace;
   floorplan?: FloorplanId;
   /** Scoped presentation surface; does not invent a new workspace contract. */
-  surface?: "cereri-registry" | "cereri-detail" | "clients-registry" | "client-hub";
+  surface?: PageSurface;
   children: ReactNode;
 };
 

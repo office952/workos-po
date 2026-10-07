@@ -2,10 +2,13 @@ import { useMemo, useState } from "react";
 import { EmptyState } from "../components/EmptyState";
 import { FilterBar } from "../components/FilterBar";
 import { CollectionBody } from "../components/LoadingFloor";
+import { PageMetrics } from "../components/PageMetrics";
+import { InlineAlert } from "../components/InlineAlert";
 import { StatusBadge } from "../components/StatusBadge";
 import { SurfacePanel } from "../components/SurfacePanel";
 import { WorklistRow } from "../components/WorklistRow";
 import { resourceKeys } from "../data/resourceKeys";
+import { invalidateResources } from "../data/resourceCache";
 import { loadQuoteList } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
@@ -14,6 +17,7 @@ import { matchesSearch, uniqueLabels } from "../presentation/listFilter";
 import { statusTone } from "../presentation/statusTone";
 import { presentQuoteWorklistAction } from "../presentation/worklistAction";
 import { quoteHref } from "../routing/appRoute";
+import "../styles/surfaces/commercial.css";
 
 const ALL = "all";
 const COLUMNS = ["Ofertă", "Client", "Produs", "Stare", "Creată", "Acțiune"] as const;
@@ -61,16 +65,24 @@ export function QuotesPage() {
       contextLabel="Oferte"
       currentHref="/oferte"
       workspace="stack"
+      surface="quotes-registry"
+      headerVariant="pilot"
+      eyebrow="Registru comercial"
       title="Oferte"
-      lead="Ofertele înghețate rămân neschimbate după acceptare."
-      meta={quotes.status === "success" ? `${visible.length} rezultate` : undefined}
+      instrument={<PageMetrics items={[
+        { label: "Oferte", value: quotes.status === "success" ? items.length : "—" },
+        { label: "Necesită atenție", value: quotes.status === "success" ? items.filter((item) => item.needsAttention).length : "—" },
+      ]} />}
     >
-      <SurfacePanel
-        variant="flush"
-        label="Oferte"
-        busy={quotes.status === "loading" && items.length === 0}
-      >
+      {quotes.status === "error" && items.length > 0 ? (
+        <InlineAlert tone="error" title="Lista nu a putut fi actualizată">
+          Datele afișate sunt de la ultima citire reușită.
+          <button type="button" className="quiet-action" onClick={() => invalidateResources(resourceKeys.quotes())}>Reîncearcă</button>
+        </InlineAlert>
+      ) : null}
+      <div className="commercial-toolbar">
         <FilterBar
+          variant="toolbar"
           searchId="oferte-cauta"
           searchLabel="Caută"
           searchValue={query}
@@ -79,6 +91,14 @@ export function QuotesPage() {
           selectedChip={stageChip}
           onChipChange={setStageChip}
         />
+        {query || stageChip !== ALL ? <button type="button" className="quiet-action" onClick={() => { setQuery(""); setStageChip(ALL); }}>Resetează filtrele</button> : null}
+      </div>
+      <section className="commercial-register" aria-label="Registru oferte">
+      <SurfacePanel
+        variant="flush"
+        label="Oferte"
+        busy={quotes.status === "loading" && items.length === 0}
+      >
         <CollectionBody
           status={quotes.status}
           itemCount={items.length}
@@ -89,6 +109,7 @@ export function QuotesPage() {
           variant="registry"
           errorTitle="Ofertele nu au putut fi citite"
           errorBody="Lista de oferte nu este disponibilă."
+          errorAction={<button type="button" className="quiet-action" onClick={() => invalidateResources(resourceKeys.quotes())}>Reîncearcă</button>}
           empty={<EmptyState title="Nu există oferte înghețate." />}
           filteredEmpty={<EmptyState title="Nicio ofertă nu corespunde filtrului." />}
         >
@@ -115,6 +136,7 @@ export function QuotesPage() {
           })}
         </CollectionBody>
       </SurfacePanel>
+      </section>
     </SlicePage>
   );
 }

@@ -6,7 +6,7 @@ import {
   quoteHref,
   requestHref,
 } from "../routing/appRoute";
-import type { PageWorkspace } from "./SlicePage";
+import type { PageSurface, PageWorkspace } from "./SlicePage";
 
 export type RouteChrome = {
   contextLabel: string;
@@ -15,6 +15,7 @@ export type RouteChrome = {
   eyebrow: string;
   title: string;
   lead: string;
+  pilot?: { surface: PageSurface; metrics?: readonly string[] };
 };
 
 export function presentRouteChrome(route: AppRoute): RouteChrome {
@@ -41,10 +42,11 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       return {
         contextLabel: "Clienți",
         currentHref: "/clienti",
-        workspace: "collection-with-rail",
-        eyebrow: "Clienți",
+        workspace: "stack",
+        eyebrow: "Registru comercial",
         title: "Clienți",
-        lead: "Alege un client existent sau înregistrează unul nou pentru lucrare.",
+        lead: "",
+        pilot: { surface: "clients-registry", metrics: ["Total", "Activi", "Retrași", "Necesită acțiune"] },
       };
     case "client":
       return {
@@ -53,16 +55,18 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         workspace: "object",
         eyebrow: "Client",
         title: "Client",
-        lead: "Deschide o cerere existentă sau creează cererea pentru această lucrare.",
+        lead: "",
+        pilot: { surface: "client-hub", metrics: ["Cereri", "Oferte", "Lucrări"] },
       };
     case "requests":
       return {
         contextLabel: "Cereri",
         currentHref: "/cereri",
         workspace: "stack",
-        eyebrow: "Cereri",
-        title: "Cereri",
-        lead: "Registrul cererilor de ofertă. Deschide obiectul sau continuă pasul canonic.",
+        eyebrow: "Registru comercial",
+        title: "Cereri de ofertă",
+        lead: "",
+        pilot: { surface: "cereri-registry", metrics: ["Total", "Necesită acțiune"] },
       };
     case "request":
       return {
@@ -72,51 +76,57 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         eyebrow: "Cerere",
         title: "Cerere",
         lead: "Se încarcă detaliile cererii și următorul pas disponibil.",
+        pilot: { surface: "cereri-detail" },
       };
     case "catalog":
       return {
         contextLabel: "Catalog",
         currentHref: "/catalog",
-        workspace: "catalog",
-        eyebrow: "Catalog",
-        title: "Catalog de produse",
-        lead: "Alege produsul lucrării. Configuratorul primește clientul, cererea și produsul selectat.",
+        workspace: "stack",
+        eyebrow: "Alegere produs",
+        title: "Catalog",
+        lead: "",
+        pilot: { surface: "catalog-registry", metrics: ["Produse disponibile"] },
       };
     case "assembly":
       return {
         contextLabel: "Ansamblu",
         currentHref: "/ansamblu",
-        workspace: "configuration",
+        workspace: "stack",
         eyebrow: "Ansamblu",
         title: "Ansamblu",
         lead: "Panou ACM și litere volumetrice.",
+        pilot: { surface: "assembly-workbench" },
       };
     case "configurator":
       return {
         contextLabel: "Configurator",
         currentHref: "/configurator",
         workspace: "configuration",
-        eyebrow: "Configurator",
+        eyebrow: "Pregătire produs",
         title: "Configurator",
         lead: "Completează faptele confirmate, verifică costul intern și prețul clientului, apoi îngheață oferta.",
+        pilot: { surface: "configuration-workbench" },
       };
     case "quotes":
       return {
         contextLabel: "Oferte",
         currentHref: "/oferte",
         workspace: "stack",
-        eyebrow: "Oferte",
+        eyebrow: "Registru comercial",
         title: "Oferte",
-        lead: "Ofertele înghețate rămân neschimbate după acceptare.",
+        lead: "",
+        pilot: { surface: "quotes-registry", metrics: ["Oferte", "Necesită atenție"] },
       };
     case "quote":
       return {
         contextLabel: "Ofertă",
         currentHref: quoteHref(route.productCode, route.quoteSnapshotId),
-        workspace: "object",
+        workspace: "stack",
         eyebrow: "Ofertă",
         title: "Ofertă înghețată",
         lead: "Înregistrare comercială înghețată. Acceptarea păstrează această versiune.",
+        pilot: { surface: "quote-detail" },
       };
     case "jobs":
       return {

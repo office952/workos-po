@@ -13,6 +13,75 @@ afterEach(() => {
 });
 
 describe("CatalogPage", () => {
+  it("offers assemblies without standalone products and filters them by search", async () => {
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => catalogResponse(input)));
+    render(<CatalogPage />);
+    expect(await screen.findByRole("button", { name: /Ansamblu test/ })).toBeDisabled();
+    await userEvent.type(screen.getByLabelText("Caută"), "inexistent");
+    expect(screen.queryByRole("button", { name: /Ansamblu test/ })).not.toBeInTheDocument();
+    expect(screen.getByText("Niciun ansamblu nu corespunde căutării.")).toBeInTheDocument();
+  });
+
+  it("creates an assembly explicitly, blocks repeated clicks, and allows retry after failure", async () => {
+    window.history.replaceState({}, "", "/catalog?customer=cus-1&request=req-1");
+    let release!: (response: unknown) => void;
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => init?.method === "POST" ? new Promise((resolve) => { release = resolve; }) : catalogResponse(input));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<CatalogPage />);
+    const action = await screen.findByRole("button", { name: /Creează ansamblul/ });
+    await userEvent.click(action);
+    expect(action).toBeDisabled();
+    await userEvent.click(action);
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(1);
+    await act(async () => release({ ok: false, status: 503, json: async () => ({}) }));
+    expect(await screen.findByText("Ansamblul nu a putut fi creat. Reîncearcă.")).toBeInTheDocument();
+    expect(action).toBeEnabled();
+    await userEvent.click(action);
+    await act(async () => release({ ok: true, status: 201, json: async () => ({ assembly: { assemblyId: "asm:new" } }) }));
+    expect(window.location.pathname).toBe("/ansamblu");
+    expect(new URLSearchParams(window.location.search).get("assembly")).toBe("asm:new");
+    expect(JSON.parse(String(fetchMock.mock.calls.find(([, init]) => init?.method === "POST")?.[1]?.body))).toEqual({ requestId: "req-1", kind: "SIGN_ASSEMBLY_ACM_SIGNAGE_V2" });
+  });
+
+  it("does not navigate after a pending assembly creation has left the page", async () => {
+    window.history.replaceState({}, "", "/catalog?customer=cus-1&request=req-1");
+    let release!: (response: unknown) => void;
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo, init?: RequestInit) => init?.method === "POST" ? new Promise((resolve) => { release = resolve; }) : catalogResponse(input)));
+    const { unmount } = render(<CatalogPage />);
+    await userEvent.click(await screen.findByRole("button", { name: /Creează ansamblul/ }));
+    unmount();
+    window.history.replaceState({}, "", "/clienti");
+    await act(async () => release({ ok: true, status: 201, json: async () => ({ assembly: { assemblyId: "asm:old" } }) }));
+    expect(window.location.pathname).toBe("/clienti");
+  });
+
+  it("does not revive abandoned pending creation after A → B → A", async () => {
+    window.history.replaceState({}, "", "/catalog?customer=cus-1&request=req-1");
+    const releases: ((response: unknown) => void)[] = [];
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      if (init?.method === "POST") return new Promise((resolve) => { releases.push(resolve); });
+      if (String(input).endsWith("/requests")) return Promise.resolve({ ok: true, status: 200, json: async () => ({ overview: { requests: [
+        { requestId: "req-1", customerId: "cus-1", title: "A" },
+        { requestId: "req-2", customerId: "cus-2", title: "B" },
+      ] } }) });
+      return catalogResponse(input);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { rerender } = render(<CatalogPage />);
+    await userEvent.click(await screen.findByRole("button", { name: /Creează ansamblul/ }));
+    window.history.replaceState({}, "", "/catalog?customer=cus-2&request=req-2");
+    rerender(<CatalogPage />);
+    window.history.replaceState({}, "", "/catalog?customer=cus-1&request=req-1");
+    rerender(<CatalogPage />);
+    const action = screen.getByRole("button", { name: /Creează ansamblul/ });
+    expect(action).toBeEnabled();
+    await userEvent.click(action);
+    await act(async () => releases[0]({ ok: true, status: 201, json: async () => ({ assembly: { assemblyId: "asm:old" } }) }));
+    expect(window.location.pathname).toBe("/catalog");
+    expect(action).toBeDisabled();
+    await act(async () => releases[1]({ ok: true, status: 201, json: async () => ({ assembly: { assemblyId: "asm:new" } }) }));
+    expect(new URLSearchParams(window.location.search).get("assembly")).toBe("asm:new");
+  });
   it.each(["delayed", "failed"])("does not expose mixed client/request actions during a %s ownership read", async (mode) => {
     vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
     window.history.replaceState({}, "", "/catalog?request=req-B");
@@ -33,7 +102,10 @@ describe("CatalogPage", () => {
     render(<CatalogPage />);
     await screen.findByText("Produs test");
     expect(screen.queryByRole("link", { name: /Produs test/ })).not.toBeInTheDocument();
-    expect(screen.queryByText("Ansamblu test")).not.toBeInTheDocument();
+    const assembly = await screen.findByRole("button", { name: /Ansamblu test/ });
+    expect(assembly).toBeDisabled();
+    await userEvent.click(assembly);
+    expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
     expect(readConfiguratorSession()).toMatchObject({ customerId: "cus-A", requestId: "req-A", drafts: { widthMm: "1200" } });
     if (mode === "failed") {
       await screen.findByText("Cererea nu a putut fi verificată");
@@ -47,6 +119,7 @@ describe("CatalogPage", () => {
     expect(href.searchParams.get("customer")).toBe("cus-B");
     expect(href.searchParams.get("request")).toBe("req-B");
     expect(await screen.findByText("Ansamblu test")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ansamblu test/ })).toBeEnabled();
     expect(readConfiguratorSession().drafts).toEqual({ widthMm: "1200" });
   });
   it("retains customer and request labels from list context without visiting detail", async () => {
@@ -185,3 +258,13 @@ describe("CatalogPage", () => {
     expect(screen.queryByText("Cerere A")).not.toBeInTheDocument();
   });
 });
+
+function catalogResponse(input: RequestInfo) {
+  const url = String(input);
+  const payload = url.endsWith("/requests")
+    ? { overview: { requests: [{ requestId: "req-1", customerId: "cus-1", title: "Cerere test", statusLabel: "Nouă" }] } }
+    : url.endsWith("/assemblies/offering")
+      ? { offerings: [{ kind: "SIGN_ASSEMBLY_ACM_SIGNAGE_V2", available: true, label: "Ansamblu test", summary: "Panou și litere" }] }
+      : { products: [] };
+  return Promise.resolve({ ok: true, status: 200, json: async () => payload });
+}

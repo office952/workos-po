@@ -1,9 +1,13 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { QuotesPage } from "./QuotesPage";
+import { invalidateResources, resetResourceCache } from "../data/resourceCache";
+import { resourceKeys } from "../data/resourceKeys";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  resetResourceCache();
 });
 
 function stubQuotes(quotes: unknown[]) {
@@ -26,6 +30,30 @@ function stubQuotes(quotes: unknown[]) {
 const productCode = "PRD-LETTERS-FRONTLIT-PLEXI-AL06";
 
 describe("QuotesPage", () => {
+  it("counts server attention flags instead of explanatory labels", async () => {
+    stubQuotes([
+      { quoteSnapshotId: "q-flag", productCode, reference: "OF-FLAG", needsAttention: true },
+      { quoteSnapshotId: "q-copy", productCode, reference: "OF-COPY", needsAttention: false, attentionLabel: "Text explicativ" },
+    ]);
+    render(<QuotesPage />);
+    await screen.findByRole("link", { name: /OF-FLAG/ });
+    const metric = screen.getByText("Necesită atenție").parentElement!;
+    expect(within(metric).getByText("1")).toBeInTheDocument();
+  });
+
+  it("explains a failed refresh of cached offers and retries", async () => {
+    stubQuotes([{ quoteSnapshotId: "q-a", productCode, reference: "OF-A" }]);
+    const success = vi.mocked(fetch).getMockImplementation()!;
+    render(<QuotesPage />);
+    await screen.findByRole("link", { name: /OF-A/ });
+    vi.mocked(fetch).mockImplementation(() => Promise.resolve({ ok: false, status: 503, json: async () => ({}) } as Response));
+    act(() => invalidateResources(resourceKeys.quotes()));
+    expect(await screen.findByText("Datele afișate sunt de la ultima citire reușită.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /OF-A/ })).toBeInTheDocument();
+    vi.mocked(fetch).mockImplementation(success);
+    await userEvent.click(screen.getByRole("button", { name: "Reîncearcă" }));
+    expect(screen.queryByText("Lista nu a putut fi actualizată")).not.toBeInTheDocument();
+  });
   it("keeps created quotes honest and does not treat createdAt as updatedAt", async () => {
     stubQuotes([
       {

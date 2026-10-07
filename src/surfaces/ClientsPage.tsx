@@ -80,7 +80,6 @@ export function ClientsPage() {
     [items, query, statusChip],
   );
 
-  const selected = visible.find((item) => item.customerId === selectedId) ?? null;
   if (selectedId && registry.status === "success" && !items.some((item) => item.customerId === selectedId)) {
     setSelectedId(null);
   }
@@ -263,7 +262,6 @@ export function ClientsPage() {
               {visible.map((customer) => (
                 <tr
                   key={customer.customerId}
-                  data-selected={customer.customerId === selected?.customerId ? "true" : undefined}
                   data-attention={customer.needsAttention ? "true" : undefined}
                 >
                   <td className="clients-table__identity">

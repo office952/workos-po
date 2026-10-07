@@ -19,6 +19,7 @@ import {
 import { LinkedJobs } from "./LinkedJobs";
 import { RequestAttachmentsSection } from "./RequestAttachmentsSection";
 import { RequestInstallationSection } from "./RequestInstallationSection";
+import "../styles/surfaces/commercial.css";
 
 type RequestDetailPageProps = {
   requestId: string;
@@ -58,6 +59,7 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
       currentHref={requestHref(requestId)}
       workspace="object"
       surface="cereri-detail"
+      headerVariant="pilot"
       eyebrow="Cerere"
       title={headerTitle}
       lead={headerLead}
@@ -75,19 +77,18 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
           </>
         ) : undefined
       }
-      status={
-        detail ? (
-          <StatusBadge label={detail.statusLabel} tone={statusTone("workflow")} />
-        ) : null
-      }
-      action={
-        primary ? (
+    >
+      <div className="commercial-toolbar request-detail__toolbar">
+        <div className="commercial-toolbar__context">
+          <a className="text-link" href="/cereri">← Toate cererile</a>
+          {detail ? <StatusBadge label={detail.statusLabel} tone={statusTone("workflow")} /> : null}
+        </div>
+        {primary ? (
           <a className="hit" href={primary.actionHref}>
             <span className="button button--primary">{primary.actionLabel}</span>
           </a>
-        ) : null
-      }
-    >
+        ) : null}
+      </div>
       {request.status === "error" && !detail ? (
         <InlineAlert tone="error" title="Cererea nu a putut fi citită">
           Identitatea cererii nu este disponibilă.

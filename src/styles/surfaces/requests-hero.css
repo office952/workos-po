@@ -1,21 +1,6 @@
 /* Selected intake concept: title and counts left, physical receipt right.
    Hardware is an image asset; the receipt carries live presentation data. */
-div[data-surface="cereri-registry"] > .page-header {
-  position: relative;
-  isolation: isolate;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr);
-  grid-template-areas: "copy aside" "instrument aside";
-  align-items: center;
-  gap: 20px 64px;
-  margin: 0 var(--page-gutter);
-  min-height: 320px;
-  padding: 42px 0 32px;
-  border: 0;
-  border-bottom: 1px solid var(--color-border);
-  background: transparent;
-  box-shadow: none;
-}
+/* Geometry, title and counts are owned by layout/pilot-page.css. */
 div[data-surface="cereri-registry"] > .page-header::after {
   content: "";
   position: absolute;
@@ -34,22 +19,6 @@ div[data-surface="cereri-registry"] > .page-header::after {
   mix-blend-mode: multiply;
   opacity: 0.46;
 }
-[data-surface="cereri-registry"] .page-header__copy { grid-area: copy; max-width: 640px; padding: 0 0 16px; border-bottom: 1px solid var(--color-border); box-shadow: none; }
-[data-surface="cereri-registry"] .page-header__eyebrow { margin: 0 0 14px; color: var(--color-text-secondary); font: 400 11px var(--font-mono); letter-spacing: 0.19em; }
-[data-surface="cereri-registry"] .page-header__title { color: var(--requests-display-ink); font-family: var(--font-brand); font-size: clamp(36px, 4.2vw, 78px); line-height: 1.06; font-weight: 600; letter-spacing: -0.055em; }
-[data-surface="cereri-registry"] .page-header__aside { grid-area: aside; width: 100%; align-self: center; }
-[data-surface="cereri-registry"] .page-header__action { width: 100%; }
-[data-surface="cereri-registry"] .page-header__instrument { grid-area: instrument; min-width: 0; }
-.requests-instrument { display: flex; align-items: stretch; gap: 20px; }
-.requests-instrument__metric { display: flex; align-items: center; gap: 16px; min-height: 58px; padding: 8px 18px; border: 1px solid transparent; background: transparent; color: var(--color-text-primary); text-align: left; cursor: pointer; }
-.requests-instrument__metric:first-child { padding-left: 0; }
-.requests-instrument__metric + .requests-instrument__metric { border-left-color: var(--color-border-strong); }
-.requests-instrument__metric:hover { background: var(--color-surface-raised); }
-.requests-instrument__metric[aria-pressed="true"] { border-bottom-color: var(--color-text-secondary); }
-.requests-instrument__metric--attention[data-attention="true"] { color: var(--requests-amber); }
-.requests-instrument__metric--attention[aria-pressed="true"] { border-bottom-color: var(--requests-amber); }
-.requests-instrument__metric-value { font: 400 44px/1 var(--font-mono); letter-spacing: -0.06em; }
-.requests-instrument__metric-label { max-width: 90px; font: 500 13px/1.4 var(--font-sans); }
 .requests-intake { display: grid; grid-template-columns: minmax(0, 760px) max-content; align-items: center; justify-content: center; gap: 24px; width: 100%; }
 .requests-intake__device { position: relative; width: min(100%, 760px); min-width: 0; aspect-ratio: 3.77; container-type: inline-size; }
 .requests-intake__device > img { position: absolute; z-index: 0; top: -32%; display: block; width: 100%; height: auto; }
@@ -129,22 +98,17 @@ div[data-surface="cereri-registry"] > .page-header::after {
 .requests-new { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 48px; padding: 0 22px; border: 1px solid var(--shell-signal); background: var(--shell-signal); color: var(--shell-button-ink); font: 600 14px var(--font-sans); text-decoration: none; white-space: nowrap; }
 .requests-new > svg { flex: 0 0 auto; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; }
 .requests-new:hover { background: var(--shell-signal-strong); border-color: var(--shell-signal-strong); }
-[data-surface="cereri-registry"] > .page-region { padding-top: 0; background: transparent; }
+[data-surface="cereri-registry"] > .page-region { background: transparent; }
 @media (prefers-reduced-motion: no-preference) {
   .requests-intake__device > img { animation: requests-receipt-reveal 480ms ease-out both; }
 }
 @keyframes requests-receipt-reveal { from { clip-path: inset(0 0 27% 0); } to { clip-path: inset(0); } }
 @media (max-width: 1439px) {
-  div[data-surface="cereri-registry"] > .page-header { min-height: 230px; gap: 16px 32px; padding-block: 28px 24px; }
   .requests-intake { grid-template-columns: minmax(0, 760px); gap: 12px; }
   .requests-intake__label { display: none; }
+  .requests-intake__hint { display: none; }
 }
 @media (max-width: 1151px) {
-  div[data-surface="cereri-registry"] > .page-header { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 200px; gap: 12px 24px; }
-  .requests-instrument { gap: 10px; }
-  .requests-instrument__metric { min-height: 48px; padding-inline: 10px; gap: 10px; }
-  .requests-instrument__metric-value { font-size: 30px; }
-  .requests-instrument__metric-label { font-size: 12px; }
   .requests-intake__hint > span:last-child { display: none; }
 }
 @container (max-width: 620px) {
@@ -157,11 +121,6 @@ div[data-surface="cereri-registry"] > .page-header::after {
   .requests-intake__meta > span:last-child { display: none; }
 }
 @media (max-width: 767px) {
-  div[data-surface="cereri-registry"] > .page-header { grid-template-columns: minmax(0, 1fr); grid-template-areas: "copy" "instrument"; min-height: 0; padding-block: 26px 16px; gap: 16px; }
-  [data-surface="cereri-registry"] .page-header__title { font-size: 34px; }
-  [data-surface="cereri-registry"] .page-header__aside { display: none; }
   div[data-surface="cereri-registry"] > .page-header::after { display: none; }
-  [data-surface="cereri-registry"] .page-header__copy { padding-bottom: 0; border: 0; }
-  .requests-instrument__metric { min-height: 48px; }
   .requests-new { min-height: 44px; padding-inline: 16px; }
 }
