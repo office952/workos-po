@@ -158,6 +158,11 @@ jobs:
             }, scheme);
             const page = await context.newPage();
             const errors = [];
+            const imageResponses = [];
+            page.on("response", (response) => {
+              if (response.url().includes("request-intake") && new URL(response.url()).pathname.endsWith(".webp")) imageResponses.push(response);
+            });
+            const textureResponse = width >= 768 ? page.waitForResponse((response) => response.url().includes("request-intake-surface") && new URL(response.url()).pathname.endsWith(".webp")) : null;
             page.on("pageerror", (error) => errors.push(error.message));
             page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
 
@@ -213,11 +218,11 @@ jobs:
             assert.equal(await page.getByRole("button", { name: "Anterior" }).isDisabled(), true);
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Overflow at ${width}`);
             await page.screenshot({ path: `${out}/${name}.png`, fullPage: true });
-            if (width >= 768) await page.waitForFunction(() => performance.getEntriesByType("resource")
-              .some((entry) => entry.name.includes("request-intake-surface") && entry.encodedBodySize > 0));
-            const assets = await page.evaluate(() => performance.getEntriesByType("resource")
-              .filter((entry) => entry.name.includes("request-intake") && !new URL(entry.name).searchParams.has("import"))
-              .map((entry) => ({ url: entry.name, bytes: entry.encodedBodySize, transfer: entry.transferSize, duration: entry.duration })));
+            if (textureResponse) await (await textureResponse).finished();
+            // Read bytes already received by Chromium; this makes no extra image request.
+            const assets = await Promise.all(imageResponses.map(async (response) => ({
+              url: response.url(), bytes: (await response.body()).length, status: response.status(),
+            })));
             assetEvidence.push({ name, width, deviceScaleFactor, assets });
             if (width >= 768) {
               assert.equal(assets.length, 2, "Decoration fetched more than once");
@@ -254,9 +259,10 @@ jobs:
               await row.hover();
               assert.equal(await page.locator(".requests-intake__sheet").getAttribute("href"), "/cereri/req-1");
               const imageBefore = await page.locator(".requests-intake img").evaluate((img) => img.currentSrc);
-              const imageLoadsBefore = (await page.evaluate(() => performance.getEntriesByType("resource").filter((entry) => entry.name.includes("request-intake") && !entry.name.includes("?import")))).length;
+              const imageLoadsBefore = imageResponses.length;
               await row.locator(".requests-table__client").click();
               assert.equal(await row.getAttribute("aria-selected"), "true");
+              assert.equal(await page.locator(".requests-intake img").evaluate((img) => img.getAnimations().some((animation) => animation.playState === "running")), false, "Selection replayed the entrance animation");
               assert.equal(await page.locator(".requests-intake__sheet").getAttribute("href"), "/cereri/req-2");
               await page.screenshot({ path: `${out}/REQUESTS_V5__${scheme === "dark" ? "15_SELECTED_DARK" : "16_SELECTED_LIGHT"}.png`, fullPage: true });
               const third = page.getByRole("row", { name: "Previzualizează cererea: Colantare vitrină" });
@@ -267,7 +273,7 @@ jobs:
               await page.keyboard.press("Enter");
               assert.equal(await page.locator(".requests-intake__sheet").getAttribute("href"), "/cereri/req-2");
               assert.equal(await page.locator(".requests-intake img").evaluate((img) => img.currentSrc), imageBefore);
-              assert.equal((await page.evaluate(() => performance.getEntriesByType("resource").filter((entry) => entry.name.includes("request-intake") && !entry.name.includes("?import")))).length, imageLoadsBefore);
+              assert.equal(imageResponses.length, imageLoadsBefore);
               await page.getByRole("button", { name: /Necesită acțiune/ }).click();
               await page.getByRole("searchbox", { name: "Caută" }).fill("inexistent");
               assert.equal(await page.locator(".requests-intake__sheet").getAttribute("href"), "/cereri/req-2");
