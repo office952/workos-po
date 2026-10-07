@@ -212,21 +212,21 @@ jobs:
             assert.equal(await page.getByRole("button", { name: "Următor" }).isDisabled(), true);
             assert.equal(await page.getByRole("button", { name: "Anterior" }).isDisabled(), true);
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Overflow at ${width}`);
-            await page.screenshot({ path: `${out}/${name}.png`, fullPage: true, animations: "disabled" });
+            await page.screenshot({ path: `${out}/${name}.png`, fullPage: true });
             if (width === 1920 && scheme === "dark") {
               await page.getByRole("combobox", { name: "Ordine" }).selectOption("oldest");
               assert.match(await page.locator("tbody tr").first().innerText(), /Totem dublă față/);
-              await page.screenshot({ path: `${out}/REQUESTS_V4__06_SORT_OLDEST_1920x1080.png`, fullPage: true, animations: "disabled" });
+              await page.screenshot({ path: `${out}/REQUESTS_V4__06_SORT_OLDEST_1920x1080.png`, fullPage: true });
               await page.getByRole("button", { name: /Necesită acțiune/ }).click();
               assert.equal(await page.locator("tbody tr").count(), 2);
-              await page.screenshot({ path: `${out}/REQUESTS_V4__07_ATTENTION_1920x1080.png`, fullPage: true, animations: "disabled" });
+              await page.screenshot({ path: `${out}/REQUESTS_V4__07_ATTENTION_1920x1080.png`, fullPage: true });
               await page.getByRole("searchbox", { name: "Caută" }).fill("inexistent");
               await page.getByText("Nicio cerere nu corespunde filtrului.").waitFor();
               await page.getByRole("button", { name: /Resetează filtrele/ }).click();
               assert.equal(await page.locator("tbody tr").count(), 4);
               await page.getByRole("button", { name: "Rânduri compacte" }).click();
               assert.equal(await page.getByRole("button", { name: "Rânduri compacte" }).getAttribute("aria-pressed"), "true");
-              await page.screenshot({ path: `${out}/REQUESTS_V4__08_COMPACT_1920x1080.png`, fullPage: true, animations: "disabled" });
+              await page.screenshot({ path: `${out}/REQUESTS_V4__08_COMPACT_1920x1080.png`, fullPage: true });
             }
             assert.deepEqual(errors, [], "Browser console/page errors");
             await context.close();

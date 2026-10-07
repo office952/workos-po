@@ -48,8 +48,8 @@ div[data-surface="cereri-registry"] > .page-header::after {
 .requests-instrument__metric-label { max-width: 90px; font: 500 13px/1.4 var(--font-sans); }
 .requests-intake { display: flex; align-items: center; justify-content: center; gap: 24px; width: 100%; }
 .requests-intake__device { position: relative; width: min(100%, 760px); min-width: 0; aspect-ratio: 3.77; }
-.requests-intake__device > img { position: absolute; top: -32%; display: block; width: 100%; height: auto; }
-.requests-intake__sheet { position: absolute; left: 13%; right: 13%; top: 39%; bottom: 9%; display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 10px 10px 0; color: #252119; text-decoration: none; overflow: hidden; }
+.requests-intake__device > img { position: absolute; z-index: 0; top: -32%; display: block; width: 100%; height: auto; }
+.requests-intake__sheet { position: absolute; z-index: 1; left: 13%; right: 13%; top: 39%; bottom: 9%; display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 10px 10px 0; color: #252119; text-decoration: none; overflow: hidden; }
 .requests-intake__meta { display: flex; justify-content: space-between; gap: 12px; font: 400 11px/1.25 var(--font-mono); }
 .requests-intake__sheet strong { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font: 600 clamp(13px, 1vw, 18px)/1.25 var(--font-sans); }
 .requests-intake__sheet:hover { text-decoration: underline; text-underline-offset: 3px; }
