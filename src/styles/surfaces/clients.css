@@ -4,53 +4,10 @@
   --clients-panel: color-mix(in srgb, var(--color-surface) 96%, var(--color-info));
 }
 
-/* Registry and client hub share header geometry, without changing sibling pages. */
-[data-surface="clients-registry"] > .page-header,
-[data-surface="client-hub"] > .page-header {
-  align-items: center;
-  flex-wrap: wrap;
-  min-height: 0;
-  padding-block: 20px;
-  gap: 16px 24px;
-}
-
-[data-surface="clients-registry"] > .page-header .page-header__copy,
-[data-surface="client-hub"] > .page-header .page-header__copy {
-  flex: 1 1 24rem;
-}
-
-[data-surface="clients-registry"] > .page-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-
-[data-surface="clients-registry"] > .page-header .page-header__instrument {
-  display: contents;
-}
-
-[data-surface="clients-registry"] > .page-header .clients-instrument {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-[data-surface="clients-registry"] > .page-header .clients-toolbar {
-  grid-column: 1 / -1;
-  padding: 0;
-}
-
 .page-workspace[data-surface="clients-registry"] {
+  display: block;
   width: 100%;
   max-width: none;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
-  gap: 24px;
-}
-
-.page-workspace[data-surface="clients-registry"] > .ui-panel {
-  min-width: 0;
-}
-
-.page-workspace[data-surface="clients-registry"] > :only-child {
-  grid-column: 1 / -1;
 }
 
 .clients-register {
@@ -264,82 +221,6 @@
   padding: 40px 20px;
 }
 
-.clients-create {
-  display: grid;
-  gap: 12px;
-}
-
-.clients-instrument {
-  display: flex;
-  align-items: stretch;
-  gap: 16px;
-}
-
-.clients-instrument__metric {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 48px;
-  padding: 6px 14px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--color-text-primary);
-  text-align: left;
-  cursor: pointer;
-}
-
-.clients-instrument__metric + .clients-instrument__metric {
-  border-left-color: var(--color-border-strong);
-}
-
-.clients-instrument__metric:hover,
-.clients-instrument__metric:focus-visible {
-  background: var(--color-surface-raised);
-}
-
-.clients-instrument__metric:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
-}
-
-.clients-instrument__metric[aria-pressed="true"] {
-  border-bottom-color: var(--color-text-secondary);
-}
-
-.clients-instrument__metric--attention[data-attention="true"] {
-  color: var(--color-warning);
-}
-
-.clients-instrument__metric-value {
-  font: 400 28px/1 var(--font-mono);
-  letter-spacing: -0.04em;
-}
-
-.clients-instrument__metric-label {
-  max-width: 90px;
-  font: 500 13px/1.4 var(--font-sans);
-}
-
-@media (max-width: 1099px) {
-  .page-workspace[data-surface="clients-registry"] {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .clients-instrument {
-    gap: 4px;
-    flex-wrap: wrap;
-  }
-
-  [data-surface="clients-registry"] > .page-header {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  [data-surface="clients-registry"] > .page-header .clients-instrument {
-    grid-column: 1;
-    grid-row: 2;
-  }
-}
-
 @media (max-width: 1151px) {
   .clients-table__place {
     display: none;
@@ -351,23 +232,13 @@
     --clients-action-width: 132px;
   }
 
-  [data-surface="clients-registry"] > .page-header,
-  [data-surface="client-hub"] > .page-header {
-    padding-block: 16px;
-    gap: 12px;
-  }
-
-  .page-header__instrument:has(.clients-instrument),
-  .page-header__instrument:has(.client-hub__counts) {
-    width: 100%;
-  }
-
-  .clients-instrument {
+  [data-surface="clients-registry"] .pilot-instrument {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
-  .clients-instrument__metric {
+  [data-surface="clients-registry"] .pilot-instrument__metric {
     padding: 8px;
   }
 

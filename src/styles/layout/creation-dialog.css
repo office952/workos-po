@@ -1,0 +1,16 @@
+.creation-dialog {
+  width: min(32rem, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 24px;
+  overflow: auto;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+.creation-dialog::backdrop { background: rgb(0 0 0 / 60%); }
+.creation-dialog__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.creation-dialog__header h2 { margin: 0; font: 600 24px/1.2 var(--font-brand); }
+.creation-dialog__close { flex: 0 0 44px; height: 44px; border: 1px solid var(--color-border); background: transparent; color: inherit; font-size: 24px; cursor: pointer; }
+.creation-dialog__close:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+.creation-dialog form { display: grid; gap: 16px; }
+.creation-dialog .ui-note { margin: 0; }

@@ -10,6 +10,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   sessionStorage.clear();
   resetResourceCache();
+  window.history.replaceState({}, "", "/");
 });
 
 function jsonResponse(status: number, body: unknown) {
@@ -26,11 +27,15 @@ describe("ClientsPage", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<ClientsPage />);
     await screen.findByRole("link", { name: /Atelier Nord/ });
+    await userEvent.click(screen.getByRole("button", { name: "Client nou" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
     fetchMock.mockImplementation(() => jsonResponse(status, {}));
     act(() => invalidateResources(resourceKeys.customers()));
     expect(await screen.findByText("Acces refuzat")).toBeInTheDocument();
     expect(screen.queryByText("Atelier Nord")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Înregistrează clientul" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Client nou" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("remembers the client opened using the row action", async () => {
@@ -54,9 +59,11 @@ describe("ClientsPage", () => {
     vi.stubGlobal("location", { ...window.location, assign });
 
     render(<ClientsPage />);
-    expect(document.querySelector(".page-workspace--collection-with-rail")).not.toBeNull();
-    await userEvent.setup().type(await screen.findByLabelText("Denumire"), "Atelier Nord");
-    await userEvent.setup().click(screen.getByRole("button", { name: "Înregistrează clientul" }));
+    expect(document.querySelector(".page-workspace--stack")).not.toBeNull();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: "Client nou" }));
+    await userEvent.setup().type(screen.getByLabelText("Denumire"), "Atelier Nord");
+    await userEvent.keyboard("{Enter}");
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -128,4 +135,32 @@ describe("ClientsPage", () => {
     await userEvent.setup().click(screen.getByRole("button", { name: "Reîncearcă" }));
     expect(await screen.findByText("Nu există încă clienți")).toBeInTheDocument();
   });
+  it("keeps a draft when closed and reopens only through the CTA", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => jsonResponse(200, { registry: { customers: [] } })));
+    render(<ClientsPage />);
+    await userEvent.click(await screen.findByRole("button", { name: "Client nou" }));
+    await userEvent.type(screen.getByLabelText("Denumire"), "Atelier nou");
+    await userEvent.click(screen.getByRole("button", { name: "Închide formularul" }));
+    expect(screen.queryByLabelText("Denumire")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Client nou" }));
+    expect(screen.getByLabelText("Denumire")).toHaveValue("Atelier nou");
+  });
+
+  it("does not navigate after a pending customer creation has left the page", async () => {
+    let release!: (value: unknown) => void;
+    vi.stubGlobal("fetch", vi.fn((_input: RequestInfo, init?: RequestInit) =>
+      init?.method === "POST" ? new Promise((resolve) => { release = resolve; }) : jsonResponse(200, { registry: { customers: [] } }),
+    ));
+    window.history.replaceState({}, "", "/clienti");
+    const { unmount } = render(<ClientsPage />);
+    await userEvent.click(await screen.findByRole("button", { name: "Client nou" }));
+    await userEvent.type(screen.getByLabelText("Denumire"), "Atelier nou");
+    await userEvent.click(screen.getByRole("button", { name: "Înregistrează clientul" }));
+    await waitFor(() => expect(release).toBeTypeOf("function"));
+    unmount();
+    window.history.replaceState({}, "", "/cereri");
+    await act(async () => { release(await jsonResponse(201, { customer: { customerId: "cus-new", displayName: "Atelier nou" } })); });
+    expect(window.location.pathname).toBe("/cereri");
+  });
+
 });

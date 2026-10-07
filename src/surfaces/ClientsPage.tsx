@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import "../styles/surfaces/clients.css";
 import { presentCustomerId } from "../adapters/contextAdapter";
 import { createCustomer } from "../api/customers";
 import { TransportError } from "../api/http";
 import { Button } from "../components/Button";
+import { CreationDialog } from "../components/CreationDialog";
 import { EmptyState } from "../components/EmptyState";
 import { ErrorState } from "../components/ErrorState";
 import { InlineAlert } from "../components/InlineAlert";
 import { collectionViewState } from "../components/collectionViewState";
 import { StatusBadge } from "../components/StatusBadge";
-import { SurfacePanel } from "../components/SurfacePanel";
 import { TextField } from "../components/TextField";
 import { invalidateAfterCreateCustomer } from "../data/invalidation";
 import { invalidateResources } from "../data/resourceCache";
@@ -37,12 +37,19 @@ export function ClientsPage() {
   const summary = registry.data?.summary;
   const remembered = readClientsRegistryMemory();
   const [name, setName] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
   const [query, setQuery] = useState(remembered.query);
   const [statusChip, setStatusChip] = useState(remembered.statusChip);
   const [selectedId, setSelectedId] = useState<string | null>(remembered.selectedId);
   const [saveState, setSaveState] = useState<"idle" | "pending" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const creationScope = useRef(0);
+  useLayoutEffect(() => {
+    creationScope.current += 1;
+    return () => { creationScope.current += 1; };
+  }, []);
+  if (createOpen && registry.status !== "success") setCreateOpen(false);
 
   useEffect(() => {
     writeClientsRegistryMemory({ query, statusChip, selectedId });
@@ -79,23 +86,28 @@ export function ClientsPage() {
   }
 
   async function create(): Promise<void> {
-    if (name.trim() === "") {
+    if (name.trim() === "" || saveState === "pending" || registry.status !== "success") {
       return;
     }
     setSaveState("pending");
     setSaveError(null);
+    const scope = creationScope.current;
     try {
       const created = presentCustomerId(await createCustomer(name.trim()));
       if (!created) {
+        if (scope !== creationScope.current) return;
         setSaveState("error");
         setSaveError("Clientul nu a putut fi creat.");
         return;
       }
-      setName("");
-      setSaveState("idle");
       invalidateAfterCreateCustomer();
+      if (scope !== creationScope.current) return;
+      setName("");
+      setCreateOpen(false);
+      setSaveState("idle");
       navigate(clientHref(created));
     } catch (error) {
+      if (scope !== creationScope.current) return;
       setSaveState("error");
       setSaveError(
         error instanceof TransportError
@@ -113,55 +125,56 @@ export function ClientsPage() {
     <SlicePage
       contextLabel="Clienți"
       currentHref="/clienti"
-      workspace="collection-with-rail"
+      workspace="stack"
       surface="clients-registry"
+      headerVariant="pilot"
       eyebrow="Registru comercial"
       title="Clienți"
-      lead="Găsește clientul și continuă lucrarea din fișa lui."
-      meta={registry.status === "success" ? `${visible.length} rezultate` : undefined}
       instrument={
-        <>
-        <div className="clients-instrument" role="group" aria-label="Filtre registru clienți">
+        <div className="pilot-instrument" role="group" aria-label="Filtre registru clienți">
           <button
             type="button"
-            className="clients-instrument__metric"
+            className="pilot-instrument__metric"
             aria-pressed={statusChip === ALL}
             onClick={() => setStatusChip(ALL)}
           >
-            <strong className="clients-instrument__metric-value">{count(summary?.total)}</strong>
-            <span className="clients-instrument__metric-label">Total</span>
+            <strong className="pilot-instrument__metric-value">{count(summary?.total)}</strong>
+            <span className="pilot-instrument__metric-label">Total</span>
           </button>
           <button
             type="button"
-            className="clients-instrument__metric"
+            className="pilot-instrument__metric"
             aria-pressed={statusChip === "ACTIVE"}
             onClick={() => setStatusChip("ACTIVE")}
           >
-            <strong className="clients-instrument__metric-value">{count(summary?.active)}</strong>
-            <span className="clients-instrument__metric-label">Activi</span>
+            <strong className="pilot-instrument__metric-value">{count(summary?.active)}</strong>
+            <span className="pilot-instrument__metric-label">Activi</span>
           </button>
           <button
             type="button"
-            className="clients-instrument__metric"
+            className="pilot-instrument__metric"
             aria-pressed={statusChip === "RETIRED"}
             onClick={() => setStatusChip("RETIRED")}
           >
-            <strong className="clients-instrument__metric-value">{count(summary?.retired)}</strong>
-            <span className="clients-instrument__metric-label">Retrași</span>
+            <strong className="pilot-instrument__metric-value">{count(summary?.retired)}</strong>
+            <span className="pilot-instrument__metric-label">Retrași</span>
           </button>
           <button
             type="button"
-            className="clients-instrument__metric clients-instrument__metric--attention"
+            className="pilot-instrument__metric pilot-instrument__metric--attention"
             data-attention={(summary?.needsAttention ?? 0) > 0}
             aria-pressed={statusChip === "attention"}
             onClick={() => setStatusChip("attention")}
           >
-            <strong className="clients-instrument__metric-value">
+            <strong className="pilot-instrument__metric-value">
               {count(summary?.needsAttention)}
             </strong>
-            <span className="clients-instrument__metric-label">Necesită acțiune</span>
+            <span className="pilot-instrument__metric-label">Necesită acțiune</span>
           </button>
         </div>
+      }
+    >
+      <section className="clients-register" aria-label="Registru clienți">
         <div className="clients-toolbar">
           <div className="clients-search">
             <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -180,11 +193,13 @@ export function ClientsPage() {
               onChange={(event) => setQuery(event.target.value)}
             />
           </div>
+          {registry.status === "success" ? (
+            <button type="button" className="pilot-create" onClick={() => setCreateOpen(true)}>
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+              Client nou
+            </button>
+          ) : null}
         </div>
-        </>
-      }
-    >
-      <section className="clients-register" aria-label="Registru clienți">
         {registry.status === "error" && registry.data ? (
           <InlineAlert tone="error" title="Lista nu a putut fi actualizată">
             Datele afișate sunt de la ultima citire reușită.
@@ -293,14 +308,12 @@ export function ClientsPage() {
           </table>
         )}
       </section>
-      {registry.status === "success" ? <SurfacePanel title="Client nou" label="Client nou">
-        <div className="clients-create">
-          <TextField id="customer-name" label="Denumire" value={name} onChange={setName} />
+      {createOpen && registry.status === "success" ? <CreationDialog title="Client nou" busy={saveState === "pending"} onDismiss={() => setCreateOpen(false)}>
+        <form onSubmit={(event) => { event.preventDefault(); void create(); }}>
+          <TextField id="customer-name" label="Denumire" value={name} onChange={setName} disabled={saveState === "pending"} />
           <Button
+            type="submit"
             disabled={name.trim() === "" || saveState === "pending"}
-            onClick={() => {
-              void create();
-            }}
           >
             Înregistrează clientul
           </Button>
@@ -310,8 +323,8 @@ export function ClientsPage() {
               {saveError}
             </InlineAlert>
           ) : null}
-        </div>
-      </SurfacePanel> : null}
+        </form>
+      </CreationDialog> : null}
     </SlicePage>
   );
 }

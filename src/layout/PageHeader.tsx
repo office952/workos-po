@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import "../styles/layout/pilot-page.css";
 
 type PageHeaderProps = {
   eyebrow?: string;
@@ -9,6 +10,7 @@ type PageHeaderProps = {
   action?: ReactNode;
   instrument?: ReactNode;
   quiet?: boolean;
+  variant?: "default" | "pilot";
 };
 
 function sameOperatorLabel(left: string, right: string): boolean {
@@ -24,12 +26,13 @@ export function PageHeader({
   action,
   instrument,
   quiet = false,
+  variant = "default",
 }: PageHeaderProps) {
   const showEyebrow = Boolean(eyebrow && !sameOperatorLabel(eyebrow, title));
   const hasAside = status != null || action != null;
 
   return (
-    <div className={quiet ? "page-header page-header--quiet" : "page-header"}>
+    <div className={["page-header", quiet && "page-header--quiet", variant === "pilot" && "page-header--pilot"].filter(Boolean).join(" ")}>
       <div className="page-header__copy">
         {showEyebrow ? <p className="page-header__eyebrow">{eyebrow}</p> : null}
         <h1 className="page-header__title">{title}</h1>

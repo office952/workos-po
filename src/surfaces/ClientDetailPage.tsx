@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import "../styles/surfaces/clients.css";
 import "../styles/surfaces/client-hub.css";
 import { presentCreatedRequestId } from "../adapters/requestAdapter";
@@ -10,6 +10,7 @@ import type {
 } from "../api/types";
 import { createRequest } from "../api/requests";
 import { Button } from "../components/Button";
+import { CreationDialog } from "../components/CreationDialog";
 import { EmptyState } from "../components/EmptyState";
 import { ErrorState } from "../components/ErrorState";
 import { InlineAlert } from "../components/InlineAlert";
@@ -60,9 +61,24 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
   const customer = workspace.data?.customer;
   const section = parseClientHubSection(window.location.search);
   const [title, setTitle] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
   const [description, setDescription] = useState("");
   const [saveState, setSaveState] = useState<"idle" | "pending" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [draftCustomerId, setDraftCustomerId] = useState(customerId);
+  const creationScope = useRef(0);
+  useLayoutEffect(() => {
+    creationScope.current += 1;
+    return () => { creationScope.current += 1; };
+  }, [customerId]);
+  if (draftCustomerId !== customerId) {
+    setDraftCustomerId(customerId);
+    setTitle("");
+    setDescription("");
+    setSaveError(null);
+    setSaveState("idle");
+    setCreateOpen(false);
+  }
 
   useEffect(() => {
     if (!customer || workspace.status !== "success") {
@@ -74,11 +90,12 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
   }, [customer, customerId, workspace.status]);
 
   async function create(): Promise<void> {
-    if (title.trim() === "" || description.trim() === "") {
+    if (title.trim() === "" || description.trim() === "" || saveState === "pending" || workspace.status !== "success" || workspace.data?.canCreateRequest !== true) {
       return;
     }
     setSaveState("pending");
     setSaveError(null);
+    const scope = creationScope.current;
     try {
       const requestId = presentCreatedRequestId(
         await createRequest({
@@ -88,13 +105,17 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
         }),
       );
       if (!requestId) {
+        if (scope !== creationScope.current) return;
         setSaveState("error");
         setSaveError("Cererea nu a putut fi creată.");
         return;
       }
       invalidateAfterCreateRequest(customerId);
+      if (scope !== creationScope.current) return;
+      setCreateOpen(false);
       navigate(requestHref(requestId));
     } catch (error) {
+      if (scope !== creationScope.current) return;
       setSaveState("error");
       setSaveError(
         error instanceof TransportError
@@ -104,21 +125,24 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
     }
   }
 
+  const canCreate = workspace.status === "success" && workspace.data?.canCreateRequest === true;
+  if (createOpen && !canCreate) setCreateOpen(false);
   const createForm =
-    workspace.status === "success" && workspace.data?.canCreateRequest === true ? (
-      <SurfacePanel title="Cerere nouă" label="Cerere nouă">
-        <TextField id="request-title" label="Titlu" value={title} onChange={setTitle} />
+    createOpen && canCreate ? (
+      <CreationDialog title="Cerere nouă" busy={saveState === "pending"} onDismiss={() => setCreateOpen(false)}>
+        <form onSubmit={(event) => { event.preventDefault(); void create(); }}>
+        <p className="ui-note">Client: {customer?.displayName}</p>
+        <TextField id="request-title" label="Titlu" value={title} onChange={setTitle} disabled={saveState === "pending"} />
         <TextField
           id="request-description"
           label="Descriere"
           value={description}
           onChange={setDescription}
+          disabled={saveState === "pending"}
         />
         <Button
+          type="submit"
           disabled={title.trim() === "" || description.trim() === "" || saveState === "pending"}
-          onClick={() => {
-            void create();
-          }}
         >
           Creează cererea
         </Button>
@@ -130,7 +154,8 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
         <p className="ui-note">
           Cererea va fi înregistrată pentru acest client.
         </p>
-      </SurfacePanel>
+        </form>
+      </CreationDialog>
     ) : null;
 
   return (
@@ -139,25 +164,27 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
       currentHref={clientHref(customerId, section)}
       workspace="object"
       surface="client-hub"
+      headerVariant="pilot"
       eyebrow="Client"
       title={customer?.displayName ?? "Client"}
-      lead="Datele clientului, cererile, ofertele și lucrările sale."
-      meta={customer?.city ?? undefined}
-      status={
-        customer ? (
+      meta={
+        <>
+        <a className="client-hub__back" href="/clienti">← Toți clienții</a>
+        {customer ? (
           <StatusBadge label={customer.statusLabel} tone={statusTone("workflow")} />
-        ) : null
+        ) : null}
+        </>
       }
-      action={<a className="client-hub__back" href="/clienti">← Toți clienții</a>}
       instrument={workspace.data ? (
-        <ul className="client-hub__counts" aria-label="Relația cu clientul">
-          <li><a href={clientHref(customerId, "cereri")}><strong>{workspace.data.summary.requestCount}</strong><span>Cereri</span></a></li>
-          <li><a href={clientHref(customerId, "cereri")}><strong>{workspace.data.summary.quoteCount}</strong><span>Oferte</span></a></li>
-          <li><a href={clientHref(customerId, "lucrari")}><strong>{workspace.data.summary.jobCount}</strong><span>Lucrări</span></a></li>
+        <ul className="pilot-instrument client-hub__counts" aria-label="Relația cu clientul">
+          <li><a className="pilot-instrument__metric" href={clientHref(customerId, "cereri")}><strong className="pilot-instrument__metric-value">{workspace.data.summary.requestCount}</strong><span className="pilot-instrument__metric-label">Cereri</span></a></li>
+          <li><a className="pilot-instrument__metric" href={clientHref(customerId, "cereri")}><strong className="pilot-instrument__metric-value">{workspace.data.summary.quoteCount}</strong><span className="pilot-instrument__metric-label">Oferte</span></a></li>
+          <li><a className="pilot-instrument__metric" href={clientHref(customerId, "lucrari")}><strong className="pilot-instrument__metric-value">{workspace.data.summary.jobCount}</strong><span className="pilot-instrument__metric-label">Lucrări</span></a></li>
         </ul>
       ) : null}
     >
       <div className="client-hub">
+        <div className="client-hub__toolbar">
         <nav className="client-hub__nav" aria-label="Secțiuni client">
           {CLIENT_HUB_SECTIONS.map((item) => (
             <a
@@ -169,6 +196,13 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
             </a>
           ))}
         </nav>
+        {canCreate ? (
+          <button type="button" className="pilot-create" onClick={() => setCreateOpen(true)}>
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+            Cerere nouă
+          </button>
+        ) : null}
+        </div>
         {(workspace.status === "idle" || workspace.status === "loading") && !workspace.data ? (
           <p role="status">Se citește hubul clientului</p>
         ) : null}
@@ -227,7 +261,6 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
               </dl>
             </SurfacePanel>
             </div>
-            {createForm ? <aside className="client-hub__create" aria-label="Creare cerere">{createForm}</aside> : null}
           </div>
         ) : null}
         {workspace.data && section === "lucrari" ? (
@@ -257,7 +290,6 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
                 rows={workspace.data.quotes.map((item) => quoteRow(item))}
               />
             </div>
-            {createForm ? <aside className="client-hub__create" aria-label="Creare cerere">{createForm}</aside> : null}
           </div>
         ) : null}
         {workspace.data && section in CLIENT_HUB_FUTURE_COPY ? (
@@ -276,6 +308,7 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
           </SurfacePanel>
         ) : null}
       </div>
+      {createForm}
     </SlicePage>
   );
 }

@@ -42,7 +42,8 @@ describe("App navigation", () => {
 
     render(<App />);
     expect(document.querySelector(".boot")).toBeNull();
-    expect(await screen.findByRole("heading", { name: "Client nou" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Client nou" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Clienți" })).toBeInTheDocument();
     const shell = document.querySelector(".app-shell__bar");
     expect(shell).not.toBeNull();

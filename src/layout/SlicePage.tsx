@@ -49,6 +49,7 @@ type SlicePageProps = {
   status?: ReactNode;
   action?: ReactNode;
   instrument?: ReactNode;
+  headerVariant?: "default" | "pilot";
   workspace?: PageWorkspace;
   floorplan?: FloorplanId;
   /** Scoped presentation surface; does not invent a new workspace contract. */
@@ -64,6 +65,7 @@ export function SlicePage({
   status,
   action,
   instrument,
+  headerVariant,
   workspace = "stack",
   floorplan,
   surface,
@@ -81,6 +83,7 @@ export function SlicePage({
           status={status}
           action={action}
           instrument={instrument}
+          variant={headerVariant}
           quiet={quiet}
         />
         <div className="page-region">
