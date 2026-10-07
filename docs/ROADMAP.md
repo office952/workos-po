@@ -16,7 +16,7 @@ Owner direction of 2026-10-07 is recorded in [Request, Catalog and configuration
 
 One active source candidate: `feat/product-system-request-coherence` in `office952/workos-po`. Scope: definition-only Catalog, central request/CUI intake, in-request product selection, existing assembly continuity, removal of retired code and contradictory active documentation. Source implementation, commit and push are authorized by the current Owner session. Merge/deploy, real Cloud/business-data operations, schema/migrations/seeds remain unauthorized.
 
-Source implementation and automated checks are complete for this candidate. Browser proof is blocked by the unavailable browser/connection timeout; no visual or Owner acceptance is declared. Full arbitrary definition authoring and durable cross-device draft persistence remain open; do not relabel the projection as a complete editor. Candidate evidence and open limits are recorded in [REPORT.md](review/request-catalog-coherence/REPORT.md).
+Source implementation and automated checks are complete for this candidate. Cursor's subsequent isolated review at `836cc9e` confirmed Catalog inspection but found a server action mismatch on a newly saved undecided request. The same source branch corrects that projection and adds regression coverage; the updated runtime still requires verification. Browser geometry/theme proof remains blocked by connection freezes; no visual or Owner acceptance is declared. Full arbitrary definition authoring and durable cross-device draft persistence remain open; do not relabel the projection as a complete editor. Candidate evidence and open limits are recorded in [REPORT.md](review/request-catalog-coherence/REPORT.md).
 
 ## Historical accepted baseline before the coherence candidate
 

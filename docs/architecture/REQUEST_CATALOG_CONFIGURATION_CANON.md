@@ -33,6 +33,7 @@ A supplied/existing site panel remains HostContext. A fabricated ACM cassette is
 ## State and failure rules
 
 - Server session determines organization; no frontend organization override or client-specific fork.
+- An undecided request in `NEW`, `IN_REVIEW` or `READY_FOR_QUOTE`, without a linked offer, receives `CHOOSE_PRODUCT` from the domain projection. Product selection starts configuration; it does not advance the request status or declare quote readiness. `WAITING_CUSTOMER`, `BLOCKED` and `CANCELLED` retain their existing continuation. A linked offer keeps `OPEN_QUOTE` priority. The UI follows this server action.
 - CUI matching strips optional RO and spaces. CUI input is syntactically checked for lookup; no unsupported checksum/fiscal-registration claim is made. API POST/PATCH refuse normalized duplicates within the current organization. This is an application guard, not a new cross-replica database uniqueness constraint.
 - ANAF v9 is read-only/advisory, with a six-second timeout, bounded cache and one outbound call per second per process. Errors do not create customers. No fiscal registration status is inferred from a CUI prefix. Multi-replica deployments still need a shared upstream rate limiter if traffic requires it.
 - If customer creation succeeds and request creation fails, intake retries the request using the created customer.

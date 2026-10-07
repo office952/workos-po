@@ -8,6 +8,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   sessionStorage.clear();
   resetResourceCache();
+  window.history.replaceState({}, "", "/");
 });
 
 function requestDetail(overrides: Record<string, unknown> = {}) {
@@ -72,7 +73,7 @@ function stubDetail(detail: unknown, extra?: (url: string, init?: RequestInit) =
 }
 
 describe("RequestDetailPage", () => {
-  it("keeps request identity in the header and a single catalog continuation", async () => {
+  it("keeps request identity in the header and product continuation inside the request", async () => {
     stubDetail(requestDetail());
 
     render(<RequestDetailPage requestId="req-1" />);
@@ -92,6 +93,32 @@ describe("RequestDetailPage", () => {
     expect(screen.queryByRole("heading", { name: "Cerere", level: 2 })).not.toBeInTheDocument();
     expect(screen.queryByText(/Nu adăuga montaj/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Montajul nu face parte/i)).not.toBeInTheDocument();
+  });
+
+  it("chooses a product for a reopened NEW undecided request using the server action", async () => {
+    const detail = requestDetail({
+      request: { ...requestDetail().request, requestId: "req-new", status: "NEW" },
+      statusLabel: "Nouă",
+    });
+    stubDetail(detail, (url) => {
+      if (url.endsWith("/product-catalog")) {
+        return new Response(JSON.stringify({ tree: [{ kind: "product", code: "PRD-TEST", label: "Litere test" }] }), { status: 200 });
+      }
+      if (url.includes("/assemblies")) {
+        return new Response(JSON.stringify({ canCreate: false, offerings: [], assemblies: [] }), { status: 200 });
+      }
+      return null;
+    });
+    render(<RequestDetailPage requestId="req-new" />);
+    expect(await screen.findByRole("link", { name: "Alege produs" })).toHaveAttribute("href", "/cereri/req-new?alege-produs=1#alege-produs");
+    expect(screen.queryByText("Nicio acțiune disponibilă")).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: /Litere test/ }));
+    expect(window.location.pathname).toBe("/configurator");
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get("request")).toBe("req-new");
+    expect(params.get("customer")).toBe("cus-1");
+    expect(params.get("product")).toBe("PRD-TEST");
+    expect(vi.mocked(fetch).mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
   });
 
   it("does not show catalog when OPEN_QUOTE is the primary action", async () => {

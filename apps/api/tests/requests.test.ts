@@ -125,8 +125,21 @@ describe("commercial request API", () => {
     expect(overview.requests).toHaveLength(1);
     expect(overview.requests[0]).toMatchObject({
       statusLabel: "Nouă",
-      nextActionLabel: "Deschide",
+      nextAction: "CHOOSE_PRODUCT",
+      nextActionLabel: "Alege produs",
       customerDisplayName: "Client Cerere",
+    });
+
+    // An undecided intake has no linked offer. Reopening must permit choosing
+    // a product without a status PATCH or pretending the request is quote-ready.
+    const reopened = await app.request(`/api/requests/${request.requestId}`);
+    expect(reopened.status).toBe(200);
+    const detail = (await readBody(reopened)).detail as JsonObject;
+    expect(detail).toMatchObject({
+      request: { requestId: request.requestId, customerId: customer.customerId, status: "NEW" },
+      nextAction: "CHOOSE_PRODUCT",
+      nextActionLabel: "Alege produs",
+      linkedOffers: [],
     });
 
     const patched = await app.request(`/api/requests/${request.requestId}`, {

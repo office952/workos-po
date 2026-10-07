@@ -28,6 +28,16 @@ The retired `CatalogContextDialog`, Catalog commercial routing and unused styles
 
 The complete arbitrary product-definition editor is still missing. This candidate connects the existing inspection and supported edit contracts; it does not claim full component/material/process authoring. The active canon describes the next domain-owned contract needed. Durable cross-device draft persistence is not added. CUI duplicate checks and upstream throttling are application/process guards, not distributed uniqueness/rate-limit guarantees. Interrupted create requests are not server-idempotent or rolled back.
 
+## Follow-up: undecided request continuation
+
+Cursor's reported isolated Windows review at `836cc9ecbaf03ece03c3578ac027c6d31ea0c64a` used candidate UI/API ports 5185/8790 and a `SYNTHETIC_TEST` Cloud root. Catalog inspection passed in a snapshot. The undecided request `CER-4F6BF94F` saved and reopened, but the API returned `NEW` / `OPEN_REQUEST`, so the UI correctly omitted its `CHOOSE_PRODUCT` picker. Scenarios C–F were not executed; browser geometry/theme capture froze twice. This is reported evidence, not an independently rerun browser result.
+
+The shared domain next-action projection now returns `CHOOSE_PRODUCT` for requests in `NEW`, `IN_REVIEW` or `READY_FOR_QUOTE` without linked offers. List, client workspace and detail inherit the same rule. Request status, attention and quote readiness are not modified. Waiting, blocked and cancelled requests preserve their existing action; linked offers retain priority. No frontend status fallback was introduced.
+
+Regression verification: domain request/customer workspace suites **27 tests passed**; real API request/customer workspace suites **16 tests passed**; frontend RequestDetail/NewRequest/Requests/worklist action suites **56 tests passed**. Coverage includes all request statuses, linked-offer priority, POST new request → GET list/detail while still `NEW`, and product selection navigating with the original customer/request identity without a status mutation. The updated Windows candidate and scenarios B–F remain pending. Full original suites above were not redundantly rerun for this narrow correction.
+
+Frontend build/typecheck, engine typecheck, lint for changed frontend/domain/API files and `git diff --check` also passed for this correction. Frontend bundle hashes remain unchanged because the functional correction belongs to the shared domain projection.
+
 ## Integration boundary
 
 Source branch only. No merge, deploy, real Cloud/business-data write, new schema/migration/seed or main change. Cursor's checkpoint remains preserved. Candidate is code-verified and available for review; UI acceptance and deployment are pending.

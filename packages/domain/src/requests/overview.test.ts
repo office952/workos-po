@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { createCustomer } from "../customers/identity.js";
 import { projectCustomerWorkspace } from "../customers/workspace.js";
 import type { QuoteOverviewItem } from "../quotes/overview.js";
-import type { CommercialRequest } from "./commercialRequest.js";
+import { COMMERCIAL_REQUEST_STATUSES, type CommercialRequest } from "./commercialRequest.js";
 import {
   deriveRequestCommercialProgress,
   deriveRequestOverviewAttention,
+  deriveRequestOverviewNextAction,
   filterRequestOverview,
   projectRequestDetail,
   projectRequestOverview,
@@ -63,6 +64,24 @@ function quote(stage: QuoteOverviewItem["stage"], inscription = "HUB"): QuoteOve
 }
 
 describe("request overview projection", () => {
+  it.each(COMMERCIAL_REQUEST_STATUSES)("projects product selection for active intake status %s without advancing readiness", (status) => {
+    const expected = ["NEW", "IN_REVIEW", "READY_FOR_QUOTE"].includes(status)
+      ? "CHOOSE_PRODUCT"
+      : "OPEN_REQUEST";
+    const source = request({ status });
+    const item = projectRequestOverviewItem({ request: source, customerDisplayName: "Client", quotes: [] });
+    const detail = projectRequestDetail({ request: source, customerDisplayName: "Client", quotes: [] });
+    expect(item.nextAction).toBe(expected);
+    expect(detail.nextAction).toBe(expected);
+    expect(item.status).toBe(status);
+    expect(detail.request.status).toBe(status);
+    expect(source.status).toBe(status);
+  });
+
+  it.each(COMMERCIAL_REQUEST_STATUSES)("preserves linked-offer continuation for status %s", (status) => {
+    expect(deriveRequestOverviewNextAction({ status, quotes: [quote("QUOTE_CREATED")] })).toBe("OPEN_QUOTE");
+  });
+
   it("keeps request status separate from derived offer progress", () => {
     const item = projectRequestOverviewItem({
       request: request({ status: "READY_FOR_QUOTE" }),
