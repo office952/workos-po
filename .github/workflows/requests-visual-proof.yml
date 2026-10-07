@@ -191,15 +191,13 @@ jobs:
             await page.getByRole("link", { name: /CER-E5D190D8/ }).waitFor();
             await page.evaluate(() => document.fonts.ready);
             if (width >= 768) await page.locator(".requests-intake img").evaluate((img) => img.decode());
-            if (width >= 768) await page.evaluate(async () => {
+            if (width >= 768) await page.waitForFunction(() => performance.getEntriesByType("resource")
+              .some((entry) => entry.name.includes("request-intake-surface") && entry.encodedBodySize > 0));
+            if (width >= 768) await page.evaluate(() => {
               const header = document.querySelector('[data-surface="cereri-registry"] > .page-header');
               const surface = getComputedStyle(header, "::after");
               const imageUrl = surface.backgroundImage.match(/url\(["']?(.*?)["']?\)/)?.[1];
               if (!imageUrl?.includes("request-intake-surface")) throw new Error("Missing selected demo surface texture");
-              const texture = new Image();
-              texture.src = imageUrl;
-              await texture.decode();
-              if (texture.naturalWidth < 1900) throw new Error("Surface texture is undersized");
             });
             if (width >= 768) await page.locator(".requests-intake").evaluate(async (intake) => {
               // The decorative intake is intentionally hidden on phone layouts.
@@ -221,6 +219,10 @@ jobs:
               .filter((entry) => entry.name.includes("request-intake") && !new URL(entry.name).searchParams.has("import"))
               .map((entry) => ({ url: entry.name, bytes: entry.encodedBodySize, transfer: entry.transferSize, duration: entry.duration })));
             assetEvidence.push({ name, width, deviceScaleFactor, assets });
+            if (width >= 768) {
+              assert.equal(assets.length, 2, "Decoration fetched more than once");
+              assert.equal(assets.reduce((sum, asset) => sum + asset.bytes, 0), deviceScaleFactor === 2 ? 109914 : 43144);
+            }
             if (width < 768) {
               assert.equal(await page.locator(".requests-intake img").count(), 0);
               assert.equal(assets.length, 0, "Phone downloaded hidden decoration");
@@ -320,6 +322,16 @@ jobs:
           await page.keyboard.press("Enter");
           assert.equal(await page.locator(".requests-pagination__range").innerText(), "11–20 din 23 cereri");
           assert.match(await page.locator("tbody tr").first().innerText(), /review 11/);
+          // Keyboard activation scrolls to the pager; restore the comparison viewport
+          // before capturing composited image layers above the fold.
+          await page.evaluate(() => window.scrollTo(0, 0));
+          await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+          console.log("PAGE_TWO_RENDER", JSON.stringify(await page.evaluate(() => ({
+            width: innerWidth, title: getComputedStyle(document.querySelector(".page-header__title")).fontSize,
+            image: document.querySelector(".requests-intake img").currentSrc,
+            complete: document.querySelector(".requests-intake img").complete,
+            clip: getComputedStyle(document.querySelector(".requests-intake img")).clipPath,
+          }))));
           await page.screenshot({ path: `${out}/REQUESTS_V5__10_PAGINATION_PAGE_2.png`, fullPage: true, animations: "disabled" });
           await page.getByRole("button", { name: "Pagina 3", exact: true }).click();
           assert.equal(await page.locator("tbody tr").count(), 3);
