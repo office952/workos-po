@@ -1,60 +1,64 @@
-# Follow-up: explicit receipt selection and image delivery, 2026-10-07
+# Cereri — selected receipt and optimized image delivery, 2026-10-07
 
-Owner GO authorizes using the physical receipt as a selected-request preview and optimizing its image delivery. Default receipt remains the latest dated request. Hover only highlights; clicking non-link row content selects; Enter/Space on the row selects; identity, next-action and paper links retain navigation. Selection is presentation state independent of filter/sort/page and falls back to latest when its request is removed. Phone layouts omit both the hardware DOM and row-preview interaction.
+**Outcome and boundary**
 
-Responsive WebP assets reuse the existing hardware pixels: 760 × 324 (20,352 bytes), 1520 × 648 (87,122 bytes). The matching drafting surface remains 2172 × 724 and is recompressed to 22,792 bytes. Maximum image payload is 43,144 bytes at 1× desktop and 109,914 bytes at 2× desktop, versus 227,652 bytes previously. The original 1920px source is retained in Git but is no longer imported into the runtime build. Text updates do not change image URLs or replay the hardware animation. Async decoding is used; visible imagery is not lazy-loaded. CSS limits the texture URL to non-phone viewports.
+The Owner-approved original physical intake composition is preserved. Its live receipt now previews an explicitly selected request, and decorative image delivery is reduced. Production-frontend Chromium captures and interaction checks passed in GitHub Actions; no actionable P0/P1/P2 visual issue remains in the inspected captures. Interactive Work Mode cloud preview remains blocked by the previously observed ERR_BLOCKED_BY_CLIENT. CI proof does not certify that cloud preview.
 
-The canonical static frontend server now supplies correct image MIME types and one-year immutable caching only for existing versioned public images under /assets. HTML, missing-asset SPA fallback and unversioned assets revalidate. API responses are unaffected. These are transport/cache changes only; no persistence or business changes.
+**Visual truth and evidence**
 
-Focused verification: 16 Requests + 5 AppShell tests and 8 API origin/static tests passed locally; production build passed. Seventeen production-frontend Chromium captures and image resource evidence are pending GitHub Actions. The earlier comparison below remains historical until this follow-up is visually checked.
+- Target: the first original “Fanta de intrare” demo, `generated_images/exec-dafc90b2-0512-4156-aef7-25c22b4a2109.png` in the review workspace, 1672 × 941. Later design alternatives are not the target and remain in the separate design-ideas archive.
+- Current baseline: `review/requests-intake-v5/REQUESTS_V5__01_DESKTOP_DARK_1920x1080.png`, `/cereri`, all requests, newest first, comfortable rows, four synthetic fixtures, CSS viewport 1920 × 1080, deviceScaleFactor 1.
+- `COMPARISON_DEMO.png`: normalized reference left, current implementation right. Normalization is solely for comparison.
+- `COMPARISON_OPTIMIZATION.png`: previous accepted v4 implementation left, current implementation right, same viewport and state.
+- `COMPARISON_HEADER.png`: previous header above, current below, same crop.
+- Seventeen captures cover desktop dark/light, laptop, tablet, phone, sort, attention, compact density, pagination pages 1/2, phone pagination, empty/error, many-page phone pagination, explicit selection in both themes and desktop at deviceScaleFactor 2.
+- Captures use the actual production frontend build through Vite preview, not a generated mockup. API responses are intercepted synthetic review fixtures. No real Cloud data is used.
+- Verified evidence run: https://github.com/office952/workos-po/actions/runs/37578104254, code/proof commit `6f48b876e3adbb836749198a6a8128f558266bc6`, artifact `requests-intake-v5`.
 
-final result: blocked
+**Receipt behavior**
 
-Pending follow-up capture inspection. Interactive Work Mode cloud preview also remains blocked by ERR_BLOCKED_BY_CLIENT, as previously observed.
+- Initial receipt is the latest request with a valid creation timestamp.
+- Hover only highlights the row. Clicking non-link row content selects that request. Enter/Space on the focused row selects it while retaining table semantics.
+- Identity and next-action links preserve their original navigation. Clicking the paper opens the displayed request. The row handler does not swallow link clicks or text selection.
+- Explicit selection is independent of search, sort, filtering and pagination. Removing the selected request from refreshed data forgets the selection and falls back to latest; a later refresh does not revive it.
+- Selection changes text/link only: the image URL remains unchanged, no additional image is fetched and the entrance animation does not replay.
+- Phone layouts do not mount the hardware, fetch the header texture or expose an invisible row-preview action. Existing links and pagination remain available. Media-query changes update the DOM.
 
----
+**Image delivery and cache**
 
-# Cereri — original intake concept and surface refinement, 2026-10-07
+| Asset | Dimensions | Bytes |
+| --- | --- | ---: |
+| Standard hardware WebP | 760 × 324 | 20,352 |
+| High-density hardware WebP | 1520 × 648 | 87,122 |
+| Drafting surface WebP | 2172 × 724 | 22,792 |
 
-**Scope and visual truth**
+The original hardware pixels are reused through resizing/encoding; no replacement art was generated. The original 1920px source remains in Git but is not imported into the runtime build. Native responsive srcset/sizes selects one hardware variant; correct intrinsic dimensions and async decoding are supplied. Visible imagery is not lazy-loaded. The texture URL applies only to non-phone media.
 
-The Owner selected the first original “Fanta de intrare” demo, with the physical intake slightly smaller and working pagination below the register. This follow-up brings the header texture and technical grid closer to that exact reference. It does not select a later design variation.
+`IMAGE_LOADING_EVIDENCE.json` records actual image response body bytes already received by Chromium. Measurement does not initiate extra image requests. Browser assertions confirm exactly two assets on visible layouts: 43,144 bytes at 1× and 109,914 bytes at 2×, versus the previous 227,652-byte image payload. These are approximately 81% and 52% reductions in decorative image bytes, not measured reductions in total page-load time. Phone proof records zero decorative image requests. No slow-network/field benchmark is claimed.
 
-- Reference: `generated_images/exec-dafc90b2-0512-4156-aef7-25c22b4a2109.png` in the review workspace, 1672 × 941.
-- Browser evidence: `review/requests-intake-v4/REQUESTS_V4__01_DESKTOP_DARK_1920x1080.png`, `/cereri`, newest first, comfortable rows, four synthetic requests, 1920 × 1080 CSS viewport, deviceScaleFactor 1.
-- Comparison: `COMPARISON_FINAL.png`, reference left and implementation right; `COMPARISON_HEADER_FINAL.png`, reference above and implementation below. Reference normalization is solely for visual comparison.
-- Fourteen captures cover desktop dark/light, laptop, tablet, phone, sort, attention, compact density, pagination pages 1/2, phone pagination, empty/error and a middle page of a 200-request phone dataset.
-- Chromium runs in GitHub Actions. The local browser executable is unavailable in the current workspace; its download failed. No real Cloud data or writes are used.
-
-**What changed**
-
-1. The earlier routing-grid treatment was too different from the demo. A generated matte, warm-black drafting surface now supplies fine square grid lines, restrained larger divisions, light material grain and sparse bronze calibration marks. The left title area is quiet; technical detail concentrates around the intake.
-2. Initial surface opacity 0.72 was too strong. Final opacity is 0.52 in dark. Light uses an inverted neutral surface with multiply blending at 0.46. The asset is 2172 × 724, compressed WebP, 47,652 bytes; it is decorative and does not carry business data.
-3. The hardware remains 760px at desktop, about 16% smaller than the normalized reference. Its responsive grid track, aspect ratio and explicit image/text layers preserve the live receipt area.
-4. A delayed opacity entrance left the live receipt text absent from laptop/tablet full-page captures despite valid text, computed opacity and geometry. Receipt text now displays immediately. Only the physical paper image retains its short reveal; reduced motion disables that reveal.
-
-Latest fourteen Chromium captures were inspected after the receipt fix. Laptop and tablet paper text is visible; no actionable P0/P1/P2 visual issue remains in the captured states. The cloud-preview blocker below remains.
+The canonical same-origin static server supplies proper image MIME types. Only existing content-hashed public image assets under /assets receive `public, max-age=31536000, immutable`. HTML, missing-asset SPA fallback and unversioned assets revalidate with `no-cache`. API responses are unaffected. Cache policy is tested through the canonical server; the screenshot preview server is not the production cache-policy proof.
 
 **Fidelity review**
 
-- Hierarchy and rhythm: open title/counts on the left, physical intake on the right, restrained divider, toolbar, unframed register and functional pager. Hardware size and pagination are deliberate Owner changes.
-- Typography: existing Geist Sans headings, IBM Plex Sans interface text and IBM Plex Mono technical labels/counters. Warm display ink and clear live paper text maintain the reference hierarchy. Long receipt titles clamp to two lines.
-- Material and contrast: bronze hardware and cream paper are preserved. The new grid and grain supply the requested background material while the worklist remains visually quiet. Both themes retain semantic mint actions and amber attention.
-- Content: latest receipt, request states, commercial progress and actions use the existing adapter and routes. Receipt remains independent of list filtering/page selection. Empty/error content remains neutral. Review timestamps use Europe/Bucharest; the demo's illustrative times are not fixed application content.
-- Remaining P3 differences: native WorkOS font glyphs, exact raster paper geometry and grid contrast vary slightly from the generated demo. This is a faithful implementation of the selected composition, not a pixel-identical reproduction.
+- Typography: existing Geist Sans headings, IBM Plex Sans interface text and IBM Plex Mono technical labels/counters; warm display ink and live paper typography preserve hierarchy. Long paper titles clamp to two lines.
+- Rhythm: title/counts left, 760px hardware right (about 16% smaller than the normalized original, as requested), quiet divider, aligned toolbar, unframed register and working 10/20/50 pager.
+- Material/contrast: fine square grid, restrained grain, bronze calibration marks and warm metal/paper remain. Dark opacity 0.52 and neutral inverted/multiply light opacity 0.46 preserve both themes. Explicit selection adds a quiet mint lower edge while keeping canonical amber attention marking.
+- Functional content: existing adapters determine request identity, state, commercial progress and next action. Presentation selection invents no business state. Empty/error receipts remain neutral.
+- Remaining P3: optimized grain is slightly smoother, and native font glyphs/raster geometry differ slightly from the generated demo. Composition and function are preserved; this is not a pixel-identical reproduction.
 
-**Verification**
+**Verification and capture corrections**
 
-- The previous implementation passed 20 targeted Requests/AppShell/navigation tests and 1,571 full CI tests: 401 frontend, 621 domain, 549 API.
-- The follow-up workflow repeats Requests tests, production build, browser interaction assertions and all fourteen captures. Full WorkOS Verify repeats frontend and engine lint/typecheck/tests/build.
-- Browser assertions cover filtering, search/reset, sort before pagination, compact rows, page sizes 10/20/50, pager boundaries, keyboard activation, bounded phone links, reduced motion and no horizontal overflow. Receipt geometry and texture decoding are explicitly checked on visible layouts.
-- Existing unrelated lint warnings and the existing bundle-size warning remain.
-- Cloud interactive-preview verification is still blocked by the previously observed `net::ERR_BLOCKED_BY_CLIENT` at `http://terminal.local:4173/cereri`. Successful CI captures do not certify an interactive Work Mode cloud preview.
+- Local checks passed: 16 Requests + 5 AppShell tests; 8 API origin/static tests; frontend lint/build; engine lint/typecheck. Eleven unrelated lint warnings and the existing bundle-size warning remain.
+- Full CI on the implementation passed frontend and engine checks. Suite totals are 404 frontend, 621 domain and 550 API tests (1,575).
+- Browser assertions cover hover, row click, Enter/Space, selection persistence through filters, actual request/paper link navigation, no image reload/replayed entrance, responsive variant choice and zero phone decoration requests, alongside existing search/sort/density/pagination/empty/error checks.
+- An initial offscreen keyboard-pagination full-page capture omitted composited header layers. Restoring scroll to the reference viewport and waiting two paint frames produced the correct full-page capture; the final page-2 image was inspected.
+- Earlier resource instrumentation explicitly decoded a second image and distorted the loading report; using response bodies already received by Chromium removed that extra request. Resource Timing was insufficient for the CSS background in this environment; actual response evidence verifies the byte totals.
+- No actionable P0/P1/P2 issue remains in the final inspected CI captures. No local browser executable is available in this workspace; visual verification is through CI Chromium.
 
-**Delivery boundary**
+**Delivery**
 
-The authorized delivery is the existing GitHub review branch/PR, with synthetic browser screenshots and comparisons. No merge, production deployment, real Cloud mutation or business database change is included. Other design ideas remain preserved in the separate design-ideas archive.
+Existing PR #48 and review branch only. No merge, production deployment, persistence/domain change or real Cloud/DB access. Other design ideas remain preserved separately.
 
 final result: blocked
 
-The cloud interactive-preview requirement remains blocked. GitHub review evidence is supplied with that explicit limitation; this is not a certified cloud prototype handoff.
+Blocker is limited to interactive Work Mode cloud-preview verification. The authorized GitHub review delivery includes verified synthetic Chromium captures and interactions with that explicit limitation.
