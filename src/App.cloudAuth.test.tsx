@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
@@ -83,6 +83,8 @@ function installFetch(
 }
 
 afterEach(() => {
+  // Unmount while this test's fetch stub and session context are still installed.
+  cleanup();
   vi.unstubAllGlobals();
   sessionStorage.clear();
   window.history.replaceState({}, "", "/");
@@ -193,7 +195,9 @@ describe("App Cloud auth integration", () => {
 
     render(<App />);
 
-    expect(await screen.findByRole("heading", { name: "Clienți" })).toBeInTheDocument();
+    // The route loading shell also has this heading; wait for the actual registry.
+    expect(await screen.findByLabelText("Caută")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Clienți" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Login Societate" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ieși din cont" })).not.toBeInTheDocument();
   });
