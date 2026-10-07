@@ -300,8 +300,14 @@ jobs:
               await page.getByRole("combobox", { name: "Ordine" }).selectOption("oldest");
               assert.match(await page.locator("tbody tr").first().innerText(), /Totem dublă față/);
               await page.screenshot({ path: `${out}/REQUESTS_V6__06_SORT_OLDEST_1920x1080.png`, fullPage: true, animations: "disabled" });
+              await page.evaluate(() => window.scrollTo(0, 0));
+              const beforeAttention = await anchors(page);
               await page.getByRole("button", { name: /Necesită acțiune/ }).click();
               assert.equal(await page.locator("tbody tr").count(), 2);
+              await page.evaluate(() => window.scrollTo(0, 0));
+              const afterAttention = await anchors(page);
+              assertStable(beforeAttention, afterAttention);
+              geometryEvidence.push({ name: "attention_filter_stability", beforeFilter: beforeAttention, afterFilter: afterAttention });
               await page.screenshot({ path: `${out}/REQUESTS_V6__07_ATTENTION_1920x1080.png`, fullPage: true, animations: "disabled" });
               await page.getByRole("searchbox", { name: "Caută" }).fill("inexistent");
               await page.getByText("Nicio cerere nu corespunde filtrului.").waitFor();

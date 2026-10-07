@@ -23,7 +23,7 @@ Verified implementation/proof head: `e5ea58cd20be04c03aef28222b5b7423f3237125`.
 - Full verification: https://github.com/office952/workos-po/actions/runs/37583407684
 - Artifact: `requests-intake-v6`, including `GEOMETRY_EVIDENCE.json` and `IMAGE_LOADING_EVIDENCE.json`.
 
-The scrollbar test starts with 23 synthetic requests and an overflowing document, then selects an attention filter that produces no results and removes document overflow. Brand, menu, route, account, hero, toolbar and table heading have identical x/y/width/height before and after filtering; measured deltas are zero. Reset restores the original geometry. This proves the tested Chromium layout, not every browser configuration.
+The scrollbar test starts with 23 synthetic requests and an overflowing document, then enters a search that produces no results and removes document overflow. Brand, menu, route, account, hero, toolbar and table heading have identical x/y/width/height before and after filtering; measured deltas are zero. Reset restores the original geometry. A separate assertion compares the same anchors before and after selecting “Necesită acțiune”. This proves the tested Chromium layout, not every browser configuration.
 
 All measured row actions are 160 × 44 or 148 × 44 as specified. Account controls are 44px high. Visible printed receipt lines fit the paper at every non-phone test width; the paper uses IBM Plex Mono. Long request/client/organization strings remain bounded without horizontal document overflow.
 
