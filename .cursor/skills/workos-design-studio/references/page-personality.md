@@ -18,7 +18,7 @@ Current implementation evidence lives in `src/layout/SlicePage.tsx` (`PageWorksp
 | `collection-with-rail` | Stack / list with an intake rail. Select or register, then continue. | Clienți |
 | `object` | Object detail. One current object, its state, the next safe action. | Client, Cerere, Ofertă |
 | `configuration` | Configuration instrument. Technical / spatial construction. | Configurator |
-| `catalog` | Catalog. Choose a product into an already-known job context. | Catalog |
+| `catalog` | Catalog. Administer reusable product definitions without customer/request context. | Catalog |
 | `traveler` | Traveler / job continuity. The same job across release, plan, planned vs actual. | Lucrare |
 | `operational` | Operational workspace. Dense, actionable, minimum ceremony. | Atelier, Execuție, Planificare |
 | `operational-gate` | Operational gate. Identify the actor, then enter the workspace. | Used when the operational floor must first identify who is working |

@@ -77,6 +77,9 @@ describe("product assembly API", () => {
     expect(created.status).toBe(201);
     const assemblyId = ((await json(created)).assembly as { assemblyId: string }).assemblyId;
 
+    expect((await json(await app.request(`/api/assemblies?request=${encodeURIComponent(requestId)}`))).assemblies).toEqual([expect.objectContaining({ assemblyId, customerId, requestId })]);
+    expect((await app.request("/api/assemblies?request=missing")).status).toBe(404);
+    expect(await json(await app.request(`/api/assemblies/${assemblyId}/members/SIGNAGE_LETTERS`))).toMatchObject({ customerId, requestId, productCode: CANONICAL_PRODUCT_CODE, values: null });
     const acmReview = await reviewId(app, ACM_CASSETTE_NONE_PRODUCT_CODE, acmValues);
     const lettersReview = await reviewId(app, CANONICAL_PRODUCT_CODE, lettersValues);
     const acmMember = await app.request(`/api/assemblies/${assemblyId}/members`, {
@@ -99,6 +102,7 @@ describe("product assembly API", () => {
       ).status,
     ).toBe(200);
 
+    expect(await json(await app.request(`/api/assemblies/${assemblyId}/members/SIGNAGE_LETTERS`))).toMatchObject({ customerId, requestId, productCode: CANONICAL_PRODUCT_CODE, values: lettersValues });
     expect((await app.request(`/api/assemblies/${assemblyId}/confirm`, { method: "POST" })).status).toBe(200);
     expect((await app.request(`/api/assemblies/${assemblyId}/quote`, { method: "POST" })).status).toBe(200);
     const lockedRequest = await json(await app.request(`/api/requests/${requestId}`));

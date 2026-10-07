@@ -1,3 +1,4 @@
+import { loadAssemblyMember } from "../api/assemblies";
 import { useEffect, useRef, useState } from "react";
 import { presentConfirm } from "../adapters/confirmAdapter";
 import {
@@ -13,14 +14,13 @@ import { postQuoteSnapshot } from "../api/quote";
 import { LoadingFloor } from "../components/LoadingFloor";
 import "../styles/surfaces/commercial.css";
 import "../styles/surfaces/configuration-workbench.css";
-import { CatalogContextDialog } from "../components/CatalogContextDialog";
 import { SellerSetupPanel } from "../components/SellerSetupPanel";
+import { ExtendRequestProduct } from "../components/ExtendRequestProduct";
 import { invalidateAfterFreezeQuote } from "../data/invalidation";
 import { invalidateResources } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadSellerConfigured } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
-import { navigate } from "../routing/navigate";
 import type {
   ConfirmTransport,
   DraftValues,
@@ -43,7 +43,7 @@ import { CommercialPricePanel } from "../presentation/commercialPrice";
 import { CostCompletenessIssues } from "../presentation/costCompleteness";
 import { presentCostLine, selectLineByResource } from "../presentation/costLine";
 import { ALUMINIUM_RETURN_PROFILE_RESOURCE_ID } from "../reference/lettersProduct";
-import { catalogHref, configuratorHref, quoteHref } from "../routing/appRoute";
+import { requestProductHref, requestHref, quoteHref } from "../routing/appRoute";
 import {
   labelsMatchingContext,
   lastQuoteOwnedByContext,
@@ -141,7 +141,7 @@ export function ConfiguratorPage({
   assemblyId = null,
   memberRole = null,
 }: ConfiguratorPageProps) {
-  const context: ConfiguratorContext = { customerId, requestId, productCode };
+  const context: ConfiguratorContext = { customerId, requestId, productCode, ...(assemblyId ? { assemblyId } : {}) };
   const stored = readConfiguratorSession();
   const [drafts, setDrafts] = useState<Record<string, string>>(() =>
     ownedDraftsForContext(stored, context),
@@ -153,6 +153,7 @@ export function ConfiguratorPage({
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<ConfirmTransport | null>(null);
   const [pricedResultKey, setPricedResultKey] = useState<string | null>(null);
+  const [extensionPending, setExtensionPending] = useState(false);
   const [freezeState, setFreezeState] = useState<ActionState>("idle");
   const [freezeError, setFreezeError] = useState<string | null>(null);
   const [manualNetDraft, setManualNetDraft] = useState("");
@@ -163,12 +164,18 @@ export function ConfiguratorPage({
   const [quoteDiscountDraft, setQuoteDiscountDraft] = useState("");
   const [quoteAdjustmentDraft, setQuoteAdjustmentDraft] = useState("");
   const [termsOrigin, setTermsOrigin] = useState<"defaults" | "quote">("defaults");
-  const [contextRecoveryOpen, setContextRecoveryOpen] = useState(false);
   const seller = useResource(resourceKeys.seller(), loadSellerConfigured);
   const sellerConfigured = seller.status === "success" ? seller.data : null;
   const [lastQuote, setLastQuote] = useState<FrozenQuoteRef | null>(() =>
     lastQuoteOwnedByContext(stored.lastQuote, context),
   );
+
+  const member = useResource(assemblyId && memberRole ? `assembly-member:${assemblyId}:${memberRole}` : null, () => loadAssemblyMember({ assemblyId: assemblyId!, role: memberRole!, customerId, requestId, productCode }));
+  const [seedApplied, setSeedApplied] = useState(false);
+  if (member.data && !seedApplied) {
+    if (Object.keys(drafts).length === 0) setDrafts(member.data);
+    setSeedApplied(true);
+  }
 
   const schemaRef = useRef<PresentedFormSchema | null>(null);
   const draftsDirtyRef = useRef(false);
@@ -240,22 +247,25 @@ export function ConfiguratorPage({
       reviewId,
     });
   }
+  const latestResultKey = useRef("");
+  useEffect(() => { latestResultKey.current = currentCommercialResultKey(); });
+  useEffect(() => () => { confirmGeneration.current += 1; }, []);
 
   useEffect(() => {
     const stored = readConfiguratorSession();
     writeConfiguratorSession({
       drafts,
-      draftContext: { customerId, requestId, productCode },
+      draftContext: { customerId, requestId, productCode, ...(assemblyId ? { assemblyId } : {}) },
       customerId,
       requestId,
       productCode,
       lastQuote,
       ...labelsMatchingContext(stored, { customerId, requestId }),
     });
-  }, [customerId, drafts, lastQuote, productCode, requestId]);
+  }, [assemblyId, customerId, drafts, lastQuote, productCode, requestId]);
 
   useEffect(() => {
-    if (!productCode) {
+    if (!productCode || (assemblyId && memberRole && !seedApplied)) {
       return;
     }
     let cancelled = false;
@@ -326,9 +336,10 @@ export function ConfiguratorPage({
       cancelled = true;
       window.clearTimeout(handle);
     };
-  }, [draftKey, drafts, productCode, requestId]);
+  }, [draftKey, drafts, productCode, requestId, assemblyId, memberRole, seedApplied]);
 
   function updateField(fieldId: string, value: string): void {
+    confirmGeneration.current += 1;
     draftsDirtyRef.current = true;
     setDrafts((current) => ({ ...current, [fieldId]: value }));
     setConfirmation(null);
@@ -364,7 +375,7 @@ export function ConfiguratorPage({
         return;
       }
       setConfirmation(presented);
-      const editedDuringFlight = currentCommercialResultKey(preview.reviewId) !== sentKey;
+      const editedDuringFlight = latestResultKey.current !== sentKey;
       if (editedDuringFlight) {
         setPricedResultKey(sentKey);
       } else {
@@ -400,6 +411,7 @@ export function ConfiguratorPage({
           values: currentTransportValues(),
           reviewId: preview.reviewId,
           ...(requestId ? { requestId } : {}),
+          ...commercialPayload(),
         });
         if (generation !== confirmGeneration.current) {
           return;
@@ -532,12 +544,15 @@ export function ConfiguratorPage({
       ])}
     >
       <div className="commercial-toolbar">
-        <a className="text-link" href={catalogHref({ customerId, requestId, productCode: null })}>← Înapoi la catalog</a>
+        <a className="text-link" href={requestId ? requestHref(requestId) : "/cereri"}>← Înapoi la cerere</a>
         <nav className="configuration-jump" aria-label="Etapele configurării">
           <a href="#configuratie">Configurație</a>
           <a href="#pregatire-oferta">Pregătire ofertă</a>
         </nav>
       </div>
+      {member.status === "error" && <InlineAlert tone="error" title="Configurația din ansamblu nu a putut fi citită"><Button variant="secondary" onClick={() => invalidateResources(`assembly-member:${assemblyId}:${memberRole}`)}>Reîncearcă citirea configurației</Button></InlineAlert>}
+      <fieldset className="configuration-lock" disabled={extensionPending || freezePending || Boolean(assemblyId && memberRole && !seedApplied)}>
+        <legend className="sr-only">Configurație și preț</legend>
       <div className="configuration-construction">
       <nav className="configuration-outline" aria-label="Secțiunile produsului">
         <span className="section-label">Produs</span>
@@ -573,12 +588,12 @@ export function ConfiguratorPage({
       >
         {!productCode ? (
           <InlineAlert tone="blocked" title="Produsul nu este ales">
-            Alege produsul din catalog, împreună cu clientul și cererea.{" "}
+            Alege produsul în cererea pentru care lucrezi.{" "}
             <a
               className="text-link"
-              href={catalogHref({ customerId, requestId, productCode: null })}
+              href={requestId ? requestProductHref(requestId) : "/cereri/noua"}
             >
-              Deschide catalogul
+              Alege produsul în cerere
             </a>
           </InlineAlert>
         ) : null}
@@ -662,9 +677,7 @@ export function ConfiguratorPage({
               Completează clientul și cererea pentru a continua traseul asistat către ofertă.
               Draftul tehnic local rămâne disponibil.
               {productCode ? (
-                <Button variant="secondary" onClick={() => setContextRecoveryOpen(true)}>
-                  Completează contextul
-                </Button>
+                <a className="text-link" href="/cereri/noua">Creează o cerere</a>
               ) : null}
             </InlineAlert>
           ) : null}
@@ -987,38 +1000,8 @@ export function ConfiguratorPage({
         </SurfacePanel>
       </div>
       </section>
-      {contextRecoveryOpen && productCode ? (
-        <CatalogContextDialog
-          productLabel={preview?.product.label ?? productCode}
-          onDismiss={() => setContextRecoveryOpen(false)}
-          onConfirm={(selection) => {
-            const previous = readConfiguratorSession();
-            writeConfiguratorSession({
-              ...previous,
-              drafts,
-              draftContext: {
-                customerId: selection.customerId,
-                requestId: selection.requestId,
-                productCode,
-              },
-              customerId: selection.customerId,
-              requestId: selection.requestId,
-              customerLabel: selection.customerLabel,
-              requestLabel: selection.requestLabel,
-              productCode,
-              lastQuote,
-            });
-            setContextRecoveryOpen(false);
-            navigate(
-              configuratorHref({
-                customerId: selection.customerId,
-                requestId: selection.requestId,
-                productCode,
-              }),
-            );
-          }}
-        />
-      ) : null}
+      </fieldset>
+      {!assemblyId && customerId && requestId && activeProduct && <ExtendRequestProduct key={`${requestId}:${activeProduct}`} customerId={customerId} requestId={requestId} productCode={activeProduct} reviewId={preview?.reviewId ?? null} values={preview?.formSchema ? valuesForTransport(drafts, preview.formSchema) : valuesBeforeSchema(drafts)} drafts={drafts} confirmed={Boolean(confirmation && priceIsCurrent && !confirmPending && !freezePending && previewState !== "pending")} commercial={commercialPayload()} onPending={setExtensionPending} />}
     </SlicePage>
   );
 }

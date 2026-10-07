@@ -115,9 +115,7 @@ describe("App Cloud auth integration", () => {
     window.history.replaceState({}, "", "/clienti/cus-one");
     render(<App />);
     await screen.findByRole("heading", { name: "Client Alpha" });
-    await userEvent.click(screen.getByRole("button", { name: "Cerere nouă" }));
-    await userEvent.type(screen.getByLabelText("Titlu"), "Cerere din A");
-    await userEvent.click(screen.getByRole("button", { name: "Închide formularul" }));
+
     writeClientsRegistryMemory({ query: "Client Alpha", selectedId: "cus-one", statusChip: "attention" });
     act(() => invalidateResources(resourceKeys.customerWorkspace("cus-one")));
     await waitFor(() => expect(releaseOld).toBeTypeOf("function"));
@@ -136,7 +134,7 @@ describe("App Cloud auth integration", () => {
       await screen.findByRole("heading", { name: "Client Beta" });
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       await userEvent.click(screen.getByRole("button", { name: "Cerere nouă" }));
-      expect(screen.getByLabelText("Titlu")).toHaveValue("");
+      expect(await screen.findByLabelText("Titlu cerere")).toHaveValue("");
     } else {
       expect(await screen.findByText("Acces refuzat")).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Creează cererea" })).not.toBeInTheDocument();

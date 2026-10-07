@@ -38,12 +38,15 @@ function settingDrafts(model: TechnicalSettingsAdminTransport): Record<string, s
 }
 
 export function TechnicalAdminPage() {
+  const componentId = new URLSearchParams(window.location.search).get("component");
   const admin = useResource(resourceKeys.technicalAdmin(), loadTechnicalSettingsAdmin);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [source, setSource] = useState<unknown>(null);
   const [model, setModel] = useState<TechnicalSettingsAdminTransport | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+
+  const visibleHistory = model?.history.filter(row => !componentId || model.settings.some(item => item.typeId === componentId && item.settingId === row.settingId)) ?? [];
 
   const loadState =
     admin.status === "error" && !admin.data
@@ -71,7 +74,7 @@ export function TechnicalAdminPage() {
       return;
     }
     const settings: Array<{ settingId: string; value: number }> = [];
-    for (const setting of model.settings) {
+    for (const setting of model.settings.filter(item => !componentId || item.typeId === componentId)) {
       const value = parseDraft(drafts[setting.settingId] ?? "");
       if (value === null) {
         setSaveState("error");
@@ -163,6 +166,7 @@ export function TechnicalAdminPage() {
               />
             }
           >
+            {componentId && <><a className="text-link" href="/catalog">Înapoi la definițiile produselor</a>{!model.settings.some(item => item.typeId === componentId) && <p>Această componentă nu are setări editabile în versiunea curentă.</p>}</>}
             {model.guidance ? (
               <InlineAlert
                 tone={model.resolutionOk ? "pending" : "blocked"}
@@ -190,7 +194,7 @@ export function TechnicalAdminPage() {
                 {errorMessage}
               </InlineAlert>
             ) : null}
-            {model.settings.map((setting) => (
+            {model.settings.filter(item => !componentId || item.typeId === componentId).map((setting) => (
               <div key={setting.settingId}>
                 <TextField
                   id={setting.settingId}
@@ -235,11 +239,11 @@ export function TechnicalAdminPage() {
             {pending ? <LoadingIndicator label="Se salvează setările tehnice" /> : null}
           </SurfacePanel>
           <SurfacePanel title="Istoric versiuni" label="Istoric">
-            {model.history.length === 0 ? (
+            {visibleHistory.length === 0 ? (
               <p>Nu există încă versiuni persistate.</p>
             ) : (
               <Worklist variant="compact" label="Versiuni setări tehnice">
-                {[...model.history].reverse().map((row) => (
+                {[...visibleHistory].reverse().map((row) => (
                   <WorklistRow
                     key={`${row.definitionId}:${row.version}`}
                     variant="compact"

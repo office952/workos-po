@@ -1,5 +1,7 @@
 # WORKOS_GOLDEN_SPINE_COMPLETION_V1
 
+Historical baseline/reference. Current flow/navigation is owned by [Request, Catalog and configuration](architecture/REQUEST_CATALOG_CONFIGURATION_CANON.md); status by [ROADMAP.md](ROADMAP.md). Do not execute an old Catalog-first path or old GO flag as a current instruction.
+
 > HISTORICAL EXECUTION ARTIFACT
 > NOT CURRENT PRODUCT AUTHORITY
 > CURRENT WORKOS PO SAAS CANON WINS

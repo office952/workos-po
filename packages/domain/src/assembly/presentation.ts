@@ -17,6 +17,8 @@ import type {
 
 export type AssemblyReviewPresentation = {
   assemblyId: string;
+  customerId: string | null;
+  requestId: string | null;
   label: string;
   status: AssemblyDefinition["status"];
   statusLabel: string;
@@ -131,6 +133,8 @@ export function presentAssemblyReview(input: {
   );
   return {
     assemblyId: input.definition.assemblyId,
+    customerId: input.definition.customerId,
+    requestId: input.definition.requestId,
     label: assemblyOfferingLabelFor(input.definition.kind, roles),
     status: input.definition.status,
     statusLabel: assemblyStatusLabel(input.definition.status),

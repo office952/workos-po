@@ -167,6 +167,9 @@ function installFetch(options: {
   const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
     void init;
     const url = String(input);
+    if (url.includes("/members/SIGNAGE_LETTERS")) {
+      return jsonResponse({ customerId: "cus-1", requestId: "req-1", productCode: LETTERS_PRODUCT, values: null });
+    }
     if (url.endsWith("/preview")) {
       return jsonResponse(url.includes(ACM_PRODUCT) ? acmPreviewBody : previewBody);
     }

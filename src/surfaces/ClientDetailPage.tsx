@@ -1,23 +1,16 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import "../styles/surfaces/clients.css";
 import "../styles/surfaces/client-hub.css";
-import { presentCreatedRequestId } from "../adapters/requestAdapter";
-import { TransportError } from "../api/http";
 import type {
   JobListItemTransport,
   QuoteListItemTransport,
   RequestListItemTransport,
 } from "../api/types";
-import { createRequest } from "../api/requests";
 import { Button } from "../components/Button";
-import { CreationDialog } from "../components/CreationDialog";
 import { EmptyState } from "../components/EmptyState";
 import { ErrorState } from "../components/ErrorState";
-import { InlineAlert } from "../components/InlineAlert";
 import { StatusBadge } from "../components/StatusBadge";
 import { SurfacePanel } from "../components/SurfacePanel";
-import { TextField } from "../components/TextField";
-import { invalidateAfterCreateRequest } from "../data/invalidation";
 import { invalidateResources } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadCustomerWorkspace } from "../data/routeLoaders";
@@ -60,26 +53,6 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
   const workspace = access === "denied" ? { ...loaded, data: undefined } : loaded;
   const customer = workspace.data?.customer;
   const section = parseClientHubSection(window.location.search);
-  const [title, setTitle] = useState("");
-  const [createOpen, setCreateOpen] = useState(false);
-  const [description, setDescription] = useState("");
-  const [saveState, setSaveState] = useState<"idle" | "pending" | "error">("idle");
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [draftCustomerId, setDraftCustomerId] = useState(customerId);
-  const creationScope = useRef(0);
-  useLayoutEffect(() => {
-    creationScope.current += 1;
-    return () => { creationScope.current += 1; };
-  }, [customerId]);
-  if (draftCustomerId !== customerId) {
-    setDraftCustomerId(customerId);
-    setTitle("");
-    setDescription("");
-    setSaveError(null);
-    setSaveState("idle");
-    setCreateOpen(false);
-  }
-
   useEffect(() => {
     if (!customer || workspace.status !== "success") {
       return;
@@ -89,74 +62,7 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
     );
   }, [customer, customerId, workspace.status]);
 
-  async function create(): Promise<void> {
-    if (title.trim() === "" || description.trim() === "" || saveState === "pending" || workspace.status !== "success" || workspace.data?.canCreateRequest !== true) {
-      return;
-    }
-    setSaveState("pending");
-    setSaveError(null);
-    const scope = creationScope.current;
-    try {
-      const requestId = presentCreatedRequestId(
-        await createRequest({
-          customerId,
-          title: title.trim(),
-          description: description.trim(),
-        }),
-      );
-      if (!requestId) {
-        if (scope !== creationScope.current) return;
-        setSaveState("error");
-        setSaveError("Cererea nu a putut fi creată.");
-        return;
-      }
-      invalidateAfterCreateRequest(customerId);
-      if (scope !== creationScope.current) return;
-      setCreateOpen(false);
-      navigate(requestHref(requestId));
-    } catch (error) {
-      if (scope !== creationScope.current) return;
-      setSaveState("error");
-      setSaveError(
-        error instanceof TransportError
-          ? "Cererea nu este acceptată."
-          : "Cererea nu a putut fi creată.",
-      );
-    }
-  }
-
   const canCreate = workspace.status === "success" && workspace.data?.canCreateRequest === true;
-  if (createOpen && !canCreate) setCreateOpen(false);
-  const createForm =
-    createOpen && canCreate ? (
-      <CreationDialog title="Cerere nouă" busy={saveState === "pending"} onDismiss={() => setCreateOpen(false)}>
-        <form onSubmit={(event) => { event.preventDefault(); void create(); }}>
-        <p className="ui-note">Client: {customer?.displayName}</p>
-        <TextField id="request-title" label="Titlu" value={title} onChange={setTitle} disabled={saveState === "pending"} />
-        <TextField
-          id="request-description"
-          label="Descriere"
-          value={description}
-          onChange={setDescription}
-          disabled={saveState === "pending"}
-        />
-        <Button
-          type="submit"
-          disabled={title.trim() === "" || description.trim() === "" || saveState === "pending"}
-        >
-          Creează cererea
-        </Button>
-        {saveError ? (
-          <InlineAlert tone="error" title="Crearea a eșuat">
-            {saveError}
-          </InlineAlert>
-        ) : null}
-        <p className="ui-note">
-          Cererea va fi înregistrată pentru acest client.
-        </p>
-        </form>
-      </CreationDialog>
-    ) : null;
 
   return (
     <SlicePage
@@ -193,7 +99,7 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
           ))}
         </nav>
         {canCreate ? (
-          <button type="button" className="pilot-create" onClick={() => setCreateOpen(true)}>
+          <button type="button" className="pilot-create" onClick={() => navigate(`/cereri/noua?customer=${encodeURIComponent(customerId)}`)}>
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
             Cerere nouă
           </button>
@@ -304,7 +210,6 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
           </SurfacePanel>
         ) : null}
       </div>
-      {createForm}
     </SlicePage>
   );
 }

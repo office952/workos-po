@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { InlineAlert } from "../components/InlineAlert";
+import { RequestProductSelection } from "../components/RequestProductSelection";
 import { InfoRow } from "../components/InfoRow";
 import { LoadingFloor } from "../components/LoadingFloor";
 import { StatusBadge } from "../components/StatusBadge";
@@ -97,6 +98,7 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
       {detail ? (
         <>
           <div className="stack request-detail__main">
+            {detail.nextAction === "CHOOSE_PRODUCT" && <RequestProductSelection key={detail.requestId} customerId={detail.customerId} requestId={detail.requestId} />}
             <SurfacePanel title="Ce dorește clientul" label="Ce dorește clientul">
               <p>{detail.description || "Fără descriere."}</p>
             </SurfacePanel>

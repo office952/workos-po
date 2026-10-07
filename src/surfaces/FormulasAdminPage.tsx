@@ -30,12 +30,15 @@ import { FormulaAstEditor } from "./FormulaAstEditor";
 type SaveState = "idle" | "pending" | "success" | "alreadyApplied" | "error";
 
 export function FormulasAdminPage() {
+  const componentId = new URLSearchParams(window.location.search).get("component");
   const admin = useResource(resourceKeys.formulasAdmin(), loadFormulasAdmin);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [source, setSource] = useState<unknown>(null);
   const [model, setModel] = useState<FormulasAdminTransport | null>(null);
   const [drafts, setDrafts] = useState<Record<string, FormulaAstTransport | null>>({});
+
+  const visibleHistory = model?.history.filter(row => !componentId || model.formulas.some(item => item.typeId === componentId && item.formulaId === row.formulaId)) ?? [];
 
   const loadState =
     admin.status === "error" && !admin.data
@@ -145,6 +148,7 @@ export function FormulasAdminPage() {
               />
             }
           >
+            {componentId && <><a className="text-link" href="/catalog">Înapoi la definițiile produselor</a>{!model.formulas.some(item => item.typeId === componentId) && <p>Această componentă nu are formule editabile în versiunea curentă.</p>}</>}
             {model.guidance ? (
               <InlineAlert
                 tone={model.resolutionOk ? "pending" : "blocked"}
@@ -172,7 +176,7 @@ export function FormulasAdminPage() {
                 {errorMessage}
               </InlineAlert>
             ) : null}
-            {model.formulas.map((formula) => (
+            {model.formulas.filter(item => !componentId || item.typeId === componentId).map((formula) => (
               <div key={formula.formulaId}>
                 <h3>{formula.label}</h3>
                 <p>{formula.description}</p>
@@ -220,11 +224,11 @@ export function FormulasAdminPage() {
             {pending ? <LoadingIndicator label="Se salvează formula de calcul" /> : null}
           </SurfacePanel>
           <SurfacePanel title="Istoric versiuni" label="Istoric">
-            {model.history.length === 0 ? (
+            {visibleHistory.length === 0 ? (
               <p>Nu există încă versiuni persistate.</p>
             ) : (
               <Worklist variant="compact" label="Versiuni formule de calcul">
-                {[...model.history].reverse().map((row) => (
+                {[...visibleHistory].reverse().map((row) => (
                   <WorklistRow
                     key={`${row.formulaId}:${row.version}`}
                     variant="compact"

@@ -10,7 +10,18 @@ NO PARTIAL PRODUCTION CUTOVER
 NO PARALLEL PRODUCT TRUTH
 ```
 
-## Current
+## Current: request and Catalog coherence
+
+Owner direction of 2026-10-07 is recorded in [Request, Catalog and configuration](architecture/REQUEST_CATALOG_CONFIGURATION_CANON.md). Cursor's withdrawn implementation is preserved at `checkpoint/cursor-handoff-20261007-2037`, `3046aa700fcd8cb8384ed63497fad62f83b79aaa`, from UI base `b5071b6acb59025edbdf82338c5c3613dcd7a5d3`.
+
+One active source candidate: `feat/product-system-request-coherence` in `office952/workos-po`. Scope: definition-only Catalog, central request/CUI intake, in-request product selection, existing assembly continuity, removal of retired code and contradictory active documentation. Source implementation, commit and push are authorized by the current Owner session. Merge/deploy, real Cloud/business-data operations, schema/migrations/seeds remain unauthorized.
+
+Source implementation and automated checks are complete for this candidate. Browser proof is blocked by the unavailable browser/connection timeout; no visual or Owner acceptance is declared. Full arbitrary definition authoring and durable cross-device draft persistence remain open; do not relabel the projection as a complete editor. Candidate evidence and open limits are recorded in [REPORT.md](review/request-catalog-coherence/REPORT.md).
+
+## Historical accepted baseline before the coherence candidate
+
+All milestone/current/next/authorization flags below describe prior decisions at their recorded commits. They are historical evidence, not a second live status or authorization for this candidate. Domain/production invariants remain binding unless explicitly changed; old Catalog-first navigation is superseded by the active flow contract.
+
 
 ```text
 FRONTEND_PRESERVATION_SEED = COMPLETE
@@ -807,7 +818,7 @@ Execution acceptance advisories, not a correction wave:
 - the execution task list can become visually dense
 - Atelier empty-state wording contains minor implementation-oriented language
 
-## Current program
+## Historical product-completion program
 
 ```text
 CURRENT_PROGRAM = WORKOS_PRODUCT_COMPLETION_V1

@@ -1,6 +1,7 @@
 import type { SpineContext } from "../routing/appRoute";
 
-export type ConfiguratorContext = SpineContext;
+export type ConfiguratorContext = SpineContext & { assemblyId?: string | null };
+type DraftRecovery = { context: ConfiguratorContext; drafts: Record<string, string> };
 
 export type FrozenQuoteRef = {
   productCode: string;
@@ -10,6 +11,7 @@ export type FrozenQuoteRef = {
 };
 
 export type ConfiguratorSession = {
+  draftRecovery?: Record<string, DraftRecovery>;
   drafts: Record<string, string>;
   draftContext: ConfiguratorContext;
   customerId: string | null;
@@ -58,6 +60,7 @@ function presentContext(value: unknown): ConfiguratorContext | null {
     productCode: presentId(record.productCode),
     requestId: presentId(record.requestId),
     customerId: presentId(record.customerId),
+    ...(presentId(record.assemblyId) ? { assemblyId: presentId(record.assemblyId) } : {}),
   };
 }
 
@@ -79,13 +82,14 @@ function presentQuoteRef(value: unknown): FrozenQuoteRef | null {
 }
 
 export function configuratorContextKey(context: ConfiguratorContext): string {
-  return `${context.productCode ?? ""}\u001f${context.requestId ?? ""}\u001f${context.customerId ?? ""}`;
+  return `${context.productCode ?? ""}\u001f${context.requestId ?? ""}\u001f${context.customerId ?? ""}${context.assemblyId ? `\u001f${context.assemblyId}` : ""}`;
 }
 
 export function draftContextMatches(
   stored: ConfiguratorContext,
   selected: ConfiguratorContext,
 ): boolean {
+  if ((stored.assemblyId ?? null) !== (selected.assemblyId ?? null)) return false;
   if (!selected.productCode || stored.productCode !== selected.productCode) {
     return false;
   }
@@ -99,10 +103,12 @@ export function draftContextMatches(
 }
 
 export function ownedDraftsForContext(
-  stored: Pick<ConfiguratorSession, "drafts" | "draftContext">,
+  stored: Pick<ConfiguratorSession, "drafts" | "draftContext" | "draftRecovery">,
   selected: ConfiguratorContext,
 ): Record<string, string> {
-  return draftContextMatches(stored.draftContext, selected) ? stored.drafts : {};
+  if (draftContextMatches(stored.draftContext, selected)) return stored.drafts;
+  const recovered = stored.draftRecovery?.[configuratorContextKey(selected)];
+  return recovered && draftContextMatches(recovered.context, selected) ? recovered.drafts : {};
 }
 
 export function lastQuoteOwnedByContext(
@@ -138,11 +144,19 @@ export function readConfiguratorSession(): ConfiguratorSession {
       return empty;
     }
     const drafts = asRecord(record.drafts);
+    const recovery = asRecord(record.draftRecovery);
+    const draftRecovery = Object.fromEntries(Object.entries(recovery ?? {}).flatMap(([key, value]) => {
+      const item = asRecord(value);
+      const context = presentContext(item?.context);
+      const values = asRecord(item?.drafts);
+      return context && values ? [[key, { context, drafts: Object.fromEntries(Object.entries(values).filter((entry): entry is [string, string] => typeof entry[1] === "string")) }]] : [];
+    }));
     const explicit = presentContext(record.draftContext);
     const customerId = presentId(record.customerId);
     const requestId = presentId(record.requestId);
     const productCode = presentId(record.productCode);
     return {
+      draftRecovery,
       drafts: drafts
         ? Object.fromEntries(
             Object.entries(drafts).filter((entry): entry is [string, string] => {
@@ -253,7 +267,15 @@ export function writeConfiguratorSession(next: ConfiguratorSession): void {
   if (typeof sessionStorage === "undefined") {
     return;
   }
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  const previous = readConfiguratorSession();
+  const draftRecovery = { ...previous.draftRecovery };
+  if (previous.draftContext.productCode) draftRecovery[configuratorContextKey(previous.draftContext)] = { context: previous.draftContext, drafts: previous.drafts };
+  if (next.draftContext.productCode) {
+    const key = configuratorContextKey(next.draftContext);
+    delete draftRecovery[key];
+    draftRecovery[key] = { context: next.draftContext, drafts: next.drafts };
+  }
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ ...next, draftRecovery: Object.fromEntries(Object.entries(draftRecovery).slice(-50)) }));
 }
 
 export function clearConfiguratorSession(): void {

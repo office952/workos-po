@@ -1,4 +1,5 @@
 export type AdministrationRailId =
+  | "catalog"
   | "commercial"
   | "resources"
   | "services"
@@ -37,6 +38,7 @@ const ADMINISTRATION_GROUPS: readonly AdministrationGroup[] = [
     id: "organization",
     label: "Organizație",
     items: [
+      { id: "catalog", label: "Catalog", href: "/catalog", purpose: "Administrează construcția, componentele și regulile produselor." },
       {
         id: "products",
         label: "Produse oferite",

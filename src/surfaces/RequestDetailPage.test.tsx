@@ -85,7 +85,7 @@ describe("RequestDetailPage", () => {
     expect(screen.getByText(/Creată/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Alege produs" })).toHaveAttribute(
       "href",
-      "/catalog?customer=cus-1&request=req-1",
+      "/cereri/req-1?alege-produs=1#alege-produs",
     );
     expect(screen.getByRole("heading", { name: "Ce dorește clientul" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Continuare" })).toBeInTheDocument();

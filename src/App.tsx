@@ -48,6 +48,7 @@ import { QuoteSnapshotPage } from "./surfaces/QuoteSnapshotPage";
 import { QuotesPage } from "./surfaces/QuotesPage";
 import { RequestDetailPage } from "./surfaces/RequestDetailPage";
 import { RequestsPage } from "./surfaces/RequestsPage";
+import { NewRequestPage } from "./surfaces/NewRequestPage";
 import { CommercialAdminPage } from "./surfaces/CommercialAdminPage";
 import { ResourcesAdminPage } from "./surfaces/ResourcesAdminPage";
 import { ExternalProductionAdminPage } from "./surfaces/ExternalProductionAdminPage";
@@ -85,6 +86,8 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
       return <ClientDetailPage customerId={route.customerId} />;
     case "requests":
       return <RequestsPage />;
+    case "new-request":
+      return <NewRequestPage key={search} />;
     case "request":
       return <RequestDetailPage requestId={route.requestId} />;
     case "catalog":
@@ -97,7 +100,7 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
       const memberRole = new URLSearchParams(search).get("role");
       return (
         <ConfiguratorPage
-          key={configuratorContextKey(context)}
+          key={configuratorContextKey({ ...context, assemblyId })}
           customerId={context.customerId}
           requestId={context.requestId}
           productCode={context.productCode}

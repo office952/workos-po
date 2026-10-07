@@ -68,7 +68,7 @@ describe("ClientDetailPage", () => {
     render(<ClientDetailPage customerId="cus-1" />);
     await screen.findByRole("heading", { name: "Atelier Nord" });
     await userEvent.click(screen.getByRole("button", { name: "Cerere nouă" }));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/cereri/noua");
     fetchMock.mockImplementation(() => jsonResponse(status, { error: "denied" }));
     act(() => invalidateResources(resourceKeys.customerWorkspace("cus-1")));
     expect(await screen.findByText("Acces refuzat")).toBeInTheDocument();
@@ -121,7 +121,7 @@ describe("ClientDetailPage", () => {
     expect(document.querySelector(".page-workspace--object")).not.toBeNull();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Cerere nouă" }));
-    expect(screen.getByRole("dialog", { name: "Cerere nouă" })).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/cereri/noua");
     expect(screen.getByRole("navigation", { name: "Secțiuni client" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Documente" })).toHaveAttribute(
       "href",
@@ -201,45 +201,13 @@ describe("ClientDetailPage", () => {
     await userEvent.setup().click(screen.getByRole("button", { name: "Reîncearcă" }));
     expect(await screen.findByRole("heading", { name: "Atelier Nord" })).toBeInTheDocument();
   });
-  it("creates a request from the CTA for the current customer", async () => {
-    const fetchMock = vi.fn((_input: RequestInfo, init?: RequestInit) => {
-      if (init?.method === "POST") return jsonResponse(201, { request: { requestId: "req-new" } });
-      return jsonResponse(200, workspace("cus-1", "Atelier Nord"));
-    });
-    vi.stubGlobal("fetch", fetchMock);
-    render(<ClientDetailPage customerId="cus-1" />);
+  it("hands the current customer to the sole request intake without creating a request in the hub", async () => {
+    const fetchMock = vi.fn((_input: RequestInfo, init?: RequestInit) => { void init; return jsonResponse(200, workspace("cus-1", "Atelier Nord")); });
+    vi.stubGlobal("fetch", fetchMock); render(<ClientDetailPage customerId="cus-1" />);
     await userEvent.click(await screen.findByRole("button", { name: "Cerere nouă" }));
-    expect(screen.getByText("Client: Atelier Nord")).toBeInTheDocument();
-    await userEvent.type(screen.getByLabelText("Titlu"), "Casetă");
-    await userEvent.type(screen.getByLabelText("Descriere"), "Intrare atelier");
-    await userEvent.click(screen.getByRole("button", { name: "Creează cererea" }));
-    await waitFor(() => expect(window.location.pathname).toBe("/cereri/req-new"));
-    expect(fetchMock).toHaveBeenCalledWith("/api/requests", expect.objectContaining({ method: "POST", body: JSON.stringify({ customerId: "cus-1", title: "Casetă", description: "Intrare atelier" }) }));
-  });
-
-  it.each([201, 500])("does not apply a delayed A creation to client B (HTTP %i)", async (status) => {
-    let release!: (value: unknown) => void;
-    vi.stubGlobal("fetch", vi.fn((input: RequestInfo, init?: RequestInit) => {
-      if (init?.method === "POST") return new Promise((resolve) => { release = resolve; });
-      return jsonResponse(200, String(input).includes("cus-B") ? workspace("cus-B", "Client B") : workspace("cus-A", "Client A"));
-    }));
-    const { rerender } = render(<ClientDetailPage customerId="cus-A" />);
-    await userEvent.click(await screen.findByRole("button", { name: "Cerere nouă" }));
-    await userEvent.type(screen.getByLabelText("Titlu"), "Cerere A");
-    await userEvent.type(screen.getByLabelText("Descriere"), "Descriere A");
-    await userEvent.click(screen.getByRole("button", { name: "Creează cererea" }));
-    await waitFor(() => expect(release).toBeTypeOf("function"));
-    window.history.replaceState({}, "", "/clienti/cus-B");
-    rerender(<ClientDetailPage customerId="cus-B" />);
-    await screen.findByRole("heading", { name: "Client B" });
+    expect(window.location.pathname).toBe("/cereri/noua");
+    expect(new URLSearchParams(window.location.search).get("customer")).toBe("cus-1");
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Cerere nouă" }));
-    expect(screen.getByLabelText("Titlu")).toHaveValue("");
-    await act(async () => { release(await jsonResponse(status, { request: { requestId: "req-A" } })); });
-    expect(window.location.pathname).toBe("/clienti/cus-B");
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.queryByText("Crearea a eșuat")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Titlu")).toHaveValue("");
   });
-
 });

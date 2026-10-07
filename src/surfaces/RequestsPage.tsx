@@ -255,7 +255,7 @@ export function RequestsPage() {
               </svg>
               <span>{compact ? "Compact" : "Confort"}</span>
             </button>
-            <a className="requests-new" href="/clienti">
+            <a className="requests-new" href="/cereri/noua">
               <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
               Cerere nouă
             </a>
@@ -290,10 +290,10 @@ export function RequestsPage() {
           <div className="requests-feedback">
             <EmptyState
               title="Nu există cereri"
-              description="Începe de la un client."
+              description="Înregistrează clientul și lucrarea solicitată."
               action={
-                <a className="text-link" href="/clienti">
-                  Începe de la un client
+                <a className="text-link" href="/cereri/noua">
+                  Creează o cerere
                 </a>
               }
             />

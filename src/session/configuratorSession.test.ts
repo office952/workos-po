@@ -232,3 +232,19 @@ describe("resolveOwnedSpine", () => {
     ).toEqual({ customerId: "cus-B", requestId: null, productCode: null });
   });
 });
+
+describe("draft continuity across products", () => {
+  it("recovers A after A → B → A without leaking into another request or assembly", () => {
+    const a = context(LETTERS, "req-A", "cus-A"); const b = context(ACM, "req-A", "cus-A");
+    const session = (draftContext: ConfiguratorContext, drafts: Record<string, string>): ConfiguratorSession => ({ draftContext, drafts, ...draftContext, lastQuote: null });
+    writeConfiguratorSession(session(a, { "root.inscription": "ATELIER", [LETTERS_ONLY_FIELD]: "250000" }));
+    writeConfiguratorSession(session(b, { [ACM_ONLY_FIELD]: "1800" }));
+    expect(ownedDraftsForContext(readConfiguratorSession(), a)).toEqual({ "root.inscription": "ATELIER", [LETTERS_ONLY_FIELD]: "250000" });
+    expect(ownedDraftsForContext(readConfiguratorSession(), { ...a, requestId: "req-B" })).toEqual({});
+    expect(ownedDraftsForContext(readConfiguratorSession(), { ...a, assemblyId: "asm-A" })).toEqual({});
+    const member = { ...a, assemblyId: "asm-A" }; writeConfiguratorSession(session(member, { "root.inscription": "MEMBRU" }));
+    writeConfiguratorSession(session(b, { [ACM_ONLY_FIELD]: "2000" }));
+    expect(ownedDraftsForContext(readConfiguratorSession(), member)).toEqual({ "root.inscription": "MEMBRU" });
+    clearConfiguratorSession(); expect(ownedDraftsForContext(readConfiguratorSession(), a)).toEqual({});
+  });
+});

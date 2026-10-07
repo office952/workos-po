@@ -20,7 +20,7 @@ export const GLOBAL_NAV: readonly GlobalNavGroup[] = [
   {
     id: "commercial",
     label: "Comercial",
-    summary: "Clienți, cereri, catalog și oferte.",
+    summary: "Clienți, cereri și oferte.",
     items: [
       {
         id: "clients",
@@ -35,13 +35,6 @@ export const GLOBAL_NAV: readonly GlobalNavGroup[] = [
         href: "/cereri",
         purpose: "Deschide o cerere de ofertă.",
         midWidthPriority: true,
-      },
-      {
-        id: "catalog",
-        label: "Catalog",
-        href: "/catalog",
-        purpose: "Alege produsul pentru lucrare.",
-        midWidthPriority: false,
       },
       {
         id: "quotes",
@@ -85,6 +78,13 @@ export const GLOBAL_NAV: readonly GlobalNavGroup[] = [
     label: "Administrare",
     summary: "Setările organizației.",
     items: [
+      {
+        id: "catalog",
+        label: "Catalog",
+        href: "/catalog",
+        purpose: "Administrează definițiile și construcția produselor.",
+        midWidthPriority: false,
+      },
       {
         id: "administration",
         label: "Administrare",

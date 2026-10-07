@@ -2,6 +2,8 @@
 
 Living architecture for changeable business truth in `office952/workos-po`.
 
+Product-definition versus request-instance responsibilities belong to [Request, Catalog and configuration](REQUEST_CATALOG_CONFIGURATION_CANON.md). The status/GO flags below record completed foundation work; they do not authorize new schema, migrations or real-data operations.
+
 This file is the single Configuration-First architecture owner. It is not a second Product Truth, not a second roadmap, and not an implementation authorization.
 
 ```text

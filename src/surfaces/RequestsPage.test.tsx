@@ -267,7 +267,7 @@ describe("RequestsPage", () => {
     expect(await screen.findByText("Nu există cereri")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("0 din 0");
     expect(screen.getAllByText("00")).toHaveLength(2);
-    expect(screen.getByRole("link", { name: "Începe de la un client" })).toHaveAttribute("href", "/clienti");
+    expect(screen.getByRole("link", { name: "Creează o cerere" })).toHaveAttribute("href", "/cereri/noua");
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
@@ -306,7 +306,7 @@ describe("RequestsPage", () => {
     expect(screen.getByText("Progres comercial")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Cerere nouă" })).toHaveAttribute(
       "href",
-      "/clienti",
+      "/cereri/noua",
     );
     expect(screen.getByText("Total")).toBeInTheDocument();
     expect(
@@ -432,7 +432,7 @@ describe("RequestsPage", () => {
     render(<RequestsPage />);
     expect(
       await screen.findByRole("link", { name: "Alege produs" }),
-    ).toHaveAttribute("href", "/catalog?customer=cus-9&request=req-2");
+    ).toHaveAttribute("href", "/cereri/req-2?alege-produs=1#alege-produs");
     expect(screen.getByRole("link", { name: /CRQ-105/ })).toHaveAttribute(
       "href",
       "/cereri/req-2",

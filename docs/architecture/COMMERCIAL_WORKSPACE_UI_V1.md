@@ -1,5 +1,7 @@
 # Commercial workspace UI V1
 
+Historical geometry and implementation record. Current responsibilities/navigation are superseded by [Request, Catalog and configuration](REQUEST_CATALOG_CONFIGURATION_CANON.md). The prior verification section describes that revision only.
+
 Review candidate from `6466f14a715767ddcf63ca80e7a6e4a4df4ae6bd`, the client pilot direction liked by Owner on 2026-10-07. Owner subsequently requested stable title/count/action positions between Clienți and Cereri, and authorized the next commercial wave. This is not a new business model or visual acceptance.
 
 ## Shared page geometry
@@ -14,7 +16,7 @@ Remembered client identity remains context memory; it no longer paints the first
 
 | Surface | Responsibility |
 | --- | --- |
-| Catalog | Full-width product registry; search and product-family filter in toolbar; assemblies in a distinct searchable section, even when no standalone products are returned. Unverified context allows inspection but no configuration or assembly creation. |
+| Catalog | Reusable product definitions and component inspection; no commercial context. Search/filter/pagination remain collection presentation. |
 | Configurator | Schema section navigation, technical inputs and server review, then a separate commercial preparation region. All drafts and operations remain in the existing parent page. No wizard state, implicit confirm or fake CAD. |
 | Assembly | Scope selector with a visible selected state; existing aggregate review and commercial operations remain explicit. |
 | Oferte registry | Server attention flags, stage/search filtering, fixed action widths, reset and retry including failed refresh of cached data. `createdAt` stays creation time. |
@@ -45,22 +47,11 @@ Technical edits still clear confirmation. Both technical confirmation and commer
 
 Creation is explicitly labelled, has pending/error feedback, and disables duplicate clicks. A context epoch suppresses late navigation after leaving/changing the context. Pending state is discarded when context changes, including A → B → A. A late request may have created a server object; ignoring its response is not a rollback or an idempotency guarantee.
 
-## Commercial flow recovery (post-b5071b6)
+## Withdrawn commercial recovery
 
-Owner decision 2026-10-07 recovers the Catalog → context → Configurator → verified price → freeze path without changing product domain, formulas, tenancy, roles, or commercial lifecycle.
+The checkpoint `3046aa7` preserved a proposed Catalog → context dialog → Configurator recovery. Owner withdrew that direction on 2026-10-07. Its commercial-context dialog and create-request entry in Catalog are removed by the coherence candidate. Useful seller-error distinction, price freshness and collection presentation are retained where appropriate.
 
-- Bare Catalog is consultable without loading the full request registry and without tacitly applying the last session request. Remembered context may be proposed; using it requires an explicit action. Choosing a product without verified context opens assisted client/request completion (existing create-request contract only on explicit create).
-- Catalog presentation keeps family/category from the server tree, with local search, filters, result count, reset, and local pagination (initial page size 20). Optional detail uses only returned projection fields.
-- Seller issuer loading separates fetch error from confirmed unconfigured state. Catalog consultation is not blocked by issuer readiness.
-- Customer price freshness is presentation state: commercial-term edits after a server result mark the previous amount stale and disable freeze until recalculation against current terms. Late confirm responses do not validate a newer draft.
-- Deep Configurator workbench redesign (construction ↔ representation ↔ properties) remains a separate later intervention.
-
-## Limits and next work
-
-- The assembly projection does not supply authoritative customer/request context to its configuration links; the existing session continuity remains. Do not infer ownership from labels or add a second truth.
-- No new editable formula module, uploads, document signing, invoicing, portfolio or client-specific fork.
-- No engine, persistence, auth or protected-checkout changes; no seed/reset, real data mutation, merge or deployment.
-- Configurator workbench redesign and later Lucrări / Planificare / Atelier / Execuție remain outside this recovery.
+The current assembly projection supplies server-owned customer/request context. Request detail owns product choice and reopening started assemblies. This replaces the previous session-only link limitation. No historical tests below establish proof of these later changes.
 
 ## Verification of this candidate
 

@@ -2,7 +2,7 @@ import { discardResourceCache, invalidateResourcePrefix, invalidateResources } f
 import { resourceKeys } from "./resourceKeys";
 
 export function invalidateAfterCreateCustomer(): void {
-  invalidateResources(resourceKeys.customers());
+  invalidateResources(resourceKeys.customers(), resourceKeys.customerIntake());
 }
 
 export function invalidateAfterCreateRequest(customerId: string): void {
@@ -15,7 +15,7 @@ export function invalidateAfterCreateRequest(customerId: string): void {
 }
 
 export function invalidateCustomerProjections(): void {
-  invalidateResources(resourceKeys.customers());
+  invalidateResources(resourceKeys.customers(), resourceKeys.customerIntake());
   invalidateResourcePrefix(resourceKeys.customerWorkspacePrefix());
 }
 
@@ -93,11 +93,11 @@ export function invalidateAfterCommercialPolicyChange(): void {
 }
 
 export function invalidateAfterTechnicalSettingsChange(): void {
-  invalidateResources(resourceKeys.technicalAdmin());
+  invalidateResources(resourceKeys.technicalAdmin(), resourceKeys.productSystem());
 }
 
 export function invalidateAfterFormulasChange(): void {
-  invalidateResources(resourceKeys.formulasAdmin());
+  invalidateResources(resourceKeys.formulasAdmin(), resourceKeys.productSystem());
 }
 
 export function invalidateAfterProductEnablementChange(): void {

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   canonicalLocation,
   atelierHref,
-  catalogHref,
+  requestProductHref,
   configuratorHref,
   executionHref,
   parseJobContext,
@@ -24,6 +24,7 @@ describe("parseAppRoute", () => {
     expect(parseAppRoute("/configurator")).toEqual({ name: "configurator" });
     expect(parseAppRoute("/clienti/cus-1")).toEqual({ name: "client", customerId: "cus-1" });
     expect(parseAppRoute("/cereri")).toEqual({ name: "requests" });
+    expect(parseAppRoute("/cereri/noua")).toEqual({ name: "new-request" });
     expect(parseAppRoute("/cereri/req-1")).toEqual({ name: "request", requestId: "req-1" });
     expect(parseAppRoute("/catalog")).toEqual({ name: "catalog" });
     expect(parseAppRoute("/oferte")).toEqual({ name: "quotes" });
@@ -75,7 +76,7 @@ describe("parseAppRoute", () => {
     expect(parseCustomerContext("")).toBeNull();
   });
 
-  it("builds configurator context from cerere and catalog, not a hardcoded product", () => {
+  it("builds configurator context from the request, not a hardcoded product", () => {
     expect(
       parseSpineContext("?customer=cus-1&request=req-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06"),
     ).toEqual({
@@ -116,12 +117,9 @@ describe("parseAppRoute", () => {
     expect(navItemCurrent("/clienti", ADMINISTRATION_HREF)).toBe(false);
     expect(navItemCurrent("/oferte", ADMINISTRATION_HREF)).toBe(false);
     expect(
-      catalogHref({
-        customerId: "cus-1",
-        requestId: "req-1",
-        productCode: null,
-      }),
-    ).toBe("/catalog?customer=cus-1&request=req-1");
+      requestProductHref("req-1"),
+    ).toBe("/cereri/req-1?alege-produs=1#alege-produs");
+
     expect(atelierHref({ jobId: "ord-1" })).toBe("/atelier?job=ord-1");
     expect(executionHref("exp-1", { taskId: "task-1", jobId: "ord-1" })).toBe(
       "/executie/exp-1?task=task-1&job=ord-1",
@@ -129,4 +127,10 @@ describe("parseAppRoute", () => {
     expect(parseJobContext("?job=ord-1")).toBe("ord-1");
     expect(parseTaskContext("?task=task-1")).toBe("task-1");
   });
+});
+
+it("redirects historical commercial Catalog URLs to request intake/selection", () => {
+  expect(canonicalLocation("/catalog", "?request=req%3A1&customer=cus%3A1")).toBe("/cereri/req%3A1?alege-produs=1#alege-produs");
+  expect(canonicalLocation("/catalog", "?customer=cus%3A1")).toBe("/cereri/noua?customer=cus%3A1");
+  expect(canonicalLocation("/catalog", "?product=PRD-TEST")).toBeNull();
 });

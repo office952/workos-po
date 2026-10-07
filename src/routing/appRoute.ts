@@ -3,6 +3,7 @@ export type AppRoute =
   | { name: "clients" }
   | { name: "client"; customerId: string }
   | { name: "requests" }
+  | { name: "new-request" }
   | { name: "request"; requestId: string }
   | { name: "catalog" }
   | { name: "assembly" }
@@ -55,6 +56,7 @@ export function parseAppRoute(pathname: string): AppRoute {
   if (pathname === "/cereri") {
     return { name: "requests" };
   }
+  if (pathname === "/cereri/noua") return { name: "new-request" };
   const request = pathname.match(/^\/cereri\/([^/]+)$/);
   if (request) {
     return { name: "request", requestId: decodeURIComponent(request[1]) };
@@ -258,8 +260,8 @@ export function withSpineContext(pathname: string, context: SpineContext): strin
   return query ? `${pathname}?${query}` : pathname;
 }
 
-export function catalogHref(context: SpineContext): string {
-  return withSpineContext("/catalog", context);
+export function requestProductHref(requestId: string): string {
+  return `${requestHref(requestId)}?alege-produs=1#alege-produs`;
 }
 
 export function assemblyHref(assemblyId: string): string {
@@ -271,6 +273,11 @@ export function configuratorHref(context: SpineContext): string {
 }
 
 export function canonicalLocation(pathname: string, search: string): string | null {
+  if (pathname === "/catalog") {
+    const previous = parseSpineContext(search);
+    if (previous.requestId) return requestProductHref(previous.requestId);
+    if (previous.customerId) return `/cereri/noua?customer=${encodeURIComponent(previous.customerId)}`;
+  }
   if (pathname !== "/") {
     return null;
   }

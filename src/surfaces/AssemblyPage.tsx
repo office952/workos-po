@@ -10,8 +10,7 @@ import "../styles/surfaces/commercial.css";
 import { writeResource } from "../data/resourceCache";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
-import { configuratorHref } from "../routing/appRoute";
-import { readConfiguratorSession } from "../session/configuratorSession";
+import { configuratorHref, requestHref } from "../routing/appRoute";
 
 type AssemblyScope = {
   id: "acm" | "logo" | "letters" | "relation" | "summary";
@@ -24,6 +23,8 @@ type AssemblyScope = {
 
 type AssemblyView = {
   assemblyId: string;
+  customerId: string | null;
+  requestId: string | null;
   label: string;
   statusLabel: string;
   stale: boolean;
@@ -41,22 +42,6 @@ type AssemblyView = {
   orderId: string | null;
   productionId: string | null;
   executionPlanId: string | null;
-};
-
-const SCOPE_PRODUCT: Partial<Record<AssemblyScope["id"], string | null>> = {
-  acm: "PRD-ACM-CASSETTE-NONE",
-  logo: "PRD-LOGO-FRONTLIT-PLEXI-AL06",
-  letters: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
-  relation: null,
-  summary: null,
-};
-
-const SCOPE_ROLE: Partial<Record<AssemblyScope["id"], string | null>> = {
-  acm: "SUPPORT_PANEL",
-  logo: "SIGNAGE_LOGO",
-  letters: "SIGNAGE_LETTERS",
-  relation: null,
-  summary: null,
 };
 
 export function assemblyLead(hasLogo: boolean, lettersPresent: boolean): string {
@@ -82,7 +67,6 @@ async function loadAssembly(assemblyId: string): Promise<AssemblyView> {
 
 export function AssemblyPage() {
   const assemblyId = new URLSearchParams(window.location.search).get("assembly");
-  const session = readConfiguratorSession();
   const [scopeId, setScopeId] = useState<AssemblyScope["id"]>("summary");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -111,8 +95,8 @@ export function AssemblyPage() {
   }
 
   const scope = assembly?.scopes.find((item) => item.id === scopeId) ?? assembly?.scopes[0];
-  const productCode = scope?.productCode ?? (scope ? SCOPE_PRODUCT[scope.id] : null);
-  const role = scope?.role ?? (scope ? SCOPE_ROLE[scope.id] : null);
+  const productCode = scope?.productCode;
+  const role = scope?.role;
   const hasLogo = assembly?.scopes.some((item) => item.id === "logo") ?? false;
   const lettersPresent =
     assembly?.scopes.some((item) => item.id === "letters" && item.complete) ?? false;
@@ -129,11 +113,11 @@ export function AssemblyPage() {
       lead={assemblyLead(hasLogo, lettersPresent)}
     >
       <div className="commercial-toolbar">
-        <a className="text-link" href="/catalog">← Înapoi la catalog</a>
+        <a className="text-link" href={assembly?.requestId ? requestHref(assembly.requestId) : "/cereri"}>← Înapoi la cerere</a>
       </div>
       {!assemblyId ? (
         <InlineAlert tone="blocked" title="Ansamblu lipsă">
-          Deschide ansamblul din catalog, dintr-o cerere.
+          Deschide ansamblul din cererea pentru care lucrezi.
         </InlineAlert>
       ) : null}
       {loaded.status === "error" || error ? (
@@ -161,13 +145,13 @@ export function AssemblyPage() {
             <SurfacePanel title={scope.title} label={scope.title}>
               <p>{scope.summary}</p>
               <InfoRow label="Stare" value={scope.complete ? "Complet" : "Necesită date"} />
-              {productCode && role ? (
+              {productCode && role && assembly.customerId && assembly.requestId ? (
                 <p>
                   <a
                     className="text-link"
                     href={configuratorHref({
-                      customerId: session.customerId,
-                      requestId: session.requestId,
+                      customerId: assembly.customerId,
+                      requestId: assembly.requestId,
                       productCode,
                     }).concat(
                       `&assembly=${encodeURIComponent(assembly.assemblyId)}&role=${role}`,

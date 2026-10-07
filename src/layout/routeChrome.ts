@@ -78,15 +78,17 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         lead: "Se încarcă detaliile cererii și următorul pas disponibil.",
         pilot: { surface: "cereri-detail" },
       };
+    case "new-request":
+      return { contextLabel: "Cereri", currentHref: "/cereri/noua", workspace: "stack", eyebrow: "Registru comercial", title: "Cerere nouă", lead: "Alege clientul, descrie lucrarea și selectează produsul sau momentan indecis." };
     case "catalog":
       return {
         contextLabel: "Catalog",
         currentHref: "/catalog",
         workspace: "stack",
-        eyebrow: "Alegere produs",
+        eyebrow: "Definiții de produse",
         title: "Catalog",
         lead: "",
-        pilot: { surface: "catalog-registry", metrics: ["Produse disponibile"] },
+        pilot: { surface: "catalog-registry" },
       };
     case "assembly":
       return {
