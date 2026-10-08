@@ -16,7 +16,7 @@ describe("component architecture projection", () => {
       "Față",
       "Volum",
       "Spate",
-      "Iluminare",
+      "Electrică / iluminare",
     ]);
     expect(JSON.stringify(roles)).not.toMatch(/RETURN_CANT|Cant\b/);
   });

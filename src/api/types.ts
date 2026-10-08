@@ -71,6 +71,7 @@ export type PresentedFormField = {
 };
 
 export type PresentedFormSection = {
+  componentId?: string;
   id: string;
   title: string;
   fields: PresentedFormField[];
@@ -90,7 +91,7 @@ export type PreviewTransport = {
   product: {
     code: string;
     label: string;
-    identityFacts: Array<{ id: string; label: string; value: string }>;
+    identityFacts: Array<{ id: string; componentId?: string; label: string; value: string }>;
   };
   values: DraftValues;
   formSchema: PresentedFormSchema | null;

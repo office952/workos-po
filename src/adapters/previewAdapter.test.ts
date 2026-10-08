@@ -32,7 +32,7 @@ describe("presentPreview", () => {
         productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
         label: "Litere volumetrice luminoase",
         identityFacts: [
-          { id: "face.material", label: "Material față", value: "Plexiglas 3 mm opal" },
+          { id: "face.material", componentId: "FACE", label: "Material față", value: "Plexiglas 3 mm opal" },
         ],
       },
       values: {},
@@ -61,7 +61,7 @@ describe("presentPreview", () => {
 
     expect(presented?.product.code).toBe("PRD-LETTERS-FRONTLIT-PLEXI-AL06");
     expect(presented?.product.identityFacts).toEqual([
-      { id: "face.material", label: "Material față", value: "Plexiglas 3 mm opal" },
+      { id: "face.material", componentId: "FACE", label: "Material față", value: "Plexiglas 3 mm opal" },
     ]);
     expect(presented?.reviewId).toBe("crv1:abc");
     expect(presented?.formSchema?.sections[0]?.fields[0]?.label).toBe(

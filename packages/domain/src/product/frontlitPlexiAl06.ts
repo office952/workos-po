@@ -16,10 +16,10 @@ export const frontlitPlexiAl06Template: ProductTemplate = {
     "Litere volumetrice luminoase cu iluminare față, față din plexiglas 3 mm opal și volum din aluminiu 0,6 mm.",
   legacyReference: "TPL-VOLUMETRIC-LETTERS_v2",
   identityFacts: [
-    { id: "lighting", label: "Iluminare", value: "Iluminare frontală" },
-    { id: "face.material", label: "Material față", value: "Plexiglas 3 mm opal" },
-    { id: "volume.material", label: "Material volum", value: "Aluminiu 0,6 mm" },
-    { id: "back.material", label: "Material spate", value: "Forex 10 mm" },
+    { id: "lighting", componentId: "LIGHTING", label: "Iluminare", value: "Iluminare frontală" },
+    { id: "face.material", componentId: "FACE", label: "Material față", value: "Plexiglas 3 mm opal" },
+    { id: "volume.material", componentId: "VOLUME", label: "Material volum", value: "Aluminiu 0,6 mm" },
+    { id: "back.material", componentId: "BACK", label: "Material spate", value: "Forex 10 mm" },
   ],
   fixedValues: {
     "face.materialFamily": "plexiglas",
@@ -50,7 +50,7 @@ export const frontlitPlexiAl06Template: ProductTemplate = {
     },
     {
       id: "LIGHTING",
-      label: "Iluminare",
+      label: "Electrică / iluminare",
       required: true,
       typeId: "LIGHTING_FRONT_LED",
     },

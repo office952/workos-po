@@ -25,6 +25,14 @@ const schema = presentFormSchema({
 });
 
 describe("form schema adapter", () => {
+  it("preserves explicit component ownership and supports older unbound schemas", () => {
+    const presented = presentFormSchema({ id: "bound", sections: [
+      { ...schema!.sections[0], componentId: "VOLUME" },
+      { ...schema!.sections[0], id: "legacy" },
+    ] });
+    expect(presented?.sections[0].componentId).toBe("VOLUME");
+    expect(presented?.sections[1]).not.toHaveProperty("componentId");
+  });
   it("coerces number fields for transport without calculating cost", () => {
     expect(
       valuesForTransport(

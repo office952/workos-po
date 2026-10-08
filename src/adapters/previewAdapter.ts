@@ -22,7 +22,7 @@ function presentReadiness(value: unknown): ConfigurationReadiness | null {
 
 function presentIdentityFacts(
   value: unknown,
-): Array<{ id: string; label: string; value: string }> {
+): PreviewTransport["product"]["identityFacts"] {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -36,7 +36,7 @@ function presentIdentityFacts(
     ) {
       return [];
     }
-    return [{ id: record.id, label: record.label, value: record.value }];
+    return [{ id: record.id, label: record.label, value: record.value, ...(typeof record.componentId === "string" ? { componentId: record.componentId } : {}) }];
   });
 }
 

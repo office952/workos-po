@@ -1,10 +1,13 @@
-import { useId, useLayoutEffect, useRef, useState } from "react";
+import { useId, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from "react";
 import type { PreviewTransport, PresentedFormField } from "../api/types";
 import { InfoRow } from "./InfoRow";
 import { SelectField } from "./SelectField";
 import { TextField } from "./TextField";
 
+export type ConfigurationSectionsHandle = { focusField: (fieldId: string) => void };
+
 type ConfigurationSectionsProps = {
+  ref?: Ref<ConfigurationSectionsHandle>;
   preview: PreviewTransport;
   drafts: Record<string, string>;
   onChange: (fieldId: string, value: string) => void;
@@ -17,8 +20,18 @@ function fieldValue(field: PresentedFormField, drafts: Record<string, string>): 
 }
 
 /** Navigation is presentation state. Schema and missing facts remain server-owned. */
-export function ConfigurationSections({ preview, drafts, onChange }: ConfigurationSectionsProps) {
-  const sections = preview.formSchema?.sections ?? [];
+export function ConfigurationSections({ preview, drafts, onChange, ref }: ConfigurationSectionsProps) {
+  const schemaSections = preview.formSchema?.sections ?? [];
+  const sections = [
+    ...schemaSections.map((section) => ({
+      ...section,
+      facts: preview.product.identityFacts.filter((fact) => Boolean(section.componentId) && fact.componentId === section.componentId),
+    })),
+    ...preview.selectedComponents.filter((component) => !schemaSections.some((section) => section.componentId === component.id)).map((component) => ({
+      id: `component:${component.id}`, componentId: component.id, title: component.label, fields: [] as PresentedFormField[],
+      facts: preview.product.identityFacts.filter((fact) => fact.componentId === component.id),
+    })),
+  ];
   const [selected, setSelected] = useState<string | null>(null);
   const active = sections.find((section) => section.id === selected) ?? sections[0];
   const [compositionSelected, setCompositionSelected] = useState(false);
@@ -36,12 +49,19 @@ export function ConfigurationSections({ preview, drafts, onChange }: Configurati
       document.getElementById(focusField.current)?.focus();
       focusField.current = null;
     }
-  }, [active?.id, compositionSelected]);
+  });
 
   function selectSection(id: string): void {
     setSelected(id);
     setCompositionSelected(false);
   }
+
+  useImperativeHandle(ref, () => ({ focusField(fieldId) {
+    const section = sections.find((item) => item.fields.some((field) => field.id === fieldId));
+    if (!section) return;
+    focusField.current = fieldId;
+    selectSection(section.id);
+  } }));
 
   return (
     <div className="configuration-sections">
@@ -66,10 +86,11 @@ export function ConfigurationSections({ preview, drafts, onChange }: Configurati
               <span className="configuration-layer__content">
                 <strong>{section.title}</strong>
                 <span className="configuration-layer__values">
-                  {section.fields.slice(0, 3).map((field) => (
-                    <span key={field.id}><span>{field.label}</span><b>{fieldValue(field, drafts)}</b></span>
-                  ))}
+                  {section.fields.length > 0
+                    ? section.fields.map((field) => fieldValue(field, drafts)).filter((value) => value !== "—").slice(0, 3).join(" · ") || "Valori de completat"
+                    : section.facts.map((fact) => fact.value).join(" · ") || "Componentă inclusă"}
                 </span>
+                {section.fields.length === 0 ? <span className="configuration-layer__fixed">Proprietăți fixe</span> : null}
                 {missing.length > 0 ? <span className="configuration-layer__missing">De completat: {missing.map((fact) => fact.label).join(", ")}</span> : null}
               </span>
             </button>
@@ -98,20 +119,32 @@ export function ConfigurationSections({ preview, drafts, onChange }: Configurati
             hidden={compositionSelected || active?.id !== section.id}
           >
             <div className="configuration-inspector__heading">
-              <span className="section-label">Setări pentru această lucrare</span>
+              <span className="section-label">{section.fields.length > 0 ? "Setări pentru această lucrare" : "Componentă definită în produs"}</span>
               <h3>{section.title}</h3>
             </div>
+            <div className={`configuration-inspector__body${section.fields.length === 0 ? " configuration-inspector__body--readonly" : ""}`}>
             <div className="configuration-inspector__fields">
+              {section.fields.length === 0 ? <div className="configuration-readonly">
+                {section.facts.length > 0 ? <dl>{section.facts.map((fact) => <InfoRow key={fact.id} label={fact.label} value={fact.value} />)}</dl> : null}
+                <p>Pentru această lucrare, componenta folosește proprietățile fixe definite în catalog.</p>
+                <a className="text-link" href={`/catalog?product=${encodeURIComponent(preview.product.code)}`}>Vezi definiția produsului</a>
+              </div> : null}
               {section.fields.map((field) => field.type === "select" ? (
                 <SelectField key={field.id} id={field.id} label={field.label}
-                  value={drafts[field.id] ?? ""} hint={field.hint} options={field.options}
+                  value={drafts[field.id] ?? ""} hint={field.hint} error={preview.missing.find((fact) => fact.fieldId === field.id)?.label} options={field.options}
                   onChange={(value) => onChange(field.id, value)} />
               ) : (
                 <TextField key={field.id} id={field.id} label={field.label}
-                  value={drafts[field.id] ?? ""} hint={field.hint}
+                  value={drafts[field.id] ?? ""} hint={field.hint} error={preview.missing.find((fact) => fact.fieldId === field.id)?.label}
                   inputMode={field.type === "number" ? "decimal" : "text"}
                   onChange={(value) => onChange(field.id, value)} />
               ))}
+            </div>
+            {section.fields.length > 0 && (section.componentId ? section.facts : preview.product.identityFacts).length > 0 ? <aside className="configuration-definition" aria-label={`Definiție în context: ${section.title}`}>
+              <span className="section-label">Din definiția produsului</span>
+              <dl>{(section.componentId ? section.facts : preview.product.identityFacts).map((fact) => <InfoRow key={fact.id} label={fact.label} value={fact.value} />)}</dl>
+              <p>Proprietăți fixe ale produsului ales.</p>
+            </aside> : null}
             </div>
           </section>
         ))}

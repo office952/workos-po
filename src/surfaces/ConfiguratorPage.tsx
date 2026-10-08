@@ -11,7 +11,9 @@ import { postConfigurationConfirm } from "../api/confirm";
 import { TransportError, postJson, readTransportErrorCode, readTransportReasons } from "../api/http";
 import { postConfigurationPreview } from "../api/preview";
 import { postQuoteSnapshot } from "../api/quote";
-import { ConfigurationSections } from "../components/ConfigurationSections";
+import { ConfigurationSections, type ConfigurationSectionsHandle } from "../components/ConfigurationSections";
+import { ConfigurationReview } from "../components/ConfigurationReview";
+import { ConfigurationWorkAreas, type ConfigurationWorkArea } from "../components/ConfigurationWorkAreas";
 import { LoadingFloor } from "../components/LoadingFloor";
 import "../styles/surfaces/commercial.css";
 import "../styles/surfaces/configuration-workbench.css";
@@ -146,6 +148,11 @@ export function ConfiguratorPage({
   const [drafts, setDrafts] = useState<Record<string, string>>(() =>
     ownedDraftsForContext(stored, context),
   );
+  const [workArea, setWorkArea] = useState<ConfigurationWorkArea>("configuration");
+  const workAreaRef = useRef<ConfigurationWorkArea>(workArea);
+  useEffect(() => { workAreaRef.current = workArea; }, [workArea]);
+  const sectionsHandle = useRef<ConfigurationSectionsHandle>(null);
+  const costDetails = useRef<HTMLDetailsElement>(null);
   const [preview, setPreview] = useState<PreviewTransport | null>(null);
   const [previewState, setPreviewState] = useState<PreviewState>("idle");
   const [previewAttempt, setPreviewAttempt] = useState(0);
@@ -354,6 +361,7 @@ export function ConfiguratorPage({
     if (!preview?.reviewId || !activeProduct) {
       return;
     }
+    const fromTechnicalReview = workArea === "review";
     const generation = ++confirmGeneration.current;
     const sentKey = currentCommercialResultKey(preview.reviewId);
     setConfirmState("pending");
@@ -421,6 +429,7 @@ export function ConfiguratorPage({
         invalidateResources(`assembly:${assemblyId}`);
       }
       setConfirmState("idle");
+      if (fromTechnicalReview && workAreaRef.current === "review") setWorkArea("commercial");
     } catch (error) {
       if (generation !== confirmGeneration.current) {
         return;
@@ -536,31 +545,7 @@ export function ConfiguratorPage({
       workspace="configuration"
       surface="configuration-workbench"
       headerVariant="default"
-      eyebrow="Pregătire produs"
-      title="Configurator"
-      lead="Configurează produsul, verifică datele și pregătește oferta pentru această cerere."
-      meta={presentContextMeta([
-        labelsMatchingContext(stored, context).customerLabel,
-        labelsMatchingContext(stored, context).requestLabel,
-        "Costul intern nu este preț de vânzare.",
-      ])}
-    >
-      <div className="commercial-toolbar">
-        <a className="text-link" href={requestId ? requestHref(requestId) : "/cereri"}>← Înapoi la cerere</a>
-        <nav className="configuration-jump" aria-label="Etapele configurării">
-          <a href="#configuratie">Configurație</a>
-          <a href="#pregatire-oferta">Pregătire ofertă</a>
-        </nav>
-      </div>
-      {member.status === "error" && <InlineAlert tone="error" title="Configurația din ansamblu nu a putut fi citită"><Button variant="secondary" onClick={() => invalidateResources(`assembly-member:${assemblyId}:${memberRole}`)}>Reîncearcă citirea configurației</Button></InlineAlert>}
-      <fieldset className="configuration-lock" disabled={extensionPending || freezePending || Boolean(assemblyId && memberRole && !seedApplied)}>
-        <legend className="sr-only">Configurație și preț</legend>
-      <div className="configuration-construction">
-      <div id="configuratie" className="configuration-editor">
-      <SurfacePanel
-        title={preview?.product.label ?? "Configurație"}
-        label="Configurare"
-        status={
+      status={
           <StatusBadge
             label={
               !productCode
@@ -586,6 +571,33 @@ export function ConfiguratorPage({
             }
           />
         }
+      eyebrow="Pregătire produs"
+      title={preview?.product.label ?? "Configurator"}
+      lead=""
+      action={<a className="text-link" href={requestId ? requestHref(requestId) : "/cereri"}>← Înapoi la cerere</a>}
+      meta={presentContextMeta([
+        labelsMatchingContext(stored, context).customerLabel,
+        labelsMatchingContext(stored, context).requestLabel,
+      ])}
+    >
+      <ConfigurationWorkAreas selected={workArea} onSelect={setWorkArea} disabled={freezePending || extensionPending} />
+          {customerId === null || requestId === null ? (
+            <InlineAlert tone="blocked" title="Context comercial incomplet">
+              Completează clientul și cererea pentru a continua traseul asistat către ofertă.
+              Draftul tehnic local rămâne disponibil.
+              {productCode ? (
+                <a className="text-link" href="/cereri/noua">Creează o cerere</a>
+              ) : null}
+            </InlineAlert>
+          ) : null}
+      {member.status === "error" && <InlineAlert tone="error" title="Configurația din ansamblu nu a putut fi citită"><Button variant="secondary" onClick={() => invalidateResources(`assembly-member:${assemblyId}:${memberRole}`)}>Reîncearcă citirea configurației</Button></InlineAlert>}
+      <fieldset className="configuration-lock" disabled={extensionPending || freezePending || Boolean(assemblyId && memberRole && !seedApplied)}>
+        <legend className="u-visually-hidden">Configurație și preț</legend>
+      <section id="configuration-area-configuration" role="tabpanel" aria-labelledby="configuration-tab-configuration" hidden={workArea !== "configuration"}>
+      <div id="configuratie" className="configuration-editor">
+      <SurfacePanel
+        variant="flush"
+        label="Configurare"
         busy={previewState === "pending" && !preview}
       >
         {!productCode ? (
@@ -621,42 +633,25 @@ export function ConfiguratorPage({
           </InlineAlert>
         ) : null}
         {preview ? (
-          <ConfigurationSections key={`${customerId}:${requestId}:${productCode}:${assemblyId}:${memberRole}`}
+          <ConfigurationSections ref={sectionsHandle} key={`${customerId}:${requestId}:${productCode}:${assemblyId}:${memberRole}`}
             preview={preview} drafts={drafts} onChange={updateField} />
         ) : null}
       </SurfacePanel>
       </div>
+      <div className="configuration-action-tray">
+        <div><strong>Următorul pas: verificarea configurației</strong><p>Verifică valorile înainte de confirmare. Costul și prețul se consultă la pregătirea ofertei.</p></div>
+        <Button disabled={!preview || previewState !== "ready" || confirmPending} onClick={() => setWorkArea("review")}>Verifică configurația</Button>
+      </div>
+      </section>
+      <section id="configuration-area-review" role="tabpanel" aria-labelledby="configuration-tab-review" hidden={workArea !== "review"}>
+        {preview ? <ConfigurationReview preview={preview} drafts={drafts} onEdit={(fieldId) => {
+          setWorkArea("configuration");
+          sectionsHandle.current?.focusField(fieldId);
+        }} /> : <p>Rezumatul apare după citirea configurației produsului.</p>}
       <div className="stack configuration-review">
         <SurfacePanel variant="quiet" title="Stare și acțiune" label="Stare">
           {previewState === "pending" ? (
             <LoadingIndicator label="Se actualizează previzualizarea" />
-          ) : null}
-          {seller.status === "error" ? (
-            <InlineAlert tone="error" title="Nu am putut verifica datele firmei emitente">
-              Emiterea ofertei așteaptă verificarea. Consultarea și pregătirea tehnică pot continua.
-              <Button
-                variant="secondary"
-                onClick={() => invalidateResources(resourceKeys.seller())}
-              >
-                Reîncearcă
-              </Button>
-            </InlineAlert>
-          ) : null}
-          {sellerConfigured === false ? (
-            <SellerSetupPanel
-              onSaved={() => {
-                setFreezeError(null);
-              }}
-            />
-          ) : null}
-          {customerId === null || requestId === null ? (
-            <InlineAlert tone="blocked" title="Context comercial incomplet">
-              Completează clientul și cererea pentru a continua traseul asistat către ofertă.
-              Draftul tehnic local rămâne disponibil.
-              {productCode ? (
-                <a className="text-link" href="/cereri/noua">Creează o cerere</a>
-              ) : null}
-            </InlineAlert>
           ) : null}
           {preview?.readiness === "blocked" ? (
             <InlineAlert tone="blocked" title="Lipsesc fapte">
@@ -683,52 +678,46 @@ export function ConfiguratorPage({
               {confirmError}
             </InlineAlert>
           ) : null}
-          <Button
-            disabled={!ready || confirmPending || !productCode}
-            onClick={() => void confirm()}
-          >
-            Confirmă configurația
-          </Button>
         </SurfacePanel>
-        <SurfacePanel title="Cost intern" label="Cost">
-          {!confirmation ? (
-            <p>Confirmă configurația pentru a citi costul intern cunoscut.</p>
-          ) : null}
-          {confirmation && !confirmation.financialVisible ? (
-            <InlineAlert tone="blocked" title="Cost intern indisponibil">
-              Contextul financiar nu este vizibil pentru acest rol.
+      </div>
+      <div className="configuration-action-tray">
+        <div><strong>{ready ? "Configurația poate fi confirmată" : "Verifică datele configurației"}</strong><p>Confirmarea trimite valorile curente pentru calcul. Nu creează oferta.</p></div>
+        <div className="configuration-action-tray__buttons">
+          <Button variant="secondary" onClick={() => setWorkArea("configuration")}>Editează configurația</Button>
+          <Button disabled={!ready || confirmPending || !productCode} onClick={() => void confirm()}>Confirmă configurația</Button>
+        </div>
+      </div>
+      </section>
+      <section id="configuration-area-commercial" role="tabpanel" aria-labelledby="configuration-tab-commercial" hidden={workArea !== "commercial"}>
+      <div id="pregatire-oferta" className="configuration-commercial" onClick={(event) => {
+        const target = event.target as HTMLElement;
+        const href = target.closest("a")?.getAttribute("href");
+        if (href === "#configuratie") {
+          event.preventDefault();
+          setWorkArea("configuration");
+        } else if (href?.startsWith("#cost-intern-")) {
+          if (costDetails.current) costDetails.current.open = true;
+        }
+      }}>
+          {seller.status === "error" ? (
+            <InlineAlert tone="error" title="Nu am putut verifica datele firmei emitente">
+              Emiterea ofertei așteaptă verificarea. Consultarea și pregătirea tehnică pot continua.
+              <Button
+                variant="secondary"
+                onClick={() => invalidateResources(resourceKeys.seller())}
+              >
+                Reîncearcă
+              </Button>
             </InlineAlert>
           ) : null}
-          {profile ? (
-            <div className="stack">
-              {confirmation?.completeness !== "COMPLETE" ? (
-                <SectionLabel>Linii cunoscute</SectionLabel>
-              ) : null}
-              <div className="equation" data-testid="profile-cost">
-                <p className="equation__label">{profile.label}</p>
-                <p className="equation__value">{profile.equationLabel}</p>
-              </div>
-            </div>
-          ) : null}
-          {confirmation ? (
-            <CommercialPricePanel
-              commercial={confirmation.commercial}
-              internalTotal={confirmation.total}
-              internalCurrency={confirmation.currency}
-              internalCompleteness={confirmation.completeness}
-              calculationStatus={confirmation.calculationStatus}
-              verificationStatus={confirmation.verificationStatus}
-              showCustomerPrice={false}
+          {sellerConfigured === false ? (
+            <SellerSetupPanel
+              onSaved={() => {
+                setFreezeError(null);
+              }}
             />
           ) : null}
-          {confirmation?.financialVisible &&
-          confirmation.costCompletenessIssues.length > 0 ? (
-            <CostCompletenessIssues issues={confirmation.costCompletenessIssues} />
-          ) : null}
-        </SurfacePanel>
-      </div>
-      </div>
-      <section id="pregatire-oferta" className="configuration-commercial" aria-labelledby="pregatire-oferta-title">
+
         <div className="configuration-commercial__heading">
           <h2 id="pregatire-oferta-title">Pregătire ofertă</h2>
           <p>Termenii și prețul clientului pentru configurația confirmată.</p>
@@ -736,7 +725,7 @@ export function ConfiguratorPage({
         <div className="configuration-commercial__grid">
         <SurfacePanel title="Cum stabilești prețul acestei oferte" label="Preț">
           {!confirmation ? (
-            <p>După confirmarea configurației alegi metoda de preț pentru această ofertă.</p>
+            <div className="stack"><p>După confirmarea configurației alegi metoda de preț pentru această ofertă.</p><Button variant="secondary" onClick={() => setWorkArea("review")}>Verifică și confirmă configurația</Button></div>
           ) : (
             <>
               <fieldset className="fieldset">
@@ -976,9 +965,53 @@ export function ConfiguratorPage({
           ) : null}
         </SurfacePanel>
       </div>
+      <div className="configuration-cost">
+        <SurfacePanel title="Cost intern" label="Cost">
+          {!confirmation ? (
+            <p>Confirmă configurația pentru a citi costul intern cunoscut.</p>
+          ) : null}
+          {confirmation && !confirmation.financialVisible ? (
+            <InlineAlert tone="blocked" title="Cost intern indisponibil">
+              Contextul financiar nu este vizibil pentru acest rol.
+            </InlineAlert>
+          ) : null}
+          {confirmation ? (
+            <CommercialPricePanel
+              commercial={confirmation.commercial}
+              internalTotal={confirmation.total}
+              internalCurrency={confirmation.currency}
+              internalCompleteness={confirmation.completeness}
+              calculationStatus={confirmation.calculationStatus}
+              verificationStatus={confirmation.verificationStatus}
+              showCustomerPrice={false}
+            />
+          ) : null}
+          {confirmation?.financialVisible ? <details className="configuration-cost-details" ref={costDetails}>
+            <summary>Detalii de calcul și verificare{confirmation.costCompletenessIssues.length > 0 ? ` · ${confirmation.costCompletenessIssues.length}` : ""}</summary>
+          {profile ? (
+            <div className="stack">
+              {confirmation?.completeness !== "COMPLETE" ? (
+                <SectionLabel>Linii cunoscute</SectionLabel>
+              ) : null}
+              <div className="equation" data-testid="profile-cost">
+                <p className="equation__label">{profile.label}</p>
+                <p className="equation__value">{profile.equationLabel}</p>
+              </div>
+            </div>
+          ) : null}
+          {confirmation?.financialVisible &&
+          confirmation.costCompletenessIssues.length > 0 ? (
+            <CostCompletenessIssues issues={confirmation.costCompletenessIssues} />
+          ) : null}
+          </details> : null}
+        </SurfacePanel>
+      </div>
+      </div>
       </section>
       </fieldset>
+      <div className="configuration-extension">
       {!assemblyId && customerId && requestId && activeProduct && <ExtendRequestProduct key={`${requestId}:${activeProduct}`} customerId={customerId} requestId={requestId} productCode={activeProduct} reviewId={preview?.reviewId ?? null} values={preview?.formSchema ? valuesForTransport(drafts, preview.formSchema) : valuesBeforeSchema(drafts)} drafts={drafts} confirmed={Boolean(confirmation && priceIsCurrent && !confirmPending && !freezePending && previewState !== "pending")} commercial={commercialPayload()} onPending={setExtensionPending} />}
+      </div>
     </SlicePage>
   );
 }

@@ -72,7 +72,7 @@ function presentSection(value: unknown): PresentedFormSection | null {
   if (fields.length === 0) {
     return null;
   }
-  return { id: record.id, title: record.title, fields };
+  return { id: record.id, title: record.title, fields, ...(typeof record.componentId === "string" ? { componentId: record.componentId } : {}) };
 }
 
 export function presentFormSchema(value: unknown): PresentedFormSchema | null {

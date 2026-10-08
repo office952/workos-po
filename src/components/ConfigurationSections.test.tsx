@@ -7,7 +7,7 @@ import { ConfigurationSections } from "./ConfigurationSections";
 
 const preview: PreviewTransport = {
   product: { code: "synthetic-product", label: "Produs sintetic", identityFacts: [
-    { id: "fixed-material", label: "Material fix", value: "Material definit în catalog" },
+    { id: "fixed-material", componentId: "BACK", label: "Material fix", value: "Material definit în catalog" },
   ] },
   values: {},
   formSchema: { id: "synthetic-form", sections: [
@@ -66,7 +66,55 @@ describe("ConfigurationSections", () => {
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(onChange).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "← Înapoi" }));
+    expect(screen.getByRole("region", { name: "Setări: Spate" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "← Înapoi" }));
     expect(screen.getByLabelText("Adâncime")).toHaveValue("60");
+  });
+
+  it("exposes all selected components without duplicating schema-bound editors or inventing controls", async () => {
+    const onChange = vi.fn();
+    const complete: PreviewTransport = {
+      ...preview,
+      product: { ...preview.product, identityFacts: [
+        ...preview.product.identityFacts,
+        { id: "lighting", componentId: "LIGHTING", label: "Iluminare", value: "Iluminare frontală" },
+      ] },
+      formSchema: { id: "complete", sections: [
+        preview.formSchema!.sections[0],
+        { ...preview.formSchema!.sections[1], componentId: "VOLUME", title: "Volum" },
+        { id: "face", componentId: "FACE", title: "Față", fields: [
+          { id: "finish", label: "Finisaj", type: "text", required: false, options: [] },
+        ] },
+      ] },
+      selectedComponents: [
+        { id: "FACE", label: "Față" }, { id: "VOLUME", label: "Volum" },
+        { id: "BACK", label: "Spate" }, { id: "LIGHTING", label: "Electrică / iluminare" },
+      ],
+    };
+    render(<ConfigurationSections preview={complete} drafts={{ depth: "60" }} onChange={onChange} />);
+    const user = userEvent.setup();
+    expect(screen.getAllByRole("button", { name: "Față" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Volum" })).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Spate" }));
+    const back = screen.getByRole("region", { name: "Setări: Spate" });
+    expect(back).toHaveTextContent("Material definit în catalog");
+    expect(back).not.toHaveTextContent("Iluminare frontală");
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Vezi definiția produsului" })).toHaveAttribute("href", "/catalog?product=synthetic-product");
+    await user.click(screen.getByRole("button", { name: "Electrică / iluminare" }));
+    expect(screen.getByRole("region", { name: "Setări: Electrică / iluminare" })).toHaveTextContent("Iluminare frontală");
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Volum" }));
+    expect(screen.getByLabelText("Adâncime")).toHaveValue("60");
+  });
+
+  it("does not create lighting from a product identity fact when that component is absent", () => {
+    render(<ConfigurationSections preview={{ ...preview, product: { ...preview.product, identityFacts: [
+      { id: "lighting", label: "Iluminare", value: "Fără iluminare" },
+    ] } }} drafts={{}} onChange={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: /Electrică|Iluminare/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Spate" })).toBeInTheDocument();
   });
 
   it("follows a changing server schema without retaining unsupported controls", async () => {

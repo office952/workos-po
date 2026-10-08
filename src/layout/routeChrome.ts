@@ -108,7 +108,7 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         workspace: "configuration",
         eyebrow: "Pregătire produs",
         title: "Configurator",
-        lead: "Configurează produsul, verifică datele și pregătește oferta pentru această cerere.",
+        lead: "",
         surface: "configuration-workbench",
       };
     case "quotes":
