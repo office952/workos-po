@@ -272,6 +272,43 @@ async function confirmReady() {
 }
 
 describe("ConfiguratorPage", () => {
+  it("blocks confirmation immediately after an edit until the server rechecks it", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    const original = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation((input, init) => {
+      if (String(input).endsWith("/preview") && String(init?.body).includes("NORD")) {
+        return new Promise(() => {});
+      }
+      return original(input, init);
+    });
+    renderConfigurator();
+    await screen.findByLabelText("Textul literelor");
+    expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
+    await userEvent.type(screen.getByLabelText("Textul literelor"), "NORD");
+    expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeDisabled();
+    expect(screen.queryByText("Gata de confirmare")).not.toBeInTheDocument();
+  });
+
+  it("retries a failed preview with the same owned draft", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    const original = fetchMock.getMockImplementation()!;
+    let attempts = 0;
+    fetchMock.mockImplementation((input, init) => {
+      if (String(input).endsWith("/preview") && ++attempts === 1) {
+        return jsonResponse({ reasons: ["Verificarea temporar indisponibilă"] }, 503);
+      }
+      return original(input, init);
+    });
+    seedOwnedDrafts({ "root.inscription": "NORD" });
+    renderConfigurator();
+    await screen.findByRole("button", { name: "Reîncearcă previzualizarea" });
+    expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Reîncearcă previzualizarea" }));
+    expect(await screen.findByLabelText("Textul literelor")).toHaveValue("NORD");
+    expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
+    expect(attempts).toBe(2);
+  });
+
   it("keeps technical drafts and commercial terms while moving between work areas", async () => {
     const fetchMock = installFetch({ rate: 3, cost: 37.5 });
     renderConfigurator();

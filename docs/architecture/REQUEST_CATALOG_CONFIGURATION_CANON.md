@@ -30,6 +30,12 @@ Catalog has no customer/request prerequisite, no remembered commercial binding, 
 
 A supplied/existing site panel remains HostContext. A fabricated ACM cassette is a ProductTemplate/member; those concepts must not be merged. Assembly v1/v2 are existing persisted domain contract versions, not competing UI variants.
 
+## Configurator presentation
+
+The 2026-10-08 Owner-directed workspace presents the returned form sections as a vertical construction list and one settings editor at a time. Switching sections does not confirm, calculate, mutate request status or erase drafts. Summaries display entered facts and option labels; they do not calculate measurements or infer readiness. The composition view reads product identity facts and selected components as read-only. Editable sections follow the actual server schema; no unsupported back/lighting controls or synthetic group overrides are created merely to complete an illustration.
+
+Missing-field navigation uses the server's field identifiers to open and focus the corresponding editor. Confirmation is unavailable during preview refresh or after a preview error; retry preserves the request/product draft. Cost and client price remain in their existing separate preparation area, with existing stale-price and freeze protections. Graphics/images are deferred. Multi-group inheritance and arbitrary per-layer overrides remain future domain contracts, not local UI state advertised as persisted product truth.
+
 ## State and failure rules
 
 - Server session determines organization; no frontend organization override or client-specific fork.

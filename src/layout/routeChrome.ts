@@ -108,8 +108,8 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         workspace: "configuration",
         eyebrow: "Pregătire produs",
         title: "Configurator",
-        lead: "Completează faptele confirmate, verifică costul intern și prețul clientului, apoi îngheață oferta.",
-        pilot: { surface: "configuration-workbench" },
+        lead: "Configurează produsul, verifică datele și pregătește oferta pentru această cerere.",
+        surface: "configuration-workbench",
       };
     case "quotes":
       return {

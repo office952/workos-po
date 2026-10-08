@@ -91,4 +91,24 @@ Checks for this stage:
 
 Browser status: **BLOCKED / NOT PROVEN**. No Chromium executable was installed in this workspace; Playwright's browser download failed with invalid/truncated ZIP responses. No geometry, dark/light screenshots, keyboard acceptance or Windows-runtime proof is claimed for this stage. Static responsive rules do not replace browser proof. The Owner's existing UI/API processes and all real data remain untouched. The Windows preview at 5185 still serves the earlier candidate until its clean review checkout is explicitly updated and rebuilt.
 
-Next gate: update only the existing synthetic candidate checkout to this source commit; prove `/cereri/noua` at 1920, 1440, **768**, 390 and 320px, both themes, customer/CUI paths, product→undecided selection, focus and save navigation. Verify the preserved register as well. Do not extend this review to Configurator redesign, offer freeze/order/production, migrations/seeds, real data or Owner reference ports.
+Handoff update: the Owner requested Cursor to load/build/run only, with no audit, screenshots or browser review. The Owner then responded positively and asked to continue to the Configurator. This is a positive inspection response, not an automated geometry/accessibility evidence pack.
+
+## Configurator workspace stage — 2026-10-08
+
+Source base: `e62c1ad9da558347af554356e3a290a80c87072a`; same active source branch. Owner-approved direction: technical workspace first, vertical layers/sections and focused settings; graphics and imagery later.
+
+Research used: the supplied Product Configuration Research Dossier, especially fixed/configurable/measurement ownership, focused component editing and assembly/member continuity; supplied ProductDefinition compiler, ProductAggregate and Pricing Registry documents for separation of technical structure and commercial calculation. Their historical Python routes/statuses are reference research, not current implementation truth. Current PO AGENTS, schemas, transport/adapters and architecture canon control the implementation.
+
+Delivered:
+- Compact Configurator header/loading chrome, full-width desktop construction area, vertical server-schema section selection with entered-value summaries, one visible editor and previous/next navigation.
+- Read-only composition from server identity facts and selected components. Fixed materials do not become free-text product options. No illustrations or invented component fields.
+- Server-reported missing fields open/focus the relevant section; conditional controls track the returned schema. Section navigation preserves all owned drafts and does not call confirm or attach APIs.
+- Confirmation locks immediately after an edit until preview succeeds; failed preview remains locked and supports explicit retry with the same draft.
+- Existing internal cost, customer price, stale-result protection, freeze, seller recovery and typed assembly continuation are preserved. No engine/API/schema, seeds, migrations or real-data operations.
+- Styles remain in `configuration-workbench.css`; its lock styling moved out of the unrelated Product System stylesheet. No new UI framework or styling bulk in ui.css.
+
+Verification: frontend typecheck/build pass; lint zero errors and the same 11 existing warnings. Engine typecheck/lint pass with unchanged engine source. Five workspace/Configurator/schema/loading suites: **48 tests**. Four assembly/session/intake/request compatibility suites: **53 tests**. Final build assets: `index-BmN7eixV.js`, `index-GkHWiGoy.css`; existing bundle-size advisory persists. Total **101 tests / 9 suites**, covering section continuity, option labels, read-only composition, missing-field focus, changing schema, pending-preview lock, retry, commercial freshness, assembly attach/member reopening and request context. No full-suite/API runtime or browser rerun is claimed.
+
+Browser/visual status remains **NOT PROVEN for this source delta**: the local environment has no usable browser executable, as recorded in the preceding stage. Owner manual inspection is the next gate after loading/building the published commit in the existing synthetic candidate. Cursor is requested to run only. Earlier runtime evidence at 4a100f3 does not prove this new layout. Responsive source rules cover desktop, 768px and phone, but are not geometry evidence.
+
+Remaining limits: images/CAD illustration, persisted arbitrary group/layer overrides, complete definition authoring and a further dedicated global-shell refinement. This source stage reorganizes existing server-authorized configuration; it does not manufacture these missing capabilities. No merge, deployment or Owner-reference runtime change.

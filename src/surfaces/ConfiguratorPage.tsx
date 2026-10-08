@@ -11,6 +11,7 @@ import { postConfigurationConfirm } from "../api/confirm";
 import { TransportError, postJson, readTransportErrorCode, readTransportReasons } from "../api/http";
 import { postConfigurationPreview } from "../api/preview";
 import { postQuoteSnapshot } from "../api/quote";
+import { ConfigurationSections } from "../components/ConfigurationSections";
 import { LoadingFloor } from "../components/LoadingFloor";
 import "../styles/surfaces/commercial.css";
 import "../styles/surfaces/configuration-workbench.css";
@@ -33,7 +34,6 @@ import { InfoRow } from "../components/InfoRow";
 import { InlineAlert } from "../components/InlineAlert";
 import { LoadingIndicator } from "../components/LoadingIndicator";
 import { SectionLabel } from "../components/SectionLabel";
-import { SelectField } from "../components/SelectField";
 import { StatusBadge } from "../components/StatusBadge";
 import { SurfacePanel } from "../components/SurfacePanel";
 import { TextField } from "../components/TextField";
@@ -148,6 +148,7 @@ export function ConfiguratorPage({
   );
   const [preview, setPreview] = useState<PreviewTransport | null>(null);
   const [previewState, setPreviewState] = useState<PreviewState>("idle");
+  const [previewAttempt, setPreviewAttempt] = useState(0);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [confirmState, setConfirmState] = useState<ActionState>("idle");
   const [confirmError, setConfirmError] = useState<string | null>(null);
@@ -336,11 +337,12 @@ export function ConfiguratorPage({
       cancelled = true;
       window.clearTimeout(handle);
     };
-  }, [draftKey, drafts, productCode, requestId, assemblyId, memberRole, seedApplied]);
+  }, [draftKey, drafts, productCode, requestId, assemblyId, memberRole, seedApplied, previewAttempt]);
 
   function updateField(fieldId: string, value: string): void {
     confirmGeneration.current += 1;
     draftsDirtyRef.current = true;
+    setPreviewState("pending");
     setDrafts((current) => ({ ...current, [fieldId]: value }));
     setConfirmation(null);
     setPricedResultKey(null);
@@ -499,7 +501,7 @@ export function ConfiguratorPage({
   }
 
   const profile = confirmation ? profilePresentation(confirmation.lines) : null;
-  const ready = preview?.readiness === "ready" && preview.reviewId !== null;
+  const ready = previewState === "ready" && preview?.readiness === "ready" && preview.reviewId !== null;
   const confirmPending = confirmState === "pending";
   const freezePending = freezeState === "pending";
   const priceIsCurrent =
@@ -533,10 +535,10 @@ export function ConfiguratorPage({
       currentHref="/configurator"
       workspace="configuration"
       surface="configuration-workbench"
-      headerVariant="pilot"
+      headerVariant="default"
       eyebrow="Pregătire produs"
       title="Configurator"
-      lead="Completează faptele confirmate, verifică costul intern și prețul clientului, apoi îngheață oferta."
+      lead="Configurează produsul, verifică datele și pregătește oferta pentru această cerere."
       meta={presentContextMeta([
         labelsMatchingContext(stored, context).customerLabel,
         labelsMatchingContext(stored, context).requestLabel,
@@ -554,12 +556,6 @@ export function ConfiguratorPage({
       <fieldset className="configuration-lock" disabled={extensionPending || freezePending || Boolean(assemblyId && memberRole && !seedApplied)}>
         <legend className="sr-only">Configurație și preț</legend>
       <div className="configuration-construction">
-      <nav className="configuration-outline" aria-label="Secțiunile produsului">
-        <span className="section-label">Produs</span>
-        {preview?.formSchema?.sections.map((section, index) => (
-          <a key={section.id} href={`#config-section-${index}`}>{section.title}</a>
-        ))}
-      </nav>
       <div id="configuratie" className="configuration-editor">
       <SurfacePanel
         title={preview?.product.label ?? "Configurație"}
@@ -569,6 +565,10 @@ export function ConfiguratorPage({
             label={
               !productCode
                 ? "Fără produs"
+                : previewState === "pending"
+                  ? "Se actualizează"
+                  : previewState === "error"
+                    ? "Verificare indisponibilă"
                 : preview?.readiness === "ready"
                   ? "Pregătit"
                   : preview?.readiness === "blocked"
@@ -576,7 +576,9 @@ export function ConfiguratorPage({
                     : "Se citește"
             }
             tone={
-              preview?.readiness === "ready"
+              previewState !== "ready"
+                ? "pending"
+                : preview?.readiness === "ready"
                 ? "ready"
                 : preview?.readiness === "blocked" || !productCode
                   ? "incomplete"
@@ -610,43 +612,18 @@ export function ConfiguratorPage({
             }
           >
             {previewError}
+            <Button variant="secondary" onClick={() => {
+              setPreviewState("pending");
+              setPreviewAttempt((attempt) => attempt + 1);
+            }}>
+              Reîncearcă previzualizarea
+            </Button>
           </InlineAlert>
         ) : null}
-        {preview && preview.product.identityFacts.length > 0 ? (
-          <dl>
-            {preview.product.identityFacts.map((fact) => (
-              <InfoRow key={fact.id} label={fact.label} value={fact.value} />
-            ))}
-          </dl>
+        {preview ? (
+          <ConfigurationSections key={`${customerId}:${requestId}:${productCode}:${assemblyId}:${memberRole}`}
+            preview={preview} drafts={drafts} onChange={updateField} />
         ) : null}
-        {preview?.formSchema?.sections.map((section, index) => (
-          <fieldset key={section.id} id={`config-section-${index}`} className="stack fieldset">
-            <legend className="fieldset__legend">{section.title}</legend>
-            {section.fields.map((field) =>
-              field.type === "select" ? (
-                <SelectField
-                  key={field.id}
-                  id={field.id}
-                  label={field.label}
-                  value={drafts[field.id] ?? ""}
-                  hint={field.hint}
-                  options={field.options}
-                  onChange={(value) => updateField(field.id, value)}
-                />
-              ) : (
-                <TextField
-                  key={field.id}
-                  id={field.id}
-                  label={field.label}
-                  value={drafts[field.id] ?? ""}
-                  hint={field.hint}
-                  inputMode={field.type === "number" ? "decimal" : "text"}
-                  onChange={(value) => updateField(field.id, value)}
-                />
-              ),
-            )}
-          </fieldset>
-        ))}
       </SurfacePanel>
       </div>
       <div className="stack configuration-review">
@@ -689,7 +666,7 @@ export function ConfiguratorPage({
           ) : null}
           {ready ? (
             <InlineAlert tone="pending" title="Gata de confirmare">
-              Confirmarea trimite valorile curente. Calculul rămâne la motorul de produs.
+              Verifică valorile introduse, apoi confirmă configurația pentru calculul costului și pregătirea prețului.
             </InlineAlert>
           ) : null}
           {preview?.selectedComponents.length ? (
@@ -707,7 +684,7 @@ export function ConfiguratorPage({
             </InlineAlert>
           ) : null}
           <Button
-            disabled={!ready || confirmPending || previewState === "pending" || !productCode}
+            disabled={!ready || confirmPending || !productCode}
             onClick={() => void confirm()}
           >
             Confirmă configurația
