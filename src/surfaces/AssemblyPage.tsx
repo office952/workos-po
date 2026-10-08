@@ -4,10 +4,12 @@ import { invalidateCustomerProjections } from "../data/invalidation";
 import { Button } from "../components/Button";
 import { InfoRow } from "../components/InfoRow";
 import { InlineAlert } from "../components/InlineAlert";
+import { StatusBadge } from "../components/StatusBadge";
 import { SurfacePanel } from "../components/SurfacePanel";
 import { LoadingFloor } from "../components/LoadingFloor";
 import "../styles/surfaces/commercial.css";
 import { writeResource } from "../data/resourceCache";
+import { resourceKeys } from "../data/resourceKeys";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { configuratorHref, requestHref } from "../routing/appRoute";
@@ -54,8 +56,32 @@ export function assemblyLead(hasLogo: boolean, lettersPresent: boolean): string 
   return "Configurează panoul și logo-ul. Literele sunt opționale.";
 }
 
-function assemblyKey(assemblyId: string): string {
-  return `assembly:${assemblyId}`;
+function memberConfiguratorHref(
+  assembly: AssemblyView,
+  scope: AssemblyScope,
+): string | null {
+  if (!scope.productCode || !scope.role || !assembly.customerId || !assembly.requestId) {
+    return null;
+  }
+  return configuratorHref({
+    customerId: assembly.customerId,
+    requestId: assembly.requestId,
+    productCode: scope.productCode,
+  }).concat(
+    `&assembly=${encodeURIComponent(assembly.assemblyId)}&role=${encodeURIComponent(scope.role)}`,
+  );
+}
+
+function firstIncompleteMemberScope(scopes: AssemblyScope[]): AssemblyScope | null {
+  for (const scope of scopes) {
+    if (scope.id === "summary" || scope.id === "relation") {
+      continue;
+    }
+    if (!scope.complete) {
+      return scope;
+    }
+  }
+  return null;
 }
 
 async function loadAssembly(assemblyId: string): Promise<AssemblyView> {
@@ -70,8 +96,10 @@ export function AssemblyPage() {
   const [scopeId, setScopeId] = useState<AssemblyScope["id"]>("summary");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const loaded = useResource(assemblyId ? assemblyKey(assemblyId) : null, () =>
-    loadAssembly(assemblyId ?? ""),
+  const loaded = useResource(
+    assemblyId ? resourceKeys.assembly(assemblyId) : null,
+    () => loadAssembly(assemblyId ?? ""),
+    { staleMs: -1 },
   );
   const assembly = loaded.data ?? null;
 
@@ -84,7 +112,7 @@ export function AssemblyPage() {
     try {
       const body = (await postJson(path)) as { assembly: AssemblyView };
       if (assemblyId) {
-        writeResource(assemblyKey(assemblyId), body.assembly);
+        writeResource(resourceKeys.assembly(assemblyId), body.assembly);
       }
       invalidateCustomerProjections();
     } catch {
@@ -100,6 +128,9 @@ export function AssemblyPage() {
   const hasLogo = assembly?.scopes.some((item) => item.id === "logo") ?? false;
   const lettersPresent =
     assembly?.scopes.some((item) => item.id === "letters" && item.complete) ?? false;
+  const incompleteMember = assembly ? firstIncompleteMemberScope(assembly.scopes) : null;
+  const incompleteMemberHref =
+    assembly && incompleteMember ? memberConfiguratorHref(assembly, incompleteMember) : null;
 
   return (
     <SlicePage
@@ -137,6 +168,12 @@ export function AssemblyPage() {
               {assembly.scopes.map((item) => (
                 <Button variant="secondary" aria-pressed={scope?.id === item.id} key={item.id} onClick={() => setScopeId(item.id)}>
                   {item.title}
+                  {item.id !== "summary" && item.id !== "relation" ? (
+                    <StatusBadge
+                      label={item.complete ? "Complet" : "De configurat"}
+                      tone={item.complete ? "ready" : "incomplete"}
+                    />
+                  ) : null}
                 </Button>
               ))}
             </div>
@@ -166,6 +203,35 @@ export function AssemblyPage() {
           <SurfacePanel title="Rezumat ansamblu" label="Rezumat">
             <InfoRow label="Ansamblu" value={assembly.label} />
             <InfoRow label="Stare" value={assembly.statusLabel} />
+            <dl>
+              {assembly.scopes
+                .filter((item) => item.id !== "summary" && item.id !== "relation")
+                .map((item) => (
+                  <InfoRow
+                    key={item.id}
+                    label={item.title}
+                    value={item.complete ? "Complet" : "Necesită configurare"}
+                  />
+                ))}
+            </dl>
+            {!assembly.stale && incompleteMember && incompleteMemberHref ? (
+              <InlineAlert tone="pending" title="Următorul pas">
+                Configurează {incompleteMember.title.toLowerCase()} înainte de confirmarea ansamblului.{" "}
+                <a className="text-link" href={incompleteMemberHref}>
+                  Deschide {incompleteMember.title.toLowerCase()}
+                </a>
+              </InlineAlert>
+            ) : null}
+            {!assembly.stale && assembly.canConfirm && assembly.statusLabel !== "Confirmat" ? (
+              <InlineAlert tone="pending" title="Gata de confirmare">
+                Toate părțile ansamblului sunt complete. Confirmă ansamblul pentru a pregăti oferta comună.
+              </InlineAlert>
+            ) : null}
+            {assembly.statusLabel === "Confirmat" && !assembly.quote ? (
+              <InlineAlert tone="pending" title="Pregătire ofertă">
+                Ansamblul este confirmat. Îngheață oferta comună pentru a continua comercial.
+              </InlineAlert>
+            ) : null}
             {assembly.stale ? (
               <Button disabled={pending} onClick={() => void run(`/api/assemblies/${assembly.assemblyId}/review`)}>
                 Revizuiește ansamblul

@@ -24,6 +24,17 @@ export function invalidateAfterRequestDetailChange(requestId: string): void {
   invalidateCustomerProjections();
 }
 
+export function invalidateAfterAssemblyMemberChange(
+  assemblyId: string,
+  memberRole?: string,
+): void {
+  const keys = [resourceKeys.assembly(assemblyId)];
+  if (memberRole) {
+    keys.push(resourceKeys.assemblyMember(assemblyId, memberRole));
+  }
+  invalidateResources({ refetchUnobserved: true }, ...keys);
+}
+
 export function invalidateAfterAcceptQuote(quoteSnapshotId?: string): void {
   const keys = [resourceKeys.quotes()];
   if (quoteSnapshotId) {

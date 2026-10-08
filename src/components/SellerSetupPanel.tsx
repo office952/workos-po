@@ -41,7 +41,12 @@ export function SellerSetupPanel({ onSaved }: SellerSetupPanelProps) {
 
   return (
     <InlineAlert tone="blocked" title="Datele firmei emitente lipsesc">
-      Datele firmei emitente trebuie configurate înainte de a crea oferta.
+      Organizația curentă nu are încă datele minime de emitere (denumire legală). Completează denumirea
+      aici pentru acest workspace sau deschide setările comerciale ale organizației pentru politici și
+      termeni.{" "}
+      <a className="text-link" href="/admin/commercial">
+        Setări comerciale organizație
+      </a>
       <TextField
         id="seller-legal-name"
         label="Denumire firmă"

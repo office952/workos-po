@@ -587,8 +587,9 @@ describe("ConfiguratorPage", () => {
     renderConfigurator({ requestId: null });
     await confirmReady();
     expect(
-      screen.getByText("Datele firmei emitente trebuie configurate înainte de a crea oferta."),
+      screen.getByRole("link", { name: "Setări comerciale organizație" }),
     ).toBeInTheDocument();
+    expect(screen.getByText(/Organizația curentă nu are încă datele minime de emitere/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeDisabled();
     expect(
       fetchMock.mock.calls.some(

@@ -1,13 +1,20 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { invalidateAfterAssemblyMemberChange } from "./invalidation";
 import {
   discardResourceCache,
   invalidateResources,
   loadResource,
   readResource,
+  resetResourceCache,
   subscribeResource,
   writeResource,
 } from "./resourceCache";
 import { TransportError } from "../api/http";
+import { resourceKeys } from "./resourceKeys";
+
+afterEach(() => {
+  resetResourceCache();
+});
 
 describe("resourceCache", () => {
   it.each([401, 403])("discards cached data when a refresh returns %i", async (status) => {
@@ -38,6 +45,7 @@ describe("resourceCache", () => {
     expect(listener).toHaveBeenCalled();
     stop();
   });
+
   it("deduplicates in-flight reads for the same key", async () => {
     let started = 0;
     let release!: (value: string) => void;
@@ -78,6 +86,33 @@ describe("resourceCache", () => {
     expect(readResource<string>("stale").data).toBe("next");
   });
 
+  it("refetches observed resources immediately after invalidation", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce("old")
+      .mockResolvedValueOnce("next");
+    const stop = subscribeResource("stale-observed", vi.fn());
+    await loadResource("stale-observed", fetcher);
+    invalidateResources("stale-observed");
+    await vi.waitFor(() => {
+      expect(readResource<string>("stale-observed").data).toBe("next");
+    });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    stop();
+  });
+
+  it("marks stale but does not refetch unobserved resources on explicit invalidation", async () => {
+    const fetcher = vi.fn(async () => "v1");
+    await loadResource("unobserved", fetcher);
+    invalidateResources("unobserved");
+    await Promise.resolve();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(readResource<string>("unobserved")).toMatchObject({
+      data: "v1",
+      updatedAt: null,
+    });
+  });
+
   it("notifies subscribers when a value is written", () => {
     const listener = vi.fn();
     const stop = subscribeResource("written", listener);
@@ -85,5 +120,66 @@ describe("resourceCache", () => {
     expect(listener).toHaveBeenCalled();
     expect(readResource<number>("written").data).toBe(12);
     stop();
+  });
+
+  it("survives repeated invalidation while unobserved", async () => {
+    const fetcher = vi.fn(async () => "v1");
+    await loadResource("repeat-unobserved", fetcher);
+    invalidateResources("repeat-unobserved");
+    invalidateResources("repeat-unobserved");
+    await Promise.resolve();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(readResource<string>("repeat-unobserved").updatedAt).toBeNull();
+  });
+
+  it("handles repeated invalidation for observed keys", async () => {
+    const fetcher = vi.fn().mockResolvedValue("fresh");
+    const stop = subscribeResource("repeat-observed", vi.fn());
+    await loadResource("repeat-observed", fetcher);
+    invalidateResources("repeat-observed");
+    invalidateResources("repeat-observed");
+    await vi.waitFor(() => {
+      expect(fetcher.mock.calls.length).toBeGreaterThanOrEqual(2);
+    });
+    expect(readResource<string>("repeat-observed").data).toBe("fresh");
+    stop();
+  });
+});
+
+describe("resourceCache assembly invalidation", () => {
+  it("refreshes unobserved assembly data after member confirmation invalidation", async () => {
+    const assemblyId = "asm:test";
+    const key = resourceKeys.assembly(assemblyId);
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce({ canConfirm: false })
+      .mockResolvedValueOnce({ canConfirm: true });
+
+    await loadResource(key, fetcher);
+    expect(readResource<{ canConfirm: boolean }>(key).data?.canConfirm).toBe(false);
+
+    invalidateAfterAssemblyMemberChange(assemblyId);
+    await vi.waitFor(() => {
+      expect(fetcher).toHaveBeenCalledTimes(2);
+    });
+    expect(readResource<{ canConfirm: boolean }>(key).data?.canConfirm).toBe(true);
+  });
+
+  it("updates mounted assembly readers after invalidation", async () => {
+    const assemblyId = "asm:mounted";
+    const key = resourceKeys.assembly(assemblyId);
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce({ canConfirm: false })
+      .mockResolvedValueOnce({ canConfirm: true });
+    const listener = vi.fn();
+
+    subscribeResource(key, listener);
+    await loadResource(key, fetcher);
+    invalidateAfterAssemblyMemberChange(assemblyId);
+    await vi.waitFor(() => {
+      expect(readResource<{ canConfirm: boolean }>(key).data?.canConfirm).toBe(true);
+    });
+    expect(listener).toHaveBeenCalled();
   });
 });

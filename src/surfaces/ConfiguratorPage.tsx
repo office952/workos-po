@@ -19,7 +19,7 @@ import "../styles/surfaces/commercial.css";
 import "../styles/surfaces/configuration-workbench.css";
 import { SellerSetupPanel } from "../components/SellerSetupPanel";
 import { ExtendRequestProduct } from "../components/ExtendRequestProduct";
-import { invalidateAfterFreezeQuote } from "../data/invalidation";
+import { invalidateAfterAssemblyMemberChange, invalidateAfterFreezeQuote } from "../data/invalidation";
 import { invalidateResources } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadSellerConfigured } from "../data/routeLoaders";
@@ -45,7 +45,7 @@ import { CommercialPricePanel } from "../presentation/commercialPrice";
 import { CostCompletenessIssues } from "../presentation/costCompleteness";
 import { presentCostLine, selectLineByResource } from "../presentation/costLine";
 import { ALUMINIUM_RETURN_PROFILE_RESOURCE_ID } from "../reference/lettersProduct";
-import { requestProductHref, requestHref, quoteHref } from "../routing/appRoute";
+import { assemblyHref, requestProductHref, requestHref, quoteHref } from "../routing/appRoute";
 import {
   labelsMatchingContext,
   lastQuoteOwnedByContext,
@@ -71,6 +71,19 @@ type PreviewState = "idle" | "pending" | "ready" | "error";
 type ActionState = "idle" | "pending" | "error";
 
 export type AssemblyMemberRole = "SUPPORT_PANEL" | "SIGNAGE_LETTERS" | "SIGNAGE_LOGO";
+
+export function assemblyMemberContextLabel(role: AssemblyMemberRole | null): string | null {
+  switch (role) {
+    case "SUPPORT_PANEL":
+      return "Membru ansamblu: panou ACM";
+    case "SIGNAGE_LETTERS":
+      return "Membru ansamblu: litere volumetrice";
+    case "SIGNAGE_LOGO":
+      return "Membru ansamblu: logo volumetric";
+    default:
+      return null;
+  }
+}
 
 export function readAssemblyMemberRole(value: string | null): AssemblyMemberRole | null {
   switch (value) {
@@ -426,7 +439,7 @@ export function ConfiguratorPage({
         if (generation !== confirmGeneration.current) {
           return;
         }
-        invalidateResources(`assembly:${assemblyId}`);
+        invalidateAfterAssemblyMemberChange(assemblyId, memberRole);
       }
       setConfirmState("idle");
       if (fromTechnicalReview && workAreaRef.current === "review") setWorkArea("commercial");
@@ -455,7 +468,7 @@ export function ConfiguratorPage({
       setFreezeError(
         seller.status === "error"
           ? "Nu am putut verifica datele firmei emitente."
-          : "Datele firmei emitente lipsesc.",
+          : "Datele firmei emitente lipsesc. Completează denumirea legală în zona de mai sus sau în setările comerciale ale organizației.",
       );
       return;
     }
@@ -578,6 +591,7 @@ export function ConfiguratorPage({
       meta={presentContextMeta([
         labelsMatchingContext(stored, context).customerLabel,
         labelsMatchingContext(stored, context).requestLabel,
+        assemblyMemberContextLabel(memberRole),
       ])}
     >
       <ConfigurationWorkAreas selected={workArea} onSelect={setWorkArea} disabled={freezePending || extensionPending} />
@@ -940,7 +954,7 @@ export function ConfiguratorPage({
           ) : null}
           {assemblyId && confirmation ? (
             <p>
-              <a className="text-link" href={`/ansamblu?assembly=${encodeURIComponent(assemblyId)}`}>
+              <a className="text-link" href={assemblyHref(assemblyId)}>
                 Înapoi la ansamblu
               </a>
             </p>
