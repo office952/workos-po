@@ -41,22 +41,22 @@ describe("ConfigurationSections", () => {
     }] };
     render(<ConfigurationSections preview={bound} drafts={{ area: "45000" }} onChange={onChange} />);
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Inspectează Spate" }));
-    expect(screen.getByRole("button", { name: "Spate" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("region", { name: "Setări: Spate" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Selectează Spate" }));
+    expect(screen.getByRole("button", { name: "Selectează Spate" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("region", { name: "Inspector: Spate" })).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Modifică Suprafață" }));
-    expect(screen.getByRole("region", { name: "Setări: Dimensiuni" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Inspector: Dimensiuni" })).toBeVisible();
     expect(screen.getByLabelText("Suprafață")).toHaveFocus();
     expect(screen.getByLabelText("Suprafață")).toHaveValue("45000");
     expect(onChange).not.toHaveBeenCalled();
-    await user.selectOptions(screen.getByRole("combobox", { name: "Context și componente" }), "component:BACK");
-    expect(screen.getByRole("button", { name: "Inspectează Spate" })).toHaveAttribute("aria-pressed", "true");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Strat de construcție" }), "component:BACK");
+    expect(screen.getByRole("button", { name: "Selectează Spate" })).toHaveAttribute("aria-pressed", "true");
   });
   it("keeps one visible editor, option labels and drafts while switching sections", async () => {
     render(<Harness />);
     const user = userEvent.setup();
-    expect(screen.getByRole("region", { name: "Setări: Produs" })).toBeVisible();
-    expect(screen.queryByRole("region", { name: "Setări: Dimensiuni" })).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Inspector: Produs" })).toBeVisible();
+    expect(screen.queryByRole("region", { name: "Inspector: Dimensiuni" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Dimensiuni" })).toHaveTextContent("60 mm");
     await user.click(screen.getByRole("button", { name: "Dimensiuni" }));
     await user.selectOptions(screen.getByLabelText("Adâncime"), "80");
@@ -72,7 +72,7 @@ describe("ConfigurationSections", () => {
   it("opens and focuses a server-reported missing field in another section", async () => {
     render(<Harness />);
     await userEvent.click(screen.getByRole("button", { name: "Completează: Suprafață" }));
-    expect(screen.getByRole("region", { name: "Setări: Dimensiuni" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Inspector: Dimensiuni" })).toBeVisible();
     expect(screen.getByLabelText("Suprafață")).toHaveFocus();
   });
 
@@ -86,7 +86,7 @@ describe("ConfigurationSections", () => {
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(onChange).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "← Înapoi" }));
-    expect(screen.getByRole("region", { name: "Setări: Spate" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Inspector: Spate" })).toBeVisible();
     await user.click(screen.getByRole("button", { name: "← Înapoi" }));
     expect(screen.getByLabelText("Adâncime")).toHaveValue("60");
   });
@@ -116,13 +116,13 @@ describe("ConfigurationSections", () => {
     expect(screen.getAllByRole("button", { name: "Față" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "Volum" })).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: "Spate" }));
-    const back = screen.getByRole("region", { name: "Setări: Spate" });
+    const back = screen.getByRole("region", { name: "Inspector: Spate" });
     expect(back).toHaveTextContent("Material definit în catalog");
     expect(back).not.toHaveTextContent("Iluminare frontală");
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Vezi definiția produsului" })).toHaveAttribute("href", "/catalog?product=synthetic-product");
     await user.click(screen.getByRole("button", { name: "Electrică / iluminare" }));
-    expect(screen.getByRole("region", { name: "Setări: Electrică / iluminare" })).toHaveTextContent("Iluminare frontală");
+    expect(screen.getByRole("region", { name: "Inspector: Electrică / iluminare" })).toHaveTextContent("Iluminare frontală");
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(onChange).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Volum" }));
@@ -143,7 +143,7 @@ describe("ConfigurationSections", () => {
     rerender(<ConfigurationSections preview={{ ...preview, missing: [], formSchema: {
       id: "conditional-form", sections: [preview.formSchema!.sections[0]],
     } }} drafts={{ depth: "60" }} onChange={vi.fn()} />);
-    expect(screen.getByRole("region", { name: "Setări: Produs" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Inspector: Produs" })).toBeVisible();
     expect(screen.queryByLabelText("Adâncime")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Completează: Suprafață" })).not.toBeInTheDocument();
   });
