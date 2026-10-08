@@ -37,4 +37,7 @@ export const resourceKeys = {
   organizationAccessAdmin: () => "organization-access-admin",
   peopleAdmin: () => "people-admin",
   workcentersAdmin: () => "workcenters-admin",
+  assembly: (assemblyId: string) => `assembly:${assemblyId}`,
+  assemblyMember: (assemblyId: string, memberRole: string) =>
+    `assembly-member:${assemblyId}:${memberRole}`,
 } as const;

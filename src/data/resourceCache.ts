@@ -176,7 +176,7 @@ function markStale(entry: CacheEntry): void {
 }
 
 function refreshIfObserved(key: string, entry: CacheEntry): void {
-  if (entry.listeners.size === 0 || !entry.fetcher) {
+  if (!entry.fetcher) {
     notify(entry);
     return;
   }
