@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { writeConfiguratorSession } from "../session/configuratorSession";
@@ -275,6 +275,37 @@ async function confirmReady() {
 }
 
 describe("ConfiguratorPage", () => {
+  it("hides old component calculations immediately after editing until the current preview arrives", async () => {
+    let complete: ((value: unknown) => void) | undefined;
+    let reads = 0;
+    const payload = { ...previewBody, selectedComponents: [{ id: "LIGHTING", label: "Electrică / iluminare" }], componentDetails: [{
+      componentId: "LIGHTING", label: "Electrică / iluminare", typeId: "LIGHTING_FRONT_LED", calculationLabel: "Calculat",
+      facts: [{ id: "modules", label: "Module LED", value: "125 buc", kind: "CALCULATED", sourceLabel: "Calcul tehnic" }],
+      inputFields: [], unavailable: [], hasTechnicalSettings: false, hasFormulas: false,
+    }] };
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => {
+      if (String(input).endsWith("/preview")) {
+        reads += 1;
+        if (reads > 1) return new Promise((resolve) => { complete = resolve; });
+        return jsonResponse(payload);
+      }
+      return jsonResponse({ configured: true });
+    }));
+    renderConfigurator();
+    await screen.findByLabelText("Textul literelor");
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Inspectează Electrică / iluminare" }));
+    const construction = within(screen.getByRole("region", { name: "Contextul construcției" }));
+    expect(construction.getByText("125 buc")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Produs" }));
+    await user.type(screen.getByLabelText("Textul literelor"), "NORD");
+    await user.click(screen.getByRole("button", { name: "Inspectează Electrică / iluminare" }));
+    expect(screen.queryByText("125 buc")).not.toBeInTheDocument();
+    expect(construction.getByRole("status")).toHaveTextContent("se actualizează");
+    await waitFor(() => expect(complete).toBeDefined());
+    complete!({ ok: true, json: async () => ({ ...payload, componentDetails: [{ ...payload.componentDetails[0], facts: [{ ...payload.componentDetails[0].facts[0], value: "157 buc" }] }] }) });
+    expect(await construction.findByText("157 buc")).toBeVisible();
+  });
   it("separates construction, read-only review and pricing without implicit confirmation", async () => {
     const fetchMock = installFetch({ rate: 3, cost: 37.5 });
     seedOwnedDrafts({ "root.inscription": "NORD" });

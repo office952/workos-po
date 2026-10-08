@@ -36,6 +36,7 @@ export const steelInternalFrameContract: ComponentCalculationContract = {
   typeId: STEEL_INTERNAL_FRAME_TYPE_ID,
   role: "BACK",
   profile: {
+    inputFieldIds: [FACE_WIDTH_FIELD, FACE_HEIGHT_FIELD],
     measurement: "none",
     quantityUnit: "m",
     independentCalculation: true,

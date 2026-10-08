@@ -36,6 +36,7 @@ export const plexiglasFaceContract: ComponentCalculationContract = {
   typeId: "PLEXIGLAS_FACE",
   role: "FACE",
   profile: {
+    measurementFieldIds: [FACE_AREA_FIELD],
     measurement: "confirmed_area_mm2",
     quantityUnit: "m2",
     independentCalculation: true,

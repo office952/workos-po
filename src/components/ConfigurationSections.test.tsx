@@ -32,6 +32,26 @@ function Harness() {
 }
 
 describe("ConfigurationSections", () => {
+  it("synchronizes outline, construction and inspector and focuses an explicitly bound dependency", async () => {
+    const onChange = vi.fn();
+    const bound: PreviewTransport = { ...preview, formSchema: { ...preview.formSchema!, sections: [preview.formSchema!.sections[0], { ...preview.formSchema!.sections[1], componentId: "FACE" }] }, componentDetails: [{
+      componentId: "BACK", label: "Spate", typeId: "BACK_TYPE", calculationLabel: "Calculat", facts: [],
+      inputFields: [{ fieldId: "area", label: "Suprafață", value: "45000 mm²", componentLabel: "Față" }],
+      unavailable: [], hasTechnicalSettings: false, hasFormulas: false,
+    }] };
+    render(<ConfigurationSections preview={bound} drafts={{ area: "45000" }} onChange={onChange} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Inspectează Spate" }));
+    expect(screen.getByRole("button", { name: "Spate" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("region", { name: "Setări: Spate" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Modifică Suprafață" }));
+    expect(screen.getByRole("region", { name: "Setări: Dimensiuni" })).toBeVisible();
+    expect(screen.getByLabelText("Suprafață")).toHaveFocus();
+    expect(screen.getByLabelText("Suprafață")).toHaveValue("45000");
+    expect(onChange).not.toHaveBeenCalled();
+    await user.selectOptions(screen.getByRole("combobox", { name: "Context și componente" }), "component:BACK");
+    expect(screen.getByRole("button", { name: "Inspectează Spate" })).toHaveAttribute("aria-pressed", "true");
+  });
   it("keeps one visible editor, option labels and drafts while switching sections", async () => {
     render(<Harness />);
     const user = userEvent.setup();

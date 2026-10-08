@@ -49,6 +49,7 @@ function presentField(value: unknown): PresentedFormField | null {
   }
   return {
     id: record.id,
+    ...(typeof record.componentId === "string" ? { componentId: record.componentId } : {}),
     label: record.label,
     type,
     required: record.required === true,

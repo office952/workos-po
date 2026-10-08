@@ -634,7 +634,7 @@ export function ConfiguratorPage({
         ) : null}
         {preview ? (
           <ConfigurationSections ref={sectionsHandle} key={`${customerId}:${requestId}:${productCode}:${assemblyId}:${memberRole}`}
-            preview={preview} drafts={drafts} onChange={updateField} />
+            preview={preview} drafts={drafts} onChange={updateField} technicalState={previewState === "ready" ? "current" : previewState === "pending" ? "pending" : "unavailable"} />
         ) : null}
       </SurfacePanel>
       </div>
@@ -644,7 +644,7 @@ export function ConfiguratorPage({
       </div>
       </section>
       <section id="configuration-area-review" role="tabpanel" aria-labelledby="configuration-tab-review" hidden={workArea !== "review"}>
-        {preview ? <ConfigurationReview preview={preview} drafts={drafts} onEdit={(fieldId) => {
+        {preview ? <ConfigurationReview preview={preview} drafts={drafts} technicalState={previewState === "ready" ? "current" : previewState === "pending" ? "pending" : "unavailable"} onEdit={(fieldId) => {
           setWorkArea("configuration");
           sectionsHandle.current?.focusField(fieldId);
         }} /> : <p>Rezumatul apare după citirea configurației produsului.</p>}

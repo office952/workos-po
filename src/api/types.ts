@@ -43,6 +43,7 @@ export type QuoteFreezeRequest = {
 export type ConfigurationReadiness = "ready" | "blocked";
 
 export type MissingFact = {
+  componentId?: string;
   fieldId?: string;
   label: string;
 };
@@ -61,6 +62,7 @@ export type FormFieldOption = {
 export type FormFieldType = "text" | "select" | "number";
 
 export type PresentedFormField = {
+  componentId?: string;
   id: string;
   label: string;
   type: FormFieldType;
@@ -88,6 +90,7 @@ export type PresentedComponent = {
 };
 
 export type PreviewTransport = {
+  componentDetails?: ConfigurationComponentDetails[];
   product: {
     code: string;
     label: string;
@@ -100,6 +103,18 @@ export type PreviewTransport = {
   missing: MissingFact[];
   reviewId: string | null;
   installation: InstallationTransport;
+};
+
+export type ConfigurationComponentDetails = {
+  componentId: string;
+  label: string;
+  typeId: string;
+  facts: Array<{ id: string; label: string; value: string; kind: "MEASURED" | "TECHNICAL_SETTING" | "CALCULATED"; sourceLabel: string }>;
+  inputFields: Array<{ fieldId: string; label: string; value: string; componentLabel: string }>;
+  calculationLabel: string;
+  unavailable: string[];
+  hasTechnicalSettings: boolean;
+  hasFormulas: boolean;
 };
 
 export type CostLineTransport = {

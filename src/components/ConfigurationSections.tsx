@@ -3,6 +3,7 @@ import type { PreviewTransport, PresentedFormField } from "../api/types";
 import { InfoRow } from "./InfoRow";
 import { SelectField } from "./SelectField";
 import { TextField } from "./TextField";
+import { ConfigurationTechnicalDetails, type TechnicalDetailsState } from "./ConfigurationTechnicalDetails";
 
 export type ConfigurationSectionsHandle = { focusField: (fieldId: string) => void };
 
@@ -11,6 +12,7 @@ type ConfigurationSectionsProps = {
   preview: PreviewTransport;
   drafts: Record<string, string>;
   onChange: (fieldId: string, value: string) => void;
+  technicalState?: TechnicalDetailsState;
 };
 
 function fieldValue(field: PresentedFormField, drafts: Record<string, string>): string {
@@ -20,7 +22,7 @@ function fieldValue(field: PresentedFormField, drafts: Record<string, string>): 
 }
 
 /** Navigation is presentation state. Schema and missing facts remain server-owned. */
-export function ConfigurationSections({ preview, drafts, onChange, ref }: ConfigurationSectionsProps) {
+export function ConfigurationSections({ preview, drafts, onChange, ref, technicalState = "current" }: ConfigurationSectionsProps) {
   const schemaSections = preview.formSchema?.sections ?? [];
   const sections = [
     ...schemaSections.map((section) => ({
@@ -46,7 +48,7 @@ export function ConfigurationSections({ preview, drafts, onChange, ref }: Config
 
   useLayoutEffect(() => {
     if (focusField.current) {
-      document.getElementById(focusField.current)?.focus();
+      document.getElementById(focusField.current)?.focus({ preventScroll: true });
       focusField.current = null;
     }
   });
@@ -56,18 +58,28 @@ export function ConfigurationSections({ preview, drafts, onChange, ref }: Config
     setCompositionSelected(false);
   }
 
-  useImperativeHandle(ref, () => ({ focusField(fieldId) {
+  function openField(fieldId: string): void {
     const section = sections.find((item) => item.fields.some((field) => field.id === fieldId));
     if (!section) return;
+    if (!compositionSelected && active?.id === section.id) {
+      document.getElementById(fieldId)?.focus({ preventScroll: true });
+      return;
+    }
     focusField.current = fieldId;
     selectSection(section.id);
-  } }));
+  }
+
+  useImperativeHandle(ref, () => ({ focusField: openField }));
 
   return (
     <div className="configuration-sections">
+      <div className="configuration-section-selector"><label htmlFor={`${panelId}-selector`}>Context și componente</label><select id={`${panelId}-selector`} value={compositionSelected ? "composition" : active?.id ?? ""} onChange={(event) => {
+        if (event.target.value === "composition") setCompositionSelected(true);
+        else selectSection(event.target.value);
+      }}>{sections.map((section) => <option key={section.id} value={section.id}>{section.title}</option>)}<option value="composition">Compoziție</option></select></div>
       <nav className="configuration-outline" aria-label="Secțiunile produsului">
         <div className="configuration-outline__heading">
-          <span className="section-label">Structura produsului</span>
+          <span className="section-label">Context și componente</span>
           <p>Selectează secțiunea pe care o configurezi.</p>
         </div>
         {sections.map((section, index) => {
@@ -110,6 +122,17 @@ export function ConfigurationSections({ preview, drafts, onChange, ref }: Config
           </span>
         </button>
       </nav>
+      <section className="configuration-construction-context" aria-label="Contextul construcției">
+        <header><span className="section-label">Construcție</span><h3>{compositionSelected ? "Compoziție" : active?.title ?? preview.product.label}</h3></header>
+        <div className="configuration-construction-context__layers" aria-label="Componentele construcției">{preview.selectedComponents.map((component) => {
+          const section = sections.find((item) => item.componentId === component.id);
+          return <button type="button" key={component.id} aria-label={`Inspectează ${component.label}`} aria-pressed={!compositionSelected && active?.componentId === component.id} onClick={() => { if (section) selectSection(section.id); }}>
+            <strong>{component.label}</strong><span>{preview.product.identityFacts.filter((fact) => fact.componentId === component.id).map((fact) => fact.value).join(" · ") || "Componentă inclusă"}</span>
+          </button>;
+        })}</div>
+        {!compositionSelected && active?.fields.length ? <dl className="configuration-construction-context__facts">{active.fields.map((field) => <InfoRow key={field.id} label={field.label} value={fieldValue(field, drafts)} />)}</dl> : null}
+        {!compositionSelected ? preview.componentDetails?.filter((detail) => detail.componentId === active?.componentId).map((detail) => <ConfigurationTechnicalDetails key={detail.componentId} details={detail} state={technicalState} onEditField={openField} />) : null}
+      </section>
       <div className="configuration-inspector" ref={editorRef}>
         {sections.map((section, index) => (
           <section

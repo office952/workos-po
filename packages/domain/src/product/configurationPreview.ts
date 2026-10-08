@@ -8,6 +8,7 @@ import {
 import type { ResolvedFormulaVersion } from "./resolveFormulas.js";
 import type { ResolvedTechnicalSetting } from "./resolveTechnicalSettings.js";
 import { listTypeTechnicalSettings } from "./technicalSettings.js";
+import { projectConfigurationComponentDetails, type ConfigurationComponentDetails } from "./configurationComponentDetails.js";
 import type {
   DraftConfiguration,
   DraftValues,
@@ -59,6 +60,7 @@ export type ConfigurationSelectedComponent = {
 };
 
 export type ConfigurationPreview = {
+  readonly componentDetails: readonly ConfigurationComponentDetails[];
   readonly product: ConfigurationProductIdentity;
   readonly values: DraftValues;
   readonly formSchema: FormSchema;
@@ -220,6 +222,7 @@ export function projectConfigurationPreview(
   const definition = compileDefinition(template, schema, draft);
   const selectedIds = selectedComponentIds(template, draft.values);
   return {
+    componentDetails: projectConfigurationComponentDetails(template, schema, definition, resolved, formulas),
     product: {
       productCode: template.code,
       label: template.label,
