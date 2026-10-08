@@ -175,8 +175,21 @@ function markStale(entry: CacheEntry): void {
   };
 }
 
-function refreshIfObserved(key: string, entry: CacheEntry): void {
+export type InvalidateResourcesOptions = {
+  /** Refetch when no React subscribers remain (assembly after member confirm). */
+  refetchUnobserved?: boolean;
+};
+
+function refreshIfObserved(
+  key: string,
+  entry: CacheEntry,
+  options?: InvalidateResourcesOptions,
+): void {
   if (!entry.fetcher) {
+    notify(entry);
+    return;
+  }
+  if (entry.listeners.size === 0 && !options?.refetchUnobserved) {
     notify(entry);
     return;
   }
@@ -185,14 +198,29 @@ function refreshIfObserved(key: string, entry: CacheEntry): void {
   });
 }
 
-export function invalidateResources(...keys: string[]): void {
+export function invalidateResources(
+  ...args: string[] | [InvalidateResourcesOptions, ...string[]]
+): void {
+  let options: InvalidateResourcesOptions | undefined;
+  let keys: string[];
+  const first = args[0];
+  if (
+    typeof first === "object" &&
+    first !== null &&
+    "refetchUnobserved" in first
+  ) {
+    options = first;
+    keys = args.slice(1) as string[];
+  } else {
+    keys = args as string[];
+  }
   for (const key of keys) {
     const entry = entries.get(key);
     if (!entry) {
       continue;
     }
     markStale(entry);
-    refreshIfObserved(key, entry);
+    refreshIfObserved(key, entry, options);
   }
 }
 

@@ -32,7 +32,7 @@ export function invalidateAfterAssemblyMemberChange(
   if (memberRole) {
     keys.push(resourceKeys.assemblyMember(assemblyId, memberRole));
   }
-  invalidateResources(...keys);
+  invalidateResources({ refetchUnobserved: true }, ...keys);
 }
 
 export function invalidateAfterAcceptQuote(quoteSnapshotId?: string): void {
