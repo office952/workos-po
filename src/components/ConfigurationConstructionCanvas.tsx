@@ -83,7 +83,15 @@ export function ConfigurationConstructionCanvas({
                 ? workbenchLayerStatus(section, preview.missing, drafts)
                 : "readonly";
               return (
-                <li key={component.id} className={pressed ? "is-active" : undefined}>
+                <li
+                  key={component.id}
+                  className={[
+                    pressed ? "is-active" : "",
+                    status === "readonly" ? "is-readonly" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ") || undefined}
+                >
                   <button
                     type="button"
                     aria-label={`Selectează ${component.label}`}

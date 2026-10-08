@@ -11,6 +11,7 @@ import {
 import { ConfigurationConstructionCanvas } from "./ConfigurationConstructionCanvas";
 import { InfoRow } from "./InfoRow";
 import { SelectField } from "./SelectField";
+import { StatusBadge } from "./StatusBadge";
 import { TextField } from "./TextField";
 import { ConfigurationTechnicalDetails, type TechnicalDetailsState } from "./ConfigurationTechnicalDetails";
 
@@ -45,6 +46,12 @@ export function ConfigurationSections({
   const focusField = useRef<string | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const selectedIndex = compositionSelected ? sections.length : sections.indexOf(active);
+  const activeLayerStatus = compositionSelected
+    ? ("readonly" as const)
+    : active
+      ? workbenchLayerStatus(active, preview.missing, drafts)
+      : ("configurable" as const);
+  const activeLayerTitle = compositionSelected ? "Compoziție" : (active?.title ?? preview.product.label);
   const availableMissing = preview.missing.flatMap((fact) => {
     const section = sections.find((item) => item.fields.some((field) => field.id === fact.fieldId));
     return section && fact.fieldId ? [{ ...fact, fieldId: fact.fieldId, sectionId: section.id }] : [];
@@ -94,23 +101,37 @@ export function ConfigurationSections({
 
   return (
     <div className="configuration-sections">
-      <div className="configuration-section-selector">
-        <label htmlFor={`${panelId}-selector`}>Strat de construcție</label>
-        <select
-          id={`${panelId}-selector`}
-          value={compositionSelected ? "composition" : active?.id ?? ""}
-          onChange={(event) => {
-            if (event.target.value === "composition") selectComposition();
-            else selectSection(event.target.value);
-          }}
+      <div className="configuration-section-selector" data-testid="configuration-section-selector">
+        <div className="configuration-section-selector__control">
+          <label htmlFor={`${panelId}-selector`}>Strat de construcție</label>
+          <select
+            id={`${panelId}-selector`}
+            value={compositionSelected ? "composition" : active?.id ?? ""}
+            onChange={(event) => {
+              if (event.target.value === "composition") selectComposition();
+              else selectSection(event.target.value);
+            }}
+          >
+            {sections.map((section) => (
+              <option key={section.id} value={section.id}>
+                {section.title}
+              </option>
+            ))}
+            <option value="composition">Compoziție</option>
+          </select>
+        </div>
+        <div
+          className={`configuration-section-selector__active${
+            activeLayerStatus === "readonly" ? " configuration-section-selector__active--readonly" : ""
+          }`}
+          aria-live="polite"
         >
-          {sections.map((section) => (
-            <option key={section.id} value={section.id}>
-              {section.title}
-            </option>
-          ))}
-          <option value="composition">Compoziție</option>
-        </select>
+          <span className="configuration-section-selector__active-label">Strat selectat</span>
+          <strong>{activeLayerTitle}</strong>
+          <span className="configuration-section-selector__active-status">
+            {workbenchLayerStatusLabel(activeLayerStatus)}
+          </span>
+        </div>
       </div>
       <nav className="configuration-outline" aria-label="Ierarhie construcție">
         <div className="configuration-outline__heading">
@@ -126,7 +147,9 @@ export function ConfigurationSections({
             <button
               key={section.id}
               type="button"
-              className="configuration-layer"
+              className={`configuration-layer${
+                status === "readonly" ? " configuration-layer--readonly" : ""
+              }`}
               aria-label={section.title}
               aria-pressed={!compositionSelected && active?.id === section.id}
               aria-controls={`${panelId}-${index}`}
@@ -190,15 +213,24 @@ export function ConfigurationSections({
             aria-label={`Inspector: ${section.title}`}
             hidden={compositionSelected || active?.id !== section.id}
           >
-            <div className="configuration-inspector__heading">
+            <div
+              className={`configuration-inspector__heading${
+                section.fields.length === 0 ? " configuration-inspector__heading--readonly" : ""
+              }`}
+            >
               <span className="section-label">
                 {section.fields.length > 0 ? "Proprietăți editabile" : "Informații din catalog"}
               </span>
-              <h3>{section.title}</h3>
+              <div className="configuration-inspector__heading-row">
+                <h3>{section.title}</h3>
+                {section.fields.length === 0 ? (
+                  <StatusBadge label={workbenchLayerStatusLabel("readonly")} tone="pending" />
+                ) : null}
+              </div>
               <p>
                 {section.fields.length > 0
                   ? "Modificările se trimit la server pentru verificare și calcul."
-                  : "Acest strat folosește definiția fixă a produsului din catalog."}
+                  : "Strat consultabil: proprietățile provin din catalogul produsului și din faptele tehnice calculate pentru straturile configurate. Nu editezi aici componente independente de spate sau electrice."}
               </p>
             </div>
             <div
@@ -216,7 +248,11 @@ export function ConfigurationSections({
                         ))}
                       </dl>
                     ) : null}
-                    <p>Pentru această lucrare, componenta folosește proprietățile fixe definite în catalog.</p>
+                    <p>
+                      Informațiile afișate sunt complete pentru consultare. Lipsa câmpurilor editabile nu
+                      indică un strat incomplet — schema acestei lucrări nu permite modificarea independentă
+                      a componentei.
+                    </p>
                     <a
                       className="text-link"
                       href={`/catalog?product=${encodeURIComponent(preview.product.code)}`}

@@ -51,6 +51,32 @@ describe("ConfigurationSections", () => {
     expect(onChange).not.toHaveBeenCalled();
     await user.selectOptions(screen.getByRole("combobox", { name: "Strat de construcție" }), "component:BACK");
     expect(screen.getByRole("button", { name: "Selectează Spate" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("configuration-section-selector")).toHaveTextContent("Strat selectat");
+    expect(screen.getByTestId("configuration-section-selector")).toHaveTextContent("Spate");
+  });
+
+  it("keeps Volum selection aligned across mobile selector, canvas and inspector", async () => {
+    const volumetric: PreviewTransport = {
+      ...preview,
+      formSchema: {
+        id: "volumetric",
+        sections: [
+          { id: "product", title: "Produs", fields: preview.formSchema!.sections[0].fields },
+          { id: "volume", componentId: "VOLUME", title: "Volum", fields: preview.formSchema!.sections[1].fields },
+        ],
+      },
+      selectedComponents: [
+        { id: "VOLUME", label: "Volum" },
+        { id: "BACK", label: "Spate" },
+      ],
+    };
+    render(<ConfigurationSections preview={volumetric} drafts={{ depth: "60", area: "12000" }} onChange={vi.fn()} />);
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByRole("combobox", { name: "Strat de construcție" }), "volume");
+    expect(screen.getByTestId("configuration-section-selector")).toHaveTextContent("Volum");
+    expect(screen.getByRole("button", { name: "Selectează Volum" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("region", { name: "Inspector: Volum" })).toBeVisible();
+    expect(screen.getByLabelText("Adâncime")).toHaveValue("60");
   });
   it("keeps one visible editor, option labels and drafts while switching sections", async () => {
     render(<Harness />);
@@ -117,6 +143,7 @@ describe("ConfigurationSections", () => {
     expect(screen.getAllByRole("button", { name: "Volum" })).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: "Spate" }));
     const back = screen.getByRole("region", { name: "Inspector: Spate" });
+    expect(back).toHaveTextContent("Doar consultare");
     expect(back).toHaveTextContent("Material definit în catalog");
     expect(back).not.toHaveTextContent("Iluminare frontală");
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
