@@ -294,17 +294,17 @@ describe("ConfiguratorPage", () => {
     renderConfigurator();
     await screen.findByLabelText("Textul literelor");
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Inspectează Electrică / iluminare" }));
-    const construction = within(screen.getByRole("region", { name: "Contextul construcției" }));
-    expect(construction.getByText("125 buc")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Electrică / iluminare" }));
+    const inspector = within(screen.getByRole("region", { name: "Inspector: Electrică / iluminare" }));
+    expect(inspector.getByText("125 buc")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Produs" }));
     await user.type(screen.getByLabelText("Textul literelor"), "NORD");
-    await user.click(screen.getByRole("button", { name: "Inspectează Electrică / iluminare" }));
+    await user.click(screen.getByRole("button", { name: "Electrică / iluminare" }));
     expect(screen.queryByText("125 buc")).not.toBeInTheDocument();
-    expect(construction.getByRole("status")).toHaveTextContent("se actualizează");
+    expect(inspector.getByRole("status")).toHaveTextContent("se actualizează");
     await waitFor(() => expect(complete).toBeDefined());
     complete!({ ok: true, json: async () => ({ ...payload, componentDetails: [{ ...payload.componentDetails[0], facts: [{ ...payload.componentDetails[0].facts[0], value: "157 buc" }] }] }) });
-    expect(await construction.findByText("157 buc")).toBeVisible();
+    expect(await inspector.findByText("157 buc")).toBeVisible();
   });
   it("separates construction, read-only review and pricing without implicit confirmation", async () => {
     const fetchMock = installFetch({ rate: 3, cost: 37.5 });

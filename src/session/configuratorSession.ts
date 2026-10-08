@@ -1,3 +1,4 @@
+import type { WorkbenchNavigationState } from "../configuration/workbenchModel";
 import type { SpineContext } from "../routing/appRoute";
 
 export type ConfiguratorContext = SpineContext & { assemblyId?: string | null };
@@ -20,6 +21,7 @@ export type ConfiguratorSession = {
   lastQuote: FrozenQuoteRef | null;
   customerLabel?: string | null;
   requestLabel?: string | null;
+  workbenchNavigation?: Record<string, WorkbenchNavigationState>;
 };
 
 const STORAGE_KEY = "workos-ui20.configurator.v1";
@@ -39,6 +41,7 @@ const empty: ConfiguratorSession = {
   lastQuote: null,
   customerLabel: null,
   requestLabel: null,
+  workbenchNavigation: {},
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -62,6 +65,34 @@ function presentContext(value: unknown): ConfiguratorContext | null {
     customerId: presentId(record.customerId),
     ...(presentId(record.assemblyId) ? { assemblyId: presentId(record.assemblyId) } : {}),
   };
+}
+
+function presentWorkbenchNavigation(
+  value: unknown,
+): Record<string, WorkbenchNavigationState> {
+  const record = asRecord(value);
+  if (!record) {
+    return {};
+  }
+  return Object.fromEntries(
+    Object.entries(record).flatMap(([key, item]) => {
+      const navigation = asRecord(item);
+      if (!navigation) {
+        return [];
+      }
+      const composition = navigation.composition === true;
+      const sectionId =
+        typeof navigation.sectionId === "string" ? navigation.sectionId : null;
+      return [[key, { sectionId, composition }]];
+    }),
+  );
+}
+
+export function workbenchNavigationForContext(
+  stored: Pick<ConfiguratorSession, "workbenchNavigation">,
+  selected: ConfiguratorContext,
+): WorkbenchNavigationState | null {
+  return stored.workbenchNavigation?.[configuratorContextKey(selected)] ?? null;
 }
 
 function presentQuoteRef(value: unknown): FrozenQuoteRef | null {
@@ -175,6 +206,7 @@ export function readConfiguratorSession(): ConfiguratorSession {
       lastQuote: presentQuoteRef(record.lastQuote),
       customerLabel: presentId(record.customerLabel),
       requestLabel: presentId(record.requestLabel),
+      workbenchNavigation: presentWorkbenchNavigation(record.workbenchNavigation),
     };
   } catch {
     return empty;

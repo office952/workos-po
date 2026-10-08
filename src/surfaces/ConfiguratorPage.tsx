@@ -50,11 +50,14 @@ import {
   labelsMatchingContext,
   lastQuoteOwnedByContext,
   ownedDraftsForContext,
+  configuratorContextKey,
   readConfiguratorSession,
+  workbenchNavigationForContext,
   writeConfiguratorSession,
   type ConfiguratorContext,
   type FrozenQuoteRef,
 } from "../session/configuratorSession";
+import type { WorkbenchNavigationState } from "../configuration/workbenchModel";
 
 function commercialResultKey(input: {
   pricingMethod: "PRODUCT_COST_PLUS" | "MANUAL_FIXED_PRODUCT";
@@ -158,6 +161,9 @@ export function ConfiguratorPage({
 }: ConfiguratorPageProps) {
   const context: ConfiguratorContext = { customerId, requestId, productCode, ...(assemblyId ? { assemblyId } : {}) };
   const stored = readConfiguratorSession();
+  const [workbenchNavigation, setWorkbenchNavigation] = useState<
+    Record<string, WorkbenchNavigationState>
+  >(() => stored.workbenchNavigation ?? {});
   const [drafts, setDrafts] = useState<Record<string, string>>(() =>
     ownedDraftsForContext(stored, context),
   );
@@ -281,9 +287,10 @@ export function ConfiguratorPage({
       requestId,
       productCode,
       lastQuote,
+      workbenchNavigation,
       ...labelsMatchingContext(stored, { customerId, requestId }),
     });
-  }, [assemblyId, customerId, drafts, lastQuote, productCode, requestId]);
+  }, [assemblyId, customerId, drafts, lastQuote, productCode, requestId, workbenchNavigation]);
 
   useEffect(() => {
     if (!productCode || (assemblyId && memberRole && !seedApplied)) {
@@ -647,8 +654,23 @@ export function ConfiguratorPage({
           </InlineAlert>
         ) : null}
         {preview ? (
-          <ConfigurationSections ref={sectionsHandle} key={`${customerId}:${requestId}:${productCode}:${assemblyId}:${memberRole}`}
-            preview={preview} drafts={drafts} onChange={updateField} technicalState={previewState === "ready" ? "current" : previewState === "pending" ? "pending" : "unavailable"} />
+          <ConfigurationSections
+            ref={sectionsHandle}
+            key={`${customerId}:${requestId}:${productCode}:${assemblyId}:${memberRole}`}
+            preview={preview}
+            drafts={drafts}
+            onChange={updateField}
+            technicalState={
+              previewState === "ready" ? "current" : previewState === "pending" ? "pending" : "unavailable"
+            }
+            initialNavigation={workbenchNavigationForContext({ workbenchNavigation }, context)}
+            onNavigationChange={(navigation) => {
+              setWorkbenchNavigation((current) => ({
+                ...current,
+                [configuratorContextKey(context)]: navigation,
+              }));
+            }}
+          />
         ) : null}
       </SurfacePanel>
       </div>
