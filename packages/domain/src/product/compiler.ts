@@ -114,6 +114,29 @@ export function compileDefinition(
   const missing: MissingInput[] = [];
   const values: DraftValues = { ...template.fixedValues };
 
+  // Inputs reserved for future constructive variants are not silently ignored.
+  // Until a versioned schema owns them, accepting them would let an operator
+  // confirm a legacy-priced product while believing BACK/LED choices survived.
+  const reservedConstructiveFields = [
+    ["back.supportKind", "BACK"],
+    ["back.profile", "BACK"],
+    ["lighting.moduleTypeId", "LIGHTING"],
+    ["lighting.voltageV", "LIGHTING"],
+    ["lighting.colorTemperatureK", "LIGHTING"],
+  ] as const;
+  const publishedFieldIds = new Set(allFields(schema).map((field) => field.id));
+  for (const [fieldId, componentId] of reservedConstructiveFields) {
+    if (Object.hasOwn(draft.values, fieldId) &&
+        !publishedFieldIds.has(fieldId) &&
+        !Object.hasOwn(template.fixedValues, fieldId)) {
+      missing.push({
+        fieldId,
+        componentId,
+        label: `Opțiune constructivă nepublicată: ${fieldId}`,
+      });
+    }
+  }
+
   for (const field of allFields(schema)) {
     if (field.id in template.fixedValues) {
       continue;
