@@ -573,9 +573,15 @@ describe("PERF_3 resources mutation delta", () => {
     );
     expect(saved.status).toBe(200);
 
-    const confirmed = await runWithProductEvaluationTraceAsync(async () =>
-      confirmProduct(app, CANONICAL_PRODUCT_CODE, lettersValues),
-    );
+    const reviewed = await compileReady(app, CANONICAL_PRODUCT_CODE, lettersValues);
+    const confirmed = await runWithProductEvaluationTraceAsync(async () => {
+      const response = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/confirm`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(reviewed),
+      });
+      return { status: response.status, body: await readBody(response) };
+    });
     expect(confirmed.result.status).toBe(200);
     expect((confirmed.result.body.eic as JsonObject).total).toBe(383);
     expect(confirmed.trace.evaluateProductComponents).toBe(1);
