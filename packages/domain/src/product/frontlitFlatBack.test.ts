@@ -60,7 +60,7 @@ describe("opt-in flat BACK product in existing configurator", () => {
     expect(accepted.truth.templateCode).toBe(FRONTLIT_FLAT_BACK_PRODUCT_CODE);
     expect(accepted.truth.values["back.profile"]).toBe("FLAT");
     expect(accepted.eic.completeness).toBe("COMPLETE");
-    expect(accepted.evaluations.some((item) => item.componentId === "BACK")).toBe(true);
+    expect(accepted.evaluations.some((item) => item.component.id === "BACK")).toBe(true);
     expect(accepted.aggregate.requirements.some((item) => item.resourceId === FOREX_10MM_ID)).toBe(true);
     expect(projectCommercialPrice(accepted.eic).grossPrice).toBeGreaterThan(0);
   });
