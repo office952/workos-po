@@ -29,12 +29,12 @@ describe("FOREX_BACK", () => {
   });
 
   it("fails closed on any V2 profile input until the manufacturing recipe is versioned", () => {
-    for (const values of [
+    for (const values of ([ 
       { "back.thicknessMm": 10, "back.supportKind": "METAL_FRAME", "back.profile": "GROOVED" },
       { "back.thicknessMm": 10, "back.supportKind": "PANEL", "back.profile": "FLAT" },
       { "back.thicknessMm": 10, "back.supportKind": "PANEL", "back.profile": "GROOVED" },
       { "back.thicknessMm": 10, "back.supportKind": "PANEL" },
-    ]) {
+    ] as Record<string, string | number | boolean | null>[])) {
       const result = forexBackContract.calculate({
         values, measurements: [], shared: { confirmedAreaMm2: 250000 }, technicalSettings: [],
       });
