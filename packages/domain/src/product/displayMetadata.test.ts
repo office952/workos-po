@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CANONICAL_PRODUCT_CODE } from "./frontlitPlexiAl06.js";
+import { FRONTLIT_FLAT_BACK_PRODUCT_CODE } from "./frontlitFlatBack.js";
 import {
   createDisplayLabelCatalog,
   DISPLAY_LABEL_MAX_LENGTH,
@@ -23,6 +24,7 @@ describe("display metadata", () => {
       "PRODUCT_CATEGORY:FRONT_LIT_VOLUMETRIC_LOGO",
       "PRODUCT_CATEGORY:ACM_CASSETTE_PANELS",
       `PRODUCT_TEMPLATE:${CANONICAL_PRODUCT_CODE}`,
+      `PRODUCT_TEMPLATE:${FRONTLIT_FLAT_BACK_PRODUCT_CODE}`,
       "PRODUCT_TEMPLATE:PRD-ACM-CASSETTE-NONE",
       "PRODUCT_TEMPLATE:PRD-LOGO-FRONTLIT-PLEXI-AL06",
       "COMPONENT_TYPE:PLEXIGLAS_FACE",

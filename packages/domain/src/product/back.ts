@@ -4,6 +4,7 @@ import type {
   ComponentCalculationResult,
 } from "./componentContract.js";
 import { resolveTypeResources } from "./componentTypes.js";
+import { planBackManufacturing } from "./backManufacturing.js";
 import { squareMetersFromMm2 } from "./units.js";
 
 export const BACK_COMPONENT_ID = "BACK";
@@ -40,6 +41,24 @@ export const forexBackContract: ComponentCalculationContract = {
     return [];
   },
   calculate(input: ComponentCalculationInput): ComponentCalculationResult {
+    // These optional values are reserved for a future versioned product form.
+    // A partial/contradictory pair must never produce an apparently costed BACK.
+    // Existing v1 snapshots provide neither value and keep their original result.
+    const support = input.values["back.supportKind"];
+    const profile = input.values["back.profile"];
+    if (support !== undefined || profile !== undefined) {
+      const plan = planBackManufacturing(input.values, input.shared.confirmedAreaMm2);
+      if (plan.status === "BLOCKED") {
+        return backResult("UNAVAILABLE", [], [], [`Plan de fabricație spate indisponibil: ${plan.reason}`]);
+      }
+      return backResult(
+        "CALCULATED",
+        [{ componentId: BACK_COMPONENT_ID, id: "back_area", label: "Suprafață spate",
+           value: plan.materialAreaM2, unit: "m2", basis: "confirmed_area" }],
+        [{ componentId: BACK_COMPONENT_ID, resourceId: plan.resourceId,
+           quantity: plan.materialAreaM2, unit: "m2" }],
+      );
+    }
     const areaMm2 = input.shared.confirmedAreaMm2;
     if (typeof areaMm2 !== "number") {
       return backResult("MISSING_MEASUREMENT", [], []);

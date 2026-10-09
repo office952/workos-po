@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CANONICAL_PRODUCT_CODE } from "../product/frontlitPlexiAl06.js";
+import { FRONTLIT_FLAT_BACK_PRODUCT_CODE } from "../product/frontlitFlatBack.js";
 import {
   ALUMINIUM_RETURN_PROFILE_ID,
   FOREX_10MM_ID,
@@ -22,6 +23,12 @@ describe("resources administration projection", () => {
         typeId: "PLEXIGLAS_FACE",
         role: "FACE",
         productCode: CANONICAL_PRODUCT_CODE,
+      }),
+      expect.objectContaining({
+        resourceId: PLEXIGLAS_3MM_OPAL_ID,
+        typeId: "PLEXIGLAS_FACE",
+        role: "FACE",
+        productCode: FRONTLIT_FLAT_BACK_PRODUCT_CODE,
       }),
       expect.objectContaining({
         resourceId: PLEXIGLAS_3MM_OPAL_ID,

@@ -48,6 +48,7 @@ import {
   frontlitPlexiAl06Template,
 } from "./frontlitPlexiAl06.js";
 import { getProductTemplate, productTemplates } from "./productRegistry.js";
+import { FRONTLIT_FLAT_BACK_PRODUCT_CODE } from "./frontlitFlatBack.js";
 import {
   resolveOrganizationTechnicalSettings,
 } from "./resolveTechnicalSettings.js";
@@ -115,6 +116,7 @@ describe("ACM cassette Product Truth V2", () => {
     expect(getProductTemplate(ACM_CASSETTE_NONE_PRODUCT_CODE)).toBe(acmCassetteNoneTemplate);
     expect(productTemplates.map((item) => item.code)).toEqual([
       CANONICAL_PRODUCT_CODE,
+      FRONTLIT_FLAT_BACK_PRODUCT_CODE,
       ACM_CASSETTE_NONE_PRODUCT_CODE,
       "PRD-LOGO-FRONTLIT-PLEXI-AL06",
     ]);

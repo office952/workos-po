@@ -70,6 +70,38 @@ describe("configuration preview transport", () => {
     );
   });
 
+  it("rejects unpublished constructive BACK/LED choices across preview and confirmation", () => {
+    for (const [fieldId, value] of [
+      ["back.supportKind", "METAL_FRAME"],
+      ["back.profile", "GROOVED"],
+      ["lighting.moduleTypeId", "LED-24V"],
+      ["lighting.voltageV", 24],
+      ["lighting.colorTemperatureK", 4000],
+    ] as const) {
+      const attempted = lettersDraft({ ...lettersReadyValues, [fieldId]: value });
+      const preview = projectConfigurationPreview(
+        frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, attempted,
+      );
+      expect(preview.readiness).toBe("blocked");
+      expect(preview.reviewId).toBeNull();
+      expect(preview.missing.some((item) => item.fieldId === fieldId)).toBe(true);
+      const attemptedConfirmation = confirmReviewedDraft(
+        frontlitPlexiAl06Template,
+        frontlitPlexiAl06FormSchema,
+        attempted,
+        "crv1:stale-review",
+      );
+      expect(attemptedConfirmation).toMatchObject({ ok: false });
+    }
+    const legacy = projectConfigurationPreview(
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      lettersDraft(lettersReadyValues),
+    );
+    expect(legacy.readiness).toBe("ready");
+    expect(legacy.reviewId).not.toBeNull();
+  });
+
   it("changes visibility and readiness when LETTERS values change", () => {
     const blocked = projectConfigurationPreview(
       frontlitPlexiAl06Template,

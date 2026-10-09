@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CANONICAL_PRODUCT_CODE } from "@workos-final/domain";
+import { CANONICAL_PRODUCT_CODE, FRONTLIT_FLAT_BACK_PRODUCT_CODE } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
 
 describe("system projection API", () => {
@@ -60,6 +60,7 @@ describe("system projection API", () => {
     expect(body.families[0]?.id).toBe("LIGHTED_VOLUMETRIC_SIGNS");
     expect(body.families[0]?.productCodes).toEqual([
       CANONICAL_PRODUCT_CODE,
+      FRONTLIT_FLAT_BACK_PRODUCT_CODE,
       "PRD-LOGO-FRONTLIT-PLEXI-AL06",
     ]);
     expect(body.products[0]?.composition.map((item) => item.typeId)).toEqual([
@@ -71,7 +72,11 @@ describe("system projection API", () => {
     expect(
       body.types.find((item) => item.typeId === "LIGHTING_FRONT_LED")
         ?.usedByProductCodes,
-    ).toEqual([CANONICAL_PRODUCT_CODE, "PRD-LOGO-FRONTLIT-PLEXI-AL06"]);
+    ).toEqual([
+      CANONICAL_PRODUCT_CODE,
+      FRONTLIT_FLAT_BACK_PRODUCT_CODE,
+      "PRD-LOGO-FRONTLIT-PLEXI-AL06",
+    ]);
   });
 
   it("projects resources administration from the typed catalog", async () => {

@@ -57,6 +57,21 @@ describe("selectPsuUnits", () => {
     ]);
   });
 
+  it("filters PSU candidates by electrical voltage without cross-voltage fallback", () => {
+    const catalog = [
+      { resourceId: "PSU12", label: "12 V supply", capacityW: 100, voltageV: 12 },
+      { resourceId: "PSU24", label: "24 V supply", capacityW: 160, voltageV: 24 },
+    ];
+    expect(selectPsuUnits(80, catalog, 12)).toEqual([
+      { resourceId: "PSU12", label: "12 V supply", capacityW: 100, quantity: 1 },
+    ]);
+    expect(selectPsuUnits(80, catalog, 24)).toEqual([
+      { resourceId: "PSU24", label: "24 V supply", capacityW: 160, quantity: 1 },
+    ]);
+    expect(selectPsuUnits(80, catalog, 48)).toEqual([]);
+    expect(selectPsuUnits(80, catalog, -12)).toEqual([]);
+  });
+
   it("reads capacities from the resource catalog", () => {
     expect(listPsuCapacityCatalog().some((item) => item.capacityW === 150)).toBe(false);
     expect(selectPsuUnits(50, listPsuCapacityCatalog())).toEqual([

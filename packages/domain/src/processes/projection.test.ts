@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ACM_CASSETTE_NONE_PRODUCT_CODE } from "../product/acmCassetteNone.js";
 import { CANONICAL_PRODUCT_CODE } from "../product/frontlitPlexiAl06.js";
+import { FRONTLIT_FLAT_BACK_PRODUCT_CODE } from "../product/frontlitFlatBack.js";
 import { RETURN_CANT_FORMING_ID } from "../resources/catalog.js";
 import { CUT_SHEET_CNC_ID, FORM_ALUMINIUM_PROFILE_ID } from "./catalog.js";
 import { projectOperationalProcessesAdministration } from "./projection.js";
@@ -12,6 +13,8 @@ describe("operational process projection", () => {
     expect(cncUses.map((item) => item.role).sort()).toEqual([
       "BACK",
       "BACK",
+      "BACK",
+      "FACE",
       "FACE",
       "FACE",
       "FACE",
@@ -20,6 +23,8 @@ describe("operational process projection", () => {
       ACM_CASSETTE_NONE_PRODUCT_CODE,
       CANONICAL_PRODUCT_CODE,
       CANONICAL_PRODUCT_CODE,
+      FRONTLIT_FLAT_BACK_PRODUCT_CODE,
+      FRONTLIT_FLAT_BACK_PRODUCT_CODE,
       "PRD-LOGO-FRONTLIT-PLEXI-AL06",
       "PRD-LOGO-FRONTLIT-PLEXI-AL06",
     ]);

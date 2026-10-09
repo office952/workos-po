@@ -4,6 +4,7 @@ import {
   type ComponentEvaluation,
 } from "./componentEvaluation.js";
 import type { DisplayLabelCatalog } from "./displayMetadata.js";
+import { planBackManufacturing } from "./backManufacturing.js";
 import type { ResolvedFormulaVersion } from "./resolveFormulas.js";
 import type { ComponentTechnicalSettingDefinition } from "./technicalSettings.js";
 import type {
@@ -114,6 +115,29 @@ export function compileDefinition(
   const missing: MissingInput[] = [];
   const values: DraftValues = { ...template.fixedValues };
 
+  // Inputs reserved for future constructive variants are not silently ignored.
+  // Until a versioned schema owns them, accepting them would let an operator
+  // confirm a legacy-priced product while believing BACK/LED choices survived.
+  const reservedConstructiveFields = [
+    ["back.supportKind", "BACK", "Tip suport spate"],
+    ["back.profile", "BACK", "Profil constructiv spate"],
+    ["lighting.moduleTypeId", "LIGHTING", "Model modul LED"],
+    ["lighting.voltageV", "LIGHTING", "Tensiune alimentare LED"],
+    ["lighting.colorTemperatureK", "LIGHTING", "Temperatură de culoare LED"],
+  ] as const;
+  const publishedFieldIds = new Set(allFields(schema).map((field) => field.id));
+  for (const [fieldId, componentId, fieldLabel] of reservedConstructiveFields) {
+    if (Object.hasOwn(draft.values, fieldId) &&
+        !publishedFieldIds.has(fieldId) &&
+        !Object.hasOwn(template.fixedValues, fieldId)) {
+      missing.push({
+        fieldId,
+        componentId,
+        label: `${fieldLabel}: opțiune indisponibilă pentru acest produs`,
+      });
+    }
+  }
+
   for (const field of allFields(schema)) {
     if (field.id in template.fixedValues) {
       continue;
@@ -146,6 +170,23 @@ export function compileDefinition(
     }
     if (!isEmpty(value) && isValidValue(field, value)) {
       values[field.id] = value as DraftValue;
+    }
+  }
+
+  // A published field does not automatically authorize pricing. Require
+  // manufacturing evidence before a constructive BACK choice is confirmable.
+  if (selectedIds.includes("BACK") &&
+      (Object.hasOwn(values, "back.supportKind") || Object.hasOwn(values, "back.profile"))) {
+    const plan = planBackManufacturing(values, typeof values["face.confirmedAreaMm2"] === "number"
+      ? values["face.confirmedAreaMm2"] : undefined);
+    if (plan.status === "BLOCKED") {
+      missing.push({
+        componentId: "BACK",
+        fieldId: "back.profile",
+        label: plan.reason === "groove_recipe_missing"
+          ? "Spate cu canal: lipsește rețeta de prelucrare și costul verificat"
+          : "Profilul de spate nu poate fi fabricat cu datele disponibile",
+      });
     }
   }
 

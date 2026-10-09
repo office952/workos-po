@@ -101,6 +101,9 @@ export function measuredFactsForCanvas(input: {
   technicalState?: TechnicalDetailsState;
 }): Array<{ label: string; value: string; kind: "draft" | "calculated" | "catalog" }> {
   const technicalCurrent = (input.technicalState ?? "current") === "current";
+  // During a fresh server evaluation, even previously rendered input and measured
+  // facts must not be presented as current construction evidence.
+  if (!technicalCurrent) return [];
   const facts: Array<{ label: string; value: string; kind: "draft" | "calculated" | "catalog" }> =
     [];
   if (input.activeSection) {

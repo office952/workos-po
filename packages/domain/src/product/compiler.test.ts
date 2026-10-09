@@ -99,6 +99,71 @@ describe("canonical product", () => {
   });
 });
 
+describe("unpublished constructive instance fields", () => {
+  it("does not silently accept advanced BACK and LED options as legacy-priced values", () => {
+    const attempted = compileDefinition(
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      draft({
+        ...readyValues,
+        "back.supportKind": "METAL_FRAME",
+        "back.profile": "GROOVED",
+        "lighting.moduleTypeId": "UNPUBLISHED_MODULE",
+        "lighting.voltageV": 24,
+        "lighting.colorTemperatureK": 4000,
+      }),
+    );
+    expect(attempted.readiness).toBe("blocked");
+    expect(attempted.missing.map((item) => item.componentId)).toEqual([
+      "BACK", "BACK", "LIGHTING", "LIGHTING", "LIGHTING",
+    ]);
+    expect(attempted.missing.every((item) => !item.label.includes(".") && !item.label.includes("moduleTypeId"))).toBe(true);
+    expect(attempted.values).not.toHaveProperty("back.profile");
+    expect(attempted.values).not.toHaveProperty("lighting.moduleTypeId");
+  });
+
+  it("preserves readiness for the existing approved V1 input set", () => {
+    const current = compileDefinition(
+      frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, draft(readyValues),
+    );
+    expect(current.readiness).toBe("ready");
+    expect(current.missing).toEqual([]);
+  });
+});
+
+describe("published BACK manufacturing gate", () => {
+  const schemaWithBack = {
+    ...frontlitPlexiAl06FormSchema,
+    sections: [...frontlitPlexiAl06FormSchema.sections, {
+      id: "back",
+      title: "Spate",
+      componentId: "BACK",
+      fields: [
+        { id: "back.supportKind", componentId: "BACK", label: "Suport", type: "select" as const, required: true,
+          options: [{ value: "PANEL", label: "Panou" }, { value: "METAL_FRAME", label: "Cadru metalic" }],
+          visibleWhen: { kind: "always" as const } },
+        { id: "back.profile", componentId: "BACK", label: "Profil", type: "select" as const, required: true,
+          options: [{ value: "FLAT", label: "Plan" }, { value: "GROOVED", label: "Cu canal" }],
+          visibleWhen: { kind: "always" as const } },
+      ],
+    }],
+  };
+
+  it("permits an evidence-backed flat BACK when fields are published", () => {
+    const definition = compileDefinition(frontlitPlexiAl06Template, schemaWithBack,
+      draft({ ...readyValues, "back.supportKind": "PANEL", "back.profile": "FLAT" }));
+    expect(definition.readiness).toBe("ready");
+    expect(definition.values["back.profile"]).toBe("FLAT");
+  });
+
+  it("blocks grooved BACK despite a syntactically valid published choice", () => {
+    const definition = compileDefinition(frontlitPlexiAl06Template, schemaWithBack,
+      draft({ ...readyValues, "back.supportKind": "METAL_FRAME", "back.profile": "GROOVED" }));
+    expect(definition.readiness).toBe("blocked");
+    expect(definition.missing.some((item) => item.label.includes("rețeta de prelucrare"))).toBe(true);
+  });
+});
+
 describe("module law", () => {
   it("includes required lighting without an include toggle", () => {
     expect(selectedComponentIds(frontlitPlexiAl06Template, readyValues)).toEqual([

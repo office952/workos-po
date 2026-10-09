@@ -1,4 +1,4 @@
-import { MAT_LED_MODULE_ID } from "../resources/catalog.js";
+import { MAT_LED_MODULE_ID, getResource, listPsuCapacityCatalog } from "../resources/catalog.js";
 import type { ResourceRequirement } from "../resources/requirement.js";
 import type {
   ComponentCalculationContract,
@@ -133,6 +133,19 @@ export const lightingFrontLedContract: ComponentCalculationContract = {
     return [];
   },
   calculate(input: ComponentCalculationInput): ComponentCalculationResult {
+    // Future per-order LED identities cannot silently inherit the v1 generic
+    // module cost and power assumptions. Existing templates provide none of
+    // these values and retain their established formula and PSU evaluation.
+    const hasUnpricedLedSelection = [
+      "lighting.moduleTypeId",
+      "lighting.voltageV",
+      "lighting.colorTemperatureK",
+    ].some((id) => input.values[id] !== undefined);
+    if (hasUnpricedLedSelection) {
+      return lightingResult("UNAVAILABLE", [], [], [
+        "Selecția LED necesită catalog de module, compatibilitate electrică și rețete versionate.",
+      ]);
+    }
     const settingGaps = lightingSettingGaps(input.technicalSettings);
     if (settingGaps.length > 0) {
       return lightingResult("UNAVAILABLE", [], [], settingGaps);
@@ -190,7 +203,13 @@ export const lightingFrontLedContract: ComponentCalculationContract = {
       return lightingResult("UNAVAILABLE", [], [], [LIGHTING_MISSING_FORMULAS]);
     }
 
-    const selected = selectPsuUnits(requiredCapacity.value);
+    const moduleVoltageV = getResource(MAT_LED_MODULE_ID)?.electrical?.voltageV;
+    if (moduleVoltageV === undefined) {
+      return lightingResult("UNAVAILABLE", [], [], [
+        "Tensiunea nominală a modulului LED nu este publicată în catalog.",
+      ]);
+    }
+    const selected = selectPsuUnits(requiredCapacity.value, listPsuCapacityCatalog(), moduleVoltageV);
     const quantities = lightingQuantities(
       moduleQuantity.value,
       totalLedLoad.value,

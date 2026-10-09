@@ -150,6 +150,11 @@ export {
   frontlitPlexiAl06Template,
 } from "./frontlitPlexiAl06.js";
 export {
+  FRONTLIT_FLAT_BACK_PRODUCT_CODE,
+  frontlitFlatBackFormSchema,
+  frontlitFlatBackTemplate,
+} from "./frontlitFlatBack.js";
+export {
   LOGO_PRODUCT_CODE,
   logoFrontlitPlexiAl06FormSchema,
   logoFrontlitPlexiAl06Template,

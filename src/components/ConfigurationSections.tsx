@@ -332,6 +332,19 @@ export function ConfigurationSections({
           ) : (
             <p>Produsul nu are proprietăți fixe publicate în acest formular.</p>
           )}
+          {preview.componentDetails && preview.componentDetails.length > 0 ? (
+            <div className="configuration-composition__technical" aria-label="Dependențe tehnice pe componente">
+              <span className="section-label">Dependențe tehnice ale ansamblului</span>
+              {preview.componentDetails.map((detail) => (
+                <ConfigurationTechnicalDetails
+                  key={detail.componentId}
+                  details={detail}
+                  state={technicalState}
+                  onEditField={openField}
+                />
+              ))}
+            </div>
+          ) : null}
           {preview.selectedComponents.length > 0 ? (
             <div className="configuration-composition">
               <span className="section-label">Componente incluse</span>

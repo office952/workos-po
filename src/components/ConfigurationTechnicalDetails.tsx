@@ -12,7 +12,7 @@ export function ConfigurationTechnicalDetails({ details, state = "current", onEd
   return <section className="configuration-technical" aria-label={`Detalii tehnice: ${details.label}`}>
     <div className="configuration-technical__heading"><span className="section-label">Date și dependențe</span>{current ? <span>{details.calculationLabel}</span> : null}</div>
     {!current ? <p role="status">{state === "pending" ? "Rezultatele tehnice se actualizează pentru valorile noi." : "Rezultatele tehnice nu sunt disponibile pentru valorile curente. Reîncearcă verificarea configurației."}</p> : null}
-    <dl>{details.facts.filter((fact) => current || fact.kind === "TECHNICAL_SETTING").map((fact) => <div className="configuration-technical__fact" key={fact.id}>
+    <dl>{details.facts.filter(() => current).map((fact) => <div className="configuration-technical__fact" key={fact.id}>
       <dt>{fact.label}<span>{kindLabels[fact.kind]}</span></dt>
       <dd><strong>{fact.value}</strong><span>{fact.sourceLabel}</span></dd>
     </div>)}</dl>
