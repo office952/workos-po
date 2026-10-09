@@ -42,6 +42,26 @@ describe("workbenchModel", () => {
     expect(workbenchLayerStatus(sections[3], preview.missing, {})).toBe("readonly");
   });
 
+  it("hides stale construction evidence until a fresh preview arrives", () => {
+    const sections = buildWorkbenchSections(preview);
+    for (const technicalState of ["pending", "unavailable"] as const) {
+      expect(measuredFactsForCanvas({
+        preview,
+        activeComponentId: "VOLUME",
+        activeSection: sections[1],
+        drafts: { depth: "60" },
+        technicalState,
+      })).toEqual([]);
+    }
+    expect(measuredFactsForCanvas({
+      preview,
+      activeComponentId: "VOLUME",
+      activeSection: sections[1],
+      drafts: { depth: "60" },
+      technicalState: "current",
+    })).toEqual([{ label: "Adâncime", value: "60 mm", kind: "draft" }]);
+  });
+
   it("restores navigation only when the section still exists", () => {
     const sections = buildWorkbenchSections(preview);
     expect(resolveInitialWorkbenchNavigation(sections, { sectionId: "vol", composition: false }).sectionId).toBe("vol");
