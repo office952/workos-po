@@ -1,0 +1,74 @@
+---
+description: WorkOS cost-aware Cursor prompting — default low cost; reserve expensive Agent/models for justified risk or complexity.
+alwaysApply: true
+---
+
+# WorkOS Cursor Cost-Aware Prompting Policy
+
+All WorkOS Cursor prompts must be cost-aware by default. Expensive Agent loops and high-capability models are reserved for tasks where ambiguity, architectural risk, security risk, product-truth risk, or implementation complexity justifies them.
+
+This rule complements `AGENTS.md` and `research-on-demand.mdc`. It does not change Product Truth, SaaS-only boundaries, or Owner gates.
+
+## Required fields (substantive WorkOS Cursor work)
+
+- `MODE`: READ-ONLY / PLAN / DEBUG / AGENT
+- `COST PROFILE`: LOW / BALANCED / HIGH
+- `LOCATION + GIT IDENTITY GATE`
+- `TASK`
+- `ALLOWED SCOPE`
+- `PERMISSIONS`
+- `ACCEPTANCE`
+- `STOP CONDITIONS`
+
+## Default cost routing
+
+### Class C / LOW
+
+Branch/status checks, location gates, file inventory, simple search, mechanical summaries, tiny deterministic copy/CSS/text changes.
+
+Use Ask/read-only or low-cost Agent (Composer / Auto Cost). Minimal tool calls. No broad exploration.
+
+### Class B / BALANCED
+
+Approved implementation, focused UI work, tests, controlled refactors, feature slices with known scope.
+
+Use normal Agent with bounded files and acceptance criteria.
+
+### Class A / HIGH
+
+Architecture, Product Truth, pricing/execution contracts, security, migrations, hard debugging, final synthesis, cross-module decisions.
+
+Use Plan/Debug/high-reasoning only when needed. Prefer a new chat when escalating cost tier.
+
+## Prompt construction
+
+- Keep location gates short. Do not paste full WorkOS history into identity gates.
+- Prefer one task per chat/Agent.
+- Start a new chat/Agent after a completed checkpoint, runtime proof, commit, PR, or major decision.
+- Do not use mega-prompts when a short objective plus repo discovery is enough.
+- Do not attach large dossiers by default. Reference docs by filename; read only relevant sections.
+- Limit exploration before implementation. Ask for a read-only plan first when scope is unclear.
+- Use one implementation writer by default.
+- Parallelize only read-only research or verification unless explicitly approved.
+- Do not activate MCP/plugins unless the lane requires them.
+- Do not use high-cost models for gate/setup/status/mechanical tasks.
+- For UI implementation, still require runtime/browser proof when relevant.
+- Preserve SaaS-only, one product truth, one business engine, synthetic-vs-real data separation, and explicit Owner gates.
+
+## Gate behavior (LOW)
+
+When the prompt is a location/git/runtime gate or `COST PROFILE: LOW` / `GATE_ONLY`:
+
+1. Verify only the requested identity/status fields.
+2. Do not read large files, implement, run tests, or modify files unless the prompt explicitly authorizes a docs-only/policy write after `SAFE_TO_CONTINUE = YES`.
+3. Report compactly, then STOP (or continue only into the explicitly allowed next step).
+
+## Stop conditions (default)
+
+- `SAFE_TO_CONTINUE != YES`
+- Target files already dirty with unrelated edits
+- Required scope expands outside allowed files/modules
+- Real cloud/db credentials or mutation would be required
+- Destructive Git would be required
+
+Do not reset/stash/checkout to fix identity. Do not modify unrelated files. Do not start parallel writers. Do not run broad refactors.
