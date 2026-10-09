@@ -15,12 +15,16 @@ export type SelectedPsuUnit = {
 export function selectPsuUnits(
   requiredCapacityW: number,
   catalog: readonly PsuCapacityEntry[] = listPsuCapacityCatalog(),
+  requiredVoltageV?: number,
 ): readonly SelectedPsuUnit[] {
+  if (requiredVoltageV !== undefined && (!Number.isFinite(requiredVoltageV) || requiredVoltageV <= 0)) {
+    return [];
+  }
   if (!Number.isFinite(requiredCapacityW) || requiredCapacityW <= 0) {
     return [];
   }
   const capacities = [...catalog]
-    .filter((item) => item.capacityW > 0)
+    .filter((item) => item.capacityW > 0 && (requiredVoltageV === undefined || item.voltageV === requiredVoltageV))
     .sort((left, right) => left.capacityW - right.capacityW);
   if (capacities.length === 0) {
     return [];
