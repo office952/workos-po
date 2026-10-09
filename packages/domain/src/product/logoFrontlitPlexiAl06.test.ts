@@ -10,6 +10,7 @@ import {
 import { getComponentContract } from "./componentRegistry.js";
 import { seededDisplayLabelCatalog } from "./displayMetadata.js";
 import { CANONICAL_PRODUCT_CODE, frontlitPlexiAl06Template } from "./frontlitPlexiAl06.js";
+import { FRONTLIT_FLAT_BACK_PRODUCT_CODE } from "./frontlitFlatBack.js";
 import { ACM_CASSETTE_NONE_PRODUCT_CODE } from "./acmCassetteNone.js";
 import {
   LOGO_PRODUCT_CODE,
@@ -181,6 +182,7 @@ describe("volumetric logo product", () => {
         { templateCode: CANONICAL_PRODUCT_CODE, enabled: true },
         { templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE, enabled: true },
         { templateCode: LOGO_PRODUCT_CODE, enabled: true },
+        { templateCode: FRONTLIT_FLAT_BACK_PRODUCT_CODE, enabled: false },
       ],
       { now: "2026-09-24T00:00:00.000Z", actorUserId: "owner-1", rowId: "pev:logo" },
     );
@@ -196,6 +198,7 @@ describe("volumetric logo product", () => {
         { templateCode: CANONICAL_PRODUCT_CODE, enabled: true },
         { templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE, enabled: true },
         { templateCode: LOGO_PRODUCT_CODE, enabled: false },
+        { templateCode: FRONTLIT_FLAT_BACK_PRODUCT_CODE, enabled: false },
       ],
       { now: "2026-09-24T01:00:00.000Z", actorUserId: "owner-1", rowId: "pev:logo-off" },
     );
