@@ -12,6 +12,7 @@ import { createPerson } from "../people/identity.js";
 import { codeDefaultProductEnablement } from "../product/productEnablement.js";
 import {
   ACM_CASSETTE_NONE_PRODUCT_CODE,
+  ACM_CASSETTE_NONE_TEMPLATE_VERSION,
   acmCassetteNoneFormSchema,
   acmCassetteNoneTemplate,
 } from "../product/acmCassetteNone.js";
@@ -27,9 +28,15 @@ import {
   frontlitPlexiAl06Template,
 } from "../product/frontlitPlexiAl06.js";
 import { starterFormulaVersionsForType } from "../product/resolveFormulas.js";
-import type { DraftValues, FormSchema, ProductTemplate } from "../product/types.js";
+import type { DraftValues, FormSchema, ProductAggregate, ProductTemplate } from "../product/types.js";
 import { forexBackContract } from "../product/back.js";
-import { costEvidence, LAB_SITE_INSTALL_ID } from "../resources/catalog.js";
+import {
+  ACM_3MM_ID,
+  costEvidence,
+  FOREX_10MM_ID,
+  LAB_SITE_INSTALL_ID,
+  STEEL_FRAME_PROFILE_ID,
+} from "../resources/catalog.js";
 import { INSPECT_FINISHED_LETTER_ID, INSTALL_AT_SITE_ID, PACK_PRODUCT_ID } from "../processes/catalog.js";
 import {
   acknowledgeAssemblyReview,
@@ -43,9 +50,11 @@ import {
   materializeAssemblyExecutionPlan,
   MOUNT_LETTERS_ON_PANEL_ID,
   INSPECT_FINISHED_ASSEMBLY_ID,
+  LETTERS_ON_ACM_PANEL,
   presentAssemblyReview,
   projectAssemblyProduction,
   setAssemblyTaskPlannedEffort,
+  SIGN_ASSEMBLY_ACM_LETTERS_V1,
   type ConfirmedChildProduct,
 } from "./index.js";
 
@@ -98,6 +107,7 @@ function confirmedChild(
   childQuoteSnapshotId: string;
   childQuoteContentHash: string;
   commercial: FrozenCommercialOffer;
+  aggregate: ProductAggregate;
 } {
   const compiled = evaluate(template, schema, values);
   const price = projectCommercialPrice(compiled.eic, DEFAULT_COMMERCIAL_POLICY, quoteTerms);
@@ -133,6 +143,7 @@ function confirmedChild(
     eicCurrency: "EUR",
     eicCompleteness: compiled.eic.completeness,
     truth: compiled.truth,
+    aggregate: compiled.aggregate,
   };
 }
 
@@ -737,6 +748,286 @@ describe("product assembly v1", () => {
     expect(service.line.siteExecutionContext.plannedDurationHours).toBe(3);
     expect(production.snapshot.siteInstallation?.street).toBe("Strada Sintetică 1");
     expect(JSON.stringify(production.snapshot.siteInstallation)).not.toMatch(/rate|subcontract/);
+  });
+});
+
+const PANEL_KEYS = ["face.widthMm", "face.heightMm", "face.cassetteDepthMm", "face.backReturnMm"];
+const LETTERS_FOREX_M2 = 0.25;
+
+function produceAssembly(
+  acm: ReturnType<typeof confirmedChild>,
+  letters: ReturnType<typeof confirmedChild>,
+  suffix: string,
+) {
+  const created = createAssemblyDefinition({
+    assemblyId: `asm-${suffix}`,
+    organizationId: ORG,
+    requestId: `req-${suffix}`,
+    customerId: "cus-1",
+    resolution: codeDefaultProductEnablement(),
+    createdAt: "2026-09-23T10:00:00.000Z",
+  });
+  if (!created.ok) {
+    throw new Error(created.error);
+  }
+  const withAcm = attachConfirmedChild(created.definition, acm, "SUPPORT_PANEL", created.definition.createdAt);
+  if (!withAcm.ok) {
+    throw new Error(withAcm.error);
+  }
+  const withLetters = attachConfirmedChild(withAcm.definition, letters, "SIGNAGE_LETTERS", created.definition.createdAt);
+  if (!withLetters.ok) {
+    throw new Error(withLetters.error);
+  }
+  const confirmed = confirmAssembly(withLetters.definition, [acm, letters], [], "2026-09-23T11:00:00.000Z");
+  if (!confirmed.ok) {
+    throw new Error(confirmed.error);
+  }
+  const quote = freezeAssemblyQuote({
+    quoteSnapshotId: `asmq-${suffix}`,
+    truth: confirmed.truth,
+    children: [acm, letters],
+    createdAt: "2026-09-23T11:10:00.000Z",
+  });
+  if (!quote.ok) {
+    throw new Error(quote.error);
+  }
+  const order = acceptAssemblyQuote({
+    orderSnapshotId: `asmo-${suffix}`,
+    quote: quote.quote,
+    children: [acm, letters],
+    createdAt: "2026-09-23T11:20:00.000Z",
+  });
+  if (!order.ok) {
+    throw new Error(order.error);
+  }
+  const production = projectAssemblyProduction(order.order, {
+    snapshotId: `asmp-${suffix}`,
+    createdAt: "2026-09-23T11:30:00.000Z",
+  });
+  if (!production.ok) {
+    throw new Error(production.error);
+  }
+  return { ...confirmed, quote: quote.quote, order: order.order, production: production.snapshot };
+}
+
+function memberDemandIds(
+  production: ReturnType<typeof produceAssembly>["production"],
+  role: "SUPPORT_PANEL" | "SIGNAGE_LETTERS",
+): Set<string> {
+  const member = production.members.find((item) => item.role === role);
+  return new Set(member?.operations.flatMap((op) => op.resourceDemands.map((item) => item.resourceId)) ?? []);
+}
+
+function forexQuantity(aggregate: ProductAggregate): number {
+  return aggregate.requirements
+    .filter((item) => item.resourceId === FOREX_10MM_ID)
+    .reduce((sum, item) => sum + item.quantity, 0);
+}
+
+describe("two product physical invariants", () => {
+  it("keeps each child product identity and provenance on its own member", () => {
+    const ready = readyAssembly();
+    const built = produceAssembly(ready.acm, ready.letters, "identity");
+    expect(built.truth.kind).toBe(SIGN_ASSEMBLY_ACM_LETTERS_V1);
+    const support = built.truth.members.find((item) => item.role === "SUPPORT_PANEL");
+    const letters = built.truth.members.find((item) => item.role === "SIGNAGE_LETTERS");
+    expect(support).toEqual({
+      memberId: "member:support-panel",
+      role: "SUPPORT_PANEL",
+      productCode: ACM_CASSETTE_NONE_PRODUCT_CODE,
+      templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE,
+      templateVersion: ACM_CASSETTE_NONE_TEMPLATE_VERSION,
+      organizationId: ORG,
+      confirmedTruthId: ready.acm.truthId,
+      confirmedTruthHash: ready.acm.truthHash,
+      confirmedAggregateHash: ready.acm.aggregateHash,
+    });
+    expect(letters).toEqual({
+      memberId: "member:signage-letters",
+      role: "SIGNAGE_LETTERS",
+      productCode: CANONICAL_PRODUCT_CODE,
+      templateCode: CANONICAL_PRODUCT_CODE,
+      templateVersion: frontlitPlexiAl06Template.version,
+      organizationId: ORG,
+      confirmedTruthId: ready.letters.truthId,
+      confirmedTruthHash: ready.letters.truthHash,
+      confirmedAggregateHash: ready.letters.aggregateHash,
+    });
+    expect(support?.confirmedTruthHash).not.toBe(letters?.confirmedTruthHash);
+    expect(support?.confirmedAggregateHash).not.toBe(letters?.confirmedAggregateHash);
+    expect(built.aggregate.childAggregates).toEqual([
+      { memberId: "member:signage-letters", role: "SIGNAGE_LETTERS", productCode: CANONICAL_PRODUCT_CODE, aggregateHash: ready.letters.aggregateHash },
+      { memberId: "member:support-panel", role: "SUPPORT_PANEL", productCode: ACM_CASSETTE_NONE_PRODUCT_CODE, aggregateHash: ready.acm.aggregateHash },
+    ]);
+    const truthJson = JSON.stringify(built.truth);
+    for (const flattened of [...PANEL_KEYS, "face.confirmedAreaMm2", "FOREX_BACK", "ACM_CASSETTE_BODY", FOREX_10MM_ID, ACM_3MM_ID]) {
+      expect(truthJson).not.toContain(flattened);
+    }
+    expect(JSON.stringify(built.aggregate)).not.toContain(FOREX_10MM_ID);
+    expect(JSON.stringify(built.aggregate)).not.toContain(ACM_3MM_ID);
+  });
+
+  it("does not mutate the confirmed letters child when the ACM support is added", () => {
+    const ready = readyAssembly();
+    const letters = confirmedChild(
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      lettersValues,
+      "child-letters-before",
+    );
+    const truthBefore = structuredClone(letters.truth);
+    const aggregateBefore = structuredClone(letters.aggregate);
+    const truthHashBefore = hashProductTruth(letters.truth);
+    const aggregateHashBefore = hashProductAggregate(letters.aggregate);
+
+    const built = produceAssembly(ready.acm, letters, "no-mutation");
+
+    expect(letters.truth).toEqual(truthBefore);
+    expect(letters.aggregate).toEqual(aggregateBefore);
+    expect(hashProductTruth(letters.truth)).toBe(truthHashBefore);
+    expect(hashProductAggregate(letters.aggregate)).toBe(aggregateHashBefore);
+    expect(letters.truthHash).toBe(truthHashBefore);
+    expect(letters.aggregateHash).toBe(aggregateHashBefore);
+    expect(letters.truth.values).toMatchObject(lettersValues);
+    expect(letters.truth.values["back.materialFamily"]).toBe("forex");
+    for (const key of PANEL_KEYS) {
+      expect(letters.truth.values).not.toHaveProperty(key);
+    }
+    const lettersResources = new Set(letters.aggregate.requirements.map((item) => item.resourceId));
+    expect(lettersResources.has(FOREX_10MM_ID)).toBe(true);
+    expect(lettersResources.has(ACM_3MM_ID)).toBe(false);
+    expect(lettersResources.has(STEEL_FRAME_PROFILE_ID)).toBe(false);
+    expect(letters.aggregate.components.map((item) => item.id)).not.toContain("ACM_CASSETTE_BODY");
+
+    const lettersDemand = memberDemandIds(built.production, "SIGNAGE_LETTERS");
+    const acmDemand = memberDemandIds(built.production, "SUPPORT_PANEL");
+    expect(lettersDemand.has(ACM_3MM_ID)).toBe(false);
+    expect(lettersDemand.has(STEEL_FRAME_PROFILE_ID)).toBe(false);
+    expect(acmDemand.has(FOREX_10MM_ID)).toBe(false);
+    expect(
+      built.production.members.find((item) => item.role === "SIGNAGE_LETTERS")?.productionInputHash,
+    ).toBe(letters.productionInput.contentHash);
+  });
+
+  it("isolates panel dimensions from the letters BACK", () => {
+    const letters = confirmedChild(
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      lettersValues,
+      "child-letters-shared",
+    );
+    const lettersTruthBefore = structuredClone(letters.truth);
+    const smallPanel = confirmedChild(
+      acmCassetteNoneTemplate,
+      acmCassetteNoneFormSchema,
+      { ...acmValues, "face.widthMm": 2000, "face.heightMm": 1000 },
+      "child-acm-small",
+    );
+    const largePanel = confirmedChild(
+      acmCassetteNoneTemplate,
+      acmCassetteNoneFormSchema,
+      { ...acmValues, "face.widthMm": 3000, "face.heightMm": 800 },
+      "child-acm-large",
+    );
+    const small = produceAssembly(smallPanel, letters, "panel-small");
+    const large = produceAssembly(largePanel, letters, "panel-large");
+
+    expect(smallPanel.truthHash).not.toBe(largePanel.truthHash);
+    expect(smallPanel.aggregateHash).not.toBe(largePanel.aggregateHash);
+    expect(small.truth.contentHash).not.toBe(large.truth.contentHash);
+
+    const lettersMember = (built: ReturnType<typeof produceAssembly>) =>
+      built.truth.members.find((item) => item.role === "SIGNAGE_LETTERS");
+    expect(lettersMember(small)).toEqual(lettersMember(large));
+    expect(lettersMember(small)?.confirmedTruthHash).toBe(letters.truthHash);
+    expect(lettersMember(small)?.confirmedAggregateHash).toBe(letters.aggregateHash);
+    expect(letters.truth).toEqual(lettersTruthBefore);
+    expect(letters.truth.values["face.confirmedAreaMm2"]).toBe(250000);
+
+    expect(forexQuantity(letters.aggregate)).toBe(LETTERS_FOREX_M2);
+    for (const panelAreaM2 of [2, 2.4]) {
+      expect(forexQuantity(letters.aggregate)).not.toBe(panelAreaM2);
+    }
+    const lettersProduction = (built: ReturnType<typeof produceAssembly>) =>
+      built.production.members.find((item) => item.role === "SIGNAGE_LETTERS");
+    expect(lettersProduction(small)?.operations).toEqual(lettersProduction(large)?.operations);
+    expect(lettersProduction(small)?.productionInputHash).toBe(lettersProduction(large)?.productionInputHash);
+    const lettersJson = JSON.stringify(lettersProduction(large));
+    for (const key of PANEL_KEYS) {
+      expect(JSON.stringify(letters.truth)).not.toContain(key);
+      expect(lettersJson).not.toContain(key);
+    }
+  });
+
+  it("holds exactly one letters-on-panel relation", () => {
+    const ready = readyAssembly();
+    const built = produceAssembly(ready.acm, ready.letters, "relation");
+    expect(built.truth.relations).toHaveLength(1);
+    expect(built.truth.relations.filter((item) => item.kind === LETTERS_ON_ACM_PANEL)).toHaveLength(1);
+    expect(built.aggregate.relationConsequences).toEqual([
+      { relationId: "relation:letters-on-acm-panel", processId: MOUNT_LETTERS_ON_PANEL_ID },
+    ]);
+    const reattached = attachConfirmedChild(
+      built.definition,
+      ready.letters,
+      "SIGNAGE_LETTERS",
+      "2026-09-23T11:40:00.000Z",
+    );
+    if (!reattached.ok) {
+      throw new Error(reattached.error);
+    }
+    expect(reattached.definition.members).toHaveLength(2);
+    expect(reattached.definition.relations).toHaveLength(1);
+    expect(reattached.definition.relations[0]?.kind).toBe(LETTERS_ON_ACM_PANEL);
+  });
+
+  it("keeps the final assembled production terminals", () => {
+    const ready = readyAssembly();
+    const { production } = produceAssembly(ready.acm, ready.letters, "terminals");
+    const memberOps = production.members.flatMap((member) => member.operations);
+    const all = [...memberOps, ...production.assemblyOperations];
+    expect(all.filter((item) => item.processId === MOUNT_LETTERS_ON_PANEL_ID)).toHaveLength(1);
+    expect(all.filter((item) => item.processId === INSPECT_FINISHED_ASSEMBLY_ID)).toHaveLength(1);
+    expect(all.filter((item) => item.processId === PACK_PRODUCT_ID)).toHaveLength(1);
+    expect(all.filter((item) => item.processId === INSPECT_FINISHED_LETTER_ID)).toHaveLength(0);
+    expect(memberOps.some((item) => item.processId === PACK_PRODUCT_ID)).toBe(false);
+    expect(production.assemblyOperations.map((item) => item.processId)).toEqual([
+      MOUNT_LETTERS_ON_PANEL_ID,
+      INSPECT_FINISHED_ASSEMBLY_ID,
+      PACK_PRODUCT_ID,
+    ]);
+  });
+
+  it("keeps child snapshot lineage distinct and technical truth separate from quotes", () => {
+    const ready = readyAssembly();
+    const built = produceAssembly(ready.acm, ready.letters, "lineage");
+    expect(ready.acm.childQuoteSnapshotId).not.toBe(ready.letters.childQuoteSnapshotId);
+    expect(ready.acm.childQuoteContentHash).not.toBe(ready.letters.childQuoteContentHash);
+    expect(ready.acm.productionInput.contentHash).not.toBe(ready.letters.productionInput.contentHash);
+    const quoteMembers = new Map(built.quote.members.map((item) => [item.role, item]));
+    expect(quoteMembers.get("SUPPORT_PANEL")?.childQuoteSnapshotId).toBe(ready.acm.childQuoteSnapshotId);
+    expect(quoteMembers.get("SIGNAGE_LETTERS")?.childQuoteSnapshotId).toBe(ready.letters.childQuoteSnapshotId);
+    expect(built.quote.assemblyTruthHash).toBe(built.truth.contentHash);
+    expect(built.quote.contentHash).not.toBe(built.truth.contentHash);
+    expect(built.production.members.map((item) => item.productionInputHash).sort()).toEqual(
+      [ready.acm.productionInput.contentHash, ready.letters.productionInput.contentHash].sort(),
+    );
+
+    const lettersTruthBefore = structuredClone(ready.letters.truth);
+    const repriced = confirmedChild(
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      lettersValues,
+      ready.letters.truthId,
+      ORG,
+      { markupPercent: 80, discountPercent: 0, adjustmentAmount: 0 },
+    );
+    expect(repriced.truth.values).toEqual(lettersTruthBefore.values);
+    expect(repriced.truth.measurements).toEqual(lettersTruthBefore.measurements);
+    expect(repriced.truthHash).toBe(ready.letters.truthHash);
+    expect(repriced.aggregateHash).toBe(ready.letters.aggregateHash);
+    expect(repriced.childQuoteContentHash).not.toBe(ready.letters.childQuoteContentHash);
+    expect(ready.letters.truth).toEqual(lettersTruthBefore);
   });
 });
 

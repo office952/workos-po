@@ -79,6 +79,20 @@ describe("product template resource usage", () => {
     expect(acm?.recipeIds).not.toContain(RCP_CNC_FACE_ID);
   });
 
+  it("keeps the two products' physical materials on their own product", () => {
+    const letters = usageForProductTemplate(usages, CANONICAL_PRODUCT_CODE);
+    const acm = usageForProductTemplate(usages, ACM_CASSETTE_NONE_PRODUCT_CODE);
+    expect(letters?.resourceIds).toContain(FOREX_10MM_ID);
+    expect(letters?.resourceIds).not.toContain(ACM_3MM_ID);
+    expect(letters?.resourceIds).not.toContain(STEEL_FRAME_PROFILE_ID);
+    expect(acm?.resourceIds).toContain(ACM_3MM_ID);
+    expect(acm?.resourceIds).toContain(STEEL_FRAME_PROFILE_ID);
+    expect(acm?.resourceIds).not.toContain(FOREX_10MM_ID);
+    expect(acm?.resourceIds).not.toContain(PLEXIGLAS_3MM_OPAL_ID);
+    expect(acm?.resourceIds).not.toContain(ALUMINIUM_RETURN_PROFILE_ID);
+    expect(acm?.resourceIds).not.toContain(RETURN_CANT_FORMING_ID);
+  });
+
   it("reuses one shared resource identity across templates", () => {
     const letters = usageForProductTemplate(usages, CANONICAL_PRODUCT_CODE);
     const acm = usageForProductTemplate(usages, ACM_CASSETTE_NONE_PRODUCT_CODE);
