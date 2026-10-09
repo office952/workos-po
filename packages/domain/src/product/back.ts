@@ -4,6 +4,7 @@ import type {
   ComponentCalculationResult,
 } from "./componentContract.js";
 import { resolveTypeResources } from "./componentTypes.js";
+import { evaluateBackCompatibility } from "./backCompatibility.js";
 import { squareMetersFromMm2 } from "./units.js";
 
 export const BACK_COMPONENT_ID = "BACK";
@@ -40,6 +41,23 @@ export const forexBackContract: ComponentCalculationContract = {
     return [];
   },
   calculate(input: ComponentCalculationInput): ComponentCalculationResult {
+    // These optional values are reserved for a future versioned product form.
+    // A partial/contradictory pair must never produce an apparently costed BACK.
+    // Existing v1 snapshots provide neither value and keep their original result.
+    const support = input.values["back.supportKind"];
+    const profile = input.values["back.profile"];
+    if (support !== undefined || profile !== undefined) {
+      const compatibility = evaluateBackCompatibility(support, profile);
+      if (compatibility.status !== "COMPATIBLE") {
+        return backResult("UNAVAILABLE", [], [], [`Profil spate incompatibil sau incomplet: ${compatibility.reason}`]);
+      }
+      // Compatibility alone is not an authorized manufacturing recipe.
+      // Block priced quantities until groove machining and flat-profile
+      // resource/process evidence have a versioned domain contract.
+      return backResult("UNAVAILABLE", [], [], [
+        "Profilul constructiv de spate necesită rețetă de material și prelucrare versionată.",
+      ]);
+    }
     const areaMm2 = input.shared.confirmedAreaMm2;
     if (typeof areaMm2 !== "number") {
       return backResult("MISSING_MEASUREMENT", [], []);
