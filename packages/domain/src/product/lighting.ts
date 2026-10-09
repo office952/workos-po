@@ -1,4 +1,4 @@
-import { MAT_LED_MODULE_ID } from "../resources/catalog.js";
+import { MAT_LED_MODULE_ID, getResource, listPsuCapacityCatalog } from "../resources/catalog.js";
 import type { ResourceRequirement } from "../resources/requirement.js";
 import type {
   ComponentCalculationContract,
@@ -203,7 +203,13 @@ export const lightingFrontLedContract: ComponentCalculationContract = {
       return lightingResult("UNAVAILABLE", [], [], [LIGHTING_MISSING_FORMULAS]);
     }
 
-    const selected = selectPsuUnits(requiredCapacity.value);
+    const moduleVoltageV = getResource(MAT_LED_MODULE_ID)?.electrical?.voltageV;
+    if (moduleVoltageV === undefined) {
+      return lightingResult("UNAVAILABLE", [], [], [
+        "Tensiunea nominală a modulului LED nu este publicată în catalog.",
+      ]);
+    }
+    const selected = selectPsuUnits(requiredCapacity.value, listPsuCapacityCatalog(), moduleVoltageV);
     const quantities = lightingQuantities(
       moduleQuantity.value,
       totalLedLoad.value,
