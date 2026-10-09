@@ -43,7 +43,9 @@ export function ConfigurationConstructionCanvas({
   onSelectComponent,
   technicalState = "current",
 }: ConfigurationConstructionCanvasProps) {
-  const readiness = readinessPresentation(preview.readiness, preview.missing.length);
+  const readiness = technicalState === "current"
+    ? readinessPresentation(preview.readiness, preview.missing.length)
+    : { label: technicalState === "pending" ? "Se verifică modificările" : "Verificarea trebuie reluată", tone: "pending" as const };
   const activeComponentId = compositionSelected ? undefined : activeSection?.componentId;
   const measuredFacts = measuredFactsForCanvas({
     preview,
@@ -142,6 +144,8 @@ export function ConfigurationConstructionCanvas({
             <p className="configuration-construction-canvas__empty" role={technicalState === "pending" ? "status" : undefined}>
               {technicalState === "pending"
                 ? "Rezultatele tehnice se actualizează pentru valorile noi."
+                : technicalState === "unavailable"
+                  ? "Verificarea nu este disponibilă. Reîncearcă actualizarea pentru a vedea valorile calculate."
                 : compositionSelected
                   ? "Consultă compoziția în inspectorul din dreapta."
                   : "Completează proprietățile stratului selectat în inspector."}
