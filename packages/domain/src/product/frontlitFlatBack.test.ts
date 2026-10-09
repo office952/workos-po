@@ -5,7 +5,6 @@ import { seededDisplayLabelCatalog } from "./displayMetadata.js";
 import { costEvidence, FOREX_10MM_ID } from "../resources/catalog.js";
 import { starterFormulaVersionsForType } from "./resolveFormulas.js";
 import { projectCommercialPrice } from "../commercial/price.js";
-import { freezeQuoteSnapshot } from "../commercial/quoteSnapshot.js";
 import { confirmReviewedDraft, projectConfigurationPreview } from "./configurationPreview.js";
 import { FRONTLIT_FLAT_BACK_PRODUCT_CODE, frontlitFlatBackFormSchema, frontlitFlatBackTemplate } from "./frontlitFlatBack.js";
 import { frontlitPlexiAl06Template } from "./frontlitPlexiAl06.js";
@@ -62,7 +61,7 @@ describe("opt-in flat BACK product in existing configurator", () => {
     expect(accepted.truth.values["back.profile"]).toBe("FLAT");
     expect(accepted.eic.completeness).toBe("COMPLETE");
     expect(accepted.evaluations.some((item) => item.componentId === "BACK")).toBe(true);
-    expect(accepted.aggregate.materialRequirements.some((item) => item.resourceId === FOREX_10MM_ID)).toBe(true);
+    expect(accepted.aggregate.requirements.some((item) => item.resourceId === FOREX_10MM_ID)).toBe(true);
     expect(projectCommercialPrice(accepted.eic).grossPrice).toBeGreaterThan(0);
   });
 
