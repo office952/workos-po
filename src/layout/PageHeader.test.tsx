@@ -24,4 +24,12 @@ describe("PageHeader", () => {
     expect(screen.getByRole("heading", { name: "Cereri" })).toBeInTheDocument();
     expect(document.querySelector(".page-header__eyebrow")).toBeNull();
   });
+
+  it("reserves the pilot eyebrow before the real object identity arrives", () => {
+    const { rerender } = render(<PageHeader variant="pilot" eyebrow="Client" title="Client" />);
+    expect(document.querySelector(".page-header__eyebrow")).toHaveAttribute("aria-hidden", "true");
+    rerender(<PageHeader variant="pilot" eyebrow="Client" title="Atelier Nord" />);
+    expect(document.querySelectorAll(".page-header__eyebrow")).toHaveLength(1);
+    expect(screen.getByText("Client", { selector: ".page-header__eyebrow" })).not.toHaveAttribute("aria-hidden");
+  });
 });

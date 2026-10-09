@@ -111,7 +111,7 @@ describe("presentRequestWorklistAction", () => {
       ),
     ).toEqual({
       actionLabel: "Alege produs",
-      actionHref: "/catalog?customer=cus-1&request=req-1",
+      actionHref: "/cereri/req-1?alege-produs=1#alege-produs",
     });
   });
 

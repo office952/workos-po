@@ -120,6 +120,7 @@ export const lightingFrontLedContract: ComponentCalculationContract = {
   typeId: "LIGHTING_FRONT_LED",
   role: "LIGHTING",
   profile: {
+    inputFieldIds: [VOLUME_PERIMETER_FIELD],
     measurement: "none",
     quantityUnit: "buc",
     independentCalculation: true,

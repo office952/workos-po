@@ -1164,6 +1164,8 @@ export {
   LETTERS_ON_ACM_PANEL,
   LOGO_ON_ACM_PANEL,
   MOUNT_LOGO_ON_PANEL_ID,
+  assemblyRoleLabel,
+  rolesForAssemblyKind,
   SIGN_ASSEMBLY_ACM_LETTERS_V1,
   SIGN_ASSEMBLY_ACM_SIGNAGE_V2,
   acceptAssemblyQuote,

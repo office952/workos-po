@@ -3,7 +3,7 @@ export type GlobalNavItem = {
   label: string;
   href: string;
   purpose: string;
-  /** Mid-width priority row (768–1024). Overflow items live under “Mai multe”. */
+  /** Tablet priority row (768–1151). Overflow items live under “Mai multe”. */
   midWidthPriority: boolean;
 };
 
@@ -20,7 +20,7 @@ export const GLOBAL_NAV: readonly GlobalNavGroup[] = [
   {
     id: "commercial",
     label: "Comercial",
-    summary: "Clienți, cereri, catalog și oferte.",
+    summary: "Clienți, cereri și oferte.",
     items: [
       {
         id: "clients",
@@ -35,13 +35,6 @@ export const GLOBAL_NAV: readonly GlobalNavGroup[] = [
         href: "/cereri",
         purpose: "Deschide o cerere de ofertă.",
         midWidthPriority: true,
-      },
-      {
-        id: "catalog",
-        label: "Catalog",
-        href: "/catalog",
-        purpose: "Alege produsul pentru lucrare.",
-        midWidthPriority: false,
       },
       {
         id: "quotes",
@@ -69,7 +62,7 @@ export const GLOBAL_NAV: readonly GlobalNavGroup[] = [
         label: "Planificare",
         href: "/planificare",
         purpose: "Vezi efortul planificat pe zone și utilaje.",
-        midWidthPriority: true,
+        midWidthPriority: false,
       },
       {
         id: "atelier",
@@ -86,11 +79,18 @@ export const GLOBAL_NAV: readonly GlobalNavGroup[] = [
     summary: "Setările organizației.",
     items: [
       {
+        id: "catalog",
+        label: "Catalog",
+        href: "/catalog",
+        purpose: "Administrează definițiile și construcția produselor.",
+        midWidthPriority: false,
+      },
+      {
         id: "administration",
         label: "Administrare",
         href: "/admin",
         purpose: "Deschide setările organizației.",
-        midWidthPriority: true,
+        midWidthPriority: false,
       },
     ],
   },

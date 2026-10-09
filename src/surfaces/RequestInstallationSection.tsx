@@ -15,6 +15,7 @@ import { SelectField } from "../components/SelectField";
 import { SurfacePanel } from "../components/SurfacePanel";
 import { TextField } from "../components/TextField";
 import { invalidateResources, writeResource } from "../data/resourceCache";
+import { invalidateCustomerProjections } from "../data/invalidation";
 import { resourceKeys } from "../data/resourceKeys";
 import {
   ELECTRICAL_STATE_OPTIONS,
@@ -195,6 +196,7 @@ function RequestInstallationOfferControls({
       }
       writeResource(resourceKeys.request(detail.requestId), presented);
       invalidateResources(resourceKeys.requests());
+      invalidateCustomerProjections();
       setConfirmingDelete(false);
       setDraftMode("");
       setSaveState("idle");
@@ -368,6 +370,7 @@ function InstallationPriceControl({ detail }: { detail: RequestDetailTransport }
         writeResource(resourceKeys.request(detail.requestId), presented);
       }
       invalidateResources(resourceKeys.requests());
+      invalidateCustomerProjections();
       setSaveState("idle");
     } catch (error) {
       setSaveState("error");
@@ -549,6 +552,7 @@ function RequestInstallationFactsEditor({
         writeResource(resourceKeys.request(detail.requestId), presented);
       }
       invalidateResources(resourceKeys.requests());
+      invalidateCustomerProjections();
       setSaveState("idle");
     } catch (error) {
       setSaveState("error");

@@ -16,7 +16,7 @@ export function registerSystemProjectionRoutes(app: Hono<ApiEnv>): void {
 
   app.get("/api/product-system-admin", (c) => {
     const runtime = getProductSystem(c);
-    return c.json(runtime.present().admin);
+    return c.json({ ...runtime.present().admin, canEdit: isOwner(c) });
   });
 
   app.get("/api/resources-admin", (c) => {

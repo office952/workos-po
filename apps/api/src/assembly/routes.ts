@@ -21,6 +21,8 @@ import {
   materializeAssemblyExecutionPlan,
   presentAssemblyReview,
   productCodeForRole,
+  rolesForAssemblyKind,
+  assemblyRoleLabel,
   projectAssemblyProduction,
   projectSiteInstallationScope,
   SITE_INSTALLATION_SCOPE_ID,
@@ -38,6 +40,7 @@ import {
 } from "../product.js";
 import {
   listAssemblyTruths,
+  listRequestAssemblies,
   readAssemblyDefinition,
   readAssemblyOrderByQuote,
   readAssemblyProductionByOrder,
@@ -54,24 +57,36 @@ import {
 import { persistAssemblyQuoteRequestLock } from "../requests/store.js";
 
 export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
+  app.get("/api/assemblies", (c) => {
+    const runtime = getProductSystem(c);
+    const requestId = c.req.query("request");
+    if (!requestId) return c.json({ error: "invalid_payload" }, 400);
+    if (!runtime.readCommercialRequest(requestId)) return c.json({ error: "not_found" }, 404);
+    const plane = runtime.assemblyPlane();
+    return c.json({ assemblies: listRequestAssemblies(plane.db, plane.organizationId, requestId).map(definition => presentCurrent(runtime, definition.assemblyId)).filter(Boolean) });
+  });
+
   app.get("/api/assemblies/offering", (c) => {
     const runtime = getProductSystem(c);
     const resolution = runtime.resolveProductEnablement();
     const v1 = assemblyAvailableForNewWork(resolution);
     const v2 = assemblyV2AvailableForNewWork(resolution);
     return c.json({
+      canCreate: isOwner(c),
       available: v1,
       label: "Panou ACM + litere volumetrice",
       summary: "Panou ACM și litere volumetrice, confirmate separat și montate împreună.",
       offerings: [
         {
           kind: SIGN_ASSEMBLY_ACM_LETTERS_V1,
+          members: rolesForAssemblyKind(SIGN_ASSEMBLY_ACM_LETTERS_V1).map(role => ({ role, productCode: productCodeForRole(role), label: assemblyRoleLabel(role) })),
           available: v1,
           label: "Panou ACM + litere volumetrice",
           summary: "Panou ACM și litere volumetrice, confirmate separat și montate împreună.",
         },
         {
           kind: SIGN_ASSEMBLY_ACM_SIGNAGE_V2,
+          members: rolesForAssemblyKind(SIGN_ASSEMBLY_ACM_SIGNAGE_V2).filter(role => resolution.ok && isTemplateEnabledForNewWork(productCodeForRole(role), resolution)).map(role => ({ role, productCode: productCodeForRole(role), label: assemblyRoleLabel(role) })),
           available: v2,
           label: "Panou ACM + logo volumetric",
           summary: "Panou ACM și logo volumetric. Literele pot fi adăugate când sunt oferite.",
@@ -123,6 +138,18 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: "not_found" }, 404);
     }
     return c.json({ assembly: presented });
+  });
+
+  app.get("/api/assemblies/:assemblyId/members/:role", (c) => {
+    const runtime = getProductSystem(c);
+    const plane = runtime.assemblyPlane();
+    const definition = readAssemblyDefinition(plane.db, plane.organizationId, c.req.param("assemblyId"));
+    if (!definition) return c.json({ error: "not_found" }, 404);
+    const role = readRole({ role: c.req.param("role") });
+    if (!role) return c.json({ error: "invalid_payload" }, 400);
+    const member = definition.members.find(item => item.role === role);
+    const child = member ? readConfirmedChild(plane.db, plane.organizationId, member.confirmedTruthId) : null;
+    return c.json({ customerId: definition.customerId, requestId: definition.requestId, productCode: productCodeForRole(role), values: child?.truth.values ?? null });
   });
 
   app.post("/api/assemblies/:assemblyId/members", async (c) => {

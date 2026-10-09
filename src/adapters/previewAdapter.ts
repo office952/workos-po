@@ -1,4 +1,5 @@
 import { presentFormSchema } from "./formSchemaAdapter";
+import { presentConfigurationComponentDetails } from "./configurationComponentDetailsAdapter";
 import type {
   ConfigurationReadiness,
   InstallationTransport,
@@ -22,7 +23,7 @@ function presentReadiness(value: unknown): ConfigurationReadiness | null {
 
 function presentIdentityFacts(
   value: unknown,
-): Array<{ id: string; label: string; value: string }> {
+): PreviewTransport["product"]["identityFacts"] {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -36,7 +37,7 @@ function presentIdentityFacts(
     ) {
       return [];
     }
-    return [{ id: record.id, label: record.label, value: record.value }];
+    return [{ id: record.id, label: record.label, value: record.value, ...(typeof record.componentId === "string" ? { componentId: record.componentId } : {}) }];
   });
 }
 
@@ -53,6 +54,7 @@ function presentMissing(value: unknown): MissingFact[] {
     return [
       {
         label: record.label,
+        ...(typeof record.componentId === "string" ? { componentId: record.componentId } : {}),
         fieldId: typeof record.fieldId === "string" ? record.fieldId : undefined,
       },
     ];
@@ -124,6 +126,7 @@ export function presentPreview(payload: unknown): PreviewTransport | null {
   }
 
   return {
+    componentDetails: presentConfigurationComponentDetails(record.componentDetails),
     product: {
       code,
       label: product.label,

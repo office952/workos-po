@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="420" viewBox="0 0 960 420" fill="none">
+  <g stroke="currentColor" stroke-width="1" opacity=".16">
+    <path d="M0 60H960M0 140H960M0 220H960M0 300H960M0 380H960"/>
+    <path d="M80 0V420M240 0V420M400 0V420M560 0V420M720 0V420M880 0V420"/>
+  </g>
+  <g stroke="currentColor" stroke-width="1.2" opacity=".28">
+    <path d="M34 92H176V52H318V172H486V112H668V252H846"/>
+    <path d="M92 334H214V274H364V354H540V294H718V334H928"/>
+    <path d="M510 32V78H632V148H774V206H912"/>
+  </g>
+  <g fill="currentColor" opacity=".34">
+    <rect x="171" y="47" width="10" height="10"/>
+    <rect x="313" y="167" width="10" height="10"/>
+    <rect x="481" y="107" width="10" height="10"/>
+    <rect x="663" y="247" width="10" height="10"/>
+    <rect x="209" y="269" width="10" height="10"/>
+    <rect x="359" y="349" width="10" height="10"/>
+    <rect x="535" y="289" width="10" height="10"/>
+    <rect x="713" y="329" width="10" height="10"/>
+  </g>
+  <g stroke="currentColor" stroke-width="1" opacity=".22">
+    <path d="M20 20h28M20 20v28M940 20h-28M940 20v28M20 400h28M20 400v-28M940 400h-28M940 400v-28"/>
+  </g>
+</svg>

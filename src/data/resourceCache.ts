@@ -1,3 +1,5 @@
+import { TransportError } from "../api/http";
+
 export type ResourceStatus = "idle" | "loading" | "success" | "error";
 
 export type ResourceSnapshot<T> = {
@@ -142,7 +144,10 @@ export async function loadResource<T>(
       }
       entry.snapshot = {
         status: "error",
-        data: entry.snapshot.data,
+        data:
+          error instanceof TransportError && (error.status === 401 || error.status === 403)
+            ? undefined
+            : entry.snapshot.data,
         error,
         updatedAt: Date.now(),
       };
@@ -170,8 +175,21 @@ function markStale(entry: CacheEntry): void {
   };
 }
 
-function refreshIfObserved(key: string, entry: CacheEntry): void {
-  if (entry.listeners.size === 0 || !entry.fetcher) {
+export type InvalidateResourcesOptions = {
+  /** Refetch when no React subscribers remain (assembly after member confirm). */
+  refetchUnobserved?: boolean;
+};
+
+function refreshIfObserved(
+  key: string,
+  entry: CacheEntry,
+  options?: InvalidateResourcesOptions,
+): void {
+  if (!entry.fetcher) {
+    notify(entry);
+    return;
+  }
+  if (entry.listeners.size === 0 && !options?.refetchUnobserved) {
     notify(entry);
     return;
   }
@@ -180,14 +198,29 @@ function refreshIfObserved(key: string, entry: CacheEntry): void {
   });
 }
 
-export function invalidateResources(...keys: string[]): void {
+export function invalidateResources(
+  ...args: string[] | [InvalidateResourcesOptions, ...string[]]
+): void {
+  let options: InvalidateResourcesOptions | undefined;
+  let keys: string[];
+  const first = args[0];
+  if (
+    typeof first === "object" &&
+    first !== null &&
+    "refetchUnobserved" in first
+  ) {
+    options = first;
+    keys = args.slice(1) as string[];
+  } else {
+    keys = args as string[];
+  }
   for (const key of keys) {
     const entry = entries.get(key);
     if (!entry) {
       continue;
     }
     markStale(entry);
-    refreshIfObserved(key, entry);
+    refreshIfObserved(key, entry, options);
   }
 }
 
@@ -209,6 +242,16 @@ export function resetResourceCache(): void {
     entry.listeners.clear();
   }
   entries.clear();
+}
+
+/** Discard session-bound values and old responses without disconnecting mounted readers. */
+export function discardResourceCache(): void {
+  for (const entry of entries.values()) {
+    entry.generation += 1;
+    entry.inflight = null;
+    entry.snapshot = { ...idleSnapshot };
+    notify(entry);
+  }
 }
 
 export function hasUsableData<T>(snapshot: ResourceSnapshot<T>): boolean {

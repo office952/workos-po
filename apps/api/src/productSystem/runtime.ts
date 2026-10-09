@@ -697,6 +697,21 @@ export type ProductSystemRuntimeOptions = {
   now?: () => string;
 };
 
+function resolveExecutionPlanJobIdForInbox(
+  db: SqliteDatabase,
+  organizationId: string,
+  sourceSnapshotId: string,
+): string | null {
+  const acceptedSnapshot = getAcceptedProductionSnapshot(db, sourceSnapshotId);
+  if (acceptedSnapshot?.sourceOrderSnapshotId) {
+    return acceptedSnapshot.sourceOrderSnapshotId;
+  }
+  const assemblyProduction = acceptedSnapshot
+    ? null
+    : readAssemblyProductionBySnapshot(db, organizationId, sourceSnapshotId);
+  return assemblyProduction?.sourceOrderSnapshotId ?? null;
+}
+
 export function createProductSystemRuntime(
   sqlitePath = resolveProductSystemSqlitePath(),
   options: ProductSystemRuntimeOptions = {},
@@ -1040,15 +1055,20 @@ export function createProductSystemRuntimeFromOpenDb(
       const people = listPeople(db);
       const eligibility = currentEligibility();
       const openPlans = listOpenExecutionPlanRecords(db);
+      const organizationId = currentOrganizationId();
       const plans = openPlans.map((record) => {
         const snapshot = getAcceptedProductionSnapshot(db, record.plan.sourceSnapshotId);
-        const orderId = snapshot?.sourceOrderSnapshotId;
-        const order = orderId ? getOrderSnapshot(db, orderId) : null;
+        const jobId = resolveExecutionPlanJobIdForInbox(
+          db,
+          organizationId,
+          record.plan.sourceSnapshotId,
+        );
+        const order = jobId ? getOrderSnapshot(db, jobId) : null;
         return {
           record,
           snapshot,
           customerDisplayName: order?.customer?.displayName ?? null,
-          jobId: orderId ?? snapshot?.sourceOrderSnapshotId ?? null,
+          jobId,
         };
       });
       return projectOperatorTaskInbox({

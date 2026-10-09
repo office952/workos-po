@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetResourceCache } from "../data/resourceCache";
@@ -12,6 +12,14 @@ afterEach(() => {
 });
 
 describe("QuoteSnapshotPage", () => {
+  it("keeps partial unknown internal cost distinct from zero and does not require a letter profile", async () => {
+    stubQuotePage({ envelope: createdEnvelope(), snapshot: { ...frozenSnapshot(), eic: { completeness: "PARTIAL", currency: "EUR", total: 0, lines: [] } } });
+    render(<QuoteSnapshotPage productCode={productCode} quoteSnapshotId="q-a" />);
+    expect(await screen.findByTestId("internal-cost")).toHaveTextContent("Incomplet");
+    expect(screen.getByTestId("internal-cost")).not.toHaveTextContent("0,00 EUR");
+    expect(screen.queryByText("Linie de profil indisponibilă")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Descarcă oferta PDF" })).toBeEnabled();
+  });
   it("uses envelope stage and nextAction without passive acceptance or order GETs", async () => {
     const fetchMock = stubQuotePage({
       envelope: createdEnvelope(),
@@ -23,7 +31,7 @@ describe("QuoteSnapshotPage", () => {
     expect(await screen.findByTestId("frozen-profile-cost")).toHaveTextContent(
       "12,5 m × 3,00 EUR/m = 37,50 EUR",
     );
-    expect(screen.getByTestId("commercial-price")).toHaveTextContent("Preț net client");
+    expect(within(screen.getByRole("region", { name: "Valori înghețate" })).getByTestId("commercial-price")).toHaveTextContent("Preț net client");
     expect(screen.getByText("Creată")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Marchează acceptată" })).toBeEnabled();
     expect(screen.getByText("Neacceptată")).toBeInTheDocument();

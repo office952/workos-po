@@ -12,6 +12,11 @@ const CONTENT_TYPES: Record<string, string> = {
   ".svg": "image/svg+xml",
   ".txt": "text/plain; charset=utf-8",
   ".woff2": "font/woff2",
+  ".webp": "image/webp",
+  ".avif": "image/avif",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
 };
 
 function safeFile(root: string, urlPath: string): string | null {
@@ -45,6 +50,11 @@ function serveStatic(c: Context<ApiEnv>, staticRoot: string): Response | Promise
     return c.body("not found", 404);
   }
   const type = CONTENT_TYPES[extname(filePath).toLowerCase()] ?? "application/octet-stream";
+  // Only content-hashed public image assets may survive a frontend release.
+  // SPA fallback HTML must always revalidate, including missing asset requests.
+  const versionedImage = filePath === requested &&
+    /^\/assets\/[^/]+-[A-Za-z0-9_-]{8,}\.(?:webp|avif|png|jpe?g|gif|svg)$/i.test(c.req.path);
+  const cacheControl = versionedImage ? "public, max-age=31536000, immutable" : "no-cache";
   return new Promise((resolveResponse, reject) => {
     const stream = createReadStream(filePath);
     const chunks: Buffer[] = [];
@@ -56,7 +66,7 @@ function serveStatic(c: Context<ApiEnv>, staticRoot: string): Response | Promise
       resolveResponse(
         new Response(Buffer.concat(chunks), {
           status: 200,
-          headers: { "content-type": type },
+          headers: { "content-type": type, "cache-control": cacheControl },
         }),
       );
     });

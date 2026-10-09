@@ -93,44 +93,7 @@ Owned by this repository's imported engine (`apps/api` + `packages/domain`):
 
 The engine owns contracts, validation, evaluation, snapshots, and invariants. Changeable business values, formulas, rates, and commercial rules belong in versioned domain-owned configuration, not as silent source constants. That is Configuration-First, not a second Product Truth. See `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
-```text
-VOLUMETRIC_LOGO_V1 = COMPLETE / OWNER_ACCEPTED
-OWNER_ACCEPTED_VOLUMETRIC_LOGO_V1 = YES
-PRODUCT_ASSEMBLY_V2 = COMPLETE / OWNER_ACCEPTED
-OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V2 = YES
-VOLUMETRIC_LOGO_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
-PRODUCT_ASSEMBLY_V2_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
-HOST_CONTEXT_V1 = COMPLETE / OWNER_ACCEPTED
-OWNER_ACCEPTED_HOST_CONTEXT_V1 = YES
-MOUNTING_INTERFACE_V1 = COMPLETE / OWNER_ACCEPTED
-OWNER_ACCEPTED_MOUNTING_INTERFACE_V1 = YES
-SITE_INSTALLATION_VERTICAL_V1 = COMPLETE / OWNER_ACCEPTED
-OWNER_ACCEPTED_SITE_INSTALLATION_VERTICAL_V1 = YES
-EXECUTION_REALITY_V1 = COMPLETE / OWNER_ACCEPTED
-OWNER_ACCEPTED_EXECUTION_REALITY_V1 = YES
-ACTUAL_DURATION_V1 = COMPLETE / OWNER_ACCEPTED
-MACHINE_RUN_V1 = COMPLETE / OWNER_ACCEPTED
-PLANNED_VS_ACTUAL_TIME_V1 = COMPLETE / OWNER_ACCEPTED
-EXECUTION_REALITY_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
-CURRENT_PROGRAM = PRODUCTION_PILOT_READINESS_V1
-CURRENT_PROGRAM_STATUS = COMPLETE / OWNER_ACCEPTED
-PRODUCTION_PILOT_READINESS_V1 = COMPLETE / OWNER_ACCEPTED
-OWNER_ACCEPTED_PRODUCTION_PILOT_READINESS_V1 = YES
-PREFLIGHT_ENGINE = SYNTHETICALLY_PROVEN
-REAL_ENVIRONMENT_PREFLIGHT = NOT_RUN
-DEPLOY_PRODUCTION = HOLD
-CUTOVER = HOLD
-FIRST_REAL_BUSINESS_OPERATION = HOLD
-NEXT_WAVE_AUTHORIZED = NO
-HOST_CONTEXT_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
-MOUNTING_INTERFACE_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
-SITE_INSTALLATION_VERTICAL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
-LEGACY_NAMING_DEBT = ProductAggregate.inscription is a generic display designation for some products
-```
-
-Logo V1 does not introduce `root.designation`. The existing `inscription` field carries the logo designation, shown to the operator as Denumire logo.
-
-The root frontend must consume supported contracts. It must not independently implement them. It must not import `@workos-final/domain`.
+Current flow responsibilities belong to [Request, Catalog and configuration](architecture/REQUEST_CATALOG_CONFIGURATION_CANON.md). Catalog defines reusable products; requests bind clients and product instances. Settings/formulas stay versioned and domain-owned. The current implementation status and accepted historical milestones belong only to [ROADMAP.md](ROADMAP.md); this authority document does not duplicate changing milestone flags.
 
 ## Presentation truth
 

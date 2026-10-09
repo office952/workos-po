@@ -1,239 +1,84 @@
-import { useEffect, useMemo, useState } from "react";
-import { getJson, postJson } from "../api/http";
-import { CatalogWorkspace } from "../components/CatalogWorkspace";
-import { EmptyState } from "../components/EmptyState";
-import { FilterBar } from "../components/FilterBar";
+import { useState } from "react";
+import { presentProductSystem } from "../adapters/productSystemAdapter";
+import { fetchProductSystem, updateProductLabel } from "../api/productSystem";
+import { TransportError } from "../api/http";
+import { Button } from "../components/Button";
 import { InlineAlert } from "../components/InlineAlert";
-import { CollectionBody } from "../components/LoadingFloor";
+import { LoadingFloor } from "../components/LoadingFloor";
+import { ProductPicker } from "../components/ProductPicker";
 import { SurfacePanel } from "../components/SurfacePanel";
-import { WorklistRow } from "../components/WorklistRow";
+import { TextField } from "../components/TextField";
+import { invalidateResources } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
-import { loadCatalogProducts, loadRequestList } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
-import { presentContextMeta } from "../presentation/contextMeta";
-import { matchesSearch, uniqueLabels } from "../presentation/listFilter";
-import { configuratorHref, parseSpineContext } from "../routing/appRoute";
-import { navigate } from "../routing/navigate";
-import {
-  labelsMatchingContext,
-  readConfiguratorSession,
-  writeConfiguratorSession,
-} from "../session/configuratorSession";
 
-const ALL = "all";
-const COLUMNS = ["Produs", "Familie", "Acțiune"] as const;
+async function loadProductSystem() {
+  const model = presentProductSystem(await fetchProductSystem());
+  if (!model) throw new Error("unpresentable_product_system");
+  return model;
+}
 
 export function CatalogPage() {
-  const context = parseSpineContext(window.location.search);
-  const stored = readConfiguratorSession();
-  const customerId = context.customerId ?? stored.customerId;
-  const requestId = context.requestId ?? stored.requestId;
-  const catalog = useResource(resourceKeys.catalog(), loadCatalogProducts);
-  const requests = useResource(resourceKeys.requests(), loadRequestList);
-  const products = useMemo(() => catalog.data ?? [], [catalog.data]);
-  const contextRequest =
-    (requests.data ?? []).find((item) => item.requestId === requestId) ?? null;
-  const [query, setQuery] = useState("");
-  const [family, setFamily] = useState(ALL);
-  const [offerings, setOfferings] = useState<
-    { kind: string; available: boolean; label: string; summary: string }[]
-  >([]);
+  const loaded = useResource(resourceKeys.productSystem(), loadProductSystem);
+  const [code, setCode] = useState<string | null>(() => new URLSearchParams(window.location.search).get("product"));
+  const [typeId, setTypeId] = useState<string | null>(null);
+  const [rename, setRename] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const model = loaded.data;
+  const product = model?.products.find(p => p.code === code);
+  const component = product?.composition.find(c => c.typeId === typeId) ?? product?.composition[0];
+  const type = model?.types.find(t => t.typeId === component?.typeId);
+  const attributes = type?.configurations.find(c => c.productCode === product?.code)?.attributes ?? [];
 
-  useEffect(() => {
-    void getJson("/api/assemblies/offering")
-      .then((body) => {
-        const record = body as {
-          available?: unknown;
-          label?: unknown;
-          summary?: unknown;
-          offerings?: unknown;
-        };
-        if (Array.isArray(record.offerings)) {
-          setOfferings(
-            record.offerings.flatMap((item) => {
-              if (typeof item !== "object" || item === null) {
-                return [];
-              }
-              const row = item as {
-                kind?: unknown;
-                available?: unknown;
-                label?: unknown;
-                summary?: unknown;
-              };
-              if (row.available !== true || typeof row.label !== "string" || typeof row.kind !== "string") {
-                return [];
-              }
-              return [
-                {
-                  kind: row.kind,
-                  available: true,
-                  label: row.label,
-                  summary: typeof row.summary === "string" ? row.summary : "",
-                },
-              ];
-            }),
-          );
-          return;
-        }
-        if (record.available === true && typeof record.label === "string") {
-          setOfferings([
-            {
-              kind: "SIGN_ASSEMBLY_ACM_LETTERS_V1",
-              available: true,
-              label: record.label,
-              summary: typeof record.summary === "string" ? record.summary : "",
-            },
-          ]);
-        }
-      })
-      .catch(() => {
-        setOfferings([]);
-      });
-  }, []);
+  async function saveLabel() {
+    if (!product || rename === null || pending || !model?.canEdit) return;
+    setPending(true); setError(null);
+    try {
+      await updateProductLabel(product.code, rename.trim(), product.displayRevision);
+      setRename(null);
+      invalidateResources(resourceKeys.productSystem(), resourceKeys.catalog());
+    } catch (e) {
+      setError(e instanceof TransportError && e.status === 409 ? "Denumirea a fost modificată între timp. Reîncarcă produsul înainte de salvare." : "Denumirea nu a putut fi salvată.");
+    } finally { setPending(false); }
+  }
 
-  useEffect(() => {
-    const previous = readConfiguratorSession();
-    const matched = labelsMatchingContext(previous, { customerId, requestId });
-    const customerLabel =
-      matched.customerLabel ?? contextRequest?.customerDisplayName ?? null;
-    const requestLabel =
-      matched.requestLabel ??
-      contextRequest?.reference ??
-      contextRequest?.title ??
-      null;
-    writeConfiguratorSession({
-      ...previous,
-      customerId,
-      requestId,
-      customerLabel,
-      requestLabel,
-    });
-  }, [contextRequest, customerId, requestId]);
-
-  const sessionLabels = labelsMatchingContext(stored, { customerId, requestId });
-  const labels = {
-    customerLabel:
-      sessionLabels.customerLabel ?? contextRequest?.customerDisplayName ?? null,
-    requestLabel:
-      sessionLabels.requestLabel ??
-      contextRequest?.reference ??
-      contextRequest?.title ??
-      null,
-  };
-
-  const families = useMemo(
-    () => uniqueLabels(products.map((product) => product.familyLabel)),
-    [products],
-  );
-
-  const visible = useMemo(
-    () =>
-      products.filter((product) => {
-        const matchesFamily = family === ALL || product.familyLabel === family;
-        return (
-          matchesFamily &&
-          matchesSearch(query, [product.label, product.description, product.familyLabel])
-        );
-      }),
-    [family, products, query],
-  );
-
-  return (
-    <SlicePage
-      contextLabel="Catalog"
-      currentHref="/catalog"
-      workspace="catalog"
-      eyebrow="Catalog"
-      title="Catalog de produse"
-      lead="Alege produsul lucrării. Configuratorul primește clientul, cererea și produsul selectat."
-      meta={
-        presentContextMeta([labels.customerLabel, labels.requestLabel]) ??
-        (customerId && requestId
-          ? "Clientul și cererea rămân contextul acestei configurări."
-          : undefined)
-      }
-    >
-      {!customerId || !requestId ? (
-        <InlineAlert tone="blocked" title="Context incomplet">
-          Catalogul are nevoie de un client și o cerere înainte de configurare.
-        </InlineAlert>
-      ) : null}
-      <CatalogWorkspace
-        families={families}
-        selectedFamily={family}
-        allLabel="Toate"
-        onSelectFamily={setFamily}
-      >
-        <SurfacePanel
-          variant="flush"
-          label="Produse"
-          busy={catalog.status === "loading" && products.length === 0}
-        >
-          <FilterBar
-            searchId="catalog-cauta"
-            searchLabel="Caută"
-            searchValue={query}
-            onSearchChange={setQuery}
-            meta={
-              catalog.status === "success"
-                ? `${visible.length} din ${products.length}`
-                : undefined
-            }
-          />
-          <CollectionBody
-            status={catalog.status}
-            itemCount={products.length}
-            visibleCount={visible.length}
-            loadingLabel="Se citește catalogul"
-            columns={COLUMNS}
-            worklistLabel="Șabloane de produs"
-            variant="compact"
-            errorTitle="Catalogul nu a putut fi citit"
-            errorBody="Produsele nu sunt disponibile."
-            empty={<EmptyState title="Catalogul nu are șabloane de prezentat." />}
-            filteredEmpty={
-              <EmptyState title="Categoria nu are șabloane care să corespundă." />
-            }
-          >
-            {offerings.map((item) =>
-              requestId ? (
-                <WorklistRow
-                  key={item.kind}
-                  variant="compact"
-                  onSelect={() => {
-                    void postJson("/api/assemblies", { requestId, kind: item.kind }).then((body) => {
-                      const assembly = (body as { assembly?: { assemblyId?: string } }).assembly;
-                      if (assembly?.assemblyId) {
-                        navigate(`/ansamblu?assembly=${encodeURIComponent(assembly.assemblyId)}`);
-                      }
-                    });
-                  }}
-                  identity={item.label}
-                  identityDetail={item.summary}
-                  context="Ansamblu"
-                  actionLabel="Deschide ansamblul"
-                />
-              ) : null,
-            )}
-            {visible.map((product) => (
-              <WorklistRow
-                key={product.code}
-                variant="compact"
-                href={configuratorHref({
-                  customerId,
-                  requestId,
-                  productCode: product.code,
-                })}
-                identity={product.label}
-                identityDetail={product.description || undefined}
-                context={product.familyLabel ?? "Produs"}
-                actionLabel="Deschide configurația"
-              />
-            ))}
-          </CollectionBody>
-        </SurfacePanel>
-      </CatalogWorkspace>
-    </SlicePage>
-  );
+  return <SlicePage contextLabel="Catalog" currentHref="/catalog" workspace="stack" surface="catalog-registry" headerVariant="pilot" eyebrow="Definiții de produse" title="Catalog" lead="Construcția produselor, materialele, procesele și regulile de calcul pentru lucrările noi.">
+    <div className="product-system-links">
+      <a className="text-link" href="/admin/products">Disponibilitatea produselor</a>
+      <a className="text-link" href="/admin/technical">Setări tehnice</a>
+      <a className="text-link" href="/admin/formulas">Formule de calcul</a>
+    </div>
+    {loaded.status === "error" && <InlineAlert tone="error" title="Definițiile produselor nu au putut fi citite">{model ? "Se afișează ultima versiune citită." : "Reîncearcă încărcarea."}<Button variant="secondary" onClick={() => invalidateResources(resourceKeys.productSystem())}>Reîncearcă</Button></InlineAlert>}
+    {!model && loaded.status !== "error" && <LoadingFloor variant="registry" label="Se citesc definițiile produselor" />}
+    {model && <div className="product-system-workspace">
+      <ProductPicker products={model.products} selectedCode={code} disabled={pending} actionLabel="Deschide definiția" onChoose={p => { setCode(p.code); setTypeId(null); setRename(null); setError(null); }} />
+      <div className="product-system-detail">
+        {product ? <>
+          <SurfacePanel title={product.label} label="Definiție produs">
+            <p>{product.description}</p><p className="ui-note">{[product.familyLabel, product.categoryLabel].filter(Boolean).join(" · ")}</p>
+            {model.canEdit && (rename === null ? <Button variant="secondary" onClick={() => setRename(product.label)}>Editează denumirea</Button> : <form onSubmit={e => { e.preventDefault(); void saveLabel(); }}>
+              <TextField id="product-label" label="Denumire produs" value={rename} onChange={setRename} disabled={pending} />
+              <Button type="submit" disabled={pending || !rename.trim()}>Salvează denumirea</Button><Button variant="secondary" disabled={pending} onClick={() => setRename(null)}>Anulează</Button>
+            </form>)}
+            {error && <InlineAlert tone="error" title="Salvarea a eșuat">{error}</InlineAlert>}
+          </SurfacePanel>
+          <nav className="product-system-detail__nav" aria-label="Componentele produsului">{product.composition.map(c => <button key={c.role} type="button" aria-pressed={component?.typeId === c.typeId} onClick={() => setTypeId(c.typeId)}>{c.roleLabel}</button>)}</nav>
+          {type && <SurfacePanel title={component?.roleLabel ?? type.label} label="Construcție">
+            <h3>{type.label}</h3><p>{type.description}</p>
+            <dl className="product-system-facts">{attributes.map((a, i) => <div key={i}><dt>{a.label}</dt><dd>{a.valueDisplay}<small className="ui-note"> · {a.ownershipLabel}</small></dd></div>)}</dl>
+            <h3>Măsurare și calcul</h3><p>{type.measurement} · {type.quantity}</p>
+            <dl className="product-system-facts">{[...type.calculationInputs, ...type.calculationResults].map((line, i) => <div key={i}><dt>{line.label}</dt><dd>{line.value}</dd></div>)}</dl>
+            <div className="product-system-links"><a className="text-link" href={`/admin/technical?component=${encodeURIComponent(type.typeId)}`}>Setările acestei componente</a><a className="text-link" href={`/admin/formulas?component=${encodeURIComponent(type.typeId)}`}>Formulele acestei componente</a></div>
+            <h3>Materiale și resurse</h3><ul>{type.resourceReferences.map(r => <li key={r.id}>{r.label}</li>)}</ul>
+            <h3>Procese</h3><ul>{type.processReferences.map(r => <li key={r.id}>{r.label}</li>)}</ul>
+            <a className="text-link" href="/admin/resources">Tarifele resurselor</a>
+            {type.gaps.length > 0 && <InlineAlert tone="pending" title="De completat în definiție">{type.gaps.join(" ")}</InlineAlert>}
+          </SurfacePanel>}
+          <p className="ui-note">Setările și formulele editabile sunt administrate în paginile lor. Proprietățile constructive fixe sunt prezentate pentru verificare; editorul complet de definiții nu este încă disponibil. Configurațiile și ofertele înghețate își păstrează versiunea.</p>
+        </> : <SurfacePanel title="Selectează un produs" label="Definiție produs"><p>Deschide definiția pentru a verifica fața, cantul, spatele, iluminarea și modul de realizare, în funcție de produs.</p></SurfacePanel>}
+      </div>
+    </div>}
+  </SlicePage>;
 }

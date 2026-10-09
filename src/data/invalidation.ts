@@ -1,16 +1,38 @@
-import { invalidateResourcePrefix, invalidateResources } from "./resourceCache";
+import { discardResourceCache, invalidateResourcePrefix, invalidateResources } from "./resourceCache";
 import { resourceKeys } from "./resourceKeys";
 
 export function invalidateAfterCreateCustomer(): void {
-  invalidateResources(resourceKeys.customers());
+  invalidateResources(resourceKeys.customers(), resourceKeys.customerIntake());
 }
 
 export function invalidateAfterCreateRequest(customerId: string): void {
-  invalidateResources(resourceKeys.requests(), resourceKeys.customer(customerId));
+  invalidateResources(
+    resourceKeys.requests(),
+    resourceKeys.customer(customerId),
+    resourceKeys.customerWorkspace(customerId),
+    resourceKeys.customers(),
+  );
+}
+
+export function invalidateCustomerProjections(): void {
+  invalidateResources(resourceKeys.customers(), resourceKeys.customerIntake());
+  invalidateResourcePrefix(resourceKeys.customerWorkspacePrefix());
 }
 
 export function invalidateAfterRequestDetailChange(requestId: string): void {
   invalidateResources(resourceKeys.request(requestId), resourceKeys.requests());
+  invalidateCustomerProjections();
+}
+
+export function invalidateAfterAssemblyMemberChange(
+  assemblyId: string,
+  memberRole?: string,
+): void {
+  const keys = [resourceKeys.assembly(assemblyId)];
+  if (memberRole) {
+    keys.push(resourceKeys.assemblyMember(assemblyId, memberRole));
+  }
+  invalidateResources({ refetchUnobserved: true }, ...keys);
 }
 
 export function invalidateAfterAcceptQuote(quoteSnapshotId?: string): void {
@@ -19,6 +41,7 @@ export function invalidateAfterAcceptQuote(quoteSnapshotId?: string): void {
     keys.push(resourceKeys.quoteEnvelope(quoteSnapshotId));
   }
   invalidateResources(...keys);
+  invalidateCustomerProjections();
 }
 
 export function invalidateAfterCreateOrder(quoteSnapshotId?: string): void {
@@ -27,10 +50,12 @@ export function invalidateAfterCreateOrder(quoteSnapshotId?: string): void {
     keys.push(resourceKeys.quoteEnvelope(quoteSnapshotId));
   }
   invalidateResources(...keys);
+  invalidateCustomerProjections();
 }
 
 export function invalidateAfterFreezeQuote(): void {
   invalidateResources(resourceKeys.quotes());
+  invalidateCustomerProjections();
 }
 
 export function invalidateAfterSellerChange(): void {
@@ -39,10 +64,12 @@ export function invalidateAfterSellerChange(): void {
 
 export function invalidateAfterProductionRelease(jobId: string): void {
   invalidateResources(resourceKeys.job(jobId), resourceKeys.jobs());
+  invalidateCustomerProjections();
 }
 
 export function invalidateAfterCreateExecutionPlan(jobId: string): void {
   invalidateResources(resourceKeys.job(jobId), resourceKeys.jobs());
+  invalidateCustomerProjections();
 }
 
 export function invalidateAfterExecutionTaskChange(planId: string): void {
@@ -53,6 +80,7 @@ export function invalidateAfterExecutionTaskChange(planId: string): void {
     resourceKeys.planningWorkload(),
   );
   invalidateResourcePrefix(resourceKeys.jobPrefix());
+  invalidateCustomerProjections();
 }
 
 export function invalidateAfterOperatorSessionChange(): void {
@@ -64,29 +92,7 @@ export function invalidateAfterOperatorSessionChange(): void {
 }
 
 export function invalidateAfterCloudBoundaryChange(): void {
-  invalidateAfterOperatorSessionChange();
-  invalidateResources(
-    resourceKeys.seller(),
-    resourceKeys.customers(),
-    resourceKeys.requests(),
-    resourceKeys.catalog(),
-    resourceKeys.quotes(),
-    resourceKeys.jobs(),
-    resourceKeys.resourcesAdmin(),
-    resourceKeys.commercialAdmin(),
-    resourceKeys.technicalAdmin(),
-    resourceKeys.formulasAdmin(),
-    resourceKeys.productEnablementAdmin(),
-    resourceKeys.organizationAccessAdmin(),
-    resourceKeys.peopleAdmin(),
-    resourceKeys.workcentersAdmin(),
-    resourceKeys.planningWorkload(),
-  );
-  invalidateResourcePrefix("customer:");
-  invalidateResourcePrefix("request:");
-  invalidateResourcePrefix("quote");
-  invalidateResourcePrefix("job:");
-  invalidateResourcePrefix("execution-plan:");
+  discardResourceCache();
 }
 
 export function invalidateAfterCostEvidenceChange(): void {
@@ -98,11 +104,11 @@ export function invalidateAfterCommercialPolicyChange(): void {
 }
 
 export function invalidateAfterTechnicalSettingsChange(): void {
-  invalidateResources(resourceKeys.technicalAdmin());
+  invalidateResources(resourceKeys.technicalAdmin(), resourceKeys.productSystem());
 }
 
 export function invalidateAfterFormulasChange(): void {
-  invalidateResources(resourceKeys.formulasAdmin());
+  invalidateResources(resourceKeys.formulasAdmin(), resourceKeys.productSystem());
 }
 
 export function invalidateAfterProductEnablementChange(): void {
@@ -126,4 +132,5 @@ export function invalidateAfterWorkcentersAdminChange(): void {
   );
   invalidateResourcePrefix(resourceKeys.jobPrefix());
   invalidateResourcePrefix("execution-plan:");
+  invalidateCustomerProjections();
 }

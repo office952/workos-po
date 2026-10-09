@@ -1,0 +1,108 @@
+/* WorkOS post-login machine palette.
+   Semantic theme tokens only. Layout belongs to layout/app-shell-v2.css.
+   Login keeps its own scene palette; post-login surfaces consume these roles.
+*/
+
+.app-shell {
+  --shell-chassis: #f0ede7;
+  --shell-deck: #e7e2d9;
+  --shell-panel: #f7f4ee;
+  --shell-panel-strong: #ddd6ca;
+  --shell-edge: #c9c0b1;
+  --shell-edge-strong: #a99d8d;
+  --shell-ink: #171512;
+  --shell-muted: #6f685e;
+  --shell-brass: #8b6427;
+  --shell-brass-soft: rgb(139 100 39 / 12%);
+  --shell-signal: #356d60;
+  --shell-signal-strong: #2f7867;
+  --shell-signal-deep: #295a50;
+  --shell-signal-soft: rgb(53 109 96 / 12%);
+  --shell-fault: #a7493f;
+  --shell-fault-soft: rgb(167 73 63 / 12%);
+  --shell-warning: #9c6820;
+  --shell-warning-soft: rgb(156 104 32 / 13%);
+  --shell-button-ink: #ffffff;
+  --shell-live-shadow: rgb(53 109 96 / 34%);
+  --shell-overlay-shadow: rgb(0 0 0 / 22%);
+
+  --color-canvas: #efebe4;
+  --color-surface: var(--shell-panel);
+  --color-surface-raised: #ebe6dd;
+  --color-surface-alt: #e6e0d6;
+  --color-border-subtle: #d8d0c4;
+  --color-border: #c8beb0;
+  --color-border-strong: var(--shell-edge-strong);
+  --color-text-primary: var(--shell-ink);
+  --color-text-secondary: #5f594f;
+  --color-text-kicker: #746b5f;
+  --color-text-muted: #81786c;
+  --color-shell: var(--shell-chassis);
+  --color-shell-ink: var(--shell-ink);
+  --color-azure-a1: var(--shell-signal);
+  --color-azure-a0: var(--shell-signal-strong);
+  --color-azure-a2: var(--shell-signal-deep);
+  --color-focus-ring: var(--shell-signal);
+  --color-selection-edge: var(--shell-brass);
+  --color-selection-fill: var(--shell-brass-soft);
+  --color-warning: var(--shell-warning);
+  --color-warning-soft: var(--shell-warning-soft);
+  --color-success: var(--shell-signal);
+  --color-success-soft: var(--shell-signal-soft);
+  --color-info: #526f69;
+  --color-info-soft: rgb(82 111 105 / 13%);
+  --color-danger: var(--shell-fault);
+  --color-danger-soft: var(--shell-fault-soft);
+}
+
+:root[data-resolved-theme="dark"] .app-shell {
+  --shell-chassis: #0d0c0b;
+  --shell-deck: #121110;
+  --shell-panel: #171512;
+  --shell-panel-strong: #1e1b17;
+  --shell-edge: #2a2724;
+  --shell-edge-strong: #5c574f;
+  --shell-ink: #f4f1ec;
+  --shell-muted: #9a958e;
+  --shell-brass: #b8872b;
+  --shell-brass-soft: rgb(184 135 43 / 12%);
+  --shell-signal: #8fc8b5;
+  --shell-signal-strong: #a1d6c4;
+  --shell-signal-deep: #76ad9b;
+  --shell-signal-soft: rgb(143 200 181 / 10%);
+  --shell-fault: #dc766b;
+  --shell-fault-soft: rgb(220 118 107 / 13%);
+  --shell-warning: #d6a04b;
+  --shell-warning-soft: rgb(214 160 75 / 14%);
+  --shell-button-ink: #08110e;
+  --shell-live-shadow: rgb(143 200 181 / 42%);
+  --shell-overlay-shadow: rgb(0 0 0 / 34%);
+
+  --color-canvas: var(--shell-deck);
+  --color-surface: var(--shell-panel);
+  --color-surface-raised: #1d1a17;
+  --color-surface-alt: #211e1a;
+  --color-border-subtle: var(--shell-edge);
+  --color-border: #37322d;
+  --color-border-strong: var(--shell-edge-strong);
+  --color-text-primary: var(--shell-ink);
+  --color-text-secondary: #b8b0a5;
+  --color-text-kicker: var(--shell-muted);
+  --color-text-muted: #837d75;
+  --color-shell: var(--shell-chassis);
+  --color-shell-ink: var(--shell-ink);
+  --color-azure-a1: var(--shell-signal);
+  --color-azure-a0: var(--shell-signal-strong);
+  --color-azure-a2: var(--shell-signal-deep);
+  --color-focus-ring: #d6ad62;
+  --color-selection-edge: var(--shell-brass);
+  --color-selection-fill: var(--shell-brass-soft);
+  --color-warning: var(--shell-warning);
+  --color-warning-soft: var(--shell-warning-soft);
+  --color-success: var(--shell-signal);
+  --color-success-soft: var(--shell-signal-soft);
+  --color-info: #a5c5bb;
+  --color-info-soft: rgb(165 197 187 / 11%);
+  --color-danger: var(--shell-fault);
+  --color-danger-soft: var(--shell-fault-soft);
+}

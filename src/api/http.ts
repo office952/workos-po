@@ -1,4 +1,10 @@
-import { notifyCloudUnauthorizedUnlessPublic } from "../session/sessionExpiryBridge";
+import { notifyCloudUnauthorizedUnlessPublic, readCloudBoundaryVersion } from "../session/sessionExpiryBridge";
+
+function assertCurrentSession(boundaryVersion: number): void {
+  if (boundaryVersion !== readCloudBoundaryVersion()) {
+    throw new Error("session_context_changed");
+  }
+}
 
 export class TransportError extends Error {
   readonly status: number;
@@ -40,6 +46,7 @@ export async function sendJson(
   path: string,
   body?: unknown,
 ): Promise<JsonResult> {
+  const boundaryVersion = readCloudBoundaryVersion();
   const response = await fetch(path, {
     method,
     credentials: "same-origin",
@@ -51,6 +58,7 @@ export async function sendJson(
   });
 
   const payload = await response.json().catch(() => null);
+  assertCurrentSession(boundaryVersion);
   if (!response.ok) {
     notifyCloudUnauthorizedUnlessPublic(path, response.status);
     return { ok: false, status: response.status, body: payload };
@@ -91,6 +99,7 @@ export async function putJson(path: string, body: unknown): Promise<unknown> {
 }
 
 export async function postForm(path: string, body: FormData): Promise<unknown> {
+  const boundaryVersion = readCloudBoundaryVersion();
   const response = await fetch(path, {
     method: "POST",
     credentials: "same-origin",
@@ -99,12 +108,13 @@ export async function postForm(path: string, body: FormData): Promise<unknown> {
     },
     body,
   });
+  const payload = await response.json().catch(() => null);
+  assertCurrentSession(boundaryVersion);
   if (!response.ok) {
     notifyCloudUnauthorizedUnlessPublic(path, response.status);
-    const payload = await response.json().catch(() => null);
     throw new TransportError(`Cererea ${path} a eșuat.`, response.status, payload);
   }
-  return response.json().catch(() => null);
+  return payload;
 }
 
 export type DownloadResult =
@@ -112,6 +122,7 @@ export type DownloadResult =
   | { ok: false; status: number; body: unknown };
 
 export async function fetchDownload(path: string): Promise<DownloadResult> {
+  const boundaryVersion = readCloudBoundaryVersion();
   const response = await fetch(path, {
     method: "GET",
     credentials: "same-origin",
@@ -121,15 +132,18 @@ export async function fetchDownload(path: string): Promise<DownloadResult> {
   });
   const contentType = response.headers.get("content-type") ?? "";
   if (!response.ok) {
-    notifyCloudUnauthorizedUnlessPublic(path, response.status);
     const body = contentType.includes("application/json")
       ? await response.json().catch(() => null)
       : null;
+    assertCurrentSession(boundaryVersion);
+    notifyCloudUnauthorizedUnlessPublic(path, response.status);
     return { ok: false, status: response.status, body };
   }
+  const blob = await response.blob();
+  assertCurrentSession(boundaryVersion);
   return {
     ok: true,
-    blob: await response.blob(),
+    blob,
     filename: readContentDispositionFilename(response.headers.get("content-disposition")),
   };
 }

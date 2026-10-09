@@ -202,7 +202,11 @@ export function deriveRequestOverviewNextAction(input: {
   if (furthestLinkedQuote(input.quotes)) {
     return "OPEN_QUOTE";
   }
-  if (input.status === "READY_FOR_QUOTE") {
+  if (
+    input.status === "NEW" ||
+    input.status === "IN_REVIEW" ||
+    input.status === "READY_FOR_QUOTE"
+  ) {
     return "CHOOSE_PRODUCT";
   }
   return "OPEN_REQUEST";

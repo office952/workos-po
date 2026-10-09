@@ -2,6 +2,15 @@ type UnauthorizedHandler = () => void;
 
 let cloudUnauthorizedHandler: UnauthorizedHandler | null = null;
 let suppressUnauthorizedExpiry = false;
+let cloudBoundaryVersion = 0;
+
+export function readCloudBoundaryVersion(): number {
+  return cloudBoundaryVersion;
+}
+
+export function advanceCloudBoundaryVersion(): void {
+  cloudBoundaryVersion += 1;
+}
 
 export function setCloudUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
   cloudUnauthorizedHandler = handler;

@@ -1,8 +1,12 @@
 export const resourceKeys = {
+  productSystem: () => "product-system",
   health: () => "health",
   seller: () => "seller",
   customers: () => "customers",
+  customerIntake: () => "customers:intake",
   customer: (customerId: string) => `customer:${customerId}`,
+  customerWorkspace: (customerId: string) => `customer-workspace:${customerId}`,
+  customerWorkspacePrefix: () => "customer-workspace:",
   requests: () => "requests",
   request: (requestId: string) => `request:${requestId}`,
   catalog: () => "catalog",
@@ -33,4 +37,7 @@ export const resourceKeys = {
   organizationAccessAdmin: () => "organization-access-admin",
   peopleAdmin: () => "people-admin",
   workcentersAdmin: () => "workcenters-admin",
+  assembly: (assemblyId: string) => `assembly:${assemblyId}`,
+  assemblyMember: (assemblyId: string, memberRole: string) =>
+    `assembly-member:${assemblyId}:${memberRole}`,
 } as const;

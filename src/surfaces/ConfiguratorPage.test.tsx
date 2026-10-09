@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { writeConfiguratorSession } from "../session/configuratorSession";
@@ -167,6 +167,9 @@ function installFetch(options: {
   const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
     void init;
     const url = String(input);
+    if (url.includes("/members/SIGNAGE_LETTERS")) {
+      return jsonResponse({ customerId: "cus-1", requestId: "req-1", productCode: LETTERS_PRODUCT, values: null });
+    }
     if (url.endsWith("/preview")) {
       return jsonResponse(url.includes(ACM_PRODUCT) ? acmPreviewBody : previewBody);
     }
@@ -260,15 +263,171 @@ function seedOwnedDrafts(
 async function confirmReady() {
   const user = userEvent.setup();
   await screen.findByLabelText("Textul literelor");
+  await user.click(screen.getByRole("tab", { name: /Verificare/ }));
   await waitFor(() => {
     expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
   });
   await user.click(screen.getByRole("button", { name: "Confirmă configurația" }));
+  await waitFor(() => expect(screen.getByRole("tab", { name: /Pregătire ofertă/ })).toHaveAttribute("aria-selected", "true"));
+  await user.click(screen.getByText(/Detalii de calcul și verificare/));
   await screen.findByTestId("profile-cost");
   return user;
 }
 
 describe("ConfiguratorPage", () => {
+  it("hides old component calculations immediately after editing until the current preview arrives", async () => {
+    let complete: ((value: unknown) => void) | undefined;
+    let reads = 0;
+    const payload = { ...previewBody, selectedComponents: [{ id: "LIGHTING", label: "Electrică / iluminare" }], componentDetails: [{
+      componentId: "LIGHTING", label: "Electrică / iluminare", typeId: "LIGHTING_FRONT_LED", calculationLabel: "Calculat",
+      facts: [{ id: "modules", label: "Module LED", value: "125 buc", kind: "CALCULATED", sourceLabel: "Calcul tehnic" }],
+      inputFields: [], unavailable: [], hasTechnicalSettings: false, hasFormulas: false,
+    }] };
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => {
+      if (String(input).endsWith("/preview")) {
+        reads += 1;
+        if (reads > 1) return new Promise((resolve) => { complete = resolve; });
+        return jsonResponse(payload);
+      }
+      return jsonResponse({ configured: true });
+    }));
+    renderConfigurator();
+    await screen.findByLabelText("Textul literelor");
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Electrică / iluminare" }));
+    const inspector = within(screen.getByRole("region", { name: "Inspector: Electrică / iluminare" }));
+    expect(inspector.getByText("125 buc")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Produs" }));
+    await user.type(screen.getByLabelText("Textul literelor"), "NORD");
+    await user.click(screen.getByRole("button", { name: "Electrică / iluminare" }));
+    expect(screen.queryByText("125 buc")).not.toBeInTheDocument();
+    expect(inspector.getByRole("status")).toHaveTextContent("se actualizează");
+    await waitFor(() => expect(complete).toBeDefined());
+    complete!({ ok: true, json: async () => ({ ...payload, componentDetails: [{ ...payload.componentDetails[0], facts: [{ ...payload.componentDetails[0].facts[0], value: "157 buc" }] }] }) });
+    expect(await inspector.findByText("157 buc")).toBeVisible();
+  });
+  it("separates construction, read-only review and pricing without implicit confirmation", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    seedOwnedDrafts({ "root.inscription": "NORD" });
+    renderConfigurator();
+    await screen.findByLabelText("Textul literelor");
+    expect(screen.queryByRole("button", { name: "Confirmă configurația" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Cost intern" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Verifică configurația" }));
+    expect(screen.getByRole("region", { name: "Rezumat tehnic" })).toHaveTextContent("NORD");
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Modifică Textul literelor" }));
+    expect(screen.getByLabelText("Textul literelor")).toHaveFocus();
+    expect(screen.getByLabelText("Textul literelor")).toHaveValue("NORD");
+    await userEvent.click(screen.getByRole("tab", { name: "Pregătire ofertă" }));
+    expect(screen.getByRole("button", { name: "Verifică și confirmă configurația" })).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/confirm"))).toBe(false);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/quote-snapshots"))).toBe(false);
+  });
+
+  it("keeps cost details closed after explicit technical confirmation", async () => {
+    installFetch({ rate: 3, cost: 37.5 });
+    renderConfigurator();
+    await screen.findByLabelText("Textul literelor");
+    await userEvent.click(screen.getByRole("button", { name: "Verifică configurația" }));
+    await userEvent.click(screen.getByRole("button", { name: "Confirmă configurația" }));
+    await waitFor(() => expect(screen.getByRole("tab", { name: "Pregătire ofertă" })).toHaveAttribute("aria-selected", "true"));
+    expect(screen.getByText(/Detalii de calcul și verificare/).closest("details")).not.toHaveAttribute("open");
+    expect(screen.getByRole("heading", { name: "Cost intern" })).toBeVisible();
+    await userEvent.click(screen.getByRole("tab", { name: "Configurație" }));
+    expect(screen.queryByRole("heading", { name: "Cost intern" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Textul literelor")).toBeVisible();
+  });
+
+  it("does not pull the operator into pricing after leaving a pending confirmation", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    const original = fetchMock.getMockImplementation()!;
+    let release: (body: Awaited<ReturnType<typeof jsonResponse>>) => void = () => {};
+    const response = new Promise<Awaited<ReturnType<typeof jsonResponse>>>((resolve) => { release = resolve; });
+    fetchMock.mockImplementation((input, init) => String(input).endsWith("/confirm") ? response : original(input, init));
+    renderConfigurator();
+    await screen.findByLabelText("Textul literelor");
+    await userEvent.click(screen.getByRole("button", { name: "Verifică configurația" }));
+    await userEvent.click(screen.getByRole("button", { name: "Confirmă configurația" }));
+    await userEvent.click(screen.getByRole("tab", { name: "Configurație" }));
+    release(await jsonResponse(confirmBody({ rate: 3, cost: 37.5 })));
+    await screen.findByTestId("profile-cost");
+    expect(screen.getByRole("tab", { name: "Configurație" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("blocks confirmation immediately after an edit until the server rechecks it", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    const original = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation((input, init) => {
+      if (String(input).endsWith("/preview") && String(init?.body).includes("NORD")) {
+        return new Promise(() => {});
+      }
+      return original(input, init);
+    });
+    renderConfigurator();
+    await screen.findByLabelText("Textul literelor");
+    await userEvent.click(screen.getByRole("tab", { name: /Verificare/ }));
+    expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
+    await userEvent.click(screen.getByRole("button", { name: "Modifică Textul literelor" }));
+    await userEvent.type(screen.getByLabelText("Textul literelor"), "NORD");
+    await userEvent.click(screen.getByRole("tab", { name: /Verificare/ }));
+    expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeDisabled();
+    expect(screen.queryByText("Gata de confirmare")).not.toBeInTheDocument();
+  });
+
+  it("retries a failed preview with the same owned draft", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    const original = fetchMock.getMockImplementation()!;
+    let attempts = 0;
+    fetchMock.mockImplementation((input, init) => {
+      if (String(input).endsWith("/preview") && ++attempts === 1) {
+        return jsonResponse({ reasons: ["Verificarea temporar indisponibilă"] }, 503);
+      }
+      return original(input, init);
+    });
+    seedOwnedDrafts({ "root.inscription": "NORD" });
+    renderConfigurator();
+    await screen.findByRole("button", { name: "Reîncearcă previzualizarea" });
+    await userEvent.click(screen.getByRole("tab", { name: /Verificare/ }));
+    expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("tab", { name: /Configurație/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Reîncearcă previzualizarea" }));
+    expect(await screen.findByLabelText("Textul literelor")).toHaveValue("NORD");
+    await userEvent.click(screen.getByRole("tab", { name: /Verificare/ }));
+    expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
+    expect(attempts).toBe(2);
+  });
+
+  it("keeps technical drafts and commercial terms while moving between work areas", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    renderConfigurator();
+    const user = await confirmReady();
+    const markup = screen.getByLabelText("Adaos pentru această ofertă (%)");
+    await user.clear(markup);
+    await user.type(markup, "42");
+    const confirms = () => fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/confirm"));
+    expect(confirms()).toHaveLength(1);
+    await user.click(screen.getByRole("tab", { name: /Pregătire ofertă/ }));
+    expect(markup).toHaveValue("42");
+    expect(confirms()).toHaveLength(1);
+    await user.click(screen.getByRole("tab", { name: /Configurație/ }));
+    await user.type(screen.getByLabelText("Textul literelor"), "NORD");
+    expect(screen.queryByTestId("profile-cost")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Îngheață oferta" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Textul literelor")).toHaveValue("NORD");
+  });
+
+  it("persists an assembly member only through explicit configuration confirmation", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    renderConfigurator({ assemblyId: "asm:1", memberRole: "SIGNAGE_LETTERS" });
+    await screen.findByLabelText("Textul literelor");
+    await userEvent.click(screen.getByRole("tab", { name: /Pregătire ofertă/ }));
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/members"))).toBe(false);
+    await confirmReady();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/assemblies/asm%3A1/members", expect.objectContaining({ method: "POST" })));
+    expect(screen.queryByRole("button", { name: "Îngheață oferta" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Înapoi la ansamblu" })).toHaveAttribute("href", "/ansamblu?assembly=asm%3A1");
+  });
   it("sends configuration values to preview and keeps reviewId on confirm", async () => {
     const fetchMock = installFetch({ rate: 3, cost: 37.5 });
     window.history.replaceState(
@@ -287,6 +446,7 @@ describe("ConfiguratorPage", () => {
       );
     });
 
+    await userEvent.click(screen.getByRole("tab", { name: /Verificare/ }));
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
     });
@@ -351,9 +511,7 @@ describe("ConfiguratorPage", () => {
     );
     renderConfigurator({ customerId: null, requestId: null });
     await confirmReady();
-    expect(
-      screen.getByText(/Selectează un client înainte de a crea oferta/),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Context comercial incomplet")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeDisabled();
     expect(
       fetchMock.mock.calls.some(
@@ -365,6 +523,54 @@ describe("ConfiguratorPage", () => {
     expect(
       fetchMock.mock.calls.some((call) => String(call[0]).endsWith("/quote-snapshots")),
     ).toBe(false);
+  });
+
+  it("marks customer price stale after commercial term edits and blocks freeze until recalculation", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    renderConfigurator();
+    const user = await confirmReady();
+    expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeEnabled();
+    const markup = screen.getByLabelText("Adaos pentru această ofertă (%)");
+    await user.clear(markup);
+    await user.type(markup, "48");
+    expect(screen.getByText("Preț neactualizat")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Actualizează prețul" }));
+    await waitFor(() => {
+      expect(screen.queryByText("Preț neactualizat")).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeEnabled();
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/confirm")).length).toBeGreaterThan(1);
+  });
+
+  it("distinguishes seller fetch error from missing issuer data", async () => {
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      void init;
+      const url = String(input);
+      if (url.endsWith("/preview")) {
+        return jsonResponse(previewBody);
+      }
+      if (url.endsWith("/confirm")) {
+        return jsonResponse(confirmBody({ rate: 3, cost: 37.5 }));
+      }
+      if (url.endsWith("/seller")) {
+        return jsonResponse({ error: "denied" }, 503);
+      }
+      return jsonResponse({});
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    renderConfigurator();
+    const user = await confirmReady();
+    expect(
+      await screen.findByText("Nu am putut verifica datele firmei emitente"),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Denumire firmă")).not.toBeInTheDocument();
+    expect(screen.queryByText("Datele firmei emitente lipsesc")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Îngheață oferta" }));
+    expect(fetchMock.mock.calls.some((call) => String(call[0]).endsWith("/quote-snapshots"))).toBe(
+      false,
+    );
   });
 
   it("blocks freeze when seller is missing and does not update seller", async () => {
@@ -381,8 +587,9 @@ describe("ConfiguratorPage", () => {
     renderConfigurator({ requestId: null });
     await confirmReady();
     expect(
-      screen.getByText("Datele firmei trebuie configurate înainte de a crea oferta."),
+      screen.getByRole("link", { name: "Setări comerciale organizație" }),
     ).toBeInTheDocument();
+    expect(screen.getByText(/Organizația curentă nu are încă datele minime de emitere/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeDisabled();
     expect(
       fetchMock.mock.calls.some(
@@ -493,6 +700,7 @@ describe("ConfiguratorPage", () => {
       "/?customer=cus-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06",
     );
     renderConfigurator({ requestId: null });
+    await userEvent.click(screen.getByRole("tab", { name: /Verificare/ }));
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
     });
@@ -783,6 +991,10 @@ describe("ConfiguratorPage", () => {
     );
     expect(screen.getByRole("radio", { name: /Preț net negociat manual/ })).toBeEnabled();
     expect(screen.getByText(/deoarece costul intern este incomplet/)).toBeInTheDocument();
+    await userEvent.click(screen.getByText(/Detalii de calcul și verificare/));
+    expect(screen.getByText(/Detalii de calcul și verificare/).closest("details")).not.toHaveAttribute("open");
+    await userEvent.click(screen.getByRole("link", { name: "Vezi ce lipsește" }));
+    expect(screen.getByText(/Detalii de calcul și verificare/).closest("details")).toHaveAttribute("open");
   });
 
   it("shows a technical gap without claiming a missing tariff", async () => {
@@ -814,6 +1026,9 @@ describe("ConfiguratorPage", () => {
       "#configuratie",
     );
     expect(screen.queryByText(/Tarif lipsă/)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("link", { name: "Completează configurația" }));
+    expect(screen.getByRole("tab", { name: "Configurație" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByLabelText("Textul literelor")).toBeVisible();
   });
 
   it("shows provisional evidence as unconfirmed, not missing", async () => {
@@ -931,6 +1146,7 @@ describe("ConfiguratorPage", () => {
     renderConfigurator({ requestId: null });
     const user = userEvent.setup();
     await screen.findByLabelText("Textul literelor");
+    await userEvent.click(screen.getByRole("tab", { name: /Verificare/ }));
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
     });

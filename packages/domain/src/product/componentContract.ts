@@ -48,6 +48,9 @@ export type ComponentMeasurementKind =
 export type ComponentEicReadiness = "material" | "material_and_operation" | "unavailable";
 
 export type ComponentContractProfile = {
+  measurementFieldIds?: readonly string[];
+  /** Explicit instance inputs consumed from another component, for navigation. */
+  inputFieldIds?: readonly string[];
   measurement: ComponentMeasurementKind;
   quantityUnit: "m" | "m2" | "buc" | null;
   independentCalculation: boolean;

@@ -132,210 +132,30 @@ Core presentation rules:
 - no new major surface should add bulk to `src/styles/ui.css`; new surfaces use explicit modular stylesheet ownership;
 - do not introduce a replacement component library or styling framework without explicit Owner GO.
 
-Cereri de oferta is the first major post-login surface intended to apply both canons.
+## Current flow and status
 
-## Tooling advisory
+- Active responsibilities: `docs/architecture/REQUEST_CATALOG_CONFIGURATION_CANON.md`.
+- Living implementation status and accepted history: `docs/ROADMAP.md`.
+- Configuration-First architecture: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
+- Catalog administers reusable product definitions; it does not require or create a customer/request.
+- New request owns client/CUI intake, an enabled-product choice or `Momentan indecis`.
+- Configurator owns instance facts and commercial preparation inside a request. It renders the server schema.
+- Manufactured ACM support is a product/assembly member. A supplied site support is HostContext.
+- Keep one active implementation and one canon per responsibility. Preserve frozen domain contract versions and historical reports as history; do not treat their old `CURRENT_PROGRAM`/GO flags as current authority.
+- Do not claim full product-definition authoring, production readiness or visual acceptance when only a projection/candidate is delivered.
 
-```text
-ENGINE_LINT_COVERAGE = REQUIRED
-```
+## Verification and integration
 
-`pnpm lint` remains the root frontend linter. `pnpm engine:lint` covers `apps/api` and `packages/domain`. Do not downgrade frontend lint to make the engine pass.
+Use meaningful targeted tests first. For cross-surface changes, run frontend typecheck/lint/tests/build and engine typecheck/lint plus relevant domain/API tests. Material UI changes require browser inspection at relevant widths, including 768px, and clear synthetic-vs-real evidence.
 
-## Owner gates
+`pnpm lint` covers the root frontend; `pnpm engine:lint` covers the API and domain. Do not weaken either to make a candidate pass.
 
-No production deployment, real Cloud mutation, business DB mutation, old-repo mutation, or cutover without an explicit Owner GO.
+One implementation writer per mutable scope. Keep source work on a scoped branch; integrate only to the level authorized in the session. Review the final diff and repository identity before commit/push. Tests or self-review do not authorize merge/deploy.
 
-No business database, ORM, migrations, seeds, or destructive data operations without an explicit Owner GO.
+## Data and Owner gates
 
-```text
-PRODUCT_MODEL = SAAS_ONLY
-PRIMARY_PRODUCT_DIRECTION = SAAS
-PRIMARY_PRESENTATION = UI20
-PRIMARY_ACCESS = BROWSER
-PRIMARY_AUTH = EMAIL_PASSWORD
-PRIMARY_SESSION = SERVER_SIDE_CLOUD_SESSION
-PRIMARY_TENANCY = ORGANIZATION
-PRIMARY_RUNTIME = CLOUD
-PRIMARY_PRODUCTION_TOPOLOGY = SAME_ORIGIN_HTTPS
-ONE_WORKOS_CODEBASE = YES
-ONE_BUSINESS_ENGINE = YES
-ONE_PRODUCT_TRUTH = YES
-NO_CLIENT_CODE_FORK = YES
-CUSTOMER_OPERABLE_WITHOUT_CURSOR = YES
-ALTERNATIVE_PRODUCT_DELIVERY = NO
-PRIMARY_USER_JOURNEY = COMPLETE
-PRIMARY_USER_JOURNEY_PROOF = SYNTHETIC_SAAS_E2E
-PEOPLE_AND_MACHINE_ADMIN_V1 = COMPLETE
-EXECUTION_EXPANSION_V1_IMPLEMENTATION = COMPLETE / INTEGRATED
-EXECUTION_EXPANSION_V1_OWNER_ACCEPTED = YES
-EXE1_EXECUTION_READINESS = COMPLETE
-EXE1_INTEGRATED_ON_MAIN = YES
-EXE1_MERGE_COMMIT = 18d5506f062ad0725f0fa3a8b204e5b121bd45b1
-PR_25 = MERGED
-EXE2_PROVIDER_OPERATOR_INTERACTION = COMPLETE
-EXE2_INTEGRATED_ON_MAIN = YES
-EXE2_MERGE_COMMIT = 0919f217dfb0efe1600fde659f8cad66c252b88a
-PR_26 = MERGED
-EXE3_WHOLE_PLAN_COMPREHENSION = COMPLETE
-EXE3_INTEGRATED_ON_MAIN = YES
-EXE3_MERGE_COMMIT = 54d91e11d06b4deb567f601118147182c863dbf5
-PR_27 = MERGED
-EXE4 = COMPLETE / MERGED
-EXE4_INTEGRATED_ON_MAIN = YES
-EXE4_MERGE_COMMIT = e0ddbdac7de5896d683e05782a21f0e55a984b9b
-PR_28 = MERGED
-CURRENT_PROGRAM = WORKOS_PRODUCT_COMPLETION_V1
-CURRENT_PROGRAM_STATUS = COMPLETE / OWNER_ACCEPTED
-WORKOS_PRODUCT_COMPLETION_V1 = COMPLETE / OWNER_ACCEPTED
-WORKOS_PRODUCT_COMPLETION_V1_REAL_V1_BLOCKERS = NONE
-WORKOS_PRODUCT_COMPLETION_V1_P0 = 0
-WORKOS_PRODUCT_COMPLETION_V1_P1 = 0
-PRODUCT_V1_IMPLEMENTATION = CLOSED
-CONTROLLED_ORGANIZATION_PROVISIONING_V1 = COMPLETE / OWNER_ACCEPTED / INTEGRATED
-CONTROLLED_ORGANIZATION_PROVISIONING_V1_INTEGRATED_ON_MAIN = YES
-CONTROLLED_ORGANIZATION_PROVISIONING_V1_COMMIT = 6ad2f4b78b3dbd72dbb286107c6ac04e8dafcc9c
-ADDITIONAL_USER_OPERATOR_TOOLING_V1 = COMPLETE / OWNER_ACCEPTED / INTEGRATED
-ADDITIONAL_USER_OPERATOR_TOOLING_V1_INTEGRATED_ON_MAIN = YES
-ADDITIONAL_USER_OPERATOR_TOOLING_V1_COMMIT = 47d18c3134e1239c3934a995541a9ca352587084
-PRODUCTION_PILOT_READINESS_V1 = COMPLETE / OWNER_ACCEPTED
-MATERIAL_READINESS_V5B = COMPLETE / OWNER_ACCEPTED / INTEGRATED
-MATERIAL_READINESS_V5B_PR = 37
-MATERIAL_READINESS_V5B_MERGE_COMMIT = 6f53c58e1d96ab692236953abadf02f5e41ee5f9
-EXTERNAL_PRODUCTION_HANDOFF_V1 = COMPLETE / OWNER_ACCEPTED / INTEGRATED
-EXTERNAL_PRODUCTION_HANDOFF_V1_PR = 38
-EXTERNAL_PRODUCTION_HANDOFF_V1_MERGE_COMMIT = 488e99c0fc35edb6f271bb9f286340bd1a1ac05e
-QC_REWORK_V1 = COMPLETE / OWNER_ACCEPTED / INTEGRATED
-QC_REWORK_V1_INTEGRATED_ON_MAIN = YES
-QC_REWORK_V1_COMMIT = 259b804ae2506b6ca1d2b19054f40f7993985537
-OWNER_ACCEPTED_PRODUCTION_PILOT_READINESS_V1 = YES
-PREFLIGHT_ENGINE = SYNTHETICALLY_PROVEN
-REAL_ENVIRONMENT_PREFLIGHT = NOT_RUN
-DEPLOY_PRODUCTION = HOLD
-CUTOVER = HOLD
-FIRST_REAL_BUSINESS_OPERATION = HOLD
-NEXT_PROGRAM = REAL_ENVIRONMENT_PREFLIGHT / PRODUCTION_PILOT
-NEXT_PROGRAM_STATUS = NOT_STARTED / OWNER_GO_REQUIRED
-EXECUTION_REALITY_V1 = COMPLETE / OWNER_ACCEPTED
-OWNER_ACCEPTED_EXECUTION_REALITY_V1 = YES
-ACTUAL_DURATION_V1 = COMPLETE / OWNER_ACCEPTED
-MACHINE_RUN_V1 = COMPLETE / OWNER_ACCEPTED
-PLANNED_VS_ACTUAL_TIME_V1 = COMPLETE / OWNER_ACCEPTED
-EXECUTION_REALITY_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
-PRODUCT_ASSEMBLY_V1 = COMPLETE / OWNER_ACCEPTED
-OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V1 = YES
-PRODUCT_ASSEMBLY_IMPLEMENTATION = COMPLETE / INTEGRATED
-PRODUCT_ASSEMBLY_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
-VOLUMETRIC_LOGO_V1 = COMPLETE / OWNER_ACCEPTED
-OWNER_ACCEPTED_VOLUMETRIC_LOGO_V1 = YES
-PRODUCT_ASSEMBLY_V2 = COMPLETE / OWNER_ACCEPTED
-OWNER_ACCEPTED_PRODUCT_ASSEMBLY_V2 = YES
-VOLUMETRIC_LOGO_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
-PRODUCT_ASSEMBLY_V2_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
-HOST_CONTEXT_V1 = COMPLETE / OWNER_ACCEPTED
-OWNER_ACCEPTED_HOST_CONTEXT_V1 = YES
-MOUNTING_INTERFACE_V1 = COMPLETE / OWNER_ACCEPTED
-OWNER_ACCEPTED_MOUNTING_INTERFACE_V1 = YES
-SITE_INSTALLATION_VERTICAL_V1 = COMPLETE / OWNER_ACCEPTED
-OWNER_ACCEPTED_SITE_INSTALLATION_VERTICAL_V1 = YES
-HOST_CONTEXT_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
-MOUNTING_INTERFACE_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
-SITE_INSTALLATION_VERTICAL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
-LOGO_PRODUCT_CODE = PRD-LOGO-FRONTLIT-PLEXI-AL06
-LOGO_DEFAULT_ENABLEMENT = DISABLED
-ASSEMBLY_V2_KIND = SIGN_ASSEMBLY_ACM_SIGNAGE_V2
-LEGACY_NAMING_DEBT = ProductAggregate.inscription is a generic display designation for some products
-PREVIOUS_CAP0 = SUPERSEDED_IN_PART_BY_OWNER_WORKLOAD_CORRECTION
-PLANNING_CAPACITY_V1_PREFLIGHT = COMPLETE
-PLANNING_CAPACITY_V1_OWNER_DECISIONS = SUPERSEDED_IN_PART
-CAP0 = SUPERSEDED_IN_PART
-CAP0_MERGE_COMMIT = a841399eda433fba4d7b95b5824fe1ffdd88fbed
-CAP1 = SUPERSEDED_BY_PLN1
-CAP2 = CANCELLED
-CAP3 = SUPERSEDED_BY_PLN1_PROJECTION
-PLN0 = COMPLETE
-PLN1 = COMPLETE / OWNER_ACCEPTED
-PLN2 = COMPLETE / OWNER_ACCEPTED
-OPERATIONS_CONTROL_V1 = COMPLETE / OWNER_ACCEPTED
-PRODUCT_ASSEMBLY_FIRST_CLASS_JOB = COMPLETE / OWNER_ACCEPTED
-OWNER_ACCEPTED_OPERATIONS_CONTROL_V1 = YES
-OPERATIONS_CONTROL_V1_ACCEPTANCE_ADVISORIES = RECORDED / NOT_A_CORRECTION_WAVE
-PLN3 = NOT_STARTED
-PLANNING_IMPLEMENTATION = OWNER_ACCEPTED
-OWNER_ACCEPTED_PLANNING_IMPLEMENTATION = YES
-CAPACITY_IMPLEMENTATION = CANCELLED_WEEKLY_SUPPLY
-SCHEDULING = NOT_STARTED / OUT_OF_SCOPE_V1
-MEMBER_DAG_COMPOSITION_CORRECTIONS = DEFERRED / NOT_CAPACITY_BLOCKER
-PLANNING_CAPACITY_CANON = docs/architecture/PLANNING_CAPACITY_V1_CANON.md
-CF1_COMMERCIAL_VERTICAL_V1 = COMPLETE
-CF1_OWNER_ACCEPTED_IMPLEMENTATION = YES
-CF2_CF3_TECHNICAL_CONFIGURATION_V1 = COMPLETE
-CF2_CF3_OWNER_ACCEPTED = YES
-CF2_CF3_INTEGRATED_ON_MAIN = YES
-CF4 = COMPLETE
-CF4_NARROW_CONFIGURABLE_FORMULA_FOUNDATION_V1 = COMPLETE
-CF4_OWNER_ACCEPTED_IMPLEMENTATION = YES
-CF4_INTEGRATED_ON_MAIN = YES
-CF4_MERGE = COMPLETE
-CF4_MERGE_COMMIT = 1c91f9fd7f7d57bc91b16d1baed90eabee4581bb
-PR_12 = MERGED
-CF5 = NOT_STARTED
-STANDALONE_CF5_REQUIRED_BEFORE_LETTERS = NO
-REMAINING_CONFIGURATION_FIRST_WORK = DOMAIN_BY_DOMAIN_WHEN_REQUIRED
-LETTERS_PRODUCT_TRUTH_V1 = COMPLETE
-LETTERS_PRODUCT_TRUTH_V1_OWNER_ACCEPTED_IMPLEMENTATION = YES
-LETTERS_PRODUCT_TRUTH_V1_INTEGRATED_ON_MAIN = YES
-LETTERS_PRODUCT_TRUTH_V1_MERGE = COMPLETE
-LETTERS_PRODUCT_TRUTH_V1_MERGE_COMMIT = bb3c80b7f500b8b71c15106140ca55af1faf70d9
-PR_15 = MERGED
-ACM_PRODUCT_TRUTH_V1 = COMPLETE
-ACM_PRODUCT_TRUTH_V1_OWNER_ACCEPTED_IMPLEMENTATION = YES
-ACM_PRODUCT_TRUTH_V1_INTEGRATED_ON_MAIN = YES
-ACM_PRODUCT_TRUTH_V1_MERGE = COMPLETE
-ACM_PRODUCT_TRUTH_V1_MERGE_COMMIT = 1583c458fd4c6e3d06d48629b954afabcb23b149
-PR_17 = MERGED
-PRODUCT_ENABLEMENT_ADMIN_V1 = COMPLETE
-PRODUCT_ENABLEMENT_ADMIN_V1_OWNER_ACCEPTED_IMPLEMENTATION = YES
-PRODUCT_ENABLEMENT_ADMIN_V1_INTEGRATED_ON_MAIN = YES
-PRODUCT_ENABLEMENT_ADMIN_V1_MERGE = COMPLETE
-PRODUCT_ENABLEMENT_ADMIN_V1_MERGE_COMMIT = b082b1a8a9288aac59ae0d3a34915415500107e1
-PR_19 = MERGED
-PEOPLE_AND_MACHINE_ADMIN_V1 = COMPLETE
-PEOPLE_AND_MACHINE_ADMIN_V1_INTEGRATED_ON_MAIN = YES
-PEOPLE_ADMIN_V1 = COMPLETE
-MACHINE_WORKCENTER_ADMIN_V1 = COMPLETE
-PEOPLE_ELIGIBILITY_CAPABILITY_COVERAGE_CLOSURE = COMPLETE
-CURRENT_SUPPORTED_PRODUCT_UNMAPPED_PEOPLE_CAPABILITIES = []
-PRODUCT_ENABLEMENT = ORGANIZATION_SCOPED
-CONFIGURATION_SURFACE = /admin/products
-CURRENT_TWO_PRODUCTS_DEFAULT = ENABLED
-FUTURE_UNCONFIGURED_PRODUCT = FAIL_CLOSED
-HISTORICAL_LIFECYCLE = PRESERVED
-OWNER_WRITE = YES
-MEMBER_WRITE = NO
-ACM_PRODUCT_CODE = PRD-ACM-CASSETTE-NONE
-ACM_TEMPLATE_VERSION = 2
-ACM_FORM_SCHEMA_VERSION = prd-acm-cassette-none-form-v2
-FRAME_CLEARANCE = ORGANIZATION_CONFIGURABLE_VERSIONED
-CLIENT_PRODUCT_DEFINITION_AUTHORITY = REMOVED
-VALUES_CRV1_AUTHORITY = REQUIRED
-GENERIC_ACCEPTANCE_BOUNDARY = CLOSED
-CURRENT_FIRST_LETTERS_SKU = PRD-LETTERS-FRONTLIT-PLEXI-AL06
-CURRENT_SKU_MODEL = SPECIFIC_PRODUCT_TEMPLATE_SKU
-NEXT_WAVE_AUTHORIZED = NO
-FORMULA_CONFIGURABILITY_FULLY_DELIVERED = NO
-REAL_CLOUD_WRITE = HOLD
-REAL_DB_WRITE = HOLD
-REAL_HUB_MEDIA_CLOUD_ROOT_ACCESS = HOLD
-```
+No production deployment, real Cloud access/write, business DB mutation, old-repo mutation or cutover without explicit Owner authorization.
 
-Living program authority: `docs/ROADMAP.md`.
-Configuration-First architecture: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
+No business database, ORM, migrations, seeds or destructive data operations without explicit Owner authorization. Existing automated tests use isolated synthetic databases; they do not authorize applying migrations/seeds to an Owner reference runtime or real business root.
 
-People and Machine Admin V1 is complete and integrated on main. Product Enablement Admin V1, Letters Product Truth V1, and ACM Product Truth V1 remain complete. Organizations enable or disable shared ProductTemplates for new work on `/admin/products`. Current supported-product People capabilities are mapped; unused catalog capabilities may stay unmapped. Standalone CF5 is not a mandatory gate. Remaining Configuration-First work is domain-by-domain when required. Execution Expansion V1 is Owner-accepted and integrated on main through PR #28. Execution acceptance advisories are recorded on the roadmap and are not a correction wave. Product Assembly V1 is Owner-accepted and integrated. It is cross-cutting work and does not replace Planning Workload V1. Acceptance advisories are recorded on the roadmap and are not a correction wave. Volumetric Logo V1 and Product Assembly V2 are Owner-accepted. Their acceptance advisories are recorded and are not a correction wave. Host Context V1, Mounting Interface V1, and the site-installation vertical are Owner-accepted and integrated on main. Host Context is a frozen projection of SiteInstallationFacts and is not a product. Acceptance advisories are recorded on the roadmap and are not a correction wave. WorkOS Product Completion V1 is Owner-accepted and closed. Product V1 implementation is closed. Real V1 blockers are none. Controlled Organization Provisioning V1 is Owner-accepted and integrated on main at `6ad2f4b78b3dbd72dbb286107c6ac04e8dafcc9c`. Additional User Operator Tooling V1 is Owner-accepted and integrated on main at `47d18c3134e1239c3934a995541a9ca352587084`. Self-service signup, email verification, password recovery, MFA, billing, production organization provisioning UX, commercial onboarding automation, production cutover, and first real business operation remain deferred and nonblocking. Production Pilot Readiness V1 remains Owner-accepted as a synthetically proven read-only preflight engine. A real environment preflight has not been run. Next program direction is Real Environment Preflight / Production Pilot; it is not started and requires a later Owner GO. This closure does not authorize real Cloud access, real Cloud writes, production deployment, cutover, or the first real business operation. Execution Reality V1 remains Owner-accepted. Acceptance advisories are recorded on the roadmap and are not a correction wave. PLN0 workload-first canon is complete. PLN1 planned effort, provider workload, `/planificare`, and the synthetic Owner reference runtime at `http://127.0.0.1:8787` are Owner-accepted. PLN1 acceptance advisories are recorded on the roadmap and are not a correction wave. Weekly provider `availableMinutes` and `planningWeek` remain cancelled. PLN2 and Operations Control V1 are Owner-accepted: one operational job for Product and Assembly, job priority and optional target date, and unassigned planned effort. Acceptance advisories are recorded and are not a correction wave. PLN3 is not started. Scheduling remains out of V1. Member DAG / composition corrections stay deferred and are not a Planning blocker. Living Planning canon: `docs/architecture/PLANNING_CAPACITY_V1_CANON.md`. Exact merge commits live in `docs/ROADMAP.md`.
-
-```text
-NO_SILENT_BUSINESS_TRUTH = CANONICAL
-CHANGEABLE_BUSINESS_VALUES_IN_SOURCE = MIGRATION_TARGET_NOT_DESIRED_END_STATE
-CONFIGURATION_FIRST_IMPLEMENTATION = CF1_COMPLETE_AND_CF2_CF3_COMPLETE_AND_CF4_COMPLETE
-```
+Do not stop, reclaim ports, reset or repurpose the Owner reference runtime for proof. Real data must remain outside Git. Report exact candidate checks and unresolved limits; do not copy old acceptance as new proof.

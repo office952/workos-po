@@ -1,6 +1,11 @@
 import { presentCatalogProducts } from "../adapters/catalogAdapter";
 import { presentSellerConfigured } from "../adapters/contextAdapter";
-import { presentCustomer, presentCustomerList } from "../adapters/customerAdapter";
+import {
+  presentCustomer,
+  presentCustomerList,
+  presentCustomerRegistry,
+  presentCustomerWorkspace,
+} from "../adapters/customerAdapter";
 import { presentExecutionPlan } from "../adapters/executionAdapter";
 import { presentHealth, type HealthPresentation } from "../adapters/healthAdapter";
 import { presentJobDetail, presentJobList } from "../adapters/jobAdapter";
@@ -27,7 +32,7 @@ import { presentWorkcentersAdmin } from "../adapters/workcentersAdapter";
 import { presentProductEnablementAdmin } from "../adapters/productEnablementAdapter";
 import { presentOrganizationAccessAdmin } from "../adapters/organizationAccessAdapter";
 import { fetchProductCatalog } from "../api/catalog";
-import { fetchCustomer, fetchCustomers } from "../api/customers";
+import { fetchCustomer, fetchCustomerWorkspace, fetchCustomers } from "../api/customers";
 import { fetchHealth } from "../api/health";
 import { fetchJob, fetchJobOverview } from "../api/jobs";
 import { fetchPlanningWorkload } from "../api/planning";
@@ -65,15 +70,23 @@ export async function loadHealthPresentation(): Promise<HealthPresentation> {
 }
 
 export async function loadSellerConfigured(): Promise<boolean> {
-  try {
-    return presentSellerConfigured(await fetchSeller());
-  } catch {
-    return false;
-  }
+  return presentSellerConfigured(await fetchSeller());
 }
 
 export async function loadCustomerList() {
   return presentCustomerList(await fetchCustomers());
+}
+
+export async function loadCustomerRegistry() {
+  return presentCustomerRegistry(await fetchCustomers());
+}
+
+export async function loadCustomerWorkspace(customerId: string) {
+  const presented = presentCustomerWorkspace(await fetchCustomerWorkspace(customerId));
+  if (!presented) {
+    throw new Error("unpresentable");
+  }
+  return presented;
 }
 
 export async function loadCustomer(customerId: string) {

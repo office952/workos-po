@@ -5,7 +5,7 @@ import type {
   RequestListItemTransport,
 } from "../api/types";
 import {
-  catalogHref,
+  requestProductHref,
   executionHref,
   jobHref,
   quoteHref,
@@ -25,11 +25,7 @@ export function presentRequestWorklistAction(
     case "CHOOSE_PRODUCT":
       return {
         actionLabel: item.nextActionLabel || "Alege produs",
-        actionHref: catalogHref({
-          customerId: item.customerId,
-          requestId: item.requestId,
-          productCode: null,
-        }),
+        actionHref: requestProductHref(item.requestId),
       };
     case "OPEN_QUOTE": {
       const actionHref =
@@ -68,11 +64,7 @@ export function presentRequestPrimaryAction(
     case "CHOOSE_PRODUCT":
       return {
         actionLabel: detail.nextActionLabel || "Alege produs",
-        actionHref: catalogHref({
-          customerId: detail.customerId,
-          requestId: detail.requestId,
-          productCode: null,
-        }),
+        actionHref: requestProductHref(detail.requestId),
       };
     case "OPEN_QUOTE": {
       const offer = detail.linkedOffers[0];

@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getJson, sendJson } from "./http";
+import { getJson, sendJson, postForm, fetchDownload } from "./http";
 import {
   restoreCloudUnauthorizedExpiry,
+  advanceCloudBoundaryVersion,
   setCloudUnauthorizedHandler,
   suppressCloudUnauthorizedExpiry,
 } from "../session/sessionExpiryBridge";
@@ -13,6 +14,26 @@ afterEach(() => {
 });
 
 describe("sendJson", () => {
+  it.each([200, 401])("ignores a delayed %i response from a previous session", async (status) => {
+    const handler = vi.fn();
+    setCloudUnauthorizedHandler(handler);
+    let release!: (value: unknown) => void;
+    vi.stubGlobal("fetch", vi.fn(() => new Promise((resolve) => { release = resolve; })));
+    const pending = getJson("/api/customers");
+    advanceCloudBoundaryVersion();
+    release({ ok: status === 200, status, json: async () => ({ customers: ["old session"] }) });
+    await expect(pending).rejects.toThrow("session_context_changed");
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it.each(["upload", "download"])("rejects an old session's delayed %s payload", async (kind) => {
+    let release!: (value: unknown) => void;
+    vi.stubGlobal("fetch", vi.fn(() => new Promise((resolve) => { release = resolve; })));
+    const pending = kind === "upload" ? postForm("/api/requests/one/attachments", new FormData()) : fetchDownload("/api/files/one");
+    advanceCloudBoundaryVersion();
+    release({ ok: true, status: 200, json: async () => ({}), blob: async () => new Blob(["private"]), headers: new Headers() });
+    await expect(pending).rejects.toThrow("session_context_changed");
+  });
   it("uses same-origin credentials and never stores the body", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

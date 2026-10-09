@@ -4,8 +4,17 @@ import type {
 } from "@workos-final/domain";
 import type { Hono } from "hono";
 import { getProductSystem, type ApiEnv } from "../cloud/context.js";
+import { lookupFiscalProfile, normalizeCui } from "./fiscalLookup.js";
 
 export function registerCustomerRoutes(app: Hono<ApiEnv>): void {
+  app.get("/api/customers/fiscal-lookup", async (c) => {
+    const cui = normalizeCui(c.req.query("cui"));
+    if (!cui) return c.json({ error: "invalid_cui" }, 400);
+    const matches = getProductSystem(c).listCustomers().filter(customer => normalizeCui(customer.cui) === cui);
+    if (matches.length) return c.json({ status: matches.length === 1 ? "existing" : "conflict", customers: matches });
+    try { return c.json(await lookupFiscalProfile(cui)); }
+    catch (e) { return c.json({ error: e instanceof Error && e.message === "fiscal_lookup_busy" ? "fiscal_lookup_busy" : "fiscal_lookup_unavailable" }, 503); }
+  });
   app.get("/api/customers", (c) => {
     const runtime = getProductSystem(c);
     return c.json({
@@ -39,7 +48,13 @@ export function registerCustomerRoutes(app: Hono<ApiEnv>): void {
     if (displayName === null) {
       return c.json({ error: "invalid_payload" }, 400);
     }
-    const result = runtime.createCustomer(displayName, readProfilePatch(body));
+    const profile = readProfilePatch(body);
+    const cui = normalizeCui(profile.cui);
+    if (cui) {
+      const matches = runtime.listCustomers().filter(customer => normalizeCui(customer.cui) === cui);
+      if (matches.length) return c.json({ error: "duplicate_cui", customers: matches }, 409);
+    }
+    const result = runtime.createCustomer(displayName, profile);
     if (!result.ok) {
       return c.json({ error: result.error }, customerHttpStatus(result.error));
     }
@@ -65,6 +80,11 @@ export function registerCustomerRoutes(app: Hono<ApiEnv>): void {
       });
     }
     const patch = readProfilePatch(body);
+    const cui = normalizeCui(patch.cui);
+    if (cui) {
+      const matches = runtime.listCustomers().filter(customer => customer.customerId !== c.req.param("customerId") && normalizeCui(customer.cui) === cui);
+      if (matches.length) return c.json({ error: "duplicate_cui", customers: matches }, 409);
+    }
     if (payload.displayName !== undefined) {
       if (typeof payload.displayName !== "string") {
         return c.json({ error: "invalid_payload" }, 400);

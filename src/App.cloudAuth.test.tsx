@@ -1,8 +1,14 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { notifyCloudUnauthorizedUnlessPublic } from "./session/sessionExpiryBridge";
+import { invalidateResources, readResource } from "./data/resourceCache";
+import { resourceKeys } from "./data/resourceKeys";
+import { readClientsRegistryMemory, writeClientsRegistryMemory } from "./session/clientsRegistryMemory";
+import { cloudSessionScope, rememberCloudScope } from "./session/cloudSessionScope";
+import { presentCloudSession } from "./adapters/cloudSessionAdapter";
+import { readConfiguratorSession, writeConfiguratorSession } from "./session/configuratorSession";
 
 async function openAccountMenu(): Promise<void> {
   await userEvent.click(screen.getByRole("button", { name: "Cont" }));
@@ -77,12 +83,103 @@ function installFetch(
 }
 
 afterEach(() => {
+  // Unmount while this test's fetch stub and session context are still installed.
+  cleanup();
   vi.unstubAllGlobals();
   sessionStorage.clear();
   window.history.replaceState({}, "", "/");
 });
 
 describe("App Cloud auth integration", () => {
+  it.each([200, 403])("isolates cached hub data and late reads while switching organization (new GET %i)", async (nextStatus) => {
+    let activeOrganization = "org:a";
+    let readsA = 0;
+    let releaseOld!: (value: unknown) => void;
+    let releaseNew!: (value: unknown) => void;
+    const memberships = [...authenticatedSession.memberships, { organizationId: "org:b", displayName: "Atelier Beta", role: "owner", status: "ACTIVE" }];
+    const sessionFor = () => ({ ...authenticatedSession, memberships, organization: { ...authenticatedSession.organization, organizationId: activeOrganization, displayName: activeOrganization === "org:a" ? "Atelier Alpha" : "Atelier Beta" } });
+    const hubFor = (name: string) => ({ workspace: { customer: { customerId: "cus-one", displayName: name, status: "ACTIVE", phone: name === "Client Alpha" ? "0740000001" : "0740000002" }, canCreateRequest: true, requests: [], quotes: [], jobs: [] } });
+    installFetch((url) => {
+      if (url.endsWith("/cloud/session")) return sessionFor();
+      if (url.endsWith("/cloud/active-organization")) { activeOrganization = "org:b"; return sessionFor(); }
+      if (url.endsWith("/health")) return health;
+      if (url.endsWith("/customers/cus-one/workspace")) {
+        if (activeOrganization === "org:a") {
+          if (++readsA === 1) return hubFor("Client Alpha");
+          return new Promise((resolve) => { releaseOld = resolve; });
+        }
+        return new Promise((resolve) => { releaseNew = resolve; });
+      }
+      return {};
+    });
+    window.history.replaceState({}, "", "/clienti/cus-one");
+    render(<App />);
+    await screen.findByRole("heading", { name: "Client Alpha" });
+
+    writeClientsRegistryMemory({ query: "Client Alpha", selectedId: "cus-one", statusChip: "attention" });
+    act(() => invalidateResources(resourceKeys.customerWorkspace("cus-one")));
+    await waitFor(() => expect(releaseOld).toBeTypeOf("function"));
+    await openAccountMenu();
+    await userEvent.selectOptions(screen.getByLabelText("Organizație activă"), "org:b");
+    await screen.findByText("Atelier Beta");
+    await waitFor(() => expect(releaseNew).toBeTypeOf("function"));
+    expect(screen.queryByRole("heading", { name: "Client Alpha" })).not.toBeInTheDocument();
+    expect(screen.queryByText("0740000001")).not.toBeInTheDocument();
+    expect(readResource(resourceKeys.customerWorkspace("cus-one")).data).toBeUndefined();
+    expect(readClientsRegistryMemory()).toEqual({ query: "", selectedId: null, statusChip: "all" });
+    await act(async () => { releaseOld(hubFor("Client Alpha")); });
+    expect(readResource(resourceKeys.customerWorkspace("cus-one")).data).toBeUndefined();
+    await act(async () => { releaseNew(nextStatus === 200 ? hubFor("Client Beta") : jsonResponse({ error: "denied" }, nextStatus)); });
+    if (nextStatus === 200) {
+      await screen.findByRole("heading", { name: "Client Beta" });
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "Cerere nouă" }));
+      expect(await screen.findByLabelText("Titlu cerere")).toHaveValue("");
+    } else {
+      expect(await screen.findByText("Acces refuzat")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Creează cererea" })).not.toBeInTheDocument();
+    }
+    expect(screen.queryByRole("heading", { name: "Client Alpha" })).not.toBeInTheDocument();
+  });
+
+  it.each(["same", "different"])("restores preferences only for the %s authenticated scope on boot", async (scope) => {
+    const stored = presentCloudSession(authenticatedSession);
+    rememberCloudScope(cloudSessionScope(scope === "same" ? stored : { ...stored, organization: { ...stored.organization!, organizationId: "org:b" } }));
+    writeClientsRegistryMemory({ query: "Nord", selectedId: null, statusChip: "all" });
+    writeConfiguratorSession({ customerId: "cus-one", requestId: "req-one", productCode: null, drafts: { widthMm: "1200" }, draftContext: { customerId: "cus-one", requestId: "req-one", productCode: null }, lastQuote: null });
+    installFetch((url) => url.endsWith("/cloud/session") ? authenticatedSession : url.endsWith("/health") ? health : { customers: [] });
+    window.history.replaceState({}, "", "/clienti");
+    render(<App />);
+    expect(await screen.findByLabelText("Caută")).toHaveValue(scope === "same" ? "Nord" : "");
+    expect(readConfiguratorSession().drafts).toEqual(scope === "same" ? { widthMm: "1200" } : {});
+  });
+
+  it("does not reuse client data after logout and another owner's login", async () => {
+    let current: unknown = authenticatedSession;
+    let signedOut = false;
+    const fetchMock = installFetch((url) => {
+      if (url.endsWith("/cloud/session")) return current;
+      if (url.endsWith("/cloud/logout")) { signedOut = true; current = { mode: "cloud", user: null, organization: null, memberships: [] }; return {}; }
+      if (url.endsWith("/cloud/login")) { current = { ...authenticatedSession, user: { userId: "usr:2", email: "other@example.test" } }; return current; }
+      if (url.endsWith("/health")) return health;
+      if (url.endsWith("/customers/cus-one/workspace")) return signedOut ? jsonResponse({ error: "denied" }, 403) : { workspace: { customer: { customerId: "cus-one", displayName: "Client privat", status: "ACTIVE" }, canCreateRequest: true, requests: [], quotes: [], jobs: [] } };
+      return {};
+    });
+    window.history.replaceState({}, "", "/clienti/cus-one");
+    render(<App />);
+    await screen.findByRole("heading", { name: "Client privat" });
+    await openAccountMenu();
+    await userEvent.click(screen.getByRole("button", { name: "Ieși din cont" }));
+    await expectLoginGate();
+    expect(readResource(resourceKeys.customerWorkspace("cus-one")).data).toBeUndefined();
+    await openSocietateLogin();
+    await userEvent.type(screen.getByLabelText("Adresă email"), "other@example.test");
+    await userEvent.type(screen.getByLabelText("Parolă"), "OtherPass12");
+    await userEvent.click(screen.getByRole("button", { name: "Autentificare" }));
+    expect(await screen.findByText("Acces refuzat")).toBeInTheDocument();
+    expect(screen.queryByText("Client privat")).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/customers/cus-one/workspace")).length).toBeGreaterThanOrEqual(2);
+  });
   it("keeps controlled local mode open without a login gate", async () => {
     installFetch((url) => {
       if (url.endsWith("/api/cloud/session")) {
@@ -100,7 +197,9 @@ describe("App Cloud auth integration", () => {
 
     render(<App />);
 
-    expect(await screen.findByRole("heading", { name: "Clienți" })).toBeInTheDocument();
+    // The route loading shell also has this heading; wait for the actual registry.
+    expect(await screen.findByLabelText("Caută")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Clienți" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Login Societate" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ieși din cont" })).not.toBeInTheDocument();
   });
@@ -305,8 +404,10 @@ describe("App Cloud auth integration", () => {
     await userEvent.selectOptions(select, "org:b");
     await waitFor(() => {
       expect(switchMock).toHaveBeenCalledWith({ organizationId: "org:b" });
-      expect(select).toHaveValue("org:b");
     });
+    await screen.findByText("Atelier Beta");
+    await openAccountMenu();
+    expect(await screen.findByLabelText("Organizație activă")).toHaveValue("org:b");
   });
 
   it("logs out through the Cloud contract and returns to the login gate", async () => {

@@ -49,6 +49,11 @@ export function readAssemblyDefinition(
   return row ? parseDefinition(row.payload) : null;
 }
 
+export function listRequestAssemblies(db: SqliteDatabase, organizationId: string, requestId: string): AssemblyDefinition[] {
+  const rows = db.prepare("SELECT payload FROM assembly_definitions WHERE organization_id = ? AND request_id = ? ORDER BY updated_at DESC, assembly_id").all(organizationId, requestId) as { payload: string }[];
+  return rows.map(row => parseDefinition(row.payload)).filter((item): item is AssemblyDefinition => item !== null);
+}
+
 export function saveConfirmedChild(
   db: SqliteDatabase,
   child: ConfirmedChildProduct,

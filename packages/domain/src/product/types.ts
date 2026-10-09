@@ -90,6 +90,8 @@ export type ProductCategory = {
 };
 
 export type ProductIdentityFact = {
+  /** Explicit presentation ownership; does not change calculation inputs. */
+  componentId?: string;
   id: string;
   label: string;
   value: string;

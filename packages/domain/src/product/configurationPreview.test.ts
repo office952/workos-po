@@ -59,6 +59,11 @@ describe("configuration preview transport", () => {
     expect(preview.selectedComponents.map((item) => item.id)).toEqual(
       expect.arrayContaining(["FACE", "VOLUME", "BACK", "LIGHTING"]),
     );
+    expect(preview.product.identityFacts).toEqual(expect.arrayContaining([
+      expect.objectContaining({ componentId: "BACK", value: "Forex 10 mm" }),
+      expect.objectContaining({ componentId: "LIGHTING", value: "Iluminare frontală" }),
+    ]));
+    expect(preview.formSchema.sections.map((section) => section.componentId)).toEqual(["ROOT", "FACE", "VOLUME"]);
     expect(JSON.stringify(preview)).not.toMatch(/measurements|templateVersion/);
     expect(preview.formSchema.sections.flatMap((section) => section.fields).map((field) => field.id)).not.toContain(
       "face.color",

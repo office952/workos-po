@@ -8,6 +8,7 @@ import { EmptyState } from "../components/EmptyState";
 import { InlineAlert } from "../components/InlineAlert";
 import { SurfacePanel } from "../components/SurfacePanel";
 import { invalidateResources, writeResource } from "../data/resourceCache";
+import { invalidateCustomerProjections } from "../data/invalidation";
 import { resourceKeys } from "../data/resourceKeys";
 import { formatTimestamp } from "../presentation/format";
 
@@ -40,6 +41,7 @@ export function RequestAttachmentsSection({
         writeResource(resourceKeys.request(requestId), presented);
       }
       invalidateResources(resourceKeys.requests());
+      invalidateCustomerProjections();
       setFile(null);
       if (inputRef.current) {
         inputRef.current.value = "";

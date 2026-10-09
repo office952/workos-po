@@ -39,6 +39,10 @@ function densityFor(workspace: PageWorkspace): PageDensity {
   }
 }
 
+export type PageSurface = "cereri-registry" | "cereri-detail" | "cereri-intake" | "clients-registry" | "client-hub"
+  | "catalog-registry" | "configuration-workbench" | "assembly-workbench"
+  | "quotes-registry" | "quote-detail";
+
 type SlicePageProps = {
   contextLabel: string;
   currentHref: string;
@@ -48,10 +52,12 @@ type SlicePageProps = {
   meta?: ReactNode;
   status?: ReactNode;
   action?: ReactNode;
+  instrument?: ReactNode;
+  headerVariant?: "default" | "pilot";
   workspace?: PageWorkspace;
   floorplan?: FloorplanId;
   /** Scoped presentation surface; does not invent a new workspace contract. */
-  surface?: "cereri-registry" | "cereri-detail";
+  surface?: PageSurface;
   children: ReactNode;
 };
 
@@ -62,6 +68,8 @@ export function SlicePage({
   meta,
   status,
   action,
+  instrument,
+  headerVariant,
   workspace = "stack",
   floorplan,
   surface,
@@ -78,6 +86,8 @@ export function SlicePage({
           meta={meta}
           status={status}
           action={action}
+          instrument={instrument}
+          variant={headerVariant}
           quiet={quiet}
         />
         <div className="page-region">

@@ -42,7 +42,8 @@ describe("App navigation", () => {
 
     render(<App />);
     expect(document.querySelector(".boot")).toBeNull();
-    expect(await screen.findByRole("heading", { name: "Client nou" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Client nou" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Clienți" })).toBeInTheDocument();
     const shell = document.querySelector(".app-shell__bar");
     expect(shell).not.toBeNull();
@@ -58,7 +59,7 @@ describe("App navigation", () => {
     const firstCustomerReads = customerReads();
 
     await userEvent.setup().click(screen.getByRole("link", { name: "Cereri" }));
-    expect(await screen.findByRole("heading", { name: "Cereri" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Cereri de ofertă" })).toBeInTheDocument();
     expect(document.querySelector(".app-shell__bar")).toBe(shell);
 
     window.history.back();
@@ -70,7 +71,7 @@ describe("App navigation", () => {
     expect(customerReads()).toBe(firstCustomerReads);
 
     await userEvent.setup().click(screen.getByRole("link", { name: "Cereri" }));
-    expect(await screen.findByRole("heading", { name: "Cereri" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Cereri de ofertă" })).toBeInTheDocument();
     window.history.back();
     window.dispatchEvent(new PopStateEvent("popstate"));
     await waitFor(() => {

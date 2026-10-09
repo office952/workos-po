@@ -10,7 +10,26 @@ NO PARTIAL PRODUCTION CUTOVER
 NO PARALLEL PRODUCT TRUTH
 ```
 
-## Current
+## Current: request and Catalog coherence
+
+Owner direction of 2026-10-07 is recorded in [Request, Catalog and configuration](architecture/REQUEST_CATALOG_CONFIGURATION_CANON.md). Cursor's withdrawn implementation is preserved at `checkpoint/cursor-handoff-20261007-2037`, `3046aa700fcd8cb8384ed63497fad62f83b79aaa`, from UI base `b5071b6acb59025edbdf82338c5c3613dcd7a5d3`.
+
+One active source candidate: `feat/product-system-request-coherence` in `office952/workos-po`. Scope: definition-only Catalog, central request/CUI intake, in-request product selection, existing assembly continuity, removal of retired code and contradictory active documentation. Source implementation, commit and push are authorized by the current Owner session. Merge/deploy, real Cloud/business-data operations, schema/migrations/seeds remain unauthorized.
+
+The functional coherence baseline and its automated checks are complete. The server action mismatch found at `836cc9e` was corrected at `4a100f38bb75111a5a6f491aec2c5c829357aed0`. Cursor's isolated synthetic runtime reports complete that baseline's scoped A–F journey, including confirming/reopening ACM + letters, stale-price protection, light at measured 1440/768/390 viewports and core keyboard navigation. Codex reviewed supplied dark intake captures and decisive source contracts; final light/assembly media is referenced in the Windows report and was not independently inspected. The baseline's functional recovery gate is closed on that attributed evidence; visual acceptance and integration remain pending. Full arbitrary definition authoring and durable cross-device draft persistence remain open; do not relabel the projection as a complete editor. Evidence and open limits are recorded in [REPORT.md](review/request-catalog-coherence/REPORT.md). These earlier runtime results apply to `4a100f3`, not automatically to later UI changes.
+
+Current UX stage, 2026-10-08: the full-width new-request intake was published at `e62c1ad9da558347af554356e3a290a80c87072a`. The Owner responded positively after the run handoff and asked to continue; imagery is deferred. The Cereri de oferta register remains the accepted visual reference. Cursor's current task is load/build/run only; manual inspection belongs to the Owner, with no requested Cursor audit or evidence loop.
+
+The Configurator workspace and component-navigation refinement were published at `e6e8eccfe8978dfae3071c23004b96809afca4fc` and `c75dac74c0d337033de4446a0dc30f45c3203a03`. The current stage on the same branch follows the Owner-supplied `WORKOS_UI_DESIGN_AUTHORITY_V14_BACK_VARIANT_FIXED_POLISH.html#configurator`: left outline, central vertical construction/technical context, right focused inspector, and compact selector with editor first on tablet/phone. Configurație / Verificare / Pregătire ofertă remain separate work areas. Every actual component remains individually accessible; server identifiers bind identity facts and source-field navigation.
+
+Live read-only technical details now come from the existing domain evaluator, including BACK's mapped FACE area, electrical settings with organization/platform version provenance, module/power/supply quantities and frame dependencies. The browser formats no calculations and invents no manufacturing values. Draft edits hide prior measured/calculated results immediately while preview refreshes; settings and formulas remain organization administration. Calculation rules, readiness, API operations and persistence are unchanged. Support-dependent grooved/flat BACK machining, its dimensions/side closure/process evidence, complete definition authoring, arbitrary group overrides and CAD graphics remain open domain/design work. The prototype's machining toggle is not an implemented product field.
+
+Automated checks and reference provenance are recorded in REPORT.md. Current geometry/theme/keyboard acceptance remains pending Owner inspection; older baseline media is not proof of this layout. Cursor loads/builds/runs only, including the updated candidate API; no Cursor audit/evidence loop. Source commit/push is authorized; merge/deploy and real data operations remain outside this stage.
+
+## Historical accepted baseline before the coherence candidate
+
+All milestone/current/next/authorization flags below describe prior decisions at their recorded commits. They are historical evidence, not a second live status or authorization for this candidate. Domain/production invariants remain binding unless explicitly changed; old Catalog-first navigation is superseded by the active flow contract.
+
 
 ```text
 FRONTEND_PRESERVATION_SEED = COMPLETE
@@ -807,7 +826,7 @@ Execution acceptance advisories, not a correction wave:
 - the execution task list can become visually dense
 - Atelier empty-state wording contains minor implementation-oriented language
 
-## Current program
+## Historical product-completion program
 
 ```text
 CURRENT_PROGRAM = WORKOS_PRODUCT_COMPLETION_V1

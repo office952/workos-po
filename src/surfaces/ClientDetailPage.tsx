@@ -1,28 +1,42 @@
-import { useEffect, useMemo, useState } from "react";
-import { presentCreatedRequestId } from "../adapters/requestAdapter";
-import { TransportError } from "../api/http";
-import { createRequest } from "../api/requests";
+import { useEffect } from "react";
+import "../styles/surfaces/clients.css";
+import "../styles/surfaces/client-hub.css";
+import type {
+  JobListItemTransport,
+  QuoteListItemTransport,
+  RequestListItemTransport,
+} from "../api/types";
 import { Button } from "../components/Button";
-import { InlineAlert } from "../components/InlineAlert";
 import { EmptyState } from "../components/EmptyState";
-import { CollectionBody } from "../components/LoadingFloor";
+import { ErrorState } from "../components/ErrorState";
 import { StatusBadge } from "../components/StatusBadge";
 import { SurfacePanel } from "../components/SurfacePanel";
-import { TextField } from "../components/TextField";
-import { WorklistRow } from "../components/WorklistRow";
-import { invalidateAfterCreateRequest } from "../data/invalidation";
+import { invalidateResources } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
-import { loadCustomer, loadJobList, loadRequestList } from "../data/routeLoaders";
+import { loadCustomerWorkspace } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
+import { CLIENT_HUB_FUTURE_COPY, CLIENT_HUB_SECTION_LABEL } from "../presentation/clientHub";
 import { formatTimestamp } from "../presentation/format";
 import { presentRequestRegistryStatus } from "../presentation/requestListStatus";
+import { presentResourceAccess } from "../presentation/resourceAccess";
 import { statusTone } from "../presentation/statusTone";
-import { presentRequestWorklistAction } from "../presentation/worklistAction";
-import { catalogHref, clientHref, requestHref } from "../routing/appRoute";
-import { navigate } from "../routing/navigate";
-import { LinkedJobs } from "./LinkedJobs";
 import {
+  presentJobWorklistAction,
+  presentQuoteWorklistAction,
+  presentRequestWorklistAction,
+} from "../presentation/worklistAction";
+import {
+  CLIENT_HUB_SECTIONS,
+  clientHref,
+  jobHref,
+  parseClientHubSection,
+  quoteHref,
+  requestHref,
+} from "../routing/appRoute";
+import { navigate } from "../routing/navigate";
+import {
+  bindConfiguratorSessionToCustomer,
   readConfiguratorSession,
   writeConfiguratorSession,
 } from "../session/configuratorSession";
@@ -31,204 +45,284 @@ type ClientDetailPageProps = {
   customerId: string;
 };
 
-const COLUMNS = ["Cerere", "Context", "Stare", "Acțiune"] as const;
-
 export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
-  const customer = useResource(resourceKeys.customer(customerId), () => loadCustomer(customerId));
-  const requests = useResource(resourceKeys.requests(), loadRequestList);
-  const jobs = useResource(resourceKeys.jobs(), loadJobList);
-  const customerJobs = useMemo(
-    () => (jobs.data ?? []).filter((item) => item.customerId === customerId),
-    [customerId, jobs.data],
+  const loaded = useResource(resourceKeys.customerWorkspace(customerId), () =>
+    loadCustomerWorkspace(customerId),
   );
-  const mine = useMemo(
-    () => (requests.data ?? []).filter((item) => item.customerId === customerId),
-    [customerId, requests.data],
-  );
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [saveState, setSaveState] = useState<"idle" | "pending" | "error">("idle");
-  const [saveError, setSaveError] = useState<string | null>(null);
-
+  const access = presentResourceAccess(loaded.error);
+  const workspace = access === "denied" ? { ...loaded, data: undefined } : loaded;
+  const customer = workspace.data?.customer;
+  const section = parseClientHubSection(window.location.search);
   useEffect(() => {
-    if (!customer.data) {
+    if (!customer || workspace.status !== "success") {
       return;
     }
-    const stored = readConfiguratorSession();
-    writeConfiguratorSession({
-      ...stored,
-      customerId,
-      customerLabel: customer.data.displayName,
-      requestLabel: stored.customerId === customerId ? stored.requestLabel ?? null : null,
-    });
-  }, [customer.data, customerId]);
+    writeConfiguratorSession(
+      bindConfiguratorSessionToCustomer(readConfiguratorSession(), customerId, customer.displayName),
+    );
+  }, [customer, customerId, workspace.status]);
 
-  async function create(): Promise<void> {
-    if (title.trim() === "" || description.trim() === "") {
-      return;
-    }
-    setSaveState("pending");
-    setSaveError(null);
-    try {
-      const requestId = presentCreatedRequestId(
-        await createRequest({
-          customerId,
-          title: title.trim(),
-          description: description.trim(),
-        }),
-      );
-      if (!requestId) {
-        setSaveState("error");
-        setSaveError("Cererea nu a putut fi creată.");
-        return;
-      }
-      invalidateAfterCreateRequest(customerId);
-      navigate(requestHref(requestId));
-    } catch (error) {
-      setSaveState("error");
-      setSaveError(
-        error instanceof TransportError
-          ? "Cererea nu este acceptată."
-          : "Cererea nu a putut fi creată.",
-      );
-    }
-  }
+  const canCreate = workspace.status === "success" && workspace.data?.canCreateRequest === true;
 
   return (
     <SlicePage
       contextLabel="Client"
-      currentHref={clientHref(customerId)}
+      currentHref={clientHref(customerId, section)}
       workspace="object"
+      surface="client-hub"
+      headerVariant="pilot"
       eyebrow="Client"
-      title={customer.data?.displayName ?? "Client"}
-      lead="Deschide o cerere existentă sau creează cererea pentru această lucrare."
-      meta={customer.data?.city ?? undefined}
-      status={
-        customer.data ? (
-          <StatusBadge
-            label={customer.data.status === "ACTIVE" ? "Activ" : customer.data.status}
-            tone={statusTone("workflow")}
-          />
-        ) : null
+      title={customer?.displayName ?? "Client"}
+      instrument={
+        <ul className="pilot-instrument client-hub__counts" aria-label="Relația cu clientul">
+          <li><a className="pilot-instrument__metric" href={clientHref(customerId, "cereri")}><strong className="pilot-instrument__metric-value">{workspace.data?.summary.requestCount ?? "—"}</strong><span className="pilot-instrument__metric-label">Cereri</span></a></li>
+          <li><a className="pilot-instrument__metric" href={clientHref(customerId, "cereri")}><strong className="pilot-instrument__metric-value">{workspace.data?.summary.quoteCount ?? "—"}</strong><span className="pilot-instrument__metric-label">Oferte</span></a></li>
+          <li><a className="pilot-instrument__metric" href={clientHref(customerId, "lucrari")}><strong className="pilot-instrument__metric-value">{workspace.data?.summary.jobCount ?? "—"}</strong><span className="pilot-instrument__metric-label">Lucrări</span></a></li>
+        </ul>
       }
     >
-      <SurfacePanel
-        variant="flush"
-        title="Cereri ale clientului"
-        meta={
-          requests.status === "success"
-            ? `${mine.length} ${mine.length === 1 ? "cerere" : "cereri"}`
-            : undefined
-        }
-        label="Cereri"
-        busy={requests.status === "loading" && mine.length === 0}
-      >
-        <CollectionBody
-          status={requests.status}
-          itemCount={mine.length}
-          visibleCount={mine.length}
-          loadingLabel="Se citesc cererile clientului"
-          columns={COLUMNS}
-          worklistLabel="Cereri ale clientului"
-          variant="commercial"
-          errorTitle="Cererile nu au putut fi citite"
-          errorBody="Lista de cereri nu este disponibilă."
-          empty={
-            <EmptyState
-              title="Nu există cereri"
-              description="Creează cererea lucrării."
-            />
-          }
-          filteredEmpty={
-            <EmptyState
-              title="Nu există cereri"
-              description="Creează cererea lucrării."
-            />
-          }
-        >
-          {mine.map((item) => {
-            const action = presentRequestWorklistAction(item);
-            const registry = presentRequestRegistryStatus({
-              statusLabel: item.statusLabel,
-              contextLabel: item.contextLabel,
-            });
-            return (
-              <WorklistRow
-                key={item.requestId}
-                variant="commercial"
-                detailHref={requestHref(item.requestId)}
-                actionHref={action.actionHref}
-                identity={item.title}
-                identityDetail={
-                  [
-                    item.reference && item.reference !== item.title ? item.reference : null,
-                    formatTimestamp(item.createdAt),
-                    item.attentionLabel,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ") || undefined
-                }
-                context={
-                  registry.commercialProgressLabel === "—"
-                    ? undefined
-                    : registry.commercialProgressLabel
-                }
-                state={<StatusBadge label={registry.stateLabel} tone={statusTone("workflow")} />}
-                actionLabel={action.actionLabel}
-              />
-            );
-          })}
-        </CollectionBody>
-        {customer.data ? (
-          <div className="ui-panel__pad">
-            <p>
-              <a
-                className="text-link"
-                href={catalogHref({
-                  customerId,
-                  requestId: null,
-                  productCode: null,
-                })}
-              >
-                Deschide catalogul pentru acest client
-              </a>
-            </p>
+      <div className="client-hub">
+        <div className="client-hub__toolbar">
+        <div className="client-hub__context">
+          <a className="client-hub__back" href="/clienti">← Toți clienții</a>
+          {customer ? <StatusBadge label={customer.statusLabel} tone={statusTone("workflow")} /> : null}
+        </div>
+        <nav className="client-hub__nav" aria-label="Secțiuni client">
+          {CLIENT_HUB_SECTIONS.map((item) => (
+            <a
+              key={item}
+              href={clientHref(customerId, item)}
+              aria-current={item === section ? "page" : undefined}
+            >
+              {CLIENT_HUB_SECTION_LABEL[item]}
+            </a>
+          ))}
+        </nav>
+        {canCreate ? (
+          <button type="button" className="pilot-create" onClick={() => navigate(`/cereri/noua?customer=${encodeURIComponent(customerId)}`)}>
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+            Cerere nouă
+          </button>
+        ) : null}
+        </div>
+        {(workspace.status === "idle" || workspace.status === "loading") && !workspace.data ? (
+          <p role="status">Se citește hubul clientului</p>
+        ) : null}
+        {workspace.status === "error" ? (
+          <ErrorState title={access === "denied" ? "Acces refuzat" : "Clientul nu a putut fi citit"}>
+            {access === "denied"
+              ? "Nu ai acces la acest client în organizația curentă."
+              : workspace.data
+                ? "Actualizarea a eșuat. Datele afișate sunt de la ultima citire reușită."
+                : "Datele clientului nu sunt disponibile."}
+            <Button
+              variant="secondary"
+              onClick={() => invalidateResources(resourceKeys.customerWorkspace(customerId))}
+            >
+              Reîncearcă
+            </Button>
+          </ErrorState>
+        ) : null}
+        {workspace.data && section === "prezentare" ? (
+          <div className="client-hub__layout">
+            <div className="client-hub__main">
+              <SurfacePanel title="Identitate" label="Identitate client">
+                <dl className="client-hub__facts">
+                  <div>
+                    <dt>Denumire</dt>
+                    <dd>{customer?.displayName}</dd>
+                </div>
+                <div>
+                  <dt>Stare</dt>
+                  <dd>{customer?.statusLabel}</dd>
+                </div>
+                <div>
+                  <dt>Localitate</dt>
+                  <dd>{customer?.city ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt>Contact</dt>
+                  <dd>{customer?.contactName ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt>Telefon</dt>
+                  <dd>{customer?.phone ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt>Email</dt>
+                  <dd>{customer?.email ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt>Adresă</dt>
+                  <dd>{customer?.address ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt>CUI</dt>
+                  <dd>{customer?.cui ?? "—"}</dd>
+                </div>
+              </dl>
+            </SurfacePanel>
+            </div>
           </div>
         ) : null}
-      </SurfacePanel>
-      <LinkedJobs title="Lucrări ale clientului" jobs={customerJobs} />
-      <div className="stack">
-        {customer.status === "error" && !customer.data ? (
-          <InlineAlert tone="error" title="Clientul nu a putut fi citit">
-            Identitatea clientului nu este disponibilă.
-          </InlineAlert>
-        ) : null}
-        <SurfacePanel title="Cerere nouă" label="Cerere nouă">
-          <TextField id="request-title" label="Titlu" value={title} onChange={setTitle} />
-          <TextField
-            id="request-description"
-            label="Descriere"
-            value={description}
-            onChange={setDescription}
+        {workspace.data && section === "lucrari" ? (
+          <HubCollection
+            title="Lucrări"
+            emptyTitle="Nu există lucrări"
+            emptyBody="Lucrările eliberate pentru acest client apar aici."
+            columns={["Lucrare", "Stare", "Acțiune"]}
+            rows={workspace.data.jobs.map((job) => jobRow(job))}
           />
-          <Button
-            disabled={title.trim() === "" || description.trim() === "" || saveState === "pending"}
-            onClick={() => {
-              void create();
-            }}
+        ) : null}
+        {workspace.data && section === "cereri" ? (
+          <div className="client-hub__layout">
+            <div className="client-hub__main client-hub__collections">
+              <HubCollection
+                title="Cereri"
+                emptyTitle="Nu există cereri"
+                emptyBody="Creează cererea lucrării pentru acest client."
+                columns={["Cerere", "Stare", "Acțiune"]}
+                rows={workspace.data.requests.map((item) => requestRow(item))}
+              />
+              <HubCollection
+                title="Oferte"
+                emptyTitle="Nu există oferte"
+                emptyBody="Ofertele acestui client vor apărea aici."
+                columns={["Ofertă", "Stare", "Acțiune"]}
+                rows={workspace.data.quotes.map((item) => quoteRow(item))}
+              />
+            </div>
+          </div>
+        ) : null}
+        {workspace.data && section in CLIENT_HUB_FUTURE_COPY ? (
+          <SurfacePanel
+            title={CLIENT_HUB_SECTION_LABEL[section]}
+            label={CLIENT_HUB_SECTION_LABEL[section]}
           >
-            Creează cererea
-          </Button>
-          {saveError ? (
-            <InlineAlert tone="error" title="Crearea a eșuat">
-              {saveError}
-            </InlineAlert>
-          ) : null}
-          <p className="ui-note">
-            Clientul rămâne contextul. Cererea pornește fluxul comercial și operațional.
-          </p>
-        </SurfacePanel>
+            <>
+              <p className="client-hub__future">
+                {CLIENT_HUB_FUTURE_COPY[section as keyof typeof CLIENT_HUB_FUTURE_COPY].title}
+              </p>
+              <p className="client-hub__future">
+                {CLIENT_HUB_FUTURE_COPY[section as keyof typeof CLIENT_HUB_FUTURE_COPY].body}
+              </p>
+            </>
+          </SurfacePanel>
+        ) : null}
       </div>
     </SlicePage>
+  );
+}
+
+type HubRow = {
+  key: string;
+  href: string;
+  title: string;
+  detail?: string;
+  state: string;
+  actionHref: string;
+  actionLabel: string;
+};
+
+function requestRow(item: RequestListItemTransport): HubRow {
+  const action = presentRequestWorklistAction(item);
+  const registry = presentRequestRegistryStatus({
+    statusLabel: item.statusLabel,
+    contextLabel: item.contextLabel,
+  });
+  return {
+    key: item.requestId,
+    href: requestHref(item.requestId),
+    title: item.title,
+    detail: [item.reference && item.reference !== item.title ? item.reference : null, formatTimestamp(item.createdAt)]
+      .filter(Boolean)
+      .join(" · "),
+    state: registry.stateLabel,
+    actionHref: action.actionHref,
+    actionLabel: action.actionLabel,
+  };
+}
+
+function quoteRow(item: QuoteListItemTransport): HubRow {
+  const action = presentQuoteWorklistAction(item);
+  return {
+    key: item.quoteSnapshotId,
+    href: quoteHref(item.productCode, item.quoteSnapshotId),
+    title: item.reference,
+    detail: item.productLabel,
+    state: item.stageLabel,
+    actionHref: action.actionHref,
+    actionLabel: action.actionLabel,
+  };
+}
+
+function jobRow(job: JobListItemTransport): HubRow {
+  const action = presentJobWorklistAction(job);
+  return {
+    key: job.jobId,
+    href: jobHref(job.jobId),
+    title: job.kind === "ASSEMBLY" ? job.productLabel : job.inscription || job.productLabel,
+    detail: [job.priorityLabel, job.targetDateLabel].filter(Boolean).join(" · "),
+    state: job.stageLabel,
+    actionHref: action.actionHref,
+    actionLabel: action.actionLabel,
+  };
+}
+
+function HubCollection({
+  title,
+  emptyTitle,
+  emptyBody,
+  columns,
+  rows,
+}: {
+  title: string;
+  emptyTitle: string;
+  emptyBody: string;
+  columns: readonly string[];
+  rows: readonly HubRow[];
+}) {
+  return (
+    <SurfacePanel variant="flush" title={title} label={title} meta={`${rows.length}`}>
+      {rows.length === 0 ? (
+        <div className="clients-feedback">
+          <EmptyState title={emptyTitle} description={emptyBody} />
+        </div>
+      ) : (
+        <table className="clients-table">
+          <caption className="u-visually-hidden">{title}</caption>
+          <thead>
+            <tr>
+              {columns.map((column, index) => (
+                <th key={column} scope="col" className={index === 0 ? "clients-table__identity" : index === 1 ? "clients-table__state" : "clients-table__action"}>
+                  {column}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.key}>
+                <td className="clients-table__identity">
+                  <a className="clients-object" href={row.href}>
+                    <span className="clients-object__title">{row.title}</span>
+                    {row.detail ? <span className="clients-object__detail">{row.detail}</span> : null}
+                  </a>
+                </td>
+                <td className="clients-table__state">
+                  <StatusBadge label={row.state} tone={statusTone("workflow")} />
+                </td>
+                <td className="clients-table__action">
+                  <a className="clients-next" href={row.actionHref}>
+                    <span>{row.actionLabel}</span>
+                    <span aria-hidden="true">→</span>
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </SurfacePanel>
   );
 }

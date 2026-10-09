@@ -23,6 +23,8 @@ body,
 
 html {
   overflow-x: clip;
+  /* Filters and short lists must not move the shared navigation/account rail. */
+  scrollbar-gutter: stable;
   background: var(--color-canvas);
 }
 

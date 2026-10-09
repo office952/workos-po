@@ -33,8 +33,8 @@ export const acmCassetteNoneTemplate: ProductTemplate = {
   description:
     "Panou casetat din ACM, fără iluminare. Corpul din foaie ACM și cadrul intern din oțel sunt componente separate.",
   identityFacts: [
-    { id: "face.material", label: "Material casetă", value: "ACM 3 mm" },
-    { id: "back.material", label: "Cadru intern", value: "Profil oțel" },
+    { id: "face.material", componentId: "FACE", label: "Material casetă", value: "ACM 3 mm" },
+    { id: "back.material", componentId: "BACK", label: "Cadru intern", value: "Profil oțel" },
     { id: "lighting", label: "Iluminare", value: "Fără iluminare" },
   ],
   fixedValues: {
