@@ -111,6 +111,32 @@ LETTERS != ACM FACE
 Current Letters BACK remains `FOREX_BACK` on `PRD-LETTERS-FRONTLIT-PLEXI-AL06`.
 Current ACM remains `PRD-ACM-CASSETTE-NONE` with `ACM_CASSETTE_BODY` + `STEEL_INTERNAL_FRAME`.
 
+## Two product physical invariants
+
+Owner-accepted. Architecture constraints only; no new runtime behavior.
+
+```text
+LETTERS.BACK = FOREX_BACK (Forex 10 mm), on any support
+ACM_SUPPORT = separate product PRD-ACM-CASSETTE-NONE
+ACM_CASSETTE_BODY != LETTERS.BACK
+STEEL_INTERNAL_FRAME != LETTERS.BACK
+ACM_ROLE_NAME_BACK = role slot only, not physical equivalence with LETTERS.BACK
+PANEL_DIMENSIONS_DRIVE_LETTERS_BACK = NEVER
+ASSEMBLY_RELATION_RECALCULATES_CHILD_PRODUCT = NEVER
+FLATTEN_CHILD_PRODUCT_TRUTH = NEVER
+LETTERS_ON_ACM_PANEL per SIGN_ASSEMBLY_ACM_LETTERS_V1 = exactly 1
+FLAT_GROOVED_BACK = NOT_IMPLEMENTED
+```
+
+- Letters BACK remains `FOREX_BACK`; its quantity derives from the confirmed letters face area only.
+- ACM support remains a separate product with its own truth, aggregate and provenance. ACM never replaces letters BACK; Forex never becomes ACM and ACM never becomes Forex.
+- Flat / grooved is a future BACK manufacturing / construction distinction. It is not a material, not a support product and not a new product identity. No `...-FLAT-BACK` product code. Future work keeps the same letters identity with versioned Product Truth.
+- Future derivation is fail-closed: a typed panel support may imply flat and a typed metal frame may imply grooved. Generic HostContext `facadeType = METAL` is insufficient to imply `METAL_FRAME` and must never produce grooved on its own.
+- Historical snapshots remain immutable; a child reconfirmation creates new truth and leaves the confirmed assembly unchanged.
+- Assembly EIC reconciliation remains an open blocker. Today assembly `eicTotal` sums child totals; that is not accepted as correct. Final assembly EIC must correspond to the final assembly production graph: child terminal operations superseded by assembly operations must not stay costed unless still performed. Unknown cost is not zero; missing assembly operation evidence must resolve to PARTIAL / BLOCKED, never an invented zero.
+
+Regression proof: `packages/domain/src/assembly/assembly.test.ts` (two product physical invariants), `packages/domain/src/resources/productTemplateUsage.test.ts`, `packages/domain/src/product/back.test.ts`, `apps/api/tests/product-assembly.test.ts`.
+
 ## Child product truth
 
 Each fabricated child stays independently configurable and confirmable.
@@ -247,3 +273,4 @@ Assemblies are additive. Standalone Letters, ACM, and future simple products rem
 6. Detailed ACM segmentation contract
 7. Host Context integration with SiteInstallationFacts — closed; Owner-accepted with Host Context V1
 8. Exact stale / review semantics when a child changes
+9. Assembly EIC reconciliation with the final assembly production graph — open blocker

@@ -102,7 +102,11 @@ describe("product assembly API", () => {
       ).status,
     ).toBe(200);
 
-    expect(await json(await app.request(`/api/assemblies/${assemblyId}/members/SIGNAGE_LETTERS`))).toMatchObject({ customerId, requestId, productCode: CANONICAL_PRODUCT_CODE, values: lettersValues });
+    const lettersMember = await json(await app.request(`/api/assemblies/${assemblyId}/members/SIGNAGE_LETTERS`));
+    expect(lettersMember).toMatchObject({ customerId, requestId, productCode: CANONICAL_PRODUCT_CODE, values: lettersValues });
+    expect(lettersMember.values).not.toHaveProperty("face.widthMm");
+    expect(lettersMember.values).not.toHaveProperty("face.heightMm");
+    expect(await json(await app.request(`/api/assemblies/${assemblyId}/members/SUPPORT_PANEL`))).toMatchObject({ productCode: ACM_CASSETTE_NONE_PRODUCT_CODE, values: acmValues });
     expect((await app.request(`/api/assemblies/${assemblyId}/confirm`, { method: "POST" })).status).toBe(200);
     expect((await app.request(`/api/assemblies/${assemblyId}/quote`, { method: "POST" })).status).toBe(200);
     const lockedRequest = await json(await app.request(`/api/requests/${requestId}`));
