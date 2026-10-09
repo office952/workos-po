@@ -131,6 +131,39 @@ describe("unpublished constructive instance fields", () => {
   });
 });
 
+describe("published BACK manufacturing gate", () => {
+  const schemaWithBack = {
+    ...frontlitPlexiAl06FormSchema,
+    sections: [...frontlitPlexiAl06FormSchema.sections, {
+      id: "back",
+      title: "Spate",
+      componentId: "BACK",
+      fields: [
+        { id: "back.supportKind", componentId: "BACK", label: "Suport", type: "select" as const, required: true,
+          options: [{ value: "PANEL", label: "Panou" }, { value: "METAL_FRAME", label: "Cadru metalic" }],
+          visibleWhen: { kind: "always" as const } },
+        { id: "back.profile", componentId: "BACK", label: "Profil", type: "select" as const, required: true,
+          options: [{ value: "FLAT", label: "Plan" }, { value: "GROOVED", label: "Cu canal" }],
+          visibleWhen: { kind: "always" as const } },
+      ],
+    }],
+  };
+
+  it("permits an evidence-backed flat BACK when fields are published", () => {
+    const definition = compileDefinition(frontlitPlexiAl06Template, schemaWithBack,
+      draft({ ...readyValues, "back.supportKind": "PANEL", "back.profile": "FLAT" }));
+    expect(definition.readiness).toBe("ready");
+    expect(definition.values["back.profile"]).toBe("FLAT");
+  });
+
+  it("blocks grooved BACK despite a syntactically valid published choice", () => {
+    const definition = compileDefinition(frontlitPlexiAl06Template, schemaWithBack,
+      draft({ ...readyValues, "back.supportKind": "METAL_FRAME", "back.profile": "GROOVED" }));
+    expect(definition.readiness).toBe("blocked");
+    expect(definition.missing.some((item) => item.label.includes("rețeta de prelucrare"))).toBe(true);
+  });
+});
+
 describe("module law", () => {
   it("includes required lighting without an include toggle", () => {
     expect(selectedComponentIds(frontlitPlexiAl06Template, readyValues)).toEqual([
