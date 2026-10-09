@@ -28,6 +28,23 @@ describe("FOREX_BACK", () => {
     ]);
   });
 
+  it("fails closed on any V2 profile input until the manufacturing recipe is versioned", () => {
+    for (const values of [
+      { "back.thicknessMm": 10, "back.supportKind": "METAL_FRAME", "back.profile": "GROOVED" },
+      { "back.thicknessMm": 10, "back.supportKind": "PANEL", "back.profile": "FLAT" },
+      { "back.thicknessMm": 10, "back.supportKind": "PANEL", "back.profile": "GROOVED" },
+      { "back.thicknessMm": 10, "back.supportKind": "PANEL" },
+    ]) {
+      const result = forexBackContract.calculate({
+        values, measurements: [], shared: { confirmedAreaMm2: 250000 }, technicalSettings: [],
+      });
+      expect(result.status).toBe("UNAVAILABLE");
+      expect(result.quantities).toEqual([]);
+      expect(result.requirements).toEqual([]);
+      expect(result.unavailable.length).toBeGreaterThan(0);
+    }
+  });
+
   it("does not assume FACE area unless composition supplies it", () => {
     const result = forexBackContract.calculate({
       values: { "back.thicknessMm": 10 },
