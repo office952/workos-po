@@ -28,7 +28,7 @@ describe("system projection API", () => {
       "Față",
       "Volum",
       "Spate",
-      "Iluminare",
+      "Electrică / iluminare",
     ]);
     expect(body.roles[0]?.types[0]?.usedBy[0]?.productCode).toBe(
       CANONICAL_PRODUCT_CODE,
