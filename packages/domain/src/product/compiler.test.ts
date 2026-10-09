@@ -99,6 +99,38 @@ describe("canonical product", () => {
   });
 });
 
+describe("unpublished constructive instance fields", () => {
+  it("does not silently accept advanced BACK and LED options as legacy-priced values", () => {
+    const attempted = compileDefinition(
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      draft({
+        ...readyValues,
+        "back.supportKind": "METAL_FRAME",
+        "back.profile": "GROOVED",
+        "lighting.moduleTypeId": "UNPUBLISHED_MODULE",
+        "lighting.voltageV": 24,
+        "lighting.colorTemperatureK": 4000,
+      }),
+    );
+    expect(attempted.readiness).toBe("blocked");
+    expect(attempted.missing.map((item) => item.componentId)).toEqual([
+      "BACK", "BACK", "LIGHTING", "LIGHTING", "LIGHTING",
+    ]);
+    expect(attempted.missing.every((item) => !item.label.includes(".") && !item.label.includes("moduleTypeId"))).toBe(true);
+    expect(attempted.values).not.toHaveProperty("back.profile");
+    expect(attempted.values).not.toHaveProperty("lighting.moduleTypeId");
+  });
+
+  it("preserves readiness for the existing approved V1 input set", () => {
+    const current = compileDefinition(
+      frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, draft(readyValues),
+    );
+    expect(current.readiness).toBe("ready");
+    expect(current.missing).toEqual([]);
+  });
+});
+
 describe("module law", () => {
   it("includes required lighting without an include toggle", () => {
     expect(selectedComponentIds(frontlitPlexiAl06Template, readyValues)).toEqual([
