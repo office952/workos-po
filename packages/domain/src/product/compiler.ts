@@ -118,21 +118,21 @@ export function compileDefinition(
   // Until a versioned schema owns them, accepting them would let an operator
   // confirm a legacy-priced product while believing BACK/LED choices survived.
   const reservedConstructiveFields = [
-    ["back.supportKind", "BACK"],
-    ["back.profile", "BACK"],
-    ["lighting.moduleTypeId", "LIGHTING"],
-    ["lighting.voltageV", "LIGHTING"],
-    ["lighting.colorTemperatureK", "LIGHTING"],
+    ["back.supportKind", "BACK", "Tip suport spate"],
+    ["back.profile", "BACK", "Profil constructiv spate"],
+    ["lighting.moduleTypeId", "LIGHTING", "Model modul LED"],
+    ["lighting.voltageV", "LIGHTING", "Tensiune alimentare LED"],
+    ["lighting.colorTemperatureK", "LIGHTING", "Temperatură de culoare LED"],
   ] as const;
   const publishedFieldIds = new Set(allFields(schema).map((field) => field.id));
-  for (const [fieldId, componentId] of reservedConstructiveFields) {
+  for (const [fieldId, componentId, fieldLabel] of reservedConstructiveFields) {
     if (Object.hasOwn(draft.values, fieldId) &&
         !publishedFieldIds.has(fieldId) &&
         !Object.hasOwn(template.fixedValues, fieldId)) {
       missing.push({
         fieldId,
         componentId,
-        label: `Opțiune constructivă nepublicată: ${fieldId}`,
+        label: `${fieldLabel}: opțiune indisponibilă pentru acest produs`,
       });
     }
   }
