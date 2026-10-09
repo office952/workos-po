@@ -62,7 +62,7 @@ describe("resources administration mutation delta", () => {
       costEvidenceRowsRebuilt: 1,
       resourceRecordsRebuilt: 1,
       recipeRecordsRebuilt: 0,
-      templateUsagesRebuilt: 2,
+      templateUsagesRebuilt: 3,
     });
 
     const thirty = before.costEvidence.find(
