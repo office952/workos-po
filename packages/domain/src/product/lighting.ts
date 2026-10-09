@@ -133,6 +133,19 @@ export const lightingFrontLedContract: ComponentCalculationContract = {
     return [];
   },
   calculate(input: ComponentCalculationInput): ComponentCalculationResult {
+    // Future per-order LED identities cannot silently inherit the v1 generic
+    // module cost and power assumptions. Existing templates provide none of
+    // these values and retain their established formula and PSU evaluation.
+    const hasUnpricedLedSelection = [
+      "lighting.moduleTypeId",
+      "lighting.voltageV",
+      "lighting.colorTemperatureK",
+    ].some((id) => input.values[id] !== undefined);
+    if (hasUnpricedLedSelection) {
+      return lightingResult("UNAVAILABLE", [], [], [
+        "Selecția LED necesită catalog de module, compatibilitate electrică și rețete versionate.",
+      ]);
+    }
     const settingGaps = lightingSettingGaps(input.technicalSettings);
     if (settingGaps.length > 0) {
       return lightingResult("UNAVAILABLE", [], [], settingGaps);
