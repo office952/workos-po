@@ -28,10 +28,9 @@ describe("FOREX_BACK", () => {
     ]);
   });
 
-  it("fails closed on any V2 profile input until the manufacturing recipe is versioned", () => {
+  it("blocks unsupported or incomplete BACK profile inputs", () => {
     for (const values of ([ 
       { "back.thicknessMm": 10, "back.supportKind": "METAL_FRAME", "back.profile": "GROOVED" },
-      { "back.thicknessMm": 10, "back.supportKind": "PANEL", "back.profile": "FLAT" },
       { "back.thicknessMm": 10, "back.supportKind": "PANEL", "back.profile": "GROOVED" },
       { "back.thicknessMm": 10, "back.supportKind": "PANEL" },
     ] as Record<string, string | number | boolean | null>[])) {
@@ -43,6 +42,20 @@ describe("FOREX_BACK", () => {
       expect(result.requirements).toEqual([]);
       expect(result.unavailable.length).toBeGreaterThan(0);
     }
+  });
+
+  it("calculates the flat panel BACK from the existing material evidence", () => {
+    const result = forexBackContract.calculate({
+      values: { "back.thicknessMm": 10, "back.supportKind": "PANEL", "back.profile": "FLAT" },
+      measurements: [], shared: { confirmedAreaMm2: 250000 }, technicalSettings: [],
+    });
+    expect(result.status).toBe("CALCULATED");
+    expect(result.requirements).toEqual([{
+      componentId: BACK_COMPONENT_ID,
+      resourceId: FOREX_10MM_ID,
+      quantity: 0.25,
+      unit: "m2",
+    }]);
   });
 
   it("does not assume FACE area unless composition supplies it", () => {
