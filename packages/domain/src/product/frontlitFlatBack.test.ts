@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { compileDefinition } from "./compiler.js";
+import { compileAcceptedProductEvaluation } from "./acceptedEvaluation.js";
+import { seededDisplayLabelCatalog } from "./displayMetadata.js";
+import { costEvidence, FOREX_10MM_ID } from "../resources/catalog.js";
+import { starterFormulaVersionsForType } from "./resolveFormulas.js";
+import { projectCommercialPrice } from "../commercial/price.js";
+import { freezeQuoteSnapshot } from "../commercial/quoteSnapshot.js";
 import { confirmReviewedDraft, projectConfigurationPreview } from "./configurationPreview.js";
 import { FRONTLIT_FLAT_BACK_PRODUCT_CODE, frontlitFlatBackFormSchema, frontlitFlatBackTemplate } from "./frontlitFlatBack.js";
 import { frontlitPlexiAl06Template } from "./frontlitPlexiAl06.js";
@@ -38,6 +44,26 @@ describe("opt-in flat BACK product in existing configurator", () => {
     expect(compiled.values["back.supportKind"]).toBe("PANEL");
     const confirmed = confirmReviewedDraft(frontlitFlatBackTemplate, frontlitFlatBackFormSchema, draft, preview.reviewId!);
     expect(confirmed).toMatchObject({ templateCode: FRONTLIT_FLAT_BACK_PRODUCT_CODE });
+  });
+
+  it("carries reviewed flat BACK through the sole server evaluation and commercial price", () => {
+    const definition = compileDefinition(frontlitFlatBackTemplate, frontlitFlatBackFormSchema, draft);
+    const truth = confirmReviewedDraft(frontlitFlatBackTemplate, frontlitFlatBackFormSchema, draft, definition.reviewId);
+    if ("ok" in truth) throw new Error("expected confirmed product truth");
+    const accepted = compileAcceptedProductEvaluation({
+      truth,
+      template: frontlitFlatBackTemplate,
+      formSchema: frontlitFlatBackFormSchema,
+      labels: seededDisplayLabelCatalog(),
+      costEvidenceRows: costEvidence,
+      formulaVersionsForType: starterFormulaVersionsForType,
+    });
+    expect(accepted.truth.templateCode).toBe(FRONTLIT_FLAT_BACK_PRODUCT_CODE);
+    expect(accepted.truth.values["back.profile"]).toBe("FLAT");
+    expect(accepted.eic.completeness).toBe("COMPLETE");
+    expect(accepted.evaluations.some((item) => item.componentId === "BACK")).toBe(true);
+    expect(accepted.aggregate.materialRequirements.some((item) => item.resourceId === FOREX_10MM_ID)).toBe(true);
+    expect(projectCommercialPrice(accepted.eic).grossPrice).toBeGreaterThan(0);
   });
 
   it("blocks a frame/grooved injection even if request bypasses the form", () => {
