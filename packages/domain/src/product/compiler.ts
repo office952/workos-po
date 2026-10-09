@@ -4,6 +4,7 @@ import {
   type ComponentEvaluation,
 } from "./componentEvaluation.js";
 import type { DisplayLabelCatalog } from "./displayMetadata.js";
+import { planBackManufacturing } from "./backManufacturing.js";
 import type { ResolvedFormulaVersion } from "./resolveFormulas.js";
 import type { ComponentTechnicalSettingDefinition } from "./technicalSettings.js";
 import type {
@@ -169,6 +170,23 @@ export function compileDefinition(
     }
     if (!isEmpty(value) && isValidValue(field, value)) {
       values[field.id] = value as DraftValue;
+    }
+  }
+
+  // A published field does not automatically authorize pricing. Require
+  // manufacturing evidence before a constructive BACK choice is confirmable.
+  if (selectedIds.includes("BACK") &&
+      (Object.hasOwn(values, "back.supportKind") || Object.hasOwn(values, "back.profile"))) {
+    const plan = planBackManufacturing(values, typeof values["face.confirmedAreaMm2"] === "number"
+      ? values["face.confirmedAreaMm2"] : undefined);
+    if (plan.status === "BLOCKED") {
+      missing.push({
+        componentId: "BACK",
+        fieldId: "back.profile",
+        label: plan.reason === "groove_recipe_missing"
+          ? "Spate cu canal: lipsește rețeta de prelucrare și costul verificat"
+          : "Profilul de spate nu poate fi fabricat cu datele disponibile",
+      });
     }
   }
 
