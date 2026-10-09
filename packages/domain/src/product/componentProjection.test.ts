@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CANONICAL_PRODUCT_CODE } from "./frontlitPlexiAl06.js";
+import { FRONTLIT_FLAT_BACK_PRODUCT_CODE } from "./frontlitFlatBack.js";
 import { projectComponentArchitecture } from "./componentProjection.js";
 import { seededDisplayLabelCatalog } from "./displayMetadata.js";
 
@@ -30,6 +31,9 @@ describe("component architecture projection", () => {
         productCode: CANONICAL_PRODUCT_CODE,
         productLabel:
           "Litere volumetrice luminoase — față plexiglas, volum aluminiu 0,6 mm",
+      }),
+      expect.objectContaining({
+        productCode: FRONTLIT_FLAT_BACK_PRODUCT_CODE,
       }),
       expect.objectContaining({
         productCode: "PRD-LOGO-FRONTLIT-PLEXI-AL06",
