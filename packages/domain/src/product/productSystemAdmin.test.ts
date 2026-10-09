@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CANONICAL_PRODUCT_CODE } from "./frontlitPlexiAl06.js";
+import { FRONTLIT_FLAT_BACK_PRODUCT_CODE } from "./frontlitFlatBack.js";
 import { seededDisplayLabelCatalog } from "./displayMetadata.js";
 import {
   collectChildCategoryIds,
@@ -18,6 +19,7 @@ describe("product system administration projection", () => {
     expect(admin.families[0]?.categoryIds).toHaveLength(4);
     expect(admin.families[0]?.productCodes).toEqual([
       CANONICAL_PRODUCT_CODE,
+      FRONTLIT_FLAT_BACK_PRODUCT_CODE,
       "PRD-LOGO-FRONTLIT-PLEXI-AL06",
     ]);
     expect(admin.families[0]?.readiness.lifecycle).toBe("ACTIVE");
@@ -33,9 +35,9 @@ describe("product system administration projection", () => {
     ]);
     const used = admin.categories.find((item) => item.id === "FRONT_LIT_VOLUMETRIC_LETTERS");
     const empty = admin.categories.find((item) => item.id === "HALO_LIT_VOLUMETRIC_LETTERS");
-    expect(used?.productCodes).toEqual([CANONICAL_PRODUCT_CODE]);
+    expect(used?.productCodes).toEqual([CANONICAL_PRODUCT_CODE, FRONTLIT_FLAT_BACK_PRODUCT_CODE]);
     expect(used?.readiness.canDelete).toBe(false);
-    expect(used?.readiness.deleteBlockers[0]).toMatch(/1 produs/);
+    expect(used?.readiness.deleteBlockers[0]).toMatch(/2 produse/);
     expect(empty?.productCodes).toEqual([]);
     expect(empty?.readiness.canDelete).toBe(true);
     expect(empty?.readiness.canRetire).toBe(true);
@@ -69,6 +71,7 @@ describe("product system administration projection", () => {
     const lighting = admin.types.find((item) => item.typeId === "LIGHTING_FRONT_LED");
     expect(lighting?.usedByProductCodes).toEqual([
       CANONICAL_PRODUCT_CODE,
+      FRONTLIT_FLAT_BACK_PRODUCT_CODE,
       "PRD-LOGO-FRONTLIT-PLEXI-AL06",
     ]);
     expect(lighting?.usedByLabels[0]).toContain("Litere volumetrice luminoase");
