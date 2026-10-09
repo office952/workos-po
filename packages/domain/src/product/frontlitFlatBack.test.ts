@@ -46,8 +46,15 @@ describe("opt-in flat BACK product in existing configurator", () => {
   });
 
   it("carries reviewed flat BACK through the sole server evaluation and commercial price", () => {
-    const definition = compileDefinition(frontlitFlatBackTemplate, frontlitFlatBackFormSchema, draft);
-    const truth = confirmReviewedDraft(frontlitFlatBackTemplate, frontlitFlatBackFormSchema, draft, definition.reviewId);
+    const preview = projectConfigurationPreview(frontlitFlatBackTemplate, frontlitFlatBackFormSchema, draft);
+    expect(preview.readiness).toBe("ready");
+    expect(preview.reviewId).toBeTruthy();
+    const truth = confirmReviewedDraft(
+      frontlitFlatBackTemplate,
+      frontlitFlatBackFormSchema,
+      draft,
+      preview.reviewId!,
+    );
     if ("ok" in truth) throw new Error("expected confirmed product truth");
     const accepted = compileAcceptedProductEvaluation({
       truth,

@@ -4,6 +4,7 @@ import {
   ACM_CASSETTE_NONE_READY_VALUES,
   CANONICAL_PRODUCT_CODE,
   CODE_DEFAULT_ENABLEMENT_GUIDANCE,
+  FRONTLIT_FLAT_BACK_PRODUCT_CODE,
   LOGO_PRODUCT_CODE,
   PRODUCT_NOT_ENABLED_FOR_NEW_WORK,
 } from "@workos-final/domain";
@@ -73,9 +74,15 @@ const lettersValues = {
 
 const unknownProductCode = "PRD-NOT-A-SHARED-SKU";
 
-function bothProducts(enabledLetters: boolean, enabledAcm: boolean, enabledLogo = false) {
+function bothProducts(
+  enabledLetters: boolean,
+  enabledAcm: boolean,
+  enabledLogo = false,
+  enabledFlatBack = false,
+) {
   return [
     { templateCode: CANONICAL_PRODUCT_CODE, enabled: enabledLetters },
+    { templateCode: FRONTLIT_FLAT_BACK_PRODUCT_CODE, enabled: enabledFlatBack },
     { templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE, enabled: enabledAcm },
     { templateCode: LOGO_PRODUCT_CODE, enabled: enabledLogo },
   ];
@@ -123,12 +130,16 @@ describe("product enablement admin", () => {
     const products = listed.products as JsonObject[];
     expect(products.map((item) => item.templateCode)).toEqual([
       CANONICAL_PRODUCT_CODE,
+      FRONTLIT_FLAT_BACK_PRODUCT_CODE,
       ACM_CASSETTE_NONE_PRODUCT_CODE,
       LOGO_PRODUCT_CODE,
     ]);
     expect(products.find((item) => item.templateCode === CANONICAL_PRODUCT_CODE)?.enabled).toBe(
       true,
     );
+    expect(
+      products.find((item) => item.templateCode === FRONTLIT_FLAT_BACK_PRODUCT_CODE)?.enabled,
+    ).toBe(false);
     expect(products.find((item) => item.templateCode === ACM_CASSETTE_NONE_PRODUCT_CODE)?.enabled).toBe(
       true,
     );

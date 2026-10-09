@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ACM_CASSETTE_NONE_PRODUCT_CODE,
   CANONICAL_PRODUCT_CODE,
+  FRONTLIT_FLAT_BACK_PRODUCT_CODE,
   INSPECT_FINISHED_ASSEMBLY_ID,
   INSPECT_FINISHED_LETTER_ID,
   INSPECT_FINISHED_LOGO_ID,
@@ -71,6 +72,7 @@ async function saveProducts(
     body: JSON.stringify({
       products: [
         { templateCode: CANONICAL_PRODUCT_CODE, enabled: enabled.letters },
+        { templateCode: FRONTLIT_FLAT_BACK_PRODUCT_CODE, enabled: false },
         { templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE, enabled: enabled.acm },
         { templateCode: LOGO_PRODUCT_CODE, enabled: enabled.logo },
       ],

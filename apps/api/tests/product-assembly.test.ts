@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ACM_CASSETTE_NONE_PRODUCT_CODE,
   CANONICAL_PRODUCT_CODE,
+  FRONTLIT_FLAT_BACK_PRODUCT_CODE,
   INSPECT_FINISHED_ASSEMBLY_ID,
   MOUNT_LETTERS_ON_PANEL_ID,
 } from "@workos-final/domain";
@@ -228,6 +229,7 @@ describe("product assembly API", () => {
       body: JSON.stringify({
         products: [
           { templateCode: CANONICAL_PRODUCT_CODE, enabled: true },
+          { templateCode: FRONTLIT_FLAT_BACK_PRODUCT_CODE, enabled: false },
           { templateCode: ACM_CASSETTE_NONE_PRODUCT_CODE, enabled: false },
           { templateCode: "PRD-LOGO-FRONTLIT-PLEXI-AL06", enabled: false },
         ],
