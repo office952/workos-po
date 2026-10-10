@@ -4,6 +4,7 @@
 
 - Repository: `office952/workos-po`
 - Branch: `feat/integrated-assembly-quote-remediation-v1`
+- HEAD: `b4628f8` (implementation `ceffae8` + EIC `6efbbe0`)
 - Base: `origin/main` @ `88c53ea` (includes PR #64 two-product invariants)
 - Includes: PR #65 EIC reconciliation (cherry-pick `ef44276`), PR #63 rules adapted without flat-BACK SKU
 
@@ -41,10 +42,10 @@
 
 ### Synthetic E2E evidence
 
-Screenshots (same branch build, port 8788):
+Screenshots captured on integrated build served at `127.0.0.1:8788` (isolated synthetic root; `8787` reference untouched). Paths are gitignored locally under `docs/evidence/integrated-assembly-e2e-v1/`:
 
-- `docs/evidence/integrated-assembly-e2e-v1/01-request-product-selection.png` — cerere → **Litere pe panou ACM** entry
-- `docs/evidence/integrated-assembly-e2e-v1/02-assembly-guided-summary.png` — guided assembly summary + **Pregătește oferta**
+- `01-request-product-selection.png` — cerere → **Litere pe panou ACM** entry
+- `02-assembly-guided-summary.png` — guided assembly summary + **Pregătește oferta**
 
 Browser path exercised: login → cerere Delta Retail → **Începe: Panou ACM + litere volumetrice** → assembly workspace → open letters configurator (assembly member context). Full confirm → grouped quote not completed in this pass (timeboxed).
 
@@ -67,4 +68,4 @@ Browser path exercised: login → cerere Delta Retail → **Începe: Panou ACM +
 - [ ] Standalone letters unchanged vs historical snapshots
 - [ ] Forex and ACM lines separate in cost evidence
 - [x] `pnpm verify:all` green on PR branch
-- [ ] Review E2E screenshots in `docs/evidence/integrated-assembly-e2e-v1/`
+- [ ] Review E2E screenshots (local `docs/evidence/integrated-assembly-e2e-v1/`, gitignored)
