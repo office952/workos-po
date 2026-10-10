@@ -2,6 +2,7 @@ import {
   FRONT_LIT_VOLUMETRIC_LETTERS_CATEGORY_ID,
   LIGHTED_VOLUMETRIC_SIGNS_FAMILY_ID,
 } from "./catalog.js";
+import { LETTERS_MOUNTING_CONTEXT_FIELD, LETTERS_MOUNTING_ON_ACM_PANEL } from "./lettersMountingContext.js";
 import type { FormSchema, ProductTemplate } from "./types.js";
 
 export const CANONICAL_PRODUCT_CODE = "PRD-LETTERS-FRONTLIT-PLEXI-AL06";
@@ -166,6 +167,41 @@ export const frontlitPlexiAl06FormSchema: FormSchema = {
           min: 1,
           visibleWhen: { kind: "always" },
           hint: "Valoare confirmată de operator. Nu este geometrie calculată de WorkOS.",
+        },
+      ],
+    },
+    {
+      id: "back",
+      title: "Spate",
+      componentId: "BACK",
+      fields: [
+        {
+          id: "back.supportKind",
+          componentId: "BACK",
+          label: "Suport constructiv",
+          type: "select",
+          required: true,
+          options: [{ value: "PANEL", label: "Panou" }],
+          visibleWhen: {
+            kind: "fieldEquals",
+            fieldId: LETTERS_MOUNTING_CONTEXT_FIELD,
+            value: LETTERS_MOUNTING_ON_ACM_PANEL,
+          },
+          hint: "Pentru montaj pe panou ACM: spate Forex plan, separat de materialul panoului.",
+        },
+        {
+          id: "back.profile",
+          componentId: "BACK",
+          label: "Profil spate",
+          type: "select",
+          required: true,
+          options: [{ value: "FLAT", label: "Plan" }],
+          visibleWhen: {
+            kind: "fieldEquals",
+            fieldId: LETTERS_MOUNTING_CONTEXT_FIELD,
+            value: LETTERS_MOUNTING_ON_ACM_PANEL,
+          },
+          hint: "Canalul/cadrul metalic necesită rețetă verificată și nu este încă ofertabil.",
         },
       ],
     },

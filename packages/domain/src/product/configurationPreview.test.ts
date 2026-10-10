@@ -22,6 +22,10 @@ import {
   frontlitPlexiAl06FormSchema,
   frontlitPlexiAl06Template,
 } from "./frontlitPlexiAl06.js";
+import {
+  LETTERS_MOUNTING_CONTEXT_FIELD,
+  LETTERS_MOUNTING_ON_ACM_PANEL,
+} from "./lettersMountingContext.js";
 import { LED_PITCH_SETTING_ID } from "./technicalSettings.js";
 import type { DraftConfiguration } from "./types.js";
 
@@ -64,6 +68,9 @@ describe("configuration preview transport", () => {
       expect.objectContaining({ componentId: "LIGHTING", value: "Iluminare frontală" }),
     ]));
     expect(preview.formSchema.sections.map((section) => section.componentId)).toEqual(["ROOT", "FACE", "VOLUME"]);
+    expect(
+      preview.formSchema.sections.flatMap((section) => section.fields).map((field) => field.id),
+    ).not.toContain("back.supportKind");
     expect(JSON.stringify(preview)).not.toMatch(/measurements|templateVersion/);
     expect(preview.formSchema.sections.flatMap((section) => section.fields).map((field) => field.id)).not.toContain(
       "face.color",
@@ -89,6 +96,24 @@ describe("configuration preview transport", () => {
     expect(vinylFields).toContain("face.color");
     expect(vinyl.readiness).toBe("blocked");
     expect(vinyl.missing.some((item) => item.fieldId === "face.color")).toBe(true);
+  });
+
+  it("publishes BACK constructive fields when mounting context is acm_panel", () => {
+    const preview = projectConfigurationPreview(
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      lettersDraft({
+        ...lettersReadyValues,
+        [LETTERS_MOUNTING_CONTEXT_FIELD]: LETTERS_MOUNTING_ON_ACM_PANEL,
+        "back.supportKind": "PANEL",
+        "back.profile": "FLAT",
+      }),
+    );
+    const fieldIds = preview.formSchema.sections.flatMap((section) => section.fields).map((field) => field.id);
+    expect(fieldIds).toEqual(
+      expect.arrayContaining(["back.supportKind", "back.profile"]),
+    );
+    expect(preview.formSchema.sections.map((section) => section.id)).toContain("back");
   });
 
   it("does not give ACM LETTERS VOLUME or LIGHTING fields", () => {

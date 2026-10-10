@@ -48,7 +48,7 @@ type AssemblyView = {
 
 export function assemblyLead(hasLogo: boolean, lettersPresent: boolean): string {
   if (!hasLogo) {
-    return "Configurează panoul și literele, apoi confirmă ansamblul.";
+    return "Cerere → Litere pe panou → Configurează literele → Configurează panoul → Verifică ansamblul → Pregătește oferta.";
   }
   if (lettersPresent) {
     return "Configurează panoul, literele și logo-ul, apoi confirmă ansamblul.";
@@ -264,7 +264,7 @@ export function AssemblyPage() {
               disabled={pending || assembly.statusLabel !== "Confirmat"}
               onClick={() => void run(`/api/assemblies/${assembly.assemblyId}/quote`)}
             >
-              Îngheață oferta
+              Pregătește oferta
             </Button>
           )}
           {assembly.quote && !assembly.orderId ? (
