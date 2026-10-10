@@ -99,6 +99,22 @@ export function readAssemblyMemberRole(value: string | null): AssemblyMemberRole
   }
 }
 
+export function withAssemblyLettersMountingDrafts(
+  drafts: Record<string, string>,
+): Record<string, string> {
+  const next = { ...drafts };
+  if (next["constructive.mountingContext"] !== "acm_panel") {
+    next["constructive.mountingContext"] = "acm_panel";
+  }
+  if (!next["back.supportKind"]) {
+    next["back.supportKind"] = "PANEL";
+  }
+  if (!next["back.profile"]) {
+    next["back.profile"] = "FLAT";
+  }
+  return next;
+}
+
 export type ConfiguratorPageProps = ConfiguratorContext & {
   assemblyId?: string | null;
   memberRole?: AssemblyMemberRole | null;
@@ -164,9 +180,13 @@ export function ConfiguratorPage({
   const [workbenchNavigation, setWorkbenchNavigation] = useState<
     Record<string, WorkbenchNavigationState>
   >(() => stored.workbenchNavigation ?? {});
-  const [drafts, setDrafts] = useState<Record<string, string>>(() =>
-    ownedDraftsForContext(stored, context),
-  );
+  const [drafts, setDrafts] = useState<Record<string, string>>(() => {
+    const owned = ownedDraftsForContext(stored, context);
+    if (assemblyId && memberRole === "SIGNAGE_LETTERS") {
+      return withAssemblyLettersMountingDrafts(owned);
+    }
+    return owned;
+  });
   const [workArea, setWorkArea] = useState<ConfigurationWorkArea>("configuration");
   const workAreaRef = useRef<ConfigurationWorkArea>(workArea);
   useEffect(() => { workAreaRef.current = workArea; }, [workArea]);
@@ -200,7 +220,13 @@ export function ConfiguratorPage({
   const member = useResource(assemblyId && memberRole ? `assembly-member:${assemblyId}:${memberRole}` : null, () => loadAssemblyMember({ assemblyId: assemblyId!, role: memberRole!, customerId, requestId, productCode }));
   const [seedApplied, setSeedApplied] = useState(false);
   if (member.data && !seedApplied) {
-    if (Object.keys(drafts).length === 0) setDrafts(member.data);
+    if (Object.keys(drafts).length === 0) {
+      const seeded =
+        memberRole === "SIGNAGE_LETTERS" && assemblyId
+          ? withAssemblyLettersMountingDrafts(member.data)
+          : member.data;
+      setDrafts(seeded);
+    }
     setSeedApplied(true);
   }
 

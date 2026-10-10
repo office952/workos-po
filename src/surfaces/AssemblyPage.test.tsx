@@ -11,9 +11,8 @@ afterEach(() => {
 
 describe("assemblyLead", () => {
   it("keeps the letters assembly wording when logo is absent", () => {
-    expect(assemblyLead(false, true)).toBe(
-      "Configurează panoul și literele, apoi confirmă ansamblul.",
-    );
+    expect(assemblyLead(false, true)).toContain("Configurează literele");
+    expect(assemblyLead(false, true)).toContain("Pregătește oferta");
   });
 
   it("says letters are optional only when the logo assembly has no letters", () => {

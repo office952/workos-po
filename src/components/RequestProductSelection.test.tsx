@@ -18,7 +18,7 @@ it("guards repeated assembly clicks, recovers after failure and ignores abandone
   let release!: (value: unknown) => void;
   const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => init?.method === "POST" ? new Promise(resolve => { release = resolve; }) : read(input));
   vi.stubGlobal("fetch", fetchMock); const view = render(<RequestProductSelection customerId="cus-A" requestId="req-A" />);
-  const button = await screen.findByRole("button", { name: "Configurează Panou și litere" }); await userEvent.click(button); expect(button).toBeDisabled();
+  const button = await screen.findByRole("button", { name: "Începe: Panou și litere" }); await userEvent.click(button); expect(button).toBeDisabled();
   expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(1);
   await act(async () => release(await json({}, 503))); await waitFor(() => expect(button).toBeEnabled());
   await userEvent.click(button); view.unmount(); window.history.replaceState({}, "", "/cereri/req-B");
