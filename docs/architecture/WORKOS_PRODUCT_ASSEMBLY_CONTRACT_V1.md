@@ -133,9 +133,38 @@ FLAT_GROOVED_BACK = NOT_IMPLEMENTED
 - Flat / grooved is a future BACK manufacturing / construction distinction. It is not a material, not a support product and not a new product identity. No `...-FLAT-BACK` product code. Future work keeps the same letters identity with versioned Product Truth.
 - Future derivation is fail-closed: a typed panel support may imply flat and a typed metal frame may imply grooved. Generic HostContext `facadeType = METAL` is insufficient to imply `METAL_FRAME` and must never produce grooved on its own.
 - Historical snapshots remain immutable; a child reconfirmation creates new truth and leaves the confirmed assembly unchanged.
-- Assembly EIC reconciliation remains an open blocker. Today assembly `eicTotal` sums child totals; that is not accepted as correct. Final assembly EIC must correspond to the final assembly production graph: child terminal operations superseded by assembly operations must not stay costed unless still performed. Unknown cost is not zero; missing assembly operation evidence must resolve to PARTIAL / BLOCKED, never an invented zero.
+- Assembly EIC follows the final assembly production graph. See "Assembly internal EIC reconciliation" below.
 
 Regression proof: `packages/domain/src/assembly/assembly.test.ts` (two product physical invariants), `packages/domain/src/resources/productTemplateUsage.test.ts`, `packages/domain/src/product/back.test.ts`, `apps/api/tests/product-assembly.test.ts`.
+
+## Assembly internal EIC reconciliation
+
+```text
+ASSEMBLY_EIC_RECONCILIATION_IMPLEMENTATION = LOCAL_CANDIDATE_PENDING_REVIEW
+FINAL_ASSEMBLY_EIC_FOLLOWS_FINAL_PRODUCTION_GRAPH = YES
+ASSEMBLY_EIC_RAW_CHILD_SUM = REMOVED
+CHILD_TERMINAL_COST_SURVIVES_IF_OPERATION_REMOVED = NO
+UNKNOWN_COST = ZERO = NEVER
+MISSING_ASSEMBLY_COST_EVIDENCE = PARTIAL
+EIC_TOTAL = KNOWN_RECONCILED_SUBTOTAL
+CHILD_PRODUCT_TRUTH_MUTATION = NEVER
+COMMERCIAL_REPRICING = OUT_OF_SCOPE
+NEW_COST_RATES_OR_RECIPES = NONE
+SITE_INSTALLATION_EIC = FROZEN_SERVICE_LINE / OUTSIDE_ASSEMBLY_PRODUCTION_EIC
+```
+
+Owner: `reconcileAssemblyEic` in `packages/domain/src/assembly/eic.ts`, called by `projectAssemblyProduction`. It reads frozen order evidence only: each child's frozen `eicTotal`, frozen `productionInput` operations, requirements and `usedRecipes` traces, and the final assembly operations. It never reads current cost evidence, rates or the recipe catalog, and it never recompiles a child.
+
+- **Retained child cost.** The child's frozen standalone EIC is the starting point. Material and fabrication cost for work that stays in the member graph is unchanged.
+- **Superseded child terminal cost.** Assembly removes child `PACK_PRODUCT`, `INSPECT_FINISHED_LETTER` and `INSPECT_FINISHED_LOGO`. A child recipe cost leaves the child contribution only when every frozen trace of that recipe belongs to a removed operation. It leaves once per recipe, matching standalone recipe-id deduplication. It does not leave when the same resource is a frozen material requirement, because standalone EIC charged that resource through the requirement, not the recipe. A recipe with any surviving traced process stays costed once. Frozen traces of one recipe that disagree are not guessed: the cost stays and the result is PARTIAL.
+- **Assembly operations.** `MOUNT_LETTERS_ON_PANEL`, `MOUNT_LOGO_ON_PANEL`, `INSPECT_FINISHED_ASSEMBLY` and the final assembly `PACK_PRODUCT` have no frozen cost evidence or quantity today. They are reported as unpriced and make assembly EIC `PARTIAL`; they are never counted as zero. The final assembly pack does not inherit a child pack cost, and no assembly packing area, mount rate, QC rate or labor duration is inferred.
+- **Site installation.** `INSTALL_AT_SITE` cost is the frozen `FrozenSiteInstallationQuoteLineV2.eic` on the order service line. As for standalone production releases (`AcceptedProductionSnapshot.eic` = product EIC while `INSTALL_AT_SITE` is appended), it stays on that frozen line, outside `AssemblyProductionSnapshot.eicTotal`. It is neither recalculated nor dropped, and it is not reported as an unknown cost.
+- **Commercial.** Quote / order totals and child commercial offers are unchanged. EIC reconciliation never reprices.
+- **History.** Persisted assembly production snapshots are insert-once and are not rewritten. Only new projections carry the reconciled EIC.
+
+Current synthetic V1 and V2 assemblies therefore resolve to `eicCompleteness = PARTIAL`. Their `eicTotal` is the sum of child frozen EIC minus each child's frozen `RCP_PACK_PRODUCT` trace cost. COMPLETE becomes possible only when frozen assembly-operation cost evidence exists. That would be a separate Owner decision.
+
+Regression proof: `packages/domain/src/assembly/assemblyEic.test.ts`.
 
 ## Child product truth
 
@@ -273,4 +302,4 @@ Assemblies are additive. Standalone Letters, ACM, and future simple products rem
 6. Detailed ACM segmentation contract
 7. Host Context integration with SiteInstallationFacts — closed; Owner-accepted with Host Context V1
 8. Exact stale / review semantics when a child changes
-9. Assembly EIC reconciliation with the final assembly production graph — open blocker
+9. Assembly EIC reconciliation with the final assembly production graph — local candidate pending review (see "Assembly internal EIC reconciliation"); frozen assembly-operation cost evidence remains open
