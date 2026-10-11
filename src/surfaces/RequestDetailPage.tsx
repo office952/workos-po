@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import type { RequestAssemblyWorkTransport } from "../api/types";
 import { InlineAlert } from "../components/InlineAlert";
 import { RequestProductSelection } from "../components/RequestProductSelection";
 import { InfoRow } from "../components/InfoRow";
@@ -9,10 +10,17 @@ import { resourceKeys } from "../data/resourceKeys";
 import { loadJobList, loadRequestDetail } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
-import { formatTimestamp } from "../presentation/format";
+import { formatMoney, formatTimestamp } from "../presentation/format";
 import { statusTone } from "../presentation/statusTone";
 import { presentRequestPrimaryAction } from "../presentation/worklistAction";
-import { clientHref, quoteHref, requestHref } from "../routing/appRoute";
+import {
+  assemblyHref,
+  clientHref,
+  executionHref,
+  jobHref,
+  quoteHref,
+  requestHref,
+} from "../routing/appRoute";
 import {
   readConfiguratorSession,
   writeConfiguratorSession,
@@ -98,7 +106,17 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
       {detail ? (
         <>
           <div className="stack request-detail__main">
+            {detail.assemblies.length > 0 ? <RequestAssemblyWorkPanel assemblies={detail.assemblies} /> : null}
             {detail.nextAction === "CHOOSE_PRODUCT" && <RequestProductSelection key={detail.requestId} customerId={detail.customerId} requestId={detail.requestId} />}
+            {detail.canStartAdditionalWork && (
+              <RequestProductSelection
+                key={`${detail.requestId}:additional`}
+                customerId={detail.customerId}
+                requestId={detail.requestId}
+                mode="additional"
+                existingLabel={detail.assemblies[0]?.label ?? null}
+              />
+            )}
             <SurfacePanel title="Ce dorește clientul" label="Ce dorește clientul">
               <p>{detail.description || "Fără descriere."}</p>
             </SurfacePanel>
@@ -145,5 +163,56 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
         </SurfacePanel>
       ) : null}
     </SlicePage>
+  );
+}
+
+function RequestAssemblyWorkPanel({ assemblies }: { assemblies: RequestAssemblyWorkTransport[] }) {
+  return (
+    <SurfacePanel title="Lucrul comercial al cererii" label="Lucrul comercial al cererii">
+      <ul className="request-assembly-work">
+        {assemblies.map((work) => (
+          <li key={work.assemblyId} className="request-assembly-work__item">
+            <div className="request-assembly-work__heading">
+              <strong>{work.label}</strong>
+              <StatusBadge label={work.stageLabel} tone={statusTone("workflow")} />
+            </div>
+            <dl className="fact-grid fact-grid--rail">
+              {work.quoteGrossPrice !== null ? (
+                <InfoRow
+                  label="Ofertă comună"
+                  value={formatMoney(work.quoteGrossPrice, work.currency ?? "EUR")}
+                />
+              ) : null}
+              {work.revisionPending ? (
+                <InfoRow label="Revizie" value="Ansamblul a fost modificat după ofertă" />
+              ) : null}
+              {!work.membersEditable ? (
+                <InfoRow label="Configurații" value="Doar consultare (comandă acceptată)" />
+              ) : null}
+            </dl>
+            <p className="request-assembly-work__links">
+              <a className="text-link" href={assemblyHref(work.assemblyId)}>
+                {work.membersEditable && !work.hasQuote ? "Continuă ansamblul" : "Deschide ansamblul"}
+              </a>
+              {work.hasQuote ? (
+                <a className="text-link" href={`${assemblyHref(work.assemblyId)}#oferta`}>
+                  Deschide oferta comună
+                </a>
+              ) : null}
+              {work.orderSnapshotId ? (
+                <a className="text-link" href={jobHref(work.orderSnapshotId)}>
+                  Deschide comanda
+                </a>
+              ) : null}
+              {work.executionPlanId ? (
+                <a className="text-link" href={executionHref(work.executionPlanId)}>
+                  Deschide execuția
+                </a>
+              ) : null}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </SurfacePanel>
   );
 }

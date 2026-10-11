@@ -4,7 +4,7 @@ import type {
   ComponentCalculationResult,
 } from "./componentContract.js";
 import { resolveTypeResources } from "./componentTypes.js";
-import { planBackManufacturing } from "./backManufacturing.js";
+import { backManufacturingBlockLabel, planBackManufacturing } from "./backManufacturing.js";
 import { squareMetersFromMm2 } from "./units.js";
 
 export const BACK_COMPONENT_ID = "BACK";
@@ -46,7 +46,7 @@ export const forexBackContract: ComponentCalculationContract = {
     if (support !== undefined || profile !== undefined) {
       const plan = planBackManufacturing(input.values, input.shared.confirmedAreaMm2);
       if (plan.status === "BLOCKED") {
-        return backResult("UNAVAILABLE", [], [], [`Plan de fabricație spate indisponibil: ${plan.reason}`]);
+        return backResult("UNAVAILABLE", [], [], [backManufacturingBlockLabel(plan.reason)]);
       }
       return backResult(
         "CALCULATED",

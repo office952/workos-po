@@ -56,6 +56,7 @@ import {
   type JobPlanningMetadata,
   projectQuoteOverview,
   projectQuoteOverviewItem,
+  projectRequestAssemblyWork,
   projectRequestDetail,
   projectRequestOverview,
   projectRequestOverviewItem,
@@ -73,6 +74,7 @@ import {
   type QuoteOverviewProjection,
   type RequestAttachmentError,
   type RequestAttachmentProjection,
+  type RequestAssemblyWork,
   type RequestDetailProjection,
   type RequestOverviewProjection,
   type SiteInstallationFactsMutationResult,
@@ -240,8 +242,11 @@ import {
 } from "../product/productEnablementStore.js";
 import {
   listAssemblyOrders,
+  listRequestAssemblies,
   readAssemblyOrder,
+  readAssemblyOrderByQuote,
   readAssemblyProductionByOrder,
+  readLatestAssemblyQuote,
   readAssemblyProductionBySnapshot,
   saveAssemblyProduction as persistAssemblyProduction,
 } from "../assembly/store.js";
@@ -595,6 +600,7 @@ export type ProductSystemRuntime = {
   listRequestOverview(): RequestOverviewProjection;
   readCommercialRequest(requestId: string): CommercialRequest | null;
   readRequestDetail(requestId: string): RequestDetailProjection | null;
+  readRequestAssemblyWork(requestId: string): RequestAssemblyWork[];
   listRequestAttachments(requestId: string): RequestAttachmentProjection[] | null;
   createRequestAttachment(
     requestId: string,
@@ -1242,10 +1248,10 @@ export function createProductSystemRuntimeFromOpenDb(
       return projectQuoteOverview(quoteOverviewItems(db));
     },
     listRequestOverview() {
-      return projectRequestOverview(requestOverviewItems(db));
+      return projectRequestOverview(requestOverviewItems(db, currentOrganizationId()));
     },
     listCustomerRegistry() {
-      const requests = requestOverviewItems(db);
+      const requests = requestOverviewItems(db, currentOrganizationId());
       const quotes = quoteOverviewItems(db);
       const jobs = jobOverviewItems(
         db,
@@ -1271,7 +1277,7 @@ export function createProductSystemRuntimeFromOpenDb(
       }
       return projectCustomerWorkspace({
         customer,
-        requests: requestsForCustomer(requestOverviewItems(db), customerId),
+        requests: requestsForCustomer(requestOverviewItems(db, currentOrganizationId()), customerId),
         quotes: quotesForCustomer(quoteOverviewItems(db), customerId),
         jobs: jobsForCustomer(
           jobOverviewItems(
@@ -1301,7 +1307,11 @@ export function createProductSystemRuntimeFromOpenDb(
         installationFacts: getInstallationFacts(db, request.requestId),
         installationEvidence: siteInstallationEvidenceFromRows(readActiveCostEvidence(db)),
         hasLinkedQuotes: requestHasLinkedQuotes(db, request.requestId),
+        assemblies: requestAssemblyWork(db, currentOrganizationId(), request.requestId),
       });
+    },
+    readRequestAssemblyWork(requestId) {
+      return requestAssemblyWork(db, currentOrganizationId(), requestId);
     },
     listRequestAttachments(requestId) {
       const request = getCommercialRequest(db, requestId);
@@ -1534,14 +1544,35 @@ export function createProductSystemRuntimeFromOpenDb(
   };
 }
 
-function requestOverviewItems(db: SqliteDatabase) {
+function requestOverviewItems(db: SqliteDatabase, organizationId: string) {
   return listCommercialRequests(db).map((request) =>
     projectRequestOverviewItem({
       request,
       customerDisplayName: getCustomer(db, request.customerId)?.displayName ?? null,
       quotes: linkedQuoteOverviewItems(db, request.requestId),
+      assemblies: requestAssemblyWork(db, organizationId, request.requestId),
     }),
   );
+}
+
+function requestAssemblyWork(db: SqliteDatabase, organizationId: string, requestId: string) {
+  return listRequestAssemblies(db, organizationId, requestId).map((definition) => {
+    const quote = readLatestAssemblyQuote(db, organizationId, definition.assemblyId);
+    const order = quote
+      ? readAssemblyOrderByQuote(db, organizationId, quote.quoteSnapshotId)
+      : null;
+    const production = order
+      ? readAssemblyProductionByOrder(db, organizationId, order.orderSnapshotId)
+      : null;
+    const execution = production ? getExecutionPlanBySnapshotId(db, production.snapshotId) : null;
+    return projectRequestAssemblyWork({
+      definition,
+      quote,
+      order,
+      production,
+      executionPlanId: execution?.plan.planId ?? null,
+    });
+  });
 }
 
 function quoteOverviewItems(db: SqliteDatabase) {

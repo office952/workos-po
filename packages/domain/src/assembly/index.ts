@@ -67,7 +67,9 @@ export {
 } from "./execution.js";
 export {
   presentAssemblyReview,
+  presentConfirmedAssemblyMember,
   type AssemblyReviewPresentation,
+  type ConfirmedAssemblyMemberPresentation,
 } from "./presentation.js";
 export type {
   AssemblyAggregate,

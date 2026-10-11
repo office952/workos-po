@@ -428,6 +428,88 @@ describe("ConfiguratorPage", () => {
     expect(screen.queryByRole("button", { name: "Îngheață oferta" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Înapoi la ansamblu" })).toHaveAttribute("href", "/ansamblu?assembly=asm%3A1");
   });
+
+  function confirmedMemberResponse(membersEditable: boolean) {
+    return jsonResponse({
+      customerId: "cus-1",
+      requestId: "req-1",
+      productCode: LETTERS_PRODUCT,
+      values: { "root.inscription": "NORD" },
+      membersEditable,
+      confirmed: {
+        confirmedAt: "2026-10-10T10:00:00.000Z",
+        productLabel: "Litere",
+        inscription: "NORD",
+        customerPrice: { netPrice: 534.2, vatAmount: 112.18, grossPrice: 646.38, currency: "EUR", markupPercent: 30, discountPercent: 0, adjustmentAmount: 0 },
+        internalCost: { total: 396.5, currency: "EUR", completeness: "COMPLETE", completenessLabel: "Complete pentru configurația curentă" },
+      },
+    });
+  }
+
+  it("reloads a confirmed member with its accepted price and cost without reconfirming or touching the assembly", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    const original = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation((input, init) => String(input).includes("/members/SIGNAGE_LETTERS") ? confirmedMemberResponse(true) : original(input, init));
+    renderConfigurator({ assemblyId: "asm:1", memberRole: "SIGNAGE_LETTERS" });
+    await waitFor(() => expect(screen.getByLabelText("Textul literelor")).toHaveValue("NORD"));
+    await userEvent.click(screen.getByRole("tab", { name: /Pregătire ofertă/ }));
+    const price = await screen.findByTestId("confirmed-member-price");
+    expect(price).toHaveTextContent("Ultima confirmare acceptată în ansamblu");
+    expect(price).toHaveTextContent("646,38 EUR");
+    expect(screen.getByText("396,50 EUR")).toBeInTheDocument();
+    expect(screen.queryByText("Confirmă configurația pentru a citi costul intern cunoscut.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Configurația a fost modificată")).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/members") || String(url).endsWith("/confirm"))).toBe(false);
+  });
+
+  it("flags an edited confirmed member as differing from the accepted confirmation", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    const original = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation((input, init) => String(input).includes("/members/SIGNAGE_LETTERS") ? confirmedMemberResponse(true) : original(input, init));
+    renderConfigurator({ assemblyId: "asm:1", memberRole: "SIGNAGE_LETTERS" });
+    await waitFor(() => expect(screen.getByLabelText("Textul literelor")).toHaveValue("NORD"));
+    await userEvent.type(screen.getByLabelText("Textul literelor"), "X");
+    await userEvent.click(screen.getByRole("tab", { name: /Pregătire ofertă/ }));
+    expect(await screen.findByText("Configurația a fost modificată")).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/members"))).toBe(false);
+  });
+
+  it("keeps a member of an ordered assembly consult-only", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    const original = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation((input, init) => String(input).includes("/members/SIGNAGE_LETTERS") ? confirmedMemberResponse(false) : original(input, init));
+    renderConfigurator({ assemblyId: "asm:1", memberRole: "SIGNAGE_LETTERS" });
+    expect(await screen.findByText("Doar consultare")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Textul literelor")).toBeDisabled();
+    await userEvent.click(screen.getByRole("tab", { name: /Pregătire ofertă/ }));
+    expect(await screen.findByTestId("confirmed-member-price")).toHaveTextContent("646,38 EUR");
+    expect(screen.queryByRole("button", { name: "Verifică și reconfirmă configurația" })).not.toBeInTheDocument();
+  });
+
+  it("asks for an explicit separate quote when the product already belongs to the request assembly", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    const original = fetchMock.getMockImplementation()!;
+    const freezeBodies: Record<string, unknown>[] = [];
+    fetchMock.mockImplementation((input, init) => {
+      if (String(input).endsWith("/quote-snapshots")) {
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        freezeBodies.push(body);
+        if (body.commercialIntent !== "SEPARATE_QUOTE") {
+          return jsonResponse({ error: "request_assembly_overlap", assemblyId: "asm:1", reasons: ["Produsul face deja parte din ansamblul „Panou ACM + litere volumetrice” al acestei cereri."] }, 409);
+        }
+      }
+      return original(input, init);
+    });
+    renderConfigurator();
+    const user = await confirmReady();
+    await user.click(screen.getByRole("button", { name: "Îngheață oferta" }));
+    expect(await screen.findByText("Produsul este deja în ansamblul cererii")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Deschide ansamblul existent" })).toHaveAttribute("href", "/ansamblu?assembly=asm%3A1");
+    await user.click(screen.getByRole("button", { name: "Îngheață ca ofertă separată" }));
+    await screen.findByRole("link", { name: "Deschide oferta înghețată" });
+    expect(freezeBodies.map((body) => body.commercialIntent ?? null)).toEqual([null, "SEPARATE_QUOTE"]);
+  });
+
   it("sends configuration values to preview and keeps reviewId on confirm", async () => {
     const fetchMock = installFetch({ rate: 3, cost: 37.5 });
     window.history.replaceState(

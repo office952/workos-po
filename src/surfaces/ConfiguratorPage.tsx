@@ -1,4 +1,9 @@
-import { loadAssemblyMember } from "../api/assemblies";
+import {
+  existingCommercialWork,
+  loadAssemblyMember,
+  SEPARATE_QUOTE_INTENT,
+  type ConfirmedAssemblyMember,
+} from "../api/assemblies";
 import { useEffect, useRef, useState } from "react";
 import { presentConfirm } from "../adapters/confirmAdapter";
 import {
@@ -19,7 +24,11 @@ import "../styles/surfaces/commercial.css";
 import "../styles/surfaces/configuration-workbench.css";
 import { SellerSetupPanel } from "../components/SellerSetupPanel";
 import { ExtendRequestProduct } from "../components/ExtendRequestProduct";
-import { invalidateAfterAssemblyMemberChange, invalidateAfterFreezeQuote } from "../data/invalidation";
+import {
+  invalidateAfterAssemblyMemberChange,
+  invalidateAfterFreezeQuote,
+  invalidateAfterRequestDetailChange,
+} from "../data/invalidation";
 import { invalidateResources } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadSellerConfigured } from "../data/routeLoaders";
@@ -41,6 +50,7 @@ import { SurfacePanel } from "../components/SurfacePanel";
 import { TextField } from "../components/TextField";
 import { SlicePage } from "../layout/SlicePage";
 import { presentContextMeta } from "../presentation/contextMeta";
+import { formatMoney, formatTimestamp } from "../presentation/format";
 import { CommercialPricePanel } from "../presentation/commercialPrice";
 import { CostCompletenessIssues } from "../presentation/costCompleteness";
 import { presentCostLine, selectLineByResource } from "../presentation/costLine";
@@ -72,6 +82,34 @@ function commercialResultKey(input: {
 
 type PreviewState = "idle" | "pending" | "ready" | "error";
 type ActionState = "idle" | "pending" | "error";
+
+function ConfirmedMemberPrice({ member, current }: { member: ConfirmedAssemblyMember; current: boolean }) {
+  const confirmedLabel = formatTimestamp(member.confirmedAt);
+  return (
+    <div className="stack" data-testid="confirmed-member-price">
+      <p>
+        Ultima confirmare acceptată în ansamblu{confirmedLabel ? ` · ${confirmedLabel}` : ""}.
+      </p>
+      {member.customerPrice ? (
+        <dl>
+          <InfoRow label="Preț net" value={formatMoney(member.customerPrice.netPrice, member.customerPrice.currency)} />
+          <InfoRow label="TVA" value={formatMoney(member.customerPrice.vatAmount, member.customerPrice.currency)} />
+          <InfoRow label="Preț client cu TVA" value={formatMoney(member.customerPrice.grossPrice, member.customerPrice.currency)} />
+          <InfoRow label="Adaos" value={`${member.customerPrice.markupPercent}%`} />
+          <InfoRow label="Discount" value={`${member.customerPrice.discountPercent}%`} />
+          <InfoRow label="Ajustare" value={formatMoney(member.customerPrice.adjustmentAmount, member.customerPrice.currency)} />
+        </dl>
+      ) : (
+        <p>Ultima confirmare nu are un preț client complet.</p>
+      )}
+      {!current ? (
+        <InlineAlert tone="pending" title="Configurația a fost modificată">
+          Valorile afișate aparțin ultimei confirmări. Reconfirmă configurația pentru a calcula prețul valorilor noi.
+        </InlineAlert>
+      ) : null}
+    </div>
+  );
+}
 
 export type AssemblyMemberRole = "SUPPORT_PANEL" | "SIGNAGE_LETTERS" | "SIGNAGE_LOGO";
 
@@ -180,6 +218,7 @@ export function ConfiguratorPage({
   const [workbenchNavigation, setWorkbenchNavigation] = useState<
     Record<string, WorkbenchNavigationState>
   >(() => stored.workbenchNavigation ?? {});
+  const [hadOwnedDrafts] = useState(() => Object.keys(ownedDraftsForContext(stored, context)).length > 0);
   const [drafts, setDrafts] = useState<Record<string, string>>(() => {
     const owned = ownedDraftsForContext(stored, context);
     if (assemblyId && memberRole === "SIGNAGE_LETTERS") {
@@ -203,6 +242,7 @@ export function ConfiguratorPage({
   const [extensionPending, setExtensionPending] = useState(false);
   const [freezeState, setFreezeState] = useState<ActionState>("idle");
   const [freezeError, setFreezeError] = useState<string | null>(null);
+  const [overlapAssemblyId, setOverlapAssemblyId] = useState<string | null>(null);
   const [manualNetDraft, setManualNetDraft] = useState("");
   const [pricingMethod, setPricingMethod] = useState<
     "PRODUCT_COST_PLUS" | "MANUAL_FIXED_PRODUCT"
@@ -220,15 +260,22 @@ export function ConfiguratorPage({
   const member = useResource(assemblyId && memberRole ? `assembly-member:${assemblyId}:${memberRole}` : null, () => loadAssemblyMember({ assemblyId: assemblyId!, role: memberRole!, customerId, requestId, productCode }));
   const [seedApplied, setSeedApplied] = useState(false);
   if (member.data && !seedApplied) {
-    if (Object.keys(drafts).length === 0) {
+    if (!hadOwnedDrafts && Object.keys(member.data.values).length > 0) {
       const seeded =
         memberRole === "SIGNAGE_LETTERS" && assemblyId
-          ? withAssemblyLettersMountingDrafts(member.data)
-          : member.data;
+          ? withAssemblyLettersMountingDrafts(member.data.values)
+          : member.data.values;
       setDrafts(seeded);
     }
     setSeedApplied(true);
   }
+  const confirmedMember = member.data?.confirmed ?? null;
+  const memberConsultOnly = Boolean(assemblyId && memberRole && member.data && !member.data.membersEditable);
+  const memberDraftsMatchConfirmed = Boolean(
+    member.data &&
+      Object.entries(member.data.values).every(([key, value]) => drafts[key] === value),
+  );
+  const showConfirmedMember = Boolean(confirmedMember && !confirmation);
 
   const schemaRef = useRef<PresentedFormSchema | null>(null);
   const draftsDirtyRef = useRef(false);
@@ -473,6 +520,7 @@ export function ConfiguratorPage({
           return;
         }
         invalidateAfterAssemblyMemberChange(assemblyId, memberRole);
+        if (requestId) invalidateAfterRequestDetailChange(requestId);
       }
       setConfirmState("idle");
       if (fromTechnicalReview && workAreaRef.current === "review") setWorkArea("commercial");
@@ -492,10 +540,11 @@ export function ConfiguratorPage({
     }
   }
 
-  async function freeze(): Promise<void> {
+  async function freeze(options: { separateQuote?: boolean } = {}): Promise<void> {
     if (!preview?.reviewId || !confirmation || !activeProduct) {
       return;
     }
+    setOverlapAssemblyId(null);
     if (sellerConfigured !== true) {
       setFreezeState("error");
       setFreezeError(
@@ -533,6 +582,7 @@ export function ConfiguratorPage({
           reviewId: preview.reviewId,
           customerId,
           ...(requestId ? { requestId } : {}),
+          ...(options.separateQuote ? { commercialIntent: SEPARATE_QUOTE_INTENT } : {}),
           ...commercialPayload(),
         }),
       );
@@ -551,6 +601,12 @@ export function ConfiguratorPage({
       setFreezeState("idle");
     } catch (error) {
       setFreezeState("error");
+      const overlap = existingCommercialWork(error);
+      if (overlap) {
+        setOverlapAssemblyId(overlap.assemblyId);
+        setFreezeError(overlap.reason || "Produsul face deja parte dintr-un ansamblu al cererii.");
+        return;
+      }
       setFreezeError(presentFreezeError(error));
     }
   }
@@ -638,7 +694,14 @@ export function ConfiguratorPage({
             </InlineAlert>
           ) : null}
       {member.status === "error" && <InlineAlert tone="error" title="Configurația din ansamblu nu a putut fi citită"><Button variant="secondary" onClick={() => invalidateResources(`assembly-member:${assemblyId}:${memberRole}`)}>Reîncearcă citirea configurației</Button></InlineAlert>}
-      <fieldset className="configuration-lock" disabled={extensionPending || freezePending || Boolean(assemblyId && memberRole && !seedApplied)}>
+      {memberConsultOnly && assemblyId ? (
+        <InlineAlert tone="blocked" title="Doar consultare">
+          Ansamblul are o comandă acceptată. Configurația confirmată poate fi consultată, dar nu
+          modificată. Pentru modificări creează o variantă comercială nouă din cerere.{" "}
+          <a className="text-link" href={assemblyHref(assemblyId)}>Înapoi la ansamblu</a>
+        </InlineAlert>
+      ) : null}
+      <fieldset className="configuration-lock" disabled={extensionPending || freezePending || memberConsultOnly || Boolean(assemblyId && memberRole && !seedApplied)}>
         <legend className="u-visually-hidden">Configurație și preț</legend>
       <section id="configuration-area-configuration" role="tabpanel" aria-labelledby="configuration-tab-configuration" hidden={workArea !== "configuration"}>
       <div id="configuratie" className="configuration-editor">
@@ -786,7 +849,17 @@ export function ConfiguratorPage({
         </div>
         <div className="configuration-commercial__grid">
         <SurfacePanel title="Cum stabilești prețul acestei oferte" label="Preț">
-          {!confirmation ? (
+          {!confirmation && showConfirmedMember ? (
+            <div className="stack">
+              <p>Prețul acestei părți este cel din ultima confirmare acceptată în ansamblu. Consultarea nu modifică ansamblul.</p>
+              {!memberConsultOnly ? (
+                <>
+                  <p>Pentru alt preț sau alte valori, verifică și reconfirmă configurația; ansamblul va cere apoi revizuire.</p>
+                  <Button variant="secondary" onClick={() => setWorkArea("review")}>Verifică și reconfirmă configurația</Button>
+                </>
+              ) : null}
+            </div>
+          ) : !confirmation ? (
             <div className="stack"><p>După confirmarea configurației alegi metoda de preț pentru această ofertă.</p><Button variant="secondary" onClick={() => setWorkArea("review")}>Verifică și confirmă configurația</Button></div>
           ) : (
             <>
@@ -976,6 +1049,8 @@ export function ConfiguratorPage({
               showInternalCost={false}
               showCustomerPrice
             />
+          ) : showConfirmedMember && confirmedMember ? (
+            <ConfirmedMemberPrice member={confirmedMember} current={memberDraftsMatchConfirmed} />
           ) : (
             <p>Prețul clientului apare după calculul de pe server.</p>
           )}
@@ -1008,7 +1083,21 @@ export function ConfiguratorPage({
             </p>
           ) : null}
           {freezePending ? <LoadingIndicator label="Se îngheață oferta" /> : null}
-          {freezeError ? (
+          {freezeError && overlapAssemblyId ? (
+            <InlineAlert tone="blocked" title="Produsul este deja în ansamblul cererii">
+              {freezeError}{" "}
+              <a className="text-link" href={assemblyHref(overlapAssemblyId)}>Deschide ansamblul existent</a>
+              <Button
+                variant="secondary"
+                disabled={freezePending || freezeBlocked}
+                onClick={() => {
+                  void freeze({ separateQuote: true });
+                }}
+              >
+                Îngheață ca ofertă separată
+              </Button>
+            </InlineAlert>
+          ) : freezeError ? (
             <InlineAlert tone="error" title="Înghețarea a eșuat">
               {freezeError}
             </InlineAlert>
@@ -1029,7 +1118,17 @@ export function ConfiguratorPage({
       </div>
       <div className="configuration-cost">
         <SurfacePanel title="Cost intern" label="Cost">
-          {!confirmation ? (
+          {!confirmation && showConfirmedMember && confirmedMember?.internalCost ? (
+            <dl>
+              <InfoRow
+                label="Cost intern cunoscut (ultima confirmare)"
+                value={formatMoney(confirmedMember.internalCost.total, confirmedMember.internalCost.currency)}
+              />
+              <InfoRow label="Completitudine" value={confirmedMember.internalCost.completenessLabel} />
+            </dl>
+          ) : !confirmation && showConfirmedMember ? (
+            <p>Costul intern este vizibil doar pentru rolul cu acces financiar.</p>
+          ) : !confirmation ? (
             <p>Confirmă configurația pentru a citi costul intern cunoscut.</p>
           ) : null}
           {confirmation && !confirmation.financialVisible ? (

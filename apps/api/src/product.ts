@@ -51,6 +51,7 @@ import {
   SITE_INSTALLATION_SCOPE_ID,
   siteInstallationEvidenceFromRows,
   siteInstallationFreezeRefusal,
+  requestStandaloneQuoteRefusal,
   projectExecutionPlanView,
   type ActualConsumptionLineInput,
   type ExecutionPlanRecord,
@@ -121,6 +122,14 @@ function readRequestId(body: unknown): string | null {
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function readCommercialIntent(body: unknown): string | null {
+  if (typeof body !== "object" || body === null || !("commercialIntent" in body)) {
+    return null;
+  }
+  const value = (body as { commercialIntent: unknown }).commercialIntent;
+  return typeof value === "string" ? value : null;
 }
 
 function installationReadinessForRequest(
@@ -686,6 +695,14 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       );
       if (installationRefusal) {
         return c.json(installationRefusal, 422);
+      }
+      const overlap = requestStandaloneQuoteRefusal({
+        productCode: compiled.truth.templateCode,
+        assemblies: runtime.readRequestAssemblyWork(requestId),
+        intent: readCommercialIntent(body),
+      });
+      if (overlap) {
+        return c.json(overlap, 409);
       }
     }
     const priced = resolveProductCommercialForRequest(

@@ -61,9 +61,27 @@
 
 **Forex vs ACM (manufacturing truth):** domain tests `lettersMountingContext.test.ts` assert **FOREX_10MM** requirement on letters BACK from face area and **no ACM_3MM** on letters; ACM panel product carries ACM separately. Grouped quote preserves **two child commercial sections**, not a blended material line.
 
-**Stale protection:** `product-assembly.test.ts` covers member reconfirm → assembly `stale` until `/review` (same API contract used in production).
+**Stale protection:** `product-assembly-continuity.test.ts` covers a genuine member edit before the order → assembly `stale` until `/review`; `product-assembly.test.ts` covers a member edit after the order → `409 assembly_order_frozen` with the assembly unchanged.
 
 Screenshots (local, gitignored): `%LOCALAPPDATA%\\Temp\\cursor\\screenshots\\` — `page-2026-10-10T20-16-26-711Z.png` (Spate BACK fields), `page-2026-10-10T20-16-40-666Z.png` (grouped assembly quote).
+
+## Commercial continuity (PR66 final remediation)
+
+Root causes found in the PR66 acceptance gate:
+
+- The request projection only received standalone quote links; assembly quote, order and production snapshots never reached it, so the request kept offering **Alege produs** with no commercial progress.
+- The confirmed child commercial/EIC snapshot was never returned to the configurator; the accepted price lived only in ephemeral client state, so a reload asked for reconfirmation.
+- A member reconfirmation after the order made `loadBundle` follow a new quote and orphan the accepted order.
+
+Behaviour now:
+
+- `packages/domain/src/requests/assemblyWork.ts` projects each request assembly from its existing snapshots (`IN_CONFIGURATION` → `NEEDS_REVIEW` / `READY_FOR_QUOTE` → `QUOTE_CREATED` → `ORDER_CREATED` → `PRODUCTION_RELEASED`). Request detail and overview use it for commercial progress, next action (**Deschide ansamblul**) and links to assembly, common quote, order and execution. The stored request status is not rewritten (it can still read **Nouă**).
+- Continuation guards (server, `409`): a second assembly on the same request needs `commercialIntent=COMMERCIAL_ALTERNATIVE`; a standalone quote for a product already in a request assembly needs `commercialIntent=SEPARATE_QUOTE`; member changes after an order are refused (`assembly_order_frozen`). Standalone quotes without overlap are unchanged.
+- `GET /api/assemblies/:id/members/:role` returns the accepted child confirmation (customer price; internal cost for owners only) and `membersEditable`. Reading never mutates the assembly; after an order the configurator is consult-only.
+- Released assemblies show the frozen production cost with completeness; PARTIAL lists the assembly operations without recorded cost instead of treating them as zero (owner-only).
+- Blocked BACK manufacturing reasons are shown in Romanian (`backManufacturingBlockLabel`), never as raw codes.
+
+Synthetic evidence: isolated runtime on `127.0.0.1:8789` from this worktree with a freshly provisioned `SYNTHETIC_REFERENCE` root (`.tmp/continuity-e2e-root`, gitignored); 8787 and 8788 were not touched. Screenshots and the API journey are in `.tmp/acceptance-evidence/pr66-continuity/` (gitignored).
 
 ## Pricing completeness
 
@@ -76,11 +94,16 @@ Screenshots (local, gitignored): `%LOCALAPPDATA%\\Temp\\cursor\\screenshots\\` �
 - Assembly mount/QC/pack operations remain **PARTIAL** EIC until Owner-approved cost evidence exists
 - Grooved / metal-frame BACK still blocked (no fictional groove pricing)
 - PR #63 configurator composition-tab stale UX not fully ported
-- Assembly mount/QC/pack EIC costs remain **PARTIAL** (not zero)
+- The stored request status stays as the operator set it (e.g. **Nouă**) after assembly quote/order/production; progress is shown separately
+- Assembly quotes are not listed in the **Oferte** registry; they are reached from the request and the assembly
+- Changing an ordered assembly requires an explicit commercial alternative (new assembly); there is no in-place order revision
+- A child PARTIAL cost is surfaced only through the assembly production snapshot completeness
 
 ## Owner acceptance checklist
 
-- [x] Cerere → Litere pe panou → configure letters (Spate constructive fields editable when on ACM) → configure ACM → confirm assembly → grouped quote (synthetic 8788)
+- [x] Request page reflects assembly quote / order / production and links to them (synthetic 8789)
+- [x] Confirmed member reload shows accepted price read-only; consultation does not stale the assembly
+- [x] Cerere → Produs compus (Panou ACM + litere volumetrice) → configure letters (Spate constructive fields editable when on ACM) → configure ACM → confirm assembly → grouped quote (synthetic 8788)
 - [ ] Standalone letters unchanged vs historical snapshots
 - [ ] Forex and ACM lines separate in cost evidence
 - [x] `pnpm verify:all` green on PR branch
@@ -89,4 +112,4 @@ Screenshots (local, gitignored): `%LOCALAPPDATA%\\Temp\\cursor\\screenshots\\` �
 
 ## Final acceptance verdict (agent)
 
-**READY FOR OWNER REVIEW** on PR #66 @ `525bace` — integrated remediation + BACK visibility fix + synthetic E2E pass. **Not OWNER_ACCEPTED** (merge/deploy withheld).
+**READY FOR OWNER MERGE DECISION** on PR #66 after the commercial continuity remediation — request lifecycle projection, continuation guards, confirmed-member reload and PARTIAL production cost, with `pnpm verify:all` and synthetic E2E pass. **Not OWNER_ACCEPTED** (merge/deploy withheld).

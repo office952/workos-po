@@ -19,6 +19,28 @@ export type BackManufacturingPlan =
       reason: "invalid_profile" | "missing_geometry" | "missing_material" | "groove_recipe_missing";
     };
 
+export type BackManufacturingBlockReason = Extract<
+  BackManufacturingPlan,
+  { status: "BLOCKED" }
+>["reason"];
+
+export function backManufacturingBlockLabel(reason: BackManufacturingBlockReason): string {
+  switch (reason) {
+    case "invalid_profile":
+      return "Profilul spatelui nu este compatibil cu suportul ales.";
+    case "missing_geometry":
+      return "Spatele se calculează după ce introduci suprafața literelor.";
+    case "missing_material":
+      return "Alege materialul spatelui.";
+    case "groove_recipe_missing":
+      return "Spatele cu canal nu are încă o rețetă de prelucrare.";
+    default: {
+      const _exhaustive: never = reason;
+      return _exhaustive;
+    }
+  }
+}
+
 export function planBackManufacturing(
   values: DraftValues,
   confirmedAreaMm2: number | undefined,

@@ -26,6 +26,11 @@ import {
   type CommercialRequest,
   type CommercialRequestStatus,
 } from "./commercialRequest.js";
+import {
+  furthestRequestAssembly,
+  requestAssemblyCommercialRank,
+  type RequestAssemblyWork,
+} from "./assemblyWork.js";
 
 export const REQUEST_OVERVIEW_FILTERS = [
   "ALL",
@@ -42,6 +47,7 @@ export const REQUEST_OVERVIEW_NEXT_ACTIONS = [
   "OPEN_REQUEST",
   "CHOOSE_PRODUCT",
   "OPEN_QUOTE",
+  "OPEN_ASSEMBLY",
 ] as const;
 export type RequestOverviewNextAction = (typeof REQUEST_OVERVIEW_NEXT_ACTIONS)[number];
 
@@ -72,6 +78,7 @@ export type RequestOverviewItem = {
   linkedQuoteCount: number;
   linkedQuoteSnapshotId: string | null;
   linkedQuoteProductCode: string | null;
+  linkedAssemblyId: string | null;
 };
 
 export type RequestOverviewSummary = {
@@ -99,6 +106,10 @@ export type RequestDetailProjection = {
   canUpdateStatus: boolean;
   canUploadAttachments: boolean;
   linkedOffers: readonly QuoteOverviewItem[];
+  assemblies: readonly RequestAssemblyWork[];
+  linkedAssemblyId: string | null;
+  /** Commercial work already exists and the request status still accepts a further, explicit product or alternative. */
+  canStartAdditionalWork: boolean;
   attachments: readonly RequestAttachmentProjection[];
   installationScope: SiteInstallationOperatorView | null;
   installationOffer: SiteInstallationRequestOfferView;
@@ -139,6 +150,8 @@ export function requestOverviewNextActionLabel(action: RequestOverviewNextAction
       return "Alege produs";
     case "OPEN_QUOTE":
       return "Deschide oferta";
+    case "OPEN_ASSEMBLY":
+      return "Deschide ansamblul";
     default: {
       const _exhaustive: never = action;
       return _exhaustive;
@@ -165,14 +178,21 @@ export function requestCommercialProgressLabel(
 
 export function deriveRequestCommercialProgress(
   quotes: readonly QuoteOverviewItem[],
+  assemblies: readonly RequestAssemblyWork[] = [],
 ): RequestCommercialProgress | null {
-  if (quotes.some((quote) => quote.stage === "ORDER_CREATED")) {
+  if (
+    quotes.some((quote) => quote.stage === "ORDER_CREATED") ||
+    assemblies.some((work) => work.orderSnapshotId !== null)
+  ) {
     return "ORDER_CREATED";
   }
   if (quotes.some((quote) => quote.stage === "QUOTE_ACCEPTED")) {
     return "QUOTE_ACCEPTED";
   }
-  if (quotes.some((quote) => quote.stage === "QUOTE_CREATED")) {
+  if (
+    quotes.some((quote) => quote.stage === "QUOTE_CREATED") ||
+    assemblies.some((work) => work.quoteSnapshotId !== null)
+  ) {
     return "QUOTE_CREATED";
   }
   return null;
@@ -181,13 +201,9 @@ export function deriveRequestCommercialProgress(
 export function furthestLinkedQuote(
   quotes: readonly QuoteOverviewItem[],
 ): QuoteOverviewItem | null {
-  const rank: Record<QuoteOverviewStage, number> = {
-    QUOTE_CREATED: 1,
-    QUOTE_ACCEPTED: 2,
-    ORDER_CREATED: 3,
-  };
   return [...quotes].sort((left, right) => {
-    const stageDelta = rank[right.stage] - rank[left.stage];
+    const stageDelta =
+      QUOTE_COMMERCIAL_RANK[right.stage] - QUOTE_COMMERCIAL_RANK[left.stage];
     if (stageDelta !== 0) {
       return stageDelta;
     }
@@ -195,21 +211,46 @@ export function furthestLinkedQuote(
   })[0] ?? null;
 }
 
+const QUOTE_COMMERCIAL_RANK: Record<QuoteOverviewStage, number> = {
+  QUOTE_CREATED: 1,
+  QUOTE_ACCEPTED: 2,
+  ORDER_CREATED: 3,
+};
+
 export function deriveRequestOverviewNextAction(input: {
   status: CommercialRequestStatus;
   quotes: readonly QuoteOverviewItem[];
+  assemblies?: readonly RequestAssemblyWork[];
 }): RequestOverviewNextAction {
-  if (furthestLinkedQuote(input.quotes)) {
+  const quote = furthestLinkedQuote(input.quotes);
+  const assembly = furthestRequestAssembly(input.assemblies ?? []);
+  if (
+    assembly &&
+    (!quote || requestAssemblyCommercialRank(assembly) >= QUOTE_COMMERCIAL_RANK[quote.stage])
+  ) {
+    return "OPEN_ASSEMBLY";
+  }
+  if (quote) {
     return "OPEN_QUOTE";
   }
-  if (
-    input.status === "NEW" ||
-    input.status === "IN_REVIEW" ||
-    input.status === "READY_FOR_QUOTE"
-  ) {
-    return "CHOOSE_PRODUCT";
+  return requestAcceptsNewProductWork(input.status) ? "CHOOSE_PRODUCT" : "OPEN_REQUEST";
+}
+
+export function requestAcceptsNewProductWork(status: CommercialRequestStatus): boolean {
+  switch (status) {
+    case "NEW":
+    case "IN_REVIEW":
+    case "READY_FOR_QUOTE":
+      return true;
+    case "WAITING_CUSTOMER":
+    case "BLOCKED":
+    case "CANCELLED":
+      return false;
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
+    }
   }
-  return "OPEN_REQUEST";
 }
 
 export function requestOverviewHref(requestId: string): string {
@@ -220,19 +261,38 @@ export function requestOverviewNextActionHref(input: {
   requestId: string;
   nextAction: RequestOverviewNextAction;
   quotes: readonly QuoteOverviewItem[];
+  assemblies?: readonly RequestAssemblyWork[];
 }): string {
-  if (input.nextAction !== "OPEN_QUOTE") {
-    return requestOverviewHref(input.requestId);
+  switch (input.nextAction) {
+    case "OPEN_QUOTE": {
+      const quote = furthestLinkedQuote(input.quotes);
+      return quote
+        ? quoteOverviewHref({
+            productCode: quote.productCode,
+            quoteSnapshotId: quote.quoteSnapshotId,
+            orderSnapshotId: quote.orderSnapshotId,
+            nextAction: quote.nextAction,
+          })
+        : requestOverviewHref(input.requestId);
+    }
+    case "OPEN_ASSEMBLY": {
+      const assembly = furthestRequestAssembly(input.assemblies ?? []);
+      return assembly
+        ? requestAssemblyHref(assembly.assemblyId)
+        : requestOverviewHref(input.requestId);
+    }
+    case "OPEN_REQUEST":
+    case "CHOOSE_PRODUCT":
+      return requestOverviewHref(input.requestId);
+    default: {
+      const _exhaustive: never = input.nextAction;
+      return _exhaustive;
+    }
   }
-  const quote = furthestLinkedQuote(input.quotes);
-  return quote
-    ? quoteOverviewHref({
-        productCode: quote.productCode,
-        quoteSnapshotId: quote.quoteSnapshotId,
-        orderSnapshotId: quote.orderSnapshotId,
-        nextAction: quote.nextAction,
-      })
-    : requestOverviewHref(input.requestId);
+}
+
+export function requestAssemblyHref(assemblyId: string): string {
+  return `/assemblies/${encodeURIComponent(assemblyId)}`;
 }
 
 export function deriveRequestOverviewAttention(input: {
@@ -263,15 +323,19 @@ export function projectRequestOverviewItem(input: {
   request: CommercialRequest;
   customerDisplayName: string | null;
   quotes: readonly QuoteOverviewItem[];
+  assemblies?: readonly RequestAssemblyWork[];
 }): RequestOverviewItem {
-  const commercialProgress = deriveRequestCommercialProgress(input.quotes);
+  const assemblies = input.assemblies ?? [];
+  const commercialProgress = deriveRequestCommercialProgress(input.quotes, assemblies);
   const nextAction = deriveRequestOverviewNextAction({
     status: input.request.status,
     quotes: input.quotes,
+    assemblies,
   });
   const attention = deriveRequestOverviewAttention({
     status: input.request.status,
-    hasLinkedQuotes: input.quotes.length > 0,
+    hasLinkedQuotes:
+      input.quotes.length > 0 || assemblies.some((work) => work.quoteSnapshotId !== null),
   });
   const furthestQuote = furthestLinkedQuote(input.quotes);
   return {
@@ -294,12 +358,14 @@ export function projectRequestOverviewItem(input: {
       requestId: input.request.requestId,
       nextAction,
       quotes: input.quotes,
+      assemblies,
     }),
     needsAttention: attention.needsAttention,
     attentionLabel: attention.attentionLabel,
     linkedQuoteCount: input.quotes.length,
     linkedQuoteSnapshotId: furthestQuote?.quoteSnapshotId ?? null,
     linkedQuoteProductCode: furthestQuote?.productCode ?? null,
+    linkedAssemblyId: furthestRequestAssembly(assemblies)?.assemblyId ?? null,
   };
 }
 
@@ -369,9 +435,11 @@ export function projectRequestDetail(input: {
   installationFacts?: SiteInstallationFacts | null;
   installationEvidence?: SiteInstallationEvidenceInput;
   hasLinkedQuotes?: boolean;
+  assemblies?: readonly RequestAssemblyWork[];
   asOf?: string;
 }): RequestDetailProjection {
-  const commercialProgress = deriveRequestCommercialProgress(input.quotes);
+  const assemblies = input.assemblies ?? [];
+  const commercialProgress = deriveRequestCommercialProgress(input.quotes, assemblies);
   const attachments = (input.attachments ?? []).map(projectRequestAttachment);
   const selected = input.request.optionalScopeIds.includes(SITE_INSTALLATION_SCOPE_ID);
   const installationFacts = selected ? (input.installationFacts ?? null) : null;
@@ -379,6 +447,7 @@ export function projectRequestDetail(input: {
   const nextAction = deriveRequestOverviewNextAction({
     status: input.request.status,
     quotes: input.quotes,
+    assemblies,
   });
   return {
     request: input.request,
@@ -392,6 +461,14 @@ export function projectRequestDetail(input: {
     canUpdateStatus: input.request.status !== "CANCELLED",
     canUploadAttachments: canUploadRequestAttachment(input.request.status),
     linkedOffers: input.quotes,
+    assemblies: [...assemblies].sort((left, right) =>
+      right.updatedAt.localeCompare(left.updatedAt),
+    ),
+    linkedAssemblyId: furthestRequestAssembly(assemblies)?.assemblyId ?? null,
+    canStartAdditionalWork:
+      nextAction !== "CHOOSE_PRODUCT" &&
+      (assemblies.length > 0 || input.quotes.length > 0) &&
+      requestAcceptsNewProductWork(input.request.status),
     attachments,
     installationScope: presentSiteInstallationScope(
       projectSiteInstallationScope({

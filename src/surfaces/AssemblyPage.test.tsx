@@ -12,7 +12,8 @@ afterEach(() => {
 describe("assemblyLead", () => {
   it("keeps the letters assembly wording when logo is absent", () => {
     expect(assemblyLead(false, true)).toContain("Configurează literele");
-    expect(assemblyLead(false, true)).toContain("Pregătește oferta");
+    expect(assemblyLead(false, true)).toContain("panoul ACM");
+    expect(assemblyLead(false, true)).toContain("pregătește oferta");
   });
 
   it("says letters are optional only when the logo assembly has no letters", () => {
@@ -122,5 +123,63 @@ describe("AssemblyPage", () => {
       expect(confirmButton).not.toBeDisabled();
     });
     expect(fetchMock).toHaveBeenCalled();
+  });
+
+  it("shows the frozen quote with Romanian amounts, honest PARTIAL production cost and consult-only members after an order", async () => {
+    window.history.replaceState(null, "", "/ansamblu?assembly=asm:released");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            assembly: {
+              assemblyId: "asm:released",
+              customerId: "cus:1",
+              requestId: "crq:1",
+              label: "Panou ACM + litere volumetrice",
+              statusLabel: "Confirmat",
+              stale: false,
+              staleReason: null,
+              canConfirm: false,
+              scopes: [
+                { id: "acm", title: "Panou ACM", complete: true, summary: "Panou", productCode: "ACM_PANEL", role: "SUPPORT_PANEL" },
+                { id: "letters", title: "Litere", complete: true, summary: "Litere", productCode: "LETTERS_V1", role: "SIGNAGE_LETTERS" },
+                { id: "relation", title: "Ansamblare", complete: true, summary: "Relații" },
+                { id: "summary", title: "Rezumat ansamblu", complete: true, summary: "Gata" },
+              ],
+              quote: {
+                label: "Panou ACM + litere volumetrice",
+                sections: [{ title: "Litere", inscription: "ABC", grossPrice: 647.68 }],
+                netPrice: 633.34,
+                vatAmount: 133,
+                grossPrice: 766.34,
+                currency: "EUR",
+              },
+              orderId: "asmo:1",
+              productionId: "asmp:1",
+              executionPlanId: null,
+              productionCost: {
+                total: 461.64,
+                currency: "EUR",
+                completeness: "PARTIAL",
+                completenessLabel: "Incomplet pentru configurația curentă",
+                unpricedOperations: ["Montaj litere pe panou", "Control final"],
+              },
+              membersEditable: false,
+            },
+          }),
+        }),
+      ),
+    );
+
+    render(<AssemblyPage />);
+    expect(await screen.findByText("766,34 EUR")).toBeInTheDocument();
+    expect(screen.getByText("ABC · 647,68 EUR")).toBeInTheDocument();
+    expect(screen.getByText("461,64 EUR")).toBeInTheDocument();
+    expect(screen.getByText(/Montaj litere pe panou, Control final/)).toBeInTheDocument();
+    screen.getByRole("button", { name: /Panou ACM/ }).click();
+    expect(await screen.findByRole("link", { name: "Consultă configurația" })).toBeInTheDocument();
   });
 });

@@ -23,6 +23,9 @@ import {
   productCodeForRole,
   rolesForAssemblyKind,
   assemblyRoleLabel,
+  assemblyMemberChangeRefusal,
+  presentConfirmedAssemblyMember,
+  requestAssemblyCreationRefusal,
   projectAssemblyProduction,
   projectSiteInstallationScope,
   SITE_INSTALLATION_SCOPE_ID,
@@ -63,7 +66,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     if (!requestId) return c.json({ error: "invalid_payload" }, 400);
     if (!runtime.readCommercialRequest(requestId)) return c.json({ error: "not_found" }, 404);
     const plane = runtime.assemblyPlane();
-    return c.json({ assemblies: listRequestAssemblies(plane.db, plane.organizationId, requestId).map(definition => presentCurrent(runtime, definition.assemblyId)).filter(Boolean) });
+    return c.json({ assemblies: listRequestAssemblies(plane.db, plane.organizationId, requestId).map(definition => presentCurrent(runtime, definition.assemblyId, isOwner(c))).filter(Boolean) });
   });
 
   app.get("/api/assemblies/offering", (c) => {
@@ -115,6 +118,13 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     if (readString(body, "kind") !== null && !kind) {
       return c.json({ error: "invalid_payload" }, 400);
     }
+    const duplicate = requestAssemblyCreationRefusal({
+      assemblies: runtime.readRequestAssemblyWork(requestId),
+      intent: readString(body, "commercialIntent"),
+    });
+    if (duplicate) {
+      return c.json(duplicate, 409);
+    }
     const created = createAssemblyDefinition({
       assemblyId: `asm:${randomUUID()}`,
       organizationId: plane.organizationId,
@@ -128,12 +138,12 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: created.error, reasons: created.reasons }, 409);
     }
     saveAssemblyDefinition(plane.db, created.definition);
-    return c.json({ assembly: presentCurrent(runtime, created.definition.assemblyId) }, 201);
+    return c.json({ assembly: presentCurrent(runtime, created.definition.assemblyId, isOwner(c)) }, 201);
   });
 
   app.get("/api/assemblies/:assemblyId", (c) => {
     const runtime = getProductSystem(c);
-    const presented = presentCurrent(runtime, c.req.param("assemblyId"));
+    const presented = presentCurrent(runtime, c.req.param("assemblyId"), isOwner(c));
     if (!presented) {
       return c.json({ error: "not_found" }, 404);
     }
@@ -149,7 +159,15 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     if (!role) return c.json({ error: "invalid_payload" }, 400);
     const member = definition.members.find(item => item.role === role);
     const child = member ? readConfirmedChild(plane.db, plane.organizationId, member.confirmedTruthId) : null;
-    return c.json({ customerId: definition.customerId, requestId: definition.requestId, productCode: productCodeForRole(role), values: child?.truth.values ?? null });
+    const bundle = loadBundle(runtime, definition.assemblyId);
+    return c.json({
+      customerId: definition.customerId,
+      requestId: definition.requestId,
+      productCode: productCodeForRole(role),
+      values: child?.truth.values ?? null,
+      confirmed: child ? presentConfirmedAssemblyMember(child, isOwner(c)) : null,
+      membersEditable: !bundle?.order,
+    });
   });
 
   app.post("/api/assemblies/:assemblyId/members", async (c) => {
@@ -170,6 +188,12 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     const role = readRole(body);
     if (!role) {
       return c.json({ error: "invalid_payload" }, 400);
+    }
+    const frozen = assemblyMemberChangeRefusal({
+      membersEditable: !loadBundle(runtime, definition.assemblyId)?.order,
+    });
+    if (frozen) {
+      return c.json(frozen, 409);
     }
     const productCode = productCodeForRole(role);
     const compiled = compileAcceptedProduct(runtime, productCode, body);
@@ -240,7 +264,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     }
     saveAssemblyDefinition(plane.db, attached.definition);
     return c.json({
-      assembly: presentCurrent(runtime, attached.definition.assemblyId),
+      assembly: presentCurrent(runtime, attached.definition.assemblyId, isOwner(c)),
       productLabel: child.productLabel,
       inscription: child.inscription,
     });
@@ -261,7 +285,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: reviewed.error, reasons: reviewed.reasons }, 409);
     }
     saveAssemblyDefinition(plane.db, reviewed.definition);
-    return c.json({ assembly: presentCurrent(runtime, reviewed.definition.assemblyId) });
+    return c.json({ assembly: presentCurrent(runtime, reviewed.definition.assemblyId, isOwner(c)) });
   });
 
   app.post("/api/assemblies/:assemblyId/confirm", (c) => {
@@ -289,7 +313,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     }
     saveAssemblyTruth(plane.db, confirmed.truth);
     saveAssemblyDefinition(plane.db, confirmed.definition);
-    return c.json({ assembly: presentCurrent(runtime, confirmed.definition.assemblyId) });
+    return c.json({ assembly: presentCurrent(runtime, confirmed.definition.assemblyId, isOwner(c)) });
   });
 
   app.post("/api/assemblies/:assemblyId/quote", (c) => {
@@ -328,7 +352,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
         frozen.quote.quoteSnapshotId,
       );
     }
-    return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId) });
+    return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId, isOwner(c)) });
   });
 
   app.post("/api/assemblies/:assemblyId/accept", (c) => {
@@ -355,7 +379,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: accepted.error, reasons: accepted.reasons }, 422);
     }
     saveAssemblyOrder(plane.db, accepted.order);
-    return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId) });
+    return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId, isOwner(c)) });
   });
 
   app.post("/api/assemblies/:assemblyId/production", (c) => {
@@ -375,7 +399,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: projected.error, reasons: projected.reasons }, 422);
     }
     saveAssemblyProduction(runtime.assemblyPlane().db, projected.snapshot);
-    return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId) });
+    return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId, isOwner(c)) });
   });
 
   app.post("/api/assemblies/:assemblyId/execution-plan", (c) => {
@@ -388,13 +412,14 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: "not_found" }, 404);
     }
     runtime.persistExecutionPlan(materializeAssemblyExecutionPlan(current.production));
-    return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId) });
+    return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId, isOwner(c)) });
   });
 }
 
 function presentCurrent(
   runtime: ReturnType<typeof getProductSystem>,
   assemblyId: string,
+  financialVisible: boolean,
 ) {
   const bundle = loadBundle(runtime, assemblyId);
   if (!bundle) {
@@ -408,6 +433,7 @@ function presentCurrent(
     order: bundle.order,
     production: bundle.production,
     executionPlanId: bundle.executionPlanId,
+    financialVisible,
     lettersSelectable:
       resolution.ok &&
       isTemplateEnabledForNewWork(productCodeForRole("SIGNAGE_LETTERS"), resolution),
