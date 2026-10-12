@@ -54,6 +54,18 @@ div > .page-header.page-header--pilot + .page-region { padding-top: 0; }
 .pilot-create { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 12px; min-height: 48px; padding: 0 22px; border: 1px solid var(--shell-signal); background: var(--shell-signal); color: var(--shell-button-ink); font: 600 14px var(--font-sans); text-decoration: none; white-space: nowrap; cursor: pointer; }
 .pilot-create > svg { flex: 0 0 auto; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; }
 .pilot-create:hover { background: var(--shell-signal-strong); border-color: var(--shell-signal-strong); }
+/* Object pages (one frozen record) keep the pilot language without the registry's reserved title band. */
+div > .page-header.page-header--pilot.page-header--pilot-compact {
+  --pilot-title-size: clamp(26px, 2.3vw, 36px);
+  grid-template-rows: auto;
+  min-height: 0;
+  gap: 0;
+  padding: 28px 0 18px;
+}
+div > .page-header.page-header--pilot-compact .page-header__copy { max-width: none; padding-bottom: 0; border-bottom: 0; }
+div > .page-header.page-header--pilot-compact .page-header__eyebrow { margin-bottom: 10px; }
+div > .page-header.page-header--pilot-compact .page-header__title { letter-spacing: -0.03em; }
+div > .page-header.page-header--pilot-compact .page-header__lead { margin-top: 8px; }
 @media (max-width: 1439px) {
   div > .page-header.page-header--pilot { min-height: 230px; gap: 16px; padding-block: 28px 24px; }
   div > .page-header.page-header--pilot-aside { column-gap: 32px; }

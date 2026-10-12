@@ -31,14 +31,47 @@ describe("QuoteSnapshotPage", () => {
     expect(await screen.findByTestId("frozen-profile-cost")).toHaveTextContent(
       "12,5 m × 3,00 EUR/m = 37,50 EUR",
     );
-    expect(within(screen.getByRole("region", { name: "Valori înghețate" })).getByTestId("commercial-price")).toHaveTextContent("Preț net client");
-    expect(screen.getByText("Creată")).toBeInTheDocument();
+    const summary = within(screen.getByRole("region", { name: "Rezumat comercial" }));
+    expect(summary.getByTestId("quote-total")).toHaveTextContent("Total cu TVA61,26 EUR");
+    expect(summary.getByTestId("quote-total")).toHaveTextContent("Net 50,63 EUR");
+    expect(summary.getByText("Creată")).toBeInTheDocument();
+    const product = within(screen.getByRole("row", { name: "Litere volumetrice luminoase" }));
+    expect(product.getByText("Text: synthetic reference text")).toBeInTheDocument();
+    expect(product.getByText("61,26 EUR")).toBeInTheDocument();
+    expect(screen.queryByTestId("customer-price")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Marchează acceptată" })).toBeEnabled();
     expect(screen.getByText("Neacceptată")).toBeInTheDocument();
     expect(screen.queryByText("Înghețată")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Descarcă oferta PDF" })).toBeEnabled();
     expect(document.querySelector(".lifecycle")).toBeNull();
     expect(passiveLifecycleGets(fetchMock)).toEqual([]);
+  });
+
+  it("shows the frozen job total of a product with site installation, as the quote document does", async () => {
+    const { eic: _eic, ...withoutCost } = frozenSnapshot();
+    void _eic;
+    stubQuotePage({
+      envelope: createdEnvelope(),
+      snapshot: {
+        ...withoutCost,
+        commercial: { ...frozenSnapshot().commercial, vatPercent: 21, vatAmount: 10.63 },
+        lines: [
+          { kind: "PRODUCT", commercial: { netPrice: 50.63, currency: "EUR" } },
+          { kind: "SITE_INSTALLATION", commercial: { netPrice: 100, currency: "EUR" } },
+        ],
+        jobCommercial: { netPrice: 150.63, vatAmount: 31.63, grossPrice: 182.26, currency: "EUR", completeness: "COMPLETE" },
+      },
+    });
+    render(<QuoteSnapshotPage productCode={productCode} quoteSnapshotId="q-a" />);
+    const total = await screen.findByTestId("quote-total");
+    expect(total).toHaveTextContent("182,26 EUR");
+    expect(total).toHaveTextContent("Net 150,63 EUR");
+    expect(total).toHaveTextContent("TVA 21% 31,63 EUR");
+    const lines = within(screen.getByRole("table", { name: "Ce se ofertează" }));
+    expect(within(lines.getByRole("row", { name: "Litere volumetrice luminoase" })).getByText("50,63 EUR")).toBeInTheDocument();
+    expect(within(lines.getByRole("row", { name: "Montaj la locație" })).getByText("100,00 EUR")).toBeInTheDocument();
+    expect(within(lines.getByRole("row", { name: /Total ofertă/ })).getByText("150,63 EUR")).toBeInTheDocument();
+    expect(screen.queryByText(/Cost intern/)).not.toBeInTheDocument();
   });
 
   it("presents customer and request links only when the snapshot transport has them", async () => {
@@ -59,6 +92,11 @@ describe("QuoteSnapshotPage", () => {
     render(<QuoteSnapshotPage productCode={productCode} quoteSnapshotId="q-a" />);
 
     expect(await screen.findByText("Atelier Nord")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: "Rezumat comercial" })).getByText(
+        "Prețul pentru client nu este complet în această ofertă.",
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Deschide clientul" })).toHaveAttribute(
       "href",
       "/clienti/cus-1",

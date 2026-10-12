@@ -187,7 +187,7 @@ describe("request adapter", () => {
         stageLabel: "Eliberat în producție",
         quoteGrossPrice: 766.34,
         currency: "EUR",
-        hasQuote: true,
+        quoteSnapshotId: "asmq:1",
         orderSnapshotId: "asmo:1",
         hasProduction: true,
         executionPlanId: null,

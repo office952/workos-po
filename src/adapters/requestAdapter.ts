@@ -153,7 +153,7 @@ function presentRequestAssemblies(value: unknown): RequestAssemblyWorkTransport[
         stageLabel: row.stageLabel,
         quoteGrossPrice: asNumber(row.quoteGrossPrice),
         currency: asString(row.currency),
-        hasQuote: asString(row.quoteSnapshotId) !== null,
+        quoteSnapshotId: asString(row.quoteSnapshotId),
         orderSnapshotId: asString(row.orderSnapshotId),
         hasProduction: asString(row.productionSnapshotId) !== null,
         executionPlanId: asString(row.executionPlanId),

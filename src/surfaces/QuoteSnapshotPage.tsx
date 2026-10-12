@@ -6,33 +6,88 @@ import {
 import { TransportError, readTransportReasons } from "../api/http";
 import { postQuoteAcceptance, postQuoteOrder } from "../api/lifecycle";
 import { fetchQuoteDocument } from "../api/quote";
-import type { QuoteListItemTransport } from "../api/types";
+import type { QuoteListItemTransport, QuoteSnapshotTransport } from "../api/types";
 import { Button } from "../components/Button";
-import { InfoRow } from "../components/InfoRow";
 import { InlineAlert } from "../components/InlineAlert";
 import { LoadingFloor } from "../components/LoadingFloor";
-import { StatusBadge } from "../components/StatusBadge";
-import { SurfacePanel } from "../components/SurfacePanel";
 import { invalidateAfterAcceptQuote, invalidateAfterCreateOrder } from "../data/invalidation";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadQuoteEnvelope, loadQuoteSnapshot } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { CommercialPricePanel } from "../presentation/commercialPrice";
+import { presentCustomerPrice } from "../presentation/customerPrice";
 import { triggerBrowserDownload } from "../presentation/download";
 import { presentCostLine, selectLineByResource } from "../presentation/costLine";
-import { formatMoney } from "../presentation/format";
 import { presentContextMeta } from "../presentation/contextMeta";
-import { statusTone } from "../presentation/statusTone";
 import { ALUMINIUM_RETURN_PROFILE_RESOURCE_ID } from "../reference/lettersProduct";
 import { clientHref, jobHref, quoteHref, requestHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
-import "../styles/surfaces/commercial.css";
+import { QuoteLines, QuoteRelations, QuoteSummary, type QuoteLine, type QuoteRelation, type QuoteTotal } from "./quoteDetail";
+import "../styles/surfaces/offers.css";
 
 type QuoteSnapshotPageProps = {
   productCode: string;
   quoteSnapshotId: string;
 };
+
+/** Same total as the quote document: the frozen job total when the quote carries several lines. */
+function presentFrozenTotal(snapshot: QuoteSnapshotTransport): QuoteTotal | null {
+  const product = presentCustomerPrice(snapshot.commercial);
+  if (!snapshot.jobCommercial) {
+    return product;
+  }
+  const job = presentCustomerPrice(snapshot.jobCommercial);
+  return job ? { ...job, vatPercent: job.vatPercent ?? product?.vatPercent ?? null } : null;
+}
+
+function inscriptionLabel(productCode: string): string {
+  return productCode === "PRD-LOGO-FRONTLIT-PLEXI-AL06" ? "Denumire logo" : "Text";
+}
+
+function presentLines(snapshot: QuoteSnapshotTransport, total: QuoteTotal | null): QuoteLine[] {
+  const inscription = snapshot.inscription
+    ? `${inscriptionLabel(snapshot.productCode)}: ${snapshot.inscription}`
+    : null;
+  if (snapshot.offerLines.length === 0) {
+    return [
+      {
+        key: "product",
+        title: snapshot.productLabel,
+        detail: inscription,
+        netPrice: total?.netPrice ?? null,
+        vatPercent: total?.vatPercent ?? null,
+        vatAmount: total?.vatAmount ?? null,
+        grossPrice: total?.grossPrice ?? null,
+        currency: total?.currency ?? snapshot.currency ?? "EUR",
+      },
+    ];
+  }
+  return snapshot.offerLines.map((line) => ({
+    key: `${line.kind}-${line.label}`,
+    title: line.kind === "PRODUCT" ? snapshot.productLabel : line.label,
+    detail: line.kind === "PRODUCT" ? inscription : null,
+    netPrice: line.netPrice,
+    vatPercent: null,
+    vatAmount: null,
+    grossPrice: null,
+    currency: line.currency ?? "EUR",
+  }));
+}
+
+function presentRelations(snapshot: QuoteSnapshotTransport, orderSnapshotId: string | null): QuoteRelation[] {
+  return [
+    snapshot.customerId
+      ? { key: "customer", label: "Client", detail: snapshot.customerDisplayName, href: clientHref(snapshot.customerId), action: "Deschide clientul" }
+      : null,
+    snapshot.requestId
+      ? { key: "request", label: "Cerere", detail: snapshot.requestReference, href: requestHref(snapshot.requestId), action: "Deschide cererea" }
+      : null,
+    orderSnapshotId
+      ? { key: "order", label: "Comandă", detail: null, href: jobHref(orderSnapshotId), action: "Deschide comanda" }
+      : null,
+  ].filter((relation): relation is QuoteRelation => relation !== null);
+}
 
 export function QuoteSnapshotPage({
   productCode,
@@ -114,6 +169,7 @@ export function QuoteSnapshotPage({
     : null;
   const presented = profile ? presentCostLine(profile) : null;
   const orderSnapshotId = presentedEnvelope?.orderSnapshotId ?? null;
+  const total = presentedSnapshot ? presentFrozenTotal(presentedSnapshot) : null;
 
   return (
     <SlicePage
@@ -121,161 +177,97 @@ export function QuoteSnapshotPage({
       currentHref={quoteHref(productCode, quoteSnapshotId)}
       workspace="stack"
       surface="quote-detail"
-      headerVariant="pilot"
-      eyebrow="Ofertă"
+      headerVariant="pilot-compact"
+      eyebrow="Ofertă · Produs"
       title={presentedEnvelope?.reference || presentedSnapshot?.productLabel || "Ofertă înghețată"}
-      lead="Înregistrare comercială înghețată. Acceptarea păstrează această versiune."
       meta={presentContextMeta([
         presentedSnapshot?.customerDisplayName,
         presentedSnapshot?.requestReference,
-        presentedSnapshot?.inscription,
+        presentedSnapshot?.productLabel,
       ])}
     >
-      <div className="commercial-toolbar">
-        <div className="commercial-toolbar__context">
-          <a className="text-link" href="/oferte">← Toate ofertele</a>
-          {stageLabel ? <StatusBadge label={stageLabel} tone={statusTone("workflow")} /> : null}
-        </div>
-        <QuoteEnvelopeAction
-          envelope={presentedEnvelope}
-          pending={actionState === "pending"}
-          onAccept={() => void accept()}
-          onCreateOrder={() => void createOrder()}
-        />
-      </div>
-      <div className="commercial-object">
-      {snapshot.status === "error" && !presentedSnapshot ? (
-        <InlineAlert tone="error" title="Oferta nu a putut fi citită">
-          Identitatea ofertei nu este disponibilă în runtime-ul izolat.
-        </InlineAlert>
-      ) : null}
-      <SurfacePanel
-        title="Valori înghețate"
-        label="Valori înghețate"
-        busy={!presentedSnapshot && snapshot.status !== "error"}
-      >
+      <div className="offers-detail">
+        <a className="offers-detail__back text-link" href="/oferte">← Toate ofertele</a>
+        {snapshot.status === "error" && !presentedSnapshot ? (
+          <InlineAlert tone="error" title="Oferta nu a putut fi citită">
+            Oferta nu este disponibilă.
+          </InlineAlert>
+        ) : null}
         {presentedSnapshot ? (
           <>
-            <CommercialPricePanel
-              commercial={presentedSnapshot.commercial}
-              internalTotal={null}
-              internalCurrency={presentedSnapshot.currency}
-              showInternalCost={false}
-            />
-            {presentedSnapshot.offerLines.length > 0 ? (
-              <dl className="fact-grid">
-                {presentedSnapshot.offerLines.map((line) => (
-                  <InfoRow
-                    key={`${line.kind}-${line.label}`}
-                    label={line.label}
-                    value={
-                      line.netPrice == null
-                        ? "—"
-                        : formatMoney(line.netPrice, line.currency ?? "EUR")
-                    }
+            <QuoteSummary
+              total={total}
+              unavailableNote="Prețul pentru client nu este complet în această ofertă."
+              facts={[
+                { label: "Stare", value: stageLabel ?? "—" },
+                { label: "Acceptare", value: presentQuoteAcceptanceFact(presentedEnvelope?.stage ?? null) },
+                { label: "Tip", value: presentedEnvelope?.kindLabel || "Produs" },
+              ]}
+              actions={
+                <>
+                  <QuoteEnvelopeAction
+                    envelope={presentedEnvelope}
+                    pending={actionState === "pending"}
+                    onAccept={() => void accept()}
+                    onCreateOrder={() => void createOrder()}
                   />
-                ))}
-                {presentedSnapshot.jobCommercial?.netPrice != null ? (
-                  <InfoRow
-                    label="Total ofertă"
-                    value={formatMoney(
-                      presentedSnapshot.jobCommercial.netPrice,
-                      presentedSnapshot.jobCommercial.currency ?? "EUR",
-                    )}
-                  />
-                ) : null}
-              </dl>
-            ) : null}
-            <dl className="fact-grid">
-              <InfoRow label="Produs" value={presentedSnapshot.productLabel} />
-              <InfoRow
-                label={
-                  productCode === "PRD-LOGO-FRONTLIT-PLEXI-AL06"
-                    ? "Denumire logo"
-                    : "Text"
-                }
-                value={presentedSnapshot.inscription ?? "—"}
-              />
-              {presentedSnapshot.customerDisplayName ? (
-                <InfoRow label="Client" value={presentedSnapshot.customerDisplayName} />
+                  <Button
+                    variant="secondary"
+                    disabled={documentState === "pending"}
+                    onClick={() => void downloadDocument()}
+                  >
+                    Descarcă oferta PDF
+                  </Button>
+                </>
+              }
+              note="Oferta este înghețată. Acceptarea și comanda păstrează această versiune."
+            >
+              {documentError ? (
+                <InlineAlert tone="error" title="Documentul nu poate fi descărcat">
+                  {documentError}
+                </InlineAlert>
               ) : null}
-              <InfoRow
-                label="Acceptare"
-                value={presentQuoteAcceptanceFact(presentedEnvelope?.stage ?? null)}
-              />
-            </dl>
-            <p>
-              <Button
-                variant="secondary"
-                disabled={documentState === "pending"}
-                onClick={() => void downloadDocument()}
-              >
-                Descarcă oferta PDF
-              </Button>
-            </p>
-            {documentError ? (
-              <InlineAlert tone="error" title="Documentul nu poate fi descărcat">
-                {documentError}
-              </InlineAlert>
+              {actionError ? (
+                <InlineAlert tone="error" title="Acțiunea a eșuat">
+                  {actionError}
+                </InlineAlert>
+              ) : null}
+            </QuoteSummary>
+            <QuoteLines
+              caption="Ce se ofertează"
+              lines={presentLines(presentedSnapshot, total)}
+              total={presentedSnapshot.offerLines.length > 0 ? total : null}
+              lineTax={presentedSnapshot.offerLines.length === 0}
+            />
+            {presentedSnapshot.financialVisible ? (
+              <section className="offers-cost" aria-label="Cost intern">
+                <details className="quote-analysis">
+                  <summary>Cost intern · analiza versiunii înghețate</summary>
+                  <CommercialPricePanel
+                    commercial={presentedSnapshot.commercial}
+                    internalTotal={presentedSnapshot.total}
+                    internalCurrency={presentedSnapshot.currency}
+                    internalCompleteness={presentedSnapshot.completeness}
+                    showCustomerPrice={false}
+                  />
+                  {presented ? (
+                    <div className="equation" data-testid="frozen-profile-cost">
+                      <p className="equation__label">{presented.label}</p>
+                      <p className="equation__value">{presented.equationLabel}</p>
+                      <p className="ui-note">Linia internă nu este preț de vânzare și rămâne înghețată pe această ofertă.</p>
+                    </div>
+                  ) : null}
+                </details>
+              </section>
             ) : null}
-            {actionError ? (
-              <InlineAlert tone="error" title="Acțiunea a eșuat">
-                {actionError}
-              </InlineAlert>
-            ) : null}
+            <QuoteRelations
+              relations={presentRelations(presentedSnapshot, orderSnapshotId)}
+              note="Acceptarea și lucrarea rămân pe această versiune înghețată. Configurația nu se reconstruiește."
+            />
           </>
         ) : snapshot.status !== "error" ? (
           <LoadingFloor variant="facts" label="Se citește oferta înghețată" />
         ) : null}
-      </SurfacePanel>
-      {presentedSnapshot?.financialVisible ? (
-        <details className="quote-analysis">
-          <summary>Cost intern · analiza versiunii înghețate</summary>
-          <CommercialPricePanel
-            commercial={presentedSnapshot.commercial}
-            internalTotal={presentedSnapshot.total}
-            internalCurrency={presentedSnapshot.currency}
-            internalCompleteness={presentedSnapshot.completeness}
-            showCustomerPrice={false}
-          />
-          {presented ? (
-            <div className="equation" data-testid="frozen-profile-cost">
-              <p className="equation__label">{presented.label}</p>
-              <p className="equation__value">{presented.equationLabel}</p>
-              <p className="ui-note">Linia internă nu este preț de vânzare și rămâne înghețată pe această ofertă.</p>
-            </div>
-          ) : null}
-        </details>
-      ) : null}
-      <SurfacePanel variant="quiet" title="Stare și următorul pas">
-        <p className="ui-note">
-          Acceptarea și lucrarea rămân pe această versiune înghețată. Nu se reconstruiește
-          configurația.
-        </p>
-        {presentedSnapshot?.customerId ? (
-          <p>
-            <a className="text-link" href={clientHref(presentedSnapshot.customerId)}>
-              Deschide clientul
-            </a>
-          </p>
-        ) : null}
-        {presentedSnapshot?.requestId ? (
-          <p>
-            <a className="text-link" href={requestHref(presentedSnapshot.requestId)}>
-              Deschide cererea
-            </a>
-          </p>
-        ) : null}
-        {orderSnapshotId && presentedEnvelope?.nextAction !== "OPEN_ORDER" ? (
-          <p>
-            <a className="text-link" href={jobHref(orderSnapshotId)}>
-              {presentedEnvelope?.nextAction === "OPEN_ORDER"
-                ? presentedEnvelope.nextActionLabel || "Deschide comanda"
-                : "Deschide lucrarea"}
-            </a>
-          </p>
-        ) : null}
-      </SurfacePanel>
       </div>
     </SlicePage>
   );

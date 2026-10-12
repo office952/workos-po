@@ -15,6 +15,7 @@ import { statusTone } from "../presentation/statusTone";
 import { presentRequestPrimaryAction } from "../presentation/worklistAction";
 import {
   assemblyHref,
+  assemblyQuoteHref,
   clientHref,
   executionHref,
   jobHref,
@@ -192,10 +193,10 @@ function RequestAssemblyWorkPanel({ assemblies }: { assemblies: RequestAssemblyW
             </dl>
             <p className="request-assembly-work__links">
               <a className="text-link" href={assemblyHref(work.assemblyId)}>
-                {work.membersEditable && !work.hasQuote ? "Continuă ansamblul" : "Deschide ansamblul"}
+                {work.membersEditable && !work.quoteSnapshotId ? "Continuă ansamblul" : "Deschide ansamblul"}
               </a>
-              {work.hasQuote ? (
-                <a className="text-link" href={`${assemblyHref(work.assemblyId)}#oferta`}>
+              {work.quoteSnapshotId ? (
+                <a className="text-link" href={assemblyQuoteHref(work.quoteSnapshotId)}>
                   Deschide oferta comună
                 </a>
               ) : null}

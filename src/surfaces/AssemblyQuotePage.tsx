@@ -1,22 +1,71 @@
-import type { AssemblyQuoteCostTransport } from "../api/types";
-import { InfoRow } from "../components/InfoRow";
+import type { AssemblyQuoteCostTransport, AssemblyQuoteTransport } from "../api/types";
 import { InlineAlert } from "../components/InlineAlert";
 import { LoadingFloor } from "../components/LoadingFloor";
-import { StatusBadge } from "../components/StatusBadge";
-import { SurfacePanel } from "../components/SurfacePanel";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadAssemblyQuote } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { presentContextMeta } from "../presentation/contextMeta";
 import { formatMoney } from "../presentation/format";
-import { statusTone } from "../presentation/statusTone";
 import { assemblyHref, assemblyQuoteHref, jobHref, requestHref } from "../routing/appRoute";
-import "../styles/surfaces/commercial.css";
+import { QuoteLines, QuoteRelations, QuoteSummary, type QuoteLine, type QuoteRelation, type QuoteTotal } from "./quoteDetail";
+import "../styles/surfaces/offers.css";
 
 type AssemblyQuotePageProps = {
   quoteSnapshotId: string;
 };
+
+function sharedVatPercent(quote: AssemblyQuoteTransport): number | null {
+  const rates = new Set(quote.sections.map((section) => section.vatPercent));
+  return rates.size === 1 ? [...rates][0] ?? null : null;
+}
+
+function presentTotal(quote: AssemblyQuoteTransport): QuoteTotal {
+  return { ...quote.totals, vatPercent: sharedVatPercent(quote) };
+}
+
+function presentLines(quote: AssemblyQuoteTransport): QuoteLine[] {
+  const sections: QuoteLine[] = quote.sections.map((section) => ({
+    key: section.memberId,
+    title: section.roleLabel,
+    detail: [section.productLabel === section.roleLabel ? null : section.productLabel, section.inscription]
+      .filter(Boolean)
+      .join(" · ") || null,
+    netPrice: section.netPrice,
+    vatPercent: section.vatPercent,
+    vatAmount: section.vatAmount,
+    grossPrice: section.grossPrice,
+    currency: section.currency,
+  }));
+  const service = quote.serviceSection;
+  return service
+    ? [
+        ...sections,
+        {
+          key: "service",
+          title: service.label,
+          detail: "Serviciu",
+          netPrice: service.netPrice,
+          vatPercent: null,
+          vatAmount: service.vatAmount,
+          grossPrice: service.grossPrice,
+          currency: service.currency,
+        },
+      ]
+    : sections;
+}
+
+function presentRelations(quote: AssemblyQuoteTransport): QuoteRelation[] {
+  return [
+    quote.requestId
+      ? { key: "request", label: "Cerere", detail: quote.item.requestReference, href: requestHref(quote.requestId), action: "Deschide cererea" }
+      : null,
+    { key: "assembly", label: "Ansamblu", detail: quote.label, href: assemblyHref(quote.assemblyId), action: "Deschide ansamblul" },
+    quote.orderSnapshotId
+      ? { key: "order", label: "Comandă", detail: null, href: jobHref(quote.orderSnapshotId), action: "Deschide comanda" }
+      : null,
+  ].filter((relation): relation is QuoteRelation => relation !== null);
+}
 
 /** Read-only view of one frozen assembly quote; acceptance stays on the assembly page. */
 export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
@@ -32,20 +81,13 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
       currentHref={assemblyQuoteHref(quoteSnapshotId)}
       workspace="stack"
       surface="quote-detail"
-      headerVariant="pilot"
-      eyebrow="Ofertă ansamblu"
+      headerVariant="pilot-compact"
+      eyebrow="Ofertă · Ansamblu"
       title={item?.reference ?? "Ofertă de ansamblu"}
-      lead="Înregistrare comercială înghețată. Secțiunile rămân trasabile separat."
       meta={presentContextMeta([item?.customerDisplayName, item?.requestReference, quote?.label])}
     >
-      <div className="commercial-toolbar">
-        <div className="commercial-toolbar__context">
-          <a className="text-link" href="/oferte">← Toate ofertele</a>
-          {item ? <StatusBadge label={item.kindLabel} tone={statusTone("workflow")} /> : null}
-          {item ? <StatusBadge label={item.stageLabel} tone={statusTone("workflow")} /> : null}
-        </div>
-      </div>
-      <div className="commercial-object">
+      <div className="offers-detail">
+        <a className="offers-detail__back text-link" href="/oferte">← Toate ofertele</a>
         {loaded.status === "error" && !quote ? (
           <InlineAlert tone="error" title="Oferta nu a putut fi citită">
             Oferta de ansamblu nu este disponibilă.
@@ -56,73 +98,39 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
             Ansamblul are o ofertă mai nouă. Această versiune rămâne înghețată pentru istoric.
           </InlineAlert>
         ) : null}
-        <SurfacePanel title="Secțiuni ofertă" label="Secțiuni ofertă" busy={!quote && loaded.status !== "error"}>
-          {quote ? (
-            <>
-              {quote.sections.map((section) => (
-                <dl className="fact-grid" key={section.memberId} aria-label={section.roleLabel}>
-                  <InfoRow
-                    label={section.roleLabel}
-                    value={[section.productLabel, section.inscription].filter(Boolean).join(" · ")}
-                  />
-                  <InfoRow label="Net" value={formatMoney(section.netPrice, section.currency)} />
-                  <InfoRow
-                    label={`TVA ${section.vatPercent}%`}
-                    value={formatMoney(section.vatAmount, section.currency)}
-                  />
-                  <InfoRow label="Total secțiune" value={formatMoney(section.grossPrice, section.currency)} />
-                </dl>
-              ))}
-              {quote.serviceSection ? (
-                <dl className="fact-grid" aria-label={quote.serviceSection.label}>
-                  <InfoRow label={quote.serviceSection.label} value="Serviciu" />
-                  <InfoRow
-                    label="Total serviciu"
-                    value={formatMoney(quote.serviceSection.grossPrice, quote.serviceSection.currency)}
-                  />
-                </dl>
-              ) : null}
-            </>
-          ) : loaded.status !== "error" ? (
-            <LoadingFloor variant="facts" label="Se citește oferta de ansamblu" />
-          ) : null}
-        </SurfacePanel>
-        {quote ? (
-          <SurfacePanel title="Total ofertă" label="Total ofertă">
-            <dl className="fact-grid">
-              <InfoRow label="Total net" value={formatMoney(quote.totals.netPrice, quote.totals.currency)} />
-              <InfoRow label="TVA" value={formatMoney(quote.totals.vatAmount, quote.totals.currency)} />
-              <InfoRow
-                label="Total comercial"
-                value={formatMoney(quote.totals.grossPrice, quote.totals.currency)}
-              />
-              <InfoRow label="Comandă" value={quote.orderSnapshotId ? "Acceptată — comandă creată" : "Neacceptată"} />
-            </dl>
-          </SurfacePanel>
-        ) : null}
-        {quote?.internalCost ? <InternalCostPanel cost={quote.internalCost} /> : null}
-        {quote?.internalCost === null ? (
-          <p className="ui-note">Costul intern nu poate fi urmărit pentru această ofertă.</p>
-        ) : null}
-        {quote ? (
-          <SurfacePanel variant="quiet" title="Legături">
-            <p className="ui-note">
-              Oferta este înghețată. Acceptarea și modificările se fac din ansamblu, nu din registru.
-            </p>
-            {quote.requestId ? (
-              <p>
-                <a className="text-link" href={requestHref(quote.requestId)}>Deschide cererea</a>
-              </p>
+        {quote && item ? (
+          <>
+            <QuoteSummary
+              total={presentTotal(quote)}
+              unavailableNote="Totalul ofertei nu este disponibil."
+              facts={[
+                { label: "Stare", value: item.stageLabel },
+                { label: "Tip", value: `${item.kindLabel} · ${item.sectionCount} secțiuni` },
+                { label: "Comandă", value: quote.orderSnapshotId ? "Acceptată — comandă creată" : "Neacceptată" },
+              ]}
+              actions={
+                <a
+                  className="offers-next"
+                  href={quote.orderSnapshotId ? jobHref(quote.orderSnapshotId) : assemblyHref(quote.assemblyId)}
+                >
+                  <span>{quote.orderSnapshotId ? "Deschide comanda" : "Deschide ansamblul"}</span>
+                  <span aria-hidden="true">→</span>
+                </a>
+              }
+              note="Oferta este înghețată. Acceptarea și modificările se fac din ansamblu."
+            />
+            <QuoteLines caption="Secțiuni ofertă" lines={presentLines(quote)} total={presentTotal(quote)} lineTax />
+            {quote.internalCost ? <InternalCostPanel cost={quote.internalCost} /> : null}
+            {quote.internalCost === null ? (
+              <p className="ui-note">Costul intern nu poate fi urmărit pentru această ofertă.</p>
             ) : null}
-            <p>
-              <a className="text-link" href={assemblyHref(quote.assemblyId)}>Deschide ansamblul</a>
-            </p>
-            {quote.orderSnapshotId ? (
-              <p>
-                <a className="text-link" href={jobHref(quote.orderSnapshotId)}>Deschide comanda</a>
-              </p>
-            ) : null}
-          </SurfacePanel>
+            <QuoteRelations
+              relations={presentRelations(quote)}
+              note="Fiecare legătură deschide înregistrarea ei. Oferta rămâne neschimbată."
+            />
+          </>
+        ) : loaded.status !== "error" ? (
+          <LoadingFloor variant="facts" label="Se citește oferta de ansamblu" />
         ) : null}
       </div>
     </SlicePage>
@@ -131,46 +139,45 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
 
 function InternalCostPanel({ cost }: { cost: AssemblyQuoteCostTransport }) {
   return (
-    <details className="quote-analysis">
-      <summary>Cost intern · evidență ({cost.sourceLabel})</summary>
-      <p className="ui-note">Costul intern nu este preț de vânzare.</p>
-      <dl className="fact-grid">
-        {cost.sections.map((section) => (
-          <InfoRow
-            key={section.memberId}
-            label={section.roleLabel}
-            value={`${formatMoney(section.total, section.currency)} · ${section.completenessLabel}`}
-          />
-        ))}
-      </dl>
-      {cost.production ? (
-        <>
-          <dl className="fact-grid">
-            <InfoRow
-              label="Cost intern de producție"
-              value={`${formatMoney(cost.production.total, cost.production.currency)} · ${cost.production.completenessLabel}`}
-            />
-          </dl>
-          {cost.production.unpricedOperations.length > 0 ? (
-            <InlineAlert tone="pending" title="Cost parțial">
-              Lucrările de ansamblu de mai jos nu au cost înregistrat și nu sunt tratate ca zero.
-              <ul>
-                {cost.production.unpricedOperations.map((operation) => (
-                  <li key={operation.processLabel}>
-                    {operation.processLabel}: lipsește {operation.missingInputs.join(", ").toLocaleLowerCase("ro")}
-                  </li>
-                ))}
-              </ul>
-            </InlineAlert>
+    <section className="offers-cost" aria-label="Cost intern">
+      <details className="quote-analysis">
+        <summary>Cost intern · evidență ({cost.sourceLabel})</summary>
+        <p className="ui-note">Costul intern nu este preț de vânzare.</p>
+        <dl className="offers-cost__rows">
+          {cost.sections.map((section) => (
+            <div key={section.memberId}>
+              <dt>{section.roleLabel}</dt>
+              <dd>{formatMoney(section.total, section.currency)}</dd>
+              <dd>{section.completenessLabel}</dd>
+            </div>
+          ))}
+          {cost.production ? (
+            <div>
+              <dt>Cost intern de producție</dt>
+              <dd>{formatMoney(cost.production.total, cost.production.currency)}</dd>
+              <dd data-completeness={cost.production.completeness}>{cost.production.completenessLabel}</dd>
+            </div>
           ) : null}
-        </>
-      ) : null}
-      {cost.productionPending ? (
-        <p className="ui-note">
-          Costul intern de producție se stabilește la eliberarea în producție. Costurile pe secțiuni nu
-          se adună înainte, pentru că ansamblarea înlocuiește o parte din lucrările fiecărui produs.
-        </p>
-      ) : null}
-    </details>
+        </dl>
+        {cost.production && cost.production.unpricedOperations.length > 0 ? (
+          <InlineAlert tone="pending" title="Cost parțial">
+            Lucrările de ansamblu de mai jos nu au cost înregistrat și nu sunt tratate ca zero.
+            <ul>
+              {cost.production.unpricedOperations.map((operation) => (
+                <li key={operation.processLabel}>
+                  {operation.processLabel}: lipsește {operation.missingInputs.join(", ").toLocaleLowerCase("ro")}
+                </li>
+              ))}
+            </ul>
+          </InlineAlert>
+        ) : null}
+        {cost.productionPending ? (
+          <p className="ui-note">
+            Costul intern de producție se stabilește la eliberarea în producție. Costurile pe secțiuni nu
+            se adună înainte, pentru că ansamblarea înlocuiește o parte din lucrările fiecărui produs.
+          </p>
+        ) : null}
+      </details>
+    </section>
   );
 }

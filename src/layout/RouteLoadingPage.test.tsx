@@ -15,4 +15,12 @@ describe("pilot loading chrome", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Se încarcă pagina.");
   });
+
+  it.each([
+    { name: "quote", productCode: "PRD-1", quoteSnapshotId: "q-1" },
+    { name: "assembly-quote", quoteSnapshotId: "asmq:1" },
+  ] as const)("loads a single quote ($name) in the compact header used by the loaded page", (route) => {
+    render(<RouteLoadingPage route={route as AppRoute} />);
+    expect(document.querySelector(".page-header--pilot.page-header--pilot-compact")).not.toBeNull();
+  });
 });

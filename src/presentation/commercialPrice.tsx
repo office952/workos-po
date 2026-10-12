@@ -2,6 +2,7 @@ import type { CommercialPriceTransport } from "../api/types";
 import { InlineAlert } from "../components/InlineAlert";
 import { SectionLabel } from "../components/SectionLabel";
 import { StatusBadge } from "../components/StatusBadge";
+import { presentCustomerPrice } from "./customerPrice";
 import { formatMoney } from "./format";
 
 type CommercialPricePanelProps = {
@@ -106,11 +107,7 @@ export function CommercialPricePanel({
   );
   const showKnownCostBlock =
     showInternalCost && (knownCost !== null || completenessValue === "PARTIAL");
-  const customerReady =
-    showCustomerPrice &&
-    commercial?.completeness === "COMPLETE" &&
-    commercial.unavailableReasons.length === 0 &&
-    (commercial.netPrice !== null || commercial.grossPrice !== null);
+  const customerReady = showCustomerPrice && presentCustomerPrice(commercial) !== null;
 
   return (
     <div className="stack" data-testid="commercial-price">
@@ -136,7 +133,7 @@ export function CommercialPricePanel({
           {costStatus.attention ? <p>{costStatus.attention}</p> : null}
         </div>
       ) : null}
-      {customerReady ? (
+      {customerReady && commercial ? (
         <div className="price-hero" data-testid="customer-price">
           {commercial.netPrice !== null && commercial.netPrice !== undefined ? (
             <>
