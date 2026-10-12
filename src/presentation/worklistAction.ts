@@ -5,6 +5,7 @@ import type {
   RequestListItemTransport,
 } from "../api/types";
 import {
+  assemblyHref,
   requestProductHref,
   executionHref,
   jobHref,
@@ -44,6 +45,13 @@ export function presentRequestWorklistAction(
         actionHref: requestHref(item.requestId),
       };
     }
+    case "OPEN_ASSEMBLY":
+      return item.linkedAssemblyId
+        ? {
+            actionLabel: item.nextActionLabel || "Deschide ansamblul",
+            actionHref: assemblyHref(item.linkedAssemblyId),
+          }
+        : { actionLabel: "Deschide", actionHref: requestHref(item.requestId) };
     case "OPEN_REQUEST":
       return {
         actionLabel: item.nextActionLabel || "Deschide",
@@ -76,6 +84,13 @@ export function presentRequestPrimaryAction(
         actionHref: quoteHref(offer.productCode, offer.quoteSnapshotId),
       };
     }
+    case "OPEN_ASSEMBLY":
+      return detail.linkedAssemblyId
+        ? {
+            actionLabel: detail.nextActionLabel || "Deschide ansamblul",
+            actionHref: assemblyHref(detail.linkedAssemblyId),
+          }
+        : null;
     case "OPEN_REQUEST":
       return null;
     default:

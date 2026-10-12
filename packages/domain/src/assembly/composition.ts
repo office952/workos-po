@@ -13,6 +13,7 @@ import { projectSiteInstallationOperationalView } from "../installation/hostCont
 import { appendInstallAtSiteOperation } from "../production/installAtSite.js";
 import type { FrozenProductionOperation } from "../production/snapshot.js";
 import { contentHash } from "./canonical.js";
+import { reconcileAssemblyEic } from "./eic.js";
 import {
   ASSEMBLY_OFFERING_LABEL,
   ASSEMBLY_QC_LABEL,
@@ -36,8 +37,12 @@ export function projectAssemblyProduction(
   order: AssemblyOrderSnapshot,
   input: { snapshotId: string; createdAt: string },
 ): { ok: true; snapshot: AssemblyProductionSnapshot } | AssemblyRuleFailure {
-  const members = order.children.map((child) => {
-    const operations = projectMemberOperations(child.memberId, child.role, child.productionInput.operations);
+  const retained = order.children.map((child) => ({
+    child,
+    retainedOperations: retainedChildOperations(child.productionInput.operations),
+  }));
+  const members = retained.map(({ child, retainedOperations }) => {
+    const operations = projectMemberOperations(child.memberId, child.role, retainedOperations);
     return {
       memberId: child.memberId,
       role: child.role,
@@ -87,12 +92,11 @@ export function projectAssemblyProduction(
         siteExecutionContext: serviceLine.siteExecutionContext,
       })
     : undefined;
-  const eicTotal = roundMoney(order.children.reduce((sum, child) => sum + child.eicTotal, 0));
-  const eicCompleteness: "COMPLETE" | "PARTIAL" = order.children.every(
-    (child) => child.eicCompleteness === "COMPLETE",
-  )
-    ? "COMPLETE"
-    : "PARTIAL";
+  const eic = reconcileAssemblyEic({
+    members: retained,
+    assemblyOperations: operations,
+    ...(serviceLine ? { serviceLine } : {}),
+  });
   const label =
     order.assemblyKind === SIGN_ASSEMBLY_ACM_LETTERS_V1 ? ASSEMBLY_OFFERING_LABEL : order.label;
   const body = {
@@ -108,9 +112,9 @@ export function projectAssemblyProduction(
     label,
     members,
     assemblyOperations: operations,
-    eicTotal,
-    eicCurrency: "EUR" as const,
-    eicCompleteness,
+    eicTotal: eic.total,
+    eicCurrency: eic.currency,
+    eicCompleteness: eic.completeness,
     ...(siteInstallation ? { siteInstallation } : {}),
   };
   return {
@@ -195,12 +199,17 @@ function v2AssemblyOperations(
   return [...operations, qc, pack];
 }
 
+function retainedChildOperations(
+  operations: readonly FrozenProductionOperation[],
+): FrozenProductionOperation[] {
+  return operations.filter((operation) => !DROPPED_TERMINAL_PROCESSES.has(operation.processId));
+}
+
 function projectMemberOperations(
   memberId: string,
   role: AssemblyMemberRole,
-  operations: readonly FrozenProductionOperation[],
+  kept: readonly FrozenProductionOperation[],
 ): FrozenProductionOperation[] {
-  const kept = operations.filter((operation) => !DROPPED_TERMINAL_PROCESSES.has(operation.processId));
   const idMap = new Map(kept.map((operation) => [operation.id, `${memberId}:${operation.id}`]));
   return kept.map((operation) => ({
     ...operation,
@@ -214,10 +223,6 @@ function projectMemberOperations(
     quantities: operation.quantities.map((item) => ({ ...item })),
     resourceDemands: operation.resourceDemands.map((item) => ({ ...item })),
   }));
-}
-
-function roundMoney(value: number): number {
-  return Math.round(value * 100) / 100;
 }
 
 function sinkIds(operations: readonly FrozenProductionOperation[]): string[] {

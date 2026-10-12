@@ -33,6 +33,7 @@ function request(
     attentionLabel: null,
     linkedQuoteSnapshotId: null,
     linkedQuoteProductCode: null,
+    linkedAssemblyId: null,
     ...partial,
   };
 }
@@ -147,6 +148,24 @@ describe("presentRequestWorklistAction", () => {
         "/quotes/PRD-ACM-CASSETTE-NONE/qts%3APRD-ACM-CASSETTE-NONE%3Aabffbb338a5a65fc2f9c69d41798d58f4fb73d27e4941df6a05052bddb2ca6d4",
     });
   });
+
+  it("opens the request assembly for OPEN_ASSEMBLY instead of offering a product choice", () => {
+    expect(
+      presentRequestWorklistAction(
+        request({
+          nextAction: "OPEN_ASSEMBLY",
+          nextActionLabel: "Deschide ansamblul",
+          linkedAssemblyId: "asm:1",
+        }),
+      ),
+    ).toEqual({ actionLabel: "Deschide ansamblul", actionHref: "/ansamblu?assembly=asm%3A1" });
+  });
+
+  it("falls back to request detail when OPEN_ASSEMBLY has no assembly identity", () => {
+    expect(
+      presentRequestWorklistAction(request({ nextAction: "OPEN_ASSEMBLY", nextActionLabel: "Deschide ansamblul" })),
+    ).toEqual({ actionLabel: "Deschide", actionHref: "/cereri/req-1" });
+  });
 });
 
 describe("presentRequestPrimaryAction", () => {
@@ -168,6 +187,9 @@ describe("presentRequestPrimaryAction", () => {
     linkedOffers: [],
     linkedQuoteIds: [],
     linkedQuoteProductCodes: [],
+    assemblies: [],
+    linkedAssemblyId: null,
+    canStartAdditionalWork: false,
     attachments: [],
     installationOffer: {
       capabilityId: "SITE_INSTALLATION",
@@ -209,6 +231,17 @@ describe("presentRequestPrimaryAction", () => {
       actionLabel: "Deschide oferta",
       actionHref: "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
     });
+  });
+
+  it("makes the server-chosen assembly the primary action for OPEN_ASSEMBLY", () => {
+    expect(
+      presentRequestPrimaryAction({
+        ...detail,
+        nextAction: "OPEN_ASSEMBLY",
+        nextActionLabel: "Deschide ansamblul",
+        linkedAssemblyId: "asm:quoted",
+      }),
+    ).toEqual({ actionLabel: "Deschide ansamblul", actionHref: "/ansamblu?assembly=asm%3Aquoted" });
   });
 
   it("hides a primary action for OPEN_REQUEST", () => {

@@ -54,12 +54,22 @@ export {
   projectAssemblyProduction,
 } from "./composition.js";
 export {
+  reconcileAssemblyEic,
+  type AssemblyEicChildReconciliation,
+  type AssemblyEicMemberInput,
+  type AssemblyEicReconciliation,
+  type AssemblyEicSupersededRecipe,
+  type AssemblyEicUnpricedOperation,
+} from "./eic.js";
+export {
   materializeAssemblyExecutionPlan,
   setAssemblyTaskPlannedEffort,
 } from "./execution.js";
 export {
   presentAssemblyReview,
+  presentConfirmedAssemblyMember,
   type AssemblyReviewPresentation,
+  type ConfirmedAssemblyMemberPresentation,
 } from "./presentation.js";
 export type {
   AssemblyAggregate,

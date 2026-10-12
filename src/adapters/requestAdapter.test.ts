@@ -149,6 +149,54 @@ describe("request adapter", () => {
     expect(detail?.nextAction).not.toBe("OPEN_QUOTE");
   });
 
+  it("projects request assembly work, the server-chosen assembly and the additional-work flag", () => {
+    const detail = presentRequestDetail({
+      detail: {
+        request: { requestId: "req-asm", title: "Panou", customerId: "cus-1", status: "NEW" },
+        nextAction: "OPEN_ASSEMBLY",
+        linkedAssemblyId: "asm:1",
+        canStartAdditionalWork: true,
+        assemblies: [
+          {
+            assemblyId: "asm:1",
+            label: "Panou ACM + litere volumetrice",
+            stage: "PRODUCTION_RELEASED",
+            stageLabel: "Eliberat în producție",
+            quoteSnapshotId: "asmq:1",
+            quoteGrossPrice: 766.34,
+            currency: "EUR",
+            orderSnapshotId: "asmo:1",
+            productionSnapshotId: "asmp:1",
+            executionPlanId: null,
+            revisionPending: false,
+            membersEditable: false,
+          },
+          { assemblyId: 7, label: "invalid" },
+        ],
+      },
+    });
+    expect(detail?.nextAction).toBe("OPEN_ASSEMBLY");
+    expect(detail?.nextActionLabel).toBe("Deschide ansamblul");
+    expect(detail?.linkedAssemblyId).toBe("asm:1");
+    expect(detail?.canStartAdditionalWork).toBe(true);
+    expect(detail?.assemblies).toEqual([
+      {
+        assemblyId: "asm:1",
+        label: "Panou ACM + litere volumetrice",
+        stage: "PRODUCTION_RELEASED",
+        stageLabel: "Eliberat în producție",
+        quoteGrossPrice: 766.34,
+        currency: "EUR",
+        hasQuote: true,
+        orderSnapshotId: "asmo:1",
+        hasProduction: true,
+        executionPlanId: null,
+        revisionPending: false,
+        membersEditable: false,
+      },
+    ]);
+  });
+
   it("keeps facade and fixing other notes on the installation transport", () => {
     const populated = presentRequestDetail({
       detail: {

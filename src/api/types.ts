@@ -38,6 +38,7 @@ export type QuoteFreezeRequest = {
   quoteCommercialTerms?: QuoteCommercialTermsTransport;
   manualProductNetPrice?: number;
   preferManualProductPrice?: boolean;
+  commercialIntent?: string;
 };
 
 export type ConfigurationReadiness = "ready" | "blocked";
@@ -296,12 +297,28 @@ export type RequestListItemTransport = {
   attentionLabel: string | null;
   linkedQuoteSnapshotId: string | null;
   linkedQuoteProductCode: string | null;
+  linkedAssemblyId: string | null;
 };
 
 export type RequestLinkedOfferTransport = {
   quoteSnapshotId: string;
   productCode: string;
   reference: string | null;
+};
+
+export type RequestAssemblyWorkTransport = {
+  assemblyId: string;
+  label: string;
+  stage: string;
+  stageLabel: string;
+  quoteGrossPrice: number | null;
+  currency: string | null;
+  hasQuote: boolean;
+  orderSnapshotId: string | null;
+  hasProduction: boolean;
+  executionPlanId: string | null;
+  revisionPending: boolean;
+  membersEditable: boolean;
 };
 
 export type RequestAttachmentTransport = {
@@ -391,6 +408,9 @@ export type RequestDetailTransport = {
   linkedOffers: RequestLinkedOfferTransport[];
   linkedQuoteIds: string[];
   linkedQuoteProductCodes: string[];
+  assemblies: RequestAssemblyWorkTransport[];
+  linkedAssemblyId: string | null;
+  canStartAdditionalWork: boolean;
   attachments: RequestAttachmentTransport[];
   installationOffer: RequestInstallationOfferTransport | null;
   installationScope: RequestInstallationScopeTransport | null;

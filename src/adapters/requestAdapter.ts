@@ -1,4 +1,5 @@
 import type {
+  RequestAssemblyWorkTransport,
   RequestAttachmentTransport,
   RequestDetailTransport,
   RequestInstallationFactsTransport,
@@ -45,6 +46,7 @@ export function presentRequestListItem(value: unknown): RequestListItemTransport
     attentionLabel: asString(row.attentionLabel),
     linkedQuoteSnapshotId: asString(row.linkedQuoteSnapshotId),
     linkedQuoteProductCode: asString(row.linkedQuoteProductCode),
+    linkedAssemblyId: asString(row.linkedAssemblyId),
   };
 }
 
@@ -79,6 +81,9 @@ export function presentRequestDetail(payload: unknown): RequestDetailTransport |
     linkedOffers,
     linkedQuoteIds: linkedOffers.map((offer) => offer.quoteSnapshotId),
     linkedQuoteProductCodes: linkedOffers.map((offer) => offer.productCode),
+    assemblies: presentRequestAssemblies(detail?.assemblies),
+    linkedAssemblyId: asString(detail?.linkedAssemblyId),
+    canStartAdditionalWork: asBoolean(detail?.canStartAdditionalWork) ?? false,
     attachments: presentAttachments(detail?.attachments),
     installationOffer: presentInstallationOffer(detail?.installationOffer),
     installationScope: presentInstallationScope(detail?.installationScope),
@@ -117,11 +122,46 @@ function labelForRequestNextAction(nextAction: string): string {
       return "Alege produs";
     case "OPEN_QUOTE":
       return "Deschide oferta";
+    case "OPEN_ASSEMBLY":
+      return "Deschide ansamblul";
     case "OPEN_REQUEST":
       return "Deschide";
     default:
       return "Deschide";
   }
+}
+
+function presentRequestAssemblies(value: unknown): RequestAssemblyWorkTransport[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => {
+    const row = asRecord(item);
+    if (
+      !row ||
+      typeof row.assemblyId !== "string" ||
+      typeof row.label !== "string" ||
+      typeof row.stageLabel !== "string"
+    ) {
+      return [];
+    }
+    return [
+      {
+        assemblyId: row.assemblyId,
+        label: row.label,
+        stage: asString(row.stage) ?? "",
+        stageLabel: row.stageLabel,
+        quoteGrossPrice: asNumber(row.quoteGrossPrice),
+        currency: asString(row.currency),
+        hasQuote: asString(row.quoteSnapshotId) !== null,
+        orderSnapshotId: asString(row.orderSnapshotId),
+        hasProduction: asString(row.productionSnapshotId) !== null,
+        executionPlanId: asString(row.executionPlanId),
+        revisionPending: asBoolean(row.revisionPending) ?? false,
+        membersEditable: asBoolean(row.membersEditable) ?? false,
+      },
+    ];
+  });
 }
 
 function presentLinkedOffers(value: unknown): RequestLinkedOfferTransport[] {

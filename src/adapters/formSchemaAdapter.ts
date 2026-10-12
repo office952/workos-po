@@ -98,10 +98,18 @@ export function valuesForTransport(
   drafts: Record<string, string>,
   schema: PresentedFormSchema | null,
 ): DraftValues {
-  const values: DraftValues = {};
+  // Keep constructive / gating draft keys even when the last preview hid their sections.
+  // Otherwise visibility-conditioned fields (e.g. BACK on ACM mount) vanish after the first preview.
+  const values = valuesBeforeSchema(drafts);
+  if (!schema) {
+    return values;
+  }
   for (const field of listFormFields(schema)) {
     const raw = drafts[field.id];
-    if (raw === undefined || raw.trim() === "") {
+    if (raw === undefined) {
+      continue;
+    }
+    if (raw.trim() === "") {
       values[field.id] = null;
       continue;
     }

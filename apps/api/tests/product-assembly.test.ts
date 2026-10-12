@@ -184,23 +184,21 @@ describe("product assembly API", () => {
 
     const changedValues = { ...lettersValues, "root.inscription": "NOU" };
     const changedReview = await reviewId(app, CANONICAL_PRODUCT_CODE, changedValues);
-    expect(
-      (
-        await app.request(`/api/assemblies/${assemblyId}/members`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            role: "SIGNAGE_LETTERS",
-            values: changedValues,
-            reviewId: changedReview,
-          }),
-        })
-      ).status,
-    ).toBe(200);
-    const stale = await json(await app.request(`/api/assemblies/${assemblyId}`));
-    expect((stale.assembly as { stale: boolean }).stale).toBe(true);
-    const blocked = await app.request(`/api/assemblies/${assemblyId}/confirm`, { method: "POST" });
-    expect(blocked.status).toBe(422);
+    const beforeRefusedEdit = await json(await app.request(`/api/assemblies/${assemblyId}`));
+    const frozenEdit = await app.request(`/api/assemblies/${assemblyId}/members`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        role: "SIGNAGE_LETTERS",
+        values: changedValues,
+        reviewId: changedReview,
+      }),
+    });
+    expect(frozenEdit.status).toBe(409);
+    expect((await json(frozenEdit)).error).toBe("assembly_order_frozen");
+    const afterRefusedEdit = await json(await app.request(`/api/assemblies/${assemblyId}`));
+    expect((afterRefusedEdit.assembly as { stale: boolean }).stale).toBe(false);
+    expect(afterRefusedEdit).toEqual(beforeRefusedEdit);
 
     await app.request("/api/seller", {
       method: "PATCH",

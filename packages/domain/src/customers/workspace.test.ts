@@ -38,6 +38,7 @@ function requestItem(
     linkedQuoteCount: 0,
     linkedQuoteSnapshotId: null,
     linkedQuoteProductCode: null,
+    linkedAssemblyId: null,
     ...overrides,
   };
 }

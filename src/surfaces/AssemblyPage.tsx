@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { getJson, postJson } from "../api/http";
-import { invalidateCustomerProjections } from "../data/invalidation";
+import { invalidateAfterRequestDetailChange, invalidateCustomerProjections } from "../data/invalidation";
 import { Button } from "../components/Button";
 import { InfoRow } from "../components/InfoRow";
 import { InlineAlert } from "../components/InlineAlert";
@@ -8,10 +8,11 @@ import { StatusBadge } from "../components/StatusBadge";
 import { SurfacePanel } from "../components/SurfacePanel";
 import { LoadingFloor } from "../components/LoadingFloor";
 import "../styles/surfaces/commercial.css";
-import { writeResource } from "../data/resourceCache";
+import { invalidateResources, writeResource } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
+import { formatMoney } from "../presentation/format";
 import { configuratorHref, requestHref } from "../routing/appRoute";
 
 type AssemblyScope = {
@@ -44,11 +45,24 @@ type AssemblyView = {
   orderId: string | null;
   productionId: string | null;
   executionPlanId: string | null;
+  productionCost?: {
+    total: number;
+    currency: string;
+    completeness: string;
+    completenessLabel: string;
+    unpricedOperations: string[];
+  } | null;
+  membersEditable?: boolean;
 };
+
+/** Lowercases only the first letter so acronyms such as ACM keep their case in running text. */
+function inSentence(title: string): string {
+  return title.charAt(0).toLocaleLowerCase("ro") + title.slice(1);
+}
 
 export function assemblyLead(hasLogo: boolean, lettersPresent: boolean): string {
   if (!hasLogo) {
-    return "Configurează panoul și literele, apoi confirmă ansamblul.";
+    return "Configurează literele și panoul ACM, verifică ansamblul, apoi pregătește oferta comună.";
   }
   if (lettersPresent) {
     return "Configurează panoul, literele și logo-ul, apoi confirmă ansamblul.";
@@ -114,7 +128,12 @@ export function AssemblyPage() {
       if (assemblyId) {
         writeResource(resourceKeys.assembly(assemblyId), body.assembly);
       }
-      invalidateCustomerProjections();
+      if (body.assembly.requestId) {
+        invalidateAfterRequestDetailChange(body.assembly.requestId);
+      } else {
+        invalidateCustomerProjections();
+      }
+      invalidateResources(resourceKeys.jobs());
     } catch {
       setError("Acțiunea nu a putut fi finalizată.");
     } finally {
@@ -131,6 +150,7 @@ export function AssemblyPage() {
   const incompleteMember = assembly ? firstIncompleteMemberScope(assembly.scopes) : null;
   const incompleteMemberHref =
     assembly && incompleteMember ? memberConfiguratorHref(assembly, incompleteMember) : null;
+  const membersEditable = assembly?.membersEditable !== false;
 
   return (
     <SlicePage
@@ -194,8 +214,14 @@ export function AssemblyPage() {
                       `&assembly=${encodeURIComponent(assembly.assemblyId)}&role=${role}`,
                     )}
                   >
-                    Deschide configurația
+                    {membersEditable ? "Deschide configurația" : "Consultă configurația"}
                   </a>
+                </p>
+              ) : null}
+              {!membersEditable ? (
+                <p className="ui-note">
+                  Comanda este acceptată. Configurația poate fi doar consultată; modificările se fac
+                  într-o variantă comercială nouă, din cerere.
                 </p>
               ) : null}
             </SurfacePanel>
@@ -216,9 +242,9 @@ export function AssemblyPage() {
             </dl>
             {!assembly.stale && incompleteMember && incompleteMemberHref ? (
               <InlineAlert tone="pending" title="Următorul pas">
-                Configurează {incompleteMember.title.toLowerCase()} înainte de confirmarea ansamblului.{" "}
+                Configurează {inSentence(incompleteMember.title)} înainte de confirmarea ansamblului.{" "}
                 <a className="text-link" href={incompleteMemberHref}>
-                  Deschide {incompleteMember.title.toLowerCase()}
+                  Deschide {inSentence(incompleteMember.title)}
                 </a>
               </InlineAlert>
             ) : null}
@@ -245,26 +271,36 @@ export function AssemblyPage() {
             </Button>
           </SurfacePanel>
           {assembly.quote ? (
-            <SurfacePanel title="Ofertă" label="Ofertă">
-              <h2>{assembly.quote.label}</h2>
-              {assembly.quote.sections.map((section) => (
+            <div id="oferta">
+              <SurfacePanel title="Ofertă" label="Ofertă">
+                <h2>{assembly.quote.label}</h2>
+                {assembly.quote.sections.map((section) => (
+                  <InfoRow
+                    key={section.title}
+                    label={section.title}
+                    value={`${section.inscription} · ${formatMoney(section.grossPrice, assembly.quote?.currency ?? "EUR")}`}
+                  />
+                ))}
                 <InfoRow
-                  key={section.title}
-                  label={section.title}
-                  value={`${section.inscription} · ${section.grossPrice} ${assembly.quote?.currency}`}
+                  label="Total net"
+                  value={formatMoney(assembly.quote.netPrice, assembly.quote.currency)}
                 />
-              ))}
-              <InfoRow
-                label="Total comercial"
-                value={`${assembly.quote.grossPrice} ${assembly.quote.currency}`}
-              />
-            </SurfacePanel>
+                <InfoRow
+                  label="TVA"
+                  value={formatMoney(assembly.quote.vatAmount, assembly.quote.currency)}
+                />
+                <InfoRow
+                  label="Total comercial"
+                  value={formatMoney(assembly.quote.grossPrice, assembly.quote.currency)}
+                />
+              </SurfacePanel>
+            </div>
           ) : (
             <Button
               disabled={pending || assembly.statusLabel !== "Confirmat"}
               onClick={() => void run(`/api/assemblies/${assembly.assemblyId}/quote`)}
             >
-              Îngheață oferta
+              Pregătește oferta
             </Button>
           )}
           {assembly.quote && !assembly.orderId ? (
@@ -285,6 +321,24 @@ export function AssemblyPage() {
             >
               Creează planul de execuție
             </Button>
+          ) : null}
+          {assembly.productionCost ? (
+            <SurfacePanel title="Cost intern de producție" label="Cost intern de producție">
+              <InfoRow
+                label="Cost cunoscut"
+                value={formatMoney(assembly.productionCost.total, assembly.productionCost.currency)}
+              />
+              <InfoRow label="Completitudine" value={assembly.productionCost.completenessLabel} />
+              {assembly.productionCost.completeness === "PARTIAL" ? (
+                <InlineAlert tone="pending" title="Cost parțial">
+                  Costul nu include lucrările de ansamblu fără cost înregistrat
+                  {assembly.productionCost.unpricedOperations.length > 0
+                    ? `: ${assembly.productionCost.unpricedOperations.join(", ")}`
+                    : ""}
+                  . Nu sunt tratate ca zero.
+                </InlineAlert>
+              ) : null}
+            </SurfacePanel>
           ) : null}
           {assembly.executionPlanId ? (
             <p>

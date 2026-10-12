@@ -8,7 +8,9 @@ import {
   assemblyStatusLabel,
   productCodeForRole,
 } from "./contract.js";
-import type { AssemblyDefinition, AssemblyTruth } from "./model.js";
+import { INSTALL_AT_SITE_ID } from "../processes/catalog.js";
+import { costCompletenessLabel } from "../resources/eic.js";
+import type { AssemblyDefinition, AssemblyTruth, ConfirmedChildProduct } from "./model.js";
 import type {
   AssemblyOrderSnapshot,
   AssemblyProductionSnapshot,
@@ -44,7 +46,68 @@ export type AssemblyReviewPresentation = {
   orderId: string | null;
   productionId: string | null;
   executionPlanId: string | null;
+  /** Frozen production cost; owner-only. Unpriced assembly work keeps it PARTIAL, never zero. */
+  productionCost: {
+    total: number;
+    currency: "EUR";
+    completeness: "COMPLETE" | "PARTIAL";
+    completenessLabel: string;
+    unpricedOperations: readonly string[];
+  } | null;
+  membersEditable: boolean;
 };
+
+export type ConfirmedAssemblyMemberPresentation = {
+  confirmedAt: string;
+  productLabel: string;
+  inscription: string;
+  customerPrice: {
+    netPrice: number;
+    vatAmount: number;
+    grossPrice: number;
+    currency: "EUR";
+    markupPercent: number;
+    discountPercent: number;
+    adjustmentAmount: number;
+  } | null;
+  internalCost: {
+    total: number;
+    currency: "EUR";
+    completeness: "COMPLETE" | "PARTIAL";
+    completenessLabel: string;
+  } | null;
+};
+
+/** Read-only view of the last accepted confirmation of one member; reading it never mutates the assembly. */
+export function presentConfirmedAssemblyMember(
+  child: ConfirmedChildProduct,
+  financialVisible: boolean,
+): ConfirmedAssemblyMemberPresentation {
+  return {
+    confirmedAt: child.confirmedAt,
+    productLabel: child.productLabel,
+    inscription: child.inscription,
+    customerPrice: child.commercial
+      ? {
+          netPrice: child.commercial.netPrice,
+          vatAmount: child.commercial.vatAmount,
+          grossPrice: child.commercial.grossPrice,
+          currency: child.commercial.currency,
+          markupPercent: child.commercial.markupPercent,
+          discountPercent: child.commercial.discountPercent,
+          adjustmentAmount: child.commercial.adjustmentAmount,
+        }
+      : null,
+    internalCost: financialVisible
+      ? {
+          total: child.eicTotal,
+          currency: child.eicCurrency,
+          completeness: child.eicCompleteness,
+          completenessLabel: costCompletenessLabel(child.eicCompleteness),
+        }
+      : null,
+  };
+}
 
 export function presentAssemblyReview(input: {
   definition: AssemblyDefinition;
@@ -54,6 +117,7 @@ export function presentAssemblyReview(input: {
   production: AssemblyProductionSnapshot | null;
   executionPlanId: string | null;
   lettersSelectable?: boolean;
+  financialVisible?: boolean;
 }): AssemblyReviewPresentation {
   const support = input.definition.members.find((member) => member.role === "SUPPORT_PANEL");
   const letters = input.definition.members.find((member) => member.role === "SIGNAGE_LETTERS");
@@ -168,5 +232,21 @@ export function presentAssemblyReview(input: {
     orderId: input.order?.orderSnapshotId ?? null,
     productionId: input.production?.snapshotId ?? null,
     executionPlanId: input.executionPlanId,
+    productionCost:
+      input.production && input.financialVisible === true
+        ? {
+            total: input.production.eicTotal,
+            currency: input.production.eicCurrency,
+            completeness: input.production.eicCompleteness,
+            completenessLabel: costCompletenessLabel(input.production.eicCompleteness),
+            unpricedOperations: input.production.assemblyOperations
+              .filter(
+                (operation) =>
+                  !(operation.processId === INSTALL_AT_SITE_ID && input.production?.siteInstallation),
+              )
+              .map((operation) => operation.processLabel),
+          }
+        : null,
+    membersEditable: input.order === null,
   };
 }

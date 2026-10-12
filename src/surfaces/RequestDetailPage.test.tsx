@@ -146,6 +146,83 @@ describe("RequestDetailPage", () => {
     expect(screen.getByRole("link", { name: "Deschide oferta OF-1" })).toBeInTheDocument();
   });
 
+  function assemblyWork(overrides: Record<string, unknown> = {}) {
+    return {
+      assemblyId: "asm:1",
+      label: "Panou ACM + litere volumetrice",
+      stage: "QUOTE_CREATED",
+      stageLabel: "Ofertă creată",
+      quoteSnapshotId: "asmq:1",
+      quoteGrossPrice: 766.34,
+      currency: "EUR",
+      orderSnapshotId: null,
+      productionSnapshotId: null,
+      executionPlanId: null,
+      revisionPending: false,
+      membersEditable: true,
+      ...overrides,
+    };
+  }
+
+  it("after an assembly quote, continues the assembly instead of offering a product choice", async () => {
+    stubDetail(
+      requestDetail({
+        request: { ...requestDetail().request, status: "NEW" },
+        statusLabel: "Nouă",
+        nextAction: "OPEN_ASSEMBLY",
+        nextActionLabel: "Deschide ansamblul",
+        commercialProgressLabel: "Ofertă creată",
+        linkedAssemblyId: "asm:1",
+        assemblies: [assemblyWork()],
+      }),
+    );
+
+    render(<RequestDetailPage requestId="req-1" />);
+    expect(await screen.findByRole("heading", { name: "Lucrul comercial al cererii" })).toBeInTheDocument();
+    const assemblyLinks = screen.getAllByRole("link", { name: "Deschide ansamblul" });
+    expect(assemblyLinks.length).toBeGreaterThan(0);
+    for (const link of assemblyLinks) expect(link).toHaveAttribute("href", "/ansamblu?assembly=asm%3A1");
+    expect(screen.getByRole("link", { name: "Deschide oferta comună" })).toHaveAttribute("href", "/ansamblu?assembly=asm%3A1#oferta");
+    expect(screen.getByText("766,34 EUR")).toBeInTheDocument();
+    expect(screen.getByText("Ofertă creată", { selector: "dd" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Alege produs" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Alege produsul pentru această cerere" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Adaugă altă lucrare la această cerere")).not.toBeInTheDocument();
+  });
+
+  it("after the assembly order and production release, links the order and keeps members consult-only", async () => {
+    stubDetail(
+      requestDetail({
+        request: { ...requestDetail().request, status: "NEW" },
+        statusLabel: "Nouă",
+        nextAction: "OPEN_ASSEMBLY",
+        nextActionLabel: "Deschide ansamblul",
+        commercialProgressLabel: "Comandă creată",
+        linkedAssemblyId: "asm:1",
+        canStartAdditionalWork: true,
+        assemblies: [
+          assemblyWork({
+            stage: "PRODUCTION_RELEASED",
+            stageLabel: "Eliberat în producție",
+            orderSnapshotId: "asmo:1",
+            productionSnapshotId: "asmp:1",
+            executionPlanId: "plan:1",
+            membersEditable: false,
+          }),
+        ],
+      }),
+    );
+
+    render(<RequestDetailPage requestId="req-1" />);
+    expect(await screen.findByText("Eliberat în producție")).toBeInTheDocument();
+    expect(screen.getByText("Comandă creată", { selector: "dd" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Deschide comanda" })).toHaveAttribute("href", "/lucrari/asmo%3A1");
+    expect(screen.getByRole("link", { name: "Deschide execuția" })).toHaveAttribute("href", expect.stringContaining("plan%3A1"));
+    expect(screen.getByText("Doar consultare (comandă acceptată)")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Alege produsul pentru această cerere" })).not.toBeInTheDocument();
+    expect(screen.getByText("Adaugă altă lucrare la această cerere")).toBeInTheDocument();
+  });
+
   it("does not invent OPEN_QUOTE or CHOOSE_PRODUCT when nextAction is absent", async () => {
     stubDetail(
       requestDetail({

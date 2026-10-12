@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { createAssembly, loadAssemblyOfferings } from "../api/assemblies";
+import { createAssembly, existingCommercialWork, loadAssemblyOfferings } from "../api/assemblies";
 import { postJson } from "../api/http";
 import type { DraftValues } from "../api/types";
 import { invalidateResources } from "../data/resourceCache";
+import { resourceKeys } from "../data/resourceKeys";
 import { useResource } from "../data/useResource";
 import { assemblyHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
@@ -21,30 +22,37 @@ export function ExtendRequestProduct({ customerId, requestId, productCode, revie
   const source = candidate?.members.find(member => member.productCode === productCode);
   const support = candidate?.members.find(member => member.role === "SUPPORT_PANEL");
   const [assemblyId, setAssemblyId] = useState<string | null>(null);
+  const [existingId, setExistingId] = useState<string | null>(null);
   const [pending, setPending] = useState(false); const [error, setError] = useState<string | null>(null);
   const busy = useRef(false); const generation = useRef(0);
   useEffect(() => () => { generation.current += 1; }, []);
   async function extend() {
     if (!candidate || !source || !reviewId || !confirmed || busy.current) return;
     const scope = generation.current;
-    busy.current = true; setPending(true); onPending(true); setError(null);
+    busy.current = true; setPending(true); onPending(true); setError(null); setExistingId(null);
     try {
       const id = assemblyId ?? await createAssembly(requestId, candidate.kind);
       if (scope !== generation.current) return;
       setAssemblyId(id);
-      invalidateResources(`request-assemblies:${requestId}`);
+      invalidateResources(resourceKeys.request(requestId));
       await postJson(`/api/assemblies/${encodeURIComponent(id)}/members`, { role: source.role, values, reviewId, ...commercial });
       if (scope !== generation.current) return;
       const previous = readConfiguratorSession();
       writeConfiguratorSession({ ...previous, drafts, draftContext: { customerId, requestId, productCode, assemblyId: id }, customerId, requestId, productCode });
       navigate(assemblyHref(id));
-    } catch { if (scope === generation.current) setError("Configurația nu a putut fi atașată. Datele sunt păstrate; poți reîncerca."); }
+    } catch (failure) {
+      if (scope !== generation.current) return;
+      const existing = existingCommercialWork(failure);
+      if (existing) { setExistingId(existing.assemblyId); setError(existing.reason || "Cererea are deja un ansamblu."); }
+      else setError("Configurația nu a putut fi atașată. Datele sunt păstrate; poți reîncerca.");
+    }
     finally { busy.current = false; if (scope === generation.current) { setPending(false); onPending(false); } }
   }
   if (!candidate || !source || !support || offerings.data?.canCreate !== true) return null;
   return <div><p>Ai nevoie și de {support.label.toLocaleLowerCase("ro")}? Configurația curentă va fi păstrată ca parte a produsului compus.</p>
     <Button variant="secondary" disabled={!confirmed || !reviewId || pending} onClick={() => void extend()}>{pending ? "Se atașează configurația…" : `Adaugă ${support.label.toLocaleLowerCase("ro")}`}</Button>
     {!confirmed && <p className="ui-note">Confirmă configurația și recalculează prețul înainte de a o atașa.</p>}
-    {error && <InlineAlert tone="error" title="Atașarea a eșuat">{error}{assemblyId && <a className="text-link" href={assemblyHref(assemblyId)}>Deschide ansamblul creat</a>}</InlineAlert>}
+    {error && existingId && <InlineAlert tone="blocked" title="Cererea are deja un ansamblu">{error} <a className="text-link" href={assemblyHref(existingId)}>Deschide ansamblul existent</a></InlineAlert>}
+    {error && !existingId && <InlineAlert tone="error" title="Atașarea a eșuat">{error}{assemblyId && <a className="text-link" href={assemblyHref(assemblyId)}>Deschide ansamblul creat</a>}</InlineAlert>}
   </div>;
 }

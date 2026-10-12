@@ -59,4 +59,23 @@ describe("form schema adapter", () => {
       "volume.confirmedPerimeterMm": 12500,
     });
   });
+
+  it("keeps visibility-gating draft keys that are absent from the visible schema", () => {
+    expect(
+      valuesForTransport(
+        {
+          "volume.depthMm": "60",
+          "constructive.mountingContext": "acm_panel",
+          "back.supportKind": "PANEL",
+          "back.profile": "FLAT",
+        },
+        schema,
+      ),
+    ).toEqual({
+      "volume.depthMm": "60",
+      "constructive.mountingContext": "acm_panel",
+      "back.supportKind": "PANEL",
+      "back.profile": "FLAT",
+    });
+  });
 });
