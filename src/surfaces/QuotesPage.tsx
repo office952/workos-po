@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import type { QuoteKindTransport, QuoteListItemTransport } from "../api/types";
 import { EmptyState } from "../components/EmptyState";
 import { FilterBar } from "../components/FilterBar";
 import { CollectionBody } from "../components/LoadingFloor";
@@ -16,11 +17,34 @@ import { formatTimestamp } from "../presentation/format";
 import { matchesSearch, uniqueLabels } from "../presentation/listFilter";
 import { statusTone } from "../presentation/statusTone";
 import { presentQuoteWorklistAction } from "../presentation/worklistAction";
-import { quoteHref } from "../routing/appRoute";
+import { registryQuoteHref } from "../routing/appRoute";
 import "../styles/surfaces/commercial.css";
 
 const ALL = "all";
-const COLUMNS = ["Ofertă", "Client", "Produs", "Stare", "Creată", "Acțiune"] as const;
+const KIND_CHIPS: readonly { id: string; label: string; kind: QuoteKindTransport }[] = [
+  { id: "kind:PRODUCT", label: "Produse", kind: "PRODUCT" },
+  { id: "kind:ASSEMBLY", label: "Ansambluri", kind: "ASSEMBLY" },
+];
+const COLUMNS = ["Ofertă", "Client", "Produs", "Stare", "Total · Creată", "Acțiune"] as const;
+
+function matchesChip(item: QuoteListItemTransport, chip: string): boolean {
+  if (chip === ALL) {
+    return true;
+  }
+  const kindChip = KIND_CHIPS.find((option) => option.id === chip);
+  return kindChip ? item.kind === kindChip.kind : item.stageLabel === chip;
+}
+
+function quoteSupport(item: QuoteListItemTransport): string {
+  return item.kind === "ASSEMBLY"
+    ? `${item.productLabel} · ${item.sectionCount} secțiuni`
+    : item.productLabel;
+}
+
+function quoteMeta(item: QuoteListItemTransport): string {
+  const total = item.grossDisplay ? `${item.grossDisplay} ${item.currency ?? ""}`.trim() : null;
+  return [total, formatTimestamp(item.createdAt)].filter(Boolean).join(" · ");
+}
 
 export function QuotesPage() {
   const quotes = useResource(resourceKeys.quotes(), loadQuoteList);
@@ -28,23 +52,23 @@ export function QuotesPage() {
   const [query, setQuery] = useState("");
   const [stageChip, setStageChip] = useState(ALL);
 
-  const chips = useMemo(
-    () => [
+  const chips = useMemo(() => {
+    const kinds = new Set(items.map((item) => item.kind));
+    return [
       { id: ALL, label: "Toate" },
       ...uniqueLabels(items.map((item) => item.stageLabel)).map((label) => ({
         id: label,
         label,
       })),
-    ],
-    [items],
-  );
+      ...(kinds.size > 1 ? KIND_CHIPS.map(({ id, label }) => ({ id, label })) : []),
+    ];
+  }, [items]);
 
   const visible = useMemo(
     () =>
       items.filter((item) => {
-        const matchesChip = stageChip === ALL || item.stageLabel === stageChip;
         return (
-          matchesChip &&
+          matchesChip(item, stageChip) &&
           matchesSearch(query, [
             item.reference,
             item.inscription,
@@ -54,6 +78,7 @@ export function QuotesPage() {
             item.nextActionLabel,
             item.requestReference,
             item.attentionLabel,
+            item.kindLabel,
           ])
         );
       }),
@@ -119,17 +144,23 @@ export function QuotesPage() {
               <WorklistRow
                 key={item.quoteSnapshotId}
                 variant="registry"
-                detailHref={quoteHref(item.productCode, item.quoteSnapshotId)}
+                detailHref={registryQuoteHref(item)}
                 actionHref={action.actionHref}
                 identity={item.reference}
                 identityDetail={
-                  [item.inscription || null, item.attentionLabel].filter(Boolean).join(" · ") ||
-                  undefined
+                  [
+                    item.kind === "ASSEMBLY" ? item.kindLabel : null,
+                    item.inscription || null,
+                    item.requestReference,
+                    item.attentionLabel,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || undefined
                 }
                 context={item.customerDisplayName ?? "Fără client"}
-                support={item.productLabel}
+                support={quoteSupport(item)}
                 state={<StatusBadge label={item.stageLabel} tone={statusTone("workflow")} />}
-                meta={formatTimestamp(item.createdAt) ?? ""}
+                meta={quoteMeta(item)}
                 actionLabel={action.actionLabel}
               />
             );

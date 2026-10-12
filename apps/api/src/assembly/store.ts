@@ -170,6 +170,38 @@ export function readLatestAssemblyQuote(
   return row ? (JSON.parse(row.payload) as AssemblyQuoteSnapshot) : null;
 }
 
+export function listAssemblyQuotes(
+  db: SqliteDatabase,
+  organizationId: string,
+): AssemblyQuoteSnapshot[] {
+  const rows = db
+    .prepare(
+      `SELECT payload FROM assembly_quote_snapshots WHERE organization_id = ? ORDER BY created_at DESC, quote_snapshot_id`,
+    )
+    .all(organizationId) as { payload: string }[];
+  return rows.flatMap((row) => {
+    const quote = JSON.parse(row.payload) as AssemblyQuoteSnapshot;
+    return quote.organizationId === organizationId ? [quote] : [];
+  });
+}
+
+export function readAssemblyQuote(
+  db: SqliteDatabase,
+  organizationId: string,
+  quoteSnapshotId: string,
+): AssemblyQuoteSnapshot | null {
+  const row = db
+    .prepare(
+      `SELECT payload FROM assembly_quote_snapshots WHERE organization_id = ? AND quote_snapshot_id = ?`,
+    )
+    .get(organizationId, quoteSnapshotId) as { payload: string } | undefined;
+  if (!row) {
+    return null;
+  }
+  const quote = JSON.parse(row.payload) as AssemblyQuoteSnapshot;
+  return quote.organizationId === organizationId ? quote : null;
+}
+
 export function saveAssemblyOrder(
   db: SqliteDatabase,
   order: AssemblyOrderSnapshot,

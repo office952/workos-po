@@ -18,6 +18,7 @@ export const QUOTE_OVERVIEW_NEXT_ACTIONS = [
   "ACCEPT_QUOTE",
   "CREATE_ORDER",
   "OPEN_ORDER",
+  "OPEN_ASSEMBLY",
 ] as const;
 export type QuoteOverviewNextAction = (typeof QUOTE_OVERVIEW_NEXT_ACTIONS)[number];
 
@@ -29,8 +30,19 @@ export const QUOTE_OVERVIEW_FILTERS = [
 ] as const;
 export type QuoteOverviewFilter = (typeof QUOTE_OVERVIEW_FILTERS)[number];
 
+/** PRODUCT = standalone product quote; ASSEMBLY = one commercial record over several product sections. */
+export const QUOTE_OVERVIEW_KINDS = ["PRODUCT", "ASSEMBLY"] as const;
+export type QuoteOverviewKind = (typeof QUOTE_OVERVIEW_KINDS)[number];
+
 export type QuoteOverviewItem = {
   quoteSnapshotId: string;
+  kind: QuoteOverviewKind;
+  kindLabel: string;
+  /** ASSEMBLY only. */
+  assemblyId: string | null;
+  sectionCount: number;
+  /** ASSEMBLY only: a newer frozen quote exists for the same assembly. */
+  superseded: boolean;
   reference: string;
   productCode: string;
   productLabel: string;
@@ -59,6 +71,7 @@ export type QuoteOverviewSummary = {
   needsAttention: number;
   accepted: number;
   ordered: number;
+  assemblies: number;
 };
 
 export type QuoteOverviewProjection = {
@@ -89,8 +102,23 @@ export function quoteOverviewNextActionLabel(action: QuoteOverviewNextAction): s
       return "Creează comanda";
     case "OPEN_ORDER":
       return "Deschide comanda";
+    case "OPEN_ASSEMBLY":
+      return "Deschide ansamblul";
     default: {
       const _exhaustive: never = action;
+      return _exhaustive;
+    }
+  }
+}
+
+export function quoteOverviewKindLabel(kind: QuoteOverviewKind): string {
+  switch (kind) {
+    case "PRODUCT":
+      return "Produs";
+    case "ASSEMBLY":
+      return "Ansamblu";
+    default: {
+      const _exhaustive: never = kind;
       return _exhaustive;
     }
   }
@@ -193,6 +221,11 @@ export function projectQuoteOverviewItem(input: {
   const orderSnapshotId = input.order?.orderSnapshotId ?? null;
   return {
     quoteSnapshotId: input.quote.quoteSnapshotId,
+    kind: "PRODUCT",
+    kindLabel: quoteOverviewKindLabel("PRODUCT"),
+    assemblyId: null,
+    sectionCount: 1,
+    superseded: false,
     reference: quoteDocumentReference(input.quote.contentHash),
     productCode: input.quote.productCode,
     productLabel: input.quote.productLabel,
@@ -233,6 +266,7 @@ export function projectQuoteOverview(
       needsAttention: sorted.filter((quote) => quote.needsAttention).length,
       accepted: sorted.filter((quote) => quote.stage === "QUOTE_ACCEPTED").length,
       ordered: sorted.filter((quote) => quote.stage === "ORDER_CREATED").length,
+      assemblies: sorted.filter((quote) => quote.kind === "ASSEMBLY").length,
     },
     quotes: sorted,
   };
@@ -250,6 +284,7 @@ export function matchesQuoteSearch(
       item.inscription,
       item.reference,
       item.requestReference,
+      item.kindLabel,
     ],
     query,
   );

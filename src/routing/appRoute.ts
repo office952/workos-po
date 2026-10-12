@@ -10,6 +10,7 @@ export type AppRoute =
   | { name: "configurator" }
   | { name: "quotes" }
   | { name: "quote"; productCode: string; quoteSnapshotId: string }
+  | { name: "assembly-quote"; quoteSnapshotId: string }
   | { name: "jobs" }
   | { name: "job"; jobId: string }
   | { name: "planning" }
@@ -69,6 +70,10 @@ export function parseAppRoute(pathname: string): AppRoute {
   }
   if (pathname === "/oferte") {
     return { name: "quotes" };
+  }
+  const assemblyQuote = pathname.match(/^\/oferte\/ansamblu\/([^/]+)$/);
+  if (assemblyQuote) {
+    return { name: "assembly-quote", quoteSnapshotId: decodeURIComponent(assemblyQuote[1]) };
   }
   if (pathname === "/lucrari") {
     return { name: "jobs" };
@@ -160,6 +165,27 @@ export function parseAppRoute(pathname: string): AppRoute {
 
 export function quoteHref(productCode: string, quoteSnapshotId: string): string {
   return `/quotes/${encodeURIComponent(productCode)}/${encodeURIComponent(quoteSnapshotId)}`;
+}
+
+export function assemblyQuoteHref(quoteSnapshotId: string): string {
+  return `/oferte/ansamblu/${encodeURIComponent(quoteSnapshotId)}`;
+}
+
+export function registryQuoteHref(item: {
+  kind: "PRODUCT" | "ASSEMBLY";
+  productCode: string;
+  quoteSnapshotId: string;
+}): string {
+  switch (item.kind) {
+    case "PRODUCT":
+      return quoteHref(item.productCode, item.quoteSnapshotId);
+    case "ASSEMBLY":
+      return assemblyQuoteHref(item.quoteSnapshotId);
+    default: {
+      const _exhaustive: never = item.kind;
+      return _exhaustive;
+    }
+  }
 }
 
 export const CLIENT_HUB_SECTIONS = [

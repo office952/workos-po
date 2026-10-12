@@ -10,6 +10,7 @@ import {
   executionHref,
   jobHref,
   quoteHref,
+  registryQuoteHref,
   requestHref,
 } from "../routing/appRoute";
 import { quoteHrefFromEngineHref, quoteHrefFromSnapshotIdentity } from "./operatorHref";
@@ -101,8 +102,12 @@ export function presentRequestPrimaryAction(
 export function presentQuoteWorklistAction(
   item: QuoteListItemTransport,
 ): PresentedWorklistAction {
-  const detailHref = quoteHref(item.productCode, item.quoteSnapshotId);
+  const detailHref = registryQuoteHref(item);
   switch (item.nextAction) {
+    case "OPEN_ASSEMBLY":
+      return item.assemblyId
+        ? { actionLabel: item.nextActionLabel || "Deschide ansamblul", actionHref: assemblyHref(item.assemblyId) }
+        : { actionLabel: "Deschide oferta", actionHref: detailHref };
     case "OPEN_ORDER":
       if (item.orderSnapshotId) {
         return {

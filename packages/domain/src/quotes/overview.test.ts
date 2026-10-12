@@ -166,6 +166,7 @@ describe("quote overview projection", () => {
       needsAttention: 2,
       accepted: 1,
       ordered: 1,
+      assemblies: 0,
     });
     expect(filterQuoteOverview(overview, "NEEDS_ACTION")).toHaveLength(2);
     expect(filterQuoteOverview(overview, "ACCEPTED")[0]?.inscription).toBe("B");

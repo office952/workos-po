@@ -8,7 +8,7 @@ import { StatusBadge } from "../components/StatusBadge";
 import { SurfacePanel } from "../components/SurfacePanel";
 import { LoadingFloor } from "../components/LoadingFloor";
 import "../styles/surfaces/commercial.css";
-import { invalidateResources, writeResource } from "../data/resourceCache";
+import { invalidateResourcePrefix, invalidateResources, writeResource } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
@@ -133,7 +133,8 @@ export function AssemblyPage() {
       } else {
         invalidateCustomerProjections();
       }
-      invalidateResources(resourceKeys.jobs());
+      invalidateResources(resourceKeys.jobs(), resourceKeys.quotes());
+      invalidateResourcePrefix(resourceKeys.assemblyQuote(""));
     } catch {
       setError("Acțiunea nu a putut fi finalizată.");
     } finally {
