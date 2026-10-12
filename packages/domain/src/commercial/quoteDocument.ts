@@ -181,15 +181,29 @@ function projectOfferLineLabels(snapshot: QuoteSnapshot): QuoteDocumentLine[] {
   }));
 }
 
+/**
+ * The single customer-facing total of a frozen standalone quote: the frozen job
+ * total (product + site installation) when present, otherwise the product offer.
+ */
+export function quoteSnapshotCustomerTotal(snapshot: QuoteSnapshot): {
+  netPrice: number;
+  vatAmount: number;
+  grossPrice: number;
+  vatPercent: number;
+  currency: "EUR";
+} {
+  const source = snapshot.jobCommercial ?? snapshot.commercial;
+  return {
+    netPrice: source.netPrice,
+    vatAmount: source.vatAmount,
+    grossPrice: source.grossPrice,
+    vatPercent: snapshot.commercial.vatPercent,
+    currency: source.currency,
+  };
+}
+
 function projectCommercialLines(snapshot: QuoteSnapshot): QuoteDocumentCommercial {
-  const commercial = snapshot.jobCommercial
-    ? {
-        ...snapshot.commercial,
-        netPrice: snapshot.jobCommercial.netPrice,
-        vatAmount: snapshot.jobCommercial.vatAmount,
-        grossPrice: snapshot.jobCommercial.grossPrice,
-      }
-    : snapshot.commercial;
+  const commercial = quoteSnapshotCustomerTotal(snapshot);
   return {
     netLabel: snapshot.jobCommercial ? "Total ofertă" : "Subtotal",
     netDisplay: formatCustomerMoney(commercial.netPrice),

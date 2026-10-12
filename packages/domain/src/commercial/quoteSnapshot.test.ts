@@ -36,6 +36,7 @@ import { recordQuoteAcceptance } from "./quoteAcceptance.js";
 import { MANUAL_FIXED_SERVICE_STRATEGY } from "./servicePrice.js";
 import { LAB_SITE_INSTALL_ID } from "../resources/catalog.js";
 import { blankSiteInstallationFacts } from "../installation/facts.js";
+import { projectQuoteOverviewItem } from "../quotes/overview.js";
 
 const readyValues: DraftValues = {
   "root.inscription": "WORKOS",
@@ -532,6 +533,19 @@ describe("quote snapshot freeze", () => {
     expect(document.configuration.filter((line) => line.label === "Produs")).toHaveLength(1);
     expect(document.commercial.netLabel).toBe("Total ofertă");
     expect(document.commercial.netPrice).toBe(withInstall.snapshot.jobCommercial?.netPrice);
+    expect(document.commercial.grossDisplay).toBe("866,82");
+    const registryRow = projectQuoteOverviewItem({
+      quote: withInstall.snapshot,
+      acceptance: null,
+      order: ordered.snapshot,
+    });
+    expect(registryRow.grossDisplay).toBe(document.commercial.grossDisplay);
+    expect(ordered.snapshot.jobCommercial?.grossPrice).toBe(866.82);
+    expect(projectQuoteOverviewItem({
+      quote: productOnly.snapshot,
+      acceptance: null,
+      order: null,
+    }).grossDisplay).toBe(projectQuoteDocument(productOnly.snapshot).commercial.grossDisplay);
     const documentText = JSON.stringify(document);
     expect(documentText).not.toMatch(/person_hour|OWNER_CONFIRMED|contentHash|qts:|subcontract/i);
     expect(documentText).not.toContain("25,00");

@@ -802,6 +802,16 @@ Assembly production cost stays `PARTIAL` until the organization configures the a
 
 Open: customer hub and request linked-offer lists remain product-only; no assembly quote document/PDF yet.
 
+## Commercial Total Consistency V1
+
+```text
+COMMERCIAL_TOTAL_CONSISTENCY_V1 = CANDIDATE
+BASE = 08809b9c33e6ab104c4375c3b530fb040a66f842
+SCHEMA_MIGRATION = NO
+```
+
+A standalone quote with on-site installation shows the same total in Oferte, request/customer linked-offer lists, the quote detail, the PDF and the order. `quoteSnapshotCustomerTotal` (`packages/domain/src/commercial/quoteDocument.ts`) is the single read of that total: the frozen `jobCommercial` when present, otherwise the frozen product `commercial`. It reads frozen values only; nothing is recalculated with current rates, installation is not added a second time, and production EIC is unchanged. Historical product-only (schema v1) snapshots keep their product total.
+
 ## Previous program
 
 ```text
