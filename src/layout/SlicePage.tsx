@@ -53,7 +53,7 @@ type SlicePageProps = {
   status?: ReactNode;
   action?: ReactNode;
   instrument?: ReactNode;
-  headerVariant?: "default" | "pilot";
+  headerVariant?: "default" | "pilot" | "pilot-compact";
   workspace?: PageWorkspace;
   floorplan?: FloorplanId;
   /** Scoped presentation surface; does not invent a new workspace contract. */

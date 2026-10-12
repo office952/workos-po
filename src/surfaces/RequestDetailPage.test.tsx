@@ -182,7 +182,7 @@ describe("RequestDetailPage", () => {
     const assemblyLinks = screen.getAllByRole("link", { name: "Deschide ansamblul" });
     expect(assemblyLinks.length).toBeGreaterThan(0);
     for (const link of assemblyLinks) expect(link).toHaveAttribute("href", "/ansamblu?assembly=asm%3A1");
-    expect(screen.getByRole("link", { name: "Deschide oferta comună" })).toHaveAttribute("href", "/ansamblu?assembly=asm%3A1#oferta");
+    expect(screen.getByRole("link", { name: "Deschide oferta comună" })).toHaveAttribute("href", "/oferte/ansamblu/asmq%3A1");
     expect(screen.getByText("766,34 EUR")).toBeInTheDocument();
     expect(screen.getByText("Ofertă creată", { selector: "dd" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Alege produs" })).not.toBeInTheDocument();

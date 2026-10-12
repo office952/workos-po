@@ -313,7 +313,7 @@ export type RequestAssemblyWorkTransport = {
   stageLabel: string;
   quoteGrossPrice: number | null;
   currency: string | null;
-  hasQuote: boolean;
+  quoteSnapshotId: string | null;
   orderSnapshotId: string | null;
   hasProduction: boolean;
   executionPlanId: string | null;

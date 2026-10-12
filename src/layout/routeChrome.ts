@@ -17,7 +17,7 @@ export type RouteChrome = {
   title: string;
   lead: string;
   surface?: PageSurface;
-  pilot?: { surface: PageSurface; metrics?: readonly string[] };
+  pilot?: { surface: PageSurface; metrics?: readonly string[]; compact?: boolean };
 };
 
 export function presentRouteChrome(route: AppRoute): RouteChrome {
@@ -130,7 +130,7 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         eyebrow: "Ofertă",
         title: "Ofertă înghețată",
         lead: "Înregistrare comercială înghețată. Acceptarea păstrează această versiune.",
-        pilot: { surface: "quote-detail" },
+        pilot: { surface: "quote-detail", compact: true },
       };
     case "assembly-quote":
       return {
@@ -140,7 +140,7 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         eyebrow: "Ofertă ansamblu",
         title: "Ofertă de ansamblu",
         lead: "Înregistrare comercială înghețată. Secțiunile rămân trasabile separat.",
-        pilot: { surface: "quote-detail" },
+        pilot: { surface: "quote-detail", compact: true },
       };
     case "jobs":
       return {
