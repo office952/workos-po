@@ -3,6 +3,7 @@ import type { OrderSnapshot } from "../commercial/orderSnapshot.js";
 import {
   formatCustomerMoney,
   quoteDocumentReference,
+  quoteSnapshotCustomerTotal,
 } from "../commercial/quoteDocument.js";
 import type { QuoteSnapshot } from "../commercial/quoteSnapshot.js";
 import { matchesSearchFields } from "../searchNormalize.js";
@@ -219,6 +220,7 @@ export function projectQuoteOverviewItem(input: {
   const nextAction = deriveQuoteOverviewNextAction(stage);
   const attention = deriveQuoteOverviewAttention(stage);
   const orderSnapshotId = input.order?.orderSnapshotId ?? null;
+  const customerTotal = quoteSnapshotCustomerTotal(input.quote);
   return {
     quoteSnapshotId: input.quote.quoteSnapshotId,
     kind: "PRODUCT",
@@ -233,8 +235,8 @@ export function projectQuoteOverviewItem(input: {
     customerId: input.quote.customer?.customerId ?? null,
     customerDisplayName: input.quote.customer?.displayName ?? null,
     createdAt: input.quote.createdAt,
-    grossDisplay: formatCustomerMoney(input.quote.commercial.grossPrice),
-    currency: input.quote.commercial.currency,
+    grossDisplay: formatCustomerMoney(customerTotal.grossPrice),
+    currency: customerTotal.currency,
     stage,
     stageLabel: quoteOverviewStageLabel(stage),
     nextAction,

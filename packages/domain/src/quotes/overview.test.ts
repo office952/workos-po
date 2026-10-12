@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { OrderSnapshot } from "../commercial/orderSnapshot.js";
+import { projectQuoteDocument } from "../commercial/quoteDocument.js";
 import type { QuoteAcceptanceDecision } from "../commercial/quoteAcceptance.js";
 import type { QuoteSnapshot } from "../commercial/quoteSnapshot.js";
 import {
@@ -145,6 +146,37 @@ describe("quote overview projection", () => {
       attentionLabel: "Urmează acceptarea",
     });
     expect(created.href).toBe("/quotes/qts%3AWORKOS");
+  });
+
+  it("shows the same frozen total as the quote document, with or without installation", () => {
+    const productOnly = quote("PRODUS");
+    const withInstallation: QuoteSnapshot = {
+      ...quote("MONTAJ"),
+      schemaVersion: 2,
+      jobCommercial: {
+        netPrice: 716.38,
+        vatAmount: 150.44,
+        grossPrice: 866.82,
+        currency: "EUR",
+        completeness: "COMPLETE",
+      },
+    };
+    const productItem = projectQuoteOverviewItem({
+      quote: productOnly,
+      acceptance: null,
+      order: null,
+    });
+    const installationItem = projectQuoteOverviewItem({
+      quote: withInstallation,
+      acceptance: acceptance("MONTAJ"),
+      order: null,
+    });
+    expect(productItem.grossDisplay).toBe("624,82");
+    expect(productItem.grossDisplay).toBe(projectQuoteDocument(productOnly).commercial.grossDisplay);
+    expect(installationItem.grossDisplay).toBe("866,82");
+    expect(installationItem.grossDisplay).toBe(
+      projectQuoteDocument(withInstallation).commercial.grossDisplay,
+    );
   });
 
   it("keeps ordered quotes out of the needs-action filter", () => {
