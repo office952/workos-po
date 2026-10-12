@@ -1,5 +1,7 @@
 # Integrated assembly & quote remediation V1
 
+**Status (PILOT-0 reconciliation, 2026-10-13):** integrated on `main` through PR #66, merge commit `0fb380c` (2026-10-12). Owner acceptance is **not recorded**: the unticked checklist items below stayed open at merge. This file is the candidate record at its HEAD; later `main` changes are noted inline. PR #65's EIC commit `6efbbe0` is on `main` through this PR, so PR #65 itself is superseded and still open.
+
 ## Source identity
 
 - Repository: `office952/workos-po`
@@ -95,7 +97,7 @@ Synthetic evidence: isolated runtime on `127.0.0.1:8789` from this worktree with
 - Grooved / metal-frame BACK still blocked (no fictional groove pricing)
 - PR #63 configurator composition-tab stale UX not fully ported
 - The stored request status stays as the operator set it (e.g. **Nouă**) after assembly quote/order/production; progress is shown separately
-- Assembly quotes are not listed in the **Oferte** registry; they are reached from the request and the assembly
+- ~~Assembly quotes are not listed in the **Oferte** registry; they are reached from the request and the assembly~~ — superseded on `main` by PR #67 (Unified Quotes Registry V1): Oferte lists assembly quotes. The customer workspace and the request's linked-offer list still show product quotes only; the request reaches its assembly quote through its separate assembly progress section.
 - Changing an ordered assembly requires an explicit commercial alternative (new assembly); there is no in-place order revision
 - A child PARTIAL cost is surfaced only through the assembly production snapshot completeness
 

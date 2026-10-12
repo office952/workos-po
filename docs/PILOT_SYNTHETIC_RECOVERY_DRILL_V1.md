@@ -2,7 +2,7 @@
 
 Tracking: [pilot readiness phases](https://github.com/office952/workos-po/issues/55).
 
-**Status: runbook proposal; execution NOT performed.** This document cannot authorize production cutover, real data inspection or writes, or a backup of a real Cloud root.
+**Status: runbook; one synthetic execution recorded (PILOT-0, `main` `eb3f3c4`, verdict PASS, Owner acceptance pending).** Evidence and runbook findings: [PILOT-0 drill evidence](PILOT_0_SYNTHETIC_RECOVERY_DRILL_EVIDENCE_V1.md). This document cannot authorize production cutover, real data inspection or writes, or a backup of a real Cloud root. No real-environment recovery drill has been performed.
 
 ## Purpose and existing evidence
 
@@ -57,6 +57,8 @@ Passing tests does not prove an operator executed a recovery drill on the intend
 - [ ] Shutdown and restart responsibility is clear; any incident results in STOP.
 
 A completed synthetic drill is **necessary evidence**, not production deployment authorization.
+
+The checkboxes above stay unticked in this runbook: each execution records its own results. The PILOT-0 execution met every acceptance criterion on synthetic roots and recorded four runbook findings, including that Windows has no operator-facing graceful API stop (signals from another process terminate Node before the shutdown handler runs). The deployment runbook must name the stop mechanism for the chosen host.
 
 ## Result report contract
 

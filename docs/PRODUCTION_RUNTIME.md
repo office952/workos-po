@@ -138,6 +138,13 @@ STOP API
 Do not enable unattended scheduled production backup with automatic service restart yet. Concurrent recovery of an unattended stale lease is future hardening. This advisory does not reopen Cloud Runtime and Recovery V1.
 
 ```text
+SYNTHETIC_OPERATOR_RECOVERY_DRILL = EXECUTED_ONCE / PASS / OWNER_ACCEPTANCE_PENDING
+REAL_ENVIRONMENT_RECOVERY_DRILL = NOT_RUN
+```
+
+The [PILOT-0 drill evidence](PILOT_0_SYNTHETIC_RECOVERY_DRILL_EVIDENCE_V1.md) followed this stop → verify → backup → validate → restore sequence on new synthetic roots. "Stop API" means a stop that runs the in-process shutdown and releases the lease. On Windows, signals from another process terminate Node before that handler runs, so the stop mechanism must be chosen and verified per host ([deploy/rollback runbook](PILOT_DEPLOY_ROLLBACK_INCIDENT_RUNBOOK_V1.md)).
+
+```text
 pnpm --filter @workos-final/api cloud:backup
 pnpm --filter @workos-final/api cloud:restore -- --backup <dir> --target <new-root>
 ```
