@@ -10,7 +10,65 @@ NO PARTIAL PRODUCTION CUTOVER
 NO PARALLEL PRODUCT TRUTH
 ```
 
-## Current: request and Catalog coherence
+## Current: PILOT-0 truth and readiness
+
+Living status as of 2026-10-13. Verified `main` is `eb3f3c4915e6c18cad91ac613af55fdde934459c` (PR #69 merge); WorkOS Verify succeeded on that push. Later sections are historical records unless they say otherwise. Merge alone is never Owner acceptance.
+
+```text
+CURRENT_MILESTONE = PILOT-0_TRUTH_AND_READINESS
+MAIN = eb3f3c4915e6c18cad91ac613af55fdde934459c
+SYNTHETIC_OPERATOR_RECOVERY_DRILL = EXECUTED / PASS / OWNER_ACCEPTANCE_PENDING
+DEPLOY_ROLLBACK_INCIDENT_RUNBOOK = TEMPLATE / NOT_EXECUTED / NOT_ACCEPTED
+REAL_ENVIRONMENT_PREFLIGHT = NOT_RUN / TARGET_NOT_IDENTIFIED
+DEPLOY_PRODUCTION = HOLD / NOT_AUTHORIZED
+CUTOVER = HOLD
+REAL_CLOUD_WRITE = HOLD
+REAL_DB_WRITE = HOLD
+FIRST_REAL_BUSINESS_OPERATION = HOLD / NOT_AUTHORIZED
+ASSEMBLY_PRODUCTION_EIC = PARTIAL
+ASSEMBLY_QUOTE_PDF = NOT_IMPLEMENTED
+PILOT_GATE_A = HOLD
+PILOT_GATE_B = HOLD
+```
+
+### Work integrated since PR #54
+
+| Work | PR / merge | Evidence class | Owner acceptance |
+| --- | --- | --- | --- |
+| Request/Catalog configuration coherence and assembly execution | #54 `af15729` | Integrated; functional baseline synthetic-tested at `4a100f3` | Not recorded; visual acceptance was pending (historical section below) |
+| Controlled pilot readiness gates | #56 `181b274` | Integrated (documentation) | Not recorded |
+| Production origin security regression coverage | #57 `bd2d7ef` | Integrated; synthetic-tested | Not recorded |
+| Second organization plane readiness fail-closed | #58 `954fddf` | Integrated; synthetic-tested | Not recorded |
+| Synthetic recovery drill runbook | #59 `bcdf32d` | Integrated; executed once on synthetic roots in PILOT-0 | Not recorded |
+| Organization setup and operator acceptance | #60 `d79881b` | Integrated (documentation); not operationally tested | Not recorded |
+| CI synthetic backup/restore proof | #61 `9af96ba` | Integrated; the workflow runs only on manual dispatch or PRs touching recovery files (last run 2026-10-09) | Not recorded |
+| ACM and letters product invariants | #64 `88c53ea` | Integrated; automated tests | Not recorded |
+| Integrated assembly quote remediation, including the PR #65 EIC reconciliation `6efbbe0` | #66 `0fb380c` | Integrated; synthetic E2E per [its record](INTEGRATED_ASSEMBLY_QUOTE_REMEDIATION_V1.md) | Not recorded; its Owner checklist stayed open (standalone letters unchanged, Forex/ACM separation, visual sign-off) |
+| Unified Quotes Registry V1 | #67 `d65c049` | Integrated | Not recorded |
+| Commercial UX coherence V1 | #68 `08809b9` | Integrated; presentation only ([report](review/commercial-ux-coherence-v1/REPORT.md)) | Not recorded |
+| Commercial Total Consistency V1 | #69 `eb3f3c4` | Integrated | Not recorded |
+
+Not integrated: draft #62 (synthetic staging gate), draft #63 (flat BACK; #66 kept its BACK rules and discarded the separate SKU) and open #65 (superseded by #66). PILOT-0 does not close or change them.
+
+### Incomplete
+
+- No assembly quotation document/PDF.
+- The customer workspace and the request's linked-offer list show product quotes only; assembly quotes appear in Oferte and in the request's assembly section.
+- Assembly production costing stays `PARTIAL`: mounting, final assembly inspection and assembly packaging have no cost evidence, and `reconcileAssemblyEic` cannot price assembly operations yet. Assemblies are excluded from cost-complete pilot claims.
+- Real-environment preflight not run; target environment and operator not identified.
+- Production deployment not authorized; deploy artifact form and host stop mechanism not decided.
+- First real job not authorized; no pilot organization provisioned or configured with Owner-confirmed rates.
+- Owner acceptance of the PR #54–#69 work above is not recorded.
+
+### PILOT-0 evidence
+
+- [Pilot readiness gate and Gate A / Gate B matrix](PILOT_READINESS_GATE_V1.md)
+- [Synthetic recovery drill evidence](PILOT_0_SYNTHETIC_RECOVERY_DRILL_EVIDENCE_V1.md) — PASS on new synthetic roots at `eb3f3c4`; four runbook findings
+- [Deploy, rollback and incident STOP runbook template](PILOT_DEPLOY_ROLLBACK_INCIDENT_RUNBOOK_V1.md) — not executed
+
+## Historical: request and Catalog coherence candidate (2026-10-07/08)
+
+Integrated on `main` through PR #54 (`af15729`, 2026-10-09). The text below is the candidate record of that time. Its "one active candidate" and authorization statements are historical; visual acceptance was pending then and no later Owner acceptance is recorded.
 
 Owner direction of 2026-10-07 is recorded in [Request, Catalog and configuration](architecture/REQUEST_CATALOG_CONFIGURATION_CANON.md). Cursor's withdrawn implementation is preserved at `checkpoint/cursor-handoff-20261007-2037`, `3046aa700fcd8cb8384ed63497fad62f83b79aaa`, from UI base `b5071b6acb59025edbdf82338c5c3613dcd7a5d3`.
 
@@ -786,7 +844,9 @@ These three mappings are current product/process truth, not universal HR policy.
 ## Unified Quotes Registry V1
 
 ```text
-UNIFIED_QUOTES_REGISTRY_V1 = CANDIDATE
+UNIFIED_QUOTES_REGISTRY_V1 = INTEGRATED / OWNER_ACCEPTANCE_NOT_RECORDED
+PR_67 = MERGED
+MERGE_COMMIT = d65c049bf76ee35e43d7613ec6cbdec14153ffea
 BASE = 0fb380cb383674745686e2fc0af30270e5f56b62
 SECOND_QUOTE_ENGINE = NO
 SCHEMA_MIGRATION = NO
@@ -800,12 +860,16 @@ Assembly production cost stays `PARTIAL` until the organization configures the a
 - `INSPECT_FINISHED_ASSEMBLY`: same three inputs.
 - `PACK_PRODUCT`: `RCP_PACK_PRODUCT` and its rate already exist; only the assembly-level area basis (which member face or envelope area) needs an Owner decision.
 
+PILOT-0 correction: configuration alone is not enough. `reconcileAssemblyEic` treats every assembly-level production operation as unpriced, so a domain change is also required. The `RCP_PACK_PRODUCT` rate reaches a new organization only as an unconfirmed platform default; whether a per-m² packing rate applies to a panel assembly is itself an Owner decision. See the assembly scope in [the pilot readiness gate](PILOT_READINESS_GATE_V1.md).
+
 Open: customer hub and request linked-offer lists remain product-only; no assembly quote document/PDF yet.
 
 ## Commercial Total Consistency V1
 
 ```text
-COMMERCIAL_TOTAL_CONSISTENCY_V1 = CANDIDATE
+COMMERCIAL_TOTAL_CONSISTENCY_V1 = INTEGRATED / OWNER_ACCEPTANCE_NOT_RECORDED
+PR_69 = MERGED
+MERGE_COMMIT = eb3f3c4915e6c18cad91ac613af55fdde934459c
 BASE = 08809b9c33e6ab104c4375c3b530fb040a66f842
 SCHEMA_MIGRATION = NO
 ```

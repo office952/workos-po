@@ -3,17 +3,20 @@
 Status: **preparation only; not a production or real-data authorization**.
 
 Tracking: [Controlled pilot roadmap](https://github.com/office952/workos-po/issues/55).
-Baseline: `main` after PR #54, merge commit `af15729064dbe8ae2bb1f433b28460457b651173`.
+Original baseline: `main` after PR #54, merge commit `af15729064dbe8ae2bb1f433b28460457b651173`.
+Current reconciled baseline (PILOT-0): `main` after PR #69, merge commit `eb3f3c4915e6c18cad91ac613af55fdde934459c`; WorkOS Verify succeeded on that push.
 
 ## Evidence classification
 
 | Evidence | Current meaning |
 | --- | --- |
 | PR #54 integrated on `main` | Source integration complete, not production release |
-| WorkOS Verify #290 succeeded on PR head | Automated code checks succeeded on reviewed candidate |
+| PR #56–#61, #64, #66–#69 integrated on `main` | Source integration complete; Owner acceptance **not recorded** for these PRs |
+| WorkOS Verify succeeded on `eb3f3c4` (push) | Automated code checks green on current `main` |
 | ACM + letters 17/17, final QC, packing, job completed | Synthetic browser journey on earlier feature commit `fc94169`; no real organization |
 | Real-environment `pnpm pilot:preflight` | **NOT RUN** |
-| Backup/restore | Quiesced offline mechanism tested synthetically; no real operating-environment drill accepted |
+| Backup/restore | Automated synthetic tests pass. Operator drill executed once on new synthetic roots at `eb3f3c4` (PILOT-0): PASS, Owner acceptance pending — [evidence](PILOT_0_SYNTHETIC_RECOVERY_DRILL_EVIDENCE_V1.md). No real operating-environment drill |
+| Deploy / rollback / incident STOP procedure | Template only — [runbook](PILOT_DEPLOY_ROLLBACK_INCIDENT_RUNBOOK_V1.md); not executed, not accepted |
 | First real customer or production order | **NOT AUTHORIZED** |
 
 Do not relabel a synthetic test, a green CI run, or a merged PR as real-environment acceptance. Reconfirm current `main` and required checks before making decisions.
@@ -41,6 +44,51 @@ Do not relabel a synthetic test, a green CI run, or a merged PR as real-environm
 - [ ] Explicit Owner authorization for deploy, real Cloud operations and first real job is obtained **separately**.
 
 **NO-GO** if any required check fails, is missing evidence, or is not authorized. A green `pilot:preflight` does not authorize deploy automatically.
+
+## PILOT-0 readiness matrix (`main` `eb3f3c4`, 2026-10-13)
+
+`pnpm pilot:preflight` inspects infrastructure only (environment, roots, HTTPS origin, builds, planes, lease, backup support). A green infrastructure preflight is not business readiness.
+
+### Gate A — real-environment read-only preflight
+
+| Requirement | Status | Evidence / gap |
+| --- | --- | --- |
+| Exact target environment identified | **MISSING** | No host, proxy/TLS owner, public origin, Cloud root or backup root recorded (correctly kept outside Git; the Owner has not supplied them) |
+| Owner authorization for that target | **MISSING** | Not given; PILOT-0 explicitly excludes it |
+| Environment operator identified | **MISSING** | Not named |
+| Safe read-only preflight procedure | READY | `pnpm pilot:preflight --json` is read-only ([production runtime](PRODUCTION_RUNTIME.md#pilot-preflight)); runbook sections 2 and 8 |
+| Expected checks and STOP conditions | READY | Exit 0/2/3 contract; runbook section 2; STOP list in [organization setup](PILOT_ORGANIZATION_SETUP_V1.md#stop-and-escalation) |
+
+**Gate A verdict: HOLD** until the Owner names the target and operator and authorizes the read-only preflight.
+
+### Gate B — controlled pilot activation
+
+| Requirement | Status | Evidence / gap |
+| --- | --- | --- |
+| Gate A passed | NOT_RUN | — |
+| Synthetic recovery drill passed | PASS (synthetic), **Owner acceptance pending** | [drill evidence](PILOT_0_SYNTHETIC_RECOVERY_DRILL_EVIDENCE_V1.md) |
+| Deploy/rollback runbook accepted | **TEMPLATE ONLY** | [runbook](PILOT_DEPLOY_ROLLBACK_INCIDENT_RUNBOOK_V1.md); artifact form and host stop mechanism undecided |
+| Backup responsibility assigned | **MISSING** | Operator, cadence and downtime window not decided |
+| Operator access controlled | PARTIAL | Server sessions, origin checks, membership and owner-write enforcement proven synthetically; no MFA or password recovery (advisory for a controlled pilot) |
+| Pilot organization configured with Owner-confirmed rates | **MISSING** | Not provisioned. A new organization starts with platform-default rates marked unconfirmed; they are calculable, so each must be reviewed before a real quote |
+| Product and provider readiness | NOT_RUN | Enablement, people/PINs, work centers, machines and providers not configured for a real organization |
+| Explicit first-real-job authorization | **NOT AUTHORIZED** | — |
+
+**Gate B verdict: HOLD.**
+
+### Assembly scope
+
+Assemblies (ACM panel with mounted letters/logo) are **excluded from cost-complete pilot claims** while assembly production EIC is `PARTIAL`. Their selling price is unaffected; their internal cost and margin are incomplete. Assembly quotes also have no PDF document yet.
+
+Missing evidence, not implemented in PILOT-0 (no rates, formulas or quantity bases invented):
+
+| Operation | Missing |
+| --- | --- |
+| `MOUNT_LETTERS_ON_PANEL` / `MOUNT_LOGO_ON_PANEL` | LABOR cost recipe, labor resource and Owner-confirmed rate, Owner-decided assembly-level quantity basis |
+| `INSPECT_FINISHED_ASSEMBLY` | Owner decision whether it is costed at all (standalone product inspection is not costed); if costed, recipe, basis and rate |
+| `PACK_PRODUCT` at assembly level | Owner decision which area basis applies to an assembly and whether the existing per-m² packing rate applies; organization-confirmed rate |
+
+Independently of those decisions, `reconcileAssemblyEic` (`packages/domain/src/assembly/eic.ts`) currently treats every assembly-level production operation as unpriced (site installation stays on its frozen service line), so configuration alone cannot make an assembly COMPLETE; a later domain change is required.
 
 ## Controlled pilot vs public SaaS launch
 
