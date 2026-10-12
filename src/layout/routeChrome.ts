@@ -1,5 +1,6 @@
 import type { AppRoute } from "../routing/appRoute";
 import {
+  assemblyQuoteHref,
   clientHref,
   executionHref,
   jobHref,
@@ -129,6 +130,16 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         eyebrow: "Ofertă",
         title: "Ofertă înghețată",
         lead: "Înregistrare comercială înghețată. Acceptarea păstrează această versiune.",
+        pilot: { surface: "quote-detail" },
+      };
+    case "assembly-quote":
+      return {
+        contextLabel: "Ofertă",
+        currentHref: assemblyQuoteHref(route.quoteSnapshotId),
+        workspace: "stack",
+        eyebrow: "Ofertă ansamblu",
+        title: "Ofertă de ansamblu",
+        lead: "Înregistrare comercială înghețată. Secțiunile rămân trasabile separat.",
         pilot: { surface: "quote-detail" },
       };
     case "jobs":

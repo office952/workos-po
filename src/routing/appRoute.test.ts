@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  assemblyQuoteHref,
   canonicalLocation,
   atelierHref,
   requestProductHref,
@@ -28,6 +29,11 @@ describe("parseAppRoute", () => {
     expect(parseAppRoute("/cereri/req-1")).toEqual({ name: "request", requestId: "req-1" });
     expect(parseAppRoute("/catalog")).toEqual({ name: "catalog" });
     expect(parseAppRoute("/oferte")).toEqual({ name: "quotes" });
+    expect(parseAppRoute(assemblyQuoteHref("asmq:1"))).toEqual({
+      name: "assembly-quote",
+      quoteSnapshotId: "asmq:1",
+    });
+    expect(navItemCurrent(assemblyQuoteHref("asmq:1"), "/oferte")).toBe(true);
     expect(parseAppRoute("/lucrari")).toEqual({ name: "jobs" });
     expect(parseAppRoute("/lucrari/job-1")).toEqual({ name: "job", jobId: "job-1" });
     expect(parseAppRoute("/planificare")).toEqual({ name: "planning" });

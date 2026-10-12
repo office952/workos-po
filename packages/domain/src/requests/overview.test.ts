@@ -32,6 +32,11 @@ function request(overrides: Partial<CommercialRequest> = {}): CommercialRequest 
 function quote(stage: QuoteOverviewItem["stage"], inscription = "HUB"): QuoteOverviewItem {
   return {
     quoteSnapshotId: `qts:${inscription}`,
+    kind: "PRODUCT",
+    kindLabel: "Produs",
+    assemblyId: null,
+    sectionCount: 1,
+    superseded: false,
     reference: "OF-ABCDEF01",
     productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
     productLabel: "Litere",

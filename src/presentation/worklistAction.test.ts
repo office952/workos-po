@@ -41,6 +41,13 @@ function request(
 function quote(partial: Partial<QuoteListItemTransport> = {}): QuoteListItemTransport {
   return {
     quoteSnapshotId: "q-1",
+    kind: "PRODUCT",
+    kindLabel: "Produs",
+    assemblyId: null,
+    sectionCount: 1,
+    superseded: false,
+    grossDisplay: "624,82",
+    currency: "EUR",
     productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
     productLabel: "Litere",
     reference: "OF-1",
@@ -273,6 +280,21 @@ describe("presentRequestPrimaryAction", () => {
 });
 
 describe("presentQuoteWorklistAction", () => {
+  it("opens the assembly for an assembly quote without an order", () => {
+    expect(
+      presentQuoteWorklistAction(
+        quote({
+          quoteSnapshotId: "asmq:1",
+          kind: "ASSEMBLY",
+          kindLabel: "Ansamblu",
+          assemblyId: "asm:1",
+          nextAction: "OPEN_ASSEMBLY",
+          nextActionLabel: "Deschide ansamblul",
+        }),
+      ),
+    ).toEqual({ actionLabel: "Deschide ansamblul", actionHref: "/ansamblu?assembly=asm%3A1" });
+  });
+
   it("does not label ACCEPT_QUOTE as a command that only opens detail", () => {
     expect(presentQuoteWorklistAction(quote())).toEqual({
       actionLabel: "Deschide oferta",

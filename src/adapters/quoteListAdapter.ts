@@ -23,8 +23,16 @@ export function presentQuoteListItem(value: unknown): QuoteListItemTransport | n
   ) {
     return null;
   }
+  const kind = row.kind === "ASSEMBLY" ? "ASSEMBLY" : "PRODUCT";
   return {
     quoteSnapshotId: row.quoteSnapshotId,
+    kind,
+    kindLabel: asString(row.kindLabel) ?? (kind === "ASSEMBLY" ? "Ansamblu" : "Produs"),
+    assemblyId: kind === "ASSEMBLY" ? asString(row.assemblyId) : null,
+    sectionCount: typeof row.sectionCount === "number" ? row.sectionCount : 1,
+    superseded: asBoolean(row.superseded) ?? false,
+    grossDisplay: asString(row.grossDisplay),
+    currency: asString(row.currency),
     productCode: row.productCode,
     productLabel: asString(row.productLabel) ?? row.productCode,
     reference: asString(row.reference) ?? row.quoteSnapshotId,

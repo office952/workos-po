@@ -14,6 +14,7 @@ export const resourceKeys = {
   quote: (productCode: string, quoteSnapshotId: string) =>
     `quote:${productCode}:${quoteSnapshotId}`,
   quoteEnvelope: (quoteSnapshotId: string) => `quote-envelope:${quoteSnapshotId}`,
+  assemblyQuote: (quoteSnapshotId: string) => `assembly-quote:${quoteSnapshotId}`,
   quoteAcceptance: (productCode: string, quoteSnapshotId: string) =>
     `quote-acceptance:${productCode}:${quoteSnapshotId}`,
   quoteOrder: (productCode: string, quoteSnapshotId: string) =>

@@ -1,3 +1,4 @@
+import { presentAssemblyQuoteEnvelope } from "../adapters/assemblyQuoteAdapter";
 import { presentCatalogProducts } from "../adapters/catalogAdapter";
 import { presentSellerConfigured } from "../adapters/contextAdapter";
 import {
@@ -131,6 +132,14 @@ export async function loadQuoteEnvelope(quoteSnapshotId: string) {
   } catch {
     return null;
   }
+}
+
+export async function loadAssemblyQuote(quoteSnapshotId: string) {
+  const presented = presentAssemblyQuoteEnvelope(await fetchQuoteEnvelope(quoteSnapshotId));
+  if (!presented) {
+    throw new Error("unpresentable");
+  }
+  return presented;
 }
 
 export async function loadQuoteAcceptance(productCode: string, quoteSnapshotId: string) {

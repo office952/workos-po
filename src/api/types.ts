@@ -427,8 +427,17 @@ export type CatalogProductTransport = {
   categoryLabel: string | null;
 };
 
+export type QuoteKindTransport = "PRODUCT" | "ASSEMBLY";
+
 export type QuoteListItemTransport = {
   quoteSnapshotId: string;
+  kind: QuoteKindTransport;
+  kindLabel: string;
+  assemblyId: string | null;
+  sectionCount: number;
+  superseded: boolean;
+  grossDisplay: string | null;
+  currency: string | null;
   productCode: string;
   productLabel: string;
   reference: string;
@@ -444,6 +453,52 @@ export type QuoteListItemTransport = {
   requestId: string | null;
   requestReference: string | null;
   orderSnapshotId: string | null;
+};
+
+export type AssemblyQuoteSectionTransport = {
+  memberId: string;
+  roleLabel: string;
+  productLabel: string;
+  inscription: string;
+  netPrice: number;
+  vatPercent: number;
+  vatAmount: number;
+  grossPrice: number;
+  currency: string;
+};
+
+export type AssemblyQuoteCostTransport = {
+  sourceLabel: string;
+  sections: {
+    memberId: string;
+    roleLabel: string;
+    total: number;
+    currency: string;
+    completeness: string;
+    completenessLabel: string;
+  }[];
+  production: {
+    total: number;
+    currency: string;
+    completeness: string;
+    completenessLabel: string;
+    unpricedOperations: { processLabel: string; missingInputs: string[] }[];
+  } | null;
+  productionPending: boolean;
+};
+
+export type AssemblyQuoteTransport = {
+  item: QuoteListItemTransport;
+  label: string;
+  assemblyId: string;
+  requestId: string | null;
+  superseded: boolean;
+  sections: AssemblyQuoteSectionTransport[];
+  serviceSection: { label: string; netPrice: number; vatAmount: number; grossPrice: number; currency: string } | null;
+  totals: { netPrice: number; vatAmount: number; grossPrice: number; currency: string };
+  orderSnapshotId: string | null;
+  /** Present only for owners; null when the evidence cannot be traced. */
+  internalCost: AssemblyQuoteCostTransport | null | undefined;
 };
 
 export type JobListItemTransport = {

@@ -116,4 +116,70 @@ describe("QuotesPage", () => {
       `/quotes/${productCode}/q-2`,
     );
   });
+
+  it("lists standalone and assembly offers together and filters by kind", async () => {
+    stubQuotes([
+      {
+        quoteSnapshotId: "q-solo",
+        kind: "PRODUCT",
+        kindLabel: "Produs",
+        sectionCount: 1,
+        productCode,
+        productLabel: "Litere",
+        reference: "OF-SOLO",
+        customerDisplayName: "Client Simplu",
+        stage: "QUOTE_CREATED",
+        stageLabel: "Creată",
+        grossDisplay: "624,82",
+        currency: "EUR",
+        nextAction: "ACCEPT_QUOTE",
+      },
+      {
+        quoteSnapshotId: "asmq:1",
+        kind: "ASSEMBLY",
+        kindLabel: "Ansamblu",
+        assemblyId: "asm:1",
+        sectionCount: 2,
+        productCode: "SIGN_ASSEMBLY_ACM_LETTERS_V1",
+        productLabel: "Panou ACM + litere volumetrice",
+        reference: "OF-ASM",
+        inscription: "PANOU · WORKOS",
+        customerDisplayName: "Client Ansamblu",
+        requestReference: "CRQ-7",
+        stage: "QUOTE_CREATED",
+        stageLabel: "Creată",
+        grossDisplay: "743,48",
+        currency: "EUR",
+        nextAction: "OPEN_ASSEMBLY",
+        nextActionLabel: "Deschide ansamblul",
+      },
+    ]);
+
+    render(<QuotesPage />);
+    const assembly = await screen.findByRole("link", { name: /OF-ASM/ });
+    expect(assembly).toHaveAttribute("href", "/oferte/ansamblu/asmq%3A1");
+    expect(assembly).toHaveTextContent("Ansamblu · PANOU · WORKOS · CRQ-7");
+    expect(screen.getByText("Panou ACM + litere volumetrice · 2 secțiuni")).toBeInTheDocument();
+    expect(screen.getByText(/743,48 EUR/)).toBeInTheDocument();
+    expect(screen.getByText(/CRQ-7/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Deschide ansamblul" })).toHaveAttribute(
+      "href",
+      "/ansamblu?assembly=asm%3A1",
+    );
+    expect(screen.getByRole("link", { name: /OF-SOLO/ })).toHaveAttribute(
+      "href",
+      `/quotes/${productCode}/q-solo`,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Ansambluri" }));
+    expect(screen.getByRole("link", { name: /OF-ASM/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /OF-SOLO/ })).not.toBeInTheDocument();
+  });
+
+  it("shows no kind filter for standalone-only registries", async () => {
+    stubQuotes([{ quoteSnapshotId: "q-a", productCode, reference: "OF-A", stageLabel: "Creată" }]);
+    render(<QuotesPage />);
+    await screen.findByRole("link", { name: /OF-A/ });
+    expect(screen.queryByRole("button", { name: "Ansambluri" })).not.toBeInTheDocument();
+  });
 });

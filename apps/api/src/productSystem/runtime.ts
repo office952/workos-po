@@ -53,9 +53,14 @@ import {
   parseTargetDate,
   type AssemblyOrderSnapshot,
   type AssemblyProductionSnapshot,
+  type AssemblyQuoteSnapshot,
+  type ConfirmedChildProduct,
   type JobPlanningMetadata,
+  type QuoteOverviewItem,
+  projectAssemblyQuoteOverviewItem,
   projectQuoteOverview,
   projectQuoteOverviewItem,
+  supersededAssemblyQuoteIds,
   projectRequestAssemblyWork,
   projectRequestDetail,
   projectRequestOverview,
@@ -242,10 +247,13 @@ import {
 } from "../product/productEnablementStore.js";
 import {
   listAssemblyOrders,
+  listAssemblyQuotes,
   listRequestAssemblies,
   readAssemblyOrder,
   readAssemblyOrderByQuote,
   readAssemblyProductionByOrder,
+  readAssemblyQuote,
+  readConfirmedChild,
   readLatestAssemblyQuote,
   readAssemblyProductionBySnapshot,
   saveAssemblyProduction as persistAssemblyProduction,
@@ -322,6 +330,15 @@ import {
   bindOperationalPlaneIdentity,
   readOperationalPlaneIdentity,
 } from "../cloud/planeIdentity.js";
+
+export type AssemblyQuoteRecord = {
+  item: QuoteOverviewItem;
+  quote: AssemblyQuoteSnapshot;
+  order: AssemblyOrderSnapshot | null;
+  production: AssemblyProductionSnapshot | null;
+  superseded: boolean;
+  confirmedChildren: ConfirmedChildProduct[];
+};
 
 export type ProductSystemRuntime = {
   sqlitePath: string;
@@ -596,7 +613,9 @@ export type ProductSystemRuntime = {
           | "invalid_target_date"
           | "planning_readonly";
       };
+  /** Oferte registry: standalone product quotes and assembly quotes in one projection. */
   listQuoteOverview(): QuoteOverviewProjection;
+  readAssemblyQuoteRecord(quoteSnapshotId: string): AssemblyQuoteRecord | null;
   listRequestOverview(): RequestOverviewProjection;
   readCommercialRequest(requestId: string): CommercialRequest | null;
   readRequestDetail(requestId: string): RequestDetailProjection | null;
@@ -1245,7 +1264,36 @@ export function createProductSystemRuntimeFromOpenDb(
       return { ok: true, alreadyApplied: false };
     },
     listQuoteOverview() {
-      return projectQuoteOverview(quoteOverviewItems(db));
+      return projectQuoteOverview([
+        ...quoteOverviewItems(db),
+        ...assemblyQuoteOverviewItems(db, currentOrganizationId()),
+      ]);
+    },
+    readAssemblyQuoteRecord(quoteSnapshotId) {
+      const organizationId = currentOrganizationId();
+      const quote = readAssemblyQuote(db, organizationId, quoteSnapshotId);
+      if (!quote) {
+        return null;
+      }
+      const siblings = listAssemblyQuotes(db, organizationId).filter(
+        (item) => item.assemblyId === quote.assemblyId,
+      );
+      const superseded = supersededAssemblyQuoteIds(siblings).has(quote.quoteSnapshotId);
+      const order = readAssemblyOrderByQuote(db, organizationId, quote.quoteSnapshotId);
+      const production = order
+        ? readAssemblyProductionByOrder(db, organizationId, order.orderSnapshotId)
+        : null;
+      return {
+        item: assemblyQuoteOverviewItem(db, quote, order, superseded),
+        quote,
+        order,
+        production,
+        superseded,
+        confirmedChildren: quote.members.flatMap((member) => {
+          const child = readConfirmedChild(db, organizationId, member.confirmedTruthId);
+          return child ? [child] : [];
+        }),
+      };
     },
     listRequestOverview() {
       return projectRequestOverview(requestOverviewItems(db, currentOrganizationId()));
@@ -1587,6 +1635,38 @@ function quoteOverviewItems(db: SqliteDatabase) {
         ? commercialRequestReference(requestLink.requestId)
         : null,
     });
+  });
+}
+
+function assemblyQuoteOverviewItems(db: SqliteDatabase, organizationId: string) {
+  const quotes = listAssemblyQuotes(db, organizationId);
+  const superseded = supersededAssemblyQuoteIds(quotes);
+  return quotes.map((quote) =>
+    assemblyQuoteOverviewItem(
+      db,
+      quote,
+      readAssemblyOrderByQuote(db, organizationId, quote.quoteSnapshotId),
+      superseded.has(quote.quoteSnapshotId),
+    ),
+  );
+}
+
+function assemblyQuoteOverviewItem(
+  db: SqliteDatabase,
+  quote: AssemblyQuoteSnapshot,
+  order: AssemblyOrderSnapshot | null,
+  superseded: boolean,
+): QuoteOverviewItem {
+  const request = quote.requestId ? getCommercialRequest(db, quote.requestId) : null;
+  const customer = request ? getCustomer(db, request.customerId) : null;
+  return projectAssemblyQuoteOverviewItem({
+    quote,
+    order,
+    customer: customer
+      ? { customerId: customer.customerId, displayName: customer.displayName }
+      : null,
+    requestReference: request ? commercialRequestReference(request.requestId) : null,
+    superseded,
   });
 }
 

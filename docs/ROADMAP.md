@@ -783,6 +783,25 @@ METAL_CUTTING → SK_METAL_CUTTING_OPERATOR → Operator debitare metale
 
 These three mappings are current product/process truth, not universal HR policy. Unused future catalog capabilities may remain unmapped. Shared-foundation reconciliation is idempotent. Existing V1 marker is preserved and no longer blocks later shared-skill reconcile. `ADOPT_EXISTING` receives shared skill foundation only, not trusted workforce. Employee qualifications are not invented automatically.
 
+## Unified Quotes Registry V1
+
+```text
+UNIFIED_QUOTES_REGISTRY_V1 = CANDIDATE
+BASE = 0fb380cb383674745686e2fc0af30270e5f56b62
+SECOND_QUOTE_ENGINE = NO
+SCHEMA_MIGRATION = NO
+```
+
+Oferte lists standalone product quotes and assembly quotes from one read model (`listQuoteOverview`) with an explicit `kind`. Assembly quotes remain one record in `assembly_quote_snapshots`; child member quotes are not persisted separately and cannot be double-counted. `/api/quotes/:id` resolves either kind; the assembly view is read-only, shows member sections, totals, superseded state and links to request, assembly and order. Internal cost is owner-only and never summed into the selling price.
+
+Assembly production cost stays `PARTIAL` until the organization configures the assembly-level operations. Minimal configuration proposal, not implemented and with no invented rates:
+
+- `MOUNT_LETTERS_ON_PANEL` / `MOUNT_LOGO_ON_PANEL`: a LABOR CostRecipe, an Owner-decided quantity basis at assembly level (for example per member or per letter) and an Owner-confirmed rate.
+- `INSPECT_FINISHED_ASSEMBLY`: same three inputs.
+- `PACK_PRODUCT`: `RCP_PACK_PRODUCT` and its rate already exist; only the assembly-level area basis (which member face or envelope area) needs an Owner decision.
+
+Open: customer hub and request linked-offer lists remain product-only; no assembly quote document/PDF yet.
+
 ## Previous program
 
 ```text

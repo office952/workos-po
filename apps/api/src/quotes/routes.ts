@@ -1,6 +1,10 @@
 import type { Hono } from "hono";
-import { scopeQuoteSnapshot } from "@workos-final/domain";
-import { getProductSystem, type ApiEnv } from "../cloud/context.js";
+import {
+  presentAssemblyQuoteDetail,
+  presentAssemblyQuoteInternalCost,
+  scopeQuoteSnapshot,
+} from "@workos-final/domain";
+import { getProductSystem, type ApiContext, type ApiEnv } from "../cloud/context.js";
 import { financialAccess } from "../financial/access.js";
 import { httpPathIdentity } from "../httpPathIdentity.js";
 
@@ -15,7 +19,7 @@ export function registerQuoteRoutes(app: Hono<ApiEnv>): void {
     const quoteSnapshotId = httpPathIdentity(c.req.path, "/api/quotes/");
     const snapshot = runtime.readQuoteSnapshot(quoteSnapshotId);
     if (!snapshot) {
-      return c.json({ error: "not_found" }, 404);
+      return assemblyQuoteEnvelope(c, quoteSnapshotId);
     }
     const item = runtime
       .listQuoteOverview()
@@ -43,5 +47,50 @@ export function registerQuoteRoutes(app: Hono<ApiEnv>): void {
           }
         : null,
     });
+  });
+}
+
+/** Read-only: reading an assembly quote never mutates the assembly, its order or production. */
+function assemblyQuoteEnvelope(c: ApiContext, quoteSnapshotId: string) {
+  const runtime = getProductSystem(c);
+  const record = runtime.readAssemblyQuoteRecord(quoteSnapshotId);
+  if (!record) {
+    return c.json({ error: "not_found" }, 404);
+  }
+  const internalCost =
+    financialAccess(c, "commercial") === "owner"
+      ? presentAssemblyQuoteInternalCost({
+          quote: record.quote,
+          order: record.order,
+          production: record.production,
+          confirmedChildren: record.confirmedChildren,
+        })
+      : undefined;
+  return c.json({
+    quote: record.item,
+    assemblyQuote: presentAssemblyQuoteDetail({
+      quote: record.quote,
+      order: record.order,
+      production: record.production,
+      superseded: record.superseded,
+    }),
+    ...(internalCost === undefined ? {} : { internalCost }),
+    order: record.order
+      ? {
+          orderSnapshotId: record.order.orderSnapshotId,
+          href: `/jobs/${encodeURIComponent(record.order.orderSnapshotId)}`,
+        }
+      : null,
+    request: record.item.requestId
+      ? {
+          requestId: record.item.requestId,
+          href: `/requests/${encodeURIComponent(record.item.requestId)}`,
+          reference: record.item.requestReference,
+        }
+      : null,
+    assembly: {
+      assemblyId: record.quote.assemblyId,
+      href: `/assemblies/${encodeURIComponent(record.quote.assemblyId)}`,
+    },
   });
 }

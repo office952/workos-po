@@ -49,6 +49,11 @@ function quoteItem(
 ): QuoteOverviewItem {
   return {
     quoteSnapshotId: "qts:alpha",
+    kind: "PRODUCT",
+    kindLabel: "Produs",
+    assemblyId: null,
+    sectionCount: 1,
+    superseded: false,
     reference: "OF-ABCDEF01",
     productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
     productLabel: "Litere",
