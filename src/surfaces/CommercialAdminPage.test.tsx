@@ -87,6 +87,58 @@ describe("CommercialAdminPage", () => {
     expect(screen.queryByText("Politica trebuie configurată")).not.toBeInTheDocument();
   });
 
+  it("shows the owner-only restriction to a member instead of a loading failure", async () => {
+    const fetchMock = vi.fn<(input: RequestInfo) => Promise<unknown>>(() =>
+      jsonResponse({ error: "forbidden" }, 403),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CommercialAdminPage />);
+
+    expect(await screen.findByText("Acces doar pentru proprietar")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Valorile comerciale sunt disponibile doar proprietarului organizației\./),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Doar citire")).toBeInTheDocument();
+    expect(screen.queryByText("Încărcarea a eșuat")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Salvează politica" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/%/)).not.toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Administrare" })).toBeInTheDocument();
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      "/api/admin/commercial-policy",
+    ]);
+  });
+
+  it("keeps a genuine server failure distinct from the owner-only restriction", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => jsonResponse({ error: "internal" }, 500)));
+
+    render(<CommercialAdminPage />);
+
+    expect(await screen.findByText("Încărcarea a eșuat")).toBeInTheDocument();
+    expect(screen.getByText("Politica comercială nu este disponibilă.")).toBeInTheDocument();
+    expect(screen.queryByText("Acces doar pentru proprietar")).not.toBeInTheDocument();
+  });
+
+  it("keeps a network failure distinct from the owner-only restriction", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))));
+
+    render(<CommercialAdminPage />);
+
+    expect(await screen.findByText("Încărcarea a eșuat")).toBeInTheDocument();
+    expect(screen.queryByText("Acces doar pentru proprietar")).not.toBeInTheDocument();
+  });
+
+  it("treats a malformed policy response as an error, not as forbidden", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => jsonResponse("not-a-policy")));
+
+    render(<CommercialAdminPage />);
+
+    expect(await screen.findByText("Încărcarea a eșuat")).toBeInTheDocument();
+    expect(screen.queryByText("Acces doar pentru proprietar")).not.toBeInTheDocument();
+  });
+
   it("saves a new organization version", async () => {
     const saved = {
       ...defaultAdmin,

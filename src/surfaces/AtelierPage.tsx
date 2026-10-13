@@ -171,12 +171,23 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
                 }))}
                 onChange={setPersonId}
               />
-              <TextField id="operator-pin" label="PIN" value={pin} onChange={setPin} />
+              <TextField
+                id="operator-pin"
+                label="PIN"
+                type="password"
+                inputMode="numeric"
+                autoComplete="off"
+                value={pin}
+                onChange={setPin}
+              />
               {selected && !selected.pinConfigured ? (
                 <>
                   <TextField
                     id="operator-pin-confirm"
                     label="Confirmă PIN"
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="off"
                     value={confirmPin}
                     onChange={setConfirmPin}
                   />

@@ -310,25 +310,35 @@ export function AssemblyPage() {
             <div id="oferta">
               <SurfacePanel title="Ofertă" label="Ofertă">
                 <h2>{assembly.quote.label}</h2>
-                {assembly.quote.sections.map((section) => (
+                <p className="section-label">Secțiuni · sume cu TVA inclus</p>
+                <dl aria-label="Secțiuni ofertă, sume cu TVA inclus">
+                  {assembly.quote.sections.map((section) => (
+                    <InfoRow
+                      key={section.title}
+                      label={section.title}
+                      value={`${section.inscription} · ${formatMoney(section.grossPrice, assembly.quote?.currency ?? "EUR")} cu TVA`}
+                    />
+                  ))}
+                </dl>
+                <p className="ui-note">
+                  Sumele pe secțiuni includ TVA și formează împreună totalul comercial cu TVA.
+                  Totalul net și TVA sunt afișate separat mai jos.
+                </p>
+                <p className="section-label">Totaluri ofertă</p>
+                <dl aria-label="Totaluri ofertă">
                   <InfoRow
-                    key={section.title}
-                    label={section.title}
-                    value={`${section.inscription} · ${formatMoney(section.grossPrice, assembly.quote?.currency ?? "EUR")}`}
+                    label="Total net (fără TVA)"
+                    value={formatMoney(assembly.quote.netPrice, assembly.quote.currency)}
                   />
-                ))}
-                <InfoRow
-                  label="Total net"
-                  value={formatMoney(assembly.quote.netPrice, assembly.quote.currency)}
-                />
-                <InfoRow
-                  label="TVA"
-                  value={formatMoney(assembly.quote.vatAmount, assembly.quote.currency)}
-                />
-                <InfoRow
-                  label="Total comercial"
-                  value={formatMoney(assembly.quote.grossPrice, assembly.quote.currency)}
-                />
+                  <InfoRow
+                    label="TVA"
+                    value={formatMoney(assembly.quote.vatAmount, assembly.quote.currency)}
+                  />
+                  <InfoRow
+                    label="Total comercial (cu TVA)"
+                    value={formatMoney(assembly.quote.grossPrice, assembly.quote.currency)}
+                  />
+                </dl>
                 {frozenRateAcknowledgement ? (
                   <FrozenRateAcknowledgementNotice acknowledgement={frozenRateAcknowledgement} />
                 ) : null}

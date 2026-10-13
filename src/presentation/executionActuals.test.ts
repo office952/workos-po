@@ -32,6 +32,7 @@ function task(
     assignmentLabel: "CNC 4020",
     requiresProvider: false,
     requiredCapabilityId: null,
+    requiredCapabilityLabel: null,
     canAssign: false,
     canAssignProvider: false,
     canClaimStart: false,

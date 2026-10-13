@@ -35,7 +35,11 @@ import { WorklistRow } from "../components/WorklistRow";
 import { invalidateAfterExecutionTaskChange } from "../data/invalidation";
 import { formatTimestamp } from "../presentation/format";
 import { resourceKeys } from "../data/resourceKeys";
-import { loadExecutionPlan, loadOperatorSession } from "../data/routeLoaders";
+import {
+  loadExecutionPlan,
+  loadOperatorSession,
+  loadWorkcentersAdmin,
+} from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import {
@@ -58,8 +62,17 @@ import {
   presentExecutionNextAction,
   presentExecutionStartError,
 } from "../presentation/executionNextAction";
+import {
+  presentMissingProviderGuidance,
+  taskMissingProvider,
+} from "../presentation/missingProviderGuidance";
 import { statusTone } from "../presentation/statusTone";
-import { atelierHref, executionHref, jobHref } from "../routing/appRoute";
+import {
+  adminWorkcentersHref,
+  atelierHref,
+  executionHref,
+  jobHref,
+} from "../routing/appRoute";
 import {
   ExecutionActualConsumptionFields,
   ExecutionActualConsumptionHistory,
@@ -475,6 +488,19 @@ export function ExecutionPage({
   const allComplete =
     plan !== null && plan.tasks.length > 0 && plan.tasks.every((task) => task.status === "COMPLETED");
   const currentTask = plan ? selectCurrentExecutionTask(plan.tasks, taskId) : null;
+  const currentTaskMissingProvider = taskMissingProvider(currentTask);
+  const providerRegistry = useResource(
+    currentTaskMissingProvider ? resourceKeys.workcentersAdmin() : null,
+    loadWorkcentersAdmin,
+  );
+  const missingProviderGuidance =
+    currentTask && currentTaskMissingProvider
+      ? presentMissingProviderGuidance({
+          capabilityId: currentTask.requiredCapabilityId,
+          capabilityLabel: currentTask.requiredCapabilityLabel,
+          registry: providerRegistry.data ?? null,
+        })
+      : null;
   const actionableTask = plan ? firstActionableTask(plan.tasks) : null;
   const sessionKnown = session.status === "success";
 
@@ -706,14 +732,15 @@ export function ExecutionPage({
                 actualConsumption={currentTask.actualConsumption}
               />
             )}
-            {currentTask.executionMode !== "EXTERNAL" &&
-            currentTask.requiresProvider &&
-            currentTask.assignmentLabel === "Nealocat" &&
-            currentTask.eligibleProviders.length === 0 &&
-            currentTask.status !== "COMPLETED" ? (
-              <InlineAlert tone="blocked" title="Utilaj / zonă lipsă">
-                Această sarcină cere un utilaj sau o zonă de lucru eligibilă deja configurată
-                în organizație. Execuția nu inventează utilaje sau zone.
+            {missingProviderGuidance ? (
+              <InlineAlert tone="blocked" title={missingProviderGuidance.title}>
+                <p>{missingProviderGuidance.reason}</p>
+                <p>{missingProviderGuidance.next}</p>
+                <p>
+                  <a className="text-link" href={adminWorkcentersHref()}>
+                    {missingProviderGuidance.actionLabel}
+                  </a>
+                </p>
               </InlineAlert>
             ) : null}
             {currentTask.canAssignProvider ? (

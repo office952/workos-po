@@ -19,6 +19,7 @@ function task(
     assignmentLabel: "Nealocat",
     requiresProvider: false,
     requiredCapabilityId: null,
+    requiredCapabilityLabel: null,
     canAssign: false,
     canAssignProvider: false,
     canClaimStart: false,

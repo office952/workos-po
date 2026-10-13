@@ -647,6 +647,7 @@ export type ExecutionTaskTransport = {
   assignmentLabel: string;
   requiresProvider: boolean;
   requiredCapabilityId: string | null;
+  requiredCapabilityLabel: string | null;
   canAssign: boolean;
   canAssignProvider: boolean;
   canClaimStart: boolean;

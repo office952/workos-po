@@ -176,11 +176,71 @@ describe("AssemblyPage", () => {
 
     render(<AssemblyPage />);
     expect(await screen.findByText("766,34 EUR")).toBeInTheDocument();
-    expect(screen.getByText("ABC · 647,68 EUR")).toBeInTheDocument();
+    expect(screen.getByText("ABC · 647,68 EUR cu TVA")).toBeInTheDocument();
     expect(screen.getByText("461,64 EUR")).toBeInTheDocument();
     expect(screen.getByText(/Montaj litere pe panou, Control final/)).toBeInTheDocument();
     screen.getByRole("button", { name: /Panou ACM/ }).click();
     expect(await screen.findByRole("link", { name: "Consultă configurația" })).toBeInTheDocument();
+  });
+
+  it("labels frozen section amounts as VAT-inclusive and keeps net, VAT and gross totals separate", async () => {
+    window.history.replaceState(null, "", "/ansamblu?assembly=asm:vat");
+    const quote = {
+      label: "Panou ACM + litere volumetrice",
+      sections: [
+        { title: "Litere", inscription: "AUDIT", grossPrice: 453.4 },
+        { title: "Panou ACM", inscription: "AUDIT", grossPrice: 415.08 },
+      ],
+      netPrice: 717.75,
+      vatAmount: 150.73,
+      grossPrice: 868.48,
+      currency: "EUR",
+    };
+    const frozen = JSON.parse(JSON.stringify(quote)) as typeof quote;
+    const fetchMock = vi.fn<(path: string, init?: RequestInit) => Promise<unknown>>(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          assembly: {
+            assemblyId: "asm:vat",
+            customerId: "cus:1",
+            requestId: "crq:1",
+            label: "Panou ACM + litere volumetrice",
+            statusLabel: "Confirmat",
+            stale: false,
+            staleReason: null,
+            canConfirm: false,
+            scopes: [
+              { id: "acm", title: "Panou ACM", complete: true, summary: "Panou" },
+              { id: "letters", title: "Litere", complete: true, summary: "Litere" },
+              { id: "summary", title: "Rezumat ansamblu", complete: true, summary: "Gata" },
+            ],
+            quote,
+            orderId: null,
+            productionId: null,
+            executionPlanId: null,
+          },
+        }),
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<AssemblyPage />);
+
+    expect(await screen.findByText("Secțiuni · sume cu TVA inclus")).toBeInTheDocument();
+    expect(screen.getByText("AUDIT · 453,40 EUR cu TVA")).toBeInTheDocument();
+    expect(screen.getByText("AUDIT · 415,08 EUR cu TVA")).toBeInTheDocument();
+    expect(screen.getByText("Total net (fără TVA)")).toBeInTheDocument();
+    expect(screen.getByText("717,75 EUR")).toBeInTheDocument();
+    expect(screen.getByText("150,73 EUR")).toBeInTheDocument();
+    expect(screen.getByText("Total comercial (cu TVA)")).toBeInTheDocument();
+    expect(screen.getByText("868,48 EUR")).toBeInTheDocument();
+    expect(screen.queryByText("717,75 EUR cu TVA")).not.toBeInTheDocument();
+    expect(quote).toEqual(frozen);
+    expect(
+      fetchMock.mock.calls.every(([, init]) => String(init?.method ?? "GET") === "GET"),
+    ).toBe(true);
   });
 
   it("freezes the assembly quote only after the Owner accepts its unconfirmed rates", async () => {

@@ -193,6 +193,59 @@ describe("WorkcentersAdminPage", () => {
     expect(screen.queryByText("mch:router")).not.toBeInTheDocument();
   });
 
+  it("keeps capability editing open without an authoritative history flag and explains the server protection", async () => {
+    const profileCapability = {
+      id: "PROFILE_FORMING",
+      label: "Fălțuire profil",
+      coverage: "NO_PROVIDER",
+      coverageLabel: "Fără furnizor",
+      providers: [],
+    };
+    const current = adminPayload({
+      machine: machineRow({ usedBy: ["Litere volumetrice · Debitare"] }),
+      capabilities: [
+        {
+          ...cncCapability,
+          coverage: "COVERED",
+          coverageLabel: "Acoperită",
+          providers: [{ id: "mch:router", label: "Router CNC" }],
+        },
+        profileCapability,
+      ],
+    });
+    const patches: unknown[] = [];
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      const method = String(init?.method ?? "GET");
+      if (url.includes("/api/machines/") && method === "PATCH") {
+        patches.push(JSON.parse(String(init?.body ?? "{}")));
+        return jsonResponse({ error: "provider_referenced" }, 409);
+      }
+      return jsonResponse(current);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const user = userEvent.setup();
+    render(<WorkcentersAdminPage />);
+    const machineCapability = await screen.findByLabelText("Capabilitate utilaj");
+    expect(machineCapability).toBeEnabled();
+    const assignButtons = screen.getAllByRole("button", { name: "Atribuie capabilitatea" });
+    const machineAssign = assignButtons[assignButtons.length - 1];
+    expect(machineAssign).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Retrage capabilitatea" })).toBeEnabled();
+
+    await user.selectOptions(machineCapability, "PROFILE_FORMING");
+    await user.click(machineAssign);
+
+    expect(await screen.findByText("Protejat de istoricul de execuție")).toBeInTheDocument();
+    expect(
+      screen.getByText(/adaugă o zonă nouă sau un utilaj nou cu acea capabilitate/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Modificarea a eșuat")).not.toBeInTheDocument();
+    expect(patches).toEqual([{ capabilityIds: ["CNC_ROUTING", "PROFILE_FORMING"] }]);
+    expect(screen.getByLabelText("Capabilitate utilaj")).toBeEnabled();
+  });
+
   it("retires an unused machine in admin history and presents a conflict", async () => {
     const current = adminPayload();
     const retired = adminPayload({
