@@ -46,6 +46,8 @@ export type UnconfirmedRateEvidence = {
   volumeDepthMm?: number;
   /** Assembly member that froze this rate; absent on standalone product quotes. */
   memberLabel?: string;
+  /** Present when the member re-prices a legacy child on current rates, not historical ones. */
+  evidenceBasis?: "CURRENT_RATE_REEVALUATION";
   quantity: number;
 };
 
@@ -299,6 +301,7 @@ function isUnconfirmedRateEvidence(value: unknown): boolean {
     typeof rate.source === "string" &&
     typeof rate.classification === "string" &&
     (rate.memberLabel === undefined || typeof rate.memberLabel === "string") &&
+    (rate.evidenceBasis === undefined || rate.evidenceBasis === "CURRENT_RATE_REEVALUATION") &&
     typeof rate.quantity === "number"
   );
 }
@@ -359,6 +362,7 @@ function scopeUnconfirmedRate(
 function unconfirmedRateContext(rate: UnconfirmedRateEvidence): string | null {
   const parts = [
     rate.memberLabel,
+    rate.evidenceBasis === "CURRENT_RATE_REEVALUATION" ? "Reevaluat la tarifele curente" : undefined,
     rate.volumeDepthMm !== undefined ? `Adâncime ${rate.volumeDepthMm} mm` : undefined,
   ].filter((part): part is string => part !== undefined && part !== "");
   return parts.length > 0 ? parts.join(" · ") : null;

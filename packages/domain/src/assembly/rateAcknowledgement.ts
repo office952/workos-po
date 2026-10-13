@@ -5,11 +5,51 @@ import {
   type UnconfirmedRateEvidence,
 } from "../commercial/rateAcknowledgement.js";
 import { canonicalContentHash } from "../production/snapshot.js";
-import type { AssemblyRuleFailure, ConfirmedChildProduct } from "./model.js";
+import {
+  CURRENT_RATE_REEVALUATION,
+  type AssemblyRuleFailure,
+  type ChildRateEvidenceBasis,
+  type ConfirmedChildProduct,
+} from "./model.js";
 import type { AssemblyQuoteSnapshot } from "./snapshots.js";
 
 function legacyChildReason(roleLabel: string): string {
-  return `Produsul „${roleLabel}” a fost confirmat înainte de verificarea tarifelor neconfirmate și nu poate susține o ofertă nouă de ansamblu.`;
+  return `Produsul „${roleLabel}” a fost confirmat înainte de înregistrarea tarifelor folosite, iar acestea nu pot fi reconstituite. Reconfirmă produsul în ansamblu pentru a-l reevalua la tarifele curente.`;
+}
+
+/**
+ * Chooses the child record a member confirmation persists. A child with recorded rates is reused
+ * as stored. A legacy child froze no per-rate evidence, so its historical rates cannot be proven:
+ * `candidate` (evaluated on current rates) is kept as a separate record that names the legacy
+ * child it re-prices. The legacy record, and every truth or quote referencing it, stays unchanged.
+ */
+export function resolveConfirmedChildRecord(
+  candidate: ConfirmedChildProduct,
+  existing: ConfirmedChildProduct | null,
+): ConfirmedChildProduct {
+  if (!existing) {
+    return candidate;
+  }
+  if (existing.unconfirmedRates) {
+    return existing;
+  }
+  const basis: ChildRateEvidenceBasis = {
+    kind: CURRENT_RATE_REEVALUATION,
+    reevaluatedFromTruthId: existing.truthId,
+  };
+  return {
+    ...candidate,
+    truthId: `pctr:${canonicalContentHash({
+      basis,
+      truthHash: candidate.truthHash,
+      aggregateHash: candidate.aggregateHash,
+      productionInputHash: candidate.productionInput.contentHash,
+      childQuoteContentHash: candidate.childQuoteContentHash,
+      unconfirmedRates: candidate.unconfirmedRates ?? [],
+    })}`,
+    unconfirmedRates: candidate.unconfirmedRates ?? [],
+    rateEvidenceBasis: basis,
+  };
 }
 
 /**
@@ -32,8 +72,13 @@ export function assessAssemblyRateAcknowledgement(input: {
       member.commercial.commercialStrategy === MANUAL_FIXED_PRODUCT_STRATEGY
         ? internalCostRates
         : priceRates;
+    const evidenceBasis = child.rateEvidenceBasis?.kind;
     target.push(
-      ...child.unconfirmedRates.map((rate) => ({ ...rate, memberLabel: member.roleLabel })),
+      ...child.unconfirmedRates.map((rate) => ({
+        ...rate,
+        memberLabel: member.roleLabel,
+        ...(evidenceBasis ? { evidenceBasis } : {}),
+      })),
     );
   }
   if (priceRates.length > 0) {

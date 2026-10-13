@@ -1227,6 +1227,8 @@ export {
   freezeAssemblyQuote,
   assemblyQuoteContentHashMatches,
   assessAssemblyRateAcknowledgement,
+  CURRENT_RATE_REEVALUATION,
+  resolveConfirmedChildRecord,
   hashProductAggregate,
   hashProductTruth,
   isAssemblyKind,
@@ -1245,5 +1247,6 @@ export {
   type AssemblyQuoteSnapshot,
   type AssemblyReviewPresentation,
   type AssemblyTruth,
+  type ChildRateEvidenceBasis,
   type ConfirmedChildProduct,
 } from "./assembly/index.js";

@@ -3,7 +3,10 @@ import { projectCommercialPrice } from "../commercial/price.js";
 import { DEFAULT_COMMERCIAL_POLICY } from "../commercial/policy.js";
 import { freezeQuoteSnapshot, freezeSiteInstallationQuoteLine, type FrozenCommercialOffer } from "../commercial/quoteSnapshot.js";
 import { MANUAL_FIXED_PRODUCT_STRATEGY } from "../commercial/productPrice.js";
-import type { UnconfirmedRateEvidence } from "../commercial/rateAcknowledgement.js";
+import {
+  scopeRateAcknowledgementRequirement,
+  type UnconfirmedRateEvidence,
+} from "../commercial/rateAcknowledgement.js";
 import { projectManualFixedServicePrice } from "../commercial/servicePrice.js";
 import { blankSiteInstallationFacts } from "../installation/facts.js";
 import type { QuoteCommercialTerms } from "../commercial/quoteTerms.js";
@@ -57,8 +60,10 @@ import {
   LETTERS_ON_ACM_PANEL,
   presentAssemblyReview,
   projectAssemblyProduction,
+  resolveConfirmedChildRecord,
   setAssemblyTaskPlannedEffort,
   SIGN_ASSEMBLY_ACM_LETTERS_V1,
+  CURRENT_RATE_REEVALUATION,
   type ConfirmedChildProduct,
 } from "./index.js";
 
@@ -202,13 +207,21 @@ const UNCONFIRMED_VINYL: UnconfirmedRateEvidence = {
 
 function rateAssessedAssembly(
   letterRates: readonly UnconfirmedRateEvidence[] | undefined,
-  options: { manualLetters?: boolean; customerName?: string } = {},
+  options: { manualLetters?: boolean; customerName?: string; reevaluatedLetters?: boolean } = {},
 ) {
   const ready = readyAssembly();
   const acm = { ...ready.acm, unconfirmedRates: [] };
-  const letters = {
+  const letters: ConfirmedChildProduct = {
     ...ready.letters,
     ...(letterRates ? { unconfirmedRates: letterRates } : {}),
+    ...(options.reevaluatedLetters
+      ? {
+          rateEvidenceBasis: {
+            kind: CURRENT_RATE_REEVALUATION,
+            reevaluatedFromTruthId: "pct:legacy-letters",
+          },
+        }
+      : {}),
     ...(options.manualLetters
       ? { commercial: { ...ready.letters.commercial, commercialStrategy: MANUAL_FIXED_PRODUCT_STRATEGY } }
       : {}),
@@ -239,8 +252,74 @@ describe("assembly unconfirmed rate acknowledgement", () => {
     const { assessed } = rateAssessedAssembly(undefined);
     expect(assessed).toMatchObject({ ok: false, error: "stale_child" });
     if (!assessed.ok) {
-      expect(assessed.reasons[0]).toContain("înainte de verificarea tarifelor");
+      expect(assessed.reasons[0]).toContain("nu pot fi reconstituite");
+      expect(assessed.reasons[0]).toContain("Reconfirmă produsul");
     }
+  });
+
+  it("re-prices a legacy child as a separate current-rate record and reuses children with recorded rates", () => {
+    const { letters } = readyAssembly();
+    const legacy = Object.freeze({ ...letters });
+    const legacyJson = JSON.stringify(legacy);
+    const candidate: ConfirmedChildProduct = { ...letters, unconfirmedRates: [UNCONFIRMED_VINYL] };
+
+    expect(resolveConfirmedChildRecord(candidate, null)).toBe(candidate);
+    const recorded = { ...letters, unconfirmedRates: [] };
+    expect(resolveConfirmedChildRecord(candidate, recorded)).toBe(recorded);
+
+    const reevaluated = resolveConfirmedChildRecord(candidate, legacy);
+    expect(reevaluated.truthId).toMatch(/^pctr:[0-9a-f]{64}$/);
+    expect(reevaluated.truthId).not.toBe(legacy.truthId);
+    expect(reevaluated).toMatchObject({
+      truthHash: legacy.truthHash,
+      aggregateHash: legacy.aggregateHash,
+      unconfirmedRates: [UNCONFIRMED_VINYL],
+      rateEvidenceBasis: {
+        kind: CURRENT_RATE_REEVALUATION,
+        reevaluatedFromTruthId: legacy.truthId,
+      },
+    });
+    expect(JSON.stringify(legacy)).toBe(legacyJson);
+
+    expect(resolveConfirmedChildRecord({ ...candidate, confirmedAt: "2026-10-01T00:00:00.000Z" }, legacy).truthId)
+      .toBe(reevaluated.truthId);
+    const changedRate = resolveConfirmedChildRecord(
+      { ...candidate, unconfirmedRates: [{ ...UNCONFIRMED_VINYL, amount: 11 }] },
+      legacy,
+    );
+    expect(changedRate.truthId).not.toBe(reevaluated.truthId);
+    const allConfirmed = resolveConfirmedChildRecord({ ...candidate, unconfirmedRates: [] }, legacy);
+    expect(allConfirmed.unconfirmedRates).toEqual([]);
+    expect(allConfirmed.rateEvidenceBasis?.kind).toBe(CURRENT_RATE_REEVALUATION);
+  });
+
+  it("marks current-rate re-evaluated member rates in the binding and the operator context", () => {
+    const historical = rateAssessedAssembly([UNCONFIRMED_VINYL]).assessed;
+    const { assessed } = rateAssessedAssembly([UNCONFIRMED_VINYL], { reevaluatedLetters: true });
+    if (!assessed.ok || !historical.ok) {
+      throw new Error("expected assessments");
+    }
+    expect(assessed.requirement.status).toBe("REQUIRED");
+    expect(assessed.requirement.rates[0]?.evidenceBasis).toBe(CURRENT_RATE_REEVALUATION);
+    expect(historical.requirement.rates[0]).not.toHaveProperty("evidenceBasis");
+    expect(assessed.requirement.bindingHash).not.toBe(historical.requirement.bindingHash);
+    const scoped = scopeRateAcknowledgementRequirement(assessed.requirement, "commercial", false);
+    expect((scoped?.rates as { context: string }[])[0]?.context).toContain("Reevaluat la tarifele curente");
+    expect(JSON.stringify(scoped)).not.toMatch(/"amount"|"quantity"/);
+    expect(scoped?.bindingHash).toBeNull();
+
+    const aiRate = { ...UNCONFIRMED_VINYL, source: "AI_DECISION" as const, classification: "AI_DECISION" as const };
+    const ai = rateAssessedAssembly([aiRate], { reevaluatedLetters: true }).assessed;
+    if (!ai.ok) {
+      throw new Error(ai.error);
+    }
+    expect(ai.requirement.status).toBe("REQUIRED");
+    const aiScoped = scopeRateAcknowledgementRequirement(ai.requirement, "owner", true);
+    expect((aiScoped?.rates as { reason: string; context: string }[])[0]).toMatchObject({
+      reason: "Valoare generată automat (AI), neconfirmată de owner",
+      context: expect.stringContaining("Reevaluat la tarifele curente"),
+    });
+    expect(typeof aiScoped?.bindingHash).toBe("string");
   });
 
   it("does not require acknowledgement when no member used an unconfirmed rate", () => {

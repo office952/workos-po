@@ -104,6 +104,16 @@ export type ConfirmedChildProduct = {
    * rate acknowledgement existed; those cannot back a new assembly quote.
    */
   unconfirmedRates?: readonly UnconfirmedRateEvidence[];
+  /** Present only when this record re-prices a legacy child on current rates. */
+  rateEvidenceBasis?: ChildRateEvidenceBasis;
+};
+
+export const CURRENT_RATE_REEVALUATION = "CURRENT_RATE_REEVALUATION" as const;
+
+/** The legacy child froze no per-rate evidence, so its historical rates are not reconstructed. */
+export type ChildRateEvidenceBasis = {
+  kind: typeof CURRENT_RATE_REEVALUATION;
+  reevaluatedFromTruthId: string;
 };
 
 export const ASSEMBLY_RULE_ERRORS = [

@@ -34,6 +34,7 @@ import {
   assessAssemblyRateAcknowledgement,
   collectUnconfirmedRates,
   decideRateAcknowledgement,
+  resolveConfirmedChildRecord,
   scopeFrozenRateAcknowledgement,
   scopeRateAcknowledgementRequirement,
   type AssemblyDefinition,
@@ -220,7 +221,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       technicalSettings: frozenTechnicalSettingsFromResolved(compiled.resolvedTechnicalSettings),
       formulas: compiled.formulaTraces,
     };
-    const child: ConfirmedChildProduct = {
+    const candidate: ConfirmedChildProduct = {
       truthId: `pct:${truthHash}`,
       organizationId: plane.organizationId,
       productCode: compiled.truth.templateCode,
@@ -270,12 +271,16 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
         },
       );
       if (frozen.ok) {
-        child.childQuoteSnapshotId = frozen.snapshot.quoteSnapshotId;
-        child.childQuoteContentHash = frozen.snapshot.contentHash;
-        child.commercial = frozen.snapshot.commercial;
-        child.productionInput = frozen.snapshot.productionInput;
+        candidate.childQuoteSnapshotId = frozen.snapshot.quoteSnapshotId;
+        candidate.childQuoteContentHash = frozen.snapshot.contentHash;
+        candidate.commercial = frozen.snapshot.commercial;
+        candidate.productionInput = frozen.snapshot.productionInput;
       }
     }
+    const child = resolveConfirmedChildRecord(
+      candidate,
+      readConfirmedChild(plane.db, plane.organizationId, candidate.truthId),
+    );
     saveConfirmedChild(plane.db, child);
     const attached = attachConfirmedChild(definition, child, role, new Date().toISOString());
     if (!attached.ok) {

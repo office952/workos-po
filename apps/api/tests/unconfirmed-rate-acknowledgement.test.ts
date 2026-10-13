@@ -800,11 +800,33 @@ describe("unconfirmed rate acknowledgement — SaaS organizations", () => {
     fixture.close();
   });
 
-  it("assembly: refuses a new quote over members confirmed before rate evidence was recorded", async () => {
+  it("assembly: re-prices legacy members on current rates without touching history", async () => {
     const fixture = createCloudFixture();
     const alpha = await cloudOrganization(fixture, "Atelier ACK Istoric", "ack-asm-legacy");
+    const beta = await cloudOrganization(fixture, "Atelier ACK Istoric B", "ack-asm-legacy-b");
     const { assemblyId } = await buildAssembly(alpha.owner, "", alpha.customerId);
-    const db = new Database(alpha.org.paths.sqlitePath);
+    const historicalAck = (await assemblyView(alpha.owner, assemblyId))
+      .rateAcknowledgement as JsonObject;
+    expect(
+      (await quoteAssembly(alpha.owner, assemblyId, { bindingHash: historicalAck.bindingHash }))
+        .status,
+    ).toBe(200);
+    const historicalQuote = (await assemblyView(alpha.owner, assemblyId)).quote as JsonObject;
+
+    const sqlitePath = alpha.org.paths.sqlitePath;
+    const readRows = () => {
+      const db = new Database(sqlitePath, { readonly: true });
+      const rows = {
+        children: db
+          .prepare(`SELECT truth_id, content_hash, payload FROM confirmed_child_products ORDER BY truth_id`)
+          .all() as { truth_id: string; payload: string }[],
+        truths: db.prepare(`SELECT * FROM assembly_truths ORDER BY assembly_truth_id`).all(),
+        quotes: db.prepare(`SELECT * FROM assembly_quote_snapshots ORDER BY rowid`).all(),
+      };
+      db.close();
+      return rows;
+    };
+    const db = new Database(sqlitePath);
     const stripped = db
       .prepare(
         `UPDATE confirmed_child_products SET payload = json_remove(payload, '$.unconfirmedRates')`,
@@ -812,13 +834,136 @@ describe("unconfirmed rate acknowledgement — SaaS organizations", () => {
       .run();
     db.close();
     expect(stripped.changes).toBe(2);
+    const legacy = readRows();
+
     expect((await assemblyView(alpha.owner, assemblyId)).rateAcknowledgement).toBeNull();
     const refused = await quoteAssembly(alpha.owner, assemblyId, { bindingHash: "fabricated" });
     expect(refused.status).toBe(422);
-    const body = await readBody(refused);
-    expect(body.error).toBe("stale_child");
-    expect(String((body.reasons as string[])[0])).toContain("înainte de verificarea tarifelor");
-    expect(await quoteCount(alpha.owner)).toBe(0);
+    const refusedBody = await readBody(refused);
+    expect(refusedBody.error).toBe("stale_child");
+    expect(String((refusedBody.reasons as string[])[0])).toContain("Reconfirmă produsul");
+
+    const vinylRow = await rateRow(alpha.owner, MAT_VINYL_ORACAL_651_ID);
+    expect(
+      (await alpha.owner.send(
+        "PATCH",
+        `/api/resources-admin/cost-evidence/${encodeURIComponent(String(vinylRow.evidenceRowId))}`,
+        { amount: 13, note: "Tarif curent schimbat după confirmarea istorică." },
+      )).status,
+    ).toBe(200);
+
+    const reconfirm = async (client: Api, role: string) => {
+      const values = role === "SUPPORT_PANEL" ? acmValues : vinylValues;
+      const path = role === "SUPPORT_PANEL" ? acmPath : productPath;
+      const reviewId = (await readBody(
+        await client.send("POST", `${path}/preview`, { values }),
+      )).reviewId;
+      return client.send("POST", `/api/assemblies/${assemblyId}/members`, { role, values, reviewId });
+    };
+    expect((await reconfirm(alpha.member, "SIGNAGE_LETTERS")).status).toBe(403);
+    const [letters, lettersAgain] = await Promise.all([
+      reconfirm(alpha.owner, "SIGNAGE_LETTERS"),
+      reconfirm(alpha.owner, "SIGNAGE_LETTERS"),
+    ]);
+    expect(letters.status).toBe(200);
+    expect(lettersAgain.status).toBe(200);
+    expect((await reconfirm(alpha.owner, "SUPPORT_PANEL")).status).toBe(200);
+    expect((await alpha.owner.send("POST", `/api/assemblies/${assemblyId}/review`)).status).toBe(200);
+    expect((await alpha.owner.send("POST", `/api/assemblies/${assemblyId}/confirm`)).status).toBe(200);
+
+    const recovered = readRows();
+    expect(recovered.truths).toHaveLength(legacy.truths.length + 1);
+    expect(recovered.truths).toEqual(expect.arrayContaining(legacy.truths));
+    expect(recovered.quotes).toEqual(legacy.quotes);
+    for (const row of legacy.children) {
+      expect(recovered.children.find((item) => item.truth_id === row.truth_id)).toEqual(row);
+    }
+    const reevaluated = recovered.children.filter((row) => row.truth_id.startsWith("pctr:"));
+    expect(reevaluated).toHaveLength(2);
+    for (const row of reevaluated) {
+      const payload = JSON.parse(row.payload) as JsonObject;
+      expect(payload.rateEvidenceBasis).toMatchObject({ kind: "CURRENT_RATE_REEVALUATION" });
+      expect(
+        legacy.children.some(
+          (item) => item.truth_id === (payload.rateEvidenceBasis as JsonObject).reevaluatedFromTruthId,
+        ),
+      ).toBe(true);
+    }
+
+    const requirement = (await assemblyView(alpha.owner, assemblyId))
+      .rateAcknowledgement as JsonObject;
+    expect(requirement).toMatchObject({ status: "REQUIRED", canAcknowledge: true });
+    const rates = scopedRates(requirement);
+    expect(rates.every((rate) => String(rate.context).includes("Reevaluat la tarifele curente"))).toBe(true);
+    expect(rates.some((rate) => rate.resourceId === MAT_VINYL_ORACAL_651_ID)).toBe(false);
+    expect(
+      scopedRates(historicalAck).find((rate) => rate.resourceId === MAT_VINYL_ORACAL_651_ID)?.amount,
+    ).toBe(9);
+    expect(
+      rates.length > 0 &&
+        rates.every((rate) => rate.reason === "Valoare implicită de platformă, neconfirmată de firmă"),
+    ).toBe(true);
+    expect(requirement.bindingHash).not.toBe(historicalAck.bindingHash);
+
+    const memberAssembly = await assemblyView(alpha.member, assemblyId);
+    expect((memberAssembly.rateAcknowledgement as JsonObject).bindingHash).toBeNull();
+    expect(JSON.stringify(memberAssembly)).not.toContain(String(requirement.bindingHash));
+    expect(JSON.stringify(memberAssembly.rateAcknowledgement)).not.toMatch(/"amount"|"quantity"/);
+    expect(
+      (await quoteAssembly(alpha.member, assemblyId, { bindingHash: requirement.bindingHash })).status,
+    ).toBe(403);
+    expect((await beta.owner.get(`/api/assemblies/${assemblyId}`)).status).toBe(404);
+    const betaAssembly = await buildAssembly(beta.owner, "", beta.customerId);
+    const crossTenant = await quoteAssembly(beta.owner, betaAssembly.assemblyId, {
+      bindingHash: requirement.bindingHash,
+    });
+    expect(crossTenant.status).toBe(409);
+    expect(await quoteCount(beta.owner)).toBe(0);
+
+    const stale = await quoteAssembly(alpha.owner, assemblyId, {
+      bindingHash: historicalAck.bindingHash,
+    });
+    expect(stale.status).toBe(409);
+    expect((await quoteAssembly(alpha.owner, assemblyId)).status).toBe(422);
+    const [first, concurrent] = await Promise.all([
+      quoteAssembly(alpha.owner, assemblyId, { bindingHash: requirement.bindingHash }),
+      quoteAssembly(alpha.owner, assemblyId, { bindingHash: requirement.bindingHash }),
+    ]);
+    expect(first.status).toBe(200);
+    expect(concurrent.status).toBe(200);
+    expect(
+      (await quoteAssembly(alpha.owner, assemblyId, { bindingHash: requirement.bindingHash })).status,
+    ).toBe(200);
+    expect(await quoteCount(alpha.owner)).toBe(2);
+
+    const quoted = await assemblyView(alpha.owner, assemblyId);
+    const newQuote = quoted.quote as JsonObject;
+    expect(typeof newQuote.grossPrice).toBe("number");
+    expect(newQuote.grossPrice).not.toBe(historicalQuote.grossPrice);
+    expect(
+      scopedRates(quoted.frozenRateAcknowledgement as JsonObject).every((rate) =>
+        String(rate.context).includes("Reevaluat la tarifele curente"),
+      ),
+    ).toBe(true);
+    expect(readRows().quotes.slice(0, legacy.quotes.length)).toEqual(legacy.quotes);
+
+    const registry = (await readBody(await alpha.owner.get("/api/quotes"))).overview as {
+      quotes: { quoteSnapshotId: string; kind: string }[];
+    };
+    const assemblyQuoteIds = registry.quotes
+      .filter((item) => item.kind === "ASSEMBLY")
+      .map((item) => item.quoteSnapshotId);
+    expect(new Set(assemblyQuoteIds).size).toBe(2);
+    for (const quoteSnapshotId of assemblyQuoteIds) {
+      const pdf = await alpha.owner.get(
+        `/api/assembly-quotes/${encodeURIComponent(quoteSnapshotId)}/document`,
+      );
+      expect(pdf.status).toBe(200);
+      expect(pdf.headers.get("content-type")).toContain("application/pdf");
+    }
+    const accepted = await alpha.owner.send("POST", `/api/assemblies/${assemblyId}/accept`);
+    expect(accepted.status).toBe(200);
+    expect(((await readBody(accepted)).assembly as JsonObject).orderId).toEqual(expect.any(String));
     fixture.close();
   });
 

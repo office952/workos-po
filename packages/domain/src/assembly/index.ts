@@ -51,7 +51,10 @@ export {
   assemblyQuoteContentHashMatches,
   freezeAssemblyQuote,
 } from "./commercial.js";
-export { assessAssemblyRateAcknowledgement } from "./rateAcknowledgement.js";
+export {
+  assessAssemblyRateAcknowledgement,
+  resolveConfirmedChildRecord,
+} from "./rateAcknowledgement.js";
 export {
   INSPECT_FINISHED_ASSEMBLY_ID,
   MOUNT_LETTERS_ON_PANEL_ID,
@@ -84,9 +87,10 @@ export type {
   AssemblyRuleError,
   AssemblyRuleFailure,
   AssemblyTruth,
+  ChildRateEvidenceBasis,
   ConfirmedChildProduct,
 } from "./model.js";
-export { ASSEMBLY_RULE_ERRORS } from "./model.js";
+export { ASSEMBLY_RULE_ERRORS, CURRENT_RATE_REEVALUATION } from "./model.js";
 export type {
   AssemblyOrderSnapshot,
   AssemblyProductionSnapshot,
