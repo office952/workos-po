@@ -1,5 +1,7 @@
 import type { Hono } from "hono";
 import {
+  assemblyQuoteContentHashMatches,
+  assemblyQuoteHasFrozenIdentity,
   freezeSellerIdentity,
   presentAssemblyQuoteDetail,
   presentAssemblyQuoteInternalCost,
@@ -59,6 +61,15 @@ export function registerQuoteRoutes(app: Hono<ApiEnv>): void {
     if (!record) {
       return c.json({ error: "not_found" }, 404);
     }
+    if (!assemblyQuoteContentHashMatches(record.quote)) {
+      return c.json(
+        {
+          error: "assembly_document_integrity",
+          reasons: ["Oferta înghețată nu mai corespunde amprentei ei și nu poate fi tipărită."],
+        },
+        422,
+      );
+    }
     const memberTruths = new Map(
       record.quote.members.flatMap((member) => {
         const child = record.confirmedChildren.find(
@@ -78,12 +89,20 @@ export function registerQuoteRoutes(app: Hono<ApiEnv>): void {
         422,
       );
     }
-    const seller = runtime.getSellerProfile();
+    const legacySeller = assemblyQuoteHasFrozenIdentity(record.quote)
+      ? undefined
+      : runtime.getSellerProfile();
     const model = projectAssemblyQuoteDocument({
       quote: record.quote,
       memberTruths,
-      customerDisplayName: record.item.customerDisplayName,
-      seller: seller ? freezeSellerIdentity(seller) : null,
+      ...(legacySeller === undefined
+        ? {}
+        : {
+            currentIdentity: {
+              customerDisplayName: record.item.customerDisplayName,
+              seller: legacySeller ? freezeSellerIdentity(legacySeller) : null,
+            },
+          }),
     });
     const bytes = await renderQuoteDocumentPdf(model);
     return c.body(Buffer.from(bytes), 200, {

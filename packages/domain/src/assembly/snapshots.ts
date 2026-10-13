@@ -1,6 +1,8 @@
 import type {
   FrozenCommercialOffer,
+  FrozenCustomerIdentity,
   FrozenJobCommercial,
+  FrozenSellerIdentity,
   FrozenSiteInstallationQuoteLineV2,
 } from "../commercial/quoteSnapshot.js";
 import type { SiteInstallationOperationalView } from "../installation/hostContext.js";
@@ -39,6 +41,9 @@ export type AssemblyQuoteSnapshot = {
   relationCommercialPrice: null;
   totals: FrozenJobCommercial;
   serviceLine?: FrozenSiteInstallationQuoteLineV2;
+  /** Absent on quotes issued before identities were frozen; their hashes exclude both fields. */
+  customer?: FrozenCustomerIdentity;
+  seller?: FrozenSellerIdentity;
 };
 
 export type AssemblyOrderChild = {

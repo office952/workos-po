@@ -124,6 +124,8 @@ export {
   formatCustomerMoneyAmount,
   formatFrozenOfferDate,
   projectAssemblyQuoteDocument,
+  assemblyQuoteHasFrozenIdentity,
+  ASSEMBLY_LEGACY_IDENTITY_NOTICE,
   projectQuoteDocument,
   quoteDocumentReference,
   sanitizeDocumentText,

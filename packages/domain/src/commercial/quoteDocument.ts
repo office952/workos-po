@@ -59,20 +59,27 @@ export type QuoteDocumentModel = {
   configuration: readonly QuoteDocumentLine[];
   technicalSummary: readonly QuoteDocumentLine[];
   sections?: readonly QuoteDocumentSection[];
+  identityNotice?: string;
   commercial: QuoteDocumentCommercial;
   filename: string;
 };
 
-/**
- * Assembly quotes freeze members and totals but not the customer or seller identity,
- * so those two come from the current registry at document time.
- */
+export const ASSEMBLY_LEGACY_IDENTITY_NOTICE =
+  "Datele firmei și ale clientului sunt cele din registrul curent; oferta a fost emisă înainte ca acestea să fie păstrate în ofertă.";
+
 export type AssemblyQuoteDocumentInput = {
   quote: AssemblyQuoteSnapshot;
   memberTruths: ReadonlyMap<string, Pick<ProductTruth, "values" | "measurements">>;
-  customerDisplayName?: string | null;
-  seller?: FrozenSellerIdentity | null;
+  /** Read only for quotes issued before identities were frozen; the document then says so. */
+  currentIdentity?: {
+    customerDisplayName?: string | null;
+    seller?: FrozenSellerIdentity | null;
+  };
 };
+
+export function assemblyQuoteHasFrozenIdentity(quote: AssemblyQuoteSnapshot): boolean {
+  return quote.seller !== undefined;
+}
 
 const CONFIG_VALUE_LABELS: Record<string, string> = {
   none: "Fără finisaj",
@@ -133,10 +140,12 @@ export function projectQuoteDocument(snapshot: QuoteSnapshot): QuoteDocumentMode
 export function projectAssemblyQuoteDocument(input: AssemblyQuoteDocumentInput): QuoteDocumentModel {
   const { quote } = input;
   const reference = quoteDocumentReference(quote.contentHash);
-  const seller = projectSeller(input.seller ?? undefined);
-  const customerDisplayName = input.customerDisplayName
-    ? sanitizeDocumentText(input.customerDisplayName)
-    : "";
+  const frozen = assemblyQuoteHasFrozenIdentity(quote);
+  const seller = projectSeller(frozen ? quote.seller : (input.currentIdentity?.seller ?? undefined));
+  const customerName = frozen
+    ? quote.customer?.displayName
+    : input.currentIdentity?.customerDisplayName;
+  const customerDisplayName = customerName ? sanitizeDocumentText(customerName) : "";
   const sections: QuoteDocumentSection[] = quote.members.map((member) => {
     const truth = input.memberTruths.get(member.confirmedTruthId);
     const measurementFieldIds = new Set((truth?.measurements ?? []).map((item) => item.fieldId));
@@ -171,6 +180,7 @@ export function projectAssemblyQuoteDocument(input: AssemblyQuoteDocumentInput):
     configuration: [],
     technicalSummary: [],
     sections,
+    ...(frozen ? {} : { identityNotice: ASSEMBLY_LEGACY_IDENTITY_NOTICE }),
     commercial: projectAssemblyCommercialLines(quote),
     filename: `Oferta-${reference}.pdf`,
   };

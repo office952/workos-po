@@ -29,6 +29,7 @@ import { DEFAULT_COMMERCIAL_POLICY, type CommercialPolicy } from "./policy.js";
 import { projectCommercialPrice } from "./price.js";
 import type { AssemblyQuoteSnapshot } from "../assembly/snapshots.js";
 import {
+  ASSEMBLY_LEGACY_IDENTITY_NOTICE,
   formatCustomerMoneyAmount,
   projectAssemblyQuoteDocument,
   projectQuoteDocument,
@@ -171,11 +172,14 @@ describe("assembly quote document projection", () => {
   it("projects one section per frozen member with its confirmed configuration and price", () => {
     const { quote, memberTruths } = assemblyFixture();
     const document = projectAssemblyQuoteDocument({
-      quote,
+      quote: {
+        ...quote,
+        customer: { customerId: "cus:nord", displayName: "Nord Market Demo SRL" },
+        seller: { legalName: "HUB MEDIA PRODUCTION S.R.L.", fiscalId: "RO54481582" },
+      },
       memberTruths,
-      customerDisplayName: "Nord Market Demo SRL",
-      seller: { legalName: "HUB MEDIA PRODUCTION S.R.L.", fiscalId: "RO54481582" },
     });
+    expect(document.identityNotice).toBeUndefined();
     expect(document.reference).toBe("OF-47542FBC");
     expect(document.issuedOn).toBe("02.09.2026");
     expect(document.productName).toBe("Panou ACM + litere volumetrice");
@@ -205,11 +209,41 @@ describe("assembly quote document projection", () => {
     expect(document.filename).toBe("Oferta-OF-47542FBC.pdf");
   });
 
-  it("omits the seller and customer when the registry has none instead of inventing them", () => {
+  it("prints frozen identities and ignores current registry values", () => {
+    const { quote, memberTruths } = assemblyFixture();
+    const document = projectAssemblyQuoteDocument({
+      quote: {
+        ...quote,
+        customer: { customerId: "cus:nord", displayName: "Nord Market Demo SRL" },
+        seller: { legalName: "HUB MEDIA PRODUCTION S.R.L." },
+      },
+      memberTruths,
+      currentIdentity: { customerDisplayName: "Client Redenumit SRL", seller: { legalName: "Firma Nouă SRL" } },
+    });
+    expect(document.customerDisplayName).toBe("Nord Market Demo SRL");
+    expect(document.issuerName).toBe("HUB MEDIA PRODUCTION S.R.L.");
+    expect(JSON.stringify(document)).not.toMatch(/Client Redenumit|Firma Nouă/);
+  });
+
+  it("labels a legacy quote's identities as current registry values", () => {
+    const { quote, memberTruths } = assemblyFixture();
+    const document = projectAssemblyQuoteDocument({
+      quote,
+      memberTruths,
+      currentIdentity: { customerDisplayName: "Nord Market Demo SRL", seller: { legalName: "Firma Curentă SRL" } },
+    });
+    expect(document.customerDisplayName).toBe("Nord Market Demo SRL");
+    expect(document.issuerName).toBe("Firma Curentă SRL");
+    expect(document.identityNotice).toBe(ASSEMBLY_LEGACY_IDENTITY_NOTICE);
+    expect(document.commercial.grossDisplay).toBe("743,48");
+  });
+
+  it("omits the seller and customer of a legacy quote when the registry has none", () => {
     const { quote, memberTruths } = assemblyFixture();
     const document = projectAssemblyQuoteDocument({ quote, memberTruths });
     expect(document.seller).toBeUndefined();
     expect(document.customerDisplayName).toBeUndefined();
+    expect(document.identityNotice).toBe(ASSEMBLY_LEGACY_IDENTITY_NOTICE);
   });
 
   it("does not print a single VAT rate when sections carry different rates", () => {

@@ -46,7 +46,11 @@ export {
   hashProductTruth,
   memberIdForRole,
 } from "./definition.js";
-export { acceptAssemblyQuote, freezeAssemblyQuote } from "./commercial.js";
+export {
+  acceptAssemblyQuote,
+  assemblyQuoteContentHashMatches,
+  freezeAssemblyQuote,
+} from "./commercial.js";
 export {
   INSPECT_FINISHED_ASSEMBLY_ID,
   MOUNT_LETTERS_ON_PANEL_ID,

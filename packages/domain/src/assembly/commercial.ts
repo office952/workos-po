@@ -1,9 +1,13 @@
 import type {
   FrozenCommercialOffer,
+  FrozenCustomerIdentity,
   FrozenJobCommercial,
+  FrozenSellerIdentity,
   FrozenSiteInstallationQuoteLineV2,
 } from "../commercial/quoteSnapshot.js";
 import { copyFrozenQuoteLine } from "../commercial/quoteSnapshot.js";
+import { freezeCustomerIdentity } from "../customers/identity.js";
+import { freezeSellerIdentity } from "../seller/identity.js";
 import { contentHash } from "./canonical.js";
 import {
   ASSEMBLY_RELATION_COMMERCIAL_PRICE,
@@ -19,7 +23,25 @@ export function freezeAssemblyQuote(input: {
   children: readonly ConfirmedChildProduct[];
   createdAt: string;
   serviceLine?: FrozenSiteInstallationQuoteLineV2;
+  customer?: FrozenCustomerIdentity;
+  seller?: FrozenSellerIdentity;
 }): { ok: true; quote: AssemblyQuoteSnapshot } | AssemblyRuleFailure {
+  const customer = input.customer ? freezeCustomerIdentity(input.customer) : undefined;
+  if (customer === null) {
+    return {
+      ok: false,
+      error: "invalid_customer",
+      reasons: ["Identitatea clientului nu este validă pentru înghețare."],
+    };
+  }
+  const seller = input.seller ? freezeSellerIdentity(input.seller) : undefined;
+  if (seller === null) {
+    return {
+      ok: false,
+      error: "invalid_seller",
+      reasons: ["Identitatea vânzătorului nu este validă pentru înghețare."],
+    };
+  }
   const members = input.truth.members.map((member) => {
     const child = input.children.find((item) => item.truthId === member.confirmedTruthId);
     if (
@@ -98,6 +120,8 @@ export function freezeAssemblyQuote(input: {
     relationCommercialPrice: ASSEMBLY_RELATION_COMMERCIAL_PRICE,
     totals,
     ...(serviceLine ? { serviceLine } : {}),
+    ...(customer ? { customer } : {}),
+    ...(seller ? { seller } : {}),
   };
   return {
     ok: true,
@@ -108,6 +132,11 @@ export function freezeAssemblyQuote(input: {
       contentHash: contentHash(body),
     },
   };
+}
+
+export function assemblyQuoteContentHashMatches(quote: AssemblyQuoteSnapshot): boolean {
+  const { quoteSnapshotId: _id, createdAt: _createdAt, contentHash: stored, ...body } = quote;
+  return contentHash(body) === stored;
 }
 
 export function acceptAssemblyQuote(input: {

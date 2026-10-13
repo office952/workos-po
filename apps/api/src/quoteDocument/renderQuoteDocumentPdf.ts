@@ -35,6 +35,9 @@ export function quoteDocumentDrawLines(model: QuoteDocumentModel): string[] {
   if (model.customerDisplayName) {
     lines.push("Client", model.customerDisplayName);
   }
+  if (model.identityNotice) {
+    lines.push(model.identityNotice);
+  }
   lines.push("Produs", model.productName);
   if (model.inscription) {
     lines.push("Înscripție", model.inscription);
@@ -130,6 +133,10 @@ export async function renderQuoteDocumentPdf(model: QuoteDocumentModel): Promise
   if (model.customerDisplayName) {
     drawHeading(pdf, cursor, "Client");
     drawText(pdf, cursor, model.customerDisplayName, BODY_SIZE, INK);
+    cursor.y -= 6;
+  }
+  if (model.identityNotice) {
+    drawText(pdf, cursor, model.identityNotice, SMALL_SIZE, MUTED);
     cursor.y -= 6;
   }
   drawHeading(pdf, cursor, "Produs");
