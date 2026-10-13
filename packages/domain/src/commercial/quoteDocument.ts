@@ -1,6 +1,7 @@
-import type { DraftValue, TechnicalMeasurement } from "../product/types.js";
+import type { AssemblyQuoteSnapshot } from "../assembly/snapshots.js";
+import type { DraftValue, ProductTruth, TechnicalMeasurement } from "../product/types.js";
 import type { FrozenSellerIdentity } from "../seller/identity.js";
-import type { QuoteSnapshot } from "./quoteSnapshot.js";
+import type { FrozenCommercialOffer, QuoteSnapshot } from "./quoteSnapshot.js";
 
 export const QUOTE_DOCUMENT_TITLE = "Ofertă" as const;
 export const QUOTE_DOCUMENT_ISSUER = "WorkOS Final" as const;
@@ -21,7 +22,7 @@ export type QuoteDocumentCommercial = {
   currency: "EUR";
   netPrice: number;
   vatAmount: number;
-  vatPercent: number;
+  vatPercent: number | null;
   grossPrice: number;
 };
 
@@ -36,6 +37,15 @@ export type QuoteDocumentSeller = {
   bank?: string;
 };
 
+export type QuoteDocumentSection = {
+  title: string;
+  productName: string;
+  inscription?: string;
+  configuration: readonly QuoteDocumentLine[];
+  technicalSummary: readonly QuoteDocumentLine[];
+  price: QuoteDocumentLine;
+};
+
 export type QuoteDocumentModel = {
   title: typeof QUOTE_DOCUMENT_TITLE;
   issuerName: string;
@@ -48,8 +58,20 @@ export type QuoteDocumentModel = {
   seller?: QuoteDocumentSeller;
   configuration: readonly QuoteDocumentLine[];
   technicalSummary: readonly QuoteDocumentLine[];
+  sections?: readonly QuoteDocumentSection[];
   commercial: QuoteDocumentCommercial;
   filename: string;
+};
+
+/**
+ * Assembly quotes freeze members and totals but not the customer or seller identity,
+ * so those two come from the current registry at document time.
+ */
+export type AssemblyQuoteDocumentInput = {
+  quote: AssemblyQuoteSnapshot;
+  memberTruths: ReadonlyMap<string, Pick<ProductTruth, "values" | "measurements">>;
+  customerDisplayName?: string | null;
+  seller?: FrozenSellerIdentity | null;
 };
 
 const CONFIG_VALUE_LABELS: Record<string, string> = {
@@ -104,6 +126,52 @@ export function projectQuoteDocument(snapshot: QuoteSnapshot): QuoteDocumentMode
     ],
     technicalSummary,
     commercial: projectCommercialLines(snapshot),
+    filename: `Oferta-${reference}.pdf`,
+  };
+}
+
+export function projectAssemblyQuoteDocument(input: AssemblyQuoteDocumentInput): QuoteDocumentModel {
+  const { quote } = input;
+  const reference = quoteDocumentReference(quote.contentHash);
+  const seller = projectSeller(input.seller ?? undefined);
+  const customerDisplayName = input.customerDisplayName
+    ? sanitizeDocumentText(input.customerDisplayName)
+    : "";
+  const sections: QuoteDocumentSection[] = quote.members.map((member) => {
+    const truth = input.memberTruths.get(member.confirmedTruthId);
+    const measurementFieldIds = new Set((truth?.measurements ?? []).map((item) => item.fieldId));
+    const inscription = sanitizeDocumentText(member.inscription);
+    return {
+      title: sanitizeDocumentText(member.roleLabel),
+      productName: sanitizeDocumentText(member.productLabel),
+      ...(inscription ? { inscription } : {}),
+      configuration: truth ? projectConfigurationLines(truth.values, measurementFieldIds) : [],
+      technicalSummary: truth ? projectTechnicalLines(truth.measurements) : [],
+      price: sectionPriceLine(member.commercial),
+    };
+  });
+  if (quote.serviceLine) {
+    sections.push({
+      title: sanitizeDocumentText(quote.serviceLine.label),
+      productName: "Serviciu",
+      configuration: [],
+      technicalSummary: [],
+      price: sectionPriceLine(quote.serviceLine.commercial),
+    });
+  }
+  return {
+    title: QUOTE_DOCUMENT_TITLE,
+    issuerName: seller?.legalName ?? QUOTE_DOCUMENT_ISSUER,
+    reference,
+    issuedOn: formatFrozenOfferDate(quote.createdAt),
+    status: QUOTE_DOCUMENT_STATUS,
+    productName: sanitizeDocumentText(quote.label),
+    ...(customerDisplayName ? { customerDisplayName } : {}),
+    ...(seller ? { seller } : {}),
+    configuration: [],
+    technicalSummary: [],
+    sections,
+    commercial: projectAssemblyCommercialLines(quote),
     filename: `Oferta-${reference}.pdf`,
   };
 }
@@ -216,6 +284,35 @@ function projectCommercialLines(snapshot: QuoteSnapshot): QuoteDocumentCommercia
     vatAmount: commercial.vatAmount,
     vatPercent: commercial.vatPercent,
     grossPrice: commercial.grossPrice,
+  };
+}
+
+function sectionPriceLine(commercial: FrozenCommercialOffer): QuoteDocumentLine {
+  return {
+    label: "Preț net",
+    value: formatCustomerMoneyAmount(commercial.netPrice, commercial.currency),
+  };
+}
+
+function projectAssemblyCommercialLines(quote: AssemblyQuoteSnapshot): QuoteDocumentCommercial {
+  const offers = [
+    ...quote.members.map((member) => member.commercial),
+    ...(quote.serviceLine ? [quote.serviceLine.commercial] : []),
+  ];
+  const rates = new Set(offers.map((offer) => offer.vatPercent));
+  const vatPercent = rates.size === 1 ? ([...rates][0] ?? null) : null;
+  return {
+    netLabel: "Total ofertă",
+    netDisplay: formatCustomerMoney(quote.totals.netPrice),
+    vatLabel: vatPercent === null ? "TVA" : `TVA ${vatPercent}%`,
+    vatDisplay: formatCustomerMoney(quote.totals.vatAmount),
+    grossLabel: "Total",
+    grossDisplay: formatCustomerMoney(quote.totals.grossPrice),
+    currency: quote.totals.currency,
+    netPrice: quote.totals.netPrice,
+    vatAmount: quote.totals.vatAmount,
+    vatPercent,
+    grossPrice: quote.totals.grossPrice,
   };
 }
 

@@ -27,7 +27,12 @@ import type { DraftValues } from "../product/types.js";
 import { compileEic } from "../resources/eic.js";
 import { DEFAULT_COMMERCIAL_POLICY, type CommercialPolicy } from "./policy.js";
 import { projectCommercialPrice } from "./price.js";
-import { formatCustomerMoneyAmount, projectQuoteDocument } from "./quoteDocument.js";
+import type { AssemblyQuoteSnapshot } from "../assembly/snapshots.js";
+import {
+  formatCustomerMoneyAmount,
+  projectAssemblyQuoteDocument,
+  projectQuoteDocument,
+} from "./quoteDocument.js";
 import { freezeQuoteSnapshot, type QuoteSnapshot } from "./quoteSnapshot.js";
 
 const lettersValues: DraftValues = {
@@ -107,6 +112,125 @@ function freezeAcm(createdAt = "2026-08-17T00:00:00.000Z") {
 function documentText(snapshot: QuoteSnapshot): string {
   return JSON.stringify(projectQuoteDocument(snapshot));
 }
+
+function assemblyFixture() {
+  const acm = freezeAcm();
+  const letters = freezeLetters();
+  const member = (
+    snapshot: QuoteSnapshot,
+    role: "SUPPORT_PANEL" | "SIGNAGE_LETTERS",
+    roleLabel: string,
+  ) => ({
+    memberId: `mem:${role}`,
+    role,
+    roleLabel,
+    productCode: snapshot.productCode,
+    productLabel: snapshot.productLabel,
+    inscription: snapshot.inscription,
+    childQuoteSnapshotId: snapshot.quoteSnapshotId,
+    childQuoteContentHash: snapshot.contentHash,
+    confirmedTruthId: `truth:${role}`,
+    confirmedTruthHash: snapshot.contentHash,
+    commercial: snapshot.commercial,
+  });
+  const quote: AssemblyQuoteSnapshot = {
+    quoteSnapshotId: "asmq:fixture",
+    schemaVersion: 1,
+    status: "FROZEN",
+    organizationId: "org:fixture",
+    requestId: null,
+    assemblyKind: "SIGN_ASSEMBLY_ACM_SIGNAGE_V2",
+    assemblyContractVersion: "product-assembly-v2",
+    assemblyId: "asm:fixture",
+    assemblyTruthId: "asmt:fixture",
+    assemblyTruthHash: "hash",
+    label: "Panou ACM + litere volumetrice",
+    createdAt: "2026-09-02T08:00:00.000Z",
+    contentHash: "47542fbce58a9891e8d82519",
+    members: [
+      member(letters, "SIGNAGE_LETTERS", "Litere"),
+      member(acm, "SUPPORT_PANEL", "Panou ACM"),
+    ],
+    relationCommercialPrice: null,
+    totals: {
+      netPrice: 614.45,
+      vatAmount: 129.03,
+      grossPrice: 743.48,
+      currency: "EUR",
+      completeness: "COMPLETE",
+    },
+  };
+  const memberTruths = new Map([
+    ["truth:SIGNAGE_LETTERS", letters.truth],
+    ["truth:SUPPORT_PANEL", acm.truth],
+  ]);
+  return { quote, memberTruths };
+}
+
+describe("assembly quote document projection", () => {
+  it("projects one section per frozen member with its confirmed configuration and price", () => {
+    const { quote, memberTruths } = assemblyFixture();
+    const document = projectAssemblyQuoteDocument({
+      quote,
+      memberTruths,
+      customerDisplayName: "Nord Market Demo SRL",
+      seller: { legalName: "HUB MEDIA PRODUCTION S.R.L.", fiscalId: "RO54481582" },
+    });
+    expect(document.reference).toBe("OF-47542FBC");
+    expect(document.issuedOn).toBe("02.09.2026");
+    expect(document.productName).toBe("Panou ACM + litere volumetrice");
+    expect(document.customerDisplayName).toBe("Nord Market Demo SRL");
+    expect(document.issuerName).toBe("HUB MEDIA PRODUCTION S.R.L.");
+    expect(document.configuration).toEqual([]);
+    expect(document.sections?.map((section) => section.title)).toEqual(["Litere", "Panou ACM"]);
+    const [letters, acm] = document.sections ?? [];
+    expect(letters?.inscription).toBe("WORKOS");
+    expect(letters?.configuration).toEqual(
+      expect.arrayContaining([{ label: "Adâncime volum", value: "60 mm" }]),
+    );
+    expect(letters?.price).toEqual({ label: "Preț net", value: "516,38 EUR" });
+    expect(acm?.productName).toBe("Panou ACM casetat");
+    expect(acm?.technicalSummary).toEqual(
+      expect.arrayContaining([{ label: "Lățime exterioară", value: "1.000 mm" }]),
+    );
+    expect(acm?.price).toEqual({ label: "Preț net", value: "98,07 EUR" });
+    expect(document.commercial).toMatchObject({
+      netLabel: "Total ofertă",
+      netDisplay: "614,45",
+      vatLabel: "TVA 21%",
+      vatDisplay: "129,03",
+      grossDisplay: "743,48",
+      vatPercent: 21,
+    });
+    expect(document.filename).toBe("Oferta-OF-47542FBC.pdf");
+  });
+
+  it("omits the seller and customer when the registry has none instead of inventing them", () => {
+    const { quote, memberTruths } = assemblyFixture();
+    const document = projectAssemblyQuoteDocument({ quote, memberTruths });
+    expect(document.seller).toBeUndefined();
+    expect(document.customerDisplayName).toBeUndefined();
+  });
+
+  it("does not print a single VAT rate when sections carry different rates", () => {
+    const { quote, memberTruths } = assemblyFixture();
+    const [first, second] = quote.members;
+    const mixed: AssemblyQuoteSnapshot = {
+      ...quote,
+      members: [first!, { ...second!, commercial: { ...second!.commercial, vatPercent: 9 } }],
+    };
+    const document = projectAssemblyQuoteDocument({ quote: mixed, memberTruths });
+    expect(document.commercial.vatLabel).toBe("TVA");
+    expect(document.commercial.vatPercent).toBeNull();
+  });
+
+  it("excludes internal cost, provenance and identity leakage", () => {
+    const { quote, memberTruths } = assemblyFixture();
+    const text = JSON.stringify(projectAssemblyQuoteDocument({ quote, memberTruths }));
+    expect(text).not.toMatch(/382\.5|72\.644|EIC|markup|asmq:|asm:|truth:|qts:|contentHash|policyId/i);
+    expect(text).not.toMatch(/PRD-LETTERS|PRD-ACM|SUPPORT_PANEL|SIGNAGE_LETTERS/);
+  });
+});
 
 describe("quote document projection", () => {
   it("projects LETTERS customer facts from the frozen snapshot only", () => {

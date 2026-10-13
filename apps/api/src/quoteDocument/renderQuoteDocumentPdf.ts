@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, PageSizes, rgb, type PDFFont, type PDFPage } from "pdf-lib";
-import type { QuoteDocumentModel } from "@workos-final/domain";
+import type { QuoteDocumentModel, QuoteDocumentSection } from "@workos-final/domain";
 
 const MARGIN = 48;
 const TITLE_SIZE = 22;
@@ -51,6 +51,9 @@ export function quoteDocumentDrawLines(model: QuoteDocumentModel): string[] {
       lines.push(`${line.label}: ${line.value}`);
     }
   }
+  for (const section of model.sections ?? []) {
+    lines.push(section.title, ...sectionBodyLines(section));
+  }
   lines.push(
     "Preț",
     `${model.commercial.netLabel}: ${model.commercial.netDisplay} ${model.commercial.currency}`,
@@ -59,6 +62,16 @@ export function quoteDocumentDrawLines(model: QuoteDocumentModel): string[] {
     "Ofertă comercială.",
   );
   return lines;
+}
+
+function sectionBodyLines(section: QuoteDocumentSection): string[] {
+  return [
+    section.productName,
+    ...(section.inscription ? [`Înscripție: ${section.inscription}`] : []),
+    ...section.configuration.map((line) => `${line.label}: ${line.value}`),
+    ...section.technicalSummary.map((line) => `${line.label}: ${line.value}`),
+    `${section.price.label}: ${section.price.value}`,
+  ];
 }
 
 function sellerDrawLines(model: QuoteDocumentModel): string[] {
@@ -140,6 +153,14 @@ export async function renderQuoteDocumentPdf(model: QuoteDocumentModel): Promise
     drawHeading(pdf, cursor, "Date tehnice");
     for (const line of model.technicalSummary) {
       drawText(pdf, cursor, `${line.label}: ${line.value}`, BODY_SIZE, INK);
+    }
+  }
+
+  for (const section of model.sections ?? []) {
+    cursor.y -= SECTION_GAP;
+    drawHeading(pdf, cursor, section.title);
+    for (const line of sectionBodyLines(section)) {
+      drawText(pdf, cursor, line, BODY_SIZE, INK);
     }
   }
 

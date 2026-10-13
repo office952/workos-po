@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AssemblyQuotePage } from "./AssemblyQuotePage";
 import { resetResourceCache } from "../data/resourceCache";
@@ -129,6 +130,33 @@ describe("AssemblyQuotePage", () => {
     expect(within(production).getByText("440,14 EUR")).toBeInTheDocument();
     expect(within(production).getByText("Parțial")).toBeInTheDocument();
     expect(screen.getByText(/Montaj litere pe panou: lipsește rețetă de cost pentru operație/)).toBeInTheDocument();
+  });
+
+  it("downloads the server document and surfaces its refusal", async () => {
+    const fetchMock = vi.fn((path: string) =>
+      Promise.resolve(
+        path.endsWith("/document")
+          ? {
+              ok: false,
+              status: 422,
+              headers: { get: () => "application/json" },
+              json: async () => ({
+                error: "assembly_document_unavailable",
+                reasons: ["Configurația confirmată a unei secțiuni nu mai poate fi citită pentru document."],
+              }),
+            }
+          : { ok: true, status: 200, json: async () => ({ quote: item, assemblyQuote }) },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<AssemblyQuotePage quoteSnapshotId="asmq:1" />);
+    await userEvent.setup().click(await screen.findByRole("button", { name: "Descarcă oferta PDF" }));
+    expect(
+      await screen.findByText("Configurația confirmată a unei secțiuni nu mai poate fi citită pentru document."),
+    ).toBeInTheDocument();
+    expect(fetchMock.mock.calls.map((call) => String(call[0]))).toContain(
+      "/api/assembly-quotes/asmq%3A1/document",
+    );
   });
 
   it("flags a superseded version", async () => {
