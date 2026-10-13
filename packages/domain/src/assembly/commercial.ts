@@ -6,6 +6,10 @@ import type {
   FrozenSiteInstallationQuoteLineV2,
 } from "../commercial/quoteSnapshot.js";
 import { copyFrozenQuoteLine } from "../commercial/quoteSnapshot.js";
+import {
+  rateAcknowledgementHashedContent,
+  type FrozenRateAcknowledgement,
+} from "../commercial/rateAcknowledgement.js";
 import { freezeCustomerIdentity } from "../customers/identity.js";
 import { freezeSellerIdentity } from "../seller/identity.js";
 import { contentHash } from "./canonical.js";
@@ -25,6 +29,7 @@ export function freezeAssemblyQuote(input: {
   serviceLine?: FrozenSiteInstallationQuoteLineV2;
   customer?: FrozenCustomerIdentity;
   seller?: FrozenSellerIdentity;
+  rateAcknowledgement?: FrozenRateAcknowledgement;
 }): { ok: true; quote: AssemblyQuoteSnapshot } | AssemblyRuleFailure {
   const customer = input.customer ? freezeCustomerIdentity(input.customer) : undefined;
   if (customer === null) {
@@ -123,20 +128,45 @@ export function freezeAssemblyQuote(input: {
     ...(customer ? { customer } : {}),
     ...(seller ? { seller } : {}),
   };
+  const acknowledgement = input.rateAcknowledgement
+    ? copyRateAcknowledgement(input.rateAcknowledgement)
+    : undefined;
   return {
     ok: true,
     quote: {
       quoteSnapshotId: input.quoteSnapshotId,
       ...body,
+      ...(acknowledgement ? { rateAcknowledgement: acknowledgement } : {}),
       createdAt: input.createdAt,
-      contentHash: contentHash(body),
+      contentHash: contentHash(assemblyQuoteHashedBody(body, acknowledgement)),
     },
   };
 }
 
 export function assemblyQuoteContentHashMatches(quote: AssemblyQuoteSnapshot): boolean {
-  const { quoteSnapshotId: _id, createdAt: _createdAt, contentHash: stored, ...body } = quote;
-  return contentHash(body) === stored;
+  const {
+    quoteSnapshotId: _id,
+    createdAt: _createdAt,
+    contentHash: stored,
+    rateAcknowledgement,
+    ...body
+  } = quote;
+  return contentHash(assemblyQuoteHashedBody(body, rateAcknowledgement)) === stored;
+}
+
+function assemblyQuoteHashedBody<T extends object>(
+  body: T,
+  acknowledgement: FrozenRateAcknowledgement | undefined,
+) {
+  return acknowledgement
+    ? { ...body, rateAcknowledgement: rateAcknowledgementHashedContent(acknowledgement) }
+    : body;
+}
+
+function copyRateAcknowledgement(
+  acknowledgement: FrozenRateAcknowledgement,
+): FrozenRateAcknowledgement {
+  return { ...acknowledgement, rates: acknowledgement.rates.map((rate) => ({ ...rate })) };
 }
 
 export function acceptAssemblyQuote(input: {

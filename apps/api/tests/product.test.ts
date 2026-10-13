@@ -828,7 +828,7 @@ describe("product configuration API", () => {
     expect(planPath).not.toMatch(/projectCommercialPrice|composeProductProcesses/);
   });
 
-  it("freezes a quote when numeric cost evidence needs verification", async () => {
+  it("freezes a quote on numeric cost evidence that needs verification only after acknowledgement", async () => {
     const app = createApp();
     const values = { ...readyValues, "face.finish": "vinyl", "face.color": "alb" };
     const previewed = await app.request(
@@ -840,18 +840,26 @@ describe("product configuration API", () => {
       },
     );
     const reviewed = await readBody(previewed);
-    const response = await app.request(
-      `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`,
-      {
+    const confirmed = await readBody(
+      await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/confirm`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          values,
-          reviewId: reviewed.reviewId,
-          customerId: await createCustomer(app),
-        }),
-      },
+        body: JSON.stringify({ values, reviewId: reviewed.reviewId }),
+      }),
     );
+    const disclosure = confirmed.rateAcknowledgement as JsonObject;
+    expect(disclosure.status).toBe("REQUIRED");
+    const customerId = await createCustomer(app);
+    const freeze = (extra: JsonObject = {}) =>
+      app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ values, reviewId: reviewed.reviewId, customerId, ...extra }),
+      });
+    expect((await freeze()).status).toBe(422);
+    const response = await freeze({
+      rateAcknowledgement: { bindingHash: disclosure.bindingHash },
+    });
     expect(response.status).toBe(200);
     const body = await readBody(response);
     expect((body.quoteSnapshot as JsonObject | undefined)?.eic).toBeDefined();

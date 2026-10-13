@@ -465,9 +465,15 @@ NUMERIC_NEEDS_VERIFICATION = USABLE_FOR_CALCULATION
 MISSING_NUMERIC_VALUE = FAIL_CLOSED_FOR_DEPENDENT_CALCULATION
 NO_SILENT_ZERO = YES
 PROVISIONAL_PROVENANCE_MUST_REMAIN_VISIBLE = YES
+UNCONFIRMED_RATE_DRIVING_SELLING_PRICE = EXPLICIT_AUTHORIZED_ACKNOWLEDGEMENT_BEFORE_FREEZE
+UNCONFIRMED_RATE_UNDER_MANUAL_PRICE = DISCLOSURE_ONLY
 ```
 
-A confirmed numeric cost is calculable. A numeric cost that needs verification is also calculable and must stay visibly unverified; it does not block quote freeze by itself. A missing numeric cost must not become zero and blocks only the calculation that depends on it.
+A confirmed numeric cost is calculable. A numeric cost that needs verification is also calculable and must stay visibly unverified. A missing numeric cost must not become zero and blocks only the calculation that depends on it.
+
+`UNCONFIRMED_RATE_ACKNOWLEDGEMENT_V1`: when an unconfirmed rate drives a cost-plus selling price, quote freeze requires an explicit acknowledgement by a user with financial access. Actor and time come from the server. The acknowledgement binds to the exact organization, request, confirmed configuration, commercial result and rate evidence; any change makes it stale and requires a new acknowledgement. It is frozen inside the quote snapshot and never confirms the organization rate itself. Under an authorized manual product price the rate is internal cost only and is disclosed without acknowledgement. Missing or invalid commercial values stay hard blockers.
+
+For this acknowledgement only, an AI-generated rate counts as unconfirmed because it is not an Owner confirmation; the shared EIC verification status is unchanged. Only a user who may acknowledge receives the binding. An assembly quote applies the same rule to the rates frozen in each member's child quote: the acknowledgement binds to the assembly truth, child quote hashes, commercial values and those rates, and is frozen in the assembly quote. A member confirmed before its rate evidence was recorded cannot back a new assembly quote: its historical rates were not frozen and are never reconstructed. Reconfirming that member, even unchanged, records a separate child priced on current rates and marked as a current-rate re-evaluation of the legacy child; the legacy child and every truth, quote and order referencing it stay unchanged. The assembly then needs review, confirmation and, when unconfirmed rates drive the price, a fresh acknowledgement.
 
 ### COMMERCIAL_RULE
 
@@ -678,7 +684,7 @@ SAFE_MANUAL_FALLBACK = REQUIRED_WHERE_SEMANTICALLY_VALID
 
 `MISSING_REQUIRED_CONFIG = FAIL_CLOSED` applies to genuinely required truth and integrity: tenancy, snapshot immutability, invalid commercial policy saves, and required technical facts for production.
 
-Optional business automation may use an explicit supported manual or basic mode. A missing required numeric cost value makes cost-plus unavailable. A present numeric cost that still needs verification remains usable for calculation and must stay visibly unverified. It does not automatically make a valid authorized manual product price unavailable.
+Optional business automation may use an explicit supported manual or basic mode. A missing required numeric cost value makes cost-plus unavailable. A present numeric cost that still needs verification remains usable for calculation and must stay visibly unverified; under cost-plus it needs an explicit authorized acknowledgement before freeze. It does not automatically make a valid authorized manual product price unavailable.
 
 ## 7. Formula architecture
 

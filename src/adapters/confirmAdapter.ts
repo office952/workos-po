@@ -2,6 +2,8 @@ import type {
   ConfirmTransport,
   CostCompletenessIssueTransport,
   CostLineTransport,
+  RateAcknowledgementTransport,
+  UnconfirmedRateTransport,
 } from "../api/types";
 import {
   presentCommercialPolicySummary,
@@ -91,6 +93,70 @@ export function presentCostLines(value: unknown): CostLineTransport[] {
   });
 }
 
+export function presentUnconfirmedRates(value: unknown): UnconfirmedRateTransport[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => {
+    const record = asRecord(item);
+    if (
+      !record ||
+      typeof record.resourceId !== "string" ||
+      typeof record.label !== "string" ||
+      typeof record.reason !== "string"
+    ) {
+      return [];
+    }
+    return [
+      {
+        resourceId: record.resourceId,
+        label: record.label,
+        reason: record.reason,
+        sourceLabel: typeof record.sourceLabel === "string" ? record.sourceLabel : "",
+        unitLabel: typeof record.unitLabel === "string" ? record.unitLabel : "",
+        context: typeof record.context === "string" ? record.context : null,
+        amount:
+          typeof record.amount === "number" && Number.isFinite(record.amount)
+            ? record.amount
+            : null,
+        currency: typeof record.currency === "string" ? record.currency : null,
+      },
+    ];
+  });
+}
+
+export function presentRateAcknowledgement(value: unknown): RateAcknowledgementTransport | null {
+  const record = asRecord(value);
+  if (!record || (record.status !== "REQUIRED" && record.status !== "DISCLOSURE_ONLY")) {
+    return null;
+  }
+  const rates = presentUnconfirmedRates(record.rates);
+  if (rates.length === 0) {
+    return null;
+  }
+  return {
+    status: record.status,
+    bindingHash:
+      typeof record.bindingHash === "string" && record.bindingHash !== ""
+        ? record.bindingHash
+        : null,
+    canAcknowledge: record.status === "REQUIRED" && record.canAcknowledge === true,
+    rates,
+  };
+}
+
+export function rateAcknowledgementSatisfied(
+  requirement: RateAcknowledgementTransport | null,
+  acknowledgedBindingHash: string | null,
+): boolean {
+  if (!requirement || requirement.status !== "REQUIRED") {
+    return true;
+  }
+  return (
+    requirement.bindingHash !== null && requirement.bindingHash === acknowledgedBindingHash
+  );
+}
+
 export function presentConfirm(
   payload: unknown,
   reviewId: string,
@@ -121,6 +187,7 @@ export function presentConfirm(
       calculatedPriceAvailable: record.calculatedPriceAvailable === true,
       manualProductPriceAuthorized: record.manualProductPriceAuthorized === true,
       quoteBlocker: presentQuoteBlocker(record.commercialExperience),
+      rateAcknowledgement: presentRateAcknowledgement(record.rateAcknowledgement),
     };
   }
   return {
@@ -147,5 +214,6 @@ export function presentConfirm(
     calculatedPriceAvailable: record.calculatedPriceAvailable === true,
     manualProductPriceAuthorized: record.manualProductPriceAuthorized === true,
     quoteBlocker: presentQuoteBlocker(record.commercialExperience),
+    rateAcknowledgement: presentRateAcknowledgement(record.rateAcknowledgement),
   };
 }

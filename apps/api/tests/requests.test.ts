@@ -7,6 +7,7 @@ import {
   SITE_INSTALLATION_SCOPE_ID,
 } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
+import { freezeAcknowledgingRates } from "./fixtures/rateAcknowledgement.js";
 
 type JsonObject = Record<string, unknown>;
 
@@ -92,16 +93,19 @@ async function freezeQuote(
   requestId?: string,
 ) {
   const reviewed = await compileReady(app, productCode, values, inscription);
-  return app.request(`/api/products/${productCode}/quote-snapshots`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      values: reviewed.values,
-      reviewId: reviewed.reviewId,
-      customerId,
-      ...(requestId ? { requestId } : {}),
+  return freezeAcknowledgingRates((acknowledgement) =>
+    app.request(`/api/products/${productCode}/quote-snapshots`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        values: reviewed.values,
+        reviewId: reviewed.reviewId,
+        customerId,
+        ...(requestId ? { requestId } : {}),
+        ...acknowledgement,
+      }),
     }),
-  });
+  );
 }
 
 describe("commercial request API", () => {

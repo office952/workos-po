@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ACM_CASSETTE_NONE_PRODUCT_CODE, CANONICAL_PRODUCT_CODE } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
+import { freezeAcknowledgingRates } from "./fixtures/rateAcknowledgement.js";
 
 type JsonObject = Record<string, unknown>;
 
@@ -59,15 +60,19 @@ async function createQuote(
   inscription: string,
 ) {
   const reviewed = await compileReady(app, productCode, values, inscription);
-  const created = await app.request(`/api/products/${productCode}/quote-snapshots`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      values: reviewed.values,
-      reviewId: reviewed.reviewId,
-      customerId: await createCustomer(app, `Client ${inscription}`),
+  const customerId = await createCustomer(app, `Client ${inscription}`);
+  const created = await freezeAcknowledgingRates((acknowledgement) =>
+    app.request(`/api/products/${productCode}/quote-snapshots`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        values: reviewed.values,
+        reviewId: reviewed.reviewId,
+        customerId,
+        ...acknowledgement,
+      }),
     }),
-  });
+  );
   return (await readBody(created)).quoteSnapshot as JsonObject;
 }
 

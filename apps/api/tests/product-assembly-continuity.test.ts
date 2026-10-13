@@ -6,6 +6,7 @@ import {
   REQUEST_SEPARATE_QUOTE_INTENT,
 } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
+import { freezeAcknowledgingRates } from "./fixtures/rateAcknowledgement.js";
 
 const lettersValues = {
   "root.inscription": "WORKOS",
@@ -86,7 +87,13 @@ async function quotedAssembly(app: App, requestId: string) {
   expect((await post(app, `/api/assemblies/${assemblyId}/members`, { role: "SUPPORT_PANEL", values: acmValues, reviewId: acmReview })).status).toBe(200);
   expect((await post(app, `/api/assemblies/${assemblyId}/members`, { role: "SIGNAGE_LETTERS", values: lettersValues, reviewId: lettersReview })).status).toBe(200);
   expect((await post(app, `/api/assemblies/${assemblyId}/confirm`)).status).toBe(200);
-  expect((await post(app, `/api/assemblies/${assemblyId}/quote`)).status).toBe(200);
+  expect(
+    (
+      await freezeAcknowledgingRates((body) =>
+        post(app, `/api/assemblies/${assemblyId}/quote`, body),
+      )
+    ).status,
+  ).toBe(200);
   return { assemblyId, lettersReview };
 }
 

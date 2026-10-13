@@ -5,6 +5,7 @@ import type {
   FrozenSellerIdentity,
   FrozenSiteInstallationQuoteLineV2,
 } from "../commercial/quoteSnapshot.js";
+import type { FrozenRateAcknowledgement } from "../commercial/rateAcknowledgement.js";
 import type { SiteInstallationOperationalView } from "../installation/hostContext.js";
 import type { FrozenProductionInput, FrozenProductionOperation } from "../production/snapshot.js";
 import type { AssemblyKind, AssemblyMemberRole } from "./contract.js";
@@ -44,6 +45,8 @@ export type AssemblyQuoteSnapshot = {
   /** Absent on quotes issued before identities were frozen; their hashes exclude both fields. */
   customer?: FrozenCustomerIdentity;
   seller?: FrozenSellerIdentity;
+  /** Absent when no acknowledgement was required; its hash excludes `acknowledgedAt`. */
+  rateAcknowledgement?: FrozenRateAcknowledgement;
 };
 
 export type AssemblyOrderChild = {

@@ -69,6 +69,12 @@ import {
   PRODUCT_NOT_ENABLED_FOR_NEW_WORK_REASON,
   getProductTemplate,
   isTemplateEnabledForNewWork,
+  assessRateAcknowledgement,
+  decideRateAcknowledgement,
+  scopeRateAcknowledgementRequirement,
+  type CommercialPriceProjection,
+  type FrozenRateAcknowledgement,
+  type RateAcknowledgementError,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
 import { getCookie } from "hono/cookie";
@@ -321,6 +327,50 @@ function presentResolvedCommercialPolicy(
   };
 }
 
+export function readRateAcknowledgementBindingHash(body: unknown): string | null {
+  if (typeof body !== "object" || body === null || !("rateAcknowledgement" in body)) {
+    return null;
+  }
+  const raw = (body as { rateAcknowledgement: unknown }).rateAcknowledgement;
+  if (typeof raw !== "object" || raw === null || !("bindingHash" in raw)) {
+    return null;
+  }
+  const value = (raw as { bindingHash: unknown }).bindingHash;
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+}
+
+function assessProductRateAcknowledgement(
+  runtime: ProductSystemRuntime,
+  compiled: Extract<ReturnType<typeof compileAcceptedProduct>, { ok: true }>,
+  commercialPrice: CommercialPriceProjection,
+  requestId: string | null,
+) {
+  return assessRateAcknowledgement({
+    organizationId: runtime.organizationId ?? "single-plane",
+    requestId,
+    truth: compiled.truth,
+    aggregate: compiled.aggregate,
+    composition: compiled.composition,
+    costEvidenceRows: compiled.costEvidenceRows,
+    commercial: commercialPrice,
+  });
+}
+
+export function rateAcknowledgementHttpStatus(error: RateAcknowledgementError): 403 | 409 | 422 {
+  switch (error) {
+    case "rate_acknowledgement_forbidden":
+      return 403;
+    case "rate_acknowledgement_stale":
+      return 409;
+    case "rate_acknowledgement_required":
+      return 422;
+    default: {
+      const _exhaustive: never = error;
+      return _exhaustive;
+    }
+  }
+}
+
 function readCustomerId(body: unknown): string | null {
   if (typeof body !== "object" || body === null || !("customerId" in body)) {
     return null;
@@ -561,6 +611,16 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
           }
         : {}),
       commercialPrice: scopeCommercialPrice(commercialPrice, access),
+      rateAcknowledgement: scopeRateAcknowledgementRequirement(
+        assessProductRateAcknowledgement(
+          runtime,
+          compiled,
+          commercialPrice,
+          readRequestId(body),
+        ),
+        access,
+        isOwner(c),
+      ),
       commercialPolicy: presentResolvedCommercialPolicy(priced.resolution),
       ...(access === "owner"
         ? {
@@ -773,6 +833,37 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         422,
       );
     }
+    const frozenAt = new Date().toISOString();
+    let rateAcknowledgement: FrozenRateAcknowledgement | null = null;
+    if (commercialPrice.completeness === "COMPLETE") {
+      const requirement = assessProductRateAcknowledgement(
+        runtime,
+        compiled,
+        commercialPrice,
+        requestId,
+      );
+      const decision = decideRateAcknowledgement(requirement, {
+        authorized: isOwner(c),
+        submittedBindingHash: readRateAcknowledgementBindingHash(body),
+        actorUserId: actorUserId(c),
+        acknowledgedAt: frozenAt,
+      });
+      if (!decision.ok) {
+        return c.json(
+          {
+            error: decision.error,
+            reasons: decision.reasons,
+            rateAcknowledgement: scopeRateAcknowledgementRequirement(
+              requirement,
+              financialAccess(c, "commercial"),
+              isOwner(c),
+            ),
+          },
+          rateAcknowledgementHttpStatus(decision.error),
+        );
+      }
+      rateAcknowledgement = decision.acknowledgement;
+    }
     const frozen = freezeQuoteSnapshot(
       compiled.truth,
       compiled.aggregate,
@@ -780,6 +871,8 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       compiled.eic,
       commercialPrice,
       {
+        createdAt: frozenAt,
+        ...(rateAcknowledgement ? { rateAcknowledgement } : {}),
         customer: {
           customerId: customer.customerId,
           displayName: customer.displayName,
@@ -1678,7 +1771,7 @@ function mutationHttpStatus(error: TaskMutationError): 404 | 409 | 422 {
   }
 }
 
-function actorUserId(c: ApiContext): string {
+export function actorUserId(c: ApiContext): string {
   return c.get("cloudUser")?.userId ?? "local";
 }
 

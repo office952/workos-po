@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetResourceCache } from "../data/resourceCache";
 import { AssemblyPage, assemblyLead } from "./AssemblyPage";
@@ -182,4 +182,176 @@ describe("AssemblyPage", () => {
     screen.getByRole("button", { name: /Panou ACM/ }).click();
     expect(await screen.findByRole("link", { name: "Consultă configurația" })).toBeInTheDocument();
   });
+
+  it("freezes the assembly quote only after the Owner accepts its unconfirmed rates", async () => {
+    window.history.replaceState(null, "", "/ansamblu?assembly=asm:ack");
+    const fetchMock = vi.fn((_path: string, init?: RequestInit) =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          assembly:
+            init?.method === "POST"
+              ? {
+                  ...confirmedAssembly("asm:ack"),
+                  quote: QUOTE,
+                  frozenRateAcknowledgement: {
+                    acknowledgedAt: "2026-10-13T09:00:00.000Z",
+                    rates: [UNCONFIRMED_RATE],
+                  },
+                }
+              : {
+                  ...confirmedAssembly("asm:ack"),
+                  rateAcknowledgement: {
+                    status: "REQUIRED",
+                    bindingHash: "binding-1",
+                    canAcknowledge: true,
+                    rates: [UNCONFIRMED_RATE],
+                  },
+                },
+        }),
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<AssemblyPage />);
+    const quoteButton = await screen.findByRole("button", { name: "Pregătește oferta" });
+    expect(screen.getByText("Prețul clientului folosește tarife neconfirmate")).toBeInTheDocument();
+    expect(screen.getByText(/Panou ACM · 18,00 EUR \/ m²/)).toBeInTheDocument();
+    expect(quoteButton).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("checkbox"));
+    await waitFor(() => {
+      expect(quoteButton).not.toBeDisabled();
+    });
+    fireEvent.click(quoteButton);
+
+    expect(await screen.findByText("Tarife neconfirmate acceptate")).toBeInTheDocument();
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+    expect(post?.[0]).toBe("/api/assemblies/asm:ack/quote");
+    expect(JSON.parse(String(post?.[1]?.body))).toEqual({
+      rateAcknowledgement: { bindingHash: "binding-1" },
+    });
+  });
+
+  it("drops a stale acknowledgement and reloads the requirement when the server refuses it", async () => {
+    window.history.replaceState(null, "", "/ansamblu?assembly=asm:stale");
+    const pendingAssembly = {
+      ...confirmedAssembly("asm:stale"),
+      rateAcknowledgement: {
+        status: "REQUIRED",
+        bindingHash: "binding-old",
+        canAcknowledge: true,
+        rates: [UNCONFIRMED_RATE],
+      },
+    };
+    const fetchMock = vi.fn((_path: string, init?: RequestInit) =>
+      Promise.resolve(
+        init?.method === "POST"
+          ? {
+              ok: false,
+              status: 409,
+              json: async () => ({
+                error: "rate_acknowledgement_stale",
+                reasons: ["Oferta sau tarifele s-au schimbat după acceptare."],
+              }),
+            }
+          : { ok: true, status: 200, json: async () => ({ assembly: pendingAssembly }) },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<AssemblyPage />);
+    const quoteButton = await screen.findByRole("button", { name: "Pregătește oferta" });
+    fireEvent.click(screen.getByRole("checkbox"));
+    await waitFor(() => {
+      expect(quoteButton).not.toBeDisabled();
+    });
+    fireEvent.click(quoteButton);
+
+    expect(await screen.findByText("Acțiunea nu a fost finalizată")).toBeInTheDocument();
+    expect(screen.getByText("Oferta sau tarifele s-au schimbat după acceptare.")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox")).not.toBeChecked();
+    expect(quoteButton).toBeDisabled();
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.filter(([, init]) => init?.method !== "POST").length).toBeGreaterThan(1);
+    });
+  });
+
+  it("tells a commercial user to ask for acknowledgement without offering the binding", async () => {
+    window.history.replaceState(null, "", "/ansamblu?assembly=asm:commercial");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            assembly: {
+              ...confirmedAssembly("asm:commercial"),
+              rateAcknowledgement: {
+                status: "REQUIRED",
+                bindingHash: null,
+                canAcknowledge: false,
+                rates: [{ ...UNCONFIRMED_RATE, amount: undefined, currency: undefined }],
+              },
+            },
+          }),
+        }),
+      ),
+    );
+
+    render(<AssemblyPage />);
+    expect(
+      await screen.findByText(/pot fi acceptate doar de un utilizator cu acces financiar/),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.queryByText(/18,00 EUR/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pregătește oferta" })).toBeDisabled();
+  });
 });
+
+const UNCONFIRMED_RATE = {
+  resourceId: "acm_3mm",
+  label: "Placă ACM 3 mm",
+  reason: "Valoare generată automat (AI), neconfirmată de owner",
+  sourceLabel: "Decizie AI / default de dezvoltare",
+  unitLabel: "m²",
+  context: "Panou ACM",
+  amount: 18,
+  currency: "EUR",
+};
+
+const QUOTE = {
+  label: "Panou ACM + litere volumetrice",
+  sections: [{ title: "Panou ACM", inscription: "ACK", grossPrice: 120 }],
+  netPrice: 100,
+  vatAmount: 20,
+  grossPrice: 120,
+  currency: "EUR",
+};
+
+function confirmedAssembly(assemblyId: string) {
+  return {
+    assemblyId,
+    customerId: "cus:1",
+    requestId: "crq:1",
+    label: "Panou ACM + litere volumetrice",
+    statusLabel: "Confirmat",
+    stale: false,
+    staleReason: null,
+    canConfirm: false,
+    scopes: [
+      { id: "acm", title: "Panou ACM", complete: true, summary: "Panou" },
+      { id: "letters", title: "Litere", complete: true, summary: "Litere" },
+      { id: "relation", title: "Ansamblare", complete: true, summary: "Relații" },
+      { id: "summary", title: "Rezumat ansamblu", complete: true, summary: "Gata" },
+    ],
+    quote: null,
+    orderId: null,
+    productionId: null,
+    executionPlanId: null,
+    rateAcknowledgement: null,
+    frozenRateAcknowledgement: null,
+  };
+}

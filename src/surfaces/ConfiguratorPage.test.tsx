@@ -510,6 +510,80 @@ describe("ConfiguratorPage", () => {
     expect(freezeBodies.map((body) => body.commercialIntent ?? null)).toEqual([null, "SEPARATE_QUOTE"]);
   });
 
+  function withRateAcknowledgement(
+    fetchMock: ReturnType<typeof installFetch>,
+    freezeResponse?: () => ReturnType<typeof jsonResponse>,
+  ) {
+    const original = fetchMock.getMockImplementation()!;
+    const freezeBodies: Record<string, unknown>[] = [];
+    fetchMock.mockImplementation((input, init) => {
+      const url = String(input);
+      if (url.endsWith("/confirm")) {
+        return jsonResponse({
+          ...confirmBody({ rate: 3, cost: 37.5 }),
+          rateAcknowledgement: {
+            status: "REQUIRED",
+            bindingHash: "f".repeat(64),
+            canAcknowledge: true,
+            rates: [
+              {
+                resourceId: "MAT-VINYL-ORACAL-651",
+                label: "Folie vinil sintetică",
+                reason: "Tarif preluat din evidența veche, neconfirmat",
+                sourceLabel: "Evidență legacy",
+                unitLabel: "m²",
+                context: null,
+                amount: 9,
+                currency: "EUR",
+              },
+            ],
+          },
+        });
+      }
+      if (url.endsWith("/quote-snapshots")) {
+        freezeBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+        if (freezeResponse) return freezeResponse();
+      }
+      return original(input, init);
+    });
+    return freezeBodies;
+  }
+
+  it("keeps freeze closed until an authorized user acknowledges the unconfirmed rates", async () => {
+    const freezeBodies = withRateAcknowledgement(installFetch({ rate: 3, cost: 37.5 }));
+    renderConfigurator();
+    const user = await confirmReady();
+    expect(await screen.findByTestId("rate-acknowledgement")).toHaveTextContent("Folie vinil sintetică");
+    expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeDisabled();
+    await user.click(screen.getByRole("checkbox", { name: /Am verificat tarifele neconfirmate/ }));
+    expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "Îngheață oferta" }));
+    await screen.findByRole("link", { name: "Deschide oferta înghețată" });
+    expect(freezeBodies).toHaveLength(1);
+    expect(freezeBodies[0]?.rateAcknowledgement).toEqual({ bindingHash: "f".repeat(64) });
+    expect(freezeBodies[0]).not.toHaveProperty("acknowledgedByUserId");
+    expect(freezeBodies[0]).not.toHaveProperty("acknowledgedAt");
+  });
+
+  it("asks for a fresh price and acknowledgement when the server reports a stale acknowledgement", async () => {
+    withRateAcknowledgement(installFetch({ rate: 3, cost: 37.5 }), () =>
+      jsonResponse(
+        {
+          error: "rate_acknowledgement_stale",
+          reasons: ["Oferta sau tarifele s-au schimbat după acceptare. Recalculează prețul și acceptă din nou tarifele neconfirmate."],
+        },
+        409,
+      ),
+    );
+    renderConfigurator();
+    const user = await confirmReady();
+    await user.click(await screen.findByRole("checkbox", { name: /Am verificat tarifele neconfirmate/ }));
+    await user.click(screen.getByRole("button", { name: "Îngheață oferta" }));
+    expect(await screen.findByText(/s-au schimbat după acceptare/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeDisabled();
+    expect(screen.queryByRole("checkbox", { name: /Am verificat tarifele neconfirmate/ })).toBeNull();
+  });
+
   it("sends configuration values to preview and keeps reviewId on confirm", async () => {
     const fetchMock = installFetch({ rate: 3, cost: 37.5 });
     window.history.replaceState(

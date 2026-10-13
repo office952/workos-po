@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { getJson, postJson } from "../api/http";
+import { presentRateAcknowledgement, rateAcknowledgementSatisfied } from "../adapters/confirmAdapter";
+import { presentFrozenRateAcknowledgement } from "../adapters/quoteAdapter";
+import {
+  TransportError,
+  getJson,
+  postJson,
+  readTransportErrorCode,
+  readTransportReasons,
+} from "../api/http";
 import { invalidateAfterRequestDetailChange, invalidateCustomerProjections } from "../data/invalidation";
 import { Button } from "../components/Button";
 import { InfoRow } from "../components/InfoRow";
@@ -13,6 +21,10 @@ import { resourceKeys } from "../data/resourceKeys";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { formatMoney } from "../presentation/format";
+import {
+  FrozenRateAcknowledgementNotice,
+  RateAcknowledgementNotice,
+} from "../presentation/rateAcknowledgement";
 import { configuratorHref, requestHref } from "../routing/appRoute";
 
 type AssemblyScope = {
@@ -53,6 +65,8 @@ type AssemblyView = {
     unpricedOperations: string[];
   } | null;
   membersEditable?: boolean;
+  rateAcknowledgement?: unknown;
+  frozenRateAcknowledgement?: unknown;
 };
 
 /** Lowercases only the first letter so acronyms such as ACM keep their case in running text. */
@@ -110,6 +124,7 @@ export function AssemblyPage() {
   const [scopeId, setScopeId] = useState<AssemblyScope["id"]>("summary");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [acknowledgedRateBinding, setAcknowledgedRateBinding] = useState<string | null>(null);
   const loaded = useResource(
     assemblyId ? resourceKeys.assembly(assemblyId) : null,
     () => loadAssembly(assemblyId ?? ""),
@@ -117,14 +132,14 @@ export function AssemblyPage() {
   );
   const assembly = loaded.data ?? null;
 
-  async function run(path: string): Promise<void> {
+  async function run(path: string, payload?: unknown): Promise<void> {
     if (!assemblyId || pending) {
       return;
     }
     setPending(true);
     setError(null);
     try {
-      const body = (await postJson(path)) as { assembly: AssemblyView };
+      const body = (await postJson(path, payload)) as { assembly: AssemblyView };
       if (assemblyId) {
         writeResource(resourceKeys.assembly(assemblyId), body.assembly);
       }
@@ -135,8 +150,15 @@ export function AssemblyPage() {
       }
       invalidateResources(resourceKeys.jobs(), resourceKeys.quotes());
       invalidateResourcePrefix(resourceKeys.assemblyQuote(""));
-    } catch {
-      setError("Acțiunea nu a putut fi finalizată.");
+    } catch (failure) {
+      const code = failure instanceof TransportError ? readTransportErrorCode(failure.body) : null;
+      if (code === "rate_acknowledgement_stale" || code === "rate_acknowledgement_required") {
+        setAcknowledgedRateBinding(null);
+        invalidateResources(resourceKeys.assembly(assemblyId));
+      }
+      const reason =
+        failure instanceof TransportError ? readTransportReasons(failure.body)[0] : undefined;
+      setError(reason ?? "Acțiunea nu a putut fi finalizată.");
     } finally {
       setPending(false);
     }
@@ -152,6 +174,15 @@ export function AssemblyPage() {
   const incompleteMemberHref =
     assembly && incompleteMember ? memberConfiguratorHref(assembly, incompleteMember) : null;
   const membersEditable = assembly?.membersEditable !== false;
+  const rateRequirement = presentRateAcknowledgement(assembly?.rateAcknowledgement);
+  const frozenRateAcknowledgement = presentFrozenRateAcknowledgement(
+    assembly?.frozenRateAcknowledgement,
+  );
+  const ratesAcknowledged = rateAcknowledgementSatisfied(rateRequirement, acknowledgedRateBinding);
+  const quotePayload =
+    rateRequirement?.status === "REQUIRED" && rateRequirement.bindingHash && ratesAcknowledged
+      ? { rateAcknowledgement: { bindingHash: rateRequirement.bindingHash } }
+      : undefined;
 
   return (
     <SlicePage
@@ -172,9 +203,13 @@ export function AssemblyPage() {
           Deschide ansamblul din cererea pentru care lucrezi.
         </InlineAlert>
       ) : null}
-      {loaded.status === "error" || error ? (
+      {error ? (
+        <InlineAlert tone="error" title="Acțiunea nu a fost finalizată">
+          {error}
+        </InlineAlert>
+      ) : loaded.status === "error" ? (
         <InlineAlert tone="error" title="Ansamblul nu este disponibil">
-          {error ?? "Ansamblul nu a putut fi citit."}
+          Ansamblul nu a putut fi citit.
         </InlineAlert>
       ) : null}
       {assembly?.stale ? (
@@ -294,15 +329,33 @@ export function AssemblyPage() {
                   label="Total comercial"
                   value={formatMoney(assembly.quote.grossPrice, assembly.quote.currency)}
                 />
+                {frozenRateAcknowledgement ? (
+                  <FrozenRateAcknowledgementNotice acknowledgement={frozenRateAcknowledgement} />
+                ) : null}
               </SurfacePanel>
             </div>
           ) : (
-            <Button
-              disabled={pending || assembly.statusLabel !== "Confirmat"}
-              onClick={() => void run(`/api/assemblies/${assembly.assemblyId}/quote`)}
-            >
-              Pregătește oferta
-            </Button>
+            <>
+              {rateRequirement ? (
+                <RateAcknowledgementNotice
+                  requirement={rateRequirement}
+                  acknowledged={
+                    acknowledgedRateBinding !== null &&
+                    acknowledgedRateBinding === rateRequirement.bindingHash
+                  }
+                  disabled={pending}
+                  onAcknowledgedChange={(acknowledged) => {
+                    setAcknowledgedRateBinding(acknowledged ? rateRequirement.bindingHash : null);
+                  }}
+                />
+              ) : null}
+              <Button
+                disabled={pending || assembly.statusLabel !== "Confirmat" || !ratesAcknowledged}
+                onClick={() => void run(`/api/assemblies/${assembly.assemblyId}/quote`, quotePayload)}
+              >
+                Pregătește oferta
+              </Button>
+            </>
           )}
           {assembly.quote && !assembly.orderId ? (
             <Button disabled={pending} onClick={() => void run(`/api/assemblies/${assembly.assemblyId}/accept`)}>

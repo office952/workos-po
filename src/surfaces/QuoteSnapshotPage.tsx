@@ -20,6 +20,7 @@ import { presentCustomerPrice } from "../presentation/customerPrice";
 import { triggerBrowserDownload } from "../presentation/download";
 import { presentCostLine, selectLineByResource } from "../presentation/costLine";
 import { presentContextMeta } from "../presentation/contextMeta";
+import { FrozenRateAcknowledgementNotice } from "../presentation/rateAcknowledgement";
 import { ALUMINIUM_RETURN_PROFILE_RESOURCE_ID } from "../reference/lettersProduct";
 import { clientHref, jobHref, quoteHref, requestHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
@@ -239,6 +240,11 @@ export function QuoteSnapshotPage({
               total={presentedSnapshot.offerLines.length > 0 ? total : null}
               lineTax={presentedSnapshot.offerLines.length === 0}
             />
+            {presentedSnapshot.rateAcknowledgement ? (
+              <FrozenRateAcknowledgementNotice
+                acknowledgement={presentedSnapshot.rateAcknowledgement}
+              />
+            ) : null}
             {presentedSnapshot.financialVisible ? (
               <section className="offers-cost" aria-label="Cost intern">
                 <details className="quote-analysis">

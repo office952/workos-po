@@ -1,4 +1,5 @@
 import type { FrozenCommercialOffer } from "../commercial/quoteSnapshot.js";
+import type { UnconfirmedRateEvidence } from "../commercial/rateAcknowledgement.js";
 import type { FrozenProductionInput } from "../production/snapshot.js";
 import type { ProductTruth } from "../product/types.js";
 import type {
@@ -98,6 +99,21 @@ export type ConfirmedChildProduct = {
   eicCurrency: "EUR";
   eicCompleteness: "COMPLETE" | "PARTIAL";
   truth: ProductTruth;
+  /**
+   * Unconfirmed rates frozen with the child commercial price. Absent on children confirmed before
+   * rate acknowledgement existed; those cannot back a new assembly quote.
+   */
+  unconfirmedRates?: readonly UnconfirmedRateEvidence[];
+  /** Present only when this record re-prices a legacy child on current rates. */
+  rateEvidenceBasis?: ChildRateEvidenceBasis;
+};
+
+export const CURRENT_RATE_REEVALUATION = "CURRENT_RATE_REEVALUATION" as const;
+
+/** The legacy child froze no per-rate evidence, so its historical rates are not reconstructed. */
+export type ChildRateEvidenceBasis = {
+  kind: typeof CURRENT_RATE_REEVALUATION;
+  reevaluatedFromTruthId: string;
 };
 
 export const ASSEMBLY_RULE_ERRORS = [
