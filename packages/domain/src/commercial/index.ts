@@ -123,12 +123,17 @@ export {
   formatCustomerMoney,
   formatCustomerMoneyAmount,
   formatFrozenOfferDate,
+  projectAssemblyQuoteDocument,
+  assemblyQuoteHasFrozenIdentity,
+  ASSEMBLY_LEGACY_IDENTITY_NOTICE,
   projectQuoteDocument,
   quoteDocumentReference,
   sanitizeDocumentText,
+  type AssemblyQuoteDocumentInput,
   type QuoteDocumentCommercial,
   type QuoteDocumentLine,
   type QuoteDocumentModel,
+  type QuoteDocumentSection,
   type QuoteDocumentSeller,
 } from "./quoteDocument.js";
 export {

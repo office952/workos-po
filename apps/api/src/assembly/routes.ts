@@ -34,6 +34,8 @@ import {
   type AssemblyKind,
   type AssemblyMemberRole,
   type ConfirmedChildProduct,
+  type FrozenCustomerIdentity,
+  type FrozenSellerIdentity,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
 import { getProductSystem, isOwner, type ApiEnv } from "../cloud/context.js";
@@ -334,12 +336,18 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     if (!service.ok) {
       return c.json({ error: service.error, reasons: service.reasons }, 422);
     }
+    const identity = assemblyQuoteIdentity(runtime, current.truth.requestId);
+    if (!identity.ok) {
+      return c.json({ error: identity.error, reasons: identity.reasons }, 422);
+    }
     const frozen = freezeAssemblyQuote({
       quoteSnapshotId: `asmq:${current.truth.assemblyTruthId}`,
       truth: current.truth,
       children,
       createdAt: new Date().toISOString(),
       ...(service.line ? { serviceLine: service.line } : {}),
+      customer: identity.customer,
+      seller: identity.seller,
     });
     if (!frozen.ok) {
       return c.json({ error: frozen.error, reasons: frozen.reasons }, 422);
@@ -521,6 +529,43 @@ function assemblyServiceLine(
     return frozen;
   }
   return { ok: true, line: frozen.line };
+}
+
+function assemblyQuoteIdentity(
+  runtime: ReturnType<typeof getProductSystem>,
+  requestId: string | null,
+):
+  | { ok: true; customer: FrozenCustomerIdentity; seller: FrozenSellerIdentity }
+  | { ok: false; error: string; reasons: string[] } {
+  const request = requestId ? runtime.readCommercialRequest(requestId) : null;
+  if (!request) {
+    return {
+      ok: false,
+      error: "missing_customer",
+      reasons: ["Oferta comercială necesită un client înainte de înghețare."],
+    };
+  }
+  const customer = runtime.getCustomer(request.customerId);
+  if (!customer || customer.status !== "ACTIVE") {
+    return {
+      ok: false,
+      error: "customer_unavailable",
+      reasons: ["Clientul selectat nu poate fi folosit pentru o ofertă nouă."],
+    };
+  }
+  const seller = runtime.getSellerProfile();
+  if (!seller) {
+    return {
+      ok: false,
+      error: "seller_unconfigured",
+      reasons: ["Datele firmei trebuie configurate înainte de a crea o ofertă."],
+    };
+  }
+  return {
+    ok: true,
+    customer: { customerId: customer.customerId, displayName: customer.displayName },
+    seller,
+  };
 }
 
 function readString(body: unknown, key: string): string | null {

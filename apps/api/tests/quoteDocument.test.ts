@@ -152,6 +152,124 @@ describe("quote document PDF", () => {
     expect(quoteDocumentDrawLines(model).join("\n")).toContain("<script>alert(1)</script>");
   });
 
+  it("renders an assembly quote PDF with the registry reference and refuses unknown or product quotes", async () => {
+    const app = createApp();
+    const customerId = await createCustomer(app, "Client Demo Ansamblu");
+    const request = await app.request("/api/requests", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ customerId, title: "Ansamblu PDF", description: "Document ansamblu" }),
+    });
+    const requestId = ((await readBody(request)).request as JsonObject).requestId as string;
+    const post = (path: string, body?: unknown) =>
+      app.request(path, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+    const review = async (productCode: string, values: Record<string, unknown>) =>
+      (await readBody(await post(`/api/products/${productCode}/preview`, { values }))).reviewId;
+    const created = await post("/api/assemblies", { requestId });
+    const assemblyId = ((await readBody(created)).assembly as JsonObject).assemblyId as string;
+    expect(
+      (await post(`/api/assemblies/${assemblyId}/members`, {
+        role: "SUPPORT_PANEL",
+        values: acmValues,
+        reviewId: await review(ACM_CASSETTE_NONE_PRODUCT_CODE, acmValues),
+      })).status,
+    ).toBe(200);
+    expect(
+      (await post(`/api/assemblies/${assemblyId}/members`, {
+        role: "SIGNAGE_LETTERS",
+        values: lettersValues,
+        reviewId: await review(CANONICAL_PRODUCT_CODE, lettersValues),
+      })).status,
+    ).toBe(200);
+    expect((await post(`/api/assemblies/${assemblyId}/confirm`)).status).toBe(200);
+    expect((await post(`/api/assemblies/${assemblyId}/quote`)).status).toBe(200);
+    const overview = (await readBody(await app.request("/api/quotes"))).overview as {
+      quotes: { quoteSnapshotId: string; kind: string; reference: string }[];
+    };
+    const assemblyQuote = overview.quotes.find((quote) => quote.kind === "ASSEMBLY");
+    expect(assemblyQuote).toBeDefined();
+
+    const response = await app.request(
+      `/api/assembly-quotes/${encodeURIComponent(assemblyQuote!.quoteSnapshotId)}/document`,
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("application/pdf");
+    expect(response.headers.get("content-disposition")).toContain(
+      `Oferta-${assemblyQuote!.reference}.pdf`,
+    );
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    expect(String.fromCharCode(...bytes.slice(0, 4))).toBe("%PDF");
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThanOrEqual(1);
+
+    expect(
+      (await app.request("/api/assembly-quotes/asmq%3Amissing/document")).status,
+    ).toBe(404);
+    const { snapshot } = await freezeQuote(CANONICAL_PRODUCT_CODE, lettersValues);
+    expect(
+      (await app.request(
+        `/api/assembly-quotes/${encodeURIComponent(snapshot.quoteSnapshotId as string)}/document`,
+      )).status,
+    ).toBe(404);
+  });
+
+  it("prints every assembly section between the product and the price", () => {
+    const text = quoteDocumentDrawLines({
+      title: "Ofertă",
+      issuerName: "HUB MEDIA PRODUCTION S.R.L.",
+      reference: "OF-47542FBC",
+      issuedOn: "02.09.2026",
+      status: "Ofertă",
+      productName: "Panou ACM + litere volumetrice",
+      customerDisplayName: "Nord Market Demo SRL",
+      configuration: [],
+      technicalSummary: [],
+      sections: [
+        {
+          title: "Litere",
+          productName: "Litere volumetrice luminoase",
+          inscription: "NORD",
+          configuration: [{ label: "Adâncime volum", value: "60 mm" }],
+          technicalSummary: [],
+          price: { label: "Preț net", value: "516,38 EUR" },
+        },
+        {
+          title: "Panou ACM",
+          productName: "Panou ACM casetat",
+          configuration: [],
+          technicalSummary: [{ label: "Lățime exterioară", value: "1.000 mm" }],
+          price: { label: "Preț net", value: "98,07 EUR" },
+        },
+      ],
+      commercial: {
+        netLabel: "Total ofertă",
+        netDisplay: "614,45",
+        vatLabel: "TVA 21%",
+        vatDisplay: "129,03",
+        grossLabel: "Total",
+        grossDisplay: "743,48",
+        currency: "EUR",
+        netPrice: 614.45,
+        vatAmount: 129.03,
+        vatPercent: 21,
+        grossPrice: 743.48,
+      },
+      filename: "Oferta-OF-47542FBC.pdf",
+    }).join("\n");
+    const product = text.indexOf("Panou ACM + litere volumetrice");
+    const letters = text.indexOf("\nLitere\n");
+    const acmPrice = text.indexOf("Preț net: 98,07 EUR");
+    expect(product).toBeGreaterThan(-1);
+    expect(letters).toBeGreaterThan(product);
+    expect(text).toContain("Înscripție: NORD");
+    expect(text).toContain("Lățime exterioară: 1.000 mm");
+    expect(acmPrice).toBeGreaterThan(letters);
+    expect(text.indexOf("Total: 743,48 EUR")).toBeGreaterThan(acmPrice);
+  });
+
   it("keeps renderer and route free of product-code branches and live repricing", () => {
     const renderer = readFileSync(
       join(dirname(fileURLToPath(import.meta.url)), "../src/quoteDocument/renderQuoteDocumentPdf.ts"),

@@ -36,3 +36,11 @@ export async function fetchQuoteDocument(
 ): Promise<DownloadResult> {
   return fetchDownload(quoteDocumentPath(productCode, quoteSnapshotId));
 }
+
+export function assemblyQuoteDocumentPath(quoteSnapshotId: string): string {
+  return `/api/assembly-quotes/${encodeURIComponent(quoteSnapshotId)}/document`;
+}
+
+export async function fetchAssemblyQuoteDocument(quoteSnapshotId: string): Promise<DownloadResult> {
+  return fetchDownload(assemblyQuoteDocumentPath(quoteSnapshotId));
+}

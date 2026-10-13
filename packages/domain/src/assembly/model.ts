@@ -113,6 +113,8 @@ export const ASSEMBLY_RULE_ERRORS = [
   "cross_organization",
   "review_required",
   "incomplete_commercial",
+  "invalid_customer",
+  "invalid_seller",
 ] as const;
 export type AssemblyRuleError = (typeof ASSEMBLY_RULE_ERRORS)[number];
 

@@ -1,12 +1,17 @@
 import type { Hono } from "hono";
 import {
+  assemblyQuoteContentHashMatches,
+  assemblyQuoteHasFrozenIdentity,
+  freezeSellerIdentity,
   presentAssemblyQuoteDetail,
   presentAssemblyQuoteInternalCost,
+  projectAssemblyQuoteDocument,
   scopeQuoteSnapshot,
 } from "@workos-final/domain";
 import { getProductSystem, type ApiContext, type ApiEnv } from "../cloud/context.js";
 import { financialAccess } from "../financial/access.js";
 import { httpPathIdentity } from "../httpPathIdentity.js";
+import { renderQuoteDocumentPdf } from "../quoteDocument/renderQuoteDocumentPdf.js";
 
 export function registerQuoteRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/quotes", (c) => {
@@ -46,6 +51,63 @@ export function registerQuoteRoutes(app: Hono<ApiEnv>): void {
             reference: item.requestReference,
           }
         : null,
+    });
+  });
+
+  app.get("/api/assembly-quotes/:quoteSnapshotId/document", async (c) => {
+    const runtime = getProductSystem(c);
+    const quoteSnapshotId = httpPathIdentity(c.req.path, "/api/assembly-quotes/", "/document");
+    const record = runtime.readAssemblyQuoteRecord(quoteSnapshotId);
+    if (!record) {
+      return c.json({ error: "not_found" }, 404);
+    }
+    if (!assemblyQuoteContentHashMatches(record.quote)) {
+      return c.json(
+        {
+          error: "assembly_document_integrity",
+          reasons: ["Oferta înghețată nu mai corespunde amprentei ei și nu poate fi tipărită."],
+        },
+        422,
+      );
+    }
+    const memberTruths = new Map(
+      record.quote.members.flatMap((member) => {
+        const child = record.confirmedChildren.find(
+          (item) =>
+            item.truthId === member.confirmedTruthId &&
+            item.truthHash === member.confirmedTruthHash,
+        );
+        return child ? [[member.confirmedTruthId, child.truth] as const] : [];
+      }),
+    );
+    if (memberTruths.size !== record.quote.members.length) {
+      return c.json(
+        {
+          error: "assembly_document_unavailable",
+          reasons: ["Configurația confirmată a unei secțiuni nu mai poate fi citită pentru document."],
+        },
+        422,
+      );
+    }
+    const legacySeller = assemblyQuoteHasFrozenIdentity(record.quote)
+      ? undefined
+      : runtime.getSellerProfile();
+    const model = projectAssemblyQuoteDocument({
+      quote: record.quote,
+      memberTruths,
+      ...(legacySeller === undefined
+        ? {}
+        : {
+            currentIdentity: {
+              customerDisplayName: record.item.customerDisplayName,
+              seller: legacySeller ? freezeSellerIdentity(legacySeller) : null,
+            },
+          }),
+    });
+    const bytes = await renderQuoteDocumentPdf(model);
+    return c.body(Buffer.from(bytes), 200, {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${model.filename}"`,
     });
   });
 }

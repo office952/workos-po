@@ -45,6 +45,7 @@ import {
   createAssemblyDefinition,
   freezeAssemblyQuote,
   acceptAssemblyQuote,
+  assemblyQuoteContentHashMatches,
   hashProductAggregate,
   hashProductTruth,
   materializeAssemblyExecutionPlan,
@@ -74,6 +75,8 @@ const acmValues: DraftValues = {
   "face.cassetteDepthMm": 40,
 };
 
+/** Hash produced for this fixture before identities existed on assembly quotes. */
+const LEGACY_IDENTITY_FREE_QUOTE_HASH = "216e034425785a18295dcfff9a649368b0757b4be250cd83efe291f173aedd5c";
 const ORG = "org-assembly";
 const OTHER_ORG = "org-other";
 
@@ -375,6 +378,86 @@ describe("product assembly v1", () => {
       throw new Error("confirm failed");
     }
     expect(left.truth.contentHash).toBe(right.truth.contentHash);
+  });
+
+  it("freezes customer and seller identity into the quote hash without touching totals or legacy hashes", () => {
+    const ready = readyAssembly();
+    const confirmed = confirmAssembly(ready.definition, [ready.acm, ready.letters], [], "2026-09-23T11:00:00.000Z");
+    if (!confirmed.ok) {
+      throw new Error(confirmed.error);
+    }
+    const base = {
+      quoteSnapshotId: "asmq-identity",
+      truth: confirmed.truth,
+      children: [ready.acm, ready.letters],
+      createdAt: "2026-09-23T11:10:00.000Z",
+    };
+    const legacy = freezeAssemblyQuote(base);
+    const issued = freezeAssemblyQuote({
+      ...base,
+      customer: { customerId: " cus:nord ", displayName: " Nord Market Demo SRL " },
+      seller: { legalName: "HUB MEDIA PRODUCTION S.R.L.", fiscalId: "RO54481582", brand: "" },
+    });
+    if (!legacy.ok || !issued.ok) {
+      throw new Error("expected frozen quotes");
+    }
+    expect(legacy.quote).not.toHaveProperty("customer");
+    expect(legacy.quote).not.toHaveProperty("seller");
+    expect(legacy.quote.contentHash).toBe(LEGACY_IDENTITY_FREE_QUOTE_HASH);
+    expect(assemblyQuoteContentHashMatches(legacy.quote)).toBe(true);
+
+    expect(issued.quote.customer).toEqual({ customerId: "cus:nord", displayName: "Nord Market Demo SRL" });
+    expect(issued.quote.seller).toEqual({ legalName: "HUB MEDIA PRODUCTION S.R.L.", fiscalId: "RO54481582" });
+    expect(issued.quote.contentHash).not.toBe(legacy.quote.contentHash);
+    expect(issued.quote.totals).toEqual(legacy.quote.totals);
+    expect(issued.quote.members).toEqual(legacy.quote.members);
+
+    const reloaded = JSON.parse(JSON.stringify(issued.quote)) as typeof issued.quote;
+    expect(assemblyQuoteContentHashMatches(reloaded)).toBe(true);
+    expect(
+      assemblyQuoteContentHashMatches({ ...reloaded, seller: { legalName: "Alt vânzător SRL" } }),
+    ).toBe(false);
+    expect(
+      assemblyQuoteContentHashMatches({
+        ...reloaded,
+        customer: { customerId: "cus:nord", displayName: "Alt client SRL" },
+      }),
+    ).toBe(false);
+    expect(assemblyQuoteContentHashMatches({ ...reloaded, customer: undefined })).toBe(false);
+
+    const order = acceptAssemblyQuote({
+      orderSnapshotId: "asmo-identity",
+      quote: issued.quote,
+      children: [ready.acm, ready.letters],
+      createdAt: "2026-09-23T11:20:00.000Z",
+    });
+    if (!order.ok) {
+      throw new Error(order.error);
+    }
+    expect(order.order.sourceQuoteContentHash).toBe(issued.quote.contentHash);
+    expect(order.order.totals).toEqual(issued.quote.totals);
+  });
+
+  it("refuses an assembly quote with an empty customer or seller identity", () => {
+    const ready = readyAssembly();
+    const confirmed = confirmAssembly(ready.definition, [ready.acm, ready.letters], [], "2026-09-23T11:00:00.000Z");
+    if (!confirmed.ok) {
+      throw new Error(confirmed.error);
+    }
+    const base = {
+      quoteSnapshotId: "asmq-invalid",
+      truth: confirmed.truth,
+      children: [ready.acm, ready.letters],
+      createdAt: "2026-09-23T11:10:00.000Z",
+    };
+    expect(freezeAssemblyQuote({ ...base, customer: { customerId: "cus:1", displayName: " " } })).toMatchObject({
+      ok: false,
+      error: "invalid_customer",
+    });
+    expect(freezeAssemblyQuote({ ...base, seller: { legalName: "" } })).toMatchObject({
+      ok: false,
+      error: "invalid_seller",
+    });
   });
 
   it("sums child commercial totals without a second markup", () => {

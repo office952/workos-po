@@ -1,4 +1,8 @@
+import { useState } from "react";
+import { readTransportReasons } from "../api/http";
+import { fetchAssemblyQuoteDocument } from "../api/quote";
 import type { AssemblyQuoteCostTransport, AssemblyQuoteTransport } from "../api/types";
+import { Button } from "../components/Button";
 import { InlineAlert } from "../components/InlineAlert";
 import { LoadingFloor } from "../components/LoadingFloor";
 import { resourceKeys } from "../data/resourceKeys";
@@ -6,6 +10,7 @@ import { loadAssemblyQuote } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { presentContextMeta } from "../presentation/contextMeta";
+import { triggerBrowserDownload } from "../presentation/download";
 import { formatMoney } from "../presentation/format";
 import { assemblyHref, assemblyQuoteHref, jobHref, requestHref } from "../routing/appRoute";
 import { QuoteLines, QuoteRelations, QuoteSummary, type QuoteLine, type QuoteRelation, type QuoteTotal } from "./quoteDetail";
@@ -74,6 +79,20 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
   );
   const quote = loaded.data ?? null;
   const item = quote?.item ?? null;
+  const [documentPending, setDocumentPending] = useState(false);
+  const [documentError, setDocumentError] = useState<string | null>(null);
+
+  async function downloadDocument(): Promise<void> {
+    setDocumentPending(true);
+    setDocumentError(null);
+    const result = await fetchAssemblyQuoteDocument(quoteSnapshotId);
+    setDocumentPending(false);
+    if (!result.ok) {
+      setDocumentError(readTransportReasons(result.body)[0] ?? "Documentul ofertei nu este disponibil.");
+      return;
+    }
+    triggerBrowserDownload(result.blob, result.filename ?? "oferta.pdf");
+  }
 
   return (
     <SlicePage
@@ -109,16 +128,27 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
                 { label: "Comandă", value: quote.orderSnapshotId ? "Acceptată — comandă creată" : "Neacceptată" },
               ]}
               actions={
-                <a
-                  className="offers-next"
-                  href={quote.orderSnapshotId ? jobHref(quote.orderSnapshotId) : assemblyHref(quote.assemblyId)}
-                >
-                  <span>{quote.orderSnapshotId ? "Deschide comanda" : "Deschide ansamblul"}</span>
-                  <span aria-hidden="true">→</span>
-                </a>
+                <>
+                  <a
+                    className="offers-next"
+                    href={quote.orderSnapshotId ? jobHref(quote.orderSnapshotId) : assemblyHref(quote.assemblyId)}
+                  >
+                    <span>{quote.orderSnapshotId ? "Deschide comanda" : "Deschide ansamblul"}</span>
+                    <span aria-hidden="true">→</span>
+                  </a>
+                  <Button variant="secondary" disabled={documentPending} onClick={() => void downloadDocument()}>
+                    Descarcă oferta PDF
+                  </Button>
+                </>
               }
               note="Oferta este înghețată. Acceptarea și modificările se fac din ansamblu."
-            />
+            >
+              {documentError ? (
+                <InlineAlert tone="error" title="Documentul nu poate fi descărcat">
+                  {documentError}
+                </InlineAlert>
+              ) : null}
+            </QuoteSummary>
             <QuoteLines caption="Secțiuni ofertă" lines={presentLines(quote)} total={presentTotal(quote)} lineTax />
             {quote.internalCost ? <InternalCostPanel cost={quote.internalCost} /> : null}
             {quote.internalCost === null ? (
