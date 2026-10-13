@@ -89,6 +89,7 @@ describe("presentConfirm", () => {
       calculatedPriceAvailable: false,
       manualProductPriceAuthorized: false,
       quoteBlocker: null,
+      rateAcknowledgement: null,
     });
   });
 });

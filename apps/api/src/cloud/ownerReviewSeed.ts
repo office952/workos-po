@@ -179,12 +179,27 @@ async function freezeQuote(
     }),
     `preview:${productCode}`,
   );
+  const priced = await requireOk(
+    await client.request("POST", `/api/products/${productCode}/confirm`, {
+      values,
+      reviewId: previewed.reviewId,
+      requestId,
+    }),
+    `confirm:${productCode}`,
+  );
+  const disclosure = priced.rateAcknowledgement as
+    | { status?: unknown; bindingHash?: unknown }
+    | null
+    | undefined;
   const frozen = await requireOk(
     await client.request("POST", `/api/products/${productCode}/quote-snapshots`, {
       values,
       reviewId: previewed.reviewId,
       customerId,
       requestId,
+      ...(disclosure?.status === "REQUIRED" && typeof disclosure.bindingHash === "string"
+        ? { rateAcknowledgement: { bindingHash: disclosure.bindingHash } }
+        : {}),
     }),
     `quote:${productCode}`,
   );

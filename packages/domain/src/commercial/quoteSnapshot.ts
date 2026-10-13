@@ -64,6 +64,11 @@ import {
   MANUAL_FIXED_SERVICE_STRATEGY,
   projectLiveJobCommercial,
 } from "./servicePrice.js";
+import {
+  isFrozenRateAcknowledgement,
+  rateAcknowledgementHashedContent,
+  type FrozenRateAcknowledgement,
+} from "./rateAcknowledgement.js";
 
 export const QUOTE_SNAPSHOT_SCHEMA_VERSION = 1 as const;
 export const QUOTE_SNAPSHOT_SCHEMA_VERSION_V2 = 2 as const;
@@ -220,6 +225,7 @@ export type QuoteSnapshot = {
   seller?: FrozenSellerIdentity;
   lines?: readonly FrozenQuoteLine[];
   jobCommercial?: FrozenJobCommercial;
+  rateAcknowledgement?: FrozenRateAcknowledgement;
 };
 
 export type QuoteSnapshotResult =
@@ -246,6 +252,7 @@ export function freezeQuoteSnapshot(
     technicalSettings?: readonly FrozenTechnicalSetting[];
     formulas?: FrozenProductionInput["usedFormulas"];
     installation?: QuoteInstallationFreezeInput;
+    rateAcknowledgement?: FrozenRateAcknowledgement;
   },
 ): QuoteSnapshotResult {
   const productStrategy =
@@ -334,6 +341,18 @@ export function freezeQuoteSnapshot(
       reasons: [INVALID_SELLER_REASON],
     };
   }
+  const rateAcknowledgement = options?.rateAcknowledgement;
+  if (
+    rateAcknowledgement &&
+    (productStrategy !== PRODUCT_COMMERCIAL_STRATEGY ||
+      !isFrozenRateAcknowledgement(rateAcknowledgement))
+  ) {
+    return {
+      ok: false,
+      error: "unavailable_offer",
+      reasons: [UNAVAILABLE_REASON],
+    };
+  }
 
   const frozenProductCommercial = freezeCommercialOffer(commercial, productStrategy);
   const frozenProductEic = freezeEic(eic);
@@ -380,12 +399,20 @@ export function freezeQuoteSnapshot(
     ...(customer ? { customer } : {}),
     ...(seller ? { seller } : {}),
   };
-  const contentHash = sha256Hex(stableStringify(hashedContent));
+  const contentHash = sha256Hex(
+    stableStringify({
+      ...hashedContent,
+      ...(rateAcknowledgement
+        ? { rateAcknowledgement: rateAcknowledgementHashedContent(rateAcknowledgement) }
+        : {}),
+    }),
+  );
   return {
     ok: true,
     snapshot: deepFreeze({
       quoteSnapshotId: `qts:${truth.templateCode}:${contentHash}`,
       ...hashedContent,
+      ...(rateAcknowledgement ? { rateAcknowledgement } : {}),
       sourceConfirmedAt: truth.confirmedAt,
       createdAt: options?.createdAt ?? new Date().toISOString(),
       contentHash,
@@ -511,6 +538,13 @@ export function quoteSnapshotHashedPayload(snapshot: QuoteSnapshot): Record<stri
       : {}),
     ...(snapshot.customer ? { customer: snapshot.customer } : {}),
     ...(snapshot.seller ? { seller: snapshot.seller } : {}),
+    ...(snapshot.rateAcknowledgement
+      ? {
+          rateAcknowledgement: rateAcknowledgementHashedContent(
+            snapshot.rateAcknowledgement,
+          ),
+        }
+      : {}),
   };
 }
 
@@ -545,6 +579,12 @@ export function isTrustedFrozenQuoteV2ForOrder(snapshot: QuoteSnapshot): boolean
 
 export function isSupportedQuoteSnapshot(snapshot: QuoteSnapshot): boolean {
   if (snapshot.status !== "FROZEN") {
+    return false;
+  }
+  if (
+    snapshot.rateAcknowledgement !== undefined &&
+    !isFrozenRateAcknowledgement(snapshot.rateAcknowledgement)
+  ) {
     return false;
   }
   if (snapshot.schemaVersion === QUOTE_SNAPSHOT_SCHEMA_VERSION) {

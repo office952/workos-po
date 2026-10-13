@@ -1,5 +1,9 @@
-import { presentCostLines } from "./confirmAdapter";
-import type { QuoteOfferLineTransport, QuoteSnapshotTransport } from "../api/types";
+import { presentCostLines, presentUnconfirmedRates } from "./confirmAdapter";
+import type {
+  FrozenRateAcknowledgementTransport,
+  QuoteOfferLineTransport,
+  QuoteSnapshotTransport,
+} from "../api/types";
 import { presentCommercialPrice } from "./commercialAdapter";
 import { asNumber, asRecord, asString } from "./record";
 
@@ -51,7 +55,17 @@ export function presentQuoteSnapshot(
     nextAction: asString(overview?.nextAction),
     nextActionLabel: asString(overview?.nextActionLabel),
     orderSnapshotId: asString(overview?.orderSnapshotId) ?? asString(order?.orderSnapshotId),
+    rateAcknowledgement: presentFrozenRateAcknowledgement(snapshot.rateAcknowledgement),
   };
+}
+
+function presentFrozenRateAcknowledgement(
+  value: unknown,
+): FrozenRateAcknowledgementTransport | null {
+  const record = asRecord(value);
+  const acknowledgedAt = asString(record?.acknowledgedAt);
+  const rates = presentUnconfirmedRates(record?.rates);
+  return acknowledgedAt && rates.length > 0 ? { acknowledgedAt, rates } : null;
 }
 
 function presentOfferLines(value: unknown): QuoteOfferLineTransport[] {

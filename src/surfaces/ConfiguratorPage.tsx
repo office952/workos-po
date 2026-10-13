@@ -5,7 +5,7 @@ import {
   type ConfirmedAssemblyMember,
 } from "../api/assemblies";
 import { useEffect, useRef, useState } from "react";
-import { presentConfirm } from "../adapters/confirmAdapter";
+import { presentConfirm, rateAcknowledgementSatisfied } from "../adapters/confirmAdapter";
 import {
   valuesBeforeSchema,
   valuesForTransport,
@@ -54,6 +54,7 @@ import { formatMoney, formatTimestamp } from "../presentation/format";
 import { CommercialPricePanel } from "../presentation/commercialPrice";
 import { CostCompletenessIssues } from "../presentation/costCompleteness";
 import { presentCostLine, selectLineByResource } from "../presentation/costLine";
+import { RateAcknowledgementNotice } from "../presentation/rateAcknowledgement";
 import { ALUMINIUM_RETURN_PROFILE_RESOURCE_ID } from "../reference/lettersProduct";
 import { assemblyHref, requestProductHref, requestHref, quoteHref } from "../routing/appRoute";
 import {
@@ -201,6 +202,12 @@ function presentFreezeError(error: unknown): string {
       return "Configurația s-a schimbat. Reia previzualizarea.";
     case "service_quote_freeze_not_authorized":
       return "Oferta cu montaj nu poate fi înghețată în această etapă.";
+    case "rate_acknowledgement_required":
+      return "Acceptă explicit tarifele neconfirmate înainte de înghețare.";
+    case "rate_acknowledgement_forbidden":
+      return "Tarifele neconfirmate pot fi acceptate doar de un utilizator cu acces financiar.";
+    case "rate_acknowledgement_stale":
+      return "Oferta sau tarifele s-au schimbat după acceptare. Recalculează prețul și acceptă din nou.";
     default:
       return "Înghețarea ofertei a eșuat.";
   }
@@ -242,6 +249,7 @@ export function ConfiguratorPage({
   const [extensionPending, setExtensionPending] = useState(false);
   const [freezeState, setFreezeState] = useState<ActionState>("idle");
   const [freezeError, setFreezeError] = useState<string | null>(null);
+  const [acknowledgedRateBinding, setAcknowledgedRateBinding] = useState<string | null>(null);
   const [overlapAssemblyId, setOverlapAssemblyId] = useState<string | null>(null);
   const [manualNetDraft, setManualNetDraft] = useState("");
   const [pricingMethod, setPricingMethod] = useState<
@@ -573,6 +581,16 @@ export function ConfiguratorPage({
       setFreezeError("Prețul clientului nu este gata pentru înghețare.");
       return;
     }
+    const requirement = confirmation.rateAcknowledgement;
+    if (!rateAcknowledgementSatisfied(requirement, acknowledgedRateBinding)) {
+      setFreezeState("error");
+      setFreezeError("Acceptă explicit tarifele neconfirmate înainte de înghețare.");
+      return;
+    }
+    const rateAcknowledgement =
+      requirement?.status === "REQUIRED" && requirement.bindingHash
+        ? { rateAcknowledgement: { bindingHash: requirement.bindingHash } }
+        : {};
     setFreezeState("pending");
     setFreezeError(null);
     try {
@@ -584,6 +602,7 @@ export function ConfiguratorPage({
           ...(requestId ? { requestId } : {}),
           ...(options.separateQuote ? { commercialIntent: SEPARATE_QUOTE_INTENT } : {}),
           ...commercialPayload(),
+          ...rateAcknowledgement,
         }),
       );
       if (!presented) {
@@ -607,6 +626,13 @@ export function ConfiguratorPage({
         setFreezeError(overlap.reason || "Produsul face deja parte dintr-un ansamblu al cererii.");
         return;
       }
+      if (
+        error instanceof TransportError &&
+        readTransportErrorCode(error.body) === "rate_acknowledgement_stale"
+      ) {
+        setAcknowledgedRateBinding(null);
+        setPricedResultKey(null);
+      }
       setFreezeError(presentFreezeError(error));
     }
   }
@@ -622,11 +648,14 @@ export function ConfiguratorPage({
     confirmation.commercial.netPrice !== null &&
     confirmation.commercial.unavailableReasons.length === 0;
   const validCustomerPrice = Boolean(serverCustomerPriceReady && priceIsCurrent);
+  const rateRequirement = confirmation?.rateAcknowledgement ?? null;
+  const ratesAcknowledged = rateAcknowledgementSatisfied(rateRequirement, acknowledgedRateBinding);
   const freezeBlocked =
     sellerConfigured !== true ||
     customerId === null ||
     confirmPending ||
-    !validCustomerPrice;
+    !validCustomerPrice ||
+    !ratesAcknowledged;
   const calculatedUnavailable = Boolean(
     confirmation && !confirmation.calculatedPriceAvailable,
   );
@@ -1064,6 +1093,16 @@ export function ConfiguratorPage({
             <InlineAlert tone="blocked" title="Prețul nu este gata">
               Completează metoda de preț și calculează prețul înainte de a îngheța oferta.
             </InlineAlert>
+          ) : null}
+          {rateRequirement && validCustomerPrice && !assemblyId ? (
+            <RateAcknowledgementNotice
+              requirement={rateRequirement}
+              acknowledged={ratesAcknowledged}
+              disabled={freezePending}
+              onAcknowledgedChange={(acknowledged) => {
+                setAcknowledgedRateBinding(acknowledged ? rateRequirement.bindingHash : null);
+              }}
+            />
           ) : null}
           {confirmation && !assemblyId ? (
             <Button

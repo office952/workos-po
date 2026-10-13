@@ -465,9 +465,13 @@ NUMERIC_NEEDS_VERIFICATION = USABLE_FOR_CALCULATION
 MISSING_NUMERIC_VALUE = FAIL_CLOSED_FOR_DEPENDENT_CALCULATION
 NO_SILENT_ZERO = YES
 PROVISIONAL_PROVENANCE_MUST_REMAIN_VISIBLE = YES
+UNCONFIRMED_RATE_DRIVING_SELLING_PRICE = EXPLICIT_AUTHORIZED_ACKNOWLEDGEMENT_BEFORE_FREEZE
+UNCONFIRMED_RATE_UNDER_MANUAL_PRICE = DISCLOSURE_ONLY
 ```
 
-A confirmed numeric cost is calculable. A numeric cost that needs verification is also calculable and must stay visibly unverified; it does not block quote freeze by itself. A missing numeric cost must not become zero and blocks only the calculation that depends on it.
+A confirmed numeric cost is calculable. A numeric cost that needs verification is also calculable and must stay visibly unverified. A missing numeric cost must not become zero and blocks only the calculation that depends on it.
+
+`UNCONFIRMED_RATE_ACKNOWLEDGEMENT_V1`: when an unconfirmed rate drives a cost-plus selling price, quote freeze requires an explicit acknowledgement by a user with financial access. Actor and time come from the server. The acknowledgement binds to the exact organization, request, confirmed configuration, commercial result and rate evidence; any change makes it stale and requires a new acknowledgement. It is frozen inside the quote snapshot and never confirms the organization rate itself. Under an authorized manual product price the rate is internal cost only and is disclosed without acknowledgement. Missing or invalid commercial values stay hard blockers.
 
 ### COMMERCIAL_RULE
 
@@ -678,7 +682,7 @@ SAFE_MANUAL_FALLBACK = REQUIRED_WHERE_SEMANTICALLY_VALID
 
 `MISSING_REQUIRED_CONFIG = FAIL_CLOSED` applies to genuinely required truth and integrity: tenancy, snapshot immutability, invalid commercial policy saves, and required technical facts for production.
 
-Optional business automation may use an explicit supported manual or basic mode. A missing required numeric cost value makes cost-plus unavailable. A present numeric cost that still needs verification remains usable for calculation and must stay visibly unverified. It does not automatically make a valid authorized manual product price unavailable.
+Optional business automation may use an explicit supported manual or basic mode. A missing required numeric cost value makes cost-plus unavailable. A present numeric cost that still needs verification remains usable for calculation and must stay visibly unverified; under cost-plus it needs an explicit authorized acknowledgement before freeze. It does not automatically make a valid authorized manual product price unavailable.
 
 ## 7. Formula architecture
 

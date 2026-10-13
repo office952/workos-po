@@ -39,6 +39,7 @@ export type QuoteFreezeRequest = {
   manualProductNetPrice?: number;
   preferManualProductPrice?: boolean;
   commercialIntent?: string;
+  rateAcknowledgement?: { bindingHash: string };
 };
 
 export type ConfigurationReadiness = "ready" | "blocked";
@@ -194,6 +195,25 @@ export type ConfirmTransport = {
   calculatedPriceAvailable: boolean;
   manualProductPriceAuthorized: boolean;
   quoteBlocker: string | null;
+  rateAcknowledgement: RateAcknowledgementTransport | null;
+};
+
+export type UnconfirmedRateTransport = {
+  resourceId: string;
+  label: string;
+  reason: string;
+  sourceLabel: string;
+  unitLabel: string;
+  context: string | null;
+  amount: number | null;
+  currency: string | null;
+};
+
+export type RateAcknowledgementTransport = {
+  status: "REQUIRED" | "DISCLOSURE_ONLY";
+  bindingHash: string | null;
+  canAcknowledge: boolean;
+  rates: UnconfirmedRateTransport[];
 };
 
 export type QuoteOfferLineTransport = {
@@ -226,6 +246,12 @@ export type QuoteSnapshotTransport = {
   nextAction: string | null;
   nextActionLabel: string | null;
   orderSnapshotId: string | null;
+  rateAcknowledgement: FrozenRateAcknowledgementTransport | null;
+};
+
+export type FrozenRateAcknowledgementTransport = {
+  acknowledgedAt: string;
+  rates: UnconfirmedRateTransport[];
 };
 
 export type CustomerTransport = {

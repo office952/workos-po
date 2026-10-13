@@ -14,6 +14,7 @@ import type { ExecutionPlanView } from "../execution/plan.js";
 import type { ExecutionPlanPreview } from "../execution/preview.js";
 import type { SiteInstallationOperatorView } from "../installation/scope.js";
 import type { RequestDetailProjection } from "../requests/overview.js";
+import { scopeFrozenRateAcknowledgement } from "./rateAcknowledgement.js";
 
 export const FINANCIAL_ACCESS_SCOPES = ["owner", "commercial", "workshop"] as const;
 export type FinancialAccessScope = (typeof FINANCIAL_ACCESS_SCOPES)[number];
@@ -245,6 +246,12 @@ export function scopeQuoteSnapshot(
       currency: snapshot.jobCommercial.currency,
       completeness: snapshot.jobCommercial.completeness,
     };
+  }
+  const rateAcknowledgement = snapshot.rateAcknowledgement
+    ? scopeFrozenRateAcknowledgement(snapshot.rateAcknowledgement, access)
+    : null;
+  if (rateAcknowledgement) {
+    scoped.rateAcknowledgement = rateAcknowledgement;
   }
   return omitForbiddenFinancialFields(scoped, access) as Record<string, unknown>;
 }
