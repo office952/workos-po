@@ -12,6 +12,7 @@ import {
   SIGN_ASSEMBLY_ACM_SIGNAGE_V2,
 } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
+import { freezeAcknowledgingRates } from "./fixtures/rateAcknowledgement.js";
 
 const logoValues = {
   "root.inscription": "NORD LOGO",
@@ -274,7 +275,17 @@ async function attach(
 
 async function finishAssembly(app: ReturnType<typeof createApp>, assemblyId: string) {
   expect((await app.request(`/api/assemblies/${assemblyId}/confirm`, { method: "POST" })).status).toBe(200);
-  expect((await app.request(`/api/assemblies/${assemblyId}/quote`, { method: "POST" })).status).toBe(200);
+  expect(
+    (
+      await freezeAcknowledgingRates((body) =>
+        app.request(`/api/assemblies/${assemblyId}/quote`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        }),
+      )
+    ).status,
+  ).toBe(200);
   expect((await app.request(`/api/assemblies/${assemblyId}/accept`, { method: "POST" })).status).toBe(200);
   expect((await app.request(`/api/assemblies/${assemblyId}/production`, { method: "POST" })).status).toBe(200);
   const planned = await app.request(`/api/assemblies/${assemblyId}/execution-plan`, { method: "POST" });

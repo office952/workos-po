@@ -1,4 +1,5 @@
 import type { FrozenCommercialOffer } from "../commercial/quoteSnapshot.js";
+import type { UnconfirmedRateEvidence } from "../commercial/rateAcknowledgement.js";
 import type { FrozenProductionInput } from "../production/snapshot.js";
 import type { ProductTruth } from "../product/types.js";
 import type {
@@ -98,6 +99,11 @@ export type ConfirmedChildProduct = {
   eicCurrency: "EUR";
   eicCompleteness: "COMPLETE" | "PARTIAL";
   truth: ProductTruth;
+  /**
+   * Unconfirmed rates frozen with the child commercial price. Absent on children confirmed before
+   * rate acknowledgement existed; those cannot back a new assembly quote.
+   */
+  unconfirmedRates?: readonly UnconfirmedRateEvidence[];
 };
 
 export const ASSEMBLY_RULE_ERRORS = [

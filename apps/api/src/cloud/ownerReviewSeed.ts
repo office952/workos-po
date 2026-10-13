@@ -480,9 +480,19 @@ async function ensureAssemblyScenarioA(
     if (!confirm.ok && confirm.status !== 409) {
       throw new Error(`assembly_confirm:${confirm.body?.error ?? confirm.status}`);
     }
+    const confirmed = await client.request(
+      "GET",
+      `/api/assemblies/${encodeURIComponent(assemblyId)}`,
+    );
+    const pending = (confirmed.body?.assembly as {
+      rateAcknowledgement?: { status?: unknown; bindingHash?: unknown } | null;
+    } | undefined)?.rateAcknowledgement;
     const quote = await client.request(
       "POST",
       `/api/assemblies/${encodeURIComponent(assemblyId)}/quote`,
+      pending?.status === "REQUIRED" && typeof pending.bindingHash === "string"
+        ? { rateAcknowledgement: { bindingHash: pending.bindingHash } }
+        : {},
     );
     if (!quote.ok && quote.status !== 409) {
       throw new Error(`assembly_quote:${quote.body?.error ?? quote.status}`);

@@ -6,6 +6,7 @@ import {
   MOUNT_LETTERS_ON_PANEL_ID,
 } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
+import { freezeAcknowledgingRates } from "./fixtures/rateAcknowledgement.js";
 
 const lettersValues = {
   "root.inscription": "WORKOS",
@@ -40,6 +41,16 @@ async function reviewId(
   expect(response.status).toBe(200);
   const body = await json(response);
   return body.reviewId as string;
+}
+
+function quoteAssembly(app: ReturnType<typeof createApp>, assemblyId: string) {
+  return freezeAcknowledgingRates((body) =>
+    app.request(`/api/assemblies/${assemblyId}/quote`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  );
 }
 
 describe("product assembly API", () => {
@@ -108,7 +119,7 @@ describe("product assembly API", () => {
     expect(lettersMember.values).not.toHaveProperty("face.heightMm");
     expect(await json(await app.request(`/api/assemblies/${assemblyId}/members/SUPPORT_PANEL`))).toMatchObject({ productCode: ACM_CASSETTE_NONE_PRODUCT_CODE, values: acmValues });
     expect((await app.request(`/api/assemblies/${assemblyId}/confirm`, { method: "POST" })).status).toBe(200);
-    expect((await app.request(`/api/assemblies/${assemblyId}/quote`, { method: "POST" })).status).toBe(200);
+    expect((await quoteAssembly(app, assemblyId)).status).toBe(200);
     const lockedRequest = await json(await app.request(`/api/requests/${requestId}`));
     const offer = (lockedRequest.detail as { installationOffer: { selectionLocked: boolean; canChangeSelection: boolean } })
       .installationOffer;
@@ -214,13 +225,12 @@ describe("product assembly API", () => {
       },
     );
     expect(standaloneLetters.status).toBe(200);
-    const standaloneAcm = await app.request(
-      `/api/products/${ACM_CASSETTE_NONE_PRODUCT_CODE}/quote-snapshots`,
-      {
+    const standaloneAcm = await freezeAcknowledgingRates((acknowledgement) =>
+      app.request(`/api/products/${ACM_CASSETTE_NONE_PRODUCT_CODE}/quote-snapshots`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ values: acmValues, reviewId: acmReview, customerId }),
-      },
+        body: JSON.stringify({ values: acmValues, reviewId: acmReview, customerId, ...acknowledgement }),
+      }),
     );
     expect(standaloneAcm.status).toBe(200);
 

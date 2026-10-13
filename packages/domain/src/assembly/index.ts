@@ -51,6 +51,7 @@ export {
   assemblyQuoteContentHashMatches,
   freezeAssemblyQuote,
 } from "./commercial.js";
+export { assessAssemblyRateAcknowledgement } from "./rateAcknowledgement.js";
 export {
   INSPECT_FINISHED_ASSEMBLY_ID,
   MOUNT_LETTERS_ON_PANEL_ID,

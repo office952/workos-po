@@ -5,6 +5,7 @@ import {
   formatCustomerMoney,
 } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
+import { freezeAcknowledgingRates } from "./fixtures/rateAcknowledgement.js";
 
 const lettersValues = {
   "root.inscription": "WORKOS",
@@ -76,6 +77,10 @@ function post(app: App, path: string, body?: unknown) {
   });
 }
 
+function quoteAssembly(app: App, assemblyId: string) {
+  return freezeAcknowledgingRates((body) => post(app, `/api/assemblies/${assemblyId}/quote`, body));
+}
+
 async function reviewId(app: App, productCode: string, values: Record<string, unknown>) {
   const response = await post(app, `/api/products/${productCode}/preview`, { values });
   expect(response.status).toBe(200);
@@ -120,7 +125,7 @@ async function quotedAssembly(app: App, requestId: string) {
   expect((await post(app, `/api/assemblies/${assemblyId}/members`, { role: "SUPPORT_PANEL", values: acmValues, reviewId: acmReview })).status).toBe(200);
   expect((await post(app, `/api/assemblies/${assemblyId}/members`, { role: "SIGNAGE_LETTERS", values: lettersValues, reviewId: lettersReview })).status).toBe(200);
   expect((await post(app, `/api/assemblies/${assemblyId}/confirm`)).status).toBe(200);
-  expect((await post(app, `/api/assemblies/${assemblyId}/quote`)).status).toBe(200);
+  expect((await quoteAssembly(app, assemblyId)).status).toBe(200);
   return assemblyId;
 }
 
@@ -253,7 +258,7 @@ describe("unified Oferte registry", () => {
     expect((await post(app, `/api/assemblies/${assemblyId}/members`, { role: "SIGNAGE_LETTERS", values: changed, reviewId: changedReview })).status).toBe(200);
     expect((await post(app, `/api/assemblies/${assemblyId}/review`)).status).toBe(200);
     expect((await post(app, `/api/assemblies/${assemblyId}/confirm`)).status).toBe(200);
-    expect((await post(app, `/api/assemblies/${assemblyId}/quote`)).status).toBe(200);
+    expect((await quoteAssembly(app, assemblyId)).status).toBe(200);
 
     const quotes = (await registry(app)).quotes.filter((item) => item.assemblyId === assemblyId);
     expect(quotes).toHaveLength(2);

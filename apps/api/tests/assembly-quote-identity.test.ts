@@ -12,6 +12,7 @@ import {
   freezeAssemblyQuote,
 } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
+import { freezeAcknowledgingRates } from "./fixtures/rateAcknowledgement.js";
 import {
   readAssemblyQuote,
   readAssemblyTruth,
@@ -114,7 +115,13 @@ async function issueAssemblyQuote(app: App, customerName: string, headers: Recor
     expect(attached.status).toBe(200);
   }
   expect((await send(app, "POST", `/api/assemblies/${assemblyId}/confirm`, undefined, headers)).status).toBe(200);
-  expect((await send(app, "POST", `/api/assemblies/${assemblyId}/quote`, undefined, headers)).status).toBe(200);
+  expect(
+    (
+      await freezeAcknowledgingRates((body) =>
+        send(app, "POST", `/api/assemblies/${assemblyId}/quote`, body, headers),
+      )
+    ).status,
+  ).toBe(200);
   const overview = (await json(await app.request("/api/quotes", { headers }))).overview as {
     quotes: { quoteSnapshotId: string; kind: string; reference: string; grossPrice: number }[];
   };

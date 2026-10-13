@@ -31,16 +31,28 @@ import {
   SITE_INSTALLATION_SCOPE_ID,
   siteInstallationEvidenceFromRows,
   siteInstallationFreezeRefusal,
+  assessAssemblyRateAcknowledgement,
+  collectUnconfirmedRates,
+  decideRateAcknowledgement,
+  scopeFrozenRateAcknowledgement,
+  scopeRateAcknowledgementRequirement,
+  type AssemblyDefinition,
   type AssemblyKind,
   type AssemblyMemberRole,
+  type AssemblyTruth,
   type ConfirmedChildProduct,
   type FrozenCustomerIdentity,
   type FrozenSellerIdentity,
+  type RateAcknowledgementRequirement,
 } from "@workos-final/domain";
-import type { Hono } from "hono";
+import type { Context, Hono } from "hono";
 import { getProductSystem, isOwner, type ApiEnv } from "../cloud/context.js";
+import { financialAccess } from "../financial/access.js";
 import {
+  actorUserId,
   compileAcceptedProduct,
+  rateAcknowledgementHttpStatus,
+  readRateAcknowledgementBindingHash,
   resolveProductCommercialForRequest,
 } from "../product.js";
 import {
@@ -68,7 +80,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     if (!requestId) return c.json({ error: "invalid_payload" }, 400);
     if (!runtime.readCommercialRequest(requestId)) return c.json({ error: "not_found" }, 404);
     const plane = runtime.assemblyPlane();
-    return c.json({ assemblies: listRequestAssemblies(plane.db, plane.organizationId, requestId).map(definition => presentCurrent(runtime, definition.assemblyId, isOwner(c))).filter(Boolean) });
+    return c.json({ assemblies: listRequestAssemblies(plane.db, plane.organizationId, requestId).map(definition => presentCurrent(runtime, definition.assemblyId, c)).filter(Boolean) });
   });
 
   app.get("/api/assemblies/offering", (c) => {
@@ -140,12 +152,12 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: created.error, reasons: created.reasons }, 409);
     }
     saveAssemblyDefinition(plane.db, created.definition);
-    return c.json({ assembly: presentCurrent(runtime, created.definition.assemblyId, isOwner(c)) }, 201);
+    return c.json({ assembly: presentCurrent(runtime, created.definition.assemblyId, c) }, 201);
   });
 
   app.get("/api/assemblies/:assemblyId", (c) => {
     const runtime = getProductSystem(c);
-    const presented = presentCurrent(runtime, c.req.param("assemblyId"), isOwner(c));
+    const presented = presentCurrent(runtime, c.req.param("assemblyId"), c);
     if (!presented) {
       return c.json({ error: "not_found" }, 404);
     }
@@ -233,6 +245,11 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       eicCurrency: "EUR",
       eicCompleteness: compiled.eic.completeness,
       truth: compiled.truth,
+      unconfirmedRates: collectUnconfirmedRates(
+        compiled.aggregate,
+        compiled.composition,
+        compiled.costEvidenceRows,
+      ),
     };
     const priced = resolveProductCommercialForRequest(
       runtime,
@@ -266,7 +283,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     }
     saveAssemblyDefinition(plane.db, attached.definition);
     return c.json({
-      assembly: presentCurrent(runtime, attached.definition.assemblyId, isOwner(c)),
+      assembly: presentCurrent(runtime, attached.definition.assemblyId, c),
       productLabel: child.productLabel,
       inscription: child.inscription,
     });
@@ -287,7 +304,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: reviewed.error, reasons: reviewed.reasons }, 409);
     }
     saveAssemblyDefinition(plane.db, reviewed.definition);
-    return c.json({ assembly: presentCurrent(runtime, reviewed.definition.assemblyId, isOwner(c)) });
+    return c.json({ assembly: presentCurrent(runtime, reviewed.definition.assemblyId, c) });
   });
 
   app.post("/api/assemblies/:assemblyId/confirm", (c) => {
@@ -315,39 +332,49 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     }
     saveAssemblyTruth(plane.db, confirmed.truth);
     saveAssemblyDefinition(plane.db, confirmed.definition);
-    return c.json({ assembly: presentCurrent(runtime, confirmed.definition.assemblyId, isOwner(c)) });
+    return c.json({ assembly: presentCurrent(runtime, confirmed.definition.assemblyId, c) });
   });
 
-  app.post("/api/assemblies/:assemblyId/quote", (c) => {
+  app.post("/api/assemblies/:assemblyId/quote", async (c) => {
     if (!isOwner(c)) {
       return c.json({ error: "forbidden" }, 403);
     }
+    const body = await c.req.json().catch(() => null);
     const runtime = getProductSystem(c);
     const plane = runtime.assemblyPlane();
     const current = loadBundle(runtime, c.req.param("assemblyId"));
     if (!current?.truth) {
       return c.json({ error: "not_found", reasons: ["Ansamblul trebuie confirmat înainte de ofertă."] }, 422);
     }
-    const children = current.definition.members.flatMap((member) => {
-      const child = readConfirmedChild(plane.db, plane.organizationId, member.confirmedTruthId);
-      return child ? [child] : [];
-    });
-    const service = assemblyServiceLine(runtime, current.truth.requestId);
-    if (!service.ok) {
-      return c.json({ error: service.error, reasons: service.reasons }, 422);
+    const prepared = prepareAssemblyQuote(runtime, current.truth, current.definition);
+    if (!prepared.ok) {
+      return c.json({ error: prepared.error, reasons: prepared.reasons }, 422);
     }
-    const identity = assemblyQuoteIdentity(runtime, current.truth.requestId);
-    if (!identity.ok) {
-      return c.json({ error: identity.error, reasons: identity.reasons }, 422);
+    const createdAt = new Date().toISOString();
+    const decision = decideRateAcknowledgement(prepared.requirement, {
+      authorized: isOwner(c),
+      submittedBindingHash: readRateAcknowledgementBindingHash(body),
+      actorUserId: actorUserId(c),
+      acknowledgedAt: createdAt,
+    });
+    if (!decision.ok) {
+      return c.json(
+        {
+          error: decision.error,
+          reasons: decision.reasons,
+          rateAcknowledgement: scopeRateAcknowledgementRequirement(
+            prepared.requirement,
+            financialAccess(c, "commercial"),
+            isOwner(c),
+          ),
+        },
+        rateAcknowledgementHttpStatus(decision.error),
+      );
     }
     const frozen = freezeAssemblyQuote({
-      quoteSnapshotId: `asmq:${current.truth.assemblyTruthId}`,
-      truth: current.truth,
-      children,
-      createdAt: new Date().toISOString(),
-      ...(service.line ? { serviceLine: service.line } : {}),
-      customer: identity.customer,
-      seller: identity.seller,
+      ...prepared.input,
+      createdAt,
+      ...(decision.acknowledgement ? { rateAcknowledgement: decision.acknowledgement } : {}),
     });
     if (!frozen.ok) {
       return c.json({ error: frozen.error, reasons: frozen.reasons }, 422);
@@ -360,7 +387,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
         frozen.quote.quoteSnapshotId,
       );
     }
-    return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId, isOwner(c)) });
+    return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId, c) });
   });
 
   app.post("/api/assemblies/:assemblyId/accept", (c) => {
@@ -387,7 +414,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: accepted.error, reasons: accepted.reasons }, 422);
     }
     saveAssemblyOrder(plane.db, accepted.order);
-    return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId, isOwner(c)) });
+    return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId, c) });
   });
 
   app.post("/api/assemblies/:assemblyId/production", (c) => {
@@ -407,7 +434,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: projected.error, reasons: projected.reasons }, 422);
     }
     saveAssemblyProduction(runtime.assemblyPlane().db, projected.snapshot);
-    return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId, isOwner(c)) });
+    return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId, c) });
   });
 
   app.post("/api/assemblies/:assemblyId/execution-plan", (c) => {
@@ -420,32 +447,93 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: "not_found" }, 404);
     }
     runtime.persistExecutionPlan(materializeAssemblyExecutionPlan(current.production));
-    return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId, isOwner(c)) });
+    return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId, c) });
   });
 }
 
 function presentCurrent(
   runtime: ReturnType<typeof getProductSystem>,
   assemblyId: string,
-  financialVisible: boolean,
+  c: Context<ApiEnv>,
 ) {
   const bundle = loadBundle(runtime, assemblyId);
   if (!bundle) {
     return null;
   }
   const resolution = runtime.resolveProductEnablement();
-  return presentAssemblyReview({
-    definition: bundle.definition,
-    truth: bundle.truth,
-    quote: bundle.quote,
-    order: bundle.order,
-    production: bundle.production,
-    executionPlanId: bundle.executionPlanId,
-    financialVisible,
-    lettersSelectable:
-      resolution.ok &&
-      isTemplateEnabledForNewWork(productCodeForRole("SIGNAGE_LETTERS"), resolution),
+  const pending =
+    bundle.truth && bundle.quote?.assemblyTruthId !== bundle.truth.assemblyTruthId
+      ? prepareAssemblyQuote(runtime, bundle.truth, bundle.definition)
+      : null;
+  const access = financialAccess(c, "commercial");
+  return {
+    ...presentAssemblyReview({
+      definition: bundle.definition,
+      truth: bundle.truth,
+      quote: bundle.quote,
+      order: bundle.order,
+      production: bundle.production,
+      executionPlanId: bundle.executionPlanId,
+      financialVisible: isOwner(c),
+      lettersSelectable:
+        resolution.ok &&
+        isTemplateEnabledForNewWork(productCodeForRole("SIGNAGE_LETTERS"), resolution),
+    }),
+    rateAcknowledgement: pending?.ok
+      ? scopeRateAcknowledgementRequirement(pending.requirement, access, isOwner(c))
+      : null,
+    frozenRateAcknowledgement: bundle.quote?.rateAcknowledgement
+      ? scopeFrozenRateAcknowledgement(bundle.quote.rateAcknowledgement, access)
+      : null,
+  };
+}
+
+/** Builds the unacknowledged candidate quote and assesses the rates frozen in its members. */
+function prepareAssemblyQuote(
+  runtime: ReturnType<typeof getProductSystem>,
+  truth: AssemblyTruth,
+  definition: AssemblyDefinition,
+):
+  | {
+      ok: true;
+      input: Omit<Parameters<typeof freezeAssemblyQuote>[0], "createdAt" | "rateAcknowledgement">;
+      requirement: RateAcknowledgementRequirement;
+    }
+  | { ok: false; error: string; reasons: readonly string[] } {
+  const plane = runtime.assemblyPlane();
+  const children = definition.members.flatMap((member) => {
+    const child = readConfirmedChild(plane.db, plane.organizationId, member.confirmedTruthId);
+    return child ? [child] : [];
   });
+  const service = assemblyServiceLine(runtime, truth.requestId);
+  if (!service.ok) {
+    return {
+      ok: false,
+      error: service.error ?? "incomplete_offer",
+      reasons: service.reasons ?? [],
+    };
+  }
+  const identity = assemblyQuoteIdentity(runtime, truth.requestId);
+  if (!identity.ok) {
+    return identity;
+  }
+  const input = {
+    quoteSnapshotId: `asmq:${truth.assemblyTruthId}`,
+    truth,
+    children,
+    ...(service.line ? { serviceLine: service.line } : {}),
+    customer: identity.customer,
+    seller: identity.seller,
+  };
+  const candidate = freezeAssemblyQuote({ ...input, createdAt: new Date().toISOString() });
+  if (!candidate.ok) {
+    return candidate;
+  }
+  const assessed = assessAssemblyRateAcknowledgement({ candidate: candidate.quote, children });
+  if (!assessed.ok) {
+    return assessed;
+  }
+  return { ok: true, input, requirement: assessed.requirement };
 }
 
 function loadBundle(runtime: ReturnType<typeof getProductSystem>, assemblyId: string) {

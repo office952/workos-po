@@ -59,7 +59,7 @@ export function presentQuoteSnapshot(
   };
 }
 
-function presentFrozenRateAcknowledgement(
+export function presentFrozenRateAcknowledgement(
   value: unknown,
 ): FrozenRateAcknowledgementTransport | null {
   const record = asRecord(value);

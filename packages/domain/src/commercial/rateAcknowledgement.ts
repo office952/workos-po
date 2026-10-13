@@ -44,6 +44,8 @@ export type UnconfirmedRateEvidence = {
   source: CostEvidence["source"];
   classification: CostEvidence["classification"];
   volumeDepthMm?: number;
+  /** Assembly member that froze this rate; absent on standalone product quotes. */
+  memberLabel?: string;
   quantity: number;
 };
 
@@ -75,6 +77,18 @@ const FORBIDDEN_REASON =
 const STALE_REASON =
   "Oferta sau tarifele s-au schimbat după acceptare. Recalculează prețul și acceptă din nou tarifele neconfirmate.";
 
+function isAiDecisionEvidence(evidence: Pick<CostEvidence, "source" | "classification">): boolean {
+  return evidence.source === "AI_DECISION" || evidence.classification === "AI_DECISION";
+}
+
+/**
+ * AI-generated rates are not Owner confirmations, so they need commercial acknowledgement even
+ * though the shared EIC verification status still treats them as verified.
+ */
+function rateNeedsCommercialAcknowledgement(evidence: CostEvidence): boolean {
+  return isAiDecisionEvidence(evidence) || costEvidenceNeedsVerification(evidence);
+}
+
 export function collectUnconfirmedRates(
   aggregate: ProductAggregate,
   composition: ProductProcessComposition | undefined,
@@ -87,7 +101,7 @@ export function collectUnconfirmedRates(
       requirement.resourceId,
       requirement.costQualifier,
     );
-    if (!evidence || !costEvidenceNeedsVerification(evidence)) {
+    if (!evidence || !rateNeedsCommercialAcknowledgement(evidence)) {
       continue;
     }
     const key =
@@ -284,11 +298,15 @@ function isUnconfirmedRateEvidence(value: unknown): boolean {
     typeof rate.perUnit === "string" &&
     typeof rate.source === "string" &&
     typeof rate.classification === "string" &&
+    (rate.memberLabel === undefined || typeof rate.memberLabel === "string") &&
     typeof rate.quantity === "number"
   );
 }
 
 export function unconfirmedRateReasonLabel(rate: Pick<UnconfirmedRateEvidence, "source" | "classification">): string {
+  if (isAiDecisionEvidence(rate)) {
+    return "Valoare generată automat (AI), neconfirmată de owner";
+  }
   switch (rate.source) {
     case "PLATFORM_DEFAULT":
       return "Valoare implicită de platformă, neconfirmată de firmă";
@@ -331,13 +349,22 @@ function scopeUnconfirmedRate(
     reason: unconfirmedRateReasonLabel(rate),
     sourceLabel: costSourceLabel(rate.source),
     unitLabel: resourceUnitLabel(rate.perUnit),
-    context: rate.volumeDepthMm !== undefined ? `Adâncime ${rate.volumeDepthMm} mm` : null,
+    context: unconfirmedRateContext(rate),
     ...(access === "owner"
       ? { amount: rate.amount, currency: rate.currency, quantity: rate.quantity }
       : {}),
   };
 }
 
+function unconfirmedRateContext(rate: UnconfirmedRateEvidence): string | null {
+  const parts = [
+    rate.memberLabel,
+    rate.volumeDepthMm !== undefined ? `Adâncime ${rate.volumeDepthMm} mm` : undefined,
+  ].filter((part): part is string => part !== undefined && part !== "");
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+/** Only a user who may acknowledge receives the binding; the server re-checks both anyway. */
 export function scopeRateAcknowledgementRequirement(
   requirement: RateAcknowledgementRequirement,
   access: FinancialAccessScope,
@@ -346,12 +373,13 @@ export function scopeRateAcknowledgementRequirement(
   if (access === "workshop") {
     return null;
   }
+  const acknowledgeable = canAcknowledge && requirement.status === "REQUIRED";
   return {
     policy: requirement.policy,
     status: requirement.status,
     impact: requirement.impact,
-    bindingHash: requirement.bindingHash,
-    canAcknowledge: canAcknowledge && requirement.status === "REQUIRED",
+    bindingHash: acknowledgeable ? requirement.bindingHash : null,
+    canAcknowledge: acknowledgeable,
     rates: requirement.rates.map((rate) => scopeUnconfirmedRate(rate, access)),
   };
 }

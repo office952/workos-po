@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { projectCommercialPrice } from "../commercial/price.js";
 import { DEFAULT_COMMERCIAL_POLICY } from "../commercial/policy.js";
 import { freezeQuoteSnapshot, freezeSiteInstallationQuoteLine, type FrozenCommercialOffer } from "../commercial/quoteSnapshot.js";
+import { MANUAL_FIXED_PRODUCT_STRATEGY } from "../commercial/productPrice.js";
+import type { UnconfirmedRateEvidence } from "../commercial/rateAcknowledgement.js";
 import { projectManualFixedServicePrice } from "../commercial/servicePrice.js";
 import { blankSiteInstallationFacts } from "../installation/facts.js";
 import type { QuoteCommercialTerms } from "../commercial/quoteTerms.js";
@@ -40,6 +42,7 @@ import {
 import { INSPECT_FINISHED_LETTER_ID, INSTALL_AT_SITE_ID, PACK_PRODUCT_ID } from "../processes/catalog.js";
 import {
   acknowledgeAssemblyReview,
+  assessAssemblyRateAcknowledgement,
   attachConfirmedChild,
   confirmAssembly,
   createAssemblyDefinition,
@@ -184,6 +187,158 @@ function readyAssembly() {
   }
   return { definition: withLetters.definition, acm, letters };
 }
+
+const UNCONFIRMED_VINYL: UnconfirmedRateEvidence = {
+  resourceId: "MAT-VINYL-ORACAL-651",
+  label: "Folie Oracal 651",
+  evidenceRowId: "cer:vinyl",
+  amount: 9,
+  currency: "EUR",
+  perUnit: "m2",
+  source: "LEGACY_EVIDENCE",
+  classification: "DEVELOPMENT_DEFAULT",
+  quantity: 0.25,
+};
+
+function rateAssessedAssembly(
+  letterRates: readonly UnconfirmedRateEvidence[] | undefined,
+  options: { manualLetters?: boolean; customerName?: string } = {},
+) {
+  const ready = readyAssembly();
+  const acm = { ...ready.acm, unconfirmedRates: [] };
+  const letters = {
+    ...ready.letters,
+    ...(letterRates ? { unconfirmedRates: letterRates } : {}),
+    ...(options.manualLetters
+      ? { commercial: { ...ready.letters.commercial, commercialStrategy: MANUAL_FIXED_PRODUCT_STRATEGY } }
+      : {}),
+  };
+  const confirmed = confirmAssembly(ready.definition, [acm, letters], [], "2026-09-23T11:00:00.000Z");
+  if (!confirmed.ok) {
+    throw new Error(confirmed.error);
+  }
+  const input = {
+    quoteSnapshotId: "asmq-ack",
+    truth: confirmed.truth,
+    children: [acm, letters],
+    customer: { customerId: "cus-1", displayName: options.customerName ?? "Client ACK SRL" },
+  };
+  const candidate = freezeAssemblyQuote({ ...input, createdAt: "2026-09-23T11:10:00.000Z" });
+  if (!candidate.ok) {
+    throw new Error(candidate.error);
+  }
+  return {
+    input,
+    candidate: candidate.quote,
+    assessed: assessAssemblyRateAcknowledgement({ candidate: candidate.quote, children: input.children }),
+  };
+}
+
+describe("assembly unconfirmed rate acknowledgement", () => {
+  it("fails closed for members confirmed before their rate evidence was recorded", () => {
+    const { assessed } = rateAssessedAssembly(undefined);
+    expect(assessed).toMatchObject({ ok: false, error: "stale_child" });
+    if (!assessed.ok) {
+      expect(assessed.reasons[0]).toContain("înainte de verificarea tarifelor");
+    }
+  });
+
+  it("does not require acknowledgement when no member used an unconfirmed rate", () => {
+    const { assessed } = rateAssessedAssembly([]);
+    expect(assessed).toMatchObject({
+      ok: true,
+      requirement: { status: "NOT_REQUIRED", rates: [], bindingHash: null },
+    });
+  });
+
+  it("requires acknowledgement bound to the candidate quote and the member rates", () => {
+    const { assessed, candidate } = rateAssessedAssembly([UNCONFIRMED_VINYL]);
+    if (!assessed.ok) {
+      throw new Error(assessed.error);
+    }
+    const lettersLabel = candidate.members.find((member) => member.role === "SIGNAGE_LETTERS")?.roleLabel;
+    expect(assessed.requirement).toMatchObject({
+      status: "REQUIRED",
+      impact: "DRIVES_SELLING_PRICE",
+      rates: [{ ...UNCONFIRMED_VINYL, memberLabel: lettersLabel }],
+    });
+    expect(assessed.requirement.bindingHash).toMatch(/^[0-9a-f]{64}$/);
+
+    const again = rateAssessedAssembly([UNCONFIRMED_VINYL]).assessed;
+    const otherCustomer = rateAssessedAssembly([UNCONFIRMED_VINYL], { customerName: "Alt client SRL" })
+      .assessed;
+    const otherRate = rateAssessedAssembly([{ ...UNCONFIRMED_VINYL, amount: 10 }]).assessed;
+    if (!again.ok || !otherCustomer.ok || !otherRate.ok) {
+      throw new Error("expected assessments");
+    }
+    expect(again.requirement.bindingHash).toBe(assessed.requirement.bindingHash);
+    expect(otherCustomer.requirement.bindingHash).not.toBe(assessed.requirement.bindingHash);
+    expect(otherRate.requirement.bindingHash).not.toBe(assessed.requirement.bindingHash);
+  });
+
+  it("only discloses rates of a member priced manually", () => {
+    const { assessed } = rateAssessedAssembly([UNCONFIRMED_VINYL], { manualLetters: true });
+    expect(assessed).toMatchObject({
+      ok: true,
+      requirement: { status: "DISCLOSURE_ONLY", impact: "INTERNAL_COST_ONLY", bindingHash: null },
+    });
+  });
+
+  it("freezes the acknowledgement into the quote hash without its time, totals or order changing", () => {
+    const { assessed, candidate, input } = rateAssessedAssembly([UNCONFIRMED_VINYL]);
+    if (!assessed.ok || assessed.requirement.bindingHash === null) {
+      throw new Error("expected a required acknowledgement");
+    }
+    const acknowledgement = {
+      policy: assessed.requirement.policy,
+      bindingHash: assessed.requirement.bindingHash,
+      impact: "DRIVES_SELLING_PRICE" as const,
+      acknowledgedByUserId: "usr:owner",
+      acknowledgedAt: "2026-09-23T11:10:00.000Z",
+      rates: assessed.requirement.rates,
+    };
+    const first = freezeAssemblyQuote({
+      ...input,
+      createdAt: "2026-09-23T11:10:00.000Z",
+      rateAcknowledgement: acknowledgement,
+    });
+    const later = freezeAssemblyQuote({
+      ...input,
+      createdAt: "2026-09-24T11:10:00.000Z",
+      rateAcknowledgement: { ...acknowledgement, acknowledgedAt: "2026-09-24T11:10:00.000Z" },
+    });
+    if (!first.ok || !later.ok) {
+      throw new Error("expected frozen quotes");
+    }
+    expect(first.quote.contentHash).toBe(later.quote.contentHash);
+    expect(first.quote.contentHash).not.toBe(candidate.contentHash);
+    expect(first.quote.totals).toEqual(candidate.totals);
+    expect(first.quote.members).toEqual(candidate.members);
+
+    const reloaded = JSON.parse(JSON.stringify(first.quote)) as typeof first.quote;
+    expect(assemblyQuoteContentHashMatches(reloaded)).toBe(true);
+    expect(assemblyQuoteContentHashMatches(candidate)).toBe(true);
+    expect(
+      assemblyQuoteContentHashMatches({
+        ...reloaded,
+        rateAcknowledgement: { ...acknowledgement, acknowledgedByUserId: "usr:other" },
+      }),
+    ).toBe(false);
+    expect(assemblyQuoteContentHashMatches({ ...reloaded, rateAcknowledgement: undefined })).toBe(false);
+
+    const order = acceptAssemblyQuote({
+      orderSnapshotId: "asmo-ack",
+      quote: first.quote,
+      children: input.children,
+      createdAt: "2026-09-23T12:00:00.000Z",
+    });
+    if (!order.ok) {
+      throw new Error(order.error);
+    }
+    expect(order.order.totals).toEqual(candidate.totals);
+    expect(order.order).not.toHaveProperty("rateAcknowledgement");
+  });
+});
 
 describe("product assembly v1", () => {
   it("accepts one ACM panel and one letters child", () => {

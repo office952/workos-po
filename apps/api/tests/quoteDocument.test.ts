@@ -9,6 +9,7 @@ import {
   projectQuoteDocument,
 } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
+import { freezeAcknowledgingRates } from "./fixtures/rateAcknowledgement.js";
 import {
   quoteDocumentDrawLines,
   renderQuoteDocumentPdf,
@@ -53,15 +54,22 @@ async function freezeQuote(productCode: string, values: Record<string, unknown>)
     body: JSON.stringify({ values }),
   });
   const compiledBody = await readBody(compiled);
-  const created = await app.request(`/api/products/${productCode}/quote-snapshots`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      values,
-      reviewId: compiledBody.reviewId,
-      customerId: await createCustomer(app, productCode.includes("ACM") ? "Client Demo ACM" : "Client Demo LETTERS"),
+  const customerId = await createCustomer(
+    app,
+    productCode.includes("ACM") ? "Client Demo ACM" : "Client Demo LETTERS",
+  );
+  const created = await freezeAcknowledgingRates((acknowledgement) =>
+    app.request(`/api/products/${productCode}/quote-snapshots`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        values,
+        reviewId: compiledBody.reviewId,
+        customerId,
+        ...acknowledgement,
+      }),
     }),
-  });
+  );
   const body = await readBody(created);
   return {
     app,
@@ -186,7 +194,10 @@ describe("quote document PDF", () => {
       })).status,
     ).toBe(200);
     expect((await post(`/api/assemblies/${assemblyId}/confirm`)).status).toBe(200);
-    expect((await post(`/api/assemblies/${assemblyId}/quote`)).status).toBe(200);
+    expect(
+      (await freezeAcknowledgingRates((body) => post(`/api/assemblies/${assemblyId}/quote`, body)))
+        .status,
+    ).toBe(200);
     const overview = (await readBody(await app.request("/api/quotes"))).overview as {
       quotes: { quoteSnapshotId: string; kind: string; reference: string }[];
     };

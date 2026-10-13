@@ -8,6 +8,7 @@ import {
   MCH_CNC_4020_ID,
 } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
+import { freezeAcknowledgingRates } from "./fixtures/rateAcknowledgement.js";
 import { createProductSystemRuntime } from "../src/productSystem/runtime.js";
 import { cookieForPersonName, withCookie } from "./operator-test-helpers.js";
 
@@ -126,7 +127,17 @@ async function createAssemblyExecutionJob(app: ReturnType<typeof createApp>): Pr
   expect((await app.request(`/api/assemblies/${assemblyId}/confirm`, { method: "POST" })).status).toBe(
     200,
   );
-  expect((await app.request(`/api/assemblies/${assemblyId}/quote`, { method: "POST" })).status).toBe(200);
+  expect(
+    (
+      await freezeAcknowledgingRates((body) =>
+        app.request(`/api/assemblies/${assemblyId}/quote`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        }),
+      )
+    ).status,
+  ).toBe(200);
   expect((await app.request(`/api/assemblies/${assemblyId}/accept`, { method: "POST" })).status).toBe(200);
   expect((await app.request(`/api/assemblies/${assemblyId}/production`, { method: "POST" })).status).toBe(
     200,

@@ -10,6 +10,7 @@ import {
   SITE_INSTALLATION_SCOPE_ID,
 } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
+import { freezeAcknowledgingRates } from "./fixtures/rateAcknowledgement.js";
 import { openSqliteDatabase } from "../src/persistence/sqlite.js";
 import { createProductSystemRuntime } from "../src/productSystem/runtime.js";
 
@@ -543,9 +544,8 @@ describe("commercial request installation facts API", () => {
       }),
     });
     const compiled = await readBody(compile);
-    const freeze = await app.request(
-      `/api/products/${ACM_CASSETTE_NONE_PRODUCT_CODE}/quote-snapshots`,
-      {
+    const freeze = await freezeAcknowledgingRates((acknowledgement) =>
+      app.request(`/api/products/${ACM_CASSETTE_NONE_PRODUCT_CODE}/quote-snapshots`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -558,8 +558,9 @@ describe("commercial request installation facts API", () => {
           reviewId: compiled.reviewId,
           customerId: customer.customerId,
           requestId,
+          ...acknowledgement,
         }),
-      },
+      }),
     );
     expect(freeze.status).toBe(200);
     const detail = (

@@ -473,6 +473,8 @@ A confirmed numeric cost is calculable. A numeric cost that needs verification i
 
 `UNCONFIRMED_RATE_ACKNOWLEDGEMENT_V1`: when an unconfirmed rate drives a cost-plus selling price, quote freeze requires an explicit acknowledgement by a user with financial access. Actor and time come from the server. The acknowledgement binds to the exact organization, request, confirmed configuration, commercial result and rate evidence; any change makes it stale and requires a new acknowledgement. It is frozen inside the quote snapshot and never confirms the organization rate itself. Under an authorized manual product price the rate is internal cost only and is disclosed without acknowledgement. Missing or invalid commercial values stay hard blockers.
 
+For this acknowledgement only, an AI-generated rate counts as unconfirmed because it is not an Owner confirmation; the shared EIC verification status is unchanged. Only a user who may acknowledge receives the binding. An assembly quote applies the same rule to the rates frozen in each member's child quote: the acknowledgement binds to the assembly truth, child quote hashes, commercial values and those rates, and is frozen in the assembly quote. A member confirmed before its rate evidence was recorded cannot back a new assembly quote.
+
 ### COMMERCIAL_RULE
 
 Changeable commercial policy: markup, VAT, discount defaults, adjustments.

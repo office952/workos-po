@@ -13,7 +13,11 @@ import {
 } from "../product/frontlitPlexiAl06.js";
 import { starterFormulaVersionsForType } from "../product/resolveFormulas.js";
 import type { DraftValues } from "../product/types.js";
-import { costEvidence, type CostEvidence } from "../resources/catalog.js";
+import {
+  costEvidence,
+  PLEXIGLAS_3MM_OPAL_ID,
+  type CostEvidence,
+} from "../resources/catalog.js";
 import { compileEic } from "../resources/eic.js";
 import { projectCommercialPrice } from "./price.js";
 import { projectManualFixedProductPrice } from "./productPrice.js";
@@ -121,6 +125,22 @@ describe("unconfirmed rate acknowledgement policy", () => {
     expect(requirement.bindingHash).toMatch(/^[0-9a-f]{64}$/);
   });
 
+  it("requires acknowledgement for AI-generated rates without changing the EIC verification status", () => {
+    const aiRows = costEvidence.map((row) =>
+      row.resourceId === PLEXIGLAS_3MM_OPAL_ID
+        ? { ...row, source: "AI_DECISION" as const, classification: "AI_DECISION" as const }
+        : row,
+    );
+    const { requirement, eic } = assess(readyValues, {}, aiRows);
+    expect(eic.verificationStatus).toBe(assess(readyValues).eic.verificationStatus);
+    expect(requirement.status).toBe("REQUIRED");
+    expect(requirement.rates.map((rate) => rate.resourceId)).toEqual([PLEXIGLAS_3MM_OPAL_ID]);
+    const scoped = scopeRateAcknowledgementRequirement(requirement, "commercial", false);
+    expect((scoped?.rates as Record<string, unknown>[])[0]?.reason).toBe(
+      "Valoare generată automat (AI), neconfirmată de owner",
+    );
+  });
+
   it("only discloses unconfirmed rates under an owner-authorized manual price", () => {
     const built = spine(vinylValues);
     const manual = projectManualFixedProductPrice({
@@ -193,9 +213,14 @@ describe("unconfirmed rate acknowledgement policy", () => {
     const { requirement } = assess(vinylValues);
     const owner = scopeRateAcknowledgementRequirement(requirement, "owner", true);
     const commercial = scopeRateAcknowledgementRequirement(requirement, "commercial", false);
-    expect(owner).toMatchObject({ status: "REQUIRED", canAcknowledge: true });
+    expect(owner).toMatchObject({
+      status: "REQUIRED",
+      canAcknowledge: true,
+      bindingHash: requirement.bindingHash,
+    });
     expect((owner?.rates as Record<string, unknown>[])[0]).toHaveProperty("amount");
-    expect(commercial).toMatchObject({ status: "REQUIRED", canAcknowledge: false });
+    expect(commercial).toMatchObject({ status: "REQUIRED", canAcknowledge: false, bindingHash: null });
+    expect(JSON.stringify(commercial)).not.toContain(String(requirement.bindingHash));
     for (const rate of commercial?.rates as Record<string, unknown>[]) {
       expect(rate).not.toHaveProperty("amount");
       expect(rate).not.toHaveProperty("quantity");

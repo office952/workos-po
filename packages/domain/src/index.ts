@@ -1226,6 +1226,7 @@ export {
   createAssemblyDefinition,
   freezeAssemblyQuote,
   assemblyQuoteContentHashMatches,
+  assessAssemblyRateAcknowledgement,
   hashProductAggregate,
   hashProductTruth,
   isAssemblyKind,

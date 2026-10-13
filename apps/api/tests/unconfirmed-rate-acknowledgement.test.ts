@@ -206,6 +206,55 @@ function scopedRates(disclosure: JsonObject | null | undefined): JsonObject[] {
   return (disclosure?.rates as JsonObject[] | undefined) ?? [];
 }
 
+const acmPath = `/api/products/${ACM_CASSETTE_NONE_PRODUCT_CODE}`;
+const acmValues = {
+  "root.inscription": "PANOU ACK",
+  "face.widthMm": 1000,
+  "face.heightMm": 500,
+  "face.cassetteDepthMm": 40,
+};
+
+async function buildAssembly(client: Api, customerName: string, customerId?: string) {
+  const request = await readBody(
+    await client.send("POST", "/api/requests", {
+      customerId: customerId ?? (await createCustomer(client, customerName)),
+      title: "Panou ACM + litere sintetic",
+      description: "Ansamblu sintetic pentru tarife neconfirmate.",
+    }),
+  );
+  const requestId = (request.request as JsonObject).requestId as string;
+  const created = await client.send("POST", "/api/assemblies", { requestId });
+  expect(created.status).toBe(201);
+  const assemblyId = ((await readBody(created)).assembly as JsonObject).assemblyId as string;
+  const acmReview = (await readBody(
+    await client.send("POST", `${acmPath}/preview`, { values: acmValues }),
+  )).reviewId;
+  const lettersReview = await preview(client, vinylValues);
+  for (const member of [
+    { role: "SUPPORT_PANEL", values: acmValues, reviewId: acmReview },
+    { role: "SIGNAGE_LETTERS", values: vinylValues, reviewId: lettersReview },
+  ]) {
+    const attached = await client.send("POST", `/api/assemblies/${assemblyId}/members`, member);
+    expect(attached.status).toBe(200);
+  }
+  expect((await client.send("POST", `/api/assemblies/${assemblyId}/confirm`)).status).toBe(200);
+  return { assemblyId, requestId };
+}
+
+async function assemblyView(client: Api, assemblyId: string): Promise<JsonObject> {
+  const response = await client.get(`/api/assemblies/${assemblyId}`);
+  expect(response.status).toBe(200);
+  return (await readBody(response)).assembly as JsonObject;
+}
+
+function quoteAssembly(client: Api, assemblyId: string, rateAcknowledgement?: JsonObject) {
+  return client.send(
+    "POST",
+    `/api/assemblies/${assemblyId}/quote`,
+    rateAcknowledgement ? { rateAcknowledgement } : {},
+  );
+}
+
 describe("unconfirmed rate acknowledgement — standalone product (single plane)", () => {
   it("1. lets a quote on confirmed rates freeze through the normal flow", async () => {
     const client = api(createApp());
@@ -441,50 +490,180 @@ describe("unconfirmed rate acknowledgement — standalone product (single plane)
     expect((order.commercial as JsonObject).grossPrice).toBe(grossPrice);
   });
 
-  it("15. leaves the assembly contract unchanged and never invents an acknowledgement or EIC", async () => {
-    const app = createApp();
-    const client = api(app);
-    const customerId = await createCustomer(client, "Client ansamblu ACK");
-    const request = await readBody(
-      await client.send("POST", "/api/requests", {
-        customerId,
-        title: "Panou ACM + litere sintetic",
-        description: "Ansamblu sintetic pentru tarife neconfirmate.",
-      }),
+  it("treats AI-generated ACM rates as unconfirmed without changing the EIC verification status", async () => {
+    const client = api(createApp());
+    const customerId = await createCustomer(client);
+    const reviewId = (await readBody(
+      await client.send("POST", `${acmPath}/preview`, { values: acmValues }),
+    )).reviewId as string;
+    const confirmed = await client.send("POST", `${acmPath}/confirm`, {
+      values: acmValues,
+      reviewId,
+    });
+    expect(confirmed.status).toBe(200);
+    const body = await readBody(confirmed);
+    const disclosure = body.rateAcknowledgement as JsonObject;
+    expect(disclosure).toMatchObject({ status: "REQUIRED", canAcknowledge: true });
+    const rates = scopedRates(disclosure);
+    expect(rates.length).toBeGreaterThan(0);
+    expect(
+      rates.every(
+        (rate) =>
+          rate.sourceLabel === "Decizie AI / default de dezvoltare" &&
+          rate.reason === "Valoare generată automat (AI), neconfirmată de owner",
+      ),
+    ).toBe(true);
+    expect((body.eic as JsonObject).verificationStatus).toBe("CONFIRMED");
+
+    const refused = await client.send("POST", `${acmPath}/quote-snapshots`, {
+      values: acmValues,
+      reviewId,
+      customerId,
+    });
+    expect(refused.status).toBe(422);
+    expect((await readBody(refused)).error).toBe("rate_acknowledgement_required");
+  });
+
+  it("15. requires an Owner acknowledgement bound to the exact ACM + letters assembly before its quote freezes", async () => {
+    const client = api(createApp());
+    const { assemblyId } = await buildAssembly(client, "Client ansamblu ACK");
+    const pending = await assemblyView(client, assemblyId);
+    const requirement = pending.rateAcknowledgement as JsonObject;
+    expect(requirement).toMatchObject({
+      status: "REQUIRED",
+      impact: "DRIVES_SELLING_PRICE",
+      canAcknowledge: true,
+    });
+    expect(typeof requirement.bindingHash).toBe("string");
+    const rates = scopedRates(requirement);
+    const acmRates = rates.filter((rate) => String(rate.context).startsWith("Panou ACM"));
+    expect(acmRates.length).toBeGreaterThan(0);
+    expect(
+      acmRates.every((rate) => rate.reason === "Valoare generată automat (AI), neconfirmată de owner"),
+    ).toBe(true);
+    expect(rates.find((rate) => rate.resourceId === MAT_VINYL_ORACAL_651_ID)).toMatchObject({
+      reason: "Tarif preluat din evidența veche, neconfirmat",
+      amount: 9,
+    });
+
+    const missing = await quoteAssembly(client, assemblyId);
+    expect(missing.status).toBe(422);
+    const missingBody = await readBody(missing);
+    expect(missingBody.error).toBe("rate_acknowledgement_required");
+    expect((missingBody.rateAcknowledgement as JsonObject).bindingHash).toBe(requirement.bindingHash);
+    const fabricated = await quoteAssembly(client, assemblyId, { bindingHash: "fabricated" });
+    expect(fabricated.status).toBe(409);
+    expect((await readBody(fabricated)).error).toBe("rate_acknowledgement_stale");
+    expect((await assemblyView(client, assemblyId)).quote).toBeNull();
+    expect(await quoteCount(client)).toBe(0);
+
+    const acknowledgement = {
+      bindingHash: requirement.bindingHash,
+      acknowledgedByUserId: "spoofed-user",
+      acknowledgedAt: "1999-01-01T00:00:00.000Z",
+    };
+    const [first, concurrent] = await Promise.all([
+      quoteAssembly(client, assemblyId, acknowledgement),
+      quoteAssembly(client, assemblyId, acknowledgement),
+    ]);
+    expect(first.status).toBe(200);
+    expect(concurrent.status).toBe(200);
+    expect((await quoteAssembly(client, assemblyId, acknowledgement)).status).toBe(200);
+    expect(await quoteCount(client)).toBe(1);
+
+    const quoted = await assemblyView(client, assemblyId);
+    expect(quoted.rateAcknowledgement).toBeNull();
+    const frozen = quoted.frozenRateAcknowledgement as JsonObject;
+    expect(frozen.acknowledgedByUserId).toBe("local");
+    expect(frozen.acknowledgedAt).not.toBe("1999-01-01T00:00:00.000Z");
+    expect(scopedRates(frozen)).toEqual(rates);
+  });
+
+  it("15b. keeps assembly totals, PDF and order identical to a quote on confirmed rates and survives later rate changes", async () => {
+    const unconfirmed = api(createApp());
+    const acknowledged = await buildAssembly(unconfirmed, "Client ansamblu ACK");
+    const requirement = (await assemblyView(unconfirmed, acknowledged.assemblyId))
+      .rateAcknowledgement as JsonObject;
+    expect(
+      (await quoteAssembly(unconfirmed, acknowledged.assemblyId, {
+        bindingHash: requirement.bindingHash,
+      })).status,
+    ).toBe(200);
+
+    const confirmedClient = api(createApp());
+    await confirmAllRates(confirmedClient);
+    const plain = await buildAssembly(confirmedClient, "Client ansamblu ACK");
+    expect((await assemblyView(confirmedClient, plain.assemblyId)).rateAcknowledgement).toMatchObject({
+      status: "NOT_REQUIRED",
+      bindingHash: null,
+    });
+    expect((await quoteAssembly(confirmedClient, plain.assemblyId)).status).toBe(200);
+    const plainView = await assemblyView(confirmedClient, plain.assemblyId);
+    expect(plainView.frozenRateAcknowledgement).toBeNull();
+
+    const quote = (await assemblyView(unconfirmed, acknowledged.assemblyId)).quote as JsonObject;
+    expect(quote).toEqual(plainView.quote);
+
+    const vinylRow = await rateRow(unconfirmed, MAT_VINYL_ORACAL_651_ID);
+    expect(
+      (await unconfirmed.send(
+        "PATCH",
+        `/api/resources-admin/cost-evidence/${encodeURIComponent(String(vinylRow.evidenceRowId))}`,
+        { amount: 20, note: "Tarif curent schimbat după înghețare." },
+      )).status,
+    ).toBe(200);
+    const after = await assemblyView(unconfirmed, acknowledged.assemblyId);
+    expect(after.quote).toEqual(quote);
+    expect(
+      scopedRates(after.frozenRateAcknowledgement as JsonObject).find(
+        (rate) => rate.resourceId === MAT_VINYL_ORACAL_651_ID,
+      )?.amount,
+    ).toBe(9);
+
+    const registry = (await readBody(await unconfirmed.get("/api/quotes"))).overview as {
+      quotes: { quoteSnapshotId: string; kind: string }[];
+    };
+    const assemblyQuote = registry.quotes.find((item) => item.kind === "ASSEMBLY");
+    expect(assemblyQuote).toBeDefined();
+    const pdf = await unconfirmed.get(
+      `/api/assembly-quotes/${encodeURIComponent(String(assemblyQuote?.quoteSnapshotId))}/document`,
     );
-    const requestId = (request.request as JsonObject).requestId as string;
-    const created = await client.send("POST", "/api/assemblies", { requestId });
-    expect(created.status).toBe(201);
-    const assemblyId = ((await readBody(created)).assembly as JsonObject).assemblyId as string;
-    const acmValues = {
-      "root.inscription": "PANOU ACK",
-      "face.widthMm": 1000,
-      "face.heightMm": 500,
-      "face.cassetteDepthMm": 40,
-    };
-    const acmReview = (await readBody(
-      await client.send("POST", `/api/products/${ACM_CASSETTE_NONE_PRODUCT_CODE}/preview`, {
-        values: acmValues,
-      }),
-    )).reviewId;
-    const lettersReview = await preview(client, vinylValues);
-    for (const member of [
-      { role: "SUPPORT_PANEL", values: acmValues, reviewId: acmReview },
-      { role: "SIGNAGE_LETTERS", values: vinylValues, reviewId: lettersReview },
-    ]) {
-      const attached = await client.send("POST", `/api/assemblies/${assemblyId}/members`, member);
-      expect(attached.status).toBe(200);
-    }
+    expect(pdf.status).toBe(200);
+    expect(pdf.headers.get("content-type")).toContain("application/pdf");
+    const accepted = await unconfirmed.send("POST", `/api/assemblies/${acknowledged.assemblyId}/accept`);
+    expect(accepted.status).toBe(200);
+    expect(((await readBody(accepted)).assembly as JsonObject).orderId).toEqual(expect.any(String));
+  });
+
+  it("15c. invalidates an assembly acknowledgement when a member is reconfirmed on a changed rate", async () => {
+    const client = api(createApp());
+    const { assemblyId } = await buildAssembly(client, "Client ansamblu ACK");
+    const first = (await assemblyView(client, assemblyId)).rateAcknowledgement as JsonObject;
+    const vinylRow = await rateRow(client, MAT_VINYL_ORACAL_651_ID);
+    expect(
+      (await client.send(
+        "PATCH",
+        `/api/resources-admin/cost-evidence/${encodeURIComponent(String(vinylRow.evidenceRowId))}`,
+        { amount: 11, note: "Tarif sintetic schimbat înainte de ofertă." },
+      )).status,
+    ).toBe(200);
+    const changedLetters = { ...vinylValues, "root.inscription": "ACK NOU" };
+    expect(
+      (await client.send("POST", `/api/assemblies/${assemblyId}/members`, {
+        role: "SIGNAGE_LETTERS",
+        values: changedLetters,
+        reviewId: await preview(client, changedLetters),
+      })).status,
+    ).toBe(200);
+    await client.send("POST", `/api/assemblies/${assemblyId}/review`);
     expect((await client.send("POST", `/api/assemblies/${assemblyId}/confirm`)).status).toBe(200);
-    expect((await client.send("POST", `/api/assemblies/${assemblyId}/quote`)).status).toBe(200);
-    const quoted = await readBody(await client.get(`/api/assemblies/${assemblyId}`));
-    const quote = (quoted.assembly as JsonObject).quote as {
-      grossPrice: number;
-      sections: unknown[];
-    };
-    expect(quote.sections).toHaveLength(2);
-    expect(quote.grossPrice).toBeGreaterThan(0);
-    expect(JSON.stringify(quoted)).not.toContain("rateAcknowledgement");
+
+    const stale = await quoteAssembly(client, assemblyId, { bindingHash: first.bindingHash });
+    expect(stale.status).toBe(409);
+    const fresh = (await readBody(stale)).rateAcknowledgement as JsonObject;
+    expect(fresh.bindingHash).not.toBe(first.bindingHash);
+    expect(scopedRates(fresh).some((rate) => rate.resourceId === MAT_VINYL_ORACAL_651_ID)).toBe(false);
+    expect((await quoteAssembly(client, assemblyId, { bindingHash: fresh.bindingHash })).status).toBe(200);
   });
 });
 
@@ -510,6 +689,10 @@ describe("unconfirmed rate acknowledgement — SaaS organizations", () => {
     const memberConfirm = await confirm(alpha.member, readyValues);
     expect(memberConfirm.disclosure?.status).toBe("REQUIRED");
     expect(memberConfirm.disclosure?.canAcknowledge).toBe(false);
+    expect(memberConfirm.disclosure?.bindingHash).toBeNull();
+    expect(JSON.stringify(memberConfirm.body)).not.toContain(
+      String(ownerConfirm.disclosure?.bindingHash),
+    );
     const memberRates = scopedRates(memberConfirm.disclosure);
     expect(memberRates.length).toBe(platformRates.length);
     expect(memberRates.some((rate) => "amount" in rate || "quantity" in rate)).toBe(false);
@@ -521,7 +704,9 @@ describe("unconfirmed rate acknowledgement — SaaS organizations", () => {
       alpha.customerId,
     );
     expect(memberRefused.status).toBe(403);
-    expect((await readBody(memberRefused)).error).toBe("rate_acknowledgement_forbidden");
+    const memberRefusedBody = await readBody(memberRefused);
+    expect(memberRefusedBody.error).toBe("rate_acknowledgement_forbidden");
+    expect((memberRefusedBody.rateAcknowledgement as JsonObject).bindingHash).toBeNull();
     const memberWithHash = await freeze(
       alpha.member,
       readyValues,
@@ -564,6 +749,76 @@ describe("unconfirmed rate acknowledgement — SaaS organizations", () => {
 
     const stillUnconfirmed = await rateRow(alpha.owner, PLEXIGLAS_3MM_OPAL_ID);
     expect(stillUnconfirmed.sourceLabel).toBe("Valoare implicită de platformă");
+    fixture.close();
+  });
+
+  it("assembly: scopes the binding to the Owner, refuses commercial users and isolates tenants", async () => {
+    const fixture = createCloudFixture();
+    const alpha = await cloudOrganization(fixture, "Atelier ACK Ansamblu A", "ack-asm-alpha");
+    const beta = await cloudOrganization(fixture, "Atelier ACK Ansamblu B", "ack-asm-beta");
+    const { assemblyId } = await buildAssembly(alpha.owner, "", alpha.customerId);
+    const ownerView = (await assemblyView(alpha.owner, assemblyId)).rateAcknowledgement as JsonObject;
+    expect(ownerView).toMatchObject({ status: "REQUIRED", canAcknowledge: true });
+    expect(typeof ownerView.bindingHash).toBe("string");
+
+    const memberAssembly = await assemblyView(alpha.member, assemblyId);
+    const memberView = memberAssembly.rateAcknowledgement as JsonObject;
+    expect(memberView).toMatchObject({ status: "REQUIRED", canAcknowledge: false, bindingHash: null });
+    expect(scopedRates(memberView)).toHaveLength(scopedRates(ownerView).length);
+    expect(JSON.stringify(memberAssembly)).not.toContain(String(ownerView.bindingHash));
+    expect(JSON.stringify(memberView)).not.toMatch(/"amount"|"quantity"/);
+    const memberQuote = await quoteAssembly(alpha.member, assemblyId, {
+      bindingHash: ownerView.bindingHash,
+    });
+    expect(memberQuote.status).toBe(403);
+
+    expect((await beta.owner.get(`/api/assemblies/${assemblyId}`)).status).toBe(404);
+    expect(
+      (await quoteAssembly(beta.owner, assemblyId, { bindingHash: ownerView.bindingHash })).status,
+    ).not.toBe(200);
+    const betaAssembly = await buildAssembly(beta.owner, "", beta.customerId);
+    const betaView = (await assemblyView(beta.owner, betaAssembly.assemblyId))
+      .rateAcknowledgement as JsonObject;
+    expect(betaView.bindingHash).not.toBe(ownerView.bindingHash);
+    const crossTenant = await quoteAssembly(beta.owner, betaAssembly.assemblyId, {
+      bindingHash: ownerView.bindingHash,
+    });
+    expect(crossTenant.status).toBe(409);
+    expect(await quoteCount(alpha.owner)).toBe(0);
+    expect(await quoteCount(beta.owner)).toBe(0);
+
+    const acknowledged = await quoteAssembly(alpha.owner, assemblyId, {
+      bindingHash: ownerView.bindingHash,
+    });
+    expect(acknowledged.status).toBe(200);
+    const frozen = (await assemblyView(alpha.owner, assemblyId)).frozenRateAcknowledgement as JsonObject;
+    expect(frozen.acknowledgedByUserId).toMatch(/^usr:/);
+    const memberFrozen = (await assemblyView(alpha.member, assemblyId))
+      .frozenRateAcknowledgement as JsonObject;
+    expect(JSON.stringify(memberFrozen)).not.toMatch(/"amount"|"quantity"|bindingHash/);
+    expect(await quoteCount(beta.owner)).toBe(0);
+    fixture.close();
+  });
+
+  it("assembly: refuses a new quote over members confirmed before rate evidence was recorded", async () => {
+    const fixture = createCloudFixture();
+    const alpha = await cloudOrganization(fixture, "Atelier ACK Istoric", "ack-asm-legacy");
+    const { assemblyId } = await buildAssembly(alpha.owner, "", alpha.customerId);
+    const db = new Database(alpha.org.paths.sqlitePath);
+    const stripped = db
+      .prepare(
+        `UPDATE confirmed_child_products SET payload = json_remove(payload, '$.unconfirmedRates')`,
+      )
+      .run();
+    db.close();
+    expect(stripped.changes).toBe(2);
+    expect((await assemblyView(alpha.owner, assemblyId)).rateAcknowledgement).toBeNull();
+    const refused = await quoteAssembly(alpha.owner, assemblyId, { bindingHash: "fabricated" });
+    expect(refused.status).toBe(422);
+    const body = await readBody(refused);
+    expect(body.error).toBe("stale_child");
+    expect(String((body.reasons as string[])[0])).toContain("înainte de verificarea tarifelor");
+    expect(await quoteCount(alpha.owner)).toBe(0);
     fixture.close();
   });
 

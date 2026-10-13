@@ -327,7 +327,7 @@ function presentResolvedCommercialPolicy(
   };
 }
 
-function readRateAcknowledgementBindingHash(body: unknown): string | null {
+export function readRateAcknowledgementBindingHash(body: unknown): string | null {
   if (typeof body !== "object" || body === null || !("rateAcknowledgement" in body)) {
     return null;
   }
@@ -356,7 +356,7 @@ function assessProductRateAcknowledgement(
   });
 }
 
-function rateAcknowledgementHttpStatus(error: RateAcknowledgementError): 403 | 409 | 422 {
+export function rateAcknowledgementHttpStatus(error: RateAcknowledgementError): 403 | 409 | 422 {
   switch (error) {
     case "rate_acknowledgement_forbidden":
       return 403;
@@ -1771,7 +1771,7 @@ function mutationHttpStatus(error: TaskMutationError): 404 | 409 | 422 {
   }
 }
 
-function actorUserId(c: ApiContext): string {
+export function actorUserId(c: ApiContext): string {
   return c.get("cloudUser")?.userId ?? "local";
 }
 
