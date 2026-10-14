@@ -174,7 +174,23 @@ function installFetch(options: {
       return jsonResponse(url.includes(ACM_PRODUCT) ? acmPreviewBody : previewBody);
     }
     if (url.endsWith("/confirm")) {
-      return jsonResponse(confirmBody(options));
+      const request = JSON.parse(String(init?.body ?? "{}")) as { manualProductNetPrice?: number };
+      const base = confirmBody(options);
+      const net = request.manualProductNetPrice;
+      const ready = typeof net === "number" && Number.isFinite(net) && net > 0;
+      return jsonResponse({
+        ...base,
+        pricingMethod: "MANUAL_FIXED_PRODUCT",
+        calculatedPriceAvailable: false,
+        commercialPrice: {
+          ...base.commercialPrice,
+          netPrice: ready ? net : null,
+          vatAmount: ready ? Number((net * 0.21).toFixed(2)) : null,
+          grossPrice: ready ? Number((net * 1.21).toFixed(2)) : null,
+          completeness: ready ? "COMPLETE" : "PARTIAL",
+          unavailableReasons: ready ? [] : ["Prețul net manual nu este confirmat."],
+        },
+      });
     }
     if (url.endsWith("/seller")) {
       return jsonResponse({
@@ -269,6 +285,10 @@ async function confirmReady() {
   });
   await user.click(screen.getByRole("button", { name: "Confirmă configurația" }));
   await waitFor(() => expect(screen.getByRole("tab", { name: /Pregătire ofertă/ })).toHaveAttribute("aria-selected", "true"));
+  const net = await screen.findByLabelText("Preț net al produsului, fără TVA");
+  await user.type(net, "100");
+  await user.click(screen.getByRole("button", { name: "Confirmă prețul" }));
+  await waitFor(() => expect(screen.getByTestId("customer-price")).toHaveTextContent("Preț net client"));
   await user.click(screen.getByText(/Detalii de calcul și verificare/));
   await screen.findByTestId("profile-cost");
   return user;
@@ -398,18 +418,18 @@ describe("ConfiguratorPage", () => {
     expect(attempts).toBe(2);
   });
 
-  it("keeps technical drafts and commercial terms while moving between work areas", async () => {
+  it("keeps technical drafts and a manual net price while moving between work areas", async () => {
     const fetchMock = installFetch({ rate: 3, cost: 37.5 });
     renderConfigurator();
     const user = await confirmReady();
-    const markup = screen.getByLabelText("Adaos pentru această ofertă (%)");
-    await user.clear(markup);
-    await user.type(markup, "42");
+    const net = screen.getByLabelText("Preț net al produsului, fără TVA");
+    await user.clear(net);
+    await user.type(net, "142");
     const confirms = () => fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/confirm"));
-    expect(confirms()).toHaveLength(1);
+    expect(confirms()).toHaveLength(2);
     await user.click(screen.getByRole("tab", { name: /Pregătire ofertă/ }));
-    expect(markup).toHaveValue("42");
-    expect(confirms()).toHaveLength(1);
+    expect(net).toHaveValue("142");
+    expect(confirms()).toHaveLength(2);
     await user.click(screen.getByRole("tab", { name: /Configurație/ }));
     await user.type(screen.getByLabelText("Textul literelor"), "NORD");
     expect(screen.queryByTestId("profile-cost")).not.toBeInTheDocument();
@@ -681,14 +701,14 @@ describe("ConfiguratorPage", () => {
     ).toBe(false);
   });
 
-  it("marks customer price stale after commercial term edits and blocks freeze until recalculation", async () => {
+  it("marks customer price stale after editing manual net and blocks freeze until reconfirmation", async () => {
     const fetchMock = installFetch({ rate: 3, cost: 37.5 });
     renderConfigurator();
     const user = await confirmReady();
     expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeEnabled();
-    const markup = screen.getByLabelText("Adaos pentru această ofertă (%)");
-    await user.clear(markup);
-    await user.type(markup, "48");
+    const net = screen.getByLabelText("Preț net al produsului, fără TVA");
+    await user.clear(net);
+    await user.type(net, "148");
     expect(screen.getByText("Preț neactualizat")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeDisabled();
     await user.click(screen.getByRole("button", { name: "Actualizează prețul" }));
@@ -696,7 +716,7 @@ describe("ConfiguratorPage", () => {
       expect(screen.queryByText("Preț neactualizat")).not.toBeInTheDocument();
     });
     expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeEnabled();
-    expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/confirm")).length).toBeGreaterThan(1);
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/confirm")).length).toBeGreaterThan(2);
   });
 
   it("distinguishes seller fetch error from missing issuer data", async () => {
@@ -866,7 +886,7 @@ describe("ConfiguratorPage", () => {
     );
   });
 
-  it("asks how this quote is priced and keeps cost separate from customer price", async () => {
+  it("uses manual net for new quotations while keeping estimated cost separate", async () => {
     installFetch({ rate: 3, cost: 37.5 });
     window.history.replaceState(
       null,
@@ -875,11 +895,9 @@ describe("ConfiguratorPage", () => {
     );
     renderConfigurator({ requestId: null });
     await confirmReady();
-    expect(screen.getByText("Cum stabilești prețul acestei oferte?")).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: /Calculat din costuri/ })).toBeChecked();
-    expect(screen.getByRole("radio", { name: /Preț net negociat manual/ })).toBeInTheDocument();
-    expect(screen.getByLabelText("Adaos pentru această ofertă (%)")).toHaveValue("35");
-    expect(screen.getByText("Pornit din valorile implicite ale firmei.")).toBeInTheDocument();
+    expect(screen.getByTestId("manual-price-method")).toHaveTextContent("Preț net stabilit manual");
+    expect(screen.queryByText("Calculat din costuri")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Preț net al produsului, fără TVA")).toHaveValue("100");
     expect(screen.getByText("Cost intern cunoscut")).toBeInTheDocument();
     expect(screen.getByTestId("customer-price")).toHaveTextContent("Preț net client");
     expect(screen.queryByText("Preț net manual produs")).not.toBeInTheDocument();
@@ -1145,8 +1163,8 @@ describe("ConfiguratorPage", () => {
       "href",
       "/admin/resources",
     );
-    expect(screen.getByRole("radio", { name: /Preț net negociat manual/ })).toBeEnabled();
-    expect(screen.getByText(/deoarece costul intern este incomplet/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Preț net al produsului, fără TVA")).toBeEnabled();
+    expect(screen.getByText(/Acceptarea și comanda rămân supuse verificărilor interne/)).toBeInTheDocument();
     await userEvent.click(screen.getByText(/Detalii de calcul și verificare/));
     expect(screen.getByText(/Detalii de calcul și verificare/).closest("details")).not.toHaveAttribute("open");
     await userEvent.click(screen.getByRole("link", { name: "Vezi ce lipsește" }));
@@ -1222,13 +1240,10 @@ describe("ConfiguratorPage", () => {
     expect(screen.getByText("Cost existent, dar neconfirmat")).toBeInTheDocument();
     expect(screen.queryByText("Ce lipsește din cost")).not.toBeInTheDocument();
     expect(screen.queryByText(/Tarif lipsă/)).not.toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: /Calculat din costuri/ })).toBeEnabled();
-    expect(screen.getByRole("radio", { name: /Preț net negociat manual/ })).toBeEnabled();
-    expect(
-      screen.getByText("Calculul folosește 1 valoare care necesită verificare."),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: /Calculat din costuri/ })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Preț net al produsului, fără TVA")).toBeEnabled();
+    expect(screen.getByLabelText("Preț net al produsului, fără TVA")).toBeEnabled();
     expect(screen.queryByText(/Calculul automat nu este disponibil/)).not.toBeInTheDocument();
-    expect(screen.getByText("Adaos pentru această ofertă (%)")).toBeInTheDocument();
   });
 
   it("hides unresolved cost issues when EIC is complete", async () => {
@@ -1309,7 +1324,7 @@ describe("ConfiguratorPage", () => {
     await user.click(screen.getByRole("button", { name: "Confirmă configurația" }));
     expect(await screen.findByText("Cost intern indisponibil")).toBeInTheDocument();
     expect(screen.queryByTestId("cost-completeness-issues")).not.toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: /Preț net negociat manual/ })).toBeEnabled();
+    expect(screen.getByLabelText("Preț net al produsului, fără TVA")).toBeEnabled();
   });
 
   it("R-001A starts new quotes with manual customer pricing and never offers cost-plus", async () => {
@@ -1321,6 +1336,7 @@ describe("ConfiguratorPage", () => {
     expect(screen.getByTestId("manual-price-method")).toHaveTextContent("Preț net stabilit manual");
 
     const input = screen.getByLabelText("Preț net al produsului, fără TVA");
+    await user.clear(input);
     await user.type(input, "680");
     await user.click(screen.getByRole("button", { name: "Actualizează prețul" }));
 
