@@ -49,6 +49,7 @@ async function createOrder(app: ReturnType<typeof createApp>, inscription: strin
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
+      manualProductNetPrice: 400,
       values: { ...readyValues, "root.inscription": inscription },
       reviewId: reviewed.reviewId,
       customerId,

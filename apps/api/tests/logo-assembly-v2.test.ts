@@ -138,7 +138,7 @@ describe("volumetric logo and assembly v2", () => {
     const quoted = await app.request(`/api/products/${LOGO_PRODUCT_CODE}/quote-snapshots`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ values: logoValues, reviewId: reviewed, customerId }),
+      body: JSON.stringify({ manualProductNetPrice: 400, values: logoValues, reviewId: reviewed, customerId }),
     });
     expect(quoted.status, await quoted.clone().text()).toBe(200);
     const quoteId = ((await json(quoted)).quoteSnapshot as { quoteSnapshotId: string }).quoteSnapshotId;
@@ -269,7 +269,7 @@ async function attach(
   const response = await app.request(`/api/assemblies/${assemblyId}/members`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ role, values, reviewId: reviewed }),
+    body: JSON.stringify({ manualProductNetPrice: 400, role, values, reviewId: reviewed }),
   });
   expect(response.status, await response.clone().text()).toBe(200);
 }

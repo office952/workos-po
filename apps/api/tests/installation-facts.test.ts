@@ -439,6 +439,7 @@ describe("commercial request installation facts API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         values: { ...lettersValues, "root.inscription": "LOCKF" },
         reviewId: compiled.reviewId,
         customerId: customer.customerId,
@@ -451,6 +452,7 @@ describe("commercial request installation facts API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         values: { ...lettersValues, "root.inscription": "LOCKF" },
         reviewId: compiled.reviewId,
         customerId: customer.customerId,
@@ -549,6 +551,7 @@ describe("commercial request installation facts API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: {
             "root.inscription": "ACM1",
             "face.widthMm": 1000,

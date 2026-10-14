@@ -109,7 +109,7 @@ async function issueAssemblyQuote(app: App, customerName: string, headers: Recor
       app,
       "POST",
       `/api/assemblies/${assemblyId}/members`,
-      { role, values, reviewId: await review(productCode, values) },
+      { manualProductNetPrice: 400, role, values, reviewId: await review(productCode, values) },
       headers,
     );
     expect(attached.status).toBe(200);

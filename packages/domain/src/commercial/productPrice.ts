@@ -51,6 +51,23 @@ export function isValidManualProductNetPrice(
   return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
+// Monetary rounding scales the amount before rounding, so a finite manual net can
+// still overflow to Infinity; JSON would then persist it as null.
+function isValidProjectedNetVatGross(priced: {
+  netPrice: number;
+  vatAmount: number;
+  grossPrice: number;
+}): boolean {
+  return (
+    Number.isFinite(priced.netPrice) &&
+    Number.isFinite(priced.vatAmount) &&
+    Number.isFinite(priced.grossPrice) &&
+    priced.netPrice > 0 &&
+    priced.vatAmount >= 0 &&
+    priced.grossPrice > 0
+  );
+}
+
 export function projectManualFixedProductPrice(
   input: {
     netPrice: number | null | undefined;
@@ -127,7 +144,7 @@ export function projectManualFixedProductPrice(
   }
 
   const priced = projectNetVatGross(input.netPrice, policy);
-  if (priced.netPrice <= 0) {
+  if (!isValidProjectedNetVatGross(priced)) {
     return {
       ...base,
       markupAmount: null,

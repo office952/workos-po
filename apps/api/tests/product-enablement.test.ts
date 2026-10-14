@@ -159,6 +159,7 @@ describe("product enablement admin", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         values: lettersValues,
         reviewId: preview.reviewId,
         customerId,

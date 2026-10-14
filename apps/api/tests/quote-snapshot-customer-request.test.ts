@@ -53,6 +53,7 @@ describe("quote snapshot customer and request", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: { ...lettersValues, "root.inscription": "NORD" },
           reviewId: compiled.reviewId,
           customerId,

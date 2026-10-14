@@ -161,7 +161,7 @@ describe("site installation other values", () => {
     const frozen = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ values, reviewId, customerId, requestId }),
+      body: JSON.stringify({ manualProductNetPrice: 400, values, reviewId, customerId, requestId }),
     });
     expect(frozen.status).toBe(200);
     const quote = (await readBody(frozen)).quoteSnapshot as JsonObject;
@@ -341,7 +341,7 @@ describe("site installation other values", () => {
     const frozen = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ values, reviewId, customerId, requestId }),
+      body: JSON.stringify({ manualProductNetPrice: 400, values, reviewId, customerId, requestId }),
     });
     expect(frozen.status).toBe(200);
     const quote = (await readBody(frozen)).quoteSnapshot as JsonObject;
@@ -441,7 +441,7 @@ describe("site installation other values", () => {
     const frozen = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ values, reviewId, customerId, requestId }),
+      body: JSON.stringify({ manualProductNetPrice: 400, values, reviewId, customerId, requestId }),
     });
     expect(frozen.status).toBe(200);
     const line = serviceLine((await readBody(frozen)).quoteSnapshot as JsonObject);

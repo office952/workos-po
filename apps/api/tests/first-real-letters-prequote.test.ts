@@ -149,6 +149,7 @@ describe("first real letters pre-quote API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         values: { "root.inscription": "PREQ", ...lettersValues },
         reviewId: compiled.reviewId,
         requestId,
@@ -156,7 +157,7 @@ describe("first real letters pre-quote API", () => {
     });
     expect(confirmed.status).toBe(200);
     const confirmedBody = await readBody(confirmed);
-    expect((confirmedBody.jobCommercial as JsonObject).grossPrice).toBe(866.82);
+    expect((confirmedBody.jobCommercial as JsonObject).grossPrice).toBe(726);
     expect(
       ((confirmedBody.installationScope as JsonObject).ownerInternalCost as JsonObject).total,
     ).toBe(300);
@@ -164,6 +165,7 @@ describe("first real letters pre-quote API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         values: { "root.inscription": "PREQ", ...lettersValues },
         reviewId: compiled.reviewId,
         customerId: customer.customerId,
@@ -192,6 +194,7 @@ describe("first real letters pre-quote API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: { "root.inscription": "ONLY", ...lettersValues },
           reviewId: productCompiled.reviewId,
           customerId: customer.customerId,
@@ -292,6 +295,7 @@ describe("first real letters pre-quote API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         values: { "root.inscription": "SUBC", ...lettersValues },
         reviewId: compiled.reviewId,
         customerId: customer.customerId,
@@ -536,6 +540,7 @@ describe("first real letters pre-quote owner writes", () => {
           "content-type": "application/json",
         },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: { "root.inscription": "LEAK", ...lettersValues },
           reviewId: compiled.reviewId,
           requestId,

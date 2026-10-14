@@ -49,6 +49,7 @@ describe("seller API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         values: {
           "root.inscription": "WORKOS",
           "face.finish": "none",
@@ -85,6 +86,7 @@ describe("seller API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         values: {
           "root.inscription": "WORKOS",
           "face.finish": "none",

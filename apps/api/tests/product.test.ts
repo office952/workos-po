@@ -148,6 +148,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values,
           reviewId: body.reviewId,
         }),
@@ -164,6 +165,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: { ...readyValues, "root.inscription": "CHANGED" },
           reviewId: reviewed.reviewId,
         }),
@@ -180,6 +182,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: reviewed.values,
           reviewId: reviewed.reviewId,
         }),
@@ -207,13 +210,12 @@ describe("product configuration API", () => {
     expect((eic.excludedComponentLabels as string[])).toEqual([]);
     const commercialPrice = body.commercialPrice as JsonObject;
     expect(commercialPrice.completeness).toBe("COMPLETE");
-    expect(commercialPrice.markupPercent).toBe(35);
+    expect(commercialPrice.commercialStrategy).toBe("MANUAL_FIXED_PRODUCT");
     expect(commercialPrice.vatPercent).toBe(21);
     expect(commercialPrice.currency).toBe("EUR");
-    expect(commercialPrice.markupAmount).toBe(133.88);
-    expect(commercialPrice.netPrice).toBe(516.38);
-    expect(commercialPrice.vatAmount).toBe(108.44);
-    expect(commercialPrice.grossPrice).toBe(624.82);
+    expect(commercialPrice.netPrice).toBe(400);
+    expect(commercialPrice.vatAmount).toBe(84);
+    expect(commercialPrice.grossPrice).toBe(484);
     expect(JSON.stringify(commercialPrice)).not.toMatch(/FACE|VOLUME|BACK|LIGHTING/);
     const preview = body.executionPlanPreview as JsonObject;
     expect(preview.status).toBe("PREVIEW");
@@ -227,7 +229,7 @@ describe("product configuration API", () => {
     expect(JSON.stringify(preview)).not.toMatch(/ExecutionTask|startTask|assignedTo/);
   });
 
-  it("calculates commercial price when numeric cost evidence needs verification", async () => {
+  it("keeps the manual commercial price confirmed when numeric cost evidence needs verification", async () => {
     const values = { ...readyValues, "face.finish": "vinyl", "face.color": "alb" };
     const previewed = await createApp().request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/preview`,
@@ -244,6 +246,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values,
           reviewId: reviewed.reviewId,
         }),
@@ -258,17 +261,17 @@ describe("product configuration API", () => {
     expect(eic.verificationStatus).toBe("NEEDS_VERIFICATION");
     expect(commercialPrice.completeness).toBe("COMPLETE");
     expect(commercialPrice.calculationStatus).toBe("CALCULABLE");
-    expect(commercialPrice.verificationStatus).toBe("NEEDS_VERIFICATION");
+    expect(commercialPrice.verificationStatus).toBe("CONFIRMED");
     expect(commercialPrice.unavailableReasons).toEqual([]);
     expect(typeof commercialPrice.netPrice).toBe("number");
     expect(typeof commercialPrice.grossPrice).toBe("number");
-    expect(body.calculatedPriceAvailable).toBe(true);
+    expect(body.calculatedPriceAvailable).toBe(false);
   });
 
   it.each([
-    { depthMm: "30", eicTotal: 370, gross: 604.4 },
-    { depthMm: "80", eicTotal: 395, gross: 645.23 },
-    { depthMm: "100", eicTotal: 407.5, gross: 665.66 },
+    { depthMm: "30", eicTotal: 370, gross: 484 },
+    { depthMm: "80", eicTotal: 395, gross: 484 },
+    { depthMm: "100", eicTotal: 407.5, gross: 484 },
   ] as const)(
     "confirms COMPLETE commercial for none/none $depthMm mm",
     async ({ depthMm, eicTotal, gross }) => {
@@ -288,6 +291,7 @@ describe("product configuration API", () => {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
+            manualProductNetPrice: 400,
             values,
             reviewId: reviewed.reviewId,
           }),
@@ -305,9 +309,9 @@ describe("product configuration API", () => {
   );
 
   it.each([
-    { depthMm: "30", eicTotal: 370, gross: 604.4 },
-    { depthMm: "80", eicTotal: 395, gross: 645.23 },
-    { depthMm: "100", eicTotal: 407.5, gross: 665.66 },
+    { depthMm: "30", eicTotal: 370, gross: 484 },
+    { depthMm: "80", eicTotal: 395, gross: 484 },
+    { depthMm: "100", eicTotal: 407.5, gross: 484 },
   ] as const)(
     "freezes a quote snapshot for none/none $depthMm mm",
     async ({ depthMm, eicTotal, gross }) => {
@@ -328,6 +332,7 @@ describe("product configuration API", () => {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
+            manualProductNetPrice: 400,
             values,
             reviewId: reviewed.reviewId,
             customerId: await createCustomer(app),
@@ -349,6 +354,7 @@ describe("product configuration API", () => {
     const reviewed = await previewReady();
     const app = createApp();
     const payload = {
+      manualProductNetPrice: 400,
       values: reviewed.values,
       reviewId: reviewed.reviewId,
       customerId: await createCustomer(app),
@@ -386,9 +392,9 @@ describe("product configuration API", () => {
     expect(eic.total).toBe(382.5);
     expect(commercial.policyId).toBe("DEFAULT_COMMERCIAL_POLICY");
     expect(commercial.policyVersion).toBe(1);
-    expect(commercial.markupPercent).toBe(35);
+    expect(commercial.markupPercent).toBe(0);
     expect(commercial.vatPercent).toBe(21);
-    expect(commercial.grossPrice).toBe(624.82);
+    expect(commercial.grossPrice).toBe(484);
     expect(commercial.discountAmount).toBe(0);
     expect(commercial.adjustmentAmount).toBe(0);
     expect(JSON.stringify(snapshot)).not.toMatch(/ExecutionPlan|ExecutionTask|inventory/);
@@ -398,7 +404,7 @@ describe("product configuration API", () => {
     );
     expect(read.status).toBe(200);
     const stored = ((await readBody(read)).quoteSnapshot as JsonObject).commercial as JsonObject;
-    expect(stored.grossPrice).toBe(624.82);
+    expect(stored.grossPrice).toBe(484);
 
     const plans = await app.request(`/api/execution-plans/missing`);
     expect(plans.status).toBe(404);
@@ -417,6 +423,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: reviewed.values,
           reviewId: reviewed.reviewId,
           customerId: await createCustomer(app),
@@ -443,7 +450,7 @@ describe("product configuration API", () => {
     expect(typeof decision.acceptedAt).toBe("string");
     expect((created.quoteSnapshot as JsonObject).status).toBe("FROZEN");
     expect((created.quoteSnapshot as JsonObject).commercial as JsonObject).toMatchObject({
-      grossPrice: 624.82,
+      grossPrice: 484,
     });
     expect(((created.quoteSnapshot as JsonObject).eic as JsonObject).total).toBe(382.5);
     expect(created.orderSnapshot).toBeUndefined();
@@ -475,6 +482,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: reviewed.values,
           reviewId: reviewed.reviewId,
           customerId: await createCustomer(app),
@@ -504,6 +512,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: reviewed.values,
           reviewId: reviewed.reviewId,
           customerId: await createCustomer(app),
@@ -535,9 +544,9 @@ describe("product configuration API", () => {
     expect(order.sourceQuoteContentHash).toBe(quote.contentHash);
     expect(order.sourceAcceptanceId).toBe(acceptance.acceptanceId);
     expect((order.eic as JsonObject).total).toBe(382.5);
-    expect(commercial.markupPercent).toBe(35);
+    expect(commercial.markupPercent).toBe(0);
     expect(commercial.vatPercent).toBe(21);
-    expect(commercial.grossPrice).toBe(624.82);
+    expect(commercial.grossPrice).toBe(484);
     expect(created.productionSnapshot).toBeUndefined();
     expect(created.executionPlan).toBeUndefined();
     expect((created.quoteSnapshot as JsonObject).status).toBe("FROZEN");
@@ -545,7 +554,7 @@ describe("product configuration API", () => {
     const byQuote = await app.request(orderPath);
     expect(byQuote.status).toBe(200);
     expect(((await readBody(byQuote)).orderSnapshot as JsonObject).commercial as JsonObject).toMatchObject({
-      grossPrice: 624.82,
+      grossPrice: 484,
     });
     const byId = await app.request(
       `/api/products/${CANONICAL_PRODUCT_CODE}/orders/${order.orderSnapshotId}`,
@@ -579,6 +588,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: reviewed.values,
           reviewId: reviewed.reviewId,
           customerId: await createCustomer(app),
@@ -624,6 +634,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: reviewed.values,
           reviewId: reviewed.reviewId,
           customerId: await createCustomer(app),
@@ -661,7 +672,7 @@ describe("product configuration API", () => {
     expect((snapshot.eic as JsonObject).total).toBe(382.5);
     expect(created.executionPlan).toBeUndefined();
     expect((created.orderSnapshot as JsonObject).commercial as JsonObject).toMatchObject({
-      grossPrice: 624.82,
+      grossPrice: 484,
     });
 
     const readBack = await app.request(releasePath);
@@ -707,6 +718,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: reviewed.values,
           reviewId: reviewed.reviewId,
           customerId: await createCustomer(app),
@@ -770,6 +782,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: reviewed.values,
           reviewId: reviewed.reviewId,
           customerId: await createCustomer(app),
@@ -828,7 +841,7 @@ describe("product configuration API", () => {
     expect(planPath).not.toMatch(/projectCommercialPrice|composeProductProcesses/);
   });
 
-  it("freezes a quote on numeric cost evidence that needs verification only after acknowledgement", async () => {
+  it("discloses numeric cost evidence that needs verification without gating a manual-price freeze", async () => {
     const app = createApp();
     const values = { ...readyValues, "face.finish": "vinyl", "face.color": "alb" };
     const previewed = await app.request(
@@ -844,28 +857,27 @@ describe("product configuration API", () => {
       await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/confirm`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ values, reviewId: reviewed.reviewId }),
+        body: JSON.stringify({ manualProductNetPrice: 400, values, reviewId: reviewed.reviewId }),
       }),
     );
     const disclosure = confirmed.rateAcknowledgement as JsonObject;
-    expect(disclosure.status).toBe("REQUIRED");
+    expect(disclosure).toMatchObject({
+      status: "DISCLOSURE_ONLY",
+      impact: "INTERNAL_COST_ONLY",
+      bindingHash: null,
+    });
     const customerId = await createCustomer(app);
-    const freeze = (extra: JsonObject = {}) =>
-      app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ values, reviewId: reviewed.reviewId, customerId, ...extra }),
-      });
-    expect((await freeze()).status).toBe(422);
-    const response = await freeze({
-      rateAcknowledgement: { bindingHash: disclosure.bindingHash },
+    const response = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ manualProductNetPrice: 400, values, reviewId: reviewed.reviewId, customerId }),
     });
     expect(response.status).toBe(200);
     const body = await readBody(response);
-    expect((body.quoteSnapshot as JsonObject | undefined)?.eic).toBeDefined();
-    expect(((body.quoteSnapshot as JsonObject).eic as JsonObject).completeness).toBe(
-      "COMPLETE",
-    );
+    const snapshot = body.quoteSnapshot as JsonObject;
+    expect((snapshot.eic as JsonObject).completeness).toBe("COMPLETE");
+    expect((snapshot.commercial as JsonObject).netPrice).toBe(400);
+    expect(snapshot.rateAcknowledgement).toBeUndefined();
   });
 
   it("does not let a draft override product-fixed identity", async () => {
@@ -1216,6 +1228,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: reviewed.values,
           reviewId: reviewed.reviewId,
         }),
@@ -1333,6 +1346,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: reviewed.values,
           reviewId: reviewed.reviewId,
         }),
@@ -1436,6 +1450,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: reviewed.values,
           reviewId: reviewed.reviewId,
         }),
@@ -1557,6 +1572,7 @@ describe("product configuration API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: reviewed.values,
           reviewId: reviewed.reviewId,
         }),

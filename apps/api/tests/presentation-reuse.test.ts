@@ -286,6 +286,7 @@ describe("product system runtime presentation reuse", () => {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
+            manualProductNetPrice: 400,
             values: lettersValues,
             reviewId: reviewed.reviewId,
           }),
@@ -301,7 +302,7 @@ describe("product system runtime presentation reuse", () => {
     });
     expect(first.result.status).toBe(200);
     expect(first.result.body.eic.total).toBe(382.5);
-    expect(first.result.body.commercialPrice.grossPrice).toBe(624.82);
+    expect(first.result.body.commercialPrice.grossPrice).toBe(484);
     expect(first.trace.evaluateProductComponents).toBe(1);
     expect(first.trace.compileEic).toBe(1);
     expect(counts).toEqual({ labelLoads: 1, presentationBuilds: 1 });
@@ -313,6 +314,7 @@ describe("product system runtime presentation reuse", () => {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
+            manualProductNetPrice: 400,
             values: lettersValues,
             reviewId: reviewed.reviewId,
           }),

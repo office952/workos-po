@@ -79,6 +79,7 @@ describe("cost completeness transport", () => {
         method: "POST",
         headers: { cookie: owner.cookie ?? "", "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: vinylValues,
           reviewId: compiled.reviewId,
         }),
@@ -92,9 +93,9 @@ describe("cost completeness transport", () => {
     expect(eic.completeness).toBe("COMPLETE");
     expect(eic.calculationStatus).toBe("CALCULABLE");
     expect(eic.verificationStatus).toBe("NEEDS_VERIFICATION");
-    expect(ownerConfirm.calculatedPriceAvailable).toBe(true);
+    expect(ownerConfirm.calculatedPriceAvailable).toBe(false);
     expect(commercialPrice.completeness).toBe("COMPLETE");
-    expect(typeof commercialPrice.netPrice).toBe("number");
+    expect(commercialPrice.netPrice).toBe(400);
     expect(typeof commercialPrice.grossPrice).toBe("number");
     expect(issues.some((issue) => issue.type === "PROVISIONAL_COST_EVIDENCE")).toBe(true);
     expect(issues.some((issue) => issue.impact === "REQUIRES_VERIFICATION")).toBe(true);
@@ -109,6 +110,7 @@ describe("cost completeness transport", () => {
         method: "POST",
         headers: { cookie: member.cookie ?? "", "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: vinylValues,
           reviewId: compiled.reviewId,
         }),
@@ -133,6 +135,7 @@ describe("cost completeness transport", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: readyValues,
           reviewId: compiled.reviewId,
         }),
@@ -178,6 +181,7 @@ describe("cost completeness transport", () => {
         method: "POST",
         headers: { cookie: owner.cookie ?? "", "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: readyValues,
           reviewId: compiled.reviewId,
         }),

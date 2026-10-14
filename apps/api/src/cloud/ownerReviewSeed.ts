@@ -45,6 +45,8 @@ export type OwnerReviewSeedReport = {
 
 const LETTERS = "PRD-LETTERS-FRONTLIT-PLEXI-AL06";
 const ACM = "PRD-ACM-CASSETTE-NONE";
+// Synthetic review data only; new quotes require an Owner-entered manual net price.
+const SYNTHETIC_MANUAL_NET_PRICE = 500;
 
 function lettersValues(inscription: string): Record<string, unknown> {
   return {
@@ -184,6 +186,7 @@ async function freezeQuote(
       values,
       reviewId: previewed.reviewId,
       requestId,
+      manualProductNetPrice: SYNTHETIC_MANUAL_NET_PRICE,
     }),
     `confirm:${productCode}`,
   );
@@ -197,6 +200,7 @@ async function freezeQuote(
       reviewId: previewed.reviewId,
       customerId,
       requestId,
+      manualProductNetPrice: SYNTHETIC_MANUAL_NET_PRICE,
       ...(disclosure?.status === "REQUIRED" && typeof disclosure.bindingHash === "string"
         ? { rateAcknowledgement: { bindingHash: disclosure.bindingHash } }
         : {}),
@@ -452,6 +456,7 @@ async function ensureAssemblyScenarioA(
           role: "SUPPORT_PANEL",
           values: acmValues("Nord Market ACM"),
           reviewId: acmReview.reviewId,
+          manualProductNetPrice: SYNTHETIC_MANUAL_NET_PRICE,
         }),
         "assembly_acm_member",
       );
@@ -469,6 +474,7 @@ async function ensureAssemblyScenarioA(
           role: "SIGNAGE_LETTERS",
           values: lettersValues("NORD"),
           reviewId: lettersReview.reviewId,
+          manualProductNetPrice: SYNTHETIC_MANUAL_NET_PRICE,
         }),
         "assembly_letters_member",
       );

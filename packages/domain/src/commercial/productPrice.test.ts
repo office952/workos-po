@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_COMMERCIAL_POLICY } from "./policy.js";
 import {
+  INVALID_MANUAL_PRODUCT_PRICE_REASON,
   MANUAL_FIXED_PRODUCT_STRATEGY,
   MISSING_MANUAL_PRODUCT_PRICE_REASON,
   PRODUCT_COST_PLUS_STRATEGY,
@@ -39,6 +40,26 @@ describe("manual fixed product commercial", () => {
     expect(withKnownCost.internalCostCompleteness).toBe("PARTIAL");
   });
 
+  it("R-001A keeps commercial net and VAT invariant when internal labor cost changes", () => {
+    const policy = { ...codeDefaultCommercialPolicy(), vatPercent: 21 };
+    const first = projectManualFixedProductPrice(
+      { netPrice: 680, internalCost: 340, internalCostCompleteness: "COMPLETE" },
+      policy,
+    );
+    const second = projectManualFixedProductPrice(
+      { netPrice: 680, internalCost: 420, internalCostCompleteness: "COMPLETE" },
+      policy,
+    );
+    expect(first.commercialStrategy).toBe(MANUAL_FIXED_PRODUCT_STRATEGY);
+    expect(second.commercialStrategy).toBe(MANUAL_FIXED_PRODUCT_STRATEGY);
+    expect([first.netPrice, first.vatAmount, first.grossPrice]).toEqual([680, 142.8, 822.8]);
+    expect([second.netPrice, second.vatAmount, second.grossPrice]).toEqual(
+      [first.netPrice, first.vatAmount, first.grossPrice],
+    );
+    expect(first.internalCost).toBe(340);
+    expect(second.internalCost).toBe(420);
+  });
+
   it("rejects a negative or invalid manual net", () => {
     expect(projectManualFixedProductPrice({ netPrice: -10 }).unavailableReasons).toContain(
       MISSING_MANUAL_PRODUCT_PRICE_REASON,
@@ -49,6 +70,27 @@ describe("manual fixed product commercial", () => {
     expect(
       projectManualFixedProductPrice({ netPrice: 0 }).unavailableReasons,
     ).toContain(MISSING_MANUAL_PRODUCT_PRICE_REASON);
+  });
+
+  it.each([
+    { label: "net overflow", netPrice: 1e308 },
+    { label: "gross-only overflow", netPrice: 1.6e306 },
+    { label: "largest finite number", netPrice: Number.MAX_VALUE },
+  ])("fails closed when monetary rounding overflows ($label)", ({ netPrice }) => {
+    expect(Number.isFinite(netPrice)).toBe(true);
+    const price = projectManualFixedProductPrice({ netPrice });
+    expect(price.completeness).toBe("UNAVAILABLE");
+    expect(price.unavailableReasons).toEqual([INVALID_MANUAL_PRODUCT_PRICE_REASON]);
+    expect(price.netPrice).toBeNull();
+    expect(price.vatAmount).toBeNull();
+    expect(price.grossPrice).toBeNull();
+  });
+
+  it("keeps a large but representable manual net complete and finite", () => {
+    const price = projectManualFixedProductPrice({ netPrice: 1e12 });
+    expect(price.completeness).toBe("COMPLETE");
+    expect([price.netPrice, price.vatAmount, price.grossPrice].every(Number.isFinite)).toBe(true);
+    expect(JSON.parse(JSON.stringify(price)).grossPrice).toBe(price.grossPrice);
   });
 
   it("does not treat missing manual net as zero", () => {

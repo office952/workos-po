@@ -97,7 +97,7 @@ describe("product assembly API", () => {
     const acmMember = await app.request(`/api/assemblies/${assemblyId}/members`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ role: "SUPPORT_PANEL", values: acmValues, reviewId: acmReview }),
+      body: JSON.stringify({ manualProductNetPrice: 400, role: "SUPPORT_PANEL", values: acmValues, reviewId: acmReview }),
     });
     expect(acmMember.status, JSON.stringify(await acmMember.clone().json())).toBe(200);
     expect(
@@ -106,6 +106,7 @@ describe("product assembly API", () => {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
+            manualProductNetPrice: 400,
             role: "SIGNAGE_LETTERS",
             values: lettersValues,
             reviewId: lettersReview,
@@ -201,6 +202,7 @@ describe("product assembly API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         role: "SIGNAGE_LETTERS",
         values: changedValues,
         reviewId: changedReview,
@@ -222,7 +224,7 @@ describe("product assembly API", () => {
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ values: lettersValues, reviewId: lettersReview, customerId }),
+        body: JSON.stringify({ manualProductNetPrice: 400, values: lettersValues, reviewId: lettersReview, customerId }),
       },
     );
     expect(standaloneLetters.status).toBe(200);
@@ -230,7 +232,7 @@ describe("product assembly API", () => {
       app.request(`/api/products/${ACM_CASSETTE_NONE_PRODUCT_CODE}/quote-snapshots`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ values: acmValues, reviewId: acmReview, customerId, ...acknowledgement }),
+        body: JSON.stringify({ manualProductNetPrice: 400, values: acmValues, reviewId: acmReview, customerId, ...acknowledgement }),
       }),
     );
     expect(standaloneAcm.status).toBe(200);
@@ -289,6 +291,25 @@ describe("product assembly API", () => {
     const assemblyId = ((await json(created)).assembly as { assemblyId: string }).assemblyId;
     const acmReview = await reviewId(app, ACM_CASSETTE_NONE_PRODUCT_CODE, acmValues);
     const lettersReview = await reviewId(app, CANONICAL_PRODUCT_CODE, lettersValues);
+    const costPlusMember = await app.request(`/api/assemblies/${assemblyId}/members`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        role: "SUPPORT_PANEL",
+        values: acmValues,
+        reviewId: acmReview,
+        pricingMethod: "PRODUCT_COST_PLUS",
+        manualProductNetPrice: 400,
+      }),
+    });
+    expect(costPlusMember.status).toBe(400);
+    expect((await json(costPlusMember)).error).toBe("pricing_method_not_allowed");
+    const untouched = await json(await app.request(`/api/assemblies/${assemblyId}`));
+    expect(
+      (untouched.assembly as { scopes: { id: string; complete: boolean }[] }).scopes.find(
+        (scope) => scope.id === "acm",
+      )?.complete,
+    ).toBe(false);
     const unusableTerms = { quoteCommercialTerms: { markupPercent: "bad" } };
     expect(
       (

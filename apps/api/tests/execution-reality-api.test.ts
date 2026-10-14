@@ -50,7 +50,7 @@ async function createExecutionPlan(app: ReturnType<typeof createApp>) {
   const quote = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ values: readyValues, reviewId, customerId }),
+    body: JSON.stringify({ manualProductNetPrice: 400, values: readyValues, reviewId, customerId }),
   });
   const quoteId = ((await readBody(quote)).quoteSnapshot as JsonObject).quoteSnapshotId as string;
   await app.request(
@@ -280,7 +280,7 @@ describe("execution reality API", () => {
       await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/accepted-production-snapshot`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ values: readyValues, reviewId: compiled.reviewId }),
+        body: JSON.stringify({ manualProductNetPrice: 400, values: readyValues, reviewId: compiled.reviewId }),
       }),
     );
     const snapshotId = (accepted.snapshot as JsonObject).snapshotId as string;

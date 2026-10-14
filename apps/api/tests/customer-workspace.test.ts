@@ -74,6 +74,7 @@ async function freezeQuote(
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
+      manualProductNetPrice: 400,
       values: reviewed.values,
       reviewId: reviewed.reviewId,
       customerId,

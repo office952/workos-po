@@ -81,7 +81,7 @@ async function confirmProduct(
   const response = await app.request(`/api/products/${productCode}/confirm`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(reviewed),
+    body: JSON.stringify({ ...reviewed, manualProductNetPrice: 400 }),
   });
   return { status: response.status, body: await readBody(response) };
 }
@@ -105,6 +105,7 @@ async function freezeQuote(
     body: JSON.stringify({
       ...reviewed,
       customerId,
+      manualProductNetPrice: 400,
     }),
   });
   return { status: response.status, body: await readBody(response) };
@@ -623,13 +624,13 @@ describe("qualified cost evidence owner path", () => {
     });
     expect((depth30.body.eic as JsonObject).completeness).toBe("COMPLETE");
     expect((depth30.body.eic as JsonObject).total).toBe(370);
-    expect((depth30.body.commercialPrice as JsonObject).grossPrice).toBe(604.4);
+    expect((depth30.body.commercialPrice as JsonObject).grossPrice).toBe(484);
     expect((depth60.body.eic as JsonObject).total).toBe(382.5);
-    expect((depth60.body.commercialPrice as JsonObject).grossPrice).toBe(624.82);
+    expect((depth60.body.commercialPrice as JsonObject).grossPrice).toBe(484);
     expect((depth80.body.eic as JsonObject).total).toBe(395);
-    expect((depth80.body.commercialPrice as JsonObject).grossPrice).toBe(645.23);
+    expect((depth80.body.commercialPrice as JsonObject).grossPrice).toBe(484);
     expect((depth100.body.eic as JsonObject).total).toBe(407.5);
-    expect((depth100.body.commercialPrice as JsonObject).grossPrice).toBe(665.66);
+    expect((depth100.body.commercialPrice as JsonObject).grossPrice).toBe(484);
 
     const quote30 = await freezeQuote(
       app,

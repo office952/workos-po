@@ -85,8 +85,8 @@ async function quotedAssembly(app: App, requestId: string) {
   const assemblyId = ((await json(created)).assembly as { assemblyId: string }).assemblyId;
   const acmReview = await reviewId(app, ACM_CASSETTE_NONE_PRODUCT_CODE, acmValues);
   const lettersReview = await reviewId(app, CANONICAL_PRODUCT_CODE, lettersValues);
-  expect((await post(app, `/api/assemblies/${assemblyId}/members`, { role: "SUPPORT_PANEL", values: acmValues, reviewId: acmReview })).status).toBe(200);
-  expect((await post(app, `/api/assemblies/${assemblyId}/members`, { role: "SIGNAGE_LETTERS", values: lettersValues, reviewId: lettersReview })).status).toBe(200);
+  expect((await post(app, `/api/assemblies/${assemblyId}/members`, { manualProductNetPrice: 400, role: "SUPPORT_PANEL", values: acmValues, reviewId: acmReview })).status).toBe(200);
+  expect((await post(app, `/api/assemblies/${assemblyId}/members`, { manualProductNetPrice: 400, role: "SIGNAGE_LETTERS", values: lettersValues, reviewId: lettersReview })).status).toBe(200);
   expect((await post(app, `/api/assemblies/${assemblyId}/confirm`)).status).toBe(200);
   expect(
     (
@@ -178,6 +178,7 @@ describe("request commercial continuity for assemblies", () => {
     const plain = await setupRequest(app, "Simplu");
     const plainReview = await reviewId(app, CANONICAL_PRODUCT_CODE, lettersValues);
     const standalone = await post(app, `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`, {
+      manualProductNetPrice: 400,
       values: lettersValues,
       reviewId: plainReview,
       customerId: plain.customerId,
@@ -190,6 +191,7 @@ describe("request commercial continuity for assemblies", () => {
     const { assemblyId } = await quotedAssembly(app, withAssembly.requestId);
     const overlapReview = await reviewId(app, CANONICAL_PRODUCT_CODE, lettersValues);
     const overlap = await post(app, `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`, {
+      manualProductNetPrice: 400,
       values: lettersValues,
       reviewId: overlapReview,
       customerId: withAssembly.customerId,
@@ -198,6 +200,7 @@ describe("request commercial continuity for assemblies", () => {
     expect(overlap.status).toBe(409);
     expect(await json(overlap)).toMatchObject({ error: "request_assembly_overlap", assemblyId });
     const separate = await post(app, `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`, {
+      manualProductNetPrice: 400,
       values: lettersValues,
       reviewId: overlapReview,
       customerId: withAssembly.customerId,
@@ -230,6 +233,7 @@ describe("request commercial continuity for assemblies", () => {
     const changedValues = { ...lettersValues, "root.inscription": "NOU" };
     const changedReview = await reviewId(app, CANONICAL_PRODUCT_CODE, changedValues);
     const edited = await post(app, `/api/assemblies/${assemblyId}/members`, {
+      manualProductNetPrice: 400,
       role: "SIGNAGE_LETTERS",
       values: changedValues,
       reviewId: changedReview,

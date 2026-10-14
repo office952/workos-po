@@ -20,7 +20,7 @@ import {
   MANUAL_FIXED_PRODUCT_STRATEGY,
   PRODUCT_COST_PLUS_STRATEGY,
   organizationCommercialDefaultsFromPolicy,
-  projectAuthorizedProductCommercialPrice,
+  projectManualFixedProductPrice,
   projectCommercialPrice,
   projectCostCompletenessIssues,
   quoteCommercialTermsFromPolicy,
@@ -203,13 +203,6 @@ function readManualProductNetPrice(body: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function readPreferManualProductPrice(body: unknown): boolean {
-  if (typeof body !== "object" || body === null || !("preferManualProductPrice" in body)) {
-    return false;
-  }
-  return (body as { preferManualProductPrice: unknown }).preferManualProductPrice === true;
-}
-
 function readPricingMethod(body: unknown): "PRODUCT_COST_PLUS" | "MANUAL_FIXED_PRODUCT" | null {
   if (typeof body !== "object" || body === null || !("pricingMethod" in body)) {
     return null;
@@ -278,33 +271,50 @@ export function resolveProductCommercialForRequest(
       issues: termIssues,
     };
   }
-  const pricingMethod =
-    readPricingMethod(body) ??
-    (authorized && readPreferManualProductPrice(body)
-      ? MANUAL_FIXED_PRODUCT_STRATEGY
-      : PRODUCT_COST_PLUS_STRATEGY);
-  const preferManual = authorized && pricingMethod === MANUAL_FIXED_PRODUCT_STRATEGY;
-  const costPlus = projectCommercialPrice(eic, resolution.policy, quoteTerms);
-  const commercialPrice = projectAuthorizedProductCommercialPrice(
-    costPlus,
-    resolution.policy,
+  // R-001A applies only to new quote creation. Historical cost-plus snapshots
+  // continue to be read by their original immutable commercial contract.
+  const requestedMethod = readPricingMethod(body);
+  if (requestedMethod === PRODUCT_COST_PLUS_STRATEGY) {
+    return {
+      ok: false as const,
+      error: "pricing_method_not_allowed" as const,
+      reasons: [
+        "Prețul calculat din costuri nu mai este permis pentru ofertele noi. Introdu un preț net manual.",
+      ],
+    };
+  }
+  if (
+    body !== null &&
+    typeof body === "object" &&
+    "pricingMethod" in body &&
+    requestedMethod === null
+  ) {
+    return {
+      ok: false as const,
+      error: "invalid_pricing_method" as const,
+      reasons: ["Metoda de preț pentru oferta nouă nu este validă."],
+    };
+  }
+  const commercialPrice = projectManualFixedProductPrice(
     {
-      authorized,
-      manualNetPrice: authorized ? readManualProductNetPrice(body) : null,
-      preferManual,
+      netPrice: authorized ? readManualProductNetPrice(body) : null,
+      currency: eic.currency,
+      internalCost: eic.total,
+      internalCostCurrency: eic.currency,
+      internalCostCompleteness: eic.completeness,
     },
+    resolution.policy,
   );
   const organizationDefaults = organizationCommercialDefaultsFromPolicy(resolution.policy);
   return {
     ok: true as const,
     resolution,
-    costPlus,
     commercialPrice,
     quoteTerms,
     organizationDefaults,
     quoteTermsFromDefaults: quoteCommercialTermsMatchDefaults(quoteTerms, organizationDefaults),
-    pricingMethod: commercialPrice.commercialStrategy ?? pricingMethod,
-    calculatedPriceAvailable: costPlus.calculationStatus === "CALCULABLE",
+    pricingMethod: MANUAL_FIXED_PRODUCT_STRATEGY,
+    calculatedPriceAvailable: false,
     manualProductPriceAuthorized: authorized,
   };
 }
@@ -561,13 +571,15 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       isOwner(c),
     );
     if (!priced.ok) {
-      if ("error" in priced && priced.error === "invalid_quote_terms") {
+      if ("error" in priced) {
         return c.json(
-          {
-            error: "invalid_quote_terms",
-            issues: priced.issues,
-            reasons: priced.issues.map((issue) => issue.reason),
-          },
+          priced.error === "invalid_quote_terms"
+            ? {
+                error: priced.error,
+                issues: priced.issues,
+                reasons: priced.issues.map((issue) => issue.reason),
+              }
+            : { error: priced.error, reasons: priced.reasons },
           400,
         );
       }
@@ -772,13 +784,15 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       isOwner(c),
     );
     if (!priced.ok) {
-      if ("error" in priced && priced.error === "invalid_quote_terms") {
+      if ("error" in priced) {
         return c.json(
-          {
-            error: "invalid_quote_terms",
-            issues: priced.issues,
-            reasons: priced.issues.map((issue) => issue.reason),
-          },
+          priced.error === "invalid_quote_terms"
+            ? {
+                error: priced.error,
+                issues: priced.issues,
+                reasons: priced.issues.map((issue) => issue.reason),
+              }
+            : { error: priced.error, reasons: priced.reasons },
           400,
         );
       }

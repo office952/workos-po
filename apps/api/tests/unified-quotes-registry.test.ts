@@ -108,6 +108,7 @@ async function setSeller(app: App) {
 async function standaloneQuote(app: App, customerId: string, requestId: string) {
   const review = await reviewId(app, CANONICAL_PRODUCT_CODE, lettersValues);
   const created = await post(app, `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`, {
+    manualProductNetPrice: 400,
     values: lettersValues,
     reviewId: review,
     customerId,
@@ -123,8 +124,8 @@ async function quotedAssembly(app: App, requestId: string) {
   const assemblyId = ((await json(created)).assembly as { assemblyId: string }).assemblyId;
   const acmReview = await reviewId(app, ACM_CASSETTE_NONE_PRODUCT_CODE, acmValues);
   const lettersReview = await reviewId(app, CANONICAL_PRODUCT_CODE, lettersValues);
-  expect((await post(app, `/api/assemblies/${assemblyId}/members`, { role: "SUPPORT_PANEL", values: acmValues, reviewId: acmReview })).status).toBe(200);
-  expect((await post(app, `/api/assemblies/${assemblyId}/members`, { role: "SIGNAGE_LETTERS", values: lettersValues, reviewId: lettersReview })).status).toBe(200);
+  expect((await post(app, `/api/assemblies/${assemblyId}/members`, { manualProductNetPrice: 400, role: "SUPPORT_PANEL", values: acmValues, reviewId: acmReview })).status).toBe(200);
+  expect((await post(app, `/api/assemblies/${assemblyId}/members`, { manualProductNetPrice: 400, role: "SIGNAGE_LETTERS", values: lettersValues, reviewId: lettersReview })).status).toBe(200);
   expect((await post(app, `/api/assemblies/${assemblyId}/confirm`)).status).toBe(200);
   expect((await quoteAssembly(app, assemblyId)).status).toBe(200);
   return assemblyId;
@@ -256,7 +257,7 @@ describe("unified Oferte registry", () => {
     const firstId = (await registry(app)).quotes[0]?.quoteSnapshotId ?? "";
     const changed = { ...lettersValues, "root.inscription": "NOU" };
     const changedReview = await reviewId(app, CANONICAL_PRODUCT_CODE, changed);
-    expect((await post(app, `/api/assemblies/${assemblyId}/members`, { role: "SIGNAGE_LETTERS", values: changed, reviewId: changedReview })).status).toBe(200);
+    expect((await post(app, `/api/assemblies/${assemblyId}/members`, { manualProductNetPrice: 400, role: "SIGNAGE_LETTERS", values: changed, reviewId: changedReview })).status).toBe(200);
     expect((await post(app, `/api/assemblies/${assemblyId}/review`)).status).toBe(200);
     expect((await post(app, `/api/assemblies/${assemblyId}/confirm`)).status).toBe(200);
     expect((await quoteAssembly(app, assemblyId)).status).toBe(200);

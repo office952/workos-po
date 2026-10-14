@@ -98,6 +98,7 @@ async function freezeQuote(
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         values: reviewed.values,
         reviewId: reviewed.reviewId,
         customerId,
@@ -309,12 +310,8 @@ describe("commercial request API", () => {
           reviewId: firstCompiled.reviewId,
           customerId: customer.customerId,
           requestId,
-          pricingMethod: "PRODUCT_COST_PLUS",
-          quoteCommercialTerms: {
-            markupPercent: 35,
-            discountPercent: 0,
-            adjustmentAmount: 0,
-          },
+          pricingMethod: "MANUAL_FIXED_PRODUCT",
+          manualProductNetPrice: 400,
         }),
       },
     );
@@ -340,12 +337,8 @@ describe("commercial request API", () => {
           reviewId: secondCompiled.reviewId,
           customerId: customer.customerId,
           requestId,
-          pricingMethod: "PRODUCT_COST_PLUS",
-          quoteCommercialTerms: {
-            markupPercent: 25,
-            discountPercent: 5,
-            adjustmentAmount: 0,
-          },
+          pricingMethod: "MANUAL_FIXED_PRODUCT",
+          manualProductNetPrice: 450,
         }),
       },
     );
@@ -355,8 +348,8 @@ describe("commercial request API", () => {
     const secondHash = secondQuote.contentHash as string;
     expect(secondId).not.toBe(firstId);
     expect(secondHash).not.toBe(firstHash);
-    expect(((secondQuote.commercial as JsonObject).markupPercent)).toBe(25);
-    expect(((secondQuote.commercial as JsonObject).discountPercent)).toBe(5);
+    expect(((secondQuote.commercial as JsonObject).commercialStrategy)).toBe("MANUAL_FIXED_PRODUCT");
+    expect(((secondQuote.commercial as JsonObject).netPrice)).toBe(450);
 
     const accepted = await readBody(
       await app.request(
@@ -376,8 +369,8 @@ describe("commercial request API", () => {
     const rereadCommercial = (rereadFirst.quoteSnapshot as JsonObject)
       .commercial as JsonObject;
     expect((rereadFirst.quoteSnapshot as JsonObject).contentHash).toBe(firstHash);
-    expect(rereadCommercial.markupPercent).toBe(firstCommercial.markupPercent);
-    expect(rereadCommercial.discountPercent).toBe(firstCommercial.discountPercent);
+    expect(rereadCommercial.netPrice).toBe(firstCommercial.netPrice);
+    expect(rereadCommercial.commercialStrategy).toBe(firstCommercial.commercialStrategy);
 
     const detail = (await readBody(await app.request(`/api/requests/${requestId}`)))
       .detail as { linkedOffers: Array<JsonObject> };
@@ -902,7 +895,7 @@ describe("commercial request API", () => {
     expect(productOnly.status).toBe(200);
     const quote = (await readBody(productOnly)).quoteSnapshot as JsonObject;
     expect((quote.eic as JsonObject).total).toBe(382.5);
-    expect((quote.commercial as JsonObject).grossPrice).toBe(624.82);
+    expect((quote.commercial as JsonObject).grossPrice).toBe(484);
     expect(JSON.stringify(quote)).not.toMatch(/SITE_INSTALLATION|TRANSPORT/);
   });
 });
