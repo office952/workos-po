@@ -1,0 +1,18 @@
+---
+description: Owner-mandated Notion journal gate for every actionable WorkOS plan, implementation, PR or state transition.
+alwaysApply: true
+---
+
+# WorkOS Notion-first journal
+
+Owner decision: **Notion is mandatory chronological governance for past, present and future WorkOS development.**
+
+Before drafting an executable implementation plan, changing requirements, writing or editing code/docs/config/tests, starting a new implementation wave, committing, pushing, creating/updating PRs, merging, deploying or migrating:
+
+1. Read `docs/governance/NOTION_JOURNAL_GATE_V1.md`.
+2. Find and **verify** the matching implementation record in [the WorkOS Notion registry](https://app.notion.com/p/cc42b70f86354dd7b08e6a00b4cb5156).
+3. Report `NOTION_RECORD_ID`, `NOTION_RECORD_URL`, `NOTION_RECORD_VERIFIED`, `OWNER_GO_FOR_REQUESTED_ACTION`, `SCOPE_MATCHES_NOTION`, and `NOTION_GATE`.
+4. STOP before any write if the record is missing, Notion is unavailable, scope differs or Owner permission for the action is absent.
+5. Log meaningful changes and the result/PR/SHA in the [change journal](https://app.notion.com/p/cc9f25cbe6db48b8bf262832448f8390).
+
+Notion does **not** replace GitHub code truth or authorize work by itself. No silent retroactive log. No real-data/deploy/merge authority is implied. WorkOS customer runtime must never depend on Notion availability.
