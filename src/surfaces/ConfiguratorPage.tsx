@@ -38,7 +38,6 @@ import type {
   DraftValues,
   PresentedFormSchema,
   PreviewTransport,
-  QuoteCommercialTermsTransport,
 } from "../api/types";
 import { Button } from "../components/Button";
 import { InfoRow } from "../components/InfoRow";
@@ -71,10 +70,6 @@ import {
 import type { WorkbenchNavigationState } from "../configuration/workbenchModel";
 
 function commercialResultKey(input: {
-  pricingMethod: "PRODUCT_COST_PLUS" | "MANUAL_FIXED_PRODUCT";
-  markupDraft: string;
-  discountDraft: string;
-  adjustmentDraft: string;
   manualNetDraft: string;
   reviewId: string | null;
 }): string {
@@ -252,13 +247,6 @@ export function ConfiguratorPage({
   const [acknowledgedRateBinding, setAcknowledgedRateBinding] = useState<string | null>(null);
   const [overlapAssemblyId, setOverlapAssemblyId] = useState<string | null>(null);
   const [manualNetDraft, setManualNetDraft] = useState("");
-  const [pricingMethod, setPricingMethod] = useState<
-    "PRODUCT_COST_PLUS" | "MANUAL_FIXED_PRODUCT"
-  >("PRODUCT_COST_PLUS");
-  const [quoteMarkupDraft, setQuoteMarkupDraft] = useState("");
-  const [quoteDiscountDraft, setQuoteDiscountDraft] = useState("");
-  const [quoteAdjustmentDraft, setQuoteAdjustmentDraft] = useState("");
-  const [termsOrigin, setTermsOrigin] = useState<"defaults" | "quote">("defaults");
   const seller = useResource(resourceKeys.seller(), loadSellerConfigured);
   const sellerConfigured = seller.status === "success" ? seller.data : null;
   const [lastQuote, setLastQuote] = useState<FrozenQuoteRef | null>(() =>
@@ -297,63 +285,19 @@ export function ConfiguratorPage({
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }
 
-  function parseCommercialNumber(value: string): number | null {
-    const trimmed = value.trim().replace(",", ".");
-    if (trimmed === "") {
-      return null;
-    }
-    const parsed = Number(trimmed);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-
-  function applyQuoteTerms(terms: QuoteCommercialTermsTransport, fromDefaults: boolean): void {
-    setQuoteMarkupDraft(String(terms.markupPercent));
-    setQuoteDiscountDraft(String(terms.discountPercent));
-    setQuoteAdjustmentDraft(String(terms.adjustmentAmount));
-    setTermsOrigin(fromDefaults ? "defaults" : "quote");
-  }
-
-  function currentQuoteTerms(): QuoteCommercialTermsTransport | null {
-    const markupPercent = parseCommercialNumber(quoteMarkupDraft);
-    const discountPercent = parseCommercialNumber(quoteDiscountDraft);
-    const adjustmentAmount = parseCommercialNumber(quoteAdjustmentDraft);
-    if (markupPercent === null || discountPercent === null || adjustmentAmount === null) {
-      return null;
-    }
-    return { markupPercent, discountPercent, adjustmentAmount };
-  }
-
   function commercialPayload(): {
-    pricingMethod: "PRODUCT_COST_PLUS" | "MANUAL_FIXED_PRODUCT";
-    quoteCommercialTerms?: QuoteCommercialTermsTransport;
+    pricingMethod: "MANUAL_FIXED_PRODUCT";
     manualProductNetPrice?: number;
   } {
     const net = parsedManualNet();
-    const terms = currentQuoteTerms();
     return {
-      pricingMethod,
-      ...(terms ? { quoteCommercialTerms: terms } : {}),
-      ...(pricingMethod === "MANUAL_FIXED_PRODUCT" && net !== null
-        ? { manualProductNetPrice: net }
-        : {}),
+      pricingMethod: "MANUAL_FIXED_PRODUCT",
+      ...(net !== null ? { manualProductNetPrice: net } : {}),
     };
   }
 
-  function currentTransportValues(): DraftValues {
-    return schemaRef.current
-      ? valuesForTransport(drafts, schemaRef.current)
-      : valuesBeforeSchema(drafts);
-  }
-
   function currentCommercialResultKey(reviewId: string | null = preview?.reviewId ?? null): string {
-    return commercialResultKey({
-      pricingMethod,
-      markupDraft: quoteMarkupDraft,
-      discountDraft: quoteDiscountDraft,
-      adjustmentDraft: quoteAdjustmentDraft,
-      manualNetDraft: pricingMethod === "MANUAL_FIXED_PRODUCT" ? manualNetDraft : "",
-      reviewId,
-    });
+    return commercialResultKey({ manualNetDraft, reviewId });
   }
   const latestResultKey = useRef("");
   useEffect(() => { latestResultKey.current = currentCommercialResultKey(); });
@@ -490,28 +434,9 @@ export function ConfiguratorPage({
       if (editedDuringFlight) {
         setPricedResultKey(sentKey);
       } else {
-        const nextMethod = presented.pricingMethod ?? pricingMethod;
-        const nextTerms = presented.quoteCommercialTerms ??
-          presented.organizationDefaults ??
-          currentQuoteTerms();
-        if (presented.pricingMethod) {
-          setPricingMethod(presented.pricingMethod);
-        }
-        if (presented.quoteCommercialTerms) {
-          applyQuoteTerms(presented.quoteCommercialTerms, presented.quoteTermsFromDefaults);
-        } else if (presented.organizationDefaults) {
-          applyQuoteTerms(presented.organizationDefaults, true);
-        }
         setPricedResultKey(
           commercialResultKey({
-            pricingMethod: nextMethod,
-            markupDraft: nextTerms ? String(nextTerms.markupPercent) : quoteMarkupDraft,
-            discountDraft: nextTerms ? String(nextTerms.discountPercent) : quoteDiscountDraft,
-            adjustmentDraft: nextTerms ? String(nextTerms.adjustmentAmount) : quoteAdjustmentDraft,
-            manualNetDraft:
-              nextMethod === "MANUAL_FIXED_PRODUCT"
-                ? String(presented.commercial?.netPrice ?? manualNetDraft)
-                : "",
+            manualNetDraft: String(presented.commercial?.netPrice ?? manualNetDraft),
             reviewId: preview.reviewId,
           }),
         );
@@ -656,19 +581,7 @@ export function ConfiguratorPage({
     confirmPending ||
     !validCustomerPrice ||
     !ratesAcknowledged;
-  const calculatedUnavailable = Boolean(
-    confirmation && !confirmation.calculatedPriceAvailable,
-  );
-  const verificationIssues =
-    confirmation?.costCompletenessIssues.filter(
-      (issue) => issue.impact === "REQUIRES_VERIFICATION",
-    ) ?? [];
-  const blockingIssues =
-    confirmation?.costCompletenessIssues.filter(
-      (issue) => issue.impact === "BLOCKS_CALCULATION",
-    ) ?? [];
   const priceNotReady = Boolean(confirmation && !validCustomerPrice);
-  const organizationDefaults = confirmation?.organizationDefaults;
   return (
     <SlicePage
       contextLabel="Configurator"
@@ -889,149 +802,35 @@ export function ConfiguratorPage({
               ) : null}
             </div>
           ) : !confirmation ? (
-            <div className="stack"><p>După confirmarea configurației alegi metoda de preț pentru această ofertă.</p><Button variant="secondary" onClick={() => setWorkArea("review")}>Verifică și confirmă configurația</Button></div>
+            <div className="stack"><p>După confirmarea configurației introduci prețul net pentru această ofertă. Costul intern rămâne separat.</p><Button variant="secondary" onClick={() => setWorkArea("review")}>Verifică și confirmă configurația</Button></div>
           ) : (
             <>
-              <fieldset className="fieldset">
-                <legend className="fieldset__legend">Cum stabilești prețul acestei oferte?</legend>
-                <div className="choice-stack">
-                  <label
-                    className={`choice-card${
-                      pricingMethod === "PRODUCT_COST_PLUS" ? " choice-card--selected" : ""
-                    }${calculatedUnavailable ? " choice-card--unavailable" : ""}`}
-                    htmlFor="pricingMethodCalculated"
-                  >
-                    <input
-                      id="pricingMethodCalculated"
-                      type="radio"
-                      name="pricingMethod"
-                      value="PRODUCT_COST_PLUS"
-                      checked={pricingMethod === "PRODUCT_COST_PLUS"}
-                      disabled={calculatedUnavailable}
-                      onChange={() => setPricingMethod("PRODUCT_COST_PLUS")}
-                    />
-                    <span>
-                      <p className="choice-card__title">Calculat din costuri</p>
-                      <p className="choice-card__copy">
-                        WorkOS calculează prețul pornind de la costul intern și termenii
-                        comerciali ai acestei oferte.
-                      </p>
-                      {calculatedUnavailable ? (
-                        <p className="choice-card__status">Indisponibil momentan</p>
-                      ) : null}
-                    </span>
-                  </label>
-                  <label
-                    className={`choice-card${
-                      pricingMethod === "MANUAL_FIXED_PRODUCT" ? " choice-card--selected" : ""
-                    }`}
-                    htmlFor="pricingMethodManual"
-                  >
-                    <input
-                      id="pricingMethodManual"
-                      type="radio"
-                      name="pricingMethod"
-                      value="MANUAL_FIXED_PRODUCT"
-                      checked={pricingMethod === "MANUAL_FIXED_PRODUCT"}
-                      onChange={() => setPricingMethod("MANUAL_FIXED_PRODUCT")}
-                    />
-                    <span>
-                      <p className="choice-card__title">Preț net negociat manual</p>
-                      <p className="choice-card__copy">
-                        Introdu suma netă pe care vrei să o oferi clientului pentru acest
-                        produs. TVA se aplică automat.
-                      </p>
-                    </span>
-                  </label>
-                </div>
-              </fieldset>
-              {calculatedUnavailable ? (
-                <InlineAlert tone="pending" title="Calculul automat nu este disponibil">
-                  Calculul automat nu este disponibil deoarece costul intern este
-                  incomplet.{" "}
-                  {confirmation.financialVisible && blockingIssues.length > 0 ? (
-                    <a className="text-link" href="#cost-intern-gaps">
-                      Vezi ce lipsește
-                    </a>
-                  ) : null}
-                </InlineAlert>
-              ) : null}
-              {!calculatedUnavailable && verificationIssues.length > 0 ? (
-                <InlineAlert tone="pending" title="Necesită verificare">
-                  {verificationIssues.length === 1
-                    ? "Calculul folosește 1 valoare care necesită verificare."
-                    : `Calculul folosește ${verificationIssues.length} valori care necesită verificare.`}
-                </InlineAlert>
-              ) : null}
-              {confirmation.financialVisible &&
-              pricingMethod === "PRODUCT_COST_PLUS" &&
-              !calculatedUnavailable ? (
-                <div className="stack" data-testid="quote-commercial-terms">
-                  <p>Termeni comerciali ai acestei oferte</p>
-                  <p>
-                    {termsOrigin === "defaults"
-                      ? "Pornit din valorile implicite ale firmei."
-                      : "Valorile au fost schimbate doar pentru această ofertă."}
-                  </p>
-                  <TextField
-                    id="quoteMarkupPercent"
-                    label="Adaos pentru această ofertă (%)"
-                    value={quoteMarkupDraft}
-                    inputMode="decimal"
-                    hint="Procentul de adaos se aplică doar acestei oferte, nu politicii firmei."
-                    onChange={(value) => {
-                      setQuoteMarkupDraft(value);
-                      setTermsOrigin("quote");
-                    }}
-                  />
-                  <TextField
-                    id="quoteDiscountPercent"
-                    label="Discount pentru această ofertă (%)"
-                    value={quoteDiscountDraft}
-                    inputMode="decimal"
-                    hint="Discountul este net, înainte de TVA, și doar pentru această ofertă."
-                    onChange={(value) => {
-                      setQuoteDiscountDraft(value);
-                      setTermsOrigin("quote");
-                    }}
-                  />
-                  <TextField
-                    id="quoteAdjustmentAmount"
-                    label="Ajustare netă (+/- EUR)"
-                    value={quoteAdjustmentDraft}
-                    inputMode="decimal"
-                    hint="Sumă netă, fără TVA, adăugată sau scăzută doar din această ofertă."
-                    onChange={(value) => {
-                      setQuoteAdjustmentDraft(value);
-                      setTermsOrigin("quote");
-                    }}
-                  />
-                  {organizationDefaults ? (
-                    <button
-                      type="button"
-                      className="quiet-action"
-                      onClick={() => {
-                        applyQuoteTerms(organizationDefaults, true);
-                      }}
-                    >
-                      Revino la valorile implicite
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-              {confirmation.manualProductPriceAuthorized &&
-              pricingMethod === "MANUAL_FIXED_PRODUCT" ? (
+              <div className="stack" data-testid="manual-price-method">
+                <p><strong>Preț net stabilit manual</strong></p>
+                <p>Prețul clientului este introdus și confirmat de un utilizator autorizat.
+                  Nu se calculează din costuri de producție, manoperă sau ore lucrate.</p>
+              </div>
+              {confirmation.manualProductPriceAuthorized ? (
                 <div className="stack" data-testid="manual-product-price">
                   <TextField
                     id="manualProductNetPrice"
-                    label="Preț net negociat al produsului, fără TVA"
+                    label="Preț net al produsului, fără TVA"
                     value={manualNetDraft}
                     inputMode="decimal"
-                    hint="Introdu suma netă pe care vrei să o oferi clientului pentru produs. Această sumă înlocuiește calculul automat cost + adaos − discount pentru această ofertă. TVA se aplică separat. Serviciile și montajul se tratează separat."
+                    hint="Introdu prețul net al produsului. TVA se calculează separat; montajul și serviciile au preț distinct."
                     onChange={setManualNetDraft}
                   />
-                  <p>Costul intern rămâne separat și nu este modificat de prețul manual.</p>
                 </div>
+              ) : (
+                <InlineAlert tone="blocked" title="Prețul manual nu poate fi setat">
+                  Doar utilizatorul autorizat poate confirma prețul acestei oferte.
+                </InlineAlert>
+              )}
+              {confirmation.completeness !== "COMPLETE" && confirmation.financialVisible ? (
+                <InlineAlert tone="pending" title="Cost intern incomplet">
+                  Poți pregăti prețul comercial independent de aceste costuri.
+                  Acceptarea și comanda rămân supuse verificărilor interne existente.
+                </InlineAlert>
               ) : null}
               <Button
                 disabled={confirmPending}
@@ -1039,37 +838,12 @@ export function ConfiguratorPage({
                   void confirm();
                 }}
               >
-                {serverCustomerPriceReady ? "Actualizează prețul" : "Calculează prețul"}
+                {serverCustomerPriceReady ? "Actualizează prețul" : "Confirmă prețul"}
               </Button>
             </>
           )}
         </SurfacePanel>
         <SurfacePanel title="Preț client" label="Rezultat">
-          {confirmation && pricingMethod === "PRODUCT_COST_PLUS" && validCustomerPrice ? (
-            <dl>
-              {confirmation.commercial?.markupPercent !== null &&
-              confirmation.commercial?.markupPercent !== undefined ? (
-                <InfoRow
-                  label="Adaos"
-                  value={`${confirmation.commercial.markupPercent}%`}
-                />
-              ) : null}
-              {confirmation.commercial?.discountPercent !== null &&
-              confirmation.commercial?.discountPercent !== undefined ? (
-                <InfoRow
-                  label="Discount"
-                  value={`${confirmation.commercial.discountPercent}%`}
-                />
-              ) : null}
-              {confirmation.commercial?.adjustmentAmount !== null &&
-              confirmation.commercial?.adjustmentAmount !== undefined ? (
-                <InfoRow
-                  label="Ajustare"
-                  value={`${confirmation.commercial.adjustmentAmount} EUR`}
-                />
-              ) : null}
-            </dl>
-          ) : null}
           {confirmation ? (
             <CommercialPricePanel
               commercial={confirmation.commercial}
@@ -1085,13 +859,13 @@ export function ConfiguratorPage({
           )}
           {confirmation && serverCustomerPriceReady && !priceIsCurrent ? (
             <InlineAlert tone="blocked" title="Preț neactualizat">
-              Termenii comerciali s-au schimbat față de ultimul calcul. Suma afișată mai jos este
-              rezultatul precedent; actualizează prețul înainte de înghețare.
+              Prețul manual s-a schimbat față de ultima confirmare.
+              Actualizează prețul înainte de a îngheța oferta.
             </InlineAlert>
           ) : null}
-          {priceNotReady && !calculatedUnavailable && priceIsCurrent ? (
+          {priceNotReady && priceIsCurrent ? (
             <InlineAlert tone="blocked" title="Prețul nu este gata">
-              Completează metoda de preț și calculează prețul înainte de a îngheța oferta.
+              Introdu și confirmă un preț net manual valid înainte de a îngheța oferta.
             </InlineAlert>
           ) : null}
           {rateRequirement && validCustomerPrice && !assemblyId ? (
