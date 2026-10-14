@@ -80,6 +80,7 @@ describe("resources administration projection", () => {
       "LAB-FORM-SHEET-CASSETTE",
       "LAB-ATTACH-INTERNAL-FRAME",
       "LAB-SITE-INSTALL",
+      "LAB-WORKSHOP-LABOR",
     ]);
     expect(admin.serviceRecipes.map((item) => item.id)).toEqual(
       expect.arrayContaining([

@@ -60,15 +60,61 @@ export {
   MOUNT_LETTERS_ON_PANEL_ID,
   MOUNT_LOGO_ON_PANEL_ID,
   projectAssemblyProduction,
+  unpricedAssemblyProductionOperations,
 } from "./composition.js";
 export {
   reconcileAssemblyEic,
   type AssemblyEicChildReconciliation,
   type AssemblyEicMemberInput,
+  type AssemblyEicPricedOperation,
   type AssemblyEicReconciliation,
   type AssemblyEicSupersededRecipe,
   type AssemblyEicUnpricedOperation,
+  type AssemblyOperationEvidenceStatus,
 } from "./eic.js";
+export {
+  ASSEMBLY_COSTED_PROCESS_IDS,
+  ASSEMBLY_ESTIMABLE_PROCESS_IDS,
+  ASSEMBLY_OPERATION_COST_SCHEMA,
+  ASSEMBLY_OPERATION_GAP_OUTCOMES,
+  FINAL_INSPECTION_MODES,
+  FINAL_PACKAGING_MODES,
+  MAX_ESTIMATED_PERSON_HOURS,
+  assemblyCostedProcessIds,
+  assemblyOperationId,
+  frozenPolicyFrom,
+  isCostedOperationLine,
+  isAssemblyEstimableProcessId,
+  isFinalInspectionMode,
+  isFinalPackagingMode,
+  isValidEstimatedPersonHours,
+  verifiedOperationCostLines,
+  type AssemblyCostedProcessId,
+  type AssemblyEstimableProcessId,
+  type AssemblyOperationCostPolicyVersion,
+  type AssemblyOperationEstimate,
+  type AssemblyOperationGapOutcome,
+  type AssemblyOperationQuantityProvenance,
+  type FinalInspectionMode,
+  type FinalPackagingMode,
+  type FrozenAssemblyOperationCost,
+  type FrozenAssemblyOperationCostedLine,
+  type FrozenAssemblyOperationCostLine,
+  type FrozenAssemblyOperationCostPolicy,
+} from "./operationCostEvidence.js";
+export {
+  assemblyOperationCostProcessLabel,
+  evaluateAssemblyOperationCosts,
+  setAssemblyOperationEstimates,
+  type AssemblyOperationCostMember,
+  type AssemblyOperationEstimateEdit,
+} from "./operationCost.js";
+export {
+  presentAssemblyOperationCost,
+  type AssemblyOperationCostLineView,
+  type AssemblyOperationCostSource,
+  type AssemblyOperationCostView,
+} from "./operationCostPresentation.js";
 export {
   materializeAssemblyExecutionPlan,
   setAssemblyTaskPlannedEffort,
@@ -93,6 +139,7 @@ export type {
 export { ASSEMBLY_RULE_ERRORS, CURRENT_RATE_REEVALUATION } from "./model.js";
 export type {
   AssemblyOrderSnapshot,
+  AssemblyProductionOperationCost,
   AssemblyProductionSnapshot,
   AssemblyQuoteSnapshot,
 } from "./snapshots.js";

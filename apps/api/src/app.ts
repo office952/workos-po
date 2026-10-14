@@ -44,6 +44,7 @@ import { registerFormulaRoutes } from "./product/formulaRoutes.js";
 import { registerTechnicalSettingRoutes } from "./product/technicalSettingRoutes.js";
 import { registerProductEnablementRoutes } from "./product/productEnablementRoutes.js";
 import { registerPlanningRoutes } from "./planning/routes.js";
+import { registerAssemblyOperationCostRoutes } from "./assembly/operationCostRoutes.js";
 import { registerAssemblyRoutes } from "./assembly/routes.js";
 import { registerProductRoutes } from "./product.js";
 import { registerProductSystemAdminRoutes } from "./productSystem/routes.js";
@@ -158,6 +159,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<ApiEnv> {
   registerJobRoutes(app);
   registerPlanningRoutes(app);
   registerAssemblyRoutes(app);
+  registerAssemblyOperationCostRoutes(app);
   registerQuoteRoutes(app);
   registerRequestRoutes(app);
   registerPeopleRoutes(app);

@@ -12,11 +12,11 @@ NO PARALLEL PRODUCT TRUTH
 
 ## Current: PILOT-0 truth and readiness
 
-Living status as of 2026-10-14. Verified `main` is `498f3caabccba7eafeb2696d0a65ceb790f2f8cb` (PR #74 merge); WorkOS Verify succeeded on that push. Later sections are historical records unless they say otherwise. Merge alone is never Owner acceptance.
+Living status as of 2026-10-14. Verified `main` is `162e98a5470211dc62cce6198e8cc58593fae158` (PR #75 merge); WorkOS Verify succeeded on that push. Later sections are historical records unless they say otherwise. Merge alone is never Owner acceptance.
 
 ```text
 CURRENT_MILESTONE = PILOT-0_TRUTH_AND_READINESS
-MAIN = 498f3caabccba7eafeb2696d0a65ceb790f2f8cb
+MAIN = 162e98a5470211dc62cce6198e8cc58593fae158
 SYNTHETIC_OPERATOR_RECOVERY_DRILL = EXECUTED / PASS / OWNER_ACCEPTANCE_PENDING
 DEPLOY_ROLLBACK_INCIDENT_RUNBOOK = TEMPLATE / NOT_EXECUTED / NOT_ACCEPTED
 REAL_ENVIRONMENT_PREFLIGHT = NOT_RUN / TARGET_NOT_IDENTIFIED
@@ -25,10 +25,12 @@ CUTOVER = HOLD
 REAL_CLOUD_WRITE = HOLD
 REAL_DB_WRITE = HOLD
 FIRST_REAL_BUSINESS_OPERATION = HOLD / NOT_AUTHORIZED
-ASSEMBLY_PRODUCTION_EIC = PARTIAL
+ASSEMBLY_PRODUCTION_EIC = PARTIAL on main; V4 candidate below / NOT_MERGED
 ASSEMBLY_QUOTE_PDF = INTEGRATED (PR #71) / OWNER_ACCEPTANCE_NOT_RECORDED
 ASSEMBLY_COMMERCIAL_ACCEPTANCE_V2 = INTEGRATED (PR #74) / OWNER_ACCEPTANCE_NOT_RECORDED
-V3_REQUEST_QUOTE_CUSTOMER_COHERENCE = CANDIDATE / NOT_MERGED / OWNER_ACCEPTANCE_NOT_RECORDED
+V3_REQUEST_QUOTE_CUSTOMER_COHERENCE = INTEGRATED (PR #75) / OWNER_ACCEPTANCE_NOT_RECORDED
+V4_ASSEMBLY_PRODUCTION_EIC = CANDIDATE / NOT_MERGED / OWNER_ACCEPTANCE_NOT_RECORDED
+MIGRATION_041_REAL_APPLICATION = HOLD / SEPARATE_APPROVED_PROCEDURE_REQUIRED
 PILOT_GATE_A = HOLD
 PILOT_GATE_B = HOLD
 ```
@@ -54,17 +56,18 @@ PILOT_GATE_B = HOLD
 | Unconfirmed rate acknowledgement before quote freeze V1 | #72 `96e2707` | Integrated; automated tests | Not recorded |
 | V1 operational safety and assembly VAT clarity (F04) | #73 `474ce5d` | Integrated | Not recorded |
 | V2 assembly commercial flow: acceptance on the exact frozen quote, P1 stale-configuration refusal | #74 `498f3ca` | Integrated | Not recorded |
+| V3 unified request, quote and customer commercial history | #75 `162e98a` | Integrated | Not recorded |
 
 Not integrated: draft #62 (synthetic staging gate), draft #63 (flat BACK; #66 kept its BACK rules and discarded the separate SKU) and open #65 (superseded by #66). PILOT-0 does not close or change them.
 
 ### Incomplete
 
-- V3 candidate (`feat/v3-request-quote-customer-coherence`, not merged): the customer workspace/registry and the request's linked offers read the same unified quote projection as Oferte, so assembly quotes and their historical versions appear there too. Until it merges, `main` still shows product quotes only in those two places.
-- Assembly production costing stays `PARTIAL`: mounting, final assembly inspection and assembly packaging have no cost evidence, and `reconcileAssemblyEic` cannot price assembly operations yet. Assemblies are excluded from cost-complete pilot claims.
+- Assembly production costing stays `PARTIAL` on `main`: mounting, final assembly inspection and assembly packaging have no cost evidence, and `reconcileAssemblyEic` cannot price assembly operations yet. Assemblies are excluded from cost-complete pilot claims. The V4 candidate below prices them from organization evidence; it is not merged.
+- Migration 041 (V4 candidate) runs automatically the first time a database is opened by a build that contains it. Applying it to any real database needs a separate Owner-approved procedure (backup, target identification, verification); merging V4 does not authorize it.
 - Real-environment preflight not run; target environment and operator not identified.
 - Production deployment not authorized; deploy artifact form and host stop mechanism not decided.
 - First real job not authorized; no pilot organization provisioned or configured with Owner-confirmed rates.
-- Owner acceptance of the PR #54–#74 work above is not recorded.
+- Owner acceptance of the PR #54–#75 work above is not recorded.
 
 ### PILOT-0 evidence
 
@@ -900,8 +903,10 @@ A standalone quote with on-site installation shows the same total in Oferte, req
 
 ## V3 Request, Quote and Customer commercial coherence
 
+Integrated by PR #75 (`162e98a`, 2026-10-14). Owner acceptance is not recorded.
+
 ```text
-V3_REQUEST_QUOTE_CUSTOMER_COHERENCE = CANDIDATE / NOT_MERGED / OWNER_ACCEPTANCE_NOT_RECORDED
+V3_REQUEST_QUOTE_CUSTOMER_COHERENCE = CANDIDATE / NOT_MERGED / OWNER_ACCEPTANCE_NOT_RECORDED (historical flag; see PR #75)
 BRANCH = feat/v3-request-quote-customer-coherence
 BASE = 498f3caabccba7eafeb2696d0a65ceb790f2f8cb
 SECOND_QUOTE_ENGINE = NO
@@ -911,6 +916,31 @@ PRICING_VAT_ACCEPTANCE_CHANGE = NO
 ```
 
 The customer registry, customer workspace and request detail read the same composition as Oferte (`commercialQuoteOverview` in the API runtime): every frozen product and assembly snapshot once, with its existing stage, superseded flag and order. An assembly quote belongs to a customer only through its persisted `requestId` and that request's customer (the request customer is locked once a quote is linked); a quote without a request is never attached to a customer or request. Request linked offers keep product links first, then every assembly snapshot of that request, so historical versions stay separately traceable and the request's `OPEN_QUOTE` target is unchanged. The request list (Cereri) projection is unchanged. Client and request rows open product quotes on the product route and assembly quotes on `/oferte/ansamblu/:id`; superseded versions without an order show the server's superseded label instead of an acceptance stage.
+
+## V4 Assembly Production EIC
+
+```text
+V4_ASSEMBLY_PRODUCTION_EIC = CANDIDATE / NOT_MERGED / OWNER_ACCEPTANCE_NOT_RECORDED
+BRANCH = feat/v4-assembly-production-eic-041
+BASE = 162e98a5470211dc62cce6198e8cc58593fae158
+SCHEMA_MIGRATION = 041_assembly_operation_cost_policy (organization plane, append-only)
+MIGRATION_041_REAL_APPLICATION = HOLD / SEPARATE_APPROVED_PROCEDURE_REQUIRED
+SECOND_PRICING_OR_COST_ENGINE = NO
+COMMERCIAL_PRICE_CHANGE = NO
+QUOTE_IDENTITY_ACCEPTANCE_RELEASE_CHANGE = NO
+EVIDENCE = AUTOMATED_TESTS + SYNTHETIC_BROWSER_E2E (no real data)
+```
+
+Assembly-level operations (mounting letters/logo on the panel, final assembly inspection, final packaging) get an internal cost when a quote is frozen. The domain (`packages/domain/src/assembly/operationCost*.ts`) evaluates each operation to one typed outcome: `COSTED` (confirmed rate), `UNCONFIRMED_RATE` (calculable, marked as needing verification and disclosed through the existing rate acknowledgement), `INCLUDED` (organization policy says final inspection is part of other operations, cost 0), or a gap (`MISSING_POLICY`, `MISSING_QUANTITY`, `MISSING_RATE`, `INCOMPATIBLE_UNIT`). Gaps are never zero: the known total is marked `PARTIAL`. Costed lines record quantity, unit, rate, the cost-evidence row and the quantity provenance (operator person-hour estimate, or the support panel face area with its production input hash and recipe).
+
+- Organization policy lives in `assembly_operation_cost_policy_versions` (migration 041): numbered versions, the next version only, no update or delete. Final inspection is `NOT_CONFIGURED`, `INCLUDED_IN_OTHER_OPERATIONS` or `SEPARATE_LABOR`; final packaging is `NOT_CONFIGURED` or `PANEL_FACE_AREA`. No policy reads as not configured; nothing is backfilled.
+- The workshop labor rate is the cost-evidence resource `LAB-WORKSHOP-LABOR` (EUR per person-hour), created and superseded through the existing cost-evidence routes.
+- Person-hour estimates are edited on the assembly (`PUT /api/assemblies/:id/operation-estimates`) until the current quote is frozen or an order exists. The frozen result is sealed into the quote snapshot with an evidence hash; `reconcileAssemblyEic` reads only that frozen evidence, so later rate or policy changes never alter a frozen quote, order or release.
+- Owner administration: `GET /api/admin/assembly-operation-cost`, `POST /api/admin/assembly-operation-cost-policy` (stale versions refused). Members see modes but no amounts and cannot edit; other organizations get nothing.
+- UI: section `Cost intern ansamblare` on the assembly page (Owner only) and in Administrare → Dovezi de cost. Customer prices and quote totals are unchanged.
+- Typed recipe trace correction: when a production snapshot is frozen, each operation's recipe is resolved with the composition node's type id, so the frozen trace names the same recipe EIC charged (for example the sheet-panel CNC recipe for the ACM cassette face) instead of the generic process/scope recipe. Monetary EIC is unchanged; letters and logo traces are unchanged. This changes the pinned hash of the legacy identity-free fixture and the production input hash of new ACM freezes. Existing frozen snapshots are not rewritten.
+
+Migration 041 runs automatically the first time any database is opened by a build that contains it. The runner applies each file and then records it, without one enclosing transaction; the DDL uses `IF NOT EXISTS`, and the tests prove recovery after an interruption between table creation and registration. Applying 041 to a real database still requires a separate Owner-approved procedure. Merging this candidate does not authorize opening a real database with it.
 
 ## Previous program
 

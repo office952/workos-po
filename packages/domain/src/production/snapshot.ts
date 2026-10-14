@@ -357,7 +357,7 @@ function freezeOperations(
     const capability = process
       ? getProductionCapability(process.requiredCapabilityId)
       : undefined;
-    const recipe = recipeForProcessScope(node.processId, node.scope);
+    const recipe = recipeForProcessScope(node.processId, node.scope, node.typeId);
     const recipeQuantity = recipe ? quantityForRecipe(recipe, aggregate) : undefined;
     return {
       id: node.id,
@@ -390,7 +390,7 @@ function freezeRecipeTraces(
 ): FrozenRecipeTrace[] {
   const traces: FrozenRecipeTrace[] = [];
   for (const node of composition.nodes) {
-    const recipe = recipeForProcessScope(node.processId, node.scope);
+    const recipe = recipeForProcessScope(node.processId, node.scope, node.typeId);
     if (!recipe) {
       continue;
     }

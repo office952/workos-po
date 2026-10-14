@@ -8,7 +8,7 @@ import {
   formatCustomerMoney,
   quoteDocumentReference,
 } from "../commercial/quoteDocument.js";
-import { INSTALL_AT_SITE_ID } from "../processes/catalog.js";
+import { unpricedAssemblyProductionOperations } from "../assembly/composition.js";
 import type { FrozenProductionOperation } from "../production/snapshot.js";
 import { costCompletenessLabel } from "../resources/eic.js";
 import { recipeForProcess, recipeQuantityBasisLabel } from "../resources/recipes.js";
@@ -251,19 +251,29 @@ export function presentAssemblyQuoteInternalCost(input: {
           currency: production.eicCurrency,
           completeness: production.eicCompleteness,
           completenessLabel: costCompletenessLabel(production.eicCompleteness),
-          unpricedOperations: production.assemblyOperations
-            .filter(
-              (operation) =>
-                !(operation.processId === INSTALL_AT_SITE_ID && production.siteInstallation),
-            )
+          unpricedOperations: unpricedAssemblyProductionOperations(production)
             .map((operation) => ({
               processLabel: operation.processLabel,
-              missingInputs: assemblyOperationMissingCostInputs(operation),
+              missingInputs:
+                frozenGapReason(input.order, production, operation.processId) ??
+                assemblyOperationMissingCostInputs(operation),
             })),
         }
       : null,
     productionPending: production === null,
   };
+}
+
+function frozenGapReason(
+  order: AssemblyOrderSnapshot | null,
+  production: AssemblyProductionSnapshot,
+  processId: string,
+): string[] | null {
+  if (production.operationCost?.evidenceStatus === "INVALID") {
+    return ["Evidența de cost înghețată pentru ansamblare nu este coerentă"];
+  }
+  const line = order?.operationCost?.lines.find((item) => item.processId === processId);
+  return line && "reason" in line ? [line.reason] : null;
 }
 
 /** Names the costing inputs an assembly operation lacks; it never proposes a rate. */

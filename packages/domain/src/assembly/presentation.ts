@@ -8,8 +8,8 @@ import {
   assemblyStatusLabel,
   productCodeForRole,
 } from "./contract.js";
-import { INSTALL_AT_SITE_ID } from "../processes/catalog.js";
 import { costCompletenessLabel } from "../resources/eic.js";
+import { unpricedAssemblyProductionOperations } from "./composition.js";
 import type { AssemblyDefinition, AssemblyTruth, ConfirmedChildProduct } from "./model.js";
 import type {
   AssemblyOrderSnapshot,
@@ -239,12 +239,9 @@ export function presentAssemblyReview(input: {
             currency: input.production.eicCurrency,
             completeness: input.production.eicCompleteness,
             completenessLabel: costCompletenessLabel(input.production.eicCompleteness),
-            unpricedOperations: input.production.assemblyOperations
-              .filter(
-                (operation) =>
-                  !(operation.processId === INSTALL_AT_SITE_ID && input.production?.siteInstallation),
-              )
-              .map((operation) => operation.processLabel),
+            unpricedOperations: unpricedAssemblyProductionOperations(input.production).map(
+              (operation) => operation.processLabel,
+            ),
           }
         : null,
     membersEditable: input.order === null,

@@ -9,6 +9,7 @@ import type {
   AssemblyMemberRole,
   AssemblyRelationKind,
 } from "./contract.js";
+import type { AssemblyOperationEstimate } from "./operationCostEvidence.js";
 
 export type AssemblyMember = {
   memberId: string;
@@ -44,6 +45,8 @@ export type AssemblyDefinition = {
   staleReason: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Pre-quotation internal-cost estimates; outside the confirmed truth, so editing never makes it stale. */
+  operationEstimates?: readonly AssemblyOperationEstimate[];
 };
 
 export type AssemblyTruth = {

@@ -8,6 +8,7 @@ import {
   attachConfirmedChild,
   confirmAssembly,
   createAssemblyDefinition,
+  evaluateAssemblyOperationCosts,
   freezeAssemblyQuote,
   freezeProductionInput,
   freezeQuoteSnapshot,
@@ -18,7 +19,9 @@ import {
   isAssemblyKind,
   isTemplateEnabledForNewWork,
   materializeAssemblyExecutionPlan,
+  presentAssemblyOperationCost,
   presentAssemblyReview,
+  setAssemblyOperationEstimates,
   productCodeForRole,
   rolesForAssemblyKind,
   assemblyRoleLabel,
@@ -39,8 +42,10 @@ import {
   type AssemblyDefinition,
   type AssemblyKind,
   type AssemblyMemberRole,
+  type AssemblyOperationEstimateEdit,
   type AssemblyTruth,
   type ConfirmedChildProduct,
+  type FrozenAssemblyOperationCost,
   type FrozenCustomerIdentity,
   type FrozenSellerIdentity,
   type RateAcknowledgementRequirement,
@@ -73,6 +78,7 @@ import {
 } from "./store.js";
 import { persistAssemblyQuoteRequestLock } from "../requests/store.js";
 import { planAssemblyAcceptance } from "./acceptance.js";
+import { readCurrentAssemblyOperationCostPolicy } from "./operationCostPolicyStore.js";
 
 export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/assemblies", (c) => {
@@ -340,6 +346,49 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     return c.json({ assembly: presentCurrent(runtime, confirmed.definition.assemblyId, c) });
   });
 
+  app.put("/api/assemblies/:assemblyId/operation-estimates", async (c) => {
+    if (!isOwner(c)) {
+      return c.json({ error: "forbidden" }, 403);
+    }
+    const edits = readEstimateEdits(await c.req.json().catch(() => null));
+    if (!edits) {
+      return c.json({ error: "invalid_payload" }, 400);
+    }
+    const runtime = getProductSystem(c);
+    const plane = runtime.assemblyPlane();
+    const assemblyId = c.req.param("assemblyId");
+    const saved = plane.db
+      .transaction(() => {
+        const bundle = loadBundle(runtime, assemblyId);
+        if (!bundle) {
+          return { status: 404 as const, body: { error: "not_found" } };
+        }
+        if (!operationEstimatesEditable(bundle)) {
+          return {
+            status: 409 as const,
+            body: {
+              error: "estimates_frozen",
+              reasons: ["Orele estimate sunt înghețate în oferta curentă și nu mai pot fi modificate."],
+            },
+          };
+        }
+        const updated = setAssemblyOperationEstimates(bundle.definition, edits, {
+          userId: actorUserId(c),
+          at: new Date().toISOString(),
+        });
+        if (!updated.ok) {
+          return { status: 400 as const, body: { error: updated.error, reasons: updated.reasons } };
+        }
+        saveAssemblyDefinition(plane.db, updated.definition);
+        return null;
+      })
+      .immediate();
+    if (saved) {
+      return c.json(saved.body, saved.status);
+    }
+    return c.json({ assembly: presentCurrent(runtime, assemblyId, c) });
+  });
+
   app.post("/api/assemblies/:assemblyId/quote", async (c) => {
     if (!isOwner(c)) {
       return c.json({ error: "forbidden" }, 403);
@@ -494,7 +543,76 @@ function presentCurrent(
     frozenRateAcknowledgement: bundle.quote?.rateAcknowledgement
       ? scopeFrozenRateAcknowledgement(bundle.quote.rateAcknowledgement, access)
       : null,
+    operationCost: isOwner(c)
+      ? presentOperationCost(runtime, bundle, pending?.ok ? pending.input.operationCost : undefined)
+      : null,
   };
+}
+
+type AssemblyBundle = NonNullable<ReturnType<typeof loadBundle>>;
+
+/** The quote for the current confirmed truth (or the accepted order) freezes the estimates. */
+function currentQuoteIsFrozen(bundle: AssemblyBundle): boolean {
+  return (
+    bundle.order !== null ||
+    (bundle.definition.status === "CONFIRMED" &&
+      bundle.truth !== null &&
+      bundle.quote?.assemblyTruthId === bundle.truth.assemblyTruthId)
+  );
+}
+
+function operationEstimatesEditable(bundle: AssemblyBundle): boolean {
+  return !currentQuoteIsFrozen(bundle);
+}
+
+function presentOperationCost(
+  runtime: ReturnType<typeof getProductSystem>,
+  bundle: AssemblyBundle,
+  pendingEvidence: FrozenAssemblyOperationCost | undefined,
+) {
+  const frozen = currentQuoteIsFrozen(bundle);
+  const frozenEvidence = bundle.order?.operationCost ?? bundle.quote?.operationCost ?? null;
+  const evidence = frozen
+    ? frozenEvidence
+    : (pendingEvidence ?? evaluateOperationCost(runtime, bundle.definition));
+  return presentAssemblyOperationCost({
+    kind: bundle.definition.kind,
+    roles: bundle.definition.members.map((member) => member.role),
+    source: frozen ? (frozenEvidence ? "FROZEN" : "FROZEN_WITHOUT_EVIDENCE") : "PREVIEW",
+    evidence,
+    estimates: bundle.definition.operationEstimates ?? [],
+    editable: !frozen,
+  });
+}
+
+/**
+ * Evaluates assembly operation cost from the organization policy, the definition's estimates and
+ * the active cost evidence of this plane. Only a quote freeze makes the result evidence.
+ */
+function evaluateOperationCost(
+  runtime: ReturnType<typeof getProductSystem>,
+  definition: AssemblyDefinition,
+  children?: readonly ConfirmedChildProduct[],
+): FrozenAssemblyOperationCost | null {
+  const plane = runtime.assemblyPlane();
+  const members = definition.members.flatMap((member) => {
+    const child =
+      children?.find((item) => item.truthId === member.confirmedTruthId) ??
+      readConfirmedChild(plane.db, plane.organizationId, member.confirmedTruthId);
+    return child
+      ? [{ memberId: member.memberId, role: member.role, productionInput: child.productionInput }]
+      : [];
+  });
+  if (members.length === 0 || members.length !== definition.members.length) {
+    return null;
+  }
+  return evaluateAssemblyOperationCosts({
+    kind: definition.kind,
+    members,
+    policy: readCurrentAssemblyOperationCostPolicy(plane.db),
+    estimates: definition.operationEstimates ?? [],
+    evidenceRows: runtime.listActiveCostEvidence(),
+  });
 }
 
 /** Builds the unacknowledged candidate quote and assesses the rates frozen in its members. */
@@ -526,6 +644,7 @@ function prepareAssemblyQuote(
   if (!identity.ok) {
     return identity;
   }
+  const operationCost = evaluateOperationCost(runtime, definition, children);
   const input = {
     quoteSnapshotId: `asmq:${truth.assemblyTruthId}`,
     truth,
@@ -533,6 +652,7 @@ function prepareAssemblyQuote(
     ...(service.line ? { serviceLine: service.line } : {}),
     customer: identity.customer,
     seller: identity.seller,
+    ...(operationCost ? { operationCost } : {}),
   };
   const candidate = freezeAssemblyQuote({ ...input, createdAt: new Date().toISOString() });
   if (!candidate.ok) {
@@ -663,6 +783,23 @@ function assemblyQuoteIdentity(
     customer: { customerId: customer.customerId, displayName: customer.displayName },
     seller,
   };
+}
+
+function readEstimateEdits(body: unknown): AssemblyOperationEstimateEdit[] | null {
+  const estimates = (body as { estimates?: unknown } | null)?.estimates;
+  if (!Array.isArray(estimates) || estimates.length === 0 || estimates.length > 10) {
+    return null;
+  }
+  const edits: AssemblyOperationEstimateEdit[] = [];
+  for (const item of estimates) {
+    const processId = (item as { processId?: unknown } | null)?.processId;
+    const personHours = (item as { personHours?: unknown } | null)?.personHours;
+    if (typeof processId !== "string" || !(personHours === null || typeof personHours === "number")) {
+      return null;
+    }
+    edits.push({ processId, personHours });
+  }
+  return edits;
 }
 
 function readString(body: unknown, key: string): string | null {
