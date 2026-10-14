@@ -1264,10 +1264,7 @@ export function createProductSystemRuntimeFromOpenDb(
       return { ok: true, alreadyApplied: false };
     },
     listQuoteOverview() {
-      return projectQuoteOverview([
-        ...quoteOverviewItems(db),
-        ...assemblyQuoteOverviewItems(db, currentOrganizationId()),
-      ]);
+      return commercialQuoteOverview(db, currentOrganizationId());
     },
     readAssemblyQuoteRecord(quoteSnapshotId) {
       const organizationId = currentOrganizationId();
@@ -1300,7 +1297,7 @@ export function createProductSystemRuntimeFromOpenDb(
     },
     listCustomerRegistry() {
       const requests = requestOverviewItems(db, currentOrganizationId());
-      const quotes = quoteOverviewItems(db);
+      const quotes = commercialQuoteOverview(db, currentOrganizationId()).quotes;
       const jobs = jobOverviewItems(
         db,
         currentProviderRegistry(),
@@ -1326,7 +1323,10 @@ export function createProductSystemRuntimeFromOpenDb(
       return projectCustomerWorkspace({
         customer,
         requests: requestsForCustomer(requestOverviewItems(db, currentOrganizationId()), customerId),
-        quotes: quotesForCustomer(quoteOverviewItems(db), customerId),
+        quotes: quotesForCustomer(
+          commercialQuoteOverview(db, currentOrganizationId()).quotes,
+          customerId,
+        ),
         jobs: jobsForCustomer(
           jobOverviewItems(
             db,
@@ -1349,7 +1349,7 @@ export function createProductSystemRuntimeFromOpenDb(
       return projectRequestDetail({
         request,
         customerDisplayName: getCustomer(db, request.customerId)?.displayName ?? null,
-        quotes: linkedQuoteOverviewItems(db, request.requestId),
+        quotes: requestCommercialQuoteItems(db, currentOrganizationId(), request.requestId),
         attachments: listCommercialRequestAttachments(db, request.requestId),
         serviceOffer: readOrganizationServiceOffer(db),
         installationFacts: getInstallationFacts(db, request.requestId),
@@ -1636,6 +1636,28 @@ function quoteOverviewItems(db: SqliteDatabase) {
         : null,
     });
   });
+}
+
+/** One commercial history for Oferte, Clienți and Cereri: every frozen snapshot of both kinds, once. */
+function commercialQuoteOverview(db: SqliteDatabase, organizationId: string) {
+  return projectQuoteOverview([
+    ...quoteOverviewItems(db),
+    ...assemblyQuoteOverviewItems(db, organizationId),
+  ]);
+}
+
+/** Product quotes keep their link order first, so the request's existing OPEN_QUOTE target is unchanged. */
+function requestCommercialQuoteItems(
+  db: SqliteDatabase,
+  organizationId: string,
+  requestId: string,
+): QuoteOverviewItem[] {
+  return [
+    ...linkedQuoteOverviewItems(db, requestId),
+    ...assemblyQuoteOverviewItems(db, organizationId).filter(
+      (item) => item.requestId === requestId,
+    ),
+  ];
 }
 
 function assemblyQuoteOverviewItems(db: SqliteDatabase, organizationId: string) {

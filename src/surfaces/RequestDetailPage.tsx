@@ -11,6 +11,7 @@ import { loadJobList, loadRequestDetail } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { formatMoney, formatTimestamp } from "../presentation/format";
+import { presentQuoteHistoryState } from "../presentation/quoteHistory";
 import { statusTone } from "../presentation/statusTone";
 import { presentRequestPrimaryAction } from "../presentation/worklistAction";
 import {
@@ -19,7 +20,7 @@ import {
   clientHref,
   executionHref,
   jobHref,
-  quoteHref,
+  registryQuoteHref,
   requestHref,
 } from "../routing/appRoute";
 import {
@@ -143,16 +144,25 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
             </SurfacePanel>
             {detail.linkedOffers.length > 0 ? (
               <SurfacePanel variant="quiet" title="Oferte legate" label="Oferte legate">
-                {detail.linkedOffers.map((offer) => (
-                  <p key={offer.quoteSnapshotId}>
-                    <a
-                      className="text-link"
-                      href={quoteHref(offer.productCode, offer.quoteSnapshotId)}
-                    >
-                      {offer.reference ? `Deschide oferta ${offer.reference}` : "Deschide oferta"}
-                    </a>
-                  </p>
-                ))}
+                <ul className="request-linked-offers">
+                  {detail.linkedOffers.map((offer) => (
+                    <li key={offer.quoteSnapshotId} className="request-linked-offers__item">
+                      <a className="text-link" href={registryQuoteHref(offer)}>
+                        {offer.reference ? `Deschide oferta ${offer.reference}` : "Deschide oferta"}
+                      </a>
+                      <span className="request-linked-offers__meta">
+                        {[offer.kindLabel, offer.productLabel, presentQuoteHistoryState(offer)]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                      {offer.orderSnapshotId ? (
+                        <a className="text-link" href={jobHref(offer.orderSnapshotId)}>
+                          Deschide comanda
+                        </a>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
               </SurfacePanel>
             ) : null}
             <LinkedJobs title="Lucrări legate" jobs={requestJobs} />

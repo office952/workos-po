@@ -9,7 +9,6 @@ import {
   requestProductHref,
   executionHref,
   jobHref,
-  quoteHref,
   registryQuoteHref,
   requestHref,
 } from "../routing/appRoute";
@@ -76,13 +75,14 @@ export function presentRequestPrimaryAction(
         actionHref: requestProductHref(detail.requestId),
       };
     case "OPEN_QUOTE": {
-      const offer = detail.linkedOffers[0];
+      const offer =
+        detail.linkedOffers.find((item) => item.kind === "PRODUCT") ?? detail.linkedOffers[0];
       if (!offer) {
         return null;
       }
       return {
         actionLabel: detail.nextActionLabel || "Deschide oferta",
-        actionHref: quoteHref(offer.productCode, offer.quoteSnapshotId),
+        actionHref: registryQuoteHref(offer),
       };
     }
     case "OPEN_ASSEMBLY":

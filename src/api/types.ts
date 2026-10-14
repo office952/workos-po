@@ -328,8 +328,15 @@ export type RequestListItemTransport = {
 
 export type RequestLinkedOfferTransport = {
   quoteSnapshotId: string;
+  kind: "PRODUCT" | "ASSEMBLY";
+  kindLabel: string;
   productCode: string;
+  productLabel: string | null;
   reference: string | null;
+  stageLabel: string | null;
+  superseded: boolean;
+  attentionLabel: string | null;
+  orderSnapshotId: string | null;
 };
 
 export type RequestAssemblyWorkTransport = {

@@ -173,11 +173,19 @@ function presentLinkedOffers(value: unknown): RequestLinkedOfferTransport[] {
     if (!row || typeof row.quoteSnapshotId !== "string" || typeof row.productCode !== "string") {
       return [];
     }
+    const kind = row.kind === "ASSEMBLY" ? "ASSEMBLY" : "PRODUCT";
     return [
       {
         quoteSnapshotId: row.quoteSnapshotId,
+        kind,
+        kindLabel: asString(row.kindLabel) ?? (kind === "ASSEMBLY" ? "Ansamblu" : "Produs"),
         productCode: row.productCode,
+        productLabel: asString(row.productLabel),
         reference: asString(row.reference),
+        stageLabel: asString(row.stageLabel),
+        superseded: asBoolean(row.superseded) ?? false,
+        attentionLabel: asString(row.attentionLabel),
+        orderSnapshotId: asString(row.orderSnapshotId),
       },
     ];
   });

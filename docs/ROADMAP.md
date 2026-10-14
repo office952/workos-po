@@ -12,11 +12,11 @@ NO PARALLEL PRODUCT TRUTH
 
 ## Current: PILOT-0 truth and readiness
 
-Living status as of 2026-10-13. Verified `main` is `eb3f3c4915e6c18cad91ac613af55fdde934459c` (PR #69 merge); WorkOS Verify succeeded on that push. Later sections are historical records unless they say otherwise. Merge alone is never Owner acceptance.
+Living status as of 2026-10-14. Verified `main` is `498f3caabccba7eafeb2696d0a65ceb790f2f8cb` (PR #74 merge); WorkOS Verify succeeded on that push. Later sections are historical records unless they say otherwise. Merge alone is never Owner acceptance.
 
 ```text
 CURRENT_MILESTONE = PILOT-0_TRUTH_AND_READINESS
-MAIN = eb3f3c4915e6c18cad91ac613af55fdde934459c
+MAIN = 498f3caabccba7eafeb2696d0a65ceb790f2f8cb
 SYNTHETIC_OPERATOR_RECOVERY_DRILL = EXECUTED / PASS / OWNER_ACCEPTANCE_PENDING
 DEPLOY_ROLLBACK_INCIDENT_RUNBOOK = TEMPLATE / NOT_EXECUTED / NOT_ACCEPTED
 REAL_ENVIRONMENT_PREFLIGHT = NOT_RUN / TARGET_NOT_IDENTIFIED
@@ -26,7 +26,9 @@ REAL_CLOUD_WRITE = HOLD
 REAL_DB_WRITE = HOLD
 FIRST_REAL_BUSINESS_OPERATION = HOLD / NOT_AUTHORIZED
 ASSEMBLY_PRODUCTION_EIC = PARTIAL
-ASSEMBLY_QUOTE_PDF = NOT_IMPLEMENTED
+ASSEMBLY_QUOTE_PDF = INTEGRATED (PR #71) / OWNER_ACCEPTANCE_NOT_RECORDED
+ASSEMBLY_COMMERCIAL_ACCEPTANCE_V2 = INTEGRATED (PR #74) / OWNER_ACCEPTANCE_NOT_RECORDED
+V3_REQUEST_QUOTE_CUSTOMER_COHERENCE = CANDIDATE / NOT_MERGED / OWNER_ACCEPTANCE_NOT_RECORDED
 PILOT_GATE_A = HOLD
 PILOT_GATE_B = HOLD
 ```
@@ -47,18 +49,22 @@ PILOT_GATE_B = HOLD
 | Unified Quotes Registry V1 | #67 `d65c049` | Integrated | Not recorded |
 | Commercial UX coherence V1 | #68 `08809b9` | Integrated; presentation only ([report](review/commercial-ux-coherence-v1/REPORT.md)) | Not recorded |
 | Commercial Total Consistency V1 | #69 `eb3f3c4` | Integrated | Not recorded |
+| PILOT-0 truth and readiness reconciliation | #70 `5e5b505` | Integrated (documentation) | Not recorded |
+| Assembly quote PDF with frozen commercial identity | #71 `328a339` | Integrated; automated tests | Not recorded |
+| Unconfirmed rate acknowledgement before quote freeze V1 | #72 `96e2707` | Integrated; automated tests | Not recorded |
+| V1 operational safety and assembly VAT clarity (F04) | #73 `474ce5d` | Integrated | Not recorded |
+| V2 assembly commercial flow: acceptance on the exact frozen quote, P1 stale-configuration refusal | #74 `498f3ca` | Integrated | Not recorded |
 
 Not integrated: draft #62 (synthetic staging gate), draft #63 (flat BACK; #66 kept its BACK rules and discarded the separate SKU) and open #65 (superseded by #66). PILOT-0 does not close or change them.
 
 ### Incomplete
 
-- No assembly quotation document/PDF.
-- The customer workspace and the request's linked-offer list show product quotes only; assembly quotes appear in Oferte and in the request's assembly section.
+- V3 candidate (`feat/v3-request-quote-customer-coherence`, not merged): the customer workspace/registry and the request's linked offers read the same unified quote projection as Oferte, so assembly quotes and their historical versions appear there too. Until it merges, `main` still shows product quotes only in those two places.
 - Assembly production costing stays `PARTIAL`: mounting, final assembly inspection and assembly packaging have no cost evidence, and `reconcileAssemblyEic` cannot price assembly operations yet. Assemblies are excluded from cost-complete pilot claims.
 - Real-environment preflight not run; target environment and operator not identified.
 - Production deployment not authorized; deploy artifact form and host stop mechanism not decided.
 - First real job not authorized; no pilot organization provisioned or configured with Owner-confirmed rates.
-- Owner acceptance of the PR #54–#69 work above is not recorded.
+- Owner acceptance of the PR #54–#74 work above is not recorded.
 
 ### PILOT-0 evidence
 
@@ -862,12 +868,14 @@ Assembly production cost stays `PARTIAL` until the organization configures the a
 
 PILOT-0 correction: configuration alone is not enough. `reconcileAssemblyEic` treats every assembly-level production operation as unpriced, so a domain change is also required. The `RCP_PACK_PRODUCT` rate reaches a new organization only as an unconfirmed platform default; whether a per-m² packing rate applies to a panel assembly is itself an Owner decision. See the assembly scope in [the pilot readiness gate](PILOT_READINESS_GATE_V1.md).
 
-Open: customer hub and request linked-offer lists remain product-only; no assembly quote document/PDF yet.
+Open at the time of PR #67: customer hub and request linked-offer lists remain product-only; no assembly quote document/PDF yet. Later status: the assembly quote PDF was integrated by PR #71; the customer/request lists are addressed by the V3 candidate below.
 
 ## Assembly Commercial Acceptance V2
 
+Recorded as a candidate; integrated by PR #74 (`498f3ca`, 2026-10-14), together with the P1 refusal of quotes whose confirmed configuration became stale. Owner acceptance is not recorded.
+
 ```text
-ASSEMBLY_COMMERCIAL_ACCEPTANCE_V2 = CANDIDATE / NOT_MERGED / OWNER_ACCEPTANCE_NOT_RECORDED
+ASSEMBLY_COMMERCIAL_ACCEPTANCE_V2 = CANDIDATE / NOT_MERGED / OWNER_ACCEPTANCE_NOT_RECORDED (historical flag; see PR #74)
 ACCEPTANCE_LOCATION = ASSEMBLY_QUOTE_PAGE
 SECOND_QUOTE_ENGINE = NO
 SCHEMA_MIGRATION = NO
@@ -889,6 +897,20 @@ SCHEMA_MIGRATION = NO
 ```
 
 A standalone quote with on-site installation shows the same total in Oferte, request/customer linked-offer lists, the quote detail, the PDF and the order. `quoteSnapshotCustomerTotal` (`packages/domain/src/commercial/quoteDocument.ts`) is the single read of that total: the frozen `jobCommercial` when present, otherwise the frozen product `commercial`. It reads frozen values only; nothing is recalculated with current rates, installation is not added a second time, and production EIC is unchanged. Historical product-only (schema v1) snapshots keep their product total.
+
+## V3 Request, Quote and Customer commercial coherence
+
+```text
+V3_REQUEST_QUOTE_CUSTOMER_COHERENCE = CANDIDATE / NOT_MERGED / OWNER_ACCEPTANCE_NOT_RECORDED
+BRANCH = feat/v3-request-quote-customer-coherence
+BASE = 498f3caabccba7eafeb2696d0a65ceb790f2f8cb
+SECOND_QUOTE_ENGINE = NO
+SCHEMA_MIGRATION = NO
+DOMAIN_CHANGE = NO
+PRICING_VAT_ACCEPTANCE_CHANGE = NO
+```
+
+The customer registry, customer workspace and request detail read the same composition as Oferte (`commercialQuoteOverview` in the API runtime): every frozen product and assembly snapshot once, with its existing stage, superseded flag and order. An assembly quote belongs to a customer only through its persisted `requestId` and that request's customer (the request customer is locked once a quote is linked); a quote without a request is never attached to a customer or request. Request linked offers keep product links first, then every assembly snapshot of that request, so historical versions stay separately traceable and the request's `OPEN_QUOTE` target is unchanged. The request list (Cereri) projection is unchanged. Client and request rows open product quotes on the product route and assembly quotes on `/oferte/ansamblu/:id`; superseded versions without an order show the server's superseded label instead of an acceptance stage.
 
 ## Previous program
 

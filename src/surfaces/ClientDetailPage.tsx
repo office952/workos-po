@@ -18,6 +18,7 @@ import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { CLIENT_HUB_FUTURE_COPY, CLIENT_HUB_SECTION_LABEL } from "../presentation/clientHub";
 import { formatTimestamp } from "../presentation/format";
+import { presentQuoteHistoryState } from "../presentation/quoteHistory";
 import { presentRequestRegistryStatus } from "../presentation/requestListStatus";
 import { presentResourceAccess } from "../presentation/resourceAccess";
 import { statusTone } from "../presentation/statusTone";
@@ -31,7 +32,7 @@ import {
   clientHref,
   jobHref,
   parseClientHubSection,
-  quoteHref,
+  registryQuoteHref,
   requestHref,
 } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
@@ -247,10 +248,10 @@ function quoteRow(item: QuoteListItemTransport): HubRow {
   const action = presentQuoteWorklistAction(item);
   return {
     key: item.quoteSnapshotId,
-    href: quoteHref(item.productCode, item.quoteSnapshotId),
+    href: registryQuoteHref(item),
     title: item.reference,
-    detail: item.productLabel,
-    state: item.stageLabel,
+    detail: [item.kindLabel, item.productLabel, item.requestReference].filter(Boolean).join(" · "),
+    state: presentQuoteHistoryState(item),
     actionHref: action.actionHref,
     actionLabel: action.actionLabel,
   };

@@ -35,19 +35,31 @@ export function invalidateAfterAssemblyMemberChange(
   invalidateResources({ refetchUnobserved: true }, ...keys);
 }
 
-export function invalidateAfterAcceptQuote(quoteSnapshotId?: string): void {
+export function invalidateAfterAcceptQuote(
+  quoteSnapshotId?: string,
+  requestId?: string | null,
+): void {
   const keys = [resourceKeys.quotes()];
   if (quoteSnapshotId) {
     keys.push(resourceKeys.quoteEnvelope(quoteSnapshotId));
+  }
+  if (requestId) {
+    keys.push(resourceKeys.request(requestId));
   }
   invalidateResources(...keys);
   invalidateCustomerProjections();
 }
 
-export function invalidateAfterCreateOrder(quoteSnapshotId?: string): void {
+export function invalidateAfterCreateOrder(
+  quoteSnapshotId?: string,
+  requestId?: string | null,
+): void {
   const keys = [resourceKeys.quotes(), resourceKeys.jobs()];
   if (quoteSnapshotId) {
     keys.push(resourceKeys.quoteEnvelope(quoteSnapshotId));
+  }
+  if (requestId) {
+    keys.push(resourceKeys.request(requestId));
   }
   invalidateResources(...keys);
   invalidateCustomerProjections();
@@ -66,8 +78,12 @@ export function invalidateAfterAcceptAssemblyQuote(input: {
   }
 }
 
-export function invalidateAfterFreezeQuote(): void {
-  invalidateResources(resourceKeys.quotes());
+export function invalidateAfterFreezeQuote(requestId?: string | null): void {
+  const keys = [resourceKeys.quotes()];
+  if (requestId) {
+    keys.push(resourceKeys.request(requestId), resourceKeys.requests());
+  }
+  invalidateResources(...keys);
   invalidateCustomerProjections();
 }
 

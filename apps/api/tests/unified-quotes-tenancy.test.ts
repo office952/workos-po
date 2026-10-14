@@ -172,4 +172,88 @@ describe("unified Oferte registry tenancy and roles", () => {
     }
     expect(collectFinancialKeys(memberList.body).has("markupPercent")).toBe(false);
   });
+
+  it("scopes customer and request commercial history to the organisation and the authoritative request", async () => {
+    const world = await provisionHostileIsolationWorld();
+    const { fixture, alpha, testCompany, cookies } = world;
+    fixture.registry.evict(alpha.organizationId);
+    const linked = syntheticAssemblyQuote({
+      quoteSnapshotId: "asmq:alpha-linked",
+      organizationId: alpha.organizationId,
+      requestId: alpha.requestId,
+    });
+    insertAssemblyQuote(alpha.planeRoot, linked);
+    insertAssemblyQuote(
+      alpha.planeRoot,
+      syntheticAssemblyQuote({
+        quoteSnapshotId: "asmq:alpha-without-request",
+        organizationId: alpha.organizationId,
+        requestId: null,
+      }),
+    );
+    insertAssemblyQuote(
+      alpha.planeRoot,
+      syntheticAssemblyQuote({
+        quoteSnapshotId: "asmq:spoofed-org-request",
+        organizationId: testCompany.organizationId,
+        requestId: alpha.requestId,
+      }),
+    );
+    const workspacePath = `/api/customers/${encodeURIComponent(alpha.customerId)}/workspace`;
+    const requestPath = `/api/requests/${encodeURIComponent(alpha.requestId)}`;
+    type Item = { quoteSnapshotId: string; kind: string; customerId: string | null };
+    const workspaceIds = (body: Json) =>
+      ((body.workspace as { quotes: Item[] }).quotes ?? []).map((item) => item.quoteSnapshotId);
+    const offerIds = (body: Json) =>
+      ((body.detail as { linkedOffers: Item[] }).linkedOffers ?? []).map((item) => item.quoteSnapshotId);
+
+    for (const cookie of [cookies.userA, cookies.memberA]) {
+      const workspace = await read(fixture.app, workspacePath, cookie);
+      expect(workspace.status).toBe(200);
+      const ids = workspaceIds(workspace.body);
+      expect(ids).toEqual(expect.arrayContaining([alpha.quoteId, linked.quoteSnapshotId]));
+      expect(ids).not.toContain("asmq:alpha-without-request");
+      expect(ids).not.toContain("asmq:spoofed-org-request");
+      expect(ids).not.toContain(testCompany.quoteId);
+      expect(new Set(ids).size).toBe(ids.length);
+      expect((workspace.body.workspace as { summary: { quoteCount: number } }).summary.quoteCount).toBe(ids.length);
+      for (const key of ["internalCost", "eicTotal", "markupPercent", "marginAmount"]) {
+        expect(collectFinancialKeys(workspace.body).has(key)).toBe(false);
+      }
+
+      const detail = await read(fixture.app, requestPath, cookie);
+      expect(detail.status).toBe(200);
+      expect(offerIds(detail.body)).toContain(linked.quoteSnapshotId);
+      expect(offerIds(detail.body)).not.toContain("asmq:alpha-without-request");
+      expect(offerIds(detail.body)).not.toContain("asmq:spoofed-org-request");
+      for (const key of ["internalCost", "eicTotal", "markupPercent", "marginAmount"]) {
+        expect(collectFinancialKeys(detail.body.detail as Json).has(key)).toBe(false);
+      }
+
+      const registry = await read(fixture.app, "/api/customers", cookie);
+      const row = (registry.body.registry as { customers: { customerId: string; quoteCount: number }[] }).customers
+        .find((item) => item.customerId === alpha.customerId);
+      expect(row?.quoteCount).toBe(ids.length);
+    }
+
+    const ownerQuotes = quoteIds((await read(fixture.app, "/api/quotes", cookies.userA)).body);
+    expect(ownerQuotes).toContain("asmq:alpha-without-request");
+
+    for (const cookie of [cookies.userB, cookies.memberB]) {
+      expect((await read(fixture.app, workspacePath, cookie)).status).toBe(404);
+      expect((await read(fixture.app, requestPath, cookie)).status).toBe(404);
+      const foreign = await read(
+        fixture.app,
+        `/api/customers/${encodeURIComponent(testCompany.customerId)}/workspace`,
+        cookie,
+      );
+      expect(foreign.status).toBe(200);
+      const foreignIds = workspaceIds(foreign.body);
+      expect(foreignIds).not.toContain(linked.quoteSnapshotId);
+      expect(foreignIds).not.toContain(alpha.quoteId);
+      expect(JSON.stringify(foreign.body)).not.toContain(alpha.customerName);
+      const foreignRegistry = await read(fixture.app, "/api/customers", cookie);
+      expect(JSON.stringify(foreignRegistry.body)).not.toContain(alpha.customerId);
+    }
+  });
 });
