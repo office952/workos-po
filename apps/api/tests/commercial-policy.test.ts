@@ -179,12 +179,15 @@ describe("commercial policy API", () => {
       body: JSON.stringify({
         values: compiled.values,
         reviewId: compiled.reviewId,
+        manualProductNetPrice: 400,
       }),
     });
     const confirmBody = await readBody(confirmed);
     const price = confirmBody.commercialPrice as JsonObject;
     expect(price.policyVersion).toBe(1);
-    expect(price.markupPercent).toBe(40);
+    expect(price.markupPercent).toBe(0);
+    expect(price.netPrice).toBe(400);
+    expect((confirmBody.quoteCommercialTerms as JsonObject).markupPercent).toBe(40);
     expect(price.vatPercent).toBe(19);
     expect((confirmBody.commercialPolicy as JsonObject).source).toBe("ORGANIZATION");
   });
@@ -228,13 +231,16 @@ describe("commercial policy API", () => {
         values: compiled.values,
         reviewId: compiled.reviewId,
         customerId,
+        manualProductNetPrice: 400,
       }),
     });
     const first = (await readBody(firstQuote)).quoteSnapshot as JsonObject;
     const firstCommercial = first.commercial as JsonObject;
     expect(firstCommercial.policySource).toBe("ORGANIZATION");
     expect(firstCommercial.policyVersion).toBe(1);
-    expect(firstCommercial.markupPercent).toBe(30);
+    expect(firstCommercial.markupPercent).toBe(0);
+    expect(firstCommercial.netPrice).toBe(400);
+    expect(firstCommercial.grossPrice).toBe(484);
 
     await app.request("/api/admin/commercial-policy", {
       method: "POST",
@@ -253,10 +259,13 @@ describe("commercial policy API", () => {
         values: compiled.values,
         reviewId: compiled.reviewId,
         customerId,
+        manualProductNetPrice: 400,
       }),
     });
     const second = (await readBody(secondQuote)).quoteSnapshot as JsonObject;
-    expect((second.commercial as JsonObject).markupPercent).toBe(50);
+    expect((second.commercial as JsonObject).markupPercent).toBe(0);
+    expect((second.commercial as JsonObject).netPrice).toBe(400);
+    expect((second.commercial as JsonObject).grossPrice).toBe(476);
     expect((second.commercial as JsonObject).policyVersion).toBe(2);
 
     const reread = await readBody(
@@ -264,7 +273,8 @@ describe("commercial policy API", () => {
         `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots/${first.quoteSnapshotId}`,
       ),
     );
-    expect(((reread.quoteSnapshot as JsonObject).commercial as JsonObject).markupPercent).toBe(30);
+    expect(((reread.quoteSnapshot as JsonObject).commercial as JsonObject).markupPercent).toBe(0);
+    expect(((reread.quoteSnapshot as JsonObject).commercial as JsonObject).grossPrice).toBe(484);
     expect(((reread.quoteSnapshot as JsonObject).commercial as JsonObject).policyVersion).toBe(1);
   });
 
@@ -477,7 +487,8 @@ describe("commercial policy API", () => {
       body: JSON.stringify({
         values: compiled.values,
         reviewId: compiled.reviewId,
-        pricingMethod: "PRODUCT_COST_PLUS",
+        pricingMethod: "MANUAL_FIXED_PRODUCT",
+        manualProductNetPrice: 680,
         quoteCommercialTerms: {
           markupPercent: 25,
           discountPercent: 5,
@@ -487,8 +498,10 @@ describe("commercial policy API", () => {
     });
     const negotiatedBody = await readBody(negotiated);
     const negotiatedPrice = negotiatedBody.commercialPrice as JsonObject;
-    expect(negotiatedPrice.markupPercent).toBe(25);
-    expect(negotiatedPrice.discountPercent).toBe(5);
+    expect(negotiatedPrice.markupPercent).toBe(0);
+    expect(negotiatedPrice.netPrice).toBe(680);
+    expect(negotiatedPrice.discountPercent).toBe(0);
+    expect((negotiatedBody.quoteCommercialTerms as JsonObject).markupPercent).toBe(25);
     expect(negotiatedBody.quoteTermsFromDefaults).toBe(false);
 
     const frozen = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`, {
@@ -498,7 +511,8 @@ describe("commercial policy API", () => {
         values: compiled.values,
         reviewId: compiled.reviewId,
         customerId,
-        pricingMethod: "PRODUCT_COST_PLUS",
+        pricingMethod: "MANUAL_FIXED_PRODUCT",
+        manualProductNetPrice: 680,
         quoteCommercialTerms: {
           markupPercent: 25,
           discountPercent: 5,
@@ -508,8 +522,8 @@ describe("commercial policy API", () => {
     });
     expect(frozen.status).toBe(200);
     const first = (await readBody(frozen)).quoteSnapshot as JsonObject;
-    expect(((first.commercial as JsonObject).markupPercent)).toBe(25);
-    expect(((first.commercial as JsonObject).discountPercent)).toBe(5);
+    expect(((first.commercial as JsonObject).markupPercent)).toBe(0);
+    expect(((first.commercial as JsonObject).netPrice)).toBe(680);
 
     const secondConfirm = await readBody(
       await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/confirm`, {
@@ -518,10 +532,12 @@ describe("commercial policy API", () => {
         body: JSON.stringify({
           values: compiled.values,
           reviewId: compiled.reviewId,
+          manualProductNetPrice: 680,
         }),
       }),
     );
-    expect((secondConfirm.commercialPrice as JsonObject).markupPercent).toBe(35);
+    expect((secondConfirm.commercialPrice as JsonObject).markupPercent).toBe(0);
+    expect((secondConfirm.quoteCommercialTerms as JsonObject).markupPercent).toBe(35);
     expect(secondConfirm.quoteTermsFromDefaults).toBe(true);
 
     const policy = await readBody(await app.request("/api/admin/commercial-policy"));
@@ -542,7 +558,7 @@ describe("commercial policy API", () => {
         `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots/${first.quoteSnapshotId}`,
       ),
     );
-    expect(((reread.quoteSnapshot as JsonObject).commercial as JsonObject).markupPercent).toBe(25);
+    expect(((reread.quoteSnapshot as JsonObject).commercial as JsonObject).netPrice).toBe(680);
   });
 
   it("rejects invalid quote terms without freezing", async () => {
