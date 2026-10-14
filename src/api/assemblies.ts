@@ -1,4 +1,4 @@
-import { getJson, postJson, readTransportReasons, TransportError } from "./http";
+import { getJson, postJson, readTransportErrorCode, readTransportReasons, sendJson, TransportError } from "./http";
 import { asNumber, asRecord, asString } from "../adapters/record";
 
 /** Transport intent the server requires before it opens a second assembly on the same request. */
@@ -48,6 +48,42 @@ export async function createAssembly(requestId: string, kind: string, options: {
   const id = asString(asRecord(result?.assembly)?.assemblyId);
   if (!id) throw new Error("unpresentable_assembly");
   return id;
+}
+
+export type AssemblyQuoteAcceptanceResult =
+  | { ok: true; orderSnapshotId: string }
+  | { ok: false; kind: "superseded"; reason: string; currentQuoteSnapshotId: string | null }
+  | { ok: false; kind: "already_accepted"; reason: string; orderSnapshotId: string | null }
+  | { ok: false; kind: "refused"; reason: string };
+
+/** Accepts exactly the reviewed frozen snapshot; the server refuses any other identity before creating an order. */
+export async function acceptAssemblyQuote(assemblyId: string, quoteSnapshotId: string): Promise<AssemblyQuoteAcceptanceResult> {
+  let result: Awaited<ReturnType<typeof sendJson>>;
+  try {
+    result = await sendJson("POST", `/api/assemblies/${encodeURIComponent(assemblyId)}/accept`, { quoteSnapshotId });
+  } catch {
+    return { ok: false, kind: "refused", reason: "Serverul nu a putut fi contactat. Reîncarcă oferta și verifică starea ei înainte de a reîncerca." };
+  }
+  const body = asRecord(result.body);
+  if (result.ok) {
+    const orderSnapshotId = asString(asRecord(body?.order)?.orderSnapshotId);
+    return orderSnapshotId
+      ? { ok: true, orderSnapshotId }
+      : { ok: false, kind: "refused", reason: "Răspunsul serverului nu confirmă comanda. Reîncarcă oferta." };
+  }
+  const reason = readTransportReasons(result.body)[0];
+  switch (readTransportErrorCode(result.body)) {
+    case "assembly_quote_superseded":
+      return { ok: false, kind: "superseded", reason: reason ?? "Oferta nu mai este curentă.", currentQuoteSnapshotId: asString(body?.currentQuoteSnapshotId) };
+    case "assembly_quote_already_accepted":
+      return { ok: false, kind: "already_accepted", reason: reason ?? "Oferta este deja acceptată.", orderSnapshotId: asString(body?.orderSnapshotId) };
+    default:
+      return {
+        ok: false,
+        kind: "refused",
+        reason: reason ?? (result.status === 403 ? "Doar proprietarul poate accepta oferta și crea comanda." : "Oferta nu a putut fi acceptată."),
+      };
+  }
 }
 
 export type RequestAssembly = { assemblyId: string; label: string; statusLabel: string };

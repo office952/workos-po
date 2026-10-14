@@ -6,6 +6,7 @@ import {
   MOUNT_LETTERS_ON_PANEL_ID,
 } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
+import { acceptCurrentAssemblyQuote } from "./fixtures/assemblyAcceptance.js";
 import { freezeAcknowledgingRates } from "./fixtures/rateAcknowledgement.js";
 
 const lettersValues = {
@@ -129,7 +130,7 @@ describe("product assembly API", () => {
     const quote = (quoted.assembly as { quote: { grossPrice: number; sections: unknown[] } }).quote;
     expect(quote.sections).toHaveLength(2);
     expect(quote.grossPrice).toBeGreaterThan(0);
-    expect((await app.request(`/api/assemblies/${assemblyId}/accept`, { method: "POST" })).status).toBe(200);
+    expect((await acceptCurrentAssemblyQuote(app, assemblyId)).status).toBe(200);
     expect((await app.request(`/api/assemblies/${assemblyId}/production`, { method: "POST" })).status).toBe(200);
     expect((await app.request(`/api/assemblies/${assemblyId}/execution-plan`, { method: "POST" })).status).toBe(200);
     const ready = await json(await app.request(`/api/assemblies/${assemblyId}`));

@@ -864,6 +864,20 @@ PILOT-0 correction: configuration alone is not enough. `reconcileAssemblyEic` tr
 
 Open: customer hub and request linked-offer lists remain product-only; no assembly quote document/PDF yet.
 
+## Assembly Commercial Acceptance V2
+
+```text
+ASSEMBLY_COMMERCIAL_ACCEPTANCE_V2 = CANDIDATE / NOT_MERGED / OWNER_ACCEPTANCE_NOT_RECORDED
+ACCEPTANCE_LOCATION = ASSEMBLY_QUOTE_PAGE
+SECOND_QUOTE_ENGINE = NO
+SCHEMA_MIGRATION = NO
+DOMAIN_CHANGE = NO
+```
+
+Owner decision: commercial acceptance happens on the frozen assembly quote (`/oferte/ansamblu/:quoteSnapshotId`), not on the assembly page. The assembly page owns composition, confirmation, rate acknowledgement and quote freezing (`Îngheață oferta`), then links to the exact frozen quote and its PDF; the confirmation action is rendered only while the assembly is `DRAFT`.
+
+`POST /api/assemblies/:assemblyId/accept` now requires `{ quoteSnapshotId }`. The server accepts only when it equals the assembly's current snapshot and no order exists; otherwise it refuses before writing (`400 quote_identity_required`, `409 assembly_quote_superseded` with `currentQuoteSnapshotId`, `409 assembly_quote_already_accepted`). The assembly quote envelope projects `acceptance: { canAccept, reason }` from the same check (Owner only, never for superseded or ordered quotes); the assembly detail projects `quoteSnapshotId` and `quoteFreezable`. Domain acceptance (`acceptAssemblyQuote`) is unchanged.
+
 ## Commercial Total Consistency V1
 
 ```text

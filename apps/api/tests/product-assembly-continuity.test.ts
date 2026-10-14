@@ -6,6 +6,7 @@ import {
   REQUEST_SEPARATE_QUOTE_INTENT,
 } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
+import { acceptCurrentAssemblyQuote } from "./fixtures/assemblyAcceptance.js";
 import { freezeAcknowledgingRates } from "./fixtures/rateAcknowledgement.js";
 
 const lettersValues = {
@@ -127,7 +128,7 @@ describe("request commercial continuity for assemblies", () => {
       nextActionHref: `/assemblies/${encodeURIComponent(assemblyId)}`,
     });
 
-    expect((await post(app, `/api/assemblies/${assemblyId}/accept`)).status).toBe(200);
+    expect((await acceptCurrentAssemblyQuote(app, assemblyId)).status).toBe(200);
     const afterOrder = await detail(app, requestId);
     expect(afterOrder.commercialProgress).toBe("ORDER_CREATED");
     expect(afterOrder.assemblies[0]).toMatchObject({ stage: "ORDER_CREATED", membersEditable: false });

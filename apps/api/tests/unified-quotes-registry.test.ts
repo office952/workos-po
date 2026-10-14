@@ -5,6 +5,7 @@ import {
   formatCustomerMoney,
 } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
+import { acceptCurrentAssemblyQuote } from "./fixtures/assemblyAcceptance.js";
 import { freezeAcknowledgingRates } from "./fixtures/rateAcknowledgement.js";
 
 const lettersValues = {
@@ -219,7 +220,7 @@ describe("unified Oferte registry", () => {
     expect(await json(await app.request(`/api/assemblies/${assemblyId}`))).toEqual(assemblyBeforeRead);
     expect(before.internalCost).toMatchObject({ source: "CONFIRMED_MEMBERS", productionPending: true, production: null });
 
-    expect((await post(app, `/api/assemblies/${assemblyId}/accept`)).status).toBe(200);
+    expect((await acceptCurrentAssemblyQuote(app, assemblyId)).status).toBe(200);
     const ordered = (await registry(app)).quotes[0];
     expect(ordered).toMatchObject({ stage: "ORDER_CREATED", nextAction: "OPEN_ORDER" });
     expect(ordered?.orderSnapshotId).toEqual(expect.stringMatching(/^asmo:/));

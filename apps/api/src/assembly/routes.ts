@@ -3,7 +3,6 @@ import {
   SIGN_ASSEMBLY_ACM_LETTERS_V1,
   SIGN_ASSEMBLY_ACM_SIGNAGE_V2,
   acknowledgeAssemblyReview,
-  acceptAssemblyQuote,
   assemblyAvailableForNewWork,
   assemblyV2AvailableForNewWork,
   attachConfirmedChild,
@@ -73,6 +72,7 @@ import {
   saveConfirmedChild,
 } from "./store.js";
 import { persistAssemblyQuoteRequestLock } from "../requests/store.js";
+import { planAssemblyAcceptance } from "./acceptance.js";
 
 export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/assemblies", (c) => {
@@ -395,31 +395,29 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId, c) });
   });
 
-  app.post("/api/assemblies/:assemblyId/accept", (c) => {
+  app.post("/api/assemblies/:assemblyId/accept", async (c) => {
     if (!isOwner(c)) {
       return c.json({ error: "forbidden" }, 403);
     }
+    const body = await c.req.json().catch(() => null);
     const runtime = getProductSystem(c);
-    const plane = runtime.assemblyPlane();
-    const current = loadBundle(runtime, c.req.param("assemblyId"));
-    if (!current?.quote) {
-      return c.json({ error: "not_found" }, 404);
-    }
-    const children = current.definition.members.flatMap((member) => {
-      const child = readConfirmedChild(plane.db, plane.organizationId, member.confirmedTruthId);
-      return child ? [child] : [];
-    });
-    const accepted = acceptAssemblyQuote({
-      orderSnapshotId: `asmo:${current.quote.contentHash.slice(0, 24)}`,
-      quote: current.quote,
-      children,
+    const assemblyId = c.req.param("assemblyId");
+    const planned = planAssemblyAcceptance(runtime, {
+      assemblyId,
+      quoteSnapshotId: readString(body, "quoteSnapshotId"),
       createdAt: new Date().toISOString(),
     });
-    if (!accepted.ok) {
-      return c.json({ error: accepted.error, reasons: accepted.reasons }, 422);
+    if (!planned.ok) {
+      return c.json(planned.body, planned.status);
     }
-    saveAssemblyOrder(plane.db, accepted.order);
-    return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId, c) });
+    saveAssemblyOrder(runtime.assemblyPlane().db, planned.order);
+    return c.json({
+      assembly: presentCurrent(runtime, assemblyId, c),
+      order: {
+        orderSnapshotId: planned.order.orderSnapshotId,
+        sourceQuoteSnapshotId: planned.order.sourceQuoteSnapshotId,
+      },
+    });
   });
 
   app.post("/api/assemblies/:assemblyId/production", (c) => {
@@ -472,6 +470,12 @@ function presentCurrent(
       : null;
   const access = financialAccess(c, "commercial");
   return {
+    quoteSnapshotId: bundle.quote?.quoteSnapshotId ?? null,
+    quoteFreezable:
+      bundle.definition.status === "CONFIRMED" &&
+      bundle.truth !== null &&
+      bundle.order === null &&
+      bundle.quote?.assemblyTruthId !== bundle.truth.assemblyTruthId,
     ...presentAssemblyReview({
       definition: bundle.definition,
       truth: bundle.truth,

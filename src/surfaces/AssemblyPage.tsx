@@ -25,7 +25,8 @@ import {
   FrozenRateAcknowledgementNotice,
   RateAcknowledgementNotice,
 } from "../presentation/rateAcknowledgement";
-import { configuratorHref, requestHref } from "../routing/appRoute";
+import { assemblyQuoteHref, configuratorHref, jobHref, requestHref } from "../routing/appRoute";
+import { useAssemblyQuoteDocument } from "./useAssemblyQuoteDocument";
 
 type AssemblyScope = {
   id: "acm" | "logo" | "letters" | "relation" | "summary";
@@ -41,6 +42,7 @@ type AssemblyView = {
   customerId: string | null;
   requestId: string | null;
   label: string;
+  status: "DRAFT" | "STALE" | "CONFIRMED";
   statusLabel: string;
   stale: boolean;
   staleReason: string | null;
@@ -54,6 +56,10 @@ type AssemblyView = {
     grossPrice: number;
     currency: "EUR";
   } | null;
+  /** Identity of the frozen quote shown above; never derived on the client. */
+  quoteSnapshotId?: string | null;
+  /** The confirmed composition has no frozen quote yet (first freeze or after reconfirmation). */
+  quoteFreezable?: boolean;
   orderId: string | null;
   productionId: string | null;
   executionPlanId: string | null;
@@ -76,7 +82,7 @@ function inSentence(title: string): string {
 
 export function assemblyLead(hasLogo: boolean, lettersPresent: boolean): string {
   if (!hasLogo) {
-    return "Configurează literele și panoul ACM, verifică ansamblul, apoi pregătește oferta comună.";
+    return "Configurează literele și panoul ACM, verifică ansamblul, apoi îngheață oferta comună.";
   }
   if (lettersPresent) {
     return "Configurează panoul, literele și logo-ul, apoi confirmă ansamblul.";
@@ -131,6 +137,8 @@ export function AssemblyPage() {
     { staleMs: -1 },
   );
   const assembly = loaded.data ?? null;
+  const quoteFreezable = assembly?.quoteFreezable === true;
+  const quoteDocument = useAssemblyQuoteDocument(assembly?.quoteSnapshotId ?? null);
 
   async function run(path: string, payload?: unknown): Promise<void> {
     if (!assemblyId || pending) {
@@ -284,14 +292,14 @@ export function AssemblyPage() {
                 </a>
               </InlineAlert>
             ) : null}
-            {!assembly.stale && assembly.canConfirm && assembly.statusLabel !== "Confirmat" ? (
+            {assembly.status === "DRAFT" && assembly.canConfirm ? (
               <InlineAlert tone="pending" title="Gata de confirmare">
-                Toate părțile ansamblului sunt complete. Confirmă ansamblul pentru a pregăti oferta comună.
+                Toate părțile ansamblului sunt complete. Confirmă ansamblul pentru a putea îngheța oferta comună.
               </InlineAlert>
             ) : null}
-            {assembly.statusLabel === "Confirmat" && !assembly.quote ? (
-              <InlineAlert tone="pending" title="Pregătire ofertă">
-                Ansamblul este confirmat. Îngheață oferta comună pentru a continua comercial.
+            {quoteFreezable ? (
+              <InlineAlert tone="pending" title="Următorul pas: îngheață oferta">
+                Ansamblul este confirmat. Îngheață oferta comună pentru a fixa prețurile și a continua comercial.
               </InlineAlert>
             ) : null}
             {assembly.stale ? (
@@ -299,16 +307,18 @@ export function AssemblyPage() {
                 Revizuiește ansamblul
               </Button>
             ) : null}
-            <Button
-              disabled={pending || !assembly.canConfirm}
-              onClick={() => void run(`/api/assemblies/${assembly.assemblyId}/confirm`)}
-            >
-              Confirmă ansamblul
-            </Button>
+            {assembly.status === "DRAFT" ? (
+              <Button
+                disabled={pending || !assembly.canConfirm}
+                onClick={() => void run(`/api/assemblies/${assembly.assemblyId}/confirm`)}
+              >
+                Confirmă ansamblul
+              </Button>
+            ) : null}
           </SurfacePanel>
-          {assembly.quote ? (
+          {assembly.quote && !quoteFreezable ? (
             <div id="oferta">
-              <SurfacePanel title="Ofertă" label="Ofertă">
+              <SurfacePanel title="Ofertă înghețată" label="Ofertă">
                 <h2>{assembly.quote.label}</h2>
                 <p className="section-label">Secțiuni · sume cu TVA inclus</p>
                 <dl aria-label="Secțiuni ofertă, sume cu TVA inclus">
@@ -342,10 +352,43 @@ export function AssemblyPage() {
                 {frozenRateAcknowledgement ? (
                   <FrozenRateAcknowledgementNotice acknowledgement={frozenRateAcknowledgement} />
                 ) : null}
+                {assembly.quoteSnapshotId ? (
+                  <div className="assembly-quote-actions">
+                    <a className="hit" href={assemblyQuoteHref(assembly.quoteSnapshotId)}>
+                      <span className={`button button--${assembly.orderId ? "secondary" : "primary"}`}>
+                        Deschide oferta comercială
+                      </span>
+                    </a>
+                    <Button
+                      variant="secondary"
+                      disabled={quoteDocument.pending}
+                      onClick={() => void quoteDocument.download()}
+                    >
+                      Descarcă oferta PDF
+                    </Button>
+                  </div>
+                ) : null}
+                {!assembly.orderId ? (
+                  <p className="ui-note">
+                    Acceptarea ofertei și crearea comenzii se fac în pagina ofertei comerciale.
+                  </p>
+                ) : null}
+                {quoteDocument.error ? (
+                  <InlineAlert tone="error" title="Documentul nu poate fi descărcat">
+                    {quoteDocument.error}
+                  </InlineAlert>
+                ) : null}
               </SurfacePanel>
             </div>
-          ) : (
+          ) : null}
+          {quoteFreezable ? (
             <>
+              {assembly.quote ? (
+                <InlineAlert tone="pending" title="Ofertă nouă necesară">
+                  Ansamblul a fost reconfirmat după ultima ofertă. Îngheață o ofertă nouă; oferta anterioară
+                  rămâne în istoric și nu mai poate fi acceptată.
+                </InlineAlert>
+              ) : null}
               {rateRequirement ? (
                 <RateAcknowledgementNotice
                   requirement={rateRequirement}
@@ -360,19 +403,23 @@ export function AssemblyPage() {
                 />
               ) : null}
               <Button
-                disabled={pending || assembly.statusLabel !== "Confirmat" || !ratesAcknowledged}
+                disabled={pending || !ratesAcknowledged}
                 onClick={() => void run(`/api/assemblies/${assembly.assemblyId}/quote`, quotePayload)}
               >
-                Pregătește oferta
+                Îngheață oferta
               </Button>
             </>
-          )}
-          {assembly.quote && !assembly.orderId ? (
-            <Button disabled={pending} onClick={() => void run(`/api/assemblies/${assembly.assemblyId}/accept`)}>
-              Acceptă comanda
-            </Button>
           ) : null}
-          {assembly.orderId ? <InfoRow label="Comandă" value="Comandă înghețată" /> : null}
+          {assembly.orderId ? (
+            <div className="assembly-order">
+              <dl>
+                <InfoRow label="Comandă" value="Acceptată — comandă creată" />
+              </dl>
+              <a className="text-link" href={jobHref(assembly.orderId)}>
+                Deschide comanda
+              </a>
+            </div>
+          ) : null}
           {assembly.orderId && !assembly.productionId ? (
             <Button disabled={pending} onClick={() => void run(`/api/assemblies/${assembly.assemblyId}/production`)}>
               Eliberează în producție

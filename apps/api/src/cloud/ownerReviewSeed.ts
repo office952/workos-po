@@ -499,9 +499,16 @@ async function ensureAssemblyScenarioA(
     }
   }
 
+  const quoted = await client.request(
+    "GET",
+    `/api/assemblies/${encodeURIComponent(assemblyId)}`,
+  );
+  const quoteSnapshotId = (quoted.body?.assembly as { quoteSnapshotId?: string | null } | undefined)
+    ?.quoteSnapshotId;
   const accept = await client.request(
     "POST",
     `/api/assemblies/${encodeURIComponent(assemblyId)}/accept`,
+    { quoteSnapshotId },
   );
   if (!accept.ok && accept.status !== 409) {
     throw new Error(`assembly_accept:${accept.body?.error ?? accept.status}`);

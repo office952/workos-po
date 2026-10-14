@@ -365,6 +365,20 @@ tr[data-attention="true"] .offers-next {
 .offers-summary__actions { grid-area: actions; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
 .offers-summary__actions .offers-next { width: auto; min-width: var(--offers-action-width); }
 .offers-summary__note { max-width: 34ch; color: var(--offers-muted); font: 400 12px/1.45 var(--font-sans); text-align: right; }
+/* In-page acceptance confirmation: the decision stays next to the total it commits. */
+.offers-confirm {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+  padding: 16px 20px;
+  border: 1px solid var(--color-border-strong);
+  border-left: 3px solid var(--offers-amber);
+  background: var(--color-surface-raised);
+}
+.offers-confirm:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+.offers-confirm__title { color: var(--offers-ink); font: 600 15px/1.35 var(--font-sans); overflow-wrap: anywhere; }
+.offers-confirm__body { max-width: 72ch; color: var(--offers-ink); font: 400 14px/1.5 var(--font-sans); }
+.offers-confirm__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
 
 .offers-lines,
 .offers-relations { min-width: 0; }
@@ -458,6 +472,9 @@ tr[data-attention="true"] .offers-next {
   .offers-summary__actions .offers-next,
   .offers-summary__actions .hit { width: 100%; }
   .offers-summary__note { max-width: none; text-align: left; }
+  .offers-confirm { padding: 14px 14px 14px 16px; }
+  .offers-confirm__actions { flex-direction: column; }
+  .offers-confirm__actions .hit { width: 100%; }
   .offers-lines__table,
   .offers-lines__table tbody,
   .offers-lines__table tfoot { display: block; }

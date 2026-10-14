@@ -53,6 +53,19 @@ export function invalidateAfterCreateOrder(quoteSnapshotId?: string): void {
   invalidateCustomerProjections();
 }
 
+export function invalidateAfterAcceptAssemblyQuote(input: {
+  assemblyId: string;
+  requestId: string | null;
+}): void {
+  invalidateResourcePrefix(resourceKeys.assemblyQuote(""));
+  invalidateResources(resourceKeys.assembly(input.assemblyId), resourceKeys.quotes(), resourceKeys.jobs());
+  if (input.requestId) {
+    invalidateAfterRequestDetailChange(input.requestId);
+  } else {
+    invalidateCustomerProjections();
+  }
+}
+
 export function invalidateAfterFreezeQuote(): void {
   invalidateResources(resourceKeys.quotes());
   invalidateCustomerProjections();

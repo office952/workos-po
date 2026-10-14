@@ -13,7 +13,7 @@ describe("assemblyLead", () => {
   it("keeps the letters assembly wording when logo is absent", () => {
     expect(assemblyLead(false, true)).toContain("Configurează literele");
     expect(assemblyLead(false, true)).toContain("panoul ACM");
-    expect(assemblyLead(false, true)).toContain("pregătește oferta");
+    expect(assemblyLead(false, true)).toContain("îngheață oferta");
   });
 
   it("says letters are optional only when the logo assembly has no letters", () => {
@@ -42,7 +42,9 @@ describe("AssemblyPage", () => {
             assembly: {
               assemblyId: "asm:full",
               label: "Panou ACM + litere + logo volumetric",
+              status: "CONFIRMED",
               statusLabel: "Confirmat",
+              quoteFreezable: true,
               stale: false,
               staleReason: null,
               canConfirm: false,
@@ -83,6 +85,7 @@ describe("AssemblyPage", () => {
             customerId: "cus:1",
             requestId: "crq:1",
             label: "Panou ACM + litere volumetrice",
+            status: "DRAFT",
             statusLabel: "În lucru",
             stale: false,
             staleReason: null,
@@ -139,7 +142,10 @@ describe("AssemblyPage", () => {
               customerId: "cus:1",
               requestId: "crq:1",
               label: "Panou ACM + litere volumetrice",
+              status: "CONFIRMED",
               statusLabel: "Confirmat",
+              quoteSnapshotId: "asmq:released",
+              quoteFreezable: false,
               stale: false,
               staleReason: null,
               canConfirm: false,
@@ -179,6 +185,13 @@ describe("AssemblyPage", () => {
     expect(screen.getByText("ABC · 647,68 EUR cu TVA")).toBeInTheDocument();
     expect(screen.getByText("461,64 EUR")).toBeInTheDocument();
     expect(screen.getByText(/Montaj litere pe panou, Control final/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Deschide comanda" })).toHaveAttribute("href", "/lucrari/asmo%3A1");
+    expect(screen.getByRole("link", { name: "Deschide oferta comercială" })).toHaveAttribute(
+      "href",
+      "/oferte/ansamblu/asmq%3Areleased",
+    );
+    expect(screen.queryByRole("button", { name: /Accept/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confirmă ansamblul" })).not.toBeInTheDocument();
     screen.getByRole("button", { name: /Panou ACM/ }).click();
     expect(await screen.findByRole("link", { name: "Consultă configurația" })).toBeInTheDocument();
   });
@@ -207,7 +220,10 @@ describe("AssemblyPage", () => {
             customerId: "cus:1",
             requestId: "crq:1",
             label: "Panou ACM + litere volumetrice",
+            status: "CONFIRMED",
             statusLabel: "Confirmat",
+            quoteSnapshotId: "asmq:vat",
+            quoteFreezable: false,
             stale: false,
             staleReason: null,
             canConfirm: false,
@@ -255,6 +271,8 @@ describe("AssemblyPage", () => {
               ? {
                   ...confirmedAssembly("asm:ack"),
                   quote: QUOTE,
+                  quoteSnapshotId: "asmq:ack",
+                  quoteFreezable: false,
                   frozenRateAcknowledgement: {
                     acknowledgedAt: "2026-10-13T09:00:00.000Z",
                     rates: [UNCONFIRMED_RATE],
@@ -275,7 +293,7 @@ describe("AssemblyPage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<AssemblyPage />);
-    const quoteButton = await screen.findByRole("button", { name: "Pregătește oferta" });
+    const quoteButton = await screen.findByRole("button", { name: "Îngheață oferta" });
     expect(screen.getByText("Prețul clientului folosește tarife neconfirmate")).toBeInTheDocument();
     expect(screen.getByText(/Panou ACM · 18,00 EUR \/ m²/)).toBeInTheDocument();
     expect(quoteButton).toBeDisabled();
@@ -287,6 +305,11 @@ describe("AssemblyPage", () => {
     fireEvent.click(quoteButton);
 
     expect(await screen.findByText("Tarife neconfirmate acceptate")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Deschide oferta comercială" })).toHaveAttribute(
+      "href",
+      "/oferte/ansamblu/asmq%3Aack",
+    );
+    expect(screen.queryByRole("button", { name: "Îngheață oferta" })).not.toBeInTheDocument();
     const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
     expect(post?.[0]).toBe("/api/assemblies/asm:ack/quote");
     expect(JSON.parse(String(post?.[1]?.body))).toEqual({
@@ -322,7 +345,7 @@ describe("AssemblyPage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<AssemblyPage />);
-    const quoteButton = await screen.findByRole("button", { name: "Pregătește oferta" });
+    const quoteButton = await screen.findByRole("button", { name: "Îngheață oferta" });
     fireEvent.click(screen.getByRole("checkbox"));
     await waitFor(() => {
       expect(quoteButton).not.toBeDisabled();
@@ -367,7 +390,7 @@ describe("AssemblyPage", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(screen.queryByText(/18,00 EUR/)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Pregătește oferta" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeDisabled();
   });
 });
 
@@ -397,6 +420,7 @@ function confirmedAssembly(assemblyId: string) {
     customerId: "cus:1",
     requestId: "crq:1",
     label: "Panou ACM + litere volumetrice",
+    status: "CONFIRMED",
     statusLabel: "Confirmat",
     stale: false,
     staleReason: null,
@@ -408,6 +432,8 @@ function confirmedAssembly(assemblyId: string) {
       { id: "summary", title: "Rezumat ansamblu", complete: true, summary: "Gata" },
     ],
     quote: null,
+    quoteSnapshotId: null,
+    quoteFreezable: true,
     orderId: null,
     productionId: null,
     executionPlanId: null,
@@ -415,3 +441,97 @@ function confirmedAssembly(assemblyId: string) {
     frozenRateAcknowledgement: null,
   };
 }
+
+function serve(assembly: Record<string, unknown>) {
+  const fetchMock = vi.fn((path: string, init?: RequestInit) =>
+    Promise.resolve(
+      path.endsWith("/document")
+        ? {
+            ok: false,
+            status: 422,
+            headers: { get: () => "application/json" },
+            json: async () => ({ error: "assembly_document_unavailable", reasons: ["Documentul lipsește."] }),
+          }
+        : { ok: true, status: 200, json: async () => ({ assembly, init }) },
+    ),
+  );
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+describe("AssemblyPage commercial lifecycle", () => {
+  it("offers confirmation only while the draft is unconfirmed and never a freeze before it", async () => {
+    window.history.replaceState(null, "", "/ansamblu?assembly=asm:draft");
+    serve({ ...confirmedAssembly("asm:draft"), status: "DRAFT", statusLabel: "Ciornă", quoteFreezable: false, canConfirm: false });
+    render(<AssemblyPage />);
+    expect(await screen.findByRole("button", { name: "Confirmă ansamblul" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Îngheață oferta" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Gata de confirmare")).not.toBeInTheDocument();
+  });
+
+  it("hides the redundant confirmation once confirmed and makes quote freezing the next step", async () => {
+    window.history.replaceState(null, "", "/ansamblu?assembly=asm:confirmed");
+    const fetchMock = serve(confirmedAssembly("asm:confirmed"));
+    render(<AssemblyPage />);
+    expect(await screen.findByRole("button", { name: "Îngheață oferta" })).not.toBeDisabled();
+    expect(screen.getByText("Următorul pas: îngheață oferta")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confirmă ansamblul" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pregătește oferta" })).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.every(([, init]) => String(init?.method ?? "GET") === "GET")).toBe(true);
+  });
+
+  it("keeps review as the only action for a stale assembly", async () => {
+    window.history.replaceState(null, "", "/ansamblu?assembly=asm:stale-review");
+    serve({
+      ...confirmedAssembly("asm:stale-review"),
+      status: "STALE",
+      statusLabel: "Necesită revizuire",
+      stale: true,
+      staleReason: "Literele au fost reconfirmate.",
+      quoteFreezable: false,
+    });
+    render(<AssemblyPage />);
+    expect(await screen.findByRole("button", { name: "Revizuiește ansamblul" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confirmă ansamblul" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Îngheață oferta" })).not.toBeInTheDocument();
+  });
+
+  it("sends a frozen, unaccepted quote to its exact commercial page and PDF without an accept action", async () => {
+    window.history.replaceState(null, "", "/ansamblu?assembly=asm:quoted");
+    const fetchMock = serve({
+      ...confirmedAssembly("asm:quoted"),
+      quote: QUOTE,
+      quoteSnapshotId: "asmq:exact-1",
+      quoteFreezable: false,
+    });
+    render(<AssemblyPage />);
+    expect(await screen.findByRole("link", { name: "Deschide oferta comercială" })).toHaveAttribute(
+      "href",
+      "/oferte/ansamblu/asmq%3Aexact-1",
+    );
+    expect(screen.getByText(/Acceptarea ofertei și crearea comenzii se fac în pagina ofertei comerciale/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Accept/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Îngheață oferta" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confirmă ansamblul" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Descarcă oferta PDF" }));
+    expect(await screen.findByText("Documentul lipsește.")).toBeInTheDocument();
+    expect(fetchMock.mock.calls.map(([path]) => String(path))).toContain(
+      "/api/assembly-quotes/asmq%3Aexact-1/document",
+    );
+    expect(fetchMock.mock.calls.some(([path]) => String(path).endsWith("/accept"))).toBe(false);
+  });
+
+  it("asks for a new freeze after reconfirmation instead of offering the previous quote", async () => {
+    window.history.replaceState(null, "", "/ansamblu?assembly=asm:revised");
+    serve({
+      ...confirmedAssembly("asm:revised"),
+      quote: QUOTE,
+      quoteSnapshotId: "asmq:previous",
+      quoteFreezable: true,
+    });
+    render(<AssemblyPage />);
+    expect(await screen.findByText("Ofertă nouă necesară")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Îngheață oferta" })).not.toBeDisabled();
+    expect(screen.queryByRole("link", { name: "Deschide oferta comercială" })).not.toBeInTheDocument();
+  });
+});

@@ -100,6 +100,7 @@ export function presentAssemblyQuoteEnvelope(payload: unknown): AssemblyQuoteTra
     : [];
   const service = asRecord(detail.serviceSection);
   const serviceMoney = presentMoney(service);
+  const acceptance = asRecord(record.acceptance);
   return {
     item,
     label: asString(detail.label) ?? item.productLabel,
@@ -112,5 +113,9 @@ export function presentAssemblyQuoteEnvelope(payload: unknown): AssemblyQuoteTra
     totals,
     orderSnapshotId: asString(detail.orderSnapshotId),
     internalCost: "internalCost" in record ? presentCost(record.internalCost) : undefined,
+    acceptance: {
+      canAccept: acceptance?.canAccept === true,
+      reason: asString(acceptance?.reason),
+    },
   };
 }
