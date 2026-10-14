@@ -38,6 +38,10 @@
 .request-assembly-work__item:last-child { padding-bottom: 0; border-bottom: 0; }
 .request-assembly-work__heading { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
 .request-assembly-work__links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 0; }
+.request-linked-offers { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.request-linked-offers__item { display: grid; gap: 4px; min-width: 0; padding-bottom: 12px; border-bottom: 1px solid var(--color-border); }
+.request-linked-offers__item:last-child { padding-bottom: 0; border-bottom: 0; }
+.request-linked-offers__meta { color: var(--color-text-secondary); font-size: 13px; overflow-wrap: anywhere; }
 .assembly-quote-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
 .assembly-order { display: grid; gap: 8px; }
 .assembly-order dl { margin: 0; }

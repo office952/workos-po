@@ -3,6 +3,7 @@ import type {
   JobListItemTransport,
   QuoteListItemTransport,
   RequestDetailTransport,
+  RequestLinkedOfferTransport,
   RequestListItemTransport,
 } from "../api/types";
 import {
@@ -11,6 +12,24 @@ import {
   presentRequestPrimaryAction,
   presentRequestWorklistAction,
 } from "./worklistAction";
+
+function linkedOffer(
+  partial: Partial<RequestLinkedOfferTransport> = {},
+): RequestLinkedOfferTransport {
+  return {
+    quoteSnapshotId: "q-1",
+    kind: "PRODUCT",
+    kindLabel: "Produs",
+    productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    productLabel: "Litere volumetrice",
+    reference: "OF-1",
+    stageLabel: "Creată",
+    superseded: false,
+    attentionLabel: "Urmează acceptarea",
+    orderSnapshotId: null,
+    ...partial,
+  };
+}
 
 function request(
   partial: Partial<RequestListItemTransport> = {},
@@ -226,18 +245,42 @@ describe("presentRequestPrimaryAction", () => {
         ...detail,
         nextAction: "OPEN_QUOTE",
         nextActionLabel: "Deschide oferta",
+        linkedOffers: [linkedOffer()],
+      }),
+    ).toEqual({
+      actionLabel: "Deschide oferta",
+      actionHref: "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
+    });
+  });
+
+  it("keeps OPEN_QUOTE on the product offer when assembly offers are listed too", () => {
+    expect(
+      presentRequestPrimaryAction({
+        ...detail,
+        nextAction: "OPEN_QUOTE",
+        nextActionLabel: "Deschide oferta",
         linkedOffers: [
-          {
-            quoteSnapshotId: "q-1",
-            productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
-            reference: "OF-1",
-          },
+          linkedOffer({ quoteSnapshotId: "asmq:1", kind: "ASSEMBLY", productCode: "SIGN_ASSEMBLY_ACM_LETTERS_V1" }),
+          linkedOffer(),
         ],
       }),
     ).toEqual({
       actionLabel: "Deschide oferta",
       actionHref: "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
     });
+  });
+
+  it("never sends an assembly offer to the product quote route", () => {
+    expect(
+      presentRequestPrimaryAction({
+        ...detail,
+        nextAction: "OPEN_QUOTE",
+        nextActionLabel: "Deschide oferta",
+        linkedOffers: [
+          linkedOffer({ quoteSnapshotId: "asmq:1", kind: "ASSEMBLY", productCode: "SIGN_ASSEMBLY_ACM_LETTERS_V1" }),
+        ],
+      })?.actionHref,
+    ).toBe("/oferte/ansamblu/asmq%3A1");
   });
 
   it("makes the server-chosen assembly the primary action for OPEN_ASSEMBLY", () => {
@@ -267,13 +310,7 @@ describe("presentRequestPrimaryAction", () => {
         ...detail,
         nextAction: "",
         nextActionLabel: "",
-        linkedOffers: [
-          {
-            quoteSnapshotId: "q-1",
-            productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
-            reference: "OF-1",
-          },
-        ],
+        linkedOffers: [linkedOffer()],
       }),
     ).toBeNull();
   });

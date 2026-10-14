@@ -616,7 +616,7 @@ export function ConfiguratorPage({
         customerId,
         requestId,
       });
-      invalidateAfterFreezeQuote();
+      invalidateAfterFreezeQuote(requestId);
       setFreezeState("idle");
     } catch (error) {
       setFreezeState("error");

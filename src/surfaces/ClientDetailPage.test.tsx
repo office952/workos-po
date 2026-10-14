@@ -192,6 +192,85 @@ describe("ClientDetailPage", () => {
     });
   });
 
+  it("lists product and assembly quotes with kind-aware links and keeps a superseded version historical", async () => {
+    window.history.replaceState({}, "", "/clienti/cus-1?sectiune=cereri");
+    const quote = (overrides: Record<string, unknown>) => ({
+      kind: "PRODUCT",
+      kindLabel: "Produs",
+      productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+      productLabel: "Litere volumetrice",
+      stage: "QUOTE_CREATED",
+      stageLabel: "Creată",
+      nextAction: "ACCEPT_QUOTE",
+      nextActionLabel: "Marchează acceptată",
+      needsAttention: true,
+      attentionLabel: "Urmează acceptarea",
+      superseded: false,
+      requestId: "req-1",
+      requestReference: "CRQ-104",
+      orderSnapshotId: null,
+      ...overrides,
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        jsonResponse(
+          200,
+          workspace("cus-1", "Atelier Nord", {
+            quotes: [
+              quote({ quoteSnapshotId: "qts:1", reference: "OF-1" }),
+              quote({
+                quoteSnapshotId: "asmq:new",
+                reference: "OF-NOU",
+                kind: "ASSEMBLY",
+                kindLabel: "Ansamblu",
+                assemblyId: "asm:1",
+                productCode: "SIGN_ASSEMBLY_ACM_LETTERS_V1",
+                productLabel: "Panou ACM + litere volumetrice",
+                stage: "ORDER_CREATED",
+                stageLabel: "Cu comandă",
+                nextAction: "OPEN_ORDER",
+                nextActionLabel: "Deschide comanda",
+                needsAttention: false,
+                attentionLabel: null,
+                orderSnapshotId: "asmo:1",
+              }),
+              quote({
+                quoteSnapshotId: "asmq:old",
+                reference: "OF-VECHI",
+                kind: "ASSEMBLY",
+                kindLabel: "Ansamblu",
+                assemblyId: "asm:1",
+                productCode: "SIGN_ASSEMBLY_ACM_LETTERS_V1",
+                productLabel: "Panou ACM + litere volumetrice",
+                nextAction: "OPEN_ASSEMBLY",
+                nextActionLabel: "Deschide ansamblul",
+                needsAttention: false,
+                attentionLabel: "Înlocuită de o versiune mai nouă",
+                superseded: true,
+              }),
+            ],
+          }),
+        ),
+      ),
+    );
+
+    render(<ClientDetailPage customerId="cus-1" />);
+    const table = await screen.findByRole("table", { name: "Oferte" });
+    const rows = table.querySelectorAll("tbody tr");
+    expect(rows).toHaveLength(3);
+    expect(screen.getByRole("link", { name: /OF-1/ })).toHaveAttribute(
+      "href",
+      "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/qts%3A1",
+    );
+    expect(screen.getByRole("link", { name: /OF-NOU/ })).toHaveAttribute("href", "/oferte/ansamblu/asmq%3Anew");
+    expect(screen.getByRole("link", { name: /OF-VECHI/ })).toHaveAttribute("href", "/oferte/ansamblu/asmq%3Aold");
+    expect(screen.getAllByText("Ansamblu · Panou ACM + litere volumetrice · CRQ-104")).toHaveLength(2);
+    expect(screen.getByText("Înlocuită de o versiune mai nouă")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Deschide comanda/ })).toHaveAttribute("href", "/lucrari/asmo%3A1");
+    expect(table.querySelectorAll('a[href^="/quotes/SIGN_ASSEMBLY"]')).toHaveLength(0);
+  });
+
   it("retries a failed hub load", async () => {
     const fetchMock = vi.fn(() => jsonResponse(500, { error: "failed" }));
     vi.stubGlobal("fetch", fetchMock);

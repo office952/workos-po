@@ -223,6 +223,103 @@ describe("RequestDetailPage", () => {
     expect(screen.getByText("Adaugă altă lucrare la această cerere")).toBeInTheDocument();
   });
 
+  it("lists product and assembly offers together, keeps the historical version and opens each by kind", async () => {
+    stubDetail(
+      requestDetail({
+        request: { ...requestDetail().request, status: "NEW" },
+        statusLabel: "Nouă",
+        nextAction: "OPEN_ASSEMBLY",
+        nextActionLabel: "Deschide ansamblul",
+        commercialProgressLabel: "Comandă creată",
+        linkedAssemblyId: "asm:1",
+        linkedOffers: [
+          {
+            quoteSnapshotId: "q-1",
+            kind: "PRODUCT",
+            kindLabel: "Produs",
+            productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+            productLabel: "Litere volumetrice",
+            reference: "OF-1",
+            stageLabel: "Creată",
+            superseded: false,
+            attentionLabel: "Urmează acceptarea",
+            orderSnapshotId: null,
+          },
+          {
+            quoteSnapshotId: "asmq:new",
+            kind: "ASSEMBLY",
+            kindLabel: "Ansamblu",
+            productCode: "SIGN_ASSEMBLY_ACM_LETTERS_V1",
+            productLabel: "Panou ACM + litere volumetrice",
+            reference: "OF-NOU",
+            stageLabel: "Cu comandă",
+            superseded: false,
+            attentionLabel: null,
+            orderSnapshotId: "asmo:1",
+          },
+          {
+            quoteSnapshotId: "asmq:old",
+            kind: "ASSEMBLY",
+            kindLabel: "Ansamblu",
+            productCode: "SIGN_ASSEMBLY_ACM_LETTERS_V1",
+            productLabel: "Panou ACM + litere volumetrice",
+            reference: "OF-VECHI",
+            stageLabel: "Creată",
+            superseded: true,
+            attentionLabel: "Înlocuită de o versiune mai nouă",
+            orderSnapshotId: null,
+          },
+        ],
+        assemblies: [
+          assemblyWork({
+            stage: "ORDER_CREATED",
+            stageLabel: "Comandă creată",
+            quoteSnapshotId: "asmq:new",
+            orderSnapshotId: "asmo:1",
+            membersEditable: false,
+          }),
+        ],
+      }),
+    );
+
+    render(<RequestDetailPage requestId="req-1" />);
+    expect(await screen.findByRole("heading", { name: "Oferte legate" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Deschide oferta OF-1" })).toHaveAttribute(
+      "href",
+      "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
+    );
+    expect(screen.getByRole("link", { name: "Deschide oferta OF-NOU" })).toHaveAttribute(
+      "href",
+      "/oferte/ansamblu/asmq%3Anew",
+    );
+    expect(screen.getByRole("link", { name: "Deschide oferta OF-VECHI" })).toHaveAttribute(
+      "href",
+      "/oferte/ansamblu/asmq%3Aold",
+    );
+    expect(
+      screen.getByText("Ansamblu · Panou ACM + litere volumetrice · Înlocuită de o versiune mai nouă"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Ansamblu · Panou ACM + litere volumetrice · Cu comandă")).toBeInTheDocument();
+    expect(screen.getByText("Produs · Litere volumetrice · Creată")).toBeInTheDocument();
+    for (const link of screen.getAllByRole("link", { name: "Deschide comanda" })) {
+      expect(link).toHaveAttribute("href", "/lucrari/asmo%3A1");
+    }
+    expect(screen.getByRole("heading", { name: "Lucrul comercial al cererii" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Deschide oferta comună" })).toHaveAttribute(
+      "href",
+      "/oferte/ansamblu/asmq%3Anew",
+    );
+    expect(document.querySelectorAll('a[href^="/quotes/SIGN_ASSEMBLY"]')).toHaveLength(0);
+    expect(document.body.textContent).not.toContain("asmq:");
+  });
+
+  it("keeps the linked offers panel absent when the request has no quotes", async () => {
+    stubDetail(requestDetail({ linkedOffers: [] }));
+    render(<RequestDetailPage requestId="req-1" />);
+    expect(await screen.findByRole("heading", { name: "CRQ-104" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Oferte legate" })).not.toBeInTheDocument();
+  });
+
   it("does not invent OPEN_QUOTE or CHOOSE_PRODUCT when nextAction is absent", async () => {
     stubDetail(
       requestDetail({

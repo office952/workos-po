@@ -110,7 +110,7 @@ export function QuoteSnapshotPage({
     setActionError(null);
     try {
       await postQuoteAcceptance(productCode, quoteSnapshotId);
-      invalidateAfterAcceptQuote(quoteSnapshotId);
+      invalidateAfterAcceptQuote(quoteSnapshotId, snapshot.data?.requestId);
       setActionState("idle");
     } catch (error) {
       setActionState("error");
@@ -129,7 +129,7 @@ export function QuoteSnapshotPage({
       const created = presentOrderSnapshotId(
         await postQuoteOrder(productCode, quoteSnapshotId),
       );
-      invalidateAfterCreateOrder(quoteSnapshotId);
+      invalidateAfterCreateOrder(quoteSnapshotId, snapshot.data?.requestId);
       const orderSnapshotId = created ?? envelope.data?.orderSnapshotId;
       if (!orderSnapshotId) {
         setActionState("error");
