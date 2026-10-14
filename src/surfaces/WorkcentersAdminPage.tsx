@@ -36,7 +36,7 @@ import { statusTone } from "../presentation/statusTone";
 import { adminMachineHref, adminWorkcenterHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
 
-type SaveState = "idle" | "pending" | "success" | "error";
+type SaveState = "idle" | "pending" | "success" | "protected" | "error";
 
 type WorkcentersAdminPageProps = {
   workcenterId?: string | null;
@@ -55,7 +55,7 @@ function mutationMessage(code: string | null, fallback: string): string {
     case "invalid_workcenter":
       return "Zona de lucru nu este valabilă.";
     case "provider_referenced":
-      return "Istoricul de execuție păstrează această zonă sau utilaj. Capabilitățile și mutarea nu pot fi schimbate.";
+      return "Această zonă sau acest utilaj a fost deja folosit în execuție, iar istoricul lucrărilor trebuie să rămână neschimbat. Capabilitățile lui și zona utilajului nu mai pot fi schimbate. Numele și descrierea se pot actualiza în continuare. Pentru o capabilitate nouă, adaugă o zonă nouă sau un utilaj nou cu acea capabilitate și activează-l.";
     case "has_open_assignment":
       return "Furnizorul este atribuit unei sarcini deschise și nu poate fi retras.";
     case "has_active_machines":
@@ -195,8 +195,9 @@ export function WorkcentersAdminPage({
       setErrorMessage(null);
       return true;
     }
-    setSaveState("error");
-    setErrorMessage(mutationMessage(readTransportErrorCode(result.body), fallback));
+    const code = readTransportErrorCode(result.body);
+    setSaveState(code === "provider_referenced" ? "protected" : "error");
+    setErrorMessage(mutationMessage(code, fallback));
     return false;
   }
 
@@ -444,6 +445,11 @@ export function WorkcentersAdminPage({
           {saveState === "success" ? (
             <InlineAlert tone="success" title="Modificarea a fost salvată">
               Atelierul citește același registru de zone și utilaje.
+            </InlineAlert>
+          ) : null}
+          {saveState === "protected" && errorMessage ? (
+            <InlineAlert tone="blocked" title="Protejat de istoricul de execuție">
+              {errorMessage}
             </InlineAlert>
           ) : null}
           {saveState === "error" && errorMessage ? (

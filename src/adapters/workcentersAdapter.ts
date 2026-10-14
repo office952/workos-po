@@ -32,6 +32,7 @@ export type WorkcenterAdminWorkcenter = {
 };
 
 export type WorkcenterAdminCoverage = {
+  capabilityId: string | null;
   label: string;
   coverage: ProviderCoverage;
   coverageLabel: string;
@@ -119,6 +120,7 @@ function presentCoverage(value: unknown): WorkcenterAdminCoverage | null {
       })
     : [];
   return {
+    capabilityId: asString(row.id),
     label,
     coverage,
     coverageLabel:

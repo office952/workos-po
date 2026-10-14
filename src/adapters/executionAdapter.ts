@@ -95,6 +95,7 @@ export function presentExecutionTask(value: unknown): ExecutionTaskTransport | n
     assignmentLabel: asString(row.assignmentLabel) ?? "Nealocat",
     requiresProvider: row.requiresProvider === true,
     requiredCapabilityId: asString(row.requiredCapabilityId),
+    requiredCapabilityLabel: asString(row.requiredCapabilityLabel),
     canAssign: row.canAssign === true,
     canAssignProvider: row.canAssignProvider === true,
     canClaimStart: row.canClaimStart === true || row.canStart === true,

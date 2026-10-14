@@ -9,6 +9,7 @@ type TextFieldProps = {
   disabled?: boolean;
   inputMode?: "text" | "decimal" | "numeric";
   type?: "text" | "password";
+  autoComplete?: string;
   className?: string;
   placeholder?: string;
   labelVisuallyHidden?: boolean;
@@ -24,6 +25,7 @@ export function TextField({
   disabled,
   inputMode = "text",
   type = "text",
+  autoComplete,
   className,
   placeholder,
   labelVisuallyHidden = false,
@@ -45,6 +47,7 @@ export function TextField({
         value={value}
         placeholder={placeholder}
         inputMode={inputMode}
+        autoComplete={autoComplete}
         disabled={disabled}
         aria-invalid={Boolean(error)}
         aria-describedby={fieldDescribedBy(id, hint, error)}

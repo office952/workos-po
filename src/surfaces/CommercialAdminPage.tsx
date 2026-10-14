@@ -3,7 +3,7 @@ import {
   presentCommercialPolicyAdmin,
   type CommercialPolicyAdminTransport,
 } from "../adapters/commercialPolicyAdapter";
-import { readTransportErrorCode, readTransportReasons } from "../api/http";
+import { TransportError, readTransportErrorCode, readTransportReasons } from "../api/http";
 import { postCommercialPolicy } from "../api/commercialPolicy";
 import { Button } from "../components/Button";
 import { CollectionRail } from "../components/CollectionRail";
@@ -11,6 +11,7 @@ import { InfoRow } from "../components/InfoRow";
 import { InlineAlert } from "../components/InlineAlert";
 import { LoadingFloor } from "../components/LoadingFloor";
 import { LoadingIndicator } from "../components/LoadingIndicator";
+import { StateNotice } from "../components/StateNotice";
 import { StatusBadge } from "../components/StatusBadge";
 import { SurfacePanel } from "../components/SurfacePanel";
 import { TextField } from "../components/TextField";
@@ -44,9 +45,12 @@ export function CommercialAdminPage() {
   const [defaultDiscountPercent, setDefaultDiscountPercent] = useState("");
   const [defaultAdjustment, setDefaultAdjustment] = useState("");
 
+  const forbidden = admin.error instanceof TransportError && admin.error.status === 403;
   const loadState =
     admin.status === "error" && !admin.data
-      ? "error"
+      ? forbidden
+        ? "forbidden"
+        : "error"
       : admin.data
         ? "ready"
         : "loading";
@@ -134,6 +138,21 @@ export function CommercialAdminPage() {
           />
           <SurfacePanel title="Politica curentă" label="Politică" busy>
             <LoadingFloor variant="admin" label="Se încarcă politica comercială" />
+          </SurfacePanel>
+        </>
+      ) : null}
+      {loadState === "forbidden" ? (
+        <>
+          <CollectionRail
+            label="Administrare"
+            items={administrationRailItems("commercial")}
+          />
+          <SurfacePanel title="Politica curentă" label="Politică">
+            <StateNotice
+              kind="read-only"
+              title="Acces doar pentru proprietar"
+              reason="Valorile comerciale sunt disponibile doar proprietarului organizației. Adaosul, TVA-ul, discountul și ajustarea implicită se văd și se modifică doar din contul proprietarului. Pentru o schimbare, contactează proprietarul organizației."
+            />
           </SurfacePanel>
         </>
       ) : null}

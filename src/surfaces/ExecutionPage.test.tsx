@@ -1980,3 +1980,157 @@ describe("ExecutionPage", () => {
     expect(screen.queryByRole("button", { name: "Pornește utilajul" })).not.toBeInTheDocument();
   });
 });
+
+describe("ExecutionPage missing-provider guidance", () => {
+  function missingProviderPlan(overrides: Record<string, unknown> = {}) {
+    return {
+      executionPlan: {
+        plan: {
+          planId: "exp:1",
+          productLabel: "Litere",
+          inscription: "WORKOS GOLDEN",
+          sourceSnapshotId: "aps:1",
+        },
+        statusLabel: "În lucru",
+        progress: { completed: 0, total: 1 },
+        tasks: [
+          {
+            ...taskPayload({
+              taskId: "task-cut",
+              processLabel: "Debitare foaie CNC",
+              status: "PLANNED",
+              statusLabel: "Planificat",
+              canComplete: false,
+              requiresCompletedQuantity: false,
+              plannedValue: null,
+              completedQuantityLabel: null,
+              varianceLabel: null,
+            }),
+            assignmentLabel: "Nealocat",
+            requiresProvider: true,
+            requiredCapabilityId: "CNC_ROUTING",
+            requiredCapabilityLabel: "Debitare CNC",
+            eligibleProviders: [],
+            ...overrides,
+          },
+        ],
+      },
+    };
+  }
+
+  function registry(coverage: string, canEdit: boolean) {
+    return {
+      canEdit,
+      workcenters: [],
+      machines: [],
+      capabilities: [
+        {
+          id: "CNC_ROUTING",
+          label: "Debitare CNC",
+          coverage,
+          coverageLabel: coverage,
+          providers: coverage === "NO_PROVIDER" ? [] : [{ id: "mch:new", label: "Router nou" }],
+        },
+      ],
+    };
+  }
+
+  function stubFetch(
+    workcenters: () => Promise<unknown>,
+    plan: Record<string, unknown> = missingProviderPlan(),
+  ) {
+    const fetchMock = vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:andrei", displayName: "Andrei" } });
+      }
+      if (url.endsWith("/api/workcenters")) {
+        return workcenters();
+      }
+      return jsonResponse(plan);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  function onlyReads(fetchMock: ReturnType<typeof vi.fn>): boolean {
+    return fetchMock.mock.calls.every(
+      ([, init]) => String((init as RequestInit | undefined)?.method ?? "GET") === "GET",
+    );
+  }
+
+  it("tells the owner that a planned resource needs activation, without activating it", async () => {
+    const fetchMock = stubFetch(() => jsonResponse(registry("PROVIDER_PLANNED", true)));
+
+    render(<ExecutionPage planId="exp:1" />);
+
+    expect(await screen.findByText("Utilaj / zonă neactivată")).toBeInTheDocument();
+    expect(screen.getByText(/capabilitatea „Debitare CNC”, dar este încă Planificat/)).toBeInTheDocument();
+    expect(screen.getByText(/Activează zona sau utilajul în Administrare/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Deschide zone și utilaje" })).toHaveAttribute(
+      "href",
+      "/admin/workcenters",
+    );
+    expect(screen.queryByRole("button", { name: /Activează|Alocă/ })).not.toBeInTheDocument();
+    expect(onlyReads(fetchMock)).toBe(true);
+  });
+
+  it("tells a member that the organization owner performs the activation", async () => {
+    stubFetch(() => jsonResponse(registry("PROVIDER_PLANNED", false)));
+
+    render(<ExecutionPage planId="exp:1" />);
+
+    expect(await screen.findByText("Utilaj / zonă neactivată")).toBeInTheDocument();
+    expect(screen.getByText(/Activarea o face proprietarul organizației/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Vezi zone și utilaje" })).toBeInTheDocument();
+  });
+
+  it("does not call a missing capability an inactive resource", async () => {
+    const fetchMock = stubFetch(() => jsonResponse(registry("NO_PROVIDER", true)));
+
+    render(<ExecutionPage planId="exp:1" />);
+
+    expect(
+      await screen.findByText(
+        "Nu există momentan o zonă sau un utilaj disponibil pentru această capabilitate.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("Utilaj / zonă lipsă").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Utilaj / zonă neactivată")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Verifică resursele existente și starea lor.*configurează sau activează o resursă eligibilă/,
+      ),
+    ).toBeInTheDocument();
+    expect(onlyReads(fetchMock)).toBe(true);
+  });
+
+  it("keeps conditional guidance when the resource registry is unavailable", async () => {
+    stubFetch(() => jsonResponse({ error: "internal" }, 500));
+
+    render(<ExecutionPage planId="exp:1" />);
+
+    expect(
+      await screen.findByText(/Verifică în Administrare › Zone și utilaje capabilitatea, starea zonei și starea utilajului/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Atribuirea și activarea le face proprietarul organizației/)).toBeInTheDocument();
+    expect(screen.queryByText("Utilaj / zonă neactivată")).not.toBeInTheDocument();
+  });
+
+  it("does not read the resource registry when the task already has eligible providers", async () => {
+    const fetchMock = stubFetch(
+      () => jsonResponse(registry("COVERED", true)),
+      missingProviderPlan({
+        eligibleProviders: [{ id: "mch:new", kind: "MACHINE", kindLabel: "Utilaj", label: "Router nou" }],
+      }),
+    );
+
+    render(<ExecutionPage planId="exp:1" />);
+
+    expect(await screen.findByText(/Utilaje eligibile/)).toBeInTheDocument();
+    expect(screen.queryByText("Utilaj / zonă lipsă")).not.toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).endsWith("/api/workcenters")),
+    ).toBe(false);
+  });
+});
