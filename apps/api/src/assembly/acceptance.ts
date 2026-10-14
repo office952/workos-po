@@ -22,7 +22,8 @@ export type AssemblyAcceptanceRefusal = {
 
 /**
  * Acceptance is bound to the exact frozen quote the operator reviewed. Only the assembly's current
- * snapshot without an order can become an order; any other identity is refused before a write.
+ * snapshot without an order, priced from the configuration that is confirmed right now, can become an
+ * order; anything else is refused before a write.
  */
 export function planAssemblyAcceptance(
   runtime: ProductSystem,
@@ -76,6 +77,19 @@ export function planAssemblyAcceptance(
       },
     };
   }
+  if (definition.status !== "CONFIRMED") {
+    return staleConfiguration(
+      "Ansamblul a fost modificat după înghețarea acestei oferte. Revizuiește și confirmă ansamblul, apoi îngheață o ofertă nouă.",
+    );
+  }
+  if (
+    definition.confirmedTruthId !== current.assemblyTruthId ||
+    definition.confirmedTruthHash !== current.assemblyTruthHash
+  ) {
+    return staleConfiguration(
+      "Ansamblul a fost reconfirmat cu altă configurație după înghețarea acestei oferte. Îngheață o ofertă nouă înainte de acceptare.",
+    );
+  }
   const children = definition.members.flatMap((member) => {
     const child = readConfirmedChild(plane.db, plane.organizationId, member.confirmedTruthId);
     return child ? [child] : [];
@@ -90,4 +104,8 @@ export function planAssemblyAcceptance(
     return { ok: false, status: 422, body: { error: accepted.error, reasons: [...accepted.reasons] } };
   }
   return { ok: true, order: accepted.order };
+}
+
+function staleConfiguration(reason: string): AssemblyAcceptanceRefusal {
+  return { ok: false, status: 409, body: { error: "assembly_quote_stale_configuration", reasons: [reason] } };
 }

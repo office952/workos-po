@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   ACM_CASSETTE_NONE_PRODUCT_CODE,
   CANONICAL_PRODUCT_CODE,
+  LOGO_PRODUCT_CODE,
   OWNER_CONFIRMED_SELLER,
+  SIGN_ASSEMBLY_ACM_SIGNAGE_V2,
 } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
 import { resetCloudLoginAttemptGuard } from "../src/cloud/controlPlane.js";
@@ -29,6 +31,15 @@ const lettersValues = {
   "volume.depthMm": "60",
   "volume.finish": "none",
   "volume.confirmedPerimeterMm": 12500,
+};
+
+const logoValues = {
+  "root.inscription": "NORD LOGO",
+  "face.finish": "none",
+  "face.confirmedAreaMm2": 180000,
+  "volume.depthMm": "60",
+  "volume.finish": "none",
+  "volume.confirmedPerimeterMm": 8400,
 };
 
 const acmValues = {
@@ -119,14 +130,22 @@ async function quotedAssembly(api: Client, label: string) {
   return { assemblyId, requestId, quoteSnapshotId: view.quoteSnapshotId as string };
 }
 
-async function revise(api: Client, assemblyId: string): Promise<string> {
+async function changeLetters(api: Client, assemblyId: string): Promise<void> {
   const changed = { ...lettersValues, "root.inscription": "NOU" };
   const changedReview = await reviewId(api, CANONICAL_PRODUCT_CODE, changed);
   expect(
     (await api.post(`/api/assemblies/${assemblyId}/members`, { role: "SIGNAGE_LETTERS", values: changed, reviewId: changedReview })).status,
   ).toBe(200);
+}
+
+async function reconfirm(api: Client, assemblyId: string): Promise<void> {
   expect((await api.post(`/api/assemblies/${assemblyId}/review`)).status).toBe(200);
   expect((await api.post(`/api/assemblies/${assemblyId}/confirm`)).status).toBe(200);
+}
+
+async function revise(api: Client, assemblyId: string): Promise<string> {
+  await changeLetters(api, assemblyId);
+  await reconfirm(api, assemblyId);
   expect((await assemblyView(api, assemblyId)).quoteFreezable).toBe(true);
   expect((await freeze(api, assemblyId)).status).toBe(200);
   return (await assemblyView(api, assemblyId)).quoteSnapshotId as string;
@@ -203,6 +222,121 @@ describe("assembly quote acceptance bound to the reviewed snapshot", () => {
     expect(await assemblyOrders(api)).toBe(1);
     expect((await quoteEnvelope(api, firstId)).order).toBeNull();
     expect((await quoteEnvelope(api, firstId)).acceptance).toMatchObject({ canAccept: false });
+  });
+
+  it("refuses the last frozen quote once the assembly configuration it priced is no longer confirmed", async () => {
+    const api = client(createApp());
+    const { assemblyId, quoteSnapshotId: quoteA } = await quotedAssembly(api, "Client Configurație");
+
+    await changeLetters(api, assemblyId);
+    const stale = await assemblyView(api, assemblyId);
+    expect(stale.status).toBe("STALE");
+    expect(stale.quoteSnapshotId).toBe(quoteA);
+    const whileStale = await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId: quoteA });
+    expect(whileStale.status).toBe(409);
+    const staleRefusal = await json(whileStale);
+    expect(staleRefusal.error).toBe("assembly_quote_stale_configuration");
+    expect(staleRefusal).not.toHaveProperty("currentQuoteSnapshotId");
+    expect((await quoteEnvelope(api, quoteA)).acceptance).toMatchObject({ canAccept: false });
+    expect(await assemblyOrders(api)).toBe(0);
+
+    await reconfirm(api, assemblyId);
+    const reconfirmed = await assemblyView(api, assemblyId);
+    expect(reconfirmed.status).toBe("CONFIRMED");
+    expect(reconfirmed.quoteSnapshotId).toBe(quoteA);
+    expect(reconfirmed.quoteFreezable).toBe(true);
+    const afterReconfirm = await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId: quoteA });
+    expect(afterReconfirm.status).toBe(409);
+    const refusal = await json(afterReconfirm);
+    expect(refusal.error).toBe("assembly_quote_stale_configuration");
+    expect((refusal.reasons as string[])[0]).toMatch(/ofertă nouă/);
+    const envelopeA = await quoteEnvelope(api, quoteA);
+    expect((envelopeA.assemblyQuote as { superseded: boolean }).superseded).toBe(false);
+    expect((envelopeA.acceptance as Acceptance).canAccept).toBe(false);
+    expect((envelopeA.acceptance as Acceptance).reason).toBe((refusal.reasons as string[])[0]);
+    expect(await assemblyOrders(api)).toBe(0);
+    expect(envelopeA.order).toBeNull();
+
+    expect((await freeze(api, assemblyId)).status).toBe(200);
+    const quoteB = (await assemblyView(api, assemblyId)).quoteSnapshotId as string;
+    expect(quoteB).not.toBe(quoteA);
+    expect((await quoteEnvelope(api, quoteA)).acceptance).toMatchObject({ canAccept: false });
+    expect((await quoteEnvelope(api, quoteB)).acceptance).toEqual<Acceptance>({ canAccept: true, reason: null });
+    const replayA = await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId: quoteA });
+    expect(replayA.status).toBe(409);
+    expect(await json(replayA)).toMatchObject({ error: "assembly_quote_superseded", currentQuoteSnapshotId: quoteB });
+
+    const accepted = await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId: quoteB });
+    expect(accepted.status).toBe(200);
+    const order = (await json(accepted)).order as { orderSnapshotId: string; sourceQuoteSnapshotId: string };
+    expect(order.sourceQuoteSnapshotId).toBe(quoteB);
+    expect(await assemblyOrders(api)).toBe(1);
+    expect((await quoteEnvelope(api, quoteA)).order).toBeNull();
+    const repeated = await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId: quoteB });
+    expect(repeated.status).toBe(409);
+    expect(await json(repeated)).toMatchObject({ error: "assembly_quote_already_accepted", orderSnapshotId: order.orderSnapshotId });
+    expect(await assemblyOrders(api)).toBe(1);
+  });
+
+  it("refuses a quote frozen before a member was added and the assembly reconfirmed", async () => {
+    const api = client(createApp());
+    const enabled = await api.post("/api/admin/product-enablement", {
+      products: [CANONICAL_PRODUCT_CODE, ACM_CASSETTE_NONE_PRODUCT_CODE, LOGO_PRODUCT_CODE].map((templateCode) => ({
+        templateCode,
+        enabled: true,
+      })),
+    });
+    expect(enabled.status).toBe(200);
+    const customer = await json(await api.post("/api/customers", { displayName: "Client Logo" }));
+    const customerId = (customer.customer as { customerId: string }).customerId;
+    const request = await json(await api.post("/api/requests", { customerId, title: "Logo", description: "Membru adăugat" }));
+    const requestId = (request.request as { requestId: string }).requestId;
+    const created = await api.post("/api/assemblies", { requestId, kind: SIGN_ASSEMBLY_ACM_SIGNAGE_V2 });
+    expect(created.status).toBe(201);
+    const assemblyId = ((await json(created)).assembly as { assemblyId: string }).assemblyId;
+    const attach = async (role: string, productCode: string, values: Json) =>
+      expect(
+        (await api.post(`/api/assemblies/${assemblyId}/members`, { role, values, reviewId: await reviewId(api, productCode, values) }))
+          .status,
+      ).toBe(200);
+    await attach("SUPPORT_PANEL", ACM_CASSETTE_NONE_PRODUCT_CODE, acmValues);
+    await attach("SIGNAGE_LOGO", LOGO_PRODUCT_CODE, logoValues);
+    expect((await api.post(`/api/assemblies/${assemblyId}/confirm`)).status).toBe(200);
+    expect((await freeze(api, assemblyId)).status).toBe(200);
+    const quoteA = (await assemblyView(api, assemblyId)).quoteSnapshotId as string;
+
+    await attach("SIGNAGE_LETTERS", CANONICAL_PRODUCT_CODE, lettersValues);
+    expect((await assemblyView(api, assemblyId)).status).toBe("STALE");
+    const whileStale = await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId: quoteA });
+    expect(whileStale.status).toBe(409);
+    expect((await json(whileStale)).error).toBe("assembly_quote_stale_configuration");
+    expect(await assemblyOrders(api)).toBe(0);
+
+    await reconfirm(api, assemblyId);
+    const reconfirmed = await assemblyView(api, assemblyId);
+    expect(reconfirmed.status).toBe("CONFIRMED");
+    expect(reconfirmed.quoteSnapshotId).toBe(quoteA);
+    expect(reconfirmed.quoteFreezable).toBe(true);
+
+    const refused = await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId: quoteA });
+    expect(refused.status).toBe(409);
+    expect((await json(refused)).error).toBe("assembly_quote_stale_configuration");
+    expect((await quoteEnvelope(api, quoteA)).acceptance).toMatchObject({ canAccept: false });
+    expect((await quoteEnvelope(api, quoteA)).order).toBeNull();
+    expect(await assemblyOrders(api)).toBe(0);
+  });
+
+  it("keeps a quote acceptable when the assembly is reconfirmed with the same configuration", async () => {
+    const api = client(createApp());
+    const { assemblyId, quoteSnapshotId } = await quotedAssembly(api, "Client Neschimbat");
+    expect((await api.post(`/api/assemblies/${assemblyId}/confirm`)).status).toBe(200);
+    const after = await assemblyView(api, assemblyId);
+    expect(after.status).toBe("CONFIRMED");
+    expect(after.quoteSnapshotId).toBe(quoteSnapshotId);
+    expect(after.quoteFreezable).toBe(false);
+    expect((await quoteEnvelope(api, quoteSnapshotId)).acceptance).toEqual<Acceptance>({ canAccept: true, reason: null });
+    expect((await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId })).status).toBe(200);
+    expect(await assemblyOrders(api)).toBe(1);
   });
 
   it("lets a member read the quote but never accept it, and isolates organizations", async () => {
