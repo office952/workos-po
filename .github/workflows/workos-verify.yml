@@ -31,6 +31,10 @@ jobs:
           node-version: 24
           cache: pnpm
 
+      - name: Test Notion PR journal gate
+        if: github.event_name == 'pull_request'
+        run: node --test scripts/verify-notion-pr-metadata.test.mjs
+
       - name: Notion PR journal metadata gate
         if: github.event_name == 'pull_request'
         run: node scripts/verify-notion-pr-metadata.mjs
