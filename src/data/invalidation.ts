@@ -125,7 +125,7 @@ export function invalidateAfterCloudBoundaryChange(): void {
 }
 
 export function invalidateAfterCostEvidenceChange(): void {
-  invalidateResources(resourceKeys.resourcesAdmin());
+  invalidateResources(resourceKeys.resourcesAdmin(), resourceKeys.assemblyOperationCostAdmin());
 }
 
 export function invalidateAfterCommercialPolicyChange(): void {

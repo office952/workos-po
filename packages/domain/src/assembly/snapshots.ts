@@ -9,6 +9,7 @@ import type { FrozenRateAcknowledgement } from "../commercial/rateAcknowledgemen
 import type { SiteInstallationOperationalView } from "../installation/hostContext.js";
 import type { FrozenProductionInput, FrozenProductionOperation } from "../production/snapshot.js";
 import type { AssemblyKind, AssemblyMemberRole } from "./contract.js";
+import type { FrozenAssemblyOperationCost } from "./operationCostEvidence.js";
 
 export type AssemblyQuoteMember = {
   memberId: string;
@@ -47,6 +48,8 @@ export type AssemblyQuoteSnapshot = {
   seller?: FrozenSellerIdentity;
   /** Absent when no acknowledgement was required; its hash excludes `acknowledgedAt`. */
   rateAcknowledgement?: FrozenRateAcknowledgement;
+  /** Absent on quotes frozen before assembly operation costing; their hashes exclude it. */
+  operationCost?: FrozenAssemblyOperationCost;
 };
 
 export type AssemblyOrderChild = {
@@ -89,6 +92,20 @@ export type AssemblyOrderSnapshot = {
   relationCommercialPrice: null;
   totals: FrozenJobCommercial;
   serviceLine?: FrozenSiteInstallationQuoteLineV2;
+  /** Copied unchanged from the accepted quote; absent when that quote carried none. */
+  operationCost?: FrozenAssemblyOperationCost;
+};
+
+/** What production reconciled from the order's frozen operation evidence. */
+export type AssemblyProductionOperationCost = {
+  evidenceStatus: "VALID" | "INVALID";
+  evidenceHash: string;
+  policyVersion: number | null;
+  pricedProcessIds: readonly string[];
+  includedProcessIds: readonly string[];
+  unpricedProcessIds: readonly string[];
+  total: number;
+  currency: "EUR";
 };
 
 export type AssemblyProductionMember = {
@@ -122,4 +139,6 @@ export type AssemblyProductionSnapshot = {
   eicCurrency: "EUR";
   eicCompleteness: "COMPLETE" | "PARTIAL";
   siteInstallation?: SiteInstallationOperationalView;
+  /** Present only when the source order froze operation evidence. */
+  operationCost?: AssemblyProductionOperationCost;
 };

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { presentAssemblyOperationCost } from "../adapters/assemblyOperationCostAdapter";
 import { presentRateAcknowledgement, rateAcknowledgementSatisfied } from "../adapters/confirmAdapter";
 import { presentFrozenRateAcknowledgement } from "../adapters/quoteAdapter";
 import {
@@ -26,6 +27,7 @@ import {
   RateAcknowledgementNotice,
 } from "../presentation/rateAcknowledgement";
 import { assemblyQuoteHref, configuratorHref, jobHref, requestHref } from "../routing/appRoute";
+import { AssemblyOperationCostPanel } from "./AssemblyOperationCostPanel";
 import { useAssemblyQuoteDocument } from "./useAssemblyQuoteDocument";
 
 type AssemblyScope = {
@@ -71,6 +73,8 @@ type AssemblyView = {
     unpricedOperations: string[];
   } | null;
   membersEditable?: boolean;
+  /** Owner-only internal assembly operation cost; null for roles without financial access. */
+  operationCost?: unknown;
   rateAcknowledgement?: unknown;
   frozenRateAcknowledgement?: unknown;
 };
@@ -185,6 +189,11 @@ export function AssemblyPage() {
   const rateRequirement = presentRateAcknowledgement(assembly?.rateAcknowledgement);
   const frozenRateAcknowledgement = presentFrozenRateAcknowledgement(
     assembly?.frozenRateAcknowledgement,
+  );
+  const operationCostPayload = assembly?.operationCost;
+  const operationCost = useMemo(
+    () => presentAssemblyOperationCost(operationCostPayload),
+    [operationCostPayload],
   );
   const ratesAcknowledged = rateAcknowledgementSatisfied(rateRequirement, acknowledgedRateBinding);
   const quotePayload =
@@ -432,6 +441,17 @@ export function AssemblyPage() {
             >
               Creează planul de execuție
             </Button>
+          ) : null}
+          {operationCost ? (
+            <AssemblyOperationCostPanel
+              assemblyId={assembly.assemblyId}
+              cost={operationCost}
+              onSaved={(next) => {
+                if (next) {
+                  writeResource(resourceKeys.assembly(assembly.assemblyId), next as AssemblyView);
+                }
+              }}
+            />
           ) : null}
           {assembly.productionCost ? (
             <SurfacePanel title="Cost intern de producție" label="Cost intern de producție">

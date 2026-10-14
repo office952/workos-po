@@ -18,6 +18,10 @@ import {
   assemblyOfferingLabelFor,
   assemblyRoleLabel,
 } from "./contract.js";
+import {
+  copyFrozenAssemblyOperationCost,
+  type FrozenAssemblyOperationCost,
+} from "./operationCostEvidence.js";
 import type { AssemblyOrderSnapshot, AssemblyQuoteSnapshot } from "./snapshots.js";
 import type { AssemblyRuleFailure, AssemblyTruth, ConfirmedChildProduct } from "./model.js";
 
@@ -30,6 +34,7 @@ export function freezeAssemblyQuote(input: {
   customer?: FrozenCustomerIdentity;
   seller?: FrozenSellerIdentity;
   rateAcknowledgement?: FrozenRateAcknowledgement;
+  operationCost?: FrozenAssemblyOperationCost;
 }): { ok: true; quote: AssemblyQuoteSnapshot } | AssemblyRuleFailure {
   const customer = input.customer ? freezeCustomerIdentity(input.customer) : undefined;
   if (customer === null) {
@@ -103,6 +108,9 @@ export function freezeAssemblyQuote(input: {
   const serviceLine = input.serviceLine
     ? copyServiceLine(input.serviceLine)
     : undefined;
+  const operationCost = input.operationCost
+    ? copyFrozenAssemblyOperationCost(input.operationCost)
+    : undefined;
   const totals = sumCommercial([
     ...published.map((item) => item.commercial),
     ...(serviceLine ? [serviceLine.commercial] : []),
@@ -127,6 +135,7 @@ export function freezeAssemblyQuote(input: {
     ...(serviceLine ? { serviceLine } : {}),
     ...(customer ? { customer } : {}),
     ...(seller ? { seller } : {}),
+    ...(operationCost ? { operationCost } : {}),
   };
   const acknowledgement = input.rateAcknowledgement
     ? copyRateAcknowledgement(input.rateAcknowledgement)
@@ -251,6 +260,9 @@ export function acceptAssemblyQuote(input: {
     relationCommercialPrice: ASSEMBLY_RELATION_COMMERCIAL_PRICE,
     totals: { ...input.quote.totals },
     ...(serviceLine ? { serviceLine } : {}),
+    ...(input.quote.operationCost
+      ? { operationCost: copyFrozenAssemblyOperationCost(input.quote.operationCost) }
+      : {}),
   };
   return {
     ok: true,

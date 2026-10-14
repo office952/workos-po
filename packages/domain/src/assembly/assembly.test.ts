@@ -83,8 +83,11 @@ const acmValues: DraftValues = {
   "face.cassetteDepthMm": 40,
 };
 
-/** Hash produced for this fixture before identities existed on assembly quotes. */
-const LEGACY_IDENTITY_FREE_QUOTE_HASH = "216e034425785a18295dcfff9a649368b0757b4be250cd83efe291f173aedd5c";
+/**
+ * Hash of this fixture frozen without identities. The fixture is re-frozen on every run, so the
+ * value follows its child production input (ACM recipe traces resolved by component type).
+ */
+const LEGACY_IDENTITY_FREE_QUOTE_HASH = "5f4629f735cbfa7e6bc2f649e3dc47eb4f692f586cc7a96c693ac8510b5cabb1";
 const ORG = "org-assembly";
 const OTHER_ORG = "org-other";
 

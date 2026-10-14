@@ -4,6 +4,7 @@ import {
   INSPECT_FINISHED_ASSEMBLY_ID,
   INSPECT_FINISHED_LETTER_ID,
   INSPECT_FINISHED_LOGO_ID,
+  INSTALL_AT_SITE_ID,
   MOUNT_LETTERS_ON_PANEL_ID,
   MOUNT_LOGO_ON_PANEL_ID,
   PACK_PRODUCT_ID,
@@ -22,7 +23,11 @@ import {
   assemblyRoleLabel,
   type AssemblyMemberRole,
 } from "./contract.js";
-import type { AssemblyOrderSnapshot, AssemblyProductionSnapshot } from "./snapshots.js";
+import type {
+  AssemblyOrderSnapshot,
+  AssemblyProductionOperationCost,
+  AssemblyProductionSnapshot,
+} from "./snapshots.js";
 import type { AssemblyRuleFailure } from "./model.js";
 
 export { INSPECT_FINISHED_ASSEMBLY_ID, MOUNT_LETTERS_ON_PANEL_ID, MOUNT_LOGO_ON_PANEL_ID };
@@ -96,7 +101,20 @@ export function projectAssemblyProduction(
     members: retained,
     assemblyOperations: operations,
     ...(serviceLine ? { serviceLine } : {}),
+    ...(order.operationCost ? { operationCost: order.operationCost } : {}),
   });
+  const operationCost: AssemblyProductionOperationCost | undefined = order.operationCost
+    ? {
+        evidenceStatus: eic.operationEvidence === "VALID" ? "VALID" : "INVALID",
+        evidenceHash: order.operationCost.evidenceHash,
+        policyVersion: order.operationCost.policy.version,
+        pricedProcessIds: eic.pricedAssemblyOperations.map((item) => item.processId),
+        includedProcessIds: eic.includedAssemblyOperations.map((item) => item.processId),
+        unpricedProcessIds: eic.unpricedAssemblyOperations.map((item) => item.processId),
+        total: eic.operationCostTotal,
+        currency: "EUR",
+      }
+    : undefined;
   const label =
     order.assemblyKind === SIGN_ASSEMBLY_ACM_LETTERS_V1 ? ASSEMBLY_OFFERING_LABEL : order.label;
   const body = {
@@ -116,6 +134,7 @@ export function projectAssemblyProduction(
     eicCurrency: eic.currency,
     eicCompleteness: eic.completeness,
     ...(siteInstallation ? { siteInstallation } : {}),
+    ...(operationCost ? { operationCost } : {}),
   };
   return {
     ok: true,
@@ -126,6 +145,20 @@ export function projectAssemblyProduction(
       contentHash: contentHash(body),
     },
   };
+}
+
+/** Assembly operations the production snapshot left without frozen cost; site work is never one. */
+export function unpricedAssemblyProductionOperations(
+  production: Pick<AssemblyProductionSnapshot, "assemblyOperations" | "siteInstallation" | "operationCost">,
+): FrozenProductionOperation[] {
+  const unpriced = production.operationCost
+    ? new Set(production.operationCost.unpricedProcessIds)
+    : null;
+  return production.assemblyOperations.filter(
+    (operation) =>
+      !(operation.processId === INSTALL_AT_SITE_ID && production.siteInstallation) &&
+      (unpriced === null || unpriced.has(operation.processId)),
+  );
 }
 
 function v1AssemblyOperations(

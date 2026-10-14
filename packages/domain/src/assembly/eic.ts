@@ -1,6 +1,12 @@
 import type { FrozenSiteInstallationQuoteLineV2 } from "../commercial/quoteSnapshot.js";
 import { INSTALL_AT_SITE_ID } from "../processes/catalog.js";
 import type { FrozenProductionOperation, FrozenRecipeTrace } from "../production/snapshot.js";
+import {
+  isCostedOperationLine,
+  verifiedOperationCostLines,
+  type FrozenAssemblyOperationCost,
+  type FrozenAssemblyOperationCostLine,
+} from "./operationCostEvidence.js";
 import type { AssemblyOrderChild } from "./snapshots.js";
 
 export type AssemblyEicSupersededRecipe = {
@@ -24,6 +30,11 @@ export type AssemblyEicUnpricedOperation = {
   processId: string;
 };
 
+export type AssemblyEicPricedOperation = AssemblyEicUnpricedOperation & { cost: number };
+
+/** ABSENT: order frozen before operation evidence existed. INVALID: evidence failed verification. */
+export type AssemblyOperationEvidenceStatus = "ABSENT" | "VALID" | "INVALID";
+
 export type AssemblyEicReconciliation = {
   rawChildTotal: number;
   total: number;
@@ -31,6 +42,10 @@ export type AssemblyEicReconciliation = {
   completeness: "COMPLETE" | "PARTIAL";
   children: readonly AssemblyEicChildReconciliation[];
   unpricedAssemblyOperations: readonly AssemblyEicUnpricedOperation[];
+  pricedAssemblyOperations: readonly AssemblyEicPricedOperation[];
+  includedAssemblyOperations: readonly AssemblyEicUnpricedOperation[];
+  operationEvidence: AssemblyOperationEvidenceStatus;
+  operationCostTotal: number;
   siteInstallationEicOutsideTotal: number | null;
 };
 
@@ -39,32 +54,100 @@ export type AssemblyEicMemberInput = {
   retainedOperations: readonly FrozenProductionOperation[];
 };
 
-// Frozen order evidence only; never current cost evidence. Assembly operations have no frozen
-// cost evidence, so they stay unpriced (PARTIAL), never zero. Site-installation EIC stays on its
-// frozen service line, outside production EIC, exactly as for standalone production releases.
+// Frozen order evidence only; never current cost evidence. Assembly operations are priced only
+// from the operation evidence frozen in the order; without it they stay unpriced (PARTIAL), never
+// zero. Site-installation EIC stays on its frozen service line, outside production EIC, exactly as
+// for standalone production releases.
 export function reconcileAssemblyEic(input: {
   members: readonly AssemblyEicMemberInput[];
   assemblyOperations: readonly FrozenProductionOperation[];
   serviceLine?: FrozenSiteInstallationQuoteLineV2;
+  operationCost?: FrozenAssemblyOperationCost;
 }): AssemblyEicReconciliation {
   const children = input.members.map(reconcileChild);
-  const unpricedAssemblyOperations = input.assemblyOperations
-    .filter((operation) => !(operation.processId === INSTALL_AT_SITE_ID && input.serviceLine))
-    .map((operation) => ({ operationId: operation.id, processId: operation.processId }));
+  const assemblyOperations = input.assemblyOperations.filter(
+    (operation) => !(operation.processId === INSTALL_AT_SITE_ID && input.serviceLine),
+  );
+  const lines = operationLines(input.operationCost, input.members, assemblyOperations);
+  const operationEvidence: AssemblyOperationEvidenceStatus = !input.operationCost
+    ? "ABSENT"
+    : lines
+      ? "VALID"
+      : "INVALID";
+  const unpricedAssemblyOperations: AssemblyEicUnpricedOperation[] = [];
+  const pricedAssemblyOperations: AssemblyEicPricedOperation[] = [];
+  const includedAssemblyOperations: AssemblyEicUnpricedOperation[] = [];
+  for (const operation of assemblyOperations) {
+    const ref = { operationId: operation.id, processId: operation.processId };
+    const line = lines?.get(operation.processId);
+    if (line && isCostedOperationLine(line)) {
+      pricedAssemblyOperations.push({ ...ref, cost: line.cost });
+    } else if (line?.outcome === "INCLUDED") {
+      includedAssemblyOperations.push(ref);
+    } else {
+      unpricedAssemblyOperations.push(ref);
+    }
+  }
+  const operationCostTotal = sum(pricedAssemblyOperations.map((operation) => operation.cost));
   const complete =
     children.every(
       (child) =>
         child.frozenEicCompleteness === "COMPLETE" && child.unreconciledRecipeIds.length === 0,
-    ) && unpricedAssemblyOperations.length === 0;
+    ) &&
+    unpricedAssemblyOperations.length === 0 &&
+    operationEvidence !== "INVALID";
   return {
     rawChildTotal: roundMoney(sum(input.members.map((member) => member.child.eicTotal))),
-    total: roundMoney(sum(children.map((child) => child.reconciledEicTotal))),
+    total: roundMoney(
+      sum(children.map((child) => child.reconciledEicTotal)) + operationCostTotal,
+    ),
     currency: "EUR",
     completeness: complete ? "COMPLETE" : "PARTIAL",
     children,
     unpricedAssemblyOperations,
+    pricedAssemblyOperations,
+    includedAssemblyOperations,
+    operationEvidence,
+    operationCostTotal: roundMoney(operationCostTotal),
     siteInstallationEicOutsideTotal: input.serviceLine ? input.serviceLine.eic.total : null,
   };
+}
+
+/**
+ * Returns the frozen lines only when the evidence verifies and matches this order: each line maps to
+ * one projected assembly operation and any panel-area quantity points at the frozen support input.
+ */
+function operationLines(
+  evidence: FrozenAssemblyOperationCost | undefined,
+  members: readonly AssemblyEicMemberInput[],
+  assemblyOperations: readonly FrozenProductionOperation[],
+): ReadonlyMap<string, FrozenAssemblyOperationCostLine> | null {
+  const lines = verifiedOperationCostLines(evidence);
+  if (!lines) {
+    return null;
+  }
+  const processIds = new Set(assemblyOperations.map((operation) => operation.processId));
+  for (const line of lines.values()) {
+    if (!processIds.has(line.processId)) {
+      return null;
+    }
+    if (isCostedOperationLine(line) && line.quantityProvenance.kind === "SUPPORT_PANEL_FACE_AREA") {
+      const provenance = line.quantityProvenance;
+      const support = members.find((member) => member.child.memberId === provenance.memberId);
+      const trace = support?.child.productionInput.usedRecipes.find(
+        (item) => item.recipeId === provenance.recipeId,
+      );
+      if (
+        !support ||
+        support.child.role !== "SUPPORT_PANEL" ||
+        support.child.productionInput.contentHash !== provenance.productionInputHash ||
+        trace?.quantity !== line.quantity
+      ) {
+        return null;
+      }
+    }
+  }
+  return lines;
 }
 
 function reconcileChild(member: AssemblyEicMemberInput): AssemblyEicChildReconciliation {

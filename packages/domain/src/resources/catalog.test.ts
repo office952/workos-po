@@ -87,6 +87,7 @@ describe("resource catalog", () => {
       "LAB-FORM-SHEET-CASSETTE",
       "LAB-ATTACH-INTERNAL-FRAME",
       "LAB-SITE-INSTALL",
+      "LAB-WORKSHOP-LABOR",
       "SVC-SITE-INSTALL-SUBCONTRACT",
     ]);
   });

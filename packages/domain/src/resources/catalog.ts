@@ -219,6 +219,7 @@ export const SVC_CUT_METAL_STOCK_ID = "SVC-CUT-METAL-STOCK";
 export const LAB_FORM_SHEET_CASSETTE_ID = "LAB-FORM-SHEET-CASSETTE";
 export const LAB_ATTACH_INTERNAL_FRAME_ID = "LAB-ATTACH-INTERNAL-FRAME";
 export const LAB_SITE_INSTALL_ID = "LAB-SITE-INSTALL";
+export const LAB_WORKSHOP_LABOR_ID = "LAB-WORKSHOP-LABOR";
 export const SVC_SITE_INSTALL_SUBCONTRACT_ID = "SVC-SITE-INSTALL-SUBCONTRACT";
 
 export const materialFamilies: readonly MaterialFamily[] = [
@@ -464,6 +465,12 @@ export const resourceCatalog: readonly ResourceDefinition[] = [
   {
     id: LAB_SITE_INSTALL_ID,
     label: "Manoperă montaj la locație",
+    kind: "LABOR",
+    unit: "person_hour",
+  },
+  {
+    id: LAB_WORKSHOP_LABOR_ID,
+    label: "Manoperă atelier",
     kind: "LABOR",
     unit: "person_hour",
   },

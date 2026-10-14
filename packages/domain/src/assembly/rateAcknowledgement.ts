@@ -13,6 +13,8 @@ import {
 } from "./model.js";
 import type { AssemblyQuoteSnapshot } from "./snapshots.js";
 
+const ASSEMBLY_OPERATIONS_MEMBER_LABEL = "Ansamblare";
+
 function legacyChildReason(roleLabel: string): string {
   return `Produsul „${roleLabel}” a fost confirmat înainte de înregistrarea tarifelor folosite, iar acestea nu pot fi reconstituite. Reconfirmă produsul în ansamblu pentru a-l reevalua la tarifele curente.`;
 }
@@ -52,6 +54,28 @@ export function resolveConfirmedChildRecord(
   };
 }
 
+/** Assembly operation rates only feed internal cost, so they never require acknowledgement. */
+function unconfirmedOperationRates(candidate: AssemblyQuoteSnapshot): UnconfirmedRateEvidence[] {
+  return (candidate.operationCost?.lines ?? []).flatMap((line) =>
+    line.outcome === "UNCONFIRMED_RATE"
+      ? [
+          {
+            resourceId: line.resourceId,
+            label: line.resourceLabel,
+            evidenceRowId: line.evidenceRowId,
+            amount: line.rate,
+            currency: line.currency,
+            perUnit: line.unit,
+            source: line.evidenceSource,
+            classification: line.evidenceClassification,
+            memberLabel: ASSEMBLY_OPERATIONS_MEMBER_LABEL,
+            quantity: line.quantity,
+          },
+        ]
+      : [],
+  );
+}
+
 /**
  * Assesses the rates frozen in every member's child quote. `candidate` must be the assembly quote
  * built without an acknowledgement: its content hash binds the assembly truth, child quote
@@ -81,6 +105,7 @@ export function assessAssemblyRateAcknowledgement(input: {
       })),
     );
   }
+  internalCostRates.push(...unconfirmedOperationRates(input.candidate));
   if (priceRates.length > 0) {
     return {
       ok: true,

@@ -18,8 +18,9 @@ import { SurfacePanel } from "../components/SurfacePanel";
 import { TextField } from "../components/TextField";
 import { Worklist } from "../components/Worklist";
 import { WorklistRow } from "../components/WorklistRow";
+import { AssemblyOperationCostPolicyPanel } from "./AssemblyOperationCostPolicyPanel";
 import { invalidateAfterCostEvidenceChange } from "../data/invalidation";
-import { writeResource } from "../data/resourceCache";
+import { invalidateResources, writeResource } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadResourcesAdmin } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
@@ -124,6 +125,7 @@ export function ResourcesAdminPage() {
         return;
       }
       writeResource(resourceKeys.resourcesAdmin(), presented.admin);
+      invalidateResources(resourceKeys.assemblyOperationCostAdmin());
       applyAdmin(presented.admin.rows, presented.admin.canEdit);
       setSaveState("success");
       return;
@@ -306,6 +308,9 @@ export function ResourcesAdminPage() {
               <EmptyState title="Nu există dovezi de cost de afișat." />
             )}
           </SurfacePanel>
+          <div className="operation-cost-admin-band">
+            <AssemblyOperationCostPolicyPanel />
+          </div>
         </>
       ) : null}
     </SlicePage>

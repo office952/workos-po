@@ -166,6 +166,18 @@ Current synthetic V1 and V2 assemblies therefore resolve to `eicCompleteness = P
 
 Regression proof: `packages/domain/src/assembly/assemblyEic.test.ts`.
 
+### Frozen assembly-operation cost evidence (V4 candidate, not merged)
+
+```text
+V4_ASSEMBLY_OPERATION_COST = CANDIDATE / NOT_MERGED / OWNER_ACCEPTANCE_NOT_RECORDED
+EVIDENCE_OWNER = packages/domain/src/assembly/operationCostEvidence.ts
+ORGANIZATION_POLICY = migration 041, append-only versions
+UNKNOWN_COST = ZERO = NEVER
+COMMERCIAL_REPRICING = NO
+```
+
+On the V4 branch, the quote freeze seals a `FrozenAssemblyOperationCost` into the assembly quote snapshot and the order carries it. `reconcileAssemblyEic` prices assembly operations only from that frozen evidence, and only after it verifies the evidence hash and checks that every line maps to one projected assembly operation and that any panel-area quantity points at the frozen support input. Costed and unconfirmed-rate lines add their frozen cost; `INCLUDED` final inspection adds 0; every gap stays unpriced and keeps the result `PARTIAL`. Orders frozen before the evidence existed (`ABSENT`) keep the behavior described above, and evidence that fails verification (`INVALID`) is never trusted and keeps the result `PARTIAL`. Current cost evidence, rates and the organization policy are still never read at reconciliation. Status and gates are recorded in [`ROADMAP.md`](../ROADMAP.md#v4-assembly-production-eic).
+
 ## Child product truth
 
 Each fabricated child stays independently configurable and confirmable.
