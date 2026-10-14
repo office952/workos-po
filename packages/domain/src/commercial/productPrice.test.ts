@@ -39,6 +39,26 @@ describe("manual fixed product commercial", () => {
     expect(withKnownCost.internalCostCompleteness).toBe("PARTIAL");
   });
 
+  it("R-001A keeps commercial net and VAT invariant when internal labor cost changes", () => {
+    const policy = { ...codeDefaultCommercialPolicy(), vatPercent: 21 };
+    const first = projectManualFixedProductPrice(
+      { netPrice: 680, internalCost: 340, internalCostCompleteness: "COMPLETE" },
+      policy,
+    );
+    const second = projectManualFixedProductPrice(
+      { netPrice: 680, internalCost: 420, internalCostCompleteness: "COMPLETE" },
+      policy,
+    );
+    expect(first.commercialStrategy).toBe(MANUAL_FIXED_PRODUCT_STRATEGY);
+    expect(second.commercialStrategy).toBe(MANUAL_FIXED_PRODUCT_STRATEGY);
+    expect([first.netPrice, first.vatAmount, first.grossPrice]).toEqual([680, 142.8, 822.8]);
+    expect([second.netPrice, second.vatAmount, second.grossPrice]).toEqual(
+      [first.netPrice, first.vatAmount, first.grossPrice],
+    );
+    expect(first.internalCost).toBe(340);
+    expect(second.internalCost).toBe(420);
+  });
+
   it("rejects a negative or invalid manual net", () => {
     expect(projectManualFixedProductPrice({ netPrice: -10 }).unavailableReasons).toContain(
       MISSING_MANUAL_PRODUCT_PRICE_REASON,
