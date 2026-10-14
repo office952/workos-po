@@ -159,3 +159,9 @@ No production deployment, real Cloud access/write, business DB mutation, old-rep
 No business database, ORM, migrations, seeds or destructive data operations without explicit Owner authorization. Existing automated tests use isolated synthetic databases; they do not authorize applying migrations/seeds to an Owner reference runtime or real business root.
 
 Do not stop, reclaim ports, reset or repurpose the Owner reference runtime for proof. Real data must remain outside Git. Report exact candidate checks and unresolved limits; do not copy old acceptance as new proof.
+
+## Mandatory Notion governance
+
+**Owner-approved: Notion is the permanent journal for WorkOS past, present and future development.** Before any actionable planning, requirement change, implementation, docs/tests/config change, commit, push, PR, merge, deployment or migration, verify a durable record in the [WorkOS implementation registry](https://app.notion.com/p/cc42b70f86354dd7b08e6a00b4cb5156), with its stable ID, exact URL, scope and the separately applicable Owner GO. Log the result and evidence afterward. New scope means updating Notion **before** changing it.
+
+Canonical procedure: [docs/governance/NOTION_JOURNAL_GATE_V1.md](docs/governance/NOTION_JOURNAL_GATE_V1.md). If the Notion record is missing, unverifiable, or Notion is inaccessible, **STOP BEFORE WRITE**. A PR must include its implementation record ID/URL. Neither a Notion entry nor this rule authorizes merge, real-data operations or deploy. Notion is for **development governance**, never a business-runtime dependency.
