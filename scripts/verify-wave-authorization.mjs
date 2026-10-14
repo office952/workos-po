@@ -2,6 +2,7 @@
 // WorkOS Governance V2: verifies an Owner-signed wave authorization read only from the protected base ref.
 // It never calls Notion and never grants merge, deploy or real-system authority.
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -47,6 +48,9 @@ const EVIDENCE_ID = /^[A-Z]{2,}(-[A-Z0-9]+)*-[0-9]{3,}$/;
 const NOTION_URL = /^https:\/\/app\.notion\.com\/p\/[0-9a-f]{32}$/i;
 const PRINCIPAL = /^[A-Za-z0-9._@+-]{3,128}$/;
 const REPOSITORY = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+const SHA256_HEX = /^[0-9a-f]{64}$/;
+export const AUTHORIZATION_MODES = Object.freeze(["V1", "V2"]);
+// Conflict clearance is authority: it may only come from a newer Owner-signed manifest, never from the ledger.
 const LEDGER_AUTHORITY_KEYS = [
   "authorizedActions",
   "prohibitedActions",
@@ -55,6 +59,10 @@ const LEDGER_AUTHORITY_KEYS = [
   "ownerGo",
   "validUntil",
   "authorization",
+  "revision",
+  "resolvedByRevision",
+  "resolvesConflicts",
+  "resolved",
 ];
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -206,7 +214,23 @@ export function validateManifest(manifest, expectedRecordId) {
   if (!Array.isArray(manifest.evidence) || manifest.evidence.length === 0) {
     reasons.push("evidence must link at least the Owner decision record.");
   }
+  if (manifest.resolvesConflicts !== undefined) {
+    const resolves = manifest.resolvesConflicts;
+    if (
+      !Array.isArray(resolves) ||
+      resolves.length === 0 ||
+      resolves.some((item) => !Number.isInteger(item?.seq) || item.seq < 1 || !SHA256_HEX.test(item?.sha256 ?? ""))
+    ) {
+      reasons.push("resolvesConflicts must list {seq, sha256} of the exact SCOPE_CONFLICT ledger lines.");
+    } else if (!Number.isInteger(manifest.revision) || manifest.revision < 2) {
+      reasons.push("resolvesConflicts requires a superseding revision; revision 1 has no earlier conflict to resolve.");
+    }
+  }
   return reasons;
+}
+
+export function ledgerLineHash(line) {
+  return createHash("sha256").update(normalize(line), "utf8").digest("hex");
 }
 
 export function verifyOwnerSignature({ manifestText, signatureText, allowedSignersText, principal }) {
@@ -268,8 +292,19 @@ function parseLedgerLines(text) {
     .filter((line) => line.trim());
 }
 
+// A SCOPE_CONFLICT is cleared only by the Owner-signed manifest in force: a superseding revision, approved
+// after the conflict was raised, that names the exact ledger line (seq + SHA-256). Ledger content never clears it.
+function isConflictResolved(entry, line, authorization) {
+  const resolves = authorization?.resolvesConflicts;
+  if (!Array.isArray(resolves) || !Number.isInteger(authorization.revision) || authorization.revision < 2) return false;
+  if (!isIsoInstant(entry.at) || !isIsoInstant(authorization.approvedAt)) return false;
+  if (Date.parse(entry.at) >= Date.parse(authorization.approvedAt)) return false;
+  const hash = ledgerLineHash(line);
+  return resolves.some((item) => item?.seq === entry.seq && item?.sha256 === hash);
+}
+
 // The ledger is an append-only chronology. It records journal synchronization; it never carries authority.
-export function evaluateSyncLedger({ baseText, headText, manifestRevision }) {
+export function evaluateSyncLedger({ baseText, headText, authorization }) {
   const errors = [];
   const baseLines = parseLedgerLines(baseText);
   const headLines = parseLedgerLines(headText);
@@ -277,12 +312,17 @@ export function evaluateSyncLedger({ baseText, headText, manifestRevision }) {
     errors.push("sync ledger history was rewritten; entries are append-only.");
   }
   const entries = [];
+  const conflicts = [];
   headLines.forEach((line, index) => {
     let entry;
     try {
       entry = JSON.parse(line);
     } catch {
       errors.push(`sync ledger line ${index + 1} is not JSON.`);
+      return;
+    }
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      errors.push(`sync ledger line ${index + 1} is not a JSON object.`);
       return;
     }
     if (entry.seq !== index + 1) errors.push(`sync ledger entry ${index + 1} has seq ${entry.seq}.`);
@@ -300,18 +340,17 @@ export function evaluateSyncLedger({ baseText, headText, manifestRevision }) {
       errors.push(`sync ledger entry ${index + 1} is out of chronological order.`);
     }
     entries.push(entry);
+    if (entry.state === "SCOPE_CONFLICT" && !isConflictResolved(entry, line, authorization)) {
+      conflicts.push(entry.seq ?? index + 1);
+    }
   });
+  // An unresolved conflict dominates: malformed or forged lines must never make it look cleared.
+  if (conflicts.length) return { state: "SCOPE_CONFLICT", errors, unreconciled: conflicts };
   if (errors.length) return { state: "SYNC_FAILED", errors, unreconciled: [] };
 
   const reconciled = new Set(
     entries.filter((entry) => entry.state === "SYNC_CONFIRMED" && Number.isInteger(entry.reconciles)).map((entry) => entry.reconciles),
   );
-  const conflict = entries.find(
-    (entry) =>
-      entry.state === "SCOPE_CONFLICT" &&
-      !(Number.isInteger(entry.resolvedByRevision) && manifestRevision >= entry.resolvedByRevision),
-  );
-  if (conflict) return { state: "SCOPE_CONFLICT", errors, unreconciled: [conflict.seq] };
   const open = entries.filter((entry) => entry.state !== "SYNC_CONFIRMED" && !reconciled.has(entry.seq));
   if (entries.length === 0) return { state: "SYNC_PENDING", errors, unreconciled: [] };
   if (open.some((entry) => entry.state === "SYNC_FAILED")) {
@@ -410,11 +449,13 @@ export function evaluateWaveAuthorization({ cwd, baseRef, headRef, recordId, act
   const ledger = evaluateSyncLedger({
     baseText: readAtRef(cwd, baseSha, ledgerPath(recordId)),
     headText: readAtRef(cwd, headSha, ledgerPath(recordId)),
-    manifestRevision: revision,
+    authorization: manifest,
   });
   reasons.push(...ledger.errors);
   if (ledger.state === "SCOPE_CONFLICT") {
-    reasons.push(`SCOPE_CONFLICT recorded in the sync ledger (seq ${ledger.unreconciled.join(", ")}); a new Owner revision is required.`);
+    reasons.push(
+      `SCOPE_CONFLICT recorded in the sync ledger (seq ${ledger.unreconciled.join(", ")}); only a newer Owner-signed revision listing it in resolvesConflicts can clear it.`,
+    );
   }
 
   const result = {
@@ -467,7 +508,15 @@ export function evaluateAuthorizationChanges({ cwd, baseRef, headRef, now = new 
       const manifestPath = `${AUTHORIZATION_DIR}${recordId}.json`;
       const manifestText = readAtRef(cwd, headSha, manifestPath);
       const signatureText = readAtRef(cwd, headSha, `${manifestPath}.sig`);
-      if (manifestText === null && signatureText === null) continue;
+      const previous = readAtRef(cwd, baseSha, manifestPath);
+      if (manifestText === null && signatureText === null) {
+        if (previous !== null) {
+          reasons.push(
+            `${recordId}: authorizations are never deleted; append a revocation instead (deletion would allow replaying an older revision).`,
+          );
+        }
+        continue;
+      }
       if (manifestText === null || signatureText === null) {
         reasons.push(`${recordId}: manifest and signature must be added or removed together.`);
         continue;
@@ -490,7 +539,6 @@ export function evaluateAuthorizationChanges({ cwd, baseRef, headRef, now = new 
       if (!signerPrincipals(allowedSignersText).includes(principal) || !signature.ok) {
         reasons.push(`${recordId}: not signed by a registered Owner key on the protected base.`);
       }
-      const previous = readAtRef(cwd, baseSha, manifestPath);
       if (previous !== null) {
         try {
           if (manifest.revision <= JSON.parse(previous).revision) {
@@ -499,6 +547,8 @@ export function evaluateAuthorizationChanges({ cwd, baseRef, headRef, now = new 
         } catch {
           reasons.push(`${recordId}: previous authorization on base is unreadable.`);
         }
+      } else if (manifest.resolvesConflicts !== undefined) {
+        reasons.push(`${recordId}: resolvesConflicts must supersede an existing Owner authorization on the protected base.`);
       }
     }
   }
@@ -516,11 +566,42 @@ function parseArgs(argv) {
   return options;
 }
 
+function prFieldValues(body, key) {
+  return normalize(body)
+    .split("\n")
+    .filter((line) => line.trimStart().toLowerCase().startsWith(`${key.toLowerCase()}:`))
+    .map((line) => line.trimStart().slice(key.length + 1).trim());
+}
+
 function prField(body, key) {
-  const lines = normalize(body).split("\n").filter((line) =>
-    line.trimStart().toLowerCase().startsWith(`${key.toLowerCase()}:`),
-  );
-  return lines.length === 1 ? lines[0].trimStart().slice(key.length + 1).trim() : null;
+  const values = prFieldValues(body, key);
+  return values.length === 1 ? values[0] : null;
+}
+
+// Exactly one `Authorization Mode:` line whose value is exactly V1 or V2. Nothing defaults to V1.
+export function parseAuthorizationMode(body) {
+  const values = prFieldValues(typeof body === "string" ? body : "", "Authorization Mode");
+  if (values.length === 0) return { mode: null, error: "Authorization Mode is missing; declare exactly `Authorization Mode: V1` or `V2`." };
+  if (values.length > 1) return { mode: null, error: "Authorization Mode is declared more than once." };
+  if (!AUTHORIZATION_MODES.includes(values[0])) {
+    return { mode: null, error: `Authorization Mode ${JSON.stringify(values[0])} is not exactly V1 or V2.` };
+  }
+  return { mode: values[0], error: null };
+}
+
+function reportManualV1(reason) {
+  console.log("AUTHORIZATION_MODE=V1");
+  console.log("OWNER_SIGNATURE=NOT_CHECKED");
+  console.log("MANUAL_V1_REVIEW_REQUIRED=YES");
+  console.log(`::warning title=V1 manual governance::${reason} No cryptographic Owner authorization was verified.`);
+  console.log("GOVERNANCE_V2_CI=V1_MANUAL_REVIEW_REQUIRED");
+  return 0;
+}
+
+function stopCi(reason) {
+  console.error(`- ${reason}`);
+  console.log("GOVERNANCE_V2_CI=STOP");
+  return 1;
 }
 
 function originRepository(cwd) {
@@ -572,32 +653,25 @@ function runCi(options) {
   try {
     payload = JSON.parse(readFileSync(eventPath ?? "", "utf8"));
   } catch {
-    console.error("- cannot read the pull request event payload.");
-    console.log("GOVERNANCE_V2_CI=STOP");
-    return 1;
+    return stopCi("cannot read the pull request event payload.");
   }
   const baseRef = options.base ?? "HEAD^1";
   const headRef = options.head ?? "HEAD";
   const baseSha = resolveCommit(cwd, baseRef);
-  if (!baseSha) {
-    console.error(`- cannot resolve protected base ${baseRef}.`);
-    console.log("GOVERNANCE_V2_CI=STOP");
-    return 1;
-  }
+  if (!baseSha) return stopCi(`cannot resolve protected base ${baseRef}.`);
+  const body = payload?.pull_request?.body;
+  const declared = parseAuthorizationMode(body);
   if (!isV2Active(cwd, baseSha)) {
-    console.log(`V2_ACTIVE=NO base=${baseSha}; V1 metadata gate and Owner review remain the governance control.`);
-    console.log("GOVERNANCE_V2_CI=PASS");
-    return 0;
+    console.log(`V2_ACTIVE=NO base=${baseSha}`);
+    if (declared.mode === "V2") return stopCi("Authorization Mode V2 is declared, but V2 is not active on the protected base.");
+    return reportManualV1("V2 is not active on the protected base; the V1 metadata gate and Owner review govern this PR.");
   }
   const changes = evaluateAuthorizationChanges({ cwd, baseRef, headRef });
   if (changes.gate !== "PASS") return report(changes, "GOVERNANCE_V2_CI");
 
-  const body = payload?.pull_request?.body ?? "";
-  const mode = prField(body, "Authorization Mode") ?? "V1";
-  if (!/^V2\b/i.test(mode)) {
-    console.log(`AUTHORIZATION_MODE=V1; live Notion verification is declared by the PR author and checked by review.`);
-    console.log("GOVERNANCE_V2_CI=PASS");
-    return 0;
+  if (declared.error) return stopCi(declared.error);
+  if (declared.mode === "V1") {
+    return reportManualV1("Authorization Mode V1: live Notion verification is declared by the PR author and must be checked by review.");
   }
   const headRepo = payload?.pull_request?.head?.repo?.full_name;
   const repository = payload?.repository?.full_name;

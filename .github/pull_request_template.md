@@ -18,4 +18,4 @@ Authorization Mode: V1
 
 Governance: [NOTION_JOURNAL_GATE_V1](https://github.com/office952/workos-po/blob/main/docs/governance/NOTION_JOURNAL_GATE_V1.md) · [NOTION_JOURNAL_GATE_V2](https://github.com/office952/workos-po/blob/main/docs/governance/NOTION_JOURNAL_GATE_V2.md) (applies only once on `main`)
 
-**Replace the sample record ID/URL. Do not reuse N-006 for unrelated PRs.** Use `Authorization Mode: V2` only when V2 is active on `main` and a signed wave authorization exists.
+**Replace the sample record ID/URL. Do not reuse N-006 for unrelated PRs.** Keep exactly one `Authorization Mode:` line, with the value exactly `V1` or `V2`. Use `V2` only when V2 is active on `main` and a signed wave authorization exists. `V1` is manual governance: CI reports it as `V1_MANUAL_REVIEW_REQUIRED`, never as a verified Owner signature.

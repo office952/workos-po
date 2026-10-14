@@ -17,7 +17,9 @@ import {
   evaluateAuthorizationChanges,
   evaluateSyncLedger,
   evaluateWaveAuthorization,
+  ledgerLineHash,
   ledgerPath,
+  parseAuthorizationMode,
 } from "./verify-wave-authorization.mjs";
 
 const script = fileURLToPath(new URL("./verify-wave-authorization.mjs", import.meta.url));
@@ -293,47 +295,144 @@ describe("Notion synchronization ledger", () => {
   const url = `https://app.notion.com/p/${"c".repeat(32)}`;
   const line = (entry) => JSON.stringify(entry);
   const pending = { seq: 1, at: "2026-10-14T10:00:00Z", event: "commit abc during Notion outage", state: "SYNC_PENDING" };
+  const conflictEntry = { seq: 1, at: "2026-10-14T10:00:00Z", event: "pricing change needed", state: "SCOPE_CONFLICT" };
 
   test("pending entries stay pending until reconciled", () => {
-    assert.equal(evaluateSyncLedger({ baseText: null, headText: line(pending), manifestRevision: 1 }).state, "SYNC_PENDING");
+    assert.equal(evaluateSyncLedger({ baseText: null, headText: line(pending) }).state, "SYNC_PENDING");
     const reconciled = [line(pending), line({ seq: 2, at: "2026-10-14T11:00:00Z", event: "journal restored", state: "SYNC_CONFIRMED", notionUrl: url, reconciles: 1 })].join("\n");
-    assert.equal(evaluateSyncLedger({ baseText: line(pending), headText: reconciled, manifestRevision: 1 }).state, "SYNC_CONFIRMED");
+    assert.equal(evaluateSyncLedger({ baseText: line(pending), headText: reconciled }).state, "SYNC_CONFIRMED");
   });
 
   test("failed synchronization is reported, not hidden", () => {
     const failed = { ...pending, state: "SYNC_FAILED" };
-    const result = evaluateSyncLedger({ baseText: null, headText: line(failed), manifestRevision: 1 });
+    const result = evaluateSyncLedger({ baseText: null, headText: line(failed) });
     assert.equal(result.state, "SYNC_FAILED");
     assert.deepEqual(result.unreconciled, [1]);
   });
 
   test("SYNC_CONFIRMED cannot be claimed without the Notion journal URL", () => {
-    const result = evaluateSyncLedger({ baseText: null, headText: line({ ...pending, state: "SYNC_CONFIRMED" }), manifestRevision: 1 });
+    const result = evaluateSyncLedger({ baseText: null, headText: line({ ...pending, state: "SYNC_CONFIRMED" }) });
     assert.ok(result.errors.some((error) => /without the Notion journal URL/.test(error)));
   });
 
   test("history cannot be rewritten", () => {
-    const result = evaluateSyncLedger({ baseText: line(pending), headText: line({ ...pending, event: "rewritten" }), manifestRevision: 1 });
+    const result = evaluateSyncLedger({ baseText: line(pending), headText: line({ ...pending, event: "rewritten" }) });
     assert.ok(result.errors.some((error) => /append-only/.test(error)));
   });
 
   test("pending synchronization never carries authority", () => {
-    const result = evaluateSyncLedger({ baseText: null, headText: line({ ...pending, authorizedActions: ["MERGE"] }), manifestRevision: 1 });
+    const result = evaluateSyncLedger({ baseText: null, headText: line({ ...pending, authorizedActions: ["MERGE"] }) });
     assert.ok(result.errors.some((error) => /authority field authorizedActions/.test(error)));
   });
 
   test("entries must stay chronological and sequential", () => {
     const text = [line(pending), line({ ...pending, seq: 3, at: "2026-10-13T00:00:00Z" })].join("\n");
-    const result = evaluateSyncLedger({ baseText: null, headText: text, manifestRevision: 1 });
+    const result = evaluateSyncLedger({ baseText: null, headText: text });
     assert.ok(result.errors.some((error) => /seq 3/.test(error)));
     assert.ok(result.errors.some((error) => /chronological/.test(error)));
   });
 
-  test("SCOPE_CONFLICT stops the wave until a new Owner revision resolves it", () => {
-    const conflict = line({ seq: 1, at: "2026-10-14T10:00:00Z", event: "pricing change needed", state: "SCOPE_CONFLICT", resolvedByRevision: 2 });
-    const cwd = scenario({ head: { "src/feature/a.ts": "x\n", [ledgerPath(RECORD)]: `${conflict}\n` } });
+  test("SCOPE_CONFLICT stops the wave", () => {
+    const cwd = scenario({ head: { "src/feature/a.ts": "x\n", [ledgerPath(RECORD)]: `${line(conflictEntry)}\n` } });
     assertStop(evaluate(cwd), /SCOPE_CONFLICT recorded/);
-    assert.equal(evaluateSyncLedger({ baseText: null, headText: conflict, manifestRevision: 2 }).state, "SYNC_PENDING");
+  });
+
+  test("regression: ledger resolvedByRevision equal to the signed revision does not clear the conflict", () => {
+    const forged = line({ ...conflictEntry, resolvedByRevision: 1 });
+    const result = evaluateSyncLedger({ baseText: null, headText: forged, authorization: manifest({ revision: 1 }) });
+    assert.equal(result.state, "SCOPE_CONFLICT");
+    assert.deepEqual(result.unreconciled, [1]);
+    assert.ok(result.errors.some((error) => /authority field resolvedByRevision/.test(error)));
+    const cwd = scenario({ head: { "src/feature/a.ts": "x\n", [ledgerPath(RECORD)]: `${forged}\n` } });
+    assertStop(evaluate(cwd), /SCOPE_CONFLICT recorded/);
+  });
+
+  test("ledger clearance markers for older, current or future revisions never clear the conflict", () => {
+    for (const revision of [0, 1, 2, 99]) {
+      for (const marker of [{ resolvedByRevision: revision }, { revision }, { resolved: true }]) {
+        const forged = line({ ...conflictEntry, ...marker });
+        for (const authorization of [manifest({ revision: 1 }), manifest({ revision: 2 }), undefined]) {
+          const result = evaluateSyncLedger({ baseText: null, headText: forged, authorization });
+          assert.equal(result.state, "SCOPE_CONFLICT", `${JSON.stringify(marker)} @ ${authorization?.revision}`);
+        }
+      }
+    }
+  });
+
+  test("an appended ledger line cannot clear an earlier conflict", () => {
+    const clearances = [
+      { seq: 2, at: "2026-10-14T11:00:00Z", event: "conflict cleared", state: "SYNC_CONFIRMED", notionUrl: url, reconciles: 1 },
+      { seq: 2, at: "2026-10-14T11:00:00Z", event: "conflict cleared", state: "SYNC_PENDING", resolvesConflicts: [{ seq: 1, sha256: ledgerLineHash(line(conflictEntry)) }] },
+    ];
+    for (const clearance of clearances) {
+      const text = [line(conflictEntry), line(clearance)].join("\n");
+      const result = evaluateSyncLedger({ baseText: line(conflictEntry), headText: text, authorization: manifest() });
+      assert.equal(result.state, "SCOPE_CONFLICT", JSON.stringify(clearance));
+    }
+  });
+
+  test("a historical conflict line cannot be edited or removed to escape it", () => {
+    const base = line(conflictEntry);
+    for (const head of [line({ ...conflictEntry, state: "SYNC_CONFIRMED", notionUrl: url }), ""]) {
+      const result = evaluateSyncLedger({ baseText: base, headText: head, authorization: manifest() });
+      assert.notEqual(result.state, "SYNC_CONFIRMED");
+      assert.notEqual(result.state, "SYNC_PENDING");
+      assert.ok(result.errors.some((error) => /append-only/.test(error)));
+    }
+  });
+
+  test("a newer Owner-signed revision naming the exact conflict line clears it", () => {
+    const conflict = line(conflictEntry);
+    const revision2 = manifest({ revision: 2, supersedes: 1, approvedAt: "2026-10-14T11:00:00Z", resolvesConflicts: [{ seq: 1, sha256: ledgerLineHash(conflict) }] });
+    const result = evaluateSyncLedger({ baseText: conflict, headText: conflict, authorization: revision2 });
+    assert.equal(result.state, "SYNC_PENDING");
+    assert.deepEqual(result.unreconciled, [1]);
+
+    const cwd = scenario({
+      authorization: revision2,
+      base: { [ledgerPath(RECORD)]: `${conflict}\n` },
+      head: { "src/feature/a.ts": "x\n", [ledgerPath(RECORD)]: `${conflict}\n${line({ ...pending, seq: 2, at: "2026-10-14T11:30:00Z" })}\n` },
+    });
+    const gate = evaluate(cwd);
+    assert.equal(gate.gate, "PASS", gate.reasons.join("\n"));
+    assert.equal(gate.syncState, "SYNC_PENDING");
+  });
+
+  test("a signed resolution that does not match the conflict exactly does not clear it", () => {
+    const conflict = line(conflictEntry);
+    const hash = ledgerLineHash(conflict);
+    const cases = [
+      ["different line content", { resolvesConflicts: [{ seq: 1, sha256: ledgerLineHash(line({ ...conflictEntry, event: "other" })) }] }],
+      ["different seq", { resolvesConflicts: [{ seq: 2, sha256: hash }] }],
+      ["approved before the conflict was raised", { approvedAt: "2026-10-14T09:00:00Z", resolvesConflicts: [{ seq: 1, sha256: hash }] }],
+      ["revision 1 cannot resolve", { revision: 1, resolvesConflicts: [{ seq: 1, sha256: hash }] }],
+    ];
+    for (const [name, overrides] of cases) {
+      const authorization = manifest({ revision: 2, supersedes: 1, approvedAt: "2026-10-14T11:00:00Z", ...overrides });
+      const result = evaluateSyncLedger({ baseText: null, headText: conflict, authorization });
+      assert.equal(result.state, "SCOPE_CONFLICT", name);
+    }
+  });
+
+  test("a later conflict is not pre-cleared by an earlier resolution", () => {
+    const first = line(conflictEntry);
+    const second = line({ ...conflictEntry, seq: 2, at: "2026-10-14T12:00:00Z", event: "second conflict" });
+    const authorization = manifest({ revision: 2, supersedes: 1, approvedAt: "2026-10-14T11:00:00Z", resolvesConflicts: [{ seq: 1, sha256: ledgerLineHash(first) }] });
+    const result = evaluateSyncLedger({ baseText: first, headText: `${first}\n${second}`, authorization });
+    assert.equal(result.state, "SCOPE_CONFLICT");
+    assert.deepEqual(result.unreconciled, [2]);
+  });
+
+  test("resolvesConflicts is only valid in a superseding manifest", () => {
+    const hash = "d".repeat(64);
+    assertStop(evaluate(scenario({ authorization: manifest({ resolvesConflicts: [{ seq: 1, sha256: hash }] }) })), /superseding revision/);
+    assertStop(evaluate(scenario({ authorization: manifest({ revision: 2, resolvesConflicts: [{ seq: 1 }] }) })), /resolvesConflicts must list/);
+  });
+
+  test("a non-object ledger line fails closed", () => {
+    for (const text of ["null", "1", "[]"]) {
+      assert.equal(evaluateSyncLedger({ baseText: null, headText: text }).state, "SYNC_FAILED", text);
+    }
   });
 
   test("wave ledger is writable by the wave without widening its scope", () => {
@@ -389,6 +488,18 @@ describe("authorization-change PRs", () => {
     assert.equal(changes(next).gate, "PASS", changes(next).reasons.join("\n"));
   });
 
+  test("an authorization cannot be deleted to make room for replaying an older revision", () => {
+    const cwd = scenario({ head: { [MANIFEST_PATH]: null, [`${MANIFEST_PATH}.sig`]: null } });
+    assertStop(changes(cwd), /never deleted; append a revocation/);
+  });
+
+  test("a conflict resolution must supersede an existing base authorization", () => {
+    const resolution = manifest({ revision: 2, supersedes: 1, resolvesConflicts: [{ seq: 1, sha256: "e".repeat(64) }] });
+    assertStop(changes(scenario({ authorization: null, head: signedManifestFiles(resolution) })), /must supersede an existing/);
+    const superseding = scenario({ head: signedManifestFiles(resolution) });
+    assert.equal(changes(superseding).gate, "PASS", changes(superseding).reasons.join("\n"));
+  });
+
   test("ordinary implementation PRs are untouched by the guard", () => {
     assert.equal(changes(scenario()).gate, "PASS");
   });
@@ -411,10 +522,68 @@ describe("CLI", () => {
     });
   }
 
-  test("CI reports V2 inactive when the protected base has no V2 contract", () => {
-    const r = ci(scenario({ v2: false }), "Authorization Mode: V2");
+  const v1Body = `Notion Record ID: ${RECORD}\nAuthorization Mode: V1`;
+
+  test("CI keeps the V1 path while V2 is inactive, reported as manual review, never as signed authorization", () => {
+    for (const body of [v1Body, "Notion Record ID: N-006"]) {
+      const r = ci(scenario({ v2: false }), body);
+      assert.equal(r.status, 0, r.stderr);
+      assert.match(r.stdout, /V2_ACTIVE=NO/);
+      assert.match(r.stdout, /MANUAL_V1_REVIEW_REQUIRED=YES/);
+      assert.match(r.stdout, /OWNER_SIGNATURE=NOT_CHECKED/);
+      assert.match(r.stdout, /GOVERNANCE_V2_CI=V1_MANUAL_REVIEW_REQUIRED/);
+      assert.doesNotMatch(r.stdout, /GOVERNANCE_V2_CI=PASS|WAVE_AUTHORIZATION=VALID|OWNER_SIGNATURE=VERIFIED/);
+    }
+  });
+
+  test("CI refuses a V2 claim while V2 is inactive on the protected base", () => {
+    const r = ci(scenario({ v2: false }), `Authorization Mode: V2\nNotion Record ID: ${RECORD}`);
+    assert.notEqual(r.status, 0);
+    assert.match(r.stdout, /GOVERNANCE_V2_CI=STOP/);
+    assert.match(r.stderr, /not active/);
+  });
+
+  test("CI with V2 active accepts explicit V1 only as manual review", () => {
+    const r = ci(scenario(), v1Body);
     assert.equal(r.status, 0, r.stderr);
-    assert.match(r.stdout, /V2_ACTIVE=NO/);
+    assert.match(r.stdout, /AUTHORIZATION_MODE=V1/);
+    assert.match(r.stdout, /MANUAL_V1_REVIEW_REQUIRED=YES/);
+    assert.match(r.stdout, /::warning title=V1 manual governance::/);
+    assert.doesNotMatch(r.stdout, /GOVERNANCE_V2_CI=PASS|OWNER_SIGNATURE=VERIFIED/);
+  });
+
+  test("CI with V2 active refuses a missing, duplicated or unrecognized Authorization Mode", () => {
+    const bodies = [
+      [`Notion Record ID: ${RECORD}`, /missing/],
+      [`${v1Body}\nAuthorization Mode: V2`, /more than once/],
+      [`${v1Body}\nAuthorization Mode: V1`, /more than once/],
+      [`Notion Record ID: ${RECORD}\nAuthorization Mode: V1 | V2`, /not exactly V1 or V2/],
+      [`Notion Record ID: ${RECORD}\nAuthorization Mode: V2-signed`, /not exactly V1 or V2/],
+      [`Notion Record ID: ${RECORD}\nAuthorization Mode: v1`, /not exactly V1 or V2/],
+      [`Notion Record ID: ${RECORD}\nAuthorization Mode: V3`, /not exactly V1 or V2/],
+      [`Notion Record ID: ${RECORD}\nAuthorization Mode:`, /not exactly V1 or V2/],
+    ];
+    for (const [body, pattern] of bodies) {
+      const r = ci(scenario(), body);
+      assert.notEqual(r.status, 0, body);
+      assert.match(r.stdout, /GOVERNANCE_V2_CI=STOP/, body);
+      assert.match(r.stderr, pattern, body);
+    }
+  });
+
+  test("CI with V2 active refuses a pull request without a body", () => {
+    const r = ci(scenario(), null);
+    assert.notEqual(r.status, 0);
+    assert.match(r.stderr, /Authorization Mode is missing/);
+  });
+
+  test("parseAuthorizationMode accepts only one exact V1 or V2 declaration", () => {
+    assert.deepEqual(parseAuthorizationMode("Authorization Mode: V1"), { mode: "V1", error: null });
+    assert.deepEqual(parseAuthorizationMode("  authorization mode:   V2  "), { mode: "V2", error: null });
+    assert.deepEqual(parseAuthorizationMode("Authorization Mode: V2\r\nScope: x"), { mode: "V2", error: null });
+    for (const body of [undefined, null, "", "Authorization Mode: V2 ok", "Authorization Mode: V1\nAuthorization Mode: V1"]) {
+      assert.equal(parseAuthorizationMode(body).mode, null, String(body));
+    }
   });
 
   test("CI fails a V2 PR without a protected Owner authorization", () => {
