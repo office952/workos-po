@@ -434,12 +434,9 @@ export function ConfiguratorPage({
       if (editedDuringFlight) {
         setPricedResultKey(sentKey);
       } else {
-        setPricedResultKey(
-          commercialResultKey({
-            manualNetDraft: String(presented.commercial?.netPrice ?? manualNetDraft),
-            reviewId: preview.reviewId,
-          }),
-        );
+        // Price confirmation belongs to the exact submitted draft, even if the
+        // server rounds the numeric net or the operator typed a decimal comma.
+        setPricedResultKey(sentKey);
       }
       if (assemblyId && memberRole) {
         await postJson(`/api/assemblies/${encodeURIComponent(assemblyId)}/members`, {
