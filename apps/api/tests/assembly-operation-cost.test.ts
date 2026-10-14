@@ -121,8 +121,8 @@ async function confirmedAssembly(api: Client, label: string): Promise<string> {
   expect(created.status).toBe(201);
   const assemblyId = ((await json(created)).assembly as { assemblyId: string }).assemblyId;
   for (const member of [
-    { role: "SUPPORT_PANEL", values: acmValues, reviewId: await reviewId(api, ACM_CASSETTE_NONE_PRODUCT_CODE, acmValues) },
-    { role: "SIGNAGE_LETTERS", values: lettersValues, reviewId: await reviewId(api, CANONICAL_PRODUCT_CODE, lettersValues) },
+    { role: "SUPPORT_PANEL", manualProductNetPrice: 300, values: acmValues, reviewId: await reviewId(api, ACM_CASSETTE_NONE_PRODUCT_CODE, acmValues) },
+    { role: "SIGNAGE_LETTERS", manualProductNetPrice: 400, values: lettersValues, reviewId: await reviewId(api, CANONICAL_PRODUCT_CODE, lettersValues) },
   ]) {
     expect((await api.post(`/api/assemblies/${assemblyId}/members`, member)).status).toBe(200);
   }

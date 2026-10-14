@@ -264,6 +264,13 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       body,
       isOwner(c),
     );
+    if (
+      !priced.ok &&
+      "error" in priced &&
+      (priced.error === "pricing_method_not_allowed" || priced.error === "invalid_pricing_method")
+    ) {
+      return c.json({ error: priced.error, reasons: priced.reasons }, 400);
+    }
     if (priced.ok) {
       const frozen = freezeQuoteSnapshot(
         compiled.truth,

@@ -463,6 +463,7 @@ describe("request attachments documents V1", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: {
             ...lettersValues,
             "root.inscription": "ATTACH",

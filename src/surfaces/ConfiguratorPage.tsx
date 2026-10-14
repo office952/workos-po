@@ -296,6 +296,12 @@ export function ConfiguratorPage({
     };
   }
 
+  function currentTransportValues(): DraftValues {
+    return schemaRef.current
+      ? valuesForTransport(drafts, schemaRef.current)
+      : valuesBeforeSchema(drafts);
+  }
+
   function currentCommercialResultKey(reviewId: string | null = preview?.reviewId ?? null): string {
     return commercialResultKey({ manualNetDraft, reviewId });
   }
@@ -826,17 +832,24 @@ export function ConfiguratorPage({
               {confirmation.completeness !== "COMPLETE" && confirmation.financialVisible ? (
                 <InlineAlert tone="pending" title="Cost intern incomplet">
                   Poți pregăti prețul comercial independent de aceste costuri.
-                  Acceptarea și comanda rămân supuse verificărilor interne existente.
+                  Acceptarea și comanda rămân supuse verificărilor interne existente.{" "}
+                  {confirmation.costCompletenessIssues.length > 0 ? (
+                    <a className="text-link" href="#cost-intern-gaps">
+                      Vezi ce lipsește
+                    </a>
+                  ) : null}
                 </InlineAlert>
               ) : null}
-              <Button
-                disabled={confirmPending}
-                onClick={() => {
-                  void confirm();
-                }}
-              >
-                {serverCustomerPriceReady ? "Actualizează prețul" : "Confirmă prețul"}
-              </Button>
+              {confirmation.manualProductPriceAuthorized ? (
+                <Button
+                  disabled={confirmPending}
+                  onClick={() => {
+                    void confirm();
+                  }}
+                >
+                  {serverCustomerPriceReady ? "Actualizează prețul" : "Confirmă prețul"}
+                </Button>
+              ) : null}
             </>
           )}
         </SurfacePanel>
@@ -860,7 +873,7 @@ export function ConfiguratorPage({
               Actualizează prețul înainte de a îngheța oferta.
             </InlineAlert>
           ) : null}
-          {priceNotReady && priceIsCurrent ? (
+          {priceNotReady && priceIsCurrent && confirmation?.manualProductPriceAuthorized ? (
             <InlineAlert tone="blocked" title="Prețul nu este gata">
               Introdu și confirmă un preț net manual valid înainte de a îngheța oferta.
             </InlineAlert>

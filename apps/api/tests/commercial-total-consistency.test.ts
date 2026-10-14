@@ -60,6 +60,7 @@ async function freezeQuote(
     "POST",
     `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`,
     {
+      manualProductNetPrice: 400,
       values,
       reviewId: preview.reviewId,
       customerId,
@@ -202,15 +203,15 @@ describe("commercial total consistency for standalone quotes with site installat
     const withInstallation = await freezeQuote(owner, "MONTAJ", customerId, requestId);
     const productOnly = await freezeQuote(owner, "PRODUS", customerId);
     expect(withInstallation.schemaVersion).toBe(2);
-    expect(withInstallation.commercial.grossPrice).toBe(624.82);
-    expect(withInstallation.jobCommercial?.grossPrice).toBe(866.82);
+    expect(withInstallation.commercial.grossPrice).toBe(484);
+    expect(withInstallation.jobCommercial?.grossPrice).toBe(726);
     expect(productOnly.schemaVersion).toBe(1);
     expect(productOnly.jobCommercial).toBeUndefined();
 
     const installationDocument = projectQuoteDocument(withInstallation);
     const productDocument = projectQuoteDocument(productOnly);
-    expect(installationDocument.commercial.grossDisplay).toBe("866,82");
-    expect(productDocument.commercial.grossDisplay).toBe("624,82");
+    expect(installationDocument.commercial.grossDisplay).toBe("726,00");
+    expect(productDocument.commercial.grossDisplay).toBe("484,00");
     const pdf = await owner.get(
       `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots/${encodeURIComponent(withInstallation.quoteSnapshotId)}/document`,
     );
@@ -221,13 +222,13 @@ describe("commercial total consistency for standalone quotes with site installat
     expect(ownerRows.MONTAJ?.grossDisplay).toBe(installationDocument.commercial.grossDisplay);
     expect(ownerRows.PRODUS?.grossDisplay).toBe(productDocument.commercial.grossDisplay);
     const memberRows = await registryRows(member);
-    expect(memberRows.MONTAJ?.grossDisplay).toBe("866,82");
-    expect(memberRows.PRODUS?.grossDisplay).toBe("624,82");
+    expect(memberRows.MONTAJ?.grossDisplay).toBe("726,00");
+    expect(memberRows.PRODUS?.grossDisplay).toBe("484,00");
     expect(JSON.stringify(memberRows)).not.toMatch(/"rate"|ownerInternalCost|"total":300/);
 
     const requestDetail = await readBody(await owner.get(requestPath));
-    expect(JSON.stringify(requestDetail)).toContain("\"grossDisplay\":\"866,82\"");
-    expect(JSON.stringify(requestDetail)).not.toContain("\"grossDisplay\":\"624,82\"");
+    expect(JSON.stringify(requestDetail)).toContain("\"grossDisplay\":\"726,00\"");
+    expect(JSON.stringify(requestDetail)).not.toContain("\"grossDisplay\":\"484,00\"");
 
     expect(
       (await owner.send("PATCH", `${requestPath}/installation-price`, { netPrice: 500 })).status,
@@ -239,22 +240,22 @@ describe("commercial total consistency for standalone quotes with site installat
         { amount: 60, note: "Tarif curent schimbat după înghețare." },
       )).status,
     ).toBe(200);
-    expect((await registryRows(owner)).MONTAJ?.grossDisplay).toBe("866,82");
+    expect((await registryRows(owner)).MONTAJ?.grossDisplay).toBe("726,00");
     expect(projectQuoteDocument(
       (await readBody(
         await owner.get(`/api/quotes/${encodeURIComponent(withInstallation.quoteSnapshotId)}`),
       )).quoteSnapshot as QuoteSnapshot,
-    ).commercial.grossDisplay).toBe("866,82");
+    ).commercial.grossDisplay).toBe("726,00");
 
     const quotePath = `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots/${encodeURIComponent(withInstallation.quoteSnapshotId)}`;
     expect((await owner.send("POST", `${quotePath}/acceptance`)).status).toBe(200);
     const ordered = await owner.send("POST", `${quotePath}/order`);
     expect(ordered.status).toBe(200);
     const order = (await readBody(ordered)).orderSnapshot as JsonObject;
-    expect((order.jobCommercial as JsonObject).grossPrice).toBe(866.82);
-    expect((order.commercial as JsonObject).grossPrice).toBe(624.82);
+    expect((order.jobCommercial as JsonObject).grossPrice).toBe(726);
+    expect((order.commercial as JsonObject).grossPrice).toBe(484);
     const orderedRow = (await registryRows(owner)).MONTAJ;
-    expect(orderedRow).toMatchObject({ stage: "ORDER_CREATED", grossDisplay: "866,82" });
+    expect(orderedRow).toMatchObject({ stage: "ORDER_CREATED", grossDisplay: "726,00" });
 
     expect(await registryRows(betaOwner)).toEqual({});
     fixture.close();

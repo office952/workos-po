@@ -255,6 +255,7 @@ async function createOrphanQuote(
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
+      manualProductNetPrice: 400,
       values: { ...lettersValues, "root.inscription": inscription },
       reviewId: compiled.reviewId,
       customerId,

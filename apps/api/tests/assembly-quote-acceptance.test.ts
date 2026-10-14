@@ -117,8 +117,8 @@ async function quotedAssembly(api: Client, label: string) {
   expect(created.status).toBe(201);
   const assemblyId = ((await json(created)).assembly as { assemblyId: string }).assemblyId;
   for (const member of [
-    { role: "SUPPORT_PANEL", values: acmValues, reviewId: await reviewId(api, ACM_CASSETTE_NONE_PRODUCT_CODE, acmValues) },
-    { role: "SIGNAGE_LETTERS", values: lettersValues, reviewId: await reviewId(api, CANONICAL_PRODUCT_CODE, lettersValues) },
+    { role: "SUPPORT_PANEL", manualProductNetPrice: 300, values: acmValues, reviewId: await reviewId(api, ACM_CASSETTE_NONE_PRODUCT_CODE, acmValues) },
+    { role: "SIGNAGE_LETTERS", manualProductNetPrice: 400, values: lettersValues, reviewId: await reviewId(api, CANONICAL_PRODUCT_CODE, lettersValues) },
   ]) {
     expect((await api.post(`/api/assemblies/${assemblyId}/members`, member)).status).toBe(200);
   }
@@ -134,7 +134,7 @@ async function changeLetters(api: Client, assemblyId: string): Promise<void> {
   const changed = { ...lettersValues, "root.inscription": "NOU" };
   const changedReview = await reviewId(api, CANONICAL_PRODUCT_CODE, changed);
   expect(
-    (await api.post(`/api/assemblies/${assemblyId}/members`, { role: "SIGNAGE_LETTERS", values: changed, reviewId: changedReview })).status,
+    (await api.post(`/api/assemblies/${assemblyId}/members`, { manualProductNetPrice: 400, role: "SIGNAGE_LETTERS", values: changed, reviewId: changedReview })).status,
   ).toBe(200);
 }
 
@@ -296,7 +296,7 @@ describe("assembly quote acceptance bound to the reviewed snapshot", () => {
     const assemblyId = ((await json(created)).assembly as { assemblyId: string }).assemblyId;
     const attach = async (role: string, productCode: string, values: Json) =>
       expect(
-        (await api.post(`/api/assemblies/${assemblyId}/members`, { role, values, reviewId: await reviewId(api, productCode, values) }))
+        (await api.post(`/api/assemblies/${assemblyId}/members`, { manualProductNetPrice: 400, role, values, reviewId: await reviewId(api, productCode, values) }))
           .status,
       ).toBe(200);
     await attach("SUPPORT_PANEL", ACM_CASSETTE_NONE_PRODUCT_CODE, acmValues);

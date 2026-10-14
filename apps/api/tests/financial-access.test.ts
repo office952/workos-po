@@ -123,6 +123,7 @@ describe("ALT_B_SCOPED financial access", () => {
         method: "POST",
         headers: ownerHeaders,
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: readyValues,
           reviewId: compiledBody.reviewId,
         }),
@@ -140,6 +141,7 @@ describe("ALT_B_SCOPED financial access", () => {
         method: "POST",
         headers: { ...memberHeaders, "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: readyValues,
           reviewId: compiledBody.reviewId,
         }),
@@ -168,6 +170,7 @@ describe("ALT_B_SCOPED financial access", () => {
         method: "POST",
         headers: ownerHeaders,
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: readyValues,
           reviewId: compiledBody.reviewId,
           customerId,

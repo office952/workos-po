@@ -153,6 +153,7 @@ describe("UI20 transport contract", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         values: lettersReady,
         reviewId: previewed.body.reviewId,
       }),
@@ -174,6 +175,7 @@ describe("UI20 transport contract", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         values: lettersReady,
         reviewId: previewed.body.reviewId,
         customerId: (customer.customer as JsonObject).customerId,
@@ -192,6 +194,7 @@ describe("UI20 transport contract", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         values: { ...lettersReady, "root.inscription": "CHANGED" },
         reviewId: previewed.body.reviewId,
       }),
@@ -209,6 +212,7 @@ describe("UI20 transport contract", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         definition: compiled.definition,
         reviewId: compiled.reviewId,
       }),
@@ -224,6 +228,7 @@ describe("UI20 transport contract", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         values: lettersReady,
         reviewId: "crv1:deadbeef",
       }),
@@ -289,6 +294,7 @@ describe("UI20 transport contract", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: lettersReady,
           reviewId: previewed.body.reviewId,
           requestId,
@@ -301,6 +307,7 @@ describe("UI20 transport contract", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         values: lettersReady,
         reviewId: previewed.body.reviewId,
         customerId: (customer.customer as JsonObject).customerId,
@@ -357,6 +364,7 @@ describe("UI20 transport contract", () => {
           "content-type": "application/json",
         },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: lettersReady,
           reviewId: previewed.reviewId,
         }),
@@ -366,7 +374,12 @@ describe("UI20 transport contract", () => {
     expect(memberKeys.has("grossPrice")).toBe(true);
     expect(memberKeys.has("internalCost")).toBe(false);
     expect(memberKeys.has("markupPercent")).toBe(false);
-    expect((memberConfirm.commercialExperience as JsonObject).primaryAction).toBe("CREATE_QUOTE");
+    expect(memberConfirm.manualProductPriceAuthorized).toBe(false);
+    expect((memberConfirm.commercialPrice as JsonObject).netPrice).toBeNull();
+    expect((memberConfirm.commercialExperience as JsonObject).primaryAction).toBeNull();
+    expect((memberConfirm.commercialExperience as JsonObject).quoteBlocker).toBe(
+      "Prețul clientului nu poate fi confirmat.",
+    );
 
     const seller = await fixture.app.request("/api/seller", {
       method: "PATCH",

@@ -58,6 +58,7 @@ async function createOrder(
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
+      manualProductNetPrice: 400,
       values: reviewed.values,
       reviewId: reviewed.reviewId,
       customerId: await createCustomer(app, customerName),
@@ -211,6 +212,7 @@ describe("job overview API", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         values: reviewed.values,
         reviewId: reviewed.reviewId,
       }),

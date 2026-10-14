@@ -81,6 +81,7 @@ describe("accepted product evaluation API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values,
           reviewId: reviewed.reviewId,
         }),
@@ -100,6 +101,7 @@ describe("accepted product evaluation API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: { ...lettersValues, "root.inscription": "CHANGED" },
           reviewId: reviewed.reviewId,
         }),
@@ -119,6 +121,7 @@ describe("accepted product evaluation API", () => {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
+            manualProductNetPrice: 400,
             values: reviewed.values,
             reviewId: reviewed.reviewId,
           }),
@@ -128,7 +131,7 @@ describe("accepted product evaluation API", () => {
     });
     expect(result.status).toBe(200);
     expect((result.body.eic as JsonObject).total).toBe(382.5);
-    expect((result.body.commercialPrice as JsonObject).grossPrice).toBe(624.82);
+    expect((result.body.commercialPrice as JsonObject).grossPrice).toBe(484);
     expect(trace.evaluateProductComponents).toBe(1);
     expect(trace.compileEic).toBe(1);
     expect(trace.runtimePresent).toBe(1);
@@ -145,6 +148,7 @@ describe("accepted product evaluation API", () => {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
+            manualProductNetPrice: 400,
             values: reviewed.values,
             reviewId: reviewed.reviewId,
           }),
@@ -156,6 +160,6 @@ describe("accepted product evaluation API", () => {
     expect(trace.evaluateProductComponents).toBe(1);
     expect(trace.compileEic).toBe(1);
     expect((result.body.eic as JsonObject).completeness).toBe("COMPLETE");
-    expect((result.body.commercialPrice as JsonObject).grossPrice).toBe(118.66);
+    expect((result.body.commercialPrice as JsonObject).grossPrice).toBe(484);
   });
 });

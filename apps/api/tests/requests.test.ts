@@ -98,6 +98,7 @@ async function freezeQuote(
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         values: reviewed.values,
         reviewId: reviewed.reviewId,
         customerId,
@@ -894,7 +895,7 @@ describe("commercial request API", () => {
     expect(productOnly.status).toBe(200);
     const quote = (await readBody(productOnly)).quoteSnapshot as JsonObject;
     expect((quote.eic as JsonObject).total).toBe(382.5);
-    expect((quote.commercial as JsonObject).grossPrice).toBe(624.82);
+    expect((quote.commercial as JsonObject).grossPrice).toBe(484);
     expect(JSON.stringify(quote)).not.toMatch(/SITE_INSTALLATION|TRANSPORT/);
   });
 });

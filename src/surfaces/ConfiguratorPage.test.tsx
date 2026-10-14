@@ -148,6 +148,26 @@ function confirmBody(options: {
   };
 }
 
+function manualConfirmBody(options: Parameters<typeof confirmBody>[0], init?: RequestInit) {
+  const request = JSON.parse(String(init?.body ?? "{}")) as { manualProductNetPrice?: number };
+  const base = confirmBody(options);
+  const net = request.manualProductNetPrice;
+  const ready = typeof net === "number" && Number.isFinite(net) && net > 0;
+  return {
+    ...base,
+    pricingMethod: "MANUAL_FIXED_PRODUCT",
+    calculatedPriceAvailable: false,
+    commercialPrice: {
+      ...base.commercialPrice,
+      netPrice: ready ? net : null,
+      vatAmount: ready ? Number((net * 0.21).toFixed(2)) : null,
+      grossPrice: ready ? Number((net * 1.21).toFixed(2)) : null,
+      completeness: ready ? "COMPLETE" : "PARTIAL",
+      unavailableReasons: ready ? [] : ["Prețul net manual nu este confirmat."],
+    },
+  };
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
   sessionStorage.clear();
@@ -174,23 +194,7 @@ function installFetch(options: {
       return jsonResponse(url.includes(ACM_PRODUCT) ? acmPreviewBody : previewBody);
     }
     if (url.endsWith("/confirm")) {
-      const request = JSON.parse(String(init?.body ?? "{}")) as { manualProductNetPrice?: number };
-      const base = confirmBody(options);
-      const net = request.manualProductNetPrice;
-      const ready = typeof net === "number" && Number.isFinite(net) && net > 0;
-      return jsonResponse({
-        ...base,
-        pricingMethod: "MANUAL_FIXED_PRODUCT",
-        calculatedPriceAvailable: false,
-        commercialPrice: {
-          ...base.commercialPrice,
-          netPrice: ready ? net : null,
-          vatAmount: ready ? Number((net * 0.21).toFixed(2)) : null,
-          grossPrice: ready ? Number((net * 1.21).toFixed(2)) : null,
-          completeness: ready ? "COMPLETE" : "PARTIAL",
-          unavailableReasons: ready ? [] : ["Prețul net manual nu este confirmat."],
-        },
-      });
+      return jsonResponse(manualConfirmBody(options, init));
     }
     if (url.endsWith("/seller")) {
       return jsonResponse({
@@ -532,19 +536,25 @@ describe("ConfiguratorPage", () => {
 
   function withRateAcknowledgement(
     fetchMock: ReturnType<typeof installFetch>,
-    freezeResponse?: () => ReturnType<typeof jsonResponse>,
+    options: {
+      status?: "REQUIRED" | "DISCLOSURE_ONLY";
+      freezeResponse?: () => ReturnType<typeof jsonResponse>;
+    } = {},
   ) {
+    const status = options.status ?? "DISCLOSURE_ONLY";
+    const freezeResponse = options.freezeResponse;
     const original = fetchMock.getMockImplementation()!;
     const freezeBodies: Record<string, unknown>[] = [];
-    fetchMock.mockImplementation((input, init) => {
+    fetchMock.mockImplementation(async (input, init) => {
       const url = String(input);
       if (url.endsWith("/confirm")) {
+        const confirmed = (await (await original(input, init)).json()) as Record<string, unknown>;
         return jsonResponse({
-          ...confirmBody({ rate: 3, cost: 37.5 }),
+          ...confirmed,
           rateAcknowledgement: {
-            status: "REQUIRED",
-            bindingHash: "f".repeat(64),
-            canAcknowledge: true,
+            status,
+            bindingHash: status === "REQUIRED" ? "f".repeat(64) : null,
+            canAcknowledge: status === "REQUIRED",
             rates: [
               {
                 resourceId: "MAT-VINYL-ORACAL-651",
@@ -569,8 +579,24 @@ describe("ConfiguratorPage", () => {
     return freezeBodies;
   }
 
-  it("keeps freeze closed until an authorized user acknowledges the unconfirmed rates", async () => {
+  it("discloses unconfirmed internal-cost rates without gating a manual-price freeze", async () => {
     const freezeBodies = withRateAcknowledgement(installFetch({ rate: 3, cost: 37.5 }));
+    renderConfigurator();
+    const user = await confirmReady();
+    expect(await screen.findByText("Tarife neconfirmate în costul intern")).toBeInTheDocument();
+    expect(screen.getByText("Folie vinil sintetică")).toBeInTheDocument();
+    expect(screen.queryByTestId("rate-acknowledgement")).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: /Am verificat tarifele neconfirmate/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "Îngheață oferta" }));
+    await screen.findByRole("link", { name: "Deschide oferta înghețată" });
+    expect(freezeBodies).toHaveLength(1);
+    expect(freezeBodies[0]?.manualProductNetPrice).toBe(100);
+    expect(freezeBodies[0]).not.toHaveProperty("rateAcknowledgement");
+  });
+
+  it("keeps legacy acknowledgement-required freezes closed until the authorized user acknowledges", async () => {
+    const freezeBodies = withRateAcknowledgement(installFetch({ rate: 3, cost: 37.5 }), { status: "REQUIRED" });
     renderConfigurator();
     const user = await confirmReady();
     expect(await screen.findByTestId("rate-acknowledgement")).toHaveTextContent("Folie vinil sintetică");
@@ -579,22 +605,23 @@ describe("ConfiguratorPage", () => {
     expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeEnabled();
     await user.click(screen.getByRole("button", { name: "Îngheață oferta" }));
     await screen.findByRole("link", { name: "Deschide oferta înghețată" });
-    expect(freezeBodies).toHaveLength(1);
     expect(freezeBodies[0]?.rateAcknowledgement).toEqual({ bindingHash: "f".repeat(64) });
     expect(freezeBodies[0]).not.toHaveProperty("acknowledgedByUserId");
     expect(freezeBodies[0]).not.toHaveProperty("acknowledgedAt");
   });
 
   it("asks for a fresh price and acknowledgement when the server reports a stale acknowledgement", async () => {
-    withRateAcknowledgement(installFetch({ rate: 3, cost: 37.5 }), () =>
-      jsonResponse(
-        {
-          error: "rate_acknowledgement_stale",
-          reasons: ["Oferta sau tarifele s-au schimbat după acceptare. Recalculează prețul și acceptă din nou tarifele neconfirmate."],
-        },
-        409,
-      ),
-    );
+    withRateAcknowledgement(installFetch({ rate: 3, cost: 37.5 }), {
+      status: "REQUIRED",
+      freezeResponse: () =>
+        jsonResponse(
+          {
+            error: "rate_acknowledgement_stale",
+            reasons: ["Oferta sau tarifele s-au schimbat după acceptare. Recalculează prețul și acceptă din nou tarifele neconfirmate."],
+          },
+          409,
+        ),
+    });
     renderConfigurator();
     const user = await confirmReady();
     await user.click(await screen.findByRole("checkbox", { name: /Am verificat tarifele neconfirmate/ }));
@@ -727,7 +754,7 @@ describe("ConfiguratorPage", () => {
         return jsonResponse(previewBody);
       }
       if (url.endsWith("/confirm")) {
-        return jsonResponse(confirmBody({ rate: 3, cost: 37.5 }));
+        return jsonResponse(manualConfirmBody({ rate: 3, cost: 37.5 }, init));
       }
       if (url.endsWith("/seller")) {
         return jsonResponse({ error: "denied" }, 503);
@@ -786,7 +813,7 @@ describe("ConfiguratorPage", () => {
         return jsonResponse(previewBody);
       }
       if (url.endsWith("/confirm")) {
-        return jsonResponse(confirmBody({ rate: 3, cost: 37.5 }));
+        return jsonResponse(manualConfirmBody({ rate: 3, cost: 37.5 }, init));
       }
       if (url.endsWith("/seller") && method === "PATCH") {
         sellerConfigured = true;
@@ -1124,6 +1151,31 @@ describe("ConfiguratorPage", () => {
     expect(document.querySelector(".panel__header")).toBeNull();
     expect(document.querySelector(".panel__body")).toBeNull();
     expect(document.querySelector(".configurator-new-panel")).toBeNull();
+  });
+
+  it("offers no manual price entry or price action to a user without commercial authority", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    const original = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (input, init) => {
+      if (String(input).endsWith("/confirm")) {
+        const confirmed = (await (await original(input, init)).json()) as Record<string, unknown>;
+        return jsonResponse({ ...confirmed, manualProductPriceAuthorized: false });
+      }
+      return original(input, init);
+    });
+    renderConfigurator();
+    const user = userEvent.setup();
+    await screen.findByLabelText("Textul literelor");
+    await user.click(screen.getByRole("tab", { name: /Verificare/ }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
+    });
+    await user.click(screen.getByRole("button", { name: "Confirmă configurația" }));
+    expect(await screen.findByText("Prețul manual nu poate fi setat")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Preț net al produsului, fără TVA")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Confirmă prețul" })).toBeNull();
+    expect(screen.queryByText("Prețul nu este gata")).toBeNull();
+    expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeDisabled();
   });
 
   it("shows the missing cost-evidence resource and a cost-evidence action", async () => {

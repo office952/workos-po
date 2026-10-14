@@ -66,6 +66,7 @@ async function createQuote(
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         values: reviewed.values,
         reviewId: reviewed.reviewId,
         customerId,
@@ -115,7 +116,7 @@ describe("quote overview API", () => {
       nextActionLabel: "Marchează acceptată",
       needsAttention: true,
       customerDisplayName: "Client QTA",
-      grossDisplay: "624,82",
+      grossDisplay: "484,00",
       currency: "EUR",
     });
     expect(String(byInscription.QTA.href)).toBe(

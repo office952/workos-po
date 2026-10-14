@@ -63,6 +63,7 @@ async function freezeQuote(productCode: string, values: Record<string, unknown>)
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         values,
         reviewId: compiledBody.reviewId,
         customerId,
@@ -94,7 +95,7 @@ describe("quote document PDF", () => {
     const model = projectQuoteDocument(snapshot as never);
     const text = quoteDocumentDrawLines(model).join("\n");
     expect(text).toContain("Ofertă");
-    expect(text).toContain("624,82 EUR");
+    expect(text).toContain("484,00 EUR");
     expect(text).toContain("Litere volumetrice luminoase");
     expect(text).toContain("WORKOS ăâîșț");
     expect(text).toContain("60 mm");
@@ -116,7 +117,7 @@ describe("quote document PDF", () => {
     expect(text).toContain("500 mm");
     expect(text).toContain("40 mm");
     expect(text).toContain("Adâncime casetă / prima întoarcere");
-    expect(text).toContain("118,66 EUR");
+    expect(text).toContain("484,00 EUR");
     expect(text).toContain("Client Demo ACM");
     expect(text).not.toMatch(/72,644|AI_DECISION|PRD-ACM|resourceId/);
     expect(String.fromCharCode(...bytes.slice(0, 4))).toBe("%PDF");
@@ -181,6 +182,7 @@ describe("quote document PDF", () => {
     const assemblyId = ((await readBody(created)).assembly as JsonObject).assemblyId as string;
     expect(
       (await post(`/api/assemblies/${assemblyId}/members`, {
+        manualProductNetPrice: 400,
         role: "SUPPORT_PANEL",
         values: acmValues,
         reviewId: await review(ACM_CASSETTE_NONE_PRODUCT_CODE, acmValues),
@@ -188,6 +190,7 @@ describe("quote document PDF", () => {
     ).toBe(200);
     expect(
       (await post(`/api/assemblies/${assemblyId}/members`, {
+        manualProductNetPrice: 400,
         role: "SIGNAGE_LETTERS",
         values: lettersValues,
         reviewId: await review(CANONICAL_PRODUCT_CODE, lettersValues),

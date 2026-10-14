@@ -134,7 +134,7 @@ async function confirmProduct(
   const response = await app.request(`/api/products/${productCode}/confirm`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(reviewed),
+    body: JSON.stringify({ ...reviewed, manualProductNetPrice: 400 }),
   });
   return { status: response.status, body: await readBody(response) };
 }
@@ -159,6 +159,7 @@ async function freezeQuote(
     body: JSON.stringify({
       ...reviewed,
       customerId,
+      manualProductNetPrice: 400,
     }),
   });
   return { status: response.status, body: await readBody(response) };
@@ -458,7 +459,7 @@ describe("PERF_3 resources mutation delta", () => {
     expect((sixty.body.eic as JsonObject).total).toBe(395);
     expect((eighty.body.eic as JsonObject).total).toBe(395);
     expect((hundred.body.eic as JsonObject).total).toBe(407.5);
-    expect((acm.body.commercialPrice as JsonObject).grossPrice).toBe(118.66);
+    expect((acm.body.commercialPrice as JsonObject).grossPrice).toBe(484);
     expect(counts.evidenceLoads).toBe(1);
     expect(counts.fullAdminBuilds).toBe(1);
     runtime.close();
@@ -578,7 +579,7 @@ describe("PERF_3 resources mutation delta", () => {
       const response = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/confirm`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(reviewed),
+        body: JSON.stringify({ ...reviewed, manualProductNetPrice: 400 }),
       });
       return { status: response.status, body: await readBody(response) };
     });

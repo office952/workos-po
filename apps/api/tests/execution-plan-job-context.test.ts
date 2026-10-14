@@ -39,6 +39,7 @@ describe("execution plan job context", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: readyValues,
           reviewId: compiled.reviewId,
           customerId: (customer.customer as JsonObject).customerId,

@@ -297,6 +297,7 @@ describe("formula API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: readyValues,
           reviewId: previewAfter.reviewId,
           customerId,
@@ -328,6 +329,7 @@ describe("formula API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: readyValues,
           reviewId: preview.reviewId,
           customerId,
@@ -358,7 +360,7 @@ describe("formula API", () => {
     const stale = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/confirm`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ values: readyValues, reviewId: preview.reviewId }),
+      body: JSON.stringify({ manualProductNetPrice: 400, values: readyValues, reviewId: preview.reviewId }),
     });
     expect(stale.status).toBe(409);
 
@@ -387,6 +389,7 @@ describe("formula API", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           values: readyValues,
           reviewId: nextPreview.reviewId,
           customerId,

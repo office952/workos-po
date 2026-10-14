@@ -163,6 +163,7 @@ describe("accepted product authority", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        manualProductNetPrice: 400,
         definition: crafted,
         reviewId: crafted.reviewId,
       }),
@@ -241,7 +242,7 @@ describe("accepted product authority", () => {
     const confirm = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/confirm`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ values, reviewId: previewed.reviewId }),
+      body: JSON.stringify({ manualProductNetPrice: 400, values, reviewId: previewed.reviewId }),
     });
     expect(confirm.status).toBe(400);
     expect((await readBody(confirm)).error).toBe("review_required");
@@ -367,7 +368,7 @@ describe("accepted product authority", () => {
     const confirm = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/confirm`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ values: readyValues, reviewId: "crv1:missing" }),
+      body: JSON.stringify({ manualProductNetPrice: 400, values: readyValues, reviewId: "crv1:missing" }),
     });
     expect(preview.status).toBe(409);
     expect((await readBody(preview)).error).toBe("technical_settings_unavailable");
@@ -394,7 +395,7 @@ describe("accepted product authority", () => {
     const confirm = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/confirm`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ values: readyValues, reviewId: "crv1:missing" }),
+      body: JSON.stringify({ manualProductNetPrice: 400, values: readyValues, reviewId: "crv1:missing" }),
     });
     expect(preview.status).toBe(409);
     expect((await readBody(preview)).error).toBe("formulas_unavailable");
@@ -420,6 +421,7 @@ describe("accepted product authority", () => {
       body: JSON.stringify({
         ...payload,
         customerId: await createCustomer(app),
+        manualProductNetPrice: 400,
       }),
     });
     expect(quote.status).toBe(200);

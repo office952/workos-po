@@ -1,4 +1,4 @@
-﻿import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -108,7 +108,7 @@ async function createAssemblyExecutionJob(app: ReturnType<typeof createApp>): Pr
       await app.request(`/api/assemblies/${assemblyId}/members`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ role: "SUPPORT_PANEL", values: acmValues, reviewId: acmReview }),
+        body: JSON.stringify({ manualProductNetPrice: 400, role: "SUPPORT_PANEL", values: acmValues, reviewId: acmReview }),
       })
     ).status,
   ).toBe(200);
@@ -118,6 +118,7 @@ async function createAssemblyExecutionJob(app: ReturnType<typeof createApp>): Pr
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          manualProductNetPrice: 400,
           role: "SIGNAGE_LETTERS",
           values: lettersValues,
           reviewId: lettersReview,
