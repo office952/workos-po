@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+    types: [opened, synchronize, reopened, edited, ready_for_review]
   push:
     branches:
       - main
@@ -29,6 +30,10 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+
+      - name: Notion PR journal metadata gate
+        if: github.event_name == 'pull_request'
+        run: node scripts/verify-notion-pr-metadata.mjs
 
       - name: Install
         run: pnpm install --frozen-lockfile
