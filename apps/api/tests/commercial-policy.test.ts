@@ -383,6 +383,56 @@ describe("commercial policy API", () => {
     expect((snapshot.eic as JsonObject | undefined)?.completeness).toBe("COMPLETE");
   });
 
+  it.each([1e308, 1.6e306])(
+    "refuses a finite manual net %s whose monetary rounding overflows",
+    async (manualProductNetPrice) => {
+      const app = createApp();
+      const customerId = await createCustomer(app, "Client overflow");
+      const compiled = await compile(app);
+      const path = `/api/products/${CANONICAL_PRODUCT_CODE}`;
+
+      const confirmed = await app.request(`${path}/confirm`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          values: compiled.values,
+          reviewId: compiled.reviewId,
+          manualProductNetPrice,
+        }),
+      });
+      expect(confirmed.status).toBe(200);
+      const confirmBody = await readBody(confirmed);
+      const price = confirmBody.commercialPrice as JsonObject;
+      expect(price.commercialStrategy).toBe("MANUAL_FIXED_PRODUCT");
+      expect(price.completeness).toBe("UNAVAILABLE");
+      expect(price.netPrice).toBeNull();
+      expect(price.vatAmount).toBeNull();
+      expect(price.grossPrice).toBeNull();
+      const experience = confirmBody.commercialExperience as JsonObject;
+      expect(experience.stage).toBe("CONFIGURATION_CONFIRMED");
+      expect(experience.primaryAction).toBeNull();
+      expect(experience.quoteBlocker).not.toBeNull();
+
+      const frozen = await app.request(`${path}/quote-snapshots`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          values: compiled.values,
+          reviewId: compiled.reviewId,
+          customerId,
+          manualProductNetPrice,
+        }),
+      });
+      expect(frozen.status).toBe(422);
+      expect((await readBody(frozen)).error).toBe("incomplete_offer");
+
+      const quotes = await app.request("/api/quotes");
+      expect(quotes.status).toBe(200);
+      const overview = (await readBody(quotes)).overview as { quotes: JsonObject[] };
+      expect(overview.quotes).toHaveLength(0);
+    },
+  );
+
   it("blocks freeze when neither calculated nor manual price is valid", async () => {
     const app = createApp();
     const customerId = await createCustomer(app, "Client blocat");
