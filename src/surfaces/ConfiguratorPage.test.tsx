@@ -1312,6 +1312,30 @@ describe("ConfiguratorPage", () => {
     expect(screen.getByRole("radio", { name: /Preț net negociat manual/ })).toBeEnabled();
   });
 
+  it("R-001A starts new quotes with manual customer pricing and never offers cost-plus", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    renderConfigurator({ requestId: null });
+    const user = await confirmReady();
+    expect(screen.queryByText("Calculat din costuri")).not.toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: /Calculat din costuri/ })).not.toBeInTheDocument();
+    expect(screen.getByTestId("manual-price-method")).toHaveTextContent("Preț net stabilit manual");
+
+    const input = screen.getByLabelText("Preț net al produsului, fără TVA");
+    await user.type(input, "680");
+    await user.click(screen.getByRole("button", { name: "Actualizează prețul" }));
+
+    await waitFor(() => {
+      const confirmCalls = fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/confirm"));
+      expect(confirmCalls.length).toBeGreaterThanOrEqual(2);
+    });
+    const last = fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/confirm")).at(-1);
+    const body = JSON.parse(String(last?.[1]?.body)) as Record<string, unknown>;
+    expect(body.pricingMethod).toBe("MANUAL_FIXED_PRODUCT");
+    expect(body.manualProductNetPrice).toBe(680);
+    expect(String(last?.[1]?.body)).not.toContain("PRODUCT_COST_PLUS");
+    expect(String(last?.[1]?.body)).not.toContain("quoteCommercialTerms");
+  });
+
   it("states that a disabled product is unavailable for new work", async () => {
     vi.stubGlobal(
       "fetch",
