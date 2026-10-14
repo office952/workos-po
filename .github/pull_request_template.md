@@ -1,7 +1,7 @@
 ## WorkOS Notion journal gate
 
-Notion Record ID: N-006
-Notion Record URL: https://app.notion.com/p/3f98ea98e40f819794edd8974c3b964e
+Notion Record ID: REPLACE_WITH_H_OR_N_OR_R_CODE
+Notion Record URL: REPLACE_WITH_EXACT_RECORD_PAGE_URL
 Owner GO: Replace with exact Owner authorization and relevant scope
 Scope: Replace with the approved change and excluded areas
 Evidence: Replace with tests, CI, runtime evidence, and known limitations
