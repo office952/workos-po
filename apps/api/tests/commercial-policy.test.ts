@@ -268,6 +268,72 @@ describe("commercial policy API", () => {
     expect(((reread.quoteSnapshot as JsonObject).commercial as JsonObject).policyVersion).toBe(1);
   });
 
+  it("R-001A defaults new offers to manual and rejects explicit cost-plus without changing legacy reads", async () => {
+    const app = createApp();
+    const customerId = await createCustomer(app, "Client R-001A");
+    const compiled = await compile(app);
+    const path = `/api/products/${CANONICAL_PRODUCT_CODE}`;
+
+    const unpriced = await app.request(`${path}/confirm`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ values: compiled.values, reviewId: compiled.reviewId }),
+    });
+    expect(unpriced.status).toBe(200);
+    const unpricedBody = await readBody(unpriced);
+    const pending = unpricedBody.commercialPrice as JsonObject;
+    expect(unpricedBody.pricingMethod).toBe("MANUAL_FIXED_PRODUCT");
+    expect(pending.commercialStrategy).toBe("MANUAL_FIXED_PRODUCT");
+    expect(pending.netPrice).toBeNull();
+    expect(pending.completeness).toBe("PARTIAL");
+
+    const manual = await app.request(`${path}/confirm`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        values: compiled.values, reviewId: compiled.reviewId, manualProductNetPrice: 680,
+      }),
+    });
+    expect(manual.status).toBe(200);
+    const manualBody = await readBody(manual);
+    const confirmed = manualBody.commercialPrice as JsonObject;
+    expect(confirmed.commercialStrategy).toBe("MANUAL_FIXED_PRODUCT");
+    expect(confirmed.netPrice).toBe(680);
+    expect(confirmed.vatAmount).toBe(142.8);
+    expect(confirmed.grossPrice).toBe(822.8);
+
+    for (const endpoint of [`${path}/confirm`, `${path}/quote-snapshots`]) {
+      const denied = await app.request(endpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          values: compiled.values, reviewId: compiled.reviewId, customerId,
+          pricingMethod: "PRODUCT_COST_PLUS", manualProductNetPrice: 680,
+        }),
+      });
+      expect(denied.status).toBe(400);
+      expect((await readBody(denied)).error).toBe("pricing_method_not_allowed");
+    }
+
+    const frozen = await app.request(`${path}/quote-snapshots`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        values: compiled.values, reviewId: compiled.reviewId, customerId,
+        manualProductNetPrice: 680,
+      }),
+    });
+    expect(frozen.status).toBe(200);
+    const snapshot = (await readBody(frozen)).quoteSnapshot as JsonObject;
+    expect((snapshot.commercial as JsonObject).commercialStrategy).toBe("MANUAL_FIXED_PRODUCT");
+    expect((snapshot.commercial as JsonObject).netPrice).toBe(680);
+    const reread = await app.request(`${path}/quote-snapshots/${snapshot.quoteSnapshotId}`);
+    expect(reread.status).toBe(200);
+    const history = (await readBody(reread)).quoteSnapshot as JsonObject;
+    expect(history.contentHash).toBe(snapshot.contentHash);
+    expect((history.commercial as JsonObject).netPrice).toBe(680);
+  });
+
   it("allows a manual product freeze when cost-plus is unavailable", async () => {
     const app = createApp();
     const customerId = await createCustomer(app, "Client manual");
