@@ -151,9 +151,7 @@ export function RequestsPage() {
                 </span>
                 <span className="requests-intake__progress">
                   <span>Stare: {receiptRegistry?.stateLabel}</span>
-                  {receiptRegistry?.commercialProgressLabel !== "—" && (
-                    <span>{receiptRegistry?.commercialProgressLabel}</span>
-                  )}
+                  <span>Progres: {receiptRegistry?.commercialProgressLabel ?? "—"}</span>
                 </span>
               </a>
             ) : (

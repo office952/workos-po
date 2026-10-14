@@ -12,6 +12,8 @@
 .commercial-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; padding: 20px 0; }
 .request-detail__toolbar { grid-column: 1 / -1; }
 .commercial-toolbar__context { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; min-width: 0; color: var(--color-text-secondary); font-size: 14px; }
+.request-progress { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; min-width: 0; }
+.request-progress__item { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
 .commercial-toolbar .filter-bar { flex: 1 1 30rem; margin: 0; padding: 0; border: 0; }
 .commercial-toolbar .filter-bar__search { width: min(100%, 740px); max-width: none; }
 .commercial-toolbar .field__control { min-height: 48px; }
