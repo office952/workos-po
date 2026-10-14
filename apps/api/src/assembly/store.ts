@@ -164,7 +164,7 @@ export function readLatestAssemblyQuote(
 ): AssemblyQuoteSnapshot | null {
   const row = db
     .prepare(
-      `SELECT payload FROM assembly_quote_snapshots WHERE organization_id = ? AND assembly_id = ? ORDER BY created_at DESC LIMIT 1`,
+      `SELECT payload FROM assembly_quote_snapshots WHERE organization_id = ? AND assembly_id = ? ORDER BY created_at DESC, quote_snapshot_id DESC LIMIT 1`,
     )
     .get(organizationId, assemblyId) as { payload: string } | undefined;
   return row ? (JSON.parse(row.payload) as AssemblyQuoteSnapshot) : null;

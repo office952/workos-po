@@ -8,9 +8,11 @@ import {
   projectAssemblyQuoteDocument,
   scopeQuoteSnapshot,
 } from "@workos-final/domain";
-import { getProductSystem, type ApiContext, type ApiEnv } from "../cloud/context.js";
+import { planAssemblyAcceptance } from "../assembly/acceptance.js";
+import { getProductSystem, isOwner, type ApiContext, type ApiEnv } from "../cloud/context.js";
 import { financialAccess } from "../financial/access.js";
 import { httpPathIdentity } from "../httpPathIdentity.js";
+import type { AssemblyQuoteRecord } from "../productSystem/runtime.js";
 import { renderQuoteDocumentPdf } from "../quoteDocument/renderQuoteDocumentPdf.js";
 
 export function registerQuoteRoutes(app: Hono<ApiEnv>): void {
@@ -137,6 +139,7 @@ function assemblyQuoteEnvelope(c: ApiContext, quoteSnapshotId: string) {
       superseded: record.superseded,
     }),
     ...(internalCost === undefined ? {} : { internalCost }),
+    acceptance: presentAssemblyQuoteAcceptance(c, record),
     order: record.order
       ? {
           orderSnapshotId: record.order.orderSnapshotId,
@@ -155,4 +158,31 @@ function assemblyQuoteEnvelope(c: ApiContext, quoteSnapshotId: string) {
       href: `/assemblies/${encodeURIComponent(record.quote.assemblyId)}`,
     },
   });
+}
+
+/** Read-only dry run of the same exact-quote acceptance the mutation enforces; nothing is persisted. */
+function presentAssemblyQuoteAcceptance(
+  c: ApiContext,
+  record: AssemblyQuoteRecord,
+): { canAccept: boolean; reason: string | null } {
+  if (record.order) {
+    return { canAccept: false, reason: null };
+  }
+  if (record.superseded) {
+    return {
+      canAccept: false,
+      reason: "Versiune înlocuită. Doar oferta curentă a ansamblului poate fi acceptată.",
+    };
+  }
+  if (!isOwner(c)) {
+    return { canAccept: false, reason: "Doar proprietarul poate accepta oferta și crea comanda." };
+  }
+  const planned = planAssemblyAcceptance(getProductSystem(c), {
+    assemblyId: record.quote.assemblyId,
+    quoteSnapshotId: record.quote.quoteSnapshotId,
+    createdAt: new Date().toISOString(),
+  });
+  return planned.ok
+    ? { canAccept: true, reason: null }
+    : { canAccept: false, reason: planned.body.reasons[0] ?? "Oferta nu poate fi acceptată acum." };
 }

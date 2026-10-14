@@ -525,6 +525,8 @@ export type AssemblyQuoteTransport = {
   orderSnapshotId: string | null;
   /** Present only for owners; null when the evidence cannot be traced. */
   internalCost: AssemblyQuoteCostTransport | null | undefined;
+  /** Server dry run of accepting this exact snapshot; absent or malformed means not acceptable. */
+  acceptance: { canAccept: boolean; reason: string | null };
 };
 
 export type JobListItemTransport = {

@@ -12,6 +12,7 @@ import {
   SIGN_ASSEMBLY_ACM_SIGNAGE_V2,
 } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
+import { acceptCurrentAssemblyQuote } from "./fixtures/assemblyAcceptance.js";
 import { freezeAcknowledgingRates } from "./fixtures/rateAcknowledgement.js";
 
 const logoValues = {
@@ -286,7 +287,7 @@ async function finishAssembly(app: ReturnType<typeof createApp>, assemblyId: str
       )
     ).status,
   ).toBe(200);
-  expect((await app.request(`/api/assemblies/${assemblyId}/accept`, { method: "POST" })).status).toBe(200);
+  expect((await acceptCurrentAssemblyQuote(app, assemblyId)).status).toBe(200);
   expect((await app.request(`/api/assemblies/${assemblyId}/production`, { method: "POST" })).status).toBe(200);
   const planned = await app.request(`/api/assemblies/${assemblyId}/execution-plan`, { method: "POST" });
   expect(planned.status, await planned.clone().text()).toBe(200);

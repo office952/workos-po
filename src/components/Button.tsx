@@ -1,8 +1,8 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ComponentPropsWithRef, ReactNode } from "react";
 
 type ButtonVariant = "primary" | "secondary" | "ghost";
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+type ButtonProps = ComponentPropsWithRef<"button"> & {
   variant?: ButtonVariant;
   children: ReactNode;
 };

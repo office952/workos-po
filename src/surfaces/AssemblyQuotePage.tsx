@@ -1,24 +1,26 @@
-import { useState } from "react";
-import { readTransportReasons } from "../api/http";
-import { fetchAssemblyQuoteDocument } from "../api/quote";
+import { useEffect, useId, useRef, useState } from "react";
+import { acceptAssemblyQuote, type AssemblyQuoteAcceptanceResult } from "../api/assemblies";
 import type { AssemblyQuoteCostTransport, AssemblyQuoteTransport } from "../api/types";
 import { Button } from "../components/Button";
 import { InlineAlert } from "../components/InlineAlert";
 import { LoadingFloor } from "../components/LoadingFloor";
+import { invalidateAfterAcceptAssemblyQuote } from "../data/invalidation";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadAssemblyQuote } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { presentContextMeta } from "../presentation/contextMeta";
-import { triggerBrowserDownload } from "../presentation/download";
 import { formatMoney } from "../presentation/format";
 import { assemblyHref, assemblyQuoteHref, jobHref, requestHref } from "../routing/appRoute";
 import { QuoteLines, QuoteRelations, QuoteSummary, type QuoteLine, type QuoteRelation, type QuoteTotal } from "./quoteDetail";
+import { useAssemblyQuoteDocument } from "./useAssemblyQuoteDocument";
 import "../styles/surfaces/offers.css";
 
 type AssemblyQuotePageProps = {
   quoteSnapshotId: string;
 };
+
+type AcceptanceRefusal = Exclude<AssemblyQuoteAcceptanceResult, { ok: true }>;
 
 function sharedVatPercent(quote: AssemblyQuoteTransport): number | null {
   const rates = new Set(quote.sections.map((section) => section.vatPercent));
@@ -60,38 +62,91 @@ function presentLines(quote: AssemblyQuoteTransport): QuoteLine[] {
     : sections;
 }
 
-function presentRelations(quote: AssemblyQuoteTransport): QuoteRelation[] {
+function presentRelations(quote: AssemblyQuoteTransport, orderSnapshotId: string | null): QuoteRelation[] {
   return [
     quote.requestId
       ? { key: "request", label: "Cerere", detail: quote.item.requestReference, href: requestHref(quote.requestId), action: "Deschide cererea" }
       : null,
     { key: "assembly", label: "Ansamblu", detail: quote.label, href: assemblyHref(quote.assemblyId), action: "Deschide ansamblul" },
-    quote.orderSnapshotId
-      ? { key: "order", label: "Comandă", detail: null, href: jobHref(quote.orderSnapshotId), action: "Deschide comanda" }
+    orderSnapshotId
+      ? { key: "order", label: "Comandă", detail: null, href: jobHref(orderSnapshotId), action: "Deschide comanda" }
       : null,
   ].filter((relation): relation is QuoteRelation => relation !== null);
 }
 
-/** Read-only view of one frozen assembly quote; acceptance stays on the assembly page. */
+function refusalTitle(refusal: AcceptanceRefusal): string {
+  switch (refusal.kind) {
+    case "superseded":
+      return "Oferta nu mai este curentă";
+    case "already_accepted":
+      return "Oferta este deja acceptată";
+    case "refused":
+      return "Oferta nu a fost acceptată";
+    default: {
+      const exhaustive: never = refusal;
+      return exhaustive;
+    }
+  }
+}
+
+/** Commercial decision surface of one frozen assembly quote: totals, PDF, acceptance and the resulting order. */
 export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
   const loaded = useResource(resourceKeys.assemblyQuote(quoteSnapshotId), () =>
     loadAssemblyQuote(quoteSnapshotId),
   );
   const quote = loaded.data ?? null;
   const item = quote?.item ?? null;
-  const [documentPending, setDocumentPending] = useState(false);
-  const [documentError, setDocumentError] = useState<string | null>(null);
+  const quoteDocument = useAssemblyQuoteDocument(quoteSnapshotId);
+  const [confirming, setConfirming] = useState(false);
+  const [accepting, setAccepting] = useState(false);
+  const [acceptedOrderId, setAcceptedOrderId] = useState<string | null>(null);
+  const [refusal, setRefusal] = useState<AcceptanceRefusal | null>(null);
+  const acceptingRef = useRef(false);
+  const returnFocusRef = useRef(false);
+  const confirmRef = useRef<HTMLElement>(null);
+  const acceptButtonRef = useRef<HTMLButtonElement>(null);
+  const confirmTitleId = useId();
 
-  async function downloadDocument(): Promise<void> {
-    setDocumentPending(true);
-    setDocumentError(null);
-    const result = await fetchAssemblyQuoteDocument(quoteSnapshotId);
-    setDocumentPending(false);
-    if (!result.ok) {
-      setDocumentError(readTransportReasons(result.body)[0] ?? "Documentul ofertei nu este disponibil.");
+  const orderSnapshotId = quote?.orderSnapshotId ?? acceptedOrderId;
+  const canAccept = Boolean(quote?.acceptance.canAccept && !quote.superseded && !orderSnapshotId);
+
+  useEffect(() => {
+    if (confirming) {
+      confirmRef.current?.focus();
+    } else if (returnFocusRef.current) {
+      returnFocusRef.current = false;
+      acceptButtonRef.current?.focus();
+    }
+  }, [confirming]);
+
+  function cancelConfirmation(): void {
+    if (accepting) {
       return;
     }
-    triggerBrowserDownload(result.blob, result.filename ?? "oferta.pdf");
+    returnFocusRef.current = true;
+    setConfirming(false);
+  }
+
+  async function accept(): Promise<void> {
+    if (!quote || acceptingRef.current) {
+      return;
+    }
+    acceptingRef.current = true;
+    setAccepting(true);
+    setRefusal(null);
+    const result = await acceptAssemblyQuote(quote.assemblyId, quoteSnapshotId);
+    acceptingRef.current = false;
+    setAccepting(false);
+    setConfirming(false);
+    invalidateAfterAcceptAssemblyQuote({ assemblyId: quote.assemblyId, requestId: quote.requestId });
+    if (result.ok) {
+      setAcceptedOrderId(result.orderSnapshotId);
+      return;
+    }
+    if (result.kind === "already_accepted" && result.orderSnapshotId) {
+      setAcceptedOrderId(result.orderSnapshotId);
+    }
+    setRefusal(result);
   }
 
   return (
@@ -109,12 +164,30 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
         <a className="offers-detail__back text-link" href="/oferte">← Toate ofertele</a>
         {loaded.status === "error" && !quote ? (
           <InlineAlert tone="error" title="Oferta nu a putut fi citită">
-            Oferta de ansamblu nu este disponibilă.
+            Oferta de ansamblu nu este disponibilă. Redeschide oferta din ansamblu sau din lista de oferte.
           </InlineAlert>
         ) : null}
         {quote?.superseded ? (
           <InlineAlert tone="pending" title="Versiune înlocuită">
-            Ansamblul are o ofertă mai nouă. Această versiune rămâne înghețată pentru istoric.
+            Ansamblul are o ofertă mai nouă. Această versiune rămâne înghețată pentru istoric și nu poate fi acceptată.
+          </InlineAlert>
+        ) : null}
+        {acceptedOrderId && !refusal ? (
+          <InlineAlert tone="success" title="Oferta a fost acceptată">
+            Comanda a fost creată din această ofertă înghețată.
+          </InlineAlert>
+        ) : null}
+        {refusal ? (
+          <InlineAlert tone={refusal.kind === "already_accepted" ? "pending" : "error"} title={refusalTitle(refusal)}>
+            {refusal.reason}
+            {refusal.kind === "superseded" && refusal.currentQuoteSnapshotId ? (
+              <>
+                {" "}
+                <a className="text-link" href={assemblyQuoteHref(refusal.currentQuoteSnapshotId)}>
+                  Deschide oferta curentă
+                </a>
+              </>
+            ) : null}
           </InlineAlert>
         ) : null}
         {quote && item ? (
@@ -125,27 +198,80 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
               facts={[
                 { label: "Stare", value: item.stageLabel },
                 { label: "Tip", value: `${item.kindLabel} · ${item.sectionCount} secțiuni` },
-                { label: "Comandă", value: quote.orderSnapshotId ? "Acceptată — comandă creată" : "Neacceptată" },
+                { label: "Comandă", value: orderSnapshotId ? "Acceptată — comandă creată" : "Neacceptată" },
               ]}
               actions={
                 <>
-                  <a
-                    className="offers-next"
-                    href={quote.orderSnapshotId ? jobHref(quote.orderSnapshotId) : assemblyHref(quote.assemblyId)}
-                  >
-                    <span>{quote.orderSnapshotId ? "Deschide comanda" : "Deschide ansamblul"}</span>
-                    <span aria-hidden="true">→</span>
-                  </a>
-                  <Button variant="secondary" disabled={documentPending} onClick={() => void downloadDocument()}>
+                  {orderSnapshotId ? (
+                    <a className="offers-next" href={jobHref(orderSnapshotId)}>
+                      <span>Deschide comanda</span>
+                      <span aria-hidden="true">→</span>
+                    </a>
+                  ) : canAccept ? (
+                    <Button
+                      ref={acceptButtonRef}
+                      disabled={accepting || confirming}
+                      aria-expanded={confirming}
+                      onClick={() => {
+                        setRefusal(null);
+                        setConfirming(true);
+                      }}
+                    >
+                      Acceptă oferta și creează comanda
+                    </Button>
+                  ) : (
+                    <a className="offers-next" href={assemblyHref(quote.assemblyId)}>
+                      <span>Deschide ansamblul</span>
+                      <span aria-hidden="true">→</span>
+                    </a>
+                  )}
+                  <Button variant="secondary" disabled={quoteDocument.pending} onClick={() => void quoteDocument.download()}>
                     Descarcă oferta PDF
                   </Button>
                 </>
               }
-              note="Oferta este înghețată. Acceptarea și modificările se fac din ansamblu."
+              note={
+                orderSnapshotId
+                  ? "Oferta este acceptată. Comanda păstrează sumele acestei versiuni."
+                  : canAccept
+                    ? "Oferta este înghețată. Acceptarea creează comanda din această versiune."
+                    : quote.acceptance.reason ?? "Oferta este înghețată."
+              }
             >
-              {documentError ? (
+              {confirming && canAccept ? (
+                <section
+                  ref={confirmRef}
+                  className="offers-confirm"
+                  aria-labelledby={confirmTitleId}
+                  tabIndex={-1}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      cancelConfirmation();
+                    }
+                  }}
+                >
+                  <p className="offers-confirm__title" id={confirmTitleId}>
+                    Confirmi acceptarea ofertei {item.reference}?
+                  </p>
+                  <p className="offers-confirm__body">
+                    Acceptarea creează comanda din această ofertă înghețată, la{" "}
+                    {formatMoney(quote.totals.grossPrice, quote.totals.currency)} cu TVA. Oferta trece în
+                    stadiul „Cu comandă” și nu mai poate fi acceptată din nou; o modificare ulterioară cere o
+                    ofertă nouă.
+                  </p>
+                  <div className="offers-confirm__actions">
+                    <Button disabled={accepting} onClick={() => void accept()}>
+                      {accepting ? "Se creează comanda…" : "Confirmă acceptarea"}
+                    </Button>
+                    <Button variant="secondary" disabled={accepting} onClick={cancelConfirmation}>
+                      Renunță
+                    </Button>
+                  </div>
+                </section>
+              ) : null}
+              {quoteDocument.error ? (
                 <InlineAlert tone="error" title="Documentul nu poate fi descărcat">
-                  {documentError}
+                  {quoteDocument.error}
                 </InlineAlert>
               ) : null}
             </QuoteSummary>
@@ -155,7 +281,7 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
               <p className="ui-note">Costul intern nu poate fi urmărit pentru această ofertă.</p>
             ) : null}
             <QuoteRelations
-              relations={presentRelations(quote)}
+              relations={presentRelations(quote, orderSnapshotId)}
               note="Fiecare legătură deschide înregistrarea ei. Oferta rămâne neschimbată."
             />
           </>

@@ -630,7 +630,9 @@ describe("unconfirmed rate acknowledgement — standalone product (single plane)
     );
     expect(pdf.status).toBe(200);
     expect(pdf.headers.get("content-type")).toContain("application/pdf");
-    const accepted = await unconfirmed.send("POST", `/api/assemblies/${acknowledged.assemblyId}/accept`);
+    const accepted = await unconfirmed.send("POST", `/api/assemblies/${acknowledged.assemblyId}/accept`, {
+      quoteSnapshotId: (await assemblyView(unconfirmed, acknowledged.assemblyId)).quoteSnapshotId,
+    });
     expect(accepted.status).toBe(200);
     expect(((await readBody(accepted)).assembly as JsonObject).orderId).toEqual(expect.any(String));
   });
@@ -961,7 +963,9 @@ describe("unconfirmed rate acknowledgement — SaaS organizations", () => {
       expect(pdf.status).toBe(200);
       expect(pdf.headers.get("content-type")).toContain("application/pdf");
     }
-    const accepted = await alpha.owner.send("POST", `/api/assemblies/${assemblyId}/accept`);
+    const accepted = await alpha.owner.send("POST", `/api/assemblies/${assemblyId}/accept`, {
+      quoteSnapshotId: (await assemblyView(alpha.owner, assemblyId)).quoteSnapshotId,
+    });
     expect(accepted.status).toBe(200);
     expect(((await readBody(accepted)).assembly as JsonObject).orderId).toEqual(expect.any(String));
     fixture.close();
