@@ -22,15 +22,44 @@ import { loadExecutionPlan, loadJobDetail } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { presentJobLifecycle } from "../presentation/jobLifecycle";
+import { formatQuantity } from "../presentation/format";
 import { statusTone } from "../presentation/statusTone";
 import { atelierHref, executionHref, jobHref, quoteHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
 import { SiteInstallationContextPanel } from "./SiteInstallationContextPanel";
+import { ExecutionActualConsumptionHistory } from "./ExecutionActualConsumption";
 import type { ExecutionTaskTransport } from "../api/types";
 
 type JobDetailPageProps = {
   jobId: string;
 };
+
+function TaskMaterialConsumption({ task }: { task: ExecutionTaskTransport }) {
+  const planned = task.plannedResources;
+  const actual = task.actualConsumption;
+  return (
+    <div data-testid="material-consumption">
+      <p className="section-label">Consum de material</p>
+      {planned.length > 0 ? (
+        <ul className="execution-actuals__history">
+          {planned.map((resource) => (
+            <li key={resource.resourceId}>
+              <span>{resource.label}</span>
+              <span>Planificat: {formatQuantity(resource.plannedQuantity, resource.unit)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>Consum planificat neînregistrat.</p>
+      )}
+      {actual.length > 0 ? (
+        <ExecutionActualConsumptionHistory actualConsumption={actual} />
+      ) : (
+        <p data-testid="actual-consumption-missing">Consum efectiv neînregistrat.</p>
+      )}
+    </div>
+  );
+}
 
 function jobQualityLabel(task: ExecutionTaskTransport): string {
   if (task.openReworkEpisode?.status === "OPEN") {
@@ -317,16 +346,19 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
                       <p className="section-label">
                         {task.seqLabel} {task.processLabel}
                       </p>
-                      <p className="section-label">Cantitate</p>
+                      <p className="section-label">Cantitate de lucrare</p>
                       <MeasurePair
                         planned={task.plannedQuantityLabel ?? "Fără cantitate măsurabilă"}
                         actual={task.completedQuantityLabel ?? "—"}
                       />
                       {task.varianceLabel ? (
-                        <p className="worklist-row__detail">{task.varianceLabel}</p>
+                        <p className="worklist-row__detail" data-testid="work-quantity-outcome">
+                          Cantitate executată: {task.varianceLabel}
+                        </p>
                       ) : (
                         <p className="worklist-row__detail">{task.statusLabel}</p>
                       )}
+                      <TaskMaterialConsumption task={task} />
                       {task.executionMode === "EXTERNAL" && task.externalProviderLabel ? (
                         <p className="worklist-row__detail">{task.externalProviderLabel}</p>
                       ) : null}

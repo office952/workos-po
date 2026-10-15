@@ -63,7 +63,15 @@ export function presentExecutionNextAction(
   if (task.canClaimStart) {
     return identified === false ? "Identifică operatorul" : "Poate fi pornită";
   }
+  if (task.status === "COMPLETED") {
+    return presentCompletedTaskAction(task);
+  }
   return presentOperatorRelation(task);
+}
+
+function presentCompletedTaskAction(task: ExecutionTaskTransport): string {
+  const label = task.statusLabel.trim();
+  return label.length > 0 ? label : "Finalizat";
 }
 
 function presentUnassignedProviderAction(task: ExecutionTaskTransport): string | null {

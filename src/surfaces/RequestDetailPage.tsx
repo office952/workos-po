@@ -92,7 +92,21 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
       <div className="commercial-toolbar request-detail__toolbar">
         <div className="commercial-toolbar__context">
           <a className="text-link" href="/cereri">← Toate cererile</a>
-          {detail ? <StatusBadge label={detail.statusLabel} tone={statusTone("workflow")} /> : null}
+          {detail ? (
+            <div className="request-progress" data-testid="request-progress">
+              <span className="request-progress__item" data-testid="request-administrative-status">
+                <span className="section-label">Stare administrativă</span>
+                <StatusBadge label={detail.statusLabel} tone={statusTone("workflow")} />
+              </span>
+              <span className="request-progress__item" data-testid="request-commercial-progress">
+                <span className="section-label">Progres comercial</span>
+                <StatusBadge
+                  label={detail.commercialProgressLabel?.trim() || "—"}
+                  tone={statusTone("workflow")}
+                />
+              </span>
+            </div>
+          ) : null}
         </div>
         {primary ? (
           <a className="hit" href={primary.actionHref}>

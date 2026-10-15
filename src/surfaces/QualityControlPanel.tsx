@@ -3,6 +3,7 @@ import { Button } from "../components/Button";
 import { InlineAlert } from "../components/InlineAlert";
 import { TextField } from "../components/TextField";
 import { formatTimestamp } from "../presentation/format";
+import { presentQualityHistory, type QualityHistoryEntry } from "../presentation/qualityHistory";
 
 type QualityControlPanelProps = {
   task: ExecutionTaskTransport;
@@ -31,6 +32,7 @@ export function QualityControlPanel({
     return null;
   }
   const attempts = task.qualityAttempts ?? [];
+  const history = presentQualityHistory(attempts, task.reworkEpisodes ?? []);
   const open = task.openReworkEpisode?.status === "OPEN" ? task.openReworkEpisode : null;
   const failNote =
     task.latestQualityResult === "FAIL"
@@ -82,30 +84,55 @@ export function QualityControlPanel({
           </div>
         </>
       ) : null}
-      {attempts.length > 0 ? (
+      {history.length > 0 ? (
         <div className="stack" data-testid="quality-history">
-          {attempts.map((attempt) => (
-            <p key={attempt.attemptSeq}>
-              {attempt.result === "PASS" ? "Acceptat" : "Respins"}
-              {attempt.note ? ` — ${attempt.note}` : ""}
-              {formatTimestamp(attempt.recordedAt)
-                ? ` — ${formatTimestamp(attempt.recordedAt)}`
-                : ""}
-            </p>
+          {history.map((entry) => (
+            <QualityHistoryLine key={qualityHistoryKey(entry)} entry={entry} />
           ))}
-          {(task.reworkEpisodes ?? [])
-            .filter((episode) => episode.status === "CLOSED")
-            .map((episode) => (
-              <p key={`episode-${episode.episodeSeq}`}>
-                Corecție închisă
-                {episode.correctionNote ? ` — ${episode.correctionNote}` : ""}
-                {episode.closedAt && formatTimestamp(episode.closedAt)
-                  ? ` — ${formatTimestamp(episode.closedAt)}`
-                  : ""}
-              </p>
-            ))}
         </div>
       ) : null}
     </div>
   );
+}
+
+function qualityHistoryKey(entry: QualityHistoryEntry): string {
+  switch (entry.kind) {
+    case "attempt":
+      return `attempt-${entry.attempt.attemptSeq}`;
+    case "correction":
+      return `episode-${entry.episode.episodeSeq}`;
+    default: {
+      const _exhaustive: never = entry;
+      return _exhaustive;
+    }
+  }
+}
+
+function QualityHistoryLine({ entry }: { entry: QualityHistoryEntry }) {
+  switch (entry.kind) {
+    case "attempt":
+      return (
+        <p>
+          {entry.attempt.result === "PASS" ? "Acceptat" : "Respins"}
+          {entry.attempt.note ? ` — ${entry.attempt.note}` : ""}
+          {formatTimestamp(entry.attempt.recordedAt)
+            ? ` — ${formatTimestamp(entry.attempt.recordedAt)}`
+            : ""}
+        </p>
+      );
+    case "correction":
+      return (
+        <p>
+          Corecție închisă
+          {entry.episode.correctionNote ? ` — ${entry.episode.correctionNote}` : ""}
+          {entry.episode.closedAt && formatTimestamp(entry.episode.closedAt)
+            ? ` — ${formatTimestamp(entry.episode.closedAt)}`
+            : ""}
+        </p>
+      );
+    default: {
+      const _exhaustive: never = entry;
+      return _exhaustive;
+    }
+  }
 }

@@ -344,7 +344,7 @@ describe("RequestsPage", () => {
     const receipt = screen.getByRole("link", { name: "Ultima intrare: Caseta" });
     expect(within(receipt).getByText("NORD MARKET DEMO SRL")).toBeInTheDocument();
     expect(within(receipt).getByText("Stare: Nouă")).toBeInTheDocument();
-    expect(within(receipt).getByText("Ofertă creată")).toBeInTheDocument();
+    expect(within(receipt).getByText("Progres: Ofertă creată")).toBeInTheDocument();
   });
 
   it("filters Necesită acțiune from canonical needsAttention", async () => {

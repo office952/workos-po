@@ -114,6 +114,76 @@ describe("presentExecutionNextAction", () => {
     ).toBe("În lucru la alt operator");
   });
 
+  it("shows a completed task as finished before an operator-ownership hint", () => {
+    expect(
+      presentExecutionNextAction(
+        task({
+          status: "COMPLETED",
+          statusLabel: "Finalizat",
+          operatorRelation: "owned_by_other",
+        }),
+        true,
+      ),
+    ).toBe("Finalizat");
+    expect(
+      presentExecutionNextAction(
+        task({
+          status: "COMPLETED",
+          statusLabel: "   ",
+          operatorRelation: "owned",
+        }),
+        false,
+      ),
+    ).toBe("Finalizat");
+  });
+
+  it("keeps active ownership, dependencies, quality and external copy ahead of completion", () => {
+    expect(
+      presentExecutionNextAction(
+        task({
+          status: "IN_PROGRESS",
+          statusLabel: "În lucru",
+          operatorRelation: "owned_by_other",
+        }),
+        true,
+      ),
+    ).toBe("În lucru la alt operator");
+    expect(
+      presentExecutionNextAction(
+        task({
+          status: "COMPLETED",
+          statusLabel: "Finalizat",
+          waitingFor: ["Debitare foaie CNC"],
+          operatorRelation: "owned_by_other",
+        }),
+        true,
+      ),
+    ).toBe("Așteaptă: Debitare foaie CNC");
+    expect(
+      presentExecutionNextAction(
+        task({
+          status: "COMPLETED",
+          statusLabel: "Finalizat",
+          qualityControl: true,
+          qualityBlockLabel: "Este necesară corecția",
+          operatorRelation: "owned_by_other",
+        }),
+        true,
+      ),
+    ).toBe("Este necesară corecția");
+    expect(
+      presentExecutionNextAction(
+        task({
+          executionMode: "EXTERNAL",
+          status: "OUTSIDE",
+          statusLabel: "La furnizor extern",
+          operatorRelation: "owned_by_other",
+        }),
+        true,
+      ),
+    ).toBe("La furnizor extern");
+  });
+
   it("does not call an unassigned eligible provider missing", () => {
     const memberWaiting = task({
       requiresProvider: true,

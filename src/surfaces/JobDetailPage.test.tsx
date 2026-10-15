@@ -311,4 +311,121 @@ describe("JobDetailPage", () => {
     expect(screen.getAllByText("La furnizor extern").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Atelier Extern").length).toBeGreaterThan(0);
   });
+
+  it("separates work quantity from planned and actual material consumption", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/jobs/job-mat")) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => ({
+              job: {
+                jobId: "job-mat",
+                productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+                productLabel: "Litere volumetrice",
+                inscription: "CONSUM",
+                customerDisplayName: "Atelier Nord",
+                stage: "IN_EXECUTION",
+                stageLabel: "În execuție",
+                nextAction: "CONTINUE_EXECUTION",
+                nextActionLabel: "Continuă execuția",
+                progressLabel: "1 / 2",
+                orderSnapshotId: "ord-mat",
+                releaseSnapshotId: "rel-mat",
+              },
+              quote: { quoteSnapshotId: "q-mat" },
+              execution: { planId: "exp-mat" },
+            }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            executionPlan: {
+              plan: {
+                planId: "exp-mat",
+                productLabel: "Litere",
+                inscription: "CONSUM",
+                sourceSnapshotId: "aps-mat",
+              },
+              statusLabel: "În lucru",
+              progress: { completed: 1, total: 2 },
+              tasks: [
+                {
+                  taskId: "task-cut",
+                  processLabel: "Debitare",
+                  scopeLabel: "Spate",
+                  seqLabel: "01",
+                  status: "COMPLETED",
+                  statusLabel: "Finalizat",
+                  assignmentLabel: "CNC",
+                  requiresProvider: true,
+                  canAssign: false,
+                  canClaimStart: false,
+                  canComplete: false,
+                  requiresCompletedQuantity: true,
+                  measurableQuantity: { label: "Lungime", value: 12.5, unit: "m" },
+                  completedQuantityLabel: "Realizat: 12,5 m",
+                  varianceLabel: "Conform planului",
+                  waitingFor: [],
+                  eligibleProviders: [],
+                  resourceDemands: [
+                    {
+                      resourceId: "res-plex",
+                      label: "Plexiglas",
+                      plannedQuantity: 12.5,
+                      unit: "m",
+                    },
+                  ],
+                  actualConsumption: [
+                    {
+                      resourceId: "res-plex",
+                      resourceLabel: "Plexiglas",
+                      actualQuantity: 13.75,
+                      unit: "m",
+                      note: "rebut",
+                    },
+                  ],
+                },
+                {
+                  taskId: "task-qc",
+                  processLabel: "Control",
+                  scopeLabel: "Față",
+                  seqLabel: "02",
+                  status: "PLANNED",
+                  statusLabel: "Planificat",
+                  assignmentLabel: "Nealocat",
+                  requiresProvider: false,
+                  canAssign: false,
+                  canClaimStart: false,
+                  canComplete: false,
+                  requiresCompletedQuantity: false,
+                  waitingFor: [],
+                  eligibleProviders: [],
+                },
+              ],
+            },
+          }),
+        });
+      }),
+    );
+
+    render(<JobDetailPage jobId="job-mat" />);
+    expect(await screen.findByText("Cantitate executată: Conform planului")).toBeInTheDocument();
+    expect(screen.getByText("Realizat: 12,5 m")).toBeInTheDocument();
+    const sections = screen.getAllByTestId("material-consumption");
+    expect(sections).toHaveLength(2);
+    expect(sections[0]).toHaveTextContent("Planificat: 12,5 m");
+    expect(sections[0]).toHaveTextContent("Consum efectiv");
+    expect(sections[0]).toHaveTextContent("13,75 m");
+    expect(sections[0]).toHaveTextContent("rebut");
+    expect(sections[1]).toHaveTextContent("Consum planificat neînregistrat.");
+    expect(sections[1]).toHaveTextContent("Consum efectiv neînregistrat.");
+    expect(screen.queryByText(/cost intern/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\bEIC\b/)).not.toBeInTheDocument();
+  });
 });
