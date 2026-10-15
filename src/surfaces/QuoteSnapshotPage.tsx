@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode, type Ref } from "react";
 import {
   presentOrderSnapshotId,
   presentQuoteAcceptanceFact,
@@ -17,6 +17,7 @@ import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { CommercialPricePanel } from "../presentation/commercialPrice";
 import { presentCustomerPrice } from "../presentation/customerPrice";
+import { formatMoney } from "../presentation/format";
 import { triggerBrowserDownload } from "../presentation/download";
 import { presentCostLine, selectLineByResource } from "../presentation/costLine";
 import { presentContextMeta } from "../presentation/contextMeta";
@@ -76,6 +77,18 @@ function presentLines(snapshot: QuoteSnapshotTransport, total: QuoteTotal | null
   }));
 }
 
+function quoteAcceptanceIdentity(
+  envelope: QuoteListItemTransport | null,
+  snapshot: QuoteSnapshotTransport | null,
+): string {
+  const reference = envelope?.reference.trim() ?? "";
+  const snapshotId = snapshot?.quoteSnapshotId ?? envelope?.quoteSnapshotId ?? "";
+  if (reference && reference !== snapshotId) {
+    return reference;
+  }
+  return snapshot?.productLabel || envelope?.productLabel || "această ofertă";
+}
+
 function presentRelations(snapshot: QuoteSnapshotTransport, orderSnapshotId: string | null): QuoteRelation[] {
   return [
     snapshot.customerId
@@ -102,15 +115,43 @@ export function QuoteSnapshotPage({
   );
   const [actionState, setActionState] = useState<"idle" | "pending" | "error">("idle");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const [documentState, setDocumentState] = useState<"idle" | "pending" | "error">("idle");
   const [documentError, setDocumentError] = useState<string | null>(null);
+  const acceptingRef = useRef(false);
+  const returnFocusRef = useRef(false);
+  const confirmRef = useRef<HTMLElement>(null);
+  const acceptButtonRef = useRef<HTMLButtonElement>(null);
+  const confirmTitleId = useId();
+
+  useEffect(() => {
+    if (confirming) {
+      confirmRef.current?.focus();
+    } else if (returnFocusRef.current) {
+      returnFocusRef.current = false;
+      acceptButtonRef.current?.focus();
+    }
+  }, [confirming]);
+
+  function cancelAcceptance(): void {
+    if (acceptingRef.current) {
+      return;
+    }
+    returnFocusRef.current = true;
+    setConfirming(false);
+  }
 
   async function accept(): Promise<void> {
+    if (acceptingRef.current) {
+      return;
+    }
+    acceptingRef.current = true;
     setActionState("pending");
     setActionError(null);
     try {
       await postQuoteAcceptance(productCode, quoteSnapshotId);
       invalidateAfterAcceptQuote(quoteSnapshotId, snapshot.data?.requestId);
+      setConfirming(false);
       setActionState("idle");
     } catch (error) {
       setActionState("error");
@@ -119,6 +160,8 @@ export function QuoteSnapshotPage({
           ? "Oferta nu poate fi acceptată încă."
           : "Acceptarea a eșuat.",
       );
+    } finally {
+      acceptingRef.current = false;
     }
   }
 
@@ -208,8 +251,13 @@ export function QuoteSnapshotPage({
                 <>
                   <QuoteEnvelopeAction
                     envelope={presentedEnvelope}
-                    pending={actionState === "pending"}
-                    onAccept={() => void accept()}
+                    pending={actionState === "pending" || confirming}
+                    confirming={confirming}
+                    acceptButtonRef={acceptButtonRef}
+                    onAccept={() => {
+                      setActionError(null);
+                      setConfirming(true);
+                    }}
                     onCreateOrder={() => void createOrder()}
                   />
                   <Button
@@ -223,6 +271,23 @@ export function QuoteSnapshotPage({
               }
               note="Oferta este înghețată. Acceptarea și comanda păstrează această versiune."
             >
+              {confirming && presentedEnvelope?.nextAction === "ACCEPT_QUOTE" ? (
+                <QuoteAcceptanceConfirmation
+                  titleId={confirmTitleId}
+                  confirmRef={confirmRef}
+                  identity={quoteAcceptanceIdentity(presentedEnvelope, presentedSnapshot)}
+                  customerName={
+                    presentedSnapshot?.customerDisplayName ?? presentedEnvelope.customerDisplayName
+                  }
+                  requestReference={
+                    presentedSnapshot?.requestReference ?? presentedEnvelope.requestReference
+                  }
+                  total={total}
+                  pending={actionState === "pending"}
+                  onConfirm={() => void accept()}
+                  onCancel={cancelAcceptance}
+                />
+              ) : null}
               {documentError ? (
                 <InlineAlert tone="error" title="Documentul nu poate fi descărcat">
                   {documentError}
@@ -279,14 +344,84 @@ export function QuoteSnapshotPage({
   );
 }
 
+function QuoteAcceptanceConfirmation({
+  titleId,
+  confirmRef,
+  identity,
+  customerName,
+  requestReference,
+  total,
+  pending,
+  onConfirm,
+  onCancel,
+}: {
+  titleId: string;
+  confirmRef: Ref<HTMLElement>;
+  identity: string;
+  customerName: string | null;
+  requestReference: string | null;
+  total: QuoteTotal | null;
+  pending: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}): ReactNode {
+  const customer = customerName?.trim() ?? "";
+  const request = requestReference?.trim() ?? "";
+  const commercial =
+    total && total.grossPrice !== null
+      ? [
+          total.netPrice !== null ? `Net ${formatMoney(total.netPrice, total.currency)}` : null,
+          `Total cu TVA ${formatMoney(total.grossPrice, total.currency)}`,
+        ]
+          .filter((part): part is string => part !== null)
+          .join(" · ")
+      : "";
+  return (
+    <section
+      ref={confirmRef}
+      className="offers-confirm"
+      aria-labelledby={titleId}
+      tabIndex={-1}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          onCancel();
+        }
+      }}
+    >
+      <p className="offers-confirm__title" id={titleId}>
+        Confirmi acceptarea ofertei {identity}?
+      </p>
+      <p className="offers-confirm__body">
+        Se înregistrează acceptarea comunicată de client pentru această ofertă înghețată.
+        {customer ? ` Client: ${customer}.` : ""}
+        {request ? ` Cerere: ${request}.` : ""}
+        {commercial ? ` ${commercial}.` : ""}
+      </p>
+      <div className="offers-confirm__actions">
+        <Button disabled={pending} onClick={onConfirm}>
+          {pending ? "Se înregistrează acceptarea…" : "Confirmă acceptarea"}
+        </Button>
+        <Button variant="secondary" disabled={pending} onClick={onCancel}>
+          Anulează
+        </Button>
+      </div>
+    </section>
+  );
+}
+
 function QuoteEnvelopeAction({
   envelope,
   pending,
+  confirming,
+  acceptButtonRef,
   onAccept,
   onCreateOrder,
 }: {
   envelope: QuoteListItemTransport | null;
   pending: boolean;
+  confirming: boolean;
+  acceptButtonRef: Ref<HTMLButtonElement>;
   onAccept: () => void;
   onCreateOrder: () => void;
 }): ReactNode {
@@ -296,7 +431,12 @@ function QuoteEnvelopeAction({
   switch (envelope.nextAction) {
     case "ACCEPT_QUOTE":
       return (
-        <Button disabled={pending} onClick={onAccept}>
+        <Button
+          ref={acceptButtonRef}
+          disabled={pending}
+          aria-expanded={confirming}
+          onClick={onAccept}
+        >
           {envelope.nextActionLabel || "Marchează acceptată"}
         </Button>
       );

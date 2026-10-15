@@ -42,10 +42,7 @@ import {
 } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
-import {
-  draftCompletedQuantity,
-  parseCompletedQuantity,
-} from "../presentation/completedQuantity";
+import { parseCompletedQuantity } from "../presentation/completedQuantity";
 import {
   actualConsumptionDraftKey,
   canEditActualConsumption,
@@ -269,13 +266,7 @@ export function ExecutionPage({
   const [correctionNotes, setCorrectionNotes] = useState<Record<string, string>>({});
 
   function actualQuantityDraft(task: ExecutionTaskTransport): string {
-    if (actualDrafts[task.taskId] !== undefined) {
-      return actualDrafts[task.taskId];
-    }
-    if (task.requiresCompletedQuantity && task.plannedQuantity !== null) {
-      return draftCompletedQuantity(task.plannedQuantity);
-    }
-    return "";
+    return actualDrafts[task.taskId] ?? "";
   }
 
   async function assign(
@@ -704,6 +695,11 @@ export function ExecutionPage({
                 id={`actual-${currentTask.taskId}`}
                 label="Cantitate realizată"
                 value={actualQuantityDraft(currentTask)}
+                hint={
+                  currentTask.plannedQuantityLabel
+                    ? `Planificat: ${currentTask.plannedQuantityLabel}`
+                    : undefined
+                }
                 inputMode="decimal"
                 disabled={actionState === "pending"}
                 onChange={(value) => {
