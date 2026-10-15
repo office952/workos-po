@@ -12,8 +12,8 @@ import { formatTimestamp } from "../presentation/format";
 import { matchesSearch } from "../presentation/listFilter";
 import { presentJobWorklistAction } from "../presentation/worklistAction";
 import { jobHref } from "../routing/appRoute";
-import travelerTop from "../assets/work-traveler-top.svg";
-import travelerFoot from "../assets/work-traveler-foot.svg";
+import travelerTop from "../assets/work-traveler-dock-photo.svg";
+import travelerFoot from "../assets/work-traveler-clamp-photo.svg";
 import "../styles/surfaces/jobs.css";
 
 const FILTERS = [
@@ -165,20 +165,14 @@ function WorkTraveler({ job }: { job: JobListItemTransport | null }) {
   const action = job ? presentJobWorklistAction(job) : null;
 
   return (
-    <aside className="jobs-traveler" aria-label="Fișă operațională pentru lucrarea selectată">
+    <aside className="jobs-traveler" aria-label="Fișa operațională a lucrării selectate">
       <div className="jobs-traveler__housing">
-        <span className="jobs-traveler__side-rail jobs-traveler__side-rail--left" aria-hidden="true" />
-        <span className="jobs-traveler__side-rail jobs-traveler__side-rail--right" aria-hidden="true" />
         <div className="jobs-traveler__fixture-top" aria-hidden="true">
-          <img src={travelerTop} alt="" width="820" height="194" />
-          <div className="jobs-traveler__fixture-label">
-            <span><strong>WORK TRAVELER</strong><small>PRODUCTION CONTROL</small></span>
-            <span className="jobs-traveler__fixture-brand">WorkOS<small>ATELIER / OPERATIONS</small></span>
-          </div>
+          <img src={travelerTop} alt="" width="760" height="207" />
         </div>
         <div className="jobs-traveler__paper-bay">
           {job ? (
-            <div className="jobs-traveler__paper" key={job.jobId}>
+            <article className="jobs-traveler__paper" key={job.jobId}>
               <div className="jobs-traveler__paper-head">
                 <span>FIȘĂ DE PRODUCȚIE</span>
                 <span>{formatTimestamp(job.createdAt) ?? "—"}</span>
@@ -186,23 +180,34 @@ function WorkTraveler({ job }: { job: JobListItemTransport | null }) {
               <h2 className="jobs-traveler__title">{jobName(job)}</h2>
               <p className="jobs-traveler__description" title={jobSubtitle(job)}>{jobSubtitle(job)}</p>
               <p className="jobs-traveler__client">{job.customerDisplayName ?? "Client neprecizat"}</p>
-              <dl className="jobs-traveler__facts">
-                <div><dt>Tip lucrare</dt><dd>{job.kindLabel}</dd></div>
-                <div><dt>Prioritate</dt><dd>{job.priorityLabel}</dd></div>
-                <div><dt>Termen</dt><dd>{job.targetDateLabel}</dd></div>
-                <div><dt>Progres</dt><dd>{job.progressLabel ?? "Fără plan de execuție"}</dd></div>
-              </dl>
+
+              <div className="jobs-traveler__meta" aria-label="Date esențiale">
+                <span><small>TIP</small>{job.kindLabel}</span>
+                <span><small>PRIORITATE</small>{job.priorityLabel}</span>
+                <span><small>TERMEN</small>{job.targetDateLabel}</span>
+              </div>
+
               <div className="jobs-traveler__current">
-                <span className="jobs-traveler__eyebrow">ETAPA ACTUALĂ</span>
-                <strong>{job.stageLabel}</strong>
+                <div>
+                  <span className="jobs-traveler__eyebrow">ETAPA ACTUALĂ</span>
+                  <strong>{job.stageLabel}</strong>
+                </div>
+                <div className="jobs-traveler__current-progress">
+                  <span>PROGRES</span>
+                  <b>{job.progressLabel ?? "Fără plan de execuție"}</b>
+                </div>
                 {job.attentionLabel ? (
-                  <p className="jobs-traveler__alert"><span aria-hidden="true">!</span>{job.attentionLabel}</p>
+                  <p className="jobs-traveler__alert">
+                    <span aria-hidden="true">!</span>
+                    <span>{job.attentionLabel}</span>
+                  </p>
                 ) : null}
               </div>
-              <div className="jobs-traveler__flow">
+
+              <section className="jobs-traveler__flow" aria-label="Traseul lucrării">
                 <h3>FLUX DE PRODUCȚIE</h3>
                 <ProductionRail job={job} vertical />
-              </div>
+              </section>
               <div className="jobs-traveler__continue">
                 <span className="jobs-traveler__eyebrow">URMĂTOAREA ACȚIUNE</span>
                 <strong>{job.nextActionLabel || "Deschide lucrarea"}</strong>
@@ -214,7 +219,7 @@ function WorkTraveler({ job }: { job: JobListItemTransport | null }) {
                   <a className="jobs-traveler__detail-link" href={jobHref(job.jobId)}>Deschide fișa completă →</a>
                 ) : null}
               </div>
-            </div>
+            </article>
           ) : (
             <div className="jobs-traveler__paper jobs-traveler__paper--empty">
               <span className="jobs-traveler__eyebrow">FIȘĂ DE PRODUCȚIE</span>
@@ -224,15 +229,11 @@ function WorkTraveler({ job }: { job: JobListItemTransport | null }) {
         </div>
         <div className="jobs-traveler__paper-tear" aria-hidden="true" />
         <div className="jobs-traveler__fixture-bottom" aria-hidden="true">
-          <img src={travelerFoot} alt="" width="820" height="140" />
-          <span className="jobs-traveler__fixture-engraving">
-            <span>WORKOS / JOB CONTROL</span>
-            <span>PRODUCTION SYSTEM</span>
-          </span>
+          <img src={travelerFoot} alt="" width="760" height="124" />
         </div>
       </div>
       <p className="jobs-traveler__hint" aria-hidden="true">
-        {job ? "Fișă operațională / " + job.stageLabel : "Selectează un rând pentru previzualizare"}
+        <span>{job ? "Fișă operațională / " + job.stageLabel : "Așteaptă selecția unei lucrări"}</span>
         <span>WORKOS / OPERAȚIUNI</span>
       </p>
       <p className="u-visually-hidden" aria-live="polite" aria-atomic="true">
