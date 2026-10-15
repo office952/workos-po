@@ -46,6 +46,11 @@ describe("JobsPage", () => {
     const planning = screen.getByRole("link", { name: "Planificare" });
     expect(planning).toHaveAttribute("href", "/planificare");
     expect(planning.closest(".jobs-spine__controls")).not.toBeNull();
+    const hero = screen.getByRole("heading", { name: "Lucrări" }).closest(".page-header");
+    expect(hero).toHaveClass("page-header--pilot");
+    expect(hero).not.toHaveClass("page-header--pilot-compact");
+    expect(within(hero as HTMLElement).getByRole("group", { name: "Indicatori lucrări" })).toHaveClass("pilot-instrument");
+
     expect(document.querySelector(".app-shell__nav")).toBeNull();
     expect(screen.getByRole("link", { name: /ALPHA/ })).toHaveAttribute("href", "/lucrari/job-1");
     const continueLinks = screen.getAllByRole("link", { name: "Continuă execuția" });

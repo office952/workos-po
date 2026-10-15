@@ -1,52 +1,22 @@
-/* WorkOS Lucrări — integrated production ledger + physical Work Traveler.
-   The Cereri hero surface is shared as an atmospheric engineering field; no shared CSS
-   or shell authority is changed. All state, progress and next actions are API-owned. */
+/* Lucrări V1.4: use the same header geometry as the commercial registries.
+   Header-only background is a first-row grid layer; it cannot spill into the
+   register or the tall, live Work Traveler, at any viewport/content height. */
 .jobs-spine {
   --jobs-ink: var(--color-text-primary);
   --jobs-muted: var(--color-text-secondary);
   --jobs-signal: var(--shell-signal);
   --jobs-brass: var(--color-warning);
   --jobs-paper: #eee6d7;
-  --jobs-header-height: 255px;
   position: relative;
   isolation: isolate;
   min-width: 0;
   padding: 0 var(--page-gutter) 56px;
 }
-.jobs-spine::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: min(620px,100%);
-  pointer-events: none;
-  background: url("../../assets/request-intake-surface.webp") center top / cover no-repeat;
-  opacity: .62;
-  -webkit-mask-image: linear-gradient(to bottom,#000 0%,#000 37%,transparent 100%);
-  mask-image: linear-gradient(to bottom,#000 0%,#000 37%,transparent 100%);
-}
-[data-resolved-theme="light"] .jobs-spine::before {
-  filter: invert(1) grayscale(1);
-  mix-blend-mode: multiply;
-  opacity: .32;
-}
-.jobs-spine::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  top: var(--jobs-header-height);
-  left: var(--page-gutter);
-  right: var(--page-gutter);
-  height: 1px;
-  background: var(--color-border);
-  pointer-events: none;
-}
 .jobs-spine__layout {
   --jobs-traveler-width: clamp(440px,34vw,555px);
   --jobs-gap: clamp(16px,1.8vw,28px);
   position: relative;
+  isolation: isolate;
   display: grid;
   grid-template-columns: minmax(0,1fr) var(--jobs-traveler-width);
   grid-template-areas: "header traveler" "register traveler";
@@ -56,67 +26,53 @@
   max-width: 1880px;
   margin: 0 auto;
 }
+/* The artwork is an actual item in grid row 1, so its bottom is exactly the
+   bottom of the pilot header; the Work Traveler may extend below independently. */
 .jobs-spine__layout::before {
   content: "";
-  position: absolute;
-  z-index: -1;
-  top: 0;
-  bottom: 0;
-  right: calc(var(--jobs-traveler-width) + var(--jobs-gap) / 2);
-  width: 1px;
-  background: linear-gradient(to bottom,transparent,var(--color-border) 36%,transparent 89%);
-  pointer-events: none;
-  opacity: .21;
-}
-
-/* One uninterrupted hero: identity, service wayfinding, data-derived instrument. */
-.jobs-spine__header { position: relative; grid-area: header; min-width: 0; }
-.jobs-spine__header > .page-header.page-header--pilot.page-header--pilot-compact {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  align-self: stretch;
   position: relative;
-  min-height: var(--jobs-header-height);
-  display: grid;
-  grid-template-columns: minmax(0,1fr);
-  grid-template-rows: auto auto;
-  grid-template-areas: "copy" "instrument";
-  align-content: space-between;
-  align-items: start;
-  gap: 18px;
-  margin: 0;
-  padding: 35px 0 20px;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
+  z-index: 0;
+  min-height: 0;
+  margin-inline: calc(-1 * var(--page-gutter));
+  background: url("../../assets/request-intake-surface.webp") center / cover no-repeat;
+  opacity: .52;
+  pointer-events: none;
 }
-.jobs-spine__header .page-header__copy {
-  grid-area: copy;
-  min-width: 0;
-  max-width: 780px;
-  padding: 0;
-  border: 0;
-  box-shadow: none;
+[data-resolved-theme="light"] .jobs-spine__layout::before {
+  filter: invert(1) grayscale(1);
+  mix-blend-mode: multiply;
+  opacity: .46;
 }
-.jobs-spine__header .page-header__eyebrow {
-  margin-bottom: 13px;
-  color: var(--jobs-muted);
-  font: 500 10px/1.2 var(--font-mono);
-  letter-spacing: .15em;
-}
-.jobs-spine__header .page-header__title {
-  color: var(--jobs-ink);
-  font: 650 clamp(49px,5.2vw,76px)/1.02 var(--font-brand);
-  letter-spacing: -.064em;
-}
-[data-resolved-theme="dark"] .jobs-spine__header .page-header__title { color: #eee6d7; }
-.jobs-spine__header .page-header__lead {
-  margin-top: 11px;
-  max-width: 615px;
-  color: var(--jobs-muted);
-  font: 400 clamp(12px,1.1vw,15px)/1.45 var(--font-sans);
-}
-.jobs-spine__header .page-header__instrument {
-  grid-area: instrument;
-  min-width: 0;
+.jobs-spine__layout::after {
+  content: "";
+  grid-column: 1 / -1;
+  grid-row: 1;
   align-self: end;
+  position: relative;
+  z-index: 1;
+  height: 1px;
+  margin-inline: calc(-1 * var(--page-gutter));
+  background: var(--color-border);
+  pointer-events: none;
+}
+.jobs-spine__header {
+  position: relative;
+  z-index: 1;
+  grid-area: header;
+  min-width: 0;
+}
+/* Preserve the accepted PageHeader pilot min-height/title reserve/padding.
+   Remove only its nested gutter and short-column border: our full-width grid
+   separator owns the header-to-register boundary. */
+.jobs-spine__header > .page-header.page-header--pilot {
+  margin: 0;
+  border-bottom: 0;
+}
+.jobs-spine__header .page-header__lead {
+  max-width: var(--readable-text-width);
 }
 .jobs-spine__process-map {
   position: absolute;
@@ -150,40 +106,28 @@
   background: var(--jobs-brass);
   box-shadow: 0 69px var(--jobs-brass), 0 137px var(--jobs-brass);
 }
+/* Reuse pilot-instrument semantics and typography shared by Cereri/Clienți/
+   Oferte. Local sizing only prevents four operational counters from wrapping. */
 .jobs-spine__metrics {
-  display: flex;
-  align-items: stretch;
-  flex-wrap: nowrap;
   width: min(100%,780px);
+  flex-wrap: nowrap;
+  gap: clamp(8px,1.15vw,20px);
 }
-.jobs-spine__metrics button {
-  display: flex;
-  align-items: center;
-  gap: 13px;
+.jobs-spine__metrics > .pilot-instrument__metric {
   flex: 1 1 0;
   min-width: 0;
-  min-height: 54px;
-  padding: 4px 20px;
-  background: transparent;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  color: var(--jobs-ink);
-  text-align: left;
-  cursor: pointer;
+  gap: clamp(8px,1vw,16px);
+  padding-inline: clamp(8px,1.1vw,18px);
 }
-.jobs-spine__metrics button:first-child { padding-left: 0; }
-.jobs-spine__metrics button + button { border-left: 1px solid var(--color-border-strong); }
-.jobs-spine__metrics button:hover { background: var(--color-surface-raised); }
-.jobs-spine__metrics button[aria-pressed="true"] { border-bottom-color: var(--jobs-signal); }
-.jobs-spine__metrics button:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: -2px; }
-.jobs-spine__metrics strong {
-  color: inherit;
-  font: 400 clamp(28px,2.65vw,42px)/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -.07em;
+.jobs-spine__metrics > .pilot-instrument__metric:first-child {
+  padding-left: 0;
 }
-.jobs-spine__metrics span { color: inherit; font: 500 11px/1.35 var(--font-sans); }
-.jobs-spine__metrics button[data-attention="true"] { color: var(--jobs-brass); }
+.jobs-spine__metrics > .pilot-instrument__metric[aria-pressed="true"] {
+  border-bottom-color: var(--jobs-signal);
+}
+.jobs-spine__metrics > .pilot-instrument__metric--attention[aria-pressed="true"] {
+  border-bottom-color: var(--jobs-brass);
+}
 
 /* The registry continues directly from the hero, without a second visual world. */
 .jobs-spine__register { grid-area: register; position: relative; min-width: 0; }
@@ -191,9 +135,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px 16px;
+  gap: 16px 24px;
   flex-wrap: wrap;
-  padding: 17px 0 13px;
+  padding: 20px 0;
 }
 .jobs-spine__search {
   display: flex;
@@ -202,8 +146,8 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
-  min-height: 46px;
-  padding: 0 14px;
+  min-height: 48px;
+  padding: 0 16px;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
 }
@@ -709,6 +653,11 @@
 }
 .jobs-traveler__hint span:last-child { text-align: right; }
 
+/* Like Cereri, compact screens keep the header clean without graticule. */
+@media (max-width:767px) {
+  .jobs-spine__layout::before { display: none; }
+}
+
 /* Preserve readable job status/next action before sacrificing secondary columns. */
 @media (max-width:1660px) {
   .jobs-spine__layout { --jobs-traveler-width: clamp(425px,34vw,530px); }
@@ -752,7 +701,6 @@
   .jobs-traveler__steps .jobs-spine__rail-label { font-size: 11px; }
 }
 @media (max-width:1060px) {
-  .jobs-spine { --jobs-header-height: 235px; }
   .jobs-spine__layout {
     grid-template-columns: minmax(0,1fr);
     grid-template-rows: auto auto auto;
@@ -760,7 +708,6 @@
     row-gap: 0;
   }
   .jobs-spine__layout::before { display: none; }
-  .jobs-spine__header > .page-header.page-header--pilot.page-header--pilot-compact { padding-top: 25px; }
   .jobs-spine__columns,.jobs-spine__row {
     grid-template-columns: minmax(180px,1.2fr) minmax(170px,1.1fr) minmax(138px,.82fr);
   }
@@ -770,15 +717,7 @@
   .jobs-spine__controls { width: auto; }
 }
 @media (max-width:690px) {
-  .jobs-spine { --jobs-header-height: 0px; padding-inline: var(--page-gutter); }
-  .jobs-spine::before { height: 300px; opacity: .3; }
-  .jobs-spine::after { display: none; }
-  .jobs-spine__header > .page-header.page-header--pilot.page-header--pilot-compact {
-    min-height: 0; padding: 26px 0 17px; gap: 17px;
-  }
-  .jobs-spine__header .page-header__title { font-size: clamp(40px,11vw,58px); }
-  .jobs-spine__header .page-header__lead { font-size: 12px; }
-  .jobs-spine__metrics { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  .jobs-spine__metrics { display: grid; grid-template-columns: 1fr 1fr; width: 100%; gap: 0; }
   .jobs-spine__metrics button { padding: 9px 13px; min-height: 52px; }
   .jobs-spine__metrics button:nth-child(odd) { border-left: 0; }
   .jobs-spine__metrics button:nth-child(n+3) { border-top: 1px solid var(--color-border); }

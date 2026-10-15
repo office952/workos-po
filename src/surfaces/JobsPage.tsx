@@ -303,23 +303,27 @@ export function JobsPage() {
               <span>LIVRARE</span>
             </div>
             <PageHeader
-              variant="pilot-compact"
+              variant="pilot"
               eyebrow="Registru operațional"
               title="Lucrări"
               lead="Planifică, urmărește execuția și finalizează lucrările de producție."
               instrument={
-                <div className="jobs-spine__metrics" role="group" aria-label="Indicatori lucrări">
-                  <button type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
-                    <strong>{countLabel(counts.total)}</strong><span>Total<br />lucrări</span>
+                <div className="pilot-instrument jobs-spine__metrics" role="group" aria-label="Indicatori lucrări">
+                  <button type="button" className="pilot-instrument__metric" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
+                    <strong className="pilot-instrument__metric-value">{countLabel(counts.total)}</strong>
+                    <span className="pilot-instrument__metric-label">Total<br />lucrări</span>
                   </button>
-                  <button type="button" data-attention={counts.attention > 0} aria-pressed={filter === "needs-action"} onClick={() => setFilter("needs-action")}>
-                    <strong>{countLabel(counts.attention)}</strong><span>Necesită<br />acțiune</span>
+                  <button type="button" className="pilot-instrument__metric pilot-instrument__metric--attention" data-attention={counts.attention > 0} aria-pressed={filter === "needs-action"} onClick={() => setFilter("needs-action")}>
+                    <strong className="pilot-instrument__metric-value">{countLabel(counts.attention)}</strong>
+                    <span className="pilot-instrument__metric-label">Necesită<br />acțiune</span>
                   </button>
-                  <button type="button" aria-pressed={filter === "in-execution"} onClick={() => setFilter("in-execution")}>
-                    <strong>{countLabel(counts.executing)}</strong><span>În<br />execuție</span>
+                  <button type="button" className="pilot-instrument__metric" aria-pressed={filter === "in-execution"} onClick={() => setFilter("in-execution")}>
+                    <strong className="pilot-instrument__metric-value">{countLabel(counts.executing)}</strong>
+                    <span className="pilot-instrument__metric-label">În<br />execuție</span>
                   </button>
-                  <button type="button" aria-pressed={filter === "completed"} onClick={() => setFilter("completed")}>
-                    <strong>{countLabel(counts.completed)}</strong><span>Finalizate</span>
+                  <button type="button" className="pilot-instrument__metric" aria-pressed={filter === "completed"} onClick={() => setFilter("completed")}>
+                    <strong className="pilot-instrument__metric-value">{countLabel(counts.completed)}</strong>
+                    <span className="pilot-instrument__metric-label">Finalizate</span>
                   </button>
                 </div>
               }
