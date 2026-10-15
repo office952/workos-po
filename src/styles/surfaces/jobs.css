@@ -48,13 +48,16 @@
 }
 .jobs-spine__layout::after {
   content: "";
-  grid-column: 1 / -1;
+  /* Finish the header rule at the register edge. Extending across both grid
+     columns draws a visible line through the live Work Traveler ticket. */
+  grid-column: 1;
   grid-row: 1;
   align-self: end;
   position: relative;
   z-index: 1;
   height: 1px;
-  margin-inline: calc(-1 * var(--page-gutter));
+  margin-left: calc(-1 * var(--page-gutter));
+  margin-right: 0;
   background: var(--color-border);
   pointer-events: none;
 }
