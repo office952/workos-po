@@ -12,11 +12,11 @@ NO PARALLEL PRODUCT TRUTH
 
 ## Current: PILOT-0 truth and readiness
 
-Living status reconciled on 2026-10-15 against GitHub `main` at `1a7bd6d2795c72055e907cb9f4ccf7bb1463b9d0` (PR #77 merge; PR #76 integrated V4 at `bdf6904048f253f0639fdd98e1db26347c6b258c`). This is a source integration baseline, not a claim of new Owner acceptance or a real-environment pilot. CI and runtime evidence apply only to their exact tested SHA. Later sections are historical records unless they say otherwise. Merge alone is never Owner acceptance.
+Living status reconciled on 2026-10-15 against GitHub `main` at observed baseline `aa3ce72b879792c064e8c549fd9f48de89235979` (PR #81 merge; PR #78 manual-first integrated; PR #76 V4 integrated). This is the verified source baseline **before the later documentation PR #80 merge**, not a permanently current main SHA or a claim of new Owner visual acceptance or real-environment pilot readiness. CI and runtime evidence apply only to their exact tested SHA. Later sections are historical records unless they say otherwise. Merge alone is never Owner acceptance.
 
 ```text
 CURRENT_MILESTONE = PILOT-0_TRUTH_AND_READINESS
-MAIN = 1a7bd6d2795c72055e907cb9f4ccf7bb1463b9d0
+MAIN_LAST_VERIFIED_BASE = aa3ce72b879792c064e8c549fd9f48de89235979 (2026-10-15, before docs-only PR #80)
 SYNTHETIC_OPERATOR_RECOVERY_DRILL = EXECUTED / PASS / OWNER_ACCEPTANCE_PENDING
 DEPLOY_ROLLBACK_INCIDENT_RUNBOOK = TEMPLATE / NOT_EXECUTED / NOT_ACCEPTED
 REAL_ENVIRONMENT_PREFLIGHT = NOT_RUN / TARGET_NOT_IDENTIFIED
@@ -33,7 +33,9 @@ V4_ASSEMBLY_PRODUCTION_EIC = INTEGRATED (PR #76) / OWNER_ACCEPTANCE_NOT_RECORDED
 MIGRATION_041_CODE = INTEGRATED (PR #76) / ORGANIZATION PLANE
 MIGRATION_041_REAL_APPLICATION = HOLD / SEPARATE_APPROVED_PROCEDURE_REQUIRED
 NOTION_JOURNAL_GATE_V1 = INTEGRATED (PR #77) / CI METADATA FORMAT ONLY; LIVE NOTION GO NOT AUTOMATICALLY VERIFIED
-R001A_MANUAL_FIRST = PR #78 DRAFT / NOT_MERGED / INDEPENDENT_REVIEW_PENDING
+R001A_MANUAL_FIRST = INTEGRATED (PR #78) / POSTMERGE CI PASS / OWNER_VISUAL_ACCEPTANCE_PENDING
+R002_UX_V1 = INTEGRATED (PR #81) / POSTMERGE CI PASS / OWNER_VISUAL_ACCEPTANCE_PENDING
+N003_OPERATOR_E2E = 9/12 REPORTED SYNTHETIC PASS / F04 F09 F12 PENDING / OWNER_ACCEPTANCE_PENDING
 N007_GOVERNANCE_V2 = PR #79 DRAFT / NOT_MERGED / V1 REMAINS ACTIVE
 PILOT_GATE_A = HOLD
 PILOT_GATE_B = HOLD
@@ -63,17 +65,21 @@ PILOT_GATE_B = HOLD
 | V3 unified request, quote and customer commercial history | #75 `162e98a` | Integrated | Not recorded |
 | V4 assembly operation EIC and migration 041 code | #76 `bdf6904` | Integrated; per-organization cost completeness needs configured evidence, not a pilot pass | Not recorded |
 | Notion journal policy V1 and PR metadata CI guard | #77 `1a7bd6d` | Integrated; metadata syntax check does not verify live Notion authorization | Governance rule Owner-approved; no separate runtime acceptance |
+| R-001A manual-first offer pricing | #78 `31e5cac` | Integrated; verified exact SHA post-merge [WorkOS Verify](https://github.com/office952/workos-po/actions/runs/38644745895); EIC PARTIAL acceptance remains blocked | Visual acceptance not recorded |
+| R-002 UX V1 operator clarity | #81 `aa3ce72` | Integrated; verified exact SHA post-merge [WorkOS Verify](https://github.com/office952/workos-po/actions/runs/38688912646); QC/member browser follow-ups pending | Visual acceptance not recorded |
 
-Not integrated: draft #62 (synthetic staging gate), draft #63 (flat BACK; #66 kept its BACK rules and discarded the separate SKU), open #65 (superseded by #66), draft #78 (manual-first commercial) and draft #79 (Governance V2). PILOT-0 does not close or change them.
+Not integrated: draft #62 (synthetic staging gate), draft #63 (flat BACK; #66 kept its BACK rules and discarded the separate SKU), open #65 (superseded by #66) and draft #79 (Governance V2). PILOT-0 does not close or change them. The N-005 docs-only PR #80 is a separate pending documentation change until its own merge.
 
 ### Incomplete
 
 - V4 assembly-operation costing is present on `main`: the domain can reconcile mounting, final inspection and packaging from versioned organization cost evidence. Without configured evidence/policies, individual operations remain gaps and their EIC stays `PARTIAL`; no blanket assembly cost-complete pilot claim is justified.
 - Migration 041 code is integrated through PR #76 and runs automatically when a database is first opened by a containing build. Opening or applying it to a **real** organization database remains on HOLD pending a separately approved procedure (backup, target identification, recovery and verification). Integration does not authorize real migration.
+- Manual-first R-001A is integrated, but commercial quote acceptance and order creation still require EIC COMPLETE; an EIC PARTIAL quote may be frozen but cannot be accepted or ordered under the current contract (AUD-PRICING-002 remains an open Owner business decision). Do not silently bypass the release gate.
+- The operator E2E journey was reported synthetically for nine Fxx scenarios on an equivalent source tree; F04/F09/F12 remain PENDING, QC browser chronology and member-role browser session are unverified. This is not a full-matrix or Owner visual acceptance.
 - Real-environment preflight not run; target environment and operator not identified.
 - Production deployment not authorized; deploy artifact form and host stop mechanism not decided.
 - First real job not authorized; no pilot organization provisioned or configured with Owner-confirmed rates.
-- Owner acceptance of recent integrations through PR #77 must be checked per work item; GitHub merge/CI alone does not imply acceptance. The recorded PILOT-0 business gates remain on HOLD.
+- Owner visual acceptance of recent integrations through PR #81 must be checked per work item; GitHub merge/CI alone does not imply acceptance. The recorded PILOT-0 business gates remain on HOLD.
 
 ### PILOT-0 evidence
 
