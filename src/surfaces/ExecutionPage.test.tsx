@@ -137,7 +137,9 @@ describe("ExecutionPage", () => {
     const actualField = within(measurableArticle as HTMLElement).getByLabelText(
       "Cantitate realizată",
     );
-    expect(actualField).toHaveValue("12,5");
+    expect(actualField).toHaveValue("");
+    expect(actualField).toHaveAccessibleDescription("Planificat: Lungime 12.5 m");
+    expect(within(measurableArticle as HTMLElement).getByText("Lungime 12.5 m")).toBeInTheDocument();
     expect(
       within(wiringArticle as HTMLElement).queryByLabelText("Cantitate realizată"),
     ).toBeNull();
@@ -210,6 +212,115 @@ describe("ExecutionPage", () => {
     ).toBe(false);
     expect(screen.getByLabelText("Cantitate realizată")).toHaveValue("abc");
     expect(screen.getByRole("button", { name: "Închide sarcina" })).toBeEnabled();
+  });
+
+  it("does not complete a measurable task until the operator enters an actual, including zero", async () => {
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({
+          operator: { personId: "per:andrei", displayName: "Andrei Goghi" },
+        });
+      }
+      if (url.includes("/complete") && init?.method === "POST") {
+        return jsonResponse({ ok: true });
+      }
+      return jsonResponse(
+        planPayload([
+          {
+            taskId: "task-cut",
+            processLabel: "Debitare foaie CNC",
+            status: "IN_PROGRESS",
+            statusLabel: "În lucru",
+            canComplete: true,
+            requiresCompletedQuantity: true,
+            plannedValue: 3.2,
+            completedQuantityLabel: null,
+            varianceLabel: null,
+          },
+        ]),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<ExecutionPage planId="exp:1" />);
+    const actualField = await screen.findByLabelText("Cantitate realizată");
+    expect(actualField).toHaveValue("");
+    expect(actualField).toHaveAccessibleDescription("Planificat: Lungime 3.2 m");
+    await user.click(screen.getByRole("button", { name: "Închide sarcina" }));
+    expect(
+      await screen.findByText(
+        "Cantitatea realizată trebuie să fie un număr valid, zero sau pozitiv.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(([url, init]) => String(url).includes("/complete") && init?.method === "POST"),
+    ).toBe(false);
+
+    await user.type(actualField, "0");
+    await user.click(screen.getByRole("button", { name: "Închide sarcina" }));
+    await waitFor(() => {
+      const completeCall = fetchMock.mock.calls.find(
+        ([url, init]) => String(url).includes("/complete") && init?.method === "POST",
+      );
+      expect(completeCall?.[1]?.body).toBe(JSON.stringify({ completedQuantity: 0 }));
+    });
+  });
+
+  it("keeps each task's entered actual when the operator changes task", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/operator-session")) {
+          return jsonResponse({
+            operator: { personId: "per:andrei", displayName: "Andrei Goghi" },
+          });
+        }
+        return jsonResponse(
+          planPayload([
+            {
+              taskId: "task-cut",
+              processLabel: "Debitare foaie CNC",
+              status: "IN_PROGRESS",
+              statusLabel: "În lucru",
+              canComplete: true,
+              requiresCompletedQuantity: true,
+              plannedValue: 3.2,
+              completedQuantityLabel: null,
+              varianceLabel: null,
+            },
+            {
+              taskId: "task-edge",
+              processLabel: "Frezare cant",
+              status: "IN_PROGRESS",
+              statusLabel: "În lucru",
+              canComplete: true,
+              requiresCompletedQuantity: true,
+              plannedValue: 8,
+              completedQuantityLabel: null,
+              varianceLabel: null,
+            },
+          ]),
+        );
+      }),
+    );
+    const user = userEvent.setup();
+    const view = render(<ExecutionPage planId="exp:1" taskId="task-cut" />);
+    const first = await screen.findByLabelText("Cantitate realizată");
+    await user.type(first, "11.8");
+    expect(first).toHaveValue("11.8");
+
+    view.rerender(<ExecutionPage planId="exp:1" taskId="task-edge" />);
+    const second = await screen.findByLabelText("Cantitate realizată");
+    expect(second).toHaveValue("");
+    expect(second).toHaveAccessibleDescription("Planificat: Lungime 8 m");
+    await user.type(second, "2,5");
+
+    view.rerender(<ExecutionPage planId="exp:1" taskId="task-cut" />);
+    expect(await screen.findByLabelText("Cantitate realizată")).toHaveValue("11.8");
+    view.rerender(<ExecutionPage planId="exp:1" taskId="task-edge" />);
+    expect(screen.getByLabelText("Cantitate realizată")).toHaveValue("2,5");
   });
 
   it("completes a non-measurable task without sending a quantity", async () => {

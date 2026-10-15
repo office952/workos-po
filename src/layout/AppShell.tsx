@@ -250,10 +250,12 @@ export function AppShell({
 
           <div className="app-shell__route">
             <span className="app-shell__route-signal" aria-hidden="true" />
-            <span className="app-shell__route-kicker">
-              Canal activ <span className="app-shell__route-live">/ live</span>
+            <span className="app-shell__route-copy">
+              <span className="app-shell__route-kicker">
+                Canal activ <span className="app-shell__route-live">/ live</span>
+              </span>
+              <strong className="app-shell__route-name">{contextLabel}</strong>
             </span>
-            <strong className="app-shell__route-name">{contextLabel}</strong>
           </div>
 
           <div className="app-shell__account">

@@ -1,9 +1,76 @@
 import { useState } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PreviewTransport } from "../api/types";
 import { ConfigurationSections } from "./ConfigurationSections";
+
+const COMPACT_QUERY = "(max-width: 1023px)";
+const originalMatchMedia = window.matchMedia;
+
+afterEach(() => {
+  if (originalMatchMedia) {
+    window.matchMedia = originalMatchMedia;
+    return;
+  }
+  Reflect.deleteProperty(window, "matchMedia");
+});
+
+function mockViewport(compact: boolean): void {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    configurable: true,
+    value: vi.fn((query: string) => ({
+      matches: query === COMPACT_QUERY ? compact : false,
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+      onchange: null,
+    })),
+  });
+}
+
+function lettersPreview(): PreviewTransport {
+  return {
+    product: {
+      code: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+      label: "Litere volumetrice luminoase",
+      identityFacts: [
+        { id: "back-material", componentId: "BACK", label: "Material spate", value: "Aluminiu 0,6 mm" },
+      ],
+    },
+    values: {},
+    formSchema: {
+      id: "form",
+      sections: [
+        {
+          id: "face",
+          componentId: "FACE",
+          title: "Față",
+          fields: [
+            { id: "root.inscription", label: "Textul literelor", type: "text", required: true, options: [] },
+          ],
+        },
+      ],
+    },
+    selectedComponents: [
+      { id: "FACE", label: "Față" },
+      { id: "BACK", label: "Spate" },
+      { id: "LIGHTING", label: "Electrică / iluminare" },
+    ],
+    readiness: "blocked",
+    missing: [{ fieldId: "root.inscription", label: "Textul literelor", componentId: "FACE" }],
+    reviewId: "crv1:letters",
+    installation: { selected: false, prequoteReady: null, incompleteReasons: [] },
+  };
+}
+
+function precedes(earlier: HTMLElement, later: HTMLElement): boolean {
+  return Boolean(earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING);
+}
 
 const preview: PreviewTransport = {
   product: { code: "synthetic-product", label: "Produs sintetic", identityFacts: [
@@ -179,5 +246,65 @@ describe("ConfigurationSections", () => {
     render(<ConfigurationSections preview={{ ...preview, readiness: "ready", missing: [], reviewId: "review" }} drafts={{}} onChange={vi.fn()} />);
     expect(screen.queryByRole("button", { name: /Completează:/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Dimensiuni" })).not.toHaveTextContent("De completat");
+  });
+
+  it("keeps desktop order as outline, construction, then inspector", () => {
+    mockViewport(false);
+    render(<ConfigurationSections preview={lettersPreview()} drafts={{}} onChange={() => undefined} />);
+    expect(document.querySelector(".configuration-sections")).toHaveAttribute("data-layout", "desktop");
+    const outline = screen.getByRole("navigation", { name: "Ierarhie construcție" });
+    const construction = screen.getByRole("region", { name: "Plan de construcție" });
+    const inspector = screen.getByRole("region", { name: "Inspector: Față" });
+    expect(precedes(outline, construction)).toBe(true);
+    expect(precedes(construction, inspector)).toBe(true);
+  });
+
+  it("puts the editor before the construction diagram for tablet and phone, including keyboard order", async () => {
+    mockViewport(true);
+    function CompactHarness() {
+      const [drafts, setDrafts] = useState<Record<string, string>>({});
+      return (
+        <ConfigurationSections
+          preview={lettersPreview()}
+          drafts={drafts}
+          onChange={(fieldId, value) => {
+            setDrafts((current) => ({ ...current, [fieldId]: value }));
+          }}
+        />
+      );
+    }
+    render(<CompactHarness />);
+
+    expect(document.querySelector(".configuration-sections")).toHaveAttribute("data-layout", "compact");
+    expect(screen.queryByRole("navigation", { name: "Ierarhie construcție" })).not.toBeInTheDocument();
+    const selector = screen.getByLabelText("Strat de construcție");
+    const inspector = screen.getByRole("region", { name: "Inspector: Față" });
+    const construction = screen.getByRole("region", { name: "Plan de construcție" });
+    expect(precedes(selector, inspector)).toBe(true);
+    expect(precedes(inspector, construction)).toBe(true);
+
+    const user = userEvent.setup();
+    selector.focus();
+    await user.tab();
+    expect(inspector.contains(document.activeElement)).toBe(true);
+    expect(construction.contains(document.activeElement)).toBe(false);
+
+    await user.click(screen.getByRole("button", { name: "Completează: Textul literelor" }));
+    const field = screen.getByLabelText("Textul literelor");
+    expect(field).toHaveFocus();
+    await user.type(field, "NORD");
+    expect(field).toHaveValue("NORD");
+
+    await user.selectOptions(selector, "component:BACK");
+    const back = screen.getByRole("region", { name: "Inspector: Spate" });
+    expect(within(back).getByText("Doar consultare")).toBeInTheDocument();
+    expect(within(back).queryByRole("textbox")).not.toBeInTheDocument();
+    expect(within(back).getByText("Aluminiu 0,6 mm")).toBeInTheDocument();
+
+    await user.selectOptions(selector, "component:LIGHTING");
+    const lighting = screen.getByRole("region", { name: "Inspector: Electrică / iluminare" });
+    expect(within(lighting).queryByRole("textbox")).not.toBeInTheDocument();
+    expect(within(lighting).queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Textul literelor", hidden: true })).toHaveValue("NORD");
   });
 });

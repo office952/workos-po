@@ -1,4 +1,4 @@
-import { useId, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from "react";
+import { useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from "react";
 import type { PreviewTransport } from "../api/types";
 import {
   buildWorkbenchSections,
@@ -16,6 +16,33 @@ import { TextField } from "./TextField";
 import { ConfigurationTechnicalDetails, type TechnicalDetailsState } from "./ConfigurationTechnicalDetails";
 
 export type ConfigurationSectionsHandle = { focusField: (fieldId: string) => void };
+
+const COMPACT_WORKBENCH_QUERY = "(max-width: 1023px)";
+
+function resolveCompactWorkbenchOrder(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return false;
+  }
+  return window.matchMedia(COMPACT_WORKBENCH_QUERY).matches;
+}
+
+/** Tablet and phone stack the editor before the construction diagram, in DOM order. */
+function useCompactWorkbenchOrder(): boolean {
+  const [compact, setCompact] = useState(resolveCompactWorkbenchOrder);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") {
+      return;
+    }
+    const query = window.matchMedia(COMPACT_WORKBENCH_QUERY);
+    const sync = () => setCompact(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
+
+  return compact;
+}
 
 type ConfigurationSectionsProps = {
   ref?: Ref<ConfigurationSectionsHandle>;
@@ -37,6 +64,7 @@ export function ConfigurationSections({
   initialNavigation = null,
   onNavigationChange,
 }: ConfigurationSectionsProps) {
+  const compact = useCompactWorkbenchOrder();
   const sections = buildWorkbenchSections(preview);
   const initial = resolveInitialWorkbenchNavigation(sections, initialNavigation ?? undefined);
   const [selected, setSelected] = useState<string | null>(initial.sectionId);
@@ -99,8 +127,20 @@ export function ConfigurationSections({
     }
   }
 
+  const construction = (
+    <ConfigurationConstructionCanvas
+      preview={preview}
+      sections={sections}
+      activeSection={active}
+      compositionSelected={compositionSelected}
+      drafts={drafts}
+      onSelectComponent={selectComponent}
+      technicalState={technicalState}
+    />
+  );
+
   return (
-    <div className="configuration-sections">
+    <div className="configuration-sections" data-layout={compact ? "compact" : "desktop"}>
       <div className="configuration-section-selector" data-testid="configuration-section-selector">
         <div className="configuration-section-selector__control">
           <label htmlFor={`${panelId}-selector`}>Strat de construcție</label>
@@ -133,6 +173,7 @@ export function ConfigurationSections({
           </span>
         </div>
       </div>
+      {compact ? null : (
       <nav className="configuration-outline" aria-label="Ierarhie construcție">
         <div className="configuration-outline__heading">
           <span className="section-label">Ierarhie construcție</span>
@@ -196,15 +237,8 @@ export function ConfigurationSections({
           </span>
         </button>
       </nav>
-      <ConfigurationConstructionCanvas
-        preview={preview}
-        sections={sections}
-        activeSection={active}
-        compositionSelected={compositionSelected}
-        drafts={drafts}
-        onSelectComponent={selectComponent}
-        technicalState={technicalState}
-      />
+      )}
+      {compact ? null : construction}
       <div className="configuration-inspector" ref={editorRef}>
         {sections.map((section, index) => (
           <section
@@ -394,6 +428,7 @@ export function ConfigurationSections({
           </div>
         ) : null}
       </div>
+      {compact ? construction : null}
     </div>
   );
 }

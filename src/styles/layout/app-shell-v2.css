@@ -22,8 +22,8 @@
 }
 
 .app-shell__utility {
-  display: grid;
-  grid-template-columns: minmax(11.5rem, auto) minmax(0, 1fr) auto auto;
+  display: flex;
+  flex-wrap: wrap;
   align-items: stretch;
   min-height: var(--shell-height);
   padding: 0 var(--page-gutter);
@@ -36,6 +36,7 @@
 }
 
 .app-shell .app-shell__brand {
+  flex: 0 0 auto;
   align-self: stretch;
   gap: 10px;
   min-height: var(--shell-height);
@@ -104,23 +105,26 @@
 }
 
 .app-shell__route {
-  justify-self: stretch;
-  display: grid;
-  grid-template-columns: 7px auto;
-  grid-template-areas:
-    "signal kicker"
-    "signal name";
-  column-gap: 9px;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
   align-items: center;
-  align-content: center;
-  row-gap: 4px;
-  min-width: 0;
-  padding: 0 16px;
+  gap: 9px;
+  min-width: max-content;
+  padding: 8px 16px;
   border-left: 1px solid var(--shell-edge);
 }
 
+.app-shell__route-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: max-content;
+}
+
 .app-shell__route-signal {
-  grid-area: signal;
+  flex: 0 0 auto;
   width: 6px;
   height: 6px;
   background: var(--shell-signal);
@@ -128,36 +132,33 @@
 }
 
 .app-shell__route-kicker {
-  grid-area: kicker;
   color: var(--shell-muted);
   font-family: var(--font-mono);
   font-size: 0.49rem;
   line-height: 1.1;
   letter-spacing: 0.11em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .app-shell__route-name {
-  grid-area: name;
-  max-width: 32rem;
-  overflow: hidden;
   color: var(--shell-ink);
   font-family: var(--font-mono);
   font-size: 0.68rem;
   font-weight: 600;
   line-height: 1.25;
   letter-spacing: 0.055em;
-  text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
 .app-shell .app-shell__account {
+  flex: 0 0 auto;
   align-self: stretch;
   display: flex;
   align-items: center;
-  margin-left: 0;
-  min-width: 0;
+  margin-left: auto;
+  min-width: max-content;
   padding-left: 18px;
   border-left: 1px solid var(--shell-edge);
 }
@@ -205,7 +206,8 @@
 }
 
 .app-shell .app-shell__nav--inline {
-  min-width: 0;
+  flex: 1 1 auto;
+  min-width: max-content;
   align-self: stretch;
   display: flex;
 }
@@ -407,10 +409,6 @@
 }
 
 @media (max-width: 1439px) {
-  .app-shell__utility {
-    grid-template-columns: minmax(8.5rem, auto) minmax(0, 1fr) auto auto;
-  }
-
   .app-shell__brand-system {
     display: none;
   }
@@ -451,9 +449,12 @@
   }
 
   .app-shell__utility {
-    grid-template-columns: auto minmax(0, 1fr) auto;
     min-height: 49px;
     padding-inline: var(--page-gutter);
+  }
+
+  .app-shell__route {
+    flex: 1 1 auto;
   }
 
   .app-shell .app-shell__brand {
@@ -506,7 +507,6 @@
   }
 
   .app-shell__utility {
-    grid-template-columns: auto 1fr auto;
     min-height: 46px;
     padding-inline: 12px;
   }
@@ -535,7 +535,6 @@
   }
 
   .app-shell__route-name {
-    max-width: 10rem;
     font-size: 0.56rem;
   }
 

@@ -184,7 +184,9 @@ describe("QuoteSnapshotPage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<QuoteSnapshotPage productCode={productCode} quoteSnapshotId="q-a" />);
-    await userEvent.setup().click(await screen.findByRole("button", { name: "Marchează acceptată" }));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Marchează acceptată" }));
+    await user.click(screen.getByRole("button", { name: "Confirmă acceptarea" }));
     expect(await screen.findByRole("button", { name: "Creează comanda" })).toBeEnabled();
     expect(screen.getAllByText("Acceptată").length).toBeGreaterThan(0);
     const acceptCall = fetchMock.mock.calls.find(
@@ -192,6 +194,129 @@ describe("QuoteSnapshotPage", () => {
     );
     expect(acceptCall?.[1]?.body).toBeUndefined();
     expect(passiveLifecycleGets(fetchMock)).toEqual([]);
+    expect(
+      fetchMock.mock.calls.filter(
+        (call) => String(call[0]).endsWith("/acceptance") && call[1]?.method === "POST",
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("shows quote identity before acceptance and does not post on cancel or escape", async () => {
+    const fetchMock = stubQuotePage({
+      envelope: {
+        ...createdEnvelope(),
+        reference: "OF-104",
+        customerDisplayName: "Atelier Nord",
+        requestReference: "CRQ-104",
+      },
+      snapshot: {
+        ...frozenSnapshot(),
+        customerDisplayName: "Atelier Nord",
+        requestReference: "CRQ-104",
+      },
+    });
+    const user = userEvent.setup();
+    render(<QuoteSnapshotPage productCode={productCode} quoteSnapshotId="q-a" />);
+    const accept = await screen.findByRole("button", { name: "Marchează acceptată" });
+    expect(screen.queryByRole("region", { name: /Confirmi acceptarea/ })).not.toBeInTheDocument();
+
+    await user.click(accept);
+    const confirmation = screen.getByRole("region", { name: "Confirmi acceptarea ofertei OF-104?" });
+    expect(confirmation).toHaveFocus();
+    expect(within(confirmation).getByText(/acceptarea comunicată de client/)).toBeInTheDocument();
+    expect(within(confirmation).getByText(/Client: Atelier Nord/)).toBeInTheDocument();
+    expect(within(confirmation).getByText(/Cerere: CRQ-104/)).toBeInTheDocument();
+    expect(within(confirmation).getByText(/Net 50,63 EUR/)).toBeInTheDocument();
+    expect(within(confirmation).getByText(/Total cu TVA 61,26 EUR/)).toBeInTheDocument();
+    expect(acceptancePosts(fetchMock)).toEqual([]);
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("region", { name: /Confirmi acceptarea/ })).not.toBeInTheDocument();
+    expect(accept).toHaveFocus();
+    expect(acceptancePosts(fetchMock)).toEqual([]);
+
+    await user.click(accept);
+    expect(screen.getByRole("region", { name: "Confirmi acceptarea ofertei OF-104?" })).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "Anulează" }));
+    expect(screen.queryByRole("region", { name: /Confirmi acceptarea/ })).not.toBeInTheDocument();
+    expect(accept).toHaveFocus();
+    expect(acceptancePosts(fetchMock)).toEqual([]);
+  });
+
+  it("posts the existing acceptance once even if confirmation is activated twice", async () => {
+    let releaseAcceptance: (value: unknown) => void = () => undefined;
+    let stage: "QUOTE_CREATED" | "QUOTE_ACCEPTED" = "QUOTE_CREATED";
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/acceptance") && init?.method === "POST") {
+        stage = "QUOTE_ACCEPTED";
+        return new Promise((resolve) => {
+          releaseAcceptance = resolve;
+        });
+      }
+      if (url.endsWith("/api/quotes/q-a")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            quote:
+              stage === "QUOTE_CREATED"
+                ? { ...createdEnvelope(), reference: "OF-104" }
+                : {
+                    quoteSnapshotId: "q-a",
+                    productCode,
+                    reference: "OF-104",
+                    stage: "QUOTE_ACCEPTED",
+                    stageLabel: "Acceptată",
+                    nextAction: "CREATE_ORDER",
+                    nextActionLabel: "Creează comanda",
+                  },
+          }),
+        });
+      }
+      if (url.includes("/quote-snapshots/q-a") && !url.endsWith("/document")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({ quoteSnapshot: frozenSnapshot() }),
+        });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<QuoteSnapshotPage productCode={productCode} quoteSnapshotId="q-a" />);
+    await user.click(await screen.findByRole("button", { name: "Marchează acceptată" }));
+    const confirm = screen.getByRole("button", { name: "Confirmă acceptarea" });
+    await user.dblClick(confirm);
+    expect(acceptancePosts(fetchMock)).toHaveLength(1);
+    releaseAcceptance({
+      ok: true,
+      status: 200,
+      json: async () => ({ created: true, acceptanceDecision: { acceptanceId: "qad:q-a" } }),
+    });
+    expect(await screen.findByRole("button", { name: "Creează comanda" })).toBeEnabled();
+    expect(acceptancePosts(fetchMock)).toHaveLength(1);
+  });
+
+  it("keeps partial internal cost visible and still confirms before the existing acceptance request", async () => {
+    const fetchMock = stubQuotePage({
+      envelope: { ...createdEnvelope(), reference: "OF-PARTIAL" },
+      snapshot: {
+        ...frozenSnapshot(),
+        eic: { completeness: "PARTIAL", currency: "EUR", total: 0, lines: [] },
+      },
+    });
+    const user = userEvent.setup();
+    render(<QuoteSnapshotPage productCode={productCode} quoteSnapshotId="q-a" />);
+    expect(await screen.findByTestId("internal-cost")).toHaveTextContent("Incomplet");
+    await user.click(screen.getByRole("button", { name: "Marchează acceptată" }));
+    expect(acceptancePosts(fetchMock)).toEqual([]);
+    await user.click(screen.getByRole("button", { name: "Confirmă acceptarea" }));
+    expect(acceptancePosts(fetchMock)).toEqual([
+      expect.stringContaining("/acceptance"),
+    ]);
+    expect(acceptancePosts(fetchMock)[0]).toMatch(/\/acceptance$/);
   });
 
   it("creates an order from the envelope and opens /lucrari/:orderSnapshotId", async () => {
@@ -402,6 +527,12 @@ function stubQuotePage(input: {
   });
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
+}
+
+function acceptancePosts(fetchMock: ReturnType<typeof vi.fn>): string[] {
+  return fetchMock.mock.calls
+    .filter((call) => String(call[0]).endsWith("/acceptance") && call[1]?.method === "POST")
+    .map((call) => String(call[0]));
 }
 
 function passiveLifecycleGets(fetchMock: ReturnType<typeof vi.fn>): string[] {
