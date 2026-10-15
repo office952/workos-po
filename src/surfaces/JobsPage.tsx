@@ -30,11 +30,11 @@ type JobSort = "newest" | "oldest";
 type RailMark = "done" | "current" | "future" | "unknown";
 
 const STEPS = [
-  { id: "order", compact: "COMANDĂ", label: "Comandă creată" },
-  { id: "release", compact: "ELIB.", label: "Eliberare în producție" },
-  { id: "plan", compact: "PLAN", label: "Plan de execuție" },
-  { id: "execution", compact: "EXEC.", label: "Atelier / execuție" },
-  { id: "complete", compact: "FINAL", label: "Lucrare finalizată" },
+  { id: "order", compact: "Comandă", label: "Comandă creată" },
+  { id: "release", compact: "Eliberare", label: "Eliberare în producție" },
+  { id: "plan", compact: "Plan", label: "Plan de execuție" },
+  { id: "execution", compact: "Execuție", label: "Atelier / execuție" },
+  { id: "complete", compact: "Final", label: "Lucrare finalizată" },
 ] as const;
 
 /** Visual milestones only. Business state, blockers and next actions stay server-owned. */
@@ -200,7 +200,7 @@ function WorkTraveler({ job }: { job: JobListItemTransport | null }) {
                 ) : null}
               </div>
               <div className="jobs-traveler__flow">
-                <h3>TRASEU DE PRODUCȚIE</h3>
+                <h3>FLUX DE PRODUCȚIE</h3>
                 <ProductionRail job={job} vertical />
               </div>
               <div className="jobs-traveler__continue">
@@ -232,7 +232,7 @@ function WorkTraveler({ job }: { job: JobListItemTransport | null }) {
         </div>
       </div>
       <p className="jobs-traveler__hint" aria-hidden="true">
-        {job ? "Fișa lucrării selectate" : "Selectează un rând pentru previzualizare"}
+        {job ? "Fișă operațională / " + job.stageLabel : "Selectează un rând pentru previzualizare"}
         <span>WORKOS / OPERAȚIUNI</span>
       </p>
       <p className="u-visually-hidden" aria-live="polite" aria-atomic="true">
@@ -294,19 +294,18 @@ export function JobsPage() {
       <div className="jobs-spine">
         <div className="jobs-spine__layout">
           <div className="jobs-spine__header">
-            <div className="jobs-spine__header-engraving" aria-hidden="true">
-              <span>04 / OPERATIONS</span><span>WORKOS CONTROL SYSTEM</span>
+            <div className="jobs-spine__process-map" aria-hidden="true">
+              <span>PLANIFICARE</span>
+              <span>EXECUȚIE</span>
+              <span>ATELIER</span>
+              <span>CALITATE</span>
+              <span>LIVRARE</span>
             </div>
             <PageHeader
               variant="pilot-compact"
               eyebrow="Registru operațional"
               title="Lucrări"
-              lead="Urmărește traseul fiecărei lucrări, de la comandă la execuție."
-              action={
-                <a className="jobs-spine__planning" href="/planificare">
-                  <span>Planificare</span><span aria-hidden="true">↗</span>
-                </a>
-              }
+              lead="Planifică, urmărește execuția și finalizează lucrările de producție."
               instrument={
                 <div className="jobs-spine__metrics" role="group" aria-label="Indicatori lucrări">
                   <button type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
@@ -351,6 +350,9 @@ export function JobsPage() {
                 <button className="jobs-spine__density" type="button" aria-pressed={compact} onClick={() => setCompact((value) => !value)}>
                   <span aria-hidden="true">☷</span>{compact ? "Compact" : "Confort"}
                 </button>
+                <a className="jobs-spine__planning" href="/planificare">
+                  <span>Planificare</span><span aria-hidden="true">↗</span>
+                </a>
               </div>
             </div>
 
