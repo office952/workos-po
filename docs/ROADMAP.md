@@ -68,7 +68,7 @@ PILOT_GATE_B = HOLD
 | R-001A manual-first offer pricing | #78 `31e5cac` | Integrated; verified exact SHA post-merge [WorkOS Verify](https://github.com/office952/workos-po/actions/runs/38644745895); EIC PARTIAL acceptance remains blocked | Visual acceptance not recorded |
 | R-002 UX V1 operator clarity | #81 `aa3ce72` | Integrated; verified exact SHA post-merge [WorkOS Verify](https://github.com/office952/workos-po/actions/runs/38688912646); QC/member browser follow-ups pending | Visual acceptance not recorded |
 
-Not integrated: draft #62 (synthetic staging gate), draft #63 (flat BACK; #66 kept its BACK rules and discarded the separate SKU), open #65 (superseded by #66) and draft #79 (Governance V2). PILOT-0 does not close or change them. The N-005 docs-only PR #80 is a separate pending documentation change until its own merge.
+Not integrated: draft #62 (synthetic staging gate), draft #63 (flat BACK; #66 kept its BACK rules and discarded the separate SKU), open #65 (superseded by #66) and draft #79 (Governance V2). PILOT-0 does not close or change them. The N-005 documentation reconciliation and merge evidence are tracked in Notion; this snapshot is not itself a claim about its PR merge state.
 
 ### Incomplete
 
