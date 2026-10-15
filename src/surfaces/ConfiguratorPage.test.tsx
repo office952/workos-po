@@ -6,6 +6,7 @@ import {
   ConfiguratorPage,
   EDIT_PREVIEW_DEBOUNCE_MS,
   INITIAL_PREVIEW_DEBOUNCE_MS,
+  withAssemblyLettersMountingDrafts,
   type ConfiguratorPageProps,
 } from "./ConfiguratorPage";
 
@@ -1540,5 +1541,25 @@ describe("ConfiguratorPage", () => {
     expect(second["volume.confirmedPerimeterMm"]).toBe(8400);
     expect(second["face.confirmedAreaMm2"]).toBe(180000);
     expect(second["root.inscription"]).toBe("NORD LOGO");
+  });
+});
+
+describe("assembly letters mounting drafts", () => {
+  it("records the panel context without replacing an operator back profile", () => {
+    expect(withAssemblyLettersMountingDrafts({ "back.profile": "GROOVED", "root.inscription": "NORD" })).toEqual({
+      "constructive.mountingContext": "acm_panel",
+      "back.supportKind": "PANEL",
+      "back.profile": "GROOVED",
+      "root.inscription": "NORD",
+    });
+    expect(withAssemblyLettersMountingDrafts({ "back.profile": "FLAT", "back.supportKind": "METAL_FRAME" })).toEqual({
+      "constructive.mountingContext": "acm_panel",
+      "back.supportKind": "METAL_FRAME",
+      "back.profile": "FLAT",
+    });
+    expect(withAssemblyLettersMountingDrafts({})).toEqual({
+      "constructive.mountingContext": "acm_panel",
+      "back.supportKind": "PANEL",
+    });
   });
 });

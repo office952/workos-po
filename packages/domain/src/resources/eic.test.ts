@@ -132,6 +132,31 @@ describe("EIC", () => {
     expect(JSON.stringify(eic)).not.toMatch(/customer|markup|quote|if process|LETTERS/i);
   });
 
+  it("prices one CNC back cut for an explicit flat profile and does not confirm a grooved back", () => {
+    const historical = confirmedSpine();
+    const flat = confirmedSpine({ ...readyValues, "back.profile": "FLAT" });
+    const historicalEic = compileEic(historical.aggregate, historical.composition);
+    const flatEic = compileEic(flat.aggregate, flat.composition);
+    expect(flatEic.total).toBe(historicalEic.total);
+    expect(flatEic.lines.filter((line) => line.resourceId === "SVC-CNC-BACK")).toHaveLength(1);
+    expect(lineCost(flatEic, "SVC-CNC-BACK")).toBe(56.25);
+    expect(lineCost(flatEic, "SVC-CNC-BACK")).toBe(lineCost(historicalEic, "SVC-CNC-BACK"));
+    expect(
+      flat.composition.nodes.filter((node) => node.scope === "BACK" && node.processId === "CUT_SHEET_CNC"),
+    ).toHaveLength(1);
+    const flatRequirements = resourceRequirements(flat.aggregate, flat.composition);
+    const historicalRequirements = resourceRequirements(historical.aggregate, historical.composition);
+    expect(flatRequirements.filter((item) => item.resourceId === "SVC-CNC-BACK")).toHaveLength(1);
+    expect(flatRequirements.filter((item) => item.resourceId === "forex_10mm")).toHaveLength(1);
+    expect(flatRequirements).toHaveLength(historicalRequirements.length);
+    const grooved = compileDefinition(frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, {
+      templateCode: CANONICAL_PRODUCT_CODE,
+      values: { ...readyValues, "back.profile": "GROOVED" },
+    });
+    expect(grooved.readiness).toBe("blocked");
+    expect(confirmReviewedDefinition(grooved, grooved.reviewId)).toMatchObject({ ok: false, reason: "not_ready" });
+  });
+
   it.each([
     { depthMm: 30, profileRate: 2, profileCost: 25, total: 370 },
     { depthMm: 60, profileRate: 3, profileCost: 37.5, total: 382.5 },
