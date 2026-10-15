@@ -143,9 +143,6 @@ export function withAssemblyLettersMountingDrafts(
   if (!next["back.supportKind"]) {
     next["back.supportKind"] = "PANEL";
   }
-  if (!next["back.profile"]) {
-    next["back.profile"] = "FLAT";
-  }
   return next;
 }
 

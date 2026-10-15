@@ -3,6 +3,7 @@ import { ACM_3MM_ID, FOREX_10MM_ID } from "../resources/catalog.js";
 import { compileDefinition, confirmReviewedDefinition } from "./compiler.js";
 import { evaluateProductComponents } from "./componentEvaluation.js";
 import { frontlitPlexiAl06FormSchema, frontlitPlexiAl06Template } from "./frontlitPlexiAl06.js";
+import { planBackManufacturing } from "./backManufacturing.js";
 import { starterFormulaVersionsForType } from "./resolveFormulas.js";
 import {
   LETTERS_MOUNTING_CONTEXT_FIELD,
@@ -65,19 +66,62 @@ describe("letters mounting context on canonical product", () => {
     expect(acm).toBeUndefined();
   });
 
-  it("blocks grooved/frame combinations fail-closed", () => {
-    const values = {
+  it("accepts an explicit flat back on standalone letters and does not force a groove on a metal frame", () => {
+    const standalone = compileDefinition(frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, {
+      templateCode: frontlitPlexiAl06Template.code,
+      values: { ...baseLetters, "back.profile": "FLAT" },
+    });
+    expect(standalone.readiness).toBe("ready");
+    expect(standalone.values["back.profile"]).toBe("FLAT");
+    expect(planBackManufacturing({
       ...baseLetters,
-      [LETTERS_MOUNTING_CONTEXT_FIELD]: LETTERS_MOUNTING_ON_ACM_PANEL,
       "back.supportKind": "METAL_FRAME",
-      "back.profile": "GROOVED",
-    };
+      "back.profile": "FLAT",
+      "back.thicknessMm": 10,
+    }, 250000)).toMatchObject({ status: "READY", profile: "FLAT", groove: null });
+  });
+
+  it("blocks grooved backs until a distinct channel recipe exists", () => {
+    for (const support of [undefined, "PANEL", "METAL_FRAME"] as const) {
+      const values = {
+        ...baseLetters,
+        ...(support
+          ? {
+              [LETTERS_MOUNTING_CONTEXT_FIELD]: LETTERS_MOUNTING_ON_ACM_PANEL,
+              "back.supportKind": support,
+            }
+          : {}),
+        "back.profile": "GROOVED",
+      };
+      const definition = compileDefinition(frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, {
+        templateCode: frontlitPlexiAl06Template.code,
+        values,
+      });
+      expect(definition.readiness).toBe("blocked");
+      expect(definition.missing.some((item) => item.fieldId === "back.profile")).toBe(true);
+      expect(confirmReviewedDefinition(definition, definition.reviewId)).toMatchObject({
+        ok: false,
+        reason: "not_ready",
+      });
+    }
+  });
+
+  it("keeps a historical ready definition without a back profile confirmable", () => {
     const definition = compileDefinition(frontlitPlexiAl06Template, frontlitPlexiAl06FormSchema, {
       templateCode: frontlitPlexiAl06Template.code,
-      values,
+      values: baseLetters,
     });
-    expect(definition.readiness).toBe("blocked");
+    expect(definition.readiness).toBe("ready");
+    expect(definition.values["back.profile"]).toBeUndefined();
     const truth = confirmReviewedDefinition(definition, definition.reviewId);
-    expect("ok" in truth && truth.ok === false).toBe(true);
+    expect("ok" in truth).toBe(false);
+    if ("ok" in truth) {
+      return;
+    }
+    expect(truth.values["back.profile"]).toBeUndefined();
+    expect(confirmReviewedDefinition(definition, "stale")).toMatchObject({
+      ok: false,
+      reason: "review_mismatch",
+    });
   });
 });

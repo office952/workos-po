@@ -67,10 +67,14 @@ describe("configuration preview transport", () => {
       expect.objectContaining({ componentId: "BACK", value: "Forex 10 mm" }),
       expect.objectContaining({ componentId: "LIGHTING", value: "Iluminare frontală" }),
     ]));
-    expect(preview.formSchema.sections.map((section) => section.componentId)).toEqual(["ROOT", "FACE", "VOLUME"]);
-    expect(
-      preview.formSchema.sections.flatMap((section) => section.fields).map((field) => field.id),
-    ).not.toContain("back.supportKind");
+    expect(preview.formSchema.sections.map((section) => section.componentId)).toEqual(["ROOT", "FACE", "VOLUME", "BACK"]);
+    const standaloneFields = preview.formSchema.sections.flatMap((section) => section.fields);
+    expect(standaloneFields.map((field) => field.id)).toContain("back.profile");
+    expect(standaloneFields.map((field) => field.id)).not.toContain("back.supportKind");
+    expect(standaloneFields.find((field) => field.id === "back.profile")?.options?.map((option) => option.value)).toEqual([
+      "FLAT",
+      "GROOVED",
+    ]);
     expect(JSON.stringify(preview)).not.toMatch(/measurements|templateVersion/);
     expect(preview.formSchema.sections.flatMap((section) => section.fields).map((field) => field.id)).not.toContain(
       "face.color",
@@ -114,6 +118,41 @@ describe("configuration preview transport", () => {
       expect.arrayContaining(["back.supportKind", "back.profile"]),
     );
     expect(preview.formSchema.sections.map((section) => section.id)).toContain("back");
+    const profile = preview.formSchema.sections
+      .flatMap((section) => section.fields)
+      .find((field) => field.id === "back.profile");
+    expect(profile?.options?.map((option) => option.value)).toEqual(["FLAT", "GROOVED"]);
+  });
+
+  it("changes the review identity when the back profile changes after preview", () => {
+    const flat = projectConfigurationPreview(
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      lettersDraft({ ...lettersReadyValues, "back.profile": "FLAT" }),
+    );
+    const grooved = projectConfigurationPreview(
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      lettersDraft({ ...lettersReadyValues, "back.profile": "GROOVED" }),
+    );
+    expect(flat.readiness).toBe("ready");
+    expect(flat.reviewId).toEqual(expect.any(String));
+    expect(grooved.readiness).toBe("blocked");
+    expect(grooved.reviewId).toBeNull();
+    const confirmed = confirmReviewedDraft(
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      lettersDraft({ ...lettersReadyValues, "back.profile": "FLAT" }),
+      flat.reviewId ?? "",
+    );
+    expect("ok" in confirmed).toBe(false);
+    const stale = confirmReviewedDraft(
+      frontlitPlexiAl06Template,
+      frontlitPlexiAl06FormSchema,
+      lettersDraft({ ...lettersReadyValues, "back.profile": "GROOVED" }),
+      flat.reviewId ?? "",
+    );
+    expect(stale).toMatchObject({ ok: false });
   });
 
   it("does not give ACM LETTERS VOLUME or LIGHTING fields", () => {

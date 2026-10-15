@@ -4,7 +4,7 @@ import {
   type ComponentEvaluation,
 } from "./componentEvaluation.js";
 import type { DisplayLabelCatalog } from "./displayMetadata.js";
-import { planBackManufacturing } from "./backManufacturing.js";
+import { planBackManufacturing, type BackManufacturingBlockReason } from "./backManufacturing.js";
 import { isLettersMountingOnAcmPanel } from "./lettersMountingContext.js";
 import type { ResolvedFormulaVersion } from "./resolveFormulas.js";
 import type { ComponentTechnicalSettingDefinition } from "./technicalSettings.js";
@@ -107,6 +107,17 @@ function allFields(schema: FormSchema): FormField[] {
   return schema.sections.flatMap((section) => [...section.fields]);
 }
 
+function backManufacturingMissingLabel(reason: BackManufacturingBlockReason): string {
+  switch (reason) {
+    case "groove_recipe_missing":
+      return "Spate cu canal: lipsește rețeta de prelucrare și costul verificat";
+    case "cnc_cost_unavailable":
+      return "Debitarea CNC a spatelui nu are perimetru confirmat sau cost verificat";
+    default:
+      return "Profilul de spate nu poate fi fabricat cu datele disponibile";
+  }
+}
+
 export function compileDefinition(
   template: ProductTemplate,
   schema: FormSchema,
@@ -197,10 +208,7 @@ export function compileDefinition(
       missing.push({
         componentId: "BACK",
         fieldId: "back.profile",
-        label:
-          plan.reason === "groove_recipe_missing"
-            ? "Spate cu canal: lipsește rețeta de prelucrare și costul verificat"
-            : "Profilul de spate nu poate fi fabricat cu datele disponibile",
+        label: backManufacturingMissingLabel(plan.reason),
       });
     }
   }
