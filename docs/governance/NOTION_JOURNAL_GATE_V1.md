@@ -1,6 +1,6 @@
 # WorkOS Notion Journal Gate V1
 
-Status: **OWNER-APPROVED GOVERNANCE RULE** (2026-10-14). This document binds planning and engineering work in `office952/workos-po`. It does **not** modify business runtime logic, Product Truth, prices, deployment eligibility, or customer availability.
+Status: **OWNER-APPROVED GOVERNANCE RULE** (2026-10-14). Once [V2](NOTION_JOURNAL_GATE_V2.md) is present on protected `main`, V1 stays historical provenance and the fallback for any work without a valid V2 wave authorization; until then V1 alone is operative. This document binds planning and engineering work in `office952/workos-po`. It does **not** modify business runtime logic, Product Truth, prices, deployment eligibility, or customer availability.
 
 ## Durable authorities
 

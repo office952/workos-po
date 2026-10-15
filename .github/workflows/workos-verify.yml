@@ -19,6 +19,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # The PR merge commit plus its first parent (the protected base) for the V2 gate.
+          fetch-depth: 2
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -33,11 +36,22 @@ jobs:
 
       - name: Test Notion PR journal gate
         if: github.event_name == 'pull_request'
-        run: node --test scripts/verify-notion-pr-metadata.test.mjs
+        run: node --test scripts/verify-notion-pr-metadata.test.mjs scripts/verify-wave-authorization.test.mjs
 
       - name: Notion PR journal metadata gate
         if: github.event_name == 'pull_request'
         run: node scripts/verify-notion-pr-metadata.mjs
+
+      # Runs the verifier from the protected base so a candidate cannot weaken its own check.
+      - name: Governance V2 wave authorization gate
+        if: github.event_name == 'pull_request'
+        run: |
+          if git cat-file -e HEAD^1:scripts/verify-wave-authorization.mjs 2>/dev/null; then
+            git show HEAD^1:scripts/verify-wave-authorization.mjs > "$RUNNER_TEMP/verify-wave-authorization.mjs"
+            node "$RUNNER_TEMP/verify-wave-authorization.mjs" ci --base HEAD^1 --head HEAD
+          else
+            echo "V2_ACTIVE=NO: the protected base has no V2 verifier; the V1 metadata gate applies."
+          fi
 
       - name: Install
         run: pnpm install --frozen-lockfile

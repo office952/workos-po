@@ -5,6 +5,7 @@ Notion Record URL: REPLACE_WITH_EXACT_RECORD_PAGE_URL
 Owner GO: Replace with exact Owner authorization and relevant scope
 Scope: Replace with the approved change and excluded areas
 Evidence: Replace with tests, CI, runtime evidence, and known limitations
+Authorization Mode: V1
 
 ## Checklist
 
@@ -13,7 +14,8 @@ Evidence: Replace with tests, CI, runtime evidence, and known limitations
 - [ ] I logged required pre-work decisions and all substantive scope changes in Notion.
 - [ ] No real Cloud/DB write, deploy, migration or merge is implied by this PR.
 - [ ] I will update the implementation record and append a journal event after review/merge.
+- [ ] V2 only: the Owner-signed authorization for this record is on protected `main`; this PR does not touch `docs/governance/authorizations/`; pending Notion sync is recorded in the wave ledger, not claimed as done.
 
-Governance: [NOTION_JOURNAL_GATE_V1](https://github.com/office952/workos-po/blob/main/docs/governance/NOTION_JOURNAL_GATE_V1.md)
+Governance: [NOTION_JOURNAL_GATE_V1](https://github.com/office952/workos-po/blob/main/docs/governance/NOTION_JOURNAL_GATE_V1.md) · [NOTION_JOURNAL_GATE_V2](https://github.com/office952/workos-po/blob/main/docs/governance/NOTION_JOURNAL_GATE_V2.md) (applies only once on `main`)
 
-**Replace the sample record ID/URL. Do not reuse N-006 for unrelated PRs.**
+**Replace the sample record ID/URL. Do not reuse N-006 for unrelated PRs.** Keep exactly one `Authorization Mode:` line, with the value exactly `V1` or `V2`. Use `V2` only when V2 is active on `main` and a signed wave authorization exists. `V1` is manual governance: CI reports it as `V1_MANUAL_REVIEW_REQUIRED`, never as a verified Owner signature.
