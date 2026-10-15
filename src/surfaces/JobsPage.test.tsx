@@ -42,17 +42,16 @@ describe("JobsPage", () => {
     }));
 
     render(<JobsPage />);
-    expect(await screen.findByText("ALPHA")).toBeInTheDocument();
+    expect((await screen.findAllByText("ALPHA")).length).toBeGreaterThan(0);
     const planning = screen.getByRole("link", { name: "Planificare" });
     expect(planning).toHaveAttribute("href", "/planificare");
     expect(planning.closest(".page-header__action")).not.toBeNull();
     expect(document.querySelector(".app-shell__nav")).toBeNull();
     expect(screen.getByRole("link", { name: /ALPHA/ })).toHaveAttribute("href", "/lucrari/job-1");
-    expect(screen.getByRole("link", { name: "Continuă execuția" })).toHaveAttribute(
-      "href",
-      "/executie/exp-1?job=job-1",
-    );
-    expect(screen.getByText(/Lipsă utilaj dedicat/)).toBeInTheDocument();
+    const continueLinks = screen.getAllByRole("link", { name: "Continuă execuția" });
+    expect(continueLinks).toHaveLength(2);
+    continueLinks.forEach((link) => expect(link).toHaveAttribute("href", "/executie/exp-1?job=job-1"));
+    expect(screen.getAllByText(/Lipsă utilaj dedicat/).length).toBeGreaterThan(0);
     expect(screen.queryByText("Actualizat")).not.toBeInTheDocument();
   });
 });

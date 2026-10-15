@@ -12,6 +12,8 @@ import { formatTimestamp } from "../presentation/format";
 import { matchesSearch } from "../presentation/listFilter";
 import { presentJobWorklistAction } from "../presentation/worklistAction";
 import { jobHref } from "../routing/appRoute";
+import travelerTop from "../assets/work-traveler-top.svg";
+import travelerFoot from "../assets/work-traveler-foot.svg";
 import "../styles/surfaces/jobs.css";
 
 const FILTERS = [
@@ -161,16 +163,18 @@ function JobRow({
 
 function WorkTraveler({ job }: { job: JobListItemTransport | null }) {
   const action = job ? presentJobWorklistAction(job) : null;
+
   return (
     <aside className="jobs-traveler" aria-label="Fișă operațională pentru lucrarea selectată">
       <div className="jobs-traveler__housing">
-        <span className="jobs-traveler__screw jobs-traveler__screw--tl" aria-hidden="true" />
-        <span className="jobs-traveler__screw jobs-traveler__screw--tr" aria-hidden="true" />
-        <span className="jobs-traveler__screw jobs-traveler__screw--bl" aria-hidden="true" />
-        <span className="jobs-traveler__screw jobs-traveler__screw--br" aria-hidden="true" />
-        <div className="jobs-traveler__slot" aria-hidden="true">
-          <span className="jobs-traveler__slot-name">WORK TRAVELER <small>PRODUCTION CONTROL</small></span>
-          <span className="jobs-traveler__slot-brand">WorkOS <small>ATELIER / OPERATIONS</small></span>
+        <span className="jobs-traveler__side-rail jobs-traveler__side-rail--left" aria-hidden="true" />
+        <span className="jobs-traveler__side-rail jobs-traveler__side-rail--right" aria-hidden="true" />
+        <div className="jobs-traveler__fixture-top" aria-hidden="true">
+          <img src={travelerTop} alt="" width="820" height="194" />
+          <div className="jobs-traveler__fixture-label">
+            <span><strong>WORK TRAVELER</strong><small>PRODUCTION CONTROL</small></span>
+            <span className="jobs-traveler__fixture-brand">WorkOS<small>ATELIER / OPERATIONS</small></span>
+          </div>
         </div>
         <div className="jobs-traveler__paper-bay">
           {job ? (
@@ -180,7 +184,7 @@ function WorkTraveler({ job }: { job: JobListItemTransport | null }) {
                 <span>{formatTimestamp(job.createdAt) ?? "—"}</span>
               </div>
               <h2 className="jobs-traveler__title">{jobName(job)}</h2>
-              <p className="jobs-traveler__description">{jobSubtitle(job)}</p>
+              <p className="jobs-traveler__description" title={jobSubtitle(job)}>{jobSubtitle(job)}</p>
               <p className="jobs-traveler__client">{job.customerDisplayName ?? "Client neprecizat"}</p>
               <dl className="jobs-traveler__facts">
                 <div><dt>Tip lucrare</dt><dd>{job.kindLabel}</dd></div>
@@ -218,9 +222,19 @@ function WorkTraveler({ job }: { job: JobListItemTransport | null }) {
             </div>
           )}
         </div>
-        <div className="jobs-traveler__perforations" aria-hidden="true" />
-        <div className="jobs-traveler__foot" aria-hidden="true"><span>WORKOS / JOB CONTROL</span><span>PRODUCTION SYSTEM</span></div>
+        <div className="jobs-traveler__paper-tear" aria-hidden="true" />
+        <div className="jobs-traveler__fixture-bottom" aria-hidden="true">
+          <img src={travelerFoot} alt="" width="820" height="140" />
+          <span className="jobs-traveler__fixture-engraving">
+            <span>WORKOS / JOB CONTROL</span>
+            <span>PRODUCTION SYSTEM</span>
+          </span>
+        </div>
       </div>
+      <p className="jobs-traveler__hint" aria-hidden="true">
+        {job ? "Fișa lucrării selectate" : "Selectează un rând pentru previzualizare"}
+        <span>WORKOS / OPERAȚIUNI</span>
+      </p>
       <p className="u-visually-hidden" aria-live="polite" aria-atomic="true">
         {job ? "Fișa afișează lucrarea " + jobName(job) : "Nicio lucrare selectată"}
       </p>
@@ -280,6 +294,9 @@ export function JobsPage() {
       <div className="jobs-spine">
         <div className="jobs-spine__layout">
           <div className="jobs-spine__header">
+            <div className="jobs-spine__header-engraving" aria-hidden="true">
+              <span>04 / OPERATIONS</span><span>WORKOS CONTROL SYSTEM</span>
+            </div>
             <PageHeader
               variant="pilot-compact"
               eyebrow="Registru operațional"
@@ -374,7 +391,7 @@ export function JobsPage() {
                 ))}
               </ul>
             )}
-            <div className="jobs-spine__footer"><span>{shown}</span><span>Selectează un rând pentru previzualizare</span></div>
+            <div className="jobs-spine__footer"><span>{shown}</span></div>
           </section>
           <WorkTraveler job={selected} />
         </div>
