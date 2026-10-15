@@ -109,18 +109,10 @@
 /* Reuse pilot-instrument semantics and typography shared by Cereri/Clienți/
    Oferte. Local sizing only prevents four operational counters from wrapping. */
 .jobs-spine__metrics {
-  width: min(100%,780px);
-  flex-wrap: nowrap;
-  gap: clamp(8px,1.15vw,20px);
-}
-.jobs-spine__metrics > .pilot-instrument__metric {
-  flex: 1 1 0;
-  min-width: 0;
-  gap: clamp(8px,1vw,16px);
-  padding-inline: clamp(8px,1.1vw,18px);
-}
-.jobs-spine__metrics > .pilot-instrument__metric:first-child {
-  padding-left: 0;
+  /* Flow at intrinsic content width, using the same 20px pilot gap and
+     individual metric padding as Cereri, Clienți and Oferte. */
+  width: fit-content;
+  max-width: 100%;
 }
 .jobs-spine__metrics > .pilot-instrument__metric[aria-pressed="true"] {
   border-bottom-color: var(--jobs-signal);
@@ -685,9 +677,6 @@
   .jobs-spine__search { max-width: none; flex-basis: 100%; }
   .jobs-spine__controls { width: 100%; justify-content: flex-end; }
   .jobs-spine__header .page-header__lead { max-width: none; }
-  .jobs-spine__metrics strong { font-size: 29px; }
-  .jobs-spine__metrics span { font-size: 10px; }
-  .jobs-spine__metrics button { padding-inline: 10px; }
   .jobs-spine__columns,.jobs-spine__row {
     grid-template-columns: minmax(145px,1.15fr) minmax(135px,1.1fr) minmax(114px,.85fr);
     gap: 8px;
