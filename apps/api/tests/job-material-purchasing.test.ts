@@ -101,7 +101,7 @@ describe("job material checks and procurement foundation", () => {
     expect((line.latestCheck as Obj).status).toBe("MISSING");
     const request = line.openRequest as Obj;
     expect(request.requestedQuantity).toBe(amount);
-    expect(request.estimatedQuantity).toBe(undefined);
+    expect(request.estimatedQuantity).toBe(estimated);
     expect(request.status).toBe("REQUESTED");
 
     const repeated = await post({
