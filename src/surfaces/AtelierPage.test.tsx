@@ -92,8 +92,8 @@ describe("AtelierPage", () => {
     );
 
     render(<AtelierPage jobId="ord-a" />);
-    expect(await screen.findByText("NORD A")).toBeInTheDocument();
-    expect(screen.queryByText("NORD B")).not.toBeInTheDocument();
+    expect(await screen.findByText("Litere · NORD A")).toBeInTheDocument();
+    expect(screen.queryByText("Litere · NORD B")).not.toBeInTheDocument();
     expect(document.querySelector('a[href="/executie/exp-a?task=task-a&job=ord-a"]')).not.toBeNull();
   });
 
@@ -267,11 +267,116 @@ describe("AtelierPage", () => {
       }),
     );
     render(<AtelierPage />);
-    expect(await screen.findByText("INTERN")).toBeInTheDocument();
+    expect(await screen.findByText("Litere · INTERN")).toBeInTheDocument();
     expect(screen.queryByText("La furnizor extern")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Predă către furnizor" })).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Marchează pentru execuție externă" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows the server lane, the reason, and an open action that is not start", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/operator-candidates")) {
+          return jsonResponse({
+            candidates: [{ personId: "per:1", displayName: "Andrei", pinConfigured: true }],
+          });
+        }
+        if (url.includes("/operator-session")) {
+          return jsonResponse({ operator: { personId: "per:1", displayName: "Andrei" } });
+        }
+        if (url.includes("/operator-task-inbox")) {
+          return jsonResponse({
+            inbox: {
+              displayOrderNote:
+                "Ordinea de afișare nu reprezintă programare sau prioritate de producție.",
+              inProgressMine: [
+                {
+                  taskId: "task-mine",
+                  planId: "exp-mine",
+                  jobId: "ord-a",
+                  processLabel: "Sudură",
+                  scopeLabel: "Cadru",
+                  seqLabel: "03",
+                  statusLabel: "În lucru",
+                  productLabel: "Litere",
+                  inscription: "NORD",
+                  customerDisplayName: "Nord Market",
+                  providerLabel: "Router 1",
+                  canClaimStart: false,
+                  lane: "in_progress_mine",
+                },
+              ],
+              availableReady: [
+                {
+                  taskId: "task-ready",
+                  planId: "exp-ready",
+                  jobId: "ord-a",
+                  processLabel: "Ambalare",
+                  scopeLabel: "Final",
+                  statusLabel: "Planificat",
+                  productLabel: "Litere",
+                  inscription: "NORD",
+                  canClaimStart: true,
+                  lane: "available_ready",
+                },
+              ],
+              availableNeedsProvider: [
+                {
+                  taskId: "task-cnc",
+                  planId: "exp-cnc",
+                  jobId: "ord-a",
+                  processLabel: "Debitare",
+                  scopeLabel: "Foaie",
+                  requiredCapabilityLabel: "Debitare CNC",
+                  canClaimStart: false,
+                  lane: "available_needs_provider",
+                },
+              ],
+              waitingDependencies: [
+                {
+                  taskId: "task-wait",
+                  planId: "exp-wait",
+                  jobId: "ord-a",
+                  processLabel: "Cablare",
+                  scopeLabel: "Spate",
+                  waitingForLabels: ["Debitare foaie CNC"],
+                  canClaimStart: false,
+                  lane: "waiting_dependencies",
+                },
+              ],
+              blockedMaterial: [
+                {
+                  taskId: "task-block",
+                  planId: "exp-block",
+                  jobId: "ord-a",
+                  processLabel: "Montare LED",
+                  scopeLabel: "Litere",
+                  materialBlockLabel: "Modul LED nu este confirmat disponibil.",
+                  canClaimStart: false,
+                  lane: "blocked_material",
+                },
+              ],
+            },
+          });
+        }
+        return jsonResponse({});
+      }),
+    );
+
+    render(<AtelierPage />);
+    expect(await screen.findByText("1 în lucru de tine")).toBeInTheDocument();
+    expect(screen.getByText("1 pot fi pornite")).toBeInTheDocument();
+    expect(screen.queryByText(/urmează/)).not.toBeInTheDocument();
+    expect(screen.getByText("În lucru de tine · Router 1")).toBeInTheDocument();
+    expect(screen.getByText("Necesită alocare: Debitare CNC")).toBeInTheDocument();
+    expect(screen.getByText("Așteaptă: Debitare foaie CNC")).toBeInTheDocument();
+    expect(screen.getByText("Modul LED nu este confirmat disponibil.")).toBeInTheDocument();
+    expect(screen.getAllByText("Deschide execuția").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Pornește" })).not.toBeInTheDocument();
+    expect(screen.getByText(/nu reprezintă programare sau prioritate/)).toBeInTheDocument();
   });
 });

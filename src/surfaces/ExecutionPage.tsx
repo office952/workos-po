@@ -42,6 +42,7 @@ import {
 } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
+import "../styles/surfaces/execution-flow.css";
 import { parseCompletedQuantity } from "../presentation/completedQuantity";
 import {
   actualConsumptionDraftKey,
@@ -206,6 +207,16 @@ function PlanSummary({
         </span>
       ))}
     </p>
+  );
+}
+
+function closeQuantityVisible(task: ExecutionTaskTransport): boolean {
+  return (
+    task.executionMode !== "EXTERNAL" &&
+    task.requiresCompletedQuantity &&
+    task.status !== "COMPLETED" &&
+    !task.qualityControl &&
+    (task.canComplete || task.completionBlockedByActiveMachineRun)
   );
 }
 
@@ -562,36 +573,9 @@ export function ExecutionPage({
             }
             label={`${currentTask.seqLabel} ${currentTask.processLabel}`}
           >
-            <MeasurePair
-              planned={currentTask.plannedQuantityLabel ?? "Fără cantitate măsurabilă"}
-              actual={currentTask.completedQuantityLabel ?? "—"}
-            />
-            <dl className="fact-grid">
-              <InfoRow label="Zonă" value={currentTask.scopeLabel} />
-              <InfoRow label="Alocare" value={currentTask.assignmentLabel} />
-              <InfoRow label="Timp planificat" value={currentTask.plannedTimeLabel} />
-              <InfoRow label="Timp efectiv" value={currentTask.actualDurationLabel} />
-              {currentTask.timeVarianceLabel ? (
-                <InfoRow label="Diferență timp" value={currentTask.timeVarianceLabel} />
-              ) : null}
-              {currentTask.executorLabel || currentTask.startedByLabel ? (
-                <InfoRow
-                  label="Operator sarcină"
-                  value={currentTask.executorLabel ?? currentTask.startedByLabel ?? ""}
-                />
-              ) : null}
-              <InfoRow label="Diferență" value={currentTask.varianceLabel ?? "—"} />
-              <InfoRow
-                label="Următorul pas"
-                value={presentExecutionNextAction(currentTask, identified)}
-              />
-            </dl>
-            {plan?.siteInstallation && currentTask.scopeLabel === "Montaj la locație" ? (
-              <SiteInstallationContextPanel context={plan.siteInstallation} />
-            ) : null}
-            {currentTask.operatorRelation === "not_eligible" ? (
-              <p>Alt operator trebuie să preia această sarcină.</p>
-            ) : null}
+            <section className="execution-next" data-testid="execution-next">
+              <h3 className="execution-next__title">Următorul pas</h3>
+              <p className="execution-next__reason">{presentExecutionNextAction(currentTask, identified)}</p>
             {currentTask.canExternalize ? (
               <Button
                 disabled={actionState === "pending"}
@@ -690,46 +674,6 @@ export function ExecutionPage({
                 ) : null}
               </div>
             ) : null}
-            {currentTask.executionMode !== "EXTERNAL" &&
-            currentTask.requiresCompletedQuantity &&
-            currentTask.status !== "COMPLETED" ? (
-              <TextField
-                id={`actual-${currentTask.taskId}`}
-                label="Cantitate realizată"
-                value={actualQuantityDraft(currentTask)}
-                hint={
-                  currentTask.plannedQuantityLabel
-                    ? `Planificat: ${currentTask.plannedQuantityLabel}`
-                    : undefined
-                }
-                inputMode="decimal"
-                disabled={actionState === "pending"}
-                onChange={(value) => {
-                  setActualDrafts((currentDrafts) => ({
-                    ...currentDrafts,
-                    [currentTask.taskId]: value,
-                  }));
-                }}
-              />
-            ) : null}
-            {canEditActualConsumption(currentTask) ? (
-              <ExecutionActualConsumptionFields
-                taskId={currentTask.taskId}
-                plannedResources={currentTask.plannedResources}
-                drafts={resourceActualDrafts}
-                disabled={actionState === "pending"}
-                onChange={(resourceId, value) => {
-                  setResourceActualDrafts((currentDrafts) => ({
-                    ...currentDrafts,
-                    [actualConsumptionDraftKey(currentTask.taskId, resourceId)]: value,
-                  }));
-                }}
-              />
-            ) : (
-              <ExecutionActualConsumptionHistory
-                actualConsumption={currentTask.actualConsumption}
-              />
-            )}
             {missingProviderGuidance ? (
               <InlineAlert tone="blocked" title={missingProviderGuidance.title}>
                 <p>{missingProviderGuidance.reason}</p>
@@ -764,6 +708,26 @@ export function ExecutionPage({
                   .map((provider) => providerChoiceLabel(provider))
                   .join(", ")}
               </p>
+            ) : null}
+            {closeQuantityVisible(currentTask) ? (
+              <TextField
+                id={`actual-${currentTask.taskId}`}
+                label="Cantitate realizată"
+                value={actualQuantityDraft(currentTask)}
+                hint={
+                  currentTask.plannedQuantityLabel
+                    ? `Planificat: ${currentTask.plannedQuantityLabel}`
+                    : undefined
+                }
+                inputMode="decimal"
+                disabled={actionState === "pending"}
+                onChange={(value) => {
+                  setActualDrafts((currentDrafts) => ({
+                    ...currentDrafts,
+                    [currentTask.taskId]: value,
+                  }));
+                }}
+              />
             ) : null}
             {currentTask.executionMode !== "EXTERNAL" &&
             (currentTask.canComplete || currentTask.completionBlockedByActiveMachineRun) &&
@@ -805,49 +769,6 @@ export function ExecutionPage({
                   <p>Oprește rularea utilajului înainte de a închide sarcina.</p>
                 ) : null}
               </div>
-            ) : null}
-            {currentTask.materialBlockLabel ? (
-              <InlineAlert tone="error" title="Material">
-                {currentTask.materialBlockLabel}
-              </InlineAlert>
-            ) : null}
-            {!resolvedJobId && currentTask.materialLines && currentTask.materialLines.length > 0 ? (
-              <div className="stack" data-testid="material-readiness">
-                {currentTask.materialLines.map((line) => (
-                  <div key={line.resourceId} className="cluster">
-                    <span>
-                      {line.label} — {line.statusLabel}
-                    </span>
-                    {plan?.canConfirmMaterial && currentTask.status === "PLANNED" ? (
-                      <>
-                        <Button
-                          disabled={actionState === "pending" || line.status === "AVAILABLE"}
-                          onClick={() => void confirmMaterial(currentTask, line.resourceId, "AVAILABLE")}
-                        >
-                          Disponibil
-                        </Button>
-                        <Button
-                          disabled={actionState === "pending" || line.status === "NOT_AVAILABLE"}
-                          onClick={() =>
-                            void confirmMaterial(currentTask, line.resourceId, "NOT_AVAILABLE")
-                          }
-                        >
-                          Indisponibil
-                        </Button>
-                      </>
-                    ) : null}
-                  </div>
-                ))}
-                <p className="ui-note">
-                  Confirmarea este o decizie de execuție. Soldul de stoc nu pornește sarcina.
-                </p>
-              </div>
-            ) : null}
-            {resolvedJobId && currentTask.plannedResources.length > 0 ? (
-              <JobMaterialPreparation
-                jobId={resolvedJobId}
-                onlyResourceIds={currentTask.plannedResources.map((resource) => resource.resourceId)}
-              />
             ) : null}
             {currentTask.qualityControl ? (
               <QualityControlPanel
@@ -908,6 +829,94 @@ export function ExecutionPage({
                 </Button>
               ) : null}
             </div>
+            </section>
+            <MeasurePair
+              planned={currentTask.plannedQuantityLabel ?? "Fără cantitate măsurabilă"}
+              actual={currentTask.completedQuantityLabel ?? "—"}
+            />
+            <dl className="fact-grid">
+              <InfoRow label="Zonă" value={currentTask.scopeLabel} />
+              <InfoRow label="Alocare" value={currentTask.assignmentLabel} />
+              <InfoRow label="Timp planificat" value={currentTask.plannedTimeLabel} />
+              <InfoRow label="Timp efectiv" value={currentTask.actualDurationLabel} />
+              {currentTask.timeVarianceLabel ? (
+                <InfoRow label="Diferență timp" value={currentTask.timeVarianceLabel} />
+              ) : null}
+              {currentTask.executorLabel || currentTask.startedByLabel ? (
+                <InfoRow
+                  label="Operator sarcină"
+                  value={currentTask.executorLabel ?? currentTask.startedByLabel ?? ""}
+                />
+              ) : null}
+              <InfoRow label="Diferență" value={currentTask.varianceLabel ?? "—"} />
+            </dl>
+            {plan?.siteInstallation && currentTask.scopeLabel === "Montaj la locație" ? (
+              <SiteInstallationContextPanel context={plan.siteInstallation} />
+            ) : null}
+            {currentTask.operatorRelation === "not_eligible" ? (
+              <p>Alt operator trebuie să preia această sarcină.</p>
+            ) : null}
+            {canEditActualConsumption(currentTask) ? (
+              <ExecutionActualConsumptionFields
+                taskId={currentTask.taskId}
+                plannedResources={currentTask.plannedResources}
+                drafts={resourceActualDrafts}
+                disabled={actionState === "pending"}
+                onChange={(resourceId, value) => {
+                  setResourceActualDrafts((currentDrafts) => ({
+                    ...currentDrafts,
+                    [actualConsumptionDraftKey(currentTask.taskId, resourceId)]: value,
+                  }));
+                }}
+              />
+            ) : (
+              <ExecutionActualConsumptionHistory
+                actualConsumption={currentTask.actualConsumption}
+              />
+            )}
+            {currentTask.materialBlockLabel ? (
+              <InlineAlert tone="error" title="Material">
+                {currentTask.materialBlockLabel}
+              </InlineAlert>
+            ) : null}
+            {!resolvedJobId && currentTask.materialLines && currentTask.materialLines.length > 0 ? (
+              <div className="stack" data-testid="material-readiness">
+                {currentTask.materialLines.map((line) => (
+                  <div key={line.resourceId} className="cluster">
+                    <span>
+                      {line.label} — {line.statusLabel}
+                    </span>
+                    {plan?.canConfirmMaterial && currentTask.status === "PLANNED" ? (
+                      <>
+                        <Button
+                          disabled={actionState === "pending" || line.status === "AVAILABLE"}
+                          onClick={() => void confirmMaterial(currentTask, line.resourceId, "AVAILABLE")}
+                        >
+                          Disponibil
+                        </Button>
+                        <Button
+                          disabled={actionState === "pending" || line.status === "NOT_AVAILABLE"}
+                          onClick={() =>
+                            void confirmMaterial(currentTask, line.resourceId, "NOT_AVAILABLE")
+                          }
+                        >
+                          Indisponibil
+                        </Button>
+                      </>
+                    ) : null}
+                  </div>
+                ))}
+                <p className="ui-note">
+                  Confirmarea este o decizie de execuție. Soldul de stoc nu pornește sarcina.
+                </p>
+              </div>
+            ) : null}
+            {resolvedJobId && currentTask.plannedResources.length > 0 ? (
+              <JobMaterialPreparation
+                jobId={resolvedJobId}
+                onlyResourceIds={currentTask.plannedResources.map((resource) => resource.resourceId)}
+              />
+            ) : null}
           </SurfacePanel>
           <SurfacePanel variant="quiet" title="Fapte">
             <dl>

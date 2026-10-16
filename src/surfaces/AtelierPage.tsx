@@ -22,7 +22,9 @@ import {
 } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
-import { presentInboxLane } from "../presentation/inboxLane";
+import { presentInboxContext, presentInboxLane, inboxLaneLabel } from "../presentation/inboxLane";
+import type { InboxTaskLane } from "../api/types";
+import "../styles/surfaces/atelier.css";
 import { statusTone } from "../presentation/statusTone";
 import { atelierHref, executionHref } from "../routing/appRoute";
 
@@ -46,7 +48,7 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
   const people = useMemo(() => candidates.data ?? [], [candidates.data]);
   const currentSession = session.data ?? null;
   const tasks = useMemo(() => {
-    const all = inbox.data ?? [];
+    const all = inbox.data?.tasks ?? [];
     if (!jobId) {
       return all;
     }
@@ -54,11 +56,26 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
   }, [inbox.data, jobId]);
   const selectedPersonId = personId || people[0]?.personId || "";
   const selected = people.find((item) => item.personId === selectedPersonId) ?? null;
-  const lanes = useMemo(() => tasks.map((task) => presentInboxLane(task)), [tasks]);
-  const readyCount = lanes.filter((lane) => lane.lane === "ready").length;
-  const nextCount = lanes.filter((lane) => lane.lane === "next").length;
-  const blockedTasks = tasks.filter((task) => task.lane === "blocked_material");
-  const openTasks = tasks.filter((task) => task.lane !== "blocked_material");
+  const laneOrder: InboxTaskLane[] = [
+    "in_progress_mine",
+    "available_ready",
+    "available_needs_provider",
+    "waiting_dependencies",
+    "blocked_material",
+  ];
+  const laneGroups = laneOrder
+    .map((lane) => ({
+      lane,
+      label: inboxLaneLabel(lane),
+      tasks: tasks.filter((task) => task.lane === lane),
+    }))
+    .filter((group) => group.tasks.length > 0);
+  const inProgressCount = tasks.filter((task) => task.lane === "in_progress_mine").length;
+  const readyCount = tasks.filter((task) => task.lane === "available_ready").length;
+  const needsProviderCount = tasks.filter((task) => task.lane === "available_needs_provider").length;
+  const waitingCount = tasks.filter((task) => task.lane === "waiting_dependencies").length;
+  const blockedCount = tasks.filter((task) => task.lane === "blocked_material").length;
+  const displayOrderNote = inbox.data?.displayOrderNote ?? null;
   const sessionKnown = session.status === "success";
   const candidatesPending = candidates.status !== "success" && people.length === 0;
 
@@ -125,8 +142,8 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
       title="Atelier"
       lead={
         jobId
-          ? "Identifică operatorul, apoi preia sarcina acestei lucrări."
-          : "Identifică operatorul, apoi preia sarcina disponibilă."
+          ? "Identifică operatorul. Lista arată starea acestei lucrări; pornirea rămâne pe execuție."
+          : "Identifică operatorul. Lista arată starea fiecărei sarcini; pornirea rămâne pe execuție."
       }
       status={
         !sessionKnown ? null : currentSession ? (
@@ -225,9 +242,19 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
         >
           <div className="lane-summary">
             <span>Autentificat: {currentSession.displayName}</span>
-            <span>{inbox.status === "success" ? `${readyCount} gata` : "Se citește"}</span>
-            <span>{inbox.status === "success" ? `${nextCount} urmează` : "…"}</span>
-            {blockedTasks.length > 0 ? <span>{blockedTasks.length} material</span> : null}
+            {inbox.status === "success" ? (
+              <>
+                <span>{inProgressCount} în lucru de tine</span>
+                <span>{readyCount} pot fi pornite</span>
+                {needsProviderCount > 0 ? (
+                  <span>{needsProviderCount} necesită alocare</span>
+                ) : null}
+                {waitingCount > 0 ? <span>{waitingCount} așteaptă dependențe</span> : null}
+                {blockedCount > 0 ? <span>{blockedCount} material blocant</span> : null}
+              </>
+            ) : (
+              <span>Se citește</span>
+            )}
           </div>
           {inbox.status !== "success" && tasks.length === 0 ? (
             <LoadingFloor
@@ -256,66 +283,39 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
               ) : null}
             </div>
           ) : null}
-          {blockedTasks.length > 0 ? (
-            <Worklist
-              variant="operational"
-              label="Material"
-              columns={["Sarcină", "Context", "Pregătire", "Acțiune"]}
-            >
-              {blockedTasks.map((task) => (
-                <WorklistRow
-                  key={task.taskId}
-                  variant="operational"
-                  href={executionHref(task.planId, {
-                    taskId: task.taskId,
-                    jobId: task.jobId ?? jobId,
-                  })}
-                  identity={`${task.processLabel} · ${task.scopeLabel}`}
-                  identityDetail={
-                    task.materialBlockLabel ?? (task.inscription || task.productLabel)
-                  }
-                  context={task.productLabel}
-                  state={<StatusBadge label="Material" tone={statusTone("danger")} />}
-                  actionLabel="Deschide execuția"
-                />
-              ))}
-            </Worklist>
-          ) : null}
-          {openTasks.length > 0 ? (
-            <Worklist
-              variant="operational"
-              label="Sarcini disponibile"
-              columns={["Sarcină", "Context", "Pregătire", "Acțiune"]}
-            >
-              {openTasks.map((task) => {
-                const lane = presentInboxLane(task);
-                return (
-                  <WorklistRow
-                    key={task.taskId}
-                    variant="operational"
-                    href={executionHref(task.planId, {
-                      taskId: task.taskId,
-                      jobId: task.jobId ?? jobId,
-                    })}
-                    identity={`${task.processLabel} · ${task.scopeLabel}`}
-                    identityDetail={task.inscription || task.productLabel}
-                    context={task.productLabel}
-                    state={
-                      <StatusBadge
-                        label={lane.laneLabel}
-                        tone={statusTone(task.canClaimStart ? "warning" : "workflow")}
-                      />
-                    }
-                    actionLabel={lane.actionLabel}
-                  />
-                );
-              })}
-            </Worklist>
-          ) : null}
+          <div className="atelier-queue">
+            {laneGroups.map((group) => (
+              <Worklist
+                key={group.lane}
+                variant="operational"
+                label={group.label}
+                columns={["Sarcină", "Lucrare", "Stare", "Acțiune"]}
+              >
+                {group.tasks.map((task) => {
+                  const lane = presentInboxLane(task);
+                  return (
+                    <WorklistRow
+                      key={task.taskId}
+                      variant="operational"
+                      href={executionHref(task.planId, {
+                        taskId: task.taskId,
+                        jobId: task.jobId ?? jobId,
+                      })}
+                      identity={`${task.seqLabel ? `${task.seqLabel} ` : ""}${task.processLabel} · ${task.scopeLabel}`}
+                      identityDetail={lane.reason}
+                      context={presentInboxContext(task)}
+                      state={<StatusBadge label={lane.laneLabel} tone={statusTone(lane.tone)} />}
+                      actionLabel={lane.actionLabel}
+                    />
+                  );
+                })}
+              </Worklist>
+            ))}
+          </div>
           <div className="ui-panel__pad">
             <p className="ui-note">
-              Ordinea vine din planul de execuție. Utilajul apare doar când operația îl
-              cere.
+              Deschide execuția duce la sarcină. Nu pornește lucrul.
+              {displayOrderNote ? ` ${displayOrderNote}` : ""}
             </p>
           </div>
         </SurfacePanel>

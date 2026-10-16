@@ -1,0 +1,8 @@
+.atelier-queue .worklist-row__action {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.atelier-queue .worklist + .worklist {
+  margin-top: var(--space-8);
+}

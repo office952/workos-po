@@ -1,9 +1,10 @@
 import type {
+  InboxTaskLane,
   InboxTaskTransport,
   OperatorCandidateTransport,
   OperatorSessionTransport,
 } from "../api/types";
-import { asRecord, asString } from "./record";
+import { asRecord, asString, asStringList } from "./record";
 
 export function presentOperatorCandidates(payload: unknown): OperatorCandidateTransport[] {
   const record = asRecord(payload);
@@ -39,20 +40,40 @@ export function presentOperatorSession(payload: unknown): OperatorSessionTranspo
   };
 }
 
+const INBOX_LANES: readonly InboxTaskLane[] = [
+  "in_progress_mine",
+  "available_ready",
+  "available_needs_provider",
+  "waiting_dependencies",
+  "blocked_material",
+];
+
+function inboxLane(value: unknown): InboxTaskLane | null {
+  return typeof value === "string" && INBOX_LANES.some((lane) => lane === value)
+    ? (value as InboxTaskLane)
+    : null;
+}
+
+export function presentInboxDisplayNote(payload: unknown): string | null {
+  const record = asRecord(payload);
+  const inbox = asRecord(record?.inbox);
+  return asString(inbox?.displayOrderNote);
+}
+
 export function presentInboxTasks(payload: unknown): InboxTaskTransport[] {
   const record = asRecord(payload);
   const inbox = asRecord(record?.inbox);
   if (!inbox) {
     return [];
   }
-  const lanes = [
-    inbox.inProgressMine,
-    inbox.availableReady,
-    inbox.availableNeedsProvider,
-    inbox.waitingDependencies,
-    inbox.blockedMaterial,
+  const lanes: ReadonlyArray<readonly [InboxTaskLane, unknown]> = [
+    ["in_progress_mine", inbox.inProgressMine],
+    ["available_ready", inbox.availableReady],
+    ["available_needs_provider", inbox.availableNeedsProvider],
+    ["waiting_dependencies", inbox.waitingDependencies],
+    ["blocked_material", inbox.blockedMaterial],
   ];
-  return lanes.flatMap((lane) => {
+  return lanes.flatMap(([sourceLane, lane]) => {
     if (!Array.isArray(lane)) {
       return [];
     }
@@ -71,9 +92,14 @@ export function presentInboxTasks(payload: unknown): InboxTaskTransport[] {
           statusLabel: asString(row.statusLabel) ?? "",
           productLabel: asString(row.productLabel) ?? "",
           inscription: asString(row.inscription) ?? "",
+          customerDisplayName: asString(row.customerDisplayName) ?? "",
+          seqLabel: asString(row.seqLabel) ?? "",
+          waitingForLabels: asStringList(row.waitingForLabels),
+          requiredCapabilityLabel: asString(row.requiredCapabilityLabel),
+          providerLabel: asString(row.providerLabel),
           canClaimStart: row.canClaimStart === true,
           requiresProvider: row.requiresProvider === true,
-          lane: asString(row.lane) ?? "",
+          lane: inboxLane(row.lane) ?? sourceLane,
           materialBlockLabel: asString(row.materialBlockLabel),
         },
       ];

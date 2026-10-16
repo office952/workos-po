@@ -2387,4 +2387,78 @@ describe("ExecutionPage missing-provider guidance", () => {
       fetchMock.mock.calls.some(([url]) => String(url).endsWith("/api/workcenters")),
     ).toBe(false);
   });
+
+  it("keeps completed quantity in the close step and shows a dependency without that field", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/operator-session")) {
+          return jsonResponse({
+            operator: { personId: "per:andrei", displayName: "Andrei Goghi" },
+          });
+        }
+        return jsonResponse({
+          executionPlan: {
+            plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+            statusLabel: "În lucru",
+            progress: {
+              total: 2,
+              completed: 0,
+              inProgress: 1,
+              planned: 1,
+              waitingDependencies: 1,
+              noProvider: 0,
+              varianceCount: 0,
+            },
+            tasks: [
+              {
+                ...taskPayload({
+                  taskId: "task-cut",
+                  processLabel: "Debitare foaie CNC",
+                  status: "IN_PROGRESS",
+                  statusLabel: "În lucru",
+                  canComplete: true,
+                  requiresCompletedQuantity: true,
+                  plannedValue: 12.5,
+                  completedQuantityLabel: null,
+                  varianceLabel: null,
+                }),
+                completionBlockedByActiveMachineRun: true,
+                canStopMachineRun: true,
+                activeMachineRunLabel: "Router 1",
+                activeMachineRunStartedLabel: "08:10",
+                machineRuns: [{ machineRunId: "run-1", active: true }],
+              },
+              {
+                ...taskPayload({
+                  taskId: "task-wait",
+                  processLabel: "Montare module LED",
+                  status: "PLANNED",
+                  statusLabel: "Planificat",
+                  canComplete: false,
+                  requiresCompletedQuantity: true,
+                  plannedValue: 125,
+                  completedQuantityLabel: null,
+                  varianceLabel: null,
+                }),
+                waitingFor: ["Debitare foaie CNC"],
+              },
+            ],
+          },
+        });
+      }),
+    );
+
+    render(<ExecutionPage planId="exp:1" taskId="task-wait" />);
+    expect(await screen.findByRole("heading", { name: "Următorul pas" })).toBeInTheDocument();
+    expect(screen.getAllByText("Așteaptă: Debitare foaie CNC").length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText("Cantitate realizată")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Pornește" })).not.toBeInTheDocument();
+
+    render(<ExecutionPage planId="exp:1" taskId="task-cut" />);
+    expect(await screen.findByLabelText("Cantitate realizată")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Închide sarcina" })).toBeDisabled();
+    expect(screen.getByText("Oprește rularea utilajului înainte de a închide sarcina.")).toBeInTheDocument();
+  });
 });
