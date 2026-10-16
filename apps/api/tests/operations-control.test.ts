@@ -138,7 +138,13 @@ describe("operations control", () => {
     const plan = (await readBody(created)).executionPlan as {
       tasks: Array<JsonObject>;
     };
-    const task = plan.tasks.find((item) => item.canAssign === true);
+    const task = plan.tasks.find(
+      (item) =>
+        item.requiresProvider === true &&
+        item.assignedProvider === null &&
+        Array.isArray(item.eligibleProviders) &&
+        item.eligibleProviders.length > 0,
+    );
     expect(task).toBeTruthy();
     const effort = await app.request(`/api/execution-tasks/${task?.taskId}/planned-effort`, {
       method: "POST",

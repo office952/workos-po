@@ -427,15 +427,20 @@ describe("planned start current eligibility", () => {
     if (!assigned.ok) {
       return;
     }
+    const started = startExecutionTask(
+      assigned.record,
+      task.taskId,
+      "2026-08-17T17:00:00.000Z",
+      [setup.person],
+      setup.eligibility,
+    );
+    expect(started.ok).toBe(true);
+    if (!started.ok) {
+      return;
+    }
     expect(
-      startExecutionTask(
-        assigned.record,
-        task.taskId,
-        "2026-08-17T17:00:00.000Z",
-        [setup.person],
-        setup.eligibility,
-      ),
-    ).toEqual({ ok: false, error: "missing_assignment" });
+      started.record.tasks.find((item) => item.taskId === task.taskId)?.providerBindingSource,
+    ).toBe("AUTO_UNIQUE");
     const view = projectExecutionPlanView(
       assigned.record,
       [setup.person],

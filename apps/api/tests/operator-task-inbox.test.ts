@@ -130,7 +130,14 @@ describe("GET /api/operator-task-inbox", () => {
     const florinReady = (
       (florinInbox.inbox as JsonObject).availableReady as Array<JsonObject>
     ).map((item) => item.inscription);
-    expect(florinReady.sort()).toEqual(["INBOX-A", "INBOX-B"]);
+    const counts = florinReady.reduce<Record<string, number>>((total, inscription) => {
+      const key = String(inscription);
+      total[key] = (total[key] ?? 0) + 1;
+      return total;
+    }, {});
+    expect(Object.keys(counts).sort()).toEqual(["INBOX-A", "INBOX-B"]);
+    expect(counts["INBOX-A"]).toBe(counts["INBOX-B"]);
+    expect(counts["INBOX-A"]).toBeGreaterThanOrEqual(2);
     expect((florinInbox.operator as JsonObject).displayName).toBe("Florin CNC");
     const inboxKeys = collectFinancialKeys(florinInbox);
     expect(inboxKeys.has("eicTotal")).toBe(false);
@@ -163,7 +170,7 @@ describe("GET /api/operator-task-inbox", () => {
     expect(mine.map((item) => item.inscription)).toEqual(["CLAIM-INBOX"]);
     expect(
       ((florinInbox.inbox as JsonObject).availableReady as Array<JsonObject>).find(
-        (item) => item.inscription === "CLAIM-INBOX",
+        (item) => item.taskId === job.backCnc.taskId,
       ),
     ).toBeUndefined();
 
@@ -174,22 +181,24 @@ describe("GET /api/operator-task-inbox", () => {
     expect((andreiInbox.inbox as JsonObject).inProgressMine).toEqual([]);
     expect(
       ((andreiInbox.inbox as JsonObject).availableReady as Array<JsonObject>).find(
-        (item) => item.inscription === "CLAIM-INBOX",
+        (item) => item.taskId === job.backCnc.taskId,
       ),
     ).toBeUndefined();
   });
 
-  it("shows provider-needed CNC work as non-startable for Florin", async () => {
+  it("shows unique CNC work as claimable without a prior provider click", async () => {
     const { app, runtime } = createIsolatedApp();
     await createPlanWithInscription(app, "NEED-PROV");
     const florinCookie = await cookieForPersonName(runtime, "Florin CNC");
     const body = await readBody(
       await app.request("/api/operator-task-inbox", withCookie(undefined, florinCookie)),
     );
+    const ready = (body.inbox as JsonObject).availableReady as Array<JsonObject>;
     const needs = (body.inbox as JsonObject).availableNeedsProvider as Array<JsonObject>;
-    expect(needs.some((item) => item.inscription === "NEED-PROV")).toBe(true);
-    expect(needs.every((item) => item.canClaimStart === false)).toBe(true);
-    expect((body.inbox as JsonObject).availableReady).toEqual([]);
+    expect(ready.some((item) => item.inscription === "NEED-PROV" && item.canClaimStart === true)).toBe(
+      true,
+    );
+    expect(needs.some((item) => item.inscription === "NEED-PROV")).toBe(false);
   });
 
   it("clears claimable lanes when Florin is temporarily unavailable", async () => {

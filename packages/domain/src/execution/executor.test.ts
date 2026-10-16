@@ -193,14 +193,19 @@ describe("task executor assignment", () => {
     if (!assigned.ok) {
       return;
     }
+    const started = startExecutionTask(
+      assigned.record,
+      backCnc.taskId,
+      "2026-08-16T17:14:00.000Z",
+      [created.person],
+    );
+    expect(started.ok).toBe(true);
+    if (!started.ok) {
+      return;
+    }
     expect(
-      startExecutionTask(
-        assigned.record,
-        backCnc.taskId,
-        "2026-08-16T17:14:00.000Z",
-        [created.person],
-      ),
-    ).toEqual({ ok: false, error: "missing_assignment" });
+      started.record.tasks.find((item) => item.taskId === backCnc.taskId)?.assignedProvider?.id,
+    ).toBe(MCH_CNC_4020_ID);
     const view = projectExecutionPlanView(assigned.record, [created.person]);
     expect(view.tasks.find((item) => item.taskId === backCnc.taskId)?.canStart).toBe(false);
     expect(view.tasks.find((item) => item.taskId === backCnc.taskId)?.requiresProvider).toBe(true);

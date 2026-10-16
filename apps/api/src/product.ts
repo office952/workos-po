@@ -1272,14 +1272,40 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
     }
     const session = runtime.resolveOperatorSession(getCookie(c, OPERATOR_SESSION_COOKIE));
     const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/provider");
+    const boundAt = new Date().toISOString();
     return respondTaskMutation(
       c,
       runtime,
-      runtime.assignExecutionTaskProvider(taskId, providerId),
+      runtime.assignExecutionTaskProvider(taskId, providerId, {
+        source: "MANUAL",
+        boundAt,
+        accountId: actorUserId(c),
+        operatorId: session.ok ? session.person.personId : null,
+      }),
       {
         taskId,
         operatorId: session.ok ? session.person.personId : null,
       },
+    );
+  });
+
+  app.post("/api/execution-tasks/:taskId/bind-unique-provider", (c) => {
+    const runtime = getProductSystem(c);
+    const session = runtime.resolveOperatorSession(getCookie(c, OPERATOR_SESSION_COOKIE));
+    if (!session.ok && !isOwner(c)) {
+      return c.json({ error: "invalid_session" }, 403);
+    }
+    const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/bind-unique-provider");
+    return respondTaskMutation(
+      c,
+      runtime,
+      runtime.bindUniqueExecutionProvider(taskId, {
+        source: "AUTO_UNIQUE",
+        boundAt: new Date().toISOString(),
+        accountId: actorUserId(c),
+        operatorId: session.ok ? session.person.personId : null,
+      }),
+      { taskId, operatorId: session.ok ? session.person.personId : null },
     );
   });
 
@@ -1328,10 +1354,16 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: "invalid_session" }, 401);
     }
     const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/start");
+    const boundAt = new Date().toISOString();
     return respondTaskMutation(
       c,
       runtime,
-      runtime.claimAndStartExecutionTask(taskId, session.person.personId),
+      runtime.claimAndStartExecutionTask(taskId, session.person.personId, {
+        source: "AUTO_UNIQUE",
+        boundAt,
+        accountId: actorUserId(c),
+        operatorId: session.person.personId,
+      }),
       { taskId, operatorId: session.person.personId },
     );
   });
@@ -1742,6 +1774,7 @@ function mutationHttpStatus(error: TaskMutationError): 404 | 409 | 422 {
       return 404;
     case "ineligible_provider":
     case "missing_assignment":
+    case "no_eligible_provider":
     case "missing_executor":
     case "provider_unavailable":
     case "executor_unavailable":
@@ -1771,6 +1804,7 @@ function mutationHttpStatus(error: TaskMutationError): 404 | 409 | 422 {
     case "task_not_external":
     case "task_not_outside":
     case "external_provider_inactive":
+    case "explicit_provider_choice_required":
       return 409;
     case "external_provider_required":
       return 422;

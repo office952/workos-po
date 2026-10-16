@@ -263,7 +263,12 @@ describe("planning workload API", () => {
   it("reads derived provider workload and treats unknown effort as unknown", async () => {
     const app = createApp();
     const plan = await createExecutionPlan(app);
-    const assignable = plan.tasks.filter((item) => item.canAssign === true);
+    const assignable = plan.tasks.filter(
+      (item) =>
+        item.requiresProvider === true &&
+        Array.isArray(item.eligibleProviders) &&
+        item.eligibleProviders.length > 0,
+    );
     const first = assignable[0];
     const second = assignable[1] ?? assignable[0];
     const providerId = ((first?.eligibleProviders as Array<JsonObject> | undefined) ?? [])[0]

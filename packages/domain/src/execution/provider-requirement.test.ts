@@ -92,7 +92,22 @@ describe("provider requirement start gate", () => {
     }
     expect(
       startExecutionTask(executorOnly.record, cnc.taskId, "2026-08-17T04:10:00.000Z", people),
-    ).toEqual({ ok: false, error: "missing_assignment" });
+    ).toMatchObject({ ok: true });
+    const autoStarted = startExecutionTask(
+      executorOnly.record,
+      cnc.taskId,
+      "2026-08-17T04:10:00.000Z",
+      people,
+    );
+    if (!autoStarted.ok) {
+      throw new Error("expected unique provider start");
+    }
+    expect(
+      autoStarted.record.tasks.find((item) => item.taskId === cnc.taskId)?.assignedProvider?.id,
+    ).toBe(MCH_CNC_4020_ID);
+    expect(
+      autoStarted.record.tasks.find((item) => item.taskId === cnc.taskId)?.providerBindingSource,
+    ).toBe("AUTO_UNIQUE");
     const providerOnly = assignProviderToTask(record, cnc.taskId, MCH_CNC_4020_ID);
     if (!providerOnly.ok) {
       throw new Error("expected provider");

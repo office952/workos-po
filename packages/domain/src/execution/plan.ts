@@ -62,6 +62,11 @@ import {
   type QualityResult,
   type ReworkEpisode,
 } from "./qualityControl.js";
+import {
+  resolveProviderBinding,
+  type ProviderBindingSource,
+  type ProviderBindingState,
+} from "./providerBinding.js";
 
 export const EXECUTION_PLAN_SCHEMA_VERSION = 1 as const;
 export const EXECUTION_PLAN_STATUSES = ["PLANNED"] as const;
@@ -193,6 +198,10 @@ export type ExecutionTask = {
   quantities: AcceptedProductionSnapshot["operations"][number]["quantities"];
   resourceDemands: AcceptedProductionSnapshot["operations"][number]["resourceDemands"];
   assignedProvider: AssignedExecutionProvider | null;
+  providerBindingSource?: ProviderBindingSource | null;
+  providerBoundAt?: string | null;
+  providerBoundByAccountId?: string | null;
+  providerBoundByOperatorId?: string | null;
   assignedExecutor: AssignedExecutionExecutor | null;
   plannedEffortMinutes: number | null;
   actualDurationMinutes: number | null;
@@ -249,6 +258,9 @@ export type ExecutionTaskView = ExecutionTask & {
   varianceLabel: string | null;
   requiresProvider: boolean;
   providerRequirementLabel: string;
+  providerBindingState: ProviderBindingState;
+  providerBindingSource: ProviderBindingSource | null;
+  providerBindingLabel: string | null;
   canAssign: boolean;
   canAssignExecutor: boolean;
   canStart: boolean;
@@ -435,6 +447,7 @@ export function projectExecutionPlanView(
       task.requiredCapabilityId,
       providerRegistry,
     );
+    const providerBinding = resolveProviderBinding(task, providerRegistry);
     const dependsOnLabels = task.dependsOnTaskIds.flatMap((id) => {
       const dependency = byId.get(id);
       return dependency ? [taskDependencyLabel(dependency)] : [];
@@ -513,7 +526,9 @@ export function projectExecutionPlanView(
       returnedAt: task.returnedAt ?? null,
       statusLabel: executionTaskStatusLabel(task.status),
       assignmentLabel:
-        mode === "EXTERNAL" ? (externalLabel ?? "Nealocat") : (task.assignedProvider?.label ?? "Nealocat"),
+        mode === "EXTERNAL"
+          ? (externalLabel ?? "Nealocat")
+          : (providerBinding.label ?? task.assignedProvider?.label ?? "Nealocat"),
       dependsOnLabels,
       waitingFor,
       eligibleProviders,
@@ -529,12 +544,15 @@ export function projectExecutionPlanView(
       providerRequirementLabel: providerRequirementLabel(
         frozenProviderRequirement(task.providerRequirement),
       ),
+      providerBindingState: providerBinding.state,
+      providerBindingSource: providerBinding.source,
+      providerBindingLabel: providerBinding.label,
       canAssign:
         mode === "INTERNAL" &&
         task.status === "PLANNED" &&
         taskRequiresProvider(task) &&
         !task.assignedProvider &&
-        eligibleProviders.length > 0,
+        providerBinding.state === "CHOICE_REQUIRED",
       canAssignExecutor: false,
       canStart: internalClaim,
       canClaimStart: internalClaim,
@@ -900,14 +918,17 @@ function providerReadyForStart(
   if (!taskRequiresProvider(task)) {
     return true;
   }
-  return (
-    task.assignedProvider !== null &&
-    assignedProviderStillValid(
+  if (task.assignedProvider) {
+    return assignedProviderStillValid(
       task.requiredCapabilityId,
       task.assignedProvider,
       registry,
-    )
-  );
+    );
+  }
+  if (task.status !== "PLANNED" || executionModeOf(task) === "EXTERNAL") {
+    return false;
+  }
+  return resolveProviderBinding(task, registry).state === "UNIQUE_PENDING";
 }
 
 function canClaimStartTask(
