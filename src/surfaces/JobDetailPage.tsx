@@ -245,9 +245,11 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
                 <strong>{job.stageLabel}</strong>
                 {job.progressLabel ? <span className="job-detail__progress">{job.progressLabel}</span> : null}
               </div>
-              <p>{job.attentionLabel || (job.stage === "EXECUTION_COMPLETED"
-                ? "Producția este finalizată. Livrarea și montajul nu sunt confirmate de această stare."
-                : "Nu există atenționări suplimentare pentru această lucrare.")}</p>
+              <p>{job.attentionLabel
+                ? job.attentionLabel
+                : job.stage === "EXECUTION_COMPLETED"
+                  ? "Producția este finalizată. Livrarea și montajul nu sunt confirmate de această stare."
+                  : "Consultă traseul și operațiile pentru pregătire, dependențe și rezultate."}</p>
             </div>
             <div className="job-detail__next">
               <span className="job-detail__eyebrow">URMĂTORUL PAS ÎN SISTEM</span>
@@ -269,10 +271,6 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
               <InfoRow label="Tip" value={job.kindLabel} />
               <InfoRow label="Prioritate" value={job.priorityLabel} />
               <InfoRow label="Termen" value={job.targetDateLabel} />
-              <InfoRow label="Stare" value={job.stageLabel} />
-              <InfoRow label="Progres" value={job.progressLabel ?? "—"} />
-              <InfoRow label="Atenție" value={job.attentionLabel ?? "Fără atenție specială"} />
-              <InfoRow label="Următoarea acțiune" value={job.nextActionLabel} />
               {materialAttention ? (
                 <InfoRow label="Material" value={materialAttention} />
               ) : null}
