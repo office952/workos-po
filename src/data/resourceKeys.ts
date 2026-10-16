@@ -24,6 +24,7 @@ export const resourceKeys = {
   job: (jobId: string) => `job:${jobId}`,
   jobPrefix: () => "job:",
   executionPlan: (planId: string) => `execution-plan:${planId}`,
+  jobMaterialPreparation: (jobId: string) => `job-material-preparation:${jobId}`,
   operatorSession: () => "operator-session",
   operatorCandidates: () => "operator-candidates",
   operatorInbox: () => "operator-inbox",
