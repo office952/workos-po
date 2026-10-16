@@ -55,6 +55,7 @@ export function registerJobMaterialRoutes(app: Hono<ApiEnv>): void {
         ? 404
         : result.error === "plan_missing" ||
           result.error === "already_requested" ||
+          result.error === "idempotency_conflict" ||
           result.error === "material_no_longer_planned"
           ? 409
           : 422;
