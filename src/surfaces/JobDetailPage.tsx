@@ -239,25 +239,33 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
       ) : null}
       {job ? (
         <>
-          <div className="job-detail__orientation" aria-label="Starea curentă a lucrării">
-            <div className="job-detail__orientation-main">
-              <span className="job-detail__eyebrow">FIȘA LUCRĂRII / STARE OPERAȚIONALĂ</span>
-              <div className="job-detail__state-line">
-                <strong>{job.stageLabel}</strong>
-
+          {plan ? (
+            job.attentionLabel ? (
+              <div className="job-detail__focus-note" role="status">
+                <span className="job-detail__eyebrow">NECESITĂ ATENȚIE</span>
+                <strong>{job.attentionLabel}</strong>
+                <a href="#job-map">Explorează harta <span aria-hidden="true">↗</span></a>
               </div>
-              <p>{job.attentionLabel
-                ? job.attentionLabel
-                : job.stage === "EXECUTION_COMPLETED"
-                  ? "Producția este finalizată. Livrarea și montajul nu sunt confirmate de această stare."
-                  : "Consultă traseul și operațiile pentru pregătire, dependențe și rezultate."}</p>
+            ) : job.stage === "EXECUTION_COMPLETED" ? (
+              <p className="job-detail__completion-note">
+                Producția este finalizată. Livrarea și montajul nu sunt confirmate de această stare.
+              </p>
+            ) : null
+          ) : (
+            <div className="job-detail__orientation" aria-label="Starea curentă a lucrării">
+              <div className="job-detail__orientation-main">
+                <span className="job-detail__eyebrow">FIȘA LUCRĂRII / STARE OPERAȚIONALĂ</span>
+                <div className="job-detail__state-line"><strong>{job.stageLabel}</strong></div>
+                <p>{job.attentionLabel
+                  ? job.attentionLabel
+                  : "Lucrarea nu are încă un plan de execuție afișabil."}</p>
+              </div>
+              <div className="job-detail__next">
+                <span className="job-detail__eyebrow">URMĂTORUL PAS ÎN SISTEM</span>
+                <strong>{job.nextActionLabel}</strong>
+              </div>
             </div>
-            <div className="job-detail__next">
-              <span className="job-detail__eyebrow">URMĂTORUL PAS ÎN SISTEM</span>
-              <strong>{job.nextActionLabel}</strong>
-              <span>Urmează acțiunea permisă de starea lucrării.</span>
-            </div>
-          </div>
+          )}
           {plan ? (
             <JobProductionMap plan={plan} jobId={jobId} jobAttention={job.attentionLabel} />
           ) : planPending ? (
