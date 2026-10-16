@@ -97,3 +97,18 @@
   .job-map__inspector { padding:15px; }
 }
 @media (prefers-reduced-motion:reduce) { .job-map *, .job-map *::before, .job-map *::after { scroll-behavior:auto !important; transition:none !important; } }
+
+.job-map__predecessors {
+  display:grid; gap:8px; margin-top:12px; padding-top:10px;
+  border-top:1px solid var(--job-map-border);
+}
+.job-map__predecessors > span { color:var(--job-map-muted); font:400 11px/1.5 var(--font-sans); }
+.job-map__predecessors button {
+  display:flex; align-items:center; justify-content:space-between;
+  gap:10px; min-height:40px; padding:8px 10px;
+  color:var(--job-map-text); background:var(--color-surface);
+  border:1px solid var(--job-map-border);
+  cursor:pointer; text-align:left; font:500 12px/1.35 var(--font-sans);
+}
+.job-map__predecessors button:hover { background:var(--color-surface-raised); border-color:var(--color-border-strong); }
+.job-map__predecessors button:focus-visible { outline:2px solid var(--color-focus-ring); outline-offset:2px; }
