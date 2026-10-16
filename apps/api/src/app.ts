@@ -14,6 +14,7 @@ import {
   type RuntimeRegistry,
 } from "./cloud/runtimeRegistry.js";
 import { registerMaterialReadinessRoutes } from "./execution/materialReadinessRoutes.js";
+import { registerJobMaterialRoutes } from "./materials/routes.js";
 import { registerExternalProductionRoutes } from "./execution/externalProductionRoutes.js";
 import { registerInventoryRoutes } from "./inventory/routes.js";
 import { registerJobRoutes } from "./jobs/routes.js";
@@ -169,6 +170,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<ApiEnv> {
   registerSellerRoutes(app);
   registerOperationalServiceRoutes(app);
   registerMaterialReadinessRoutes(app);
+  registerJobMaterialRoutes(app);
   registerExternalProductionRoutes(app);
   registerInventoryRoutes(app);
   registerSystemProjectionRoutes(app);
