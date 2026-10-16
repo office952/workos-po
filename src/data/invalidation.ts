@@ -97,7 +97,7 @@ export function invalidateAfterProductionRelease(jobId: string): void {
 }
 
 export function invalidateAfterCreateExecutionPlan(jobId: string): void {
-  invalidateResources(resourceKeys.job(jobId), resourceKeys.jobs());
+  invalidateResources(resourceKeys.job(jobId), resourceKeys.jobs(), resourceKeys.jobMaterialPreparation(jobId));
   invalidateCustomerProjections();
 }
 
