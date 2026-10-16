@@ -251,7 +251,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
               Producția este finalizată. Livrarea și montajul nu sunt confirmate de această stare.
             </p>
           ) : null}
-          {!plan ? (
+          {!planId ? (
             <div className="job-detail__orientation" aria-label="Starea curentă a lucrării">
               <div className="job-detail__orientation-main">
                 <span className="job-detail__eyebrow">FIȘA LUCRĂRII / STARE OPERAȚIONALĂ</span>
