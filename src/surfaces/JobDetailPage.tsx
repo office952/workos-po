@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "../styles/surfaces/job-detail.css";
 import { presentExecutionPlan } from "../adapters/executionAdapter";
 import { TransportError, readTransportErrorCode } from "../api/http";
 import { patchJobPlanning, postJobExecutionPlan, postJobProductionRelease } from "../api/jobs";
@@ -27,6 +28,7 @@ import { statusTone } from "../presentation/statusTone";
 import { atelierHref, executionHref, jobHref, quoteHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
 import { SiteInstallationContextPanel } from "./SiteInstallationContextPanel";
+import { JobProductionMap } from "./JobProductionMap";
 import { ExecutionActualConsumptionHistory } from "./ExecutionActualConsumption";
 import type { ExecutionTaskTransport } from "../api/types";
 
@@ -199,9 +201,10 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
       contextLabel="Lucrare"
       currentHref={jobHref(jobId)}
       workspace="traveler"
+      headerVariant="pilot-compact"
       eyebrow="Lucrare"
       title={job?.inscription || job?.productLabel || "Lucrare"}
-      lead="Eliberează producția, materializează planul și compară planificat cu realizat."
+      lead={job?.productLabel || "Dosar de producție și informații operaționale."}
       meta={job?.customerDisplayName ?? undefined}
       status={
         job ? (
@@ -236,6 +239,53 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
       ) : null}
       {job ? (
         <>
+          {job.needsAttention && job.attentionLabel ? (
+            <div className="job-detail__focus-note" role="status">
+              <span className="job-detail__eyebrow">NECESITĂ ATENȚIE</span>
+              <strong>{job.attentionLabel}</strong>
+              {plan ? <a href="#job-map">Vezi operațiile <span aria-hidden="true">↗</span></a> : null}
+            </div>
+          ) : null}
+          {job.stage === "EXECUTION_COMPLETED" ? (
+            <p className="job-detail__completion-note">
+              Producția este finalizată. Livrarea și montajul nu sunt confirmate de această stare.
+            </p>
+          ) : null}
+          {!planId ? (
+            <div className="job-detail__orientation" aria-label="Starea curentă a lucrării">
+              <div className="job-detail__orientation-main">
+                <span className="job-detail__eyebrow">FIȘA LUCRĂRII / STARE OPERAȚIONALĂ</span>
+                <div className="job-detail__state-line"><strong>{job.stageLabel}</strong></div>
+                <p>Lucrarea nu are încă un plan de execuție afișabil.</p>
+              </div>
+              <div className="job-detail__next">
+                <span className="job-detail__eyebrow">URMĂTORUL PAS ÎN SISTEM</span>
+                <strong>{job.nextActionLabel}</strong>
+              </div>
+            </div>
+          ) : null}
+          {plan ? (
+            <JobProductionMap plan={plan} jobId={jobId} jobKind={job.kind} />
+          ) : planPending ? (
+            <div className="job-detail__map-placeholder" role="status">Se citește planul de producție…</div>
+          ) : planId && planResource.status === "error" ? (
+            <InlineAlert tone="error" title="Planul nu a putut fi citit">
+              Dosarul operațional și rezultatele planului nu sunt disponibile momentan.
+            </InlineAlert>
+          ) : (
+            <div className="job-detail__map-placeholder">
+              <strong>Operațiile vor apărea după crearea planului.</strong>
+              <span>Înainte de plan, folosește acțiunea disponibilă pentru această lucrare.</span>
+            </div>
+          )}
+          <nav className="job-detail__sections" aria-label="Navigare în fișa lucrării">
+            {plan ? <a href="#job-map">Dosarul de producție</a> : null}
+            <a href="#job-overview">Rezumat</a>
+            <a href="#job-route">Traseu de producție</a>
+            <a href="#job-results">Rezultate</a>
+          </nav>
+          <div className="job-detail__body">
+          <section className="job-detail__segment" id="job-overview" aria-label="Rezumatul lucrării">
           <SurfacePanel title="Identitate" label="Identitate">
             <dl className="fact-grid">
               <InfoRow label="Lucrare" value={job.productLabel} />
@@ -243,10 +293,6 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
               <InfoRow label="Tip" value={job.kindLabel} />
               <InfoRow label="Prioritate" value={job.priorityLabel} />
               <InfoRow label="Termen" value={job.targetDateLabel} />
-              <InfoRow label="Stare" value={job.stageLabel} />
-              <InfoRow label="Progres" value={job.progressLabel ?? "—"} />
-              <InfoRow label="Atenție" value={job.attentionLabel ?? "Fără atenție specială"} />
-              <InfoRow label="Următoarea acțiune" value={job.nextActionLabel} />
               {materialAttention ? (
                 <InfoRow label="Material" value={materialAttention} />
               ) : null}
@@ -261,6 +307,8 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
                 </a>
               </p>
             ) : null}
+            <details className="job-detail__planning">
+              <summary>{job.planningEditable ? "Editează termenul și prioritatea" : "Planificare (doar citire)"}</summary>
             <form
               className="stack"
               onSubmit={(event) => {
@@ -297,6 +345,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
               )}
               {planningMessage ? <p className="ui-note">{planningMessage}</p> : null}
             </form>
+            </details>
             <p className="ui-note">
               Oferta acceptată rămâne sursa istorică. Lucrarea adaugă doar starea
               operațională.
@@ -310,6 +359,8 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
           {jobResource.data?.siteInstallation ? (
             <SiteInstallationContextPanel context={jobResource.data.siteInstallation} />
           ) : null}
+          </section>
+          <section className="job-detail__segment" id="job-route" aria-label="Traseul de producție">
           <SurfacePanel
             title="Traseu de producție"
             description="Ghid din starea lucrării. Nu este planul de producție."
@@ -323,6 +374,8 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
                   : "Planul nu există încă. După materializare, progresul vine din motorul de execuție."}
             </p>
           </SurfacePanel>
+          </section>
+          <section className="job-detail__segment" id="job-results" aria-label="Operații și rezultate">
           <SurfacePanel
             title="Planificat și realizat"
             label="Planificat și realizat"
@@ -341,6 +394,8 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
                       <p>{plan.timeSummary.actualKnownLabel}</p>
                     </div>
                   ) : null}
+                  <details className="job-detail__results-details">
+                    <summary>Detalii complete pentru cele {plan.tasks.length} operații · cantități, consumuri și timp</summary>
                   {plan.tasks.map((task) => (
                     <div key={task.taskId} className="stack">
                       <p className="section-label">
@@ -376,6 +431,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
                       ) : null}
                     </div>
                   ))}
+                  </details>
                 </>
               )}
             </div>
@@ -394,6 +450,8 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
               </>
             ) : null}
           </SurfacePanel>
+          </section>
+          </div>
         </>
       ) : jobResource.status !== "error" ? (
         <>

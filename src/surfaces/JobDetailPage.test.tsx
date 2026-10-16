@@ -254,6 +254,7 @@ describe("JobDetailPage", () => {
                 customerDisplayName: "Client",
                 stage: "EXECUTION_IN_PROGRESS",
                 stageLabel: "La furnizor extern",
+                needsAttention: true,
                 attentionLabel: "Lipsă furnizor extern",
                 nextAction: "CONTINUE_EXECUTION",
                 nextActionLabel: "Continuă execuția",
