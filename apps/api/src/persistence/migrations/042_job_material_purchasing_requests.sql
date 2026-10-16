@@ -1,7 +1,7 @@
 -- Source-controlled migration only. Do not run on real data without deployment GO.
 CREATE TABLE job_material_checks (
   check_id TEXT PRIMARY KEY NOT NULL,
-  action_key TEXT NOT NULL UNIQUE,
+  action_key TEXT NOT NULL,
   organization_id TEXT NOT NULL,
   job_id TEXT NOT NULL,
   plan_id TEXT NOT NULL,
@@ -12,6 +12,7 @@ CREATE TABLE job_material_checks (
   checked_at TEXT NOT NULL,
   FOREIGN KEY(plan_id) REFERENCES execution_plans(plan_id)
 );
+CREATE UNIQUE INDEX idx_job_material_checks_action ON job_material_checks(organization_id, action_key);
 CREATE INDEX idx_job_material_checks_job ON job_material_checks(organization_id, job_id, resource_id, checked_at DESC);
 
 CREATE TABLE job_material_requests (
