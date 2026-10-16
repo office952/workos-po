@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TransportError } from "../api/http";
 import {
   assignTaskProvider,
@@ -506,6 +506,25 @@ export function ExecutionPage({
       : null;
   const actionableTask = plan ? firstActionableTask(plan.tasks) : null;
   const sessionKnown = session.status === "success";
+  const outlineTaskId = currentTask?.taskId ?? null;
+
+  useEffect(() => {
+    if (!outlineTaskId) {
+      return;
+    }
+    const row = document.querySelector(
+      `.execution-floor > .worklist [data-task-id="${CSS.escape(outlineTaskId)}"]`,
+    );
+    const outline = row?.closest(".worklist");
+    if (!(row instanceof HTMLElement) || !(outline instanceof HTMLElement)) {
+      return;
+    }
+    const rowRect = row.getBoundingClientRect();
+    const box = outline.getBoundingClientRect();
+    if (rowRect.top < box.top || rowRect.bottom > box.bottom) {
+      outline.scrollTop += rowRect.top - box.top - 40;
+    }
+  }, [outlineTaskId]);
 
   return (
     <SlicePage
@@ -530,6 +549,7 @@ export function ExecutionPage({
           : undefined
       }
     >
+      <div className="execution-floor">
       {planResource.status === "error" && !plan ? (
         <InlineAlert tone="error" title="Planul nu a putut fi citit">
           Planul de execuție nu este disponibil.
@@ -830,6 +850,8 @@ export function ExecutionPage({
               ) : null}
             </div>
             </section>
+            <div className="execution-context">
+              <h3 className="execution-context__title">Stare, utilaj și materiale</h3>
             <MeasurePair
               planned={currentTask.plannedQuantityLabel ?? "Fără cantitate măsurabilă"}
               actual={currentTask.completedQuantityLabel ?? "—"}
@@ -917,6 +939,7 @@ export function ExecutionPage({
                 onlyResourceIds={currentTask.plannedResources.map((resource) => resource.resourceId)}
               />
             ) : null}
+            </div>
           </SurfacePanel>
           <SurfacePanel variant="quiet" title="Fapte">
             <dl>
@@ -997,12 +1020,13 @@ export function ExecutionPage({
         </Worklist>
       ) : null}
       {plan ? (
-        <p>
+        <p className="execution-return">
           <a className="text-link" href={resolvedJobId ? jobHref(resolvedJobId) : "/lucrari"}>
             {resolvedJobId ? "Revino la lucrare" : "Revino la lucrări"}
           </a>
         </p>
       ) : null}
+      </div>
     </SlicePage>
   );
 }

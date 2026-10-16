@@ -373,6 +373,15 @@ export function JobsPage() {
               <span>{shown}</span>
               {hasFilters ? <button type="button" onClick={resetFilters}>Resetează filtrele ↗</button> : null}
             </div>
+            {selected ? (
+              <p className="jobs-spine__selected-bridge">
+                <span>Selectat</span>
+                <strong>{jobName(selected)}</strong>
+                <span>{selected.stageLabel}</span>
+                {selected.progressLabel ? <span>{selected.progressLabel}</span> : <span>Fără plan de execuție</span>}
+                <span>{selected.nextActionLabel || "Deschide lucrarea"}</span>
+              </p>
+            ) : null}
 
             <div className="jobs-spine__columns" aria-hidden="true">
               <span>LUCRARE</span><span>CLIENT</span><span>ETAPĂ / PROGRES</span><span>TERMEN</span><span>ACȚIUNE</span>

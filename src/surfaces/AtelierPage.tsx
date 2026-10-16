@@ -177,7 +177,8 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
               description="Calificările se setează explicit în organizație. Atelierul nu creează persoane și nu atribuie meserii."
             />
           ) : (
-            <>
+            <div className="atelier-identify">
+              <div className="atelier-identify__form">
               <SelectField
                 id="operator-person"
                 label="Persoană"
@@ -221,18 +222,27 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
                   Intră în atelier
                 </Button>
               )}
-            </>
-          )}
           {actionError ? (
             <InlineAlert tone="error" title="Identificarea a eșuat">
               {actionError}
             </InlineAlert>
           ) : null}
-          <p className="ui-note">
-            Lista preselectează prima persoană ca alegere de formular. Identificarea începe
-            doar după PIN. Sarcinile apar după identificare. Pornirea rămâne pe execuție,
-            nu pe această listă.
-          </p>
+              </div>
+              <aside className="atelier-identify__aside">
+                <p className="atelier-identify__kicker">După identificare</p>
+                <ol>
+                  <li>Confirmi persoana cu PIN. Lista nu pornește lucrul.</li>
+                  <li>Coada arată de ce o sarcină poate sau nu poate începe.</li>
+                  <li>Deschizi execuția pentru sarcina aleasă.</li>
+                </ol>
+                <p className="ui-note">
+                  Lista preselectează prima persoană ca alegere de formular. Identificarea începe
+                  doar după PIN. Sarcinile apar după identificare. Pornirea rămâne pe execuție,
+                  nu pe această listă.
+                </p>
+              </aside>
+            </div>
+          )}
         </SurfacePanel>
       ) : (
         <SurfacePanel
@@ -240,8 +250,11 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
           label="Sarcini"
           busy={inbox.status === "loading" && tasks.length === 0}
         >
-          <div className="lane-summary">
-            <span>Autentificat: {currentSession.displayName}</span>
+          <div className="lane-summary atelier-status">
+            <p className="atelier-operator">
+              <span className="atelier-operator__kicker">Operator</span>
+              <strong>Autentificat: {currentSession.displayName}</strong>
+            </p>
             {inbox.status === "success" ? (
               <>
                 <span>{inProgressCount} în lucru de tine</span>
@@ -285,8 +298,9 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
           ) : null}
           <div className="atelier-queue">
             {laneGroups.map((group) => (
+              <section key={group.lane} className="atelier-lane" data-lane={group.lane} aria-labelledby={`atelier-lane-${group.lane}`}>
+              <h2 className="atelier-lane__title" id={`atelier-lane-${group.lane}`}>{group.label}</h2>
               <Worklist
-                key={group.lane}
                 variant="operational"
                 label={group.label}
                 columns={["Sarcină", "Lucrare", "Stare", "Acțiune"]}
@@ -310,6 +324,7 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
                   );
                 })}
               </Worklist>
+              </section>
             ))}
           </div>
           <div className="ui-panel__pad">
