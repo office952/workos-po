@@ -112,6 +112,12 @@ export function invalidateAfterExecutionTaskChange(planId: string): void {
   invalidateCustomerProjections();
 }
 
+export function invalidateAfterJobMaterialDecision(jobId: string): void {
+  invalidateResources(resourceKeys.jobMaterialPreparation(jobId), resourceKeys.operatorInbox());
+  invalidateResourcePrefix("execution-plan:");
+  invalidateResourcePrefix(resourceKeys.jobPrefix());
+}
+
 export function invalidateAfterOperatorSessionChange(): void {
   invalidateResources(
     resourceKeys.operatorSession(),
