@@ -44,7 +44,7 @@ const source = plan([
 
 describe("JobProductionMap — adaptive dossier", () => {
   it("shows only scopes from the plan, and synchronizes selection with details", () => {
-    render(<JobProductionMap plan={source} jobId="job-synthetic" />);
+    render(<JobProductionMap plan={source} jobId="job-synthetic" jobKind="ASSEMBLY" />);
     expect(screen.getByRole("heading", { name: "Ce se întâmplă cu lucrarea" })).toBeInTheDocument();
     const scopes = screen.getByRole("group", { name: "Părțile lucrării" });
     expect(scopes).toHaveTextContent("COMPOZIȚIE");
@@ -69,6 +69,15 @@ describe("JobProductionMap — adaptive dossier", () => {
     expect(stage.querySelector(".job-dossier__panel-shape")).toBeNull();
   });
 
+  it("does not invent composition for a product with multiple internal scopes", () => {
+    render(<JobProductionMap plan={source} jobId="one-product" jobKind="PRODUCT" />);
+    const scopes = screen.getByRole("group", { name: "Părțile lucrării" });
+    expect(scopes).not.toHaveTextContent("COMPOZIȚIE");
+    expect(scopes).toHaveTextContent("Litere");
+    expect(scopes).toHaveTextContent("Panou ACM");
+    expect(screen.getByRole("heading", { name: "Operații · Litere" })).toBeInTheDocument();
+  });
+
   it("scales to many tasks through pagination and filtering", () => {
     const big = plan(Array.from({ length: 36 }, (_, i) => task(String(i + 1).padStart(2, "0"), "Litere")));
     render(<JobProductionMap plan={big} jobId="bulk" />);
@@ -82,7 +91,7 @@ describe("JobProductionMap — adaptive dossier", () => {
   });
 
   it("keeps readable dependency labels without manufacturing fake links", () => {
-    render(<JobProductionMap plan={source} jobId="real-label-contract" />);
+    render(<JobProductionMap plan={source} jobId="real-label-contract" jobKind="ASSEMBLY" />);
     fireEvent.click(screen.getByRole("group", { name: "Părțile lucrării" })
       .querySelectorAll("button")[2]);
     expect(screen.getByText("Operație 01 — Litere")).toBeInTheDocument();
