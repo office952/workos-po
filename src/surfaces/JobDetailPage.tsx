@@ -28,6 +28,7 @@ import { statusTone } from "../presentation/statusTone";
 import { atelierHref, executionHref, jobHref, quoteHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
 import { SiteInstallationContextPanel } from "./SiteInstallationContextPanel";
+import { JobProductionMap } from "./JobProductionMap";
 import { ExecutionActualConsumptionHistory } from "./ExecutionActualConsumption";
 import type { ExecutionTaskTransport } from "../api/types";
 
@@ -243,7 +244,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
               <span className="job-detail__eyebrow">FIȘA LUCRĂRII / STARE OPERAȚIONALĂ</span>
               <div className="job-detail__state-line">
                 <strong>{job.stageLabel}</strong>
-                {job.progressLabel ? <span className="job-detail__progress">{job.progressLabel}</span> : null}
+
               </div>
               <p>{job.attentionLabel
                 ? job.attentionLabel
@@ -254,13 +255,28 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
             <div className="job-detail__next">
               <span className="job-detail__eyebrow">URMĂTORUL PAS ÎN SISTEM</span>
               <strong>{job.nextActionLabel}</strong>
-              <span>Acțiunile disponibile sunt stabilite de starea reală a lucrării.</span>
+              <span>Urmează acțiunea permisă de starea lucrării.</span>
             </div>
           </div>
+          {plan ? (
+            <JobProductionMap plan={plan} jobId={jobId} jobAttention={job.attentionLabel} />
+          ) : planPending ? (
+            <div className="job-detail__map-placeholder" role="status">Se citește planul de producție…</div>
+          ) : planId && planResource.status === "error" ? (
+            <InlineAlert tone="error" title="Planul nu a putut fi citit">
+              Harta și rezultatele planului nu sunt disponibile momentan.
+            </InlineAlert>
+          ) : (
+            <div className="job-detail__map-placeholder">
+              <strong>Harta producției apare după crearea planului.</strong>
+              <span>Înainte de plan, folosește acțiunea disponibilă pentru această lucrare.</span>
+            </div>
+          )}
           <nav className="job-detail__sections" aria-label="Navigare în fișa lucrării">
-            <a href="#job-overview">Rezumat <span aria-hidden="true">↗</span></a>
-            <a href="#job-route">Traseu de producție <span aria-hidden="true">↗</span></a>
-            <a href="#job-results">Operații și rezultate <span aria-hidden="true">↗</span></a>
+            {plan ? <a href="#job-map">Harta producției</a> : null}
+            <a href="#job-overview">Rezumat</a>
+            <a href="#job-route">Traseu de producție</a>
+            <a href="#job-results">Rezultate</a>
           </nav>
           <div className="job-detail__body">
           <section className="job-detail__segment" id="job-overview" aria-label="Rezumatul lucrării">
@@ -285,6 +301,8 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
                 </a>
               </p>
             ) : null}
+            <details className="job-detail__planning">
+              <summary>{job.planningEditable ? "Editează termenul și prioritatea" : "Planificare (doar citire)"}</summary>
             <form
               className="stack"
               onSubmit={(event) => {
@@ -321,6 +339,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
               )}
               {planningMessage ? <p className="ui-note">{planningMessage}</p> : null}
             </form>
+            </details>
             <p className="ui-note">
               Oferta acceptată rămâne sursa istorică. Lucrarea adaugă doar starea
               operațională.
@@ -369,6 +388,8 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
                       <p>{plan.timeSummary.actualKnownLabel}</p>
                     </div>
                   ) : null}
+                  <details className="job-detail__results-details">
+                    <summary>Detalii complete pentru cele {plan.tasks.length} operații · cantități, consumuri și timp</summary>
                   {plan.tasks.map((task) => (
                     <div key={task.taskId} className="stack">
                       <p className="section-label">
@@ -404,6 +425,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
                       ) : null}
                     </div>
                   ))}
+                  </details>
                 </>
               )}
             </div>
