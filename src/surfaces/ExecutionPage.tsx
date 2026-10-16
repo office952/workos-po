@@ -843,10 +843,10 @@ export function ExecutionPage({
                 </p>
               </div>
             ) : null}
-            {resolvedJobId && currentTask.materialLines && currentTask.materialLines.length > 0 ? (
+            {resolvedJobId && currentTask.plannedResources.length > 0 ? (
               <JobMaterialPreparation
                 jobId={resolvedJobId}
-                onlyResourceIds={currentTask.materialLines.map((line) => line.resourceId)}
+                onlyResourceIds={currentTask.plannedResources.map((resource) => resource.resourceId)}
               />
             ) : null}
             {currentTask.qualityControl ? (

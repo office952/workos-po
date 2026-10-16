@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { resetResourceCache } from "../data/resourceCache";
 import { ExecutionPage } from "./ExecutionPage";
 
 afterEach(() => {
@@ -458,6 +459,71 @@ describe("ExecutionPage", () => {
       "href",
       "/executie/exp%3A1?task=task-cut&job=ord-1",
     );
+  });
+
+  it("shows the plan material on the operation when readiness lines are not adopted", async () => {
+    resetResourceCache();
+    const led = {
+      taskId: "task-led",
+      processLabel: "Montare module LED",
+      status: "PLANNED",
+      statusLabel: "Planificat",
+      canComplete: false,
+      requiresCompletedQuantity: true,
+      plannedValue: 125,
+      completedQuantityLabel: null,
+      varianceLabel: null,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/operator-session")) {
+          return jsonResponse({
+            operator: { personId: "per:maria", displayName: "Maria Ansamblu Demo" },
+          });
+        }
+        if (url.includes("/material-preparation")) {
+          return jsonResponse({
+            preparation: {
+              jobId: "job-led",
+              planId: "exp:1",
+              lines: [
+                {
+                  resourceId: "MAT-LED-MODULE",
+                  label: "Modul LED 12V",
+                  unit: "buc",
+                  estimatedQuantity: 125,
+                  taskIds: ["task-led"],
+                  canCheck: true,
+                  latestCheck: null,
+                  openRequest: null,
+                },
+              ],
+            },
+          });
+        }
+        const plan = planPayload([led]);
+        const executionPlan = plan.executionPlan as { tasks: Array<Record<string, unknown>> };
+        executionPlan.tasks[0] = {
+          ...executionPlan.tasks[0],
+          resourceDemands: [
+            { resourceId: "SVC-PLACE-LED-MODULES", label: "Montare module LED", quantity: 125, unit: "buc" },
+            { resourceId: "MAT-LED-MODULE", label: "Modul LED 12V", quantity: 125, unit: "buc" },
+          ],
+          materialLines: [],
+          materialParticipation: "NOT_ADOPTED",
+        };
+        return jsonResponse({ ...plan, job: { jobId: "job-led", href: "/jobs/job-led" } });
+      }),
+    );
+
+    render(<ExecutionPage planId="exp:1" taskId="task-led" jobId="job-led" />);
+
+    expect(await screen.findByRole("heading", { name: "Materiale pentru operație" })).toBeInTheDocument();
+    expect(screen.getByText("Modul LED 12V")).toBeInTheDocument();
+    expect(screen.getByText(/Necesar estimat: 125/)).toBeInTheDocument();
+    expect(screen.queryByText("Montare module LED", { selector: "strong" })).not.toBeInTheDocument();
   });
 
   it("keeps a deep-linked completed task selected so history stays inspectable", async () => {

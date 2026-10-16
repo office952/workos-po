@@ -49,6 +49,9 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds }: Props) {
   const lines = (resource.data?.lines ?? []).filter(
     (line) => !selectedIds || selectedIds.has(line.resourceId),
   );
+  if (selectedIds && lines.length === 0 && resource.status !== "error") {
+    return null;
+  }
 
   async function decide(line: JobMaterialLineTransport, status: "AVAILABLE" | "MISSING") {
     if (!personName || pendingResource !== null) {
@@ -141,7 +144,7 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds }: Props) {
                 ) : null}
                 {line.openRequest ? (
                   <p className="job-materials__request">
-                    Solicitare {line.openRequest.requestId}: {displayQuantity(line.openRequest.requestedQuantity)}{" "}
+                    Solicitare înregistrată: {displayQuantity(line.openRequest.requestedQuantity)}{" "}
                     {line.openRequest.unit} · {line.openRequest.requestedByLabel} ·{" "}
                     {displayWhen(line.openRequest.requestedAt)}. În așteptarea Achizițiilor.
                   </p>
