@@ -165,3 +165,13 @@ The working 2026-10-16 candidate is PR #85 at \`4746a12390a0fb9c0cc505a4c9fddb8d
 Open risks before N-009 merge are separate from visual direction: historical migration 043 ledger behavior and historical values exceeding the validated quantity bound; PR description still contains obsolete mandatory purchase-quantity language. These are not fixed or waived by a UI benchmark.
 
 **No Owner acceptance or merge is implied by this document.**
+
+## 9. Owner-approved Task Dossier and Smart Provider Binding direction (2026-10-16)
+
+Following the Owner's explicit GO, **Fișa operației** becomes the intended functional signature of Execution: task-scoped instructions, versioned evidence/sketches/files, operator observations and separate issue signals alongside the canonical next step.
+
+- **[Task Dossier + Unique Provider Auto-Binding V1](WORKOS_TASK_DOSSIER_PROVIDER_BINDING_V1.md)** — scoped domain/API/UI implementation brief, safety gates and acceptance cases.
+- **[Notion decision](https://app.notion.com/p/3fb8ea98e40f8163ac84dcc2bcca1366)** — approved product intention, pending technical contract and runtime proof.
+- A single eligible CNC/workcenter should not force a manual assignment click; bind server-side with audit and no fabricated capacity availability. Multiple eligible providers retain authorized choice.
+- This feature needs new persisted task information and a server-owned provider transition; it is not implemented by the HTML benchmark or by PR #85. Build in an isolated feature PR and keep merge/deploy/real DB writes HOLD.
+
