@@ -1,86 +1,97 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { ExecutionPlanTransport } from "../api/types";
+import type { ExecutionPlanTransport, ExecutionTaskTransport } from "../api/types";
 import { JobProductionMap } from "./JobProductionMap";
 
-const plan = {
-  planId: "plan-synthetic",
-  progressLabel: "0 / 2",
-  progress: { completed: 0, total: 2, inProgress: 0, planned: 2, outside: 0, waitingDependencies: 1, noProvider: 0, varianceCount: 0 },
-  tasks: [
-    {
-      taskId: "cut",
-      scopeLabel: "Panou ACM",
-      seqLabel: "01",
-      processLabel: "Debitare panou",
-      status: "PLANNED",
-      statusLabel: "Planificată",
-      assignmentLabel: "Nealocat",
-      executorLabel: null,
-      requiredCapabilityLabel: "Router CNC",
-      waitingFor: [],
-      dependsOnLabels: [],
-      startBlockReason: null,
-      externalBlockLabel: null,
-      qualityBlockLabel: null,
-      materialBlockLabel: null,
-      plannedTimeLabel: "45 minute",
-      actualDurationLabel: "Necunoscut",
-    },
-    {
-      taskId: "assemble",
-      scopeLabel: "Ansamblu",
-      seqLabel: "02",
-      processLabel: "Asamblare",
-      status: "PLANNED",
-      statusLabel: "Planificată",
-      assignmentLabel: "Nealocat",
-      executorLabel: null,
-      requiredCapabilityLabel: null,
-      waitingFor: ["cut"],
-      dependsOnLabels: ["Debitare panou"],
-      startBlockReason: null,
-      externalBlockLabel: null,
-      qualityBlockLabel: null,
-      materialBlockLabel: null,
-      plannedTimeLabel: "30 minute",
-      actualDurationLabel: "Necunoscut",
-    },
-  ],
-} as unknown as ExecutionPlanTransport;
+const task = (
+  id: string, scopeLabel: string, status = "PLANNED", waitingFor: string[] = [],
+): ExecutionTaskTransport => ({
+  taskId: id,
+  scopeLabel,
+  seqLabel: id,
+  processLabel: "Operație " + id,
+  status,
+  statusLabel: status === "IN_PROGRESS" ? "În lucru" : "Planificată",
+  assignmentLabel: "Nealocat",
+  executorLabel: null,
+  requiredCapabilityLabel: null,
+  waitingFor,
+  dependsOnLabels: waitingFor,
+  startBlockReason: null,
+  externalBlockLabel: null,
+  qualityBlockLabel: null,
+  materialBlockLabel: null,
+  plannedTimeLabel: "Necunoscut",
+  actualDurationLabel: "Necunoscut",
+} as unknown as ExecutionTaskTransport);
 
-describe("JobProductionMap", () => {
-  it("uses actual plan scopes and supports selecting operations without performing mutations", () => {
-    render(<JobProductionMap plan={plan} jobId="job-synthetic" />);
-    expect(screen.getByRole("heading", { name: "Harta producției" })).toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "Subansamblele planului" })).toHaveTextContent("Panou ACM");
-    expect(screen.getByRole("group", { name: "Subansamblele planului" })).toHaveTextContent("Ansamblu");
-    const next = screen.getByRole("button", { name: "Asamblare" });
-    fireEvent.click(next);
-    expect(screen.getByRole("complementary", { name: "Detaliile operației selectate" }).querySelector("h3")?.textContent).toBe("Asamblare");
+const plan = (tasks: ExecutionTaskTransport[]): ExecutionPlanTransport => ({
+  planId: "plan-synthetic",
+  productLabel: "Panou ACM + litere",
+  inscription: "NORD",
+  progressLabel: "0 / 2",
+  progress: {
+    completed: 0, total: tasks.length, inProgress: 1, planned: tasks.length - 1,
+    outside: 0, waitingDependencies: 1, noProvider: 0, varianceCount: 0,
+  },
+  tasks,
+} as unknown as ExecutionPlanTransport);
+
+const source = plan([
+  task("01", "Litere", "IN_PROGRESS"),
+  task("02", "Panou ACM", "PLANNED", ["Operație 01 — Litere"]),
+]);
+
+describe("JobProductionMap — adaptive dossier", () => {
+  it("shows only scopes from the plan, and synchronizes selection with details", () => {
+    render(<JobProductionMap plan={source} jobId="job-synthetic" />);
+    expect(screen.getByRole("heading", { name: "Ce se întâmplă cu lucrarea" })).toBeInTheDocument();
+    const scopes = screen.getByRole("group", { name: "Părțile lucrării" });
+    expect(scopes).toHaveTextContent("COMPOZIȚIE");
+    expect(scopes).toHaveTextContent("Litere");
+    expect(scopes).toHaveTextContent("Panou ACM");
+    fireEvent.click(within(scopes).getByRole("button", { name: /Panou ACM/ }));
+    expect(screen.getByRole("heading", { name: "Operații · Panou ACM" })).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "Detaliile operației selectate" })).toHaveTextContent("Operație 02");
     expect(screen.getByText("Dependențe raportate")).toBeInTheDocument();
-    expect(screen.getAllByText("Debitare panou").length).toBeGreaterThan(0);
-    const predecessor = screen.getByRole("button", { name: "Debitare panou" });
-    fireEvent.click(predecessor);
-    expect(screen.getByRole("complementary", { name: "Detaliile operației selectate" })
-      .querySelector("h3")?.textContent).toBe("Debitare panou");
-    expect(screen.getByRole("link", { name: /Deschide planul în Execuție/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /VEZI ÎN EXECUȚIE/ })).toHaveAttribute(
       "href", "/executie/plan-synthetic?job=job-synthetic",
     );
   });
 
-  it("keeps navigation truthful when the selected operation has no upstream relation", () => {
-    render(<JobProductionMap plan={plan} jobId="job-synthetic" />);
-    expect(screen.getByText("Nicio dependență activă identificată.")).toBeInTheDocument();
-    const group = screen.getByRole("button", { name: /Ansamblu1 operație/ });
-    fireEvent.click(group);
-    expect(screen.getByText("Nicio operație nu așteaptă acum această operație.")).toBeInTheDocument();
-    expect(screen.getByText("Dependențe raportate")).toBeInTheDocument();
+  it("does not invent a composition or panel for a single letters job", () => {
+    render(<JobProductionMap plan={plan([task("01", "Litere")])} jobId="letters" />);
+    const scopes = screen.getByRole("group", { name: "Părțile lucrării" });
+    expect(scopes).toHaveTextContent("Litere");
+    expect(scopes).not.toHaveTextContent("COMPOZIȚIE");
+    expect(scopes).not.toHaveTextContent("Panou ACM");
+    const stage = screen.getByLabelText("Reprezentare orientativă a lucrării");
+    expect(stage.querySelector(".job-dossier__panel-shape")).toBeNull();
   });
 
-  it("does not fabricate component groups when tasks are missing", () => {
-    render(<JobProductionMap plan={{ ...plan, tasks: [] }} jobId="job-empty" />);
+  it("scales to many tasks through pagination and filtering", () => {
+    const big = plan(Array.from({ length: 36 }, (_, i) => task(String(i + 1).padStart(2, "0"), "Litere")));
+    render(<JobProductionMap plan={big} jobId="bulk" />);
+    expect(screen.getByRole("group", { name: "Operațiile filtrate" }).querySelectorAll("button")).toHaveLength(7);
+    expect(screen.getByText("1–7 din 36")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Pagina următoare" }));
+    expect(screen.getByText("8–14 din 36")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("searchbox", { name: "Caută operație" }), { target: { value: "36" } });
+    expect(screen.getByRole("group", { name: "Operațiile filtrate" }).querySelectorAll("button")).toHaveLength(1);
+    expect(screen.getByText("1–1 din 1")).toBeInTheDocument();
+  });
+
+  it("keeps readable dependency labels without manufacturing fake links", () => {
+    render(<JobProductionMap plan={source} jobId="real-label-contract" />);
+    fireEvent.click(screen.getByRole("group", { name: "Părțile lucrării" })
+      .querySelectorAll("button")[2]);
+    expect(screen.getByText("Operație 01 — Litere")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Operație 01 — Litere" })).not.toBeInTheDocument();
+  });
+
+  it("shows a factual empty plan", () => {
+    render(<JobProductionMap plan={plan([])} jobId="empty" />);
     expect(screen.getByText("Planul nu conține operații afișabile.")).toBeInTheDocument();
-    expect(screen.queryByRole("group", { name: "Subansamblele planului" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Părțile lucrării" })).not.toBeInTheDocument();
   });
 });
