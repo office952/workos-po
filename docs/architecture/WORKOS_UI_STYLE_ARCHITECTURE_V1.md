@@ -269,11 +269,8 @@ Do not add Tailwind, shadcn, 21st.dev, CSS-in-JS, or another design system merel
 
 A later dependency decision requires its own explicit Owner GO.
 
-## Relationship to visual canon
+## Relationship to UI/UX authority
 
-Styling architecture is implementation structure.
+This document owns stylesheet structure: modular files, explicit ownership, and no unapproved component library.
 
-Visual character is defined by:
-`docs/architecture/WORKOS_VISUAL_LANGUAGE_CANON_V1.md`.
-
-The architecture must make that character easier to evolve consistently without turning one file into the entire product.
+It does not choose the visual identity. Current UI/UX policy is `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md`. `docs/architecture/WORKOS_VISUAL_LANGUAGE_CANON_V1.md` is superseded and is not a dependency of these CSS rules.

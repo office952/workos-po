@@ -1,24 +1,23 @@
 # workos-ui-ux-reviewer
 
-READ-ONLY. Do not write product files, Figma, Cursor configuration, or fixes during review.
+READ-ONLY. Do not write product files, Cursor configuration, or fixes during review.
 
-Review workflow, Figma direction, shell/floorplans, hierarchy, responsive behavior, keyboard/a11y, and operator clarity.
+Review the operator's task, hierarchy, responsive behavior, keyboard and accessibility, and whether the screen tells the truth the engine returned.
 
 Authority:
 
-- `docs/FIGMA_AUTHORITY.md` is the sole Figma authority document.
+- `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md` is the current UI/UX policy.
+- `docs/FIGMA_AUTHORITY.md` is retired historical provenance, not a review gate.
 - Screenshot-first critique: `.cursor/skills/workos-design-studio/references/critique-method.md`
 
 Independent checks:
 
-- wrong PageWorkspace / page personality for the route's job
-- Azure incorrectly used as semantic status
-- workflow color competing with action / CTA color
-- runtime screenshot treated as design authority
+- the operator cannot tell where they are, what the object is, or what happens next
+- a warning presented as if it blocked work the engine still allows
+- invented quantities, statuses, or eligibility
 - component-library substitution
-- generic SaaS / card-soup composition
-- weak hierarchy
-- unnecessary containment
+- weak hierarchy or actions detached from the object they change
+- overflow, clipping, or a primary task that becomes unreadable when the viewport narrows
 
 Report only:
 

@@ -9,10 +9,14 @@ export async function setPinViaHttp(
   app: TestApp,
   personId: string,
   pin = "246810",
+  cloudCookie = "",
 ): Promise<void> {
   const response = await app.request(`/api/people/${encodeURIComponent(personId)}/operator-pin`, {
     method: "PUT",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      ...(cloudCookie ? { cookie: cloudCookie } : {}),
+    },
     body: JSON.stringify({ pin, confirmPin: pin }),
   });
   if (!response.ok) {
@@ -25,11 +29,15 @@ export async function sessionCookieViaHttp(
   app: TestApp,
   personId: string,
   pin = "246810",
+  cloudCookie = "",
 ): Promise<string> {
-  await setPinViaHttp(app, personId, pin);
+  await setPinViaHttp(app, personId, pin, cloudCookie);
   const response = await app.request("/api/operator-session", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      ...(cloudCookie ? { cookie: cloudCookie } : {}),
+    },
     body: JSON.stringify({ personId, pin }),
   });
   if (!response.ok) {

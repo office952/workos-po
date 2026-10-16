@@ -9,9 +9,9 @@ BUSINESS_ENGINE_AUTHORITY = workos-po/apps/api + workos-po/packages/domain
 PERSISTENCE_IMPLEMENTATION_AUTHORITY = workos-po/apps/api
 SOURCE_CODE = workos-po
 REAL_BUSINESS_DATA = external persistent WorkOS data root / Operational Planes
-PRESENTATION_DESIGN_AUTHORITY = Owner-accepted WorkOs-F design
-PRESENTATION_VISUAL_LANGUAGE_AUTHORITY = docs/architecture/WORKOS_VISUAL_LANGUAGE_CANON_V1.md
-PRESENTATION_STYLE_ARCHITECTURE_AUTHORITY = docs/architecture/WORKOS_UI_STYLE_ARCHITECTURE_V1.md
+UIUX_AUTHORITY = docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md
+PRESENTATION_IMPLEMENTATION = workos-po root frontend
+STYLESHEET_OWNERSHIP = docs/architecture/WORKOS_UI_STYLE_ARCHITECTURE_V1.md
 ```
 
 Historical provenance, not continuing development pins:
@@ -95,30 +95,22 @@ The engine owns contracts, validation, evaluation, snapshots, and invariants. Ch
 
 Current flow responsibilities belong to [Request, Catalog and configuration](architecture/REQUEST_CATALOG_CONFIGURATION_CANON.md). Catalog defines reusable products; requests bind clients and product instances. Settings/formulas stay versioned and domain-owned. The current implementation status and accepted historical milestones belong only to [ROADMAP.md](ROADMAP.md); this authority document does not duplicate changing milestone flags.
 
-## Presentation truth
+## Presentation
 
-Owner-accepted WorkOs-F remains the protected design authority for the surfaces/nodes it actually covers:
-
-- File: WorkOs-F
-- File key: `M3Klzg7sulrtLSyxJBf3Vd`
-
-Future and materially redesigned WorkOS surfaces also follow:
-- visual language: `docs/architecture/WORKOS_VISUAL_LANGUAGE_CANON_V1.md`;
-- stylesheet ownership: `docs/architecture/WORKOS_UI_STYLE_ARCHITECTURE_V1.md`.
+The current UI/UX policy is `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md`.
 
 Presentation decision order is:
 
 ```text
 explicit Owner decision
--> WorkOS visual-language canon
--> accepted Figma authority for covered surfaces
--> runtime behavior/evidence
--> historical UI reference
+-> operator task and verified experience in this application
+-> implementation in the workos-po root frontend
+-> historical visual references, only when explicitly relevant
 ```
 
-This does not silently invalidate protected Figma nodes.
+WorkOs-F and `docs/architecture/WORKOS_VISUAL_LANGUAGE_CANON_V1.md` are not current presentation authorities. Their provenance remains in `docs/FIGMA_AUTHORITY.md`. Stylesheet ownership remains `docs/architecture/WORKOS_UI_STYLE_ARCHITECTURE_V1.md`.
 
-See `docs/FIGMA_AUTHORITY.md`.
+Product Truth, formulas, quantities, readiness, eligibility, and permissions stay in the engine.
 
 ## UI implementation
 

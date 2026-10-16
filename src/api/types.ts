@@ -578,6 +578,13 @@ export type OperatorSessionTransport = {
   displayName: string;
 };
 
+export type InboxTaskLane =
+  | "in_progress_mine"
+  | "available_ready"
+  | "available_needs_provider"
+  | "waiting_dependencies"
+  | "blocked_material";
+
 export type InboxTaskTransport = {
   taskId: string;
   planId: string;
@@ -587,10 +594,15 @@ export type InboxTaskTransport = {
   statusLabel: string;
   productLabel: string;
   inscription: string;
+  customerDisplayName: string;
+  seqLabel: string;
+  waitingForLabels: string[];
+  requiredCapabilityLabel: string | null;
+  providerLabel: string | null;
   canClaimStart: boolean;
   requiresProvider: boolean;
-  lane: string;
-  materialBlockLabel?: string | null;
+  lane: InboxTaskLane;
+  materialBlockLabel: string | null;
 };
 
 export type MaterialLineTransport = {

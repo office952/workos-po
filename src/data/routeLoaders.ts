@@ -12,6 +12,7 @@ import { presentHealth, type HealthPresentation } from "../adapters/healthAdapte
 import { presentJobDetail, presentJobList } from "../adapters/jobAdapter";
 import { presentPlanningWorkload } from "../adapters/planningAdapter";
 import {
+  presentInboxDisplayNote,
   presentInboxTasks,
   presentOperatorCandidates,
   presentOperatorSession,
@@ -195,7 +196,11 @@ export async function loadOperatorCandidates() {
 }
 
 export async function loadOperatorInbox() {
-  return presentInboxTasks(await fetchOperatorInbox());
+  const payload = await fetchOperatorInbox();
+  return {
+    tasks: presentInboxTasks(payload),
+    displayOrderNote: presentInboxDisplayNote(payload),
+  };
 }
 
 export async function loadMaterialReadinessAdmin() {

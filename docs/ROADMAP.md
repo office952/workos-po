@@ -14,6 +14,14 @@ NO PARALLEL PRODUCT TRUTH
 
 Living status as of 2026-10-14. Verified `main` is `162e98a5470211dc62cce6198e8cc58593fae158` (PR #75 merge); WorkOS Verify succeeded on that push. Later sections are historical records unless they say otherwise. Merge alone is never Owner acceptance.
 
+### UI/UX authority (2026-10-16)
+
+Owner decision: Figma is not the current UI/UX authority. Product Truth stays in the engine. Experience work starts from the operator's task, explicit Owner direction, and verification in the running application. Policy: `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md`.
+
+`docs/FIGMA_AUTHORITY.md` and `docs/architecture/WORKOS_VISUAL_LANGUAGE_CANON_V1.md` remain historical provenance. Modular CSS ownership stays in `docs/architecture/WORKOS_UI_STYLE_ARCHITECTURE_V1.md`.
+
+N-009 (draft PR #85, not merged) keeps a missing-material check as an advisory warning while Material Readiness is disabled. A replenishment signal does not require a purchase quantity. This note does not rewrite the milestone history below.
+
 ```text
 CURRENT_MILESTONE = PILOT-0_TRUTH_AND_READINESS
 MAIN = 162e98a5470211dc62cce6198e8cc58593fae158
