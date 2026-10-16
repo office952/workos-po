@@ -1,6 +1,6 @@
 /* N-010 / Fișa lucrării — local presentation ownership.
    Keep the commercial pilot header grammar and server-owned operational states. */
-.page-workspace--traveler:has(.job-detail__orientation) {
+.page-workspace--traveler:has(.job-detail__sections) {
   display: block;
   width: 100%;
   max-width: none;
@@ -151,14 +151,14 @@
 .job-detail__results-details > .stack:last-child { border-bottom:0; }
 @media (max-width:767px) {
   /* Pilot header normally hides its aside: this job surface MUST keep the server-owned primary action. */
-  div > .page-header.page-header--pilot-compact.page-header--pilot-aside:has(+ .page-region .job-detail__orientation) {
+  div > .page-header.page-header--pilot-compact.page-header--pilot-aside:has(+ .page-region .page-workspace--traveler) {
     grid-template-columns:minmax(0,1fr);
     grid-template-areas:"copy" "aside";
     grid-template-rows:auto auto;
     gap:12px;
     min-height:0;
   }
-  div > .page-header.page-header--pilot-compact.page-header--pilot-aside:has(+ .page-region .job-detail__orientation) .page-header__aside {
+  div > .page-header.page-header--pilot-compact.page-header--pilot-aside:has(+ .page-region .page-workspace--traveler) .page-header__aside {
     display:flex;
     contain:none;
     width:100%;
@@ -168,7 +168,7 @@
     align-items:center;
     justify-content:space-between;
   }
-  div > .page-header.page-header--pilot-compact.page-header--pilot-aside:has(+ .page-region .job-detail__orientation) .page-header__action {
+  div > .page-header.page-header--pilot-compact.page-header--pilot-aside:has(+ .page-region .page-workspace--traveler) .page-header__action {
     width:auto;
     min-width:min(100%,230px);
   }
@@ -177,3 +177,14 @@
   .job-detail__sections a { padding-inline:14px; }
   .job-detail__body { padding-top:14px; }
 }
+
+/* Plan jobs orient immediately toward the workbench, not a repeated lifecycle hero. */
+.job-detail__focus-note {
+  display:flex; align-items:center; gap:10px 18px; flex-wrap:wrap;
+  min-height:50px; padding:11px 0; border-bottom:1px solid var(--color-border-strong);
+}
+.job-detail__focus-note .job-detail__eyebrow { color:var(--color-warning); }
+.job-detail__focus-note strong { flex:1 1 180px; font:600 13px/1.4 var(--font-sans); color:var(--color-text-primary); }
+.job-detail__focus-note a { font:500 12px/1.4 var(--font-sans); color:var(--shell-signal); text-decoration:underline; text-underline-offset:3px; }
+.job-detail__focus-note a:focus-visible { outline:2px solid var(--color-focus-ring); outline-offset:3px; }
+.job-detail__completion-note { margin:0; padding:12px 0; color:var(--color-text-secondary); font:400 13px/1.5 var(--font-sans); border-bottom:1px solid var(--color-border); }
