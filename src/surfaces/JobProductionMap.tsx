@@ -75,7 +75,6 @@ export function JobProductionMap({
       ].filter((message): message is string => Boolean(message?.trim() && message !== jobAttention))
     : [];
   const uniqueMessages = [...new Set(messages)];
-  const totalSignals = plan.tasks.filter(hasSignal).length;
   const progress = plan.progress;
 
   function chooseTask(id: string): void {
@@ -177,7 +176,7 @@ export function JobProductionMap({
           </div>
           <div className="job-map__trace" aria-label="Dependențe și continuări confirmate">
             <div className="job-map__trace-stage" data-kind="before">
-              <span className="job-map__trace-label">01 / PREDECESORI</span>
+              <span className="job-map__trace-label">01 / AȘTEAPTĂ ACUM</span>
               {predecessors.length > 0 ? predecessors.map(({ task }) => (
                 <button
                   key={task.taskId}
@@ -207,7 +206,7 @@ export function JobProductionMap({
             </div>
             <div className="job-map__trace-junction" aria-hidden="true"><span>{successors.length ? "→" : "·"}</span></div>
             <div className="job-map__trace-stage" data-kind="after">
-              <span className="job-map__trace-label">03 / DEPIND DE ACEASTA</span>
+              <span className="job-map__trace-label">03 / AȘTEAPTĂ ACEASTĂ OPERAȚIE</span>
               {successors.length > 0 ? successors.map(({ task }) => (
                 <button
                   key={task.taskId}
@@ -219,7 +218,7 @@ export function JobProductionMap({
                   <span className="job-map__trace-task-name">{taskCaption(task)}</span>
                   <small>{task.statusLabel}</small>
                 </button>
-              )) : <p className="job-map__trace-muted">Nicio continuare directă raportată în plan.</p>}
+              )) : <p className="job-map__trace-muted">Nicio operație nu așteaptă acum această operație.</p>}
             </div>
           </div>
           {predecessors.length === 0 && successors.length === 0 ? (
@@ -260,14 +259,12 @@ export function JobProductionMap({
               <span className="job-map__eyebrow">OPERAȚIE SELECTATĂ / {selected.seqLabel || "—"}</span>
               <h3>{selected.processLabel}</h3>
               <p className="job-map__inspector-state">{selected.statusLabel} · {selectedGroupLabel}</p>
-              {(uniqueMessages.length > 0 || (jobAttention && totalSignals > 0)) ? (
+              {uniqueMessages.length > 0 ? (
                 <div className="job-map__attention">
                   <strong>Atenționări raportate</strong>
                   {uniqueMessages.length > 0 ? (
                     <ul>{uniqueMessages.map((message) => <li key={message}>{message}</li>)}</ul>
-                  ) : (
-                    <p>Lucrarea necesită atenție. Verifică operațiile care au un semnal asociat.</p>
-                  )}
+                  ) : null}
                 </div>
               ) : null}
               <dl className="job-map__facts">
