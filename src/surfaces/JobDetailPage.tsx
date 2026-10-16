@@ -265,7 +265,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
             </div>
           ) : null}
           {plan ? (
-            <JobProductionMap plan={plan} jobId={jobId} jobAttention={job.needsAttention ? job.attentionLabel : null} />
+            <JobProductionMap plan={plan} jobId={jobId} />
           ) : planPending ? (
             <div className="job-detail__map-placeholder" role="status">Se citește planul de producție…</div>
           ) : planId && planResource.status === "error" ? (
