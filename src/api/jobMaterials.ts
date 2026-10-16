@@ -1,4 +1,4 @@
-import { getJson, postJson } from "./http";
+import { getJson, postJson, TransportError } from "./http";
 
 export type JobMaterialCheckTransport = {
   status: "AVAILABLE" | "MISSING";
@@ -13,6 +13,7 @@ export type JobMaterialRequestTransport = {
   status: string;
   requestedByLabel: string;
   requestedAt: string;
+  requiresReview: boolean;
 };
 
 export type JobMaterialLineTransport = {
@@ -52,11 +53,65 @@ function parsePreparation(value: unknown): JobMaterialPreparationTransport {
         !Number.isFinite(line.estimatedQuantity) ||
         line.estimatedQuantity <= 0 ||
         !Array.isArray(line.taskIds) ||
-        typeof line.canCheck !== "boolean"
+        typeof line.canCheck !== "boolean" ||
+        (line.openRequest !== null && (
+          typeof line.openRequest !== "object" ||
+          typeof line.openRequest.requiresReview !== "boolean"
+        ))
       )) {
     throw new Error("invalid_material_preparation");
   }
   return payload as JobMaterialPreparationTransport;
+}
+
+export class MaterialDecisionConflictError extends TransportError {
+  readonly preparation: JobMaterialPreparationTransport;
+
+  constructor(preparation: JobMaterialPreparationTransport) {
+    super("Starea materialelor a fost modificată.", 409);
+    this.name = "MaterialDecisionConflictError";
+    this.preparation = preparation;
+  }
+}
+
+type MaterialDecision = {
+  status: "AVAILABLE" | "MISSING";
+  requestedQuantity?: number;
+};
+
+type PendingMaterialAction = {
+  fingerprint: string;
+  actionKey: string;
+};
+
+const pendingActions = new Map<string, PendingMaterialAction>();
+
+function decisionFingerprint(decision: MaterialDecision): string {
+  return decision.status === "AVAILABLE"
+    ? "AVAILABLE"
+    : "MISSING:" + String(decision.requestedQuantity ?? "");
+}
+
+function decisionMatches(
+  preparation: JobMaterialPreparationTransport,
+  resourceId: string,
+  decision: MaterialDecision,
+): boolean {
+  const line = preparation.lines.find((item) => item.resourceId === resourceId);
+  if (!line?.latestCheck) {
+    return false;
+  }
+  if (decision.status === "AVAILABLE") {
+    return line.latestCheck.status === "AVAILABLE";
+  }
+  return line.latestCheck.status === "MISSING" &&
+    line.openRequest !== null &&
+    line.openRequest.requestedQuantity === decision.requestedQuantity;
+}
+
+/** Test hook. Pending keys survive a lost response until the same action succeeds. */
+export function resetPendingJobMaterialActionKeys(): void {
+  pendingActions.clear();
 }
 
 export async function fetchJobMaterialPreparation(
@@ -70,14 +125,35 @@ export async function fetchJobMaterialPreparation(
 export async function submitJobMaterialDecision(
   jobId: string,
   resourceId: string,
-  decision: { status: "AVAILABLE" | "MISSING"; requestedQuantity?: number },
+  decision: MaterialDecision,
 ): Promise<JobMaterialPreparationTransport> {
-  return parsePreparation(await postJson(
-    "/api/jobs/" + encodeURIComponent(jobId) + "/material-preparation/" +
-      encodeURIComponent(resourceId) + "/decision",
-    {
-      ...decision,
-      actionKey: crypto.randomUUID(),
-    },
-  ));
+  const slot = jobId + "\n" + resourceId;
+  const fingerprint = decisionFingerprint(decision);
+  const pending = pendingActions.get(slot);
+  const actionKey = pending?.fingerprint === fingerprint
+    ? pending.actionKey
+    : crypto.randomUUID();
+  pendingActions.set(slot, { fingerprint, actionKey });
+  const path = "/api/jobs/" + encodeURIComponent(jobId) + "/material-preparation/" +
+    encodeURIComponent(resourceId) + "/decision";
+  try {
+    const updated = parsePreparation(await postJson(path, { ...decision, actionKey }));
+    pendingActions.delete(slot);
+    return updated;
+  } catch (error) {
+    if (!(error instanceof TransportError) || error.status !== 409) {
+      throw error;
+    }
+    let current: JobMaterialPreparationTransport;
+    try {
+      current = await fetchJobMaterialPreparation(jobId);
+    } catch {
+      throw error;
+    }
+    if (decisionMatches(current, resourceId, decision)) {
+      pendingActions.delete(slot);
+      return current;
+    }
+    throw new MaterialDecisionConflictError(current);
+  }
 }

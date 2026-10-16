@@ -33,6 +33,8 @@ export type JobMaterialRequest = {
   requestedByPersonId: string;
   requestedByLabel: string;
   requestedAt: string;
+  /** True when a later availability check leaves this open request needing review. */
+  requiresReview: boolean;
 };
 
 export type JobMaterialPreparation = {
@@ -88,13 +90,41 @@ function mappedCheck(row: CheckRow): JobMaterialCheck {
   };
 }
 
-function mappedRequest(row: RequestRow): JobMaterialRequest {
+function materialRequestRequiresReview(
+  status: JobMaterialRequest["status"],
+  latestCheckStatus: JobMaterialCheck["status"] | null,
+): boolean {
+  switch (status) {
+    case "REQUESTED":
+      return latestCheckStatus === "AVAILABLE";
+    case "CANCELLED":
+    case "FULFILLED":
+      return false;
+    default: {
+      const exhaustive: never = status;
+      return exhaustive;
+    }
+  }
+}
+
+function asCheckStatus(value: unknown): JobMaterialCheck["status"] | null {
+  if (value === "AVAILABLE" || value === "MISSING") {
+    return value;
+  }
+  return null;
+}
+
+function mappedRequest(
+  row: RequestRow,
+  latestCheckStatus: JobMaterialCheck["status"] | null,
+): JobMaterialRequest {
   return {
     requestId: row.request_id, jobId: row.job_id, planId: row.plan_id,
     resourceId: row.resource_id, estimatedQuantity: row.estimated_quantity,
     requestedQuantity: row.requested_quantity, unit: row.unit, status: row.status,
     requestedByPersonId: row.requested_by_person_id,
     requestedByLabel: row.requested_by_label, requestedAt: row.requested_at,
+    requiresReview: materialRequestRequiresReview(row.status, latestCheckStatus),
   };
 }
 
@@ -120,16 +150,16 @@ export function readJobMaterialPreparation(
   return {
     jobId,
     planId: record.plan.planId,
-    lines: projectJobMaterialRequirements(record).map((line) => ({
-      ...line,
-      canCheck: record.tasks.some((task) => task.status === "PLANNED" && line.taskIds.includes(task.taskId)),
-      latestCheck: checks.find((item) => item.resource_id === line.resourceId)
-        ? mappedCheck(checks.find((item) => item.resource_id === line.resourceId)!)
-        : null,
-      openRequest: requests.find((item) => item.resource_id === line.resourceId)
-        ? mappedRequest(requests.find((item) => item.resource_id === line.resourceId)!)
-        : null,
-    })),
+    lines: projectJobMaterialRequirements(record).map((line) => {
+      const latest = checks.find((item) => item.resource_id === line.resourceId);
+      const request = requests.find((item) => item.resource_id === line.resourceId);
+      return {
+        ...line,
+        canCheck: record.tasks.some((task) => task.status === "PLANNED" && line.taskIds.includes(task.taskId)),
+        latestCheck: latest ? mappedCheck(latest) : null,
+        openRequest: request ? mappedRequest(request, latest ? latest.status : null) : null,
+      };
+    }),
   };
 }
 
@@ -139,10 +169,16 @@ export function listJobMaterialRequests(
 ): JobMaterialRequest[] {
   const rows = db.prepare(
     "SELECT request_id, job_id, plan_id, resource_id, estimated_quantity, requested_quantity, " +
-    "unit, status, requested_by_person_id, requested_by_label, requested_at " +
+    "unit, status, requested_by_person_id, requested_by_label, requested_at, " +
+    "(SELECT status FROM job_material_checks AS latest " +
+    "WHERE latest.organization_id = job_material_requests.organization_id " +
+    "AND latest.job_id = job_material_requests.job_id " +
+    "AND latest.plan_id = job_material_requests.plan_id " +
+    "AND latest.resource_id = job_material_requests.resource_id " +
+    "ORDER BY latest.checked_at DESC, latest.rowid DESC LIMIT 1) AS latest_check_status " +
     "FROM job_material_requests WHERE organization_id = ? ORDER BY requested_at DESC",
-  ).all(organizationId) as RequestRow[];
-  return rows.map(mappedRequest);
+  ).all(organizationId) as Array<RequestRow & { latest_check_status: unknown }>;
+  return rows.map((row) => mappedRequest(row, asCheckStatus(row.latest_check_status)));
 }
 
 export function recordJobMaterialDecision(

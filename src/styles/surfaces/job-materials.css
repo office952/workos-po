@@ -33,11 +33,21 @@
 }
 .job-materials__state[data-status="AVAILABLE"] { color: var(--color-success); }
 .job-materials__state[data-status="MISSING"] { color: var(--color-warning); }
+.job-materials__warning,
 .job-materials__request {
   padding: var(--space-12);
   border-left: 2px solid var(--color-warning);
   background: var(--color-warning-soft);
   overflow-wrap: anywhere;
+}
+.job-materials__warning {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-meta);
+  line-height: 1.6;
+}
+.job-materials__request[data-review="required"] {
+  border-left-color: var(--color-text);
 }
 .job-materials__actions { display: flex; align-items: end; flex-wrap: wrap; gap: var(--space-12); }
 .job-materials__purchase { display: grid; gap: var(--space-6); min-width: 0; }

@@ -40,6 +40,7 @@ const preparation = {
           status: "REQUESTED",
           requestedByLabel: "Maria Ansamblu Demo",
           requestedAt: "2026-10-16T01:39:00.000Z",
+          requiresReview: false,
         },
       },
     ],
@@ -65,8 +66,11 @@ describe("JobMaterialPreparation", () => {
 
     expect(await screen.findByText("Modul LED 12V")).toBeInTheDocument();
     expect(screen.getByText(/Necesar estimat: 125/)).toBeInTheDocument();
+    expect(screen.queryByText(/Necesar estimat total pe lucrare/)).not.toBeInTheDocument();
     expect(screen.getByText(/Verificat de Maria Ansamblu Demo/)).toBeInTheDocument();
+    expect(screen.getByText(/Material marcat lipsă/)).toBeInTheDocument();
     expect(screen.getByText(/Solicitare înregistrată: 140/)).toBeInTheDocument();
+    expect(screen.getByText(/În așteptarea Achizițiilor/)).toBeInTheDocument();
     expect(screen.queryByText(/mreq:/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Lipsește — solicită achiziție" })).not.toBeInTheDocument();
   });
@@ -90,5 +94,33 @@ describe("JobMaterialPreparation", () => {
     });
     expect(view.container).toBeEmptyDOMElement();
     expect(screen.queryByText("Nu există materiale planificate în această selecție.")).not.toBeInTheDocument();
+  });
+
+  it("names the job total on the current operation and asks for review after availability", async () => {
+    const reviewed = structuredClone(preparation);
+    const line = reviewed.preparation.lines[0];
+    if (!line?.latestCheck || !line.openRequest) {
+      throw new Error("fixture");
+    }
+    line.latestCheck.status = "AVAILABLE";
+    line.openRequest.requiresReview = true;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/operator-session")) {
+          return jsonResponse({ operator: null });
+        }
+        return jsonResponse(reviewed);
+      }),
+    );
+
+    render(<JobMaterialPreparation jobId="job-1" onlyResourceIds={["MAT-LED-MODULE"]} />);
+
+    expect(await screen.findByRole("heading", { name: "Materiale pentru operație" })).toBeInTheDocument();
+    expect(screen.getByText(/Necesar estimat total pe lucrare: 125/)).toBeInTheDocument();
+    expect(screen.getByText(/Solicitare existentă, de revizuit: 140/)).toBeInTheDocument();
+    expect(screen.queryByText(/În așteptarea Achizițiilor/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Material marcat lipsă/)).not.toBeInTheDocument();
   });
 });

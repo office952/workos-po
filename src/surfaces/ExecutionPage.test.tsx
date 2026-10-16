@@ -522,8 +522,85 @@ describe("ExecutionPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Materiale pentru operație" })).toBeInTheDocument();
     expect(screen.getByText("Modul LED 12V")).toBeInTheDocument();
-    expect(screen.getByText(/Necesar estimat: 125/)).toBeInTheDocument();
+    expect(screen.getByText(/Necesar estimat total pe lucrare: 125/)).toBeInTheDocument();
     expect(screen.queryByText("Montare module LED", { selector: "strong" })).not.toBeInTheDocument();
+  });
+
+  it("warns that a missing material does not hide the engine start action", async () => {
+    resetResourceCache();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/operator-session")) {
+          return jsonResponse({
+            operator: { personId: "per:maria", displayName: "Maria Ansamblu Demo" },
+          });
+        }
+        if (url.includes("/material-preparation")) {
+          return jsonResponse({
+            preparation: {
+              jobId: "job-led",
+              planId: "exp:1",
+              lines: [
+                {
+                  resourceId: "MAT-LED-MODULE",
+                  label: "Modul LED 12V",
+                  unit: "buc",
+                  estimatedQuantity: 125,
+                  taskIds: ["task-led"],
+                  canCheck: true,
+                  latestCheck: {
+                    status: "MISSING",
+                    checkedByLabel: "Maria Ansamblu Demo",
+                    checkedAt: "2026-10-16T01:39:00.000Z",
+                  },
+                  openRequest: {
+                    requestId: "mreq:secret-id",
+                    requestedQuantity: 125,
+                    unit: "buc",
+                    status: "REQUESTED",
+                    requestedByLabel: "Maria Ansamblu Demo",
+                    requestedAt: "2026-10-16T01:39:00.000Z",
+                    requiresReview: false,
+                  },
+                },
+              ],
+            },
+          });
+        }
+        const plan = planPayload([
+          {
+            taskId: "task-led",
+            processLabel: "Montare module LED",
+            status: "PLANNED",
+            statusLabel: "Planificat",
+            canComplete: false,
+            requiresCompletedQuantity: true,
+            plannedValue: 125,
+            completedQuantityLabel: null,
+            varianceLabel: null,
+          },
+        ]);
+        const executionPlan = plan.executionPlan as { tasks: Array<Record<string, unknown>> };
+        executionPlan.tasks[0] = {
+          ...executionPlan.tasks[0],
+          canClaimStart: true,
+          resourceDemands: [
+            { resourceId: "MAT-LED-MODULE", label: "Modul LED 12V", quantity: 125, unit: "buc" },
+          ],
+          materialLines: [],
+          materialParticipation: "NOT_ADOPTED",
+          materialBlockLabel: null,
+        };
+        return jsonResponse({ ...plan, job: { jobId: "job-led", href: "/jobs/job-led" } });
+      }),
+    );
+
+    render(<ExecutionPage planId="exp:1" taskId="task-led" jobId="job-led" />);
+
+    expect(await screen.findByText(/Material marcat lipsă/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pornește" })).toBeEnabled();
   });
 
   it("keeps a deep-linked completed task selected so history stays inspectable", async () => {
