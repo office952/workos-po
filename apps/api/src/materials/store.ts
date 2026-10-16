@@ -41,6 +41,7 @@ export type JobMaterialPreparation = {
   lines: Array<JobMaterialRequirement & {
     latestCheck: JobMaterialCheck | null;
     openRequest: JobMaterialRequest | null;
+    canCheck: boolean;
   }>;
 };
 
@@ -121,6 +122,7 @@ export function readJobMaterialPreparation(
     planId: record.plan.planId,
     lines: projectJobMaterialRequirements(record).map((line) => ({
       ...line,
+      canCheck: record.tasks.some((task) => task.status === "PLANNED" && line.taskIds.includes(task.taskId)),
       latestCheck: checks.find((item) => item.resource_id === line.resourceId)
         ? mappedCheck(checks.find((item) => item.resource_id === line.resourceId)!)
         : null,
