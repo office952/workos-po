@@ -36,7 +36,8 @@ export function projectJobMaterialRequirements(
       } else {
         byResource.set(key, {
           resourceId: demand.resourceId,
-          label: resource.label,
+          // Preserve the frozen job-specific material wording, not a later catalog rename.
+          label: demand.label,
           unit: demand.unit,
           estimatedQuantity: demand.quantity,
           taskIds: [task.taskId],
