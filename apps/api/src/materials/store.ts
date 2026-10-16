@@ -152,7 +152,7 @@ export function recordJobMaterialDecision(
   | { ok: true; alreadyApplied: boolean; preparation: JobMaterialPreparation }
   | { ok: false; error:
       "unknown_material" | "invalid_quantity" | "below_estimated_requirement" |
-      "already_requested" | "material_no_longer_planned" } {
+      "already_requested" | "material_no_longer_planned" | "idempotency_conflict" } {
   const required = projectJobMaterialRequirements(input.record)
     .find((line) => line.resourceId === input.resourceId);
   if (!required) {
@@ -174,9 +174,27 @@ export function recordJobMaterialDecision(
 
   const transaction = db.transaction(() => {
     const existingAction = db.prepare(
-      "SELECT check_id FROM job_material_checks WHERE action_key = ? AND organization_id = ?",
-    ).get(input.actionKey, input.organizationId) as { check_id: string } | undefined;
+      "SELECT check_id, job_id, plan_id, resource_id, status, checked_by_person_id " +
+      "FROM job_material_checks WHERE action_key = ? AND organization_id = ?",
+    ).get(input.actionKey, input.organizationId) as {
+      check_id: string; job_id: string; plan_id: string;
+      resource_id: string; status: string; checked_by_person_id: string;
+    } | undefined;
     if (existingAction) {
+      const consistent = existingAction.job_id === input.jobId &&
+        existingAction.plan_id === input.record.plan.planId &&
+        existingAction.resource_id === required.resourceId &&
+        existingAction.status === input.status &&
+        existingAction.checked_by_person_id === input.personId;
+      const savedRequest = input.status === "MISSING" ? db.prepare(
+        "SELECT requested_quantity FROM job_material_requests WHERE source_check_id = ?",
+      ).get(existingAction.check_id) as { requested_quantity: number } | undefined : null;
+      if (!consistent || (
+        input.status === "MISSING" &&
+        (!quantity?.ok || savedRequest?.requested_quantity !== quantity.quantity)
+      )) {
+        return { ok: false as const, error: "idempotency_conflict" as const };
+      }
       return { ok: true as const, alreadyApplied: true };
     }
     const existingRequest = db.prepare(
