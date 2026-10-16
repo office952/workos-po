@@ -28,6 +28,7 @@ import { atelierHref, executionHref, jobHref, quoteHref } from "../routing/appRo
 import { navigate } from "../routing/navigate";
 import { SiteInstallationContextPanel } from "./SiteInstallationContextPanel";
 import { ExecutionActualConsumptionHistory } from "./ExecutionActualConsumption";
+import { JobMaterialPreparation } from "./JobMaterialPreparation";
 import type { ExecutionTaskTransport } from "../api/types";
 
 type JobDetailPageProps = {
@@ -199,6 +200,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
       contextLabel="Lucrare"
       currentHref={jobHref(jobId)}
       workspace="traveler"
+      headerVariant="pilot-compact"
       eyebrow="Lucrare"
       title={job?.inscription || job?.productLabel || "Lucrare"}
       lead="Eliberează producția, materializează planul și compară planificat cu realizat."
@@ -310,6 +312,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
           {jobResource.data?.siteInstallation ? (
             <SiteInstallationContextPanel context={jobResource.data.siteInstallation} />
           ) : null}
+          <JobMaterialPreparation jobId={jobId} />
           <SurfacePanel
             title="Traseu de producție"
             description="Ghid din starea lucrării. Nu este planul de producție."
