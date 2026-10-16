@@ -60,6 +60,10 @@ describe("JobProductionMap", () => {
     expect(next).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Dependențe raportate")).toBeInTheDocument();
     expect(screen.getAllByText("Debitare panou").length).toBeGreaterThan(0);
+    const predecessor = screen.getByRole("button", { name: /^Debitare panou\s*↗$/ });
+    fireEvent.click(predecessor);
+    expect(screen.getByRole("complementary", { name: "Detaliile operației selectate" })
+      .querySelector("h3")?.textContent).toBe("Debitare panou");
     expect(screen.getByRole("link", { name: /Deschide planul în Execuție/ })).toHaveAttribute(
       "href", "/executie/plan-synthetic?job=job-synthetic",
     );
