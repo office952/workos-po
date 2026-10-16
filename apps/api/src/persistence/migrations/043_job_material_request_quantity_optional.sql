@@ -1,9 +1,12 @@
--- Heals a database that already applied the earlier 042 draft, where
--- requested_quantity was NOT NULL and had to be at least the estimate.
--- Fresh databases created by the aligned 042 pass through the same rebuild.
--- Stored numbers are copied. NULL stays unspecified. This file does not invent zero.
--- Do not apply this to a real business database without a separate Owner procedure.
+-- Rebuild job_material_requests so a purchase quantity may stay unspecified.
+-- One transaction: a failed copy rolls back the shadow table and leaves the source intact.
+-- foreign_keys is off only around that transaction. If this file stops early, the
+-- migration runner rolls the transaction back and turns foreign_keys back on.
+-- Stored numbers are copied. NULL stays unspecified. Zero is rejected.
+-- The quantity ceiling already declared for this table is unchanged.
+-- Do not apply this file to a real business database without a separate Owner procedure.
 PRAGMA foreign_keys=OFF;
+BEGIN IMMEDIATE;
 CREATE TABLE job_material_requests__qty (
   request_id TEXT PRIMARY KEY NOT NULL,
   organization_id TEXT NOT NULL,
@@ -37,4 +40,11 @@ ALTER TABLE job_material_requests__qty RENAME TO job_material_requests;
 CREATE UNIQUE INDEX idx_job_material_requests_open
   ON job_material_requests(organization_id, job_id, plan_id, resource_id)
   WHERE status = 'REQUESTED';
+CREATE TEMP TABLE job_material_requests__fk_guard (
+  marker TEXT NOT NULL CHECK (marker = 'ok')
+);
+INSERT INTO job_material_requests__fk_guard (marker)
+SELECT 'fk' FROM pragma_foreign_key_check('job_material_requests');
+DROP TABLE job_material_requests__fk_guard;
+COMMIT;
 PRAGMA foreign_keys=ON;

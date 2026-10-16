@@ -77,6 +77,32 @@ export function applyMigrations(db: SqliteDatabase): void {
   applySelectedMigrations(db, listOperationalMigrationFiles());
 }
 
+const MATERIAL_REQUEST_QUANTITY_MIGRATION = "043_job_material_request_quantity_optional.sql";
+const MATERIAL_REQUEST_TABLE = "job_material_requests";
+const MATERIAL_REQUEST_SHADOW = "job_material_requests__qty";
+
+/**
+ * A crashed non-transactional rebuild can leave the shadow table behind.
+ * When the source table still exists, the shadow is an unfinished copy.
+ * When only the shadow exists, it holds the copied rows and becomes the source.
+ */
+function recoverInterruptedMaterialRequestRebuild(db: SqliteDatabase): void {
+  const names = new Set(
+    db.prepare(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (?, ?)",
+    ).all(MATERIAL_REQUEST_TABLE, MATERIAL_REQUEST_SHADOW).map(
+      (row) => (row as { name: string }).name,
+    ),
+  );
+  if (names.has(MATERIAL_REQUEST_SHADOW) && names.has(MATERIAL_REQUEST_TABLE)) {
+    db.exec(`DROP TABLE ${MATERIAL_REQUEST_SHADOW}`);
+    return;
+  }
+  if (names.has(MATERIAL_REQUEST_SHADOW)) {
+    db.exec(`ALTER TABLE ${MATERIAL_REQUEST_SHADOW} RENAME TO ${MATERIAL_REQUEST_TABLE}`);
+  }
+}
+
 export function applySelectedMigrations(
   db: SqliteDatabase,
   files: readonly string[],
@@ -100,10 +126,24 @@ export function applySelectedMigrations(
       continue;
     }
     const sql = readFileSync(join(MIGRATIONS_DIR, file), "utf8");
-    db.exec(sql);
-    db.prepare(
-      "INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)",
-    ).run(file, new Date().toISOString());
+    try {
+      if (file === MATERIAL_REQUEST_QUANTITY_MIGRATION) {
+        recoverInterruptedMaterialRequestRebuild(db);
+      }
+      db.exec(sql);
+      db.prepare(
+        "INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)",
+      ).run(file, new Date().toISOString());
+    } catch (error) {
+      try {
+        if (db.inTransaction) {
+          db.exec("ROLLBACK");
+        }
+      } finally {
+        db.pragma("foreign_keys = ON");
+      }
+      throw error;
+    }
   }
 }
 
