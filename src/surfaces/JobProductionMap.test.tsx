@@ -60,7 +60,7 @@ describe("JobProductionMap", () => {
     expect(next).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Dependențe raportate")).toBeInTheDocument();
     expect(screen.getAllByText("Debitare panou").length).toBeGreaterThan(0);
-    const predecessor = screen.getByRole("button", { name: /^Debitare panou\s*↗$/ });
+    const predecessor = screen.getByRole("button", { name: "Debitare panou", exact: true });
     fireEvent.click(predecessor);
     expect(screen.getByRole("complementary", { name: "Detaliile operației selectate" })
       .querySelector("h3")?.textContent).toBe("Debitare panou");
