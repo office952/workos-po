@@ -3,299 +3,211 @@ import type { ExecutionPlanTransport, ExecutionTaskTransport } from "../api/type
 import { executionHref } from "../routing/appRoute";
 import "../styles/surfaces/job-production-map.css";
 
-type TaskGroup = { label: string; tasks: ExecutionTaskTransport[] };
-type LinkedTask = { task: ExecutionTaskTransport; relation: "before" | "after" };
+type Group = { label: string; tasks: ExecutionTaskTransport[] };
+type Filter = "all" | "active" | "waiting";
+const PER_PAGE = 7;
+const active = (task: ExecutionTaskTransport) => task.status === "IN_PROGRESS";
+const hasIssue = (task: ExecutionTaskTransport) => Boolean(
+  task.startBlockReason || task.externalBlockLabel || task.qualityBlockLabel ||
+  task.openReworkEpisode?.status === "OPEN",
+);
+const viewType = (label: string) =>
+  /liter|volum/i.test(label) ? "letters" : /panou|acm|dibond|alucobond/i.test(label) ? "panel" : "generic";
 
-function groupTasks(tasks: ExecutionTaskTransport[]): TaskGroup[] {
-  const groups = new Map<string, ExecutionTaskTransport[]>();
+function groupTasks(tasks: ExecutionTaskTransport[]): Group[] {
+  const scopes = new Map<string, ExecutionTaskTransport[]>();
   for (const task of tasks) {
     const label = task.scopeLabel.trim() || "Operații generale";
-    const group = groups.get(label) ?? [];
+    const group = scopes.get(label) ?? [];
     group.push(task);
-    groups.set(label, group);
+    scopes.set(label, group);
   }
-  return [...groups].map(([label, items]) => ({ label, tasks: items }));
-}
-
-/* Signals come from the engine, not from assumed material readiness or a UI status machine. */
-function hasSignal(task: ExecutionTaskTransport): boolean {
-  return Boolean(
-    task.startBlockReason ||
-    task.externalBlockLabel ||
-    task.qualityBlockLabel ||
-    task.openReworkEpisode?.status === "OPEN",
-  );
-}
-
-function taskCaption(task: ExecutionTaskTransport): string {
-  return [task.seqLabel, task.processLabel].filter(Boolean).join(" · ");
+  return [...scopes].map(([label, tasks]) => ({ label, tasks }));
 }
 
 export function JobProductionMap({
-  plan,
-  jobId,
-  jobAttention,
+  plan, jobId, jobAttention,
 }: {
-  plan: ExecutionPlanTransport;
-  jobId: string;
-  jobAttention?: string | null;
+  plan: ExecutionPlanTransport; jobId: string; jobAttention?: string | null;
 }) {
   const groups = useMemo(() => groupTasks(plan.tasks), [plan.tasks]);
-  const taskLookup = useMemo(
-    () => new Map(plan.tasks.map((task) => [task.taskId, task])),
-    [plan.tasks],
+  const multiple = groups.length > 1;
+  const [scope, setScope] = useState<string | null>(null);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [taskId, setTaskId] = useState<string | null>(null);
+  const selectedGroup = groups.find((group) => group.label === scope) ?? null;
+  const available = selectedGroup ? selectedGroup.tasks : plan.tasks;
+  const search = query.toLocaleLowerCase("ro-RO").trim();
+  const filtered = available.filter((task) =>
+    (filter === "all" || (filter === "active" ? active(task) : task.waitingFor.length > 0)) &&
+    (!search || [task.processLabel, task.scopeLabel, task.seqLabel, task.statusLabel, task.assignmentLabel]
+      .some((label) => label.toLocaleLowerCase("ro-RO").includes(search))),
   );
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selected =
-    (selectedId ? taskLookup.get(selectedId) : null) ??
-    plan.tasks.find(hasSignal) ??
-    plan.tasks.find((task) => task.status === "IN_PROGRESS") ??
-    plan.tasks[0] ??
-    null;
+  const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const currentPage = Math.min(page, pages);
+  const shown = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
+  const selected = shown.find((task) => task.taskId === taskId) ??
+    shown.find(hasIssue) ?? shown.find(active) ?? shown[0] ?? null;
+  const currentScope = selectedGroup?.label ?? (multiple ? "Compoziția lucrării" : groups[0]?.label ?? "Lucrare");
+  const activeCount = available.filter(active).length;
+  const hasPanel = groups.some((group) => viewType(group.label) === "panel");
+  const hasLetters = groups.some((group) => viewType(group.label) === "letters");
+  const view = selectedGroup ? viewType(selectedGroup.label) : "composition";
+  const previewPanel = hasPanel && (view === "panel" || view === "composition");
+  const previewLetters = hasLetters && (view === "letters" || view === "composition");
+  const inscription = plan.inscription.trim();
+  const displayProduct = plan.productLabel.trim() || "Lucrare în producție";
+  const warningTexts = selected ? [
+    selected.startBlockReason, selected.externalBlockLabel, selected.qualityBlockLabel,
+  ].filter((reason): reason is string => Boolean(reason?.trim())) : [];
+  const dependencies = selected ?
+    [...new Set([...selected.dependsOnLabels, ...selected.waitingFor])] : [];
 
-  const selectedGroupLabel = selected?.scopeLabel.trim() || "Operații generale";
-  const selectedGroup = groups.find((group) => group.label === selectedGroupLabel) ?? groups[0];
-  const predecessors: LinkedTask[] = (selected?.waitingFor ?? []).flatMap((id) => {
-    const task = taskLookup.get(id);
-    return task ? [{ task, relation: "before" as const }] : [];
-  });
-  const successors: LinkedTask[] = selected
-    ? plan.tasks
-        .filter((task) => task.taskId !== selected.taskId && task.waitingFor.includes(selected.taskId))
-        .map((task) => ({ task, relation: "after" as const }))
-    : [];
-  const dependencyLabels = selected?.dependsOnLabels ?? [];
-  const seenPredecessorIds = new Set(predecessors.map(({ task }) => task.taskId));
-  const unknownPredecessors = (selected?.waitingFor ?? []).filter((id) => !seenPredecessorIds.has(id));
-  const messages = selected
-    ? [
-        selected.startBlockReason,
-        selected.externalBlockLabel,
-        selected.qualityBlockLabel,
-      ].filter((message): message is string => Boolean(message?.trim() && message !== jobAttention))
-    : [];
-  const uniqueMessages = [...new Set(messages)];
-  const progress = plan.progress;
-
-  function chooseTask(id: string): void {
-    if (taskLookup.has(id)) {
-      setSelectedId(id);
-    }
+  function changeScope(value: string | null) {
+    setScope(value); setFilter("all"); setQuery(""); setPage(1); setTaskId(null);
   }
-
-  if (!plan.tasks.length) {
-    return (
-      <section className="job-map" id="job-map" aria-label="Harta producției">
-        <div className="job-map__heading">
-          <div>
-            <span className="job-map__eyebrow">PLAN OPERAȚIONAL</span>
-            <h2>Harta producției</h2>
-          </div>
-        </div>
-        <p className="job-map__empty">Planul nu conține operații afișabile.</p>
-      </section>
-    );
+  function changeFilter(value: Filter) {
+    setFilter(value); setPage(1); setTaskId(null);
   }
 
   return (
-    <section className="job-map" id="job-map" aria-label="Harta producției">
-      <div className="job-map__heading">
-        <div className="job-map__heading-copy">
-          <span className="job-map__eyebrow">PLAN OPERAȚIONAL / TRASEU DIN EXECUȚIE</span>
-          <h2>Harta producției</h2>
-          <p>Alege un subansamblu sau o operație. WorkOS îți arată relațiile confirmate în plan.</p>
+    <section className="job-dossier" id="job-map" aria-label="Dosarul de producție">
+      <div className="job-dossier__lead">
+        <div>
+          <span className="job-dossier__eyebrow">01 / VEDERE DE ANSAMBLU</span>
+          <h2>Ce se întâmplă cu lucrarea</h2>
+          <p>Selectează partea lucrării, apoi operația. Detaliile se actualizează fără să pierzi contextul.</p>
         </div>
-        <div className="job-map__summary" aria-label="Progres real al planului">
-          {progress ? (
-            <>
-              <div><strong>{progress.completed} / {progress.total}</strong><span>finalizate</span></div>
-              <div><strong>{progress.inProgress}</strong><span>în lucru</span></div>
-              <div><strong>{progress.waitingDependencies}</strong><span>așteaptă dependențe</span></div>
-            </>
-          ) : (
-            <div><strong>{plan.progressLabel}</strong><span>progres raportat</span></div>
-          )}
-        </div>
+        {plan.progress ? (
+          <div className="job-dossier__metrics" aria-label="Progresul real al planului">
+            <div><strong>{plan.progress.completed} / {plan.progress.total}</strong><span>finalizate</span></div>
+            <div><strong>{plan.progress.inProgress}</strong><span>în lucru</span></div>
+            <div><strong>{plan.progress.waitingDependencies}</strong><span>așteaptă dependențe</span></div>
+          </div>
+        ) : <span className="job-dossier__eyebrow">{plan.progressLabel}</span>}
       </div>
-      <div className="job-map__workspace">
-        <div className="job-map__main">
-          <div className="job-map__visual-key">
-            <span>SUBANSAMBLE · {groups.length}</span>
-            <span>SELECTEAZĂ PENTRU EXPLORARE</span>
-          </div>
-          <div className="job-map__assemblies" role="group" aria-label="Subansamblele planului">
-            {groups.map((group, index) => {
-              const active = group.label === selectedGroupLabel;
-              const inProgress = group.tasks.filter((task) => task.status === "IN_PROGRESS").length;
-              const signals = group.tasks.filter(hasSignal).length;
-              return (
-                <button
-                  type="button"
-                  className="job-map__assembly"
-                  data-selected={active}
-                  aria-pressed={active}
-                  key={group.label}
-                  onClick={() => {
-                    const next = group.tasks.find(hasSignal) ??
-                      group.tasks.find((task) => task.status === "IN_PROGRESS") ??
-                      group.tasks[0];
-                    if (next) chooseTask(next.taskId);
-                  }}
-                >
-                  <span className="job-map__assembly-top">
-                    <span className="job-map__assembly-index">{String(index + 1).padStart(2, "0")}</span>
-                    <span className="job-map__assembly-mark" aria-hidden="true">↗</span>
-                  </span>
-                  <span className="job-map__assembly-visual" aria-hidden="true">
-                    <span className="job-map__assembly-sheet job-map__assembly-sheet--back" />
-                    <span className="job-map__assembly-sheet job-map__assembly-sheet--mid" />
-                    <span className="job-map__assembly-sheet job-map__assembly-sheet--front" />
-                    <span className="job-map__assembly-axis" />
-                  </span>
-                  <span className="job-map__assembly-bottom">
-                    <strong>{group.label}</strong>
-                    <small>{group.tasks.length} {group.tasks.length === 1 ? "operație" : "operații"}</small>
-                  </span>
-                  <span className="job-map__assembly-signals">
-                    {inProgress > 0 ? <span>{inProgress} în lucru</span> : null}
-                    {signals > 0 ? <span className="job-map__signal">{signals} {signals === 1 ? "semnal" : "semnale"}</span> : null}
-                    {inProgress === 0 && signals === 0 ? <span>Vezi operațiile</span> : null}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <p className="job-map__schematic-note">Schemă de navigare între subansamble, nu desen tehnic sau geometrie de fabricație.</p>
-
-          <div className="job-map__route-heading">
-            <div>
-              <span className="job-map__eyebrow">TRASEUL OPERAȚIEI SELECTATE</span>
-              <h3>{selected?.processLabel}</h3>
+      {plan.tasks.length === 0 ? (
+        <p className="job-dossier__empty">Planul nu conține operații afișabile.</p>
+      ) : (
+        <div className="job-dossier__workspace">
+          <div className="job-dossier__visual">
+            <div className="job-dossier__visual-head">
+              <span className="job-dossier__eyebrow">COMPONENTELE LUCRĂRII</span>
+              <span>{groups.length} {groups.length === 1 ? "SECȚIUNE" : "SECȚIUNI"}</span>
             </div>
-            <span className="job-map__route-context">{selectedGroupLabel}</span>
-          </div>
-          <div className="job-map__trace" aria-label="Dependențe și continuări confirmate">
-            <div className="job-map__trace-stage" data-kind="before">
-              <span className="job-map__trace-label">01 / AȘTEAPTĂ ACUM</span>
-              {predecessors.length > 0 ? predecessors.map(({ task }) => (
-                <button
-                  key={task.taskId}
-                  type="button"
-                  className="job-map__trace-task"
-                  onClick={() => chooseTask(task.taskId)}
-                  aria-label={task.processLabel}
-                >
-                  <span className="job-map__trace-task-name">{taskCaption(task)}</span>
-                  <small>{task.statusLabel}</small>
+            <div className="job-dossier__scopes" role="group" aria-label="Părțile lucrării">
+              {multiple ? (
+                <button type="button" aria-pressed={!selectedGroup} onClick={() => changeScope(null)}>
+                  <small>01</small> COMPOZIȚIE
                 </button>
-              )) : (
-                <p className="job-map__trace-muted">
-                  {unknownPredecessors.length > 0
-                    ? "Există referințe nerezolvate în plan."
-                    : "Nicio dependență activă identificată."}
-                </p>
+              ) : null}
+              {groups.map((group, index) => (
+                <button type="button" key={group.label}
+                  aria-pressed={selectedGroup?.label === group.label || (!multiple && !selectedGroup)}
+                  onClick={() => changeScope(group.label)}>
+                  <small>{String(index + (multiple ? 2 : 1)).padStart(2, "0")}</small> {group.label}
+                </button>
+              ))}
+            </div>
+            <div className="job-dossier__stage" data-view={view} aria-label="Reprezentare orientativă a lucrării">
+              <div className="job-dossier__grid" aria-hidden="true" />
+              {previewPanel ? <div className="job-dossier__panel-shape" aria-hidden="true" /> : null}
+              {previewLetters && inscription ? (
+                <div className="job-dossier__letters" aria-hidden="true">{inscription}</div>
+              ) : (
+                <div className="job-dossier__fallback" aria-hidden="true">
+                  {selectedGroup?.label ?? displayProduct}
+                </div>
               )}
+              <span className="job-dossier__disclaimer">VIZUAL ORIENTATIV · NU ESTE GEOMETRIE CAD</span>
             </div>
-            <div className="job-map__trace-junction" aria-hidden="true"><span>{predecessors.length ? "→" : "·"}</span></div>
-            <div className="job-map__trace-stage job-map__trace-stage--selected">
-              <span className="job-map__trace-label">02 / ÎN FOCUS</span>
-              <strong className="job-map__trace-selected-title">{selected?.processLabel}</strong>
-              <span className="job-map__trace-status">{selected?.statusLabel}</span>
-              {selected && hasSignal(selected) ? <span className="job-map__trace-signal">Necesită atenție</span> : null}
-              {selected?.waitingFor.length ? <span className="job-map__trace-info">Așteaptă operații raportate de plan</span> : null}
-            </div>
-            <div className="job-map__trace-junction" aria-hidden="true"><span>{successors.length ? "→" : "·"}</span></div>
-            <div className="job-map__trace-stage" data-kind="after">
-              <span className="job-map__trace-label">03 / AȘTEAPTĂ ACEASTĂ OPERAȚIE</span>
-              {successors.length > 0 ? successors.map(({ task }) => (
-                <button
-                  key={task.taskId}
-                  type="button"
-                  className="job-map__trace-task"
-                  onClick={() => chooseTask(task.taskId)}
-                  aria-label={task.processLabel}
-                >
-                  <span className="job-map__trace-task-name">{taskCaption(task)}</span>
-                  <small>{task.statusLabel}</small>
-                </button>
-              )) : <p className="job-map__trace-muted">Nicio operație nu așteaptă acum această operație.</p>}
+            <div className="job-dossier__visual-foot">
+              <div><strong>{currentScope}</strong>
+                <span>{selectedGroup ? String(available.length) + " operații în secțiune" : displayProduct}</span>
+              </div>
+              <div><strong>{activeCount}</strong><span>în lucru</span></div>
             </div>
           </div>
-          {predecessors.length === 0 && successors.length === 0 ? (
-            <p className="job-map__no-links">Lipsa legăturilor vizibile nu confirmă automat eligibilitatea de pornire.</p>
-          ) : null}
 
-          <div className="job-map__queue">
-            <div className="job-map__queue-title">
-              <strong>Operații · {selectedGroup?.label}</strong>
-              <span>{selectedGroup?.tasks.length ?? 0} în grup</span>
+          <div className="job-dossier__operations">
+            <div className="job-dossier__operations-title">
+              <div>
+                <span className="job-dossier__eyebrow">02 / ATELIER · OPERAȚII</span>
+                <h3>{selectedGroup ? "Operații · " + selectedGroup.label : "Operațiile lucrării"}</h3>
+                <p>{filtered.length} din {available.length} operații afișabile în selecția curentă.</p>
+              </div>
+              {jobAttention ? <div className="job-dossier__attention"><strong>DE VERIFICAT</strong><span>{jobAttention}</span></div> : null}
             </div>
-            <div className="job-map__queue-list" role="group" aria-label="Selectează operația din subansamblu">
-              {selectedGroup?.tasks.map((task) => {
-                const active = selected?.taskId === task.taskId;
-                return (
-                  <button
-                    type="button"
-                    key={task.taskId}
-                    className="job-map__queue-task"
-                    aria-pressed={active}
-                    data-selected={active}
-                    onClick={() => chooseTask(task.taskId)}
-                  >
-                    <span className="job-map__queue-index">{task.seqLabel || "·"}</span>
-                    <span className="job-map__queue-name">{task.processLabel}</span>
-                    <span className="job-map__queue-status">{task.statusLabel}</span>
-                    {hasSignal(task) ? <span className="job-map__queue-alert" aria-label="Necesită verificare">!</span> : null}
-                  </button>
-                );
-              })}
+            <div className="job-dossier__tools">
+              <div className="job-dossier__filters" role="group" aria-label="Filtrare operații">
+                <button type="button" aria-pressed={filter === "all"} onClick={() => changeFilter("all")}>TOATE</button>
+                <button type="button" aria-pressed={filter === "active"} onClick={() => changeFilter("active")}>ÎN LUCRU</button>
+                <button type="button" aria-pressed={filter === "waiting"} onClick={() => changeFilter("waiting")}>DEPENDENȚE</button>
+              </div>
+              <input aria-label="Caută operație" type="search" placeholder="Caută operație..." value={query}
+                onChange={(event) => { setQuery(event.currentTarget.value); setPage(1); setTaskId(null); }} />
             </div>
+            <div className="job-dossier__tasks" role="group" aria-label="Operațiile filtrate">
+              {shown.map((task) => (
+                <button type="button" key={task.taskId} className="job-dossier__task"
+                  aria-pressed={task.taskId === selected?.taskId}
+                  data-selected={task.taskId === selected?.taskId}
+                  onClick={() => setTaskId(task.taskId)}>
+                  <span className="job-dossier__seq">{task.seqLabel || "—"}</span>
+                  <span className="job-dossier__task-copy"><strong>{task.processLabel || "Operație"}</strong><small>{task.assignmentLabel}</small></span>
+                  <span className="job-dossier__task-state">{task.statusLabel}</span>
+                  <span className="job-dossier__task-arrow" aria-hidden="true">{hasIssue(task) ? "!" : "↗"}</span>
+                </button>
+              ))}
+              {shown.length === 0 ? <p className="job-dossier__empty">Nu există operații pentru filtrul ales.</p> : null}
+            </div>
+            <div className="job-dossier__pager">
+              <span>{shown.length ? (currentPage - 1) * PER_PAGE + 1 : 0}–{Math.min(currentPage * PER_PAGE, filtered.length)} din {filtered.length}</span>
+              <div>
+                <button type="button" aria-label="Pagina anterioară" disabled={currentPage <= 1}
+                  onClick={() => { setPage(currentPage - 1); setTaskId(null); }}>←</button>
+                <span>{currentPage} / {pages}</span>
+                <button type="button" aria-label="Pagina următoare" disabled={currentPage >= pages}
+                  onClick={() => { setPage(currentPage + 1); setTaskId(null); }}>→</button>
+              </div>
+            </div>
+            <aside className="job-dossier__details" aria-label="Detaliile operației selectate" aria-live="polite">
+              {selected ? (
+                <>
+                  <div className="job-dossier__details-head">
+                    <div>
+                      <span className="job-dossier__eyebrow">OPERAȚIE SELECTATĂ / {selected.seqLabel || "—"}</span>
+                      <h4>{selected.processLabel}</h4>
+                      <p>{selected.statusLabel} · {selected.scopeLabel || "Operații generale"}</p>
+                    </div>
+                    <a href={executionHref(plan.planId, { jobId })}>VEZI ÎN EXECUȚIE ↗</a>
+                  </div>
+                  <dl className="job-dossier__facts">
+                    <div><dt>Alocare</dt><dd>{selected.executorLabel ?? selected.assignmentLabel}</dd></div>
+                    <div><dt>Capabilitate</dt><dd>{selected.requiredCapabilityLabel ?? "Nespecificată"}</dd></div>
+                    <div><dt>Planificat</dt><dd>{selected.plannedTimeLabel}</dd></div>
+                    <div><dt>Realizat</dt><dd>{selected.actualDurationLabel}</dd></div>
+                  </dl>
+                  {warningTexts.length ? <div className="job-dossier__warning">
+                    <strong>Atenționări ale operației</strong>
+                    <ul>{[...new Set(warningTexts)].map((s) => <li key={s}>{s}</li>)}</ul>
+                  </div> : null}
+                  {dependencies.length ? <div className="job-dossier__dependency">
+                    <strong>Dependențe raportate</strong>
+                    <ul>{dependencies.map((s) => <li key={s}>{s}</li>)}</ul>
+                    <small>Etichete din plan; nu sunt transformate în legături către operații ambigue.</small>
+                  </div> : null}
+                  {selected.materialBlockLabel ? <p className="job-dossier__advisory">
+                    Materiale: {selected.materialBlockLabel}. Semnalul nu reprezintă automat un blocaj de execuție.
+                  </p> : null}
+                </>
+              ) : <p>Selectează un alt filtru pentru a vedea operațiile.</p>}
+            </aside>
           </div>
         </div>
-
-        <aside className="job-map__inspector" aria-label="Detaliile operației selectate" aria-live="polite">
-          {selected ? (
-            <>
-              <span className="job-map__eyebrow">OPERAȚIE SELECTATĂ / {selected.seqLabel || "—"}</span>
-              <h3>{selected.processLabel}</h3>
-              <p className="job-map__inspector-state">{selected.statusLabel} · {selectedGroupLabel}</p>
-              {uniqueMessages.length > 0 ? (
-                <div className="job-map__attention">
-                  <strong>Atenționări raportate</strong>
-                  {uniqueMessages.length > 0 ? (
-                    <ul>{uniqueMessages.map((message) => <li key={message}>{message}</li>)}</ul>
-                  ) : null}
-                </div>
-              ) : null}
-              <dl className="job-map__facts">
-                <div><dt>Responsabil / alocare</dt><dd>{selected.executorLabel ?? selected.assignmentLabel}</dd></div>
-                <div><dt>Capabilitate</dt><dd>{selected.requiredCapabilityLabel ?? "Nespecificată"}</dd></div>
-                <div><dt>Planificat</dt><dd>{selected.plannedTimeLabel}</dd></div>
-                <div><dt>Realizat</dt><dd>{selected.actualDurationLabel}</dd></div>
-              </dl>
-              {(dependencyLabels.length > 0 || unknownPredecessors.length > 0) ? (
-                <div className="job-map__dependencies">
-                  <strong>Dependențe raportate</strong>
-                  {dependencyLabels.length > 0 ? (
-                    <ul>{dependencyLabels.map((label, i) => <li key={i}>{label}</li>)}</ul>
-                  ) : <p>Planul raportează operații anterioare.</p>}
-                </div>
-              ) : null}
-              {selected.materialBlockLabel ? (
-                <p className="job-map__advisory">
-                  Materiale: {selected.materialBlockLabel}. Semnalul nu este automat o interdicție de pornire; motorul decide eligibilitatea.
-                </p>
-              ) : null}
-              <a className="job-map__execute" href={executionHref(plan.planId, { jobId })}>
-                Deschide planul în Execuție <span aria-hidden="true">↗</span>
-              </a>
-              <p className="job-map__fineprint">
-                Pornirea, finalizarea și alocarea rămân în Execuție. Traseul vizual nu schimbă regulile motorului.
-              </p>
-            </>
-          ) : null}
-        </aside>
-      </div>
+      )}
     </section>
   );
 }
