@@ -26,9 +26,9 @@ function groupTasks(tasks: ExecutionTaskTransport[]): Group[] {
 }
 
 export function JobProductionMap({
-  plan, jobId, jobAttention,
+  plan, jobId,
 }: {
-  plan: ExecutionPlanTransport; jobId: string; jobAttention?: string | null;
+  plan: ExecutionPlanTransport; jobId: string;
 }) {
   const groups = useMemo(() => groupTasks(plan.tasks), [plan.tasks]);
   const multiple = groups.length > 1;
@@ -52,6 +52,7 @@ export function JobProductionMap({
     shown.find(hasIssue) ?? shown.find(active) ?? shown[0] ?? null;
   const currentScope = selectedGroup?.label ?? (multiple ? "Compoziția lucrării" : groups[0]?.label ?? "Lucrare");
   const activeCount = available.filter(active).length;
+  const issueCount = available.filter(hasIssue).length;
   const hasPanel = groups.some((group) => viewType(group.label) === "panel");
   const hasLetters = groups.some((group) => viewType(group.label) === "letters");
   const view = selectedGroup ? viewType(selectedGroup.label) : "composition";
@@ -138,7 +139,7 @@ export function JobProductionMap({
                 <h3>{selectedGroup ? "Operații · " + selectedGroup.label : "Operațiile lucrării"}</h3>
                 <p>{filtered.length} din {available.length} operații afișabile în selecția curentă.</p>
               </div>
-              {jobAttention ? <div className="job-dossier__attention"><strong>DE VERIFICAT</strong><span>{jobAttention}</span></div> : null}
+              {issueCount > 0 ? <div className="job-dossier__attention"><strong>SEMNALE ÎN SECȚIUNE</strong><span>{issueCount} {issueCount === 1 ? "operație necesită" : "operații necesită"} verificare</span></div> : null}
             </div>
             <div className="job-dossier__tools">
               <div className="job-dossier__filters" role="group" aria-label="Filtrare operații">
