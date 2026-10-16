@@ -61,7 +61,9 @@ export function resolveRequestedMaterialQuantity(
   if (!Number.isFinite(estimatedQuantity) || estimatedQuantity <= 0) {
     return { ok: false, error: "invalid_quantity" };
   }
-  const quantity = requested === undefined ? estimatedQuantity : requested;
+  // A fractional estimate of individual pieces must be rounded up, never down.
+  const minimum = unit === "buc" ? Math.ceil(estimatedQuantity) : estimatedQuantity;
+  const quantity = requested === undefined ? minimum : requested;
   if (typeof quantity !== "number" || !Number.isFinite(quantity) || quantity <= 0 || quantity > 1e9) {
     return { ok: false, error: "invalid_quantity" };
   }
