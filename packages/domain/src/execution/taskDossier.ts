@@ -21,6 +21,7 @@ export const TASK_DOSSIER_ERRORS = [
   "file_corrupt",
   "forbidden",
   "artifact_scope",
+  "invalid_purpose",
 ] as const;
 export type TaskDossierError = (typeof TASK_DOSSIER_ERRORS)[number];
 
@@ -28,6 +29,15 @@ export type TaskDossierActor = {
   accountId: string;
   operatorId: string | null;
 };
+
+export const FILE_PURPOSE_CODES = [
+  "WORKING",
+  "EXECUTION_READY",
+  "TECHNICAL_REFERENCE",
+  "EVIDENCE",
+  "RECORD",
+] as const;
+export type FilePurposeCode = (typeof FILE_PURPOSE_CODES)[number];
 
 export type TaskArtifactCategory = "PHOTO" | "DOCUMENT" | "TECHNICAL";
 export type TaskArtifactPreview = "IMAGE" | "NONE";
@@ -107,6 +117,50 @@ export function issueReasonLabel(code: IssueReasonCode): string {
       return exhaustive;
     }
   }
+}
+
+export function filePurposeLabel(code: FilePurposeCode): string {
+  switch (code) {
+    case "WORKING":
+      return "Fișier de lucru";
+    case "EXECUTION_READY":
+      return "Pregătit pentru execuție";
+    case "TECHNICAL_REFERENCE":
+      return "Referință tehnică";
+    case "EVIDENCE":
+      return "Dovadă";
+    case "RECORD":
+      return "Evidență";
+    default: {
+      const exhaustive: never = code;
+      return exhaustive;
+    }
+  }
+}
+
+export function parseOptionalFilePurpose(
+  value: unknown,
+): { ok: true; purpose: FilePurposeCode | null } | { ok: false; error: "invalid_purpose" } {
+  if (value === undefined || value === null || value === "") {
+    return { ok: true, purpose: null };
+  }
+  if (typeof value !== "string" || !FILE_PURPOSE_CODES.includes(value.trim().toUpperCase() as FilePurposeCode)) {
+    return { ok: false, error: "invalid_purpose" };
+  }
+  return { ok: true, purpose: value.trim().toUpperCase() as FilePurposeCode };
+}
+
+export function parseOptionalFileNote(
+  value: unknown,
+): { ok: true; note: string | null } | { ok: false; error: "invalid_text" } {
+  if (value === undefined || value === null || value === "") {
+    return { ok: true, note: null };
+  }
+  const parsed = parseDossierText(value);
+  if (!parsed.ok) {
+    return parsed;
+  }
+  return { ok: true, note: parsed.text };
 }
 
 export function parseDossierText(value: unknown): { ok: true; text: string } | { ok: false; error: "invalid_text" } {

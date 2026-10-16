@@ -16,6 +16,10 @@ export type DossierFile = {
   mimeType: string;
   sizeLabel: string;
   category: string;
+  purpose: string | null;
+  purposeLabel: string | null;
+  note: string | null;
+  usedAt: string | null;
   preview: string;
   uploadedAt: string;
   downloadHref: string;
@@ -74,12 +78,30 @@ export async function reportTaskIssue(
   return body.dossier;
 }
 
-export async function uploadTaskArtifact(taskId: string, file: File): Promise<TaskDossier> {
+export async function uploadTaskArtifact(
+  taskId: string,
+  file: File,
+  options?: { purpose?: string; note?: string },
+): Promise<TaskDossier> {
   const form = new FormData();
   form.set("file", file);
+  if (options?.purpose) {
+    form.set("purpose", options.purpose);
+  }
+  if (options?.note) {
+    form.set("note", options.note);
+  }
   const body = (await postForm(
     `/api/execution-tasks/${encodeURIComponent(taskId)}/artifacts`,
     form,
+  )) as { dossier: TaskDossier };
+  return body.dossier;
+}
+
+export async function markTaskArtifactUsed(taskId: string, artifactId: string): Promise<TaskDossier> {
+  const body = (await postJson(
+    `/api/execution-tasks/${encodeURIComponent(taskId)}/artifact-use`,
+    { artifactId },
   )) as { dossier: TaskDossier };
   return body.dossier;
 }

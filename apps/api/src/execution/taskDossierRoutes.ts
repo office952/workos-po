@@ -103,6 +103,8 @@ export function registerTaskDossierRoutes(app: Hono<ApiEnv>): void {
           mimeType: file.type || null,
           bytes: new Uint8Array(await file.arrayBuffer()),
           supersedesArtifactId: supersedes,
+          purpose: body["purpose"],
+          note: body["note"],
         },
         actor,
         new Date().toISOString(),
@@ -126,6 +128,29 @@ export function registerTaskDossierRoutes(app: Hono<ApiEnv>): void {
     }
     const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/artifact-links");
     const result = getProductSystem(c).linkTaskArtifact(
+      taskId,
+      artifactId,
+      actor,
+      new Date().toISOString(),
+    );
+    return dossierResult(c, result);
+  });
+
+  app.post("/api/execution-tasks/:taskId/artifact-use", async (c) => {
+    const actor = writerActor(c);
+    if (!actor) {
+      return c.json({ error: "invalid_session" }, 403);
+    }
+    const body = await c.req.json().catch(() => null);
+    const artifactId =
+      typeof body === "object" && body !== null && typeof (body as { artifactId?: unknown }).artifactId === "string"
+        ? (body as { artifactId: string }).artifactId.trim()
+        : "";
+    if (!artifactId) {
+      return c.json({ error: "invalid_payload" }, 400);
+    }
+    const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/artifact-use");
+    const result = getProductSystem(c).markTaskArtifactUsed(
       taskId,
       artifactId,
       actor,
@@ -198,6 +223,7 @@ function dossierStatus(error: TaskDossierError): 400 | 403 | 404 | 409 | 413 | 4
     case "invalid_text":
     case "invalid_reason":
     case "invalid_file":
+    case "invalid_purpose":
     case "file_corrupt":
       return 422;
     case "storage_unavailable":

@@ -50,6 +50,12 @@
   border-left: 3px solid var(--shell-signal);
 }
 
+.task-dossier__drop {
+  padding: 12px;
+  border: 1px dashed var(--color-border);
+  background: var(--color-surface-raised);
+}
+
 .task-dossier__file img {
   max-width: 100%;
   height: auto;

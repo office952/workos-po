@@ -5,6 +5,7 @@ import {
   addTaskObservation,
   linkTaskArtifact,
   loadTaskDossier,
+  markTaskArtifactUsed,
   reportTaskIssue,
   uploadTaskArtifact,
   type TaskDossier,
@@ -21,6 +22,15 @@ const ISSUE_REASONS = [
   { value: "DRAWING", label: "Desen / fișier" },
   { value: "QUALITY", label: "Calitate" },
   { value: "OTHER", label: "Altceva" },
+];
+
+const FILE_PURPOSES = [
+  { value: "", label: "Fără scop declarat" },
+  { value: "WORKING", label: "Fișier de lucru" },
+  { value: "EXECUTION_READY", label: "Pregătit pentru execuție" },
+  { value: "TECHNICAL_REFERENCE", label: "Referință tehnică" },
+  { value: "EVIDENCE", label: "Dovadă" },
+  { value: "RECORD", label: "Evidență" },
 ];
 
 type Composer = "observation" | "file" | "issue" | "instruction" | null;
@@ -40,6 +50,8 @@ export function TaskDossierPanel({
   const [issueText, setIssueText] = useState("");
   const [issueReason, setIssueReason] = useState("MATERIAL");
   const [file, setFile] = useState<File | null>(null);
+  const [filePurpose, setFilePurpose] = useState("");
+  const [fileNote, setFileNote] = useState("");
   const [pending, setPending] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -104,7 +116,7 @@ export function TaskDossierPanel({
           Adaugă observație
         </Button>
         <Button variant="secondary" disabled={pending} onClick={() => openComposer("file")}>
-          Atașează fișier
+          Adaugă fișier
         </Button>
         <Button variant="secondary" disabled={pending} onClick={() => openComposer("issue")}>
           Semnalează problemă
@@ -223,24 +235,61 @@ export function TaskDossierPanel({
               return;
             }
             const selected = file;
-            void run(() => uploadTaskArtifact(taskId, selected), "Fișierul a fost atașat.").then((saved) => {
+            const purpose = filePurpose;
+            const note = fileNote;
+            void run(
+              () => uploadTaskArtifact(taskId, selected, { purpose, note }),
+              "Fișierul a fost păstrat în dosar. Starea operației nu s-a schimbat.",
+            ).then((saved) => {
               if (saved) {
                 setFile(null);
+                setFilePurpose("");
+                setFileNote("");
               }
             });
           }}
         >
-          <label className="field" htmlFor={fileInputId}>
-            <span className="field__label">Fișier</span>
-            <input
-              id={fileInputId}
-              className="field__control"
-              type="file"
-              accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.txt,.dxf,.dwg,.cdr,.nc,.tap,.gcode"
-              onChange={(event) => setFile(event.currentTarget.files?.[0] ?? null)}
-            />
-          </label>
-          {file ? <p>{file.name}</p> : null}
+          <div
+            className="task-dossier__drop"
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              const dropped = event.dataTransfer.files[0];
+              if (dropped) {
+                setFile(dropped);
+              }
+            }}
+          >
+            <label className="field" htmlFor={fileInputId}>
+              <span className="field__label">Fișier</span>
+              <input
+                id={fileInputId}
+                className="field__control"
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.txt,.dxf,.dwg,.cdr,.nc,.tap,.gcode"
+                onChange={(event) => setFile(event.currentTarget.files?.[0] ?? null)}
+              />
+            </label>
+            <p className="task-dossier__meta">Poți selecta fișierul sau îl poți trage aici.</p>
+          </div>
+          {file ? (
+            <p className="task-dossier__meta">
+              {file.name} · {fileExtension(file.name)} · {formatBytes(file.size)}
+            </p>
+          ) : null}
+          <SelectField
+            id={`${fileInputId}-purpose`}
+            label="Scop, opțional"
+            value={filePurpose}
+            options={FILE_PURPOSES}
+            onChange={setFilePurpose}
+          />
+          <TextField
+            id={`${fileInputId}-note`}
+            label="Explicație, opțională"
+            value={fileNote}
+            onChange={setFileNote}
+          />
           <Button type="submit" disabled={pending || !file}>
             Încarcă fișierul
           </Button>
@@ -255,7 +304,17 @@ export function TaskDossierPanel({
           </DossierSection>
           <DossierSection title="Fișiere" empty={null}>
             {dossier.files.map((item) => (
-              <FileRow key={item.artifactId} file={item} />
+              <FileRow
+                key={item.artifactId}
+                file={item}
+                pending={pending}
+                onMarkUsed={() =>
+                  void run(
+                    () => markTaskArtifactUsed(taskId, item.artifactId),
+                    "Fișierul a fost marcat ca utilizat la execuție.",
+                  )
+                }
+              />
             ))}
           </DossierSection>
           {dossier.planFiles.some((item) => !item.linkedToTask) ? (
@@ -350,22 +409,62 @@ function DossierNote({
 
 function FileRow({
   file,
+  pending = false,
+  onMarkUsed,
 }: {
-  file: { originalFileName: string; sizeLabel: string; preview: string; downloadHref: string; mimeType: string };
+  file: {
+    originalFileName: string;
+    sizeLabel: string;
+    preview: string;
+    downloadHref: string;
+    mimeType: string;
+    purposeLabel: string | null;
+    note: string | null;
+    usedAt: string | null;
+  };
+  pending?: boolean;
+  onMarkUsed?: () => void;
 }) {
+  const extension = fileExtension(file.originalFileName);
   return (
     <article className="task-dossier__file">
       {file.preview === "IMAGE" ? (
         <img src={file.downloadHref} alt={file.originalFileName} />
-      ) : (
-        <p>Previzualizarea nu este disponibilă pentru acest format.</p>
-      )}
+      ) : null}
       <a className="text-link" href={file.downloadHref}>
         {file.originalFileName}
       </a>
-      <span>{file.sizeLabel}</span>
+      <p className="task-dossier__meta">
+        {extension} · {file.sizeLabel}
+        {file.purposeLabel ? ` · ${file.purposeLabel}` : ""}
+        {file.usedAt ? " · Utilizat la execuție" : ""}
+      </p>
+      {file.note ? <p>{file.note}</p> : null}
+      {file.preview !== "IMAGE" ? (
+        <p className="task-dossier__meta">Descărcare, fără previzualizare pentru acest format.</p>
+      ) : null}
+      {onMarkUsed && !file.usedAt ? (
+        <Button variant="ghost" disabled={pending} onClick={onMarkUsed}>
+          Marchează utilizat la execuție
+        </Button>
+      ) : null}
     </article>
   );
+}
+
+function fileExtension(name: string): string {
+  const extension = name.split(".").pop()?.trim().toLowerCase();
+  return extension && extension !== name.toLowerCase() ? extension : "fișier";
+}
+
+function formatBytes(size: number): string {
+  if (size < 1024) {
+    return `${size} B`;
+  }
+  if (size < 1024 * 1024) {
+    return `${Math.round(size / 1024)} KB`;
+  }
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function historyLabel(kind: string): string {
@@ -380,6 +479,8 @@ function historyLabel(kind: string): string {
       return "Fișier încărcat";
     case "ARTIFACT_LINKED":
       return "Fișier asociat";
+    case "ARTIFACT_MARKED_USED":
+      return "Fișier marcat utilizat";
     case "PROVIDER_AUTO_BOUND":
       return "Utilaj asociat automat";
     default:

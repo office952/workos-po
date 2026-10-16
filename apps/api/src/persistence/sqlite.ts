@@ -130,10 +130,14 @@ export function applySelectedMigrations(
       if (file === MATERIAL_REQUEST_QUANTITY_MIGRATION) {
         recoverInterruptedMaterialRequestRebuild(db);
       }
-      db.exec(sql);
-      db.prepare(
-        "INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)",
-      ).run(file, new Date().toISOString());
+      if (migrationManagesOwnTransaction(sql)) {
+        db.exec(sql);
+        db.prepare(
+          "INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)",
+        ).run(file, new Date().toISOString());
+      } else {
+        applyMigrationSql(db, file, sql);
+      }
     } catch (error) {
       try {
         if (db.inTransaction) {
@@ -145,6 +149,31 @@ export function applySelectedMigrations(
       throw error;
     }
   }
+}
+
+/**
+ * Schema changes and the ledger row commit together.
+ * A throw after partial SQL rolls the schema back and leaves the ledger unchanged.
+ * Migration 043 already opens its own immediate transaction; wrapping it again is invalid.
+ */
+export function applyMigrationSql(
+  db: SqliteDatabase,
+  id: string,
+  sql: string,
+  beforeLedger?: () => void,
+): void {
+  const commit = db.transaction(() => {
+    db.exec(sql);
+    beforeLedger?.();
+    db.prepare(
+      "INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)",
+    ).run(id, new Date().toISOString());
+  });
+  commit();
+}
+
+function migrationManagesOwnTransaction(sql: string): boolean {
+  return /^\s*BEGIN IMMEDIATE\s*;/m.test(sql);
 }
 
 function resolveVitestDataDir(): string {

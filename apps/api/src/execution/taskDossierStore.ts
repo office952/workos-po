@@ -1,10 +1,13 @@
 import { randomUUID } from "node:crypto";
 import {
   classifyTaskArtifact,
+  filePurposeLabel,
   formatAttachmentSize,
   issueReasonLabel,
   parseDossierText,
   parseIssueReason,
+  parseOptionalFileNote,
+  parseOptionalFilePurpose,
   safeAttachmentDownloadAsciiName,
   taskArtifactDownloadHref,
   type IssueReasonCode,
@@ -52,6 +55,9 @@ type ArtifactRow = {
   uploaded_by_account_id: string;
   uploaded_by_operator_id: string | null;
   uploaded_at: string;
+  purpose: string | null;
+  purpose_note: string | null;
+  used_at: string | null;
 };
 
 type EventRow = {
@@ -235,6 +241,8 @@ export function addTaskArtifact(
     mimeType: string | null;
     bytes: Uint8Array;
     supersedesArtifactId?: string | null;
+    purpose?: unknown;
+    note?: unknown;
   },
   actor: DossierActor,
   uploadedAt: string,
@@ -251,6 +259,14 @@ export function addTaskArtifact(
   });
   if (!classified.ok) {
     return classified;
+  }
+  const purpose = parseOptionalFilePurpose(input.purpose);
+  if (!purpose.ok) {
+    return purpose;
+  }
+  const note = parseOptionalFileNote(input.note);
+  if (!note.ok) {
+    return note;
   }
   if (input.supersedesArtifactId) {
     const previous = artifactById(db, input.supersedesArtifactId);
@@ -276,8 +292,9 @@ export function addTaskArtifact(
         INSERT INTO execution_job_artifacts (
           artifact_id, plan_id, job_id, original_file_name, mime_type, size_bytes,
           sha256, storage_key, category, preview, supersedes_artifact_id,
-          uploaded_by_account_id, uploaded_by_operator_id, uploaded_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          uploaded_by_account_id, uploaded_by_operator_id, uploaded_at,
+          purpose, purpose_note, used_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
       `,
       ).run(
         artifactId,
@@ -294,6 +311,8 @@ export function addTaskArtifact(
         actor.accountId,
         actor.operatorId,
         uploadedAt,
+        purpose.purpose,
+        note.note,
       );
       db.prepare(
         `
@@ -315,6 +334,7 @@ export function addTaskArtifact(
           fileName: input.originalFileName.slice(0, 180),
           sha256: stored.sha256,
           category: classified.category,
+          purpose: purpose.purpose,
           supersedesArtifactId: input.supersedesArtifactId ?? null,
         },
       });
@@ -381,6 +401,54 @@ export function linkTaskArtifact(
   return { ok: true, dossier, alreadyApplied: Boolean(existing) };
 }
 
+export function markTaskArtifactUsed(
+  db: SqliteDatabase,
+  taskId: string,
+  artifactId: string,
+  actor: DossierActor,
+  usedAt: string,
+): TaskDossierResult<NonNullable<ReturnType<typeof readTaskDossier>>> & { alreadyApplied?: boolean } {
+  const located = locateTask(db, taskId);
+  const artifact = artifactById(db, artifactId);
+  if (!located || !artifact) {
+    return { ok: false, error: "not_found" };
+  }
+  if (artifact.plan_id !== located.planId) {
+    return { ok: false, error: "artifact_scope" };
+  }
+  const linked = db
+    .prepare(`SELECT 1 AS linked FROM execution_artifact_task_links WHERE artifact_id = ? AND task_id = ?`)
+    .get(artifactId, taskId) as { linked: number } | undefined;
+  if (!linked) {
+    return { ok: false, error: "artifact_scope" };
+  }
+  if (!artifact.used_at) {
+    const run = db.transaction(() => {
+      db.prepare(`UPDATE execution_job_artifacts SET used_at = ? WHERE artifact_id = ? AND used_at IS NULL`).run(
+        usedAt,
+        artifactId,
+      );
+      recordDossierEvent(db, {
+        planId: located.planId,
+        taskId,
+        jobId: located.jobId,
+        eventKind: "ARTIFACT_MARKED_USED",
+        actorAccountId: actor.accountId,
+        actorOperatorId: actor.operatorId,
+        occurredAt: usedAt,
+        artifactId,
+        detail: { fileName: artifact.original_file_name },
+      });
+    });
+    run();
+  }
+  const dossier = readTaskDossier(db, taskId);
+  if (!dossier) {
+    return { ok: false, error: "not_found" };
+  }
+  return { ok: true, dossier, alreadyApplied: Boolean(artifact.used_at) };
+}
+
 export function readTaskArtifactDownload(
   db: SqliteDatabase,
   artifactId: string,
@@ -429,6 +497,10 @@ function presentArtifact(row: ArtifactRow, taskId: string, linkedToTask: boolean
     sizeLabel: formatAttachmentSize(row.size_bytes),
     sha256: row.sha256,
     category: row.category,
+    purpose: row.purpose,
+    purposeLabel: knownPurposeLabel(row.purpose),
+    note: row.purpose_note,
+    usedAt: row.used_at,
     preview: row.preview,
     supersedesArtifactId: row.supersedes_artifact_id,
     uploadedByAccountId: row.uploaded_by_account_id,
@@ -438,6 +510,14 @@ function presentArtifact(row: ArtifactRow, taskId: string, linkedToTask: boolean
     linkedToTask,
     taskId,
   };
+}
+
+function knownPurposeLabel(purpose: string | null): string | null {
+  if (!purpose) {
+    return null;
+  }
+  const parsed = parseOptionalFilePurpose(purpose);
+  return parsed.ok && parsed.purpose ? filePurposeLabel(parsed.purpose) : null;
 }
 
 function artifactById(db: SqliteDatabase, artifactId: string): ArtifactRow | null {

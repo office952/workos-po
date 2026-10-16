@@ -126,6 +126,8 @@ describe("task dossier and unique provider binding", () => {
     const pdf = new File(["%PDF-1.4"], "plan.pdf", { type: "application/pdf" });
     const upload = new FormData();
     upload.set("file", pdf);
+    upload.set("purpose", "RECORD");
+    upload.set("note", "Păstrat pentru evidență.");
     const stored = await app.request(`/api/execution-tasks/${taskId}/artifacts`, {
       method: "POST",
       headers: { cookie },
@@ -134,6 +136,12 @@ describe("task dossier and unique provider binding", () => {
     expect(stored.status).toBe(200);
     const dossier = (await readBody(stored)).dossier as JsonObject;
     const artifactId = String((dossier.files as JsonObject[])[0]?.artifactId);
+    expect((dossier.files as JsonObject[])[0]?.purpose).toBe("RECORD");
+    expect((dossier.files as JsonObject[])[0]?.note).toBe("Păstrat pentru evidență.");
+    expect((dossier.files as JsonObject[])[0]?.usedAt).toBeNull();
+    expect(runtime.readExecutionPlanByTaskId(taskId)?.tasks.find((item) => item.taskId === taskId)?.status).toBe(
+      "PLANNED",
+    );
     const nextPdf = new File(["%PDF-1.5"], "plan-v2.pdf", { type: "application/pdf" });
     const version = new FormData();
     version.set("file", nextPdf);
@@ -233,6 +241,21 @@ describe("task dossier and unique provider binding", () => {
         expect.objectContaining({ body: "Observație după închidere." }),
       ]),
     );
+    const remembered = await app.request(`/api/execution-tasks/${taskId}/dossier`, withCookie(undefined, cookie));
+    const rememberedFiles = ((await readBody(remembered)).dossier as JsonObject).files as JsonObject[];
+    expect(rememberedFiles.some((item) => item.artifactId === artifactId)).toBe(true);
+    expect(rememberedFiles.some((item) => item.supersedesArtifactId === artifactId)).toBe(true);
+    const marked = await app.request(`/api/execution-tasks/${taskId}/artifact-use`, {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie },
+      body: JSON.stringify({ artifactId }),
+    });
+    expect(marked.status).toBe(200);
+    expect(
+      runtime.readExecutionPlanByTaskId(taskId)?.tasks.find((item) => item.taskId === taskId)?.status,
+    ).toBe("COMPLETED");
+    const used = ((await readBody(marked)).dossier as JsonObject).files as JsonObject[];
+    expect(used.find((item) => item.artifactId === artifactId)?.usedAt).toEqual(expect.any(String));
   });
 
   it("refuses zero or multiple providers and binds one provider once under concurrent requests", async () => {

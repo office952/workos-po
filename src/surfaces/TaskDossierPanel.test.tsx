@@ -65,7 +65,7 @@ describe("TaskDossierPanel", () => {
     );
 
     render(<TaskDossierPanel taskId="task-1" canInstruct={false} />);
-    await user.click(await screen.findByRole("button", { name: "Atașează fișier" }));
+    await user.click(await screen.findByRole("button", { name: "Adaugă fișier" }));
     const input = screen.getByLabelText("Fișier");
     const file = new File(["%PDF-1.4"], "plan.pdf", { type: "application/pdf" });
     await user.upload(input, file);
@@ -74,6 +74,6 @@ describe("TaskDossierPanel", () => {
     await waitFor(() => {
       expect(screen.getByText("Fișierul nu este într-un format permis.")).toBeInTheDocument();
     });
-    expect(screen.getByText("plan.pdf")).toBeInTheDocument();
+    expect(screen.getByText(/plan\.pdf/)).toBeInTheDocument();
   });
 });

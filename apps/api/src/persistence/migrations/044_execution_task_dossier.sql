@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS execution_job_artifacts (
   uploaded_by_account_id TEXT NOT NULL,
   uploaded_by_operator_id TEXT,
   uploaded_at TEXT NOT NULL,
+  purpose TEXT,
+  purpose_note TEXT,
+  used_at TEXT,
   FOREIGN KEY (plan_id) REFERENCES execution_plans(plan_id)
 );
 

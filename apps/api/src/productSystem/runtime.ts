@@ -168,6 +168,7 @@ import {
   addTaskArtifact as storeAddTaskArtifact,
   addTaskDossierEntry as storeAddTaskDossierEntry,
   linkTaskArtifact as storeLinkTaskArtifact,
+  markTaskArtifactUsed as storeMarkTaskArtifactUsed,
   readTaskArtifactDownload as storeReadTaskArtifactDownload,
   readTaskDossier as storeReadTaskDossier,
 } from "../execution/taskDossierStore.js";
@@ -458,6 +459,8 @@ export type ProductSystemRuntime = {
       mimeType: string | null;
       bytes: Uint8Array;
       supersedesArtifactId?: string | null;
+      purpose?: unknown;
+      note?: unknown;
     },
     actor: { accountId: string; operatorId: string | null },
     uploadedAt: string,
@@ -468,6 +471,12 @@ export type ProductSystemRuntime = {
     actor: { accountId: string; operatorId: string | null },
     linkedAt: string,
   ): ReturnType<typeof storeLinkTaskArtifact>;
+  markTaskArtifactUsed(
+    taskId: string,
+    artifactId: string,
+    actor: { accountId: string; operatorId: string | null },
+    usedAt: string,
+  ): ReturnType<typeof storeMarkTaskArtifactUsed>;
   readTaskArtifactDownload(artifactId: string): ReturnType<typeof storeReadTaskArtifactDownload>;
   materialReadinessContext(): MaterialReadinessContext;
   readMaterialReadiness(): MaterialReadinessModeRecord;
@@ -1065,6 +1074,9 @@ export function createProductSystemRuntimeFromOpenDb(
     },
     linkTaskArtifact(taskId, artifactId, actor, linkedAt) {
       return storeLinkTaskArtifact(db, taskId, artifactId, actor, linkedAt);
+    },
+    markTaskArtifactUsed(taskId, artifactId, actor, usedAt) {
+      return storeMarkTaskArtifactUsed(db, taskId, artifactId, actor, usedAt);
     },
     readTaskArtifactDownload(artifactId) {
       return storeReadTaskArtifactDownload(db, artifactId, documentsRoot);

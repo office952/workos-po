@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { TransportError } from "../api/http";
 import {
   assignTaskProvider,
@@ -12,7 +12,6 @@ import {
   recordQualityPass,
   closeReworkEpisode,
   startExecutionTask,
-  bindUniqueProvider,
   startMachineRun,
   stopMachineRun,
 } from "../api/lifecycle";
@@ -510,22 +509,6 @@ export function ExecutionPage({
   const actionableTask = plan ? firstActionableTask(plan.tasks) : null;
   const sessionKnown = session.status === "success";
   const outlineTaskId = currentTask?.taskId ?? null;
-  const bindAttempt = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!currentTask || currentTask.providerBindingState !== "UNIQUE_PENDING") {
-      return;
-    }
-    const attemptKey = `${currentTask.taskId}:${session.data?.displayName ?? "viewer"}`;
-    if (bindAttempt.current === attemptKey) {
-      return;
-    }
-    bindAttempt.current = attemptKey;
-    const taskIdToBind = currentTask.taskId;
-    void bindUniqueProvider(taskIdToBind)
-      .then(() => invalidateAfterExecutionTaskChange(planId))
-      .catch(() => undefined);
-  }, [currentTask, planId, session.data?.displayName]);
 
   useEffect(() => {
     if (!outlineTaskId) {
