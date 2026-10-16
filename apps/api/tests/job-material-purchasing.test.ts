@@ -110,6 +110,12 @@ describe("job material checks and procurement foundation", () => {
     expect(repeated.status).toBe(200);
     expect((await json(repeated)).alreadyApplied).toBe(true);
 
+    const conflictingReplay = await post({
+      status: "MISSING", actionKey: "n009-request-first", requestedQuantity: amount + 1,
+    }, cookie);
+    expect(conflictingReplay.status).toBe(409);
+    expect((await json(conflictingReplay)).error).toBe("idempotency_conflict");
+
     const duplicate = await post({
       status: "MISSING", actionKey: "n009-request-again", requestedQuantity: amount,
     }, cookie);
