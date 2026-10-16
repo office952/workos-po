@@ -1276,3 +1276,10 @@ export {
   type ChildRateEvidenceBasis,
   type ConfirmedChildProduct,
 } from "./assembly/index.js";
+
+export {
+  projectJobMaterialRequirements,
+  resolveRequestedMaterialQuantity,
+  type JobMaterialRequirement,
+  type MaterialOrderQuantityResult,
+} from "./execution/materialProcurement.js";
