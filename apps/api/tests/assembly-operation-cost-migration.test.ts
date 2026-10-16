@@ -116,8 +116,9 @@ function seedHistoricalAssemblySnapshots(db: SqliteDatabase): void {
 describe("migration 041 assembly operation cost policy (synthetic planes only)", () => {
   it("A creates the append-only table and triggers on a new database", () => {
     const db = openPlane(syntheticPlanePath());
-    applyMigrations(db);
-    expect(listOperationalMigrationFiles().at(-1)).toBe(MIGRATION);
+    const through041 = listOperationalMigrationFiles().filter((file) => file <= MIGRATION);
+    expect(through041.at(-1)).toBe(MIGRATION);
+    applySelectedMigrations(db, through041);
     expect(schemaObjects(db)).toEqual([
       { type: "table", name: TABLE },
       { type: "trigger", name: `${TABLE}_next_only` },
@@ -135,7 +136,7 @@ describe("migration 041 assembly operation cost policy (synthetic planes only)",
     const before = dumpUserTables(db);
     expect(schemaObjects(db)).toEqual([]);
 
-    applyMigrations(db);
+    applySelectedMigrations(db, [...priorMigrations(), MIGRATION]);
 
     expect(dumpUserTables(db)).toEqual(before);
     expect(JSON.parse((db.prepare("SELECT payload FROM assembly_quote_snapshots").get() as { payload: string }).payload))
