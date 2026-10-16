@@ -204,7 +204,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
       headerVariant="pilot-compact"
       eyebrow="Lucrare"
       title={job?.inscription || job?.productLabel || "Lucrare"}
-      lead="Identitatea lucrării, traseul de producție și rezultatele operațiilor, în același loc."
+      lead={job?.productLabel || "Dosar de producție și informații operaționale."}
       meta={job?.customerDisplayName ?? undefined}
       status={
         job ? (
@@ -239,11 +239,11 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
       ) : null}
       {job ? (
         <>
-          {job.attentionLabel ? (
+          {job.needsAttention && job.attentionLabel ? (
             <div className="job-detail__focus-note" role="status">
               <span className="job-detail__eyebrow">NECESITĂ ATENȚIE</span>
               <strong>{job.attentionLabel}</strong>
-              {plan ? <a href="#job-map">Explorează harta <span aria-hidden="true">↗</span></a> : null}
+              {plan ? <a href="#job-map">Vezi operațiile <span aria-hidden="true">↗</span></a> : null}
             </div>
           ) : null}
           {job.stage === "EXECUTION_COMPLETED" ? (
@@ -265,21 +265,21 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
             </div>
           ) : null}
           {plan ? (
-            <JobProductionMap plan={plan} jobId={jobId} jobAttention={job.attentionLabel} />
+            <JobProductionMap plan={plan} jobId={jobId} jobAttention={job.needsAttention ? job.attentionLabel : null} />
           ) : planPending ? (
             <div className="job-detail__map-placeholder" role="status">Se citește planul de producție…</div>
           ) : planId && planResource.status === "error" ? (
             <InlineAlert tone="error" title="Planul nu a putut fi citit">
-              Harta și rezultatele planului nu sunt disponibile momentan.
+              Dosarul operațional și rezultatele planului nu sunt disponibile momentan.
             </InlineAlert>
           ) : (
             <div className="job-detail__map-placeholder">
-              <strong>Harta producției apare după crearea planului.</strong>
+              <strong>Operațiile vor apărea după crearea planului.</strong>
               <span>Înainte de plan, folosește acțiunea disponibilă pentru această lucrare.</span>
             </div>
           )}
           <nav className="job-detail__sections" aria-label="Navigare în fișa lucrării">
-            {plan ? <a href="#job-map">Harta producției</a> : null}
+            {plan ? <a href="#job-map">Dosarul de producție</a> : null}
             <a href="#job-overview">Rezumat</a>
             <a href="#job-route">Traseu de producție</a>
             <a href="#job-results">Rezultate</a>
