@@ -36,15 +36,13 @@ export function registerJobMaterialRoutes(app: Hono<ApiEnv>): void {
     if (typeof actionKey !== "string" || !/^[a-zA-Z0-9_-]{12,100}$/.test(actionKey)) {
       return c.json({ error: "invalid_payload" }, 400);
     }
-    if (payload.status === "AVAILABLE" && "requestedQuantity" in payload) {
+    if ("requestedQuantity" in payload) {
       return c.json({ error: "invalid_payload" }, 400);
     }
     const result = runtime.decideJobMaterial({
       jobId: c.req.param("jobId"),
       resourceId: c.req.param("resourceId"),
       status: payload.status,
-      ...(payload.status === "MISSING" && "requestedQuantity" in payload
-        ? { requestedQuantity: payload.requestedQuantity } : {}),
       actionKey,
       personId: operator.person.personId,
       personLabel: operator.person.displayName,

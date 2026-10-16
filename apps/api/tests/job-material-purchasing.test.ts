@@ -99,15 +99,14 @@ describe("job material checks and procurement foundation", () => {
     }));
     const cookie = await sessionCookieViaHttp(app, (personResponse.person as Obj).personId as string);
 
-    const less = await post({
-      status: "MISSING", actionKey: "n009-below-minimum", requestedQuantity: estimated - 1,
+    const rejectedQuantity = await post({
+      status: "MISSING", actionKey: "n009-reject-quantity", requestedQuantity: estimated,
     }, cookie);
-    expect(less.status).toBe(422);
-    expect((await json(less)).error).toBe("below_estimated_requirement");
+    expect(rejectedQuantity.status).toBe(400);
+    expect((await json(rejectedQuantity)).error).toBe("invalid_payload");
 
-    const amount = Math.ceil(estimated) + 20;
     const created = await post({
-      status: "MISSING", actionKey: "n009-request-first", requestedQuantity: amount,
+      status: "MISSING", actionKey: "n009-request-first",
     }, cookie);
     expect(created.status).toBe(200);
     const line = (((await json(created)).preparation as Obj).lines as Obj[])
@@ -115,25 +114,25 @@ describe("job material checks and procurement foundation", () => {
     expect((line.latestCheck as Obj).checkedByLabel).toBe("Operator N009");
     expect((line.latestCheck as Obj).status).toBe("MISSING");
     const request = line.openRequest as Obj;
-    expect(request.requestedQuantity).toBe(amount);
+    expect(request.requestedQuantity).toBeNull();
     expect(request.estimatedQuantity).toBe(estimated);
     expect(request.status).toBe("REQUESTED");
     expect(request.requiresReview).toBe(false);
 
     const repeated = await post({
-      status: "MISSING", actionKey: "n009-request-first", requestedQuantity: amount,
+      status: "MISSING", actionKey: "n009-request-first",
     }, cookie);
     expect(repeated.status).toBe(200);
     expect((await json(repeated)).alreadyApplied).toBe(true);
 
     const conflictingReplay = await post({
-      status: "MISSING", actionKey: "n009-request-first", requestedQuantity: amount + 1,
+      status: "AVAILABLE", actionKey: "n009-request-first",
     }, cookie);
     expect(conflictingReplay.status).toBe(409);
     expect((await json(conflictingReplay)).error).toBe("idempotency_conflict");
 
     const duplicate = await post({
-      status: "MISSING", actionKey: "n009-request-again", requestedQuantity: amount,
+      status: "MISSING", actionKey: "n009-request-again",
     }, cookie);
     expect(duplicate.status).toBe(409);
     expect((await json(duplicate)).error).toBe("already_requested");
@@ -141,7 +140,7 @@ describe("job material checks and procurement foundation", () => {
     const list = (await json(await app.request("/api/material-requests"))).requests as Obj[];
     expect(list).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        jobId, resourceId: "MAT-LED-MODULE", requestedQuantity: amount,
+        jobId, resourceId: "MAT-LED-MODULE", requestedQuantity: null,
         requestedByLabel: "Operator N009", status: "REQUESTED", requiresReview: false,
       }),
     ]));
@@ -273,7 +272,6 @@ describe("job material requests across organizations", () => {
       const created = await decide(jobA, sessionA, {
         status: "MISSING",
         actionKey: "n009-org-a-request",
-        requestedQuantity: Math.ceil(estimated as number),
       });
       expect(created.status).toBe(200);
 
@@ -286,7 +284,6 @@ describe("job material requests across organizations", () => {
       const foreignWrite = await decide(jobA, sessionB, {
         status: "MISSING",
         actionKey: "n009-org-b-on-a",
-        requestedQuantity: Math.ceil(estimated as number),
       });
       expect(foreignWrite.status).toBe(404);
       expect((await json(foreignWrite)).error).toBe("job_not_found");
@@ -305,7 +302,6 @@ describe("job material requests across organizations", () => {
       const createdB = await decide(jobB, sessionB, {
         status: "MISSING",
         actionKey: "n009-org-b-request",
-        requestedQuantity: Math.ceil(estimated as number),
       });
       expect(createdB.status).toBe(200);
       const listAAfter = (await json(await fixture.app.request("/api/material-requests", {

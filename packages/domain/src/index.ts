@@ -1279,7 +1279,7 @@ export {
 
 export {
   projectJobMaterialRequirements,
-  resolveRequestedMaterialQuantity,
+  resolveOperatorReplenishmentSignal,
   type JobMaterialRequirement,
-  type MaterialOrderQuantityResult,
+  type OperatorReplenishmentSignal,
 } from "./execution/materialProcurement.js";

@@ -8,16 +8,15 @@ color: cyan
 
 # WorkOS Design Studio
 
-Tooling overlay. Not a second Product Truth, Figma authority, product canon, or component library.
+Tooling overlay. Not a second Product Truth, product canon, or component library.
 
 ```text
 DESIGN_INTELLIGENCE = TOOLING_OVERLAY
 ROADMAP_REPLACEMENT = NO
 CURRENT_PRODUCT_PROGRAM_REMAINS_AUTHORITATIVE = YES
 NO_NEW_PERSISTENT_RULE = YES
-FIGMA_MODE = READ_ONLY
-OFF_FIGMA_EXPLORATION = ALLOWED_NON_AUTHORITATIVE
-OFF_FIGMA_BUILD_AUTHORITY = NO
+FIGMA_AUTHORITY = RETIRED
+FIGMA_WRITE = NO
 CONFIGURATOR_REDESIGN = NO
 TOKEN_CORRECTION = NO
 SHELL_CORRECTION = NO
@@ -77,23 +76,14 @@ Read only the reference the current step needs:
 Do not copy `AGENTS.md` into context. Do not invent a second authority document.
 
 Living product program: `docs/ROADMAP.md`.
-Sole Figma authority document: `docs/FIGMA_AUTHORITY.md`.
+Current UI/UX policy: `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md`.
 Configuration-First architecture: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 
 ## Figma
 
-Interpret `docs/FIGMA_AUTHORITY.md`. Do not recreate it.
+Figma is not a design, implementation, or review gate. `docs/FIGMA_AUTHORITY.md` is historical provenance. Do not appoint another Figma file, and do not write to Figma unless a later Owner GO says otherwise.
 
-```text
-FIGMA_EXPLICIT_AUTHORITY → follow accepted composition closely
-FIGMA_PARTIAL_REFERENCE → preserve WorkOS language and solve uncovered composition deliberately
-FIGMA_SILENT → non-authoritative exploration is allowed
-FIGMA_PRODUCT_TRUTH_CONFLICT → Product Truth wins on WHAT is true; accepted Figma may govern HOW truth is experienced
-FIGMA_WRITE = NO
-```
-
-Do not recreate node `1:19519`. Protected nodes remain protected.
-Off-Figma exploration is allowed and non-authoritative. Off-Figma work has no build authority.
+Judge the experience from the operator's task and from the running application. Product Truth still wins on what is true.
 
 ## Configurator
 
@@ -126,22 +116,20 @@ floorplan / information architecture / selection model /
 spatial hierarchy / workbench relationship / major interaction model
 Reality Extraction
 → Browser observation of current runtime (evidence, not authority)
-→ Canvas exploration STRONGLY_PREFERRED when accepted Figma does not already settle the composition
+→ Canvas exploration when the composition is still unsettled
 → Owner composition decision
 → compact engineering handoff
 → implementation
 → Browser + Design Mode refinement
 
 NEW_COMPLEX_SURFACE
-accepted Figma settles the relevant structure → do not duplicate exploration in Canvas
-otherwise → Canvas exploration = STRONGLY_PREFERRED
+Canvas exploration when the composition is still unsettled
 
 CONFIGURATOR
 future Owner-authorized structural redesign
 (PRODUCT / LAYER / SUBLAYER / BLUEPRINT / HORIZONTAL / VERTICAL /
 SELECTION / PROPERTIES / VALIDATION / REVIEW)
 Canvas before implementation = STRONGLY_PREFERRED
-unless accepted Figma already settles the required composition
 This does not authorize Configurator redesign now.
 CONFIGURATOR_REDESIGN = NO
 ```
@@ -149,7 +137,6 @@ CONFIGURATOR_REDESIGN = NO
 ```text
 CANVAS = NON_AUTHORITATIVE_EXPLORATION
 CANVAS != Product Truth
-CANVAS != Figma authority
 CANVAS != WorkOS implementation
 CANVAS != WorkOS component / token authority
 CANVAS != CAD precision
@@ -164,7 +151,6 @@ Canvas Design Mode is an official Cursor capability: the Owner may select and an
 CANVAS_DESIGN_MODE_OFFICIAL = YES
 LOCAL_OWNER_UI_VERIFICATION = NOT_REQUIRED_FOR_STABLE_ROUTING
 CANVAS_DESIGN_MODE != Product Truth
-CANVAS_DESIGN_MODE != accepted Figma
 CANVAS_DESIGN_MODE != implementation authority
 CANVAS_DESIGN_MODE != product code
 ```

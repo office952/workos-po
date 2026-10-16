@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   confirmMaterialReadiness,
   projectJobMaterialRequirements,
-  resolveRequestedMaterialQuantity,
+  resolveOperatorReplenishmentSignal,
   type ExecutionPlanRecord,
   type JobMaterialRequirement,
 } from "@workos-final/domain";
@@ -27,7 +27,8 @@ export type JobMaterialRequest = {
   planId: string;
   resourceId: string;
   estimatedQuantity: number;
-  requestedQuantity: number;
+  /** Null means purchasing has not chosen a quantity. It is not zero. */
+  requestedQuantity: number | null;
   unit: string;
   status: "REQUESTED" | "CANCELLED" | "FULFILLED";
   requestedByPersonId: string;
@@ -53,7 +54,6 @@ export type JobMaterialDecisionInput = {
   record: ExecutionPlanRecord;
   resourceId: string;
   status: "AVAILABLE" | "MISSING";
-  requestedQuantity?: unknown;
   actionKey: string;
   personId: string;
   personLabel: string;
@@ -74,7 +74,7 @@ type RequestRow = {
   plan_id: string;
   resource_id: string;
   estimated_quantity: number;
-  requested_quantity: number;
+  requested_quantity: number | null;
   unit: string;
   status: "REQUESTED" | "CANCELLED" | "FULFILLED";
   requested_by_person_id: string;
@@ -187,7 +187,7 @@ export function recordJobMaterialDecision(
 ):
   | { ok: true; alreadyApplied: boolean; preparation: JobMaterialPreparation }
   | { ok: false; error:
-      "unknown_material" | "invalid_quantity" | "below_estimated_requirement" |
+      "unknown_material" | "quantity_not_allowed" |
       "already_requested" | "material_no_longer_planned" | "idempotency_conflict" } {
   const required = projectJobMaterialRequirements(input.record)
     .find((line) => line.resourceId === input.resourceId);
@@ -199,13 +199,11 @@ export function recordJobMaterialDecision(
   )) {
     return { ok: false, error: "material_no_longer_planned" };
   }
-  const quantity = input.status === "MISSING"
-    ? resolveRequestedMaterialQuantity(
-        required.estimatedQuantity, required.unit, input.requestedQuantity,
-      )
+  const signal = input.status === "MISSING"
+    ? resolveOperatorReplenishmentSignal(undefined)
     : null;
-  if (quantity && !quantity.ok) {
-    return { ok: false, error: quantity.error };
+  if (signal && !signal.ok) {
+    return { ok: false, error: signal.error };
   }
 
   const transaction = db.transaction(() => {
@@ -224,10 +222,10 @@ export function recordJobMaterialDecision(
         existingAction.checked_by_person_id === input.personId;
       const savedRequest = input.status === "MISSING" ? db.prepare(
         "SELECT requested_quantity FROM job_material_requests WHERE source_check_id = ?",
-      ).get(existingAction.check_id) as { requested_quantity: number } | undefined : null;
+      ).get(existingAction.check_id) as { requested_quantity: number | null } | undefined : null;
       if (!consistent || (
         input.status === "MISSING" &&
-        (!quantity?.ok || savedRequest?.requested_quantity !== quantity.quantity)
+        (!signal?.ok || savedRequest === undefined || savedRequest === null || savedRequest.requested_quantity !== null)
       )) {
         return { ok: false as const, error: "idempotency_conflict" as const };
       }
@@ -250,14 +248,14 @@ export function recordJobMaterialDecision(
       input.record.plan.planId, required.resourceId, input.status,
       input.personId, input.personLabel, input.now);
 
-    if (input.status === "MISSING" && quantity?.ok) {
+    if (input.status === "MISSING" && signal?.ok) {
       db.prepare(
         "INSERT INTO job_material_requests " +
         "(request_id, organization_id, job_id, plan_id, resource_id, estimated_quantity, " +
         "requested_quantity, unit, status, source_check_id, requested_by_person_id, requested_by_label, requested_at) " +
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'REQUESTED', ?, ?, ?, ?)",
       ).run("mreq:" + randomUUID(), input.organizationId, input.jobId, input.record.plan.planId,
-        required.resourceId, required.estimatedQuantity, quantity.quantity, required.unit,
+        required.resourceId, required.estimatedQuantity, signal.requestedQuantity, required.unit,
         checkId, input.personId, input.personLabel, input.now);
     }
 

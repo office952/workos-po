@@ -48,14 +48,9 @@ These operator strings stay for a later wave:
 
 ## Visual language evolution
 
-The accepted shell remains valid. Future surface work now follows:
+The accepted shell remains valid as implementation. Current UI/UX policy is `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md`. Stylesheet ownership stays `docs/architecture/WORKOS_UI_STYLE_ARCHITECTURE_V1.md`. `docs/architecture/WORKOS_VISUAL_LANGUAGE_CANON_V1.md` is superseded.
 
-- `docs/architecture/WORKOS_VISUAL_LANGUAGE_CANON_V1.md`
-- `docs/architecture/WORKOS_UI_STYLE_ARCHITECTURE_V1.md`
-
-The shell should read as a calm industrial operating system: real production context with advanced orchestration, not a generic SaaS dashboard.
-
-Dark and light remain one system. Responsive behavior follows progressive detail reduction: remove secondary instrumentation before compressing the operator's primary task into illegibility.
+Dark and light remain one system. Responsive behavior keeps the primary task readable as the viewport narrows.
 
 Cereri de oferta is the first post-login surface designated to apply this visual language and modular stylesheet ownership deliberately.
 

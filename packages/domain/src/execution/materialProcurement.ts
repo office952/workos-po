@@ -50,29 +50,20 @@ export function projectJobMaterialRequirements(
   );
 }
 
-export type MaterialOrderQuantityResult =
-  | { ok: true; quantity: number }
-  | { ok: false; error: "invalid_quantity" | "below_estimated_requirement" };
+export type OperatorReplenishmentSignal =
+  | { ok: true; requestedQuantity: null }
+  | { ok: false; error: "quantity_not_allowed" };
 
-export function resolveRequestedMaterialQuantity(
-  estimatedQuantity: number,
-  unit: string,
+/**
+ * An operator signal says that replenishment is needed.
+ * It does not choose a purchase quantity, copy the technical estimate, or store zero.
+ * Purchasing decides a quantity later.
+ */
+export function resolveOperatorReplenishmentSignal(
   requested: unknown,
-): MaterialOrderQuantityResult {
-  if (!Number.isFinite(estimatedQuantity) || estimatedQuantity <= 0) {
-    return { ok: false, error: "invalid_quantity" };
+): OperatorReplenishmentSignal {
+  if (requested !== undefined && requested !== null) {
+    return { ok: false, error: "quantity_not_allowed" };
   }
-  // A fractional estimate of individual pieces must be rounded up, never down.
-  const minimum = unit === "buc" ? Math.ceil(estimatedQuantity) : estimatedQuantity;
-  const quantity = requested === undefined ? minimum : requested;
-  if (typeof quantity !== "number" || !Number.isFinite(quantity) || quantity <= 0 || quantity > 1e9) {
-    return { ok: false, error: "invalid_quantity" };
-  }
-  if (unit === "buc" && !Number.isInteger(quantity)) {
-    return { ok: false, error: "invalid_quantity" };
-  }
-  if (quantity + 1e-9 < estimatedQuantity) {
-    return { ok: false, error: "below_estimated_requirement" };
-  }
-  return { ok: true, quantity };
+  return { ok: true, requestedQuantity: null };
 }

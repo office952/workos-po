@@ -38,7 +38,7 @@ Only then inspect:
 
 Name the cause. Do not restyle a symptom.
 
-Typical causes: wrong `PageWorkspace`, false containers, equalized weight, controls detached from content, Azure used as status, a screenshot treated as authority.
+Typical causes: wrong page job, false containers, equalized weight, controls detached from content, a warning that looks like a block, a screenshot treated as a permanent visual canon.
 
 ## PASS C — refine
 

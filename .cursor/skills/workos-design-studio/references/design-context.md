@@ -17,18 +17,9 @@ They work on real production business, across office and workshop, with frequent
 
 ## Desired product character
 
-```text
-CALM INSTRUMENT
-```
+Judge clarity for the person doing the work. Current policy is `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md`.
 
-Calm. Precise. Intelligent. Operational. Mature. Professional.
-
-Industrial without crude aesthetics.
-Premium without luxury decoration.
-
-`CALM INSTRUMENT` is already product character in `docs/FIGMA_AUTHORITY.md`. Design Studio uses that character. It does not replace it.
-
-Azure is for **ACTION / INTERACTION**, not semantic status color.
+`CALM INSTRUMENT`, industrial-hardware identity, and a mandatory Azure action color are retired. Do not use them as design constraints.
 
 ## Orientation every normal page must answer
 
@@ -55,7 +46,7 @@ Do not treat the following as design source unless the task actually depends on 
 - CI, packaging, security tooling, release procedure
 - Git history
 - backend implementation detail
-- runtime screenshots as automatic visual authority (`docs/FIGMA_AUTHORITY.md`: evidence, not authority)
+- runtime screenshots as a permanent visual canon (they are evidence of behavior)
 
 ## Authority pointers
 
@@ -64,7 +55,7 @@ Read these. Do not rewrite them.
 - Product / repository identity: `AGENTS.md`, `docs/SOURCE_OF_TRUTH.md`
 - Presentation vs engine: `docs/ARCHITECTURE.md`
 - Living program: `docs/ROADMAP.md`
-- Figma: `docs/FIGMA_AUTHORITY.md`
+- UI/UX policy: `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md`
 - Changeable business truth: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`
 
 ```text

@@ -1,8 +1,18 @@
 # Figma authority
 
 ```text
+STATUS = RETIRED / HISTORICAL ONLY
+CURRENT_UIUX_AUTHORITY = docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md
+```
+
+Owner decision, 2026-10-16: Figma is not the UI/UX authority for WorkOS. This file keeps the provenance of `WorkOs-F`. It is not a gate, a fidelity source, or a blocker for design, implementation, or review. Do not appoint another Figma file in its place.
+
+The sections below are the historical record. They do not authorize current visual work.
+
+```text
 FIGMA_FILE = WorkOs-F
 FIGMA_FILE_KEY = M3Klzg7sulrtLSyxJBf3Vd
+HISTORICAL_RECORD = YES
 ```
 
 ## Protected visual authorities
@@ -40,25 +50,27 @@ Current runtime captures are evidence, not automatic design authority.
 
 Existing WorkOS UI is reference / behavioral evidence. It is not the required visual migration base.
 
-## Product character
+## Historical product character
+
+The names below are provenance. They are not current visual requirements.
 
 ```text
 CALM INSTRUMENT
 INDUSTRIAL HARDWARE. FUTURE INTELLIGENCE.
 REAL INDUSTRIAL = 70%
 FUTURE INTELLIGENCE = 30%
+HISTORICAL_ONLY = YES
 ```
 
-The visual-language authority for future WorkOS surfaces is:
-`docs/architecture/WORKOS_VISUAL_LANGUAGE_CANON_V1.md`.
+`docs/architecture/WORKOS_VISUAL_LANGUAGE_CANON_V1.md` is superseded.
+Stylesheet ownership remains `docs/architecture/WORKOS_UI_STYLE_ARCHITECTURE_V1.md`.
 
-The styling-ownership authority is:
-`docs/architecture/WORKOS_UI_STYLE_ARCHITECTURE_V1.md`.
+Historical notes, not current requirements:
 
-Dark is the command-room / night-shift expression.
-Light is the same machine in engineering-floor / daylight precision.
+Dark was described as the command-room / night-shift expression.
+Light was described as the same machine in engineering-floor / daylight precision.
 
-Azure remains for **ACTION / INTERACTION** where already established. Technical amber/gold may express real infrastructure, routing, power, attention, or instrument character when semantically justified.
+Azure was reserved for action. That reservation is retired. Technical amber/gold was an optional historical accent, not a current obligation.
 
 Avoid:
 
@@ -70,14 +82,15 @@ Avoid:
 - unnecessary gradients
 - arbitrary component-library replacement
 
-## Authority hierarchy for future presentation work
+## Historical hierarchy
+
+The order below described the retired Figma-led process. Current decisions follow `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md`.
 
 ```text
+HISTORICAL_ORDER =
 1. explicit Owner decision
 2. WORKOS_VISUAL_LANGUAGE_CANON_V1
-3. Owner-accepted Figma nodes for the surfaces they actually cover
+3. Owner-accepted Figma nodes for the surfaces they actually covered
 4. runtime captures as behavior/evidence
 5. historical UI as reference only
 ```
-
-Protected source nodes remain protected. This hierarchy does not authorize silently rewriting an accepted Figma surface. It defines how new or materially redesigned surfaces acquire the current WorkOS character.

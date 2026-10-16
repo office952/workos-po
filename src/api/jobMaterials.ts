@@ -8,7 +8,7 @@ export type JobMaterialCheckTransport = {
 
 export type JobMaterialRequestTransport = {
   requestId: string;
-  requestedQuantity: number;
+  requestedQuantity: number | null;
   unit: string;
   status: string;
   requestedByLabel: string;
@@ -56,7 +56,13 @@ function parsePreparation(value: unknown): JobMaterialPreparationTransport {
         typeof line.canCheck !== "boolean" ||
         (line.openRequest !== null && (
           typeof line.openRequest !== "object" ||
-          typeof line.openRequest.requiresReview !== "boolean"
+          typeof line.openRequest.requiresReview !== "boolean" ||
+          !(
+            line.openRequest.requestedQuantity === null ||
+            (typeof line.openRequest.requestedQuantity === "number" &&
+              Number.isFinite(line.openRequest.requestedQuantity) &&
+              line.openRequest.requestedQuantity > 0)
+          )
         ))
       )) {
     throw new Error("invalid_material_preparation");
@@ -76,7 +82,6 @@ export class MaterialDecisionConflictError extends TransportError {
 
 type MaterialDecision = {
   status: "AVAILABLE" | "MISSING";
-  requestedQuantity?: number;
 };
 
 type PendingMaterialAction = {
@@ -87,26 +92,7 @@ type PendingMaterialAction = {
 const pendingActions = new Map<string, PendingMaterialAction>();
 
 function decisionFingerprint(decision: MaterialDecision): string {
-  return decision.status === "AVAILABLE"
-    ? "AVAILABLE"
-    : "MISSING:" + String(decision.requestedQuantity ?? "");
-}
-
-function decisionMatches(
-  preparation: JobMaterialPreparationTransport,
-  resourceId: string,
-  decision: MaterialDecision,
-): boolean {
-  const line = preparation.lines.find((item) => item.resourceId === resourceId);
-  if (!line?.latestCheck) {
-    return false;
-  }
-  if (decision.status === "AVAILABLE") {
-    return line.latestCheck.status === "AVAILABLE";
-  }
-  return line.latestCheck.status === "MISSING" &&
-    line.openRequest !== null &&
-    line.openRequest.requestedQuantity === decision.requestedQuantity;
+  return decision.status;
 }
 
 /** Test hook. Pending keys survive a lost response until the same action succeeds. */
@@ -150,10 +136,8 @@ export async function submitJobMaterialDecision(
     } catch {
       throw error;
     }
-    if (decisionMatches(current, resourceId, decision)) {
-      pendingActions.delete(slot);
-      return current;
-    }
+    pendingActions.delete(slot);
+    // A 409 is another action or a conflicting replay. The same action key returns 200.
     throw new MaterialDecisionConflictError(current);
   }
 }

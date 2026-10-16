@@ -33,8 +33,11 @@ function displayWhen(value: string): string {
     : date.toLocaleString("ro-RO", { dateStyle: "short", timeStyle: "short" });
 }
 
-function minimumPurchase(line: JobMaterialLineTransport): number {
-  return line.unit === "buc" ? Math.ceil(line.estimatedQuantity) : line.estimatedQuantity;
+function purchasePhrase(quantity: number | null, unit: string): string {
+  if (quantity === null) {
+    return "cantitate de cumpărare nestabilită";
+  }
+  return displayQuantity(quantity) + " " + unit;
 }
 
 function estimatedLabel(line: JobMaterialLineTransport, jobTotal: boolean): string {
@@ -49,9 +52,7 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds }: Props) {
   const resource = useResource(key, () => fetchJobMaterialPreparation(jobId));
   const session = useResource(resourceKeys.operatorSession(), loadOperatorSession);
   const [pendingResource, setPendingResource] = useState<string | null>(null);
-  const [requestedDrafts, setRequestedDrafts] = useState<Record<string, string>>({});
   const [actionError, setActionError] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
   const personName = session.status === "success" ? session.data?.displayName : null;
   const selectedIds = onlyResourceIds ? new Set(onlyResourceIds) : null;
   const lines = (resource.data?.lines ?? []).filter(
@@ -65,48 +66,24 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds }: Props) {
     if (!personName || pendingResource !== null) {
       return;
     }
-    const request = status === "MISSING"
-      ? Number(requestedDrafts[line.resourceId] ?? String(minimumPurchase(line)))
-      : null;
-    if (status === "MISSING" && (
-      request === null ||
-      !Number.isFinite(request) ||
-      request < minimumPurchase(line) ||
-      (line.unit === "buc" && !Number.isInteger(request))
-    )) {
-      setActionError("Cantitatea de achiziționat trebuie să fie cel puțin necesarul estimat.");
-      return;
-    }
     setPendingResource(line.resourceId);
     setActionError(null);
-    setActionMessage(null);
     try {
-      const updated = await submitJobMaterialDecision(
-        jobId,
-        line.resourceId,
-        status === "AVAILABLE"
-          ? { status }
-          : { status, requestedQuantity: request ?? minimumPurchase(line) },
-      );
+      const updated = await submitJobMaterialDecision(jobId, line.resourceId, { status });
       writeResource(key, updated);
       invalidateAfterJobMaterialDecision(jobId);
-      const reviewed = updated.lines.find((item) => item.resourceId === line.resourceId)
-        ?.openRequest?.requiresReview === true;
-      setActionMessage(status === "AVAILABLE"
-        ? reviewed
-          ? "Disponibilitatea a fost confirmată. Solicitarea existentă necesită revizuire înainte de cumpărare."
-          : "Disponibilitatea a fost confirmată."
-        : "Solicitarea a fost înregistrată pentru viitoarele Achiziții. Nu este comandă plasată.");
     } catch (error) {
       if (error instanceof MaterialDecisionConflictError) {
         writeResource(key, error.preparation);
         invalidateAfterJobMaterialDecision(jobId);
-        setActionError("Starea materialelor a fost recitită. Cererea existentă nu a fost dublată.");
+        setActionError("Există deja o verificare pentru acest material. Lista a fost recitită și solicitarea nu a fost dublată.");
+      } else if (error instanceof TypeError) {
+        setActionError("Conexiunea s-a întrerupt. Reîncearcă aceeași acțiune. Solicitarea nu se dublează.");
       } else {
         setActionError(
           error instanceof TransportError && error.status === 409
             ? "Starea materialelor a fost modificată. Reîncarcă lista înainte de continuare."
-            : "Verificarea nu a putut fi înregistrată. Nu s-a confirmat nicio achiziție.",
+            : "Verificarea nu a putut fi înregistrată. Nu s-a creat o comandă.",
         );
       }
     } finally {
@@ -133,18 +110,12 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds }: Props) {
       {resource.data?.planId && lines.length > 0 ? (
         <>
           <p className="ui-note">
-            Necesarul este estimat de WorkOS din plan. Nu se numără LED-uri și nu se
-            măsoară materiale pentru această verificare. Stocul numeric nu confirmă
-            disponibilitatea în atelier.
+            Necesarul estimat vine din plan. Verificarea nu numără piese și nu cumpără materiale.
           </p>
-          {onlyResourceIds ? (
-            <p className="ui-note">
-              Cantitatea de mai jos este necesarul estimat total pe lucrare pentru materialul
-              folosit de operația curentă.
-            </p>
+          {actionError ? (
+            <InlineAlert tone="error" title="Verificarea a eșuat">{actionError}</InlineAlert>
           ) : null}
           {lines.map((line) => {
-            const min = minimumPurchase(line);
             const requestPending = line.openRequest !== null;
             return (
               <article className="job-materials__line" key={line.resourceId}>
@@ -157,7 +128,7 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds }: Props) {
                     {line.latestCheck?.status === "AVAILABLE"
                       ? "Confirmat disponibil"
                       : line.latestCheck?.status === "MISSING"
-                        ? "Material insuficient"
+                        ? "Insuficient"
                         : "Neverificat"}
                   </span>
                 </div>
@@ -168,25 +139,26 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds }: Props) {
                 ) : null}
                 {line.latestCheck?.status === "MISSING" ? (
                   <p className="job-materials__warning" role="status">
-                    Material marcat lipsă. Verificarea avertizează atelierul; pornirea operației
+                    Avertisment: materialul nu este suficient pentru lucrare. Pornirea operației
                     rămâne decisă de WorkOS.
                   </p>
                 ) : null}
                 {line.openRequest ? (
                   <p
                     className="job-materials__request"
+                    role="status"
                     data-review={line.openRequest.requiresReview ? "required" : "pending"}
                   >
                     {line.openRequest.requiresReview
-                      ? "Solicitare existentă, de revizuit: " +
-                        displayQuantity(line.openRequest.requestedQuantity) + " " +
-                        line.openRequest.unit + " · " + line.openRequest.requestedByLabel +
-                        ". Ultima verificare a confirmat disponibilitatea, deci Achizițiile " +
-                        "revizuiesc cererea înainte de cumpărare."
-                      : "Solicitare înregistrată: " +
-                        displayQuantity(line.openRequest.requestedQuantity) + " " +
-                        line.openRequest.unit + " · " + line.openRequest.requestedByLabel + " · " +
-                        displayWhen(line.openRequest.requestedAt) + ". În așteptarea Achizițiilor."}
+                      ? "Solicitare de revizuit · " +
+                        purchasePhrase(line.openRequest.requestedQuantity, line.openRequest.unit) +
+                        " · " + line.openRequest.requestedByLabel +
+                        ". Ultima verificare a confirmat disponibilitatea. Achizițiile revizuiesc " +
+                        "cererea înainte de cumpărare."
+                      : "Aprovizionare solicitată · " +
+                        purchasePhrase(line.openRequest.requestedQuantity, line.openRequest.unit) +
+                        " · " + line.openRequest.requestedByLabel + " · " +
+                        displayWhen(line.openRequest.requestedAt) + ". Nu este o comandă."}
                   </p>
                 ) : null}
                 {line.canCheck && personName ? (
@@ -196,34 +168,16 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds }: Props) {
                       disabled={pendingResource !== null}
                       onClick={() => void decide(line, "AVAILABLE")}
                     >
-                      Confirmă disponibile
+                      Confirmă disponibil
                     </Button>
                     {!requestPending ? (
-                      <div className="job-materials__purchase">
-                        <label htmlFor={"job-material-qty-" + line.resourceId}>
-                          Cantitate de achiziționat (minimum necesar)
-                        </label>
-                        <div className="job-materials__purchase-controls">
-                          <input
-                            id={"job-material-qty-" + line.resourceId}
-                            type="number"
-                            className="field__control"
-                            min={min}
-                            step={line.unit === "buc" ? "1" : "any"}
-                            value={requestedDrafts[line.resourceId] ?? String(min)}
-                            onChange={(event) =>
-                              setRequestedDrafts((current) => ({
-                                ...current, [line.resourceId]: event.target.value,
-                              }))}
-                          />
-                          <Button
-                            disabled={pendingResource !== null}
-                            onClick={() => void decide(line, "MISSING")}
-                          >
-                            Lipsește — solicită achiziție
-                          </Button>
-                        </div>
-                      </div>
+                      <Button
+                        variant="secondary"
+                        disabled={pendingResource !== null}
+                        onClick={() => void decide(line, "MISSING")}
+                      >
+                        Semnalează necesar de aprovizionare
+                      </Button>
                     ) : null}
                   </div>
                 ) : null}
@@ -242,10 +196,6 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds }: Props) {
           )}
         </>
       ) : null}
-      {actionError ? (
-        <InlineAlert tone="error" title="Verificarea a eșuat">{actionError}</InlineAlert>
-      ) : null}
-      {actionMessage ? <p role="status" className="ui-note">{actionMessage}</p> : null}
     </div>
   );
 

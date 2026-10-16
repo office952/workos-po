@@ -1,4 +1,6 @@
--- Source-controlled migration only. Do not run on real data without deployment GO.
+-- Source-controlled candidate. Do not run on real data without a separate Owner procedure.
+-- requested_quantity is unknown until purchasing decides. NULL means unspecified, never zero.
+-- A database that already applied an earlier draft of this file is corrected by 043.
 CREATE TABLE job_material_checks (
   check_id TEXT PRIMARY KEY NOT NULL,
   action_key TEXT NOT NULL,
@@ -22,7 +24,9 @@ CREATE TABLE job_material_requests (
   plan_id TEXT NOT NULL,
   resource_id TEXT NOT NULL,
   estimated_quantity REAL NOT NULL CHECK(estimated_quantity > 0),
-  requested_quantity REAL NOT NULL CHECK(requested_quantity >= estimated_quantity),
+  requested_quantity REAL CHECK(
+    requested_quantity IS NULL OR (requested_quantity > 0 AND requested_quantity <= 1000000000)
+  ),
   unit TEXT NOT NULL,
   status TEXT NOT NULL CHECK(status IN ('REQUESTED', 'CANCELLED', 'FULFILLED')),
   source_check_id TEXT NOT NULL UNIQUE REFERENCES job_material_checks(check_id),

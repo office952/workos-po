@@ -50,11 +50,10 @@ Do not invent a new visual language per page. One WorkOS language. One dominant 
 
 ## WorkOS-specific false friends
 
-- Azure used as a status color — Azure is ACTION / INTERACTION (`docs/FIGMA_AUTHORITY.md`)
-- Workflow color competing with the action / CTA
-- A runtime screenshot treated as the design to copy
+- A status color that hides the action, or an action color used as if it were a business status
+- A runtime screenshot treated as a permanent visual canon
 - Substituting a component library, shadcn, 21st.dev, or Radix program for WorkOS primitives
-- Recreating missing Figma node `1:19519`
+- Treating historical Figma, including node `1:19519`, as a current design gate
 
 ## What this file is not
 

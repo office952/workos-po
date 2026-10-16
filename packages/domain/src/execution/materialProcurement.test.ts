@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ExecutionPlanRecord } from "./plan.js";
 import {
   projectJobMaterialRequirements,
-  resolveRequestedMaterialQuantity,
+  resolveOperatorReplenishmentSignal,
 } from "./materialProcurement.js";
 
 describe("material purchasing from engine-owned estimates", () => {
@@ -36,41 +36,22 @@ describe("material purchasing from engine-owned estimates", () => {
     ]);
   });
 
-  it("never asks workers to count LEDs and never orders below the estimated requirement", () => {
-    expect(resolveRequestedMaterialQuantity(120, "buc", undefined)).toEqual({
+  it("leaves the purchase quantity unspecified and never copies the estimate or zero", () => {
+    expect(resolveOperatorReplenishmentSignal(undefined)).toEqual({
       ok: true,
-      quantity: 120,
+      requestedQuantity: null,
     });
-    expect(resolveRequestedMaterialQuantity(120, "buc", 200)).toEqual({
+    expect(resolveOperatorReplenishmentSignal(null)).toEqual({
       ok: true,
-      quantity: 200,
+      requestedQuantity: null,
     });
-    expect(resolveRequestedMaterialQuantity(120, "buc", 100)).toEqual({
+    expect(resolveOperatorReplenishmentSignal(0)).toEqual({
       ok: false,
-      error: "below_estimated_requirement",
+      error: "quantity_not_allowed",
     });
-    expect(resolveRequestedMaterialQuantity(120, "buc", 120.5)).toEqual({
+    expect(resolveOperatorReplenishmentSignal(144)).toEqual({
       ok: false,
-      error: "invalid_quantity",
-    });
-    expect(resolveRequestedMaterialQuantity(120, "buc", Number.POSITIVE_INFINITY)).toEqual({
-      ok: false,
-      error: "invalid_quantity",
-    });
-  });
-
-  it("rounds up fractional piece estimates to a whole purchasing minimum", () => {
-    expect(resolveRequestedMaterialQuantity(120.2, "buc", undefined)).toEqual({
-      ok: true, quantity: 121,
-    });
-    expect(resolveRequestedMaterialQuantity(120.2, "buc", 120)).toEqual({
-      ok: false, error: "below_estimated_requirement",
-    });
-  });
-
-  it("accepts non-piece material quantities directly from the engine", () => {
-    expect(resolveRequestedMaterialQuantity(2.4, "m2", 2.5)).toEqual({
-      ok: true, quantity: 2.5,
+      error: "quantity_not_allowed",
     });
   });
 });

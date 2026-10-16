@@ -113,24 +113,20 @@ Copying the engine did not copy or migrate real customer data.
 
 Normal operator UI does not expose internal jargon: hashes, DTO names, raw codes, service names, compiler vocabulary, raw provenance, debug objects, or internal JSON.
 
-## Visual / UI canon
+## UI/UX authority
 
-Future UI/UX work follows:
+Current policy: `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md`.
 
-```text
-VISUAL_LANGUAGE_CANON = docs/architecture/WORKOS_VISUAL_LANGUAGE_CANON_V1.md
-UI_STYLE_ARCHITECTURE_CANON = docs/architecture/WORKOS_UI_STYLE_ARCHITECTURE_V1.md
-VISUAL_IDENTITY = INDUSTRIAL_HARDWARE_FUTURE_INTELLIGENCE
-```
+Product Truth stays in the business engine. UI/UX work starts from the operator's task, compares alternatives, follows an explicit Owner decision, and is checked in the running application. The existing frontend is the implementation starting point. It is not an aesthetic standard that must be copied.
 
-Core presentation rules:
-- real industrial context first; future intelligence through capability, orchestration, instrumentation, and control;
-- no generic SaaS dashboard, card soup, decorative cyberpunk, or gratuitous gradients;
-- dark and light are the same product character, with calibrated theme contrast;
-- narrower screens progressively remove secondary detail before shrinking primary function into illegibility;
-- operator task stays primary; visual spectacle must never hide the job to be done;
-- no new major surface should add bulk to `src/styles/ui.css`; new surfaces use explicit modular stylesheet ownership;
-- do not introduce a replacement component library or styling framework without explicit Owner GO.
+Retired as current visual authority: Figma file WorkOs-F, other historical Figma files, `CALM INSTRUMENT`, `INDUSTRIAL HARDWARE / FUTURE INTELLIGENCE`, the 70/30 visual ratio, and mandatory grey/blue or Azure action palettes. Those documents remain provenance. Do not appoint a replacement Figma file.
+
+Structural rules that stay:
+- one SaaS product and one business engine;
+- modular stylesheets, with no new major surface adding bulk to `src/styles/ui.css` (`docs/architecture/WORKOS_UI_STYLE_ARCHITECTURE_V1.md`);
+- accessibility, visible focus, keyboard use, and responsive layout that keeps the primary task readable;
+- traceable operator actions;
+- no replacement component library or styling framework without explicit Owner GO.
 
 ## Current flow and status
 

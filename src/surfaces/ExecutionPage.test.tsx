@@ -599,7 +599,7 @@ describe("ExecutionPage", () => {
 
     render(<ExecutionPage planId="exp:1" taskId="task-led" jobId="job-led" />);
 
-    expect(await screen.findByText(/Material marcat lipsă/)).toBeInTheDocument();
+    expect(await screen.findByText(/Avertisment: materialul nu este suficient/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Pornește" })).toBeEnabled();
   });
 
