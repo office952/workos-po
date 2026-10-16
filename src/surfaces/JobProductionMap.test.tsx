@@ -53,11 +53,11 @@ describe("JobProductionMap", () => {
   it("uses actual plan scopes and supports selecting operations without performing mutations", () => {
     render(<JobProductionMap plan={plan} jobId="job-synthetic" />);
     expect(screen.getByRole("heading", { name: "Harta producției" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Panou ACM" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Ansamblu" })).toBeInTheDocument();
-    const next = screen.getByRole("button", { name: /Asamblare/ });
+    expect(screen.getByRole("group", { name: "Subansamblele planului" })).toHaveTextContent("Panou ACM");
+    expect(screen.getByRole("group", { name: "Subansamblele planului" })).toHaveTextContent("Ansamblu");
+    const next = screen.getByRole("button", { name: "Asamblare" });
     fireEvent.click(next);
-    expect(next).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("complementary", { name: "Detaliile operației selectate" }).querySelector("h3")?.textContent).toBe("Asamblare");
     expect(screen.getByText("Dependențe raportate")).toBeInTheDocument();
     expect(screen.getAllByText("Debitare panou").length).toBeGreaterThan(0);
     const predecessor = screen.getByRole("button", { name: "Debitare panou" });
@@ -69,9 +69,18 @@ describe("JobProductionMap", () => {
     );
   });
 
+  it("keeps navigation truthful when the selected operation has no upstream relation", () => {
+    render(<JobProductionMap plan={plan} jobId="job-synthetic" />);
+    expect(screen.getByText("Nicio dependență activă identificată.")).toBeInTheDocument();
+    const group = screen.getByRole("button", { name: /Ansamblu1 operație/ });
+    fireEvent.click(group);
+    expect(screen.getByText("Nicio continuare directă raportată în plan.")).toBeInTheDocument();
+    expect(screen.getByText("Dependențe raportate")).toBeInTheDocument();
+  });
+
   it("does not fabricate component groups when tasks are missing", () => {
     render(<JobProductionMap plan={{ ...plan, tasks: [] }} jobId="job-empty" />);
     expect(screen.getByText("Planul nu conține operații afișabile.")).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Panou ACM" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Subansamblele planului" })).not.toBeInTheDocument();
   });
 });
