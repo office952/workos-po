@@ -76,6 +76,7 @@ import {
 } from "./ExecutionActualConsumption";
 import { QualityControlPanel } from "./QualityControlPanel";
 import { SiteInstallationContextPanel } from "./SiteInstallationContextPanel";
+import { JobMaterialPreparation } from "./JobMaterialPreparation";
 
 type ExecutionPageProps = {
   planId: string;
@@ -500,6 +501,7 @@ export function ExecutionPage({
       contextLabel="Execuție"
       currentHref={executionHref(planId, { taskId, jobId: resolvedJobId })}
       workspace="operational"
+      headerVariant="pilot-compact"
       eyebrow="Execuție"
       title={plan?.inscription || plan?.productLabel || "Execuție"}
       lead="Pornește și închide sarcinile pe care le poți lucra."
@@ -809,7 +811,7 @@ export function ExecutionPage({
                 {currentTask.materialBlockLabel}
               </InlineAlert>
             ) : null}
-            {currentTask.materialLines && currentTask.materialLines.length > 0 ? (
+            {!resolvedJobId && currentTask.materialLines && currentTask.materialLines.length > 0 ? (
               <div className="stack" data-testid="material-readiness">
                 {currentTask.materialLines.map((line) => (
                   <div key={line.resourceId} className="cluster">
@@ -840,6 +842,12 @@ export function ExecutionPage({
                   Confirmarea este o decizie de execuție. Soldul de stoc nu pornește sarcina.
                 </p>
               </div>
+            ) : null}
+            {resolvedJobId && currentTask.materialLines && currentTask.materialLines.length > 0 ? (
+              <JobMaterialPreparation
+                jobId={resolvedJobId}
+                onlyResourceIds={currentTask.materialLines.map((line) => line.resourceId)}
+              />
             ) : null}
             {currentTask.qualityControl ? (
               <QualityControlPanel
