@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "../styles/surfaces/job-detail.css";
 import { presentExecutionPlan } from "../adapters/executionAdapter";
 import { TransportError, readTransportErrorCode } from "../api/http";
 import { patchJobPlanning, postJobExecutionPlan, postJobProductionRelease } from "../api/jobs";
@@ -199,9 +200,10 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
       contextLabel="Lucrare"
       currentHref={jobHref(jobId)}
       workspace="traveler"
+      headerVariant="pilot-compact"
       eyebrow="Lucrare"
       title={job?.inscription || job?.productLabel || "Lucrare"}
-      lead="Eliberează producția, materializează planul și compară planificat cu realizat."
+      lead="Identitatea lucrării, traseul de producție și rezultatele operațiilor, în același loc."
       meta={job?.customerDisplayName ?? undefined}
       status={
         job ? (
@@ -236,6 +238,30 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
       ) : null}
       {job ? (
         <>
+          <div className="job-detail__orientation" aria-label="Starea curentă a lucrării">
+            <div className="job-detail__orientation-main">
+              <span className="job-detail__eyebrow">FIȘA LUCRĂRII / STARE OPERAȚIONALĂ</span>
+              <div className="job-detail__state-line">
+                <strong>{job.stageLabel}</strong>
+                {job.progressLabel ? <span className="job-detail__progress">{job.progressLabel}</span> : null}
+              </div>
+              <p>{job.attentionLabel || (job.stage === "EXECUTION_COMPLETED"
+                ? "Producția este finalizată. Livrarea și montajul nu sunt confirmate de această stare."
+                : "Nu există atenționări suplimentare pentru această lucrare.")}</p>
+            </div>
+            <div className="job-detail__next">
+              <span className="job-detail__eyebrow">URMĂTORUL PAS ÎN SISTEM</span>
+              <strong>{job.nextActionLabel}</strong>
+              <span>Acțiunile disponibile sunt stabilite de starea reală a lucrării.</span>
+            </div>
+          </div>
+          <nav className="job-detail__sections" aria-label="Navigare în fișa lucrării">
+            <a href="#job-overview">Rezumat <span aria-hidden="true">↗</span></a>
+            <a href="#job-route">Traseu de producție <span aria-hidden="true">↗</span></a>
+            <a href="#job-results">Operații și rezultate <span aria-hidden="true">↗</span></a>
+          </nav>
+          <div className="job-detail__body">
+          <section className="job-detail__segment" id="job-overview" aria-label="Rezumatul lucrării">
           <SurfacePanel title="Identitate" label="Identitate">
             <dl className="fact-grid">
               <InfoRow label="Lucrare" value={job.productLabel} />
@@ -310,6 +336,8 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
           {jobResource.data?.siteInstallation ? (
             <SiteInstallationContextPanel context={jobResource.data.siteInstallation} />
           ) : null}
+          </section>
+          <section className="job-detail__segment" id="job-route" aria-label="Traseul de producție">
           <SurfacePanel
             title="Traseu de producție"
             description="Ghid din starea lucrării. Nu este planul de producție."
@@ -323,6 +351,8 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
                   : "Planul nu există încă. După materializare, progresul vine din motorul de execuție."}
             </p>
           </SurfacePanel>
+          </section>
+          <section className="job-detail__segment" id="job-results" aria-label="Operații și rezultate">
           <SurfacePanel
             title="Planificat și realizat"
             label="Planificat și realizat"
@@ -394,6 +424,8 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
               </>
             ) : null}
           </SurfacePanel>
+          </section>
+          </div>
         </>
       ) : jobResource.status !== "error" ? (
         <>
