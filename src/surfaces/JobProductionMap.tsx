@@ -66,16 +66,13 @@ export function JobProductionMap({
     : [];
   const dependencyLabels = selected?.dependsOnLabels ?? [];
   const seenPredecessorIds = new Set(predecessors.map(({ task }) => task.taskId));
-  const extraDependencyLabels = dependencyLabels.filter(
-    (label) => !predecessors.some(({ task }) => label.includes(task.processLabel)),
-  );
   const unknownPredecessors = (selected?.waitingFor ?? []).filter((id) => !seenPredecessorIds.has(id));
   const messages = selected
     ? [
         selected.startBlockReason,
         selected.externalBlockLabel,
         selected.qualityBlockLabel,
-      ].filter((message): message is string => Boolean(message?.trim()))
+      ].filter((message): message is string => Boolean(message?.trim() && message !== jobAttention))
     : [];
   const uniqueMessages = [...new Set(messages)];
   const totalSignals = plan.tasks.filter(hasSignal).length;
@@ -180,7 +177,7 @@ export function JobProductionMap({
           </div>
           <div className="job-map__trace" aria-label="Dependențe și continuări confirmate">
             <div className="job-map__trace-stage" data-kind="before">
-              <span className="job-map__trace-label">01 / DEPIND DE</span>
+              <span className="job-map__trace-label">01 / PREDECESORI</span>
               {predecessors.length > 0 ? predecessors.map(({ task }) => (
                 <button
                   key={task.taskId}
@@ -200,7 +197,7 @@ export function JobProductionMap({
                 </p>
               )}
             </div>
-            <div className="job-map__trace-junction" aria-hidden="true"><span>→</span></div>
+            <div className="job-map__trace-junction" aria-hidden="true"><span>{predecessors.length ? "→" : "·"}</span></div>
             <div className="job-map__trace-stage job-map__trace-stage--selected">
               <span className="job-map__trace-label">02 / ÎN FOCUS</span>
               <strong className="job-map__trace-selected-title">{selected?.processLabel}</strong>
@@ -208,7 +205,7 @@ export function JobProductionMap({
               {selected && hasSignal(selected) ? <span className="job-map__trace-signal">Necesită atenție</span> : null}
               {selected?.waitingFor.length ? <span className="job-map__trace-info">Așteaptă operații raportate de plan</span> : null}
             </div>
-            <div className="job-map__trace-junction" aria-hidden="true"><span>→</span></div>
+            <div className="job-map__trace-junction" aria-hidden="true"><span>{successors.length ? "→" : "·"}</span></div>
             <div className="job-map__trace-stage" data-kind="after">
               <span className="job-map__trace-label">03 / DEPIND DE ACEASTA</span>
               {successors.length > 0 ? successors.map(({ task }) => (
