@@ -21,8 +21,7 @@ function taskHasAttention(task: ExecutionTaskTransport): boolean {
     task.startBlockReason ||
       task.externalBlockLabel ||
       task.qualityBlockLabel ||
-      task.openReworkEpisode?.status === "OPEN" ||
-      task.waitingFor.length > 0,
+      task.openReworkEpisode?.status === "OPEN",
   );
 }
 
@@ -44,7 +43,13 @@ export function JobProductionMap({
     plan.tasks[0] ??
     null;
   const dependencies = selected?.dependsOnLabels ?? [];
-  const showUnnamedDependencies = (selected?.waitingFor.length ?? 0) > 0 && dependencies.length === 0;
+  // Highlight predecessor navigation only when task IDs match this exact plan.
+  const awaitingTasks = (selected?.waitingFor ?? []).flatMap((id) => {
+    const predecessor = plan.tasks.find((task) => task.taskId === id);
+    return predecessor ? [predecessor] : [];
+  });
+  const showUnnamedDependencies =
+    (selected?.waitingFor.length ?? 0) > 0 && dependencies.length === 0;
   const messages = selected
     ? [
         selected.startBlockReason,
@@ -128,14 +133,28 @@ export function JobProductionMap({
                   <div><dt>Planificat</dt><dd>{selected.plannedTimeLabel}</dd></div>
                   <div><dt>Realizat</dt><dd>{selected.actualDurationLabel}</dd></div>
                 </dl>
-                {dependencies.length > 0 || showUnnamedDependencies ? (
+                {dependencies.length > 0 || showUnnamedDependencies || awaitingTasks.length > 0 ? (
                   <div className="job-map__dependencies">
                     <strong>Dependențe raportate</strong>
                     {dependencies.length > 0 ? (
                       <ul>{dependencies.map((label, index) => <li key={index}>{label}</li>)}</ul>
-                    ) : (
+                    ) : showUnnamedDependencies ? (
                       <p>Așteaptă finalizarea unor operații anterioare.</p>
-                    )}
+                    ) : null}
+                    {awaitingTasks.length > 0 ? (
+                      <div className="job-map__predecessors">
+                        <span>Operații de care depinde acum:</span>
+                        {awaitingTasks.map((predecessor) => (
+                          <button
+                            type="button"
+                            key={predecessor.taskId}
+                            onClick={() => setSelectedId(predecessor.taskId)}
+                          >
+                            {predecessor.processLabel} <span aria-hidden="true">↗</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
                 {uniqueMessages.length > 0 ? (
