@@ -26,18 +26,18 @@ function groupTasks(tasks: ExecutionTaskTransport[]): Group[] {
 }
 
 export function JobProductionMap({
-  plan, jobId,
+  plan, jobId, jobKind,
 }: {
-  plan: ExecutionPlanTransport; jobId: string;
+  plan: ExecutionPlanTransport; jobId: string; jobKind?: string;
 }) {
   const groups = useMemo(() => groupTasks(plan.tasks), [plan.tasks]);
-  const multiple = groups.length > 1;
+  const hasComposition = jobKind === "ASSEMBLY" && groups.length > 1;
   const [scope, setScope] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [taskId, setTaskId] = useState<string | null>(null);
-  const selectedGroup = groups.find((group) => group.label === scope) ?? null;
+  const selectedGroup = groups.find((group) => group.label === scope) ?? (hasComposition ? null : groups[0] ?? null);
   const available = selectedGroup ? selectedGroup.tasks : plan.tasks;
   const search = query.toLocaleLowerCase("ro-RO").trim();
   const filtered = available.filter((task) =>
@@ -50,7 +50,7 @@ export function JobProductionMap({
   const shown = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
   const selected = shown.find((task) => task.taskId === taskId) ??
     shown.find(hasIssue) ?? shown.find(active) ?? shown[0] ?? null;
-  const currentScope = selectedGroup?.label ?? (multiple ? "Compoziția lucrării" : groups[0]?.label ?? "Lucrare");
+  const currentScope = selectedGroup?.label ?? (hasComposition ? "Compoziția lucrării" : "Lucrare");
   const activeCount = available.filter(active).length;
   const issueCount = available.filter(hasIssue).length;
   const hasPanel = groups.some((group) => viewType(group.label) === "panel");
@@ -99,16 +99,16 @@ export function JobProductionMap({
               <span>{groups.length} {groups.length === 1 ? "SECȚIUNE" : "SECȚIUNI"}</span>
             </div>
             <div className="job-dossier__scopes" role="group" aria-label="Părțile lucrării">
-              {multiple ? (
+              {hasComposition ? (
                 <button type="button" aria-pressed={!selectedGroup} onClick={() => changeScope(null)}>
                   <small>01</small> COMPOZIȚIE
                 </button>
               ) : null}
               {groups.map((group, index) => (
                 <button type="button" key={group.label}
-                  aria-pressed={selectedGroup?.label === group.label || (!multiple && !selectedGroup)}
+                  aria-pressed={selectedGroup?.label === group.label || (!hasComposition && !scope && groups[0]?.label === group.label)}
                   onClick={() => changeScope(group.label)}>
-                  <small>{String(index + (multiple ? 2 : 1)).padStart(2, "0")}</small> {group.label}
+                  <small>{String(index + (hasComposition ? 2 : 1)).padStart(2, "0")}</small> {group.label}
                 </button>
               ))}
             </div>
