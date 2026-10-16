@@ -1,6 +1,8 @@
+import { randomUUID } from "node:crypto";
 import {
   assignExecutorToTask,
   assignProviderToTask,
+  bindUniqueEligibleProvider,
   setPlannedEffortOnTask,
   assignedExecutorFromRow,
   assignedProviderFromRow,
@@ -19,6 +21,7 @@ import {
   type Person,
   type TaskCompletionInput,
   type TaskMutationResult,
+  type ProviderBindingStamp,
   workcenterRegistry,
   type WorkcenterRegistry,
 } from "@workos-final/domain";
@@ -62,6 +65,10 @@ type TaskRow = {
   assigned_provider_id: string | null;
   assigned_provider_kind: string | null;
   assigned_provider_label: string | null;
+  provider_binding_source: string | null;
+  provider_bound_at: string | null;
+  provider_bound_by_account_id: string | null;
+  provider_bound_by_operator_id: string | null;
   assigned_executor_id: string | null;
   assigned_executor_label: string | null;
   started_at: string | null;
@@ -345,9 +352,21 @@ export function persistAssignedProvider(
   taskId: string,
   providerId: string,
   registry: WorkcenterRegistry = workcenterRegistry,
+  stamp: ProviderBindingStamp | null = null,
 ): TaskMutationResult {
   return applyExecutionTaskMutation(db, taskId, (record) =>
-    assignProviderToTask(record, taskId, providerId, registry),
+    assignProviderToTask(record, taskId, providerId, registry, stamp),
+  );
+}
+
+export function persistUniqueProviderBinding(
+  db: SqliteDatabase,
+  taskId: string,
+  registry: WorkcenterRegistry = workcenterRegistry,
+  stamp: ProviderBindingStamp | null = null,
+): TaskMutationResult {
+  return applyExecutionTaskMutation(db, taskId, (record) =>
+    bindUniqueEligibleProvider(record, taskId, registry, stamp),
   );
 }
 
@@ -370,6 +389,7 @@ export function persistTaskStart(
   people: readonly Person[],
   eligibility: PeopleEligibilityContext | null = null,
   registry: WorkcenterRegistry = workcenterRegistry,
+  stamp: ProviderBindingStamp | null = null,
 ): TaskMutationResult {
   return applyExecutionTaskMutation(db, taskId, (record) =>
     startExecutionTask(
@@ -380,6 +400,7 @@ export function persistTaskStart(
       eligibility,
       registry,
       readMaterialReadinessContext(db),
+      stamp,
     ),
   );
 }
@@ -392,6 +413,7 @@ export function persistClaimAndStart(
   people: readonly Person[],
   eligibility: PeopleEligibilityContext | null = null,
   registry: WorkcenterRegistry = workcenterRegistry,
+  stamp: ProviderBindingStamp | null = null,
 ): TaskMutationResult {
   return applyExecutionTaskMutation(db, taskId, (record) =>
     claimAndStartExecutionTask(
@@ -403,6 +425,7 @@ export function persistClaimAndStart(
       eligibility,
       registry,
       readMaterialReadinessContext(db),
+      stamp,
     ),
   );
 }
@@ -585,6 +608,27 @@ export function applyExecutionTaskMutation(
       }
       return mutate(current);
     }
+    const previous = record.tasks.find((task) => task.taskId === taskId);
+    if (
+      next.providerBindingSource === "AUTO_UNIQUE" &&
+      previous?.assignedProvider?.id !== next.assignedProvider?.id &&
+      next.assignedProvider
+    ) {
+      recordDossierEvent(db, {
+        planId: next.executionPlanId,
+        taskId: next.taskId,
+        eventKind: "PROVIDER_AUTO_BOUND",
+        actorAccountId: next.providerBoundByAccountId ?? "system",
+        actorOperatorId: next.providerBoundByOperatorId ?? null,
+        occurredAt: next.providerBoundAt ?? next.startedAt ?? next.createdAt,
+        detail: {
+          providerId: next.assignedProvider.id,
+          providerKind: next.assignedProvider.kind,
+          providerLabel: next.assignedProvider.label,
+          source: "AUTO_UNIQUE",
+        },
+      });
+    }
     const stored = getExecutionPlanByTaskId(db, taskId);
     if (!stored) {
       return { ok: false, error: "not_found" };
@@ -636,6 +680,10 @@ export function writeTaskOperationalState(
         assigned_provider_id = ?,
         assigned_provider_kind = ?,
         assigned_provider_label = ?,
+        provider_binding_source = ?,
+        provider_bound_at = ?,
+        provider_bound_by_account_id = ?,
+        provider_bound_by_operator_id = ?,
         assigned_executor_id = ?,
         assigned_executor_label = ?,
         status = ?,
@@ -671,6 +719,10 @@ export function writeTaskOperationalState(
       next.assignedProvider?.id ?? null,
       next.assignedProvider?.kind ?? null,
       next.assignedProvider?.label ?? null,
+      next.providerBindingSource ?? null,
+      next.providerBoundAt ?? null,
+      next.providerBoundByAccountId ?? null,
+      next.providerBoundByOperatorId ?? null,
       next.assignedExecutor?.id ?? null,
       next.assignedExecutor?.label ?? null,
       next.status,
@@ -926,6 +978,13 @@ function hydrateRecord(db: SqliteDatabase, planRow: PlanRow): ExecutionPlanRecor
         row.assigned_provider_kind,
         row.assigned_provider_label,
       ),
+      providerBindingSource:
+        row.provider_binding_source === "MANUAL" || row.provider_binding_source === "AUTO_UNIQUE"
+          ? row.provider_binding_source
+          : null,
+      providerBoundAt: row.provider_bound_at,
+      providerBoundByAccountId: row.provider_bound_by_account_id,
+      providerBoundByOperatorId: row.provider_bound_by_operator_id,
       assignedExecutor: assignedExecutorFromRow(
         row.assigned_executor_id,
         row.assigned_executor_label,
@@ -954,4 +1013,42 @@ function hydrateRecord(db: SqliteDatabase, planRow: PlanRow): ExecutionPlanRecor
       returnedBy: row.returned_by,
     })),
   };
+}
+
+export function recordDossierEvent(
+  db: SqliteDatabase,
+  input: {
+    planId: string;
+    taskId: string;
+    jobId?: string | null;
+    eventKind: string;
+    actorAccountId: string;
+    actorOperatorId: string | null;
+    occurredAt: string;
+    entryId?: string | null;
+    artifactId?: string | null;
+    detail: Record<string, string | null>;
+  },
+): void {
+  db.prepare(
+    `
+    INSERT INTO execution_task_dossier_events (
+      event_id, plan_id, task_id, job_id, event_kind,
+      actor_account_id, actor_operator_id, occurred_at,
+      entry_id, artifact_id, detail_json
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `,
+  ).run(
+    `dev:${randomUUID()}`,
+    input.planId,
+    input.taskId,
+    input.jobId ?? null,
+    input.eventKind,
+    input.actorAccountId,
+    input.actorOperatorId,
+    input.occurredAt,
+    input.entryId ?? null,
+    input.artifactId ?? null,
+    JSON.stringify(input.detail),
+  );
 }

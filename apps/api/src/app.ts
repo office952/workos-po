@@ -16,6 +16,7 @@ import {
 import { registerMaterialReadinessRoutes } from "./execution/materialReadinessRoutes.js";
 import { registerJobMaterialRoutes } from "./materials/routes.js";
 import { registerExternalProductionRoutes } from "./execution/externalProductionRoutes.js";
+import { registerTaskDossierRoutes } from "./execution/taskDossierRoutes.js";
 import { registerInventoryRoutes } from "./inventory/routes.js";
 import { registerJobRoutes } from "./jobs/routes.js";
 import { registerQuoteRoutes } from "./quotes/routes.js";
@@ -172,6 +173,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<ApiEnv> {
   registerMaterialReadinessRoutes(app);
   registerJobMaterialRoutes(app);
   registerExternalProductionRoutes(app);
+  registerTaskDossierRoutes(app);
   registerInventoryRoutes(app);
   registerSystemProjectionRoutes(app);
   registerProductSystemAdminRoutes(app);

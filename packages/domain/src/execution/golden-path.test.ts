@@ -309,9 +309,10 @@ describe("LETTERS execution golden path", () => {
     const view = projectExecutionPlanView(record);
     expect(record.tasks).toHaveLength(13);
     expect(record.tasks.some((item) => item.processId === APPLY_SURFACE_FINISH_ID)).toBe(true);
-    expect(view.tasks.find((item) => item.processId === APPLY_SURFACE_FINISH_ID)?.canAssign).toBe(
-      true,
-    );
+    const vinylTask = view.tasks.find((item) => item.processId === APPLY_SURFACE_FINISH_ID);
+    expect(vinylTask?.providerBindingState).toBe("UNIQUE_PENDING");
+    expect(vinylTask?.canAssign).toBe(false);
+    expect(vinylTask?.assignedProvider).toBeNull();
     expect(view.progress.noProvider).toBe(0);
     expect(view.progress.status).toBe("PLANNED");
     expect(record.plan.eicTotal).toBe(386);

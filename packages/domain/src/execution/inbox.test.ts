@@ -144,6 +144,8 @@ describe("projectOperatorTaskInbox", () => {
     });
     expect(florinInbox.availableReady.map((item) => item.inscription).sort()).toEqual([
       "JOB-A",
+      "JOB-A",
+      "JOB-B",
       "JOB-B",
     ]);
     expect(florinInbox.availableReady.every((item) => item.canClaimStart)).toBe(true);
@@ -186,10 +188,14 @@ describe("projectOperatorTaskInbox", () => {
       eligibility: setup.eligibility,
       plans: [{ record: job.record, snapshot: job.snapshot, customerDisplayName: null }],
     });
-    const back = inbox.availableNeedsProvider.find((item) => item.processLabel.includes("CNC"));
-    expect(back).toBeTruthy();
-    expect(back?.canClaimStart).toBe(false);
-    expect(inbox.availableReady).toEqual([]);
+    const readyCnc = inbox.availableReady.filter((item) => item.processLabel.includes("CNC"));
+    const waitingCnc = inbox.waitingDependencies.filter((item) => item.processLabel.includes("CNC"));
+    expect(readyCnc.length).toBeGreaterThan(0);
+    expect(readyCnc.every((item) => item.canClaimStart)).toBe(true);
+    expect(inbox.availableNeedsProvider.filter((item) => item.processLabel.includes("CNC"))).toEqual(
+      [],
+    );
+    expect(waitingCnc.every((item) => item.canClaimStart === false)).toBe(true);
   });
 
   it("keeps in-progress mine after claim and hides it from Andrei", () => {
@@ -223,8 +229,10 @@ describe("projectOperatorTaskInbox", () => {
       eligibility: setup.eligibility,
       plans: [{ record: claimed.record, snapshot: job.snapshot, customerDisplayName: "Client" }],
     });
+    const claimedTaskId = backCnc(job.record).taskId;
     expect(florinInbox.inProgressMine).toHaveLength(1);
-    expect(florinInbox.availableReady).toEqual([]);
+    expect(florinInbox.inProgressMine[0]?.taskId).toBe(claimedTaskId);
+    expect(florinInbox.availableReady.find((item) => item.taskId === claimedTaskId)).toBeUndefined();
 
     const andreiInbox = projectOperatorTaskInbox({
       currentOperator: setup.andrei,
@@ -233,7 +241,7 @@ describe("projectOperatorTaskInbox", () => {
       plans: [{ record: claimed.record, snapshot: job.snapshot, customerDisplayName: "Client" }],
     });
     expect(andreiInbox.inProgressMine).toEqual([]);
-    expect(andreiInbox.availableReady.find((item) => item.inscription === "CLAIMED")).toBeUndefined();
+    expect(andreiInbox.availableReady.find((item) => item.taskId === claimedTaskId)).toBeUndefined();
   });
 
   it("excludes unavailable operators from claimable lanes but keeps their in-progress work", () => {

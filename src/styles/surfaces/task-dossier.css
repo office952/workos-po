@@ -1,0 +1,115 @@
+.task-dossier {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.task-dossier__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.task-dossier__actions .hit {
+  min-height: 44px;
+}
+
+.task-dossier__composer,
+.task-dossier__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.task-dossier h3 {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 650 11px/1.3 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.task-dossier__note,
+.task-dossier__file,
+.task-dossier__history {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.task-dossier__note--problem {
+  padding-left: 10px;
+  border-left: 3px solid var(--shell-signal);
+}
+
+.task-dossier__file img {
+  max-width: 100%;
+  height: auto;
+}
+
+.task-dossier__meta,
+.task-dossier__history {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.task-dossier__history {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 1279px) {
+  .execution-floor > .task-dossier {
+    order: 2;
+  }
+
+  .execution-floor > .operational-task--current {
+    order: 1;
+  }
+
+  .execution-floor > .worklist {
+    order: 3;
+  }
+}
+
+@media (min-width: 1280px) {
+  .execution-floor:has(.task-dossier) {
+    grid-template-columns: minmax(14rem, 18rem) minmax(0, 1.4fr) minmax(16rem, 22rem);
+  }
+
+  .execution-floor:has(.task-dossier) > .worklist {
+    grid-column: 1;
+  }
+
+  .execution-floor:has(.task-dossier) > .operational-task--current {
+    grid-column: 2;
+  }
+
+  .execution-floor:has(.task-dossier) > .task-dossier {
+    grid-column: 3;
+    position: sticky;
+    top: calc(var(--shell-height) + 12px);
+    max-height: calc(100dvh - var(--shell-height) - 24px);
+    overflow: auto;
+  }
+}
+
+@media (max-width: 390px) {
+  .task-dossier__actions {
+    flex-direction: column;
+  }
+
+  .task-dossier__actions .hit,
+  .task-dossier__composer .hit {
+    width: 100%;
+  }
+}

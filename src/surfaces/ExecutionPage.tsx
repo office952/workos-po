@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TransportError } from "../api/http";
 import {
   assignTaskProvider,
@@ -12,6 +12,7 @@ import {
   recordQualityPass,
   closeReworkEpisode,
   startExecutionTask,
+  bindUniqueProvider,
   startMachineRun,
   stopMachineRun,
 } from "../api/lifecycle";
@@ -43,6 +44,7 @@ import {
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import "../styles/surfaces/execution-flow.css";
+import "../styles/surfaces/task-dossier.css";
 import { parseCompletedQuantity } from "../presentation/completedQuantity";
 import {
   actualConsumptionDraftKey,
@@ -78,6 +80,7 @@ import {
 import { QualityControlPanel } from "./QualityControlPanel";
 import { SiteInstallationContextPanel } from "./SiteInstallationContextPanel";
 import { JobMaterialPreparation } from "./JobMaterialPreparation";
+import { TaskDossierPanel } from "./TaskDossierPanel";
 
 type ExecutionPageProps = {
   planId: string;
@@ -507,6 +510,22 @@ export function ExecutionPage({
   const actionableTask = plan ? firstActionableTask(plan.tasks) : null;
   const sessionKnown = session.status === "success";
   const outlineTaskId = currentTask?.taskId ?? null;
+  const bindAttempt = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!currentTask || currentTask.providerBindingState !== "UNIQUE_PENDING") {
+      return;
+    }
+    const attemptKey = `${currentTask.taskId}:${session.data?.displayName ?? "viewer"}`;
+    if (bindAttempt.current === attemptKey) {
+      return;
+    }
+    bindAttempt.current = attemptKey;
+    const taskIdToBind = currentTask.taskId;
+    void bindUniqueProvider(taskIdToBind)
+      .then(() => invalidateAfterExecutionTaskChange(planId))
+      .catch(() => undefined);
+  }, [currentTask, planId, session.data?.displayName]);
 
   useEffect(() => {
     if (!outlineTaskId) {
@@ -718,16 +737,20 @@ export function ExecutionPage({
                 }}
                 onAssign={(providerId) => void assign(currentTask, providerId)}
               />
-            ) : currentTask.requiresProvider &&
-              currentTask.eligibleProviders.length > 0 &&
-              currentTask.status !== "COMPLETED" &&
-              currentTask.assignmentLabel === "Nealocat" ? (
+            ) : currentTask.providerBindingState === "CHOICE_REQUIRED" ||
+              (currentTask.requiresProvider &&
+                currentTask.eligibleProviders.length > 1 &&
+                currentTask.assignmentLabel === "Nealocat") ? (
               <p>
-                Utilaje eligibile:{" "}
-                {currentTask.eligibleProviders
-                  .map((provider) => providerChoiceLabel(provider))
-                  .join(", ")}
+                Sunt mai multe zone sau utilaje eligibile. Alegerea o face proprietarul organizației.
+                Nimic nu se alocă automat.
               </p>
+            ) : currentTask.providerBindingLabel ? (
+              <p>{currentTask.providerBindingLabel}</p>
+            ) : currentTask.requiresProvider &&
+              currentTask.eligibleProviders.length === 1 &&
+              currentTask.assignmentLabel === "Nealocat" ? (
+              <p>{`Se asociază automat: ${currentTask.eligibleProviders[0]?.label ?? ""}`}</p>
             ) : null}
             {closeQuantityVisible(currentTask) ? (
               <TextField
@@ -970,6 +993,13 @@ export function ExecutionPage({
             </p>
           </SurfacePanel>
         </article>
+      ) : null}
+      {currentTask ? (
+        <TaskDossierPanel
+          key={currentTask.taskId}
+          taskId={currentTask.taskId}
+          canInstruct={plan?.canConfirmMaterial === true}
+        />
       ) : null}
       {!plan && planResource.status !== "error" ? (
         <article className="operational-task operational-task--current">

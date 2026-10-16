@@ -130,3 +130,7 @@ export async function handOffExternalTask(taskId: string): Promise<unknown> {
 export async function recordExternalReturn(taskId: string): Promise<unknown> {
   return postJson(`/api/execution-tasks/${encodeURIComponent(taskId)}/external-return`);
 }
+
+export async function bindUniqueProvider(taskId: string): Promise<unknown> {
+  return postJson(`/api/execution-tasks/${encodeURIComponent(taskId)}/bind-unique-provider`);
+}

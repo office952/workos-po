@@ -143,20 +143,26 @@ describe("claimAndStartExecutionTask", () => {
     expect(next?.startedAt).toBe("2026-08-17T16:00:00.000Z");
   });
 
-  it("does not claim when provider is missing", () => {
+  it("binds the single eligible machine when the operator claims", () => {
     const setup = cncPeople();
     const record = planned();
     const task = backCnc(record);
-    expect(
-      claimAndStartExecutionTask(
-        record,
-        task.taskId,
-        setup.florin.personId,
-        "2026-08-17T16:00:00.000Z",
-        setup.people,
-        setup.eligibility,
-      ),
-    ).toEqual({ ok: false, error: "missing_assignment" });
+    const claimed = claimAndStartExecutionTask(
+      record,
+      task.taskId,
+      setup.florin.personId,
+      "2026-08-17T16:00:00.000Z",
+      setup.people,
+      setup.eligibility,
+    );
+    expect(claimed.ok).toBe(true);
+    if (!claimed.ok) {
+      return;
+    }
+    const next = claimed.record.tasks.find((item) => item.taskId === task.taskId);
+    expect(next?.status).toBe("IN_PROGRESS");
+    expect(next?.assignedProvider?.id).toBe(MCH_CNC_4020_ID);
+    expect(next?.providerBindingSource).toBe("AUTO_UNIQUE");
     expect(record.tasks.find((item) => item.taskId === task.taskId)?.assignedExecutor).toBeNull();
   });
 

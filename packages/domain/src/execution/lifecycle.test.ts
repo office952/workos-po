@@ -193,7 +193,7 @@ describe("minimal execution task lifecycle", () => {
     const backCnc = taskBySource(record, "BACK", CUT_SHEET_CNC_ID);
     expect(startExecutionTask(record, backCnc.taskId, "2026-08-15T16:00:00.000Z")).toEqual({
       ok: false,
-      error: "missing_assignment",
+      error: "missing_executor",
     });
     const assigned = assignProviderToTask(record, backCnc.taskId, MCH_CNC_4020_ID);
     if (!assigned.ok) {
