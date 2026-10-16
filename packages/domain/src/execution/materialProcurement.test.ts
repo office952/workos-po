@@ -59,6 +59,15 @@ describe("material purchasing from engine-owned estimates", () => {
     });
   });
 
+  it("rounds up fractional piece estimates to a whole purchasing minimum", () => {
+    expect(resolveRequestedMaterialQuantity(120.2, "buc", undefined)).toEqual({
+      ok: true, quantity: 121,
+    });
+    expect(resolveRequestedMaterialQuantity(120.2, "buc", 120)).toEqual({
+      ok: false, error: "below_estimated_requirement",
+    });
+  });
+
   it("accepts non-piece material quantities directly from the engine", () => {
     expect(resolveRequestedMaterialQuantity(2.4, "m2", 2.5)).toEqual({
       ok: true, quantity: 2.5,
