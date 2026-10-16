@@ -255,7 +255,24 @@ describe("task dossier and unique provider binding", () => {
       runtime.readExecutionPlanByTaskId(taskId)?.tasks.find((item) => item.taskId === taskId)?.status,
     ).toBe("COMPLETED");
     const used = ((await readBody(marked)).dossier as JsonObject).files as JsonObject[];
-    expect(used.find((item) => item.artifactId === artifactId)?.usedAt).toEqual(expect.any(String));
+    const usedAt = used.find((item) => item.artifactId === artifactId)?.usedAt;
+    expect(usedAt).toEqual(expect.any(String));
+    const otherDossier = await app.request(
+      `/api/execution-tasks/${String(other.taskId)}/dossier`,
+      withCookie(undefined, cookie),
+    );
+    const otherUsed = ((await readBody(otherDossier)).dossier as JsonObject).files as JsonObject[];
+    expect(otherUsed.find((item) => item.artifactId === artifactId)?.usedAt).toBeNull();
+    const repeated = await app.request(`/api/execution-tasks/${taskId}/artifact-use`, {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie },
+      body: JSON.stringify({ artifactId }),
+    });
+    expect(repeated.status).toBe(200);
+    const repeatedBody = await readBody(repeated);
+    expect(repeatedBody.alreadyApplied).toBe(true);
+    const repeatedFiles = (repeatedBody.dossier as JsonObject).files as JsonObject[];
+    expect(repeatedFiles.find((item) => item.artifactId === artifactId)?.usedAt).toBe(usedAt);
   });
 
   it("refuses zero or multiple providers and binds one provider once under concurrent requests", async () => {

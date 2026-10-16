@@ -167,8 +167,10 @@ import {
 import {
   addTaskArtifact as storeAddTaskArtifact,
   addTaskDossierEntry as storeAddTaskDossierEntry,
+  addJobArtifact as storeAddJobArtifact,
   linkTaskArtifact as storeLinkTaskArtifact,
   markTaskArtifactUsed as storeMarkTaskArtifactUsed,
+  readJobFileArchive as storeReadJobFileArchive,
   readTaskArtifactDownload as storeReadTaskArtifactDownload,
   readTaskDossier as storeReadTaskDossier,
 } from "../execution/taskDossierStore.js";
@@ -478,6 +480,20 @@ export type ProductSystemRuntime = {
     usedAt: string,
   ): ReturnType<typeof storeMarkTaskArtifactUsed>;
   readTaskArtifactDownload(artifactId: string): ReturnType<typeof storeReadTaskArtifactDownload>;
+  readJobFileArchive(jobId: string): ReturnType<typeof storeReadJobFileArchive>;
+  addJobArtifact(
+    jobId: string,
+    input: {
+      originalFileName: string;
+      mimeType: string | null;
+      bytes: Uint8Array;
+      supersedesArtifactId?: string | null;
+      purpose?: unknown;
+      note?: unknown;
+    },
+    actor: { accountId: string; operatorId: string | null },
+    uploadedAt: string,
+  ): ReturnType<typeof storeAddJobArtifact>;
   materialReadinessContext(): MaterialReadinessContext;
   readMaterialReadiness(): MaterialReadinessModeRecord;
   setMaterialReadinessMode(
@@ -1080,6 +1096,12 @@ export function createProductSystemRuntimeFromOpenDb(
     },
     readTaskArtifactDownload(artifactId) {
       return storeReadTaskArtifactDownload(db, artifactId, documentsRoot);
+    },
+    readJobFileArchive(jobId) {
+      return storeReadJobFileArchive(db, jobId);
+    },
+    addJobArtifact(jobId, input, actor, uploadedAt) {
+      return storeAddJobArtifact(db, jobId, input, actor, uploadedAt, documentsRoot);
     },
     materialReadinessContext() {
       return readMaterialReadinessContext(db);

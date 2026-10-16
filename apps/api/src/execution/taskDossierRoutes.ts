@@ -159,6 +159,78 @@ export function registerTaskDossierRoutes(app: Hono<ApiEnv>): void {
     return dossierResult(c, result);
   });
 
+  app.get("/api/jobs/:jobId/files", (c) => {
+    const jobId = httpPathIdentity(c.req.path, "/api/jobs/", "/files");
+    const archive = getProductSystem(c).readJobFileArchive(jobId);
+    if (!archive) {
+      return c.json({ error: "not_found" }, 404);
+    }
+    return c.json({ archive });
+  });
+
+  app.post(
+    "/api/jobs/:jobId/files",
+    bodyLimit({
+      maxSize: TASK_ARTIFACT_HTTP_BODY_BYTES,
+      onError: (c) => c.json({ error: "file_too_large" }, 413),
+    }),
+    async (c) => {
+      const actor = writerActor(c);
+      if (!actor) {
+        return c.json({ error: "invalid_session" }, 403);
+      }
+      const body = await c.req.parseBody();
+      const file = body["file"];
+      if (!(file instanceof File) || file.size === 0) {
+        return c.json({ error: "invalid_file" }, 400);
+      }
+      const supersedes =
+        typeof body["supersedesArtifactId"] === "string" && body["supersedesArtifactId"].trim()
+          ? body["supersedesArtifactId"].trim()
+          : null;
+      const jobId = httpPathIdentity(c.req.path, "/api/jobs/", "/files");
+      const result = getProductSystem(c).addJobArtifact(
+        jobId,
+        {
+          originalFileName: file.name || "fisier",
+          mimeType: file.type || null,
+          bytes: new Uint8Array(await file.arrayBuffer()),
+          supersedesArtifactId: supersedes,
+          purpose: body["purpose"],
+          note: body["note"],
+        },
+        actor,
+        new Date().toISOString(),
+      );
+      return archiveResult(c, result);
+    },
+  );
+
+  app.post("/api/jobs/:jobId/file-links", async (c) => {
+    const actor = writerActor(c);
+    if (!actor) {
+      return c.json({ error: "invalid_session" }, 403);
+    }
+    const body = await c.req.json().catch(() => null);
+    const record =
+      typeof body === "object" && body !== null
+        ? (body as { artifactId?: unknown; taskId?: unknown })
+        : null;
+    const artifactId = typeof record?.artifactId === "string" ? record.artifactId.trim() : "";
+    const taskId = typeof record?.taskId === "string" ? record.taskId.trim() : "";
+    if (!artifactId || !taskId) {
+      return c.json({ error: "invalid_payload" }, 400);
+    }
+    const jobId = httpPathIdentity(c.req.path, "/api/jobs/", "/file-links");
+    const runtime = getProductSystem(c);
+    const archive = runtime.readJobFileArchive(jobId);
+    if (!archive || !archive.files.some((item) => item.artifactId === artifactId)) {
+      return c.json({ error: "not_found" }, 404);
+    }
+    const result = runtime.linkTaskArtifact(taskId, artifactId, actor, new Date().toISOString());
+    return dossierResult(c, result);
+  });
+
   app.get("/api/execution-artifacts/:artifactId/download", (c) => {
     const artifactId = httpPathIdentity(c.req.path, "/api/execution-artifacts/", "/download");
     const result = getProductSystem(c).readTaskArtifactDownload(artifactId);
@@ -197,6 +269,16 @@ function writerActor(c: ApiContext) {
     return null;
   }
   return { accountId: actorUserId(c), operatorId: null };
+}
+
+function archiveResult(
+  c: ApiContext,
+  result: { ok: true; archive: unknown } | { ok: false; error: TaskDossierError },
+) {
+  if (!result.ok) {
+    return c.json({ error: result.error }, dossierStatus(result.error));
+  }
+  return c.json({ archive: result.archive });
 }
 
 function dossierResult(

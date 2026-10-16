@@ -82,6 +82,7 @@ export function TaskDossierPanel({
         dossier.observations.length > 0 ||
         dossier.issues.length > 0 ||
         dossier.files.length > 0 ||
+        dossier.planFiles.some((item) => !item.linkedToTask) ||
         dossier.history.length > 0),
   );
 
@@ -302,7 +303,7 @@ export function TaskDossierPanel({
               <DossierNote key={entry.entryId} entry={entry} />
             ))}
           </DossierSection>
-          <DossierSection title="Fișiere" empty={null}>
+          <DossierSection title="Fișierele operației" empty={null}>
             {dossier.files.map((item) => (
               <FileRow
                 key={item.artifactId}
@@ -318,7 +319,7 @@ export function TaskDossierPanel({
             ))}
           </DossierSection>
           {dossier.planFiles.some((item) => !item.linkedToTask) ? (
-            <DossierSection title="Fișiere ale lucrării" empty={null}>
+            <DossierSection title="Fișierele generale ale lucrării" empty={null}>
               {dossier.planFiles
                 .filter((item) => !item.linkedToTask)
                 .map((item) => (

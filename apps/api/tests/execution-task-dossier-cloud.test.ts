@@ -116,9 +116,133 @@ describe("task dossier cloud tenancy", () => {
       fixture.close();
     }
   });
+
+  it("keeps a job file before the plan and scopes usage to one operation", async () => {
+    const fixture = createCloudFixture();
+    try {
+      const alpha = await addOrganization(fixture, "Atelier Arhiva Alpha");
+      const beta = await addOrganization(fixture, "Atelier Arhiva Beta");
+      await addUser(fixture, {
+        email: "owner-a-archive@example.test",
+        password: OWNER_PASSWORD,
+        organizationId: alpha.organization.organizationId,
+        role: "owner",
+      });
+      await addUser(fixture, {
+        email: "owner-b-archive@example.test",
+        password: OWNER_PASSWORD,
+        organizationId: beta.organization.organizationId,
+        role: "owner",
+      });
+      const ownerA = await loginCloud(
+        fixture.app, "owner-a-archive@example.test", OWNER_PASSWORD, alpha.organization.organizationId,
+      );
+      const ownerB = await loginCloud(
+        fixture.app, "owner-b-archive@example.test", OWNER_PASSWORD, beta.organization.organizationId,
+      );
+      const cookieA = ownerA.cookie ?? "";
+      const cookieB = ownerB.cookie ?? "";
+      const seller = await fixture.app.request("/api/seller", {
+        method: "PATCH",
+        headers: { "content-type": "application/json", cookie: cookieA },
+        body: JSON.stringify({ legalName: "Atelier Arhiva Alpha SRL" }),
+      });
+      expect(seller.status).toBe(200);
+      const jobId = await releaseJob(fixture.app, cookieA);
+      const beforePlan = await fixture.app.request(`/api/jobs/${encodeURIComponent(jobId)}`, {
+        headers: { cookie: cookieA },
+      });
+      expect(((await beforePlan.json()) as Obj).execution).toBeNull();
+
+      const upload = new FormData();
+      upload.set("file", new File(["schița"], "schita.txt", { type: "text/plain" }));
+      upload.set("purpose", "WORKING");
+      upload.set("note", "Contur pentru debitare.");
+      const stored = await fixture.app.request(`/api/jobs/${encodeURIComponent(jobId)}/files`, {
+        method: "POST",
+        headers: { cookie: cookieA },
+        body: upload,
+      });
+      expect(stored.status).toBe(200);
+      const archive = ((await stored.json()) as Obj).archive as Obj;
+      const original = (archive.files as Obj[])[0];
+      const artifactId = String(original?.artifactId);
+      expect(original?.planId).toBeNull();
+      expect(original?.purpose).toBe("WORKING");
+
+      const planned = await fixture.app.request(`/api/jobs/${encodeURIComponent(jobId)}/execution-plan`, {
+        method: "POST",
+        headers: { cookie: cookieA },
+      });
+      expect(planned.status).toBe(200);
+      const kept = await fixture.app.request(`/api/jobs/${encodeURIComponent(jobId)}/files`, {
+        headers: { cookie: cookieA },
+      });
+      const keptFiles = (((await kept.json()) as Obj).archive as Obj).files as Obj[];
+      expect(keptFiles.some((item) => item.artifactId === artifactId)).toBe(true);
+
+      const version = new FormData();
+      version.set("file", new File(["schița v2"], "schita-v2.txt", { type: "text/plain" }));
+      version.set("supersedesArtifactId", artifactId);
+      const versioned = await fixture.app.request(`/api/jobs/${encodeURIComponent(jobId)}/files`, {
+        method: "POST",
+        headers: { cookie: cookieA },
+        body: version,
+      });
+      expect(versioned.status).toBe(200);
+      const versions = (((await versioned.json()) as Obj).archive as Obj).files as Obj[];
+      expect(versions.some((item) => item.artifactId === artifactId)).toBe(true);
+      expect(versions.some((item) => item.supersedesArtifactId === artifactId)).toBe(true);
+
+      const tasks = await taskIds(fixture.app, jobId, cookieA);
+      expect(tasks.length).toBeGreaterThan(1);
+      const [taskA, taskB] = tasks;
+      const linkA = await fixture.app.request(`/api/jobs/${encodeURIComponent(jobId)}/file-links`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: cookieA },
+        body: JSON.stringify({ artifactId, taskId: taskA }),
+      });
+      const linkB = await fixture.app.request(`/api/jobs/${encodeURIComponent(jobId)}/file-links`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: cookieA },
+        body: JSON.stringify({ artifactId, taskId: taskB }),
+      });
+      expect(linkA.status).toBe(200);
+      expect(linkB.status).toBe(200);
+      expect((((await linkA.json()) as Obj).dossier as Obj).taskStatus).toBe("PLANNED");
+
+      const marked = await fixture.app.request(`/api/execution-tasks/${encodeURIComponent(taskA)}/artifact-use`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: cookieA },
+        body: JSON.stringify({ artifactId }),
+      });
+      expect(marked.status).toBe(200);
+      const markedFiles = (((await marked.json()) as Obj).dossier as Obj).files as Obj[];
+      expect(markedFiles.find((item) => item.artifactId === artifactId)?.usedAt).toEqual(expect.any(String));
+      const other = await fixture.app.request(`/api/execution-tasks/${encodeURIComponent(taskB)}/dossier`, {
+        headers: { cookie: cookieA },
+      });
+      const otherFiles = (((await other.json()) as Obj).dossier as Obj).files as Obj[];
+      expect(otherFiles.find((item) => item.artifactId === artifactId)?.usedAt).toBeNull();
+
+      const download = await fixture.app.request(
+        `/api/execution-artifacts/${encodeURIComponent(artifactId)}/download`,
+        { headers: { cookie: cookieA } },
+      );
+      expect(await download.text()).toBe("schița");
+      expect((await fixture.app.request(`/api/jobs/${encodeURIComponent(jobId)}/files`, {
+        headers: { cookie: cookieB },
+      })).status).toBe(404);
+      expect((await fixture.app.request(`/api/execution-artifacts/${encodeURIComponent(artifactId)}/download`, {
+        headers: { cookie: cookieB },
+      })).status).toBe(404);
+    } finally {
+      fixture.close();
+    }
+  });
 });
 
-async function buildJob(app: ReturnType<typeof createCloudFixture>["app"], cookie: string): Promise<string> {
+async function releaseJob(app: ReturnType<typeof createCloudFixture>["app"], cookie: string): Promise<string> {
   const headers = { "content-type": "application/json", cookie };
   const compiled = (await (await app.request(
     "/api/products/" + CANONICAL_PRODUCT_CODE + "/preview",
@@ -156,12 +280,35 @@ async function buildJob(app: ReturnType<typeof createCloudFixture>["app"], cooki
     { method: "POST", headers: { cookie } },
   );
   expect(released.status).toBe(200);
+  return orderId;
+}
+
+async function buildJob(app: ReturnType<typeof createCloudFixture>["app"], cookie: string): Promise<string> {
+  const orderId = await releaseJob(app, cookie);
   const planned = await app.request(
     "/api/jobs/" + encodeURIComponent(orderId) + "/execution-plan",
     { method: "POST", headers: { cookie } },
   );
   expect(planned.status).toBe(200);
   return orderId;
+}
+
+async function taskIds(
+  app: ReturnType<typeof createCloudFixture>["app"],
+  jobId: string,
+  cookie: string,
+): Promise<string[]> {
+  const planned = (await (await app.request(
+    "/api/jobs/" + encodeURIComponent(jobId) + "/execution-plan",
+    { method: "POST", headers: { cookie } },
+  )).json()) as Obj;
+  const planId = ((planned.executionPlan as Obj).plan as Obj).planId as string;
+  const view = (await (await app.request(
+    "/api/execution-plans/" + encodeURIComponent(planId),
+    { headers: { cookie } },
+  )).json()) as Obj;
+  const tasks = ((view.executionPlan as Obj).tasks ?? (view.plan as Obj | undefined)?.tasks ?? []) as Obj[];
+  return tasks.map((item) => String(item.taskId)).filter((item) => item !== "");
 }
 
 async function firstTaskId(
