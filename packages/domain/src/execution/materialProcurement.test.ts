@@ -28,7 +28,7 @@ describe("material purchasing from engine-owned estimates", () => {
     expect(projectJobMaterialRequirements(record)).toEqual([
       {
         resourceId: "MAT-LED-MODULE",
-        label: expect.any(String),
+        label: "Module LED",
         unit: "buc",
         estimatedQuantity: 144,
         taskIds: ["task:led", "task:other"],
