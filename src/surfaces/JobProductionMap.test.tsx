@@ -74,7 +74,7 @@ describe("JobProductionMap", () => {
     expect(screen.getByText("Nicio dependență activă identificată.")).toBeInTheDocument();
     const group = screen.getByRole("button", { name: /Ansamblu1 operație/ });
     fireEvent.click(group);
-    expect(screen.getByText("Nicio continuare directă raportată în plan.")).toBeInTheDocument();
+    expect(screen.getByText("Nicio operație nu așteaptă acum această operație.")).toBeInTheDocument();
     expect(screen.getByText("Dependențe raportate")).toBeInTheDocument();
   });
 
