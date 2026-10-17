@@ -98,6 +98,19 @@
   background: var(--color-surface);
 }
 
+.execution-floor .operational-task--current {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.execution-next .info-row,
+.execution-context .info-row {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+}
+
 .execution-floor .worklist .section-label {
   position: sticky;
   top: 0;
@@ -181,18 +194,6 @@
 
   .execution-floor:has(.worklist) > .operational-task--current {
     grid-column: 2;
-  }
-}
-
-@media (min-width: 1500px) {
-  .execution-floor .operational-task--current {
-    grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.72fr);
-  }
-}
-
-@media (max-width: 1499px) {
-  .execution-floor .operational-task--current {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 

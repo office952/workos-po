@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { TransportError, readTransportErrorCode } from "../api/http";
 import {
   addTaskInstruction,
@@ -14,7 +14,14 @@ import { Button } from "../components/Button";
 import { InlineAlert } from "../components/InlineAlert";
 import { SelectField } from "../components/SelectField";
 import { TextField } from "../components/TextField";
+import { AuthenticatedDownloadLink } from "../presentation/AuthenticatedDownloadLink";
+import {
+  fileAccessExplanation,
+  instructionAccessExplanation,
+  observationAccessExplanation,
+} from "../presentation/dossierAccess";
 import { formatTimestamp } from "../presentation/format";
+import { JobArtifactPreview } from "./JobArtifactPreview";
 
 const ISSUE_REASONS = [
   { value: "MATERIAL", label: "Material" },
@@ -37,13 +44,25 @@ type Composer = "observation" | "file" | "issue" | "instruction" | null;
 
 export function TaskDossierPanel({
   taskId,
+  taskLabel = "această operație",
   canInstruct,
+  operatorIdentified = true,
+  canWriteFiles = true,
 }: {
   taskId: string;
+  taskLabel?: string;
   canInstruct: boolean;
+  operatorIdentified?: boolean;
+  canWriteFiles?: boolean;
 }) {
   const [dossier, setDossier] = useState<TaskDossier | null>(null);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState<"none" | "initial" | "stale" | "session" | "forbidden">("none");
+  const [reloadKey, setReloadKey] = useState(0);
+  const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null);
+  const dossierRef = useRef(dossier);
+  useEffect(() => {
+    dossierRef.current = dossier;
+  }, [dossier]);
   const [composer, setComposer] = useState<Composer>(null);
   const [observation, setObservation] = useState("");
   const [instruction, setInstruction] = useState("");
@@ -63,18 +82,28 @@ export function TaskDossierPanel({
       .then((next) => {
         if (!cancelled) {
           setDossier(next);
-          setLoadError(false);
+          setLoadError("none");
         }
       })
-      .catch(() => {
-        if (!cancelled) {
-          setLoadError(true);
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return;
         }
+        const code = error instanceof TransportError ? readTransportErrorCode(error.body) : null;
+        if (code === "invalid_session") {
+          setLoadError("session");
+          return;
+        }
+        if (code === "forbidden") {
+          setLoadError("forbidden");
+          return;
+        }
+        setLoadError(dossierRef.current ? "stale" : "initial");
       });
     return () => {
       cancelled = true;
     };
-  }, [taskId]);
+  }, [taskId, reloadKey]);
 
   const hasContent = Boolean(
     dossier &&
@@ -112,22 +141,42 @@ export function TaskDossierPanel({
 
   return (
     <aside className="task-dossier" aria-label="Dosar tehnic">
+      <section className="task-dossier__messages" aria-label="Mesaje pentru această operație">
+      <h3>Mesaje pentru {taskLabel}</h3>
       <div className="task-dossier__actions">
-        <Button variant="secondary" disabled={pending} onClick={() => openComposer("observation")}>
+        <Button
+          variant="secondary"
+          disabled={pending || !operatorIdentified}
+          onClick={() => openComposer("observation")}
+        >
           Adaugă observație
         </Button>
-        <Button variant="secondary" disabled={pending} onClick={() => openComposer("file")}>
-          Adaugă fișier
-        </Button>
-        <Button variant="secondary" disabled={pending} onClick={() => openComposer("issue")}>
+        <Button
+          variant="secondary"
+          disabled={pending || !operatorIdentified}
+          onClick={() => openComposer("issue")}
+        >
           Semnalează problemă
         </Button>
-        {canInstruct ? (
-          <Button variant="ghost" disabled={pending} onClick={() => openComposer("instruction")}>
-            Adaugă instrucțiune
-          </Button>
-        ) : null}
+        <Button
+          variant="ghost"
+          disabled={pending || !canInstruct}
+          onClick={() => openComposer("instruction")}
+        >
+          Adaugă instrucțiune
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={pending || !canWriteFiles}
+          onClick={() => openComposer("file")}
+        >
+          Adaugă fișier
+        </Button>
       </div>
+      {!operatorIdentified ? <p className="ui-note">{observationAccessExplanation()}</p> : null}
+      {!canInstruct ? <p className="ui-note">{instructionAccessExplanation()}</p> : null}
+      {!canWriteFiles ? <p className="ui-note">{fileAccessExplanation(false)}</p> : null}
+      </section>
       {notice ? (
         <InlineAlert tone="success" title="Salvat">
           {notice}
@@ -138,9 +187,29 @@ export function TaskDossierPanel({
           {actionError}
         </InlineAlert>
       ) : null}
-      {loadError ? (
+      {loadError === "initial" ? (
         <InlineAlert tone="error" title="Dosarul nu a putut fi citit">
-          Reîncearcă deschiderea operației.
+          <button type="button" className="text-link" onClick={() => setReloadKey((value) => value + 1)}>
+            Reîncearcă citirea
+          </button>
+        </InlineAlert>
+      ) : null}
+      {loadError === "stale" ? (
+        <InlineAlert tone="error" title="Actualizarea dosarului a eșuat">
+          Ultima citire rămâne afișată.{" "}
+          <button type="button" className="text-link" onClick={() => setReloadKey((value) => value + 1)}>
+            Reîncearcă
+          </button>
+        </InlineAlert>
+      ) : null}
+      {loadError === "session" ? (
+        <InlineAlert tone="error" title="Sesiune expirată">
+          Identifică din nou operatorul în Atelier. Dosarul afișat nu a fost rescris.
+        </InlineAlert>
+      ) : null}
+      {loadError === "forbidden" ? (
+        <InlineAlert tone="error" title="Lipsă permisiuni">
+          Nu ai dreptul să citești acest dosar. Nu se afișează date vechi drept actualizate.
         </InlineAlert>
       ) : null}
       {composer === "observation" ? (
@@ -157,6 +226,7 @@ export function TaskDossierPanel({
             );
           }}
         >
+          <p className="ui-note">Mesaj pentru {taskLabel}.</p>
           <TextField
             id={`${fileInputId}-observation`}
             label="Observație"
@@ -309,6 +379,8 @@ export function TaskDossierPanel({
                 key={item.artifactId}
                 file={item}
                 pending={pending}
+                selected={item.artifactId === selectedArtifactId}
+                onSelect={() => setSelectedArtifactId(item.artifactId)}
                 onMarkUsed={() =>
                   void run(
                     () => markTaskArtifactUsed(taskId, item.artifactId),
@@ -346,18 +418,28 @@ export function TaskDossierPanel({
               <DossierNote key={entry.entryId} entry={entry} />
             ))}
           </DossierSection>
-          <DossierSection title="Istoric" empty={null}>
-            {dossier.history.map((event) => (
-              <p key={event.eventId} className="task-dossier__history">
-                <span>{historyLabel(event.kind)}</span>
-                <span>{event.actorLabel ?? "Cont organizație"}</span>
-                <time dateTime={event.occurredAt}>{formatTimestamp(event.occurredAt)}</time>
-              </p>
-            ))}
+          <DossierSection title="Probleme semnalate" empty={null}>
             {dossier.issues.map((entry) => (
               <DossierNote key={entry.entryId} entry={entry} problem />
             ))}
           </DossierSection>
+          <section aria-label="Istoricul operației">
+            <h3>Istoricul operației</h3>
+            {dossier.history.length === 0 ? (
+              <p className="task-dossier__meta">Nu există evenimente în dosarul acestei operații.</p>
+            ) : (
+              dossier.history.map((event) => (
+                <p key={event.eventId} className="task-dossier__history">
+                  <span>{historyLabel(event.kind)}</span>
+                  <span>{event.actorLabel ?? "Cont organizație"}</span>
+                  <time dateTime={event.occurredAt}>{formatTimestamp(event.occurredAt)}</time>
+                </p>
+              ))
+            )}
+          </section>
+          <JobArtifactPreview
+            file={dossier.files.find((item) => item.artifactId === selectedArtifactId) ?? null}
+          />
         </div>
       ) : null}
     </aside>
@@ -411,6 +493,8 @@ function DossierNote({
 function FileRow({
   file,
   pending = false,
+  selected = false,
+  onSelect,
   onMarkUsed,
 }: {
   file: {
@@ -424,25 +508,27 @@ function FileRow({
     usedAt: string | null;
   };
   pending?: boolean;
+  selected?: boolean;
+  onSelect?: () => void;
   onMarkUsed?: () => void;
 }) {
   const extension = fileExtension(file.originalFileName);
   return (
     <article className="task-dossier__file">
-      {file.preview === "IMAGE" ? (
-        <img src={file.downloadHref} alt={file.originalFileName} />
-      ) : null}
-      <a className="text-link" href={file.downloadHref}>
+      <button type="button" className="text-link" aria-pressed={selected} onClick={onSelect}>
         {file.originalFileName}
-      </a>
+      </button>
+      <AuthenticatedDownloadLink href={file.downloadHref}>
+        Descarcă originalul
+      </AuthenticatedDownloadLink>
       <p className="task-dossier__meta">
         {extension} · {file.sizeLabel}
         {file.purposeLabel ? ` · ${file.purposeLabel}` : ""}
         {file.usedAt ? " · Utilizat la execuție" : ""}
       </p>
       {file.note ? <p>{file.note}</p> : null}
-      {file.preview !== "IMAGE" ? (
-        <p className="task-dossier__meta">Descărcare, fără previzualizare pentru acest format.</p>
+      {file.preview !== "IMAGE" && extension !== "pdf" && extension !== "txt" ? (
+        <p className="task-dossier__meta">Previzualizarea nativă nu este disponibilă. Descarcă originalul.</p>
       ) : null}
       {onMarkUsed && !file.usedAt ? (
         <Button variant="ghost" disabled={pending} onClick={onMarkUsed}>
@@ -493,7 +579,7 @@ function presentDossierError(error: unknown): string {
   const code = error instanceof TransportError ? readTransportErrorCode(error.body) : null;
   switch (code) {
     case "invalid_session":
-      return "Identifică operatorul înainte să adaugi în dosar.";
+      return "Sesiunea de operator a expirat sau lipsește. Ultima citire rămâne afișată.";
     case "invalid_file":
       return "Fișierul nu este într-un format permis.";
     case "file_too_large":
@@ -501,8 +587,8 @@ function presentDossierError(error: unknown): string {
     case "invalid_text":
       return "Textul este gol sau prea lung.";
     case "forbidden":
-      return "Nu ai dreptul să publici această instrucțiune.";
+      return "Nu ai dreptul pentru această acțiune. Ultima citire rămâne afișată.";
     default:
-      return "Dosarul nu a putut fi actualizat. Textul introdus a rămas aici.";
+      return "Actualizarea a eșuat. Ultima citire rămâne afișată, iar textul introdus a rămas aici.";
   }
 }

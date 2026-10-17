@@ -47,7 +47,12 @@
 
 .task-dossier__note--problem {
   padding-left: 10px;
-  border-left: 3px solid var(--shell-signal);
+  border-left: 3px solid var(--color-warning);
+}
+
+.task-dossier__actions .button,
+.task-dossier__composer .button {
+  font-size: 14px;
 }
 
 .task-dossier__drop {
@@ -71,42 +76,6 @@
   flex-direction: row;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-@media (max-width: 1279px) {
-  .execution-floor > .task-dossier {
-    order: 2;
-  }
-
-  .execution-floor > .operational-task--current {
-    order: 1;
-  }
-
-  .execution-floor > .worklist {
-    order: 3;
-  }
-}
-
-@media (min-width: 1280px) {
-  .execution-floor:has(.task-dossier) {
-    grid-template-columns: minmax(14rem, 18rem) minmax(0, 1.4fr) minmax(16rem, 22rem);
-  }
-
-  .execution-floor:has(.task-dossier) > .worklist {
-    grid-column: 1;
-  }
-
-  .execution-floor:has(.task-dossier) > .operational-task--current {
-    grid-column: 2;
-  }
-
-  .execution-floor:has(.task-dossier) > .task-dossier {
-    grid-column: 3;
-    position: sticky;
-    top: calc(var(--shell-height) + 12px);
-    max-height: calc(100dvh - var(--shell-height) - 24px);
-    overflow: auto;
-  }
 }
 
 @media (max-width: 390px) {

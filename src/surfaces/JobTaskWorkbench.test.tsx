@@ -547,8 +547,9 @@ describe("JobTaskWorkbench", () => {
     const user = userEvent.setup();
     render(<Harness />);
     await screen.findByTestId("preview");
+    expect(screen.getByRole("region", { name: "Istoricul operației" })).toBeInTheDocument();
     await user.click(
-      screen.getByText("Detalii, utilizare și istoric", {
+      screen.getByText("Detalii și utilizare", {
         selector: "summary",
       }),
     );

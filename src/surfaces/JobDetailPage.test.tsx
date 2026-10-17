@@ -122,14 +122,14 @@ describe("JobDetailPage", () => {
     render(<JobDetailPage jobId="job-1" />);
     expect(await screen.findByRole("link", { name: "Deschide execuția" })).toHaveAttribute(
       "href",
-      "/executie/exp-1?job=job-1",
+      "/executie/exp-1?task=task-1&job=job-1",
     );
     expect(screen.getByRole("link", { name: "Deschide atelierul lucrării" })).toHaveAttribute(
       "href",
-      "/atelier?job=job-1",
+      "/atelier?job=job-1&return=%2Flucrari%2Fjob-1%3Ftask%3Dtask-1",
     );
     const headerAction = document.querySelector(".page-header__action");
-    expect(headerAction?.querySelector('a[href="/executie/exp-1?job=job-1"]')).not.toBeNull();
+    expect(headerAction?.querySelector('a[href="/executie/exp-1?task=task-1&job=job-1"]')).not.toBeNull();
     expect(headerAction).toHaveTextContent("Continuă execuția");
   });
 

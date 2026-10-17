@@ -23,4 +23,10 @@ describe("navigate", () => {
     hash.setAttribute("href", "#continut-principal");
     expect(sameOriginNavigation(hash, new MouseEvent("click", { button: 0 }))).toBeNull();
   });
+
+  it("does not treat an artifact download as an application route", () => {
+    const anchor = document.createElement("a");
+    anchor.href = "/api/execution-artifacts/artifact-1/download";
+    expect(sameOriginNavigation(anchor, new MouseEvent("click", { button: 0 }))).toBeNull();
+  });
 });

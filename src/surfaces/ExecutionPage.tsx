@@ -42,6 +42,7 @@ import {
 } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
+import { useCloudSession } from "../session/CloudSessionContext";
 import "../styles/surfaces/execution-flow.css";
 import "../styles/surfaces/task-dossier.css";
 import { parseCompletedQuantity } from "../presentation/completedQuantity";
@@ -260,6 +261,8 @@ export function ExecutionPage({
   taskId = null,
   jobId = null,
 }: ExecutionPageProps) {
+  const cloud = useCloudSession();
+  const owner = cloud.organization?.membershipRole === "owner";
   const session = useResource(resourceKeys.operatorSession(), loadOperatorSession);
   const planResource = useResource(resourceKeys.executionPlan(planId), () =>
     loadExecutionPlan(planId),
@@ -560,7 +563,13 @@ export function ExecutionPage({
       {identified === false ? (
         <InlineAlert tone="blocked" title="Operator neidentificat">
           Intră în atelier înainte de a porni sau închide o sarcină.{" "}
-          <a className="text-link" href={atelierHref({ jobId: resolvedJobId })}>
+          <a
+            className="text-link"
+            href={atelierHref({
+              jobId: resolvedJobId,
+              returnTo: executionHref(planId, { taskId, jobId: resolvedJobId }),
+            })}
+          >
             Deschide atelierul
           </a>
         </InlineAlert>
@@ -863,6 +872,26 @@ export function ExecutionPage({
               actual={currentTask.completedQuantityLabel ?? "—"}
             />
             <dl className="fact-grid">
+              <InfoRow
+                label="Operator"
+                value={
+                  !sessionKnown
+                    ? "Se identifică"
+                    : identified
+                      ? "Identificat"
+                      : "Neidentificat"
+                }
+              />
+              <InfoRow
+                label="Dependențe"
+                value={
+                  currentTask.waitingFor.length > 0
+                    ? currentTask.waitingFor.join(", ")
+                    : currentTask.dependsOnLabels.length > 0
+                      ? "Îndeplinite"
+                      : "Fără dependențe"
+                }
+              />
               <InfoRow label="Zonă" value={currentTask.scopeLabel} />
               <InfoRow label="Alocare" value={currentTask.assignmentLabel} />
               <InfoRow label="Timp planificat" value={currentTask.plannedTimeLabel} />
@@ -943,46 +972,23 @@ export function ExecutionPage({
               <JobMaterialPreparation
                 jobId={resolvedJobId}
                 onlyResourceIds={currentTask.plannedResources.map((resource) => resource.resourceId)}
+                returnTo={executionHref(planId, { taskId: currentTask.taskId, jobId: resolvedJobId })}
               />
             ) : null}
             </div>
-          </SurfacePanel>
-          <SurfacePanel variant="quiet" title="Fapte">
-            <dl>
-              <InfoRow
-                label="Operator"
-                value={
-                  !sessionKnown
-                    ? "Se identifică"
-                    : identified
-                      ? "Identificat"
-                      : "Neidentificat"
-                }
-              />
-              <InfoRow label="Zonă / utilaj" value={currentTask.assignmentLabel} />
-              <InfoRow
-                label="Dependențe"
-                value={
-                  currentTask.waitingFor.length > 0
-                    ? currentTask.waitingFor.join(", ")
-                    : currentTask.dependsOnLabels.length > 0
-                      ? "Îndeplinite"
-                      : "Fără dependențe"
-                }
-              />
-            </dl>
             <p className="ui-note">
               Planul nu se rescrie. Actualul devine fapt istoric după confirmare.
             </p>
           </SurfacePanel>
+          <TaskDossierPanel
+            key={currentTask.taskId}
+            taskId={currentTask.taskId}
+            taskLabel={`${currentTask.seqLabel} ${currentTask.processLabel}`}
+            canInstruct={owner}
+            operatorIdentified={identified === true}
+            canWriteFiles={owner || identified === true}
+          />
         </article>
-      ) : null}
-      {currentTask ? (
-        <TaskDossierPanel
-          key={currentTask.taskId}
-          taskId={currentTask.taskId}
-          canInstruct={plan?.canConfirmMaterial === true}
-        />
       ) : null}
       {!plan && planResource.status !== "error" ? (
         <article className="operational-task operational-task--current">
@@ -1034,7 +1040,14 @@ export function ExecutionPage({
       ) : null}
       {plan ? (
         <p className="execution-return">
-          <a className="text-link" href={resolvedJobId ? jobHref(resolvedJobId) : "/lucrari"}>
+          <a
+            className="text-link"
+            href={
+              resolvedJobId
+                ? jobHref(resolvedJobId, { taskId: currentTask?.taskId ?? taskId })
+                : "/lucrari"
+            }
+          >
             {resolvedJobId ? "Revino la lucrare" : "Revino la lucrări"}
           </a>
         </p>

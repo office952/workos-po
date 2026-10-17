@@ -19,6 +19,7 @@ type WorklistRowProps = {
   actionHref?: string;
   actionCommand?: () => void;
   actionPending?: boolean;
+  actionExtra?: ReactNode;
 };
 
 export function WorklistRow({
@@ -39,6 +40,7 @@ export function WorklistRow({
   actionHref,
   actionCommand,
   actionPending = false,
+  actionExtra,
 }: WorklistRowProps) {
   const compact = variant === "compact";
   const registry = variant === "registry" || variant === "operations";
@@ -90,7 +92,10 @@ export function WorklistRow({
       {operations ? <span className="worklist-row__progress">{progress ?? ""}</span> : null}
       {compact ? null : <span className="worklist-row__state">{state}</span>}
       {registry ? <span className="worklist-row__meta">{meta ?? ""}</span> : null}
-      <span className="worklist-row__action">{actionControl}</span>
+      <span className="worklist-row__action">
+        {actionControl}
+        {actionExtra}
+      </span>
     </>
   );
 

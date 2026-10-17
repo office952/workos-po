@@ -20,6 +20,7 @@ import "../styles/surfaces/job-materials.css";
 type Props = {
   jobId: string;
   onlyResourceIds?: readonly string[];
+  returnTo?: string;
 };
 
 function displayQuantity(value: number): string {
@@ -47,7 +48,7 @@ function estimatedLabel(line: JobMaterialLineTransport, jobTotal: boolean): stri
     : "Necesar estimat: " + quantity;
 }
 
-export function JobMaterialPreparation({ jobId, onlyResourceIds }: Props) {
+export function JobMaterialPreparation({ jobId, onlyResourceIds, returnTo }: Props) {
   const key = resourceKeys.jobMaterialPreparation(jobId);
   const resource = useResource(key, () => fetchJobMaterialPreparation(jobId));
   const session = useResource(resourceKeys.operatorSession(), loadOperatorSession);
@@ -187,7 +188,7 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds }: Props) {
           {!personName ? (
             <p className="ui-note">
               Verificarea și solicitarea necesită identificarea personală a operatorului.{" "}
-              <a className="text-link" href={atelierHref({ jobId })}>
+              <a className="text-link" href={atelierHref({ jobId, returnTo })}>
                 Identifică-te în Atelier
               </a>
             </p>
