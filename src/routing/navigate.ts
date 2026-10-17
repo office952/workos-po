@@ -45,7 +45,7 @@ export function sameOriginNavigation(
   if (anchor.target && anchor.target !== "_self") {
     return null;
   }
-  if (anchor.hasAttribute("download")) {
+  if (anchor.hasAttribute("download") || anchor.hasAttribute("data-authenticated-download")) {
     return null;
   }
   const raw = anchor.getAttribute("href");
@@ -54,6 +54,9 @@ export function sameOriginNavigation(
   }
   const url = new URL(anchor.href, window.location.origin);
   if (url.origin !== window.location.origin) {
+    return null;
+  }
+  if (url.pathname.startsWith("/api/") && url.pathname.endsWith("/download")) {
     return null;
   }
   return `${url.pathname}${url.search}${url.hash}`;

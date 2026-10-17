@@ -9,6 +9,7 @@ import { TextField } from "../components/TextField";
 import { resourceKeys } from "../data/resourceKeys";
 import { writeResource } from "../data/resourceCache";
 import { useResource } from "../data/useResource";
+import { AuthenticatedDownloadLink } from "../presentation/AuthenticatedDownloadLink";
 import { formatTimestamp } from "../presentation/format";
 import "../styles/surfaces/task-dossier.css";
 
@@ -131,9 +132,9 @@ export function JobFilesPanel({ jobId }: { jobId: string }) {
       ) : null}
       {files.map((item) => (
         <article key={item.artifactId} className="task-dossier__file">
-          <a className="text-link" href={item.downloadHref}>
+          <AuthenticatedDownloadLink href={item.downloadHref}>
             {item.originalFileName}
-          </a>
+          </AuthenticatedDownloadLink>
           <p className="task-dossier__meta">
             {fileExtension(item.originalFileName)} · {item.sizeLabel}
             {item.purposeLabel ? ` · ${item.purposeLabel}` : ""}
