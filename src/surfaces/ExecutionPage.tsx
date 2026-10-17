@@ -33,6 +33,7 @@ import { TextField } from "../components/TextField";
 import { Worklist } from "../components/Worklist";
 import { WorklistRow } from "../components/WorklistRow";
 import { invalidateAfterExecutionTaskChange } from "../data/invalidation";
+import { canPublishInstructions } from "../presentation/dossierAccess";
 import { formatTimestamp } from "../presentation/format";
 import { resourceKeys } from "../data/resourceKeys";
 import {
@@ -43,6 +44,7 @@ import {
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { useCloudSession } from "../session/CloudSessionContext";
+import { readCloudBoundaryVersion } from "../session/sessionExpiryBridge";
 import "../styles/surfaces/execution-flow.css";
 import "../styles/surfaces/task-dossier.css";
 import { parseCompletedQuantity } from "../presentation/completedQuantity";
@@ -262,7 +264,7 @@ export function ExecutionPage({
   jobId = null,
 }: ExecutionPageProps) {
   const cloud = useCloudSession();
-  const owner = cloud.organization?.membershipRole === "owner";
+  const owner = canPublishInstructions(cloud);
   const session = useResource(resourceKeys.operatorSession(), loadOperatorSession);
   const planResource = useResource(resourceKeys.executionPlan(planId), () =>
     loadExecutionPlan(planId),
@@ -981,12 +983,17 @@ export function ExecutionPage({
             </p>
           </SurfacePanel>
           <TaskDossierPanel
-            key={currentTask.taskId}
             taskId={currentTask.taskId}
             taskLabel={`${currentTask.seqLabel} ${currentTask.processLabel}`}
             canInstruct={owner}
             operatorIdentified={identified === true}
             canWriteFiles={owner || identified === true}
+            sessionScope={[
+              planId,
+              cloud.user?.email ?? "",
+              cloud.organization?.organizationId ?? "",
+              String(readCloudBoundaryVersion()),
+            ].join("|")}
           />
         </article>
       ) : null}

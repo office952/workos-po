@@ -25,16 +25,24 @@ export function AuthenticatedDownloadLink({
     }
     event.preventDefault();
     setError(null);
-    const result = await fetchDownload(href);
-    if (!result.ok) {
+    try {
+      const result = await fetchDownload(href);
+      if (!result.ok) {
+        setError(
+          result.status === 401 || result.status === 403
+            ? "Descărcarea cere o sesiune autentificată."
+            : "Fișierul nu a putut fi descărcat. Poți reîncerca.",
+        );
+        return;
+      }
+      triggerBrowserDownload(result.blob, result.filename ?? "document");
+    } catch (error) {
       setError(
-        result.status === 401 || result.status === 403
-          ? "Descărcarea cere o sesiune autentificată."
-          : "Fișierul nu a putut fi descărcat. Poți reîncerca.",
+        error instanceof Error && error.message === "session_context_changed"
+          ? "Sesiunea s-a schimbat. Descărcarea s-a oprit. Poți reîncerca după ce revii în organizație."
+          : "Conexiunea sau citirea a eșuat. Poți reîncerca descărcarea.",
       );
-      return;
     }
-    triggerBrowserDownload(result.blob, result.filename ?? "document");
   }
 
   return (

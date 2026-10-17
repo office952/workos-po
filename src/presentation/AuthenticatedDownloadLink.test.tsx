@@ -90,4 +90,27 @@ describe("AuthenticatedDownloadLink", () => {
     expect(triggerBrowserDownload).toHaveBeenCalledWith(expect.any(Blob), "document");
     expect(window.location.pathname).toBe("/executie/exp-1");
   });
+
+  it("explains an HTTP refusal without leaving the operation", async () => {
+    window.history.replaceState({}, "", "/lucrari/job-1?task=task-1");
+    vi.mocked(fetchDownload).mockResolvedValue({ ok: false, status: 403, body: { error: "forbidden" } });
+    const user = userEvent.setup();
+    render(<RouterHarness />);
+    await user.click(screen.getByRole("link", { name: "Descarcă" }));
+    expect(await screen.findByText("Descărcarea cere o sesiune autentificată.")).toBeInTheDocument();
+    expect(triggerBrowserDownload).not.toHaveBeenCalled();
+    expect(`${window.location.pathname}${window.location.search}`).toBe("/lucrari/job-1?task=task-1");
+    expect(screen.getByRole("link", { name: "Descarcă" })).toBeInTheDocument();
+  });
+
+  it("explains a network failure without an unhandled rejection or a route change", async () => {
+    window.history.replaceState({}, "", "/lucrari/job-1?task=task-1");
+    vi.mocked(fetchDownload).mockRejectedValue(new TypeError("Failed to fetch"));
+    const user = userEvent.setup();
+    render(<RouterHarness />);
+    await user.click(screen.getByRole("link", { name: "Descarcă" }));
+    expect(await screen.findByText("Conexiunea sau citirea a eșuat. Poți reîncerca descărcarea.")).toBeInTheDocument();
+    expect(screen.queryByText("Failed to fetch")).not.toBeInTheDocument();
+    expect(`${window.location.pathname}${window.location.search}`).toBe("/lucrari/job-1?task=task-1");
+  });
 });

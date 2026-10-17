@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { presentExecutionPlan } from "../adapters/executionAdapter";
 import { TransportError, readTransportErrorCode } from "../api/http";
+import { fetchJobMaterialPreparation } from "../api/jobMaterials";
 import { patchJobPlanning, postJobExecutionPlan, postJobProductionRelease } from "../api/jobs";
 import { Button } from "../components/Button";
 import { InfoRow } from "../components/InfoRow";
@@ -22,6 +23,7 @@ import { loadExecutionPlan, loadJobDetail } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { presentJobLifecycle } from "../presentation/jobLifecycle";
+import { presentMaterialPreparationSummary } from "../presentation/materialPreparationSummary";
 import {
   presentJobSheetLead,
   presentJobSheetTitle,
@@ -143,6 +145,10 @@ export function JobDetailPage({ jobId, taskId = null }: JobDetailPageProps) {
   }
   const priority = priorityDraft ?? job?.priority ?? "STANDARD";
   const targetDate = targetDraft ?? job?.targetDate ?? "";
+  const materialPreparation = useResource(resourceKeys.jobMaterialPreparation(jobId), () =>
+    fetchJobMaterialPreparation(jobId),
+  );
+  const materialSummary = presentMaterialPreparationSummary(materialPreparation);
   const materialAttention = (plan?.tasks ?? [])
     .map((task) => task.materialBlockLabel)
     .filter((label): label is string => Boolean(label))
@@ -361,9 +367,18 @@ export function JobDetailPage({ jobId, taskId = null }: JobDetailPageProps) {
             <SiteInstallationContextPanel context={jobResource.data.siteInstallation} />
           ) : null}
           {plan ? <details className="job-sheet-archive"><summary>Biblioteca lucrării — încărcare generală, distinctă de fișierele operației</summary><JobFilesPanel jobId={jobId} /></details> : <JobFilesPanel jobId={jobId} />}
-          {materialAttention ? <p className="job-sheet-attention">{materialAttention}</p> : null}
+          {materialAttention ? (
+            <p className="job-sheet-attention">Blocaj de execuție: {materialAttention}</p>
+          ) : null}
+          {materialSummary.length > 0 ? (
+            <div className="job-sheet-attention" data-testid="material-preparation-summary">
+              {materialSummary.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+            </div>
+          ) : null}
           <details>
-            <summary>Materiale — sumar, detalii și acțiuni</summary>
+            <summary>Materiale — detalii și acțiuni</summary>
             <JobMaterialPreparation
               jobId={jobId}
               returnTo={jobHref(jobId, { taskId: selectedTask?.taskId })}
@@ -403,7 +418,10 @@ export function JobDetailPage({ jobId, taskId = null }: JobDetailPageProps) {
                       <p>{plan.timeSummary.actualKnownLabel}</p>
                     </div>
                   ) : null}
-                  <p className="ui-note">Sumarul este pe lucrare. Detaliile stau pe operația selectată; comparația se deschide la cerere.</p>
+                  <p className="ui-note">
+                    Sumarul de timp este pe lucrare. Cantitatea, consumul și realizatul fiecărei operații
+                    stau în comparația de mai jos sau în Execuție.
+                  </p>
                   <details className="job-sheet-results"><summary>Compară {plan.tasks.length} operații</summary>
                   {plan.tasks.map((task) => (
                     <div key={task.taskId} className="stack">

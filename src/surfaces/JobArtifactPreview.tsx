@@ -11,7 +11,12 @@ type Preview =
   | { id: string; kind: "text"; text: string; truncated: boolean }
   | { id: string; kind: "error"; message: string };
 
-export function JobArtifactPreview({ file }: { file: DossierFile | null }) {
+export type ArtifactPreviewSource = Pick<
+  DossierFile,
+  "artifactId" | "originalFileName" | "sizeLabel" | "downloadHref" | "preview"
+>;
+
+export function JobArtifactPreview({ file }: { file: ArtifactPreviewSource | null }) {
   const [preview, setPreview] = useState<Preview | null>(null);
   const [retry, setRetry] = useState(0);
   const id = file?.artifactId ?? "";

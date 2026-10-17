@@ -6,6 +6,19 @@ export function instructionAccessExplanation(): string {
   return "Instrucțiunile le publică proprietarul organizației. Serverul verifică același drept.";
 }
 
+export function canPublishInstructions(session: {
+  ready: boolean;
+  unavailable: boolean;
+  mode: string;
+  organization: { membershipRole?: string | null } | null;
+}): boolean {
+  return (
+    session.ready &&
+    !session.unavailable &&
+    (session.mode === "single_plane" || session.organization?.membershipRole === "owner")
+  );
+}
+
 export function fileAccessExplanation(canWrite: boolean): string {
   if (canWrite) {
     return "Poți adăuga sau asocia fișiere pentru această operație.";

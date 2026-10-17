@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { resetResourceCache } from "../data/resourceCache";
 import { JobDetailPage } from "./JobDetailPage";
 
 vi.mock("../session/CloudSessionContext", () => ({ useCloudSession: () => ({ ready: true, unavailable: false, mode: "single_plane", user: null, organization: null }) }));
@@ -50,6 +51,80 @@ describe("JobDetailPage", () => {
     expect(screen.getByText("Ofertă acceptată")).toBeInTheDocument();
     expect(screen.getAllByText("Ofertă acceptată").length).toBe(1);
     expect(screen.queryByRole("link", { name: "Deschide atelierul lucrării" })).toBeNull();
+  });
+
+  it("shows missing stock and a review request while the material section stays closed", async () => {
+    resetResourceCache();
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      if (url.includes("material-preparation")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            preparation: {
+              jobId: "job-1",
+              planId: "exp-1",
+              lines: [
+                {
+                  resourceId: "mat-1",
+                  label: "Placă ACM",
+                  unit: "mp",
+                  estimatedQuantity: 2,
+                  taskIds: ["task-1"],
+                  canCheck: false,
+                  latestCheck: {
+                    status: "MISSING",
+                    checkedByLabel: "Ion",
+                    checkedAt: "2026-10-18T00:00:00Z",
+                  },
+                  openRequest: {
+                    requestId: "req-1",
+                    requestedQuantity: 2,
+                    unit: "mp",
+                    status: "OPEN",
+                    requestedByLabel: "Ion",
+                    requestedAt: "2026-10-18T00:00:00Z",
+                    requiresReview: true,
+                  },
+                },
+              ],
+            },
+          }),
+        });
+      }
+      if (url.includes("/jobs/job-1")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            job: {
+              jobId: "job-1",
+              productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+              productLabel: "Litere volumetrice",
+              inscription: "NORD",
+              customerDisplayName: "Atelier Nord",
+              stage: "RELEASED",
+              stageLabel: "Eliberată",
+              nextAction: "CREATE_EXECUTION_PLAN",
+              nextActionLabel: "Creează planul de execuție",
+              progressLabel: "0 / 3",
+              orderSnapshotId: "ord-1",
+              releaseSnapshotId: "rel-1",
+            },
+            quote: { quoteSnapshotId: "q-1" },
+            execution: { planId: null },
+          }),
+        });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+    }));
+
+    render(<JobDetailPage jobId="job-1" />);
+    const summary = await screen.findByTestId("material-preparation-summary");
+    expect(summary).toHaveTextContent("Placă ACM: material insuficient");
+    expect(summary).toHaveTextContent("solicitare de aprovizionare de revizuit");
+    expect(screen.getByText("Materiale — detalii și acțiuni").closest("details")).not.toHaveAttribute("open");
   });
 
   it("opens execution and atelier with the same job context when a plan exists", async () => {

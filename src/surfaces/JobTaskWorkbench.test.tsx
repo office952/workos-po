@@ -346,6 +346,27 @@ describe("JobTaskWorkbench", () => {
       ).getByRole("button", { name: /03 Operația 3/ }),
     ).toHaveTextContent("Dosar la selectare");
   });
+  it("shows a lone instruction outside the observation count", async () => {
+    values["task-1"] = {
+      ...dossier("task-1"),
+      instructions: [
+        {
+          entryId: "ins-1",
+          kind: "INSTRUCTION",
+          body: "Taie pe contur",
+          reasonCode: null,
+          reasonLabel: null,
+          authorLabel: "Owner",
+          createdAt: "2026-10-18T01:00:00Z",
+        },
+      ],
+    };
+    render(<Harness />);
+    expect(
+      await screen.findByRole("region", { name: "Instrucțiuni pentru această operație" }),
+    ).toHaveTextContent("Taie pe contur");
+    expect(screen.getByText(/0 observații · 0 probleme semnalate/)).toBeInTheDocument();
+  });
   it("requires an operator for reports even for Owner, while preserving upload and instruction access", async () => {
     mocks.operator = null;
     const user = userEvent.setup();
@@ -412,6 +433,16 @@ describe("JobTaskWorkbench", () => {
     expect(
       await screen.findByText(/Există o versiune ulterioară/),
     ).toHaveTextContent("revizie-noua.cdr");
+    expect(screen.getByTestId("preview")).toHaveTextContent("drawing-a.cdr");
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: "Deschide revizie-noua.cdr" }),
+    );
+    expect(screen.getByTestId("preview")).toHaveTextContent("revizie-noua.cdr");
+    expect(mocks.link).not.toHaveBeenCalled();
+    await user.click(
+      screen.getByRole("button", { name: "Revino la documentul asociat" }),
+    );
     expect(screen.getByTestId("preview")).toHaveTextContent("drawing-a.cdr");
   });
   it("searches all files and retains a selection outside the first three", async () => {

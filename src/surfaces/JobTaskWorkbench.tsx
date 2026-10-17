@@ -27,10 +27,12 @@ import { resourceKeys } from "../data/resourceKeys";
 import { loadOperatorSession } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import {
+  canPublishInstructions,
   fileAccessExplanation,
   instructionAccessExplanation,
   observationAccessExplanation,
 } from "../presentation/dossierAccess";
+import { laterDocumentVersions } from "../presentation/dossierRevision";
 import { formatTimestamp } from "../presentation/format";
 import { atelierHref, executionHref } from "../routing/appRoute";
 import { useCloudSession } from "../session/CloudSessionContext";
@@ -87,11 +89,7 @@ export function JobTaskWorkbench(props: Props) {
     loadOperatorSession,
   );
   const identified = operator.status === "success" && operator.data != null;
-  const owner =
-    cloud.ready &&
-    !cloud.unavailable &&
-    (cloud.mode === "single_plane" ||
-      cloud.organization?.membershipRole === "owner");
+  const owner = canPublishInstructions(cloud);
   const scope = JSON.stringify([
     props.jobId,
     cloud.user?.email,
@@ -128,6 +126,9 @@ function JobTaskWorkbenchBody({
   const [selectedFiles, setSelectedFiles] = useState<Record<string, string>>(
     {},
   );
+  const [consultedFiles, setConsultedFiles] = useState<Record<string, string>>(
+    {},
+  );
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [composer, setComposer] = useState<Composer | null>(null);
   const [allFiles, setAllFiles] = useState(false);
@@ -138,6 +139,8 @@ function JobTaskWorkbenchBody({
     error: boolean;
     text: string;
   } | null>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [savedEntry, setSavedEntry] = useState<{ taskId: string; entryId: string } | null>(null);
   const pendingRef = useRef(false);
   const mounted = useRef(true);
   const taskHeading = useRef<HTMLHeadingElement>(null);
@@ -187,15 +190,21 @@ function JobTaskWorkbenchBody({
   const draftKey = composer ? `${composer.taskId}:${composer.kind}` : "";
   const draft = drafts[draftKey] ?? emptyDraft();
   const notes = [
-    ...(dossier?.instructions ?? []),
     ...(dossier?.observations ?? []),
     ...(dossier?.issues ?? []),
   ].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  const newerVersions =
-    archive.data?.files.filter(
-      (file) =>
-        selectedFile && file.supersedesArtifactId === selectedFile.artifactId,
-    ) ?? [];
+  const instructions = [...(dossier?.instructions ?? [])].sort((a, b) =>
+    a.createdAt.localeCompare(b.createdAt),
+  );
+  const newerVersions = laterDocumentVersions(
+    selectedFile?.artifactId,
+    archive.data?.files ?? [],
+  );
+  const consultedFile =
+    (archive.data?.files ?? []).find(
+      (file) => file.artifactId === consultedFiles[taskId ?? ""],
+    ) ?? null;
+  const previewFile = consultedFile ?? selectedFile;
   const availableFiles =
     archive.data?.files.filter(
       (file) => !files.some((linked) => linked.artifactId === file.artifactId),
@@ -207,6 +216,14 @@ function JobTaskWorkbenchBody({
       mounted.current = false;
     };
   }, []);
+  const focusedEntry = useRef<string | null>(null);
+  useEffect(() => {
+    if (!savedEntry || savedEntry.taskId !== taskId || focusedEntry.current === savedEntry.entryId) {
+      return;
+    }
+    focusedEntry.current = savedEntry.entryId;
+    document.getElementById(`dossier-entry-${savedEntry.entryId}`)?.focus({ preventScroll: true });
+  }, [savedEntry, taskId]);
   useEffect(() => {
     function keydown(event: KeyboardEvent) {
       if (
@@ -240,8 +257,19 @@ function JobTaskWorkbenchBody({
     }
   }
   function chooseFile(next: string) {
-    if (taskId) setSelectedFiles((current) => ({ ...current, [taskId]: next }));
+    if (taskId) {
+      setSelectedFiles((current) => ({ ...current, [taskId]: next }));
+      setConsultedFiles((current) => {
+        if (!(taskId in current)) return current;
+        const nextState = { ...current };
+        delete nextState[taskId];
+        return nextState;
+      });
+    }
     setAllFiles(false);
+  }
+  function consultVersion(artifactId: string) {
+    if (taskId) setConsultedFiles((current) => ({ ...current, [taskId]: artifactId }));
   }
 
   async function run(
@@ -322,6 +350,20 @@ function JobTaskWorkbenchBody({
           : "Mesajul a fost păstrat în dosarul operației.",
       )
     ) {
+      const saved = readResource<TaskDossier>(resourceKeys.taskDossier(context.taskId)).data;
+      const entries =
+        context.kind === "instruction"
+          ? saved?.instructions
+          : context.kind === "issue"
+            ? saved?.issues
+            : saved?.observations;
+      const newest = entries?.[entries.length - 1];
+      if (newest) {
+        setSavedEntry({ taskId: context.taskId, entryId: newest.entryId });
+      }
+      if (context.kind !== "instruction") {
+        setNotesOpen(true);
+      }
       setDrafts((current) => {
         const next = { ...current };
         delete next[savedKey];
@@ -421,6 +463,9 @@ function JobTaskWorkbenchBody({
                       {known?.taskId === item.taskId ? (
                         <span className="job-task-row__counts">
                           <span>{known.files.length} fișiere</span>
+                          {known.instructions.length ? (
+                            <span>{known.instructions.length} instrucțiuni</span>
+                          ) : null}
                           {known.observations.length ? (
                             <span>{known.observations.length} observații</span>
                           ) : null}
@@ -628,7 +673,39 @@ function JobTaskWorkbenchBody({
               </p>
             ) : (
               <>
-                <details className="job-task-notes">
+                <section aria-label="Instrucțiuni pentru această operație">
+                  <h3>
+                    Instrucțiuni <span>{instructions.length}</span>
+                  </h3>
+                  {instructions.length === 0 ? (
+                    <p>Nicio instrucțiune pentru această operație.</p>
+                  ) : (
+                    instructions.map((entry) => (
+                      <article
+                        key={entry.entryId}
+                        id={`dossier-entry-${entry.entryId}`}
+                        className="job-task-note"
+                        tabIndex={-1}
+                      >
+                        <header>
+                          <strong>Instrucțiune</strong>
+                          <span>
+                            {entry.authorLabel ?? "Cont organizație"} ·{" "}
+                            <time dateTime={entry.createdAt}>
+                              {formatTimestamp(entry.createdAt)}
+                            </time>
+                          </span>
+                        </header>
+                        <p>{entry.body}</p>
+                      </article>
+                    ))
+                  )}
+                </section>
+                <details
+                  className="job-task-notes"
+                  open={notesOpen}
+                  onToggle={(event) => setNotesOpen(event.currentTarget.open)}
+                >
                   <summary>
                     Observații și probleme{" "}
                     <span>
@@ -638,21 +715,21 @@ function JobTaskWorkbenchBody({
                   </summary>
                   <div>
                     {!notes.length ? (
-                      <p>Niciun mesaj în dosarul acestei operații.</p>
+                      <p>Nicio observație sau problemă în dosarul acestei operații.</p>
                     ) : (
                       notes.map((entry) => (
                         <article
                           key={entry.entryId}
+                          id={`dossier-entry-${entry.entryId}`}
                           className="job-task-note"
+                          tabIndex={-1}
                           data-issue={entry.kind === "ISSUE_REPORT"}
                         >
                           <header>
                             <strong>
-                              {entry.kind === "INSTRUCTION"
-                                ? "Instrucțiune"
-                                : entry.kind === "ISSUE_REPORT"
-                                  ? `Problemă semnalată${entry.reasonLabel ? ` · ${entry.reasonLabel}` : ""}`
-                                  : "Observație"}
+                              {entry.kind === "ISSUE_REPORT"
+                                ? `Problemă semnalată${entry.reasonLabel ? ` · ${entry.reasonLabel}` : ""}`
+                                : "Observație"}
                             </strong>
                             <span>
                               {entry.authorLabel ?? "Cont organizație"} ·{" "}
@@ -741,6 +818,17 @@ function JobTaskWorkbenchBody({
                       .map((file) => file.originalFileName)
                       .join(", ")}
                     . Asocierea operației nu se schimbă automat.{" "}
+                    {newerVersions.map((file) => (
+                      <span key={file.artifactId}>
+                        <button
+                          type="button"
+                          className="text-link"
+                          onClick={() => consultVersion(file.artifactId)}
+                        >
+                          Deschide {file.originalFileName}
+                        </button>{" "}
+                      </span>
+                    ))}
                     <button
                       type="button"
                       className="text-link"
@@ -751,7 +839,27 @@ function JobTaskWorkbenchBody({
                     </button>
                   </p>
                 ) : null}
-                <JobArtifactPreview file={selectedFile} />
+                {consultedFile ? (
+                  <p className="job-workbench__revision">
+                    Previzualizezi versiunea ulterioară. Asocierea operației rămâne
+                    la documentul inițial.{" "}
+                    <button
+                      type="button"
+                      className="text-link"
+                      onClick={() => {
+                        if (!taskId) return;
+                        setConsultedFiles((current) => {
+                          const nextState = { ...current };
+                          delete nextState[taskId];
+                          return nextState;
+                        });
+                      }}
+                    >
+                      Revino la documentul asociat
+                    </button>
+                  </p>
+                ) : null}
+                <JobArtifactPreview file={previewFile} />
                 {selectedFile ? (
                   <details className="job-file-details">
                     <summary>Detalii și utilizare</summary>
