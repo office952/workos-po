@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { JobDetailPage } from "./JobDetailPage";
 
+vi.mock("../session/CloudSessionContext", () => ({ useCloudSession: () => ({ ready: true, unavailable: false, mode: "single_plane", user: null, organization: null }) }));
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
