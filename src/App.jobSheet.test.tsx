@@ -24,6 +24,7 @@ describe("job sheet navigation", () => {
       });
       if (url.includes("/execution-plans/plan-1")) return json({ executionPlan: {
         plan: { planId: "plan-1", sourceSnapshotId: "snapshot", productLabel: "Panou și litere", inscription: "NORD" },
+        progress: { completed: 0, total: 2, inProgress: 1, outside: 0, planned: 1, waitingDependencies: 0, noProvider: 0, varianceCount: 0 },
         tasks: [
           { taskId: "task-1", seqLabel: "01", processLabel: "Debitare", scopeLabel: "Față", status: "IN_PROGRESS", statusLabel: "În lucru", assignmentLabel: "Router", waitingFor: [] },
           { taskId: "task-2", seqLabel: "02", processLabel: "Lipire", scopeLabel: "Corp", status: "PLANNED", statusLabel: "Planificată", assignmentLabel: "Banc", waitingFor: [] },
@@ -40,7 +41,12 @@ describe("job sheet navigation", () => {
     window.history.replaceState({}, "", "/lucrari/job-1");
     const user = userEvent.setup();
     render(<App />);
+    const progress = await screen.findByRole("progressbar", { name: "Operații finalizate" }, { timeout: 10000 });
+    expect(progress).toHaveAttribute("value", "0");
+    expect(progress).toHaveAttribute("max", "2");
     await user.click(await screen.findByRole("link", { name: "Deschide planul de operații" }, { timeout: 10000 }));
+    expect(screen.queryByRole("link", { name: "Deschide fișa lucrării" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Deschide execuția" })).toHaveAttribute("href", "/executie/plan-1?task=task-1&job=job-1");
     await user.type(await screen.findByRole("searchbox"), "Debitare");
     await user.click(screen.getByRole("link", { name: "01 · Debitare" }));
     const addObservation = await screen.findByRole("button", { name: "Adaugă observație" });

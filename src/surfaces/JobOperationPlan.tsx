@@ -3,6 +3,7 @@ import type { ExecutionPlanTransport, ExecutionTaskTransport } from "../api/type
 import { EmptyState } from "../components/EmptyState";
 import { presentExecutionNextAction } from "../presentation/executionNextAction";
 import { jobTaskAttentionNotes, jobTaskNotes, presentJobProvider } from "../presentation/jobOperationNotes";
+import { matchesSearch } from "../presentation/listFilter";
 import { jobHref } from "../routing/appRoute";
 
 type Filter = "all" | "working" | "attention" | "completed";
@@ -18,16 +19,17 @@ export function JobOperationPlan({ jobId, plan }: { jobId: string; plan: Executi
     { value: "attention", label: "De verificat", tasks: plan.tasks.filter(task => task.status !== "COMPLETED" && jobTaskAttentionNotes(task).length > 0) },
     { value: "completed", label: "Finalizate", tasks: plan.tasks.filter(task => task.status === "COMPLETED") },
   ];
-  const term = query.trim().toLocaleLowerCase("ro-RO");
   const tasks = (groups.find(group => group.value === filter)?.tasks ?? []).filter(task =>
-    `${task.seqLabel} ${task.processLabel} ${task.scopeLabel} ${task.assignmentLabel} ${task.executorLabel ?? ""}`.toLocaleLowerCase("ro-RO").includes(term),
+    matchesSearch(query, [
+      `${task.seqLabel} ${task.processLabel} ${task.scopeLabel} ${presentJobProvider(task)} ${task.executorLabel ?? task.startedByLabel ?? ""} ${task.statusLabel} ${jobTaskNotes(task).join(" ")}`,
+    ]),
   );
 
   return <section aria-label="Planul operațiilor" className="job-plan">
     <div className="job-plan__toolbar">
       <label className="job-plan__search" htmlFor={id}>
-        <span className="u-visually-hidden">Caută operație sau componentă</span>
-        <input id={id} type="search" placeholder="Caută operație sau componentă" value={query} onChange={event => setQuery(event.target.value)} />
+        <span className="u-visually-hidden">Caută operație, componentă sau executant</span>
+        <input id={id} type="search" placeholder="Caută operație, componentă sau executant" value={query} onChange={event => setQuery(event.target.value)} />
       </label>
       <div className="job-plan__filters" role="group" aria-label="Filtrează operațiile">
         {groups.map(group => <button key={group.value} type="button" aria-pressed={filter === group.value} onClick={() => setFilter(group.value)}>{group.label} <span>· {group.tasks.length}</span></button>)}

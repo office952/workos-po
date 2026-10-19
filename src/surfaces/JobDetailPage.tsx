@@ -270,12 +270,12 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
           </a>
           <div className="job-sheet__identity-row">
             <div className="job-sheet__identity">
-              <p className="job-sheet__eyebrow">{section === "plan" ? "Planul operațiilor" : section === "operatie" ? "Dosarul operației" : "Fișa lucrării"}{job?.inscription ? ` · ${job.inscription}` : ""}</p>
+              <p className="job-sheet__eyebrow">{section === "plan" ? "Planul operațiilor" : section === "operatie" ? "Dosarul operației" : "Fișa lucrării"}</p>
               <h1>{job ? presentJobSheetTitle(job) : "Lucrare"}</h1>
               <p>{job?.customerDisplayName ?? (job ? "Client neînregistrat" : "Se citește lucrarea.")}{secondary ? ` · ${secondary}` : ""}</p>
             </div>
             <div className="job-sheet__header-action">
-              {section === "plan" || section === "operatie" ? <a className="job-sheet__link-button" href={sectionHref(section === "plan" ? "situatie" : "plan")}>{section === "plan" ? "Deschide fișa lucrării" : "Înapoi la planul operațiilor"}</a> : planId ? <a className="job-sheet__link-button job-sheet__link-button--primary" href={sectionHref("plan")}>Deschide planul de operații</a> : null}
+              {section === "operatie" ? <a className="job-sheet__link-button" href={sectionHref("plan")}>Înapoi la planul operațiilor</a> : section === "plan" ? plan ? <a className="job-sheet__link-button job-sheet__link-button--primary" href={executionHref(plan.planId, { jobId, taskId: selectedTask?.taskId })}>Deschide execuția</a> : null : planId ? <a className="job-sheet__link-button job-sheet__link-button--primary" href={sectionHref("plan")}>Deschide planul de operații</a> : null}
             </div>
           </div>
           {job ? <div className="job-sheet__planning">
@@ -305,7 +305,8 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
               <div className="job-sheet__progress">
                 <h2>{job.stageLabel}</h2>
                 <p className="job-sheet__progress-label">{plan?.progressLabel ?? job.progressLabel ?? "Progres neînregistrat"}</p>
-                {plan ? <p className="job-sheet__secondary">{plan.statusLabel}</p> : <p>{presentJobSheetLead(job)}</p>}
+                {plan?.progress && plan.progress.total > 0 ? <progress className="job-sheet__progress-meter" aria-label="Operații finalizate" value={plan.progress.completed} max={plan.progress.total} /> : null}
+                {plan ? plan.statusLabel !== job.stageLabel ? <p className="job-sheet__secondary">{plan.statusLabel}</p> : null : <p>{presentJobSheetLead(job)}</p>}
               </div>
               {job.stage === "EXECUTION_COMPLETED" ? <p>Producția este finalizată. Livrarea și montajul nu sunt confirmate de această stare.</p> : null}
               {job.attentionLabel ? <p className="job-sheet__warning">{job.attentionLabel}</p> : null}

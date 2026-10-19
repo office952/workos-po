@@ -39,4 +39,15 @@ describe("JobOperationPlan", () => {
     expect(screen.queryByText("Lucrează acum")).toBeNull();
     expect(screen.queryByRole("button", { name: /Pornește|Finalizează/ })).toBeNull();
   });
+
+  it("finds the executor and attention reason actually shown in the plan", () => {
+    render(<JobOperationPlan jobId="job-1" plan={plan} />);
+    const search = screen.getByRole("searchbox", { name: "Caută operație, componentă sau executant" });
+    fireEvent.change(search, { target: { value: "  ION  " } });
+    expect(screen.getByRole("link", { name: "01 · Debitare CNC" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "02 · Montare LED" })).toBeNull();
+    fireEvent.change(search, { target: { value: "neconfirmat" } });
+    expect(screen.getByRole("link", { name: "02 · Montare LED" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "01 · Debitare CNC" })).toBeNull();
+  });
 });
