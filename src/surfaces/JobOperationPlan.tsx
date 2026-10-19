@@ -2,7 +2,7 @@ import { useId, useState } from "react";
 import type { ExecutionPlanTransport, ExecutionTaskTransport } from "../api/types";
 import { EmptyState } from "../components/EmptyState";
 import { presentExecutionNextAction } from "../presentation/executionNextAction";
-import { jobTaskAttentionNotes, jobTaskNotes, presentJobProvider } from "../presentation/jobOperationNotes";
+import { jobTaskAttentionNotes, jobTaskNotes, presentJobProvider, presentRecordedExecutor } from "../presentation/jobOperationNotes";
 import { matchesSearch } from "../presentation/listFilter";
 import { jobHref } from "../routing/appRoute";
 
@@ -21,7 +21,7 @@ export function JobOperationPlan({ jobId, plan }: { jobId: string; plan: Executi
   ];
   const tasks = (groups.find(group => group.value === filter)?.tasks ?? []).filter(task =>
     matchesSearch(query, [
-      `${task.seqLabel} ${task.processLabel} ${task.scopeLabel} ${presentJobProvider(task)} ${task.executorLabel ?? task.startedByLabel ?? ""} ${task.statusLabel} ${jobTaskNotes(task).join(" ")}`,
+      `${task.seqLabel} ${task.processLabel} ${task.scopeLabel} ${presentJobProvider(task)} ${presentRecordedExecutor(task)} ${task.statusLabel} ${jobTaskNotes(task).join(" ")}`,
     ]),
   );
 
@@ -42,7 +42,7 @@ export function JobOperationPlan({ jobId, plan }: { jobId: string; plan: Executi
         <tbody>{tasks.map(task => <tr key={task.taskId}>
           <td data-label="Operație / componentă"><a href={jobHref(jobId, { taskId: task.taskId, section: "operatie" })}>{task.seqLabel} · {task.processLabel}</a><span className="job-sheet__secondary">{task.scopeLabel}</span></td>
           <td data-label="Stare"><span className="job-sheet__task-state" data-status={task.status}>{task.statusLabel}</span></td>
-          <td data-label="Executant înregistrat">{task.executorLabel ?? task.startedByLabel ?? "Neînregistrat"}</td>
+          <td data-label="Executant înregistrat">{presentRecordedExecutor(task)}</td>
           <td data-label="Utilaj / resursă">{presentJobProvider(task)}</td>
           <td data-label="Motiv / de verificat">{jobTaskNotes(task).length ? jobTaskNotes(task).map(line => <p key={line}>{line}</p>) : presentExecutionNextAction(task, null)}</td>
         </tr>)}</tbody>

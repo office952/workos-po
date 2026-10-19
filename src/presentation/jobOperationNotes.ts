@@ -40,3 +40,7 @@ export function jobTaskNotes(task: ExecutionTaskTransport): string[] {
 export function presentJobProvider(task: ExecutionTaskTransport): string {
   return task.providerBindingState === "NOT_REQUIRED" ? "Nu este necesar" : task.externalProviderLabel ?? task.assignmentLabel;
 }
+
+export function presentRecordedExecutor(task: ExecutionTaskTransport): string {
+  return task.executorLabel ?? task.startedByLabel ?? "Neînregistrat";
+}

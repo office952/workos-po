@@ -205,6 +205,21 @@ beforeEach(() => {
 });
 
 describe("JobTaskWorkbench", () => {
+  it("keeps the recorded executor visible and searchable when only the start record names them", async () => {
+    const selected = vi.fn();
+    const current = plan(2);
+    current.tasks[0] = { ...current.tasks[0], startedByLabel: "Ștefan Ionescu" };
+    render(<JobTaskWorkbench jobId="job-1" plan={current} taskId="task-1" onSelect={selected} />);
+    await screen.findByTestId("preview");
+    expect(within(screen.getByRole("region", { name: "Operația selectată" })).getByText("Executant înregistrat: Ștefan Ionescu")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "  stefan  " } });
+    const list = within(screen.getByRole("region", { name: "Lista operațiilor" }));
+    expect(list.getByRole("button", { name: /01 Operația 1/ })).toBeInTheDocument();
+    expect(list.queryByRole("button", { name: /02 Operația 2/ })).toBeNull();
+    expect(selected).not.toHaveBeenCalled();
+    expect(mocks.load.mock.calls.every(([id]) => id === "task-1")).toBe(true);
+  });
+
   it("loads only the selected dossier for 100 tasks and retains selection during search", async () => {
     const user = userEvent.setup();
     render(<Harness count={100} />);

@@ -34,7 +34,7 @@ import {
 } from "../presentation/dossierAccess";
 import { laterDocumentVersions } from "../presentation/dossierRevision";
 import { formatTimestamp } from "../presentation/format";
-import { presentJobStartBlockReason } from "../presentation/jobOperationNotes";
+import { presentJobStartBlockReason, presentJobProvider, presentRecordedExecutor } from "../presentation/jobOperationNotes";
 import { atelierHref, executionHref } from "../routing/appRoute";
 import { useCloudSession } from "../session/CloudSessionContext";
 import { readCloudBoundaryVersion } from "../session/sessionExpiryBridge";
@@ -180,8 +180,8 @@ function JobTaskWorkbenchBody({
       .toLocaleLowerCase("ro-RO");
   const visible = plan.tasks.filter((item) =>
     normalize(
-      `${item.seqLabel} ${item.processLabel} ${item.scopeLabel} ${item.assignmentLabel} ${item.executorLabel ?? ""}`,
-    ).includes(normalize(query)),
+      `${item.seqLabel} ${item.processLabel} ${item.scopeLabel} ${presentJobProvider(item)} ${presentRecordedExecutor(item)}`,
+    ).includes(normalize(query.trim())),
   );
   const groups = new Map<string, typeof visible>();
   for (const item of visible) {
@@ -459,7 +459,7 @@ function JobTaskWorkbenchBody({
                     <span className="job-task-row__copy">
                       <strong>{item.processLabel}</strong>
                       <small>
-                        {item.executorLabel ?? item.assignmentLabel}
+                        {item.executorLabel ?? item.startedByLabel ?? presentJobProvider(item)}
                       </small>
                       <span className="job-task-row__state">
                         {item.statusLabel}
@@ -540,10 +540,11 @@ function JobTaskWorkbenchBody({
                 <h2 ref={taskHeading} tabIndex={-1}>
                   {task.processLabel}
                 </h2>
-                <p>
-                  {task.statusLabel} · {task.assignmentLabel}
-                  {task.executorLabel ? ` · ${task.executorLabel}` : ""}
-                </p>
+                <div className="job-task-context__facts">
+                  <span className="job-task-context__status" data-status={task.status}>{task.statusLabel}</span>
+                  <span>{presentJobProvider(task)}</span>
+                  <span>Executant înregistrat: {presentRecordedExecutor(task)}</span>
+                </div>
               </div>
               <div className="job-task-context__actions">
                 <a

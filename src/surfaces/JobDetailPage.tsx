@@ -34,7 +34,7 @@ import { SiteInstallationContextPanel } from "./SiteInstallationContextPanel";
 import { ExecutionActualConsumptionHistory } from "./ExecutionActualConsumption";
 import { JobTaskWorkbench } from "./JobTaskWorkbench";
 import { JobOperationPlan } from "./JobOperationPlan";
-import { jobTaskAttentionNotes, jobTaskNotes, presentJobProvider } from "../presentation/jobOperationNotes";
+import { jobTaskAttentionNotes, jobTaskNotes, presentJobProvider, presentRecordedExecutor } from "../presentation/jobOperationNotes";
 import cncIcon from "../assets/job-sheet/cnc.svg";
 import { JobOperationFiles } from "./JobOperationFiles";
 import "../styles/surfaces/job-task-workbench.css";
@@ -325,7 +325,7 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
               {activeTasks.length ? <div className="job-sheet__activity-grid">{activeTasks.map(task => <article className="job-sheet__panel" key={task.taskId}>
                 <div className="job-sheet__activity-title">{/router/i.test(task.assignmentLabel) ? <img className="job-sheet__operation-icon" src={cncIcon} width="48" height="48" alt="" /> : <span className="job-sheet__sequence" aria-hidden="true">{task.seqLabel}</span>}<div><h3>{task.seqLabel} · {task.processLabel}</h3><p className="job-sheet__secondary">{task.scopeLabel} · {presentJobProvider(task)}</p></div></div>
                 <span className="job-sheet__task-state" data-status={task.status}>{task.statusLabel}</span>
-                <p>Executant înregistrat: {task.executorLabel ?? task.startedByLabel ?? "Neînregistrat"}</p><p className="job-sheet__secondary">Timp efectiv: {task.actualDurationLabel}</p>
+                <p>Executant înregistrat: {presentRecordedExecutor(task)}</p><p className="job-sheet__secondary">Timp efectiv: {task.actualDurationLabel}</p>
                 <a className="job-sheet__link-button" href={operationHref(task.taskId)}>Deschide operația</a>
               </article>)}</div> : <p className="job-sheet__secondary">Nicio operație începută în planul lucrării.</p>}
               <div className="job-sheet__continuation"><a className="job-sheet__text-link" href={executionHref(plan.planId, { jobId, taskId: selectedTask?.taskId })}>Deschide execuția</a><a className="job-sheet__text-link" href={atelierHref({ jobId, returnTo: sectionHref("situatie") })}>Deschide atelierul lucrării</a></div>
