@@ -43,17 +43,19 @@ describe("JobDetailPage", () => {
     render(<JobDetailPage jobId="job-1" />);
     expect(await screen.findByRole("heading", { name: "NORD" })).toBeInTheDocument();
     expect(document.querySelector(".page-workspace--traveler")).not.toBeNull();
-    expect(screen.getByRole("heading", { name: "Identitate" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Traseu de producție" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Planificat și realizat" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Situația producției" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Secțiunile lucrării" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Situație" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Rezultate" })).toHaveAttribute("href", "/lucrari/job-1?sectiune=rezultate");
+    expect(screen.queryByRole("heading", { name: "Rezultate înregistrate" })).toBeNull();
     expect(document.querySelector(".object-hero")).toBeNull();
     expect(document.querySelector(".job-dashboard-box")).toBeNull();
-    expect(screen.getByText("Ofertă acceptată")).toBeInTheDocument();
-    expect(screen.getAllByText("Ofertă acceptată").length).toBe(1);
+    expect(screen.getByRole("button", { name: "Creează planul de execuție" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Date și sursă" })).toHaveAttribute("href", "/lucrari/job-1?sectiune=sursa");
     expect(screen.queryByRole("link", { name: "Deschide atelierul lucrării" })).toBeNull();
   });
 
-  it("shows missing stock and a review request while the material section stays closed", async () => {
+  it("keeps material warnings visible on the situation without opening material actions", async () => {
     resetResourceCache();
     vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => {
       const url = String(input);
@@ -124,7 +126,8 @@ describe("JobDetailPage", () => {
     const summary = await screen.findByTestId("material-preparation-summary");
     expect(summary).toHaveTextContent("Placă ACM: material insuficient");
     expect(summary).toHaveTextContent("solicitare de aprovizionare de revizuit");
-    expect(screen.getByText("Materiale — detalii și acțiuni").closest("details")).not.toHaveAttribute("open");
+    expect(screen.getByRole("link", { name: "Vezi materialul în această fișă" })).toHaveAttribute("href", "/lucrari/job-1?sectiune=materiale");
+    expect(screen.queryByTestId("job-material-preparation")).toBeNull();
   });
 
   it("opens execution and atelier with the same job context when a plan exists", async () => {
@@ -201,11 +204,9 @@ describe("JobDetailPage", () => {
     );
     expect(screen.getByRole("link", { name: "Deschide atelierul lucrării" })).toHaveAttribute(
       "href",
-      "/atelier?job=job-1&return=%2Flucrari%2Fjob-1%3Ftask%3Dtask-1",
+      "/atelier?job=job-1&return=%2Flucrari%2Fjob-1%3Ftask%3Dtask-1%26sectiune%3Dsituatie",
     );
-    const headerAction = document.querySelector(".page-header__action");
-    expect(headerAction?.querySelector('a[href="/executie/exp-1?task=task-1&job=job-1"]')).not.toBeNull();
-    expect(headerAction).toHaveTextContent("Continuă execuția");
+    expect(screen.getByRole("link", { name: "Deschide planul de operații" })).toHaveAttribute("href", "/lucrari/job-1?task=task-1&sectiune=plan");
   });
 
   it("shows frozen OTHER installation notes and hides them for ordinary values", async () => {
@@ -255,7 +256,7 @@ describe("JobDetailPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const { unmount } = render(<JobDetailPage jobId="job-other" />);
+    const { unmount } = render(<JobDetailPage jobId="job-other" section="sursa" />);
     expect(await screen.findByText("Suprafață sintetică specială")).toBeInTheDocument();
     expect(screen.getByText("Fixare sintetică specială")).toBeInTheDocument();
     expect(screen.getByText("Tip suprafață — detalii")).toBeInTheDocument();
@@ -305,7 +306,7 @@ describe("JobDetailPage", () => {
         }),
       ),
     );
-    render(<JobDetailPage jobId="job-ordinary" />);
+    render(<JobDetailPage jobId="job-ordinary" section="sursa" />);
     expect(await screen.findByText("Beton")).toBeInTheDocument();
     expect(screen.getByText("Ancoră mecanică")).toBeInTheDocument();
     expect(screen.queryByText("Tip suprafață — detalii")).not.toBeInTheDocument();
@@ -386,7 +387,7 @@ describe("JobDetailPage", () => {
     render(<JobDetailPage jobId="job-ext" />);
     expect(await screen.findByText("Lipsă furnizor extern")).toBeInTheDocument();
     expect(screen.getAllByText("La furnizor extern").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Atelier Extern").length).toBeGreaterThan(0);
+    expect(await screen.findByRole("region", { name: "Activitate" })).toHaveTextContent("Atelier Extern");
   });
 
   it("separates work quantity from planned and actual material consumption", async () => {
@@ -491,9 +492,9 @@ describe("JobDetailPage", () => {
       }),
     );
 
-    render(<JobDetailPage jobId="job-mat" />);
+    render(<JobDetailPage jobId="job-mat" section="rezultate" />);
     expect(await screen.findByText("Cantitate executată: Conform planului")).toBeInTheDocument();
-    expect(screen.getByText("Realizat: 12,5 m")).toBeInTheDocument();
+    expect(screen.getAllByText("Realizat: 12,5 m").length).toBeGreaterThan(0);
     const sections = screen.getAllByTestId("material-consumption");
     expect(sections).toHaveLength(2);
     expect(sections[0]).toHaveTextContent("Planificat: 12,5 m");

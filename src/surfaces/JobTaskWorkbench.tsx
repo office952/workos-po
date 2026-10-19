@@ -34,6 +34,7 @@ import {
 } from "../presentation/dossierAccess";
 import { laterDocumentVersions } from "../presentation/dossierRevision";
 import { formatTimestamp } from "../presentation/format";
+import { presentJobStartBlockReason } from "../presentation/jobOperationNotes";
 import { atelierHref, executionHref } from "../routing/appRoute";
 import { useCloudSession } from "../session/CloudSessionContext";
 import { readCloudBoundaryVersion } from "../session/sessionExpiryBridge";
@@ -80,6 +81,7 @@ type Props = {
   plan: ExecutionPlanTransport;
   taskId: string | null;
   onSelect: (id: string) => void;
+  active?: boolean;
 };
 
 export function JobTaskWorkbench(props: Props) {
@@ -113,6 +115,7 @@ function JobTaskWorkbenchBody({
   plan,
   taskId,
   onSelect,
+  active = true,
   identified,
   canInstruct,
   canWriteFiles,
@@ -218,16 +221,17 @@ function JobTaskWorkbenchBody({
   }, []);
   const focusedEntry = useRef<string | null>(null);
   useEffect(() => {
-    if (!savedEntry || savedEntry.taskId !== taskId || focusedEntry.current === savedEntry.entryId) {
+    if (!active || !savedEntry || savedEntry.taskId !== taskId || focusedEntry.current === savedEntry.entryId) {
       return;
     }
     focusedEntry.current = savedEntry.entryId;
     document.getElementById(`dossier-entry-${savedEntry.entryId}`)?.focus({ preventScroll: true });
-  }, [savedEntry, taskId]);
+  }, [savedEntry, taskId, active]);
   useEffect(() => {
     function keydown(event: KeyboardEvent) {
       if (
         event.key === "Escape" &&
+        active &&
         expanded &&
         !document.querySelector("dialog[open]")
       ) {
@@ -237,7 +241,7 @@ function JobTaskWorkbenchBody({
     }
     document.addEventListener("keydown", keydown);
     return () => document.removeEventListener("keydown", keydown);
-  }, [expanded]);
+  }, [expanded, active]);
 
   function chooseTask(next: string) {
     onSelect(next);
@@ -617,7 +621,7 @@ function JobTaskWorkbenchBody({
               </p>
             ) : null}
             {[
-              task.startBlockReason,
+              presentJobStartBlockReason(task.startBlockReason),
               task.materialBlockLabel,
               task.externalBlockLabel,
               task.qualityBlockLabel,
@@ -626,7 +630,7 @@ function JobTaskWorkbenchBody({
                 {[
                   ...new Set(
                     [
-                      task.startBlockReason,
+                      presentJobStartBlockReason(task.startBlockReason),
                       task.materialBlockLabel,
                       task.externalBlockLabel,
                       task.qualityBlockLabel,
@@ -933,7 +937,7 @@ function JobTaskWorkbenchBody({
           </>
         )}
       </section>
-      {allFiles ? (
+      {active && allFiles ? (
         <CreationDialog
           title="Fișierele operației"
           onDismiss={() => setAllFiles(false)}
@@ -963,7 +967,7 @@ function JobTaskWorkbenchBody({
           </div>
         </CreationDialog>
       ) : null}
-      {composer && captured ? (
+      {active && composer && captured ? (
         <CreationDialog
           title={
             composer.kind === "file"
