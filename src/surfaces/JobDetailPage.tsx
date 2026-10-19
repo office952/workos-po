@@ -4,7 +4,6 @@ import { TransportError, readTransportErrorCode } from "../api/http";
 import { fetchJobMaterialPreparation } from "../api/jobMaterials";
 import { patchJobPlanning, postJobExecutionPlan, postJobProductionRelease } from "../api/jobs";
 import { Button } from "../components/Button";
-import { InfoRow } from "../components/InfoRow";
 import { EmptyState } from "../components/EmptyState";
 import { InlineAlert } from "../components/InlineAlert";
 import { LifecycleList } from "../components/LifecycleList";
@@ -259,6 +258,7 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
   const operationHref = (id: string) => jobHref(jobId, { taskId: id, section: "operatie" });
   const attentionTasks = (plan?.tasks ?? []).filter(task => task.status !== "COMPLETED" && jobTaskAttentionNotes(task).length > 0);
   const activeTasks = (plan?.tasks ?? []).filter(task => task.status === "IN_PROGRESS" || task.status === "OUTSIDE");
+  const resultTasks = (plan?.tasks ?? []).filter(task => task.status === "COMPLETED" || task.completedQuantityLabel !== null || task.actualDurationMinutes !== null);
   const secondary = job ? presentJobSheetSecondary(job) : null;
 
   return (
@@ -296,11 +296,11 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
         {section !== "plan" && section !== "operatie" ? <nav className="job-sheet__tabs" aria-label="Secțiunile lucrării">
           {tabs.map(tab => <a key={tab.value} href={sectionHref(tab.value)} aria-current={section === tab.value ? "page" : undefined}>{tab.label}</a>)}
         </nav> : null}
-        <div className="page-workspace--traveler job-sheet__body">
+        <div className="job-sheet__body" data-section={section}>
           {jobResource.status === "error" ? <InlineAlert tone="error" title="Lucrarea nu a putut fi actualizată">{job ? "Ultima citire rămâne afișată." : "Identitatea lucrării nu este disponibilă."}</InlineAlert> : null}
           {!job && jobResource.status !== "error" ? <LoadingFloor variant="traveler" label="Se citește lucrarea" /> : null}
           {planResource.status === "error" ? <InlineAlert tone="error" title="Planul nu a putut fi citit">Datele planului nu au putut fi actualizate.</InlineAlert> : null}
-          {job && section === "situatie" ? <>
+          {job && section === "situatie" ? <div className="job-sheet__overview">
             <section className="job-sheet__panel job-sheet__situation" aria-label="Situația producției">
               <div className="job-sheet__progress">
                 <h2>{job.stageLabel}</h2>
@@ -329,7 +329,7 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
               </article>)}</div> : <p className="job-sheet__secondary">Nicio operație începută în planul lucrării.</p>}
               <div className="job-sheet__continuation"><a className="job-sheet__text-link" href={executionHref(plan.planId, { jobId, taskId: selectedTask?.taskId })}>Deschide execuția</a><a className="job-sheet__text-link" href={atelierHref({ jobId, returnTo: sectionHref("situatie") })}>Deschide atelierul lucrării</a></div>
             </section> : null}
-          </> : null}
+          </div> : null}
           {job && plan ? <div className="job-sheet__plan" hidden={section !== "plan"}><JobOperationPlan key={`${jobId}:${plan.planId}`} jobId={jobId} plan={plan} /></div> : null}
           {job && section === "plan" && !plan ? planPending ? <LoadingFloor variant="facts" label="Se citește planul" rows={5} /> : planResource.status !== "error" ? <EmptyState title="Planul de execuție nu există încă." /> : null : null}
           {job && visitedOperation && plan ? <div hidden={section !== "operatie"} className="job-sheet__operation"><JobTaskWorkbench key={jobId} jobId={jobId} plan={plan} taskId={selectedTask?.taskId ?? null} onSelect={chooseTask} active={section === "operatie"} /></div> : null}
@@ -346,14 +346,13 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
             <div className="stack" data-testid="planned-vs-actual">
               {planPending ? <LoadingFloor variant="facts" label="Se citește planul" rows={3} /> : !plan ? planResource.status !== "error" ? <EmptyState title="Planul de execuție nu există încă." /> : null : <>
                 <p>{plan.progressLabel}</p>
-                <div className="job-plan__table-wrap"><table className="job-plan__table job-sheet__results-table"><caption className="u-visually-hidden">Cantități și timp planificat comparate cu rezultatele înregistrate</caption>
+                {resultTasks.length > 0 ? <div className="job-plan__table-wrap"><table className="job-plan__table job-sheet__results-table"><caption className="u-visually-hidden">Cantități și timp planificat comparate cu rezultatele înregistrate</caption>
                   <thead><tr><th scope="col">Operație</th><th scope="col">Cantitate planificată</th><th scope="col">Cantitate realizată</th><th scope="col">Timp planificat</th><th scope="col">Timp efectiv</th></tr></thead>
-                  <tbody>{plan.tasks.filter(task => task.status === "COMPLETED" || task.completedQuantityLabel !== null || task.actualDurationMinutes !== null).map(task => <tr key={task.taskId}>
+                  <tbody>{resultTasks.map(task => <tr key={task.taskId}>
                     <td data-label="Operație"><a href={operationHref(task.taskId)}>{task.seqLabel} · {task.processLabel}</a><span className="job-sheet__secondary">{task.statusLabel}{task.executorLabel ? ` · ${task.executorLabel}` : ""}</span></td>
                     <td data-label="Cantitate planificată">{task.plannedQuantityLabel ?? "Neînregistrată"}</td><td data-label="Cantitate realizată">{task.completedQuantityLabel ?? "Neînregistrată"}</td><td data-label="Timp planificat">{task.plannedTimeLabel}</td><td data-label="Timp efectiv">{task.actualDurationLabel}</td>
                   </tr>)}</tbody>
-                </table></div>
-                {plan.tasks.every(task => task.status !== "COMPLETED" && task.completedQuantityLabel === null && task.actualDurationMinutes === null) ? <EmptyState title="Niciun rezultat înregistrat încă." /> : null}
+                </table></div> : <EmptyState title="Niciun rezultat înregistrat încă." />}
                 {plan.timeSummary ? <div className="job-sheet__secondary"><p>{plan.timeSummary.plannedKnownLabel}</p><p>{plan.timeSummary.actualKnownLabel}</p></div> : null}
                 <details className="job-sheet__results"><summary>Compară {plan.tasks.length} operații — consum, timp și control</summary>
                   {plan.tasks.map(task => <article className="job-sheet__result-detail" key={task.taskId}>
@@ -370,7 +369,7 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
             </div>
           </SurfacePanel> : null}
           {job && section === "sursa" ? <>
-            <SurfacePanel title="Date și sursă" label="Date și sursă"><div className="job-sheet__source-grid"><div><h3>{job.kindLabel}{job.inscription ? ` · ${job.inscription}` : ""}</h3><p>{job.productLabel}</p>{job.memberLabels.length > 0 ? <p>{job.memberLabels.join(" · ")}</p> : null}<dl><InfoRow label="Următoarea acțiune" value={job.nextActionLabel} /></dl></div><div><h3>Sursă comercială acceptată</h3><p className="job-sheet__secondary">Oferta acceptată rămâne istoricul comercial al lucrării.</p>{sourceHref ? <a className="job-sheet__link-button" href={sourceHref}>{job.kind === "ASSEMBLY" ? "Deschide ansamblul sursă" : "Deschide oferta sursă"}</a> : <p className="job-sheet__secondary">Legătura către sursă nu este disponibilă.</p>}</div></div></SurfacePanel>
+            <SurfacePanel title="Date și sursă" label="Date și sursă"><div className="job-sheet__source-grid"><div><h3>{job.kindLabel}{job.inscription ? ` · ${job.inscription}` : ""}</h3><p>{job.productLabel}</p>{job.memberLabels.length > 0 ? <p>{job.memberLabels.join(" · ")}</p> : null}<dl className="job-sheet__facts"><div><dt>Următoarea acțiune</dt><dd>{job.nextActionLabel}</dd></div></dl></div><div><h3>Sursă comercială acceptată</h3><p className="job-sheet__secondary">Oferta acceptată rămâne istoricul comercial al lucrării.</p>{sourceHref ? <a className="job-sheet__link-button" href={sourceHref}>{job.kind === "ASSEMBLY" ? "Deschide ansamblul sursă" : "Deschide oferta sursă"}</a> : <p className="job-sheet__secondary">Legătura către sursă nu este disponibilă.</p>}</div></div></SurfacePanel>
             {jobResource.data?.siteInstallation ? <SiteInstallationContextPanel context={jobResource.data.siteInstallation} /> : null}
             <SurfacePanel title="Traseu de producție"><details><summary>Pașii traseului</summary><LifecycleList steps={presentJobLifecycle(job)} /></details></SurfacePanel>
           </> : null}

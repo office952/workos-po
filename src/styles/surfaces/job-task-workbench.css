@@ -240,6 +240,19 @@
   gap: 8px 18px;
   align-items: center;
 }
+.job-task-messages {
+  padding: 20px 26px;
+  border-bottom: 1px solid var(--job-line);
+}
+.job-task-messages > h3 {
+  margin: 0 0 8px;
+  font: 600 16px/1.4 var(--font-sans);
+}
+.job-task-messages > p {
+  margin: 0 0 12px;
+  color: var(--job-muted);
+  font-size: 13px;
+}
 .job-task-workbench .job-task-messages__actions .text-link {
   min-height: 44px;
   font-size: 14px;
@@ -1009,7 +1022,7 @@
   }
   .job-task-navigator {
     position: static;
-    height: 355px;
+    height: 240px;
   }
   .job-task-row {
     min-height: 94px;
@@ -1061,6 +1074,7 @@
     gap: 10px;
   }
   .job-task-context__kicker,
+  .job-task-messages,
   .job-file-shelf,
   .job-task-notes,
   .job-file-details {

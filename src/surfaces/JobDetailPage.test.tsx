@@ -1,7 +1,12 @@
 import { render, screen } from "@testing-library/react";
+import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetResourceCache } from "../data/resourceCache";
 import { JobDetailPage } from "./JobDetailPage";
+
+// Vitest stubs CSS imports; load the actual sources for the cascade regression.
+const legacyStyles = readFileSync("src/styles/ui.css", "utf8");
+const sheetStyles = readFileSync("src/styles/surfaces/job-sheet.css", "utf8");
 
 vi.mock("../session/CloudSessionContext", () => ({ useCloudSession: () => ({ ready: true, unavailable: false, mode: "single_plane", user: null, organization: null }) }));
 
@@ -10,7 +15,7 @@ afterEach(() => {
 });
 
 describe("JobDetailPage", () => {
-  it("keeps the traveler workspace without a repeated object hero", async () => {
+  it("owns the sheet layout without the legacy three-column traveler or a repeated hero", async () => {
     vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => {
       const url = String(input);
       if (url.includes("/jobs/job-1")) {
@@ -42,7 +47,22 @@ describe("JobDetailPage", () => {
 
     render(<JobDetailPage jobId="job-1" />);
     expect(await screen.findByRole("heading", { name: "NORD" })).toBeInTheDocument();
-    expect(document.querySelector(".page-workspace--traveler")).not.toBeNull();
+    expect(document.querySelector(".page-workspace--traveler")).toBeNull();
+    expect(document.querySelectorAll(".job-sheet__body")).toHaveLength(1);
+    // Reproduce production stylesheet ordering: the old traveler must never
+    // constrain the plan/results/dossier to the first of three grid tracks.
+    const style = document.createElement("style");
+    document.head.append(style);
+    try {
+      for (const css of [legacyStyles + sheetStyles, sheetStyles + legacyStyles]) {
+        style.textContent = css;
+        const body = document.querySelector(".job-sheet__body")!;
+        expect(getComputedStyle(body).display).toBe("flex");
+        expect(getComputedStyle(body).width).toBe("100%");
+      }
+    } finally {
+      style.remove();
+    }
     expect(screen.getByRole("region", { name: "Situația producției" })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Secțiunile lucrării" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Situație" })).toHaveAttribute("aria-current", "page");
