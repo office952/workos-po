@@ -419,20 +419,35 @@ function JobTaskWorkbenchBody({
     >
       <section className="job-task-navigator" aria-label="Lista operațiilor">
         <header>
-          <div>
+          <div className="job-task-navigator__heading">
             <h2>Operații</h2>
             <span>{plan.tasks.length}</span>
           </div>
-          <label className="u-visually-hidden" htmlFor={`${id}-search`}>
-            Caută operație sau responsabil
-          </label>
-          <input
-            id={`${id}-search`}
-            type="search"
-            value={query}
-            placeholder="Caută operație sau responsabil…"
-            onChange={(event) => setQuery(event.target.value)}
-          />
+          <div className="job-task-navigator__search">
+            <label className="u-visually-hidden" htmlFor={`${id}-search`}>
+              Caută operație sau responsabil
+            </label>
+            <input
+              id={`${id}-search`}
+              type="search"
+              value={query}
+              placeholder="Caută operație sau responsabil…"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+          <div className="job-task-navigator__compact">
+            <SelectField
+              id={`${id}-operation`}
+              label="Schimbă operația"
+              value={taskId ?? ""}
+              disabled={plan.tasks.length === 0}
+              options={plan.tasks.map((item) => ({
+                value: item.taskId,
+                label: `${item.seqLabel} · ${item.processLabel} · ${item.scopeLabel}`,
+              }))}
+              onChange={chooseTask}
+            />
+          </div>
         </header>
         <div className="job-task-navigator__list">
           {[...groups].map(([scope, operations]) => (
@@ -678,7 +693,7 @@ function JobTaskWorkbenchBody({
               </p>
             ) : (
               <>
-                <section aria-label="Instrucțiuni pentru această operație">
+                <section className="job-task-instructions" aria-label="Instrucțiuni pentru această operație">
                   <h3>
                     Instrucțiuni <span>{instructions.length}</span>
                   </h3>

@@ -313,12 +313,20 @@
   padding: 23px 26px 20px;
   border-bottom: 1px solid var(--job-line);
 }
-.job-task-navigator > header > div {
+.job-task-navigator__heading {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 15px;
   margin-bottom: 17px;
+}
+.job-task-navigator__compact {
+  display: none;
+}
+.job-task-navigator__compact select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
 }
 .job-task-navigator h2 {
   font-size: 25px;
@@ -556,6 +564,24 @@
 .job-task-notes {
   padding: 0 26px;
   border-bottom: 1px solid var(--job-line);
+}
+.job-task-instructions {
+  padding: 20px 26px;
+  border-bottom: 1px solid var(--job-line);
+}
+.job-task-instructions h3 {
+  margin: 0 0 8px;
+  font: 600 16px/1.4 var(--font-sans);
+}
+.job-task-instructions h3 > span {
+  margin-left: 8px;
+  font: 400 12px var(--font-mono);
+  color: var(--job-muted);
+}
+.job-task-instructions > p {
+  margin: 0;
+  color: var(--job-muted);
+  font-size: 13px;
 }
 .job-task-notes summary {
   padding: 11px 0;
@@ -1054,7 +1080,22 @@
   }
   .job-task-navigator {
     position: static;
-    height: 240px;
+    height: auto;
+  }
+  .job-task-navigator > header {
+    padding: 16px 20px;
+    border-bottom: 0;
+  }
+  .job-task-navigator__heading {
+    margin-bottom: 8px;
+  }
+  .job-task-navigator__compact {
+    display: block;
+  }
+  .job-task-navigator__search,
+  .job-task-navigator__list,
+  .job-task-navigator > footer {
+    display: none;
   }
   .job-task-row {
     min-height: 94px;
@@ -1107,6 +1148,7 @@
   }
   .job-task-context__kicker,
   .job-task-messages,
+  .job-task-instructions,
   .job-task-history,
   .job-file-shelf,
   .job-task-notes,

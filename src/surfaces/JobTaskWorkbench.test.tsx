@@ -205,6 +205,27 @@ beforeEach(() => {
 });
 
 describe("JobTaskWorkbench", () => {
+  it("uses the compact operation selector without losing a draft or changing saved records", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    await screen.findByTestId("preview");
+    await user.click(screen.getByRole("button", { name: "Adaugă observație" }));
+    await user.type(screen.getByLabelText("Observație"), "Verifică muchia");
+    await user.click(screen.getByRole("button", { name: "Închide formularul" }));
+    const selector = screen.getByRole("combobox", { name: "Schimbă operația" });
+    await user.selectOptions(selector, "task-2");
+    await screen.findByRole("heading", { name: "Operația 2" });
+    expect(selector).toHaveValue("task-2");
+    await user.selectOptions(selector, "task-1");
+    await screen.findByRole("heading", { name: "Operația 1" });
+    await user.click(screen.getByRole("button", { name: "Adaugă observație" }));
+    expect(screen.getByLabelText("Observație")).toHaveValue("Verifică muchia");
+    expect(mocks.observe).not.toHaveBeenCalled();
+    expect(mocks.issue).not.toHaveBeenCalled();
+    expect(mocks.link).not.toHaveBeenCalled();
+    expect(mocks.use).not.toHaveBeenCalled();
+  });
+
   it("keeps the recorded executor visible and searchable when only the start record names them", async () => {
     const selected = vi.fn();
     const current = plan(2);
