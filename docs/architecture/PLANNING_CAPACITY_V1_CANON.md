@@ -34,6 +34,8 @@ OWNER_ACCEPTED_PLANNING_IMPLEMENTATION = YES
 
 Living program sequence is owned by `docs/ROADMAP.md`. Configuration-First architecture remains `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`. PLN1 persistence, API, `/planificare`, and the synthetic Owner reference runtime are Owner-accepted. This document remains the Planning contract owner. PLN2 and Operations Control V1 are Owner-accepted. Acceptance advisories are recorded and are not a correction wave. This document does not authorize PLN3.
 
+**Owner amendment, 2026-10-20 — direction accepted, presentation implementation pending.** Planning must not require manual time estimates or coordinator action on every task. The coordinator releases the whole job once; operators record actual work starts under existing eligibility/dependency rules. Planning's useful cross-job view will move into Lucrări as optional **Pe utilaje și zone**, with compatible historical links. Existing workload/estimate data and domain ownership remain intact. Unique-provider auto-binding must be reflected without misleading manual-allocation prompts. The current `/planificare` route still exists until this presentation change is implemented. The accepted PLN1/PLN2 history below is not proof that this amendment is implemented. Full decision: [Production flow canon](PRODUCTION_FLOW_CANON.md#owner-decision-planning-without-repetitive-administration-2026-10-20).
+
 Accepted PLN2 contract:
 
 ```text

@@ -13,6 +13,19 @@ Candidate authorized by the Owner on 2026-10-20 in `office952/workos-po`. Built 
 
 Commercial source and lifecycle history are disclosure details in Situation. Files and material preparation are sections of the existing sheet, not new pages. Operation identity, instructions and files identify the work; they do not teach the trade.
 
+## Owner decision: planning without repetitive administration (2026-10-20)
+
+Direction accepted by the Owner; implementation of the planning presentation changes is pending. The responsibility table above describes the current candidate route, not completion of this decision.
+
+- The coordinator sends the entire job to production once. Release generates its operation graph; the coordinator does not have to authorize or start each operation separately.
+- The operator records the actual beginning of work. Readiness, dependencies and eligibility remain server-owned; releasing the whole job must not mark every operation as started or bypass required gates.
+- Manual duration estimates are optional and must not become a production prerequisite or a repeated missing-data warning. Measuring real work, including the separately scoped participation/interruptions capability, is the priority. Unknown estimates remain unknown; do not fabricate them from cost rates or quantities. Any future suggestions from comparable history need their own validated contract.
+- Retire Planning as a primary workflow page in favor of an optional cross-job **Pe utilaje și zone** view inside Lucrări. Keep the existing workload engine and historical estimates; do not add another mandatory page or a new scheduling engine. When implemented, preserve historical planning links through a compatibility route.
+- A single eligible physical provider requires no repetitive manual choice. The current execution auto-binding remains authoritative; workload presentation must distinguish automatic selection from a real missing resource or a choice between multiple providers. Do not guess provider eligibility in the frontend.
+- Replace misleading per-task administrative actions such as **Alocă în execuție** with actions that describe the actual remaining choice or simply open the operation.
+
+This records the product decision only. It does not claim that `/planificare` has already been retired, introduce multi-worker timing, or authorize merge, deployment or real-data changes.
+
 ## Coordinated server commands
 
 - Product `POST /api/products/:code/quote-snapshots/:id/confirm-order`: validate the exact frozen quote and order contracts, atomically persist acceptance + order. Repeated calls reuse the existing acceptance/order identities. Assembly retains its existing exact-version accept command, now with the validation/persistence transaction; an already accepted response carries the existing order for navigation.

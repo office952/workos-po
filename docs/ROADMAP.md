@@ -49,6 +49,10 @@ Owner-authorized source candidate on top of `184619c` / draft PR #91: offer conf
 
 Cursor reported synthetic UI E2E PASS at `0dbb6b9` on the same audit assembly after member commercial-price persistence was corrected: one order, 17/17 production operations completed and retained after reload. The Owner then authorized targeted execution reliability corrections: current-activity wording, eligibility refresh after operator/People changes, and exclusive active machine runs across jobs. The follow-up source candidate needs its own local runtime check; multi-worker participation, interrupted work timing, delivery/installation and visual acceptance are not covered by that PASS.
 
+### Owner planning simplification decision (2026-10-20)
+
+Direction accepted; implementation pending. The Owner rejects repetitive manual estimates and coordinator release of individual tasks. One job-level production command remains the entry; operators record actual work starts. Planning becomes an optional **Pe utilaje și zone** view inside Lucrări instead of a primary workflow page. Keep the workload engine, optional estimates, existing data, eligibility/dependency gates and compatible historical links. Reconcile unique-provider auto-binding with misleading unassigned/allocation prompts. The current route is not retired yet. Contract: [Production flow canon](architecture/PRODUCTION_FLOW_CANON.md#owner-decision-planning-without-repetitive-administration-2026-10-20).
+
 ### Work integrated since PR #54
 
 | Work | PR / merge | Evidence class | Owner acceptance |
