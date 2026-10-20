@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { TransportError, readTransportErrorCode } from "../api/http";
 import { postPlannedEffort } from "../api/planning";
 import type { PlanningWorkloadTaskTransport } from "../api/types";
@@ -32,6 +32,8 @@ export function JobsWorkload({ active = true }: { active?: boolean }) {
   const workload = useResource(active ? resourceKeys.planningWorkload() : null, loadPlanningWorkload);
   const [query, setQuery] = useState("");
   const [showEstimates, setShowEstimates] = useState(false);
+  const [estimateOptionsOpen, setEstimateOptionsOpen] = useState(false);
+  const estimateOptionsId = useId();
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [hours, setHours] = useState("");
   const [minutes, setMinutes] = useState("");
@@ -125,10 +127,13 @@ export function JobsWorkload({ active = true }: { active?: boolean }) {
       <div className="jobs-workload__toolbar">
         <label className="production-search"><span className="u-visually-hidden">Caută în utilaje și zone</span><input type="search" value={query} placeholder="Caută lucrare, client, operație sau utilaj" onChange={event => setQuery(event.target.value)} /></label>
         <span className="jobs-workload__count" role="status">{shown} din {total} operații deschise</span>
-        <details className="jobs-workload__options"><summary>Estimări opționale</summary>
-          <p>Poți consulta sau completa estimări când îți sunt utile.</p>
-          <label><input type="checkbox" checked={showEstimates} onChange={event => setShowEstimates(event.target.checked)} /> Afișează estimările</label>
-        </details>
+        <div className="jobs-workload__options">
+          <button type="button" className="jobs-workload__options-toggle" aria-expanded={estimateOptionsOpen} aria-controls={estimateOptionsOpen ? estimateOptionsId : undefined} onClick={() => setEstimateOptionsOpen(open => !open)}>Estimări opționale</button>
+          {estimateOptionsOpen ? <div id={estimateOptionsId}>
+            <p>Poți consulta sau completa estimări când îți sunt utile.</p>
+            <label><input type="checkbox" checked={showEstimates} onChange={event => setShowEstimates(event.target.checked)} /> Afișează estimările</label>
+          </div> : null}
+        </div>
       </div>
       {total === 0 ? <EmptyState title="Nu există operații deschise." description="Operațiile apar aici după trimiterea lucrării în producție." /> : shown === 0 ? <EmptyState title="Nicio operație pentru această căutare." /> : null}
       {shownUnassigned.length > 0 ? <SurfacePanel variant="flush" label="Resurse de verificat" title="Resurse de verificat" description="O resursă lipsește sau trebuie aleasă dintre mai multe variante eligibile.">{rows(shownUnassigned)}</SurfacePanel> : null}

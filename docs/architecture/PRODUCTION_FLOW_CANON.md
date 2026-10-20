@@ -28,6 +28,12 @@ The default resource view shows open operations, their job/customer context and 
 
 This candidate does not introduce multi-worker timing or authorize merge, deployment or real-data changes.
 
+### Resource-view runtime review and keyboard follow-up (2026-10-21)
+
+Cursor reported the main resource-view behaviors passing at `fd5de5e`: integrated navigation and historical redirect, estimates optional by default, unique-provider projection without starting work, optional estimate draft continuity, and the finished audit job unchanged. Search survives switches between the two mounted registry views; losing it after leaving for Start is within the current contract. Manual-only work was observed; the fixture did not contain a genuine missing-provider or multiple-choice case. No screenshots were available. The keyboard/focus check remained partial, so this is not visual or accessibility acceptance.
+
+The focused follow-up uses an explicit disclosure button with `aria-expanded`; closed settings are not rendered as accessible or focusable controls. The resource view and its navigation links have visible keyboard-focus styles. Automated interaction checks cover Tab, Shift+Tab, Enter and Space without posting task mutations. Local browser verification of this correction remains pending; it does not change business data, eligibility, estimates or their persistence.
+
 ## Coordinated server commands
 
 - Product `POST /api/products/:code/quote-snapshots/:id/confirm-order`: validate the exact frozen quote and order contracts, atomically persist acceptance + order. Repeated calls reuse the existing acceptance/order identities. Assembly retains its existing exact-version accept command, now with the validation/persistence transaction; an already accepted response carries the existing order for navigation.

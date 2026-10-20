@@ -91,11 +91,40 @@ function workloadPayload(overrides: Record<string, unknown> = {}) {
 }
 
 async function showEstimates(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByText("Estimări opționale", { selector: "summary" }));
+  await user.click(screen.getByRole("button", { name: "Estimări opționale" }));
   await user.click(screen.getByRole("checkbox", { name: "Afișează estimările" }));
 }
 
 describe("JobsWorkload", () => {
+  it("keeps closed estimate settings out of keyboard navigation and supports Tab and Enter", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(workloadPayload()));
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<JobsWorkload />);
+    await screen.findByText("CNC Router");
+    expect(screen.queryByRole("checkbox", { name: "Afișează estimările" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("searchbox", { name: "Caută în utilaje și zone" }));
+    await user.tab();
+    const toggle = screen.getByRole("button", { name: "Estimări opționale" });
+    expect(toggle).toHaveFocus();
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await user.keyboard("{Enter}");
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    const checkbox = screen.getByRole("checkbox", { name: "Afișează estimările" });
+    await user.tab();
+    expect(checkbox).toHaveFocus();
+    await user.keyboard(" ");
+    expect(checkbox).toBeChecked();
+    await user.tab({ shift: true });
+    expect(toggle).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("checkbox", { name: "Afișează estimările" })).not.toBeInTheDocument();
+    await user.tab();
+    expect(screen.getAllByRole("link", { name: "Litere ALPHA DEMO" })[0]).toHaveFocus();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  });
+
   it("shows work and resources without demanding estimates or mutating tasks", async () => {
     const payload = workloadPayload();
     const task = payload.workload.providers[0]!.tasks[1]!;
