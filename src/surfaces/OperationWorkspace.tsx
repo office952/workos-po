@@ -56,6 +56,7 @@ import {
 import { parseActualDurationDraft } from "../presentation/actualDuration";
 import {
   presentExecutionCompletionError,
+  presentMachineRunStartError,
   presentQualityError,
 } from "../presentation/executionCompletionError";
 import {
@@ -402,11 +403,7 @@ export function OperationWorkspace({
       invalidateAfterExecutionTaskChange(planId);
     } catch (error) {
       setActionState("error");
-      setActionError(
-        error instanceof TransportError
-          ? "Rularea utilajului nu poate fi pornită."
-          : "Pornirea utilajului a eșuat.",
-      );
+      setActionError(presentMachineRunStartError(error));
     }
   }
 

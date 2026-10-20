@@ -47,6 +47,8 @@ PILOT_GATE_B = HOLD
 
 Owner-authorized source candidate on top of `184619c` / draft PR #91: offer confirmation opens the job, a single **Trimite în producție** command prepares release and plan, and operations/dossier stay in the job sheet and Atelier. Canonical responsibilities and retired URL mapping: [Production flow canon](architecture/PRODUCTION_FLOW_CANON.md). Candidate only; merge, real-data changes, deployment and visual acceptance remain pending. This note does not change the historical main baseline above.
 
+Cursor reported synthetic UI E2E PASS at `0dbb6b9` on the same audit assembly after member commercial-price persistence was corrected: one order, 17/17 production operations completed and retained after reload. The Owner then authorized targeted execution reliability corrections: current-activity wording, eligibility refresh after operator/People changes, and exclusive active machine runs across jobs. The follow-up source candidate needs its own local runtime check; multi-worker participation, interrupted work timing, delivery/installation and visual acceptance are not covered by that PASS.
+
 ### Work integrated since PR #54
 
 | Work | PR / merge | Evidence class | Owner acceptance |

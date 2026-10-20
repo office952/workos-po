@@ -1826,6 +1826,7 @@ function mutationHttpStatus(error: TaskMutationError): 404 | 409 | 422 {
     case "invalid_transition":
     case "machine_run_not_allowed":
     case "machine_run_active":
+    case "machine_busy":
     case "machine_run_closed":
     case "external_production_disabled":
     case "task_not_planned":

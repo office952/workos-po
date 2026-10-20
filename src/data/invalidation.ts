@@ -124,6 +124,8 @@ export function invalidateAfterOperatorSessionChange(): void {
     resourceKeys.operatorInbox(),
     resourceKeys.operatorCandidates(),
   );
+  // Execution actions and operatorRelation belong to the current viewer.
+  invalidateResourcePrefix(resourceKeys.executionPlanPrefix());
 }
 
 export function invalidateAfterCloudBoundaryChange(): void {
@@ -155,7 +157,8 @@ export function invalidateAfterOrganizationAccessChange(): void {
 }
 
 export function invalidateAfterPeopleAdminChange(): void {
-  invalidateResources(resourceKeys.peopleAdmin(), resourceKeys.operatorCandidates());
+  invalidateResources(resourceKeys.peopleAdmin(), resourceKeys.operatorCandidates(), resourceKeys.operatorInbox());
+  invalidateResourcePrefix(resourceKeys.executionPlanPrefix());
 }
 
 export function invalidateAfterWorkcentersAdminChange(): void {

@@ -31,6 +31,20 @@ export function presentExecutionCompletionError(error: unknown): string {
   }
 }
 
+export function presentMachineRunStartError(error: unknown): string {
+  if (!(error instanceof TransportError)) {
+    return "Pornirea utilajului a eșuat.";
+  }
+  switch (readTransportErrorCode(error.body)) {
+    case "machine_busy":
+      return "Utilajul rulează la altă operație. Încearcă din nou după oprirea rulării curente.";
+    case "machine_run_active":
+      return "Utilajul rulează deja la această operație.";
+    default:
+      return "Rularea utilajului nu poate fi pornită.";
+  }
+}
+
 export function presentQualityError(error: unknown): string {
   if (!(error instanceof TransportError)) {
     return "Controlul nu a putut fi înregistrat.";

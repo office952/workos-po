@@ -15,6 +15,33 @@ afterEach(() => {
 });
 
 describe("JobDetailPage", () => {
+  it("does not describe finished production as never started", async () => {
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      const body = url.includes("/jobs/job-finished") ? {
+        job: {
+          jobId: "job-finished", productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+          productLabel: "Litere", inscription: "FINALIZAT", customerDisplayName: "Client sintetic",
+          stage: "EXECUTION_COMPLETED", stageLabel: "Finalizată", nextAction: "VIEW_EXECUTION",
+          nextActionLabel: "Vezi rezultatele", progressLabel: "1 / 1", orderSnapshotId: "ord-finished",
+        },
+        execution: { planId: "exp-finished" },
+      } : url.includes("/execution-plans/exp-finished") ? {
+        executionPlan: {
+          plan: { planId: "exp-finished", productLabel: "Litere", inscription: "FINALIZAT" },
+          statusLabel: "Finalizată", progress: { total: 1, completed: 1 },
+          tasks: [{ taskId: "task-finished", seqLabel: "01", processLabel: "Ambalare", scopeLabel: "Produs",
+            status: "COMPLETED", statusLabel: "Finalizat", waitingFor: [], eligibleProviders: [] }],
+        },
+      } : {};
+      return Promise.resolve({ ok: true, status: 200, json: async () => body });
+    }));
+    render(<JobDetailPage jobId="job-finished" />);
+    expect(await screen.findByText(/Producția este finalizată/)).toBeInTheDocument();
+    expect(await screen.findByText("Nicio operație în lucru în acest moment.")).toBeInTheDocument();
+    expect(screen.queryByText("Nicio operație începută în planul lucrării.")).not.toBeInTheDocument();
+  });
+
   it("owns the sheet layout without the legacy three-column traveler or a repeated hero", async () => {
     vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => {
       const url = String(input);

@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { resetResourceCache } from "../data/resourceCache";
+import { resetResourceCache, writeResource } from "../data/resourceCache";
+import { invalidateAfterOperatorSessionChange } from "../data/invalidation";
+import { resourceKeys } from "../data/resourceKeys";
 import { OperationWorkspace } from "./OperationWorkspace";
 
 vi.mock("../session/CloudSessionContext", () => ({
@@ -91,6 +93,62 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 describe("OperationWorkspace", () => {
+  it("refreshes the selected operation after identification without a reload or a start command", async () => {
+    let personId = "per:unqualified";
+    const fetchMock = vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) return jsonResponse({ operator: { personId, displayName: "Operator test" } });
+      if (!url.includes("/execution-plans/")) return jsonResponse({});
+      const eligible = personId === "per:qualified";
+      const payload = planPayload([{ taskId: "task-led", processLabel: "Montare LED", status: "PLANNED",
+        statusLabel: "Planificat", canComplete: false, requiresCompletedQuantity: false,
+        plannedValue: null, completedQuantityLabel: null, varianceLabel: null }]);
+      const plan = payload.executionPlan as { tasks: Record<string, unknown>[] };
+      Object.assign(plan.tasks[0]!, { canClaimStart: eligible, operatorRelation: eligible ? "can_claim" : "not_eligible" });
+      return jsonResponse(payload);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<OperationWorkspace planId="exp:1" taskId="task-led" />);
+    expect(await screen.findAllByText("Necesită operator calificat")).not.toHaveLength(0);
+    personId = "per:qualified";
+    act(() => {
+      writeResource(resourceKeys.operatorSession(), { personId, displayName: "Operator test" });
+      invalidateAfterOperatorSessionChange();
+    });
+    expect(await screen.findByRole("button", { name: "Pornește" })).toBeEnabled();
+    expect(screen.queryByText("Necesită operator calificat")).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/start"))).toBe(false);
+    personId = "per:unqualified";
+    act(() => {
+      writeResource(resourceKeys.operatorSession(), { personId, displayName: "Operator test" });
+      invalidateAfterOperatorSessionChange();
+    });
+    await screen.findAllByText("Necesită operator calificat");
+    expect(screen.queryByRole("button", { name: "Pornește" })).not.toBeInTheDocument();
+  });
+
+  it("explains a busy machine and allows retry without starting another run locally", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) return jsonResponse({ operator: { personId: "per:cnc", displayName: "Operator CNC" } });
+      if (url.endsWith("/machine-runs/start") && init?.method === "POST") return jsonResponse({ error: "machine_busy" }, 409);
+      if (!url.includes("/execution-plans/")) return jsonResponse({});
+      const payload = planPayload([{ taskId: "task-cnc", processLabel: "Debitare CNC", status: "IN_PROGRESS",
+        statusLabel: "În lucru", canComplete: true, requiresCompletedQuantity: false,
+        plannedValue: null, completedQuantityLabel: null, varianceLabel: null }]);
+      const plan = payload.executionPlan as { tasks: Record<string, unknown>[] };
+      Object.assign(plan.tasks[0]!, { canStartMachineRun: true, machineRuns: [] });
+      return jsonResponse(payload);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<OperationWorkspace planId="exp:1" taskId="task-cnc" />);
+    await user.click(await screen.findByRole("button", { name: "Pornește utilajul" }));
+    expect(await screen.findByText("Utilajul rulează la altă operație. Încearcă din nou după oprirea rulării curente.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pornește utilajul" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Oprește utilajul" })).not.toBeInTheDocument();
+  });
+
   it("keeps job identity and the operation draft while the compact selector navigates without saving", async () => {
     const cut: TaskFixture = { taskId: "task-cut", processLabel: "Debitare", status: "IN_PROGRESS", statusLabel: "În lucru", canComplete: true, requiresCompletedQuantity: true, plannedValue: 12.5, completedQuantityLabel: null, varianceLabel: null };
     const wire: TaskFixture = { ...cut, taskId: "task-wire", processLabel: "Cablare", status: "PLANNED", statusLabel: "Planificat", canComplete: false, requiresCompletedQuantity: false, plannedValue: null };

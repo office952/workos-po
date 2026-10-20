@@ -288,7 +288,7 @@ export function JobDetailPage({ jobId, taskId = null, section: requestedSection 
                 <span className="job-sheet__task-state" data-status={task.status}>{task.statusLabel}</span>
                 <p>Executant înregistrat: {presentRecordedExecutor(task)}</p><p className="job-sheet__secondary">Timp efectiv: {task.actualDurationLabel}</p>
                 <a className="job-sheet__link-button" href={operationHref(task.taskId)}>Deschide operația</a>
-              </article>)}</div> : <p className="job-sheet__secondary">Nicio operație începută în planul lucrării.</p>}
+              </article>)}</div> : <p className="job-sheet__secondary">Nicio operație în lucru în acest moment.</p>}
               <div className="job-sheet__continuation"><a className="job-sheet__text-link" href={sectionHref("operatii")}>Vezi operațiile</a><a className="job-sheet__text-link" href={atelierHref({ jobId, returnTo: sectionHref("situatie") })}>Deschide atelierul lucrării</a></div>
             </section> : null}
               {(attentionTasks.length > 0 || materialSummary.length > 0) ? <section className="job-sheet__panel job-sheet__attention" aria-label="De verificat">

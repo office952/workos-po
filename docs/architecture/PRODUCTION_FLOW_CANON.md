@@ -43,4 +43,10 @@ An invalid explicit task must show an error and recovery choice; never silently 
 
 ## Review and remaining boundary
 
-Automated synthetic checks cover command retries/rollback, product/assembly parity, Owner/tenant boundaries, aliases, selected task and draft continuity. Browser validation of this exact candidate at desktop, 768px and phone remains required via the local Cursor runtime. Tests/build are not visual evidence. Multi-worker participation and automatic work/pause intervals require their own state-machine work and are not introduced here.
+Automated synthetic checks cover command retries/rollback, product/assembly parity, Owner/tenant boundaries, aliases, selected task and draft continuity. Cursor reported a complete UI journey at `0dbb6b9` on the same isolated synthetic audit assembly: quote frozen, one order, production finished at 17/17 operations and retained after reload. This is reported runtime evidence for that commit, not independent browser or visual acceptance. Delivery and installation remain separate.
+
+The follow-up correction keeps an operation's lifecycle separate from machine occupancy. Multiple operations may be open; one machine may have only one open MachineRun across all jobs in an organization's operational plane. The domain checks occupancy and the persistence command reads it and inserts the run under one immediate transaction. A busy machine returns `machine_busy` / HTTP 409 with a retry explanation. Stopping its run releases occupancy; no scheduling calendar, automatic task completion, schema change, historical backfill or workcenter exclusivity is introduced.
+
+Operator identification/logout and People administration refresh cached execution plans as well as the inbox, so viewer-dependent eligibility is reread without page reload. The sheet describes the absence of current activity without claiming that no operation ever started.
+
+Browser validation of the follow-up correction remains required via the local Cursor runtime. Tests/build are not visual evidence. Multi-worker participation and automatic work/pause intervals require their own state-machine work and are not introduced here. File upload was not exercised in the reported journey. The phone table overflow observation remains a visual review advisory.

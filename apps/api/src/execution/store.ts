@@ -502,7 +502,16 @@ export function persistMachineRunStart(
     if (!record) {
       return { ok: false, error: "not_found" };
     }
-    const result = startMachineRun(record, taskId, personId, startedAt, people, eligibility);
+    // This database is the organization's operational plane. Include every job,
+    // and hold the write lock from the occupancy read through insertion.
+    const occupied = db.prepare(`
+      SELECT DISTINCT machine_provider_id FROM execution_machine_runs
+      WHERE completed_at IS NULL
+    `).all() as { machine_provider_id: string }[];
+    const result = startMachineRun(
+      record, taskId, personId, startedAt, people, eligibility,
+      occupied.map((row) => row.machine_provider_id),
+    );
     if (!result.ok) {
       return result;
     }
@@ -521,7 +530,7 @@ export function persistMachineRunStart(
     }
     return { ok: true, alreadyApplied: false, record: stored };
   });
-  return run();
+  return run.immediate();
 }
 
 export function persistMachineRunStop(

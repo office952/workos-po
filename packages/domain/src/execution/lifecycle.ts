@@ -75,6 +75,7 @@ export const TASK_MUTATION_ERRORS = [
   "invalid_actual_duration",
   "machine_run_not_allowed",
   "machine_run_active",
+  "machine_busy",
   "machine_run_not_found",
   "machine_run_closed",
   "external_production_disabled",
