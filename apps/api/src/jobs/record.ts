@@ -43,7 +43,7 @@ export function readJobRecord(db: SqliteDatabase, jobId: string, plan: Execution
       const sessions = t.workSessions ?? [];
       if (t.startedAt && !sessions.some(s => s.startedAt === t.startedAt)) timeline.push({
         eventId: 'start:' + t.taskId, kind: 'TASK_STARTED', label: 'Operație începută', actorLabel: t.assignedExecutor?.label ?? null,
-        occurredAt: t.startedAt, taskId: t.taskId, taskLabel: taskLabel(t.taskId), detail: sessions.length ? 'Început anterior evidenței sesiunilor' : null });
+        occurredAt: t.startedAt, taskId: t.taskId, taskLabel: taskLabel(t.taskId), detail: 'Început fără sesiune individuală înregistrată' });
       for (const s of sessions) {
         timeline.push({ eventId: s.sessionId + ':in', kind: 'WORK_ENTERED', label: s.startedAt === t.startedAt ? 'Operație începută' : 'A intrat în operație',
           actorLabel: s.personLabel, occurredAt: s.startedAt, taskId: t.taskId, taskLabel: taskLabel(t.taskId), detail: null });

@@ -93,6 +93,22 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 describe("OperationWorkspace", () => {
+  it.each([null, "Este necesară corecția"])("explains other active participants once, preserving a distinct primary reason: %s", async (qualityBlockLabel) => {
+    const reason = "Mai lucrează: Maria. Fiecare trebuie să iasă înainte de finalizare.";
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => {
+      if (String(input).includes("operator-session")) return jsonResponse({ operator: { personId: "per:ion", displayName: "Ion" } });
+      const payload = planPayload([{ taskId: "task-cut", processLabel: "Debitare", status: "IN_PROGRESS", statusLabel: "În lucru", canComplete: false, requiresCompletedQuantity: false, plannedValue: null, completedQuantityLabel: null, varianceLabel: null }]);
+      Object.assign((payload.executionPlan as { tasks: Record<string, unknown>[] }).tasks[0]!, { canLeave: true, qualityBlockLabel, completionParticipationBlock: reason, activeParticipantsLabel: "Ion, Maria" });
+      return jsonResponse(payload);
+    }));
+    render(<OperationWorkspace planId="exp:1" taskId="task-cut"/>);
+    const currentAction = await screen.findByTestId("execution-next");
+    expect(within(currentAction).getAllByText(reason)).toHaveLength(1);
+    if (qualityBlockLabel) expect(within(currentAction).getByText(qualityBlockLabel)).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Închide sarcina" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Ieși din operație" })).toBeEnabled();
+  });
+
   it("refreshes the selected operation after identification without a reload or a start command", async () => {
     let personId = "per:unqualified";
     const fetchMock = vi.fn((input: RequestInfo) => {

@@ -515,6 +515,7 @@ export function OperationWorkspace({
   const allComplete =
     plan !== null && plan.tasks.length > 0 && plan.tasks.every((task) => task.status === "COMPLETED");
   const currentTask = plan ? selectCurrentExecutionTask(plan.tasks, taskId) : null;
+  const currentActionReason = currentTask ? presentExecutionNextAction(currentTask, identified) : null;
   const currentTaskMissingProvider = taskMissingProvider(currentTask);
   const providerRegistry = useResource(
     currentTaskMissingProvider ? resourceKeys.workcentersAdmin() : null,
@@ -629,8 +630,8 @@ export function OperationWorkspace({
             <section className="execution-next" data-testid="execution-next">
               <h3 className="execution-next__title">Următorul pas</h3>
               {currentTask.activeParticipantsLabel ? <p>Lucrează acum: {currentTask.activeParticipantsLabel}</p> : null}
-              {currentTask.completionParticipationBlock ? <p>{currentTask.completionParticipationBlock}</p> : null}
-              <p className="execution-next__reason">{presentExecutionNextAction(currentTask, identified)}</p>
+              <p className="execution-next__reason">{currentActionReason}</p>
+              {currentTask.completionParticipationBlock && currentTask.completionParticipationBlock !== currentActionReason ? <p>{currentTask.completionParticipationBlock}</p> : null}
             {currentTask.canExternalize ? (
               <Button
                 disabled={actionState === "pending"}

@@ -41,6 +41,12 @@ function exportHours(record: JobRecord) {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
+function fileMatchesQuery(file: JobRecordFile, query: string): boolean {
+  const normalized = query.trim().toLocaleLowerCase('ro');
+  return [file.originalFileName, file.purposeLabel, ...file.usages.map(u => u.taskLabel)]
+    .join(' ').toLocaleLowerCase('ro').includes(normalized);
+}
+
 export function JobRecordView({ record, canWriteFiles, operationHref }: { record: JobRecord; canWriteFiles: boolean; operationHref: (id: string) => string }) {
   const [query, setQuery] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -52,10 +58,17 @@ export function JobRecordView({ record, canWriteFiles, operationHref }: { record
   const sessionButtons = useRef(new Map<string, HTMLButtonElement>());
   const file = record.files.find(f => f.artifactId === selected) ?? null;
   const task = record.hours?.tasks.find(t => t.taskId === sessionTask) ?? null;
-  const normalized = query.trim().toLocaleLowerCase('ro');
-  const files = record.files.filter(f => [f.originalFileName, f.purposeLabel, ...f.usages.map(u => u.taskLabel)].join(' ').toLocaleLowerCase('ro').includes(normalized));
+  const files = record.files.filter(f => fileMatchesQuery(f, query));
   const hours = record.hours;
-  function openFile(f: JobRecordFile) { setSelected(f.artifactId); setTimeout(() => fileDetail.current?.focus(), 0); }
+  function searchFiles(value: string) {
+    setQuery(value);
+    if (file && !fileMatchesQuery(file, value)) setSelected(null);
+  }
+  function openFile(f: JobRecordFile) {
+    if (!fileMatchesQuery(f, query)) setQuery('');
+    setSelected(f.artifactId);
+    setTimeout(() => fileDetail.current?.focus(), 0);
+  }
   function openSessions(t: WorkHoursTask) { setSessionTask(t.taskId); setTimeout(() => sessionHeading.current?.focus(), 0); }
   return <div className="job-record">
     {hours ? <section className="job-record__summary" aria-label="Totalurile lucrării">
@@ -73,7 +86,7 @@ export function JobRecordView({ record, canWriteFiles, operationHref }: { record
     <section id="fisiere" className="job-record__section" aria-label="Fișierele lucrării">
       <header><div><Heading icon="file">Fișierele lucrării</Heading><p>Versiunile păstrate și operațiile în care au fost declarate folosite.</p></div>{canWriteFiles ? <Button variant="secondary" aria-expanded={uploading} onClick={() => setUploading(v => !v)}>{uploading ? 'Închide încărcarea' : 'Adaugă fișier'}</Button> : null}</header>
       {uploading && canWriteFiles ? <JobFilesPanel jobId={record.jobId} uploadOnly onUploaded={() => invalidateResources(resourceKeys.jobRecord(record.jobId))}/> : null}
-      <label className="job-record__search">Caută fișier sau operație<input type="search" value={query} onChange={e => setQuery(e.target.value)}/></label>
+      <label className="job-record__search">Caută fișier sau operație<input type="search" value={query} onChange={e => searchFiles(e.target.value)}/></label>
       {files.length ? <table className="job-record__table job-record__files"><caption className="u-visually-hidden">Fișiere, utilizări și autorii înregistrărilor</caption><thead><tr><th>Fișier / revizie</th><th>Unde a fost folosit</th><th>Încărcat de / când</th><th>Consultare</th></tr></thead><tbody>{files.map(f => <tr key={f.artifactId} data-selected={file?.artifactId === f.artifactId}>
         <td data-label="Fișier / revizie"><strong>{f.originalFileName}</strong><p>{f.sizeLabel} · {f.purposeLabel ?? 'Scop nedeclarat'}</p><p>{f.supersedesArtifactId ? 'Revizie nouă · versiunea anterioară rămâne păstrată' : 'Fișier inițial'}</p></td>
         <td data-label="Unde a fost folosit">{f.usages.length ? f.usages.map(u => <div key={u.taskId} className="job-record__use"><a href={operationHref(u.taskId)}>{u.taskLabel}</a><p><RecordIcon kind={u.usedAt ? 'check' : 'link'}/>{u.usedAt ? 'Utilizare înregistrată' : 'Asociat · utilizare neconfirmată'}</p>{u.usedAt ? <p>{u.usedByLabel ?? 'Autor neînregistrat'} · {moment(u.usedAt)}</p> : null}</div>) : <p>Asociat lucrării · fără utilizare înregistrată pe operații</p>}</td>

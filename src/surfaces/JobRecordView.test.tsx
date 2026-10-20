@@ -36,4 +36,32 @@ describe('file-first job record', () => {
     expect(screen.getByText(/Evidența orelor: parțială · 1 \/ 2/)).toBeInTheDocument();
     await user.click(within(detail).getByRole('button', { name: 'Închide sesiunile' })); expect(open).toHaveFocus();
   });
+  it('closes a filtered-out file detail and does not reopen it when the search clears', async () => {
+    const user = userEvent.setup();
+    const record = { ...jobRecordFixture, files: jobRecordFixture.files.map((f, i) => ({ ...f, originalFileName: i ? 'control.txt' : 'debitare.txt' })) };
+    render(<JobRecordView record={record} canWriteFiles={false} operationHref={id => '#' + id}/>);
+    await user.click(screen.getAllByRole('button', { name: 'Utilizări și versiuni →' })[0]!);
+    expect(screen.getByRole('region', { name: 'Detalii fișier debitare.txt' })).toBeVisible();
+    const search = screen.getByRole('searchbox');
+    await user.type(search, 'debit');
+    expect(screen.getByRole('region', { name: 'Detalii fișier debitare.txt' })).toBeVisible();
+    await user.clear(search); await user.type(search, 'control');
+    expect(screen.queryByRole('region', { name: 'Detalii fișier debitare.txt' })).toBeNull();
+    expect(search).toHaveFocus();
+    await user.clear(search);
+    expect(screen.queryByRole('region', { name: 'Detalii fișier debitare.txt' })).toBeNull();
+  });
+  it('keeps revision navigation usable when the selected revision does not match the search', async () => {
+    const user = userEvent.setup();
+    const record = { ...jobRecordFixture, files: jobRecordFixture.files.map((f, i) => ({ ...f, originalFileName: i ? 'revizie.txt' : 'original.txt' })) };
+    render(<JobRecordView record={record} canWriteFiles={false} operationHref={id => '#' + id}/>);
+    await user.type(screen.getByRole('searchbox'), 'original');
+    await user.click(screen.getByRole('button', { name: 'Utilizări și versiuni →' }));
+    await user.click(screen.getByRole('button', { name: /Versiune ulterioară/ }));
+    const detail = screen.getByRole('region', { name: 'Detalii fișier revizie.txt' });
+    expect(detail).toBeVisible(); expect(screen.getByRole('searchbox')).toHaveValue('');
+    await user.click(within(detail).getByRole('button', { name: 'Închide detaliul' }));
+    expect(screen.getAllByRole('button', { name: 'Utilizări și versiuni →' })[1]).toHaveFocus();
+  });
+
 });

@@ -1,3 +1,4 @@
+import { readJobRecord } from "../src/jobs/record.js";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -90,6 +91,13 @@ describe("job record and individual work participation", () => {
       const other = second.tasks.find(t => providersOf(t).some(p => p.id === MCH_CNC_4020_ID))!;
       async function operator(name: string) { const res = await readBody(await app.request('/api/people', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ displayName: name }) }));
         const id = (res.person as JsonObject).personId as string; return { id, cookie: await sessionCookieViaHttp(app, id) }; }
+      const canonical = runtime.readExecutionPlanByTaskId(String(task.taskId))!;
+      const initialStart = '2026-10-20T08:00:00.000Z';
+      const sample = canonical.tasks.slice(0, 3);
+      const chronologyRecord = { ...canonical, tasks: sample.map((t, i) => ({ ...t, status: 'IN_PROGRESS' as const, startedAt: initialStart, workSessions: i === 0 ? [] : [{ sessionId: 'sample-' + i, taskId: t.taskId, personId: 'sample-person', personLabel: 'Operator sintetic', startedAt: i === 1 ? '2026-10-20T09:00:00.000Z' : initialStart, endedAt: null, endKind: null }] })) };
+      const chronology = readJobRecord(runtime.assemblyPlane().db, 'sample-job', chronologyRecord, '2026-10-21T07:00:00.000Z').timeline;
+      for (const t of sample.slice(0, 2)) expect(chronology.find(e => e.eventId === 'start:' + t.taskId)?.detail).toBe('Început fără sesiune individuală înregistrată');
+      expect(chronology.find(e => e.eventId === 'start:' + sample[2]!.taskId)).toBeUndefined();
       const ion = await operator('Ion sesiuni'); const maria = await operator('Maria sesiuni');
       const stamp = (at: string, id: string) => ({ source: 'AUTO_UNIQUE' as const, boundAt: at, accountId: 'test', operatorId: id });
       const startAt = '2026-10-21T08:00:00.000Z';
