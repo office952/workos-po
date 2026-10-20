@@ -108,6 +108,29 @@ async function createExecutionPlan(app: ReturnType<typeof createApp>) {
 }
 
 describe("planned effort API", () => {
+  it("projects the unique machine before assignment without an estimate or a task write", async () => {
+    const app = createApp();
+    const plan = await createExecutionPlan(app);
+    const candidate = plan.tasks.find(task => task.providerBindingState === "UNIQUE_PENDING");
+    expect(candidate).toBeDefined();
+    const response = await app.request("/api/planning/workload");
+    expect(response.status).toBe(200);
+    const workload = (await readBody(response)).workload as JsonObject;
+    const groups = workload.providers as { tasks: JsonObject[] }[];
+    const item = groups.flatMap(group => group.tasks).find(task => task.taskId === candidate!.taskId)!;
+    expect(item).toBeDefined();
+    expect(item.providerBindingState).toBe("UNIQUE_PENDING");
+    expect(item.providerBindingLabel).toMatch(/Se asociază automat/);
+    expect(item.assignedProvider).toBeNull();
+    expect(item.plannedEffortMinutes).toBeNull();
+    expect((workload.unassigned as JsonObject[]).some(task => task.taskId === candidate!.taskId)).toBe(false);
+    const after = await app.request(`/api/execution-plans/${plan.plan.planId}`);
+    const tasks = ((await readBody(after)).executionPlan as { tasks: JsonObject[] }).tasks;
+    const unchanged = tasks.find(task => task.taskId === candidate!.taskId)!;
+    expect(unchanged.status).toBe("PLANNED");
+    expect(unchanged.providerBindingState).toBe("UNIQUE_PENDING");
+  });
+
   it("saves, clears, and rejects invalid planned effort while the task is planned", async () => {
     const app = createApp();
     const plan = await createExecutionPlan(app);

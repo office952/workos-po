@@ -281,7 +281,17 @@ export function adminMachineHref(workcenterId: string, machineId: string): strin
 }
 
 export function planningHref(): string {
-  return "/planificare";
+  return jobsViewHref("resources");
+}
+
+export type JobsView = "jobs" | "resources";
+
+export function parseJobsView(search: string): JobsView {
+  return readSearchParam(search, "vedere") === "utilaje" ? "resources" : "jobs";
+}
+
+export function jobsViewHref(view: JobsView): string {
+  return view === "resources" ? "/lucrari?vedere=utilaje" : "/lucrari";
 }
 
 export function atelierHref(
@@ -385,6 +395,11 @@ export function configuratorHref(context: SpineContext): string {
 }
 
 export function canonicalLocation(pathname: string, search: string): string | null {
+  if (pathname === "/planificare") {
+    const params = new URLSearchParams(search);
+    params.set("vedere", "utilaje");
+    return `/lucrari?${params.toString()}`;
+  }
   const legacyExecution = pathname.match(/^\/(?:executie|execution)\/([^/]+)$/);
   if (legacyExecution) return executionHref(decodeURIComponent(legacyExecution[1]), {
     taskId: readSearchParam(search, "task"), jobId: readSearchParam(search, "job"),

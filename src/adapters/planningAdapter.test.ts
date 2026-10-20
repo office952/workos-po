@@ -39,5 +39,12 @@ describe("planning adapter", () => {
     expect(presented?.providers[0]?.knownQueuedMinutes).toBe(45);
     expect(presented?.providers[0]?.unknownEffortCount).toBe(1);
     expect(presented?.providers[0]?.tasks[0]?.plannedEffortMinutes).toBeNull();
+    expect(presented?.manual).toEqual([]);
+  });
+
+  it("keeps server binding explanations without inventing an assignment", () => {
+    const task = { taskId: "task:manual", executionPlanId: "exp:1", executionHref: "/atelier?plan=exp%3A1&task=task%3Amanual", status: "PLANNED", providerBindingState: "NOT_REQUIRED", providerBindingLabel: "Fără utilaj sau zonă obligatorie.", assignedProvider: null, plannedEffortMinutes: null };
+    const view = presentPlanningWorkload({ workload: { providers: [], unassigned: [], manual: [task] } });
+    expect(view?.manual[0]).toMatchObject({ assignedProvider: null, plannedEffortMinutes: null, providerBindingState: "NOT_REQUIRED", providerBindingLabel: "Fără utilaj sau zonă obligatorie." });
   });
 });

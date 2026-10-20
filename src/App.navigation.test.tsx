@@ -18,6 +18,45 @@ afterEach(() => {
 });
 
 describe("App navigation", () => {
+  it("opens the optional resource view inside jobs, retaining registry search and doing no task writes", async () => {
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      void init;
+      const url = String(input);
+      if (url.endsWith("/api/health")) return jsonResponse({ status: "ok", service: "workos-final-api", apiContractId: "workos-ui-contract-v1" });
+      if (url.endsWith("/api/jobs")) return jsonResponse({ overview: { jobs: [] } });
+      if (url.endsWith("/api/planning/workload")) return jsonResponse({ workload: { canEditEffort: true, providers: [], unassigned: [], manual: [] } });
+      return jsonResponse({});
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    window.history.replaceState({}, "", "/lucrari");
+    render(<App />);
+    const search = await screen.findByRole("searchbox", { name: "Caută lucrări" });
+    const user = userEvent.setup();
+    await user.type(search, "NORD");
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("planning/workload"))).toBe(false);
+    const shell = document.querySelector(".app-shell__bar");
+    await user.click(screen.getByRole("link", { name: "Pe utilaje și zone" }));
+    expect(await screen.findByRole("heading", { name: "Pe utilaje și zone" })).toBeInTheDocument();
+    expect(window.location.pathname + window.location.search).toBe("/lucrari?vedere=utilaje");
+    expect(document.querySelector(".app-shell__bar")).toBe(shell);
+    expect(screen.queryByRole("link", { name: "Planificare" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("link", { name: "Lista lucrărilor" }));
+    expect(await screen.findByRole("searchbox", { name: "Caută lucrări" })).toHaveValue("NORD");
+    expect(fetchMock.mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
+  });
+
+  it("replaces a bookmarked Planning URL with the jobs resource view", async () => {
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => jsonResponse(String(input).endsWith("/api/health")
+      ? { status: "ok", service: "workos-final-api", apiContractId: "workos-ui-contract-v1" }
+      : String(input).endsWith("/api/planning/workload") ? { workload: { providers: [], unassigned: [], manual: [] } } : {})));
+    window.history.replaceState({}, "", "/planificare");
+    render(<App />);
+    expect(await screen.findByRole("heading", { name: "Pe utilaje și zone" })).toBeInTheDocument();
+    expect(window.location.pathname + window.location.search).toBe("/lucrari?vedere=utilaje");
+    expect(screen.getByRole("heading", { name: "Lucrări", level: 1 })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Planificare" })).not.toBeInTheDocument();
+  });
+
   it("keeps the shell mounted and reuses registry reads across back and forward", async () => {
     const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
       const url = String(input);

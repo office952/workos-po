@@ -808,6 +808,8 @@ export type PlanningWorkloadTaskTransport = {
   jobHref: string | null;
   executionHref: string;
   assignedProvider: { id: string; kind: string; label: string } | null;
+  providerBindingState: string | null;
+  providerBindingLabel: string | null;
   plannedEffortMinutes: number | null;
   requiresProvider: boolean;
   canEditEffort: boolean;
@@ -829,6 +831,7 @@ export type PlanningWorkloadTransport = {
   canEditEffort: boolean;
   providers: PlanningWorkloadProviderTransport[];
   unassigned: PlanningWorkloadTaskTransport[];
+  manual: PlanningWorkloadTaskTransport[];
 };
 
 export type ResourcesWriteState = "READY" | "NOT_IMPLEMENTED";

@@ -7,7 +7,7 @@ afterEach(() => {
 });
 
 describe("JobsPage", () => {
-  it("keeps a discoverable Planificare entry without adding L1 navigation", async () => {
+  it("keeps the resource view inside Lucrări without a separate Planning page", async () => {
     vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => {
       const url = String(input);
       if (url.endsWith("/jobs")) {
@@ -43,9 +43,10 @@ describe("JobsPage", () => {
 
     render(<JobsPage />);
     expect((await screen.findAllByText("ALPHA")).length).toBeGreaterThan(0);
-    const planning = screen.getByRole("link", { name: "Planificare" });
-    expect(planning).toHaveAttribute("href", "/planificare");
-    expect(planning.closest(".jobs-spine__controls")).not.toBeNull();
+    const resources = screen.getByRole("link", { name: "Pe utilaje și zone" });
+    expect(resources).toHaveAttribute("href", "/lucrari?vedere=utilaje");
+    expect(resources.closest("nav")).toHaveAttribute("aria-label", "Vederi lucrări");
+    expect(screen.queryByRole("link", { name: "Planificare" })).not.toBeInTheDocument();
     const hero = screen.getByRole("heading", { name: "Lucrări" }).closest(".page-header");
     expect(hero).toHaveClass("page-header--pilot");
     expect(hero).not.toHaveClass("page-header--pilot-compact");

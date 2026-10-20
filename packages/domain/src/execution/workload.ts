@@ -6,6 +6,7 @@ import {
 } from "../jobs/planning.js";
 import { taskRequiresProvider, executionModeOf, type AssignedExecutionProvider, type ExecutionPlanRecord, type ExecutionTask, type ExecutionTaskStatus } from "./plan.js";
 import { plannedEffortIsUnknown } from "./plannedEffort.js";
+import { resolveProviderBinding, type ProviderBindingState } from "./providerBinding.js";
 import {
   workcenterRegistry,
   type ProviderKind,
@@ -27,6 +28,10 @@ export type WorkloadTaskItem = {
   jobId: string | null;
   jobHref: string | null;
   assignedProvider: AssignedExecutionProvider | null;
+  /** Queue projection only; UNIQUE_PENDING does not persist an assignment. */
+  workloadProvider: AssignedExecutionProvider | null;
+  providerBindingState: ProviderBindingState;
+  providerBindingLabel: string | null;
   plannedEffortMinutes: number | null;
   requiresProvider: boolean;
   createdAt: string;
@@ -56,6 +61,7 @@ export type WorkloadPlanSource = {
 export type PlanningWorkloadProjection = {
   providers: readonly ProviderWorkloadGroup[];
   unassigned: readonly WorkloadTaskItem[];
+  manual: readonly WorkloadTaskItem[];
 };
 
 export function isOpenWorkloadStatus(status: ExecutionTaskStatus): boolean {
@@ -110,7 +116,7 @@ export function projectPlanningWorkload(
       if (executionModeOf(task) === "EXTERNAL" || !isOpenWorkloadStatus(task.status)) {
         continue;
       }
-      items.push(toWorkloadItem(task, source));
+      items.push(toWorkloadItem(task, source, registry));
     }
   }
 
@@ -125,17 +131,20 @@ export function projectPlanningWorkload(
   }
 
   const unassigned: WorkloadTaskItem[] = [];
+  const manual: WorkloadTaskItem[] = [];
   for (const item of items) {
-    if (!item.assignedProvider) {
+    if (!item.workloadProvider) {
       if (item.requiresProvider) {
         unassigned.push(item);
+      } else {
+        manual.push(item);
       }
       continue;
     }
-    const key = providerKey(item.assignedProvider.kind, item.assignedProvider.id);
+    const key = providerKey(item.workloadProvider.kind, item.workloadProvider.id);
     const existing = groups.get(key);
     const group = existing ?? {
-      provider: item.assignedProvider,
+      provider: item.workloadProvider,
       knownQueuedMinutes: 0,
       unknownEffortCount: 0,
       tasks: [],
@@ -161,10 +170,19 @@ export function projectPlanningWorkload(
       }))
       .sort(compareProviderGroups),
     unassigned: [...unassigned].sort(compareWorkloadDisplayOrder),
+    manual: [...manual].sort(compareWorkloadDisplayOrder),
   };
 }
 
-function toWorkloadItem(task: ExecutionTask, source: WorkloadPlanSource): WorkloadTaskItem {
+function toWorkloadItem(task: ExecutionTask, source: WorkloadPlanSource, registry: WorkcenterRegistry): WorkloadTaskItem {
+  const binding = resolveProviderBinding(task, registry);
+  const workloadProvider = task.assignedProvider ??
+    (binding.state === "UNIQUE_PENDING" ? binding.provider : null);
+  const providerBindingLabel = binding.label ?? (
+    binding.state === "CHOICE_REQUIRED" ? "Alege utilajul / zona pentru această operație." :
+    binding.state === "NONE" ? "Lipsește un utilaj sau o zonă eligibilă." :
+    binding.state === "NOT_REQUIRED" ? "Fără utilaj sau zonă obligatorie." : null
+  );
   return {
     taskId: task.taskId,
     executionPlanId: task.executionPlanId,
@@ -180,6 +198,9 @@ function toWorkloadItem(task: ExecutionTask, source: WorkloadPlanSource): Worklo
     jobId: source.jobId ?? null,
     jobHref: source.jobHref ?? null,
     assignedProvider: task.assignedProvider,
+    workloadProvider,
+    providerBindingState: binding.state,
+    providerBindingLabel,
     plannedEffortMinutes: task.plannedEffortMinutes,
     requiresProvider: taskRequiresProvider(task),
     createdAt: task.createdAt,

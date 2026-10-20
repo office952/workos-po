@@ -46,10 +46,8 @@ describe("LaunchpadPage", () => {
     expect(screen.getByText(/Proprietar/)).toBeInTheDocument();
     expect(screen.getByText("Pregătit")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Continuă" })).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: /Planificare/ })[0]).toHaveAttribute(
-      "href",
-      "/planificare",
-    );
+    expect(screen.queryByRole("link", { name: /Planificare/ })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /Lucrări/ })[0]).toHaveAttribute("href", "/lucrari");
     expect(screen.getByRole("heading", { name: "Comercial" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Operațiuni" })).toBeInTheDocument();
     expect(screen.getByText("Poți modifica setările pentru lucrările noi.")).toBeInTheDocument();

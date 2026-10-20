@@ -15,7 +15,20 @@ import {
   parseCustomerContext,
   parseSpineContext,
   quoteHref,
+  planningHref,
+  parseJobsView,
 } from "./appRoute";
+
+describe("optional jobs resource view", () => {
+  it("keeps historical Planning entry links on the single jobs route", () => {
+    expect(canonicalLocation("/planificare", "")).toBe("/lucrari?vedere=utilaje");
+    expect(canonicalLocation("/planificare", "?q=NORD")).toBe("/lucrari?q=NORD&vedere=utilaje");
+    expect(planningHref()).toBe("/lucrari?vedere=utilaje");
+    expect(parseJobsView("?vedere=utilaje")).toBe("resources");
+    expect(parseJobsView("?vedere=invalid")).toBe("jobs");
+    expect(canonicalLocation("/lucrari", "?vedere=utilaje")).toBeNull();
+  });
+});
 
 describe("parseAppRoute", () => {
   it("maps the slice paths", () => {

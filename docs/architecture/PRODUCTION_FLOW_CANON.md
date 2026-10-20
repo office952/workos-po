@@ -9,22 +9,24 @@ Candidate authorized by the Owner on 2026-10-20 in `office952/workos-po`. Built 
 | Offer | Review one frozen version; **Confirmă comanda** records acceptance and creates/retrieves its order, then opens its job | Existing product / assembly offer URL |
 | Job sheet | Coordinator: situation, operations with selected dossier, documents/materials, results | `/lucrari/:jobId` with `sectiune=situatie`, `operatii`, `documente`, `rezultate` |
 | Atelier | Operator identification, eligible inbox, selected operation and execution commands in one workspace | `/atelier?job=…&plan=…&task=…` (job optional) |
-| Planning | Optional cross-job workload and allocation; never a prerequisite for production entry | `/planificare` |
+| Work by resource | Optional cross-job operations grouped by machine/zone; manual work and real resource gaps remain visible | `/lucrari?vedere=utilaje` |
 
 Commercial source and lifecycle history are disclosure details in Situation. Files and material preparation are sections of the existing sheet, not new pages. Operation identity, instructions and files identify the work; they do not teach the trade.
 
 ## Owner decision: planning without repetitive administration (2026-10-20)
 
-Direction accepted by the Owner; implementation of the planning presentation changes is pending. The responsibility table above describes the current candidate route, not completion of this decision.
+Direction accepted by the Owner; implemented as a source candidate on PR #92. Local runtime and visual validation of this presentation change remain pending.
 
 - The coordinator sends the entire job to production once. Release generates its operation graph; the coordinator does not have to authorize or start each operation separately.
 - The operator records the actual beginning of work. Readiness, dependencies and eligibility remain server-owned; releasing the whole job must not mark every operation as started or bypass required gates.
 - Manual duration estimates are optional and must not become a production prerequisite or a repeated missing-data warning. Measuring real work, including the separately scoped participation/interruptions capability, is the priority. Unknown estimates remain unknown; do not fabricate them from cost rates or quantities. Any future suggestions from comparable history need their own validated contract.
-- Retire Planning as a primary workflow page in favor of an optional cross-job **Pe utilaje și zone** view inside Lucrări. Keep the existing workload engine and historical estimates; do not add another mandatory page or a new scheduling engine. When implemented, preserve historical planning links through a compatibility route.
+- Planning is retired as a primary workflow page in favor of the optional cross-job **Pe utilaje și zone** view inside Lucrări. The existing workload engine and historical estimates are retained; `/planificare` redirects with history replacement to `/lucrari?vedere=utilaje`. `PlanningPage` and its stylesheet are replaced by the embedded `JobsWorkload`, not kept as parallel pages.
 - A single eligible physical provider requires no repetitive manual choice. The current execution auto-binding remains authoritative; workload presentation must distinguish automatic selection from a real missing resource or a choice between multiple providers. Do not guess provider eligibility in the frontend.
 - Replace misleading per-task administrative actions such as **Alocă în execuție** with actions that describe the actual remaining choice or simply open the operation.
 
-This records the product decision only. It does not claim that `/planificare` has already been retired, introduce multi-worker timing, or authorize merge, deployment or real-data changes.
+The default resource view shows open operations, their job/customer context and server-owned resource explanations. Estimates and their editor appear only after explicit optional disclosure; missing estimates are not routine warnings. A unique eligible provider is a projected queue target, visibly awaiting automatic binding, not a persisted assignment or a start event. Manual operations without a required provider stay visible in their own group. Genuine choices and missing providers remain actionable exceptions. Opening, searching and switching views never writes assignment/start commands; drafts and the registry search survive view switching within the mounted registry.
+
+This candidate does not introduce multi-worker timing or authorize merge, deployment or real-data changes.
 
 ## Coordinated server commands
 
@@ -43,6 +45,7 @@ The configurator acknowledges success only after the assembly member save succee
 
 | Historical entry | Replacement |
 | --- | --- |
+| `/planificare` and `PlanningPage` | Optional resource view in Lucrări; no separate navigation entry or page |
 | `/executie/:planId` and engine `/execution/:planId` | Replace-history redirect to Atelier, preserving plan, task and job |
 | Job `sectiune=plan` or `operatie` | `sectiune=operatii`, preserving task |
 | Job `sectiune=fisiere` or `materiale` | `sectiune=documente`, preserving task |
@@ -62,4 +65,4 @@ The follow-up correction keeps an operation's lifecycle separate from machine oc
 
 Operator identification/logout and People administration refresh cached execution plans as well as the inbox, so viewer-dependent eligibility is reread without page reload. The sheet describes the absence of current activity without claiming that no operation ever started.
 
-Browser validation of the follow-up correction remains required via the local Cursor runtime. Tests/build are not visual evidence. Multi-worker participation and automatic work/pause intervals require their own state-machine work and are not introduced here. File upload was not exercised in the reported journey. The phone table overflow observation remains a visual review advisory.
+Cursor reported A/B/C PASS on `868d617`: finished-job wording, eligibility after identification/People changes, and same-machine run exclusion/release. No screenshots were available and a session-expiry observation remains unresolved. That runtime report is separate from the pending validation of the subsequent resource-view change. Tests/build are not visual evidence. Multi-worker participation and automatic work/pause intervals require their own state-machine work and are not introduced here. File upload was not exercised in the reported journey. The phone table overflow observation remains a visual review advisory.

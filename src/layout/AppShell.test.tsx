@@ -48,7 +48,7 @@ describe("AppShell", () => {
     expect(screen.getByRole("button", { name: "Ieși din cont" })).toBeInTheDocument();
   });
 
-  it("keeps one Administrare entry and discovers Planificare", () => {
+  it("keeps one Administrare entry and uses Lucrări for workshop overview", () => {
     const { rerender } = render(
       <AppShell contextLabel="Administrare" mode="slice" currentHref="/admin/commercial">
         <div>conținut</div>
@@ -58,7 +58,8 @@ describe("AppShell", () => {
     const administration = screen.getByRole("link", { name: "Administrare" });
     expect(administration).toHaveAttribute("href", "/admin");
     expect(administration).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Planificare" })).toHaveAttribute("href", "/planificare");
+    expect(screen.queryByRole("link", { name: "Planificare" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Lucrări" })).toHaveAttribute("href", "/lucrari");
     expect(screen.queryByRole("link", { name: "Configurator" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Foundation|fundament/i })).not.toBeInTheDocument();
     expect(

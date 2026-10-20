@@ -11,7 +11,8 @@ import { PageRegion } from "../layout/PageRegion";
 import { formatTimestamp } from "../presentation/format";
 import { matchesSearch } from "../presentation/listFilter";
 import { presentJobWorklistAction } from "../presentation/worklistAction";
-import { jobHref } from "../routing/appRoute";
+import { jobHref, jobsViewHref, type JobsView } from "../routing/appRoute";
+import { JobsWorkload } from "./JobsWorkload";
 import travelerTop from "../assets/work-traveler-dock-photo.svg";
 import travelerFoot from "../assets/work-traveler-clamp-photo.svg";
 import "../styles/surfaces/jobs.css";
@@ -243,7 +244,7 @@ function WorkTraveler({ job }: { job: JobListItemTransport | null }) {
   );
 }
 
-export function JobsPage() {
+export function JobsPage({ view = "jobs" }: { view?: JobsView }) {
   const jobs = useResource(resourceKeys.jobs(), loadJobList);
   const items = useMemo(() => jobs.data ?? [], [jobs.data]);
   const [query, setQuery] = useState("");
@@ -277,7 +278,7 @@ export function JobsPage() {
     });
   }, [items, filter, query, sort]);
 
-  const view = collectionViewState(jobs.status, items.length, visible.length);
+  const registryView = collectionViewState(jobs.status, items.length, visible.length);
   const selected = visible.find((job) => job.jobId === selectedId) ?? visible[0] ?? null;
   const shown = jobs.status === "success" ? visible.length + " din " + items.length : "—";
   const countLabel = (value: number) => jobs.status === "success" ? String(value).padStart(2, "0") : "—";
@@ -293,7 +294,7 @@ export function JobsPage() {
   return (
     <PageRegion>
       <div className="jobs-spine">
-        <div className="jobs-spine__layout">
+        <div className="jobs-spine__layout" data-view={view}>
           <div className="jobs-spine__header">
             <div className="jobs-spine__process-map" aria-hidden="true">
               <span>PLANIFICARE</span>
@@ -306,8 +307,9 @@ export function JobsPage() {
               variant="pilot"
               eyebrow="Registru operațional"
               title="Lucrări"
-              lead="Planifică, urmărește execuția și finalizează lucrările de producție."
+              lead="Trimite lucrarea în producție o singură dată și urmărește operațiile în atelier."
               instrument={
+                view === "jobs" ?
                 <div className="pilot-instrument jobs-spine__metrics" role="group" aria-label="Indicatori lucrări">
                   <button type="button" className="pilot-instrument__metric" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
                     <strong className="pilot-instrument__metric-value">{countLabel(counts.total)}</strong>
@@ -325,12 +327,16 @@ export function JobsPage() {
                     <strong className="pilot-instrument__metric-value">{countLabel(counts.completed)}</strong>
                     <span className="pilot-instrument__metric-label">Finalizate</span>
                   </button>
-                </div>
+                </div> : undefined
               }
             />
+            <nav className="jobs-spine__views" aria-label="Vederi lucrări">
+              <a href={jobsViewHref("jobs")} aria-current={view === "jobs" ? "page" : undefined}>Lista lucrărilor</a>
+              <a href={jobsViewHref("resources")} aria-current={view === "resources" ? "page" : undefined}>Pe utilaje și zone</a>
+            </nav>
           </div>
 
-          <section className="jobs-spine__register" aria-label="Registru de producție">
+          <section hidden={view !== "jobs"} className="jobs-spine__register" aria-label="Registru de producție">
             <div className="jobs-spine__toolbar">
               <div className="jobs-spine__search">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg>
@@ -355,9 +361,6 @@ export function JobsPage() {
                 <button className="jobs-spine__density" type="button" aria-pressed={compact} onClick={() => setCompact((value) => !value)}>
                   <span aria-hidden="true">☷</span>{compact ? "Compact" : "Confort"}
                 </button>
-                <a className="jobs-spine__planning" href="/planificare">
-                  <span>Planificare</span><span aria-hidden="true">↗</span>
-                </a>
               </div>
             </div>
 
@@ -386,16 +389,16 @@ export function JobsPage() {
             <div className="jobs-spine__columns" aria-hidden="true">
               <span>LUCRARE</span><span>CLIENT</span><span>ETAPĂ / PROGRES</span><span>TERMEN</span><span>ACȚIUNE</span>
             </div>
-            {view === "error" ? (
+            {registryView === "error" ? (
               <div className="jobs-spine__feedback"><ErrorState title="Lucrările nu au putut fi citite">Lista de lucrări nu este disponibilă.</ErrorState></div>
-            ) : view === "loading" ? (
+            ) : registryView === "loading" ? (
               <div className="jobs-spine__feedback" role="status" aria-live="polite">Se citesc lucrările…</div>
-            ) : view === "empty" ? (
+            ) : registryView === "empty" ? (
               <div className="jobs-spine__feedback"><EmptyState title="Nu există lucrări." /></div>
-            ) : view === "filtered-empty" ? (
+            ) : registryView === "filtered-empty" ? (
               <div className="jobs-spine__feedback"><EmptyState title="Nicio lucrare nu corespunde filtrului." /><button className="jobs-spine__reset" type="button" onClick={resetFilters}>Șterge filtrele</button></div>
             ) : (
-              <ul className="jobs-spine__rows" aria-label="Lista de lucrări" aria-busy={view === "refreshing"}>
+              <ul className="jobs-spine__rows" aria-label="Lista de lucrări" aria-busy={registryView === "refreshing"}>
                 {visible.map((job) => (
                   <JobRow
                     key={job.jobId}
@@ -409,7 +412,8 @@ export function JobsPage() {
             )}
             <div className="jobs-spine__footer"><span>{shown}</span></div>
           </section>
-          <WorkTraveler job={selected} />
+          {view === "jobs" ? <WorkTraveler job={selected} /> : null}
+          <div className="jobs-spine__workload" hidden={view !== "resources"}><JobsWorkload active={view === "resources"} /></div>
         </div>
       </div>
     </PageRegion>
