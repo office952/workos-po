@@ -458,15 +458,18 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     const body = await c.req.json().catch(() => null);
     const runtime = getProductSystem(c);
     const assemblyId = c.req.param("assemblyId");
-    const planned = planAssemblyAcceptance(runtime, {
-      assemblyId,
-      quoteSnapshotId: readString(body, "quoteSnapshotId"),
-      createdAt: new Date().toISOString(),
-    });
+    const planned = runtime.assemblyPlane().db.transaction(() => {
+      const result = planAssemblyAcceptance(runtime, {
+        assemblyId,
+        quoteSnapshotId: readString(body, "quoteSnapshotId"),
+        createdAt: new Date().toISOString(),
+      });
+      if (result.ok) saveAssemblyOrder(runtime.assemblyPlane().db, result.order);
+      return result;
+    }).immediate();
     if (!planned.ok) {
       return c.json(planned.body, planned.status);
     }
-    saveAssemblyOrder(runtime.assemblyPlane().db, planned.order);
     return c.json({
       assembly: presentCurrent(runtime, assemblyId, c),
       order: {

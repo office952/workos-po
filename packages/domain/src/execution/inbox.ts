@@ -261,7 +261,7 @@ function toInboxItem(
         : null,
     canClaimStart: lane === "available_ready",
     materialBlockLabel: task.materialBlockLabel,
-    workspaceHref: `/execution/${view.plan.planId}?task=${encodeURIComponent(task.taskId)}`,
+    workspaceHref: `/atelier?plan=${encodeURIComponent(view.plan.planId)}&task=${encodeURIComponent(task.taskId)}`,
     lane,
     planCreatedAt,
     seq: task.seq,

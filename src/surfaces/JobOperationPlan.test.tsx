@@ -18,7 +18,7 @@ describe("JobOperationPlan", () => {
   it("combines search with a status filter and opens the exact operation dossier", async () => {
     const user = userEvent.setup();
     render(<JobOperationPlan jobId="job-1" plan={plan} />);
-    expect(screen.getByRole("link", { name: "01 · Debitare CNC" })).toHaveAttribute("href", "/lucrari/job-1?task=cut&sectiune=operatie");
+    expect(screen.getByRole("link", { name: "01 · Debitare CNC" })).toHaveAttribute("href", "/lucrari/job-1?task=cut&sectiune=operatii");
     await user.click(screen.getByRole("button", { name: /De verificat/ }));
     expect(screen.getByRole("link", { name: "02 · Montare LED" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "01 · Debitare CNC" })).toBeNull();

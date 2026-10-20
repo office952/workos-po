@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { presentExecutionPlan } from "../adapters/executionAdapter";
-import { TransportError, readTransportErrorCode } from "../api/http";
+import { presentJobProduction } from "../adapters/jobAdapter";
+import { TransportError, readTransportErrorCode, readTransportReasons } from "../api/http";
 import { fetchJobMaterialPreparation } from "../api/jobMaterials";
-import { patchJobPlanning, postJobExecutionPlan, postJobProductionRelease } from "../api/jobs";
+import { patchJobPlanning, postJobProduction } from "../api/jobs";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { InlineAlert } from "../components/InlineAlert";
@@ -17,7 +17,7 @@ import {
   invalidateAfterProductionRelease,
 } from "../data/invalidation";
 import { resourceKeys } from "../data/resourceKeys";
-import { loadExecutionPlan, loadJobDetail } from "../data/routeLoaders";
+import { loadExecutionPlan, loadJobDetail, loadOperatorSession } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { PageRegion } from "../layout/PageRegion";
 import { presentJobLifecycle } from "../presentation/jobLifecycle";
@@ -28,16 +28,19 @@ import {
   presentJobSheetSecondary,
 } from "../presentation/jobSheetIdentity";
 import { formatQuantity } from "../presentation/format";
-import { atelierHref, executionHref, jobHref, quoteHref, type JobSheetSection } from "../routing/appRoute";
+import { atelierHref, canonicalJobSection, jobHref, quoteHref, type JobSheetSection, type JobSheetSectionInput } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
 import { SiteInstallationContextPanel } from "./SiteInstallationContextPanel";
 import { ExecutionActualConsumptionHistory } from "./ExecutionActualConsumption";
-import { JobTaskWorkbench } from "./JobTaskWorkbench";
+import { TaskDossierPanel } from "./TaskDossierPanel";
+import { useCloudSession } from "../session/CloudSessionContext";
+import { readCloudBoundaryVersion } from "../session/sessionExpiryBridge";
+import { canPublishInstructions } from "../presentation/dossierAccess";
 import { JobOperationPlan } from "./JobOperationPlan";
 import { jobTaskAttentionNotes, jobTaskNotes, presentJobProvider, presentRecordedExecutor } from "../presentation/jobOperationNotes";
 import cncIcon from "../assets/job-sheet/cnc.svg";
 import { JobOperationFiles } from "./JobOperationFiles";
-import "../styles/surfaces/job-task-workbench.css";
+import "../styles/surfaces/task-dossier.css";
 import "../styles/surfaces/job-sheet.css";
 import { JobFilesPanel } from "./JobFilesPanel";
 import { JobMaterialPreparation } from "./JobMaterialPreparation";
@@ -46,7 +49,7 @@ import type { ExecutionTaskTransport } from "../api/types";
 type JobDetailPageProps = {
   jobId: string;
   taskId?: string | null;
-  section?: JobSheetSection;
+  section?: JobSheetSectionInput;
 };
 
 function TaskMaterialConsumption({ task }: { task: ExecutionTaskTransport }) {
@@ -93,7 +96,11 @@ function jobQualityLabel(task: ExecutionTaskTransport): string {
   return task.qualityBlockLabel ?? task.statusLabel;
 }
 
-export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operatie" : "situatie" }: JobDetailPageProps) {
+export function JobDetailPage({ jobId, taskId = null, section: requestedSection = taskId ? "operatii" : "situatie" }: JobDetailPageProps) {
+  const section = canonicalJobSection(requestedSection);
+  const cloud = useCloudSession();
+  const owner = canPublishInstructions(cloud);
+  const session = useResource(resourceKeys.operatorSession(), loadOperatorSession);
   const jobResource = useResource(resourceKeys.job(jobId), () => loadJobDetail(jobId));
   const job = jobResource.data?.job ?? null;
   const quoteSnapshotId = jobResource.data?.quoteSnapshotId ?? null;
@@ -109,17 +116,13 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
     setTrackedUrlTask(taskId);
     setChosenTaskId(taskId);
   }
-  const resolvedTaskId =
-    (chosenTaskId && plan?.tasks.some((task) => task.taskId === chosenTaskId)
-      ? chosenTaskId
-      : null) ??
+  const resolvedTaskId = chosenTaskId ??
     plan?.tasks.find((task) => task.status === "IN_PROGRESS")?.taskId ??
-    plan?.tasks[0]?.taskId ??
-    null;
+    plan?.tasks[0]?.taskId ?? null;
   const selectedTask = plan?.tasks.find((task) => task.taskId === resolvedTaskId) ?? null;
 
   useEffect(() => {
-    if (!resolvedTaskId || section !== "operatie") {
+    if (!resolvedTaskId || section !== "operatii") {
       return;
     }
     const next = jobHref(jobId, { taskId: resolvedTaskId, section });
@@ -135,14 +138,14 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
   const [actionState, setActionState] = useState<"idle" | "pending" | "error">("idle");
   const [actionError, setActionError] = useState<string | null>(null);
   const [draftScope, setDraftScope] = useState(jobId);
-  const [visitedOperation, setVisitedOperation] = useState(section === "operatie");
-  if (section === "operatie" && !visitedOperation) setVisitedOperation(true);
+  const [visitedOperation, setVisitedOperation] = useState(section === "operatii");
+  if (section === "operatii" && !visitedOperation) setVisitedOperation(true);
   const [priorityDraft, setPriorityDraft] = useState<string | null>(null);
   const [targetDraft, setTargetDraft] = useState<string | null>(null);
   const [planningMessage, setPlanningMessage] = useState<string | null>(null);
   if (draftScope !== jobId) {
     setDraftScope(jobId);
-    setVisitedOperation(section === "operatie");
+    setVisitedOperation(section === "operatii");
     setChosenTaskId(taskId);
     setTrackedUrlTask(taskId);
     setPriorityDraft(null);
@@ -160,52 +163,20 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
     .filter((label): label is string => Boolean(label))
     .join(" ");
 
-  async function release(): Promise<void> {
-    if (!job) {
-      return;
-    }
+  async function sendToProduction(): Promise<void> {
+    if (!job || actionState === "pending") return;
     setActionState("pending");
     setActionError(null);
     try {
-      await postJobProductionRelease(job.jobId);
-      setActionState("idle");
-      invalidateAfterProductionRelease(jobId);
-    } catch (error) {
-      setActionState("error");
-      setActionError(
-        error instanceof TransportError
-          ? "Lucrarea nu poate fi eliberată încă."
-          : "Eliberarea a eșuat.",
-      );
-    }
-  }
-
-  async function createPlan(): Promise<void> {
-    const snapshotId = job?.releaseSnapshotId;
-    if (!job || !snapshotId) {
-      setActionState("error");
-      setActionError("Eliberarea trebuie să existe înainte de plan.");
-      return;
-    }
-    setActionState("pending");
-    setActionError(null);
-    try {
-      const presented = presentExecutionPlan(await postJobExecutionPlan(job.jobId));
-      if (!presented) {
-        setActionState("error");
-        setActionError("Planul de execuție nu a putut fi prezentat.");
-        return;
-      }
-      setActionState("idle");
+      const prepared = presentJobProduction(await postJobProduction(job.jobId));
+      if (!prepared) throw new Error("production_not_confirmed");
       invalidateAfterCreateExecutionPlan(jobId);
-      navigate(executionHref(presented.planId, { jobId: job.jobId }));
+      setActionState("idle");
+      navigate(jobHref(jobId, { section: "operatii" }));
     } catch (error) {
       setActionState("error");
-      setActionError(
-        error instanceof TransportError
-          ? "Planul nu poate fi creat încă."
-          : "Crearea planului a eșuat.",
-      );
+      const reasons = error instanceof TransportError ? readTransportReasons(error.body) : [];
+      setActionError(reasons.join(" ") || "Lucrarea nu a putut fi trimisă în producție. Poți reîncerca în siguranță.");
     }
   }
 
@@ -249,13 +220,12 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
 
   const tabs: Array<{ value: JobSheetSection; label: string }> = [
     { value: "situatie", label: "Situație" },
-    { value: "fisiere", label: "Fișiere" },
-    { value: "materiale", label: "Materiale" },
+    { value: "operatii", label: "Operații" },
+    { value: "documente", label: "Documente și materiale" },
     { value: "rezultate", label: "Rezultate" },
-    { value: "sursa", label: "Date și sursă" },
   ];
   const sectionHref = (value: JobSheetSection) => jobHref(jobId, { section: value, taskId: selectedTask?.taskId });
-  const operationHref = (id: string) => jobHref(jobId, { taskId: id, section: "operatie" });
+  const operationHref = (id: string) => jobHref(jobId, { taskId: id, section: "operatii" });
   const attentionTasks = (plan?.tasks ?? []).filter(task => task.status !== "COMPLETED" && jobTaskAttentionNotes(task).length > 0);
   const activeTasks = (plan?.tasks ?? []).filter(task => task.status === "IN_PROGRESS" || task.status === "OUTSIDE");
   const resultTasks = (plan?.tasks ?? []).filter(task => task.status === "COMPLETED" || task.completedQuantityLabel !== null || task.actualDurationMinutes !== null);
@@ -265,17 +235,15 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
     <PageRegion>
       <div className="job-sheet" data-surface="job-detail">
         <header className="job-sheet__header">
-          <a className="job-sheet__back" href={section === "plan" || section === "operatie" ? sectionHref("situatie") : "/lucrari"}>
-            {section === "plan" || section === "operatie" ? "← Fișa lucrării" : "← Urmărire producție"}
-          </a>
+          <a className="job-sheet__back" href="/lucrari">← Urmărire producție</a>
           <div className="job-sheet__identity-row">
             <div className="job-sheet__identity">
-              <p className="job-sheet__eyebrow">{section === "plan" ? "Planul operațiilor" : section === "operatie" ? "Dosarul operației" : "Fișa lucrării"}</p>
+              <p className="job-sheet__eyebrow">Fișa lucrării</p>
               <h1>{job ? presentJobSheetTitle(job) : "Lucrare"}</h1>
               <p>{job?.customerDisplayName ?? (job ? "Client neînregistrat" : "Se citește lucrarea.")}{secondary ? ` · ${secondary}` : ""}</p>
             </div>
             <div className="job-sheet__header-action">
-              {section === "operatie" ? <a className="job-sheet__link-button" href={sectionHref("plan")}>Înapoi la planul operațiilor</a> : section === "plan" ? plan ? <a className="job-sheet__link-button job-sheet__link-button--primary" href={executionHref(plan.planId, { jobId, taskId: selectedTask?.taskId })}>Deschide execuția</a> : null : planId ? <a className="job-sheet__link-button job-sheet__link-button--primary" href={sectionHref("plan")}>Deschide planul de operații</a> : null}
+              {planId ? <a className="job-sheet__link-button" href={atelierHref({ jobId, planId, taskId: selectedTask?.taskId })}>Deschide în Atelier</a> : null}
             </div>
           </div>
           {job ? <div className="job-sheet__planning">
@@ -290,12 +258,12 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
               </form>
             </details> : <span className="job-sheet__secondary">Planificare doar pentru citire</span>}
           </div> : null}
-          {section === "plan" && plan ? <p className="job-sheet__plan-progress">{plan.progressLabel} · {plan.statusLabel}</p> : null}
+          {section === "operatii" && plan ? <p className="job-sheet__plan-progress">{plan.progressLabel} · {plan.statusLabel}</p> : null}
           {actionError ? <InlineAlert tone="error" title="Acțiunea a eșuat">{actionError}</InlineAlert> : null}
         </header>
-        {section !== "plan" && section !== "operatie" ? <nav className="job-sheet__tabs" aria-label="Secțiunile lucrării">
+        <nav className="job-sheet__tabs" aria-label="Secțiunile lucrării">
           {tabs.map(tab => <a key={tab.value} href={sectionHref(tab.value)} aria-current={section === tab.value ? "page" : undefined}>{tab.label}</a>)}
-        </nav> : null}
+        </nav>
         <div className="job-sheet__body" data-section={section}>
           {jobResource.status === "error" ? <InlineAlert tone="error" title="Lucrarea nu a putut fi actualizată">{job ? "Ultima citire rămâne afișată." : "Identitatea lucrării nu este disponibilă."}</InlineAlert> : null}
           {!job && jobResource.status !== "error" ? <LoadingFloor variant="traveler" label="Se citește lucrarea" /> : null}
@@ -310,7 +278,7 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
               </div>
               {job.stage === "EXECUTION_COMPLETED" ? <p>Producția este finalizată. Livrarea și montajul nu sunt confirmate de această stare.</p> : null}
               {job.attentionLabel ? <p className="job-sheet__warning">{job.attentionLabel}</p> : null}
-              {job.nextAction === "RELEASE_TO_PRODUCTION" ? <Button disabled={actionState === "pending"} onClick={() => void release()}>Eliberează pentru producție</Button> : job.nextAction === "CREATE_EXECUTION_PLAN" ? <Button disabled={actionState === "pending"} onClick={() => void createPlan()}>Creează planul de execuție</Button> : null}
+              {!planId && owner ? <Button disabled={actionState === "pending"} onClick={() => void sendToProduction()}>{actionState === "pending" ? "Se pregătește producția…" : "Trimite în producție"}</Button> : null}
 
             </section>
             {planPending ? <LoadingFloor variant="facts" label="Se citește planul de execuție" rows={3} /> : null}
@@ -321,28 +289,33 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
                 <p>Executant înregistrat: {presentRecordedExecutor(task)}</p><p className="job-sheet__secondary">Timp efectiv: {task.actualDurationLabel}</p>
                 <a className="job-sheet__link-button" href={operationHref(task.taskId)}>Deschide operația</a>
               </article>)}</div> : <p className="job-sheet__secondary">Nicio operație începută în planul lucrării.</p>}
-              <div className="job-sheet__continuation"><a className="job-sheet__text-link" href={executionHref(plan.planId, { jobId, taskId: selectedTask?.taskId })}>Deschide execuția</a><a className="job-sheet__text-link" href={atelierHref({ jobId, returnTo: sectionHref("situatie") })}>Deschide atelierul lucrării</a></div>
+              <div className="job-sheet__continuation"><a className="job-sheet__text-link" href={sectionHref("operatii")}>Vezi operațiile</a><a className="job-sheet__text-link" href={atelierHref({ jobId, returnTo: sectionHref("situatie") })}>Deschide atelierul lucrării</a></div>
             </section> : null}
               {(attentionTasks.length > 0 || materialSummary.length > 0) ? <section className="job-sheet__panel job-sheet__attention" aria-label="De verificat">
                 <h3>De verificat</h3>
                 <div className="job-sheet__attention-grid">
                   {attentionTasks.slice(0, 4).map(task => <article className="job-sheet__warning" key={task.taskId}><strong>{task.seqLabel} · {task.processLabel}</strong>{jobTaskNotes(task).map(line => <p key={line}>{line}</p>)}<a className="job-sheet__link-button" href={operationHref(task.taskId)}>Vezi operația</a></article>)}
-                  {materialSummary.length ? <article className="job-sheet__warning" data-testid="material-preparation-summary">{materialSummary.map(line => <p key={line}>{line}</p>)}<a className="job-sheet__link-button" href={sectionHref("materiale")}>Vezi materialul în această fișă</a></article> : null}
+                  {materialSummary.length ? <article className="job-sheet__warning" data-testid="material-preparation-summary">{materialSummary.map(line => <p key={line}>{line}</p>)}<a className="job-sheet__link-button" href={sectionHref("documente")}>Vezi materialul în această fișă</a></article> : null}
                 </div>
-                {attentionTasks.length > 4 ? <a className="job-sheet__text-link" href={sectionHref("plan")}>Vezi toate cele {attentionTasks.length} operații de verificat</a> : null}
+                {attentionTasks.length > 4 ? <a className="job-sheet__text-link" href={sectionHref("operatii")}>Vezi toate cele {attentionTasks.length} operații de verificat</a> : null}
               </section> : null}
           </div> : null}
-          {job && plan ? <div className="job-sheet__plan" hidden={section !== "plan"}><JobOperationPlan key={`${jobId}:${plan.planId}`} jobId={jobId} plan={plan} /></div> : null}
-          {job && section === "plan" && !plan ? planPending ? <LoadingFloor variant="facts" label="Se citește planul" rows={5} /> : planResource.status !== "error" ? <EmptyState title="Planul de execuție nu există încă." /> : null : null}
-          {job && visitedOperation && plan ? <div hidden={section !== "operatie"} className="job-sheet__operation"><JobTaskWorkbench key={jobId} jobId={jobId} plan={plan} taskId={selectedTask?.taskId ?? null} onSelect={chooseTask} active={section === "operatie"} /></div> : null}
-          {job && section === "operatie" && !plan ? planPending ? <LoadingFloor variant="facts" label="Se citește operația" rows={3} /> : planResource.status !== "error" ? <EmptyState title="Planul de execuție nu există încă." /> : null : null}
-          {job && section === "fisiere" ? <>
+          {job && plan ? <section hidden={section !== "operatii"} className="job-sheet__operations" aria-label="Operațiile lucrării">
+            <div className="job-sheet__plan"><JobOperationPlan key={`${jobId}:${plan.planId}`} jobId={jobId} plan={plan} selectedTaskId={selectedTask?.taskId} /></div>
+            {chosenTaskId && !selectedTask ? <InlineAlert tone="error" title="Operația nu există în această lucrare">Alege o operație din lista de mai sus. Linkul nu a fost înlocuit cu altă operație.</InlineAlert> : null}
+            {visitedOperation && selectedTask ? <section className="job-sheet__selected-operation" id="operatie-selectata" aria-label="Dosarul operației selectate">
+              <header><div><p className="section-label">Operație selectată · {selectedTask.scopeLabel}</p><h2>{selectedTask.seqLabel} · {selectedTask.processLabel}</h2><p>{selectedTask.statusLabel} · {presentJobProvider(selectedTask)} · {presentRecordedExecutor(selectedTask)}</p></div></header>
+              <TaskDossierPanel taskId={selectedTask.taskId} taskLabel={`${selectedTask.seqLabel} ${selectedTask.processLabel}`} canInstruct={owner} operatorIdentified={Boolean(session.data)} canWriteFiles={owner || Boolean(session.data)} sessionScope={[plan.planId, cloud.user?.email ?? "", cloud.organization?.organizationId ?? "", String(readCloudBoundaryVersion()), session.data?.personId ?? ""].join("|")} />
+            </section> : null}
+          </section> : null}
+          {job && section === "operatii" && !plan ? planPending ? <LoadingFloor variant="facts" label="Se citesc operațiile" rows={5} /> : <EmptyState title="Lucrarea nu este încă disponibilă în Atelier." description="Trimite lucrarea în producție din Situație pentru a pregăti operațiile." /> : null}
+          {job && section === "documente" ? <>
             {plan ? <JobOperationFiles jobId={jobId} plan={plan} task={selectedTask} onSelect={chooseTask} /> : planPending ? <LoadingFloor variant="facts" label="Se citesc operațiile" rows={2} /> : null}
             <details className="job-sheet__archive"><summary>Biblioteca lucrării — încărcare generală</summary><JobFilesPanel jobId={jobId} /></details>
           </> : null}
-          {job && section === "materiale" ? <>
+          {job && section === "documente" ? <>
             {materialAttention ? <p className="job-sheet__warning">Blocaj de execuție: {materialAttention}</p> : null}
-            <JobMaterialPreparation jobId={jobId} returnTo={sectionHref("materiale")} />
+            <JobMaterialPreparation jobId={jobId} returnTo={sectionHref("documente")} />
           </> : null}
           {job && section === "rezultate" ? <SurfacePanel title="Rezultate înregistrate" label="Planificat și realizat" busy={planPending}>
             <div className="stack" data-testid="planned-vs-actual">
@@ -370,11 +343,11 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
               </>}
             </div>
           </SurfacePanel> : null}
-          {job && section === "sursa" ? <>
+          {job && section === "situatie" ? <details className="job-sheet__source-details" id="sursa" open={window.location.hash === "#sursa" || undefined}><summary>Date comerciale și istoricul lucrării</summary>
             <SurfacePanel title="Date și sursă" label="Date și sursă"><div className="job-sheet__source-grid"><div><h3>{job.kindLabel}{job.inscription ? ` · ${job.inscription}` : ""}</h3><p>{job.productLabel}</p>{job.memberLabels.length > 0 ? <p>{job.memberLabels.join(" · ")}</p> : null}<dl className="job-sheet__facts"><div><dt>Următoarea acțiune</dt><dd>{job.nextActionLabel}</dd></div></dl></div><div><h3>Sursă comercială acceptată</h3><p className="job-sheet__secondary">Oferta acceptată rămâne istoricul comercial al lucrării.</p>{sourceHref ? <a className="job-sheet__link-button" href={sourceHref}>{job.kind === "ASSEMBLY" ? "Deschide ansamblul sursă" : "Deschide oferta sursă"}</a> : <p className="job-sheet__secondary">Legătura către sursă nu este disponibilă.</p>}</div></div></SurfacePanel>
             {jobResource.data?.siteInstallation ? <SiteInstallationContextPanel context={jobResource.data.siteInstallation} /> : null}
-            <SurfacePanel title="Traseu de producție"><details><summary>Pașii traseului</summary><LifecycleList steps={presentJobLifecycle(job)} /></details></SurfacePanel>
-          </> : null}
+            <SurfacePanel title="Traseu de producție"><LifecycleList steps={presentJobLifecycle(job)} /></SurfacePanel>
+          </details> : null}
         </div>
       </div>
     </PageRegion>

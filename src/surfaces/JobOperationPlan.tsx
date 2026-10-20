@@ -9,7 +9,7 @@ import { jobHref } from "../routing/appRoute";
 type Filter = "all" | "working" | "attention" | "completed";
 
 
-export function JobOperationPlan({ jobId, plan }: { jobId: string; plan: ExecutionPlanTransport }) {
+export function JobOperationPlan({ jobId, plan, selectedTaskId }: { jobId: string; plan: ExecutionPlanTransport; selectedTaskId?: string }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const id = useId();
@@ -39,8 +39,8 @@ export function JobOperationPlan({ jobId, plan }: { jobId: string; plan: Executi
       <table className="job-plan__table">
         <caption className="u-visually-hidden">Operațiile lucrării, starea, executantul înregistrat și resursa alocată</caption>
         <thead><tr><th scope="col">Operație / componentă</th><th scope="col">Stare</th><th scope="col">Executant înregistrat</th><th scope="col">Utilaj / resursă</th><th scope="col">Motiv / de verificat</th></tr></thead>
-        <tbody>{tasks.map(task => <tr key={task.taskId}>
-          <td data-label="Operație / componentă"><a href={jobHref(jobId, { taskId: task.taskId, section: "operatie" })}>{task.seqLabel} · {task.processLabel}</a><span className="job-sheet__secondary">{task.scopeLabel}</span></td>
+        <tbody>{tasks.map(task => <tr key={task.taskId} data-selected={task.taskId === selectedTaskId}>
+          <td data-label="Operație / componentă"><a aria-current={task.taskId === selectedTaskId ? "true" : undefined} href={jobHref(jobId, { taskId: task.taskId, section: "operatii" })}>{task.seqLabel} · {task.processLabel}</a><span className="job-sheet__secondary">{task.scopeLabel}</span></td>
           <td data-label="Stare"><span className="job-sheet__task-state" data-status={task.status}>{task.statusLabel}</span></td>
           <td data-label="Executant înregistrat">{presentRecordedExecutor(task)}</td>
           <td data-label="Utilaj / resursă">{presentJobProvider(task)}</td>

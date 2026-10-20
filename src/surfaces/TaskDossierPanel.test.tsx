@@ -28,6 +28,50 @@ const emptyDossier = {
 };
 
 describe("TaskDossierPanel", () => {
+  it("uploads an explicit revision through the shared dossier without changing file use or operation state", async () => {
+    const previous = { artifactId: "old-1", originalFileName: "desen-v1.pdf", mimeType: "application/pdf", sizeLabel: "1 KB", category: "TECHNICAL", purpose: null, purposeLabel: null, note: null, usedAt: null, preview: "PDF", uploadedAt: "2026-10-20T08:00:00Z", downloadHref: "/api/execution-artifacts/old-1/download", linkedToTask: true };
+    const fetch = vi.fn((_input: RequestInfo, _init?: RequestInit) => {
+      void _input; void _init;
+      return jsonResponse({ dossier: { ...emptyDossier.dossier, files: [previous], planFiles: [previous] } });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const user = userEvent.setup();
+    render(<TaskDossierPanel taskId="task-1" canInstruct />);
+    await screen.findByRole("button", { name: "desen-v1.pdf" });
+    await user.click(screen.getByRole("button", { name: "Adaugă fișier" }));
+    await user.selectOptions(screen.getByLabelText("Versiune nouă pentru, opțional"), "old-1");
+    await user.upload(screen.getByLabelText("Fișier"), new File(["synthetic pdf"], "desen-v2.pdf", { type: "application/pdf" }));
+    await user.click(screen.getByRole("button", { name: "Încarcă fișierul" }));
+    await screen.findByText("Salvat");
+    const writes = fetch.mock.calls.filter(([, init]) => init?.method === "POST");
+    expect(writes).toHaveLength(1);
+    expect(writes[0][0]).toBe("/api/execution-tasks/task-1/artifacts");
+    expect((writes[0][1]?.body as FormData).get("supersedesArtifactId")).toBe("old-1");
+    expect(screen.getByRole("button", { name: "desen-v1.pdf" })).toBeInTheDocument();
+  });
+
+  it("clears drafts at an operator boundary and ignores the previous operator's late response", async () => {
+    let finish!: (value: unknown) => void;
+    const fetch = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      if (String(input).endsWith("/observations") && init?.method === "POST") return new Promise(resolve => { finish = resolve; });
+      return jsonResponse(emptyDossier);
+    });
+    vi.stubGlobal("fetch", fetch);
+    const user = userEvent.setup();
+    const view = render(<TaskDossierPanel taskId="task-1" canInstruct sessionScope="org-1|operator-a" />);
+    await user.click(screen.getByRole("button", { name: "Adaugă observație" }));
+    await user.type(screen.getByLabelText("Observație"), "Mesaj A");
+    await user.click(screen.getByRole("button", { name: "Salvează observația" }));
+    view.rerender(<TaskDossierPanel taskId="task-1" canInstruct sessionScope="org-1|operator-b" />);
+    expect(screen.queryByLabelText("Observație")).toBeNull();
+    finish({ ok: true, status: 200, json: async () => ({ dossier: { ...emptyDossier.dossier, observations: [{ entryId: "obs-a", kind: "OBSERVATION", body: "Mesaj A", createdAt: "2026-10-20T09:00:00Z" }] } }) });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Adaugă observație" })).toBeEnabled());
+    expect(screen.queryByText("Salvat")).toBeNull();
+    expect(screen.queryByText("Mesaj A")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Adaugă observație" }));
+    expect(screen.getByLabelText("Observație")).toHaveValue("");
+  });
+
   it("keeps the observation when the save fails", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(

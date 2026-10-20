@@ -15,10 +15,6 @@ export async function patchJobPlanning(
   return patchJson(`/api/jobs/${encodeURIComponent(jobId)}/planning`, patch);
 }
 
-export async function postJobProductionRelease(jobId: string): Promise<unknown> {
-  return postJson(`/api/jobs/${encodeURIComponent(jobId)}/production-release`);
-}
-
-export async function postJobExecutionPlan(jobId: string): Promise<unknown> {
-  return postJson(`/api/jobs/${encodeURIComponent(jobId)}/execution-plan`);
+export async function postJobProduction(jobId: string): Promise<unknown> {
+  return postJson(`/api/jobs/${encodeURIComponent(jobId)}/production`);
 }

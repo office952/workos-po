@@ -71,8 +71,8 @@ describe("JobDetailPage", () => {
     expect(screen.queryByRole("heading", { name: "Rezultate înregistrate" })).toBeNull();
     expect(document.querySelector(".object-hero")).toBeNull();
     expect(document.querySelector(".job-dashboard-box")).toBeNull();
-    expect(screen.getByRole("button", { name: "Creează planul de execuție" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Date și sursă" })).toHaveAttribute("href", "/lucrari/job-1?sectiune=sursa");
+    expect(screen.getByRole("button", { name: "Trimite în producție" })).toBeInTheDocument();
+    expect(screen.getByText("Date comerciale și istoricul lucrării", { selector: "summary" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Deschide atelierul lucrării" })).toBeNull();
   });
 
@@ -147,7 +147,7 @@ describe("JobDetailPage", () => {
     const summary = await screen.findByTestId("material-preparation-summary");
     expect(summary).toHaveTextContent("Placă ACM: material insuficient");
     expect(summary).toHaveTextContent("solicitare de aprovizionare de revizuit");
-    expect(screen.getByRole("link", { name: "Vezi materialul în această fișă" })).toHaveAttribute("href", "/lucrari/job-1?sectiune=materiale");
+    expect(screen.getByRole("link", { name: "Vezi materialul în această fișă" })).toHaveAttribute("href", "/lucrari/job-1?sectiune=documente");
     expect(screen.queryByTestId("job-material-preparation")).toBeNull();
   });
 
@@ -219,15 +219,15 @@ describe("JobDetailPage", () => {
     }));
 
     render(<JobDetailPage jobId="job-1" />);
-    expect(await screen.findByRole("link", { name: "Deschide execuția" })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: "Deschide în Atelier" })).toHaveAttribute(
       "href",
-      "/executie/exp-1?task=task-1&job=job-1",
+      "/atelier?job=job-1&plan=exp-1&task=task-1",
     );
     expect(screen.getByRole("link", { name: "Deschide atelierul lucrării" })).toHaveAttribute(
       "href",
       "/atelier?job=job-1&return=%2Flucrari%2Fjob-1%3Ftask%3Dtask-1%26sectiune%3Dsituatie",
     );
-    expect(screen.getByRole("link", { name: "Deschide planul de operații" })).toHaveAttribute("href", "/lucrari/job-1?task=task-1&sectiune=plan");
+    expect(screen.getByRole("link", { name: "Operații" })).toHaveAttribute("href", "/lucrari/job-1?task=task-1&sectiune=operatii");
   });
 
   it("shows frozen OTHER installation notes and hides them for ordinary values", async () => {

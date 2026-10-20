@@ -43,6 +43,10 @@ PILOT_GATE_A = HOLD
 PILOT_GATE_B = HOLD
 ```
 
+### Production flow simplification candidate (2026-10-20)
+
+Owner-authorized source candidate on top of `184619c` / draft PR #91: offer confirmation opens the job, a single **Trimite în producție** command prepares release and plan, and operations/dossier stay in the job sheet and Atelier. Canonical responsibilities and retired URL mapping: [Production flow canon](architecture/PRODUCTION_FLOW_CANON.md). Candidate only; merge, real-data changes, deployment and visual acceptance remain pending. This note does not change the historical main baseline above.
+
 ### Work integrated since PR #54
 
 | Work | PR / merge | Evidence class | Owner acceptance |

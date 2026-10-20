@@ -50,7 +50,7 @@ describe("job sheet identity", () => {
       stageLabel: "Comandă",
     });
     expect(presentJobSheetTitle(urban)).toBe("URBAN");
-    expect(presentJobSheetLead(urban)).toContain("Eliberează producția");
+    expect(presentJobSheetLead(urban)).toContain("Trimite în producție");
     expect(presentJobSheetLead(urban)).not.toContain("Continuă");
   });
 

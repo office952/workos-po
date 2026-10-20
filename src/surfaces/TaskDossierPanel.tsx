@@ -50,6 +50,7 @@ type TaskDraft = {
   file: File | null;
   filePurpose: string;
   fileNote: string;
+  supersedes: string;
 };
 
 function emptyTaskDraft(): TaskDraft {
@@ -61,6 +62,7 @@ function emptyTaskDraft(): TaskDraft {
     file: null,
     filePurpose: "",
     fileNote: "",
+    supersedes: "",
   };
 }
 
@@ -93,12 +95,8 @@ export function TaskDossierPanel({
     dossierRef.current = dossier;
   }, [dossier]);
   taskIdRef.current = taskId;
-  if (draftScope !== sessionScope) {
-    setDraftScope(sessionScope);
-    setDrafts({});
-    setNotices({});
-    setErrors({});
-  }
+  const scopeRef = useRef(sessionScope);
+  scopeRef.current = sessionScope;
   const draft = drafts[taskId] ?? emptyTaskDraft();
   const observation = draft.observation;
   const instruction = draft.instruction;
@@ -117,6 +115,14 @@ export function TaskDossierPanel({
     }));
   }
   const [composer, setComposer] = useState<Composer>(null);
+  if (draftScope !== sessionScope) {
+    setDraftScope(sessionScope);
+    setDrafts({});
+    setNotices({});
+    setErrors({});
+    setSelectedByTask({});
+    setComposer(null);
+  }
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
   const pending = pendingTaskId === taskId;
   const fileInputId = useId();
@@ -148,7 +154,7 @@ export function TaskDossierPanel({
     return () => {
       cancelled = true;
     };
-  }, [taskId, reloadKey]);
+  }, [taskId, reloadKey, sessionScope]);
 
   const current = dossier?.taskId === taskId ? dossier : null;
   const previewFile =
@@ -161,20 +167,21 @@ export function TaskDossierPanel({
   ]);
   async function run(action: () => Promise<TaskDossier>, success: string): Promise<boolean> {
     const started = taskId;
+    const startedScope = sessionScope;
     setPendingTaskId(started);
     setErrors((existing) => ({ ...existing, [started]: null }));
     setNotices((existing) => ({ ...existing, [started]: null }));
     try {
       const next = await action();
       const accepted = next.taskId === started;
-      if (accepted && taskIdRef.current === started) {
+      if (accepted && taskIdRef.current === started && scopeRef.current === startedScope) {
         setDossier(next);
         setNotices((existing) => ({ ...existing, [started]: success }));
         setComposer(null);
       }
-      return accepted;
+      return accepted && scopeRef.current === startedScope;
     } catch (error) {
-      if (taskIdRef.current === started) {
+      if (taskIdRef.current === started && scopeRef.current === startedScope) {
         setErrors((existing) => ({ ...existing, [started]: presentDossierError(error) }));
       }
       return false;
@@ -366,11 +373,11 @@ export function TaskDossierPanel({
             const purpose = filePurpose;
             const note = fileNote;
             void run(
-              () => uploadTaskArtifact(started, selected, { purpose, note }),
+              () => uploadTaskArtifact(started, selected, { purpose, note, supersedesArtifactId: draft.supersedes || undefined }),
               "Fișierul a fost păstrat în dosar. Starea operației nu s-a schimbat.",
             ).then((saved) => {
               if (saved) {
-                patchDraft(started, { file: null, filePurpose: "", fileNote: "" });
+                patchDraft(started, { file: null, filePurpose: "", fileNote: "", supersedes: "" });
               }
             });
           }}
@@ -389,6 +396,7 @@ export function TaskDossierPanel({
             <label className="field" htmlFor={fileInputId}>
               <span className="field__label">Fișier</span>
               <input
+                key={taskId}
                 id={fileInputId}
                 className="field__control"
                 type="file"
@@ -409,6 +417,13 @@ export function TaskDossierPanel({
             value={filePurpose}
             options={FILE_PURPOSES}
             onChange={(value) => patchDraft(taskId, { filePurpose: value })}
+          />
+          <SelectField
+            id={`${fileInputId}-supersedes`}
+            label="Versiune nouă pentru, opțional"
+            value={draft.supersedes}
+            options={[{ value: "", label: "Fișier nou" }, ...Array.from(new Map([...(current?.files ?? []), ...(current?.planFiles ?? [])].map(item => [item.artifactId, item])).values()).map(item => ({ value: item.artifactId, label: item.originalFileName }))]}
+            onChange={(supersedes) => patchDraft(taskId, { supersedes })}
           />
           <TextField
             id={`${fileInputId}-note`}

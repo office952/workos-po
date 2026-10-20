@@ -44,3 +44,7 @@ export function assemblyQuoteDocumentPath(quoteSnapshotId: string): string {
 export async function fetchAssemblyQuoteDocument(quoteSnapshotId: string): Promise<DownloadResult> {
   return fetchDownload(assemblyQuoteDocumentPath(quoteSnapshotId));
 }
+
+export async function confirmQuoteOrder(productCode: string, quoteSnapshotId: string): Promise<unknown> {
+  return postJson(`${quoteSnapshotPath(productCode, quoteSnapshotId)}/confirm-order`);
+}

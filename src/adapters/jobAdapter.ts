@@ -86,3 +86,12 @@ export function presentJobDetail(payload: unknown): {
     siteInstallation: presentSiteInstallation(record?.siteInstallation),
   };
 }
+
+/** A successful HTTP response alone is not proof that both production records exist. */
+export function presentJobProduction(payload: unknown): { releaseSnapshotId: string; planId: string } | null {
+  const record = asRecord(payload);
+  const plan = asRecord(asRecord(record?.executionPlan)?.plan);
+  const releaseSnapshotId = asString(record?.releaseSnapshotId);
+  const planId = asString(plan?.planId);
+  return releaseSnapshotId?.trim() && planId?.trim() ? { releaseSnapshotId, planId } : null;
+}

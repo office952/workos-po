@@ -1,30 +1,6 @@
 /* Execuție: current operation dominates; outline stays scannable beside it. */
 
-[data-surface="execution"].page-workspace--operational {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  max-width: none;
-}
-[data-surface="execution"] > .page-header.page-header--pilot-compact {
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: "copy aside";
-  column-gap: 24px;
-}
-[data-surface="execution"] > .page-header .page-header__aside {
-  display: flex;
-  contain: none;
-  justify-content: flex-end;
-}
-.execution-job-link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 8px 16px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  text-decoration: none;
-}
+.operation-workspace { display: block; width: 100%; min-width: 0; }
 .execution-switcher { display: none; }
 
 .execution-floor {
@@ -256,12 +232,6 @@
 }
 
 @media (max-width: 768px) {
-  [data-surface="execution"] > .page-header.page-header--pilot-compact {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "copy" "aside";
-    gap: 12px;
-  }
-  [data-surface="execution"] > .page-header .page-header__aside { justify-content: flex-start; }
   .execution-floor .operational-task--current > .ui-panel > .ui-panel__header,
   .execution-floor .operational-task--current > .ui-panel > .ui-panel__body,
   .execution-floor .task-dossier { padding: 16px; }

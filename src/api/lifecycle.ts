@@ -1,30 +1,12 @@
 import { getJson, postJson } from "./http";
 import type { ExecutionTaskCompletionInput } from "./types";
 
-export async function postQuoteAcceptance(
-  productCode: string,
-  quoteSnapshotId: string,
-): Promise<unknown> {
-  return postJson(
-    `/api/products/${encodeURIComponent(productCode)}/quote-snapshots/${encodeURIComponent(quoteSnapshotId)}/acceptance`,
-  );
-}
-
 export async function fetchQuoteAcceptance(
   productCode: string,
   quoteSnapshotId: string,
 ): Promise<unknown> {
   return getJson(
     `/api/products/${encodeURIComponent(productCode)}/quote-snapshots/${encodeURIComponent(quoteSnapshotId)}/acceptance`,
-  );
-}
-
-export async function postQuoteOrder(
-  productCode: string,
-  quoteSnapshotId: string,
-): Promise<unknown> {
-  return postJson(
-    `/api/products/${encodeURIComponent(productCode)}/quote-snapshots/${encodeURIComponent(quoteSnapshotId)}/order`,
   );
 }
 

@@ -44,29 +44,25 @@ describe("job sheet navigation", () => {
     const progress = await screen.findByRole("progressbar", { name: "Operații finalizate" }, { timeout: 10000 });
     expect(progress).toHaveAttribute("value", "0");
     expect(progress).toHaveAttribute("max", "2");
-    await user.click(await screen.findByRole("link", { name: "Deschide planul de operații" }, { timeout: 10000 }));
-    expect(screen.queryByRole("link", { name: "Deschide fișa lucrării" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Deschide execuția" })).toHaveAttribute("href", "/executie/plan-1?task=task-1&job=job-1");
+    await user.click(screen.getByRole("link", { name: "Operații" }));
+    expect(screen.getByRole("link", { name: "Deschide în Atelier" })).toHaveAttribute("href", "/atelier?job=job-1&plan=plan-1&task=task-1");
     await user.type(await screen.findByRole("searchbox"), "Debitare");
     await user.click(screen.getByRole("link", { name: "01 · Debitare" }));
     const addObservation = await screen.findByRole("button", { name: "Adaugă observație" });
     await waitFor(() => expect(addObservation).toBeEnabled());
     await user.click(addObservation);
     await user.type(screen.getByLabelText("Observație"), "Verifică muchia");
-
-    await act(async () => navigate("/lucrari/job-1?task=task-1&sectiune=plan"));
-    expect(screen.queryByRole("dialog")).toBeNull();
+    await user.click(screen.getByRole("link", { name: "Situație" }));
+    expect(screen.queryByRole("textbox", { name: "Observație" })).toBeNull();
+    await user.click(screen.getByRole("link", { name: "Operații" }));
     expect(screen.getByRole("searchbox")).toHaveValue("Debitare");
     expect(screen.queryByRole("link", { name: "02 · Lipire" })).toBeNull();
-    await user.click(screen.getByRole("link", { name: "01 · Debitare" }));
     expect(await screen.findByLabelText("Observație")).toHaveValue("Verifică muchia");
-    await user.click(screen.getByRole("button", { name: "Închide formularul" }));
-
     await act(async () => navigate("/lucrari/job-1?task=task-1&sectiune=fisiere"));
-    expect(screen.getByRole("link", { name: "Fișiere" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Documente și materiale" })).toHaveAttribute("aria-current", "page");
     await user.selectOptions(await screen.findByLabelText("Operație"), "task-2");
-    await waitFor(() => expect(window.location.search).toBe("?task=task-2&sectiune=fisiere"));
-    expect(screen.getByRole("link", { name: "Deschide dosarul operației" })).toHaveAttribute("href", "/lucrari/job-1?task=task-2&sectiune=operatie");
+    await waitFor(() => expect(window.location.search).toBe("?task=task-2&sectiune=documente"));
+    expect(screen.getByRole("link", { name: "Deschide dosarul operației" })).toHaveAttribute("href", "/lucrari/job-1?task=task-2&sectiune=operatii");
     expect(fetch.mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
   });
 });

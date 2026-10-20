@@ -13,6 +13,7 @@ import {
   canonicalLocation,
   parseAppRoute,
   parseJobContext,
+  parsePlanContext,
   parseJobSheetSection,
   parseOperationalReturn,
   parseSpineContext,
@@ -40,7 +41,6 @@ import { AssemblyPage } from "./surfaces/AssemblyPage";
 import { ClientDetailPage } from "./surfaces/ClientDetailPage";
 import { ClientsPage } from "./surfaces/ClientsPage";
 import { ConfiguratorPage, readAssemblyMemberRole } from "./surfaces/ConfiguratorPage";
-import { ExecutionPage } from "./surfaces/ExecutionPage";
 import { FailClosedPage } from "./surfaces/FailClosedPage";
 import { FoundationProofPage } from "./surfaces/FoundationProofPage";
 import { JobDetailPage } from "./surfaces/JobDetailPage";
@@ -134,16 +134,13 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
         <AtelierPage
           jobId={parseJobContext(search)}
           returnTo={parseOperationalReturn(search)}
+          planId={parsePlanContext(search)}
+          taskId={parseTaskContext(search)}
         />
       );
     case "execution":
-      return (
-        <ExecutionPage
-          planId={route.planId}
-          taskId={parseTaskContext(search)}
-          jobId={parseJobContext(search)}
-        />
-      );
+      // Defensive fallback; normal entry is replaced by canonicalLocation.
+      return <AtelierPage planId={route.planId} taskId={parseTaskContext(search)} jobId={parseJobContext(search)} />;
     case "admin":
       return <AdminHomePage />;
     case "admin-resources":

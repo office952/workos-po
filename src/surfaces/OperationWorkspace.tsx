@@ -43,7 +43,6 @@ import {
   loadWorkcentersAdmin,
 } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
-import { SlicePage } from "../layout/SlicePage";
 import { useCloudSession } from "../session/CloudSessionContext";
 import { readCloudBoundaryVersion } from "../session/sessionExpiryBridge";
 import "../styles/surfaces/execution-flow.css";
@@ -88,10 +87,11 @@ import { SiteInstallationContextPanel } from "./SiteInstallationContextPanel";
 import { JobMaterialPreparation } from "./JobMaterialPreparation";
 import { TaskDossierPanel } from "./TaskDossierPanel";
 
-type ExecutionPageProps = {
+type OperationWorkspaceProps = {
   planId: string;
   taskId?: string | null;
   jobId?: string | null;
+  active?: boolean;
 };
 
 function firstActionableTask(
@@ -171,12 +171,7 @@ function selectCurrentExecutionTask(
   if (tasks.length === 0) {
     return null;
   }
-  const requested = taskId
-    ? (tasks.find((task) => task.taskId === taskId) ?? null)
-    : null;
-  if (requested) {
-    return requested;
-  }
+  if (taskId) return tasks.find((task) => task.taskId === taskId) ?? null;
   return firstActionableTask(tasks);
 }
 
@@ -262,11 +257,12 @@ function taskStatusKind(task: ExecutionTaskTransport) {
   return statusTone("workflow");
 }
 
-export function ExecutionPage({
+export function OperationWorkspace({
   planId,
   taskId = null,
   jobId = null,
-}: ExecutionPageProps) {
+  active = true,
+}: OperationWorkspaceProps) {
   const cloud = useCloudSession();
   const owner = canPublishInstructions(cloud);
   const session = useResource(resourceKeys.operatorSession(), loadOperatorSession);
@@ -288,6 +284,19 @@ export function ExecutionPage({
   >({});
   const [qualityNotes, setQualityNotes] = useState<Record<string, string>>({});
   const [correctionNotes, setCorrectionNotes] = useState<Record<string, string>>({});
+
+  const scope = [cloud.user?.email ?? "", cloud.organization?.organizationId ?? "", String(readCloudBoundaryVersion()), session.data?.personId ?? ""].join("|");
+  const [draftScope, setDraftScope] = useState(scope);
+  if (scope !== draftScope) {
+    setDraftScope(scope);
+    setActualDrafts({});
+    setDurationDrafts({});
+    setResourceActualDrafts({});
+    setSelectedProviderByTask({});
+    setQualityNotes({});
+    setCorrectionNotes({});
+    setActionError(null);
+  }
 
   function actualQuantityDraft(task: ExecutionTaskTransport): string {
     return actualDrafts[task.taskId] ?? "";
@@ -546,28 +555,15 @@ export function ExecutionPage({
   }, [outlineTaskId]);
 
   return (
-    <SlicePage
-      contextLabel="Execuție"
-      currentHref={executionHref(planId, { taskId, jobId: resolvedJobId })}
-      workspace="operational"
-      surface="execution"
-      headerVariant="pilot-compact"
-      eyebrow="Execuție"
-      title={job ? presentJobSheetTitle(job) : plan?.inscription || plan?.productLabel || "Execuție"}
-      lead={job ? [job.customerDisplayName, presentJobSheetSecondary(job)].filter(Boolean).join(" · ") : undefined}
-      action={resolvedJobId ? <a className="execution-job-link" href={jobHref(resolvedJobId, { taskId: currentTask?.taskId ?? taskId })}>Fișa lucrării</a> : null}
-      meta={
-        plan
-          ? [
-              plan.priorityLabel,
-              plan.targetDateLabel,
-              session.data ? `Operator: ${session.data.displayName}` : identified === false ? "Operator: neidentificat" : null,
-            ]
-              .filter((part): part is string => Boolean(part))
-              .join(" · ")
-          : undefined
-      }
-    >
+    <section className="operation-workspace" hidden={!active} aria-label="Operația selectată" data-surface="execution">
+      <header className="operation-workspace__header">
+        <div><p className="section-label">Lucrare</p>
+          <h2>{job ? presentJobSheetTitle(job) : plan?.inscription || plan?.productLabel || "Operație"}</h2>
+          {job ? <p>{[job.customerDisplayName, presentJobSheetSecondary(job)].filter(Boolean).join(" · ")}</p> : null}
+          {plan ? <p>Prioritate: {plan.priorityLabel} · Termen: {plan.targetDateLabel}</p> : null}
+        </div>
+        {resolvedJobId ? <a className="text-link" href={jobHref(resolvedJobId, { section: "operatii", taskId })}>Fișa lucrării</a> : null}
+      </header>
       <div className="execution-floor">
       {planResource.status === "error" && !plan ? (
         <InlineAlert tone="error" title="Planul nu a putut fi citit">
@@ -598,6 +594,9 @@ export function ExecutionPage({
           {actionError}
         </InlineAlert>
       ) : null}
+      {plan && taskId && !currentTask ? <InlineAlert tone="error" title="Operația nu există în această lucrare">
+        Verifică linkul sau alege o operație din lista lucrării.
+      </InlineAlert> : null}
       {plan ? (
         <PlanSummary statusLabel={plan.statusLabel} progress={plan.progress} />
       ) : null}
@@ -1021,6 +1020,7 @@ export function ExecutionPage({
               cloud.user?.email ?? "",
               cloud.organization?.organizationId ?? "",
               String(readCloudBoundaryVersion()),
+              session.data?.personId ?? "",
             ].join("|")}
           />
         </article>
@@ -1097,7 +1097,7 @@ export function ExecutionPage({
         </p>
       ) : null}
       </div>
-    </SlicePage>
+    </section>
   );
 }
 

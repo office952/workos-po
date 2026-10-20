@@ -129,7 +129,7 @@ describe("AssemblyQuotePage", () => {
     expect(within(summary).getByText("Doar proprietarul poate accepta oferta și crea comanda.")).toBeInTheDocument();
     expect(within(summary).getByRole("link", { name: "Deschide ansamblul" })).toHaveAttribute("href", "/ansamblu?assembly=asm%3A1");
     expect(within(summary).getByRole("button", { name: "Descarcă oferta PDF" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Acceptă/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Confirmă comanda/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Deschide comanda" })).not.toBeInTheDocument();
   });
 
@@ -137,7 +137,7 @@ describe("AssemblyQuotePage", () => {
     stub(unacceptedEnvelope);
     render(<AssemblyQuotePage quoteSnapshotId="asmq:1" />);
     await screen.findByRole("region", { name: "Rezumat comercial" });
-    expect(screen.queryByRole("button", { name: /Acceptă/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Confirmă comanda/ })).not.toBeInTheDocument();
   });
 
   it("never offers acceptance on a superseded version even if a stale projection allows it", async () => {
@@ -148,7 +148,7 @@ describe("AssemblyQuotePage", () => {
     });
     render(<AssemblyQuotePage quoteSnapshotId="asmq:1" />);
     expect(await screen.findByText("Versiune înlocuită")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Acceptă/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Confirmă comanda/ })).not.toBeInTheDocument();
   });
 
   it("accepts the exact reviewed snapshot after an in-page confirmation and shows the created order", async () => {
@@ -159,7 +159,7 @@ describe("AssemblyQuotePage", () => {
     });
     const user = userEvent.setup();
     render(<AssemblyQuotePage quoteSnapshotId="asmq:1" />);
-    const accept = await screen.findByRole("button", { name: "Acceptă oferta și creează comanda" });
+    const accept = await screen.findByRole("button", { name: "Confirmă comanda" });
 
     await user.click(accept);
     const confirmation = screen.getByRole("region", { name: "Confirmi acceptarea ofertei OF-ASM?" });
@@ -171,17 +171,17 @@ describe("AssemblyQuotePage", () => {
     expect(posts(fetchMock)).toHaveLength(0);
 
     await user.click(accept);
-    const confirm = screen.getByRole("button", { name: "Confirmă acceptarea" });
+    const confirm = screen.getByRole("button", { name: "Da, confirm comanda" });
     await user.dblClick(confirm);
 
-    expect(await screen.findByText("Oferta a fost acceptată")).toBeInTheDocument();
+    await waitFor(() => expect(window.location.pathname).toBe("/lucrari/asmo%3A9"));
     expect(posts(fetchMock)).toEqual([
       ["/api/assemblies/asm%3A1/accept", { quoteSnapshotId: "asmq:1" }],
     ]);
     const summary = screen.getByRole("region", { name: "Rezumat comercial" });
     expect(within(summary).getByRole("link", { name: "Deschide comanda" })).toHaveAttribute("href", "/lucrari/asmo%3A9");
     expect(within(summary).getByText("Acceptată — comandă creată")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Acceptă/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Confirmă comanda/ })).not.toBeInTheDocument();
     const reads = () => fetchMock.mock.calls.filter(([path, init]) => path === "/api/quotes/asmq%3A1" && !init?.method?.match(/POST/)).length;
     await waitFor(() => expect(reads()).toBeGreaterThan(1));
   });
@@ -198,8 +198,8 @@ describe("AssemblyQuotePage", () => {
     });
     const user = userEvent.setup();
     render(<AssemblyQuotePage quoteSnapshotId="asmq:1" />);
-    await user.click(await screen.findByRole("button", { name: "Acceptă oferta și creează comanda" }));
-    await user.click(screen.getByRole("button", { name: "Confirmă acceptarea" }));
+    await user.click(await screen.findByRole("button", { name: "Confirmă comanda" }));
+    await user.click(screen.getByRole("button", { name: "Da, confirm comanda" }));
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Oferta nu mai este curentă");
     expect(within(alert).getByRole("link", { name: "Deschide oferta curentă" })).toHaveAttribute("href", "/oferte/ansamblu/asmq%3A2");
@@ -219,20 +219,20 @@ describe("AssemblyQuotePage", () => {
     });
     const user = userEvent.setup();
     render(<AssemblyQuotePage quoteSnapshotId="asmq:1" />);
-    await user.click(await screen.findByRole("button", { name: "Acceptă oferta și creează comanda" }));
-    await user.click(screen.getByRole("button", { name: "Confirmă acceptarea" }));
-    expect(await screen.findByText("Oferta este deja acceptată")).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "Confirmă comanda" }));
+    await user.click(screen.getByRole("button", { name: "Da, confirm comanda" }));
+    await waitFor(() => expect(window.location.pathname).toBe("/lucrari/asmo%3A7"));
     const summary = screen.getByRole("region", { name: "Rezumat comercial" });
     expect(within(summary).getByRole("link", { name: "Deschide comanda" })).toHaveAttribute("href", "/lucrari/asmo%3A7");
-    expect(screen.queryByRole("button", { name: /Acceptă/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Confirmă comanda/ })).not.toBeInTheDocument();
   });
 
   it("surfaces a permission refusal and a network failure without claiming acceptance", async () => {
     acceptanceServer({ ok: false, status: 403, json: async () => ({ error: "forbidden" }) });
     const user = userEvent.setup();
     const { unmount } = render(<AssemblyQuotePage quoteSnapshotId="asmq:1" />);
-    await user.click(await screen.findByRole("button", { name: "Acceptă oferta și creează comanda" }));
-    await user.click(screen.getByRole("button", { name: "Confirmă acceptarea" }));
+    await user.click(await screen.findByRole("button", { name: "Confirmă comanda" }));
+    await user.click(screen.getByRole("button", { name: "Da, confirm comanda" }));
     expect(await screen.findByText("Doar proprietarul poate accepta oferta și crea comanda.")).toBeInTheDocument();
     expect(screen.queryByText("Oferta a fost acceptată")).not.toBeInTheDocument();
     unmount();
@@ -240,8 +240,8 @@ describe("AssemblyQuotePage", () => {
 
     acceptanceServer(null);
     render(<AssemblyQuotePage quoteSnapshotId="asmq:1" />);
-    await user.click(await screen.findByRole("button", { name: "Acceptă oferta și creează comanda" }));
-    await user.click(screen.getByRole("button", { name: "Confirmă acceptarea" }));
+    await user.click(await screen.findByRole("button", { name: "Confirmă comanda" }));
+    await user.click(screen.getByRole("button", { name: "Da, confirm comanda" }));
     expect(await screen.findByText(/Serverul nu a putut fi contactat/)).toBeInTheDocument();
     expect(screen.queryByText("Oferta a fost acceptată")).not.toBeInTheDocument();
   });

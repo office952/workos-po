@@ -7,7 +7,6 @@ import type {
 import {
   assemblyHref,
   requestProductHref,
-  executionHref,
   jobHref,
   registryQuoteHref,
   requestHref,
@@ -134,8 +133,8 @@ export function presentJobWorklistAction(item: JobListItemTransport): PresentedW
     case "CONTINUE_EXECUTION":
       if (item.planId) {
         return {
-          actionLabel: item.nextActionLabel,
-          actionHref: executionHref(item.planId, { jobId: item.jobId }),
+          actionLabel: "Vezi operațiile",
+          actionHref: jobHref(item.jobId, { section: "operatii" }),
         };
       }
       return { actionLabel: "Deschide lucrarea", actionHref: detailHref };

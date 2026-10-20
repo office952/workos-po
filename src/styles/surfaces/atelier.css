@@ -224,3 +224,10 @@
 .atelier-lane[data-lane="in_progress_mine"] .worklist-row { box-shadow: inset 3px 0 0 var(--shell-signal); }
 .atelier-queue .worklist-row:hover .worklist-row__action { background: var(--shell-signal); color: var(--shell-button-ink); }
 @media (max-width: 768px) { .atelier-toolbar { padding: 16px; } .atelier-status > span { padding-left: 0; border-left: 0; } }
+
+.atelier-inbox, .atelier-selection { width: 100%; min-width: 0; }
+.atelier-selection__back { display: inline-flex; min-height: 44px; align-items: center; margin-bottom: 16px; }
+.operation-workspace__header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: start; gap: 16px; padding: 20px 0; border-top: 1px solid var(--color-border); }
+.operation-workspace__header h2 { margin: 0 0 8px; font: 650 clamp(1.4rem, 3vw, 2rem)/1.15 var(--font-brand); overflow-wrap: anywhere; }
+.operation-workspace__header p { margin: 4px 0; color: var(--color-text-secondary); }
+.atelier-selection[hidden], .atelier-inbox[hidden], .operation-workspace[hidden] { display: none; }

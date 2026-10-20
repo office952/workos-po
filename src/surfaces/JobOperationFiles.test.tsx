@@ -44,7 +44,7 @@ describe("JobOperationFiles", () => {
     expect(await screen.findByRole("link", { name: "Descarcă fișierul" })).toHaveAttribute("href", "/api/execution-artifacts/new.txt/download");
     await act(async () => resolveFirst(response("one", "old.txt")));
     expect(screen.queryByText("old.txt")).toBeNull();
-    expect(screen.getByRole("link", { name: "Deschide dosarul operației" })).toHaveAttribute("href", "/lucrari/job?task=two&sectiune=operatie");
+    expect(screen.getByRole("link", { name: "Deschide dosarul operației" })).toHaveAttribute("href", "/lucrari/job?task=two&sectiune=operatii");
     expect(fetch.mock.calls.filter(([url]) => String(url).endsWith("/dossier"))).toHaveLength(2);
   });
 

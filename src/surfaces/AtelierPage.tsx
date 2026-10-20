@@ -27,14 +27,22 @@ import type { InboxTaskLane } from "../api/types";
 import "../styles/surfaces/atelier.css";
 import { matchesSearch } from "../presentation/listFilter";
 import { statusTone } from "../presentation/statusTone";
+import { navigate } from "../routing/navigate";
+import { OperationWorkspace } from "./OperationWorkspace";
 import { atelierHref, executionHref } from "../routing/appRoute";
 
 type AtelierPageProps = {
   jobId?: string | null;
   returnTo?: string | null;
+  planId?: string | null;
+  taskId?: string | null;
 };
 
-export function AtelierPage({ jobId = null, returnTo = null }: AtelierPageProps) {
+export function AtelierPage({ jobId = null, returnTo = null, planId = null, taskId = null }: AtelierPageProps) {
+  const [lastSelection, setLastSelection] = useState({ planId, taskId, jobId });
+  if (planId && (lastSelection.planId !== planId || lastSelection.taskId !== taskId || lastSelection.jobId !== jobId)) {
+    setLastSelection({ planId, taskId, jobId });
+  }
   const candidates = useResource(resourceKeys.operatorCandidates(), loadOperatorCandidates);
   const session = useResource(resourceKeys.operatorSession(), loadOperatorSession);
   const inbox = useResource(
@@ -100,6 +108,7 @@ export function AtelierPage({ jobId = null, returnTo = null }: AtelierPageProps)
       setActionState("idle");
       writeResource(resourceKeys.operatorSession(), next);
       invalidateAfterOperatorSessionChange();
+      if (returnTo && !planId) navigate(returnTo, "replace");
     } catch (error) {
       setActionState("error");
       const code =
@@ -164,6 +173,11 @@ export function AtelierPage({ jobId = null, returnTo = null }: AtelierPageProps)
         ) : null
       }
     >
+      {currentSession && lastSelection.planId ? <div className="atelier-selection" hidden={!planId}>
+        <a className="atelier-selection__back text-link" href={atelierHref({ jobId })}>← Lista mea de operații</a>
+        <OperationWorkspace planId={lastSelection.planId} taskId={lastSelection.taskId} jobId={lastSelection.jobId} active={Boolean(planId)} />
+      </div> : null}
+      <div hidden={Boolean(currentSession && planId)} className="atelier-inbox">
       {candidates.status === "error" && people.length === 0 ? (
         <InlineAlert tone="error" title="Atelierul nu a putut fi citit">
           Operatorii nu sunt disponibili.
@@ -235,7 +249,7 @@ export function AtelierPage({ jobId = null, returnTo = null }: AtelierPageProps)
               <aside className="atelier-identify__aside">
                 <p className="atelier-identify__kicker">Identificare</p>
                 <p>PIN-ul confirmă persoana. Lista nu pornește lucrul.</p>
-                <p>După identificare deschizi execuția pentru sarcina aleasă.</p>
+                <p>După identificare continui cu operația aleasă.</p>
                 {returnTo ? (
                   <p>
                     <a className="text-link" href={returnTo}>
@@ -337,12 +351,13 @@ export function AtelierPage({ jobId = null, returnTo = null }: AtelierPageProps)
           </div>
           <div className="ui-panel__pad">
             <p className="ui-note">
-              Deschide execuția duce la sarcină. Nu pornește lucrul.
+              Selectarea unei operații nu pornește lucrul.
               {displayOrderNote ? ` ${displayOrderNote}` : ""}
             </p>
           </div>
         </SurfacePanel>
       )}
+      </div>
     </SlicePage>
   );
 }

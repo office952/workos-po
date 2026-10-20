@@ -455,7 +455,7 @@ describe("job overview projection", () => {
     expect(assembly.memberLabels).toEqual(["Panou ACM", "Litere volumetrice"]);
     expect(assembly.priority).toBe("URGENT");
     expect(assembly.overdue).toBe(true);
-    expect(assembly.attentionLabel).toBe("Urmează eliberarea pentru producție");
+    expect(assembly.attentionLabel).toBe("Comanda așteaptă trimiterea în producție");
     expect(filterJobOverview(projectJobOverview([assembly]), "URGENT")).toHaveLength(1);
     expect(filterJobOverview(projectJobOverview([assembly]), "OVERDUE")).toHaveLength(1);
 

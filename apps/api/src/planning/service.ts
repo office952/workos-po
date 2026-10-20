@@ -137,5 +137,6 @@ function plannerExecutionHref(task: WorkloadTaskItem): string {
   if (task.jobId) {
     params.set("job", task.jobId);
   }
-  return `/executie/${encodeURIComponent(task.executionPlanId)}?${params.toString()}`;
+  params.set("plan", task.executionPlanId);
+  return `/atelier?${params.toString()}`;
 }

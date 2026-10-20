@@ -24,9 +24,9 @@ export function JobOperationFiles({ jobId, plan, task, onSelect }: {
   return <SurfacePanel title="Fișierele operației" label="Fișierele operației">
     <div className="job-sheet__file-toolbar">
       <SelectField id="job-files-operation" label="Operație" value={task?.taskId ?? ""} onChange={onSelect} options={plan.tasks.map(item => ({ value: item.taskId, label: `${item.seqLabel} · ${item.processLabel} · ${item.scopeLabel}` }))} />
-      {task ? <a className="job-sheet__link-button" href={jobHref(jobId, { taskId: task.taskId, section: "operatie" })}>Deschide dosarul operației</a> : null}
+      {task ? <a className="job-sheet__link-button" href={jobHref(jobId, { taskId: task.taskId, section: "operatii" })}>Deschide dosarul operației</a> : null}
     </div>
-    {!task ? <EmptyState title="Planul nu conține operații." /> : null}
+    {!task ? <EmptyState title={plan.tasks.length ? "Alege o operație validă din listă." : "Planul nu conține operații."} /> : null}
     {task && !dossier && resource.status !== "error" ? <LoadingFloor variant="facts" label="Se citesc fișierele operației" rows={2} /> : null}
     {resource.status === "error" ? <InlineAlert tone="error" title="Fișierele nu au putut fi actualizate">{dossier ? "Ultima citire rămâne afișată." : "Deschide dosarul operației pentru reîncercare."}</InlineAlert> : null}
     {archive.status === "error" ? <p className="job-sheet__warning">Versiunile din biblioteca lucrării nu au putut fi verificate.</p> : null}

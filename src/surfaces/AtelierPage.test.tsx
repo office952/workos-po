@@ -94,7 +94,7 @@ describe("AtelierPage", () => {
     render(<AtelierPage jobId="ord-a" />);
     expect(await screen.findByText("Litere · NORD A")).toBeInTheDocument();
     expect(screen.queryByText("Litere · NORD B")).not.toBeInTheDocument();
-    expect(document.querySelector('a[href="/executie/exp-a?task=task-a&job=ord-a"]')).not.toBeNull();
+    expect(document.querySelector('a[href="/atelier?job=ord-a&plan=exp-a&task=task-a"]')).not.toBeNull();
   });
 
   it("lists a configured person as an operator candidate", async () => {

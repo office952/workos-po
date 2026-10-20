@@ -53,9 +53,9 @@ describe("JobsPage", () => {
 
     expect(document.querySelector(".app-shell__nav")).toBeNull();
     expect(screen.getByRole("link", { name: /ALPHA/ })).toHaveAttribute("href", "/lucrari/job-1");
-    const continueLinks = screen.getAllByRole("link", { name: "Continuă execuția" });
+    const continueLinks = screen.getAllByRole("link", { name: "Vezi operațiile" });
     expect(continueLinks).toHaveLength(2);
-    continueLinks.forEach((link) => expect(link).toHaveAttribute("href", "/executie/exp-1?job=job-1"));
+    continueLinks.forEach((link) => expect(link).toHaveAttribute("href", "/lucrari/job-1?sectiune=operatii"));
     expect(screen.getAllByText(/Lipsă utilaj dedicat/).length).toBeGreaterThan(0);
     expect(screen.getByText("FLUX DE PRODUCȚIE")).toBeInTheDocument();
     expect(screen.getAllByText("Eliberare").length).toBeGreaterThan(0);
