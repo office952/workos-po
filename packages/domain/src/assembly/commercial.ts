@@ -70,7 +70,7 @@ export function freezeAssemblyQuote(input: {
       !child.childQuoteSnapshotId ||
       !child.childQuoteContentHash
     ) {
-      return { incomplete: true as const };
+      return { incomplete: true as const, roleLabel: assemblyRoleLabel(member.role) };
     }
     return {
       memberId: member.memberId,
@@ -90,7 +90,7 @@ export function freezeAssemblyQuote(input: {
     return {
       ok: false,
       error: "incomplete_commercial",
-      reasons: ["Oferta de ansamblu cere un preț comercial complet pentru fiecare produs confirmat."],
+      reasons: [`Preț comercial incomplet pentru: ${members.flatMap(item => item && "incomplete" in item ? [item.roleLabel] : []).join(", ")}. Deschide produsul și confirmă prețul înainte de a îngheța oferta.`],
     };
   }
   if (members.some((item) => item === null) || members.length !== input.truth.members.length) {

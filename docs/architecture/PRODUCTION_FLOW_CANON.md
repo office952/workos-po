@@ -20,6 +20,12 @@ Commercial source and lifecycle history are disclosure details in Situation. Fil
 - Domain readiness, eligibility, material modes, financial scoping and organization isolation remain server-owned. Incomplete estimates, inventory adoption and allocation of every future operation are not new prerequisites. New commands and their legacy mutation counterparts enforce the same Owner policy.
 - Frozen quotes, orders, production snapshots, plan/task IDs and history remain intact. No migration or business-record deletion is part of this change.
 
+## Member price persistence
+
+A technical confirmation may precede the manual customer price. Confirming a price must attach an immutable commercial revision of that member to its assembly, even when the technical hash is unchanged. Previous member records and frozen quotes/orders remain unchanged. Repeating the same price reuses its stored revision; technical-only reconfirmation retains the current assembly's accepted price. Ordered assemblies remain read-only.
+
+The configurator acknowledges success only after the assembly member save succeeds and returns the matching assembly/role with its saved commercial projection. Save failures preserve the draft and are visible in the commercial work area. Freeze refusals identify the unpriced member roles. This corrects the E2E audit blocker found after the initial PR #92 candidate; it does not merge technical readiness with commercial pricing or internal costing.
+
 ## Retirement map
 
 | Historical entry | Replacement |

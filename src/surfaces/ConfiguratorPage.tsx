@@ -1,6 +1,7 @@
 import {
   existingCommercialWork,
   loadAssemblyMember,
+  presentSavedAssemblyMember,
   SEPARATE_QUOTE_INTENT,
   type ConfirmedAssemblyMember,
 } from "../api/assemblies";
@@ -302,8 +303,6 @@ export function ConfiguratorPage({
   function currentCommercialResultKey(reviewId: string | null = preview?.reviewId ?? null): string {
     return commercialResultKey({ manualNetDraft, reviewId });
   }
-  const latestResultKey = useRef("");
-  useEffect(() => { latestResultKey.current = currentCommercialResultKey(); });
   useEffect(() => () => { confirmGeneration.current += 1; }, []);
 
   useEffect(() => {
@@ -415,7 +414,7 @@ export function ConfiguratorPage({
     setConfirmState("pending");
     setConfirmError(null);
     try {
-      const presented = presentConfirm(
+      let presented = presentConfirm(
         await postConfigurationConfirm(activeProduct, {
           values: currentTransportValues(),
           reviewId: preview.reviewId,
@@ -432,17 +431,8 @@ export function ConfiguratorPage({
         setConfirmError("Confirmarea nu poate fi prezentată.");
         return;
       }
-      setConfirmation(presented);
-      const editedDuringFlight = latestResultKey.current !== sentKey;
-      if (editedDuringFlight) {
-        setPricedResultKey(sentKey);
-      } else {
-        // Price confirmation belongs to the exact submitted draft, even if the
-        // server rounds the numeric net or the operator typed a decimal comma.
-        setPricedResultKey(sentKey);
-      }
       if (assemblyId && memberRole) {
-        await postJson(`/api/assemblies/${encodeURIComponent(assemblyId)}/members`, {
+        const savedPayload = await postJson(`/api/assemblies/${encodeURIComponent(assemblyId)}/members`, {
           role: memberRole,
           values: currentTransportValues(),
           reviewId: preview.reviewId,
@@ -452,9 +442,20 @@ export function ConfiguratorPage({
         if (generation !== confirmGeneration.current) {
           return;
         }
+        const saved = presentSavedAssemblyMember(savedPayload, assemblyId, memberRole);
+        if (!saved || (parsedManualNet() !== null && !saved.customerPrice)) {
+          setConfirmState("error");
+          setConfirmError("Salvarea prețului în ansamblu nu a fost confirmată. Reîncearcă înainte de a continua.");
+          return;
+        }
+        if (saved.customerPrice && presented.commercial && parsedManualNet() !== null) {
+          presented = { ...presented, commercial: { ...presented.commercial, ...saved.customerPrice } };
+        }
         invalidateAfterAssemblyMemberChange(assemblyId, memberRole);
         if (requestId) invalidateAfterRequestDetailChange(requestId);
       }
+      setConfirmation(presented);
+      setPricedResultKey(sentKey);
       setConfirmState("idle");
       if (fromTechnicalReview && workAreaRef.current === "review") setWorkArea("commercial");
     } catch (error) {
@@ -789,6 +790,7 @@ export function ConfiguratorPage({
           <h2 id="pregatire-oferta-title">Pregătire ofertă</h2>
           <p>Termenii și prețul clientului pentru configurația confirmată.</p>
         </div>
+        {confirmError ? <InlineAlert tone="error" title="Confirmarea a eșuat">{confirmError}</InlineAlert> : null}
         <div className="configuration-commercial__grid">
         <SurfacePanel title="Cum stabilești prețul acestei oferte" label="Preț">
           {!confirmation && showConfirmedMember ? (
