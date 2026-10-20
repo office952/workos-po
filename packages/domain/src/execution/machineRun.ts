@@ -1,3 +1,4 @@
+import { isWorkingOnTask } from "./workSessions.js";
 import {
   diagnoseAssignedPerson,
   type PeopleEligibilityContext,
@@ -88,7 +89,7 @@ export function startMachineRun(
   if (!task.assignedExecutor) {
     return { ok: false, error: "missing_executor" };
   }
-  if (task.assignedExecutor.id !== personId) {
+  if (!isWorkingOnTask(task, personId)) {
     return { ok: false, error: "wrong_executor" };
   }
   if (activeMachineRun(task)) {
@@ -168,7 +169,7 @@ export function stopMachineRun(
   if (task.status !== "IN_PROGRESS" || !task.assignedExecutor) {
     return { ok: false, error: "machine_run_not_allowed" };
   }
-  if (task.assignedExecutor.id !== personId) {
+  if (!isWorkingOnTask(task, personId)) {
     return { ok: false, error: "wrong_executor" };
   }
   const operator = requireRunClosingOperator(people, personId);

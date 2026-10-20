@@ -1,3 +1,4 @@
+import { endWorkSessions, isWorkingOnTask, otherActiveWorkers } from "./workSessions.js";
 import { resolveEligiblePeople, type PeopleEligibilityContext } from "../people/eligibility.js";
 import { findPerson, type Person } from "../people/identity.js";
 import {
@@ -76,6 +77,8 @@ export const TASK_MUTATION_ERRORS = [
   "machine_run_not_allowed",
   "machine_run_active",
   "machine_busy",
+  "active_work_elsewhere",
+  "active_participants",
   "machine_run_not_found",
   "machine_run_closed",
   "external_production_disabled",
@@ -604,7 +607,7 @@ function readyQualityMutation(
   if (executionModeOf(task) === "EXTERNAL") {
     return { ok: false, error: "invalid_transition" };
   }
-  if (!task.assignedExecutor || task.assignedExecutor.id !== actorPersonId) {
+  if (!isWorkingOnTask(task, actorPersonId)) {
     return { ok: false, error: "wrong_executor" };
   }
   const openCorrection = quality.episodes.some(
@@ -634,10 +637,11 @@ function applyStandardTaskCompletion(
     return { ok: false, error: "invalid_transition" };
   }
   if (actorPersonId !== null) {
-    if (!task.assignedExecutor || task.assignedExecutor.id !== actorPersonId) {
+    if (!isWorkingOnTask(task, actorPersonId)) {
       return { ok: false, error: "wrong_executor" };
     }
   }
+  if (otherActiveWorkers(task, actorPersonId).length) return { ok: false, error: "active_participants" };
   if (activeMachineRun(task)) {
     return { ok: false, error: "machine_run_active" };
   }
@@ -660,6 +664,7 @@ function applyStandardTaskCompletion(
       ...task,
       status: "COMPLETED",
       completedAt,
+      workSessions: endWorkSessions(task, completedAt),
       actualDurationMinutes: duration.actualDurationMinutes,
       completion: completion.evidence,
       actualConsumption: actuals.entries,

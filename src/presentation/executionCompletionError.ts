@@ -14,6 +14,8 @@ export function presentExecutionCompletionError(error: unknown): string {
       return "Unitatea de măsură nu este acceptată pentru această resursă.";
     case "invalid_note":
       return "Observația de finalizare nu este acceptată.";
+    case "active_participants":
+      return "Mai sunt persoane în această operație. Fiecare trebuie să iasă înainte de finalizare.";
     case "wrong_executor":
       return "Doar operatorul care lucrează sarcina o poate închide.";
     case "invalid_transition":
@@ -55,6 +57,8 @@ export function presentQualityError(error: unknown): string {
       return "Nota este obligatorie la respingere și la închiderea corecției, cel mult 280 de caractere.";
     case "quality_correction_open":
       return "Corecția este deschisă. Controlul nu poate fi înregistrat până se închide.";
+    case "active_participants":
+      return "Mai sunt persoane în această operație. Fiecare trebuie să iasă înainte de finalizare.";
     case "wrong_executor":
       return "Doar operatorul alocat poate înregistra controlul.";
     case "forbidden":

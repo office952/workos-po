@@ -43,6 +43,12 @@ PILOT_GATE_A = HOLD
 PILOT_GATE_B = HOLD
 ```
 
+### Job record and measured participation candidate (2026-10-21)
+
+Owner-approved scoped Figma direction, then explicit GO for implementation in the existing `office952/workos-po` PR #92. The existing sheet becomes a visible file-first record with exact revision/use evidence, all operation results and hours, per-person contributions and unified chronology. Eligible workers can join/leave independently; the canonical server and new additive migration 046 enforce one active personal interval per worker across jobs. First executor/start, legacy declared durations and old history remain intact; unknown labor is not backfilled or zero-filled. This supersedes the earlier “future participation” limitation only for the new source candidate, not for earlier runtime evidence. Contract and limits: [Production flow canon](architecture/PRODUCTION_FLOW_CANON.md#owner-approved-job-record-and-participation-2026-10-21).
+
+The Owner stopped further development of the optional resource view. Local responsive/keyboard/worker/file-use review of the exact new candidate remains pending. Session exception continues without Notion edits or a `NOTION_GATE=PASS` claim. No merge, deployment, real organization migration or business-data changes are authorized by this source wave.
+
 ### Production flow simplification candidate (2026-10-20)
 
 Owner-authorized source candidate on top of `184619c` / draft PR #91: offer confirmation opens the job, a single **Trimite în producție** command prepares release and plan, and operations/dossier stay in the job sheet and Atelier. Canonical responsibilities and retired URL mapping: [Production flow canon](architecture/PRODUCTION_FLOW_CANON.md). Candidate only; merge, real-data changes, deployment and visual acceptance remain pending. This note does not change the historical main baseline above.

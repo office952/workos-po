@@ -675,6 +675,10 @@ export type ExecutionTaskTransport = {
   canAssign: boolean;
   canAssignProvider: boolean;
   canClaimStart: boolean;
+  canLeave?: boolean;
+  activeParticipantsLabel?: string;
+  completionParticipationBlock?: string | null;
+  participants?: { personId: string; label: string; active: boolean }[];
   canComplete: boolean;
   requiresCompletedQuantity: boolean;
   plannedQuantity: number | null;

@@ -1,3 +1,4 @@
+import { jobRecordFixture } from './test/jobRecordFixture';
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -14,10 +15,11 @@ afterEach(() => {
 });
 
 describe("job sheet navigation", () => {
-  it("keeps section, operation, plan search and a dossier draft across route changes", async () => {
+  it("keeps an explicit operation draft while all record sections remain visible", async () => {
     const fetch = vi.fn((input: RequestInfo, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith("/api/health")) return json({ status: "ok", service: "workos-final-api", apiContractId: "workos-ui-contract-v1" });
+      if (url.endsWith("/api/jobs/job-1/record")) return json({ record: jobRecordFixture });
       if (url.endsWith("/api/jobs/job-1")) return json({
         job: { jobId: "job-1", kind: "ASSEMBLY", productCode: "assembly", productLabel: "Panou și litere", inscription: "NORD", customerDisplayName: "Client sintetic", stage: "IN_EXECUTION", stageLabel: "În lucru", nextAction: "CONTINUE_EXECUTION", nextActionLabel: "Continuă execuția", orderSnapshotId: "order", releaseSnapshotId: "release" },
         execution: { planId: "plan-1" },
@@ -41,28 +43,18 @@ describe("job sheet navigation", () => {
     window.history.replaceState({}, "", "/lucrari/job-1");
     const user = userEvent.setup();
     render(<App />);
-    const progress = await screen.findByRole("progressbar", { name: "Operații finalizate" }, { timeout: 10000 });
-    expect(progress).toHaveAttribute("value", "0");
-    expect(progress).toHaveAttribute("max", "2");
-    await user.click(screen.getByRole("link", { name: "Operații" }));
-    expect(screen.getByRole("link", { name: "Deschide în Atelier" })).toHaveAttribute("href", "/atelier?job=job-1&plan=plan-1&task=task-1");
-    await user.type(await screen.findByRole("searchbox"), "Debitare");
-    await user.click(screen.getByRole("link", { name: "01 · Debitare" }));
+    expect(await screen.findByRole("region", { name: "Fișierele lucrării" })).toBeVisible();
+    expect(screen.queryByRole("region", { name: "Dosarul operației selectate" })).toBeNull();
+    await user.click(screen.getAllByRole("link", { name: "01 · Lipire" })[0]!);
     const addObservation = await screen.findByRole("button", { name: "Adaugă observație" });
     await waitFor(() => expect(addObservation).toBeEnabled());
     await user.click(addObservation);
     await user.type(screen.getByLabelText("Observație"), "Verifică muchia");
-    await user.click(screen.getByRole("link", { name: "Situație" }));
-    expect(screen.queryByRole("textbox", { name: "Observație" })).toBeNull();
-    await user.click(screen.getByRole("link", { name: "Operații" }));
-    expect(screen.getByRole("searchbox")).toHaveValue("Debitare");
-    expect(screen.queryByRole("link", { name: "02 · Lipire" })).toBeNull();
-    expect(await screen.findByLabelText("Observație")).toHaveValue("Verifică muchia");
     await act(async () => navigate("/lucrari/job-1?task=task-1&sectiune=fisiere"));
-    expect(screen.getByRole("link", { name: "Documente și materiale" })).toHaveAttribute("aria-current", "page");
-    await user.selectOptions(await screen.findByLabelText("Operație"), "task-2");
-    await waitFor(() => expect(window.location.search).toBe("?task=task-2&sectiune=documente"));
-    expect(screen.getByRole("link", { name: "Deschide dosarul operației" })).toHaveAttribute("href", "/lucrari/job-1?task=task-2&sectiune=operatii");
+    expect(await screen.findByLabelText("Observație")).toHaveValue("Verifică muchia");
+    expect(screen.getByRole("region", { name: "Fișierele lucrării" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Orele lucrării" })).toBeVisible();
+    expect(screen.getByText("A ieșit din operație")).toBeVisible();
     expect(fetch.mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
   });
 });

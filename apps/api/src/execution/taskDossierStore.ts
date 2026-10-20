@@ -563,7 +563,7 @@ export function readTaskArtifactDownload(
   };
 }
 
-export function readJobFileArchive(db: SqliteDatabase, jobId: string): JobFileArchive | null {
+export function readJobFileArchive(db: SqliteDatabase, jobId: string, planId: string | null = null): JobFileArchive | null {
   if (!jobExists(db, jobId)) {
     return null;
   }
@@ -571,11 +571,11 @@ export function readJobFileArchive(db: SqliteDatabase, jobId: string): JobFileAr
     .prepare(
       `
       SELECT * FROM execution_job_artifacts
-      WHERE job_id = ?
+      WHERE job_id = ? OR (job_id IS NULL AND plan_id = ?)
       ORDER BY uploaded_at ASC, artifact_id ASC
     `,
     )
-    .all(jobId) as ArtifactRow[];
+    .all(jobId, planId) as ArtifactRow[];
   const events = db
     .prepare(
       `

@@ -98,15 +98,19 @@ describe("execution reality API", () => {
       const otherJobTask = second.tasks.find(task => providersOf(task).some(provider => provider.id === MCH_CNC_4020_ID))!;
       expect(second.plan.planId).not.toBe(first.plan.planId);
       const tasks = [cncTasks[0]!, cncTasks[1]!, otherJobTask];
-      for (const task of tasks) {
+      const taskCookies = new Map<string, string>();
+      for (const [index, task] of tasks.entries()) {
+        const worker = index === 0 ? personId : runtime.createPerson("Operator CNC paralel " + index);
+        const id = typeof worker === "string" ? worker : worker.ok ? worker.person.personId : "";
+        const ownCookie = index === 0 ? cookie : await sessionCookieViaHttp(app, id);
+        taskCookies.set(String(task.taskId), ownCookie);
         expect((await app.request(`/api/execution-tasks/${task.taskId}/provider`, {
-          method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ providerId: MCH_CNC_4020_ID }),
+          method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ providerId: MCH_CNC_4020_ID }),
         })).status).toBe(200);
-        expect((await startTaskAs(app, String(task.taskId), cookie)).status).toBe(200);
+        expect((await startTaskAs(app, String(task.taskId), ownCookie)).status).toBe(200);
       }
       const runStart = (task: JsonObject) => app.request(`/api/execution-tasks/${task.taskId}/machine-runs/start`, {
-        method: "POST", headers: { cookie },
+        method: "POST", headers: { cookie: taskCookies.get(String(task.taskId))! },
       });
       const started = await runStart(tasks[0]!);
       expect(started.status).toBe(200);
@@ -130,7 +134,7 @@ describe("execution reality API", () => {
       // A second server connection sees the same persisted occupancy.
       const secondConnection = createProductSystemRuntime(runtime.sqlitePath);
       try {
-        expect(secondConnection.startMachineRun(String(otherJobTask.taskId), personId))
+        expect(secondConnection.startMachineRun(String(otherJobTask.taskId), runtime.readExecutionPlanByTaskId(String(otherJobTask.taskId))!.tasks.find(t => t.taskId === otherJobTask.taskId)!.assignedExecutor!.id))
           .toEqual({ ok: false, error: "machine_busy" });
       } finally {
         secondConnection.close();

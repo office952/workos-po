@@ -178,15 +178,17 @@ function classifyInboxTask(input: {
     return null;
   }
 
-  if (task.status === "IN_PROGRESS" && task.assignedExecutor?.id === currentOperatorId) {
+  if (task.status === "IN_PROGRESS" && (task.canLeave || (!(task.workSessions ?? []).length && task.assignedExecutor?.id === currentOperatorId))) {
     return toInboxItem(input, "in_progress_mine");
   }
+
+  if (task.status === "IN_PROGRESS") return task.canClaimStart ? toInboxItem(input, "available_ready") : null;
 
   if (task.status !== "PLANNED") {
     return null;
   }
 
-  if (task.assignedExecutor && task.assignedExecutor.id !== currentOperatorId) {
+  if (!task.canClaimStart && task.assignedExecutor && task.assignedExecutor.id !== currentOperatorId) {
     return null;
   }
 
@@ -256,7 +258,7 @@ function toInboxItem(
     requiresProvider: task.requiresProvider,
     waitingForLabels: task.waitingFor,
     reservedForLabel:
-      task.assignedExecutor && lane !== "in_progress_mine"
+      task.assignedExecutor && task.status === "PLANNED" && lane !== "in_progress_mine"
         ? task.assignedExecutor.label
         : null,
     canClaimStart: lane === "available_ready",

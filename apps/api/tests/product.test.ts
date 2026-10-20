@@ -1167,7 +1167,8 @@ describe("product configuration API", () => {
       body: JSON.stringify({ providerId: MCH_CNC_4020_ID }),
     });
     expect(assignFace.status).toBe(200);
-    const startFace = await startTaskAs(app, String(faceCnc.taskId), cookie);
+    const faceCookie = await sessionCookieViaHttp(app, await createExecutor(app, "Executor față"));
+    const startFace = await startTaskAs(app, String(faceCnc.taskId), faceCookie);
     const parallel = (await readBody(startFace)).executionPlan as { tasks: Array<JsonObject> };
     expect(
       parallel.tasks.filter(
@@ -1219,7 +1220,7 @@ describe("product configuration API", () => {
     expect((await readBody(secondAssembly)).error).toBe("ineligible_provider");
   });
 
-  it("requires a session, claims an empty task, and respects preassignment", async () => {
+  it("requires identification and permits eligible joining while preserving the first starter", async () => {
     const reviewed = await previewReady();
     const app = createApp();
     const accepted = await app.request(
@@ -1303,8 +1304,8 @@ describe("product configuration API", () => {
     ).toBe("Executor doi");
 
     const reservedOther = await startTaskAs(app, String(backCnc.taskId), firstCookie);
-    expect(reservedOther.status).toBe(409);
-    expect((await readBody(reservedOther)).error).toBe("already_started_by_other");
+    expect(reservedOther.status).toBe(200);
+    expect((await app.request(`/api/execution-tasks/${backCnc.taskId}/leave`, { method: "POST", headers: { cookie: firstCookie } })).status).toBe(200);
 
     const started = await startTaskAs(app, String(backCnc.taskId), secondCookie);
     const startedView = (await readBody(started)).executionPlan as {
@@ -1313,8 +1314,8 @@ describe("product configuration API", () => {
     };
     const startedTask = startedView.tasks.find((item) => item.taskId === backCnc.taskId) as JsonObject;
     expect(started.status).toBe(200);
-    expect((startedTask.assignedExecutor as JsonObject).id).toBe(secondId);
-    expect((startedTask.assignedExecutor as JsonObject).label).toBe("Executor doi");
+    expect((startedTask.assignedExecutor as JsonObject).id).toBe(firstId);
+    expect((startedTask.assignedExecutor as JsonObject).label).toBe("Executor unu");
     expect(startedView.plan.eicTotal).toBeUndefined();
 
     const locked = await assignExecutor(app, backCnc.taskId, firstId);
@@ -1333,7 +1334,7 @@ describe("product configuration API", () => {
       (item) => item.taskId === backCnc.taskId,
     ) as JsonObject;
     expect(done.status).toBe("COMPLETED");
-    expect(done.assignedExecutor).toEqual({ id: secondId, label: "Executor doi" });
+    expect(done.assignedExecutor).toEqual({ id: firstId, label: "Executor unu" });
     expect((done.quantities as Array<JsonObject>)[0]?.value).toBe(12.5);
 
     await app.request(`/api/people/${secondId}`, {

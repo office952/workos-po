@@ -102,6 +102,13 @@ export function presentExecutionTask(value: unknown): ExecutionTaskTransport | n
     canAssign: row.canAssign === true,
     canAssignProvider: row.canAssignProvider === true,
     canClaimStart: row.canClaimStart === true || row.canStart === true,
+    canLeave: row.canLeave === true,
+    activeParticipantsLabel: asString(row.activeParticipantsLabel) ?? undefined,
+    completionParticipationBlock: asString(row.completionParticipationBlock),
+    participants: Array.isArray(row.participants) ? row.participants.flatMap(v => {
+      const p = asRecord(v); const id = asString(p?.personId); const label = asString(p?.label);
+      return id && label ? [{ personId: id, label, active: p?.active === true }] : [];
+    }) : [],
     canComplete: row.canComplete === true,
     requiresCompletedQuantity: row.requiresCompletedQuantity === true,
     plannedQuantity: asNumber(measurable?.value),

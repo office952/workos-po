@@ -1307,3 +1307,6 @@ export {
   type JobMaterialRequirement,
   type OperatorReplenishmentSignal,
 } from "./execution/materialProcurement.js";
+
+export * from "./execution/workSessions.js";
+export * from "./execution/workParticipation.js";

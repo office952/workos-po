@@ -31,6 +31,7 @@ type Attack = {
 };
 
 const READ_ATTACKS: Attack[] = [
+  { name: "JOB_RECORD", method: "GET", path: (id) => `/api/jobs/${id.orderId}/record` },
   { name: "CUSTOMER", method: "GET", path: (id) => `/api/customers/${id.customerId}` },
   {
     name: "CUSTOMER_WORKSPACE",

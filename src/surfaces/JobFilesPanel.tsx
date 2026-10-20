@@ -22,7 +22,7 @@ const FILE_PURPOSES = [
   { value: "RECORD", label: "Evidență" },
 ];
 
-export function JobFilesPanel({ jobId }: { jobId: string }) {
+export function JobFilesPanel({ jobId, uploadOnly = false, onUploaded }: { jobId: string; uploadOnly?: boolean; onUploaded?: () => void }) {
   const archive = useResource(resourceKeys.jobFiles(jobId), () => loadJobFiles(jobId));
   const [file, setFile] = useState<File | null>(null);
   const [purpose, setPurpose] = useState("");
@@ -49,6 +49,7 @@ export function JobFilesPanel({ jobId }: { jobId: string }) {
         supersedesArtifactId: supersedesArtifactId || undefined,
       });
       writeResource(resourceKeys.jobFiles(jobId), next);
+      onUploaded?.();
       setFile(null);
       setPurpose("");
       setNote("");
@@ -130,7 +131,7 @@ export function JobFilesPanel({ jobId }: { jobId: string }) {
       {archive.status === "success" && files.length === 0 ? (
         <p>Lucrarea nu are încă fișiere.</p>
       ) : null}
-      {files.map((item) => (
+      {!uploadOnly && files.map((item) => (
         <article key={item.artifactId} className="task-dossier__file">
           <AuthenticatedDownloadLink href={item.downloadHref}>
             {item.originalFileName}

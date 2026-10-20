@@ -7,11 +7,11 @@ Candidate authorized by the Owner on 2026-10-20 in `office952/workos-po`. Built 
 | Experience | Responsibility | Canonical location |
 | --- | --- | --- |
 | Offer | Review one frozen version; **Confirmă comanda** records acceptance and creates/retrieves its order, then opens its job | Existing product / assembly offer URL |
-| Job sheet | Coordinator: situation, operations with selected dossier, documents/materials, results | `/lucrari/:jobId` with `sectiune=situatie`, `operatii`, `documente`, `rezultate` |
+| Job sheet | Coordinator: one visible job record with file usages, hours, people, chronology and operational results | `/lucrari/:jobId`; explicit task links retain the shared dossier |
 | Atelier | Operator identification, eligible inbox, selected operation and execution commands in one workspace | `/atelier?job=…&plan=…&task=…` (job optional) |
 | Work by resource | Optional cross-job operations grouped by machine/zone; manual work and real resource gaps remain visible | `/lucrari?vedere=utilaje` |
 
-Commercial source and lifecycle history are disclosure details in Situation. Files and material preparation are sections of the existing sheet, not new pages. Operation identity, instructions and files identify the work; they do not teach the trade.
+The current record keeps files, hours, people, chronology and commercial source visible in the existing sheet. File and session details open only when requested; the main record is not hidden in tabs. Material preparation remains in the same sheet. Operation identity, instructions and files identify the work; they do not teach the trade.
 
 ## Owner decision: planning without repetitive administration (2026-10-20)
 
@@ -26,7 +26,7 @@ Direction accepted by the Owner; implemented as a source candidate on PR #92. Lo
 
 The default resource view shows open operations, their job/customer context and server-owned resource explanations. Estimates and their editor appear only after explicit optional disclosure; missing estimates are not routine warnings. A unique eligible provider is a projected queue target, visibly awaiting automatic binding, not a persisted assignment or a start event. Manual operations without a required provider stay visible in their own group. Genuine choices and missing providers remain actionable exceptions. Opening, searching and switching views never writes assignment/start commands; drafts and the registry search survive view switching within the mounted registry.
 
-This candidate does not introduce multi-worker timing or authorize merge, deployment or real-data changes.
+The resource-view wave did not introduce multi-worker timing. The later approved job-record wave below adds individual work sessions. Neither wave authorizes merge, deployment or real-data changes.
 
 ### Resource-view runtime review and keyboard follow-up (2026-10-21)
 
@@ -39,7 +39,7 @@ The focused follow-up uses an explicit disclosure button with `aria-expanded`; c
 - Product `POST /api/products/:code/quote-snapshots/:id/confirm-order`: validate the exact frozen quote and order contracts, atomically persist acceptance + order. Repeated calls reuse the existing acceptance/order identities. Assembly retains its existing exact-version accept command, now with the validation/persistence transaction; an already accepted response carries the existing order for navigation.
 - `POST /api/jobs/:id/production`: an Owner command for products and assemblies. An immediate SQLite transaction prepares/reuses the frozen production release and its execution plan together. A plan-write failure rolls back a newly created release; a historical release without a plan can be retried. Successful entry does not start any task.
 - Domain readiness, eligibility, material modes, financial scoping and organization isolation remain server-owned. Incomplete estimates, inventory adoption and allocation of every future operation are not new prerequisites. New commands and their legacy mutation counterparts enforce the same Owner policy.
-- Frozen quotes, orders, production snapshots, plan/task IDs and history remain intact. No migration or business-record deletion is part of this change.
+- Frozen quotes, orders, production snapshots, plan/task IDs and history remain intact. The original production-entry wave had no migration or business-record deletion. The later participation wave adds migration 046 without rewriting existing tasks.
 
 ## Member price persistence
 
@@ -71,4 +71,49 @@ The follow-up correction keeps an operation's lifecycle separate from machine oc
 
 Operator identification/logout and People administration refresh cached execution plans as well as the inbox, so viewer-dependent eligibility is reread without page reload. The sheet describes the absence of current activity without claiming that no operation ever started.
 
-Cursor reported A/B/C PASS on `868d617`: finished-job wording, eligibility after identification/People changes, and same-machine run exclusion/release. No screenshots were available and a session-expiry observation remains unresolved. That runtime report is separate from the pending validation of the subsequent resource-view change. Tests/build are not visual evidence. Multi-worker participation and automatic work/pause intervals require their own state-machine work and are not introduced here. File upload was not exercised in the reported journey. The phone table overflow observation remains a visual review advisory.
+Cursor reported A/B/C PASS on `868d617`: finished-job wording, eligibility after identification/People changes, and same-machine run exclusion/release. No screenshots were available and a session-expiry observation remains unresolved. That runtime report is separate from the pending validation of the subsequent resource-view change. Tests/build are not visual evidence. Multi-worker participation was outside those earlier runtime reports; its subsequent source candidate is described below. File upload was not exercised in the reported journey. The phone table overflow observation remains a visual review advisory.
+
+
+## Owner-approved job record and participation (2026-10-21)
+
+The Owner approved the scoped Figma direction and then authorized implementation in this existing GitHub repository. Session exception continues without Notion edits or a `NOTION_GATE=PASS` claim. Historical R-002 is not asserted as implementation coverage. No merge, deployment, real database mutation or final visual acceptance is included.
+
+Approved review frames: [main job record](https://www.figma.com/design/M3Klzg7sulrtLSyxJBf3Vd/WorkOs-F?node-id=732-3), [sessions and incomplete hours](https://www.figma.com/design/M3Klzg7sulrtLSyxJBf3Vd/WorkOs-F?node-id=751-17). These frames are a scoped design decision; they do not reinstate a universal Figma authority. Example numbers in them are synthetic illustrations, never job evidence.
+
+- One job page, with labeled icon anchors: files, hours, people, chronology. No four mutually exclusive sheet tabs. Historical section URLs still resolve on the same job; document/result aliases scroll to the visible corresponding section. An explicit task opens the reused `TaskDossierPanel`. Invalid task IDs remain errors. No task is silently selected on page entry or after production release.
+- File-first archive: one row per stored artifact/revision, exact downloads, uploader/time, and every linked operation. A link is not proof of use. Explicit `usedAt` / operator evidence identifies declared use. A later revision never inherits or replaces an earlier file's use evidence. No fabricated version numbering.
+- `GET /api/jobs/:jobId/record` reads the already located organization's job/plan. It projects operational results, file associations, explicit uses, measured sessions, per-person totals and a unified chronology. No financial cost projection or per-task HTTP fan-out is introduced.
+- Join/start and own leave are server commands. Eligible people may join an already running task, including operations with a machine; machine occupancy remains governed separately by MachineRun. Each person may have only one open personal work session in the organization's plane. An immediate transaction plus a partial unique index enforce this across tasks/jobs. Retries are idempotent.
+- The first executor and original task start remain historical facts. Leaving closes only that person's interval; task status remains IN_PROGRESS and other workers continue. Another active participant prevents completion with a clear explanation. The last acting participant's interval closes atomically with successful ordinary completion or quality pass. Refused completion/quality fail does not close it. Machine-run completion guards remain in force.
+- Retirement is refused while the person has an open session, including a joiner who is not the first executor. Losing a qualification does not remove the ability to leave one's session. Browser closure, logout or network loss never silently fabricate an exit time.
+- Migration `046_execution_work_sessions.sql` only adds the session table and indexes. It does not backfill sessions or reinterpret `actualDurationMinutes`. Tests use isolated temporary databases. Applying it to a real organization requires its separate operational procedure.
+
+### Meaning of each time total
+
+| Display | Authoritative calculation |
+| --- | --- |
+| Recorded labor hours | Sum of every person's session milliseconds; simultaneous people add separately |
+| Recorded active time | Union of those intervals; overlap counts once |
+| Beginning to end | First task start through last task completion, or report read time while unfinished; includes interruption/waiting |
+| Machine time | Sum of closed MachineRuns from their timestamps; active runs are explicitly excluded and signaled |
+| Declared duration | Existing manual actualDurationMinutes, displayed separately; never treated as measured labor |
+
+Timestamp precision is retained until display rounding. Coverage is complete only when every internal operation is completed, tracked from its original start and has no open sessions. Late joining to an older task remains partial. Missing labor stays unrecorded, never zero. Active sessions are provisional, with an explicit report timestamp. External-only work is marked not applicable for internal labor. CSV exports the same server-projected values, with spreadsheet-formula escaping.
+
+The existing finished audit job remains an archive, with its operations, files and available history accessible. Production completion does not assert delivery or installation. Historical quantities, material consumption, declared durations, snapshots and file bytes remain intact. Operator UI records participation automatically; no manually entered task estimate or duration is required.
+
+### Retired presentation and remaining review
+
+`JobOperationPlan` and `JobOperationFiles` were unreferenced after replacing the sheet and are removed with their isolated old layout tests. They are not kept as alternate active pages. Existing Atelier, dossier, material and artifact preview implementations are reused. `/planificare` remains the existing redirect; the Owner stopped further development of the optional resource view, so this wave does not refine it.
+
+Corrections of mistakenly left-open personal sessions, auditable time amendments, richer transport/delivery/montage lifecycle, history-based production pricing, and durable cross-device drafts are separate future contracts. Do not pretend those capabilities already exist. Local Cursor review must exercise actual joins/leaves, file upload/use/revision and responsive/keyboard presentation on the exact new source. Earlier 17/17 commercial E2E evidence is not transferred to this wave. Automated checks and the approved Figma frames are not final product visual acceptance.
+
+
+### Source verification for the job-record wave
+
+- Frontend full suite: 698 tests passed; focused follow-up covers the record, explicit operation focus, production navigation, dossier and Atelier.
+- Domain full suite after external-only time coverage: 109 files / 775 tests passed, including overlapping people, repeated entries, subminute aggregation, legacy partial coverage and external handoff elapsed time.
+- API full functional run excluding three environment-blocked files: 105 files / 602 tests passed. The initial full API run also passed 48 tests within those three files; their three remaining child-process tests fail identically on the untouched 4bfcf183 snapshot. The sandbox refuses the tsx IPC pipe / child worker produces no result. Those infrastructure tests are not declared PASS.
+- Typecheck, lint and build frontend/domain/API pass. The 13 existing Fast Refresh warnings and the existing >500 kB frontend chunk advisory remain.
+- Read-only independent source review found no remaining concrete publication blocker. Selected operation focus, current quality/rework state, correction closure, planned/actual quantity/consumption, record timestamp/refresh and retirement/session safety were checked. This is source review, not browser acceptance.
+- Browser connection was unavailable in this session. No screenshots, responsive visual PASS, live two-worker UI E2E PASS or final Owner visual acceptance are claimed. Cursor must verify the published source on the existing isolated synthetic preview.

@@ -1396,6 +1396,15 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
     );
   });
 
+  app.post("/api/execution-tasks/:taskId/leave", (c) => {
+    const runtime = getProductSystem(c);
+    const session = runtime.resolveOperatorSession(getCookie(c, OPERATOR_SESSION_COOKIE));
+    if (!session.ok) return c.json({ error: "invalid_session" }, 401);
+    const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/leave");
+    return respondTaskMutation(c, runtime, runtime.leaveExecutionWork(taskId, session.person.personId, new Date().toISOString()),
+      { taskId, operatorId: session.person.personId });
+  });
+
   app.post("/api/execution-tasks/:taskId/quality-fail", async (c) => {
     const runtime = getProductSystem(c);
     const session = runtime.resolveOperatorSession(getCookie(c, OPERATOR_SESSION_COOKIE));
@@ -1827,6 +1836,8 @@ function mutationHttpStatus(error: TaskMutationError): 404 | 409 | 422 {
     case "machine_run_not_allowed":
     case "machine_run_active":
     case "machine_busy":
+    case "active_work_elsewhere":
+    case "active_participants":
     case "machine_run_closed":
     case "external_production_disabled":
     case "task_not_planned":

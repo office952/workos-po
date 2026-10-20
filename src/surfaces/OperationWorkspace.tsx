@@ -12,6 +12,7 @@ import {
   recordQualityPass,
   closeReworkEpisode,
   startExecutionTask,
+  leaveExecutionTask,
   startMachineRun,
   stopMachineRun,
 } from "../api/lifecycle";
@@ -487,7 +488,7 @@ export function OperationWorkspace({
     const duration = parseActualDurationDraft(durationDrafts[task.taskId] ?? "");
     if (!duration.ok) {
       setActionState("error");
-      setActionError("Timpul efectiv trebuie să fie un număr întreg de minute, zero sau pozitiv.");
+      setActionError("Durata declarată trebuie să fie un număr întreg de minute, zero sau pozitiv.");
       return;
     }
     if (duration.actualDurationMinutes !== undefined) {
@@ -627,6 +628,8 @@ export function OperationWorkspace({
           >
             <section className="execution-next" data-testid="execution-next">
               <h3 className="execution-next__title">Următorul pas</h3>
+              {currentTask.activeParticipantsLabel ? <p>Lucrează acum: {currentTask.activeParticipantsLabel}</p> : null}
+              {currentTask.completionParticipationBlock ? <p>{currentTask.completionParticipationBlock}</p> : null}
               <p className="execution-next__reason">{presentExecutionNextAction(currentTask, identified)}</p>
             {currentTask.canExternalize ? (
               <Button
@@ -785,12 +788,12 @@ export function OperationWorkspace({
                 }}
               />
             ) : null}
-            {currentTask.executionMode !== "EXTERNAL" &&
+            {currentTask.executionMode !== "EXTERNAL" && !currentTask.participants?.length &&
             (currentTask.canComplete || currentTask.completionBlockedByActiveMachineRun) &&
             currentTask.status !== "COMPLETED" ? (
               <TextField
                 id={`actual-duration-${currentTask.taskId}`}
-                label="Timp efectiv (minute)"
+                label="Durată declarată, opțional (minute)"
                 value={durationDrafts[currentTask.taskId] ?? ""}
                 inputMode="numeric"
                 disabled={actionState === "pending"}
@@ -852,9 +855,11 @@ export function OperationWorkspace({
                   disabled={actionState === "pending" || identified !== true}
                   onClick={() => void start(currentTask)}
                 >
-                  Pornește
+                  {currentTask.status === "IN_PROGRESS" ? "Intră în operație" : "Pornește"}
                 </Button>
               ) : null}
+              {currentTask.canLeave ? <Button variant="secondary" disabled={actionState === "pending" || identified !== true}
+                onClick={() => void runExternal(() => leaveExecutionTask(currentTask.taskId), "Ieșirea din operație nu a putut fi înregistrată.")}>Ieși din operație</Button> : null}
               {currentTask.canStartMachineRun ? (
                 <Button
                   variant="secondary"
@@ -928,7 +933,7 @@ export function OperationWorkspace({
                 }
               />
               <InfoRow label="Timp planificat" value={currentTask.plannedTimeLabel} />
-              <InfoRow label="Timp efectiv" value={currentTask.actualDurationLabel} />
+              <InfoRow label="Durată declarată" value={currentTask.actualDurationLabel} />
               {currentTask.timeVarianceLabel ? (
                 <InfoRow label="Diferență timp" value={currentTask.timeVarianceLabel} />
               ) : null}

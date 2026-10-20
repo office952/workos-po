@@ -188,7 +188,7 @@ describe("OperationWorkspace", () => {
       expect(details).not.toHaveAttribute("open");
       await user.click(screen.getByText("Timpi, dependențe și diferențe"));
       expect(details).toHaveAttribute("open");
-      expect(within(details).getByText("Timp efectiv")).toBeInTheDocument();
+      expect(within(details).getByText("Durată declarată")).toBeInTheDocument();
       // Reproduce either stylesheet order: the legacy flex/grid rules caused
       // the selected operation to shrink with short task content.
       const style = document.createElement("style");

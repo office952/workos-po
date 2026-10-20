@@ -1,3 +1,4 @@
+import { readJobRecord } from "./record.js";
 import type { Hono } from "hono";
 import {
   freezeProductionReleaseFromOrder,
@@ -33,6 +34,15 @@ export function registerJobRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: "not_found" }, 404);
     }
     return c.json(presentJobDetail(c, runtime, located));
+  });
+
+  app.get("/api/jobs/:jobId/record", (c) => {
+    const runtime = getProductSystem(c);
+    const jobId = httpPathIdentity(c.req.path, "/api/jobs/", "/record");
+    const located = locateJob(runtime, jobId);
+    if (!located) return c.json({ error: "not_found" }, 404);
+    const plan = located.job.planId ? runtime.readExecutionPlan(located.job.planId) : null;
+    return c.json({ record: readJobRecord(runtime.assemblyPlane().db, jobId, plan, new Date().toISOString()) });
   });
 
   app.patch("/api/jobs/:jobId/planning", requireOwnerRole(), async (c) => {

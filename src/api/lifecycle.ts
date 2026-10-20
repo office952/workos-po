@@ -61,6 +61,10 @@ export async function confirmTaskMaterial(
   );
 }
 
+export async function leaveExecutionTask(taskId: string): Promise<unknown> {
+  return postJson(`/api/execution-tasks/${encodeURIComponent(taskId)}/leave`);
+}
+
 export async function startExecutionTask(taskId: string): Promise<unknown> {
   return postJson(`/api/execution-tasks/${encodeURIComponent(taskId)}/start`);
 }

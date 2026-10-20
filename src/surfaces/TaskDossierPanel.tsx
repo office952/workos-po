@@ -1,3 +1,4 @@
+import { invalidateResourcePrefix } from "../data/resourceCache";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { TransportError, readTransportErrorCode } from "../api/http";
 import {
@@ -133,6 +134,7 @@ export function TaskDossierPanel({
       .then((next) => {
         if (!cancelled && next.taskId === taskId) {
           setDossier(next);
+        invalidateResourcePrefix("job-record:");
           setLoadError("none");
         }
       })
@@ -176,6 +178,7 @@ export function TaskDossierPanel({
       const accepted = next.taskId === started;
       if (accepted && taskIdRef.current === started && scopeRef.current === startedScope) {
         setDossier(next);
+        invalidateResourcePrefix("job-record:");
         setNotices((existing) => ({ ...existing, [started]: success }));
         setComposer(null);
       }

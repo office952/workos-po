@@ -1,3 +1,4 @@
+import { jobRecordFixture } from './test/jobRecordFixture';
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -29,6 +30,7 @@ function fixture(options: { identified?: boolean; planned?: boolean; productionE
       planned = true;
       return json({ releaseSnapshotId: "release-1", executionPlan: { plan: { planId: "plan-1" } } });
     }
+    if (url.endsWith("/jobs/job-1/record")) return json({ record: jobRecordFixture });
     if (url.endsWith("/jobs/job-1")) return json({ job: { jobId: "job-1", productCode: "PRD-DEMO", productLabel: "Litere", inscription: "NORD", customerDisplayName: "Client sintetic", stage: planned ? "EXECUTION_IN_PROGRESS" : "ORDER_CREATED", stageLabel: planned ? "În lucru" : "Comandă confirmată", nextAction: planned ? "CONTINUE_EXECUTION" : "RELEASE_TO_PRODUCTION", orderSnapshotId: "job-1", releaseSnapshotId: planned ? "release-1" : null }, execution: { planId: planned ? "plan-1" : null } });
     if (url.includes("/execution-plans/plan-1")) return json({ executionPlan: { plan: { planId: "plan-1", sourceSnapshotId: "release-1", productLabel: "Litere", inscription: "NORD" }, tasks: [task], progress: { completed: 0, total: 1, inProgress: 1 } }, job: { jobId: "job-1" } });
     if (url.includes("/operator-session")) {
@@ -38,7 +40,7 @@ function fixture(options: { identified?: boolean; planned?: boolean; productionE
     if (url.includes("/operator-candidates")) return json({ candidates: [{ personId: "person-1", displayName: "Maria", pinConfigured: true }] });
     if (url.includes("/operator-task-inbox")) return json({ inbox: { inProgressMine: [{ ...task, planId: "plan-1", jobId: "job-1", productLabel: "Litere", inscription: "NORD", lane: "in_progress_mine" }], availableReady: [], availableNeedsProvider: [], waitingDependencies: [] } });
     if (url.endsWith("/dossier")) return json({ dossier: { taskId: "task-1", files: [], planFiles: [], instructions: [], observations: [], issues: [], history: [] } });
-    if (url.includes("material-preparation")) return json({ preparation: { jobId: "job-1", lines: [] } });
+    if (url.includes("material-preparation")) return json({ preparation: { jobId: "job-1", planId: planned ? "plan-1" : null, lines: [] } });
     return json({});
   });
   vi.stubGlobal("fetch", fetch);
@@ -55,10 +57,10 @@ describe("simplified production journey", () => {
     await user.click(await screen.findByRole("button", { name: "Confirmă comanda" }));
     await user.click(screen.getByRole("button", { name: "Da, confirm comanda" }));
     await user.click(await screen.findByRole("button", { name: "Trimite în producție" }));
-    await screen.findByRole("region", { name: "Dosarul operației selectate" });
+    await screen.findByRole("region", { name: "Orele lucrării" });
     expect(window.location.pathname).toBe("/lucrari/job-1");
-    expect(new URLSearchParams(window.location.search).get("sectiune")).toBe("operatii");
-    expect(screen.getByRole("navigation", { name: "Secțiunile lucrării" }).querySelectorAll("a")).toHaveLength(4);
+    expect(new URLSearchParams(window.location.search).get("task")).toBeNull();
+    expect(screen.getByRole("navigation", { name: "Repere în fișa lucrării" }).querySelectorAll("a")).toHaveLength(4);
     const posts = fetch.mock.calls.filter(([, init]) => init?.method === "POST").map(([url]) => String(url));
     expect(posts).toEqual(["/api/products/PRD-DEMO/quote-snapshots/q-1/confirm-order", "/api/jobs/job-1/production"]);
   });

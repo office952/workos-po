@@ -158,6 +158,7 @@ import {
   persistAssignedProvider,
   persistPlannedEffort,
   persistClaimAndStart,
+  persistWorkLeave,
   persistUniqueProviderBinding,
   persistMachineRunStart,
   persistMachineRunStop,
@@ -441,6 +442,7 @@ export type ProductSystemRuntime = {
     personId: string,
     stamp?: ProviderBindingStamp | null,
   ): TaskMutationResult;
+  leaveExecutionWork(taskId: string, personId: string, at: string): TaskMutationResult;
   bindUniqueExecutionProvider(
     taskId: string,
     stamp: ProviderBindingStamp,
@@ -1075,6 +1077,9 @@ export function createProductSystemRuntimeFromOpenDb(
         currentProviderRegistry(),
         stamp,
       );
+    },
+    leaveExecutionWork(taskId, personId, at) {
+      return persistWorkLeave(db, taskId, personId, at);
     },
     bindUniqueExecutionProvider(taskId, stamp) {
       return persistUniqueProviderBinding(db, taskId, currentProviderRegistry(), stamp);

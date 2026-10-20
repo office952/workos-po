@@ -237,3 +237,6 @@ export {
   type ProviderBindingStamp,
   type ProviderBindingState,
 } from "./providerBinding.js";
+
+export * from "./workSessions.js";
+export * from "./workParticipation.js";

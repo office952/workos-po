@@ -244,18 +244,20 @@ export function persistRetiredPerson(
   personId: string,
   retiredAt: string,
 ): PersonMutationResult {
-  const current = getPerson(db, personId);
-  if (!current) {
-    return { ok: false, error: "not_found" };
-  }
-  const retired = retirePerson(current, retiredAt, {
-    hasActiveTask: personHasInProgressTask(db, personId),
-  });
-  if (!retired.ok || retired.alreadyApplied) {
+  return db.transaction((): PersonMutationResult => {
+    const current = getPerson(db, personId);
+    if (!current) {
+      return { ok: false, error: "not_found" };
+    }
+    const retired = retirePerson(current, retiredAt, {
+      hasActiveTask: personHasInProgressTask(db, personId),
+    });
+    if (!retired.ok || retired.alreadyApplied) {
+      return retired;
+    }
+    writePerson(db, retired.person);
     return retired;
-  }
-  writePerson(db, retired.person);
-  return retired;
+  }).immediate();
 }
 
 export function persistCreatedSkill(
@@ -396,11 +398,12 @@ export function personHasInProgressTask(db: SqliteDatabase, personId: string): b
       `
       SELECT 1 AS found
       FROM execution_tasks
-      WHERE assigned_executor_id = ? AND status = 'IN_PROGRESS'
+      WHERE (assigned_executor_id = ? AND status = 'IN_PROGRESS')
+         OR EXISTS (SELECT 1 FROM execution_work_sessions WHERE person_id = ? AND ended_at IS NULL)
       LIMIT 1
     `,
     )
-    .get(personId) as { found: number } | undefined;
+    .get(personId, personId) as { found: number } | undefined;
   return Boolean(row);
 }
 
