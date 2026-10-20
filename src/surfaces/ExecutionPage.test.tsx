@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -90,6 +91,55 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 describe("ExecutionPage", () => {
+  it("keeps job identity and the operation draft while the compact selector navigates without saving", async () => {
+    const cut: TaskFixture = { taskId: "task-cut", processLabel: "Debitare", status: "IN_PROGRESS", statusLabel: "În lucru", canComplete: true, requiresCompletedQuantity: true, plannedValue: 12.5, completedQuantityLabel: null, varianceLabel: null };
+    const wire: TaskFixture = { ...cut, taskId: "task-wire", processLabel: "Cablare", status: "PLANNED", statusLabel: "Planificat", canComplete: false, requiresCompletedQuantity: false, plannedValue: null };
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      void init;
+      const url = String(input);
+      if (url.includes("/operator-session")) return jsonResponse({ operator: { personId: "per:1", displayName: "Ion Demo" } });
+      if (url.includes("/jobs/job-1")) return jsonResponse({ job: { jobId: "job-1", productCode: "LETTERS", productLabel: "Litere volumetrice", inscription: "NORD", customerDisplayName: "Client Demo", stage: "EXECUTION_IN_PROGRESS", stageLabel: "În lucru", nextAction: "CONTINUE_EXECUTION", nextActionLabel: "Continuă execuția", orderSnapshotId: "ord-1" } });
+      return jsonResponse(planPayload([cut, wire]));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    const { rerender } = render(<ExecutionPage planId="exp:1" jobId="job-1" taskId="task-cut" />);
+    expect(await screen.findByRole("heading", { name: "NORD" })).toBeInTheDocument();
+    expect(screen.getByText("Client Demo · Litere volumetrice")).toBeInTheDocument();
+    await user.type(await screen.findByLabelText("Cantitate realizată"), "11,8");
+    const oldUrl = window.location.href;
+    try {
+      await user.selectOptions(screen.getByRole("combobox", { name: "Schimbă operația" }), "task-wire");
+      expect(window.location.pathname).toBe("/executie/exp%3A1");
+      expect(new URLSearchParams(window.location.search).get("task")).toBe("task-wire");
+      expect(new URLSearchParams(window.location.search).get("job")).toBe("job-1");
+      rerender(<ExecutionPage planId="exp:1" jobId="job-1" taskId="task-wire" />);
+      await screen.findByRole("heading", { name: "04 Cablare" });
+      expect(screen.queryByLabelText("Cantitate realizată")).not.toBeInTheDocument();
+      rerender(<ExecutionPage planId="exp:1" jobId="job-1" taskId="task-cut" />);
+      expect(await screen.findByLabelText("Cantitate realizată")).toHaveValue("11,8");
+      expect(fetchMock.mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
+      const details = screen.getByText("Timpi, dependențe și diferențe").closest("details")!;
+      expect(details).not.toHaveAttribute("open");
+      await user.click(screen.getByText("Timpi, dependențe și diferențe"));
+      expect(details).toHaveAttribute("open");
+      expect(within(details).getByText("Timp efectiv")).toBeInTheDocument();
+      // Reproduce either stylesheet order: the legacy flex/grid rules caused
+      // the selected operation to shrink with short task content.
+      const style = document.createElement("style");
+      document.head.append(style);
+      try {
+        const legacy = readFileSync("src/styles/ui.css", "utf8");
+        const scoped = readFileSync("src/styles/surfaces/execution-flow.css", "utf8");
+        for (const css of [legacy + scoped, scoped + legacy]) {
+          style.textContent = css;
+          expect(getComputedStyle(document.querySelector('[data-surface="execution"].page-workspace')!).display).toBe("block");
+          expect(getComputedStyle(document.querySelector(".operational-task--current")!).width).toBe("100%");
+        }
+      } finally { style.remove(); }
+    } finally { window.history.replaceState({}, "", oldUrl); }
+  });
+
   it("captures operator actual quantity and displays server variance after reload", async () => {
     const measurable: TaskFixture = {
       taskId: "task-cut",
@@ -2010,8 +2060,8 @@ describe("ExecutionPage", () => {
     const logo = document.querySelector('[data-execution-scope="Logo"]');
     expect(logo).not.toBeNull();
     expect(within(logo as HTMLElement).getByText(/Probă uniformitate/)).toBeInTheDocument();
-    expect(screen.getByText(/Montaj litere pe panou/)).toBeInTheDocument();
-    expect(screen.getByText(/Montaj logo pe panou/)).toBeInTheDocument();
+    expect(within(document.querySelector('[data-execution-scope="Ansamblare"]') as HTMLElement).getByText(/Montaj litere pe panou/)).toBeInTheDocument();
+    expect(within(document.querySelector('[data-execution-scope="Ansamblare"]') as HTMLElement).getByText(/Montaj logo pe panou/)).toBeInTheDocument();
     expect(document.querySelectorAll(".operational-task--compact")).toHaveLength(tasks.length);
   });
 

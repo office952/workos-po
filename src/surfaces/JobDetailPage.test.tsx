@@ -64,6 +64,7 @@ describe("JobDetailPage", () => {
       style.remove();
     }
     expect(screen.getByRole("region", { name: "Situația producției" })).toBeInTheDocument();
+    expect(document.querySelector(".job-sheet__overview")).toHaveAttribute("data-has-plan", "false");
     expect(screen.getByRole("navigation", { name: "Secțiunile lucrării" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Situație" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Rezultate" })).toHaveAttribute("href", "/lucrari/job-1?sectiune=rezultate");

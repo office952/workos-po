@@ -1,5 +1,14 @@
 /* Atelier: operator identity, scannable lanes, visible reason, dense queue. */
 
+[data-surface="atelier"].page-workspace--operational {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+}
+[data-surface="atelier"].page-workspace > .ui-panel { width: 100%; }
+
 .page-workspace--operational:has(.atelier-identify) > .ui-panel--operational:only-child {
   max-width: none;
   width: 100%;
@@ -86,13 +95,15 @@
 }
 
 .atelier-lane__title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin: 0;
-  padding: 14px 16px 2px;
+  padding: 20px 24px 14px;
   color: var(--color-text-primary);
-  font: 650 12px/1.3 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font: 600 18px/1.4 var(--font-sans);
 }
+.atelier-lane__title > span { color: var(--color-text-secondary); font: 400 13px var(--font-mono); }
 
 .atelier-lane[data-lane="in_progress_mine"] .atelier-lane__title {
   color: var(--shell-signal);
@@ -116,13 +127,23 @@
   margin-top: 0;
 }
 
-.atelier-queue .worklist-row {
-  min-height: 64px;
-  padding-block: 8px;
+.atelier-queue .worklist--operational .worklist-row {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+  grid-template-areas: "identity context action";
+  min-height: 88px;
+  padding: 16px 24px;
+  gap: 12px 24px;
 }
+.atelier-queue .worklist-row__identity { grid-area: identity; }
+.atelier-queue .worklist-row__context { grid-area: context; }
+.atelier-queue .worklist-row__action { grid-area: action; }
+.atelier-queue .worklist-row__state { display: none; }
+.atelier-queue .worklist-row__context { color: var(--color-text-secondary); overflow-wrap: anywhere; }
 
 .atelier-queue .worklist-row__title {
   font-weight: 650;
+  font-size: 16px;
+  overflow-wrap: anywhere;
 }
 
 .atelier-queue .worklist-row__detail {
@@ -130,7 +151,7 @@
   margin-top: 3px;
   color: var(--color-text-primary);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .atelier-lane[data-lane="waiting_dependencies"] .worklist-row__detail,
@@ -143,7 +164,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 12px;
   border: 1px solid var(--shell-signal);
   color: var(--shell-signal);
@@ -172,6 +193,15 @@
 }
 
 @media (max-width: 768px) {
+
+  .atelier-queue .worklist--operational .worklist-row {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "identity" "context" "action";
+    gap: 6px;
+    padding: 16px;
+  }
+  .atelier-queue .worklist-row__action { justify-self: start; margin-top: 6px; }
+  .atelier-lane__title { padding: 16px; }
 
   .atelier-status {
     display: grid;

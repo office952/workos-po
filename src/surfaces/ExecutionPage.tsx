@@ -38,6 +38,7 @@ import { formatTimestamp } from "../presentation/format";
 import { resourceKeys } from "../data/resourceKeys";
 import {
   loadExecutionPlan,
+  loadJobDetail,
   loadOperatorSession,
   loadWorkcentersAdmin,
 } from "../data/routeLoaders";
@@ -68,6 +69,8 @@ import {
   presentMissingProviderGuidance,
   taskMissingProvider,
 } from "../presentation/missingProviderGuidance";
+import { navigate } from "../routing/navigate";
+import { presentJobSheetTitle, presentJobSheetSecondary } from "../presentation/jobSheetIdentity";
 import { statusTone } from "../presentation/statusTone";
 import {
   adminWorkcentersHref,
@@ -495,6 +498,11 @@ export function ExecutionPage({
   }
 
   const resolvedJobId = jobId ?? plan?.jobId ?? null;
+  const jobResource = useResource(
+    resolvedJobId ? resourceKeys.job(resolvedJobId) : null,
+    () => loadJobDetail(resolvedJobId!),
+  );
+  const job = jobResource.data?.job ?? null;
   const allComplete =
     plan !== null && plan.tasks.length > 0 && plan.tasks.every((task) => task.status === "COMPLETED");
   const currentTask = plan ? selectCurrentExecutionTask(plan.tasks, taskId) : null;
@@ -538,18 +546,18 @@ export function ExecutionPage({
       contextLabel="Execuție"
       currentHref={executionHref(planId, { taskId, jobId: resolvedJobId })}
       workspace="operational"
+      surface="execution"
       headerVariant="pilot-compact"
       eyebrow="Execuție"
-      title={plan?.inscription || plan?.productLabel || "Execuție"}
-      lead="Pornește și închide sarcinile pe care le poți lucra."
+      title={job ? presentJobSheetTitle(job) : plan?.inscription || plan?.productLabel || "Execuție"}
+      lead={job ? [job.customerDisplayName, presentJobSheetSecondary(job)].filter(Boolean).join(" · ") : undefined}
+      action={resolvedJobId ? <a className="execution-job-link" href={jobHref(resolvedJobId, { taskId: currentTask?.taskId ?? taskId })}>Fișa lucrării</a> : null}
       meta={
         plan
           ? [
               plan.priorityLabel,
               plan.targetDateLabel,
-              plan.statusLabel,
-              plan.progressLabel,
-              session.data ? session.data.displayName : identified === false ? "Operator neidentificat" : null,
+              session.data ? `Operator: ${session.data.displayName}` : identified === false ? "Operator: neidentificat" : null,
             ]
               .filter((part): part is string => Boolean(part))
               .join(" · ")
@@ -563,7 +571,7 @@ export function ExecutionPage({
         </InlineAlert>
       ) : null}
       {identified === false ? (
-        <InlineAlert tone="blocked" title="Operator neidentificat">
+        <InlineAlert tone="pending" title="Operator neidentificat">
           Intră în atelier înainte de a porni sau închide o sarcină.{" "}
           <a
             className="text-link"
@@ -588,6 +596,17 @@ export function ExecutionPage({
       ) : null}
       {plan ? (
         <PlanSummary statusLabel={plan.statusLabel} progress={plan.progress} />
+      ) : null}
+      {plan && currentTask ? (
+        <div className="execution-switcher">
+          <SelectField
+            id="execution-operation"
+            label="Schimbă operația"
+            value={currentTask.taskId}
+            options={plan.tasks.map(task => ({ value: task.taskId, label: `${task.seqLabel} · ${task.processLabel} · ${task.scopeLabel}` }))}
+            onChange={next => navigate(executionHref(planId, { taskId: next, jobId: resolvedJobId }))}
+          />
+        </div>
       ) : null}
       {currentTask ? (
         <article
@@ -868,11 +887,11 @@ export function ExecutionPage({
             </div>
             </section>
             <div className="execution-context">
-              <h3 className="execution-context__title">Stare, utilaj și materiale</h3>
-            <MeasurePair
+              <h3 className="execution-context__title">Operația pe scurt</h3>
+            {currentTask.plannedQuantityLabel || currentTask.completedQuantityLabel ? <MeasurePair
               planned={currentTask.plannedQuantityLabel ?? "Fără cantitate măsurabilă"}
-              actual={currentTask.completedQuantityLabel ?? "—"}
-            />
+              actual={currentTask.completedQuantityLabel ?? "Neînregistrat"}
+            /> : null}
             <dl className="fact-grid">
               <InfoRow
                 label="Operator"
@@ -880,10 +899,22 @@ export function ExecutionPage({
                   !sessionKnown
                     ? "Se identifică"
                     : identified
-                      ? "Identificat"
+                      ? session.data?.displayName ?? "Identificat"
                       : "Neidentificat"
                 }
               />
+              <InfoRow label="Zonă" value={currentTask.scopeLabel} />
+              <InfoRow label="Alocare" value={currentTask.assignmentLabel} />
+              {currentTask.executorLabel || currentTask.startedByLabel ? (
+                <InfoRow
+                  label="Operator sarcină"
+                  value={currentTask.executorLabel ?? currentTask.startedByLabel ?? ""}
+                />
+              ) : null}
+            </dl>
+            <details className="execution-details" key={currentTask.taskId}>
+              <summary>Timpi, dependențe și diferențe</summary>
+              <dl className="fact-grid">
               <InfoRow
                 label="Dependențe"
                 value={
@@ -894,21 +925,15 @@ export function ExecutionPage({
                       : "Fără dependențe"
                 }
               />
-              <InfoRow label="Zonă" value={currentTask.scopeLabel} />
-              <InfoRow label="Alocare" value={currentTask.assignmentLabel} />
               <InfoRow label="Timp planificat" value={currentTask.plannedTimeLabel} />
               <InfoRow label="Timp efectiv" value={currentTask.actualDurationLabel} />
               {currentTask.timeVarianceLabel ? (
                 <InfoRow label="Diferență timp" value={currentTask.timeVarianceLabel} />
               ) : null}
-              {currentTask.executorLabel || currentTask.startedByLabel ? (
-                <InfoRow
-                  label="Operator sarcină"
-                  value={currentTask.executorLabel ?? currentTask.startedByLabel ?? ""}
-                />
-              ) : null}
-              <InfoRow label="Diferență" value={currentTask.varianceLabel ?? "—"} />
-            </dl>
+                <InfoRow label="Diferență cantitate" value={currentTask.varianceLabel ?? "Neînregistrată"} />
+              </dl>
+              <p className="ui-note">Planul nu se rescrie. Actualul devine fapt istoric după confirmare.</p>
+            </details>
             {plan?.siteInstallation && currentTask.scopeLabel === "Montaj la locație" ? (
               <SiteInstallationContextPanel context={plan.siteInstallation} />
             ) : null}
@@ -978,9 +1003,6 @@ export function ExecutionPage({
               />
             ) : null}
             </div>
-            <p className="ui-note">
-              Planul nu se rescrie. Actualul devine fapt istoric după confirmare.
-            </p>
           </SurfacePanel>
           <TaskDossierPanel
             taskId={currentTask.taskId}

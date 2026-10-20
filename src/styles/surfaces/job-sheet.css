@@ -47,6 +47,15 @@
 .job-sheet > .job-sheet__body { display: flex; flex-direction: column; align-items: stretch; width: 100%; min-width: 0; gap: 24px; padding: 24px 34px 32px; }
 .job-sheet__overview { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); align-items: start; gap: 24px; }
 .job-sheet__overview > * { min-width: 0; }
+.job-sheet__overview[data-has-plan="false"] { grid-template-columns: minmax(0, 1fr); }
+.job-sheet__overview[data-has-plan="false"] > .job-sheet__situation { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 20px 32px; align-items: start; }
+.job-sheet__overview[data-has-plan="false"] .job-sheet__progress { max-width: 70ch; }
+.job-sheet__overview[data-has-plan="false"] .job-sheet__situation > .hit { grid-column: 2; grid-row: 1; min-height: 44px; }
+.job-sheet__overview[data-has-plan="false"] .job-sheet__attention { grid-column: 1 / -1; }
+@media (max-width: 768px) {
+  .job-sheet__overview[data-has-plan="false"] > .job-sheet__situation { grid-template-columns: minmax(0, 1fr); }
+  .job-sheet__overview[data-has-plan="false"] .job-sheet__situation > .hit { grid-column: 1; grid-row: auto; justify-self: start; }
+}
 .job-sheet__body > *, .job-sheet__panel > *, .job-sheet .ui-panel, .job-sheet .ui-panel__body { min-width: 0; }
 .job-sheet__panel, .job-sheet .ui-panel, .job-sheet__archive {
   padding: 24px;

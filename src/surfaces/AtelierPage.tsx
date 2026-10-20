@@ -139,17 +139,16 @@ export function AtelierPage({ jobId = null, returnTo = null }: AtelierPageProps)
       contextLabel="Atelier"
       currentHref={atelierHref({ jobId })}
       workspace="operational"
+      surface="atelier"
       eyebrow="Atelier"
       title="Atelier"
       lead={
         jobId
-          ? "Identifică operatorul. Lista arată starea acestei lucrări; pornirea rămâne pe execuție."
-          : "Identifică operatorul. Lista arată starea fiecărei sarcini; pornirea rămâne pe execuție."
+          ? "Operațiile tale pentru această lucrare."
+          : "Continuă lucrul sau alege o operație disponibilă."
       }
       status={
-        !sessionKnown ? null : currentSession ? (
-          <StatusBadge label={currentSession.displayName} tone={statusTone("workflow")} />
-        ) : (
+        !sessionKnown || currentSession ? null : (
           <StatusBadge label="Neidentificat" tone={statusTone("warning")} />
         )
       }
@@ -253,7 +252,7 @@ export function AtelierPage({ jobId = null, returnTo = null }: AtelierPageProps)
           <div className="lane-summary atelier-status">
             <p className="atelier-operator">
               <span className="atelier-operator__kicker">Operator</span>
-              <strong>Autentificat: {currentSession.displayName}</strong>
+              <strong>{currentSession.displayName}</strong>
             </p>
             {returnTo ? (
               <a className="text-link" href={returnTo}>
@@ -304,11 +303,10 @@ export function AtelierPage({ jobId = null, returnTo = null }: AtelierPageProps)
           <div className="atelier-queue">
             {laneGroups.map((group) => (
               <section key={group.lane} className="atelier-lane" data-lane={group.lane} aria-labelledby={`atelier-lane-${group.lane}`}>
-              <h2 className="atelier-lane__title" id={`atelier-lane-${group.lane}`}>{group.label}</h2>
+              <h2 className="atelier-lane__title" id={`atelier-lane-${group.lane}`}>{group.label}<span>{group.tasks.length}</span></h2>
               <Worklist
                 variant="operational"
                 label={group.label}
-                columns={["Sarcină", "Lucrare", "Stare", "Acțiune"]}
               >
                 {group.tasks.map((task) => {
                   const lane = presentInboxLane(task);
@@ -321,9 +319,8 @@ export function AtelierPage({ jobId = null, returnTo = null }: AtelierPageProps)
                         jobId: task.jobId ?? jobId,
                       })}
                       identity={`${task.seqLabel ? `${task.seqLabel} ` : ""}${task.processLabel} · ${task.scopeLabel}`}
-                      identityDetail={lane.reason}
+                      identityDetail={group.lane === "in_progress_mine" ? task.providerLabel ?? undefined : group.lane === "available_ready" ? undefined : lane.reason}
                       context={presentInboxContext(task)}
-                      state={<StatusBadge label={lane.laneLabel} tone={statusTone(lane.tone)} />}
                       actionLabel={lane.actionLabel}
                     />
                   );

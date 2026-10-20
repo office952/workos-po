@@ -300,7 +300,7 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
           {jobResource.status === "error" ? <InlineAlert tone="error" title="Lucrarea nu a putut fi actualizată">{job ? "Ultima citire rămâne afișată." : "Identitatea lucrării nu este disponibilă."}</InlineAlert> : null}
           {!job && jobResource.status !== "error" ? <LoadingFloor variant="traveler" label="Se citește lucrarea" /> : null}
           {planResource.status === "error" ? <InlineAlert tone="error" title="Planul nu a putut fi citit">Datele planului nu au putut fi actualizate.</InlineAlert> : null}
-          {job && section === "situatie" ? <div className="job-sheet__overview">
+          {job && section === "situatie" ? <div className="job-sheet__overview" data-has-plan={plan !== null}>
             <section className="job-sheet__panel job-sheet__situation" aria-label="Situația producției">
               <div className="job-sheet__progress">
                 <h2>{job.stageLabel}</h2>
