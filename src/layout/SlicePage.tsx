@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { floorplanForWorkspace, type FloorplanId } from "./floorplan";
+import "../styles/surfaces/production-workspace.css";
 import { PageHeader } from "./PageHeader";
 import { PageRegion } from "./PageRegion";
 
@@ -41,7 +42,7 @@ function densityFor(workspace: PageWorkspace): PageDensity {
 
 export type PageSurface = "cereri-registry" | "cereri-detail" | "cereri-intake" | "clients-registry" | "client-hub"
   | "catalog-registry" | "configuration-workbench" | "assembly-workbench"
-  | "quotes-registry" | "quote-detail" | "job-detail" | "atelier" | "execution";
+  | "quotes-registry" | "quote-detail" | "job-detail" | "atelier" | "execution" | "planning";
 
 type SlicePageProps = {
   contextLabel: string;

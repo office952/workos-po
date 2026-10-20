@@ -98,7 +98,7 @@
   gap: 12px;
   align-items: center;
   min-height: 28px;
-  font-size: 11px;
+  font-size: 13px;
 }
 .job-fingerprint__group > span:first-child {
   overflow-wrap: anywhere;
@@ -229,7 +229,7 @@
   padding: 5px 0;
   min-height: 34px;
   color: var(--job-action);
-  font-size: 12px;
+  font-size: 13px;
   text-align: left;
   cursor: pointer;
   line-height: 1.5;
@@ -303,7 +303,8 @@
   top: 18px;
   display: flex;
   flex-direction: column;
-  height: clamp(680px, calc(100dvh - 160px), 1060px);
+  height: min(900px, calc(100dvh - 36px));
+  min-height: 380px;
   border: 1px solid var(--job-line);
   border-top: 2px solid var(--job-ink);
   background: var(--job-paper);
@@ -366,11 +367,11 @@
 }
 .job-task-row {
   width: 100%;
-  min-height: 112px;
+  min-height: 96px;
   display: grid;
   grid-template-columns: 25px minmax(0, 1fr) 12px;
   gap: 13px;
-  padding: 19px 26px;
+  padding: 16px 20px;
   border: 0;
   border-bottom: 1px solid var(--job-line);
   background: none;
@@ -412,11 +413,11 @@
   color: var(--job-action);
 }
 .job-task-row__copy > small {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--job-muted);
 }
 .job-task-row__state {
-  font: 10px/1.6 var(--font-mono);
+  font: 12px/1.6 var(--font-sans);
   color: var(--job-muted);
 }
 .job-task-row__counts {
@@ -424,14 +425,14 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 4px 12px;
-  font: 10px/1.5 var(--font-sans);
+  font: 12px/1.5 var(--font-sans);
   color: var(--job-muted);
 }
 .job-task-row__issues {
   color: var(--job-brass);
 }
 .job-task-row__unknown {
-  font-size: 10px;
+  font-size: 13px;
   color: var(--job-muted);
 }
 .job-task-row__arrow {
@@ -445,7 +446,7 @@
 .job-task-navigator > footer {
   padding: 12px 26px;
   border-top: 1px solid var(--job-line);
-  font-size: 10px;
+  font-size: 13px;
   line-height: 1.7;
   color: var(--job-muted);
 }
@@ -527,7 +528,7 @@
   padding: 10px 18px;
   background: var(--job-action);
   color: var(--job-paper);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   text-decoration: none;
   border: 1px solid var(--job-action);
@@ -537,7 +538,7 @@
 .job-workbench__dependencies {
   padding: 10px 26px;
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.7;
   color: var(--job-muted);
   border-bottom: 1px solid var(--job-line);
@@ -550,7 +551,7 @@
   padding: 12px 26px;
   background: color-mix(in srgb, var(--job-brass) 10%, var(--job-paper));
   color: var(--job-brass);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.7;
   margin: 0;
   border-bottom: 1px solid var(--job-line);
@@ -585,7 +586,7 @@
 }
 .job-task-notes summary {
   padding: 11px 0;
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
   color: var(--job-ink);
 }
@@ -601,7 +602,7 @@
   scrollbar-width: thin;
 }
 .job-task-notes > div > p {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--job-muted);
 }
 .job-task-note {
@@ -621,14 +622,14 @@
   gap: 6px 18px;
 }
 .job-task-note strong {
-  font-size: 11px;
+  font-size: 13px;
 }
 .job-task-note header > span {
   font: 9px/1.5 var(--font-mono);
   color: var(--job-muted);
 }
 .job-task-note p {
-  font-size: 12px;
+  font-size: 13px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   line-height: 1.7;
@@ -696,14 +697,14 @@
 }
 .job-file-shelf__choices strong {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 550;
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
 .job-file-shelf__choices small {
   display: block;
-  font-size: 10px;
+  font-size: 13px;
   color: var(--job-muted);
   line-height: 1.5;
   margin-top: 5px;
@@ -711,7 +712,7 @@
 .job-file-shelf__choices > p {
   grid-column: 1/-1;
   color: var(--job-muted);
-  font-size: 12px;
+  font-size: 13px;
   margin: 0;
   padding-block: 8px;
 }
@@ -780,7 +781,7 @@
   margin: 0;
 }
 .job-document__empty p {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.8;
   max-width: 42ch;
   margin: 0;
@@ -808,11 +809,11 @@
   color: var(--job-ink);
 }
 .job-document__text p {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--job-muted);
 }
 .job-document__fallback {
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.7;
   color: var(--job-muted);
   margin: 0;
@@ -827,7 +828,7 @@
 }
 .job-file-details summary {
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--job-muted);
   min-height: 44px;
   padding-block: 7px;
@@ -847,7 +848,7 @@
 .job-file-details dt,
 .job-file-details > p,
 .job-file-details li {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--job-muted);
 }
 .job-file-details li {
@@ -896,7 +897,7 @@
 }
 .job-workbench-dialog__section > p,
 .job-workbench-dialog__draft {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-secondary);
   line-height: 1.8;
   margin: 0;
@@ -930,7 +931,7 @@
   font-size: 13px;
 }
 .job-workbench-dialog__file span {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--color-text-secondary);
 }
 .job-sheet-completed,
@@ -976,7 +977,7 @@
     gap: 14px 28px;
   }
   .job-task-workbench {
-    grid-template-columns: 350px minmax(0, 1fr);
+    grid-template-columns: 300px minmax(0, 1fr);
     gap: 24px;
   }
   .job-task-row {
@@ -1081,6 +1082,7 @@
   .job-task-navigator {
     position: static;
     height: auto;
+    min-height: 0;
   }
   .job-task-navigator > header {
     padding: 16px 20px;
@@ -1227,3 +1229,14 @@
     transition: background-color 100ms ease;
   }
 }
+
+.job-task-navigator__list h3 { position: sticky; top: 0; z-index: 1; font-size: 12px; padding-inline: 20px; }
+.job-task-messages__actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.job-task-row__unknown { display: none; }
+.job-task-row__seq { font-size: 13px; }
+.job-task-row__counts { line-height: 1.6; }
+.job-task-context__header h2 { letter-spacing: -.025em; }
+.job-task-context__status { display: inline-flex; align-items: center; padding: 4px 10px; border: 1px solid var(--job-line); border-radius: var(--radius-badge); }
+.job-task-workbench .job-workbench__primary { min-height: 44px; padding: 12px 18px; font-size: 14px; }
+.job-task-workbench .job-task-messages__actions .job-workbench__issue { border-color: var(--job-brass); }
+.job-document__empty { border-block: 1px dashed var(--job-line); background: var(--job-panel); }

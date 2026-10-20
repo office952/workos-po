@@ -107,6 +107,12 @@ describe("ExecutionPage", () => {
     expect(await screen.findByRole("heading", { name: "NORD" })).toBeInTheDocument();
     expect(screen.getByText("Client Demo · Litere volumetrice")).toBeInTheDocument();
     await user.type(await screen.findByLabelText("Cantitate realizată"), "11,8");
+    const outlineSearch = screen.getByRole("searchbox", { name: "Caută în operații" });
+    await user.type(outlineSearch, "Cablare");
+    expect(screen.getByRole("heading", { name: "01 Debitare" })).toBeInTheDocument();
+    expect(document.querySelector('.operational-task--compact[data-task-id="task-cut"]')).toBeNull();
+    expect(screen.getByLabelText("Cantitate realizată")).toHaveValue("11,8");
+    await user.clear(outlineSearch);
     const oldUrl = window.location.href;
     try {
       await user.selectOptions(screen.getByRole("combobox", { name: "Schimbă operația" }), "task-wire");

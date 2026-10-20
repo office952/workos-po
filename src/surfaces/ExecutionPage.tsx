@@ -69,6 +69,7 @@ import {
   presentMissingProviderGuidance,
   taskMissingProvider,
 } from "../presentation/missingProviderGuidance";
+import { matchesSearch } from "../presentation/listFilter";
 import { navigate } from "../routing/navigate";
 import { presentJobSheetTitle, presentJobSheetSecondary } from "../presentation/jobSheetIdentity";
 import { statusTone } from "../presentation/statusTone";
@@ -274,6 +275,7 @@ export function ExecutionPage({
   );
   const plan = planResource.data ?? null;
   const identified = session.status === "success" ? session.data !== null : null;
+  const [outlineQuery, setOutlineQuery] = useState("");
   const [actionState, setActionState] = useState<"idle" | "pending" | "error">("idle");
   const [actionError, setActionError] = useState<string | null>(null);
   const [actualDrafts, setActualDrafts] = useState<Record<string, string>>({});
@@ -522,6 +524,8 @@ export function ExecutionPage({
   const actionableTask = plan ? firstActionableTask(plan.tasks) : null;
   const sessionKnown = session.status === "success";
   const outlineTaskId = currentTask?.taskId ?? null;
+  const outlineTasks = (plan?.tasks ?? []).filter(task => matchesSearch(outlineQuery, [task.processLabel, task.scopeLabel, task.assignmentLabel, task.executorLabel ?? ""]));
+  const outlineTaskIds = new Set(outlineTasks.map(task => task.taskId));
 
   useEffect(() => {
     if (!outlineTaskId) {
@@ -857,6 +861,7 @@ export function ExecutionPage({
               ) : null}
               {currentTask.canStartMachineRun ? (
                 <Button
+                  variant="secondary"
                   disabled={actionState === "pending" || identified !== true}
                   onClick={() => void startRun(currentTask)}
                 >
@@ -865,6 +870,7 @@ export function ExecutionPage({
               ) : null}
               {currentTask.canStopMachineRun ? (
                 <Button
+                  variant="secondary"
                   disabled={actionState === "pending" || identified !== true}
                   onClick={() => void stopRun(currentTask)}
                 >
@@ -1028,10 +1034,18 @@ export function ExecutionPage({
       ) : null}
       {plan ? (
         <Worklist variant="operational" label="Planul de execuție">
+          <div className="execution-outline__header">
+            <h2>Operațiile lucrării</h2>
+            <label className="production-search">
+              <span className="u-visually-hidden">Caută în operații</span>
+              <input type="search" value={outlineQuery} placeholder="Caută o operație" onChange={event => setOutlineQuery(event.target.value)} />
+            </label>
+          </div>
           {executionGroups(plan.tasks).map((group) => (
-            <section key={group.label ?? "plan"} data-execution-scope={group.label ?? undefined}>
+
+            <section key={group.label ?? "plan"} hidden={!group.tasks.some(task => outlineTaskIds.has(task.taskId))} data-execution-scope={group.label ?? undefined}>
               {group.label ? <h2 className="section-label">{group.label}</h2> : null}
-              {group.tasks.map((task) => {
+              {group.tasks.filter(task => outlineTaskIds.has(task.taskId)).map((task) => {
                 const facts = compactTaskFacts(task);
                 return (
                   <article
@@ -1065,6 +1079,7 @@ export function ExecutionPage({
               })}
             </section>
           ))}
+          {plan.tasks.length > 0 && outlineTasks.length === 0 ? <p className="execution-outline__empty">Nicio operație pentru această căutare.</p> : null}
         </Worklist>
       ) : null}
       {plan ? (

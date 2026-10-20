@@ -159,16 +159,6 @@ export function TaskDossierPanel({
     ...(current?.files ?? []),
     ...(current?.planFiles ?? []),
   ]);
-  const hasContent = Boolean(
-    current &&
-      (current.instructions.length > 0 ||
-        current.observations.length > 0 ||
-        current.issues.length > 0 ||
-        current.files.length > 0 ||
-        current.planFiles.some((item) => !item.linkedToTask) ||
-        current.history.length > 0),
-  );
-
   async function run(action: () => Promise<TaskDossier>, success: string): Promise<boolean> {
     const started = taskId;
     setPendingTaskId(started);
@@ -202,6 +192,7 @@ export function TaskDossierPanel({
   return (
     <aside className="task-dossier" aria-label="Dosar tehnic">
       <section className="task-dossier__messages" aria-label="Mesaje pentru această operație">
+      <p className="task-dossier__eyebrow">Dosarul operației</p>
       <h3>Mesaje pentru {taskLabel}</h3>
       <div className="task-dossier__actions">
         <Button
@@ -214,6 +205,7 @@ export function TaskDossierPanel({
         <Button
           variant="secondary"
           disabled={pending || !operatorIdentified}
+          className="task-dossier__problem"
           onClick={() => openComposer("issue")}
         >
           Semnalează problemă
@@ -429,14 +421,14 @@ export function TaskDossierPanel({
           </Button>
         </form>
       ) : null}
-      {hasContent && current ? (
+      {current ? (
         <div className="task-dossier__body">
           <DossierSection title="Instrucțiuni" empty={null}>
             {current.instructions.map((entry) => (
               <DossierNote key={entry.entryId} entry={entry} />
             ))}
           </DossierSection>
-          <DossierSection title="Fișierele operației" empty={null}>
+          <DossierSection title="Fișierele operației" empty="Nu sunt fișiere asociate acestei operații.">
             {current.files.map((item) => (
               <FileRow
                 key={item.artifactId}
@@ -454,6 +446,7 @@ export function TaskDossierPanel({
               />
             ))}
           </DossierSection>
+          {previewFile ? <JobArtifactPreview file={previewFile} /> : null}
           {current.planFiles.some((item) => !item.linkedToTask) ? (
             <DossierSection title="Fișierele generale ale lucrării" empty={null}>
               {current.planFiles
@@ -494,8 +487,8 @@ export function TaskDossierPanel({
               <DossierNote key={entry.entryId} entry={entry} problem />
             ))}
           </DossierSection>
-          <section aria-label="Istoricul operației">
-            <h3>Istoricul operației</h3>
+          <details className="task-dossier__archive" aria-label="Istoricul operației">
+            <summary>Istoricul operației</summary>
             {current.history.length === 0 ? (
               <p className="task-dossier__meta">Nu există evenimente în dosarul acestei operații.</p>
             ) : (
@@ -507,7 +500,7 @@ export function TaskDossierPanel({
                 </p>
               ))
             )}
-          </section>
+          </details>
           {laterVersions.length > 0 ? (
             <p className="job-workbench__revision">
               Există o versiune ulterioară a documentului selectat:{" "}
@@ -528,7 +521,6 @@ export function TaskDossierPanel({
               ))}
             </p>
           ) : null}
-          <JobArtifactPreview file={previewFile} />
         </div>
       ) : null}
     </aside>

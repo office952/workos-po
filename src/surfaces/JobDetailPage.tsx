@@ -311,14 +311,7 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
               {job.stage === "EXECUTION_COMPLETED" ? <p>Producția este finalizată. Livrarea și montajul nu sunt confirmate de această stare.</p> : null}
               {job.attentionLabel ? <p className="job-sheet__warning">{job.attentionLabel}</p> : null}
               {job.nextAction === "RELEASE_TO_PRODUCTION" ? <Button disabled={actionState === "pending"} onClick={() => void release()}>Eliberează pentru producție</Button> : job.nextAction === "CREATE_EXECUTION_PLAN" ? <Button disabled={actionState === "pending"} onClick={() => void createPlan()}>Creează planul de execuție</Button> : null}
-              {(attentionTasks.length > 0 || materialSummary.length > 0) ? <div className="job-sheet__attention">
-                <h3>De verificat</h3>
-                <div className="job-sheet__attention-grid">
-                  {attentionTasks.slice(0, 4).map(task => <article className="job-sheet__warning" key={task.taskId}><strong>{task.seqLabel} · {task.processLabel}</strong>{jobTaskNotes(task).map(line => <p key={line}>{line}</p>)}<a className="job-sheet__link-button" href={operationHref(task.taskId)}>Vezi operația</a></article>)}
-                  {materialSummary.length ? <article className="job-sheet__warning" data-testid="material-preparation-summary">{materialSummary.map(line => <p key={line}>{line}</p>)}<a className="job-sheet__link-button" href={sectionHref("materiale")}>Vezi materialul în această fișă</a></article> : null}
-                </div>
-                {attentionTasks.length > 4 ? <a className="job-sheet__text-link" href={sectionHref("plan")}>Vezi toate cele {attentionTasks.length} operații de verificat</a> : null}
-              </div> : null}
+
             </section>
             {planPending ? <LoadingFloor variant="facts" label="Se citește planul de execuție" rows={3} /> : null}
             {plan ? <section aria-label="Activitate" className="job-sheet__activity"><h2>Activitate</h2>
@@ -330,6 +323,14 @@ export function JobDetailPage({ jobId, taskId = null, section = taskId ? "operat
               </article>)}</div> : <p className="job-sheet__secondary">Nicio operație începută în planul lucrării.</p>}
               <div className="job-sheet__continuation"><a className="job-sheet__text-link" href={executionHref(plan.planId, { jobId, taskId: selectedTask?.taskId })}>Deschide execuția</a><a className="job-sheet__text-link" href={atelierHref({ jobId, returnTo: sectionHref("situatie") })}>Deschide atelierul lucrării</a></div>
             </section> : null}
+              {(attentionTasks.length > 0 || materialSummary.length > 0) ? <section className="job-sheet__panel job-sheet__attention" aria-label="De verificat">
+                <h3>De verificat</h3>
+                <div className="job-sheet__attention-grid">
+                  {attentionTasks.slice(0, 4).map(task => <article className="job-sheet__warning" key={task.taskId}><strong>{task.seqLabel} · {task.processLabel}</strong>{jobTaskNotes(task).map(line => <p key={line}>{line}</p>)}<a className="job-sheet__link-button" href={operationHref(task.taskId)}>Vezi operația</a></article>)}
+                  {materialSummary.length ? <article className="job-sheet__warning" data-testid="material-preparation-summary">{materialSummary.map(line => <p key={line}>{line}</p>)}<a className="job-sheet__link-button" href={sectionHref("materiale")}>Vezi materialul în această fișă</a></article> : null}
+                </div>
+                {attentionTasks.length > 4 ? <a className="job-sheet__text-link" href={sectionHref("plan")}>Vezi toate cele {attentionTasks.length} operații de verificat</a> : null}
+              </section> : null}
           </div> : null}
           {job && plan ? <div className="job-sheet__plan" hidden={section !== "plan"}><JobOperationPlan key={`${jobId}:${plan.planId}`} jobId={jobId} plan={plan} /></div> : null}
           {job && section === "plan" && !plan ? planPending ? <LoadingFloor variant="facts" label="Se citește planul" rows={5} /> : planResource.status !== "error" ? <EmptyState title="Planul de execuție nu există încă." /> : null : null}

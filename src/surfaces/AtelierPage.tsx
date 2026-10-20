@@ -25,6 +25,7 @@ import { SlicePage } from "../layout/SlicePage";
 import { presentInboxContext, presentInboxLane, inboxLaneLabel } from "../presentation/inboxLane";
 import type { InboxTaskLane } from "../api/types";
 import "../styles/surfaces/atelier.css";
+import { matchesSearch } from "../presentation/listFilter";
 import { statusTone } from "../presentation/statusTone";
 import { atelierHref, executionHref } from "../routing/appRoute";
 
@@ -40,6 +41,7 @@ export function AtelierPage({ jobId = null, returnTo = null }: AtelierPageProps)
     session.status === "success" && session.data ? resourceKeys.operatorInbox() : null,
     loadOperatorInbox,
   );
+  const [query, setQuery] = useState("");
   const [personId, setPersonId] = useState("");
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -57,6 +59,7 @@ export function AtelierPage({ jobId = null, returnTo = null }: AtelierPageProps)
   }, [inbox.data, jobId]);
   const selectedPersonId = personId || people[0]?.personId || "";
   const selected = people.find((item) => item.personId === selectedPersonId) ?? null;
+  const shownTasks = tasks.filter(task => matchesSearch(query, [presentInboxContext(task), task.processLabel, task.scopeLabel, task.providerLabel ?? "", presentInboxLane(task).reason]));
   const laneOrder: InboxTaskLane[] = [
     "in_progress_mine",
     "available_ready",
@@ -68,7 +71,7 @@ export function AtelierPage({ jobId = null, returnTo = null }: AtelierPageProps)
     .map((lane) => ({
       lane,
       label: inboxLaneLabel(lane),
-      tasks: tasks.filter((task) => task.lane === lane),
+      tasks: shownTasks.filter((task) => task.lane === lane),
     }))
     .filter((group) => group.tasks.length > 0);
   const inProgressCount = tasks.filter((task) => task.lane === "in_progress_mine").length;
@@ -140,6 +143,7 @@ export function AtelierPage({ jobId = null, returnTo = null }: AtelierPageProps)
       currentHref={atelierHref({ jobId })}
       workspace="operational"
       surface="atelier"
+      headerVariant="pilot-compact"
       eyebrow="Atelier"
       title="Atelier"
       lead={
@@ -300,10 +304,12 @@ export function AtelierPage({ jobId = null, returnTo = null }: AtelierPageProps)
               ) : null}
             </div>
           ) : null}
+          <div className="atelier-toolbar"><label className="production-search"><span className="u-visually-hidden">Caută în atelier</span><input type="search" placeholder="Caută lucrare, client sau operație" value={query} onChange={event => setQuery(event.target.value)} /></label><span role="status">{shownTasks.length} din {tasks.length} operații</span></div>
+          {query && shownTasks.length === 0 ? <EmptyState title="Nicio operație pentru această căutare." /> : null}
           <div className="atelier-queue">
             {laneGroups.map((group) => (
               <section key={group.lane} className="atelier-lane" data-lane={group.lane} aria-labelledby={`atelier-lane-${group.lane}`}>
-              <h2 className="atelier-lane__title" id={`atelier-lane-${group.lane}`}>{group.label}<span>{group.tasks.length}</span></h2>
+              <h2 className="atelier-lane__title" id={`atelier-lane-${group.lane}`}>{group.label}{" "}<span>{group.tasks.length}</span></h2>
               <Worklist
                 variant="operational"
                 label={group.label}

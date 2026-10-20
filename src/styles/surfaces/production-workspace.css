@@ -1,0 +1,36 @@
+/* Shared presentation for the existing production surfaces. Business states
+   remain supplied by their transport models. */
+[data-surface="planning"].page-workspace,
+[data-surface="atelier"].page-workspace,
+[data-surface="execution"].page-workspace {
+  max-width: none;
+  width: 100%;
+  min-width: 0;
+}
+:is([data-surface="planning"], [data-surface="atelier"], [data-surface="execution"]) > .page-header.page-header--pilot-compact {
+  min-height: 0;
+  grid-template-rows: auto;
+  padding-block: 24px 20px;
+  background: transparent;
+}
+:is([data-surface="planning"], [data-surface="atelier"], [data-surface="execution"]) > .page-header.page-header--pilot-compact .page-header__title {
+  font: 600 clamp(26px, 2.2vw, 34px)/1.2 var(--font-sans);
+  letter-spacing: -.025em;
+}
+:is([data-surface="planning"], [data-surface="atelier"], [data-surface="execution"]) .hit > .button { min-height: 44px; padding: 10px 16px; font-size: 14px; line-height: 1.3; }
+:is([data-surface="planning"], [data-surface="atelier"], [data-surface="execution"]) .empty-state { padding: 24px; font-weight: 400; }
+.production-search { display: flex; align-items: center; min-width: 0; min-height: 46px; padding: 0 14px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); background: var(--color-surface); }
+.production-search input { width: 100%; min-width: 0; min-height: 44px; padding: 8px 0; border: 0; outline: 0; background: transparent; color: var(--color-text-primary); font: 400 14px/1.4 var(--font-sans); }
+.production-search:focus-within { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+.production-search input::placeholder { color: var(--color-text-secondary); }
+:is([data-surface="planning"], [data-surface="atelier"], [data-surface="execution"], .job-sheet) :is(a, button, summary, select, input, textarea):focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 3px; }
+@media (max-width: 767px) {
+  :is([data-surface="planning"], [data-surface="atelier"], [data-surface="execution"]) > .page-header.page-header--pilot-compact { grid-template-rows: auto; min-height: 0; padding-block: 20px 16px; }
+}
+
+[data-surface="atelier"] > .page-header.page-header--pilot-compact { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "copy aside"; gap: 24px; }
+[data-surface="atelier"] > .page-header .page-header__aside { display: flex; contain: none; justify-content: flex-end; }
+@media (max-width: 767px) {
+  [data-surface="atelier"] > .page-header.page-header--pilot-compact { grid-template-columns: minmax(0, 1fr); grid-template-areas: "copy" "aside"; gap: 12px; }
+  [data-surface="atelier"] > .page-header .page-header__aside { justify-content: flex-start; }
+}
