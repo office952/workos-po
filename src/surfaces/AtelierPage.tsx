@@ -161,7 +161,7 @@ export function AtelierPage({ jobId = null, returnTo = null, planId = null, task
           : "Continuă lucrul sau alege o operație disponibilă."
       }
       status={
-        !sessionKnown || currentSession ? null : (
+        currentSession && planId ? <span className="atelier-current-operator">Operator: <strong>{currentSession.displayName}</strong></span> : !sessionKnown || currentSession ? null : (
           <StatusBadge label="Neidentificat" tone={statusTone("warning")} />
         )
       }

@@ -60,7 +60,7 @@ describe("simplified production journey", () => {
     await screen.findByRole("region", { name: "Orele lucrării" });
     expect(window.location.pathname).toBe("/lucrari/job-1");
     expect(new URLSearchParams(window.location.search).get("task")).toBeNull();
-    expect(screen.getByRole("navigation", { name: "Repere în fișa lucrării" }).querySelectorAll("a")).toHaveLength(4);
+    expect(screen.getByRole("navigation", { name: "Repere în fișa lucrării" }).querySelectorAll("a")).toHaveLength(5);
     const posts = fetch.mock.calls.filter(([, init]) => init?.method === "POST").map(([url]) => String(url));
     expect(posts).toEqual(["/api/products/PRD-DEMO/quote-snapshots/q-1/confirm-order", "/api/jobs/job-1/production"]);
   });

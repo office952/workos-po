@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { resetResourceCache } from '../data/resourceCache';
@@ -6,13 +6,14 @@ import { jobRecordFixture } from '../test/jobRecordFixture';
 import { JobDetailPage } from './JobDetailPage';
 vi.mock('../session/CloudSessionContext', () => ({ useCloudSession: () => ({ ready: true, unavailable: false, mode: 'single_plane', user: null, organization: null }) }));
 afterEach(() => { vi.unstubAllGlobals(); resetResourceCache(); });
-function fixture(options: { finished?: boolean; planned?: boolean; invalidRecord?: boolean } = {}) {
+function fixture(options: { finished?: boolean; planned?: boolean; invalidRecord?: boolean; operator?: boolean } = {}) {
   const fetch = vi.fn((input: RequestInfo, init?: RequestInit) => {
     const url = String(input);
     let body: unknown = {};
     if (url.endsWith('/jobs/job-1/record')) body = options.invalidRecord ? {} : { record: jobRecordFixture };
     else if (url.endsWith('/jobs/job-1')) body = { job: { jobId: 'job-1', kind: 'ASSEMBLY', productCode: 'assembly', productLabel: 'Panou și litere', inscription: 'NORD', customerDisplayName: 'Client sintetic', stage: options.finished ? 'EXECUTION_COMPLETED' : 'IN_EXECUTION', stageLabel: 'În lucru', progressLabel: options.finished ? '2 / 2' : '0 / 2', nextAction: 'CONTINUE_EXECUTION', orderSnapshotId: 'order', releaseSnapshotId: 'release' }, execution: { planId: options.planned === false ? null : 'plan-1' } };
     else if (url.includes('/execution-plans/plan-1')) body = { executionPlan: { plan: { planId: 'plan-1', productLabel: 'Panou și litere', inscription: 'NORD' }, progress: { completed: 0, total: 2 }, tasks: jobRecordFixture.hours!.tasks.map(t => ({ ...t, waitingFor: [], eligibleProviders: [] })) } };
+    else if (url.includes('/operator-session') && options.operator) body = { operator: { personId: 'ion', displayName: 'Ion' } };
     else if (url.includes('material-preparation')) body = { preparation: { jobId: 'job-1', planId: null, lines: [] } };
     else if (url.endsWith('/dossier')) body = { dossier: { taskId: url.includes('task-1') ? 'task-1' : 'task-2', files: [], planFiles: [], instructions: [], observations: [], issues: [], history: [] } };
     void init;
@@ -26,7 +27,7 @@ describe('job record page', () => {
     expect(await screen.findByRole('table', { name: 'Fișiere, utilizări și autorii înregistrărilor' })).toBeVisible();
     expect(screen.getByRole('region', { name: 'Orele lucrării' })).toBeVisible();
     expect(screen.getByText('A ieșit din operație')).toBeVisible();
-    expect(screen.getByRole('navigation', { name: 'Repere în fișa lucrării' }).querySelectorAll('a')).toHaveLength(4);
+    expect(screen.getByRole('navigation', { name: 'Repere în fișa lucrării' }).querySelectorAll('a')).toHaveLength(5);
     expect(screen.queryByRole('tab')).toBeNull();
     expect(fetch.mock.calls.some(([url]) => String(url).endsWith('/dossier'))).toBe(false);
     expect(fetch.mock.calls.every(([, init]) => !init?.method || init.method === 'GET')).toBe(true);
@@ -52,6 +53,22 @@ describe('job record page', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: '01 · Lipire' })).toHaveFocus());
     expect(screen.getByRole('link', { name: 'Deschide operația în Atelier' })).toHaveAttribute('href', '/atelier?job=job-1&plan=plan-1&task=task-1');
     expect(await screen.findByText('A ieșit din operație')).toBeVisible();
+  });
+  it('preserves an unsaved dossier and focus when the whole-job report arrives later', async () => {
+    const original = fixture({ operator: true });
+    let finish!: (response: unknown) => void;
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo, init?: RequestInit) => String(input).endsWith('/jobs/job-1/record')
+      ? new Promise(resolve => { finish = resolve; }) : original(input, init)));
+    const user = userEvent.setup(); render(<JobDetailPage jobId="job-1" taskId="task-1"/>);
+    await screen.findByRole('region', { name: 'Dosarul operației selectate' });
+    await user.click(await screen.findByRole('button', { name: 'Adaugă observație' }));
+    const note = screen.getByLabelText('Observație'); await user.type(note, 'Ciornă nesalvată');
+    expect(screen.queryByText('Planul de execuție nu există încă.')).toBeNull();
+    await act(async () => { finish({ ok: true, status: 200, json: async () => ({ record: jobRecordFixture }) }); });
+    await screen.findByRole('table', { name: 'Fișiere, utilizări și autorii înregistrărilor' });
+    expect(screen.getByLabelText('Observație')).toBe(note);
+    expect(note).toHaveValue('Ciornă nesalvată'); expect(note).toHaveFocus();
+    expect(screen.getByRole('region', { name: 'Orele lucrării' })).toContainElement(screen.getByRole('region', { name: 'Dosarul operației selectate' }));
   });
   it('reports invalid record responses as unavailable and provides retry instead of perpetual loading', async () => {
     const fetch = fixture({ invalidRecord: true }); const user = userEvent.setup(); render(<JobDetailPage jobId="job-1"/>);

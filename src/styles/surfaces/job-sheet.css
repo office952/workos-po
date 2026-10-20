@@ -32,8 +32,8 @@
 .job-sheet__eyebrow { margin: 0 0 4px; font: 500 11px/1.4 var(--font-mono); color: var(--color-text-kicker); text-transform: uppercase; }
 .job-sheet h1 { margin: 0 0 4px; font: 600 clamp(26px, 2.2vw, 34px)/1.2 var(--font-sans); letter-spacing: -.02em; overflow-wrap: anywhere; }
 .job-sheet__identity > p:last-child { margin: 0; color: var(--color-text-secondary); }
-.job-sheet__header-action { flex-shrink: 0; }
-.job-sheet__header-action .job-sheet__link-button { min-width: 260px; }
+.job-sheet__header-action { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 12px; flex: 0 1 480px; }
+.job-sheet__header-action > strong { flex-basis: 100%; text-align: right; font-size: 14px; }
 .job-sheet__planning { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 32px; margin-top: 12px; color: var(--color-text-secondary); }
 .job-sheet__planning-editor { flex-basis: auto; min-width: 0; }
 .job-sheet__planning-editor summary { color: var(--job-sheet-action); }
@@ -150,6 +150,9 @@
 .job-sheet__results-table th:not(:first-child) { width: 17.5%; }
 @media (max-width: 1000px) {
   .job-sheet__header { padding-inline: 28px; }
+  .job-sheet__identity-row { align-items: start; flex-direction: column; gap: 16px; }
+  .job-sheet__header-action { flex-basis: auto; justify-content: flex-start; }
+  .job-sheet__header-action > strong { flex-basis: auto; text-align: left; }
   .job-sheet > .job-sheet__body { padding-inline: 24px; }
   .job-sheet__overview { grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); }
   .job-sheet__tabs { padding-inline: 24px; gap: 0; }
@@ -238,7 +241,7 @@
 .job-sheet__operations .job-plan__table-wrap { max-height: 440px; overflow: auto; }
 .job-sheet__operations .job-plan__table thead { position: sticky; top: 0; background: var(--color-surface); z-index: 1; }
 .job-sheet__operations tr[data-selected="true"] { box-shadow: inset 3px 0 0 var(--shell-signal); background: var(--color-surface); }
-.job-sheet__selected-operation { min-width: 0; padding-top: 24px; border-top: 1px solid var(--color-border); scroll-margin-top: 24px; }
+.job-sheet__selected-operation { min-width: 0; padding: 20px; margin-bottom: 24px; border: 1px solid var(--color-border-strong); border-left: 3px solid var(--job-sheet-action); border-radius: var(--radius-control); background: var(--color-surface-raised); scroll-margin-top: 24px; }
 .job-sheet__selected-operation > header { margin-bottom: 16px; }
 .job-sheet__selected-operation h2 { margin: 0 0 8px; }
 .job-sheet__source-details { padding: 20px 0; border-top: 1px solid var(--color-border); }

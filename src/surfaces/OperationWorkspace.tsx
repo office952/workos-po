@@ -563,7 +563,7 @@ export function OperationWorkspace({
         </div>
         {resolvedJobId ? <a className="text-link" href={jobHref(resolvedJobId, { section: "operatii", taskId })}>Fișa lucrării</a> : null}
       </header>
-      <div className="execution-floor">
+      <div className="execution-floor" data-explicit-task={Boolean(taskId)}>
       {planResource.status === "error" && !plan ? (
         <InlineAlert tone="error" title="Planul nu a putut fi citit">
           Planul de execuție nu este disponibil.
@@ -615,19 +615,30 @@ export function OperationWorkspace({
           className="operational-task operational-task--current"
           data-task-id={currentTask.taskId}
         >
+          <header className="execution-operation-heading">
+            <div><p className="section-label">{currentTask.scopeLabel}</p><h2>{currentTask.seqLabel} {currentTask.processLabel}</h2><p>{presentCurrentTaskRole(currentTask, actionableTask)}</p></div>
+            <div className="execution-operation-heading__actions"><StatusBadge label={currentTask.statusLabel} tone={taskStatusKind(currentTask)}/><a className="text-link" href="#execution-actions">Lucrul meu ↓</a></div>
+          </header>
+          <TaskDossierPanel
+            taskId={currentTask.taskId}
+            taskLabel={`${currentTask.seqLabel} ${currentTask.processLabel}`}
+            canInstruct={owner}
+            operatorIdentified={identified === true}
+            canWriteFiles={owner || identified === true}
+            sessionScope={[
+              planId,
+              cloud.user?.email ?? "",
+              cloud.organization?.organizationId ?? "",
+              String(readCloudBoundaryVersion()),
+              session.data?.personId ?? "",
+            ].join("|")}
+          />
           <SurfacePanel
             variant="operational"
-            title={`${currentTask.seqLabel} ${currentTask.processLabel}`}
-            description={presentCurrentTaskRole(currentTask, actionableTask)}
-            status={
-              <StatusBadge
-                label={currentTask.statusLabel}
-                tone={taskStatusKind(currentTask)}
-              />
-            }
+            title="Lucrul meu"
             label={`${currentTask.seqLabel} ${currentTask.processLabel}`}
           >
-            <section className="execution-next" data-testid="execution-next">
+            <section id="execution-actions" tabIndex={-1} className="execution-next" data-testid="execution-next">
               <h3 className="execution-next__title">Următorul pas</h3>
               {currentTask.activeParticipantsLabel ? <p>Lucrează acum: {currentTask.activeParticipantsLabel}</p> : null}
               <p className="execution-next__reason">{currentActionReason}</p>
@@ -830,6 +841,24 @@ export function OperationWorkspace({
                 ) : null}
               </div>
             ) : null}
+            {canEditActualConsumption(currentTask) ? (
+              <ExecutionActualConsumptionFields
+                taskId={currentTask.taskId}
+                plannedResources={currentTask.plannedResources}
+                drafts={resourceActualDrafts}
+                disabled={actionState === "pending"}
+                onChange={(resourceId, value) => {
+                  setResourceActualDrafts((currentDrafts) => ({
+                    ...currentDrafts,
+                    [actualConsumptionDraftKey(currentTask.taskId, resourceId)]: value,
+                  }));
+                }}
+              />
+            ) : (
+              <ExecutionActualConsumptionHistory
+                actualConsumption={currentTask.actualConsumption}
+              />
+            )}
             {currentTask.qualityControl ? (
               <QualityControlPanel
                 task={currentTask}
@@ -948,24 +977,6 @@ export function OperationWorkspace({
             {currentTask.operatorRelation === "not_eligible" ? (
               <p>Alt operator trebuie să preia această sarcină.</p>
             ) : null}
-            {canEditActualConsumption(currentTask) ? (
-              <ExecutionActualConsumptionFields
-                taskId={currentTask.taskId}
-                plannedResources={currentTask.plannedResources}
-                drafts={resourceActualDrafts}
-                disabled={actionState === "pending"}
-                onChange={(resourceId, value) => {
-                  setResourceActualDrafts((currentDrafts) => ({
-                    ...currentDrafts,
-                    [actualConsumptionDraftKey(currentTask.taskId, resourceId)]: value,
-                  }));
-                }}
-              />
-            ) : (
-              <ExecutionActualConsumptionHistory
-                actualConsumption={currentTask.actualConsumption}
-              />
-            )}
             {currentTask.materialBlockLabel ? (
               <InlineAlert tone="error" title="Material">
                 {currentTask.materialBlockLabel}
@@ -1012,20 +1023,7 @@ export function OperationWorkspace({
             ) : null}
             </div>
           </SurfacePanel>
-          <TaskDossierPanel
-            taskId={currentTask.taskId}
-            taskLabel={`${currentTask.seqLabel} ${currentTask.processLabel}`}
-            canInstruct={owner}
-            operatorIdentified={identified === true}
-            canWriteFiles={owner || identified === true}
-            sessionScope={[
-              planId,
-              cloud.user?.email ?? "",
-              cloud.organization?.organizationId ?? "",
-              String(readCloudBoundaryVersion()),
-              session.data?.personId ?? "",
-            ].join("|")}
-          />
+
         </article>
       ) : null}
       {!plan && planResource.status !== "error" ? (
@@ -1035,7 +1033,7 @@ export function OperationWorkspace({
           </SurfacePanel>
         </article>
       ) : null}
-      {plan ? (
+      {plan && !taskId ? (
         <Worklist variant="operational" label="Planul de execuție">
           <div className="execution-outline__header">
             <h2>Operațiile lucrării</h2>

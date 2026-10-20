@@ -54,7 +54,7 @@ export function JobDetailPage({ jobId, taskId = null, section }: Props) {
   useEffect(() => {
     if (!report.data || !section || taskId) return;
     const value = canonicalJobSection(section);
-    const id = value === 'documente' ? 'fisiere' : value === 'operatii' || value === 'rezultate' ? 'ore' : null;
+    const id = value === 'documente' ? 'fisiere' : value === 'operatii' ? 'ore' : value === 'rezultate' ? 'rezultate' : null;
     if (id) document.getElementById(id)?.scrollIntoView?.({ block: 'start' });
   }, [report.data, section, taskId]);
   const selectedTaskId = selectedTask?.taskId;
@@ -82,6 +82,7 @@ export function JobDetailPage({ jobId, taskId = null, section }: Props) {
     finally { setPending(false); }
   }
   const operationHref = (id: string) => jobHref(jobId, { taskId: id, section: 'operatii' });
+  const operationDetail = selectedTask ? <section className="job-sheet__selected-operation" aria-label="Dosarul operației selectate"><h2 ref={selectedHeading} tabIndex={-1}>{selectedTask.seqLabel} · {selectedTask.processLabel}</h2><p>{selectedTask.scopeLabel} · {selectedTask.statusLabel}</p><a className="job-sheet__link-button" href={atelierHref({ jobId, planId, taskId: selectedTask.taskId })}>Deschide operația în Atelier</a><TaskDossierPanel taskId={selectedTask.taskId} taskLabel={selectedTask.seqLabel + ' ' + selectedTask.processLabel} canInstruct={owner} operatorIdentified={Boolean(session.data)} canWriteFiles={owner || Boolean(session.data)} sessionScope={[planId, cloud.user?.email, cloud.organization?.organizationId, readCloudBoundaryVersion(), session.data?.personId].join('|')}/></section> : null;
   return <PageRegion><div className="job-sheet" data-surface="job-detail">
     <header className="job-sheet__header"><a className="job-sheet__back" href="/lucrari">← Lucrări</a>
       <div className="job-sheet__identity-row"><div className="job-sheet__identity"><p className="job-sheet__eyebrow">Fișa lucrării</p><h1>{job ? presentJobSheetTitle(job) : 'Lucrare'}</h1><p>{job?.customerDisplayName ?? 'Se citește lucrarea.'}{secondary ? ' · ' + secondary : ''}</p></div>
@@ -98,10 +99,9 @@ export function JobDetailPage({ jobId, taskId = null, section }: Props) {
       {!job && jobResource.status !== 'error' ? <LoadingFloor variant="traveler" label="Se citește lucrarea"/> : null}
       {report.status === 'error' ? <InlineAlert tone="error" title="Dosarul nu a putut fi actualizat">{report.data ? 'Ultima citire rămâne afișată.' : 'Fișierele, orele și istoricul sunt indisponibile.'}<Button variant="secondary" onClick={() => invalidateResources(resourceKeys.jobRecord(jobId))}>Reîncearcă</Button></InlineAlert> : null}
       {job && report.status !== 'error' && !report.data ? <LoadingFloor variant="facts" label="Se citesc fișierele, orele și istoricul"/> : null}
-      {report.data ? <JobRecordView key={jobId} record={report.data} canWriteFiles={owner || Boolean(session.data)} operationHref={operationHref}/> : null}
+      <JobRecordView key={jobId} record={report.data ?? null} canWriteFiles={owner || Boolean(session.data)} operationHref={operationHref} operationDetail={operationDetail}/>
       {planResource.status === 'error' ? <InlineAlert tone="error" title="Operațiile nu au putut fi citite">Drepturile și detaliile operațiilor nu sunt disponibile.</InlineAlert> : null}
       {taskId && planResource.status === 'success' && !selectedTask ? <InlineAlert tone="error" title="Operația nu există în această lucrare">Linkul nu a fost înlocuit cu altă operație.</InlineAlert> : null}
-      {selectedTask ? <section className="job-sheet__selected-operation" aria-label="Dosarul operației selectate"><h2 ref={selectedHeading} tabIndex={-1}>{selectedTask.seqLabel} · {selectedTask.processLabel}</h2><p>{selectedTask.scopeLabel} · {selectedTask.statusLabel}</p><a className="job-sheet__link-button" href={atelierHref({ jobId, planId, taskId: selectedTask.taskId })}>Deschide operația în Atelier</a><TaskDossierPanel taskId={selectedTask.taskId} taskLabel={selectedTask.seqLabel + ' ' + selectedTask.processLabel} canInstruct={owner} operatorIdentified={Boolean(session.data)} canWriteFiles={owner || Boolean(session.data)} sessionScope={[planId, cloud.user?.email, cloud.organization?.organizationId, readCloudBoundaryVersion(), session.data?.personId].join('|')}/></section> : null}
       {job ? <section id="materiale" aria-label="Materialele lucrării"><JobMaterialPreparation jobId={jobId} returnTo={jobHref(jobId)}/></section> : null}
       {jobResource.data?.siteInstallation ? <SiteInstallationContextPanel context={jobResource.data.siteInstallation}/> : null}
       {job ? <section className="job-sheet__panel" id="sursa" aria-label="Sursa comercială"><h2>Sursă comercială acceptată</h2>{sourceHref ? <a href={sourceHref}>{job.kind === 'ASSEMBLY' ? 'Deschide ansamblul sursă' : 'Deschide oferta sursă'}</a> : <p>Legătura către sursă nu este disponibilă.</p>}</section> : null}

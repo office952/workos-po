@@ -17,6 +17,22 @@ describe('file-first job record', () => {
     expect(screen.queryByRole('button', { name: 'Adaugă fișier' })).toBeNull();
     expect(screen.queryByRole('tab')).toBeNull();
   });
+  it('keeps hours, results, people and every dated event in visible sections', () => {
+    const record = { ...jobRecordFixture, timeline: [...jobRecordFixture.timeline, { ...jobRecordFixture.timeline[0]!, eventId: 'next-day', label: 'Control înregistrat', occurredAt: '2026-10-21T09:00:00Z' }] };
+    render(<JobRecordView record={record} canWriteFiles={false} operationHref={id => '#' + id}/>);
+    const hours = screen.getByRole('region', { name: 'Orele lucrării' });
+    const results = screen.getByRole('region', { name: 'Rezultatele lucrării' });
+    expect(within(hours).queryByText('Realizat: 4 buc')).toBeNull();
+    expect(within(results).getByText('Realizat: 4 buc')).toBeVisible();
+    expect(within(results).getByText('Conform planului')).toBeVisible();
+    const people = screen.getByRole('region', { name: 'Oameni și timp' });
+    const history = screen.getByRole('region', { name: 'Cronologia lucrării' });
+    expect(people.compareDocumentPosition(history) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(history).getAllByRole('heading', { level: 3 })).toHaveLength(2);
+    expect(within(history).getByText('A ieșit din operație')).toBeVisible();
+    expect(within(history).getByText('Control înregistrat')).toBeVisible();
+    expect(document.querySelector('details')).toBeNull();
+  });
   it('opens a specific revision without changing its uses and restores keyboard focus', async () => {
     const user = userEvent.setup(); render(<JobRecordView record={jobRecordFixture} canWriteFiles={false} operationHref={id => '#' + id}/>);
     const open = screen.getAllByRole('button', { name: 'Utilizări și versiuni →' })[0]!;

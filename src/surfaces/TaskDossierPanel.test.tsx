@@ -37,7 +37,10 @@ describe("TaskDossierPanel", () => {
     vi.stubGlobal("fetch", fetch);
     const user = userEvent.setup();
     render(<TaskDossierPanel taskId="task-1" canInstruct />);
-    await screen.findByRole("button", { name: "desen-v1.pdf" });
+    const file = await screen.findByRole("button", { name: "desen-v1.pdf" });
+    const composer = screen.getByRole("button", { name: "Adaugă fișier" });
+    expect(file.compareDocumentPosition(composer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Istoricul operației" })).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Adaugă fișier" }));
     await user.selectOptions(screen.getByLabelText("Versiune nouă pentru, opțional"), "old-1");
     await user.upload(screen.getByLabelText("Fișier"), new File(["synthetic pdf"], "desen-v2.pdf", { type: "application/pdf" }));

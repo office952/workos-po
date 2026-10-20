@@ -49,6 +49,14 @@ Owner-approved scoped Figma direction, then explicit GO for implementation in th
 
 The Owner stopped further development of the optional resource view. Local responsive/keyboard/worker/file-use review of the exact new candidate remains pending. Session exception continues without Notion edits or a `NOTION_GATE=PASS` claim. No merge, deployment, real organization migration or business-data changes are authorized by this source wave.
 
+### Job record UI organization candidate (2026-10-21)
+
+Owner requested organization before another preview. The existing job record stays one continuous page with five visible landmarks: files/use evidence, operations/hours, results/materials/control, people, and dated chronology. The selected operation dossier lives beside its hours ledger rather than at the end of the whole record. Whole-job loading/retry does not remount its unsaved dossier. Labor, calendar duration and machine time keep separate server-provided totals and incomplete evidence stays explicit.
+
+Atelier keeps job/operator identity, one compact operation selector and the existing command permissions. For an explicit operation, files/instructions sit beside personal work controls on desktop; narrow layouts stack them with a direct jump to controls. The full plan is no longer repeated beside that selected operation. Consumption inputs precede closing actions. Existing inbox/operation mounting, drafts, file revisions, eligibility, participation and machine exclusivity remain unchanged. No extra route, business calculation, schema or database write belongs to this UI wave.
+
+Source candidate only, in existing draft PR #92. Earlier synthetic runtime checks at `a19f991` do not validate this layout. The connected browser could not attach in this session; actual responsive/keyboard/visual inspection of the new candidate remains pending. The session exception continues without Notion edits or `NOTION_GATE=PASS`; merge, deployment and real business-data operations remain unauthorized.
+
 ### Production flow simplification candidate (2026-10-20)
 
 Owner-authorized source candidate on top of `184619c` / draft PR #91: offer confirmation opens the job, a single **Trimite în producție** command prepares release and plan, and operations/dossier stay in the job sheet and Atelier. Canonical responsibilities and retired URL mapping: [Production flow canon](architecture/PRODUCTION_FLOW_CANON.md). Candidate only; merge, real-data changes, deployment and visual acceptance remain pending. This note does not change the historical main baseline above.

@@ -181,12 +181,10 @@ describe("OperationWorkspace", () => {
     expect(await screen.findByRole("heading", { name: "NORD" })).toBeInTheDocument();
     expect(screen.getByText("Client Demo · Litere volumetrice")).toBeInTheDocument();
     await user.type(await screen.findByLabelText("Cantitate realizată"), "11,8");
-    const outlineSearch = screen.getByRole("searchbox", { name: "Caută în operații" });
-    await user.type(outlineSearch, "Cablare");
+    expect(screen.queryByRole("searchbox", { name: "Caută în operații" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Planul de execuție" })).toBeNull();
     expect(screen.getByRole("heading", { name: "01 Debitare" })).toBeInTheDocument();
-    expect(document.querySelector('.operational-task--compact[data-task-id="task-cut"]')).toBeNull();
     expect(screen.getByLabelText("Cantitate realizată")).toHaveValue("11,8");
-    await user.clear(outlineSearch);
     const oldUrl = window.location.href;
     try {
       await user.selectOptions(screen.getByRole("combobox", { name: "Schimbă operația" }), "task-wire");
@@ -597,10 +595,8 @@ describe("OperationWorkspace", () => {
       "href",
       "/lucrari/ord-1?task=task-wire",
     );
-    expect(screen.getByRole("link", { name: /01 Debitare foaie CNC/ })).toHaveAttribute(
-      "href",
-      "/atelier?job=ord-1&plan=exp%3A1&task=task-cut",
-    );
+    expect(screen.getByRole("combobox", { name: "Schimbă operația" })).toHaveValue("task-wire");
+    expect(screen.getByRole("option", { name: /01 · Debitare foaie CNC/ })).toBeInTheDocument();
   });
 
   it("shows the plan material on the operation when readiness lines are not adopted", async () => {
@@ -792,10 +788,8 @@ describe("OperationWorkspace", () => {
     );
     expect(screen.getByText("Sarcina selectată din plan")).toBeInTheDocument();
     expect(screen.getAllByText("Realizat: 12,5 m").length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: /04 Cablare electrică/ })).toHaveAttribute(
-      "href",
-      "/atelier?job=ord-1&plan=exp%3A1&task=task-wire",
-    );
+    expect(screen.getByRole("combobox", { name: "Schimbă operația" })).toHaveValue("task-cut");
+    expect(screen.getByRole("option", { name: /04 · Cablare electrică/ })).toBeInTheDocument();
     expect(screen.queryByText("Prima sarcină eligibilă din acest plan.")).not.toBeInTheDocument();
   });
 
@@ -1487,10 +1481,8 @@ describe("OperationWorkspace", () => {
     );
     expect(screen.getAllByText("Așteaptă: Debitare foaie CNC").length).toBeGreaterThan(0);
     expect(screen.queryByText("Prima sarcină eligibilă din acest plan.")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /01 Debitare foaie CNC/ })).toHaveAttribute(
-      "href",
-      "/atelier?plan=exp%3A1&task=task-cut",
-    );
+    expect(screen.getByRole("combobox", { name: "Schimbă operația" })).toHaveValue("task-wire");
+    expect(screen.getByRole("option", { name: /01 · Debitare foaie CNC/ })).toBeInTheDocument();
   });
 
   it("keeps the plan readable for an unidentified operator and disables start", async () => {
