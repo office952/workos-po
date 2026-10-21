@@ -18,6 +18,8 @@ function openSession(task: WorkHoursTask, personId = 'ion') {
   const session = task.sessions.find(s => s.personId === personId)!;
   session.endedAt = null;
   session.endKind = null;
+  task.activeSessionCount = task.sessions.filter(s => !s.endedAt).length;
+  task.provisional = true;
 }
 
 describe('people evidence in the existing job sheet', () => {
@@ -27,7 +29,7 @@ describe('people evidence in the existing job sheet', () => {
     record.hours!.totalLabel = 'Neînregistrat';
     record.hours!.tasks = record.hours!.tasks.map(task => ({ ...task, sessions: [], people: [], status: 'IN_PROGRESS' }));
     show(record);
-    expect(screen.getByText('Nimeni nu lucrează acum.')).toBeVisible();
+    expect(screen.getByText('Nimeni nu lucrează acum. Lucrarea rămâne în curs.')).toBeVisible();
     expect(screen.queryByRole('region', { name: 'Lucrează acum' })).toBeNull();
     expect(screen.getAllByText('Neînregistrat').length).toBeGreaterThan(0);
     expect(screen.getByText('Participanții nu au fost documentați prin sesiuni.')).toBeVisible();
@@ -36,8 +38,8 @@ describe('people evidence in the existing job sheet', () => {
 
   it('uses explicit job completion while preserving incomplete evidence', () => {
     show(fixture(), true);
-    expect(screen.getByText('Nu există sesiuni active în evidența lucrării finalizate.')).toBeVisible();
-    expect(screen.getByText('Evidența orelor: parțială')).toBeVisible();
+    expect(screen.getByText('Producție finalizată.')).toBeVisible();
+    expect(screen.getByText('Parțială · 1 operație')).toBeVisible();
     expect(screen.queryByText(/Lucrarea rămâne în curs/)).toBeNull();
     expect(screen.getAllByRole('table')).toHaveLength(2);
   });
@@ -51,8 +53,9 @@ describe('people evidence in the existing job sheet', () => {
     expect(within(live).getByText('Ion')).toBeVisible();
     expect(within(live).queryByText('Maria')).toBeNull();
     expect(within(live).getByRole('link', { name: '01 · Lipire' })).toHaveAttribute('href', '/lucrari/job-1?sectiune=operatii&task=task-1');
-    expect(screen.getByText('Include sesiuni active · total provizoriu')).toBeVisible();
-    expect(screen.queryByText('Nimeni nu lucrează acum.')).toBeNull();
+    expect(screen.getByText('Provizoriu · crește până la ieșirea celor activi')).toBeVisible();
+    expect(screen.getByText('Provizorie · 1 sesiune activă')).toBeVisible();
+    expect(screen.queryByText(/Nimeni nu lucrează acum/)).toBeNull();
   });
 
   it('shows simultaneous coworkers and keeps eligibility/completion actions outside this record', () => {
@@ -69,20 +72,44 @@ describe('people evidence in the existing job sheet', () => {
     expect(screen.queryByRole('button', { name: /Pornește|Finalizează|Intră în operație/ })).toBeNull();
   });
 
-  it('treats an open session as provisional evidence, and a left in-progress operation as incomplete', async () => {
+  it('keeps provisional and undocumented evidence visible together on the same operation', async () => {
     const record = fixture();
-    openSession(record.hours!.tasks[0]!, 'ion');
+    const task = record.hours!.tasks[0]!;
+    openSession(task, 'ion');
+    Object.assign(task, { undocumented: true, evidenceGap: 'UNTRACKED_START', evidenceGapLabel: 'Pornită fără sesiune individuală.', coverageLabel: 'Provizoriu · sesiune activă · parțial nedocumentat' });
+    Object.assign(record.hours!, { activeSessionCount: 1, undocumentedTaskCount: 2 });
     const user = userEvent.setup();
-    const view = show(record);
-    await user.click(screen.getByRole('button', { name: 'Evidență incompletă 0' }));
-    expect(screen.getByText('Nicio persoană nu corespunde filtrelor.')).toBeVisible();
-    const left = structuredClone(record);
-    left.hours!.tasks[0]!.sessions.find(s => s.personId === 'ion')!.endedAt = '2026-10-20T09:10:00Z';
-    left.hours!.tasks[0]!.sessions.find(s => s.personId === 'ion')!.endKind = 'LEFT';
-    left.hours!.tasks[0]!.coverageLabel = 'Parțial · timp nedocumentat';
-    view.rerender(<JobRecordPeople record={left} productionFinished={false} operationHref={id => `/op/${id}`}/>);
-    expect(screen.getByRole('button', { name: 'Evidență incompletă 2' })).toHaveAttribute('aria-pressed', 'true');
-    expect(within(screen.getByRole('article', { name: 'Ion' })).getByText('Evidență incompletă la unele operații')).toBeVisible();
+    show(record);
+    expect(screen.getByText('Provizorie · 1 sesiune activă')).toBeVisible();
+    expect(screen.getByText('Parțială · 2 operații')).toBeVisible();
+    const operation = within(screen.getByRole('region', { name: 'Lucrează acum' })).getByRole('article', { name: '01 · Lipire' });
+    expect(within(operation).getByText('Parțială · pornire nedocumentată')).toBeVisible();
+    // Reasons open on demand and name operations, never people.
+    const summary = screen.getByText('De ce este parțială · 2 operații');
+    expect(screen.getByText('Pornită fără sesiune individuală.')).not.toBeVisible();
+    await user.click(summary);
+    expect(screen.getByText('Pornită fără sesiune individuală.')).toBeVisible();
+    expect(screen.queryByText(/Evidență incompletă la unele operații/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /Evidență incompletă/ })).toBeNull();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Operație' }), 'task-1');
+    const selected = screen.getByText('Operația selectată').closest('div')!.parentElement!;
+    expect(within(selected).getByText('Provizorie · 1 sesiune activă')).toBeVisible();
+    expect(within(selected).getByText('Parțială · nedocumentată')).toBeVisible();
+  });
+
+  it('keeps a tracked, interrupted, unfinished operation in progress without an undocumented reason', () => {
+    const record = fixture();
+    const task = record.hours!.tasks[0]!;
+    Object.assign(task, { status: 'IN_PROGRESS', complete: false, coverageLabel: 'În lucru · fără sesiuni active', undocumented: false, evidenceGap: null, evidenceGapLabel: null });
+    record.hours!.tasks = [task];
+    Object.assign(record.hours!, { complete: false, undocumentedTaskCount: 0, idleTaskCount: 1, coverageLabel: 'Evidența orelor: fără lipsuri · lucrare în curs' });
+    show(record);
+    expect(screen.getByText('Nimeni nu lucrează acum. Lucrarea rămâne în curs.')).toBeVisible();
+    expect(screen.getByText('În lucru · 1 operație fără activi')).toBeVisible();
+    const current = screen.getByRole('region', { name: 'Activitate curentă' });
+    expect(within(current).getByRole('link', { name: '01 · Lipire' })).toHaveAttribute('href', '/lucrari/job-1?sectiune=operatii&task=task-1');
+    expect(screen.queryByText(/Parțială/)).toBeNull();
+    expect(screen.queryByText(/De ce este parțială/)).toBeNull();
   });
 
   it('uses server labels for operation and personal contributions, with stable keyboard focus', async () => {

@@ -15,9 +15,17 @@
 .job-people__totals dd { margin: 6px 0 4px; font-size: 22px; font-weight: 600; line-height: 1.25; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .job-people__total-main dt { color: var(--color-text-primary); font-weight: 600; }
 .job-people__totals .job-people__total-main dd { font-size: 34px; line-height: 1.15; }
-.job-people__totals dd.job-people__coverage { display: flex; align-items: baseline; gap: 8px; font-size: 15px; line-height: 1.4; }
-.job-people__coverage::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--color-warning); transform: translateY(-1px); }
-.job-people__coverage[data-complete="true"]::before { background: var(--color-success); }
+.job-people__badges { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.job-people__totals .job-people__evidence dd { font-size: 13px; font-weight: 500; margin-top: 8px; }
+
+/* Motivele evidenței parțiale, la cerere */
+.job-people__gaps { margin-top: 12px; font-size: 13px; }
+.job-people__gaps summary { display: inline-flex; align-items: center; min-height: 40px; padding: 4px 0; cursor: pointer; color: var(--job-sheet-action); font-weight: 500; }
+.job-people__gaps summary:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+.job-people__gaps ul { display: grid; gap: 6px; margin: 4px 0 0; padding: 10px 12px; list-style: none; border-left: 3px solid var(--color-warning); background: var(--color-warning-soft); }
+.job-people__gaps li { display: grid; gap: 2px; }
+.job-people__gaps li a { font-weight: 600; min-height: 28px; display: inline-flex; align-items: center; }
+.job-people__gaps li span { color: var(--color-text-secondary); }
 .job-people__totals small { display: block; font-size: 12px; line-height: 1.45; color: var(--color-text-secondary); }
 .job-record .job-people__other { display: flex; flex-wrap: wrap; gap: 4px 24px; margin: 16px 0 0; padding-top: 12px; border-top: 1px solid var(--color-border); font-size: 13px; color: var(--color-text-secondary); }
 .job-people__other b { font-weight: 600; color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
@@ -35,6 +43,12 @@
 .job-people__now-grid li { display: grid; gap: 1px; }
 .job-people__now-grid li strong { font-size: 14px; }
 .job-people__now-grid li small { color: var(--color-text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
+.job-people__now-grid .job-people__now-gap { margin-top: 4px; }
+.job-people__now--quiet { border-color: var(--color-border); padding-block: 14px; }
+.job-record .job-people__now--quiet p { display: grid; gap: 2px; margin: 0; }
+.job-people__now--quiet strong { font-size: 15px; }
+.job-people__now--quiet span { color: var(--color-text-secondary); font-size: 13px; }
+.job-people__now--quiet a { font-weight: 600; }
 
 /* Registru pe persoane */
 .job-record__section > .job-people__register-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-start; gap: 4px 16px; margin-bottom: 16px; }
@@ -57,6 +71,7 @@
 .job-people__selected dl { display: flex; flex-wrap: wrap; gap: 4px 32px; margin: 0; }
 .job-people__selected dd { margin: 2px 0 0; font-size: 14px; }
 .job-people__selected dl > div:first-child dd { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.job-record .job-people__selected-gap { grid-column: 1/-1; margin: 0; font-size: 13px; color: var(--color-text-secondary); }
 .job-record .job-people .job-people__clear,.job-record .job-people .job-people__expand { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 6px 14px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-text-primary); font-size: 13px; font-weight: 500; text-decoration: none; white-space: nowrap; }
 .job-record .job-people .job-people__clear:hover,.job-record .job-people .job-people__expand:hover { border-color: var(--job-sheet-action); }
 .job-record .job-people__result-count { margin: 12px 0; font-size: 12px; color: var(--color-text-secondary); }
@@ -69,15 +84,15 @@
 .job-people__avatar { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border: 1px solid var(--color-border); border-radius: 50%; font-size: 13px; font-weight: 600; background: var(--color-surface-raised); color: var(--color-text-secondary); }
 .job-people__avatar[data-active="true"] { color: var(--job-sheet-action); border-color: var(--job-sheet-action); background: var(--color-selection-fill); }
 .job-people__identity { min-width: 0; }
-.job-people__identity h4 { margin: 0; font-size: 16px; line-height: 1.35; overflow-wrap: anywhere; }
+.job-people__identity h4 { margin: 0; font-size: 16px; line-height: 1.35; overflow-wrap: break-word; }
 .job-record .job-people__identity p { margin: 2px 0 0; font-size: 13px; line-height: 1.4; color: var(--color-text-secondary); }
 .job-record .job-people__identity p[data-active="true"] { color: var(--job-sheet-action); font-weight: 500; }
-.job-record .job-people__identity p.job-people__person-coverage { font-size: 12px; }
 .job-people__identity time { font-variant-numeric: tabular-nums; }
 .job-people__person-total { display: grid; justify-items: end; gap: 1px; text-align: right; font-variant-numeric: tabular-nums; }
 .job-people__person-total > span,.job-people__person-total > small { font-size: 12px; color: var(--color-text-secondary); }
 .job-people__person-total > strong { font-size: 22px; line-height: 1.2; }
-.job-people__person-total b { font-weight: 600; color: var(--color-text-primary); }
+.job-people__person-total b { font-weight: 600; color: var(--color-text-primary); white-space: nowrap; }
+.job-people__person-total > small.job-people__person-job { margin-top: 2px; padding-top: 2px; border-top: 1px dashed var(--color-border); }
 .job-people__person-total[data-scope="operation"] > strong { padding: 0 8px; border-radius: var(--radius-control); background: var(--color-selection-fill); color: var(--job-sheet-action); }
 
 /* Contribuții pe operații */
@@ -87,6 +102,7 @@
 .job-record .job-people .job-people__contributions button[aria-pressed="true"] { background: var(--color-selection-fill); border-color: var(--job-sheet-action); }
 .job-people__contributions button > span { font-weight: 600; color: var(--job-sheet-action); font-variant-numeric: tabular-nums; }
 .job-people__contributions button > strong { padding-left: 6px; border-left: 1px solid var(--color-border); font-weight: 600; font-variant-numeric: tabular-nums; }
+.job-people__contributions button .job-record__icon { width: 15px; height: 15px; color: var(--color-warning); }
 
 /* Sesiuni */
 .job-people__sessions { table-layout: fixed; border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 14px; }
@@ -101,6 +117,8 @@
 .job-people__sessions td > small { display: block; color: var(--color-text-secondary); font-size: 12px; }
 .job-people__sessions time,.job-people__sessions strong { font-variant-numeric: tabular-nums; }
 .job-people__end { color: var(--color-text-secondary); }
+.job-people__next-day { display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: var(--radius-badge); background: var(--color-selection-fill); color: var(--color-text-primary); font-size: 11px; font-weight: 500; }
+.job-record .job-people__shown { flex-basis: 100%; margin: 0; font-size: 12px; color: var(--color-text-secondary); }
 .job-people__end[data-active="true"] { color: var(--job-sheet-action); font-weight: 600; }
 .job-people__person-foot { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 12px 24px; margin-top: 12px; }
 .job-people__person-foot:not(:has(.job-people__expand)) { justify-content: flex-end; }
@@ -136,6 +154,9 @@
   .job-people__totals dd { font-size: 19px; margin: 2px 0; }
   .job-people__totals .job-people__total-main dd { font-size: 28px; }
   .job-people__totals small[data-aside] { display: none; }
+  .job-people__other-note { display: none; }
+  .job-people__totals > div:last-child small { display: none; }
+  .job-people__now--quiet { padding-block: 10px; }
   .job-record .job-people__other { gap: 2px 16px; margin-top: 12px; }
   .job-people__toolbar { align-items: stretch; flex-direction: column; }
   .job-people__filters { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); }
@@ -151,6 +172,8 @@
   .job-people__avatar { width: 32px; height: 32px; font-size: 12px; }
   .job-people__identity h4 { font-size: 15px; }
   .job-people__person-total > strong { font-size: 19px; }
+  /* Operation scope adds a second total line; give it its own row so the name keeps its width. */
+  .job-people__person-total[data-scope="operation"] { grid-column: 2 / -1; grid-row: 2; justify-items: start; text-align: left; }
   .job-people__sessions,.job-people__sessions tbody { display: block; }
   .job-people__sessions caption { display: block; }
   .job-people__sessions thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }

@@ -7,7 +7,10 @@ export type WorkHoursTask = { taskId: string; processLabel: string; scopeLabel: 
   qualityLabel?: string | null; statusLabel: string; completedQuantityLabel: string | null; varianceLabel: string | null; providerLabel: string | null; externalProviderLabel: string | null;
   plannedQuantity?: { value: number; unit: string } | null; plannedConsumption?: { resourceLabel: string; quantity: number; unit: string }[];
   actualConsumption: { resourceLabel: string; actualQuantity: number; unit: string }[];
-  declaredDurationLabel: string | null; machineTimeLabel: string | null; people: WorkPerson[]; sessions: WorkSession[] };
+  declaredDurationLabel: string | null; machineTimeLabel: string | null; people: WorkPerson[]; sessions: WorkSession[];
+  /** Additive evidence projection; absent on older servers. Open sessions and canonical gaps are independent. */
+  activeSessionCount?: number; provisional?: boolean; undocumented?: boolean;
+  evidenceGap?: 'UNTRACKED_START' | 'NO_INDIVIDUAL_SESSIONS' | null; evidenceGapLabel?: string | null };
 export type JobRecordFile = { artifactId: string; originalFileName: string; mimeType: string; sizeLabel: string;
   purpose: string | null; purposeLabel: string | null; note: string | null; preview: string; supersedesArtifactId: string | null;
   authorLabel: string | null; uploadedAt: string; downloadHref: string;
@@ -15,7 +18,8 @@ export type JobRecordFile = { artifactId: string; originalFileName: string; mime
 export type JobRecord = { jobId: string; files: JobRecordFile[];
   hours: { asOf: string; totalLabel: string; complete: boolean; completeTasks: number; applicableTasks: number;
     coverageLabel: string; startedAt: string | null; completedAt: string | null; elapsedLabel: string;
-    activeTimeLabel: string; machineTimeLabel: string; machineActive: boolean; people: WorkPerson[]; tasks: WorkHoursTask[] } | null;
+    activeTimeLabel: string; machineTimeLabel: string; machineActive: boolean; people: WorkPerson[]; tasks: WorkHoursTask[];
+    activeSessionCount?: number; provisionalTaskCount?: number; undocumentedTaskCount?: number; idleTaskCount?: number } | null;
   timeline: { eventId: string; kind: string; label: string; actorLabel: string | null; occurredAt: string;
     taskId: string | null; taskLabel: string | null; detail: string | null }[] };
 

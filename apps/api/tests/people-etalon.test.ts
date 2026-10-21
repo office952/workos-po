@@ -80,28 +80,58 @@ describe("people etalon — four reproducible job states", () => {
         expect(hours.milliseconds).toBe((hours.people as Json[]).reduce((n, p) => n + p.milliseconds, 0));
 
         const active = expected.people.filter(p => p.active.length);
+        const tasks = hours.tasks as Json[];
+        const bySeq = (seq: string) => tasks.find(t => t.seqLabel === seq)!;
+        // Separate evidence signals: open sessions, canonical gaps, and operations left in progress.
+        expect(hours.activeSessionCount, state).toBe(expected.sessions.filter(s => !s.endedAt).length);
+        expect(hours.undocumentedTaskCount, state).toBe(tasks.filter(t => t.undocumented).length);
+        for (const t of tasks) {
+          expect(t.provisional, `${state}:${t.seqLabel}`).toBe((t.sessions as Json[]).some(s => !s.endedAt));
+          if (t.undocumented) expect(t.evidenceGapLabel, `${state}:${t.seqLabel}`).not.toMatch(/Andrei|Elena|Mihai|Ioana|Radu|Cristina/);
+        }
         if (state === "A") {
           expect(active.map(p => p.key).sort()).toEqual(["cristina", "elena", "radu"]);
-          expect(hours.coverageLabel).toBe("Ore provizorii · sesiuni active");
           expect(hours.completedAt).toBeNull();
+          // Same operation: live sessions and an earlier start without individual evidence, both kept.
+          const assembly = bySeq("09");
+          expect(assembly.provisional).toBe(true);
+          expect(assembly.activeSessionCount).toBe(3);
+          expect(assembly.undocumented).toBe(true);
+          expect(assembly.evidenceGap).toBe("UNTRACKED_START");
+          expect(assembly.coverageLabel).toBe("Provizoriu · sesiune activă · parțial nedocumentat");
+          expect(hours.undocumentedTaskCount).toBe(1);
+          expect(hours.coverageLabel).toBe("Ore provizorii · sesiuni active · evidență parțială");
         }
         if (state === "B") {
           expect(active).toEqual([]);
           expect(hours.completedAt).toBeNull(); // nobody active does not mean finished
-          expect((hours.tasks as Json[]).find(t => t.seqLabel === "09")!.status).toBe("IN_PROGRESS");
-          expect(hours.coverageLabel).toBe("Evidența orelor: parțială");
+          // Tracked from its start, interrupted and unfinished: in progress, never "undocumented".
+          const assembly = bySeq("09");
+          expect(assembly.status).toBe("IN_PROGRESS");
+          expect(assembly.undocumented).toBe(false);
+          expect(assembly.evidenceGap).toBeNull();
+          expect(assembly.coverageLabel).toBe("În lucru · fără sesiuni active");
+          expect(tasks.filter(t => t.status === "PLANNED").every(t => !t.undocumented && t.coverageLabel === "Neîncepută")).toBe(true);
+          expect(hours.idleTaskCount).toBe(1);
+          expect(hours.undocumentedTaskCount).toBe(0);
+          expect(hours.coverageLabel).toBe("Evidența orelor: fără lipsuri · lucrare în curs");
         }
         if (state === "C") {
           expect(expected.finished).toBe(true);
           expect(hours.complete).toBe(true);
+          expect(hours.undocumentedTaskCount).toBe(0);
+          expect(hours.activeSessionCount).toBe(0);
           expect(hours.coverageLabel).toBe("Evidența orelor: completă");
         }
         if (state === "D") {
           expect(expected.finished).toBe(true);
           expect(hours.complete).toBe(false);
           expect(hours.coverageLabel).toBe("Evidența orelor: parțială");
-          const montaj = (hours.tasks as Json[]).find(t => t.seqLabel === "15")!;
+          const montaj = bySeq("15");
           expect(montaj.coverageLabel).toBe("Parțial · timp nedocumentat");
+          expect(montaj.evidenceGap).toBe("UNTRACKED_START");
+          expect(montaj.provisional).toBe(false);
+          expect(hours.undocumentedTaskCount).toBe(1);
           expect(hours.completeTasks).toBe(taskCount - 1);
         }
 
@@ -113,7 +143,9 @@ describe("people etalon — four reproducible job states", () => {
         const timeline = record.timeline as Json[];
         expect(timeline.some(e => e.kind === "ISSUE_REPORTED" && e.actorLabel === "Radu Ionescu")).toBe(true);
         expect(timeline.some(e => e.kind === "WORK_LEFT" && e.actorLabel === "Elena Dinu")).toBe(true);
-        if (state === "D") expect(timeline.find(e => e.eventId.startsWith("start:"))?.detail).toBe("Început fără sesiune individuală înregistrată");
+        const untracked = { A: "09", D: "15" } as Record<string, string>;
+        if (untracked[state]) expect(timeline.find(e => e.eventId === "start:" + job.taskIds[untracked[state]!])?.detail).toBe("Început fără sesiune individuală înregistrată");
+        else expect(timeline.some(e => e.eventId.startsWith("start:"))).toBe(false);
 
         report.push({
           state, title: job.title, jobId: job.jobId, asOf: expected.asOf,
@@ -121,6 +153,8 @@ describe("people etalon — four reproducible job states", () => {
             people: expected.people.map(p => ({ name: p.name, sessions: p.sessions, milliseconds: p.milliseconds, active: p.active })) },
           engine: { totalLabel: hours.totalLabel, milliseconds: hours.milliseconds, activeTimeLabel: hours.activeTimeLabel,
             elapsedLabel: hours.elapsedLabel, machineTimeLabel: hours.machineTimeLabel, coverageLabel: hours.coverageLabel,
+            activeSessionCount: hours.activeSessionCount, undocumentedTaskCount: hours.undocumentedTaskCount, idleTaskCount: hours.idleTaskCount,
+            gaps: (hours.tasks as Json[]).filter(t => t.undocumented).map(t => ({ seq: t.seqLabel, gap: t.evidenceGap, provisional: t.provisional })),
             people: (hours.people as Json[]).map(p => ({ label: p.label, milliseconds: p.milliseconds, timeLabel: p.timeLabel, active: p.active })) },
         });
       }

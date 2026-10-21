@@ -49,7 +49,9 @@ type Action =
   | { use: string; on: string; who: PersonKey }
   | { untrackedStart: string; executor: PersonKey };
 
-type Step = { day: 1 | 2 | 3; at: string; action: Action; only?: "tracked" | "partial" };
+/** History variants: tracked from start; partial (D: untracked start of 15); liveGap (A: untracked start of 09, then live sessions). */
+type Variant = "tracked" | "partial" | "liveGap";
+type Step = { day: 1 | 2 | 3; at: string; action: Action; only?: Variant[] };
 
 /**
  * ACM cassette 2400×600 mm with front-lit letters. Seq labels are the canonical plan's.
@@ -125,7 +127,9 @@ const STORY: Step[] = [
   { day: 2, at: "14:05", action: { issue: "06", who: "ioana", reason: "OTHER", text: "Modul LED defect în litera O; înlocuit din stoc." } },
   { day: 2, at: "14:20", action: { leave: "06", who: "ioana" } },
   { day: 2, at: "14:40", action: { complete: "06", who: "mihai" } },
-  { day: 2, at: "14:50", action: { enter: "09", who: "elena" } },
+  { day: 2, at: "14:50", action: { enter: "09", who: "elena" }, only: ["tracked", "partial"] },
+  { day: 2, at: "14:50", action: { untrackedStart: "09", executor: "elena" }, only: ["liveGap"] },
+  { day: 2, at: "14:55", action: { enter: "09", who: "elena" }, only: ["liveGap"] },
   { day: 2, at: "15:00", action: { enter: "09", who: "radu" } },
   { day: 2, at: "16:30", action: { leave: "09", who: "radu" } },
   { day: 2, at: "17:00", action: { leave: "09", who: "elena" } },
@@ -137,11 +141,11 @@ const STORY: Step[] = [
   { day: 3, at: "09:30", action: { complete: "09", who: "elena" } },
   { day: 3, at: "09:40", action: { enter: "10", who: "ioana" } },
   { day: 3, at: "10:30", action: { quality: "10", who: "ioana", note: "Iluminare uniformă pe toate literele." } },
-  { day: 3, at: "10:40", action: { enter: "15", who: "radu" }, only: "tracked" },
-  { day: 3, at: "10:40", action: { untrackedStart: "15", executor: "radu" }, only: "partial" },
+  { day: 3, at: "10:40", action: { enter: "15", who: "radu" }, only: ["tracked", "liveGap"] },
+  { day: 3, at: "10:40", action: { untrackedStart: "15", executor: "radu" }, only: ["partial"] },
   { day: 3, at: "10:45", action: { enter: "15", who: "cristina" } },
   { day: 3, at: "11:00", action: { enter: "15", who: "elena" } },
-  { day: 3, at: "11:20", action: { enter: "15", who: "radu" }, only: "partial" },
+  { day: 3, at: "11:20", action: { enter: "15", who: "radu" }, only: ["partial"] },
   { day: 3, at: "12:00", action: { leave: "15", who: "elena" } },
   { day: 3, at: "12:30", action: { leave: "15", who: "cristina" } },
   { day: 3, at: "13:10", action: { complete: "15", who: "radu" } },
@@ -155,7 +159,7 @@ const STORY: Step[] = [
 
 /** Four reproducible cuts of the same history, on separate days so no person or machine is double-booked. */
 export const STATES: Record<StateKey, { title: string; customer: string; inscription: string;
-  dayOffsets: [number, number, number]; cut: { day: 1 | 2 | 3; at: string } | null; variant: "tracked" | "partial" }> = {
+  dayOffsets: [number, number, number]; cut: { day: 1 | 2 | 3; at: string } | null; variant: Variant }> = {
   C: { title: "Etalon Oameni C — finalizată, evidență completă", customer: "Farmacia Lumina Demo SRL", inscription: "LUMINA",
     dayOffsets: [-16, -15, -14], cut: null, variant: "tracked" },
   D: { title: "Etalon Oameni D — finalizată, evidență parțială", customer: "Cofetăria Orizont Demo SRL", inscription: "ORIZONT",
@@ -163,7 +167,7 @@ export const STATES: Record<StateKey, { title: string; customer: string; inscrip
   B: { title: "Etalon Oameni B — în lucru, nimeni activ", customer: "Optica Clar Demo SRL", inscription: "CLAR",
     dayOffsets: [-6, -5, -4], cut: { day: 2, at: "18:00" }, variant: "tracked" },
   A: { title: "Etalon Oameni A — în lucru, oameni activi", customer: "Brutăria Spic Demo SRL", inscription: "SPIC",
-    dayOffsets: [-2, -1, 0], cut: { day: 3, at: "08:30" }, variant: "tracked" },
+    dayOffsets: [-2, -1, 0], cut: { day: 3, at: "08:30" }, variant: "liveGap" },
 };
 export const STATE_ORDER: StateKey[] = ["C", "D", "B", "A"];
 
@@ -189,7 +193,7 @@ export function stateSteps(state: StateKey, anchor: string) {
   const { cut, variant } = STATES[state];
   const cutAt = cut ? stepIso(state, anchor, cut.day, cut.at) : null;
   return STORY
-    .filter(step => !step.only || step.only === variant)
+    .filter(step => !step.only || step.only.includes(variant))
     .map(step => ({ ...step, iso: stepIso(state, anchor, step.day, step.at) }))
     .filter(step => !cutAt || step.iso <= cutAt)
     .sort((a, b) => a.iso.localeCompare(b.iso));

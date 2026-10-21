@@ -101,6 +101,18 @@ Approved review frames: [main job record](https://www.figma.com/design/M3Klzg7su
 
 Timestamp precision is retained until display rounding. Coverage is complete only when every internal operation is completed, tracked from its original start and has no open sessions. Late joining to an older task remains partial. Missing labor stays unrecorded, never zero. Active sessions are provisional, with an explicit report timestamp. External-only work is marked not applicable for internal labor. CSV exports the same server-projected values, with spreadsheet-formula escaping.
 
+### Separate evidence signals (2026-10-21)
+
+The hours projection carries three independent signals per operation, additively next to the existing fields and formulas:
+
+| Field | Meaning |
+| --- | --- |
+| `activeSessionCount`, `provisional` | Open personal sessions; their time is provisional until exit or completion |
+| `undocumented`, `evidenceGap`, `evidenceGapLabel` | A canonical gap only: a recorded start with no personal session at that start (`UNTRACKED_START`), or recorded start/completion with no personal session at all (`NO_INDIVIDUAL_SESSIONS`) |
+| status `IN_PROGRESS` without open sessions | In progress, nobody active; job-level `idleTaskCount` |
+
+They can coexist on one operation. An unfinished operation, a pause, or the distance between two moments is never treated as missing work, and a gap names no person. Job level adds `activeSessionCount`, `provisionalTaskCount`, `undocumentedTaskCount` and `idleTaskCount`. `complete`, `completeTasks` and every total keep their formulas. Labels change only where they were misleading: an unstarted operation reads `Neîncepută`, a tracked interrupted one `În lucru · fără sesiuni active`, and a job's open-session label also says `evidență parțială` when a gap exists. No table, endpoint or retroactive timekeeping is added.
+
 The existing finished audit job remains an archive, with its operations, files and available history accessible. Production completion does not assert delivery or installation. Historical quantities, material consumption, declared durations, snapshots and file bytes remain intact. Operator UI records participation automatically; no manually entered task estimate or duration is required.
 
 ### Retired presentation and remaining review

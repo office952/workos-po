@@ -123,7 +123,14 @@ describe('file-first job record', () => {
     render(<View record={jobRecordFixture} section="oameni" />);
     const people = screen.getByRole('region', { name: 'Oameni și timp' });
     expect(within(people).getAllByRole('link', { name: '01 · Lipire' })).toHaveLength(2);
-    expect(within(people).queryByText('02 · Control')).toBeNull();
+    // Nobody attended 02: no person lists it; it appears only once, as the job-level evidence gap.
+    const persons = within(people).getAllByRole('article').filter(a => a.classList.contains('job-people__person'));
+    expect(persons).toHaveLength(2);
+    for (const person of persons) {
+      expect(within(person).queryByText(/02 · Control|^Control$/)).toBeNull();
+    }
+    expect(within(people).getAllByRole('link', { name: '02 · Control' })).toHaveLength(1);
+    expect(within(people).getByText(/De ce este parțială/)).toBeInTheDocument();
     expect(within(people).getByText(/Orele lipsă rămân neînregistrate/)).toBeInTheDocument();
   });
 

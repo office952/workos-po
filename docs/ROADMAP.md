@@ -59,6 +59,10 @@ Atelier keeps job/operator identity, one compact operation selector and the exis
 
 Source candidate only, in existing draft PR #92. Earlier synthetic runtime checks at `a19f991` do not validate this layout. The connected browser could not attach in this session; actual responsive/keyboard/visual inspection of the new candidate remains pending. The session exception continues without Notion edits or `NOTION_GATE=PASS`; merge, deployment and real business-data operations remain unauthorized.
 
+### People evidence signals and integrated Oameni section (2026-10-21)
+
+Owner GO on draft PR #93: the hours projection separates open sessions, canonical evidence gaps and in-progress operations without active people ([contract](architecture/PRODUCTION_FLOW_CANON.md#separate-evidence-signals-2026-10-21)). Oameni shows them as distinct badges with reasons on demand, groups live work by operation and stops attributing gaps to people. The people etalon (`apps/api/tests/people-etalon/`) adds, in state A, an untracked start followed by live sessions on the same operation, and checks that the tracked, interrupted operation in state B is not undocumented. Owner acceptance pending; no merge or deployment.
+
 ### Exclusive job-sheet sections (2026-10-21)
 
 The Owner replaced the continuous page and its anchors with six sections on the same job route: Situație, Operații, Fișiere, Oameni, Istoric and Date lucrare. One operations register holds hours and results; the separate results renderer is retired. A finished job stays a consultation record. Contract: [Production flow canon](architecture/PRODUCTION_FLOW_CANON.md#owner-decision-exclusive-job-sheet-sections-2026-10-21). No merge, deployment or business-data change.
