@@ -1,4 +1,4 @@
-/* The job record is one continuous document. Anchors move; they never hide sections. */
+/* One job sheet, six exclusive sections. Navigation is the section bar, not in-page anchors. */
 .job-record { display: grid; gap: 24px; color: var(--color-text-primary); }
 .job-sheet .job-record h2 { display: flex; align-items: center; gap: 10px; font-size: 21px; margin: 0 0 6px; }
 .job-record h3 { margin: 0; }
@@ -44,8 +44,12 @@
 .job-record__file-detail .job-document { margin-top: 16px; }
 .job-record__people-layout { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); gap: 32px; }
 .job-record__people { list-style: none; margin: 0; padding: 0; }
-.job-record__people li { display: flex; justify-content: space-between; align-items: start; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--color-border); }
-.job-record__people li:first-child { padding-top: 0; }.job-record__people small { display: block; margin-top: 4px; color: var(--color-text-secondary); }
+.job-record__people > li { display: block; padding: 16px 0; border-bottom: 1px solid var(--color-border); }
+.job-record__person { display: flex; justify-content: space-between; align-items: start; gap: 16px; }
+.job-record__person small { display: block; margin-top: 4px; color: var(--color-text-secondary); }
+.job-record__sessions { list-style: none; margin: 8px 0 0; padding: 0; }
+.job-record__sessions li { display: flex; flex-direction: column; gap: 2px; padding: 8px 0 0; }
+.job-record__sessions a { min-height: 44px; display: inline-flex; align-items: center; }
 .job-record__activity { padding: 20px; background: var(--color-surface-raised); border-radius: var(--radius-control); }
 .job-record__activity > strong { display: block; font-size: 24px; margin: 8px 0; font-variant-numeric: tabular-nums; }
 .job-record__activity > span,.job-record__count { color: var(--color-text-secondary); font-size: 13px; }
@@ -73,4 +77,47 @@
   .job-record__file-detail,.job-record__session-detail { padding: 16px; }.job-sheet .job-record h2 { font-size: 20px; }
 }
 @media(max-width:480px) { .job-record__table tr { grid-template-columns: minmax(0,1fr); }.job-record__table td:first-child { grid-column: auto; }.job-record__summary-header > div { gap: 8px; } }
-@media print { .job-record__anchors,.job-record button,.job-record__search { display: none; }.job-record__table { font-size: 10px; }.job-record__section { break-inside: auto; }.job-record__table tr { break-inside: avoid; }.job-record__summary,.job-record__section { border: 0; padding: 12px 0; } }
+.job-sheet__section[hidden],
+.job-record__table tr[hidden] { display: none; }
+.job-record__detail-row { overflow-anchor: none; }
+.job-record__detail-row > td { padding: 0 12px 16px; background: var(--color-surface); }
+.job-record__operation-detail { border: 1px solid var(--color-border-strong); border-left: 3px solid var(--job-sheet-action); padding: 16px; margin-top: 8px; background: var(--color-surface-raised); }
+.job-record__operation-detail > header { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-bottom: 12px; }
+.job-record__operation-toggle { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
+.job-record p.job-record__hours { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 0; }
+.job-record__hours span { color: var(--color-text-secondary); font-size: 12px; font-weight: 500; }
+.job-record__print-sheet { display: none; }
+.job-record__facts-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 12px 0 20px; }
+.job-record__facts-grid h5 { margin: 0 0 8px; font-size: 13px; color: var(--color-text-secondary); }
+@media (max-width: 767px) {
+  .job-record__facts-grid { grid-template-columns: minmax(0, 1fr); }
+  .job-record__operation-detail > header { flex-direction: column; }
+}
+@media (max-width: 900px) {
+  .job-record__table tr.job-record__detail-row { display: block; padding: 0; border: 0; margin: 0; }
+  .job-record__table tr.job-record__detail-row > td { display: block; }
+  .job-record__table tr.job-record__detail-row > td::before { content: none; }
+}
+@media print {
+  .app-shell__bar { display: none !important; }
+  .job-sheet__section[hidden],
+  .job-record__print-sheet[hidden] { display: block !important; }
+  .job-sheet__tabs,
+  .job-sheet__back,
+  .job-sheet__planning-editor,
+  .job-sheet__link-button,
+  .job-sheet .hit,
+  .job-record__search,
+  .job-record__operation-detail,
+  .job-record__detail-row,
+  .task-dossier,
+  .job-sheet button:not(.job-record__operation-toggle) { display: none !important; }
+  .job-record__operation-toggle { color: inherit; text-decoration: none; min-height: 0; }
+  .job-record__print-sheet { break-before: page; }
+  .job-record__print-sheet article { break-inside: avoid; margin-top: 16px; }
+  .job-record__table { font-size: 10px; }
+  .job-record__section { break-inside: auto; }
+  .job-record__table tr { break-inside: avoid; }
+  .job-record__summary,
+  .job-record__section { border: 0; padding: 12px 0; }
+}

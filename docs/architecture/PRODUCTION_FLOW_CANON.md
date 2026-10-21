@@ -7,11 +7,11 @@ Candidate authorized by the Owner on 2026-10-20 in `office952/workos-po`. Built 
 | Experience | Responsibility | Canonical location |
 | --- | --- | --- |
 | Offer | Review one frozen version; **Confirmă comanda** records acceptance and creates/retrieves its order, then opens its job | Existing product / assembly offer URL |
-| Job sheet | Coordinator: one visible job record with file usages, hours, people, chronology and operational results | `/lucrari/:jobId`; explicit task links retain the shared dossier |
+| Job sheet | Coordinator: one job route with six exclusive sections — Situație, Operații, Fișiere, Oameni, Istoric, Date lucrare — and one shared operation dossier | `/lucrari/:jobId`; `sectiune` selects the only visible section; an explicit task opens that operation inside Operații |
 | Atelier | Operator identification, eligible inbox, selected operation and execution commands in one workspace | `/atelier?job=…&plan=…&task=…` (job optional) |
 | Work by resource | Optional cross-job operations grouped by machine/zone; manual work and real resource gaps remain visible | `/lucrari?vedere=utilaje` |
 
-The current record keeps files, hours, people, chronology and commercial source visible in the existing sheet. File and session details open only when requested; the main record is not hidden in tabs. Material preparation remains in the same sheet. Operation identity, instructions and files identify the work; they do not teach the trade.
+The job sheet keeps one route. Its current presentation is six exclusive sections, described in [Owner decision: exclusive job-sheet sections](#owner-decision-exclusive-job-sheet-sections-2026-10-21). The long page with anchors recorded later in this file is the earlier wave, not the current organization. Material preparation, technical context and the commercial source stay in Date lucrare. Operation identity, instructions and files identify the work; they do not teach the trade.
 
 ## Owner decision: planning without repetitive administration (2026-10-20)
 
@@ -53,9 +53,10 @@ The configurator acknowledges success only after the assembly member save succee
 | --- | --- |
 | `/planificare` and `PlanningPage` | Optional resource view in Lucrări; no separate navigation entry or page |
 | `/executie/:planId` and engine `/execution/:planId` | Replace-history redirect to Atelier, preserving plan, task and job |
-| Job `sectiune=plan` or `operatie` | `sectiune=operatii`, preserving task |
-| Job `sectiune=fisiere` or `materiale` | `sectiune=documente`, preserving task |
-| Job `sectiune=sursa` | Situation with source disclosure anchor |
+| Job `sectiune=plan`, `operatie` or `rezultate` | `sectiune=operatii`, preserving task. Results live in the operation detail |
+| Job `sectiune=documente` | `sectiune=fisiere`, preserving task |
+| Job `sectiune=fisiere` | Fișiere, already canonical |
+| Job `sectiune=materiale` or `sursa` | `sectiune=date`, preserving task |
 | `ExecutionPage` wrapper | Shared `OperationWorkspace` inside Atelier |
 | `JobTaskWorkbench` dossier/forms | Shared `TaskDossierPanel` in sheet and Atelier |
 
@@ -117,3 +118,18 @@ Corrections of mistakenly left-open personal sessions, auditable time amendments
 - Typecheck, lint and build frontend/domain/API pass. The 13 existing Fast Refresh warnings and the existing >500 kB frontend chunk advisory remain.
 - Read-only independent source review found no remaining concrete publication blocker. Selected operation focus, current quality/rework state, correction closure, planned/actual quantity/consumption, record timestamp/refresh and retirement/session safety were checked. This is source review, not browser acceptance.
 - Browser connection was unavailable in this session. No screenshots, responsive visual PASS, live two-worker UI E2E PASS or final Owner visual acceptance are claimed. Cursor must verify the published source on the existing isolated synthetic preview.
+
+## Owner decision: exclusive job-sheet sections (2026-10-21)
+
+This decision replaces the long-page anchor organization, including frames 732:3 and 732:5. The paragraphs above remain the record of that wave. It does not change the record API, participation, machine exclusivity, eligibility, server totals, schema or the **Pe utilaje și zone** view.
+
+The same route `/lucrari/:jobId` has six sections: Situație, Operații, Fișiere, Oameni, Istoric and Date lucrare. The section bar is shared with the job identity. Choosing a section shows only that section to pointer and keyboard. Historical `sectiune` values resolve on this route; they do not open a second page. A missing section opens Situație. An explicit task without a section opens Operații.
+
+Situație shows state, progress, beginning, end, calendar duration, labor and machine time. Incomplete evidence stays explicit. It does not repeat the full operation list. Operații is the only full register: the row identifies the operation, state, participants and hours; the detail directly under that row holds results, quantities, consumption, control, sessions and the existing dossier. One detail is open at a time. Closing returns focus to the row control. An invalid task id is an error and does not select another operation. Unsaved dossier drafts survive collapse and section changes in the current session, and reset when the operator, organization or job changes. The separate results renderer is retired.
+
+Fișiere keeps revisions, uploader and time, and the difference between association and declared use, including exact-version download. Oameni shows each person's contribution and sessions, with links to operations and without repeating the plan. Istoric groups events by day. Date lucrare keeps estimated need, checks and actual consumption distinct, together with technical/install context and the commercial source.
+
+A finished job is a consultation record: results, people, hours, files, history, download, export and print. Print lays out every section and the operation results already present on the job record, including collapsed rows. It omits interactive commands and unsaved drafts, and returning from print does not change the open section, selection, scroll or drafts. It does not request each operation dossier. Priority and deadline stay historical information. The sheet does not prompt preparation or production start, and it does not phrase supply or verification as the next production step. Permitted dossier additions stay distinct from execution and keep their author and time. **Producție finalizată** does not confirm delivery or installation. Missing hours stay unrecorded.
+
+Reference frames for shared identity and stable navigation, not for demo data or business rules: [Situație](https://www.figma.com/design/M3Klzg7sulrtLSyxJBf3Vd/WorkOs-F?node-id=710-1116), [Operații](https://www.figma.com/design/M3Klzg7sulrtLSyxJBf3Vd/WorkOs-F?node-id=710-1277), [Fișiere](https://www.figma.com/design/M3Klzg7sulrtLSyxJBf3Vd/WorkOs-F?node-id=715-1271).
+

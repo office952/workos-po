@@ -188,4 +188,27 @@ describe("JobMaterialPreparation", () => {
     expect(body).not.toHaveProperty("requestedQuantity");
     expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
   });
+
+  it("keeps a finished job's material record without a production next step", async () => {
+    const reviewed = structuredClone(preparation);
+    const line = reviewed.preparation.lines[0];
+    if (!line) throw new Error("fixture");
+    line.openRequest = null;
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({ operator: { personId: "per:maria", displayName: "Maria Ansamblu Demo" } });
+      }
+      return jsonResponse(reviewed);
+    }));
+    render(<JobMaterialPreparation jobId="job-1" consultation />);
+    expect(await screen.findByText(/necesar estimat și verificări păstrate/)).toBeInTheDocument();
+    expect(screen.getByText(/Necesar estimat: 125/)).toBeInTheDocument();
+    expect(screen.getByText(/Verificat de Maria Ansamblu Demo/)).toBeInTheDocument();
+    expect(screen.getByText("Verificarea a înregistrat material insuficient.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Semnalează necesar de aprovizionare" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confirmă disponibil" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Pornirea operației/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Identifică-te în Atelier" })).not.toBeInTheDocument();
+  });
 });

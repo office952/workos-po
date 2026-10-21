@@ -32,7 +32,7 @@ export function JobRecordFiles({ record, canWriteFiles, operationHref }: { recor
     setSelected(f.artifactId);
     setTimeout(() => fileDetail.current?.focus(), 0);
   }
-  return <section id="fisiere" className="job-record__section" aria-label="Fișierele lucrării">
+  return <section className="job-record__section" aria-label="Fișierele lucrării">
       <header><div><Heading icon="file">Fișierele lucrării</Heading><p>Versiunile păstrate și operațiile în care au fost declarate folosite.</p></div>{canWriteFiles ? <Button variant="secondary" aria-expanded={uploading} onClick={() => setUploading(v => !v)}>{uploading ? 'Închide încărcarea' : 'Adaugă fișier'}</Button> : null}</header>
       {uploading && canWriteFiles ? <JobFilesPanel jobId={record.jobId} uploadOnly onUploaded={() => invalidateResources(resourceKeys.jobRecord(record.jobId))}/> : null}
       <label className="job-record__search">Caută fișier sau operație<input type="search" value={query} onChange={e => searchFiles(e.target.value)}/></label>

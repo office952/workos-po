@@ -2,12 +2,18 @@ import { moment } from './format';
 import type { JobRecord } from '../../api/jobRecord';
 import { Heading, RecordIcon } from './presentation';
 
-export function JobRecordPeople({ hours }: { hours: JobRecord['hours'] }) {
-  return <section id="oameni" className="job-record__section" aria-label="Oameni și timp">
-    <header><div><Heading icon="people">Oameni și timp</Heading><p>Contribuția fiecărei persoane la această lucrare.</p></div></header>
+export function JobRecordPeople({ hours, operationHref }: { hours: JobRecord['hours']; operationHref: (id: string) => string }) {
+  return <section className="job-record__section" aria-label="Oameni și timp">
+    <header><div><Heading icon="people">Oameni și timp</Heading><p>Contribuția fiecărei persoane și sesiunile ei. Operațiile se deschid din registru, fără repetarea planului.</p></div></header>
     <div className="job-record__people-layout">
-      {hours?.people.length ? <ul className="job-record__people">{hours.people.map(p => <li key={p.personId}><span><strong>{p.label}</strong>{p.active ? <small>Lucrează acum</small> : null}</span><strong>{p.timeLabel}</strong></li>)}</ul> : <p>Participanții nu au fost documentați prin sesiuni.</p>}
-      <div className="job-record__activity"><span>Timp cu activitate înregistrată</span><strong>{hours?.activeTimeLabel ?? 'Neînregistrat'}</strong><p className="job-record__note">Intervalele simultane se numără o singură dată aici. În orele de muncă, contribuția fiecărei persoane se adună.</p></div>
+      {hours?.people.length ? <ul className="job-record__people">{hours.people.map(person => {
+        const sessions = hours.tasks.flatMap(task => task.sessions.filter(session => session.personId === person.personId).map(session => ({ session, task })));
+        return <li key={person.personId}>
+          <div className="job-record__person"><span><strong>{person.label}</strong>{person.active ? <small>Lucrează acum</small> : null}</span><strong>{person.timeLabel}</strong></div>
+          {sessions.length ? <ul className="job-record__sessions">{sessions.map(({ session, task }) => <li key={session.sessionId}><a href={operationHref(task.taskId)}>{task.seqLabel} · {task.processLabel}</a><span>{moment(session.startedAt)} → {session.endedAt ? moment(session.endedAt) : 'Sesiune activă'} · {session.timeLabel}</span></li>)}</ul> : <p>Fără sesiuni înregistrate.</p>}
+        </li>;
+      })}</ul> : <p>Participanții nu au fost documentați prin sesiuni.</p>}
+      <div className="job-record__activity"><span>Timp cu activitate înregistrată</span><strong>{hours?.activeTimeLabel ?? 'Neînregistrat'}</strong><p className="job-record__note">Intervalele simultane se numără o singură dată aici. În orele de muncă, contribuția fiecărei persoane se adună. Orele lipsă rămân neînregistrate.</p></div>
     </div>
   </section>;
 }
@@ -28,8 +34,8 @@ export function JobRecordHistory({ events, operationHref }: { events: JobRecord[
     if (last?.key === key) last.events.push(event);
     else groups.push({ key, label: dateLabel(event.occurredAt), events: [event] });
   }
-  return <section id="cronologie" className="job-record__section" aria-label="Cronologia lucrării">
-    <header><div><Heading icon="history">Cronologia lucrării</Heading><p>Cine · ce a înregistrat · când</p></div><span className="job-record__count">{events.length} înregistrări</span></header>
+  return <section className="job-record__section" aria-label="Istoricul lucrării">
+    <header><div><Heading icon="history">Istoricul lucrării</Heading><p>Cine · ce a înregistrat · când</p></div><span className="job-record__count">{events.length} înregistrări</span></header>
     {groups.length ? groups.map((group, i) => <div className="job-record__day" key={`${group.key}-${i}`}>
       <h3>{group.label}</h3>
       <ol className="job-record__timeline">{group.events.map(e => <li key={e.eventId}>

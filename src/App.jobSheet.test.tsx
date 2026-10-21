@@ -1,9 +1,8 @@
 import { jobRecordFixture } from './test/jobRecordFixture';
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
-import { navigate } from "./routing/navigate";
 
 function json(body: unknown) {
   return Promise.resolve({ ok: true, status: 200, json: async () => body });
@@ -15,7 +14,7 @@ afterEach(() => {
 });
 
 describe("job sheet navigation", () => {
-  it("keeps an explicit operation draft while all record sections remain visible", async () => {
+  it("keeps an explicit operation draft across section changes and restores it from the URL", async () => {
     const fetch = vi.fn((input: RequestInfo, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith("/api/health")) return json({ status: "ok", service: "workos-final-api", apiContractId: "workos-ui-contract-v1" });
@@ -43,18 +42,34 @@ describe("job sheet navigation", () => {
     window.history.replaceState({}, "", "/lucrari/job-1");
     const user = userEvent.setup();
     render(<App />);
-    expect(await screen.findByRole("region", { name: "Fișierele lucrării" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Situația lucrării" })).toBeVisible();
+    expect(screen.queryByRole("region", { name: "Fișierele lucrării" })).toBeNull();
     expect(screen.queryByRole("region", { name: "Dosarul operației selectate" })).toBeNull();
-    await user.click(screen.getAllByRole("link", { name: "01 · Lipire" })[0]!);
+    await user.click(screen.getByRole("link", { name: "Operații" }));
+    await user.click(await screen.findByRole("button", { name: "01 · Lipire" }));
     const addObservation = await screen.findByRole("button", { name: "Adaugă observație" });
     await waitFor(() => expect(addObservation).toBeEnabled());
     await user.click(addObservation);
     await user.type(screen.getByLabelText("Observație"), "Verifică muchia");
-    await act(async () => navigate("/lucrari/job-1?task=task-1&sectiune=fisiere"));
-    expect(await screen.findByLabelText("Observație")).toHaveValue("Verifică muchia");
-    expect(screen.getByRole("region", { name: "Fișierele lucrării" })).toBeVisible();
-    expect(screen.getByRole("region", { name: "Orele lucrării" })).toBeVisible();
-    expect(screen.getByText("A ieșit din operație")).toBeVisible();
+    await user.click(screen.getByRole("link", { name: "Fișiere" }));
+    expect(await screen.findByRole("region", { name: "Fișierele lucrării" })).toBeVisible();
+    expect(screen.queryByRole("textbox", { name: "Observație" })).toBeNull();
+    expect(screen.queryByRole("table", { name: "Registrul operațiilor" })).toBeNull();
+    await user.click(screen.getByRole("link", { name: "Operații" }));
+    expect(await screen.findByRole("textbox", { name: "Observație" })).toHaveValue("Verifică muchia");
+    expect(new URLSearchParams(window.location.search).get("task")).toBe("task-1");
+    expect(new URLSearchParams(window.location.search).get("sectiune")).toBe("operatii");
+    const toggle = screen.getByRole("button", { name: "01 · Lipire" });
+    await user.click(screen.getByRole("button", { name: "Închide detaliul" }));
+    expect(toggle).toHaveFocus();
+    expect(screen.queryByRole("textbox", { name: "Observație" })).toBeNull();
+    await user.click(toggle);
+    expect(screen.getByRole("textbox", { name: "Observație" })).toHaveValue("Verifică muchia");
+    window.history.back();
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("task")).toBeNull());
+    expect(screen.queryByRole("region", { name: "Dosarul operației selectate" })).toBeNull();
+    window.history.forward();
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Observație" })).toHaveValue("Verifică muchia"));
     expect(fetch.mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
   });
 });

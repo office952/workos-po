@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { resetResourceCache } from '../data/resourceCache';
@@ -24,35 +24,45 @@ describe('job record page', () => {
   it('makes files, hours, people and chronology visible without selecting or fetching a task dossier', async () => {
     const fetch = fixture(); render(<JobDetailPage jobId="job-1"/>);
     expect(await screen.findByRole('heading', { name: 'Panou și litere' })).toBeInTheDocument();
-    expect(await screen.findByRole('table', { name: 'Fișiere, utilizări și autorii înregistrărilor' })).toBeVisible();
-    expect(screen.getByRole('region', { name: 'Orele lucrării' })).toBeVisible();
-    expect(screen.getByText('A ieșit din operație')).toBeVisible();
-    expect(screen.getByRole('navigation', { name: 'Repere în fișa lucrării' }).querySelectorAll('a')).toHaveLength(5);
+    expect(screen.getByRole('navigation', { name: 'Secțiunile lucrării' }).querySelectorAll('a')).toHaveLength(6);
+    expect(await screen.findByRole('heading', { name: 'Situația lucrării' })).toBeVisible();
+    expect(screen.queryByRole('table', { name: 'Fișiere, utilizări și autorii înregistrărilor' })).toBeNull();
+    expect(screen.queryByRole('table', { name: 'Registrul operațiilor' })).toBeNull();
     expect(screen.queryByRole('tab')).toBeNull();
     expect(fetch.mock.calls.some(([url]) => String(url).endsWith('/dossier'))).toBe(false);
     expect(fetch.mock.calls.every(([, init]) => !init?.method || init.method === 'GET')).toBe(true);
   });
   it('preserves the finished record and separates production completion from delivery', async () => {
-    fixture({ finished: true }); render(<JobDetailPage jobId="job-1"/>);
+    fixture({ finished: true }); render(<JobDetailPage jobId="job-1" section="operatii"/>);
     expect(await screen.findByText(/Producția este finalizată. Livrarea și montajul/)).toBeVisible();
-    expect(await screen.findByText('Durată declarată: 42 min')).toBeVisible();
+    expect(within(await screen.findByRole('table', { name: 'Registrul operațiilor' })).getByText('Durată declarată: 42 min')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Exportă orele CSV' })).toBeEnabled();
     expect(screen.queryByRole('link', { name: 'Deschide în Atelier' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Deschide operația în Atelier' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Trimite în producție' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Semnalează necesar de aprovizionare' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Tipărește fișa' })).toBeEnabled();
     expect(screen.queryByText(/Nicio operație începută/)).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Rezultatele lucrării' })).toBeNull();
   });
   it('never replaces an invalid explicit task with another operation', async () => {
     fixture(); render(<JobDetailPage jobId="job-1" taskId="missing"/>);
     expect(await screen.findByText('Operația nu există în această lucrare')).toBeVisible();
     expect(screen.queryByRole('region', { name: 'Dosarul operației selectate' })).toBeNull();
-    expect(await screen.findByRole('region', { name: 'Fișierele lucrării' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: '01 · Lipire' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('region', { name: 'Fișierele lucrării' })).toBeNull();
   });
-  it('opens only the explicitly requested task while retaining the visible whole-job record', async () => {
+  it('opens only the explicitly requested task under its row', async () => {
+    const scroll = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scroll;
     fixture(); render(<JobDetailPage jobId="job-1" taskId="task-1"/>);
-    expect(await screen.findByRole('region', { name: 'Dosarul operației selectate' })).toBeVisible();
-    await waitFor(() => expect(screen.getByRole('heading', { name: '01 · Lipire' })).toHaveFocus());
+    const detail = await screen.findByRole('region', { name: 'Dosarul operației selectate' });
+    const toggle = screen.getByRole('button', { name: '01 · Lipire' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(toggle.closest('tr')?.nextElementSibling).toContainElement(detail);
     expect(screen.getByRole('link', { name: 'Deschide operația în Atelier' })).toHaveAttribute('href', '/atelier?job=job-1&plan=plan-1&task=task-1');
-    expect(await screen.findByText('A ieșit din operație')).toBeVisible();
+    expect(document.activeElement).not.toBe(screen.getByRole('heading', { name: '01 · Lipire' }));
+    expect(scroll).not.toHaveBeenCalled();
   });
   it('preserves an unsaved dossier and focus when the whole-job report arrives later', async () => {
     const original = fixture({ operator: true });
@@ -65,10 +75,11 @@ describe('job record page', () => {
     const note = screen.getByLabelText('Observație'); await user.type(note, 'Ciornă nesalvată');
     expect(screen.queryByText('Planul de execuție nu există încă.')).toBeNull();
     await act(async () => { finish({ ok: true, status: 200, json: async () => ({ record: jobRecordFixture }) }); });
-    await screen.findByRole('table', { name: 'Fișiere, utilizări și autorii înregistrărilor' });
+    await screen.findByRole('table', { name: 'Registrul operațiilor' });
+    expect(screen.queryByRole('region', { name: 'Fișierele lucrării' })).toBeNull();
     expect(screen.getByLabelText('Observație')).toBe(note);
     expect(note).toHaveValue('Ciornă nesalvată'); expect(note).toHaveFocus();
-    expect(screen.getByRole('region', { name: 'Orele lucrării' })).toContainElement(screen.getByRole('region', { name: 'Dosarul operației selectate' }));
+    expect(screen.getByRole('region', { name: 'Operațiile lucrării' })).toContainElement(screen.getByRole('region', { name: 'Dosarul operației selectate' }));
   });
   it('reports invalid record responses as unavailable and provides retry instead of perpetual loading', async () => {
     const fetch = fixture({ invalidRecord: true }); const user = userEvent.setup(); render(<JobDetailPage jobId="job-1"/>);

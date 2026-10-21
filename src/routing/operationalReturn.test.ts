@@ -12,7 +12,7 @@ describe("operational return", () => {
     const target = jobHref("job:1", { taskId: "task:2", section: "materiale" });
     const href = atelierHref({ jobId: "job:1", returnTo: target });
     expect(parseOperationalReturn(href.slice(href.indexOf("?")))).toBe(target);
-    expect(parseJobSheetSection("?task=task:2&sectiune=materiale")).toBe("documente");
+    expect(parseJobSheetSection("?task=task:2&sectiune=materiale")).toBe("date");
     expect(parseJobSheetSection("?task=task:2")).toBe("operatii");
     expect(parseJobSheetSection("?sectiune=unknown")).toBe("situatie");
     expect(parseJobSheetSection("")).toBe("situatie");

@@ -161,10 +161,13 @@ it("retires execution and job subpages without losing task context or redirectin
   for (const section of ["plan", "operatie"]) {
     expect(canonicalLocation("/lucrari/job-1", `?task=task-2&sectiune=${section}`)).toBe("/lucrari/job-1?task=task-2&sectiune=operatii");
   }
-  for (const section of ["fisiere", "materiale"]) {
-    expect(canonicalLocation("/lucrari/job-1", `?task=task-2&sectiune=${section}`)).toBe("/lucrari/job-1?task=task-2&sectiune=documente");
+  for (const section of ["fisiere"]) {
+    expect(canonicalLocation("/lucrari/job-1", `?task=task-2&sectiune=${section}`)).toBeNull();
   }
-  expect(canonicalLocation("/lucrari/job-1", "?sectiune=sursa")).toBe("/lucrari/job-1?sectiune=situatie#sursa");
+  expect(canonicalLocation("/lucrari/job-1", "?task=task-2&sectiune=documente")).toBe("/lucrari/job-1?task=task-2&sectiune=fisiere");
+  expect(canonicalLocation("/lucrari/job-1", "?task=task-2&sectiune=materiale")).toBe("/lucrari/job-1?task=task-2&sectiune=date");
+  expect(canonicalLocation("/lucrari/job-1", "?sectiune=sursa")).toBe("/lucrari/job-1?sectiune=date");
+  expect(canonicalLocation("/lucrari/job-1", "?sectiune=rezultate")).toBe("/lucrari/job-1?sectiune=operatii");
   expect(canonicalLocation("/atelier", "?job=job-1&plan=plan-1&task=task-1")).toBeNull();
   expect(canonicalLocation("/lucrari/job-1", "?sectiune=operatii&task=task-1")).toBeNull();
 });
