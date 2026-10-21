@@ -27,11 +27,14 @@
 .job-people__now { border-color: var(--job-sheet-action); }
 .job-record .job-people__now > h3 { display: flex; align-items: center; gap: 8px; font-size: 15px; margin-bottom: 12px; }
 .job-people__pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--job-sheet-action); box-shadow: 0 0 0 4px var(--color-selection-fill); }
-.job-people__now-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(min(100%,240px),1fr)); gap: 12px; }
-.job-people__now-grid article { display: grid; gap: 2px; padding: 12px 16px; border: 1px solid var(--color-border); border-left: 3px solid var(--job-sheet-action); border-radius: var(--radius-control); background: var(--color-surface); }
-.job-people__now-grid strong { font-size: 15px; }
-.job-people__now-grid a { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; }
-.job-people__now-grid :is(small,article > span) { color: var(--color-text-secondary); font-size: 12px; }
+.job-people__now-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(min(100%,300px),1fr)); gap: 12px; }
+.job-people__now-grid article { display: grid; align-content: start; gap: 2px; padding: 8px 16px 12px; border: 1px solid var(--color-border); border-left: 3px solid var(--job-sheet-action); border-radius: var(--radius-control); background: var(--color-surface); }
+.job-people__now-grid a { display: inline-flex; align-items: center; min-height: 40px; font-size: 15px; font-weight: 600; }
+.job-people__now-grid article > span { color: var(--color-text-secondary); font-size: 12px; }
+.job-people__now-grid ul { display: grid; gap: 8px; margin: 8px 0 0; padding: 8px 0 0; border-top: 1px solid var(--color-border); list-style: none; }
+.job-people__now-grid li { display: grid; gap: 1px; }
+.job-people__now-grid li strong { font-size: 14px; }
+.job-people__now-grid li small { color: var(--color-text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
 
 /* Registru pe persoane */
 .job-record__section > .job-people__register-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-start; gap: 4px 16px; margin-bottom: 16px; }

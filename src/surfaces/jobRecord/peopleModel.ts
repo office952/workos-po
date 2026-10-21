@@ -25,7 +25,8 @@ export function peopleRecords(hours: NonNullable<JobRecord['hours']>): PersonRec
       active: sessions.filter(({ session }) => !session.endedAt),
       lastExit: sessions.filter(({ session }) => session.endedAt)
         .sort((a, b) => Date.parse(b.session.endedAt!) - Date.parse(a.session.endedAt!))[0],
-      incomplete: operations.some(({ task }) => !task.complete),
+      // Open sessions make an operation provisional, not undocumented.
+      incomplete: operations.some(({ task }) => !task.complete && !task.sessions.some(s => !s.endedAt)),
     };
   }).sort((a, b) => Number(b.active.length > 0) - Number(a.active.length > 0));
 }

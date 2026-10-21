@@ -22,6 +22,9 @@ export function JobRecordPeople({ record, productionFinished, operationHref }: {
   const hours = record.hours;
   const people = hours ? peopleRecords(hours) : [];
   const live = people.flatMap(row => row.active.map(item => ({ ...item, person: row.person })));
+  const liveTasks = (hours?.tasks ?? []).map(task => ({ task, rows: live.filter(item => item.task.taskId === task.taskId)
+    .sort((a, b) => a.session.startedAt.localeCompare(b.session.startedAt)) }))
+    .filter(group => group.rows.length > 0);
   const activeCount = people.filter(row => row.active.length > 0).length;
   const selectedTask = hours?.tasks.find(task => task.taskId === taskId);
   const visible = people.filter(row => (filter === 'all' || (filter === 'active' ? row.active.length > 0 : row.incomplete))
@@ -56,11 +59,10 @@ export function JobRecordPeople({ record, productionFinished, operationHref }: {
     </div>
     {live.length ? <section className="job-record__section job-people__now" aria-label="Lucrează acum">
       <h3><span className="job-people__pulse" aria-hidden="true"/>Lucrează acum · {activeCount}</h3>
-      <div className="job-people__now-grid">{live.map(({ person, task, session }) => <article key={session.sessionId}>
-        <strong>{person.label}</strong><a href={operationHref(task.taskId)}>{task.seqLabel} · {task.processLabel}</a>
-        <span>{task.scopeLabel}</span><small>Intrat <time dateTime={session.startedAt}>{moment(session.startedAt)}</time> · {session.timeLabel} până la citire</small>
-        {live.some(other => other.task.taskId === task.taskId && other.person.personId !== person.personId)
-          ? <small>Împreună cu {live.filter(other => other.task.taskId === task.taskId && other.person.personId !== person.personId).map(other => other.person.label).join(', ')}</small> : null}
+      <div className="job-people__now-grid">{liveTasks.map(({ task, rows }) => <article key={task.taskId} aria-label={`${task.seqLabel} · ${task.processLabel}`}>
+        <a href={operationHref(task.taskId)}>{task.seqLabel} · {task.processLabel}</a><span>{task.scopeLabel}</span>
+        <ul>{rows.map(({ person, session }) => <li key={session.sessionId}><strong>{person.label}</strong>
+          <small>Intrat <time dateTime={session.startedAt}>{moment(session.startedAt)}</time> · {session.timeLabel} până la citire</small></li>)}</ul>
       </article>)}</div>
     </section> : null}
     <section className="job-record__section job-people__register" aria-label="Participanții lucrării">

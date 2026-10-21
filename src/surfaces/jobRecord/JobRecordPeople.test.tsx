@@ -61,9 +61,28 @@ describe('people evidence in the existing job sheet', () => {
     openSession(record.hours!.tasks[0]!, 'maria');
     show(record);
     const live = screen.getByRole('region', { name: 'Lucrează acum' });
-    expect(within(live).getByText('Împreună cu Ion')).toBeVisible();
-    expect(within(live).getByText('Împreună cu Maria')).toBeVisible();
+    const operation = within(live).getByRole('article', { name: '01 · Lipire' });
+    expect(within(live).getAllByRole('article')).toHaveLength(1);
+    expect(within(operation).getAllByRole('link')).toHaveLength(1);
+    expect(within(operation).getByText('Ion')).toBeVisible();
+    expect(within(operation).getByText('Maria')).toBeVisible();
     expect(screen.queryByRole('button', { name: /Pornește|Finalizează|Intră în operație/ })).toBeNull();
+  });
+
+  it('treats an open session as provisional evidence, and a left in-progress operation as incomplete', async () => {
+    const record = fixture();
+    openSession(record.hours!.tasks[0]!, 'ion');
+    const user = userEvent.setup();
+    const view = show(record);
+    await user.click(screen.getByRole('button', { name: 'Evidență incompletă 0' }));
+    expect(screen.getByText('Nicio persoană nu corespunde filtrelor.')).toBeVisible();
+    const left = structuredClone(record);
+    left.hours!.tasks[0]!.sessions.find(s => s.personId === 'ion')!.endedAt = '2026-10-20T09:10:00Z';
+    left.hours!.tasks[0]!.sessions.find(s => s.personId === 'ion')!.endKind = 'LEFT';
+    left.hours!.tasks[0]!.coverageLabel = 'Parțial · timp nedocumentat';
+    view.rerender(<JobRecordPeople record={left} productionFinished={false} operationHref={id => `/op/${id}`}/>);
+    expect(screen.getByRole('button', { name: 'Evidență incompletă 2' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(screen.getByRole('article', { name: 'Ion' })).getByText('Evidență incompletă la unele operații')).toBeVisible();
   });
 
   it('uses server labels for operation and personal contributions, with stable keyboard focus', async () => {
