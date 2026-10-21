@@ -101,6 +101,7 @@ export function JobDetailPage({ jobId, taskId = null, section }: Props) {
       <JobRecordView
         section={active}
         record={report.data ?? null}
+        productionFinished={finished}
         summaryContext={job ? { statusLabel: finished ? 'Producție finalizată' : job.stageLabel, progressLabel: job.progressLabel, attentionLabel: finished ? null : job.attentionLabel } : undefined}
         canWriteFiles={owner || Boolean(session.data)}
         operationHref={operationHref}

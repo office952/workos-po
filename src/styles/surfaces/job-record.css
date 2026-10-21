@@ -40,16 +40,6 @@
 .job-record__use { margin-bottom: 12px; }.job-record__use:last-child { margin-bottom: 0; }.job-record__use p { display: flex; align-items: start; gap: 6px; }.job-record__use .job-record__icon { width: 16px; height: 20px; }
 .job-record__file-detail,.job-record__session-detail { border: 1px solid var(--color-border-strong); border-left: 3px solid var(--job-sheet-action); padding: 24px; margin-top: 20px; background: var(--color-surface-raised); }
 .job-record__file-detail .job-document { margin-top: 16px; }
-.job-record__people-totals { display: flex; flex-wrap: wrap; gap: 20px 48px; margin: 0 0 12px; padding-bottom: 16px; border-bottom: 1px solid var(--color-border); }
-.job-record__people-totals dt { color: var(--color-text-secondary); font-size: 13px; }
-.job-record__people-totals dd { margin: 4px 0 0; font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.job-record__people { list-style: none; margin: 0; padding: 0; }
-.job-record__people > li { display: block; padding: 20px 0 0; }
-.job-record__person { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px; background: var(--color-surface-raised); }
-.job-record__person small { display: block; margin-top: 4px; color: var(--color-text-secondary); }
-.job-record__sessions-table th:first-child { width: 40%; }
-.job-record__sessions-table th:last-child { width: 14%; }
-.job-record__sessions-table time { font-size: 13px; font-variant-numeric: tabular-nums; }
 .job-record__count { color: var(--color-text-secondary); font-size: 13px; }
 .job-record__day { margin-top: 24px; }.job-record__day > h3 { font-size: 14px; color: var(--color-text-secondary); padding-bottom: 12px; border-bottom: 1px solid var(--color-border); }
 .job-record__timeline { list-style: none; padding: 0; margin: 0; }

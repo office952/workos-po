@@ -2,7 +2,8 @@ import type { ReactNode } from "react";
 import type { JobRecord } from "../api/jobRecord";
 import type { JobSheetSection } from "../routing/appRoute";
 import { JobRecordFiles } from "./jobRecord/JobRecordFiles";
-import { JobRecordPeople, JobRecordHistory } from "./jobRecord/JobRecordHistory";
+import { JobRecordHistory } from "./jobRecord/JobRecordHistory";
+import { JobRecordPeople } from "./jobRecord/JobRecordPeople";
 import { JobRecordOperations } from "./jobRecord/JobRecordOperations";
 import { JobRecordSummary, type JobSummaryContext } from "./jobRecord/JobRecordSummary";
 import "../styles/surfaces/job-record.css";
@@ -26,6 +27,7 @@ export function JobRecordView({
   dossier,
   dates,
   summaryContext,
+  productionFinished = false,
 }: {
   section: JobSheetSection;
   record: JobRecord | null;
@@ -41,6 +43,7 @@ export function JobRecordView({
   dossier: ReactNode;
   dates: ReactNode;
   summaryContext?: JobSummaryContext;
+  productionFinished?: boolean;
 }) {
   return (
     <div className="job-record job-record-sections">
@@ -69,7 +72,7 @@ export function JobRecordView({
         {record ? <JobRecordFiles record={record} canWriteFiles={canWriteFiles} operationHref={operationHref} /> : null}
       </Section>
       <Section active={section} section="oameni">
-        {record ? <JobRecordPeople hours={record.hours} operationHref={operationHref} /> : null}
+        {record ? <JobRecordPeople key={record.jobId} record={record} productionFinished={productionFinished} operationHref={operationHref} /> : null}
       </Section>
       <Section active={section} section="istoric">
         {record ? <JobRecordHistory events={record.timeline} operationHref={operationHref} /> : null}
