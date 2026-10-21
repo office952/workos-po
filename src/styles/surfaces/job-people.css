@@ -21,7 +21,8 @@
 .job-people__now-grid :is(small,article > span) { color: var(--color-text-secondary); font-size: 12px; }
 .job-people__toolbar { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; margin-bottom: 12px; }
 .job-people__toolbar .job-plan__filters { display: flex; flex-wrap: wrap; gap: 4px; }
-.job-record .job-people__toolbar button { text-decoration: none; padding: 8px 10px; border-bottom: 2px solid transparent; }
+/* Own controls outrank the sheet's generic link-style button reset, regardless of import order. */
+.job-record .job-people .job-people__toolbar button { text-decoration: none; padding: 8px 10px; border-bottom: 2px solid transparent; }
 .job-record .job-people__toolbar button[aria-pressed="true"] { background: var(--color-selection-fill); border-bottom-color: currentColor; }
 .job-people__operation { display: grid; gap: 6px; font-size: 13px; min-width: 0; max-width: 100%; }
 .job-people__operation select { font: inherit; color: inherit; background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); min-height: 44px; padding: 8px 12px; width: min(100%,360px); max-width: 100%; }
@@ -54,7 +55,7 @@
 .job-people__axis-segment[data-dimmed="true"] { opacity: .2; }
 .job-people__axis > small { margin-left: 76px; }
 .job-people__contributions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-.job-record .job-people__contributions button { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; max-width: 100%; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-control); text-decoration: none; font-size: 12px; color: inherit; }
+.job-record .job-people .job-people__contributions button { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; max-width: 100%; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-control); text-decoration: none; font-size: 12px; color: inherit; }
 .job-record .job-people__contributions button[aria-pressed="true"] { background: var(--color-selection-fill); border-color: var(--job-sheet-action); }
 .job-people__contributions button > span { color: var(--job-sheet-action); }
 .job-people__contributions button > strong { font-weight: 500; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
