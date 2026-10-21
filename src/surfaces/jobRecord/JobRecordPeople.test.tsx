@@ -94,6 +94,13 @@ describe('people evidence in the existing job sheet', () => {
     expect(chip).toHaveFocus();
     expect(select).toHaveValue('task-2');
     expect(screen.getByRole('status')).toHaveTextContent('Afișate 1 din 2 persoane · operația 02');
+    const clear = screen.getByRole('button', { name: 'Toate operațiile' });
+    clear.focus();
+    await user.keyboard('{Enter}');
+    expect(select).toHaveValue('');
+    expect(select).toHaveFocus();
+    expect(screen.queryByRole('button', { name: 'Toate operațiile' })).toBeNull();
+    expect(screen.getByRole('status')).toHaveTextContent('Afișate 2 din 2 persoane');
   });
 
   it('keeps the active session among three visible rows and restores all rows on keyboard expansion', async () => {
@@ -125,7 +132,7 @@ describe('people evidence in the existing job sheet', () => {
     const record = fixture();
     const user = userEvent.setup();
     const view = show(record);
-    const active = screen.getByRole('button', { name: 'Lucrează acum · 0' });
+    const active = screen.getByRole('button', { name: 'Lucrează acum 0' });
     active.focus();
     await user.keyboard('{Enter}');
     expect(active).toHaveFocus();
@@ -133,7 +140,7 @@ describe('people evidence in the existing job sheet', () => {
     const next = structuredClone(record);
     openSession(next.hours!.tasks[0]!);
     view.rerender(<JobRecordPeople record={next} productionFinished={false} operationHref={id => `/op/${id}`}/>);
-    expect(screen.getByRole('button', { name: 'Lucrează acum · 1' })).toBe(active);
+    expect(screen.getByRole('button', { name: 'Lucrează acum 1' })).toBe(active);
     expect(active).toHaveFocus();
     expect(screen.getByRole('status')).toHaveTextContent('Afișate 1 din 2 persoane');
     expect(screen.getAllByRole('table')).toHaveLength(1);

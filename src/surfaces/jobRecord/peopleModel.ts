@@ -30,6 +30,8 @@ export function peopleRecords(hours: NonNullable<JobRecord['hours']>): PersonRec
   }).sort((a, b) => Number(b.active.length > 0) - Number(a.active.length > 0));
 }
 
+export function sessionCount(count: number) { return count === 1 ? '1 sesiune' : `${count} sesiuni`; }
+
 export function visibleSessions(sessions: PersonSession[], expanded: boolean, limit = 3) {
   if (expanded || sessions.length <= limit) return sessions;
   const active = sessions.filter(({ session }) => !session.endedAt);
