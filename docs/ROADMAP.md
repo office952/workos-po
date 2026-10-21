@@ -63,6 +63,8 @@ Source candidate only, in existing draft PR #92. Earlier synthetic runtime check
 
 The Owner replaced the continuous page and its anchors with six sections on the same job route: Situație, Operații, Fișiere, Oameni, Istoric and Date lucrare. One operations register holds hours and results; the separate results renderer is retired. A finished job stays a consultation record. Contract: [Production flow canon](architecture/PRODUCTION_FLOW_CANON.md#owner-decision-exclusive-job-sheet-sections-2026-10-21). No merge, deployment or business-data change.
 
+Owner-requested follow-up in draft PR #93: use the designated Figma frames for composition and density, not only navigation. Candidate changes compact the header, session tables, operations register and history, while preserving server totals and existing production semantics. No new route or PDF work. Frontend typecheck, lint and all 712 tests pass locally; visual/browser acceptance remains pending because browser access is unavailable in the review environment.
+
 ### Production flow simplification candidate (2026-10-20)
 
 Owner-authorized source candidate on top of `184619c` / draft PR #91: offer confirmation opens the job, a single **Trimite în producție** command prepares release and plan, and operations/dossier stay in the job sheet and Atelier. Canonical responsibilities and retired URL mapping: [Production flow canon](architecture/PRODUCTION_FLOW_CANON.md). Candidate only; merge, real-data changes, deployment and visual acceptance remain pending. This note does not change the historical main baseline above.

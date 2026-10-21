@@ -139,6 +139,31 @@ describe('file-first job record', () => {
     for (const link of operationLinks) expect(link).toHaveAttribute('href', '/lucrari/job-1?task=task-1&sectiune=operatii');
   });
 
+  it('keeps quantity compliance separate from a quality-control result', async () => {
+    const user = userEvent.setup();
+    render(<View record={jobRecordFixture} section="operatii" />);
+    await user.click(screen.getByRole('button', { name: '01 · Lipire' }));
+    const detail = screen.getByRole('region', { name: 'Dosarul operației selectate' });
+    const quantities = within(detail).getByRole('heading', { name: 'Cantități' }).parentElement!;
+    const quality = within(detail).getByRole('heading', { name: 'Control' }).parentElement!;
+    expect(within(quantities).getByText('Conform planului')).toBeVisible();
+    expect(within(quality).queryByText('Conform planului')).toBeNull();
+    expect(within(quality).getByText('Control neînregistrat')).toBeVisible();
+  });
+
+  it('closes a detail excluded by search and allows returning to its operation', async () => {
+    const user = userEvent.setup();
+    render(<View record={jobRecordFixture} section="operatii" />);
+    await user.click(screen.getByRole('button', { name: '01 · Lipire' }));
+    await user.type(screen.getByRole('searchbox', { name: 'Caută operație, componentă sau persoană' }), 'Control');
+    expect(screen.queryByRole('region', { name: 'Dosarul operației selectate' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '01 · Lipire' })).toBeNull();
+    expect(screen.getByRole('button', { name: '02 · Control' })).toBeVisible();
+    await user.clear(screen.getByRole('searchbox'));
+    await user.click(screen.getByRole('button', { name: '01 · Lipire' }));
+    expect(screen.getByRole('region', { name: 'Dosarul operației selectate' })).toBeVisible();
+  });
+
   it('opens a specific revision without changing its uses and restores keyboard focus', async () => {
     const user = userEvent.setup();
     render(<View record={jobRecordFixture} section="fisiere" />);

@@ -23,15 +23,17 @@ export function JobRecordDates({
         <header>
           <div>
             <h2>Datele lucrării</h2>
-            <p>Necesarul estimat și verificările stau aici. Consumul efectiv rămâne pe operația care l-a înregistrat. Contextul de montaj nu confirmă montajul.</p>
+            <p>Materiale, montaj și sursa comercială. Consumul efectiv se consultă pe operație.</p>
           </div>
         </header>
         <JobMaterialPreparation jobId={jobId} returnTo={returnTo} consultation={consultation} />
-        {site ? <SiteInstallationContextPanel context={site} /> : <p>Nu există context de montaj înregistrat.</p>}
-        <section className="job-sheet__panel" aria-label="Sursa comercială">
+        <div className="job-record__dates-grid">
+        <section aria-label="Context de montaj"><h3>Montaj</h3>{site ? <SiteInstallationContextPanel context={site} /> : <p>Nu există context de montaj înregistrat.</p>}</section>
+        <section aria-label="Sursa comercială">
           <h2>Sursă comercială acceptată</h2>
           {sourceHref ? <a href={sourceHref}>{sourceLabel}</a> : <p>Legătura către sursă nu este disponibilă.</p>}
         </section>
+        </div>
       </section>
     </div>
   );

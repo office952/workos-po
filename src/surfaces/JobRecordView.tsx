@@ -4,7 +4,7 @@ import type { JobSheetSection } from "../routing/appRoute";
 import { JobRecordFiles } from "./jobRecord/JobRecordFiles";
 import { JobRecordPeople, JobRecordHistory } from "./jobRecord/JobRecordHistory";
 import { JobRecordOperations } from "./jobRecord/JobRecordOperations";
-import { JobRecordSummary } from "./jobRecord/JobRecordSummary";
+import { JobRecordSummary, type JobSummaryContext } from "./jobRecord/JobRecordSummary";
 import "../styles/surfaces/job-record.css";
 
 function Section({ active, section, children }: { active: JobSheetSection; section: JobSheetSection; children: ReactNode }) {
@@ -25,6 +25,7 @@ export function JobRecordView({
   onCloseTask,
   dossier,
   dates,
+  summaryContext,
 }: {
   section: JobSheetSection;
   record: JobRecord | null;
@@ -39,11 +40,12 @@ export function JobRecordView({
   onCloseTask: () => void;
   dossier: ReactNode;
   dates: ReactNode;
+  summaryContext?: JobSummaryContext;
 }) {
   return (
     <div className="job-record job-record-sections">
       <Section active={section} section="situatie">
-        {record?.hours ? <JobRecordSummary record={record} /> : record ? (
+        {record?.hours ? <JobRecordSummary record={record} context={summaryContext} operationHref={operationHref} /> : record ? (
           <section className="job-record__section" aria-label="Situația lucrării">
             <h2>Situația lucrării</h2>
             <p>Evidența orelor, a duratei calendaristice și a timpului de utilaj nu este disponibilă.</p>

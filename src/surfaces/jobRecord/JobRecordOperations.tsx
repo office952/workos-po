@@ -21,6 +21,7 @@ function OperationEvidence({ task }: { task: WorkHoursTask }) {
           <h5>Cantități</h5>
           <p>{quantityText(task)}</p>
           <p>{task.completedQuantityLabel ?? "Realizat: neînregistrat"}</p>
+          {task.varianceLabel ? <p>{task.varianceLabel}</p> : null}
         </div>
         <div>
           <h5>Consumuri</h5>
@@ -42,8 +43,7 @@ function OperationEvidence({ task }: { task: WorkHoursTask }) {
         <div>
           <h5>Control</h5>
           {task.qualityLabel ? <p>{task.qualityLabel}</p> : null}
-          {task.varianceLabel ? <p>{task.varianceLabel}</p> : null}
-          {!task.qualityLabel && !task.varianceLabel ? <p>Fără înregistrări</p> : null}
+          {!task.qualityLabel ? <p>Control neînregistrat</p> : null}
         </div>
       </div>
       <h4>Sesiuni</h4>
@@ -91,7 +91,20 @@ export function JobRecordOperations({
 }) {
   const detailId = useId();
   const hours = record?.hours ?? null;
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('ALL');
   const selected = hours?.tasks.find((task) => task.taskId === selectedTaskId) ?? null;
+  function matches(task: WorkHoursTask, text: string, status: string) {
+    return (status === 'ALL' || task.status === status) &&
+      [task.seqLabel, task.processLabel, task.scopeLabel, task.providerLabel, ...task.people.map(person => person.label)]
+        .join(' ').toLocaleLowerCase('ro').includes(text.trim().toLocaleLowerCase('ro'));
+  }
+  const visibleTasks = hours?.tasks.filter(task => matches(task, query, filter)) ?? [];
+  function changeFilter(text: string, status: string) {
+    setQuery(text);
+    setFilter(status);
+    if (selected && !matches(selected, text, status)) onClose();
+  }
   const toggles = useRef(new Map<string, HTMLButtonElement>());
   const rootRef = useRef<HTMLElement>(null);
   const standbyRef = useRef<HTMLDivElement>(null);
@@ -140,18 +153,24 @@ export function JobRecordOperations({
       <header>
         <div>
           <Heading icon="hours">Operațiile lucrării</Heading>
-          <p>O singură listă. Rândul arată operația, starea, participanții și orele. Rezultatele, sesiunile și dosarul se deschid imediat sub rând.</p>
+          <p>Stare, participanți și timp. Deschide o operație pentru rezultate și dosar.</p>
         </div>
         {hours && record ? <Button variant="secondary" onClick={() => exportHours(record)}>Exportă orele CSV</Button> : null}
       </header>
       {planUnavailable ? <InlineAlert tone="error" title="Operațiile nu au putut fi citite">Drepturile și detaliile operațiilor nu sunt disponibile.</InlineAlert> : null}
       {invalidTask ? <InlineAlert tone="error" title="Operația nu există în această lucrare">Linkul nu a fost înlocuit cu altă operație.</InlineAlert> : null}
+      {hours ? <div className="job-record__operation-toolbar">
+        <label className="job-record__search">Caută operație, componentă sau persoană<input type="search" value={query} onChange={event => changeFilter(event.target.value, filter)}/></label>
+        <div className="job-plan__filters" role="group" aria-label="Filtrează operațiile">
+          {[['ALL', 'Toate'], ['IN_PROGRESS', 'În lucru'], ['COMPLETED', 'Finalizate']].map(([status, label]) => <button key={status} type="button" aria-pressed={filter === status} onClick={() => changeFilter(query, status!)}>{label} · {hours.tasks.filter(task => status === 'ALL' || task.status === status).length}</button>)}
+        </div>
+      </div> : null}
       {hours ? (
-        <table className="job-record__table">
+        <table className="job-record__table job-record__operations-table">
           <caption className="u-visually-hidden">Registrul operațiilor</caption>
-          <thead><tr><th>Operație</th><th>Stare</th><th>Participanți</th><th>Ore</th></tr></thead>
+          <thead><tr><th scope="col">Operație / componentă</th><th scope="col">Stare</th><th scope="col">Participanți</th><th scope="col">Ore</th><th scope="col">Început / final</th></tr></thead>
           <tbody>
-            {hours.tasks.map((task) => {
+            {visibleTasks.map((task) => {
               const expanded = task.taskId === selectedTaskId;
               return (
                 <Fragment key={task.taskId}>
@@ -167,22 +186,23 @@ export function JobRecordOperations({
                       >
                         {task.seqLabel} · {task.processLabel}
                       </button>
-                      <p>{task.scopeLabel}</p>
-                      {task.providerLabel || task.externalProviderLabel ? <p>{task.externalProviderLabel ?? task.providerLabel}</p> : null}
+                      <p>{task.scopeLabel}{task.providerLabel || task.externalProviderLabel ? ` · ${task.externalProviderLabel ?? task.providerLabel}` : ''}</p>
                     </td>
-                    <td data-label="Stare">{task.statusLabel}</td>
+                    <td data-label="Stare"><span className="job-record__status" data-status={task.status}>{task.statusLabel}</span></td>
                     <td data-label="Participanți">{task.people.length ? task.people.map((person) => <p key={person.personId}>{person.label} · {person.timeLabel}{person.active ? " · activ" : ""}</p>) : "Fără sesiuni înregistrate"}</td>
                     <td data-label="Ore">
                       <p className="job-record__hours"><span>Oameni</span><strong>{task.timeLabel}</strong></p>
-                      <p>{task.coverageLabel}</p>
+                      {!task.complete ? <p>{task.coverageLabel}</p> : null}
                       {task.declaredDurationLabel ? <p>Durată declarată: {task.declaredDurationLabel}</p> : null}
                       <p>Utilaj: {task.machineTimeLabel ?? "Fără rulări înregistrate"}</p>
+                    </td>
+                    <td data-label="Început / final">
                       <span className="job-record__date">Început: {moment(task.startedAt)}</span>
                       <span className="job-record__date">Final: {moment(task.completedAt)}</span>
                     </td>
                   </tr>
                   <tr hidden={!expanded} className="job-record__detail-row">
-                    <td colSpan={4}><div data-detail-slot={expanded ? "open" : "closed"} /></td>
+                    <td colSpan={5}><div data-detail-slot={expanded ? "open" : "closed"} /></td>
                   </tr>
                 </Fragment>
               );
@@ -194,10 +214,12 @@ export function JobRecordOperations({
               <td>{hours.coverageLabel}</td>
               <td>{hours.people.length} persoane</td>
               <td><p className="job-record__hours"><span>Oameni</span><strong>{hours.totalLabel}</strong></p><p>Utilaj: {hours.machineTimeLabel}</p></td>
+              <td><span className="job-record__date">Început: {moment(hours.startedAt)}</span><span className="job-record__date">Final: {moment(hours.completedAt)}</span></td>
             </tr>
           </tfoot>
         </table>
       ) : record ? <p>Planul de execuție nu există încă.</p> : null}
+      {hours && !visibleTasks.length ? <p role="status">Nicio operație nu corespunde filtrelor.</p> : null}
       {hours ? <section className="job-record__print-sheet" hidden aria-label="Rezultatele operațiilor pentru tipărire">
         <h2>Rezultatele operațiilor</h2>
         {hours.tasks.map((task) => <article key={task.taskId}>

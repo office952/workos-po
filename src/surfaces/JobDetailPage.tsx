@@ -62,7 +62,7 @@ export function JobDetailPage({ jobId, taskId = null, section }: Props) {
   const finished = job?.stage === 'EXECUTION_COMPLETED';
   const active = activeSection(section, taskId);
   const sessionScope = [planId, cloud.user?.email, cloud.organization?.organizationId, readCloudBoundaryVersion(), session.data?.personId].join('|');
-  const dossier: ReactNode = pinned ? <TaskDossierPanel key={sessionScope} taskId={pinned.taskId} taskLabel={`${pinned.seqLabel} ${pinned.processLabel}`} canInstruct={owner} operatorIdentified={Boolean(session.data)} canWriteFiles={owner || Boolean(session.data)} sessionScope={sessionScope} /> : null;
+  const dossier: ReactNode = pinned ? <TaskDossierPanel key={sessionScope} taskId={pinned.taskId} taskLabel={`${pinned.seqLabel} ${pinned.processLabel}`} canInstruct={owner} operatorIdentified={Boolean(session.data)} canWriteFiles={owner || Boolean(session.data)} sessionScope={sessionScope} recordMode /> : null;
   async function sendToProduction() {
     if (!job || pending || finished) return;
     setPending(true); setError(null);
@@ -85,11 +85,10 @@ export function JobDetailPage({ jobId, taskId = null, section }: Props) {
   return <PageRegion><div className="job-sheet" data-surface="job-detail" data-section={active}>
     <header className="job-sheet__header"><a className="job-sheet__back" href="/lucrari">← Lucrări</a>
       <div className="job-sheet__identity-row"><div className="job-sheet__identity"><p className="job-sheet__eyebrow">Fișa lucrării</p><h1>{job ? presentJobSheetTitle(job) : 'Lucrare'}</h1><p>{job?.customerDisplayName ?? 'Se citește lucrarea.'}{secondary ? ' · ' + secondary : ''}</p></div>
-        <div className="job-sheet__header-action">{job ? <strong>{finished ? 'Producție finalizată' : job.stageLabel}</strong> : null}<Button variant="secondary" onClick={() => window.print()}>Tipărește fișa</Button>{planId && !finished ? <a className="job-sheet__link-button" href={atelierHref({ jobId, planId, taskId: selectedTask?.taskId })}>Deschide în Atelier</a> : null}</div></div>
-      {job ? <div className="job-sheet__planning"><span>Prioritate: {job.priorityLabel}</span><span>Termen: {job.targetDateLabel}</span><span>{job.progressLabel}</span>
+        <div className="job-sheet__header-action"><Button variant="secondary" onClick={() => window.print()}>Tipărește fișa</Button>{planId && !finished ? <a className="job-sheet__link-button" href={atelierHref({ jobId, planId, taskId: selectedTask?.taskId })}>Deschide în Atelier</a> : null}</div></div>
+      {job ? <div className="job-sheet__planning"><strong className="job-sheet__state">{finished ? 'Producție finalizată' : job.stageLabel}</strong><span>Prioritate: {job.priorityLabel}</span><span>Termen: {job.targetDateLabel}</span><span>{job.progressLabel}</span>
         {job.planningEditable && !finished ? <details className="job-sheet__planning-editor"><summary>Modifică prioritatea și termenul</summary><form onSubmit={event => { event.preventDefault(); void savePlanning(); }}><SelectField id="job-priority" label="Prioritate" value={priority} options={[{ value: 'STANDARD', label: 'Standard' }, { value: 'HIGH', label: 'Ridicată' }, { value: 'URGENT', label: 'Urgentă' }]} onChange={setPriorityDraft}/><TextField id="job-target" label="Termen" value={targetDate} onChange={setTargetDraft}/><Button type="submit" disabled={pending}>Salvează</Button></form></details> : null}</div> : null}
-      {finished ? <p>Producția este finalizată. Livrarea și montajul nu sunt confirmate de această stare.</p> : null}
-      {job?.attentionLabel && !finished ? <p className="job-sheet__warning">{job.attentionLabel}</p> : null}
+      {finished ? <p className="job-sheet__completion-note">Producția este finalizată. Livrarea și montajul nu sunt confirmate de această stare.</p> : null}
       {job && !planId && owner && !finished ? <Button disabled={pending} onClick={() => void sendToProduction()}>{pending ? 'Se pregătește producția…' : 'Trimite în producție'}</Button> : null}
       {error ? <InlineAlert tone="error" title="Acțiunea nu a fost finalizată">{error}</InlineAlert> : null}{notice ? <p role="status">{notice}</p> : null}
     </header>
@@ -102,6 +101,7 @@ export function JobDetailPage({ jobId, taskId = null, section }: Props) {
       <JobRecordView
         section={active}
         record={report.data ?? null}
+        summaryContext={job ? { statusLabel: finished ? 'Producție finalizată' : job.stageLabel, progressLabel: job.progressLabel, attentionLabel: finished ? null : job.attentionLabel } : undefined}
         canWriteFiles={owner || Boolean(session.data)}
         operationHref={operationHref}
         selectedTaskId={selectedTask?.taskId ?? null}
