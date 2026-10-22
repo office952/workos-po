@@ -1,0 +1,78 @@
+name: WorkOS Pilot Staging Acceptance
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/pilot-staging-acceptance.yml"
+      - "apps/api/src/ops/pilotPreflight.ts"
+      - "apps/api/src/ops/pilotPreflightCli.ts"
+      - "apps/api/src/ops/readiness.ts"
+      - "apps/api/src/cloud/provision.ts"
+      - "apps/api/tests/pilot-preflight.test.ts"
+      - "apps/api/tests/cloud-isolation.test.ts"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pilot-staging-acceptance-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  acceptance:
+    name: Synthetic staging-readiness acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NODE_ENV: test
+      WORKOS_CLOUD_ROOT: ""
+      WORKOS_BACKUP_ROOT: ""
+      WORKOS_PUBLIC_ORIGIN: ""
+      WORKOS_TRUSTED_ORIGINS: ""
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run synthetic staging readiness and tenant isolation regression suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter @workos-final/api exec vitest run \
+            tests/pilot-preflight.test.ts \
+            tests/cloud-isolation.test.ts \
+            tests/pilot-origin-security-regression.test.ts \
+            tests/pilot-multi-plane-readiness.test.ts
+
+      - name: Publish sanitized acceptance evidence
+        if: always()
+        shell: bash
+        env:
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          {
+            echo "## WorkOS synthetic staging-readiness evidence"
+            echo ""
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- Result: **$JOB_STATUS**"
+            echo "- Environment: ephemeral GitHub-hosted Ubuntu, test-only"
+            echo "- Coverage: preflight, cross-organization isolation, HTTPS/origin and multi-plane readiness"
+            echo "- No organization provisioning on a real root, infrastructure deployment, database or backup artifact upload"
+            echo "- Classification: AUTOMATED_SYNTHETIC_ACCEPTANCE (not staging deployment, real preflight or first customer validation)"
+          } >> "$GITHUB_STEP_SUMMARY"
