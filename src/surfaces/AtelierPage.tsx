@@ -30,9 +30,10 @@ import { atelierHref, executionHref } from "../routing/appRoute";
 
 type AtelierPageProps = {
   jobId?: string | null;
+  returnTo?: string | null;
 };
 
-export function AtelierPage({ jobId = null }: AtelierPageProps) {
+export function AtelierPage({ jobId = null, returnTo = null }: AtelierPageProps) {
   const candidates = useResource(resourceKeys.operatorCandidates(), loadOperatorCandidates);
   const session = useResource(resourceKeys.operatorSession(), loadOperatorSession);
   const inbox = useResource(
@@ -229,17 +230,16 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
           ) : null}
               </div>
               <aside className="atelier-identify__aside">
-                <p className="atelier-identify__kicker">După identificare</p>
-                <ol>
-                  <li>Confirmi persoana cu PIN. Lista nu pornește lucrul.</li>
-                  <li>Coada arată de ce o sarcină poate sau nu poate începe.</li>
-                  <li>Deschizi execuția pentru sarcina aleasă.</li>
-                </ol>
-                <p className="ui-note">
-                  Lista preselectează prima persoană ca alegere de formular. Identificarea începe
-                  doar după PIN. Sarcinile apar după identificare. Pornirea rămâne pe execuție,
-                  nu pe această listă.
-                </p>
+                <p className="atelier-identify__kicker">Identificare</p>
+                <p>PIN-ul confirmă persoana. Lista nu pornește lucrul.</p>
+                <p>După identificare deschizi execuția pentru sarcina aleasă.</p>
+                {returnTo ? (
+                  <p>
+                    <a className="text-link" href={returnTo}>
+                      Revino la operație
+                    </a>
+                  </p>
+                ) : null}
               </aside>
             </div>
           )}
@@ -255,6 +255,11 @@ export function AtelierPage({ jobId = null }: AtelierPageProps) {
               <span className="atelier-operator__kicker">Operator</span>
               <strong>Autentificat: {currentSession.displayName}</strong>
             </p>
+            {returnTo ? (
+              <a className="text-link" href={returnTo}>
+                Revino la operație
+              </a>
+            ) : null}
             {inbox.status === "success" ? (
               <>
                 <span>{inProgressCount} în lucru de tine</span>

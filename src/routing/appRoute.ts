@@ -220,8 +220,17 @@ export function requestHref(requestId: string): string {
   return `/cereri/${encodeURIComponent(requestId)}`;
 }
 
-export function jobHref(jobId: string): string {
-  return `/lucrari/${encodeURIComponent(jobId)}`;
+export function jobHref(
+  jobId: string,
+  context: { taskId?: string | null } = {},
+): string {
+  const path = `/lucrari/${encodeURIComponent(jobId)}`;
+  if (!context.taskId) {
+    return path;
+  }
+  const params = new URLSearchParams();
+  params.set("task", context.taskId);
+  return `${path}?${params.toString()}`;
 }
 
 export function executionHref(
@@ -265,10 +274,64 @@ export function planningHref(): string {
   return "/planificare";
 }
 
-export function atelierHref(context: { jobId?: string | null } = {}): string {
-  return context.jobId
-    ? `/atelier?job=${encodeURIComponent(context.jobId)}`
-    : "/atelier";
+export function atelierHref(
+  context: { jobId?: string | null; returnTo?: string | null } = {},
+): string {
+  const params = new URLSearchParams();
+  if (context.jobId) {
+    params.set("job", context.jobId);
+  }
+  const returnTo = sanitizeOperationalReturn(context.returnTo);
+  if (returnTo) {
+    params.set("return", returnTo);
+  }
+  const query = params.toString();
+  return query ? `/atelier?${query}` : "/atelier";
+}
+
+const OPERATIONAL_RETURN_PATH = /^\/(?:lucrari\/[^/]+|executie\/[^/]+|atelier)$/;
+
+export function sanitizeOperationalReturn(value: string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (
+    trimmed === "" ||
+    trimmed.startsWith("//") ||
+    trimmed.includes("\\") ||
+    trimmed.includes("://")
+  ) {
+    return null;
+  }
+  let url: URL;
+  try {
+    url = new URL(trimmed, "https://workos.local");
+  } catch {
+    return null;
+  }
+  if (url.origin !== "https://workos.local" || !OPERATIONAL_RETURN_PATH.test(url.pathname)) {
+    return null;
+  }
+  const params = new URLSearchParams();
+  const task = url.searchParams.get("task");
+  const job = url.searchParams.get("job");
+  if (task && /^[\w:.-]+$/.test(task)) {
+    params.set("task", task);
+  }
+  if (
+    (url.pathname === "/atelier" || url.pathname.startsWith("/executie/")) &&
+    job &&
+    /^[\w:.-]+$/.test(job)
+  ) {
+    params.set("job", job);
+  }
+  const query = params.toString();
+  return query ? `${url.pathname}?${query}` : url.pathname;
+}
+
+export function parseOperationalReturn(search: string): string | null {
+  return sanitizeOperationalReturn(readSearchParam(search, "return"));
 }
 
 export function withSpineContext(pathname: string, context: SpineContext): string {

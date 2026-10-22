@@ -137,25 +137,20 @@ export function PlanningPage() {
                 columns={TASK_COLUMNS}
               >
                 {unassigned.map((task) => (
-                  <div key={task.taskId}>
-                    <PlannerTaskRow
-                      task={task}
-                      editing={editingTaskId === task.taskId}
-                      hours={hours}
-                      minutes={minutes}
-                      pending={pending}
-                      onHoursChange={setHours}
-                      onMinutesChange={setMinutes}
-                      onBeginEdit={() => beginEdit(task)}
-                      onCancel={() => setEditingTaskId(null)}
-                      onSave={() => void saveEffort(task)}
-                    />
-                    <p className="ui-note">
-                      <a className="text-link" href={task.executionHref}>
-                        Alocă zona sau utilajul în execuție
-                      </a>
-                    </p>
-                  </div>
+                  <PlannerTaskRow
+                    key={task.taskId}
+                    task={task}
+                    editing={editingTaskId === task.taskId}
+                    hours={hours}
+                    minutes={minutes}
+                    pending={pending}
+                    allocationHref={task.executionHref}
+                    onHoursChange={setHours}
+                    onMinutesChange={setMinutes}
+                    onBeginEdit={() => beginEdit(task)}
+                    onCancel={() => setEditingTaskId(null)}
+                    onSave={() => void saveEffort(task)}
+                  />
                 ))}
               </Worklist>
             )}
@@ -244,6 +239,7 @@ function PlannerTaskRow({
   pending,
   onHoursChange,
   onMinutesChange,
+  allocationHref,
   onBeginEdit,
   onCancel,
   onSave,
@@ -253,6 +249,7 @@ function PlannerTaskRow({
   hours: string;
   minutes: string;
   pending: boolean;
+  allocationHref?: string;
   onHoursChange: (value: string) => void;
   onMinutesChange: (value: string) => void;
   onBeginEdit: () => void;
@@ -309,6 +306,11 @@ function PlannerTaskRow({
           <Button variant="ghost" onClick={onCancel} disabled={pending}>
             Anulează
           </Button>
+          {allocationHref ? (
+            <a className="text-link planner-allocate" href={allocationHref}>
+              Alocă în execuție
+            </a>
+          ) : null}
         </form>
       </div>
     );
@@ -327,6 +329,13 @@ function PlannerTaskRow({
         />
       }
       actionLabel={formatPlannedEffort(task.plannedEffortMinutes)}
+      actionExtra={
+        allocationHref ? (
+          <a className="text-link planner-allocate" href={allocationHref}>
+            Alocă în execuție
+          </a>
+        ) : null
+      }
       detailHref={task.jobHref ?? undefined}
       onSelect={task.canEditEffort && !task.jobHref ? onBeginEdit : undefined}
       actionCommand={task.canEditEffort && task.jobHref ? onBeginEdit : undefined}

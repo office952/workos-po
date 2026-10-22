@@ -2142,6 +2142,22 @@ button.context-rail__item:focus-visible {
   max-width: 7rem;
 }
 
+.worklist-row__action:has(.planner-allocate) {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+.planner-allocate {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 650;
+}
+
 @media (max-width: 768px) {
   .planner-row-edit {
     grid-template-columns: 1fr;

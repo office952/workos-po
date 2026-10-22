@@ -13,6 +13,7 @@ import {
   canonicalLocation,
   parseAppRoute,
   parseJobContext,
+  parseOperationalReturn,
   parseSpineContext,
   parseTaskContext,
   type AppRoute,
@@ -124,11 +125,16 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
     case "jobs":
       return <JobsPage />;
     case "job":
-      return <JobDetailPage jobId={route.jobId} />;
+      return <JobDetailPage jobId={route.jobId} taskId={parseTaskContext(search)} />;
     case "planning":
       return <PlanningPage />;
     case "atelier":
-      return <AtelierPage jobId={parseJobContext(search)} />;
+      return (
+        <AtelierPage
+          jobId={parseJobContext(search)}
+          returnTo={parseOperationalReturn(search)}
+        />
+      );
     case "execution":
       return (
         <ExecutionPage

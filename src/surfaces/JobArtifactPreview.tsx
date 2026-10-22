@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchDownload } from "../api/http";
 import type { DossierFile } from "../api/taskDossier";
+import { AuthenticatedDownloadLink } from "../presentation/AuthenticatedDownloadLink";
 
 const PREVIEW_MAX_BYTES = 16 * 1024 * 1024;
 const TEXT_MAX_BYTES = 256 * 1024;
@@ -10,7 +11,12 @@ type Preview =
   | { id: string; kind: "text"; text: string; truncated: boolean }
   | { id: string; kind: "error"; message: string };
 
-export function JobArtifactPreview({ file }: { file: DossierFile | null }) {
+export type ArtifactPreviewSource = Pick<
+  DossierFile,
+  "artifactId" | "originalFileName" | "sizeLabel" | "downloadHref" | "preview"
+>;
+
+export function JobArtifactPreview({ file }: { file: ArtifactPreviewSource | null }) {
   const [preview, setPreview] = useState<Preview | null>(null);
   const [retry, setRetry] = useState(0);
   const id = file?.artifactId ?? "";
@@ -101,9 +107,9 @@ export function JobArtifactPreview({ file }: { file: DossierFile | null }) {
           </span>
           <h3>{file.originalFileName}</h3>
         </div>
-        <a className="text-link" href={file.downloadHref}>
+        <AuthenticatedDownloadLink href={file.downloadHref}>
           Descarcă fișierul ↗
-        </a>
+        </AuthenticatedDownloadLink>
       </header>
       <div className="job-document__body" aria-busy={supported && !current}>
         {!supported ? (
@@ -157,7 +163,10 @@ export function JobArtifactPreview({ file }: { file: DossierFile | null }) {
       {current?.kind === "pdf" ? (
         <p className="job-document__fallback">
           Dacă browserul nu afișează PDF-ul,{" "}
-          <a href={file.downloadHref}>descarcă documentul</a>.
+          <AuthenticatedDownloadLink href={file.downloadHref}>
+            descarcă documentul
+          </AuthenticatedDownloadLink>
+          .
         </p>
       ) : null}
     </section>

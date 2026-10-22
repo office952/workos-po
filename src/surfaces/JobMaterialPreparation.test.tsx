@@ -118,11 +118,21 @@ describe("JobMaterialPreparation", () => {
       }),
     );
 
-    render(<JobMaterialPreparation jobId="job-1" onlyResourceIds={["MAT-LED-MODULE"]} />);
+    render(
+      <JobMaterialPreparation
+        jobId="job-1"
+        onlyResourceIds={["MAT-LED-MODULE"]}
+        returnTo="/lucrari/job-1?task=task-1"
+      />,
+    );
 
     expect(await screen.findByRole("heading", { name: "Materiale pentru operație" })).toBeInTheDocument();
     expect(screen.getByText(/Necesar estimat total pe lucrare: 125/)).toBeInTheDocument();
     expect(screen.getByText(/Solicitare de revizuit · 140 buc/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Identifică-te în Atelier" })).toHaveAttribute(
+      "href",
+      "/atelier?job=job-1&return=%2Flucrari%2Fjob-1%3Ftask%3Dtask-1",
+    );
     expect(screen.queryByText(/Nu este o comandă/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Avertisment: materialul nu este suficient/)).not.toBeInTheDocument();
   });

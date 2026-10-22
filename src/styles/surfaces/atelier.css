@@ -1,7 +1,9 @@
 /* Atelier: operator identity, scannable lanes, visible reason, dense queue. */
 
-.page-workspace--operational:has(.atelier-identify) > .ui-panel--operational {
+.page-workspace--operational:has(.atelier-identify) > .ui-panel--operational:only-child {
   max-width: none;
+  width: 100%;
+  flex: 1 1 auto;
 }
 
 .atelier-identify {
@@ -155,17 +157,21 @@
   outline-offset: 2px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 960px) {
   .atelier-identify {
     grid-template-columns: minmax(0, 1fr);
     gap: 20px;
   }
 
   .atelier-identify__aside {
+    max-width: none;
     padding: 16px 0 0;
     border-left: 0;
     border-top: 3px solid var(--shell-signal);
   }
+}
+
+@media (max-width: 768px) {
 
   .atelier-status {
     display: grid;

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { presentExecutionPlan } from "../adapters/executionAdapter";
 import { TransportError, readTransportErrorCode } from "../api/http";
+import { fetchJobMaterialPreparation } from "../api/jobMaterials";
 import { patchJobPlanning, postJobExecutionPlan, postJobProductionRelease } from "../api/jobs";
 import { Button } from "../components/Button";
 import { InfoRow } from "../components/InfoRow";
@@ -22,9 +23,9 @@ import { loadExecutionPlan, loadJobDetail } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { presentJobLifecycle } from "../presentation/jobLifecycle";
+import { presentMaterialPreparationSummary } from "../presentation/materialPreparationSummary";
 import {
   presentJobSheetLead,
-  presentJobSheetSecondary,
   presentJobSheetTitle,
 } from "../presentation/jobSheetIdentity";
 import { formatQuantity } from "../presentation/format";
@@ -42,6 +43,7 @@ import type { ExecutionTaskTransport } from "../api/types";
 
 type JobDetailPageProps = {
   jobId: string;
+  taskId?: string | null;
 };
 
 function TaskMaterialConsumption({ task }: { task: ExecutionTaskTransport }) {
@@ -88,7 +90,7 @@ function jobQualityLabel(task: ExecutionTaskTransport): string {
   return task.qualityBlockLabel ?? task.statusLabel;
 }
 
-export function JobDetailPage({ jobId }: JobDetailPageProps) {
+export function JobDetailPage({ jobId, taskId = null }: JobDetailPageProps) {
   const jobResource = useResource(resourceKeys.job(jobId), () => loadJobDetail(jobId));
   const job = jobResource.data?.job ?? null;
   const quoteSnapshotId = jobResource.data?.quoteSnapshotId ?? null;
@@ -98,8 +100,35 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
     loadExecutionPlan(planId ?? ""),
   );
   const plan = planResource.data ?? null;
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const selectedTask = plan?.tasks.find((task) => task.taskId === selectedTaskId) ?? plan?.tasks.find((task) => task.status === "IN_PROGRESS") ?? plan?.tasks[0] ?? null;
+  const [chosenTaskId, setChosenTaskId] = useState<string | null>(taskId);
+  const [trackedUrlTask, setTrackedUrlTask] = useState<string | null>(taskId);
+  if (taskId !== trackedUrlTask) {
+    setTrackedUrlTask(taskId);
+    setChosenTaskId(taskId);
+  }
+  const resolvedTaskId =
+    (chosenTaskId && plan?.tasks.some((task) => task.taskId === chosenTaskId)
+      ? chosenTaskId
+      : null) ??
+    plan?.tasks.find((task) => task.status === "IN_PROGRESS")?.taskId ??
+    plan?.tasks[0]?.taskId ??
+    null;
+  const selectedTask = plan?.tasks.find((task) => task.taskId === resolvedTaskId) ?? null;
+
+  useEffect(() => {
+    if (!resolvedTaskId) {
+      return;
+    }
+    const next = jobHref(jobId, { taskId: resolvedTaskId });
+    if (`${window.location.pathname}${window.location.search}` !== next) {
+      navigate(next, "replace");
+    }
+  }, [jobId, resolvedTaskId]);
+
+  function chooseTask(nextTaskId: string): void {
+    setChosenTaskId(nextTaskId);
+    navigate(jobHref(jobId, { taskId: nextTaskId }), "replace");
+  }
   const [actionState, setActionState] = useState<"idle" | "pending" | "error">("idle");
   const [actionError, setActionError] = useState<string | null>(null);
   const [draftScope, setDraftScope] = useState(jobId);
@@ -108,13 +137,18 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
   const [planningMessage, setPlanningMessage] = useState<string | null>(null);
   if (draftScope !== jobId) {
     setDraftScope(jobId);
-    setSelectedTaskId(null);
+    setChosenTaskId(taskId);
+    setTrackedUrlTask(taskId);
     setPriorityDraft(null);
     setTargetDraft(null);
     setPlanningMessage(null);
   }
   const priority = priorityDraft ?? job?.priority ?? "STANDARD";
   const targetDate = targetDraft ?? job?.targetDate ?? "";
+  const materialPreparation = useResource(resourceKeys.jobMaterialPreparation(jobId), () =>
+    fetchJobMaterialPreparation(jobId),
+  );
+  const materialSummary = presentMaterialPreparationSummary(materialPreparation);
   const materialAttention = (plan?.tasks ?? [])
     .map((task) => task.materialBlockLabel)
     .filter((label): label is string => Boolean(label))
@@ -213,7 +247,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
       currentHref={jobHref(jobId)}
       workspace="traveler"
       surface="job-detail"
-      instrument={plan ? <JobTaskFingerprint tasks={plan.tasks} selectedTaskId={selectedTask?.taskId ?? null} onSelect={setSelectedTaskId} /> : undefined}
+      instrument={plan ? <JobTaskFingerprint tasks={plan.tasks} selectedTaskId={selectedTask?.taskId ?? null} onSelect={chooseTask} /> : undefined}
       headerVariant="pilot-compact"
       eyebrow="Lucrare"
       title={job ? presentJobSheetTitle(job) : "Lucrare"}
@@ -239,7 +273,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
         ) : job &&
           (job.nextAction === "OPEN_EXECUTION" || job.nextAction === "CONTINUE_EXECUTION") &&
           planId ? (
-          <a className="hit" href={executionHref(planId, { jobId })}>
+          <a className="hit" href={executionHref(planId, { jobId, taskId: selectedTask?.taskId })}>
             <span className="button button--primary">{job.nextActionLabel}</span>
           </a>
         ) : null
@@ -255,22 +289,17 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
           {job.stage === "EXECUTION_COMPLETED" ? <p className="job-sheet-completed">Producția este finalizată. Livrarea și montajul nu sunt confirmate de această stare.</p> : null}
           {job.needsAttention && job.attentionLabel ? <p className="job-sheet-attention">{job.attentionLabel}</p> : null}
           {planResource.status === "error" ? <InlineAlert tone="error" title="Planul nu a putut fi citit">Datele planului nu au putut fi actualizate.</InlineAlert> : null}
-          {plan ? <JobTaskWorkbench key={jobId} jobId={jobId} plan={plan} taskId={selectedTask?.taskId ?? null} onSelect={setSelectedTaskId} /> : null}
+          {plan ? <JobTaskWorkbench key={jobId} jobId={jobId} plan={plan} taskId={selectedTask?.taskId ?? null} onSelect={chooseTask} /> : null}
           <SurfacePanel title="Identitate" label="Identitate">
+            <div className="job-sheet-context">
+              <p>Prioritate {job.priorityLabel}</p>
+              <p>Termen {job.targetDateLabel}</p>
+              <p>Progres {job.progressLabel ?? "—"}</p>
+            </div>
             <dl className="fact-grid">
-              <InfoRow label="Lucrare" value={presentJobSheetTitle(job)} />
-              {presentJobSheetSecondary(job) ? (
-                <InfoRow label="Inscripție" value={presentJobSheetSecondary(job) ?? ""} />
-              ) : null}
-              <InfoRow label="Client" value={job.customerDisplayName ?? "—"} />
               <InfoRow label="Tip" value={job.kindLabel} />
-              <InfoRow label="Prioritate" value={job.priorityLabel} />
-              <InfoRow label="Termen" value={job.targetDateLabel} />
-              <InfoRow label="Stare" value={job.stageLabel} />
-              <InfoRow label="Progres" value={job.progressLabel ?? "—"} />
-
-              {job.attentionLabel && !job.needsAttention ? <InfoRow label="Mesaj operațional" value={job.attentionLabel} /> : null}
               <InfoRow label="Următoarea acțiune" value={job.nextActionLabel} />
+              {job.attentionLabel && !job.needsAttention ? <InfoRow label="Mesaj operațional" value={job.attentionLabel} /> : null}
               {materialAttention ? (
                 <InfoRow label="Material" value={materialAttention} />
               ) : null}
@@ -285,42 +314,45 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
                 </a>
               </p>
             ) : null}
-            <form
-              className="stack"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void savePlanning();
-              }}
-            >
-              <SelectField
-                id="job-priority"
-                label="Prioritate operațională"
-                value={priority}
-                disabled={!job.planningEditable || actionState === "pending"}
-                options={[
-                  { value: "STANDARD", label: "Standard" },
-                  { value: "HIGH", label: "Ridicată" },
-                  { value: "URGENT", label: "Urgentă" },
-                ]}
-                onChange={setPriorityDraft}
-              />
-              <TextField
-                id="job-target-date"
-                label="Termen operațional"
-                value={targetDate}
-                hint="Dată calendaristică YYYY-MM-DD. Gol înseamnă fără termen."
-                disabled={!job.planningEditable || actionState === "pending"}
-                onChange={setTargetDraft}
-              />
-              {job.planningEditable ? (
-                <Button type="submit" disabled={actionState === "pending"}>
-                  Salvează planificarea
-                </Button>
-              ) : (
-                <p className="ui-note">Lucrarea finalizată are planificarea doar pentru citire.</p>
-              )}
-              {planningMessage ? <p className="ui-note">{planningMessage}</p> : null}
-            </form>
+            {job.planningEditable ? (
+              <details>
+                <summary>Editează prioritatea și termenul</summary>
+                <form
+                  className="stack"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void savePlanning();
+                  }}
+                >
+                  <SelectField
+                    id="job-priority"
+                    label="Prioritate operațională"
+                    value={priority}
+                    disabled={actionState === "pending"}
+                    options={[
+                      { value: "STANDARD", label: "Standard" },
+                      { value: "HIGH", label: "Ridicată" },
+                      { value: "URGENT", label: "Urgentă" },
+                    ]}
+                    onChange={setPriorityDraft}
+                  />
+                  <TextField
+                    id="job-target-date"
+                    label="Termen operațional"
+                    value={targetDate}
+                    hint="Dată calendaristică YYYY-MM-DD. Gol înseamnă fără termen."
+                    disabled={actionState === "pending"}
+                    onChange={setTargetDraft}
+                  />
+                  <Button type="submit" disabled={actionState === "pending"}>
+                    Salvează planificarea
+                  </Button>
+                  {planningMessage ? <p className="ui-note">{planningMessage}</p> : null}
+                </form>
+              </details>
+            ) : (
+              <p className="ui-note">Lucrarea finalizată are planificarea doar pentru citire.</p>
+            )}
             <p className="ui-note">
               Oferta acceptată rămâne sursa istorică. Lucrarea adaugă doar starea
               operațională.
@@ -334,13 +366,28 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
           {jobResource.data?.siteInstallation ? (
             <SiteInstallationContextPanel context={jobResource.data.siteInstallation} />
           ) : null}
-          {plan ? <details className="job-sheet-archive"><summary>Fișierele lucrării · arhivă și încărcare</summary><JobFilesPanel jobId={jobId} /></details> : <JobFilesPanel jobId={jobId} />}
-          <JobMaterialPreparation jobId={jobId} />
+          {plan ? <details className="job-sheet-archive"><summary>Biblioteca lucrării — încărcare generală, distinctă de fișierele operației</summary><JobFilesPanel jobId={jobId} /></details> : <JobFilesPanel jobId={jobId} />}
+          {materialAttention ? (
+            <p className="job-sheet-attention">Blocaj de execuție: {materialAttention}</p>
+          ) : null}
+          {materialSummary.length > 0 ? (
+            <div className="job-sheet-attention" data-testid="material-preparation-summary">
+              {materialSummary.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+            </div>
+          ) : null}
+          <details>
+            <summary>Materiale — detalii și acțiuni</summary>
+            <JobMaterialPreparation
+              jobId={jobId}
+              returnTo={jobHref(jobId, { taskId: selectedTask?.taskId })}
+            />
+          </details>
           <SurfacePanel
             title="Traseu de producție"
-            description="Ghid din starea lucrării. Nu este planul de producție."
+            description="Indicator compact. Nu este planul de producție."
           >
-            <LifecycleList steps={presentJobLifecycle(job)} />
             <p className="ui-note">
               {plan
                 ? plan.progressLabel
@@ -348,6 +395,10 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
                   ? "Se citește planul de execuție."
                   : "Planul nu există încă. După materializare, progresul vine din motorul de execuție."}
             </p>
+            <details>
+              <summary>Pașii traseului</summary>
+              <LifecycleList steps={presentJobLifecycle(job)} />
+            </details>
           </SurfacePanel>
           <SurfacePanel
             title="Planificat și realizat"
@@ -367,7 +418,11 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
                       <p>{plan.timeSummary.actualKnownLabel}</p>
                     </div>
                   ) : null}
-                  <details className="job-sheet-results"><summary>Detalii complete pentru {plan.tasks.length} operații</summary>
+                  <p className="ui-note">
+                    Sumarul de timp este pe lucrare. Cantitatea, consumul și realizatul fiecărei operații
+                    stau în comparația de mai jos sau în Execuție.
+                  </p>
+                  <details className="job-sheet-results"><summary>Compară {plan.tasks.length} operații</summary>
                   {plan.tasks.map((task) => (
                     <div key={task.taskId} className="stack">
                       <p className="section-label">
@@ -410,12 +465,12 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
             {plan ? (
               <>
                 <p>
-                  <a className="text-link" href={executionHref(plan.planId, { jobId })}>
+                  <a className="text-link" href={executionHref(plan.planId, { jobId, taskId: selectedTask?.taskId })}>
                     Deschide execuția
                   </a>
                 </p>
                 <p>
-                  <a className="text-link" href={atelierHref({ jobId })}>
+                  <a className="text-link" href={atelierHref({ jobId, returnTo: jobHref(jobId, { taskId: selectedTask?.taskId }) })}>
                     Deschide atelierul lucrării
                   </a>
                 </p>

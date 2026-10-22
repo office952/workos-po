@@ -4,6 +4,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetResourceCache } from "../data/resourceCache";
 import { ExecutionPage } from "./ExecutionPage";
 
+vi.mock("../session/CloudSessionContext", () => ({
+  useCloudSession: () => ({
+    ready: true,
+    unavailable: false,
+    mode: "single_plane",
+    user: null,
+    organization: { organizationId: "org-test", membershipRole: "owner" },
+    memberships: [],
+  }),
+}));
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -453,7 +464,7 @@ describe("ExecutionPage", () => {
     );
     expect(screen.getByRole("link", { name: "Revino la lucrare" })).toHaveAttribute(
       "href",
-      "/lucrari/ord-1",
+      "/lucrari/ord-1?task=task-wire",
     );
     expect(screen.getByRole("link", { name: /01 Debitare foaie CNC/ })).toHaveAttribute(
       "href",

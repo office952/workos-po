@@ -26,6 +26,13 @@ import {
 import { resourceKeys } from "../data/resourceKeys";
 import { loadOperatorSession } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
+import {
+  canPublishInstructions,
+  fileAccessExplanation,
+  instructionAccessExplanation,
+  observationAccessExplanation,
+} from "../presentation/dossierAccess";
+import { laterDocumentVersions } from "../presentation/dossierRevision";
 import { formatTimestamp } from "../presentation/format";
 import { atelierHref, executionHref } from "../routing/appRoute";
 import { useCloudSession } from "../session/CloudSessionContext";
@@ -82,11 +89,7 @@ export function JobTaskWorkbench(props: Props) {
     loadOperatorSession,
   );
   const identified = operator.status === "success" && operator.data != null;
-  const owner =
-    cloud.ready &&
-    !cloud.unavailable &&
-    (cloud.mode === "single_plane" ||
-      cloud.organization?.membershipRole === "owner");
+  const owner = canPublishInstructions(cloud);
   const scope = JSON.stringify([
     props.jobId,
     cloud.user?.email,
@@ -123,6 +126,9 @@ function JobTaskWorkbenchBody({
   const [selectedFiles, setSelectedFiles] = useState<Record<string, string>>(
     {},
   );
+  const [consultedFiles, setConsultedFiles] = useState<Record<string, string>>(
+    {},
+  );
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [composer, setComposer] = useState<Composer | null>(null);
   const [allFiles, setAllFiles] = useState(false);
@@ -133,6 +139,8 @@ function JobTaskWorkbenchBody({
     error: boolean;
     text: string;
   } | null>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [savedEntry, setSavedEntry] = useState<{ taskId: string; entryId: string } | null>(null);
   const pendingRef = useRef(false);
   const mounted = useRef(true);
   const taskHeading = useRef<HTMLHeadingElement>(null);
@@ -182,15 +190,21 @@ function JobTaskWorkbenchBody({
   const draftKey = composer ? `${composer.taskId}:${composer.kind}` : "";
   const draft = drafts[draftKey] ?? emptyDraft();
   const notes = [
-    ...(dossier?.instructions ?? []),
     ...(dossier?.observations ?? []),
     ...(dossier?.issues ?? []),
   ].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  const newerVersions =
-    archive.data?.files.filter(
-      (file) =>
-        selectedFile && file.supersedesArtifactId === selectedFile.artifactId,
-    ) ?? [];
+  const instructions = [...(dossier?.instructions ?? [])].sort((a, b) =>
+    a.createdAt.localeCompare(b.createdAt),
+  );
+  const newerVersions = laterDocumentVersions(
+    selectedFile?.artifactId,
+    archive.data?.files ?? [],
+  );
+  const consultedFile =
+    (archive.data?.files ?? []).find(
+      (file) => file.artifactId === consultedFiles[taskId ?? ""],
+    ) ?? null;
+  const previewFile = consultedFile ?? selectedFile;
   const availableFiles =
     archive.data?.files.filter(
       (file) => !files.some((linked) => linked.artifactId === file.artifactId),
@@ -202,6 +216,14 @@ function JobTaskWorkbenchBody({
       mounted.current = false;
     };
   }, []);
+  const focusedEntry = useRef<string | null>(null);
+  useEffect(() => {
+    if (!savedEntry || savedEntry.taskId !== taskId || focusedEntry.current === savedEntry.entryId) {
+      return;
+    }
+    focusedEntry.current = savedEntry.entryId;
+    document.getElementById(`dossier-entry-${savedEntry.entryId}`)?.focus({ preventScroll: true });
+  }, [savedEntry, taskId]);
   useEffect(() => {
     function keydown(event: KeyboardEvent) {
       if (
@@ -235,8 +257,19 @@ function JobTaskWorkbenchBody({
     }
   }
   function chooseFile(next: string) {
-    if (taskId) setSelectedFiles((current) => ({ ...current, [taskId]: next }));
+    if (taskId) {
+      setSelectedFiles((current) => ({ ...current, [taskId]: next }));
+      setConsultedFiles((current) => {
+        if (!(taskId in current)) return current;
+        const nextState = { ...current };
+        delete nextState[taskId];
+        return nextState;
+      });
+    }
     setAllFiles(false);
+  }
+  function consultVersion(artifactId: string) {
+    if (taskId) setConsultedFiles((current) => ({ ...current, [taskId]: artifactId }));
   }
 
   async function run(
@@ -317,6 +350,20 @@ function JobTaskWorkbenchBody({
           : "Mesajul a fost păstrat în dosarul operației.",
       )
     ) {
+      const saved = readResource<TaskDossier>(resourceKeys.taskDossier(context.taskId)).data;
+      const entries =
+        context.kind === "instruction"
+          ? saved?.instructions
+          : context.kind === "issue"
+            ? saved?.issues
+            : saved?.observations;
+      const newest = entries?.[entries.length - 1];
+      if (newest) {
+        setSavedEntry({ taskId: context.taskId, entryId: newest.entryId });
+      }
+      if (context.kind !== "instruction") {
+        setNotesOpen(true);
+      }
       setDrafts((current) => {
         const next = { ...current };
         delete next[savedKey];
@@ -416,6 +463,9 @@ function JobTaskWorkbenchBody({
                       {known?.taskId === item.taskId ? (
                         <span className="job-task-row__counts">
                           <span>{known.files.length} fișiere</span>
+                          {known.instructions.length ? (
+                            <span>{known.instructions.length} instrucțiuni</span>
+                          ) : null}
                           {known.observations.length ? (
                             <span>{known.observations.length} observații</span>
                           ) : null}
@@ -501,35 +551,59 @@ function JobTaskWorkbenchBody({
                 >
                   Deschide Execuția ↗
                 </a>
-                <div>
-                  <button
-                    type="button"
-                    className="text-link"
-                    disabled={!identified}
-                    onClick={() => openComposer("observation")}
-                  >
-                    Adaugă observație
-                  </button>
-                  <button
-                    type="button"
-                    className="text-link job-workbench__issue"
-                    disabled={!identified}
-                    onClick={() => openComposer("issue")}
-                  >
-                    Semnalează problemă
-                  </button>
-                </div>
               </div>
             </header>
-            {!identified ? (
-              <p className="job-workbench__access">
-                Pentru observații și probleme,{" "}
-                <a href={atelierHref({ jobId })}>
-                  identifică operatorul în Atelier
-                </a>
-                .
+            <section className="job-task-messages" aria-label="Mesaje pentru această operație">
+              <h3>Mesaje pentru această operație</h3>
+              <p>
+                {task.seqLabel} · {task.processLabel}
               </p>
-            ) : null}
+              <div className="job-task-messages__actions">
+                <button
+                  type="button"
+                  className="text-link"
+                  disabled={!identified}
+                  onClick={() => openComposer("observation")}
+                >
+                  Adaugă observație
+                </button>
+                <button
+                  type="button"
+                  className="text-link job-workbench__issue"
+                  disabled={!identified}
+                  onClick={() => openComposer("issue")}
+                >
+                  Semnalează problemă
+                </button>
+                <button
+                  type="button"
+                  className="text-link"
+                  disabled={!canInstruct}
+                  onClick={() => openComposer("instruction")}
+                >
+                  Adaugă instrucțiune
+                </button>
+              </div>
+              {!identified ? (
+                <p className="job-workbench__access">
+                  {observationAccessExplanation()}{" "}
+                  <a href={atelierHref({ jobId, returnTo: executionHref(plan.planId, { jobId, taskId: task.taskId }) })}>
+                    Deschide Atelierul
+                  </a>
+                  .
+                </p>
+              ) : null}
+              {!canInstruct ? <p className="job-workbench__access">{instructionAccessExplanation()}</p> : null}
+              {!canWriteFiles ? <p className="job-workbench__access">{fileAccessExplanation(false)}</p> : null}
+              {currentFeedback && !composer ? (
+                <InlineAlert
+                  tone={currentFeedback.error ? "error" : "success"}
+                  title={currentFeedback.error ? "Nu s-a salvat" : "Salvat"}
+                >
+                  {currentFeedback.text}
+                </InlineAlert>
+              ) : null}
+            </section>
             {!visible.some((item) => item.taskId === taskId) && query ? (
               <p className="job-workbench__notice">
                 Operația selectată rămâne deschisă în afara căutării.{" "}
@@ -568,16 +642,14 @@ function JobTaskWorkbenchBody({
                 Așteaptă: {task.waitingFor.join(" · ")}
               </p>
             ) : null}
-            {currentFeedback && !composer ? (
-              <InlineAlert
-                tone={currentFeedback.error ? "error" : "success"}
-                title={currentFeedback.error ? "Nu s-a salvat" : "Salvat"}
-              >
-                {currentFeedback.text}
-              </InlineAlert>
-            ) : null}
             {dossierResource.status === "error" ? (
-              <InlineAlert tone="error" title="Dosarul nu a putut fi citit">
+              <InlineAlert
+                tone="error"
+                title={dossier ? "Actualizarea dosarului a eșuat" : "Dosarul nu a putut fi citit"}
+              >
+                {dossier
+                  ? "Ultima citire rămâne afișată. "
+                  : "Conținutul dosarului nu este disponibil. "}
                 <button
                   type="button"
                   className="text-link"
@@ -596,12 +668,44 @@ function JobTaskWorkbenchBody({
             {!dossier ? (
               <p className="job-workbench__notice" role="status">
                 {dossierResource.status === "error"
-                  ? "Conținutul dosarului nu este disponibil."
+                  ? "Citirea inițială a eșuat. Nu se afișează un dosar gol drept actual."
                   : "Se citește dosarul operației…"}
               </p>
             ) : (
               <>
-                <details className="job-task-notes">
+                <section aria-label="Instrucțiuni pentru această operație">
+                  <h3>
+                    Instrucțiuni <span>{instructions.length}</span>
+                  </h3>
+                  {instructions.length === 0 ? (
+                    <p>Nicio instrucțiune pentru această operație.</p>
+                  ) : (
+                    instructions.map((entry) => (
+                      <article
+                        key={entry.entryId}
+                        id={`dossier-entry-${entry.entryId}`}
+                        className="job-task-note"
+                        tabIndex={-1}
+                      >
+                        <header>
+                          <strong>Instrucțiune</strong>
+                          <span>
+                            {entry.authorLabel ?? "Cont organizație"} ·{" "}
+                            <time dateTime={entry.createdAt}>
+                              {formatTimestamp(entry.createdAt)}
+                            </time>
+                          </span>
+                        </header>
+                        <p>{entry.body}</p>
+                      </article>
+                    ))
+                  )}
+                </section>
+                <details
+                  className="job-task-notes"
+                  open={notesOpen}
+                  onToggle={(event) => setNotesOpen(event.currentTarget.open)}
+                >
                   <summary>
                     Observații și probleme{" "}
                     <span>
@@ -610,31 +714,22 @@ function JobTaskWorkbenchBody({
                     </span>
                   </summary>
                   <div>
-                    {canInstruct ? (
-                      <button
-                        type="button"
-                        className="text-link"
-                        onClick={() => openComposer("instruction")}
-                      >
-                        Adaugă instrucțiune
-                      </button>
-                    ) : null}
                     {!notes.length ? (
-                      <p>Niciun mesaj în dosarul acestei operații.</p>
+                      <p>Nicio observație sau problemă în dosarul acestei operații.</p>
                     ) : (
                       notes.map((entry) => (
                         <article
                           key={entry.entryId}
+                          id={`dossier-entry-${entry.entryId}`}
                           className="job-task-note"
+                          tabIndex={-1}
                           data-issue={entry.kind === "ISSUE_REPORT"}
                         >
                           <header>
                             <strong>
-                              {entry.kind === "INSTRUCTION"
-                                ? "Instrucțiune"
-                                : entry.kind === "ISSUE_REPORT"
-                                  ? `Problemă semnalată${entry.reasonLabel ? ` · ${entry.reasonLabel}` : ""}`
-                                  : "Observație"}
+                              {entry.kind === "ISSUE_REPORT"
+                                ? `Problemă semnalată${entry.reasonLabel ? ` · ${entry.reasonLabel}` : ""}`
+                                : "Observație"}
                             </strong>
                             <span>
                               {entry.authorLabel ?? "Cont organizație"} ·{" "}
@@ -701,6 +796,9 @@ function JobTaskWorkbenchBody({
                           <small>
                             {file.purposeLabel ?? "Fișier de lucru"}
                             {file.usedAt ? " · Utilizare consemnată" : ""}
+                            {files.filter((item) => item.originalFileName === file.originalFileName).length > 1
+                              ? ` · ${formatTimestamp(file.uploadedAt)}`
+                              : ""}
                           </small>
                         </span>
                       </button>
@@ -720,6 +818,17 @@ function JobTaskWorkbenchBody({
                       .map((file) => file.originalFileName)
                       .join(", ")}
                     . Asocierea operației nu se schimbă automat.{" "}
+                    {newerVersions.map((file) => (
+                      <span key={file.artifactId}>
+                        <button
+                          type="button"
+                          className="text-link"
+                          onClick={() => consultVersion(file.artifactId)}
+                        >
+                          Deschide {file.originalFileName}
+                        </button>{" "}
+                      </span>
+                    ))}
                     <button
                       type="button"
                       className="text-link"
@@ -730,10 +839,30 @@ function JobTaskWorkbenchBody({
                     </button>
                   </p>
                 ) : null}
-                <JobArtifactPreview file={selectedFile} />
+                {consultedFile ? (
+                  <p className="job-workbench__revision">
+                    Previzualizezi versiunea ulterioară. Asocierea operației rămâne
+                    la documentul inițial.{" "}
+                    <button
+                      type="button"
+                      className="text-link"
+                      onClick={() => {
+                        if (!taskId) return;
+                        setConsultedFiles((current) => {
+                          const nextState = { ...current };
+                          delete nextState[taskId];
+                          return nextState;
+                        });
+                      }}
+                    >
+                      Revino la documentul asociat
+                    </button>
+                  </p>
+                ) : null}
+                <JobArtifactPreview file={previewFile} />
                 {selectedFile ? (
                   <details className="job-file-details">
-                    <summary>Detalii, utilizare și istoric</summary>
+                    <summary>Detalii și utilizare</summary>
                     <dl>
                       <div>
                         <dt>Adăugat</dt>
@@ -781,6 +910,13 @@ function JobTaskWorkbenchBody({
                       Utilizarea este opțională și distinctă de aprobarea
                       tehnică.
                     </p>
+                  </details>
+                ) : null}
+                <section className="job-task-history" aria-label="Istoricul operației">
+                  <h3>Istoricul operației</h3>
+                  {dossier.history.length === 0 ? (
+                    <p>Nu există evenimente în dosarul acestei operații.</p>
+                  ) : (
                     <ul>
                       {dossier.history.map((event) => (
                         <li key={event.eventId}>
@@ -790,8 +926,8 @@ function JobTaskWorkbenchBody({
                         </li>
                       ))}
                     </ul>
-                  </details>
-                ) : null}
+                  )}
+                </section>
               </>
             )}
           </>
@@ -1005,9 +1141,9 @@ function dossierError(error: unknown): string {
     return "Salvarea nu a fost confirmată. Ciorna este păstrată. Verifică dosarul înainte de a retrimite.";
   const code = readTransportErrorCode(error.body);
   if (code === "invalid_session")
-    return "Identifică operatorul în Atelier înainte de a salva mesajul.";
+    return "Sesiunea de operator a expirat sau lipsește. Ultima citire a dosarului rămâne afișată.";
   if (code === "forbidden")
-    return "Nu ai dreptul să efectuezi această acțiune.";
+    return "Nu ai dreptul pentru această acțiune. Dosarul afișat nu a fost modificat.";
   if (code === "invalid_text")
     return "Textul trebuie să aibă între 1 și 2000 de caractere.";
   if (code === "invalid_file") return "Formatul fișierului nu este permis.";
