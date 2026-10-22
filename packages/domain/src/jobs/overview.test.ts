@@ -96,8 +96,11 @@ function taskStub(
     canRecordQualityFail: false,
     canCloseReworkEpisode: false,
     qualityBlockLabel: null,
+    providerBindingState: "NONE",
+    providerBindingSource: null,
+    providerBindingLabel: null,
     ...overrides,
-  };
+  } as ExecutionTaskView;
 }
 
 function order(inscription = "WORKOS"): OrderSnapshot {

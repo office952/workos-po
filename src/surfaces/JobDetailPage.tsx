@@ -33,6 +33,7 @@ import { atelierHref, executionHref, jobHref, quoteHref } from "../routing/appRo
 import { navigate } from "../routing/navigate";
 import { SiteInstallationContextPanel } from "./SiteInstallationContextPanel";
 import { ExecutionActualConsumptionHistory } from "./ExecutionActualConsumption";
+import { JobFilesPanel } from "./JobFilesPanel";
 import { JobMaterialPreparation } from "./JobMaterialPreparation";
 import type { ExecutionTaskTransport } from "../api/types";
 
@@ -320,6 +321,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
           {jobResource.data?.siteInstallation ? (
             <SiteInstallationContextPanel context={jobResource.data.siteInstallation} />
           ) : null}
+          <JobFilesPanel jobId={jobId} />
           <JobMaterialPreparation jobId={jobId} />
           <SurfacePanel
             title="Traseu de producție"

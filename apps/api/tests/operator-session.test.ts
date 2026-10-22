@@ -183,11 +183,6 @@ describe("operator identity HTTP session", () => {
     expect((await readBody(invalidSession)).error).toBe("invalid_session");
     assertExecutorEmpty();
 
-    const missingProvider = await startTaskAs(app, taskId, florinCookie);
-    expect(missingProvider.status).toBe(422);
-    expect((await readBody(missingProvider)).error).toBe("missing_assignment");
-    assertExecutorEmpty();
-
     expect(
       (
         await app.request(`/api/execution-tasks/${taskId}/provider`, {

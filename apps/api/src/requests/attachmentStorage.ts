@@ -38,6 +38,74 @@ export function resolveRequestAttachmentPath(
   return full;
 }
 
+export function writeScopedDocumentBytes(input: {
+  scopeSegments: readonly string[];
+  bytes: Uint8Array;
+  documentsRoot?: string;
+  storageKey?: string;
+}): { storageKey: string; absolutePath: string; sha256: string } {
+  const documentsRoot = input.documentsRoot ?? resolveDocumentsRoot();
+  const storageKey = input.storageKey ?? generateAttachmentStorageKey();
+  const dir = scopedDocumentDir(input.scopeSegments, documentsRoot);
+  mkdirSync(dir, { recursive: true });
+  const finalPath = scopedDocumentPath(input.scopeSegments, storageKey, documentsRoot);
+  const tempPath = join(dir, `.tmp-${randomUUID()}`);
+  try {
+    writeFileSync(tempPath, input.bytes);
+    const sha256 = sha256Hex(input.bytes);
+    try {
+      renameSync(tempPath, finalPath);
+    } catch {
+      copyFileSync(tempPath, finalPath);
+      rmSync(tempPath, { force: true });
+    }
+    return { storageKey, absolutePath: finalPath, sha256 };
+  } catch (error) {
+    rmSync(tempPath, { force: true });
+    rmSync(finalPath, { force: true });
+    throw error;
+  }
+}
+
+export function readScopedDocumentBytes(
+  scopeSegments: readonly string[],
+  storageKey: string,
+  documentsRoot = resolveDocumentsRoot(),
+): Uint8Array | null {
+  const path = scopedDocumentPath(scopeSegments, storageKey, documentsRoot);
+  if (!existsSync(path)) {
+    return null;
+  }
+  return new Uint8Array(readFileSync(path));
+}
+
+export function removeScopedDocumentFile(
+  scopeSegments: readonly string[],
+  storageKey: string,
+  documentsRoot = resolveDocumentsRoot(),
+): void {
+  rmSync(scopedDocumentPath(scopeSegments, storageKey, documentsRoot), { force: true });
+}
+
+function scopedDocumentDir(scopeSegments: readonly string[], documentsRoot: string): string {
+  return join(documentsRoot, ...scopeSegments.map((segment) => safePathSegment(segment)));
+}
+
+function scopedDocumentPath(
+  scopeSegments: readonly string[],
+  storageKey: string,
+  documentsRoot: string,
+): string {
+  const key = safePathSegment(storageKey);
+  const dir = scopedDocumentDir(scopeSegments, documentsRoot);
+  const full = resolve(dir, key);
+  const root = resolve(documentsRoot);
+  if (!full.startsWith(root + sep) && full !== root) {
+    throw new Error("storage_path_escape");
+  }
+  return full;
+}
+
 export function writeRequestAttachmentBytes(input: {
   requestId: string;
   bytes: Uint8Array;

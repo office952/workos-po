@@ -35,6 +35,10 @@ import {
   type TaskCompletionEvidence,
 } from "./plan.js";
 import {
+  resolveProviderBinding,
+  type ProviderBindingStamp,
+} from "./providerBinding.js";
+import {
   appendQualityFail,
   appendQualityPass,
   closeOpenReworkEpisode,
@@ -50,6 +54,8 @@ export const TASK_MUTATION_ERRORS = [
   "effort_frozen",
   "invalid_planned_effort",
   "missing_assignment",
+  "no_eligible_provider",
+  "explicit_provider_choice_required",
   "missing_executor",
   "provider_unavailable",
   "executor_unavailable",
@@ -109,6 +115,7 @@ export function assignProviderToTask(
   taskId: string,
   providerId: string,
   registry: WorkcenterRegistry = workcenterRegistry,
+  stamp: ProviderBindingStamp | null = null,
 ): TaskMutationResult {
   const task = findTask(record, taskId);
   if (!task) {
@@ -145,8 +152,49 @@ export function assignProviderToTask(
         kind: provider.kind,
         label: provider.label,
       },
+      providerBindingSource: stamp?.source ?? null,
+      providerBoundAt: stamp?.boundAt ?? null,
+      providerBoundByAccountId: stamp?.accountId ?? null,
+      providerBoundByOperatorId: stamp?.operatorId ?? null,
     }),
   };
+}
+
+export function bindUniqueEligibleProvider(
+  record: ExecutionPlanRecord,
+  taskId: string,
+  registry: WorkcenterRegistry = workcenterRegistry,
+  stamp: ProviderBindingStamp | null = null,
+): TaskMutationResult {
+  const task = findTask(record, taskId);
+  if (!task) {
+    return { ok: false, error: "not_found" };
+  }
+  if (task.status !== "PLANNED") {
+    return { ok: false, error: "reassignment_locked" };
+  }
+  if (executionModeOf(task) === "EXTERNAL") {
+    return { ok: false, error: "invalid_transition" };
+  }
+  if (!taskRequiresProvider(task)) {
+    return { ok: false, error: "ineligible_provider" };
+  }
+  if (task.assignedProvider) {
+    return { ok: true, record, alreadyApplied: true };
+  }
+  const resolution = resolveProviderBinding(task, registry);
+  if (resolution.state === "NONE") {
+    return { ok: false, error: "no_eligible_provider" };
+  }
+  if (resolution.state !== "UNIQUE_PENDING" || !resolution.provider) {
+    return { ok: false, error: "explicit_provider_choice_required" };
+  }
+  return assignProviderToTask(record, taskId, resolution.provider.id, registry, {
+    source: "AUTO_UNIQUE",
+    boundAt: stamp?.boundAt ?? task.createdAt,
+    accountId: stamp?.accountId ?? null,
+    operatorId: stamp?.operatorId ?? null,
+  });
 }
 
 export function assignExecutorToTask(
@@ -241,6 +289,7 @@ export function startExecutionTask(
   eligibility: PeopleEligibilityContext | null = null,
   registry: WorkcenterRegistry = workcenterRegistry,
   material: MaterialReadinessContext = DISABLED_MATERIAL_READINESS,
+  stamp: ProviderBindingStamp | null = null,
 ): TaskMutationResult {
   const task = findTask(record, taskId);
   if (!task) {
@@ -255,32 +304,39 @@ export function startExecutionTask(
   if (executionModeOf(task) === "EXTERNAL") {
     return { ok: false, error: "invalid_transition" };
   }
-  if (taskRequiresProvider(task)) {
-    if (!task.assignedProvider) {
+  const prepared = prepareUniqueProvider(record, task, startedAt, registry, stamp);
+  if (!prepared.ok) {
+    return prepared;
+  }
+  record = prepared.record;
+  const ready = prepared.task;
+  if (taskRequiresProvider(ready)) {
+    if (!ready.assignedProvider) {
       return { ok: false, error: "missing_assignment" };
     }
     if (
       !assignedProviderStillValid(
-        task.requiredCapabilityId,
-        task.assignedProvider,
+        ready.requiredCapabilityId,
+        ready.assignedProvider,
         registry,
       )
     ) {
       return { ok: false, error: "provider_unavailable" };
     }
   }
-  if (!task.assignedExecutor) {
+  if (!ready.assignedExecutor) {
     return { ok: false, error: "missing_executor" };
   }
   return claimAndStartExecutionTask(
     record,
     taskId,
-    task.assignedExecutor.id,
+    ready.assignedExecutor.id,
     startedAt,
     people,
     eligibility,
     registry,
     material,
+    stamp,
   );
 }
 
@@ -293,6 +349,7 @@ export function claimAndStartExecutionTask(
   eligibility: PeopleEligibilityContext | null = null,
   registry: WorkcenterRegistry = workcenterRegistry,
   material: MaterialReadinessContext = DISABLED_MATERIAL_READINESS,
+  stamp: ProviderBindingStamp | null = null,
 ): TaskMutationResult {
   const task = findTask(record, taskId);
   if (!task) {
@@ -313,14 +370,20 @@ export function claimAndStartExecutionTask(
   if (task.assignedExecutor && task.assignedExecutor.id !== personId) {
     return { ok: false, error: "already_started_by_other" };
   }
-  if (taskRequiresProvider(task)) {
-    if (!task.assignedProvider) {
+  const prepared = prepareUniqueProvider(record, task, startedAt, registry, stamp);
+  if (!prepared.ok) {
+    return prepared;
+  }
+  record = prepared.record;
+  const ready = prepared.task;
+  if (taskRequiresProvider(ready)) {
+    if (!ready.assignedProvider) {
       return { ok: false, error: "missing_assignment" };
     }
     if (
       !assignedProviderStillValid(
-        task.requiredCapabilityId,
-        task.assignedProvider,
+        ready.requiredCapabilityId,
+        ready.assignedProvider,
         registry,
       )
     ) {
@@ -339,7 +402,7 @@ export function claimAndStartExecutionTask(
   }
   const startBlock = plannedExecutorStartError(
     person.personId,
-    task.requiredCapabilityId as ProductionCapabilityClassId,
+    ready.requiredCapabilityId as ProductionCapabilityClassId,
     people,
     eligibility,
   );
@@ -347,17 +410,17 @@ export function claimAndStartExecutionTask(
     return { ok: false, error: startBlock };
   }
   const byId = taskIndex(record);
-  if (!dependenciesCompleted(task, byId)) {
+  if (!dependenciesCompleted(ready, byId)) {
     return { ok: false, error: "dependencies_incomplete" };
   }
-  if (materialBlocksStart(material.mode, materialDemandLines(task, material.confirmations))) {
+  if (materialBlocksStart(material.mode, materialDemandLines(ready, material.confirmations))) {
     return { ok: false, error: "material_not_ready" };
   }
   return {
     ok: true,
     alreadyApplied: false,
     record: replaceTask(record, {
-      ...task,
+      ...ready,
       status: "IN_PROGRESS",
       startedAt,
       assignedExecutor: {
@@ -718,6 +781,40 @@ export function assignedProviderFromRow(
     return null;
   }
   return { id, kind, label };
+}
+
+function prepareUniqueProvider(
+  record: ExecutionPlanRecord,
+  task: ExecutionTask,
+  startedAt: string,
+  registry: WorkcenterRegistry,
+  stamp: ProviderBindingStamp | null,
+):
+  | { ok: true; record: ExecutionPlanRecord; task: ExecutionTask }
+  | { ok: false; error: TaskMutationError } {
+  if (!taskRequiresProvider(task) || task.assignedProvider || executionModeOf(task) === "EXTERNAL") {
+    return { ok: true, record, task };
+  }
+  const bound = bindUniqueEligibleProvider(record, task.taskId, registry, {
+    source: "AUTO_UNIQUE",
+    boundAt: stamp?.boundAt ?? startedAt,
+    accountId: stamp?.accountId ?? null,
+    operatorId: stamp?.operatorId ?? null,
+  });
+  if (!bound.ok) {
+    if (
+      bound.error === "no_eligible_provider" ||
+      bound.error === "explicit_provider_choice_required"
+    ) {
+      return { ok: false, error: "missing_assignment" };
+    }
+    return bound;
+  }
+  const next = findTask(bound.record, task.taskId);
+  if (!next) {
+    return { ok: false, error: "not_found" };
+  }
+  return { ok: true, record: bound.record, task: next };
 }
 
 function findTask(

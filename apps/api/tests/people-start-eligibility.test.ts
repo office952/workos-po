@@ -225,11 +225,13 @@ describe("planned start current eligibility API", () => {
     const cookie = await sessionCookieViaHttp(app, florin.personId);
     const task = await readTask(app, planId, backCnc.taskId, cookie);
     expect(task.requiresProvider).toBe(true);
-    expect(task.canClaimStart).toBe(false);
+    expect(task.canClaimStart).toBe(true);
     const started = await startTaskAs(app, String(backCnc.taskId), cookie);
-    expect(started.status).toBe(422);
-    expect((await readBody(started)).error).toBe("missing_assignment");
-    expect((await readTask(app, planId, backCnc.taskId, cookie)).assignedExecutor).toBeNull();
+    expect(started.status).toBe(200);
+    const after = await readTask(app, planId, backCnc.taskId, cookie);
+    expect(after.status).toBe("IN_PROGRESS");
+    expect((after.assignedProvider as JsonObject).id).toBe("MCH-CNC-4020");
+    expect(after.providerBindingSource).toBe("AUTO_UNIQUE");
     runtime.close();
   });
 });

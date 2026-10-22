@@ -1011,8 +1011,7 @@ describe("ExecutionPage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<ExecutionPage planId="exp:1" />);
-    expect(await screen.findAllByText("Nealocat")).not.toHaveLength(0);
-    expect(screen.getByText("Utilaje eligibile: Utilaj — CNC 4020")).toBeInTheDocument();
+    expect(await screen.findByText("Se asociază automat: CNC 4020")).toBeInTheDocument();
     expect(screen.getAllByText("Așteaptă alocarea utilajului / zonei").length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: /01 Debitare foaie CNC/ })).toHaveTextContent(
       "Așteaptă alocarea utilajului / zonei",
@@ -2381,7 +2380,7 @@ describe("ExecutionPage missing-provider guidance", () => {
 
     render(<ExecutionPage planId="exp:1" />);
 
-    expect(await screen.findByText(/Utilaje eligibile/)).toBeInTheDocument();
+    expect(await screen.findByText(/Se asociază automat: Router nou/)).toBeInTheDocument();
     expect(screen.queryByText("Utilaj / zonă lipsă")).not.toBeInTheDocument();
     expect(
       fetchMock.mock.calls.some(([url]) => String(url).endsWith("/api/workcenters")),

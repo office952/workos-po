@@ -1257,9 +1257,19 @@ describe("product configuration API", () => {
 
     const firstId = await createExecutor(app, "Executor unu");
     const firstCookie = await sessionCookieViaHttp(app, firstId);
-    const missingProvider = await startTaskAs(app, String(backCnc.taskId), firstCookie);
-    expect(missingProvider.status).toBe(422);
-    expect((await readBody(missingProvider)).error).toBe("missing_assignment");
+    const bound = await app.request(
+      `/api/execution-tasks/${backCnc.taskId}/bind-unique-provider`,
+      { method: "POST", headers: { cookie: firstCookie } },
+    );
+    expect(bound.status).toBe(200);
+    const boundTask = (
+      ((await readBody(bound)).executionPlan as { tasks: Array<JsonObject> }).tasks.find(
+        (item) => item.taskId === backCnc.taskId,
+      )
+    ) as JsonObject;
+    expect(boundTask.status).toBe("PLANNED");
+    expect((boundTask.assignedProvider as JsonObject).id).toBe(MCH_CNC_4020_ID);
+    expect(boundTask.providerBindingSource).toBe("AUTO_UNIQUE");
 
     await app.request(`/api/execution-tasks/${backCnc.taskId}/provider`, {
       method: "POST",

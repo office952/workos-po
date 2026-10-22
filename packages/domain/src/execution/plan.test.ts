@@ -155,7 +155,8 @@ describe("persisted execution plan materialization", () => {
       status: "PLANNED",
     });
     expect(view.progress.status).not.toBe("COMPLETED");
-    expect(cnc?.canAssign).toBe(true);
+    expect(cnc?.providerBindingState).toBe("UNIQUE_PENDING");
+    expect(cnc?.canAssign).toBe(false);
     expect(cnc?.canStart).toBe(false);
     expect(pack?.assignmentLabel).toBe("Nealocat");
     expect(record.tasks.every((item) => item.assignedProvider === null)).toBe(true);

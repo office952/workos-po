@@ -109,6 +109,7 @@ import {
   type QualityControlProjectionInput,
   type TaskCompletionInput,
   type TaskMutationResult,
+  type ProviderBindingStamp,
   projectResourcesAdministration,
   siteInstallationEvidenceFromRows,
   type CostEvidence,
@@ -157,11 +158,22 @@ import {
   persistAssignedProvider,
   persistPlannedEffort,
   persistClaimAndStart,
+  persistUniqueProviderBinding,
   persistMachineRunStart,
   persistMachineRunStop,
   persistTaskComplete,
   persistTaskStart,
 } from "../execution/store.js";
+import {
+  addTaskArtifact as storeAddTaskArtifact,
+  addTaskDossierEntry as storeAddTaskDossierEntry,
+  addJobArtifact as storeAddJobArtifact,
+  linkTaskArtifact as storeLinkTaskArtifact,
+  markTaskArtifactUsed as storeMarkTaskArtifactUsed,
+  readJobFileArchive as storeReadJobFileArchive,
+  readTaskArtifactDownload as storeReadTaskArtifactDownload,
+  readTaskDossier as storeReadTaskDossier,
+} from "../execution/taskDossierStore.js";
 import {
   persistQualityCorrectionClose,
   persistQualityFail,
@@ -413,14 +425,75 @@ export type ProductSystemRuntime = {
   readExecutionPlanBySnapshot(snapshotId: string): ExecutionPlanRecord | null;
   readExecutionPlanByTaskId(taskId: string): ExecutionPlanRecord | null;
   listOpenExecutionPlans(): ExecutionPlanRecord[];
-  assignExecutionTaskProvider(taskId: string, providerId: string): TaskMutationResult;
+  assignExecutionTaskProvider(
+    taskId: string,
+    providerId: string,
+    stamp?: ProviderBindingStamp | null,
+  ): TaskMutationResult;
   setExecutionTaskPlannedEffort(
     taskId: string,
     plannedEffortMinutes: unknown,
   ): TaskMutationResult;
   assignExecutionTaskExecutor(taskId: string, personId: string): TaskMutationResult;
   startExecutionTask(taskId: string): TaskMutationResult;
-  claimAndStartExecutionTask(taskId: string, personId: string): TaskMutationResult;
+  claimAndStartExecutionTask(
+    taskId: string,
+    personId: string,
+    stamp?: ProviderBindingStamp | null,
+  ): TaskMutationResult;
+  bindUniqueExecutionProvider(
+    taskId: string,
+    stamp: ProviderBindingStamp,
+  ): TaskMutationResult;
+  readTaskDossier(taskId: string): ReturnType<typeof storeReadTaskDossier>;
+  addTaskDossierEntry(
+    taskId: string,
+    kind: "INSTRUCTION" | "OBSERVATION" | "ISSUE_REPORT",
+    body: unknown,
+    actor: { accountId: string; operatorId: string | null },
+    createdAt: string,
+    reasonCode?: unknown,
+  ): ReturnType<typeof storeAddTaskDossierEntry>;
+  addTaskArtifact(
+    taskId: string,
+    input: {
+      originalFileName: string;
+      mimeType: string | null;
+      bytes: Uint8Array;
+      supersedesArtifactId?: string | null;
+      purpose?: unknown;
+      note?: unknown;
+    },
+    actor: { accountId: string; operatorId: string | null },
+    uploadedAt: string,
+  ): ReturnType<typeof storeAddTaskArtifact>;
+  linkTaskArtifact(
+    taskId: string,
+    artifactId: string,
+    actor: { accountId: string; operatorId: string | null },
+    linkedAt: string,
+  ): ReturnType<typeof storeLinkTaskArtifact>;
+  markTaskArtifactUsed(
+    taskId: string,
+    artifactId: string,
+    actor: { accountId: string; operatorId: string | null },
+    usedAt: string,
+  ): ReturnType<typeof storeMarkTaskArtifactUsed>;
+  readTaskArtifactDownload(artifactId: string): ReturnType<typeof storeReadTaskArtifactDownload>;
+  readJobFileArchive(jobId: string): ReturnType<typeof storeReadJobFileArchive>;
+  addJobArtifact(
+    jobId: string,
+    input: {
+      originalFileName: string;
+      mimeType: string | null;
+      bytes: Uint8Array;
+      supersedesArtifactId?: string | null;
+      purpose?: unknown;
+      note?: unknown;
+    },
+    actor: { accountId: string; operatorId: string | null },
+    uploadedAt: string,
+  ): ReturnType<typeof storeAddJobArtifact>;
   materialReadinessContext(): MaterialReadinessContext;
   readMaterialReadiness(): MaterialReadinessModeRecord;
   setMaterialReadinessMode(
@@ -966,8 +1039,8 @@ export function createProductSystemRuntimeFromOpenDb(
     listOpenExecutionPlans() {
       return listOpenExecutionPlanRecords(db);
     },
-    assignExecutionTaskProvider(taskId, providerId) {
-      return persistAssignedProvider(db, taskId, providerId, currentProviderRegistry());
+    assignExecutionTaskProvider(taskId, providerId, stamp = null) {
+      return persistAssignedProvider(db, taskId, providerId, currentProviderRegistry(), stamp);
     },
     setExecutionTaskPlannedEffort(taskId, plannedEffortMinutes) {
       return persistPlannedEffort(db, taskId, plannedEffortMinutes);
@@ -991,16 +1064,44 @@ export function createProductSystemRuntimeFromOpenDb(
         currentProviderRegistry(),
       );
     },
-    claimAndStartExecutionTask(taskId, personId) {
+    claimAndStartExecutionTask(taskId, personId, stamp = null) {
       return persistClaimAndStart(
         db,
         taskId,
         personId,
-        new Date().toISOString(),
+        stamp?.boundAt ?? new Date().toISOString(),
         listPeople(db),
         currentEligibility(),
         currentProviderRegistry(),
+        stamp,
       );
+    },
+    bindUniqueExecutionProvider(taskId, stamp) {
+      return persistUniqueProviderBinding(db, taskId, currentProviderRegistry(), stamp);
+    },
+    readTaskDossier(taskId) {
+      return storeReadTaskDossier(db, taskId);
+    },
+    addTaskDossierEntry(taskId, kind, body, actor, createdAt, reasonCode) {
+      return storeAddTaskDossierEntry(db, taskId, kind, body, actor, createdAt, reasonCode);
+    },
+    addTaskArtifact(taskId, input, actor, uploadedAt) {
+      return storeAddTaskArtifact(db, taskId, input, actor, uploadedAt, documentsRoot);
+    },
+    linkTaskArtifact(taskId, artifactId, actor, linkedAt) {
+      return storeLinkTaskArtifact(db, taskId, artifactId, actor, linkedAt);
+    },
+    markTaskArtifactUsed(taskId, artifactId, actor, usedAt) {
+      return storeMarkTaskArtifactUsed(db, taskId, artifactId, actor, usedAt);
+    },
+    readTaskArtifactDownload(artifactId) {
+      return storeReadTaskArtifactDownload(db, artifactId, documentsRoot);
+    },
+    readJobFileArchive(jobId) {
+      return storeReadJobFileArchive(db, jobId);
+    },
+    addJobArtifact(jobId, input, actor, uploadedAt) {
+      return storeAddJobArtifact(db, jobId, input, actor, uploadedAt, documentsRoot);
     },
     materialReadinessContext() {
       return readMaterialReadinessContext(db);

@@ -130,10 +130,14 @@ export function applySelectedMigrations(
       if (file === MATERIAL_REQUEST_QUANTITY_MIGRATION) {
         recoverInterruptedMaterialRequestRebuild(db);
       }
-      db.exec(sql);
-      db.prepare(
-        "INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)",
-      ).run(file, new Date().toISOString());
+      if (migrationManagesOwnTransaction(sql)) {
+        db.exec(sql);
+        db.prepare(
+          "INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)",
+        ).run(file, new Date().toISOString());
+      } else {
+        applyMigrationSql(db, file, sql);
+      }
     } catch (error) {
       try {
         if (db.inTransaction) {
@@ -143,6 +147,71 @@ export function applySelectedMigrations(
         db.pragma("foreign_keys = ON");
       }
       throw error;
+    }
+  }
+}
+
+/**
+ * Schema changes and the ledger row commit together.
+ * A throw after partial SQL rolls the schema back and leaves the ledger unchanged.
+ * Migration 043 already opens its own immediate transaction; wrapping it again is invalid.
+ */
+export function applyMigrationSql(
+  db: SqliteDatabase,
+  id: string,
+  sql: string,
+  beforeLedger?: () => void,
+): void {
+  const relaxForeignKeys = migrationRequiresForeignKeysOff(sql);
+  if (relaxForeignKeys) {
+    db.pragma("foreign_keys = OFF");
+  }
+  try {
+    const commit = db.transaction(() => {
+      if (id === "045_execution_job_file_archive.sql") {
+        ensureJobArtifactColumns(db);
+      }
+      db.exec(sql);
+      beforeLedger?.();
+      db.prepare(
+        "INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)",
+      ).run(id, new Date().toISOString());
+    });
+    commit();
+  } finally {
+    if (relaxForeignKeys) {
+      db.pragma("foreign_keys = ON");
+    }
+  }
+}
+
+function migrationManagesOwnTransaction(sql: string): boolean {
+  return /^\s*BEGIN IMMEDIATE\s*;/m.test(sql);
+}
+
+function migrationRequiresForeignKeysOff(sql: string): boolean {
+  return /^\s*--\s*REQUIRES_FOREIGN_KEYS_OFF\b/m.test(sql);
+}
+
+/**
+ * 044 was extended in place before release. A database that already recorded
+ * the first 044 does not re-run it, so purpose and usage columns may be absent.
+ */
+function ensureJobArtifactColumns(db: SqliteDatabase): void {
+  const table = db
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'execution_job_artifacts'")
+    .get();
+  if (!table) {
+    return;
+  }
+  const names = new Set(
+    (db.prepare("PRAGMA table_info(execution_job_artifacts)").all() as Array<{ name: string }>).map(
+      (row) => row.name,
+    ),
+  );
+  for (const column of ["purpose", "purpose_note", "used_at"]) {
+    if (!names.has(column)) {
+      db.exec(`ALTER TABLE execution_job_artifacts ADD COLUMN ${column} TEXT`);
     }
   }
 }

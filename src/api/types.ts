@@ -666,6 +666,9 @@ export type ExecutionTaskTransport = {
   status: string;
   statusLabel: string;
   assignmentLabel: string;
+  providerBindingState?: string | null;
+  providerBindingSource?: string | null;
+  providerBindingLabel?: string | null;
   requiresProvider: boolean;
   requiredCapabilityId: string | null;
   requiredCapabilityLabel: string | null;
