@@ -20,7 +20,7 @@ Owner decision: Figma is not the current UI/UX authority. Product Truth stays in
 
 `docs/FIGMA_AUTHORITY.md` and `docs/architecture/WORKOS_VISUAL_LANGUAGE_CANON_V1.md` remain historical provenance. Modular CSS ownership stays in `docs/architecture/WORKOS_UI_STYLE_ARCHITECTURE_V1.md`.
 
-N-009 (draft PR #85, not merged) keeps a missing-material check as an advisory warning while Material Readiness is disabled. A replenishment signal does not require a purchase quantity. This note does not rewrite the milestone history below.
+N-009 (PR #85, integrated on 2026-10-22) keeps a missing-material check as an advisory warning while Material Readiness is disabled. A replenishment signal does not require a purchase quantity. This note does not rewrite the milestone history below.
 
 ```text
 CURRENT_MILESTONE = PILOT-0_TRUTH_AND_READINESS
@@ -43,9 +43,32 @@ PILOT_GATE_A = HOLD
 PILOT_GATE_B = HOLD
 ```
 
+### Integrated chain #85 → #95 (2026-10-22)
+
+Owner GO for the whole chain ([N-014](https://app.notion.com/p/4018ea98e40f815c8fe6cef6778ef632)). Merge commits only, in order; each PR was retargeted to `main` after its predecessor, and WorkOS Verify passed on the PR against the current `main` and again on `main` after the merge. Source branches are kept. Integration is not Owner acceptance: N-012 and N-013 were accepted earlier; the other records stay PENDING.
+
+| PR | Record | Merge commit |
+| --- | --- | --- |
+| #85 | N-009 | `0ec579d8f40317645fb85f3ff7867ab44fc4d497` |
+| #87 | N-015 | `cda58300a6d755b210d4007ccc3559fff70db900` |
+| #89 | N-010 | `a1e946628f87b22d3cd940b8eebc660f4f1a9d19` |
+| #90 | R-002 | `f5053c3995b65ec05bc44dada54ede49a40e1d6b` |
+| #91 | N-016 | `37597fe4a5338cc63f8f6b22294df383cec772d9` |
+| #92 | N-017 | `3b1e00293a023f3ace843e44273ee754f6abc498` |
+| #93 | N-011 | `f9093e26a5925f1033869a9dfc94d7948da5e0e7` |
+| #94 | N-012 | `a54599abbde47f7751ba94efd6f4c8260a423de6` |
+| #95 | N-013 | `67c02b3a0cd1a86ebe70cb01775a25b7d3a0d71b` |
+
+The tree at `67c02b3` equals the audited result: `60d1ab2` plus the reviewed migration 043 fix. Migration 043 compatibility (N-014): an earlier 042 draft stored `requested_quantity` without a ceiling, so 043 now admits every stored quantity (NULL stays unspecified, zero is rejected) and two triggers keep the 1000000000 ceiling for new or changed quantities; the runner is unchanged. Migrations 042–046 have run only on synthetic databases.
+
+```text
+MIGRATIONS_042_046_REAL_APPLICATION = HOLD / SEPARATE_APPROVED_PROCEDURE_REQUIRED
+DEPLOY_PRODUCTION = HOLD / NOT_AUTHORIZED
+```
+
 ### Familia WorkOS · Clienți, Cereri, Lucrări aligned with Oferte — locally accepted candidate N-013 (2026-10-22)
 
-Owner accepted the Figma direction N-013 v2 ("un registru, patru documente", page `05 · Familia WorkOS — rafinare N-013 v2`) and then the local implementation, including the pagination correction ([N-013](https://app.notion.com/p/4018ea98e40f81d1a491d8a20ba71dbe)). Published as a draft PR from `feat/n013-familia-workos`, stacked on N-012 (`feat/oferte-masa-de-ofertare` at `d11ec28`, draft PR #94). Not integrated on main; merge and deployment are not authorized. Frontend only; no engine, API, schema, dependency or permission change.
+Owner accepted the Figma direction N-013 v2 ("un registru, patru documente", page `05 · Familia WorkOS — rafinare N-013 v2`) and then the local implementation, including the pagination correction ([N-013](https://app.notion.com/p/4018ea98e40f81d1a491d8a20ba71dbe)). Published from `feat/n013-familia-workos` as PR #95 and integrated on main on 2026-10-22 (merge commit `67c02b3`). Deployment is not authorized. Frontend only; no engine, API, schema, dependency or permission change.
 
 Verification: independent review PASS — typecheck clean and 761/761 tests, i.e. the 758 tests in this branch plus 3 independent probes that are not part of the repository. Local Windows runs: typecheck, lint (0 errors, 13 pre-existing warnings), build, engine:typecheck and engine:lint passed; the full suite reported 756/758, the two failures being timing waits in untouched `App.cloudAuth` and `App.jobSheet` under heavy host load, reproduced identically on the clean N-012 base and passing in isolation. Browser proof on an isolated synthetic runtime: 49 checks plus 13 for the pagination correction, all passing.
 
@@ -61,7 +84,7 @@ Limits: station counts group the full list by stage code (the server summary has
 
 ### Oferte · Masa de ofertare — locally accepted candidate N-012 (2026-10-22)
 
-Owner accepted Figma direction 2 and, after independent review of the correction, accepted the local implementation ([N-012](https://app.notion.com/p/4008ea98e40f8164b0aae793f248e6ff)). Published as a draft PR from `feat/oferte-masa-de-ofertare`, stacked on `review/job-sheet-section-views` at `d7ae46d` (draft PR #93). Not integrated on main; merge and deployment are not authorized. Frontend only: 15 modified (including this roadmap) and 10 new files; no engine, API, schema, dependency or data change.
+Owner accepted Figma direction 2 and, after independent review of the correction, accepted the local implementation ([N-012](https://app.notion.com/p/4008ea98e40f8164b0aae793f248e6ff)). Published from `feat/oferte-masa-de-ofertare` as PR #94 and integrated on main on 2026-10-22 (merge commit `a54599a`). Deployment is not authorized. Frontend only: 15 modified (including this roadmap) and 10 new files; no engine, API, schema, dependency or data change.
 
 - Shared header band: numbered module plates grouped from `GLOBAL_NAV`, one context plate (live channel, organization, role, account), and a module switcher on tablet and phone.
 - Oferte: signal board whose counters are filters (stage tiles come from server labels), register rows (desktop) or cards with Oferta / Comanda doors (tablet, phone), and a dossier docked (≥1152px), sliding over (768–1151px) or full screen (<768px). Sheets: Ofertă (commercial document) and Comandă · lucrare (order from confirmation; job sheet progress). Acceptance stays on the offer page.
