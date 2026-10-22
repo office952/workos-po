@@ -1,3 +1,5 @@
+import { activeWorkSessions, isWorkingOnTask, otherActiveWorkers, type WorkSession } from "./workSessions.js";
+import { joinExecutionWork } from "./workParticipation.js";
 import { eligibleExecutorsForCapability } from "../people/projection.js";
 import { activePeople, type Person } from "../people/identity.js";
 import {
@@ -206,6 +208,7 @@ export type ExecutionTask = {
   plannedEffortMinutes: number | null;
   actualDurationMinutes: number | null;
   machineRuns: readonly MachineRun[];
+  workSessions?: readonly WorkSession[];
   startedAt: string | null;
   completedAt: string | null;
   completion: TaskCompletionEvidence | null;
@@ -245,6 +248,10 @@ export type OperatorTaskRelation =
   | "idle";
 
 export type ExecutionTaskView = ExecutionTask & {
+  canLeave: boolean;
+  participants: readonly { personId: string; label: string; active: boolean }[];
+  activeParticipantsLabel: string;
+  completionParticipationBlock: string | null;
   statusLabel: string;
   assignmentLabel: string;
   dependsOnLabels: readonly string[];
@@ -458,7 +465,7 @@ export function projectExecutionPlanView(
     const lines = materialDemandLines(task, material.confirmations);
     const participation = materialParticipation(material.mode, lines);
     const materialBlocked = task.status === "PLANNED" && participation === "BLOCKED";
-    const canClaimStart =
+    const legacyCanClaimStart =
       canClaimStartTask(
         task,
         byId,
@@ -467,22 +474,27 @@ export function projectExecutionPlanView(
         currentOperatorId,
         providerRegistry,
       ) && !materialBlocked;
-    const operatorRelation = projectOperatorRelation({
+    const canClaimStart = currentOperatorId !== null &&
+      !activeWorkSessions(task).some(s => s.personId === currentOperatorId) &&
+      joinExecutionWork(record, task.taskId, currentOperatorId, task.startedAt ?? task.createdAt,
+        people, eligibility, providerRegistry, material, "projection-only").ok;
+    const operatorRelation = canClaimStart ? "can_claim" : task.status === "IN_PROGRESS" && (task.workSessions ?? []).length
+      ? currentOperatorId === null ? "identify_required" : isWorkingOnTask(task, currentOperatorId) ? "owned" : "not_eligible"
+      : projectOperatorRelation({
       task,
       assignedExecutor,
       waitingFor,
       people,
       eligibility,
       currentOperatorId,
-      canClaimStart,
+      canClaimStart: legacyCanClaimStart,
       providerRegistry,
       materialBlocked,
     });
-    const ownedByCurrent =
-      task.status === "IN_PROGRESS" &&
-      assignedExecutor !== null &&
-      currentOperatorId !== null &&
-      assignedExecutor.id === currentOperatorId;
+    const ownedByCurrent = isWorkingOnTask(task, currentOperatorId);
+    const othersWorking = otherActiveWorkers(task, currentOperatorId);
+    const currentSessions = activeWorkSessions(task);
+
     const running = activeMachineRun(task);
     const machineTotal = closedMachineRunTotalMinutes(task);
     const variance = timeVarianceMinutes(task.plannedEffortMinutes, task.actualDurationMinutes);
@@ -494,7 +506,7 @@ export function projectExecutionPlanView(
       processId: task.processId,
       status: task.status,
       executionMode: mode,
-      ownedByCurrent,
+      ownedByCurrent: ownedByCurrent && othersWorking.length === 0,
       machineRunActive: running !== null,
       attempts: taskQualityAttempts(quality, task.taskId),
       episodes: taskReworkEpisodes(quality, task.taskId),
@@ -519,6 +531,11 @@ export function projectExecutionPlanView(
     const internalClaim = mode === "INTERNAL" && canClaimStart;
     return {
       ...task,
+      participants: [...new Map((task.workSessions ?? []).map(s => [s.personId, { personId: s.personId, label: s.personLabel,
+        active: currentSessions.some(a => a.personId === s.personId) }])).values()],
+      canLeave: currentSessions.some(s => s.personId === currentOperatorId),
+      activeParticipantsLabel: currentSessions.length ? currentSessions.map(s => s.personLabel).join(" · ") : "Nicio participare activă înregistrată",
+      completionParticipationBlock: ownedByCurrent && othersWorking.length ? "Mai lucrează: " + othersWorking.map(s => s.personLabel).join(" · ") + ". Fiecare trebuie să iasă înainte de finalizare." : null,
       assignedExecutor,
       executionMode: mode,
       externalProviderLabel: externalLabel,
@@ -571,6 +588,7 @@ export function projectExecutionPlanView(
       canComplete:
         mode === "INTERNAL" &&
         ownedByCurrent &&
+        othersWorking.length === 0 &&
         running === null &&
         !isQualityControlExecutionProcess(task.processId),
       hasPlannedResources: task.resourceDemands.length > 0,

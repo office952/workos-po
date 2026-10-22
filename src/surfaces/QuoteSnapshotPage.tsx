@@ -4,13 +4,13 @@ import {
   presentQuoteAcceptanceFact,
 } from "../adapters/quoteListAdapter";
 import { TransportError, readTransportReasons } from "../api/http";
-import { postQuoteAcceptance, postQuoteOrder } from "../api/lifecycle";
+import { confirmQuoteOrder } from "../api/quote";
 import { fetchQuoteDocument } from "../api/quote";
 import type { QuoteListItemTransport, QuoteSnapshotTransport } from "../api/types";
 import { Button } from "../components/Button";
 import { InlineAlert } from "../components/InlineAlert";
 import { LoadingFloor } from "../components/LoadingFloor";
-import { invalidateAfterAcceptQuote, invalidateAfterCreateOrder } from "../data/invalidation";
+import { invalidateAfterCreateOrder } from "../data/invalidation";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadQuoteEnvelope, loadQuoteSnapshot } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
@@ -149,45 +149,21 @@ export function QuoteSnapshotPage({
     setActionState("pending");
     setActionError(null);
     try {
-      await postQuoteAcceptance(productCode, quoteSnapshotId);
-      invalidateAfterAcceptQuote(quoteSnapshotId, snapshot.data?.requestId);
+      const orderId = presentOrderSnapshotId(await confirmQuoteOrder(productCode, quoteSnapshotId));
+      if (!orderId) throw new Error("missing_order");
+      invalidateAfterCreateOrder(quoteSnapshotId, snapshot.data?.requestId);
       setConfirming(false);
       setActionState("idle");
+      navigate(jobHref(orderId));
     } catch (error) {
       setActionState("error");
       setActionError(
         error instanceof TransportError
-          ? "Oferta nu poate fi acceptată încă."
-          : "Acceptarea a eșuat.",
+          ? readTransportReasons(error.body).join(" ") || (error.status === 403 ? "Doar proprietarul organizației poate confirma comanda." : "Comanda nu a putut fi confirmată. Poți reîncerca în siguranță.")
+          : "Confirmarea comenzii a eșuat. Poți reîncerca în siguranță.",
       );
     } finally {
       acceptingRef.current = false;
-    }
-  }
-
-  async function createOrder(): Promise<void> {
-    setActionState("pending");
-    setActionError(null);
-    try {
-      const created = presentOrderSnapshotId(
-        await postQuoteOrder(productCode, quoteSnapshotId),
-      );
-      invalidateAfterCreateOrder(quoteSnapshotId, snapshot.data?.requestId);
-      const orderSnapshotId = created ?? envelope.data?.orderSnapshotId;
-      if (!orderSnapshotId) {
-        setActionState("error");
-        setActionError("Comanda nu a putut fi prezentată.");
-        return;
-      }
-      setActionState("idle");
-      navigate(jobHref(orderSnapshotId));
-    } catch (error) {
-      setActionState("error");
-      setActionError(
-        error instanceof TransportError
-          ? "Comanda poate fi creată doar dintr-o ofertă acceptată."
-          : "Crearea comenzii a eșuat.",
-      );
     }
   }
 
@@ -258,7 +234,7 @@ export function QuoteSnapshotPage({
                       setActionError(null);
                       setConfirming(true);
                     }}
-                    onCreateOrder={() => void createOrder()}
+                    onCreateOrder={() => setConfirming(true)}
                   />
                   <Button
                     variant="secondary"
@@ -271,7 +247,7 @@ export function QuoteSnapshotPage({
               }
               note="Oferta este înghețată. Acceptarea și comanda păstrează această versiune."
             >
-              {confirming && presentedEnvelope?.nextAction === "ACCEPT_QUOTE" ? (
+              {confirming && (presentedEnvelope?.nextAction === "ACCEPT_QUOTE" || presentedEnvelope?.nextAction === "CREATE_ORDER") ? (
                 <QuoteAcceptanceConfirmation
                   titleId={confirmTitleId}
                   confirmRef={confirmRef}
@@ -393,14 +369,14 @@ function QuoteAcceptanceConfirmation({
         Confirmi acceptarea ofertei {identity}?
       </p>
       <p className="offers-confirm__body">
-        Se înregistrează acceptarea comunicată de client pentru această ofertă înghețată.
+        Se înregistrează acceptarea comunicată de client și se creează comanda din această ofertă înghețată.
         {customer ? ` Client: ${customer}.` : ""}
         {request ? ` Cerere: ${request}.` : ""}
         {commercial ? ` ${commercial}.` : ""}
       </p>
       <div className="offers-confirm__actions">
         <Button disabled={pending} onClick={onConfirm}>
-          {pending ? "Se înregistrează acceptarea…" : "Confirmă acceptarea"}
+          {pending ? "Se creează comanda…" : "Da, confirm comanda"}
         </Button>
         <Button variant="secondary" disabled={pending} onClick={onCancel}>
           Anulează
@@ -437,13 +413,13 @@ function QuoteEnvelopeAction({
           aria-expanded={confirming}
           onClick={onAccept}
         >
-          {envelope.nextActionLabel || "Marchează acceptată"}
+          Confirmă comanda
         </Button>
       );
     case "CREATE_ORDER":
       return (
-        <Button disabled={pending} onClick={onCreateOrder}>
-          {envelope.nextActionLabel || "Creează comanda"}
+        <Button ref={acceptButtonRef} disabled={pending} aria-expanded={confirming} onClick={onCreateOrder}>
+          Confirmă comanda
         </Button>
       );
     case "OPEN_ORDER":

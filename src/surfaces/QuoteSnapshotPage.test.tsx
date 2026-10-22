@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetResourceCache } from "../data/resourceCache";
@@ -39,7 +39,7 @@ describe("QuoteSnapshotPage", () => {
     expect(product.getByText("Text: synthetic reference text")).toBeInTheDocument();
     expect(product.getByText("61,26 EUR")).toBeInTheDocument();
     expect(screen.queryByTestId("customer-price")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Marchează acceptată" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Confirmă comanda" })).toBeEnabled();
     expect(screen.getByText("Neacceptată")).toBeInTheDocument();
     expect(screen.queryByText("Înghețată")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Descarcă oferta PDF" })).toBeEnabled();
@@ -133,23 +133,23 @@ describe("QuoteSnapshotPage", () => {
     const links = await screen.findAllByRole("link", { name: "Deschide comanda" });
     expect(links[0]).toHaveAttribute("href", "/lucrari/ord-1");
     expect(links.every((link) => link.getAttribute("href") === "/lucrari/ord-1")).toBe(true);
-    expect(screen.queryByRole("button", { name: "Marchează acceptată" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confirmă comanda" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Creează comanda" })).not.toBeInTheDocument();
     expect(passiveLifecycleGets(fetchMock)).toEqual([]);
   });
 
-  it("accepts from the envelope and refreshes to CREATE_ORDER", async () => {
+  it("confirms the exact quote and opens its job in one command", async () => {
     let stage: "QUOTE_CREATED" | "QUOTE_ACCEPTED" = "QUOTE_CREATED";
     const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
       const url = String(input);
-      if (url.endsWith("/acceptance") && init?.method === "POST") {
+      if (url.endsWith("/confirm-order") && init?.method === "POST") {
         stage = "QUOTE_ACCEPTED";
         return Promise.resolve({
           ok: true,
           status: 200,
           json: async () => ({
             created: true,
-            acceptanceDecision: { acceptanceId: "qad:q-a" },
+            orderSnapshot: { orderSnapshotId: "ord-1" },
           }),
         });
       }
@@ -185,18 +185,17 @@ describe("QuoteSnapshotPage", () => {
 
     render(<QuoteSnapshotPage productCode={productCode} quoteSnapshotId="q-a" />);
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "Marchează acceptată" }));
-    await user.click(screen.getByRole("button", { name: "Confirmă acceptarea" }));
-    expect(await screen.findByRole("button", { name: "Creează comanda" })).toBeEnabled();
-    expect(screen.getAllByText("Acceptată").length).toBeGreaterThan(0);
+    await user.click(await screen.findByRole("button", { name: "Confirmă comanda" }));
+    await user.click(screen.getByRole("button", { name: "Da, confirm comanda" }));
+    await waitFor(() => expect(window.location.pathname).toBe("/lucrari/ord-1"));
     const acceptCall = fetchMock.mock.calls.find(
-      (call) => String(call[0]).endsWith("/acceptance") && call[1]?.method === "POST",
+      (call) => String(call[0]).endsWith("/confirm-order") && call[1]?.method === "POST",
     );
     expect(acceptCall?.[1]?.body).toBeUndefined();
     expect(passiveLifecycleGets(fetchMock)).toEqual([]);
     expect(
       fetchMock.mock.calls.filter(
-        (call) => String(call[0]).endsWith("/acceptance") && call[1]?.method === "POST",
+        (call) => String(call[0]).endsWith("/confirm-order") && call[1]?.method === "POST",
       ),
     ).toHaveLength(1);
   });
@@ -217,7 +216,7 @@ describe("QuoteSnapshotPage", () => {
     });
     const user = userEvent.setup();
     render(<QuoteSnapshotPage productCode={productCode} quoteSnapshotId="q-a" />);
-    const accept = await screen.findByRole("button", { name: "Marchează acceptată" });
+    const accept = await screen.findByRole("button", { name: "Confirmă comanda" });
     expect(screen.queryByRole("region", { name: /Confirmi acceptarea/ })).not.toBeInTheDocument();
 
     await user.click(accept);
@@ -243,12 +242,12 @@ describe("QuoteSnapshotPage", () => {
     expect(acceptancePosts(fetchMock)).toEqual([]);
   });
 
-  it("posts the existing acceptance once even if confirmation is activated twice", async () => {
+  it("posts the combined confirmation once even if confirmation is activated twice", async () => {
     let releaseAcceptance: (value: unknown) => void = () => undefined;
     let stage: "QUOTE_CREATED" | "QUOTE_ACCEPTED" = "QUOTE_CREATED";
     const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
       const url = String(input);
-      if (url.endsWith("/acceptance") && init?.method === "POST") {
+      if (url.endsWith("/confirm-order") && init?.method === "POST") {
         stage = "QUOTE_ACCEPTED";
         return new Promise((resolve) => {
           releaseAcceptance = resolve;
@@ -286,16 +285,16 @@ describe("QuoteSnapshotPage", () => {
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
     render(<QuoteSnapshotPage productCode={productCode} quoteSnapshotId="q-a" />);
-    await user.click(await screen.findByRole("button", { name: "Marchează acceptată" }));
-    const confirm = screen.getByRole("button", { name: "Confirmă acceptarea" });
+    await user.click(await screen.findByRole("button", { name: "Confirmă comanda" }));
+    const confirm = screen.getByRole("button", { name: "Da, confirm comanda" });
     await user.dblClick(confirm);
     expect(acceptancePosts(fetchMock)).toHaveLength(1);
     releaseAcceptance({
       ok: true,
       status: 200,
-      json: async () => ({ created: true, acceptanceDecision: { acceptanceId: "qad:q-a" } }),
+      json: async () => ({ created: true, orderSnapshot: { orderSnapshotId: "ord-1" } }),
     });
-    expect(await screen.findByRole("button", { name: "Creează comanda" })).toBeEnabled();
+    await waitFor(() => expect(window.location.pathname).toBe("/lucrari/ord-1"));
     expect(acceptancePosts(fetchMock)).toHaveLength(1);
   });
 
@@ -310,19 +309,19 @@ describe("QuoteSnapshotPage", () => {
     const user = userEvent.setup();
     render(<QuoteSnapshotPage productCode={productCode} quoteSnapshotId="q-a" />);
     expect(await screen.findByTestId("internal-cost")).toHaveTextContent("Incomplet");
-    await user.click(screen.getByRole("button", { name: "Marchează acceptată" }));
+    await user.click(screen.getByRole("button", { name: "Confirmă comanda" }));
     expect(acceptancePosts(fetchMock)).toEqual([]);
-    await user.click(screen.getByRole("button", { name: "Confirmă acceptarea" }));
+    await user.click(screen.getByRole("button", { name: "Da, confirm comanda" }));
     expect(acceptancePosts(fetchMock)).toEqual([
-      expect.stringContaining("/acceptance"),
+      expect.stringContaining("/confirm-order"),
     ]);
-    expect(acceptancePosts(fetchMock)[0]).toMatch(/\/acceptance$/);
+    expect(acceptancePosts(fetchMock)[0]).toMatch(/\/confirm-order$/);
   });
 
   it("creates an order from the envelope and opens /lucrari/:orderSnapshotId", async () => {
     const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
       const url = String(input);
-      if (url.endsWith("/order") && init?.method === "POST") {
+      if (url.endsWith("/confirm-order") && init?.method === "POST") {
         return Promise.resolve({
           ok: true,
           status: 200,
@@ -367,10 +366,12 @@ describe("QuoteSnapshotPage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<QuoteSnapshotPage productCode={productCode} quoteSnapshotId="q-a" />);
-    await userEvent.setup().click(await screen.findByRole("button", { name: "Creează comanda" }));
-    expect(window.location.pathname).toBe("/lucrari/ord-1");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Confirmă comanda" }));
+    await user.click(screen.getByRole("button", { name: "Da, confirm comanda" }));
+    await waitFor(() => expect(window.location.pathname).toBe("/lucrari/ord-1"));
     const orderCall = fetchMock.mock.calls.find(
-      (call) => String(call[0]).endsWith("/order") && call[1]?.method === "POST",
+      (call) => String(call[0]).endsWith("/confirm-order") && call[1]?.method === "POST",
     );
     expect(orderCall).toBeTruthy();
     expect(passiveLifecycleGets(fetchMock)).toEqual([]);
@@ -405,11 +406,11 @@ describe("QuoteSnapshotPage", () => {
     render(<QuoteSnapshotPage productCode={productCode} quoteSnapshotId="q-a" />);
 
     expect(await screen.findByTestId("frozen-profile-cost")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Marchează acceptată" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confirmă comanda" })).not.toBeInTheDocument();
     expect(screen.queryByText("Se verifică")).not.toBeInTheDocument();
 
     releaseEnvelope();
-    expect(await screen.findByRole("button", { name: "Marchează acceptată" })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "Confirmă comanda" })).toBeEnabled();
     expect(screen.getByText("Neacceptată")).toBeInTheDocument();
   });
 
@@ -455,7 +456,7 @@ function createdEnvelope() {
     stage: "QUOTE_CREATED",
     stageLabel: "Creată",
     nextAction: "ACCEPT_QUOTE",
-    nextActionLabel: "Marchează acceptată",
+    nextActionLabel: "Confirmă comanda",
   };
 }
 
@@ -531,7 +532,7 @@ function stubQuotePage(input: {
 
 function acceptancePosts(fetchMock: ReturnType<typeof vi.fn>): string[] {
   return fetchMock.mock.calls
-    .filter((call) => String(call[0]).endsWith("/acceptance") && call[1]?.method === "POST")
+    .filter((call) => String(call[0]).endsWith("/confirm-order") && call[1]?.method === "POST")
     .map((call) => String(call[0]));
 }
 
@@ -542,7 +543,7 @@ function passiveLifecycleGets(fetchMock: ReturnType<typeof vi.fn>): string[] {
       const method = call[1]?.method ?? "GET";
       return (
         method === "GET" &&
-        (url.endsWith("/acceptance") || url.endsWith("/order"))
+        (url.endsWith("/confirm-order") || url.endsWith("/order"))
       );
     })
     .map((call) => String(call[0]));

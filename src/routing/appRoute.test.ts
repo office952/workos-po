@@ -15,7 +15,20 @@ import {
   parseCustomerContext,
   parseSpineContext,
   quoteHref,
+  planningHref,
+  parseJobsView,
 } from "./appRoute";
+
+describe("optional jobs resource view", () => {
+  it("keeps historical Planning entry links on the single jobs route", () => {
+    expect(canonicalLocation("/planificare", "")).toBe("/lucrari?vedere=utilaje");
+    expect(canonicalLocation("/planificare", "?q=NORD")).toBe("/lucrari?q=NORD&vedere=utilaje");
+    expect(planningHref()).toBe("/lucrari?vedere=utilaje");
+    expect(parseJobsView("?vedere=utilaje")).toBe("resources");
+    expect(parseJobsView("?vedere=invalid")).toBe("jobs");
+    expect(canonicalLocation("/lucrari", "?vedere=utilaje")).toBeNull();
+  });
+});
 
 describe("parseAppRoute", () => {
   it("maps the slice paths", () => {
@@ -128,7 +141,7 @@ describe("parseAppRoute", () => {
 
     expect(atelierHref({ jobId: "ord-1" })).toBe("/atelier?job=ord-1");
     expect(executionHref("exp-1", { taskId: "task-1", jobId: "ord-1" })).toBe(
-      "/executie/exp-1?task=task-1&job=ord-1",
+      "/atelier?job=ord-1&plan=exp-1&task=task-1",
     );
     expect(parseJobContext("?job=ord-1")).toBe("ord-1");
     expect(parseTaskContext("?task=task-1")).toBe("task-1");
@@ -139,4 +152,19 @@ it("redirects historical commercial Catalog URLs to request intake/selection", (
   expect(canonicalLocation("/catalog", "?request=req%3A1&customer=cus%3A1")).toBe("/cereri/req%3A1?alege-produs=1#alege-produs");
   expect(canonicalLocation("/catalog", "?customer=cus%3A1")).toBe("/cereri/noua?customer=cus%3A1");
   expect(canonicalLocation("/catalog", "?product=PRD-TEST")).toBeNull();
+});
+
+
+it("retires execution and job subpages without losing task context or redirecting twice", () => {
+  expect(canonicalLocation("/executie/exp%3A1", "?task=task%3A2&job=job%3A3")).toBe("/atelier?job=job%3A3&plan=exp%3A1&task=task%3A2");
+  expect(canonicalLocation("/execution/exp%3A1", "?task=task%3A2")).toBe("/atelier?plan=exp%3A1&task=task%3A2");
+  for (const section of ["plan", "operatie"]) {
+    expect(canonicalLocation("/lucrari/job-1", `?task=task-2&sectiune=${section}`)).toBe("/lucrari/job-1?task=task-2&sectiune=operatii");
+  }
+  for (const section of ["fisiere", "materiale"]) {
+    expect(canonicalLocation("/lucrari/job-1", `?task=task-2&sectiune=${section}`)).toBe("/lucrari/job-1?task=task-2&sectiune=documente");
+  }
+  expect(canonicalLocation("/lucrari/job-1", "?sectiune=sursa")).toBe("/lucrari/job-1?sectiune=situatie#sursa");
+  expect(canonicalLocation("/atelier", "?job=job-1&plan=plan-1&task=task-1")).toBeNull();
+  expect(canonicalLocation("/lucrari/job-1", "?sectiune=operatii&task=task-1")).toBeNull();
 });

@@ -39,12 +39,6 @@ export function LaunchpadPage() {
                 <span className="launchpad__link-purpose">Continuă lucrările eliberate.</span>
               </a>
             </li>
-            <li>
-              <a className="launchpad__link" href="/planificare">
-                <span className="launchpad__link-label">Planificare</span>
-                <span className="launchpad__link-purpose">Vezi efortul pe zone și utilaje.</span>
-              </a>
-            </li>
           </ul>
         </section>
         {GLOBAL_NAV.map((group) => (

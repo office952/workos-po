@@ -34,6 +34,8 @@ OWNER_ACCEPTED_PLANNING_IMPLEMENTATION = YES
 
 Living program sequence is owned by `docs/ROADMAP.md`. Configuration-First architecture remains `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`. PLN1 persistence, API, `/planificare`, and the synthetic Owner reference runtime are Owner-accepted. This document remains the Planning contract owner. PLN2 and Operations Control V1 are Owner-accepted. Acceptance advisories are recorded and are not a correction wave. This document does not authorize PLN3.
 
+**Owner amendment, 2026-10-20 — direction accepted, source candidate implemented / runtime review pending.** Planning must not require manual time estimates or coordinator action on every task. The coordinator releases the whole job once; operators record actual work starts under existing eligibility/dependency rules. Planning's useful cross-job view will move into Lucrări as optional **Pe utilaje și zone**, with compatible historical links. Existing workload/estimate data and domain ownership remain intact. Unique-provider auto-binding must be reflected without misleading manual-allocation prompts. The standalone page is replaced by the embedded resource view; historical `/planificare` links redirect to `/lucrari?vedere=utilaje`. Unique eligible providers are projected into their queue with automatic-binding disclosure, while persisted assignment remains unchanged until the existing binding command/start. Optional estimates are disclosed on request and manual operations without a required provider remain visible. The accepted PLN1/PLN2 history below is not runtime or visual acceptance of this amendment. Full decision: [Production flow canon](PRODUCTION_FLOW_CANON.md#owner-decision-planning-without-repetitive-administration-2026-10-20).
+
 Accepted PLN2 contract:
 
 ```text
@@ -212,20 +214,27 @@ This is workload, not a capacity ceiling, utilization, scheduling, or ETA.
 WORKLOAD_PRIMITIVE = plannedEffortMinutes | UNKNOWN
 ```
 
-For one exact `CapabilityProvider`:
+For one exact `CapabilityProvider`, the 2026-10-20 source candidate uses a queue target resolved by the existing domain binding rules:
 
 ```text
+QUEUE_TARGET = persisted assignedProvider
+  or the unique eligible physical provider (UNIQUE_PENDING projection only)
+
 PROVIDER_KNOWN_QUEUED_EFFORT =
-  sum(plannedEffortMinutes)
-  for relevant open tasks assigned to that exact provider
+  sum(plannedEffortMinutes) for relevant open tasks with this QUEUE_TARGET
   where effort is known
 
 UNKNOWN_EFFORT_COUNT =
-  open assigned tasks with UNKNOWN effort
+  open tasks with this QUEUE_TARGET and UNKNOWN effort
 
 UNASSIGNED_OPEN_TASKS =
-  open tasks requiring a provider but without assignedProvider
+  open provider-required tasks without a resolved QUEUE_TARGET
+
+MANUAL_OPEN_TASKS =
+  open tasks without a required provider and without a QUEUE_TARGET
 ```
+
+Projection into a unique provider's queue does not persist assignment, reserve its machine, or start the operation. The UI discloses pending automatic binding and never treats the queue as an ETA. The previous assigned-only projection hid these tasks in the unassigned pool; that presentation is superseded by the Owner amendment above. Existing explicit estimates and actual assignments remain intact. Optional estimate summaries appear only on request in the resource view.
 
 V1 has no weekly bucket. Do not force a task into `YYYY-Www`. Do not compute remaining minutes against invented supply.
 

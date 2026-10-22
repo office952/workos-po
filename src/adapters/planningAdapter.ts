@@ -15,6 +15,7 @@ export function presentPlanningWorkload(payload: unknown): PlanningWorkloadTrans
     canEditEffort: workload.canEditEffort === true,
     providers: presentProviders(workload.providers),
     unassigned: presentTasks(workload.unassigned),
+    manual: presentTasks(workload.manual),
   };
 }
 
@@ -98,6 +99,8 @@ function presentTask(value: unknown): PlanningWorkloadTaskTransport | null {
           }
         : null,
     plannedEffortMinutes: presentEffortMinutes(row.plannedEffortMinutes),
+    providerBindingState: asString(row.providerBindingState),
+    providerBindingLabel: asString(row.providerBindingLabel),
     requiresProvider: row.requiresProvider === true,
     canEditEffort: row.canEditEffort === true,
   };

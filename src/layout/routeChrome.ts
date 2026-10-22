@@ -153,12 +153,12 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       };
     case "planning":
       return {
-        contextLabel: "Planificare",
-        currentHref: "/planificare",
+        contextLabel: "Lucrări",
+        currentHref: "/lucrari",
         workspace: "operational",
-        eyebrow: "Planificare",
-        title: "Planificare",
-        lead: "Ce lucru este acum pe fiecare zonă sau utilaj și cât timp estimat avem.",
+        eyebrow: "Lucrări",
+        title: "Lucrări",
+        lead: "Operațiile deschise pe utilaje și zone.",
       };
     case "job":
       return {
@@ -167,7 +167,7 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         workspace: "traveler",
         eyebrow: "Lucrare",
         title: "Lucrare",
-        lead: "Eliberează producția, materializează planul și compară planificat cu realizat.",
+        lead: "Urmărește lucrarea, operațiile și rezultatele în aceeași fișă.",
       };
     case "atelier":
       return {
@@ -180,11 +180,11 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
       };
     case "execution":
       return {
-        contextLabel: "Execuție",
+        contextLabel: "Atelier",
         currentHref: executionHref(route.planId),
         workspace: "operational",
-        eyebrow: "Execuție",
-        title: "Execuție",
+        eyebrow: "Atelier",
+        title: "Atelier",
         lead: "Pornește și închide sarcinile pe care le poți lucra.",
       };
     case "admin-resources":

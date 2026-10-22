@@ -42,7 +42,7 @@ function densityFor(workspace: PageWorkspace): PageDensity {
 
 export type PageSurface = "cereri-registry" | "cereri-detail" | "cereri-intake" | "clients-registry" | "client-hub"
   | "catalog-registry" | "configuration-workbench" | "assembly-workbench"
-  | "quotes-registry" | "quote-detail" | "job-detail" | "atelier" | "execution" | "planning";
+  | "quotes-registry" | "quote-detail" | "job-detail" | "atelier" | "execution";
 
 type SlicePageProps = {
   contextLabel: string;

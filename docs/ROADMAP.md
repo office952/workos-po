@@ -43,6 +43,30 @@ PILOT_GATE_A = HOLD
 PILOT_GATE_B = HOLD
 ```
 
+### Job record and measured participation candidate (2026-10-21)
+
+Owner-approved scoped Figma direction, then explicit GO for implementation in the existing `office952/workos-po` PR #92. The existing sheet becomes a visible file-first record with exact revision/use evidence, all operation results and hours, per-person contributions and unified chronology. Eligible workers can join/leave independently; the canonical server and new additive migration 046 enforce one active personal interval per worker across jobs. First executor/start, legacy declared durations and old history remain intact; unknown labor is not backfilled or zero-filled. This supersedes the earlier “future participation” limitation only for the new source candidate, not for earlier runtime evidence. Contract and limits: [Production flow canon](architecture/PRODUCTION_FLOW_CANON.md#owner-approved-job-record-and-participation-2026-10-21).
+
+The Owner stopped further development of the optional resource view. Local responsive/keyboard/worker/file-use review of the exact new candidate remains pending. Session exception continues without Notion edits or a `NOTION_GATE=PASS` claim. No merge, deployment, real organization migration or business-data changes are authorized by this source wave.
+
+### Job record UI organization candidate (2026-10-21)
+
+Owner requested organization before another preview. The existing job record stays one continuous page with five visible landmarks: files/use evidence, operations/hours, results/materials/control, people, and dated chronology. The selected operation dossier lives beside its hours ledger rather than at the end of the whole record. Whole-job loading/retry does not remount its unsaved dossier. Labor, calendar duration and machine time keep separate server-provided totals and incomplete evidence stays explicit.
+
+Atelier keeps job/operator identity, one compact operation selector and the existing command permissions. For an explicit operation, files/instructions sit beside personal work controls on desktop; narrow layouts stack them with a direct jump to controls. The full plan is no longer repeated beside that selected operation. Consumption inputs precede closing actions. Existing inbox/operation mounting, drafts, file revisions, eligibility, participation and machine exclusivity remain unchanged. No extra route, business calculation, schema or database write belongs to this UI wave.
+
+Source candidate only, in existing draft PR #92. Earlier synthetic runtime checks at `a19f991` do not validate this layout. The connected browser could not attach in this session; actual responsive/keyboard/visual inspection of the new candidate remains pending. The session exception continues without Notion edits or `NOTION_GATE=PASS`; merge, deployment and real business-data operations remain unauthorized.
+
+### Production flow simplification candidate (2026-10-20)
+
+Owner-authorized source candidate on top of `184619c` / draft PR #91: offer confirmation opens the job, a single **Trimite în producție** command prepares release and plan, and operations/dossier stay in the job sheet and Atelier. Canonical responsibilities and retired URL mapping: [Production flow canon](architecture/PRODUCTION_FLOW_CANON.md). Candidate only; merge, real-data changes, deployment and visual acceptance remain pending. This note does not change the historical main baseline above.
+
+Cursor reported synthetic UI E2E PASS at `0dbb6b9` on the same audit assembly after member commercial-price persistence was corrected: one order, 17/17 production operations completed and retained after reload. The Owner then authorized targeted execution reliability corrections: current-activity wording, eligibility refresh after operator/People changes, and exclusive active machine runs across jobs. Cursor later reported A/B/C PASS at `868d617` for those reliability corrections, without screenshots. Session expiry remains an observation to isolate. Multi-worker participation, interrupted work timing, delivery/installation and visual acceptance are not covered by these checks.
+
+### Owner planning simplification decision (2026-10-20)
+
+Direction accepted; source candidate implemented on PR #92, runtime/visual validation pending. The Owner rejects repetitive manual estimates and coordinator release of individual tasks. One job-level production command remains the entry; operators record actual work starts. Planning becomes an optional **Pe utilaje și zone** view inside Lucrări instead of a primary workflow page. Keep the workload engine, optional estimates, existing data, eligibility/dependency gates and compatible historical links. Reconcile unique-provider auto-binding with misleading unassigned/allocation prompts. The separate Planning page and navigation entry are retired; `/planificare` redirects to `/lucrari?vedere=utilaje`. Existing estimates remain accessible through optional disclosure. Unique-provider queue placement is read-only and uses the domain binding resolver; genuine resource gaps/choices and manual-only work stay visible. No schema or history rewrite. Contract: [Production flow canon](architecture/PRODUCTION_FLOW_CANON.md#owner-decision-planning-without-repetitive-administration-2026-10-20).
+
 ### Work integrated since PR #54
 
 | Work | PR / merge | Evidence class | Owner acceptance |

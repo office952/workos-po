@@ -134,3 +134,9 @@ function presentConfirmedMember(value: unknown): ConfirmedAssemblyMember | null 
     internalCost: cost && total !== null ? { total, currency: asString(cost.currency) ?? "EUR", completeness: asString(cost.completeness) ?? "", completenessLabel: asString(cost.completenessLabel) ?? "" } : null,
   };
 }
+
+export function presentSavedAssemblyMember(payload: unknown, assemblyId: string, role: string): ConfirmedAssemblyMember | null {
+  const body = asRecord(payload);
+  if (asRecord(body?.assembly)?.assemblyId !== assemblyId || body?.role !== role) return null;
+  return presentConfirmedMember(body.confirmed);
+}

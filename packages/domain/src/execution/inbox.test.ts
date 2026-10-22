@@ -198,7 +198,7 @@ describe("projectOperatorTaskInbox", () => {
     expect(waitingCnc.every((item) => item.canClaimStart === false)).toBe(true);
   });
 
-  it("keeps in-progress mine after claim and hides it from Andrei", () => {
+  it("keeps legacy in-progress mine and offers joining to another qualified person", () => {
     const setup = cncPeople();
     const job = planned("CLAIMED", "2026-08-17T13:00:00.000Z");
     const withProvider = assignProviderToTask(
@@ -241,7 +241,7 @@ describe("projectOperatorTaskInbox", () => {
       plans: [{ record: claimed.record, snapshot: job.snapshot, customerDisplayName: "Client" }],
     });
     expect(andreiInbox.inProgressMine).toEqual([]);
-    expect(andreiInbox.availableReady.find((item) => item.taskId === claimedTaskId)).toBeUndefined();
+    expect(andreiInbox.availableReady.find((item) => item.taskId === claimedTaskId)?.canClaimStart).toBe(true);
   });
 
   it("excludes unavailable operators from claimable lanes but keeps their in-progress work", () => {
@@ -333,7 +333,7 @@ describe("projectOperatorTaskInbox", () => {
     expect(inbox.availableReady).toEqual([]);
   });
 
-  it("does not show work reserved for another person as claimable", () => {
+  it("keeps preassigned work joinable for every eligible person", () => {
     const setup = cncPeople();
     const job = planned("RESERVED", "2026-08-17T18:00:00.000Z");
     const withProvider = assignProviderToTask(
@@ -371,8 +371,8 @@ describe("projectOperatorTaskInbox", () => {
       ...florinInbox.waitingDependencies,
       ...florinInbox.inProgressMine,
     ].map((item) => item.taskId);
-    expect(florinTaskIds).not.toContain(reservedTaskId);
-    expect(florinInbox.availableReady.find((item) => item.taskId === reservedTaskId)).toBeUndefined();
+    expect(florinTaskIds).toContain(reservedTaskId);
+    expect(florinInbox.availableReady.find((item) => item.taskId === reservedTaskId)?.canClaimStart).toBe(true);
 
     const andreiInbox = projectOperatorTaskInbox({
       currentOperator: setup.andrei,

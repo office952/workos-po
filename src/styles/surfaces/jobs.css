@@ -165,22 +165,7 @@
 .jobs-spine__sort select { min-height: 46px; max-width: 161px; padding: 0 8px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--jobs-ink); font: 500 12px var(--font-sans); }
 .jobs-spine__density { display: inline-flex; align-items: center; gap: 7px; min-height: 46px; padding: 0 12px; border: 1px solid var(--color-border); color: var(--jobs-muted); background: var(--color-surface); font: 500 12px var(--font-sans); cursor: pointer; white-space: nowrap; }
 .jobs-spine__density:hover,.jobs-spine__density[aria-pressed="true"] { color: var(--jobs-ink); border-color: var(--color-border-strong); background: var(--color-surface-raised); }
-.jobs-spine__planning {
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 13px;
-  min-height: 46px;
-  padding: 0 15px;
-  background: var(--jobs-signal);
-  border: 1px solid var(--jobs-signal);
-  color: var(--shell-button-ink);
-  font: 650 12px var(--font-sans);
-  text-decoration: none;
-  white-space: nowrap;
-}
-.jobs-spine__planning:hover { background: var(--shell-signal-strong); border-color: var(--shell-signal-strong); }
-.jobs-spine__planning:focus-visible,.jobs-spine__density:focus-visible,.jobs-spine__filterbar button:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+.jobs-spine__density:focus-visible,.jobs-spine__filterbar button:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .jobs-spine__filterbar {
   display: flex;
   align-items: center;
@@ -745,7 +730,6 @@
   .jobs-spine__sort span { display: none; }
   .jobs-spine__sort select { max-width: 127px; }
   .jobs-spine__density { padding-inline: 8px; font-size: 11px; }
-  .jobs-spine__planning { padding-inline: 11px; font-size: 11px; }
   .jobs-spine__filterbar { flex-wrap: nowrap; gap: 15px; overflow-x: auto; scrollbar-width: thin; }
   .jobs-spine__filterbar button { white-space: nowrap; }
   .jobs-spine__columns,.jobs-spine__row { grid-template-columns: minmax(0,1fr) minmax(114px,.75fr); }
@@ -794,3 +778,12 @@
     to { opacity: 1; transform: translateY(0); }
   }
 }
+
+/* One registry, two optional views. The workload view owns the full row. */
+.jobs-spine__views { display: flex; flex-wrap: wrap; gap: 8px 24px; padding-block: 12px; border-bottom: 1px solid var(--color-border); }
+.jobs-spine__views a { display: inline-flex; align-items: center; min-height: 44px; color: var(--jobs-muted); font: 500 14px/1.4 var(--font-sans); text-decoration: none; border-bottom: 2px solid transparent; }
+.jobs-spine__views a[aria-current="page"] { color: var(--jobs-ink); border-bottom-color: var(--jobs-signal); }
+.jobs-spine__views a:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 3px; }
+.jobs-spine__layout[data-view="resources"] { grid-template-columns: minmax(0,1fr); grid-template-areas: "header" "register"; }
+.jobs-spine__workload { grid-area: register; min-width: 0; position: relative; }
+.jobs-spine__register[hidden], .jobs-spine__workload[hidden] { display: none; }

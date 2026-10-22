@@ -1,530 +1,79 @@
-import { render, screen } from "@testing-library/react";
-import { readFileSync } from "node:fs";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { resetResourceCache } from "../data/resourceCache";
-import { JobDetailPage } from "./JobDetailPage";
-
-// Vitest stubs CSS imports; load the actual sources for the cascade regression.
-const legacyStyles = readFileSync("src/styles/ui.css", "utf8");
-const sheetStyles = readFileSync("src/styles/surfaces/job-sheet.css", "utf8");
-
-vi.mock("../session/CloudSessionContext", () => ({ useCloudSession: () => ({ ready: true, unavailable: false, mode: "single_plane", user: null, organization: null }) }));
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
-
-describe("JobDetailPage", () => {
-  it("owns the sheet layout without the legacy three-column traveler or a repeated hero", async () => {
-    vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => {
-      const url = String(input);
-      if (url.includes("/jobs/job-1")) {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            job: {
-              jobId: "job-1",
-              productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
-              productLabel: "Litere volumetrice",
-              inscription: "NORD",
-              customerDisplayName: "Atelier Nord",
-              stage: "RELEASED",
-              stageLabel: "Eliberată",
-              nextAction: "CREATE_EXECUTION_PLAN",
-              nextActionLabel: "Creează planul de execuție",
-              progressLabel: "0 / 3",
-              orderSnapshotId: "ord-1",
-              releaseSnapshotId: "rel-1",
-            },
-            quote: { quoteSnapshotId: "q-1" },
-            execution: { planId: null },
-          }),
-        });
-      }
-      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
-    }));
-
-    render(<JobDetailPage jobId="job-1" />);
-    expect(await screen.findByRole("heading", { name: "NORD" })).toBeInTheDocument();
-    expect(document.querySelector(".page-workspace--traveler")).toBeNull();
-    expect(document.querySelectorAll(".job-sheet__body")).toHaveLength(1);
-    // Reproduce production stylesheet ordering: the old traveler must never
-    // constrain the plan/results/dossier to the first of three grid tracks.
-    const style = document.createElement("style");
-    document.head.append(style);
-    try {
-      for (const css of [legacyStyles + sheetStyles, sheetStyles + legacyStyles]) {
-        style.textContent = css;
-        const body = document.querySelector(".job-sheet__body")!;
-        expect(getComputedStyle(body).display).toBe("flex");
-        expect(getComputedStyle(body).width).toBe("100%");
-      }
-    } finally {
-      style.remove();
-    }
-    expect(screen.getByRole("region", { name: "Situația producției" })).toBeInTheDocument();
-    expect(document.querySelector(".job-sheet__overview")).toHaveAttribute("data-has-plan", "false");
-    expect(screen.getByRole("navigation", { name: "Secțiunile lucrării" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Situație" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Rezultate" })).toHaveAttribute("href", "/lucrari/job-1?sectiune=rezultate");
-    expect(screen.queryByRole("heading", { name: "Rezultate înregistrate" })).toBeNull();
-    expect(document.querySelector(".object-hero")).toBeNull();
-    expect(document.querySelector(".job-dashboard-box")).toBeNull();
-    expect(screen.getByRole("button", { name: "Creează planul de execuție" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Date și sursă" })).toHaveAttribute("href", "/lucrari/job-1?sectiune=sursa");
-    expect(screen.queryByRole("link", { name: "Deschide atelierul lucrării" })).toBeNull();
+import { act, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { resetResourceCache } from '../data/resourceCache';
+import { jobRecordFixture } from '../test/jobRecordFixture';
+import { JobDetailPage } from './JobDetailPage';
+vi.mock('../session/CloudSessionContext', () => ({ useCloudSession: () => ({ ready: true, unavailable: false, mode: 'single_plane', user: null, organization: null }) }));
+afterEach(() => { vi.unstubAllGlobals(); resetResourceCache(); });
+function fixture(options: { finished?: boolean; planned?: boolean; invalidRecord?: boolean; operator?: boolean } = {}) {
+  const fetch = vi.fn((input: RequestInfo, init?: RequestInit) => {
+    const url = String(input);
+    let body: unknown = {};
+    if (url.endsWith('/jobs/job-1/record')) body = options.invalidRecord ? {} : { record: jobRecordFixture };
+    else if (url.endsWith('/jobs/job-1')) body = { job: { jobId: 'job-1', kind: 'ASSEMBLY', productCode: 'assembly', productLabel: 'Panou și litere', inscription: 'NORD', customerDisplayName: 'Client sintetic', stage: options.finished ? 'EXECUTION_COMPLETED' : 'IN_EXECUTION', stageLabel: 'În lucru', progressLabel: options.finished ? '2 / 2' : '0 / 2', nextAction: 'CONTINUE_EXECUTION', orderSnapshotId: 'order', releaseSnapshotId: 'release' }, execution: { planId: options.planned === false ? null : 'plan-1' } };
+    else if (url.includes('/execution-plans/plan-1')) body = { executionPlan: { plan: { planId: 'plan-1', productLabel: 'Panou și litere', inscription: 'NORD' }, progress: { completed: 0, total: 2 }, tasks: jobRecordFixture.hours!.tasks.map(t => ({ ...t, waitingFor: [], eligibleProviders: [] })) } };
+    else if (url.includes('/operator-session') && options.operator) body = { operator: { personId: 'ion', displayName: 'Ion' } };
+    else if (url.includes('material-preparation')) body = { preparation: { jobId: 'job-1', planId: null, lines: [] } };
+    else if (url.endsWith('/dossier')) body = { dossier: { taskId: url.includes('task-1') ? 'task-1' : 'task-2', files: [], planFiles: [], instructions: [], observations: [], issues: [], history: [] } };
+    void init;
+    return Promise.resolve({ ok: true, status: 200, json: async () => body });
+  }); vi.stubGlobal('fetch', fetch); return fetch;
+}
+describe('job record page', () => {
+  it('makes files, hours, people and chronology visible without selecting or fetching a task dossier', async () => {
+    const fetch = fixture(); render(<JobDetailPage jobId="job-1"/>);
+    expect(await screen.findByRole('heading', { name: 'Panou și litere' })).toBeInTheDocument();
+    expect(await screen.findByRole('table', { name: 'Fișiere, utilizări și autorii înregistrărilor' })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Orele lucrării' })).toBeVisible();
+    expect(screen.getByText('A ieșit din operație')).toBeVisible();
+    expect(screen.getByRole('navigation', { name: 'Repere în fișa lucrării' }).querySelectorAll('a')).toHaveLength(5);
+    expect(screen.queryByRole('tab')).toBeNull();
+    expect(fetch.mock.calls.some(([url]) => String(url).endsWith('/dossier'))).toBe(false);
+    expect(fetch.mock.calls.every(([, init]) => !init?.method || init.method === 'GET')).toBe(true);
   });
-
-  it("keeps material warnings visible on the situation without opening material actions", async () => {
-    resetResourceCache();
-    vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => {
-      const url = String(input);
-      if (url.includes("material-preparation")) {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            preparation: {
-              jobId: "job-1",
-              planId: "exp-1",
-              lines: [
-                {
-                  resourceId: "mat-1",
-                  label: "Placă ACM",
-                  unit: "mp",
-                  estimatedQuantity: 2,
-                  taskIds: ["task-1"],
-                  canCheck: false,
-                  latestCheck: {
-                    status: "MISSING",
-                    checkedByLabel: "Ion",
-                    checkedAt: "2026-10-18T00:00:00Z",
-                  },
-                  openRequest: {
-                    requestId: "req-1",
-                    requestedQuantity: 2,
-                    unit: "mp",
-                    status: "OPEN",
-                    requestedByLabel: "Ion",
-                    requestedAt: "2026-10-18T00:00:00Z",
-                    requiresReview: true,
-                  },
-                },
-              ],
-            },
-          }),
-        });
-      }
-      if (url.includes("/jobs/job-1")) {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            job: {
-              jobId: "job-1",
-              productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
-              productLabel: "Litere volumetrice",
-              inscription: "NORD",
-              customerDisplayName: "Atelier Nord",
-              stage: "RELEASED",
-              stageLabel: "Eliberată",
-              nextAction: "CREATE_EXECUTION_PLAN",
-              nextActionLabel: "Creează planul de execuție",
-              progressLabel: "0 / 3",
-              orderSnapshotId: "ord-1",
-              releaseSnapshotId: "rel-1",
-            },
-            quote: { quoteSnapshotId: "q-1" },
-            execution: { planId: null },
-          }),
-        });
-      }
-      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
-    }));
-
-    render(<JobDetailPage jobId="job-1" />);
-    const summary = await screen.findByTestId("material-preparation-summary");
-    expect(summary).toHaveTextContent("Placă ACM: material insuficient");
-    expect(summary).toHaveTextContent("solicitare de aprovizionare de revizuit");
-    expect(screen.getByRole("link", { name: "Vezi materialul în această fișă" })).toHaveAttribute("href", "/lucrari/job-1?sectiune=materiale");
-    expect(screen.queryByTestId("job-material-preparation")).toBeNull();
+  it('preserves the finished record and separates production completion from delivery', async () => {
+    fixture({ finished: true }); render(<JobDetailPage jobId="job-1"/>);
+    expect(await screen.findByText(/Producția este finalizată. Livrarea și montajul/)).toBeVisible();
+    expect(await screen.findByText('Durată declarată: 42 min')).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Deschide în Atelier' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Trimite în producție' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Tipărește fișa' })).toBeEnabled();
+    expect(screen.queryByText(/Nicio operație începută/)).toBeNull();
   });
-
-  it("opens execution and atelier with the same job context when a plan exists", async () => {
-    vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => {
-      const url = String(input);
-      if (url.includes("/jobs/job-1")) {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            job: {
-              jobId: "job-1",
-              productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
-              productLabel: "Litere volumetrice",
-              inscription: "NORD",
-              customerDisplayName: "Atelier Nord",
-              stage: "IN_EXECUTION",
-              stageLabel: "În execuție",
-              nextAction: "CONTINUE_EXECUTION",
-              nextActionLabel: "Continuă execuția",
-              progressLabel: "0 / 3",
-              orderSnapshotId: "job-1",
-              releaseSnapshotId: "rel-1",
-            },
-            quote: { quoteSnapshotId: "q-1" },
-            execution: { planId: "exp-1" },
-          }),
-        });
-      }
-      if (url.includes("/execution-plans/exp-1")) {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            executionPlan: {
-              plan: {
-                planId: "exp-1",
-                productLabel: "Litere",
-                inscription: "NORD",
-                sourceSnapshotId: "aps-1",
-              },
-              statusLabel: "În lucru",
-              progress: { completed: 0, total: 1 },
-              tasks: [
-                {
-                  taskId: "task-1",
-                  processLabel: "Debitare",
-                  scopeLabel: "Spate",
-                  seqLabel: "01",
-                  status: "PLANNED",
-                  statusLabel: "Planificat",
-                  assignmentLabel: "Nealocat",
-                  requiresProvider: true,
-                  canAssign: false,
-                  canClaimStart: false,
-                  canComplete: false,
-                  requiresCompletedQuantity: false,
-                  waitingFor: [],
-                  eligibleProviders: [],
-                },
-              ],
-            },
-            job: { jobId: "job-1", href: "/jobs/job-1" },
-          }),
-        });
-      }
-      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
-    }));
-
-    render(<JobDetailPage jobId="job-1" />);
-    expect(await screen.findByRole("link", { name: "Deschide execuția" })).toHaveAttribute(
-      "href",
-      "/executie/exp-1?task=task-1&job=job-1",
-    );
-    expect(screen.getByRole("link", { name: "Deschide atelierul lucrării" })).toHaveAttribute(
-      "href",
-      "/atelier?job=job-1&return=%2Flucrari%2Fjob-1%3Ftask%3Dtask-1%26sectiune%3Dsituatie",
-    );
-    expect(screen.getByRole("link", { name: "Deschide planul de operații" })).toHaveAttribute("href", "/lucrari/job-1?task=task-1&sectiune=plan");
+  it('never replaces an invalid explicit task with another operation', async () => {
+    fixture(); render(<JobDetailPage jobId="job-1" taskId="missing"/>);
+    expect(await screen.findByText('Operația nu există în această lucrare')).toBeVisible();
+    expect(screen.queryByRole('region', { name: 'Dosarul operației selectate' })).toBeNull();
+    expect(await screen.findByRole('region', { name: 'Fișierele lucrării' })).toBeVisible();
   });
-
-  it("shows frozen OTHER installation notes and hides them for ordinary values", async () => {
-    const fetchMock = vi.fn((input: RequestInfo) => {
-      const url = String(input);
-      expect(url).not.toContain("/requests/");
-      if (url.includes("/jobs/job-other")) {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            job: {
-              jobId: "job-other",
-              productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
-              productLabel: "Litere volumetrice",
-              inscription: "ALTUL",
-              customerDisplayName: "Client sintetic",
-              stage: "RELEASED",
-              stageLabel: "Eliberată",
-              nextAction: "CREATE_EXECUTION_PLAN",
-              nextActionLabel: "Creează planul de execuție",
-              progressLabel: "0 / 3",
-              orderSnapshotId: "ord-other",
-              releaseSnapshotId: "rel-other",
-            },
-            siteInstallation: {
-              providerModeLabel: "Intern",
-              siteName: null,
-              street: "Strada Sintetică 1",
-              city: "Oraș Sintetic",
-              surfaceTypeLabel: "Altul",
-              surfaceOtherNote: "Suprafață sintetică specială",
-              fixingMethodLabel: "Altul",
-              fixingOtherNote: "Fixare sintetică specială",
-              installationElevationMm: null,
-              siteElectricalLabel: "Exclus — responsabilitatea clientului",
-              accessNotes: null,
-              contactName: null,
-              contactPhone: null,
-              crewSize: 2,
-              plannedDurationHours: 3,
-            },
-          }),
-        });
-      }
-      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
-    const { unmount } = render(<JobDetailPage jobId="job-other" section="sursa" />);
-    expect(await screen.findByText("Suprafață sintetică specială")).toBeInTheDocument();
-    expect(screen.getByText("Fixare sintetică specială")).toBeInTheDocument();
-    expect(screen.getByText("Tip suprafață — detalii")).toBeInTheDocument();
-    expect(screen.getByText("Metodă de fixare — detalii")).toBeInTheDocument();
-    expect(screen.getAllByText("Altul")).toHaveLength(2);
-    unmount();
-
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            job: {
-              jobId: "job-ordinary",
-              productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
-              productLabel: "Litere volumetrice",
-              inscription: "BETON",
-              customerDisplayName: "Client sintetic",
-              stage: "RELEASED",
-              stageLabel: "Eliberată",
-              nextAction: "CREATE_EXECUTION_PLAN",
-              nextActionLabel: "Creează planul de execuție",
-              progressLabel: "0 / 3",
-              orderSnapshotId: "ord-ordinary",
-              releaseSnapshotId: "rel-ordinary",
-            },
-            siteInstallation: {
-              providerModeLabel: "Subcontractat",
-              siteName: null,
-              street: "Strada Sintetică 10",
-              city: "Oraș Sintetic",
-              surfaceTypeLabel: "Beton",
-              surfaceOtherNote: null,
-              fixingMethodLabel: "Ancoră mecanică",
-              fixingOtherNote: null,
-              installationElevationMm: null,
-              siteElectricalLabel: "Nu se aplică",
-              accessNotes: null,
-              contactName: null,
-              contactPhone: null,
-              crewSize: null,
-              plannedDurationHours: null,
-            },
-          }),
-        }),
-      ),
-    );
-    render(<JobDetailPage jobId="job-ordinary" section="sursa" />);
-    expect(await screen.findByText("Beton")).toBeInTheDocument();
-    expect(screen.getByText("Ancoră mecanică")).toBeInTheDocument();
-    expect(screen.queryByText("Tip suprafață — detalii")).not.toBeInTheDocument();
-    expect(screen.queryByText("Metodă de fixare — detalii")).not.toBeInTheDocument();
-    expect(screen.queryByText("Echipă")).not.toBeInTheDocument();
+  it('opens only the explicitly requested task while retaining the visible whole-job record', async () => {
+    fixture(); render(<JobDetailPage jobId="job-1" taskId="task-1"/>);
+    expect(await screen.findByRole('region', { name: 'Dosarul operației selectate' })).toBeVisible();
+    await waitFor(() => expect(screen.getByRole('heading', { name: '01 · Lipire' })).toHaveFocus());
+    expect(screen.getByRole('link', { name: 'Deschide operația în Atelier' })).toHaveAttribute('href', '/atelier?job=job-1&plan=plan-1&task=task-1');
+    expect(await screen.findByText('A ieșit din operație')).toBeVisible();
   });
-
-  it("shows an outside task with its provider and missing-provider attention from the server", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((input: RequestInfo) => {
-        const url = String(input);
-        if (url.includes("/jobs/job-ext")) {
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            json: async () => ({
-              job: {
-                jobId: "job-ext",
-                productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
-                productLabel: "Litere volumetrice",
-                inscription: "EXTERN",
-                customerDisplayName: "Client",
-                stage: "EXECUTION_IN_PROGRESS",
-                stageLabel: "La furnizor extern",
-                attentionLabel: "Lipsă furnizor extern",
-                nextAction: "CONTINUE_EXECUTION",
-                nextActionLabel: "Continuă execuția",
-                progressLabel: "0 / 1",
-                orderSnapshotId: "ord-ext",
-                releaseSnapshotId: "rel-ext",
-              },
-              quote: { quoteSnapshotId: "q-ext" },
-              execution: { planId: "exp-ext" },
-            }),
-          });
-        }
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            executionPlan: {
-              plan: {
-                planId: "exp-ext",
-                productLabel: "Litere",
-                inscription: "EXTERN",
-                sourceSnapshotId: "aps-ext",
-              },
-              statusLabel: "În lucru",
-              progress: { completed: 0, total: 1 },
-              tasks: [
-                {
-                  taskId: "task-ext",
-                  processLabel: "Vopsire",
-                  scopeLabel: "Față",
-                  seqLabel: "02",
-                  status: "OUTSIDE",
-                  statusLabel: "La furnizor extern",
-                  executionMode: "EXTERNAL",
-                  externalProviderLabel: "Atelier Extern",
-                  assignmentLabel: "Atelier Extern",
-                  requiresProvider: true,
-                  canAssign: false,
-                  canClaimStart: false,
-                  canComplete: false,
-                  requiresCompletedQuantity: false,
-                  waitingFor: [],
-                  eligibleProviders: [],
-                  plannedTimeLabel: "Necunoscut",
-                  actualDurationLabel: "Necunoscut",
-                },
-              ],
-            },
-          }),
-        });
-      }),
-    );
-    render(<JobDetailPage jobId="job-ext" />);
-    expect(await screen.findByText("Lipsă furnizor extern")).toBeInTheDocument();
-    expect(screen.getAllByText("La furnizor extern").length).toBeGreaterThan(0);
-    expect(await screen.findByRole("region", { name: "Activitate" })).toHaveTextContent("Atelier Extern");
+  it('preserves an unsaved dossier and focus when the whole-job report arrives later', async () => {
+    const original = fixture({ operator: true });
+    let finish!: (response: unknown) => void;
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo, init?: RequestInit) => String(input).endsWith('/jobs/job-1/record')
+      ? new Promise(resolve => { finish = resolve; }) : original(input, init)));
+    const user = userEvent.setup(); render(<JobDetailPage jobId="job-1" taskId="task-1"/>);
+    await screen.findByRole('region', { name: 'Dosarul operației selectate' });
+    await user.click(await screen.findByRole('button', { name: 'Adaugă observație' }));
+    const note = screen.getByLabelText('Observație'); await user.type(note, 'Ciornă nesalvată');
+    expect(screen.queryByText('Planul de execuție nu există încă.')).toBeNull();
+    await act(async () => { finish({ ok: true, status: 200, json: async () => ({ record: jobRecordFixture }) }); });
+    await screen.findByRole('table', { name: 'Fișiere, utilizări și autorii înregistrărilor' });
+    expect(screen.getByLabelText('Observație')).toBe(note);
+    expect(note).toHaveValue('Ciornă nesalvată'); expect(note).toHaveFocus();
+    expect(screen.getByRole('region', { name: 'Orele lucrării' })).toContainElement(screen.getByRole('region', { name: 'Dosarul operației selectate' }));
   });
-
-  it("separates work quantity from planned and actual material consumption", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((input: RequestInfo) => {
-        const url = String(input);
-        if (url.includes("/jobs/job-mat")) {
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            json: async () => ({
-              job: {
-                jobId: "job-mat",
-                productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
-                productLabel: "Litere volumetrice",
-                inscription: "CONSUM",
-                customerDisplayName: "Atelier Nord",
-                stage: "IN_EXECUTION",
-                stageLabel: "În execuție",
-                nextAction: "CONTINUE_EXECUTION",
-                nextActionLabel: "Continuă execuția",
-                progressLabel: "1 / 2",
-                orderSnapshotId: "ord-mat",
-                releaseSnapshotId: "rel-mat",
-              },
-              quote: { quoteSnapshotId: "q-mat" },
-              execution: { planId: "exp-mat" },
-            }),
-          });
-        }
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            executionPlan: {
-              plan: {
-                planId: "exp-mat",
-                productLabel: "Litere",
-                inscription: "CONSUM",
-                sourceSnapshotId: "aps-mat",
-              },
-              statusLabel: "În lucru",
-              progress: { completed: 1, total: 2 },
-              tasks: [
-                {
-                  taskId: "task-cut",
-                  processLabel: "Debitare",
-                  scopeLabel: "Spate",
-                  seqLabel: "01",
-                  status: "COMPLETED",
-                  statusLabel: "Finalizat",
-                  assignmentLabel: "CNC",
-                  requiresProvider: true,
-                  canAssign: false,
-                  canClaimStart: false,
-                  canComplete: false,
-                  requiresCompletedQuantity: true,
-                  measurableQuantity: { label: "Lungime", value: 12.5, unit: "m" },
-                  completedQuantityLabel: "Realizat: 12,5 m",
-                  varianceLabel: "Conform planului",
-                  waitingFor: [],
-                  eligibleProviders: [],
-                  resourceDemands: [
-                    {
-                      resourceId: "res-plex",
-                      label: "Plexiglas",
-                      plannedQuantity: 12.5,
-                      unit: "m",
-                    },
-                  ],
-                  actualConsumption: [
-                    {
-                      resourceId: "res-plex",
-                      resourceLabel: "Plexiglas",
-                      actualQuantity: 13.75,
-                      unit: "m",
-                      note: "rebut",
-                    },
-                  ],
-                },
-                {
-                  taskId: "task-qc",
-                  processLabel: "Control",
-                  scopeLabel: "Față",
-                  seqLabel: "02",
-                  status: "PLANNED",
-                  statusLabel: "Planificat",
-                  assignmentLabel: "Nealocat",
-                  requiresProvider: false,
-                  canAssign: false,
-                  canClaimStart: false,
-                  canComplete: false,
-                  requiresCompletedQuantity: false,
-                  waitingFor: [],
-                  eligibleProviders: [],
-                },
-              ],
-            },
-          }),
-        });
-      }),
-    );
-
-    render(<JobDetailPage jobId="job-mat" section="rezultate" />);
-    expect(await screen.findByText("Cantitate executată: Conform planului")).toBeInTheDocument();
-    expect(screen.getAllByText("Realizat: 12,5 m").length).toBeGreaterThan(0);
-    const sections = screen.getAllByTestId("material-consumption");
-    expect(sections).toHaveLength(2);
-    expect(sections[0]).toHaveTextContent("Planificat: 12,5 m");
-    expect(sections[0]).toHaveTextContent("Consum efectiv");
-    expect(sections[0]).toHaveTextContent("13,75 m");
-    expect(sections[0]).toHaveTextContent("rebut");
-    expect(sections[1]).toHaveTextContent("Consum planificat neînregistrat.");
-    expect(sections[1]).toHaveTextContent("Consum efectiv neînregistrat.");
-    expect(screen.queryByText(/cost intern/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/\bEIC\b/)).not.toBeInTheDocument();
+  it('reports invalid record responses as unavailable and provides retry instead of perpetual loading', async () => {
+    const fetch = fixture({ invalidRecord: true }); const user = userEvent.setup(); render(<JobDetailPage jobId="job-1"/>);
+    expect(await screen.findByText('Dosarul nu a putut fi actualizat')).toBeVisible();
+    const before = fetch.mock.calls.length; await user.click(screen.getByRole('button', { name: 'Reîncearcă' }));
+    await waitFor(() => expect(fetch.mock.calls.length).toBeGreaterThan(before));
   });
 });

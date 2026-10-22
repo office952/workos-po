@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ACM_CASSETTE_NONE_PRODUCT_CODE,
   CANONICAL_PRODUCT_CODE,
@@ -6,6 +6,7 @@ import {
   OWNER_CONFIRMED_SELLER,
   SIGN_ASSEMBLY_ACM_SIGNAGE_V2,
 } from "@workos-final/domain";
+import { createProductSystemRuntime } from "../src/productSystem/runtime.js";
 import { createApp } from "../src/app.js";
 import { resetCloudLoginAttemptGuard } from "../src/cloud/controlPlane.js";
 import {
@@ -152,6 +153,24 @@ async function revise(api: Client, assemblyId: string): Promise<string> {
 }
 
 describe("assembly quote acceptance bound to the reviewed snapshot", () => {
+  it("atomically prepares assembly production, rolls back a failed plan and reuses the same result on retry", async () => {
+    const runtime = createProductSystemRuntime(":memory:");
+    try {
+      const api = client(createApp({ productSystem: runtime }));
+      const { assemblyId, quoteSnapshotId } = await quotedAssembly(api, "Flux ansamblu sintetic");
+      const accepted = await json(await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId }));
+      const id = (accepted.order as Json).orderSnapshotId as string;
+      vi.spyOn(runtime, "persistExecutionPlan").mockImplementationOnce(() => { throw new Error("synthetic assembly plan failure"); });
+      expect((await api.post(`/api/jobs/${id}/production`)).status).toBe(500);
+      expect(runtime.readAssemblyProductionForOrder(id)).toBeNull();
+      const responses = await Promise.all([api.post(`/api/jobs/${id}/production`), api.post(`/api/jobs/${id}/production`)]);
+      expect(responses.map(r => r.status)).toEqual([200, 200]);
+      const [first, retry] = await Promise.all(responses.map(json));
+      expect(retry).toEqual({ ...first, created: false });
+      expect(runtime.listOpenExecutionPlans()).toHaveLength(1);
+    } finally { runtime.close(); vi.restoreAllMocks(); }
+  });
+
   it("creates exactly one order for the exact current quote and refuses a repeat", async () => {
     const api = client(createApp());
     const { assemblyId, quoteSnapshotId } = await quotedAssembly(api, "Client Exact");

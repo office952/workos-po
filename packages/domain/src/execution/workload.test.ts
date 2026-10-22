@@ -93,8 +93,8 @@ describe("projectPlanningWorkload", () => {
     const projection = projectPlanningWorkload([{ record: withEffort, jobId: "ord:1" }]);
     const machine = projection.providers.find((item) => item.provider.id === MCH_CNC_4020_ID);
     expect(machine?.knownQueuedMinutes).toBe(45);
-    expect(machine?.unknownEffortCount).toBe(0);
-    expect(machine?.tasks).toHaveLength(1);
+    expect(machine?.unknownEffortCount).toBe(1);
+    expect(machine?.tasks).toHaveLength(2);
     expect(projection.unassigned.some((item) => item.taskId === cnc.taskId)).toBe(false);
   });
 
@@ -159,12 +159,36 @@ describe("projectPlanningWorkload", () => {
     expect(machine?.tasks.map((item) => item.taskId)).toEqual([cnc.taskId]);
   });
 
-  it("lists unassigned provider-required tasks separately", () => {
+  it("projects the unique machine without persisting an assignment or starting work", () => {
     const record = plannedRecord();
+    const before = JSON.stringify(record);
     const projection = projectPlanningWorkload([{ record }]);
-    expect(projection.unassigned.length).toBeGreaterThan(0);
-    expect(projection.unassigned.every((item) => item.requiresProvider)).toBe(true);
-    expect(projection.unassigned.every((item) => item.assignedProvider === null)).toBe(true);
+    const cnc = projection.providers.find(group => group.provider.id === MCH_CNC_4020_ID)!;
+    expect(cnc.tasks.length).toBeGreaterThan(0);
+    expect(cnc.tasks.every(task => task.providerBindingState === "UNIQUE_PENDING")).toBe(true);
+    expect(cnc.tasks.every(task => task.assignedProvider === null && task.status === "PLANNED")).toBe(true);
+    expect(cnc.tasks.every(task => task.providerBindingLabel === "Se asociază automat: CNC 4020")).toBe(true);
+    expect(cnc.tasks.every(task => !projection.unassigned.some(item => item.taskId === task.taskId))).toBe(true);
+    expect(JSON.stringify(record)).toBe(before);
+  });
+
+  it("keeps real resource gaps and choices separate from manual work", () => {
+    const record = plannedRecord();
+    const empty = projectPlanningWorkload([{ record }], createWorkcenterRegistry([], []));
+    expect(empty.unassigned.length).toBeGreaterThan(0);
+    expect(empty.unassigned.every(task => task.requiresProvider && task.providerBindingState === "NONE")).toBe(true);
+    const manualRecord = { ...record, tasks: record.tasks.map(task => ({ ...task, providerRequirement: "NOT_REQUIRED" as const })) };
+    const manual = projectPlanningWorkload([{ record: manualRecord }], createWorkcenterRegistry([], []));
+    expect(manual.unassigned).toEqual([]);
+    expect(manual.manual).toHaveLength(record.tasks.length);
+    expect(manual.manual.every(task => task.providerBindingState === "NOT_REQUIRED")).toBe(true);
+    const cnc = { id: "mch:one", label: "CNC unu", description: "test", workcenterId: null,
+      lifecycle: "ACTIVE" as const, capabilityIds: ["CNC_ROUTING" as const] };
+    const choice = projectPlanningWorkload([{ record }], createWorkcenterRegistry([], [cnc, { ...cnc, id: "mch:two", label: "CNC doi" }]));
+    const tasks = choice.unassigned.filter(task => task.providerBindingState === "CHOICE_REQUIRED");
+    expect(choice.unassigned.some(task => task.providerBindingState === "CHOICE_REQUIRED")).toBe(true);
+    expect(choice.providers.every(group => group.tasks.length === 0)).toBe(true);
+    expect(tasks.every(task => task.assignedProvider === null)).toBe(true);
   });
 
   it("keeps WORKCENTER and MACHINE groups independent", () => {

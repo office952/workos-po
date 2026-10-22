@@ -1,3 +1,4 @@
+import { readWorkSessions, writeWorkSessions } from "./workSessionStore.js";
 import { randomUUID } from "node:crypto";
 import {
   assignExecutorToTask,
@@ -6,7 +7,8 @@ import {
   setPlannedEffortOnTask,
   assignedExecutorFromRow,
   assignedProviderFromRow,
-  claimAndStartExecutionTask,
+  joinExecutionWork,
+  leaveExecutionWork,
   completeExecutionTask,
   completionFromRow,
   startExecutionTask,
@@ -415,19 +417,16 @@ export function persistClaimAndStart(
   registry: WorkcenterRegistry = workcenterRegistry,
   stamp: ProviderBindingStamp | null = null,
 ): TaskMutationResult {
-  return applyExecutionTaskMutation(db, taskId, (record) =>
-    claimAndStartExecutionTask(
-      record,
-      taskId,
-      personId,
-      startedAt,
-      people,
-      eligibility,
-      registry,
-      readMaterialReadinessContext(db),
-      stamp,
-    ),
-  );
+  return db.transaction((): TaskMutationResult => {
+    const active = db.prepare("SELECT task_id FROM execution_work_sessions WHERE person_id = ? AND ended_at IS NULL").get(personId) as { task_id: string } | undefined;
+    if (active && active.task_id !== taskId) return { ok: false, error: "active_work_elsewhere" };
+    return applyExecutionTaskMutation(db, taskId, record => joinExecutionWork(record, taskId, personId,
+      startedAt, people, eligibility, registry, readMaterialReadinessContext(db), "work:" + randomUUID(), stamp));
+  }).immediate();
+}
+
+export function persistWorkLeave(db: SqliteDatabase, taskId: string, personId: string, at: string): TaskMutationResult {
+  return applyExecutionTaskMutation(db, taskId, record => leaveExecutionWork(record, taskId, personId, at));
 }
 
 export function persistPlannedEffort(
@@ -502,7 +501,16 @@ export function persistMachineRunStart(
     if (!record) {
       return { ok: false, error: "not_found" };
     }
-    const result = startMachineRun(record, taskId, personId, startedAt, people, eligibility);
+    // This database is the organization's operational plane. Include every job,
+    // and hold the write lock from the occupancy read through insertion.
+    const occupied = db.prepare(`
+      SELECT DISTINCT machine_provider_id FROM execution_machine_runs
+      WHERE completed_at IS NULL
+    `).all() as { machine_provider_id: string }[];
+    const result = startMachineRun(
+      record, taskId, personId, startedAt, people, eligibility,
+      occupied.map((row) => row.machine_provider_id),
+    );
     if (!result.ok) {
       return result;
     }
@@ -521,7 +529,7 @@ export function persistMachineRunStart(
     }
     return { ok: true, alreadyApplied: false, record: stored };
   });
-  return run();
+  return run.immediate();
 }
 
 export function persistMachineRunStop(
@@ -635,7 +643,7 @@ export function applyExecutionTaskMutation(
     }
     return { ok: true, alreadyApplied: false, record: stored };
   });
-  return run();
+  return run.immediate();
 }
 
 function writePlannedEffortOnly(
@@ -756,6 +764,7 @@ export function writeTaskOperationalState(
   if (result.changes !== 1) {
     return false;
   }
+  writeWorkSessions(db, next, previous);
   writeActualConsumption(db, next);
   if (next.executionMode !== "EXTERNAL") {
     writeInventoryOutFromTask(db, next);
@@ -857,6 +866,7 @@ function writeActualConsumption(db: SqliteDatabase, task: ExecutionTask): void {
 }
 
 function hydrateRecord(db: SqliteDatabase, planRow: PlanRow): ExecutionPlanRecord {
+  const workSessions = readWorkSessions(db, planRow.plan_id);
   const taskRows = db
     .prepare(
       `
@@ -992,6 +1002,7 @@ function hydrateRecord(db: SqliteDatabase, planRow: PlanRow): ExecutionPlanRecor
       plannedEffortMinutes: row.planned_effort_minutes ?? null,
       actualDurationMinutes: row.actual_duration_minutes ?? null,
       machineRuns: runs.get(row.task_id) ?? [],
+      workSessions: workSessions.filter(s => s.taskId === row.task_id),
       startedAt: row.started_at,
       completedAt: row.completed_at,
       completion: completionFromRow(

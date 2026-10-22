@@ -1,9 +1,11 @@
 import { readFileSync } from "node:fs";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { resetResourceCache } from "../data/resourceCache";
-import { ExecutionPage } from "./ExecutionPage";
+import { resetResourceCache, writeResource } from "../data/resourceCache";
+import { invalidateAfterOperatorSessionChange } from "../data/invalidation";
+import { resourceKeys } from "../data/resourceKeys";
+import { OperationWorkspace } from "./OperationWorkspace";
 
 vi.mock("../session/CloudSessionContext", () => ({
   useCloudSession: () => ({
@@ -90,7 +92,79 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-describe("ExecutionPage", () => {
+describe("OperationWorkspace", () => {
+  it.each([null, "Este necesară corecția"])("explains other active participants once, preserving a distinct primary reason: %s", async (qualityBlockLabel) => {
+    const reason = "Mai lucrează: Maria. Fiecare trebuie să iasă înainte de finalizare.";
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => {
+      if (String(input).includes("operator-session")) return jsonResponse({ operator: { personId: "per:ion", displayName: "Ion" } });
+      const payload = planPayload([{ taskId: "task-cut", processLabel: "Debitare", status: "IN_PROGRESS", statusLabel: "În lucru", canComplete: false, requiresCompletedQuantity: false, plannedValue: null, completedQuantityLabel: null, varianceLabel: null }]);
+      Object.assign((payload.executionPlan as { tasks: Record<string, unknown>[] }).tasks[0]!, { canLeave: true, qualityBlockLabel, completionParticipationBlock: reason, activeParticipantsLabel: "Ion, Maria" });
+      return jsonResponse(payload);
+    }));
+    render(<OperationWorkspace planId="exp:1" taskId="task-cut"/>);
+    const currentAction = await screen.findByTestId("execution-next");
+    expect(within(currentAction).getAllByText(reason)).toHaveLength(1);
+    if (qualityBlockLabel) expect(within(currentAction).getByText(qualityBlockLabel)).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Închide sarcina" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Ieși din operație" })).toBeEnabled();
+  });
+
+  it("refreshes the selected operation after identification without a reload or a start command", async () => {
+    let personId = "per:unqualified";
+    const fetchMock = vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) return jsonResponse({ operator: { personId, displayName: "Operator test" } });
+      if (!url.includes("/execution-plans/")) return jsonResponse({});
+      const eligible = personId === "per:qualified";
+      const payload = planPayload([{ taskId: "task-led", processLabel: "Montare LED", status: "PLANNED",
+        statusLabel: "Planificat", canComplete: false, requiresCompletedQuantity: false,
+        plannedValue: null, completedQuantityLabel: null, varianceLabel: null }]);
+      const plan = payload.executionPlan as { tasks: Record<string, unknown>[] };
+      Object.assign(plan.tasks[0]!, { canClaimStart: eligible, operatorRelation: eligible ? "can_claim" : "not_eligible" });
+      return jsonResponse(payload);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<OperationWorkspace planId="exp:1" taskId="task-led" />);
+    expect(await screen.findAllByText("Necesită operator calificat")).not.toHaveLength(0);
+    personId = "per:qualified";
+    act(() => {
+      writeResource(resourceKeys.operatorSession(), { personId, displayName: "Operator test" });
+      invalidateAfterOperatorSessionChange();
+    });
+    expect(await screen.findByRole("button", { name: "Pornește" })).toBeEnabled();
+    expect(screen.queryByText("Necesită operator calificat")).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/start"))).toBe(false);
+    personId = "per:unqualified";
+    act(() => {
+      writeResource(resourceKeys.operatorSession(), { personId, displayName: "Operator test" });
+      invalidateAfterOperatorSessionChange();
+    });
+    await screen.findAllByText("Necesită operator calificat");
+    expect(screen.queryByRole("button", { name: "Pornește" })).not.toBeInTheDocument();
+  });
+
+  it("explains a busy machine and allows retry without starting another run locally", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) return jsonResponse({ operator: { personId: "per:cnc", displayName: "Operator CNC" } });
+      if (url.endsWith("/machine-runs/start") && init?.method === "POST") return jsonResponse({ error: "machine_busy" }, 409);
+      if (!url.includes("/execution-plans/")) return jsonResponse({});
+      const payload = planPayload([{ taskId: "task-cnc", processLabel: "Debitare CNC", status: "IN_PROGRESS",
+        statusLabel: "În lucru", canComplete: true, requiresCompletedQuantity: false,
+        plannedValue: null, completedQuantityLabel: null, varianceLabel: null }]);
+      const plan = payload.executionPlan as { tasks: Record<string, unknown>[] };
+      Object.assign(plan.tasks[0]!, { canStartMachineRun: true, machineRuns: [] });
+      return jsonResponse(payload);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<OperationWorkspace planId="exp:1" taskId="task-cnc" />);
+    await user.click(await screen.findByRole("button", { name: "Pornește utilajul" }));
+    expect(await screen.findByText("Utilajul rulează la altă operație. Încearcă din nou după oprirea rulării curente.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pornește utilajul" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Oprește utilajul" })).not.toBeInTheDocument();
+  });
+
   it("keeps job identity and the operation draft while the compact selector navigates without saving", async () => {
     const cut: TaskFixture = { taskId: "task-cut", processLabel: "Debitare", status: "IN_PROGRESS", statusLabel: "În lucru", canComplete: true, requiresCompletedQuantity: true, plannedValue: 12.5, completedQuantityLabel: null, varianceLabel: null };
     const wire: TaskFixture = { ...cut, taskId: "task-wire", processLabel: "Cablare", status: "PLANNED", statusLabel: "Planificat", canComplete: false, requiresCompletedQuantity: false, plannedValue: null };
@@ -103,33 +177,32 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
-    const { rerender } = render(<ExecutionPage planId="exp:1" jobId="job-1" taskId="task-cut" />);
+    const { rerender } = render(<OperationWorkspace planId="exp:1" jobId="job-1" taskId="task-cut" />);
     expect(await screen.findByRole("heading", { name: "NORD" })).toBeInTheDocument();
     expect(screen.getByText("Client Demo · Litere volumetrice")).toBeInTheDocument();
     await user.type(await screen.findByLabelText("Cantitate realizată"), "11,8");
-    const outlineSearch = screen.getByRole("searchbox", { name: "Caută în operații" });
-    await user.type(outlineSearch, "Cablare");
+    expect(screen.queryByRole("searchbox", { name: "Caută în operații" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Planul de execuție" })).toBeNull();
     expect(screen.getByRole("heading", { name: "01 Debitare" })).toBeInTheDocument();
-    expect(document.querySelector('.operational-task--compact[data-task-id="task-cut"]')).toBeNull();
     expect(screen.getByLabelText("Cantitate realizată")).toHaveValue("11,8");
-    await user.clear(outlineSearch);
     const oldUrl = window.location.href;
     try {
       await user.selectOptions(screen.getByRole("combobox", { name: "Schimbă operația" }), "task-wire");
-      expect(window.location.pathname).toBe("/executie/exp%3A1");
+      expect(window.location.pathname).toBe("/atelier");
+    expect(new URLSearchParams(window.location.search).get("plan")).toBe("exp:1");
       expect(new URLSearchParams(window.location.search).get("task")).toBe("task-wire");
       expect(new URLSearchParams(window.location.search).get("job")).toBe("job-1");
-      rerender(<ExecutionPage planId="exp:1" jobId="job-1" taskId="task-wire" />);
+      rerender(<OperationWorkspace planId="exp:1" jobId="job-1" taskId="task-wire" />);
       await screen.findByRole("heading", { name: "04 Cablare" });
       expect(screen.queryByLabelText("Cantitate realizată")).not.toBeInTheDocument();
-      rerender(<ExecutionPage planId="exp:1" jobId="job-1" taskId="task-cut" />);
+      rerender(<OperationWorkspace planId="exp:1" jobId="job-1" taskId="task-cut" />);
       expect(await screen.findByLabelText("Cantitate realizată")).toHaveValue("11,8");
       expect(fetchMock.mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
       const details = screen.getByText("Timpi, dependențe și diferențe").closest("details")!;
       expect(details).not.toHaveAttribute("open");
       await user.click(screen.getByText("Timpi, dependențe și diferențe"));
       expect(details).toHaveAttribute("open");
-      expect(within(details).getByText("Timp efectiv")).toBeInTheDocument();
+      expect(within(details).getByText("Durată declarată")).toBeInTheDocument();
       // Reproduce either stylesheet order: the legacy flex/grid rules caused
       // the selected operation to shrink with short task content.
       const style = document.createElement("style");
@@ -139,7 +212,7 @@ describe("ExecutionPage", () => {
         const scoped = readFileSync("src/styles/surfaces/execution-flow.css", "utf8");
         for (const css of [legacy + scoped, scoped + legacy]) {
           style.textContent = css;
-          expect(getComputedStyle(document.querySelector('[data-surface="execution"].page-workspace')!).display).toBe("block");
+          expect(getComputedStyle(document.querySelector('[data-surface="execution"].operation-workspace')!).display).toBe("block");
           expect(getComputedStyle(document.querySelector(".operational-task--current")!).width).toBe("100%");
         }
       } finally { style.remove(); }
@@ -195,7 +268,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
 
     await screen.findByRole("heading", { name: "01 Debitare foaie CNC" });
     const measurableArticle = document.querySelector('[data-task-id="task-cut"]');
@@ -264,7 +337,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     const actualField = await screen.findByLabelText("Cantitate realizată");
     await userEvent.setup().clear(actualField);
     await userEvent.setup().type(actualField, "abc");
@@ -311,7 +384,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     const actualField = await screen.findByLabelText("Cantitate realizată");
     expect(actualField).toHaveValue("");
     expect(actualField).toHaveAccessibleDescription("Planificat: Lungime 3.2 m");
@@ -374,20 +447,20 @@ describe("ExecutionPage", () => {
       }),
     );
     const user = userEvent.setup();
-    const view = render(<ExecutionPage planId="exp:1" taskId="task-cut" />);
+    const view = render(<OperationWorkspace planId="exp:1" taskId="task-cut" />);
     const first = await screen.findByLabelText("Cantitate realizată");
     await user.type(first, "11.8");
     expect(first).toHaveValue("11.8");
 
-    view.rerender(<ExecutionPage planId="exp:1" taskId="task-edge" />);
+    view.rerender(<OperationWorkspace planId="exp:1" taskId="task-edge" />);
     const second = await screen.findByLabelText("Cantitate realizată");
     expect(second).toHaveValue("");
     expect(second).toHaveAccessibleDescription("Planificat: Lungime 8 m");
     await user.type(second, "2,5");
 
-    view.rerender(<ExecutionPage planId="exp:1" taskId="task-cut" />);
+    view.rerender(<OperationWorkspace planId="exp:1" taskId="task-cut" />);
     expect(await screen.findByLabelText("Cantitate realizată")).toHaveValue("11.8");
-    view.rerender(<ExecutionPage planId="exp:1" taskId="task-edge" />);
+    view.rerender(<OperationWorkspace planId="exp:1" taskId="task-edge" />);
     expect(screen.getByLabelText("Cantitate realizată")).toHaveValue("2,5");
   });
 
@@ -420,7 +493,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     expect(await screen.findByRole("button", { name: "Închide sarcina" })).toBeEnabled();
     expect(screen.queryByLabelText("Cantitate realizată")).toBeNull();
     await userEvent.setup().click(screen.getByRole("button", { name: "Închide sarcina" }));
@@ -462,7 +535,7 @@ describe("ExecutionPage", () => {
       }),
     );
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     await screen.findByRole("heading", { name: "01 Debitare foaie CNC" });
     expect(screen.queryByText("Operator neidentificat")).not.toBeInTheDocument();
     expect(screen.getByText("Se identifică")).toBeInTheDocument();
@@ -512,7 +585,7 @@ describe("ExecutionPage", () => {
       }),
     );
 
-    render(<ExecutionPage planId="exp:1" taskId="task-wire" jobId="ord-1" />);
+    render(<OperationWorkspace planId="exp:1" taskId="task-wire" jobId="ord-1" />);
     expect(await screen.findByRole("heading", { name: "04 Cablare electrică" })).toBeInTheDocument();
     expect(document.querySelector(".operational-task--current")).toHaveAttribute(
       "data-task-id",
@@ -522,10 +595,8 @@ describe("ExecutionPage", () => {
       "href",
       "/lucrari/ord-1?task=task-wire",
     );
-    expect(screen.getByRole("link", { name: /01 Debitare foaie CNC/ })).toHaveAttribute(
-      "href",
-      "/executie/exp%3A1?task=task-cut&job=ord-1",
-    );
+    expect(screen.getByRole("combobox", { name: "Schimbă operația" })).toHaveValue("task-wire");
+    expect(screen.getByRole("option", { name: /01 · Debitare foaie CNC/ })).toBeInTheDocument();
   });
 
   it("shows the plan material on the operation when readiness lines are not adopted", async () => {
@@ -585,7 +656,7 @@ describe("ExecutionPage", () => {
       }),
     );
 
-    render(<ExecutionPage planId="exp:1" taskId="task-led" jobId="job-led" />);
+    render(<OperationWorkspace planId="exp:1" taskId="task-led" jobId="job-led" />);
 
     expect(await screen.findByRole("heading", { name: "Materiale pentru operație" })).toBeInTheDocument();
     expect(screen.getByText("Modul LED 12V")).toBeInTheDocument();
@@ -664,7 +735,7 @@ describe("ExecutionPage", () => {
       }),
     );
 
-    render(<ExecutionPage planId="exp:1" taskId="task-led" jobId="job-led" />);
+    render(<OperationWorkspace planId="exp:1" taskId="task-led" jobId="job-led" />);
 
     expect(await screen.findByText(/Avertisment: materialul nu este suficient/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Pornește" })).toBeEnabled();
@@ -709,7 +780,7 @@ describe("ExecutionPage", () => {
       }),
     );
 
-    render(<ExecutionPage planId="exp:1" taskId="task-cut" jobId="ord-1" />);
+    render(<OperationWorkspace planId="exp:1" taskId="task-cut" jobId="ord-1" />);
     expect(await screen.findByRole("heading", { name: "01 Debitare foaie CNC" })).toBeInTheDocument();
     expect(document.querySelector(".operational-task--current")).toHaveAttribute(
       "data-task-id",
@@ -717,10 +788,8 @@ describe("ExecutionPage", () => {
     );
     expect(screen.getByText("Sarcina selectată din plan")).toBeInTheDocument();
     expect(screen.getAllByText("Realizat: 12,5 m").length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: /04 Cablare electrică/ })).toHaveAttribute(
-      "href",
-      "/executie/exp%3A1?task=task-wire&job=ord-1",
-    );
+    expect(screen.getByRole("combobox", { name: "Schimbă operația" })).toHaveValue("task-cut");
+    expect(screen.getByRole("option", { name: /04 · Cablare electrică/ })).toBeInTheDocument();
     expect(screen.queryByText("Prima sarcină eligibilă din acest plan.")).not.toBeInTheDocument();
   });
 
@@ -766,7 +835,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     expect(await screen.findAllByText("Utilaj / zonă lipsă")).not.toHaveLength(0);
     expect(screen.getAllByText("Lipsește utilajul / zona necesară").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Adaugă utilajul de debitare" })).not.toBeInTheDocument();
@@ -823,7 +892,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     expect(await screen.findByText("Se alocă: Utilaj — CNC 4020")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Alocă CNC 4020" }));
     await waitFor(() => {
@@ -887,7 +956,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     expect(await screen.findByLabelText("Utilaj / zonă")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Alocă utilajul" })).toBeDisabled();
     await user.selectOptions(screen.getByLabelText("Utilaj / zonă"), "mch:cnc-b");
@@ -951,7 +1020,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     await screen.findByLabelText("Utilaj / zonă");
     await user.selectOptions(screen.getByLabelText("Utilaj / zonă"), "mch:cnc-a");
     await user.click(screen.getByRole("button", { name: "Alocă CNC Alfa" }));
@@ -1025,7 +1094,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     expect(await screen.findByRole("heading", { name: "04 Cablare electrică" })).toBeInTheDocument();
     expect(document.querySelector(".operational-task--current")).toHaveAttribute(
       "data-task-id",
@@ -1077,7 +1146,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     expect(await screen.findByText("Se asociază automat: CNC 4020")).toBeInTheDocument();
     expect(screen.getAllByText("Așteaptă alocarea utilajului / zonei").length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: /01 Debitare foaie CNC/ })).toHaveTextContent(
@@ -1138,7 +1207,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     await user.click(await screen.findByRole("button", { name: "Alocă CNC 4020" }));
     expect(await screen.findAllByText("CNC 4020")).not.toHaveLength(0);
     expect(screen.queryByRole("button", { name: /Alocă/ })).not.toBeInTheDocument();
@@ -1180,7 +1249,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     expect(await screen.findAllByText("CNC Zebra")).not.toHaveLength(0);
     expect(screen.queryByText("Utilaj lipsește")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Alocă/ })).not.toBeInTheDocument();
@@ -1232,7 +1301,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     await user.click(await screen.findByRole("button", { name: "Alocă CNC 4020" }));
     expect(await screen.findByText("Alocarea utilajului nu este permisă pentru această sarcină.")).toBeInTheDocument();
     expect(screen.getAllByText("Nealocat").length).toBeGreaterThan(0);
@@ -1334,7 +1403,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     expect(await screen.findByLabelText("Starea planului")).toHaveTextContent("Finalizate 1 / 4");
     expect(screen.getByLabelText("Starea planului")).toHaveTextContent("În curs 1");
     expect(screen.getByLabelText("Starea planului")).toHaveTextContent("Așteaptă 1");
@@ -1404,7 +1473,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" taskId="task-wire" />);
+    render(<OperationWorkspace planId="exp:1" taskId="task-wire" />);
     expect(await screen.findByText("Sarcina selectată din plan")).toBeInTheDocument();
     expect(document.querySelector(".operational-task--current")).toHaveAttribute(
       "data-task-id",
@@ -1412,10 +1481,8 @@ describe("ExecutionPage", () => {
     );
     expect(screen.getAllByText("Așteaptă: Debitare foaie CNC").length).toBeGreaterThan(0);
     expect(screen.queryByText("Prima sarcină eligibilă din acest plan.")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /01 Debitare foaie CNC/ })).toHaveAttribute(
-      "href",
-      "/executie/exp%3A1?task=task-cut",
-    );
+    expect(screen.getByRole("combobox", { name: "Schimbă operația" })).toHaveValue("task-wire");
+    expect(screen.getByRole("option", { name: /01 · Debitare foaie CNC/ })).toBeInTheDocument();
   });
 
   it("keeps the plan readable for an unidentified operator and disables start", async () => {
@@ -1448,7 +1515,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     expect(await screen.findByText("Operator neidentificat")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "01 Debitare foaie CNC" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Pornește" })).toBeDisabled();
@@ -1514,7 +1581,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     expect(await screen.findByText("Lucrare executată")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /01 Debitare foaie CNC/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /04 Cablare electrică/ })).toBeInTheDocument();
@@ -1557,7 +1624,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     expect(await screen.findByRole("button", { name: "Pornește" })).toBeEnabled();
     expect(screen.queryByText("Utilaj lipsește")).not.toBeInTheDocument();
   });
@@ -1607,7 +1674,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     expect(await screen.findByRole("heading", { name: "Consum efectiv" })).toBeInTheDocument();
     const plexi = screen.getByLabelText("Plexiglas opal 3 mm — consum efectiv");
     const screws = screen.getByLabelText("Șuruburi inox — consum efectiv");
@@ -1669,7 +1736,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     await user.type(await screen.findByLabelText("Plexiglas opal 3 mm — consum efectiv"), "0,80");
     await user.type(screen.getByLabelText("Șuruburi inox — consum efectiv"), "11");
     await user.click(screen.getByRole("button", { name: "Închide sarcina" }));
@@ -1739,7 +1806,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     await user.type(await screen.findByLabelText("Plexiglas opal 3 mm — consum efectiv"), "0,80");
     await user.click(screen.getByRole("button", { name: "Închide sarcina" }));
     await waitFor(() => {
@@ -1789,7 +1856,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     expect(await screen.findByRole("button", { name: "Închide sarcina" })).toBeEnabled();
     expect(screen.queryByRole("heading", { name: "Consum efectiv" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/consum efectiv/i)).not.toBeInTheDocument();
@@ -1847,7 +1914,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     await screen.findByRole("heading", { name: "03 Montaj LED" });
     expect(screen.queryByLabelText(/consum efectiv/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Închide sarcina" })).not.toBeInTheDocument();
@@ -1925,7 +1992,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     await user.type(await screen.findByLabelText("Plexiglas opal 3 mm — consum efectiv"), "0,80");
     await user.click(screen.getByRole("button", { name: "Închide sarcina" }));
     expect(await screen.findByText("Consum înregistrat")).toBeInTheDocument();
@@ -1984,7 +2051,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     await user.type(await screen.findByLabelText("Plexiglas opal 3 mm — consum efectiv"), "0,80");
     await user.click(screen.getByRole("button", { name: "Închide sarcina" }));
     expect(
@@ -2055,7 +2122,7 @@ describe("ExecutionPage", () => {
       }),
     );
 
-    render(<ExecutionPage planId="exp:v2" />);
+    render(<OperationWorkspace planId="exp:v2" />);
     expect(
       (await screen.findAllByRole("heading", { name: "Panou ACM" })).length,
     ).toBeGreaterThan(0);
@@ -2144,7 +2211,7 @@ describe("ExecutionPage", () => {
       }),
     );
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
     expect((await screen.findAllByText(/Debitare față/)).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Formare profil aluminiu/).length).toBeGreaterThan(0);
     expect(document.querySelectorAll("[data-execution-scope]")).toHaveLength(0);
@@ -2220,7 +2287,7 @@ describe("ExecutionPage", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ExecutionPage planId="exp:site" taskId="task-site" />);
+    render(<OperationWorkspace planId="exp:site" taskId="task-site" />);
     expect(await screen.findByText("Suprafață sintetică specială")).toBeInTheDocument();
     expect(screen.getByText("Fixare sintetică specială")).toBeInTheDocument();
     expect(screen.getByText("Tip suprafață — detalii")).toBeInTheDocument();
@@ -2287,7 +2354,7 @@ describe("ExecutionPage", () => {
       }),
     );
 
-    render(<ExecutionPage planId="exp:ext" taskId="task-ext" />);
+    render(<OperationWorkspace planId="exp:ext" taskId="task-ext" />);
     expect((await screen.findAllByText("Poate fi înregistrată revenirea")).length).toBeGreaterThan(0);
     expect(screen.getByText("Următoarea sarcină acționabilă")).toBeInTheDocument();
     expect(screen.getByText("La furnizor extern 1")).toBeInTheDocument();
@@ -2301,7 +2368,7 @@ describe("ExecutionPage", () => {
   });
 });
 
-describe("ExecutionPage missing-provider guidance", () => {
+describe("OperationWorkspace missing-provider guidance", () => {
   function missingProviderPlan(overrides: Record<string, unknown> = {}) {
     return {
       executionPlan: {
@@ -2382,7 +2449,7 @@ describe("ExecutionPage missing-provider guidance", () => {
   it("tells the owner that a planned resource needs activation, without activating it", async () => {
     const fetchMock = stubFetch(() => jsonResponse(registry("PROVIDER_PLANNED", true)));
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
 
     expect(await screen.findByText("Utilaj / zonă neactivată")).toBeInTheDocument();
     expect(screen.getByText(/capabilitatea „Debitare CNC”, dar este încă Planificat/)).toBeInTheDocument();
@@ -2398,7 +2465,7 @@ describe("ExecutionPage missing-provider guidance", () => {
   it("tells a member that the organization owner performs the activation", async () => {
     stubFetch(() => jsonResponse(registry("PROVIDER_PLANNED", false)));
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
 
     expect(await screen.findByText("Utilaj / zonă neactivată")).toBeInTheDocument();
     expect(screen.getByText(/Activarea o face proprietarul organizației/)).toBeInTheDocument();
@@ -2408,7 +2475,7 @@ describe("ExecutionPage missing-provider guidance", () => {
   it("does not call a missing capability an inactive resource", async () => {
     const fetchMock = stubFetch(() => jsonResponse(registry("NO_PROVIDER", true)));
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
 
     expect(
       await screen.findByText(
@@ -2428,7 +2495,7 @@ describe("ExecutionPage missing-provider guidance", () => {
   it("keeps conditional guidance when the resource registry is unavailable", async () => {
     stubFetch(() => jsonResponse({ error: "internal" }, 500));
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
 
     expect(
       await screen.findByText(/Verifică în Administrare › Zone și utilaje capabilitatea, starea zonei și starea utilajului/),
@@ -2445,7 +2512,7 @@ describe("ExecutionPage missing-provider guidance", () => {
       }),
     );
 
-    render(<ExecutionPage planId="exp:1" />);
+    render(<OperationWorkspace planId="exp:1" />);
 
     expect(await screen.findByText(/Se asociază automat: Router nou/)).toBeInTheDocument();
     expect(screen.queryByText("Utilaj / zonă lipsă")).not.toBeInTheDocument();
@@ -2516,13 +2583,13 @@ describe("ExecutionPage missing-provider guidance", () => {
       }),
     );
 
-    render(<ExecutionPage planId="exp:1" taskId="task-wait" />);
+    render(<OperationWorkspace planId="exp:1" taskId="task-wait" />);
     expect(await screen.findByRole("heading", { name: "Următorul pas" })).toBeInTheDocument();
     expect(screen.getAllByText("Așteaptă: Debitare foaie CNC").length).toBeGreaterThan(0);
     expect(screen.queryByLabelText("Cantitate realizată")).toBeNull();
     expect(screen.queryByRole("button", { name: "Pornește" })).not.toBeInTheDocument();
 
-    render(<ExecutionPage planId="exp:1" taskId="task-cut" />);
+    render(<OperationWorkspace planId="exp:1" taskId="task-cut" />);
     expect(await screen.findByLabelText("Cantitate realizată")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Închide sarcina" })).toBeDisabled();
     expect(screen.getByText("Oprește rularea utilajului înainte de a închide sarcina.")).toBeInTheDocument();

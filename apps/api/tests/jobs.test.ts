@@ -234,7 +234,7 @@ describe("job overview API", () => {
     expect(byInscription.JOBA).toMatchObject({
       stage: "ORDER_CREATED",
       stageLabel: "Comandă creată",
-      nextActionLabel: "Eliberează pentru producție",
+      nextActionLabel: "Trimite în producție",
       needsAttention: true,
       customerDisplayName: "Client JOBA",
     });
@@ -243,16 +243,16 @@ describe("job overview API", () => {
     );
     expect(byInscription.JOBB).toMatchObject({
       stage: "RELEASED",
-      nextActionLabel: "Creează planul de execuție",
+      nextActionLabel: "Trimite în producție",
     });
     expect(byInscription.JOBC).toMatchObject({
       stage: "EXECUTION_PLANNED",
-      nextActionLabel: "Deschide execuția",
+      nextActionLabel: "Vezi operațiile",
       progressLabel: "0 / 12 finalizate",
     });
     expect(byInscription.JOBD).toMatchObject({
       stage: "EXECUTION_IN_PROGRESS",
-      nextActionLabel: "Continuă execuția",
+      nextActionLabel: "Urmărește producția",
     });
     expect(byInscription.JOBE).toMatchObject({
       stage: "EXECUTION_COMPLETED",
@@ -304,7 +304,7 @@ describe("job overview API", () => {
     const plannedBody = await readBody(plannedDetail);
     expect((plannedBody.execution as JsonObject).planId).toBe(byInscription.JOBC.planId);
     expect((plannedBody.execution as JsonObject).href).toBe(
-      `/execution/${String(byInscription.JOBC.planId)}`,
+      `/atelier?plan=${encodeURIComponent(String(byInscription.JOBC.planId))}`,
     );
   });
 });

@@ -1,3 +1,4 @@
+import { isWorkingOnTask } from "./workSessions.js";
 import {
   diagnoseAssignedPerson,
   type PeopleEligibilityContext,
@@ -12,6 +13,7 @@ type MachineRunMutationError =
   | "missing_executor"
   | "wrong_executor"
   | "machine_run_active"
+  | "machine_busy"
   | "machine_run_not_found"
   | "machine_run_closed"
   | "unknown_person"
@@ -75,6 +77,7 @@ export function startMachineRun(
   startedAt: string,
   people: readonly Person[],
   eligibility: PeopleEligibilityContext | null = null,
+  occupiedMachineProviderIds: readonly string[] = [],
 ): MachineRunMutationResult {
   const task = findTask(record, taskId);
   if (!task) {
@@ -86,7 +89,7 @@ export function startMachineRun(
   if (!task.assignedExecutor) {
     return { ok: false, error: "missing_executor" };
   }
-  if (task.assignedExecutor.id !== personId) {
+  if (!isWorkingOnTask(task, personId)) {
     return { ok: false, error: "wrong_executor" };
   }
   if (activeMachineRun(task)) {
@@ -109,6 +112,15 @@ export function startMachineRun(
   const machineProviderLabel = task.assignedProvider.label.trim();
   if (machineProviderId.length === 0 || machineProviderLabel.length === 0) {
     return { ok: false, error: "machine_run_not_allowed" };
+  }
+  // An open operation is not a reservation. Only a running machine occupies it.
+  if (
+    occupiedMachineProviderIds.includes(machineProviderId) ||
+    record.tasks.some((other) =>
+      other.taskId !== taskId && activeMachineRun(other)?.machineProviderId === machineProviderId,
+    )
+  ) {
+    return { ok: false, error: "machine_busy" };
   }
   if (!Number.isFinite(Date.parse(startedAt))) {
     return { ok: false, error: "machine_run_not_allowed" };
@@ -157,7 +169,7 @@ export function stopMachineRun(
   if (task.status !== "IN_PROGRESS" || !task.assignedExecutor) {
     return { ok: false, error: "machine_run_not_allowed" };
   }
-  if (task.assignedExecutor.id !== personId) {
+  if (!isWorkingOnTask(task, personId)) {
     return { ok: false, error: "wrong_executor" };
   }
   const operator = requireRunClosingOperator(people, personId);

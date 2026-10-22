@@ -7,8 +7,10 @@ import {
   invalidateAfterFreezeQuote,
   invalidateAfterProductionRelease,
   invalidateAfterRequestDetailChange,
+  invalidateAfterOperatorSessionChange,
+  invalidateAfterPeopleAdminChange,
 } from "./invalidation";
-import { loadResource } from "./resourceCache";
+import { loadResource, readResource, subscribeResource } from "./resourceCache";
 import { resourceKeys } from "./resourceKeys";
 
 describe("customer projection updates", () => {
@@ -32,5 +34,30 @@ describe("customer projection updates", () => {
     expect(await loadResource(resourceKeys.customerWorkspace("cus-one"), readHub)).toEqual({ revision });
     expect(readRegistry).toHaveBeenCalledTimes(2);
     expect(readHub).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("execution eligibility updates", () => {
+  it.each([
+    ["operator change", invalidateAfterOperatorSessionChange],
+    ["qualification change", invalidateAfterPeopleAdminChange],
+  ])("refreshes an open plan after %s and ignores the previous pending answer", async (_label, invalidate) => {
+    const key = resourceKeys.executionPlan("plan-eligibility");
+    const stop = subscribeResource(key, vi.fn());
+    let resolveOld!: (value: { canClaimStart: boolean }) => void;
+    const fetcher = vi.fn()
+      .mockImplementationOnce(() => new Promise(resolve => { resolveOld = resolve; }))
+      .mockResolvedValue({ canClaimStart: true });
+    try {
+      const oldRequest = loadResource(key, fetcher);
+      invalidate();
+      await vi.waitFor(() => expect(readResource(key).data).toEqual({ canClaimStart: true }));
+      resolveOld({ canClaimStart: false });
+      await oldRequest;
+      expect(readResource(key).data).toEqual({ canClaimStart: true });
+      expect(fetcher).toHaveBeenCalledTimes(2);
+    } finally {
+      stop();
+    }
   });
 });

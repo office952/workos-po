@@ -79,6 +79,86 @@ function providersOf(task: JsonObject): JsonObject[] {
 }
 
 describe("execution reality API", () => {
+  it("serializes machine occupancy across tasks and jobs, then frees it on stop", async () => {
+    const root = mkdtempSync(join(tmpdir(), "workos-machine-occupancy-"));
+    isolatedRoots.push(root);
+    const runtime = createProductSystemRuntime(join(root, "organization.sqlite"));
+    const app = createApp({ productSystem: runtime });
+    try {
+      const first = await createExecutionPlan(app);
+      const second = await createExecutionPlan(app);
+      const personResponse = await app.request("/api/people", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ displayName: "Operator test ocupare" }),
+      });
+      const personId = ((await readBody(personResponse)).person as JsonObject).personId as string;
+      const cookie = await sessionCookieViaHttp(app, personId);
+      const cncTasks = first.tasks.filter(task => providersOf(task).some(provider => provider.id === MCH_CNC_4020_ID));
+      expect(cncTasks.length).toBeGreaterThanOrEqual(2);
+      const otherJobTask = second.tasks.find(task => providersOf(task).some(provider => provider.id === MCH_CNC_4020_ID))!;
+      expect(second.plan.planId).not.toBe(first.plan.planId);
+      const tasks = [cncTasks[0]!, cncTasks[1]!, otherJobTask];
+      const taskCookies = new Map<string, string>();
+      for (const [index, task] of tasks.entries()) {
+        const worker = index === 0 ? personId : runtime.createPerson("Operator CNC paralel " + index);
+        const id = typeof worker === "string" ? worker : worker.ok ? worker.person.personId : "";
+        const ownCookie = index === 0 ? cookie : await sessionCookieViaHttp(app, id);
+        taskCookies.set(String(task.taskId), ownCookie);
+        expect((await app.request(`/api/execution-tasks/${task.taskId}/provider`, {
+          method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ providerId: MCH_CNC_4020_ID }),
+        })).status).toBe(200);
+        expect((await startTaskAs(app, String(task.taskId), ownCookie)).status).toBe(200);
+      }
+      const runStart = (task: JsonObject) => app.request(`/api/execution-tasks/${task.taskId}/machine-runs/start`, {
+        method: "POST", headers: { cookie: taskCookies.get(String(task.taskId))! },
+      });
+      const started = await runStart(tasks[0]!);
+      expect(started.status).toBe(200);
+      const active = (((await readBody(started)).executionPlan as { tasks: JsonObject[] }).tasks
+        .find(task => task.taskId === tasks[0]!.taskId)?.machineRuns as JsonObject[])[0]!;
+      // Identical provider IDs in a different operational plane are independent.
+      const independentRuntime = createProductSystemRuntime(":memory:");
+      try {
+        const independentApp = createApp({ productSystem: independentRuntime });
+        const independentPlan = await createExecutionPlan(independentApp);
+        const independentTask = independentPlan.tasks.find(task => providersOf(task).some(provider => provider.id === MCH_CNC_4020_ID))!;
+        const independentPerson = independentRuntime.createPerson("Operator altă organizație");
+        if (!independentPerson.ok) throw new Error(independentPerson.error);
+        const independentId = independentPerson.person.personId;
+        expect(independentRuntime.assignExecutionTaskProvider(String(independentTask.taskId), MCH_CNC_4020_ID).ok).toBe(true);
+        expect(independentRuntime.claimAndStartExecutionTask(String(independentTask.taskId), independentId).ok).toBe(true);
+        expect(independentRuntime.startMachineRun(String(independentTask.taskId), independentId).ok).toBe(true);
+      } finally {
+        independentRuntime.close();
+      }
+      // A second server connection sees the same persisted occupancy.
+      const secondConnection = createProductSystemRuntime(runtime.sqlitePath);
+      try {
+        expect(secondConnection.startMachineRun(String(otherJobTask.taskId), runtime.readExecutionPlanByTaskId(String(otherJobTask.taskId))!.tasks.find(t => t.taskId === otherJobTask.taskId)!.assignedExecutor!.id))
+          .toEqual({ ok: false, error: "machine_busy" });
+      } finally {
+        secondConnection.close();
+      }
+      for (const task of tasks.slice(1)) {
+        const refused = await runStart(task);
+        expect(refused.status).toBe(409);
+        expect((await readBody(refused)).error).toBe("machine_busy");
+        const unchanged = await app.request(`/api/execution-plans/${task === otherJobTask ? second.plan.planId : first.plan.planId}`);
+        const view = (await readBody(unchanged)).executionPlan as { tasks: JsonObject[] };
+        expect(view.tasks.find(item => item.taskId === task.taskId)?.machineRuns).toEqual([]);
+      }
+      expect((await app.request(`/api/execution-machine-runs/${active.machineRunId}/stop`, {
+        method: "POST", headers: { cookie },
+      })).status).toBe(200);
+      // Two requests for different jobs cannot acquire the just-freed CNC together.
+      const attempts = await Promise.all(tasks.slice(1).map(runStart));
+      expect(attempts.map(response => response.status).sort()).toEqual([200, 409]);
+      expect((await readBody(attempts.find(response => response.status === 409)!)).error).toBe("machine_busy");
+    } finally {
+      runtime.close();
+    }
+  });
+
   it("starts and stops a machine run and stores actual duration separately", async () => {
     const app = createApp();
     const plan = await createExecutionPlan(app);

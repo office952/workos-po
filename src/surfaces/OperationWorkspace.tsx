@@ -12,6 +12,7 @@ import {
   recordQualityPass,
   closeReworkEpisode,
   startExecutionTask,
+  leaveExecutionTask,
   startMachineRun,
   stopMachineRun,
 } from "../api/lifecycle";
@@ -43,7 +44,6 @@ import {
   loadWorkcentersAdmin,
 } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
-import { SlicePage } from "../layout/SlicePage";
 import { useCloudSession } from "../session/CloudSessionContext";
 import { readCloudBoundaryVersion } from "../session/sessionExpiryBridge";
 import "../styles/surfaces/execution-flow.css";
@@ -57,6 +57,7 @@ import {
 import { parseActualDurationDraft } from "../presentation/actualDuration";
 import {
   presentExecutionCompletionError,
+  presentMachineRunStartError,
   presentQualityError,
 } from "../presentation/executionCompletionError";
 import {
@@ -88,10 +89,11 @@ import { SiteInstallationContextPanel } from "./SiteInstallationContextPanel";
 import { JobMaterialPreparation } from "./JobMaterialPreparation";
 import { TaskDossierPanel } from "./TaskDossierPanel";
 
-type ExecutionPageProps = {
+type OperationWorkspaceProps = {
   planId: string;
   taskId?: string | null;
   jobId?: string | null;
+  active?: boolean;
 };
 
 function firstActionableTask(
@@ -171,12 +173,7 @@ function selectCurrentExecutionTask(
   if (tasks.length === 0) {
     return null;
   }
-  const requested = taskId
-    ? (tasks.find((task) => task.taskId === taskId) ?? null)
-    : null;
-  if (requested) {
-    return requested;
-  }
+  if (taskId) return tasks.find((task) => task.taskId === taskId) ?? null;
   return firstActionableTask(tasks);
 }
 
@@ -262,11 +259,12 @@ function taskStatusKind(task: ExecutionTaskTransport) {
   return statusTone("workflow");
 }
 
-export function ExecutionPage({
+export function OperationWorkspace({
   planId,
   taskId = null,
   jobId = null,
-}: ExecutionPageProps) {
+  active = true,
+}: OperationWorkspaceProps) {
   const cloud = useCloudSession();
   const owner = canPublishInstructions(cloud);
   const session = useResource(resourceKeys.operatorSession(), loadOperatorSession);
@@ -288,6 +286,19 @@ export function ExecutionPage({
   >({});
   const [qualityNotes, setQualityNotes] = useState<Record<string, string>>({});
   const [correctionNotes, setCorrectionNotes] = useState<Record<string, string>>({});
+
+  const scope = [cloud.user?.email ?? "", cloud.organization?.organizationId ?? "", String(readCloudBoundaryVersion()), session.data?.personId ?? ""].join("|");
+  const [draftScope, setDraftScope] = useState(scope);
+  if (scope !== draftScope) {
+    setDraftScope(scope);
+    setActualDrafts({});
+    setDurationDrafts({});
+    setResourceActualDrafts({});
+    setSelectedProviderByTask({});
+    setQualityNotes({});
+    setCorrectionNotes({});
+    setActionError(null);
+  }
 
   function actualQuantityDraft(task: ExecutionTaskTransport): string {
     return actualDrafts[task.taskId] ?? "";
@@ -393,11 +404,7 @@ export function ExecutionPage({
       invalidateAfterExecutionTaskChange(planId);
     } catch (error) {
       setActionState("error");
-      setActionError(
-        error instanceof TransportError
-          ? "Rularea utilajului nu poate fi pornită."
-          : "Pornirea utilajului a eșuat.",
-      );
+      setActionError(presentMachineRunStartError(error));
     }
   }
 
@@ -481,7 +488,7 @@ export function ExecutionPage({
     const duration = parseActualDurationDraft(durationDrafts[task.taskId] ?? "");
     if (!duration.ok) {
       setActionState("error");
-      setActionError("Timpul efectiv trebuie să fie un număr întreg de minute, zero sau pozitiv.");
+      setActionError("Durata declarată trebuie să fie un număr întreg de minute, zero sau pozitiv.");
       return;
     }
     if (duration.actualDurationMinutes !== undefined) {
@@ -508,6 +515,7 @@ export function ExecutionPage({
   const allComplete =
     plan !== null && plan.tasks.length > 0 && plan.tasks.every((task) => task.status === "COMPLETED");
   const currentTask = plan ? selectCurrentExecutionTask(plan.tasks, taskId) : null;
+  const currentActionReason = currentTask ? presentExecutionNextAction(currentTask, identified) : null;
   const currentTaskMissingProvider = taskMissingProvider(currentTask);
   const providerRegistry = useResource(
     currentTaskMissingProvider ? resourceKeys.workcentersAdmin() : null,
@@ -546,29 +554,16 @@ export function ExecutionPage({
   }, [outlineTaskId]);
 
   return (
-    <SlicePage
-      contextLabel="Execuție"
-      currentHref={executionHref(planId, { taskId, jobId: resolvedJobId })}
-      workspace="operational"
-      surface="execution"
-      headerVariant="pilot-compact"
-      eyebrow="Execuție"
-      title={job ? presentJobSheetTitle(job) : plan?.inscription || plan?.productLabel || "Execuție"}
-      lead={job ? [job.customerDisplayName, presentJobSheetSecondary(job)].filter(Boolean).join(" · ") : undefined}
-      action={resolvedJobId ? <a className="execution-job-link" href={jobHref(resolvedJobId, { taskId: currentTask?.taskId ?? taskId })}>Fișa lucrării</a> : null}
-      meta={
-        plan
-          ? [
-              plan.priorityLabel,
-              plan.targetDateLabel,
-              session.data ? `Operator: ${session.data.displayName}` : identified === false ? "Operator: neidentificat" : null,
-            ]
-              .filter((part): part is string => Boolean(part))
-              .join(" · ")
-          : undefined
-      }
-    >
-      <div className="execution-floor">
+    <section className="operation-workspace" hidden={!active} aria-label="Operația selectată" data-surface="execution">
+      <header className="operation-workspace__header">
+        <div><p className="section-label">Lucrare</p>
+          <h2>{job ? presentJobSheetTitle(job) : plan?.inscription || plan?.productLabel || "Operație"}</h2>
+          {job ? <p>{[job.customerDisplayName, presentJobSheetSecondary(job)].filter(Boolean).join(" · ")}</p> : null}
+          {plan ? <p>Prioritate: {plan.priorityLabel} · Termen: {plan.targetDateLabel}</p> : null}
+        </div>
+        {resolvedJobId ? <a className="text-link" href={jobHref(resolvedJobId, { section: "operatii", taskId })}>Fișa lucrării</a> : null}
+      </header>
+      <div className="execution-floor" data-explicit-task={Boolean(taskId)}>
       {planResource.status === "error" && !plan ? (
         <InlineAlert tone="error" title="Planul nu a putut fi citit">
           Planul de execuție nu este disponibil.
@@ -598,6 +593,9 @@ export function ExecutionPage({
           {actionError}
         </InlineAlert>
       ) : null}
+      {plan && taskId && !currentTask ? <InlineAlert tone="error" title="Operația nu există în această lucrare">
+        Verifică linkul sau alege o operație din lista lucrării.
+      </InlineAlert> : null}
       {plan ? (
         <PlanSummary statusLabel={plan.statusLabel} progress={plan.progress} />
       ) : null}
@@ -617,21 +615,34 @@ export function ExecutionPage({
           className="operational-task operational-task--current"
           data-task-id={currentTask.taskId}
         >
+          <header className="execution-operation-heading">
+            <div><p className="section-label">{currentTask.scopeLabel}</p><h2>{currentTask.seqLabel} {currentTask.processLabel}</h2><p>{presentCurrentTaskRole(currentTask, actionableTask)}</p></div>
+            <div className="execution-operation-heading__actions"><StatusBadge label={currentTask.statusLabel} tone={taskStatusKind(currentTask)}/><a className="text-link" href="#execution-actions">Lucrul meu ↓</a></div>
+          </header>
+          <TaskDossierPanel
+            taskId={currentTask.taskId}
+            taskLabel={`${currentTask.seqLabel} ${currentTask.processLabel}`}
+            canInstruct={owner}
+            operatorIdentified={identified === true}
+            canWriteFiles={owner || identified === true}
+            sessionScope={[
+              planId,
+              cloud.user?.email ?? "",
+              cloud.organization?.organizationId ?? "",
+              String(readCloudBoundaryVersion()),
+              session.data?.personId ?? "",
+            ].join("|")}
+          />
           <SurfacePanel
             variant="operational"
-            title={`${currentTask.seqLabel} ${currentTask.processLabel}`}
-            description={presentCurrentTaskRole(currentTask, actionableTask)}
-            status={
-              <StatusBadge
-                label={currentTask.statusLabel}
-                tone={taskStatusKind(currentTask)}
-              />
-            }
+            title="Lucrul meu"
             label={`${currentTask.seqLabel} ${currentTask.processLabel}`}
           >
-            <section className="execution-next" data-testid="execution-next">
+            <section id="execution-actions" tabIndex={-1} className="execution-next" data-testid="execution-next">
               <h3 className="execution-next__title">Următorul pas</h3>
-              <p className="execution-next__reason">{presentExecutionNextAction(currentTask, identified)}</p>
+              {currentTask.activeParticipantsLabel ? <p>Lucrează acum: {currentTask.activeParticipantsLabel}</p> : null}
+              <p className="execution-next__reason">{currentActionReason}</p>
+              {currentTask.completionParticipationBlock && currentTask.completionParticipationBlock !== currentActionReason ? <p>{currentTask.completionParticipationBlock}</p> : null}
             {currentTask.canExternalize ? (
               <Button
                 disabled={actionState === "pending"}
@@ -789,12 +800,12 @@ export function ExecutionPage({
                 }}
               />
             ) : null}
-            {currentTask.executionMode !== "EXTERNAL" &&
+            {currentTask.executionMode !== "EXTERNAL" && !currentTask.participants?.length &&
             (currentTask.canComplete || currentTask.completionBlockedByActiveMachineRun) &&
             currentTask.status !== "COMPLETED" ? (
               <TextField
                 id={`actual-duration-${currentTask.taskId}`}
-                label="Timp efectiv (minute)"
+                label="Durată declarată, opțional (minute)"
                 value={durationDrafts[currentTask.taskId] ?? ""}
                 inputMode="numeric"
                 disabled={actionState === "pending"}
@@ -830,6 +841,24 @@ export function ExecutionPage({
                 ) : null}
               </div>
             ) : null}
+            {canEditActualConsumption(currentTask) ? (
+              <ExecutionActualConsumptionFields
+                taskId={currentTask.taskId}
+                plannedResources={currentTask.plannedResources}
+                drafts={resourceActualDrafts}
+                disabled={actionState === "pending"}
+                onChange={(resourceId, value) => {
+                  setResourceActualDrafts((currentDrafts) => ({
+                    ...currentDrafts,
+                    [actualConsumptionDraftKey(currentTask.taskId, resourceId)]: value,
+                  }));
+                }}
+              />
+            ) : (
+              <ExecutionActualConsumptionHistory
+                actualConsumption={currentTask.actualConsumption}
+              />
+            )}
             {currentTask.qualityControl ? (
               <QualityControlPanel
                 task={currentTask}
@@ -856,9 +885,11 @@ export function ExecutionPage({
                   disabled={actionState === "pending" || identified !== true}
                   onClick={() => void start(currentTask)}
                 >
-                  Pornește
+                  {currentTask.status === "IN_PROGRESS" ? "Intră în operație" : "Pornește"}
                 </Button>
               ) : null}
+              {currentTask.canLeave ? <Button variant="secondary" disabled={actionState === "pending" || identified !== true}
+                onClick={() => void runExternal(() => leaveExecutionTask(currentTask.taskId), "Ieșirea din operație nu a putut fi înregistrată.")}>Ieși din operație</Button> : null}
               {currentTask.canStartMachineRun ? (
                 <Button
                   variant="secondary"
@@ -932,7 +963,7 @@ export function ExecutionPage({
                 }
               />
               <InfoRow label="Timp planificat" value={currentTask.plannedTimeLabel} />
-              <InfoRow label="Timp efectiv" value={currentTask.actualDurationLabel} />
+              <InfoRow label="Durată declarată" value={currentTask.actualDurationLabel} />
               {currentTask.timeVarianceLabel ? (
                 <InfoRow label="Diferență timp" value={currentTask.timeVarianceLabel} />
               ) : null}
@@ -946,24 +977,6 @@ export function ExecutionPage({
             {currentTask.operatorRelation === "not_eligible" ? (
               <p>Alt operator trebuie să preia această sarcină.</p>
             ) : null}
-            {canEditActualConsumption(currentTask) ? (
-              <ExecutionActualConsumptionFields
-                taskId={currentTask.taskId}
-                plannedResources={currentTask.plannedResources}
-                drafts={resourceActualDrafts}
-                disabled={actionState === "pending"}
-                onChange={(resourceId, value) => {
-                  setResourceActualDrafts((currentDrafts) => ({
-                    ...currentDrafts,
-                    [actualConsumptionDraftKey(currentTask.taskId, resourceId)]: value,
-                  }));
-                }}
-              />
-            ) : (
-              <ExecutionActualConsumptionHistory
-                actualConsumption={currentTask.actualConsumption}
-              />
-            )}
             {currentTask.materialBlockLabel ? (
               <InlineAlert tone="error" title="Material">
                 {currentTask.materialBlockLabel}
@@ -1010,19 +1023,7 @@ export function ExecutionPage({
             ) : null}
             </div>
           </SurfacePanel>
-          <TaskDossierPanel
-            taskId={currentTask.taskId}
-            taskLabel={`${currentTask.seqLabel} ${currentTask.processLabel}`}
-            canInstruct={owner}
-            operatorIdentified={identified === true}
-            canWriteFiles={owner || identified === true}
-            sessionScope={[
-              planId,
-              cloud.user?.email ?? "",
-              cloud.organization?.organizationId ?? "",
-              String(readCloudBoundaryVersion()),
-            ].join("|")}
-          />
+
         </article>
       ) : null}
       {!plan && planResource.status !== "error" ? (
@@ -1032,7 +1033,7 @@ export function ExecutionPage({
           </SurfacePanel>
         </article>
       ) : null}
-      {plan ? (
+      {plan && !taskId ? (
         <Worklist variant="operational" label="Planul de execuție">
           <div className="execution-outline__header">
             <h2>Operațiile lucrării</h2>
@@ -1097,7 +1098,7 @@ export function ExecutionPage({
         </p>
       ) : null}
       </div>
-    </SlicePage>
+    </section>
   );
 }
 

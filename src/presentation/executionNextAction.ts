@@ -3,7 +3,7 @@ import { readTransportErrorCode, TransportError } from "../api/http";
 
 export function hasViewerExecutionAction(task: ExecutionTaskTransport): boolean {
   return Boolean(
-    task.canComplete ||
+    task.canLeave || task.canComplete ||
       task.canClaimStart ||
       task.canAssignProvider ||
       task.canExternalize ||
@@ -57,11 +57,12 @@ export function presentExecutionNextAction(
   if (task.qualityBlockLabel) {
     return task.qualityBlockLabel;
   }
+  if (task.completionParticipationBlock) return task.completionParticipationBlock;
   if (task.canComplete) {
     return "Poate fi închisă";
   }
   if (task.canClaimStart) {
-    return identified === false ? "Identifică operatorul" : "Poate fi pornită";
+    return identified === false ? "Identifică operatorul" : task.status === "IN_PROGRESS" ? "Poți intra în operație" : "Poate fi pornită";
   }
   if (task.status === "COMPLETED") {
     return presentCompletedTaskAction(task);
@@ -128,6 +129,7 @@ export function presentExecutionStartError(error: unknown): string {
     return "Pornirea a eșuat.";
   }
   const code = readTransportErrorCode(error.body);
+  if (code === "active_work_elsewhere") return "Ieși din operația la care lucrezi înainte să intri în alta.";
   if (code === "material_not_ready") {
     return "Materialul nu este confirmat disponibil. Sarcina nu poate porni.";
   }

@@ -126,13 +126,13 @@ function presentJobStageLabel(stage: JobStage, progress: ExecutionPlanProgress |
 export function jobNextActionLabel(action: JobNextAction): string {
   switch (action) {
     case "RELEASE_TO_PRODUCTION":
-      return "Eliberează pentru producție";
+      return "Trimite în producție";
     case "CREATE_EXECUTION_PLAN":
-      return "Creează planul de execuție";
+      return "Trimite în producție";
     case "OPEN_EXECUTION":
-      return "Deschide execuția";
+      return "Vezi operațiile";
     case "CONTINUE_EXECUTION":
-      return "Continuă execuția";
+      return "Urmărește producția";
     case "VIEW_COMPLETED":
       return "Lucrare finalizată";
     default: {
@@ -223,7 +223,7 @@ export function jobConfiguratorHref(item: {
 }
 
 export function jobExecutionHref(planId: string | null): string | null {
-  return planId ? `/execution/${planId}` : null;
+  return planId ? `/atelier?plan=${encodeURIComponent(planId)}` : null;
 }
 
 export function deriveJobAttention(input: {
@@ -241,14 +241,14 @@ export function deriveJobAttention(input: {
   if (input.stage === "ORDER_CREATED") {
     return {
       needsAttention: true,
-      attentionLabel: "Urmează eliberarea pentru producție",
+      attentionLabel: "Comanda așteaptă trimiterea în producție",
       overdue,
     };
   }
   if (input.stage === "RELEASED") {
     return {
       needsAttention: true,
-      attentionLabel: "Urmează planul de execuție",
+      attentionLabel: "Pregătirea producției este incompletă",
       overdue,
     };
   }

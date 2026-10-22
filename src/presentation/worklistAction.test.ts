@@ -376,8 +376,8 @@ describe("presentJobWorklistAction", () => {
         }),
       ),
     ).toEqual({
-      actionLabel: "Continuă execuția",
-      actionHref: "/executie/exp-1?job=job-1",
+      actionLabel: "Vezi operațiile",
+      actionHref: "/lucrari/job-1?sectiune=operatii",
     });
   });
 });

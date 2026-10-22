@@ -128,6 +128,28 @@ function startedMachineTask() {
   return { record: started.record, taskId: task.taskId, owner };
 }
 
+describe("machine occupancy", () => {
+  it("checks other operations and supplied organization occupancy, without reserving idle machines", () => {
+    const { record, taskId, owner } = startedMachineTask();
+    const first = startMachineRun(record, taskId, owner.personId, "2026-08-15T16:01:00.000Z", [owner]);
+    if (!first.ok) throw new Error(first.error);
+    const original = record.tasks.find(task => task.taskId === taskId)!;
+    const second = { ...original, taskId: "task:second-cnc", machineRuns: [] };
+    const together = { ...first.record, tasks: [...first.record.tasks, second] };
+    expect(startMachineRun(together, second.taskId, owner.personId, "2026-08-15T16:02:00.000Z", [owner]))
+      .toEqual({ ok: false, error: "machine_busy" });
+    expect(startMachineRun(record, taskId, owner.personId, "2026-08-15T16:02:00.000Z", [owner], null, [MCH_CNC_4020_ID]))
+      .toEqual({ ok: false, error: "machine_busy" });
+    expect(startMachineRun(record, taskId, owner.personId, "2026-08-15T16:02:00.000Z", [owner], null, ["machine:other"]).ok)
+      .toBe(true);
+    const active = first.record.tasks.find(task => task.taskId === taskId)!.machineRuns[0]!;
+    const stopped = stopMachineRun(together, active.machineRunId, owner.personId, "2026-08-15T16:03:00.000Z", [owner]);
+    if (!stopped.ok) throw new Error(stopped.error);
+    expect(startMachineRun(stopped.record, second.taskId, owner.personId, "2026-08-15T16:04:00.000Z", [owner]).ok).toBe(true);
+    expect(active.completedAt).toBeNull();
+  });
+});
+
 describe("actual task duration", () => {
   it("starts unknown and stores an explicit integer without inferring lifecycle time", () => {
     const { record, taskId, owner } = startedMachineTask();

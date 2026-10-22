@@ -231,7 +231,7 @@ function RequestAssemblyWorkPanel({ assemblies }: { assemblies: RequestAssemblyW
               ) : null}
               {work.executionPlanId ? (
                 <a className="text-link" href={executionHref(work.executionPlanId)}>
-                  Deschide execuția
+                  Deschide în Atelier
                 </a>
               ) : null}
             </p>

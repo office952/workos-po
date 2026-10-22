@@ -88,7 +88,7 @@ export function parseAppRoute(pathname: string): AppRoute {
   if (pathname === "/atelier") {
     return { name: "atelier" };
   }
-  const execution = pathname.match(/^\/executie\/([^/]+)$/);
+  const execution = pathname.match(/^\/(?:executie|execution)\/([^/]+)$/);
   if (execution) {
     return { name: "execution", planId: decodeURIComponent(execution[1]) };
   }
@@ -220,26 +220,35 @@ export function requestHref(requestId: string): string {
   return `/cereri/${encodeURIComponent(requestId)}`;
 }
 
-export const JOB_SHEET_SECTIONS = ["situatie", "fisiere", "materiale", "rezultate", "sursa", "plan", "operatie"] as const;
+export const JOB_SHEET_SECTIONS = ["situatie", "operatii", "documente", "rezultate"] as const;
+const LEGACY_JOB_SECTIONS = ["fisiere", "materiale", "sursa", "plan", "operatie"] as const;
 export type JobSheetSection = (typeof JOB_SHEET_SECTIONS)[number];
+export type JobSheetSectionInput = JobSheetSection | (typeof LEGACY_JOB_SECTIONS)[number];
 
 export function parseJobSheetSection(search: string): JobSheetSection {
   const value = readSearchParam(search, "sectiune");
-  if (value && (JOB_SHEET_SECTIONS as readonly string[]).includes(value)) {
-    return value as JobSheetSection;
+  if (value && [...JOB_SHEET_SECTIONS, ...LEGACY_JOB_SECTIONS].includes(value as JobSheetSectionInput)) {
+    return canonicalJobSection(value as JobSheetSectionInput);
   }
   // Existing task links continue to open that operation's dossier.
-  return readSearchParam(search, "task") ? "operatie" : "situatie";
+  return readSearchParam(search, "task") ? "operatii" : "situatie";
+}
+
+export function canonicalJobSection(section: JobSheetSectionInput): JobSheetSection {
+  if (section === "plan" || section === "operatie") return "operatii";
+  if (section === "materiale" || section === "fisiere") return "documente";
+  if (section === "sursa") return "situatie";
+  return section;
 }
 
 export function jobHref(
   jobId: string,
-  context: { taskId?: string | null; section?: JobSheetSection } = {},
+  context: { taskId?: string | null; section?: JobSheetSectionInput } = {},
 ): string {
   const path = `/lucrari/${encodeURIComponent(jobId)}`;
   const params = new URLSearchParams();
   if (context.taskId) params.set("task", context.taskId);
-  if (context.section) params.set("sectiune", context.section);
+  if (context.section) params.set("sectiune", canonicalJobSection(context.section));
   const query = params.toString();
   return query ? `${path}?${query}` : path;
 }
@@ -248,17 +257,7 @@ export function executionHref(
   planId: string,
   context: { taskId?: string | null; jobId?: string | null } = {},
 ): string {
-  const params = new URLSearchParams();
-  if (context.taskId) {
-    params.set("task", context.taskId);
-  }
-  if (context.jobId) {
-    params.set("job", context.jobId);
-  }
-  const query = params.toString();
-  return query
-    ? `/executie/${encodeURIComponent(planId)}?${query}`
-    : `/executie/${encodeURIComponent(planId)}`;
+  return atelierHref({ planId, ...context });
 }
 
 export function adminPeopleHref(): string {
@@ -282,16 +281,28 @@ export function adminMachineHref(workcenterId: string, machineId: string): strin
 }
 
 export function planningHref(): string {
-  return "/planificare";
+  return jobsViewHref("resources");
+}
+
+export type JobsView = "jobs" | "resources";
+
+export function parseJobsView(search: string): JobsView {
+  return readSearchParam(search, "vedere") === "utilaje" ? "resources" : "jobs";
+}
+
+export function jobsViewHref(view: JobsView): string {
+  return view === "resources" ? "/lucrari?vedere=utilaje" : "/lucrari";
 }
 
 export function atelierHref(
-  context: { jobId?: string | null; returnTo?: string | null } = {},
+  context: { jobId?: string | null; planId?: string | null; taskId?: string | null; returnTo?: string | null } = {},
 ): string {
   const params = new URLSearchParams();
   if (context.jobId) {
     params.set("job", context.jobId);
   }
+  if (context.planId) params.set("plan", context.planId);
+  if (context.taskId) params.set("task", context.taskId);
   const returnTo = sanitizeOperationalReturn(context.returnTo);
   if (returnTo) {
     params.set("return", returnTo);
@@ -300,7 +311,7 @@ export function atelierHref(
   return query ? `/atelier?${query}` : "/atelier";
 }
 
-const OPERATIONAL_RETURN_PATH = /^\/(?:lucrari\/[^/]+|executie\/[^/]+|atelier)$/;
+const OPERATIONAL_RETURN_PATH = /^\/(?:lucrari\/[^/]+|(?:executie|execution)\/[^/]+|atelier)$/;
 
 export function sanitizeOperationalReturn(value: string | null | undefined): string | null {
   if (!value) {
@@ -331,18 +342,25 @@ export function sanitizeOperationalReturn(value: string | null | undefined): str
     params.set("task", task);
   }
   const section = url.searchParams.get("sectiune");
-  if (url.pathname.startsWith("/lucrari/") && section && (JOB_SHEET_SECTIONS as readonly string[]).includes(section)) {
-    params.set("sectiune", section);
+  if (url.pathname.startsWith("/lucrari/") && section && [...JOB_SHEET_SECTIONS, ...LEGACY_JOB_SECTIONS].includes(section as JobSheetSectionInput)) {
+    params.set("sectiune", canonicalJobSection(section as JobSheetSectionInput));
   }
   if (
-    (url.pathname === "/atelier" || url.pathname.startsWith("/executie/")) &&
+    (url.pathname === "/atelier" || /^\/(?:executie|execution)\//.test(url.pathname)) &&
     job &&
     /^[\w:.-]+$/.test(job)
   ) {
     params.set("job", job);
   }
+  const legacy = url.pathname.match(/^\/(?:executie|execution)\/([^/]+)$/);
+  let plan = url.searchParams.get("plan");
+  if (legacy) {
+    try { plan = decodeURIComponent(legacy[1]); } catch { return null; }
+  }
+  if ((legacy || url.pathname === "/atelier") && plan && /^[\w:.-]+$/.test(plan)) params.set("plan", plan);
+  const path = legacy ? "/atelier" : url.pathname;
   const query = params.toString();
-  return query ? `${url.pathname}?${query}` : url.pathname;
+  return query ? `${path}?${query}` : path;
 }
 
 export function parseOperationalReturn(search: string): string | null {
@@ -377,6 +395,22 @@ export function configuratorHref(context: SpineContext): string {
 }
 
 export function canonicalLocation(pathname: string, search: string): string | null {
+  if (pathname === "/planificare") {
+    const params = new URLSearchParams(search);
+    params.set("vedere", "utilaje");
+    return `/lucrari?${params.toString()}`;
+  }
+  const legacyExecution = pathname.match(/^\/(?:executie|execution)\/([^/]+)$/);
+  if (legacyExecution) return executionHref(decodeURIComponent(legacyExecution[1]), {
+    taskId: readSearchParam(search, "task"), jobId: readSearchParam(search, "job"),
+  });
+  const job = pathname.match(/^\/lucrari\/([^/]+)$/);
+  const section = readSearchParam(search, "sectiune");
+  if (job && section && (LEGACY_JOB_SECTIONS as readonly string[]).includes(section)) {
+    return jobHref(decodeURIComponent(job[1]), {
+      taskId: readSearchParam(search, "task"), section: section as JobSheetSectionInput,
+    }) + (section === "sursa" ? "#sursa" : "");
+  }
   if (pathname === "/catalog") {
     const previous = parseSpineContext(search);
     if (previous.requestId) return requestProductHref(previous.requestId);
@@ -398,6 +432,10 @@ export function parseCustomerContext(search: string): string | null {
 
 export function parseJobContext(search: string): string | null {
   return readSearchParam(search, "job");
+}
+
+export function parsePlanContext(search: string): string | null {
+  return readSearchParam(search, "plan");
 }
 
 export function parseTaskContext(search: string): string | null {

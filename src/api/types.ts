@@ -675,6 +675,10 @@ export type ExecutionTaskTransport = {
   canAssign: boolean;
   canAssignProvider: boolean;
   canClaimStart: boolean;
+  canLeave?: boolean;
+  activeParticipantsLabel?: string;
+  completionParticipationBlock?: string | null;
+  participants?: { personId: string; label: string; active: boolean }[];
   canComplete: boolean;
   requiresCompletedQuantity: boolean;
   plannedQuantity: number | null;
@@ -808,6 +812,8 @@ export type PlanningWorkloadTaskTransport = {
   jobHref: string | null;
   executionHref: string;
   assignedProvider: { id: string; kind: string; label: string } | null;
+  providerBindingState: string | null;
+  providerBindingLabel: string | null;
   plannedEffortMinutes: number | null;
   requiresProvider: boolean;
   canEditEffort: boolean;
@@ -829,6 +835,7 @@ export type PlanningWorkloadTransport = {
   canEditEffort: boolean;
   providers: PlanningWorkloadProviderTransport[];
   unassigned: PlanningWorkloadTaskTransport[];
+  manual: PlanningWorkloadTaskTransport[];
 };
 
 export type ResourcesWriteState = "READY" | "NOT_IMPLEMENTED";

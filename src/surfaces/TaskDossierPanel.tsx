@@ -1,3 +1,4 @@
+import { invalidateResourcePrefix } from "../data/resourceCache";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { TransportError, readTransportErrorCode } from "../api/http";
 import {
@@ -50,6 +51,7 @@ type TaskDraft = {
   file: File | null;
   filePurpose: string;
   fileNote: string;
+  supersedes: string;
 };
 
 function emptyTaskDraft(): TaskDraft {
@@ -61,6 +63,7 @@ function emptyTaskDraft(): TaskDraft {
     file: null,
     filePurpose: "",
     fileNote: "",
+    supersedes: "",
   };
 }
 
@@ -93,12 +96,8 @@ export function TaskDossierPanel({
     dossierRef.current = dossier;
   }, [dossier]);
   taskIdRef.current = taskId;
-  if (draftScope !== sessionScope) {
-    setDraftScope(sessionScope);
-    setDrafts({});
-    setNotices({});
-    setErrors({});
-  }
+  const scopeRef = useRef(sessionScope);
+  scopeRef.current = sessionScope;
   const draft = drafts[taskId] ?? emptyTaskDraft();
   const observation = draft.observation;
   const instruction = draft.instruction;
@@ -117,6 +116,14 @@ export function TaskDossierPanel({
     }));
   }
   const [composer, setComposer] = useState<Composer>(null);
+  if (draftScope !== sessionScope) {
+    setDraftScope(sessionScope);
+    setDrafts({});
+    setNotices({});
+    setErrors({});
+    setSelectedByTask({});
+    setComposer(null);
+  }
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
   const pending = pendingTaskId === taskId;
   const fileInputId = useId();
@@ -127,6 +134,7 @@ export function TaskDossierPanel({
       .then((next) => {
         if (!cancelled && next.taskId === taskId) {
           setDossier(next);
+        invalidateResourcePrefix("job-record:");
           setLoadError("none");
         }
       })
@@ -148,7 +156,7 @@ export function TaskDossierPanel({
     return () => {
       cancelled = true;
     };
-  }, [taskId, reloadKey]);
+  }, [taskId, reloadKey, sessionScope]);
 
   const current = dossier?.taskId === taskId ? dossier : null;
   const previewFile =
@@ -161,20 +169,22 @@ export function TaskDossierPanel({
   ]);
   async function run(action: () => Promise<TaskDossier>, success: string): Promise<boolean> {
     const started = taskId;
+    const startedScope = sessionScope;
     setPendingTaskId(started);
     setErrors((existing) => ({ ...existing, [started]: null }));
     setNotices((existing) => ({ ...existing, [started]: null }));
     try {
       const next = await action();
       const accepted = next.taskId === started;
-      if (accepted && taskIdRef.current === started) {
+      if (accepted && taskIdRef.current === started && scopeRef.current === startedScope) {
         setDossier(next);
+        invalidateResourcePrefix("job-record:");
         setNotices((existing) => ({ ...existing, [started]: success }));
         setComposer(null);
       }
-      return accepted;
+      return accepted && scopeRef.current === startedScope;
     } catch (error) {
-      if (taskIdRef.current === started) {
+      if (taskIdRef.current === started && scopeRef.current === startedScope) {
         setErrors((existing) => ({ ...existing, [started]: presentDossierError(error) }));
       }
       return false;
@@ -191,8 +201,103 @@ export function TaskDossierPanel({
 
   return (
     <aside className="task-dossier" aria-label="Dosar tehnic">
+      <header className="task-dossier__heading"><p className="task-dossier__eyebrow">Pentru această operație</p><h3>Fișiere și instrucțiuni</h3></header>
+      {notice ? (
+        <InlineAlert tone="success" title="Salvat">
+          {notice}
+        </InlineAlert>
+      ) : null}
+      {actionError ? (
+        <InlineAlert tone="error" title="Nu s-a salvat">
+          {actionError}
+        </InlineAlert>
+      ) : null}
+      {loadError === "initial" ? (
+        <InlineAlert tone="error" title="Dosarul nu a putut fi citit">
+          <button type="button" className="text-link" onClick={() => setReloadKey((value) => value + 1)}>
+            Reîncearcă citirea
+          </button>
+        </InlineAlert>
+      ) : null}
+      {loadError === "stale" ? (
+        <InlineAlert tone="error" title="Actualizarea dosarului a eșuat">
+          Ultima citire rămâne afișată.{" "}
+          <button type="button" className="text-link" onClick={() => setReloadKey((value) => value + 1)}>
+            Reîncearcă
+          </button>
+        </InlineAlert>
+      ) : null}
+      {loadError === "session" ? (
+        <InlineAlert tone="error" title="Sesiune expirată">
+          Identifică din nou operatorul în Atelier. Dosarul afișat nu a fost rescris.
+        </InlineAlert>
+      ) : null}
+      {loadError === "forbidden" ? (
+        <InlineAlert tone="error" title="Lipsă permisiuni">
+          Nu ai dreptul să citești acest dosar. Nu se afișează date vechi drept actualizate.
+        </InlineAlert>
+      ) : null}
+      {current ? (
+        <div className="task-dossier__body">
+          <DossierSection title="Instrucțiuni" empty={null}>
+            {current.instructions.map((entry) => (
+              <DossierNote key={entry.entryId} entry={entry} />
+            ))}
+          </DossierSection>
+          <DossierSection title="Fișierele operației" empty="Nu sunt fișiere asociate acestei operații.">
+            {current.files.map((item) => (
+              <FileRow
+                key={item.artifactId}
+                file={item}
+                pending={pending}
+                canWrite={canWriteFiles}
+                selected={item.artifactId === selectedArtifactId}
+                onSelect={() => setSelectedByTask((existing) => ({ ...existing, [taskId]: item.artifactId }))}
+                onMarkUsed={() =>
+                  void run(
+                    () => markTaskArtifactUsed(taskId, item.artifactId),
+                    "Fișierul a fost marcat ca utilizat la execuție.",
+                  )
+                }
+              />
+            ))}
+          </DossierSection>
+          {previewFile ? <JobArtifactPreview file={previewFile} /> : null}
+          {current.planFiles.some((item) => !item.linkedToTask) ? (
+            <DossierSection title="Fișierele generale ale lucrării" empty={null}>
+              {current.planFiles
+                .filter((item) => !item.linkedToTask)
+                .map((item) => (
+                  <div key={item.artifactId}>
+                    <FileRow
+                      file={item}
+                      selected={item.artifactId === selectedArtifactId}
+                      onSelect={() =>
+                        setSelectedByTask((existing) => ({ ...existing, [taskId]: item.artifactId }))
+                      }
+                    />
+                    <Button
+                      variant="ghost"
+                      disabled={pending || !canWriteFiles}
+                      onClick={() =>
+                        void run(
+                          () => linkTaskArtifact(taskId, item.artifactId),
+                          "Fișierul a fost asociat acestei operații.",
+                        )
+                      }
+                    >
+                      Asociază operației
+                    </Button>
+                    {!canWriteFiles ? <p className="ui-note">{fileAccessExplanation(false)}</p> : null}
+                  </div>
+                ))}
+            </DossierSection>
+          ) : null}
+        </div>
+      ) : null}
+
       <section className="task-dossier__messages" aria-label="Mesaje pentru această operație">
-      <p className="task-dossier__eyebrow">Dosarul operației</p>
+
       <h3>Mesaje pentru {taskLabel}</h3>
       <div className="task-dossier__actions">
         <Button
@@ -229,41 +334,6 @@ export function TaskDossierPanel({
       {!canInstruct ? <p className="ui-note">{instructionAccessExplanation()}</p> : null}
       {!canWriteFiles ? <p className="ui-note">{fileAccessExplanation(false)}</p> : null}
       </section>
-      {notice ? (
-        <InlineAlert tone="success" title="Salvat">
-          {notice}
-        </InlineAlert>
-      ) : null}
-      {actionError ? (
-        <InlineAlert tone="error" title="Nu s-a salvat">
-          {actionError}
-        </InlineAlert>
-      ) : null}
-      {loadError === "initial" ? (
-        <InlineAlert tone="error" title="Dosarul nu a putut fi citit">
-          <button type="button" className="text-link" onClick={() => setReloadKey((value) => value + 1)}>
-            Reîncearcă citirea
-          </button>
-        </InlineAlert>
-      ) : null}
-      {loadError === "stale" ? (
-        <InlineAlert tone="error" title="Actualizarea dosarului a eșuat">
-          Ultima citire rămâne afișată.{" "}
-          <button type="button" className="text-link" onClick={() => setReloadKey((value) => value + 1)}>
-            Reîncearcă
-          </button>
-        </InlineAlert>
-      ) : null}
-      {loadError === "session" ? (
-        <InlineAlert tone="error" title="Sesiune expirată">
-          Identifică din nou operatorul în Atelier. Dosarul afișat nu a fost rescris.
-        </InlineAlert>
-      ) : null}
-      {loadError === "forbidden" ? (
-        <InlineAlert tone="error" title="Lipsă permisiuni">
-          Nu ai dreptul să citești acest dosar. Nu se afișează date vechi drept actualizate.
-        </InlineAlert>
-      ) : null}
       {composer === "observation" ? (
         <form
           className="task-dossier__composer"
@@ -366,11 +436,11 @@ export function TaskDossierPanel({
             const purpose = filePurpose;
             const note = fileNote;
             void run(
-              () => uploadTaskArtifact(started, selected, { purpose, note }),
+              () => uploadTaskArtifact(started, selected, { purpose, note, supersedesArtifactId: draft.supersedes || undefined }),
               "Fișierul a fost păstrat în dosar. Starea operației nu s-a schimbat.",
             ).then((saved) => {
               if (saved) {
-                patchDraft(started, { file: null, filePurpose: "", fileNote: "" });
+                patchDraft(started, { file: null, filePurpose: "", fileNote: "", supersedes: "" });
               }
             });
           }}
@@ -389,6 +459,7 @@ export function TaskDossierPanel({
             <label className="field" htmlFor={fileInputId}>
               <span className="field__label">Fișier</span>
               <input
+                key={taskId}
                 id={fileInputId}
                 className="field__control"
                 type="file"
@@ -410,6 +481,13 @@ export function TaskDossierPanel({
             options={FILE_PURPOSES}
             onChange={(value) => patchDraft(taskId, { filePurpose: value })}
           />
+          <SelectField
+            id={`${fileInputId}-supersedes`}
+            label="Versiune nouă pentru, opțional"
+            value={draft.supersedes}
+            options={[{ value: "", label: "Fișier nou" }, ...Array.from(new Map([...(current?.files ?? []), ...(current?.planFiles ?? [])].map(item => [item.artifactId, item])).values()).map(item => ({ value: item.artifactId, label: item.originalFileName }))]}
+            onChange={(supersedes) => patchDraft(taskId, { supersedes })}
+          />
           <TextField
             id={`${fileInputId}-note`}
             label="Explicație, opțională"
@@ -423,60 +501,6 @@ export function TaskDossierPanel({
       ) : null}
       {current ? (
         <div className="task-dossier__body">
-          <DossierSection title="Instrucțiuni" empty={null}>
-            {current.instructions.map((entry) => (
-              <DossierNote key={entry.entryId} entry={entry} />
-            ))}
-          </DossierSection>
-          <DossierSection title="Fișierele operației" empty="Nu sunt fișiere asociate acestei operații.">
-            {current.files.map((item) => (
-              <FileRow
-                key={item.artifactId}
-                file={item}
-                pending={pending}
-                canWrite={canWriteFiles}
-                selected={item.artifactId === selectedArtifactId}
-                onSelect={() => setSelectedByTask((existing) => ({ ...existing, [taskId]: item.artifactId }))}
-                onMarkUsed={() =>
-                  void run(
-                    () => markTaskArtifactUsed(taskId, item.artifactId),
-                    "Fișierul a fost marcat ca utilizat la execuție.",
-                  )
-                }
-              />
-            ))}
-          </DossierSection>
-          {previewFile ? <JobArtifactPreview file={previewFile} /> : null}
-          {current.planFiles.some((item) => !item.linkedToTask) ? (
-            <DossierSection title="Fișierele generale ale lucrării" empty={null}>
-              {current.planFiles
-                .filter((item) => !item.linkedToTask)
-                .map((item) => (
-                  <div key={item.artifactId}>
-                    <FileRow
-                      file={item}
-                      selected={item.artifactId === selectedArtifactId}
-                      onSelect={() =>
-                        setSelectedByTask((existing) => ({ ...existing, [taskId]: item.artifactId }))
-                      }
-                    />
-                    <Button
-                      variant="ghost"
-                      disabled={pending || !canWriteFiles}
-                      onClick={() =>
-                        void run(
-                          () => linkTaskArtifact(taskId, item.artifactId),
-                          "Fișierul a fost asociat acestei operații.",
-                        )
-                      }
-                    >
-                      Asociază operației
-                    </Button>
-                    {!canWriteFiles ? <p className="ui-note">{fileAccessExplanation(false)}</p> : null}
-                  </div>
-                ))}
-            </DossierSection>
-          ) : null}
           <DossierSection title="Observații" empty={null}>
             {current.observations.map((entry) => (
               <DossierNote key={entry.entryId} entry={entry} />
@@ -487,8 +511,8 @@ export function TaskDossierPanel({
               <DossierNote key={entry.entryId} entry={entry} problem />
             ))}
           </DossierSection>
-          <details className="task-dossier__archive" aria-label="Istoricul operației">
-            <summary>Istoricul operației</summary>
+          <section className="task-dossier__archive" aria-label="Istoricul operației">
+            <h3>Istoricul operației</h3>
             {current.history.length === 0 ? (
               <p className="task-dossier__meta">Nu există evenimente în dosarul acestei operații.</p>
             ) : (
@@ -500,7 +524,7 @@ export function TaskDossierPanel({
                 </p>
               ))
             )}
-          </details>
+          </section>
           {laterVersions.length > 0 ? (
             <p className="job-workbench__revision">
               Există o versiune ulterioară a documentului selectat:{" "}

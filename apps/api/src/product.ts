@@ -1005,7 +1005,32 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
   );
 
   app.post(
+    "/api/products/:productCode/quote-snapshots/:quoteSnapshotId/confirm-order",
+    requireOwnerRole(),
+    (c) => {
+      const runtime = getProductSystem(c);
+      const snapshot = runtime.readQuoteSnapshot(c.req.param("quoteSnapshotId"));
+      if (!snapshot || snapshot.productCode !== c.req.param("productCode")) {
+        return c.json({ error: "not_found" }, 404);
+      }
+      // Validate both frozen contracts before storing either record.
+      const recorded = recordQuoteAcceptance(snapshot);
+      if (!recorded.ok) return c.json({ error: recorded.error, reasons: recorded.reasons }, 422);
+      const acceptance = runtime.readQuoteAcceptance(snapshot.quoteSnapshotId) ?? recorded.decision;
+      const frozen = freezeOrderSnapshot(snapshot, acceptance);
+      if (!frozen.ok) return c.json({ error: frozen.error, reasons: frozen.reasons }, 422);
+      const stored = runtime.assemblyPlane().db.transaction(() => {
+        runtime.persistQuoteAcceptance(acceptance);
+        return runtime.persistOrderSnapshot(frozen.snapshot);
+      }).immediate();
+      return c.json({ created: stored.created,
+        orderSnapshot: scopeOrderSnapshot(stored.snapshot, financialAccess(c, "commercial")) });
+    },
+  );
+
+  app.post(
     "/api/products/:productCode/quote-snapshots/:quoteSnapshotId/acceptance",
+    requireOwnerRole(),
     (c) => {
       const runtime = getProductSystem(c);
       const snapshot = runtime.readQuoteSnapshot(c.req.param("quoteSnapshotId"));
@@ -1049,6 +1074,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
 
   app.post(
     "/api/products/:productCode/quote-snapshots/:quoteSnapshotId/order",
+    requireOwnerRole(),
     (c) => {
       const runtime = getProductSystem(c);
       const snapshot = runtime.readQuoteSnapshot(c.req.param("quoteSnapshotId"));
@@ -1115,6 +1141,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
 
   app.post(
     "/api/products/:productCode/orders/:orderSnapshotId/production-release",
+    requireOwnerRole(),
     (c) => {
       const runtime = getProductSystem(c);
       const orderSnapshot = runtime.readOrderSnapshot(c.req.param("orderSnapshotId"));
@@ -1174,6 +1201,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
 
   app.post(
     "/api/products/:productCode/accepted-production-snapshots/:snapshotId/execution-plan",
+    requireOwnerRole(),
     (c) => {
       const runtime = getProductSystem(c);
       const snapshot = runtime.readProductionSnapshot(c.req.param("snapshotId"));
@@ -1366,6 +1394,15 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       }),
       { taskId, operatorId: session.person.personId },
     );
+  });
+
+  app.post("/api/execution-tasks/:taskId/leave", (c) => {
+    const runtime = getProductSystem(c);
+    const session = runtime.resolveOperatorSession(getCookie(c, OPERATOR_SESSION_COOKIE));
+    if (!session.ok) return c.json({ error: "invalid_session" }, 401);
+    const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/leave");
+    return respondTaskMutation(c, runtime, runtime.leaveExecutionWork(taskId, session.person.personId, new Date().toISOString()),
+      { taskId, operatorId: session.person.personId });
   });
 
   app.post("/api/execution-tasks/:taskId/quality-fail", async (c) => {
@@ -1798,6 +1835,9 @@ function mutationHttpStatus(error: TaskMutationError): 404 | 409 | 422 {
     case "invalid_transition":
     case "machine_run_not_allowed":
     case "machine_run_active":
+    case "machine_busy":
+    case "active_work_elsewhere":
+    case "active_participants":
     case "machine_run_closed":
     case "external_production_disabled":
     case "task_not_planned":

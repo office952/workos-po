@@ -296,6 +296,22 @@ describe("assembly unconfirmed rate acknowledgement", () => {
     expect(allConfirmed.rateEvidenceBasis?.kind).toBe(CURRENT_RATE_REEVALUATION);
   });
 
+  it("versions a complete commercial change without overwriting the technical confirmation or stored records", () => {
+    const { letters } = readyAssembly();
+    const stored: ConfirmedChildProduct = { ...letters, unconfirmedRates: [] };
+    const original = JSON.stringify(stored);
+    const changed: ConfirmedChildProduct = { ...stored, childQuoteSnapshotId: "qts:new-price", childQuoteContentHash: "new-price", commercial: { ...letters.commercial, netPrice: 605, vatAmount: 127.05, grossPrice: 732.05 } };
+    const revision = resolveConfirmedChildRecord(changed, stored);
+    expect(revision.truthId).toMatch(/^pctc:[0-9a-f]{64}$/);
+    expect(revision.truthId).not.toBe(stored.truthId);
+    expect(revision.truthHash).toBe(stored.truthHash);
+    expect(revision.commercial?.netPrice).toBe(605);
+    expect(JSON.stringify(stored)).toBe(original);
+    expect(resolveConfirmedChildRecord({ ...changed, confirmedAt: "2026-10-20T12:30:00Z" }, stored).truthId).toBe(revision.truthId);
+    expect(resolveConfirmedChildRecord({ ...changed, childQuoteContentHash: "third-price", commercial: { ...changed.commercial!, netPrice: 650 } }, stored).truthId).not.toBe(revision.truthId);
+    expect(resolveConfirmedChildRecord({ ...stored, commercial: null, childQuoteSnapshotId: null, childQuoteContentHash: null }, stored)).toBe(stored);
+  });
+
   it("marks current-rate re-evaluated member rates in the binding and the operator context", () => {
     const historical = rateAssessedAssembly([UNCONFIRMED_VINYL]).assessed;
     const { assessed } = rateAssessedAssembly([UNCONFIRMED_VINYL], { reevaluatedLetters: true });

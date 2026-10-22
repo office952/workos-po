@@ -108,6 +108,7 @@ export function invalidateAfterExecutionTaskChange(planId: string): void {
     resourceKeys.jobs(),
     resourceKeys.planningWorkload(),
   );
+  invalidateResourcePrefix("job-record:");
   invalidateResourcePrefix(resourceKeys.jobPrefix());
   invalidateCustomerProjections();
 }
@@ -115,6 +116,7 @@ export function invalidateAfterExecutionTaskChange(planId: string): void {
 export function invalidateAfterJobMaterialDecision(jobId: string): void {
   invalidateResources(resourceKeys.jobMaterialPreparation(jobId), resourceKeys.operatorInbox());
   invalidateResourcePrefix("execution-plan:");
+  invalidateResourcePrefix("job-record:");
   invalidateResourcePrefix(resourceKeys.jobPrefix());
 }
 
@@ -124,6 +126,8 @@ export function invalidateAfterOperatorSessionChange(): void {
     resourceKeys.operatorInbox(),
     resourceKeys.operatorCandidates(),
   );
+  // Execution actions and operatorRelation belong to the current viewer.
+  invalidateResourcePrefix(resourceKeys.executionPlanPrefix());
 }
 
 export function invalidateAfterCloudBoundaryChange(): void {
@@ -155,7 +159,8 @@ export function invalidateAfterOrganizationAccessChange(): void {
 }
 
 export function invalidateAfterPeopleAdminChange(): void {
-  invalidateResources(resourceKeys.peopleAdmin(), resourceKeys.operatorCandidates());
+  invalidateResources(resourceKeys.peopleAdmin(), resourceKeys.operatorCandidates(), resourceKeys.operatorInbox());
+  invalidateResourcePrefix(resourceKeys.executionPlanPrefix());
 }
 
 export function invalidateAfterWorkcentersAdminChange(): void {
@@ -165,6 +170,7 @@ export function invalidateAfterWorkcentersAdminChange(): void {
     resourceKeys.jobs(),
     resourceKeys.planningWorkload(),
   );
+  invalidateResourcePrefix("job-record:");
   invalidateResourcePrefix(resourceKeys.jobPrefix());
   invalidateResourcePrefix("execution-plan:");
   invalidateCustomerProjections();

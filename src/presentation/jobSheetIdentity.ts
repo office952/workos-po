@@ -20,13 +20,11 @@ export function presentJobSheetSecondary(job: JobListItemTransport): string | nu
 export function presentJobSheetLead(job: JobListItemTransport): string {
   switch (job.nextAction) {
     case "RELEASE_TO_PRODUCTION":
-      return "Comanda există, fără plan de execuție. Eliberează producția ca lucrarea să poată intra în atelier.";
+      return "Comanda este confirmată. Trimite în producție pentru a pregăti operațiile și a face lucrarea disponibilă în Atelier.";
     case "CREATE_EXECUTION_PLAN":
-      return "Producția este eliberată. Următorul pas este planul de execuție.";
+      return "Pregătirea producției este incompletă. Trimite în producție pentru a continua cu operațiile aceleiași lucrări.";
     case "OPEN_EXECUTION":
-      return job.nextActionLabel
-        ? `Planul există. ${job.nextActionLabel}.`
-        : "Planul există. Deschide execuția.";
+      return "Lucrarea este disponibilă în Atelier. Lucrul începe când un operator eligibil pornește o operație.";
     case "CONTINUE_EXECUTION":
       return job.nextActionLabel
         ? `Execuția este deschisă. ${job.nextActionLabel}.`

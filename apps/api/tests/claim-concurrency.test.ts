@@ -35,7 +35,7 @@ function cookieHeader(rawToken: string): string {
 }
 
 describe("claim-on-start concurrency", () => {
-  it("lets exactly one of two concurrent eligible operators win", async () => {
+  it("admits two eligible participants atomically while keeping one original starter", async () => {
     const dir = mkdtempSync(join(tmpdir(), "workos-claim-"));
     temps.push(dir);
     const runtime = createProductSystemRuntime(join(dir, "product-system.sqlite"));
@@ -107,23 +107,15 @@ describe("claim-on-start concurrency", () => {
       }),
     ]);
 
-    const statuses = [first.status, second.status].sort();
-    expect(statuses).toEqual([200, 409]);
+    expect([first.status, second.status]).toEqual([200, 200]);
     const bodies = [await readBody(first), await readBody(second)];
-    const success = bodies.find((item) => !item.error);
-    const conflict = bodies.find((item) => item.error === "already_started_by_other");
-    expect(success).toBeTruthy();
-    expect(conflict).toBeTruthy();
-    const winnerLabel = ((success?.executionPlan as { tasks: Array<JsonObject> }).tasks.find(
-      (item) => item.taskId === backCnc.taskId,
-    )?.assignedExecutor as JsonObject).label;
-    expect(["Florin CNC", "Andrei Goghi"]).toContain(winnerLabel);
-    expect((conflict?.startedBy as JsonObject | undefined)?.displayName).toBe(winnerLabel);
-
+    expect(bodies.every(item => !item.error)).toBe(true);
     const stored = runtime.readExecutionPlanByTaskId(String(backCnc.taskId));
     const task = stored?.tasks.find((item) => item.taskId === backCnc.taskId);
     expect(task?.status).toBe("IN_PROGRESS");
-    expect(task?.assignedExecutor?.label).toBe(winnerLabel);
+    expect(["Florin CNC", "Andrei Goghi"]).toContain(task?.assignedExecutor?.label);
+    expect(task?.workSessions).toHaveLength(2);
+    expect(new Set(task?.workSessions?.map(s => s.personId)).size).toBe(2);
     expect(task?.startedAt).toBeTruthy();
     runtime.close();
   });

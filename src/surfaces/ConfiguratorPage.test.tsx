@@ -197,6 +197,14 @@ function installFetch(options: {
     if (url.endsWith("/confirm")) {
       return jsonResponse(manualConfirmBody(options, init));
     }
+    if (url.endsWith("/members") && init?.method === "POST") {
+      const request = JSON.parse(String(init.body)) as { role: string; manualProductNetPrice?: number };
+      const result = manualConfirmBody(options, init);
+      return jsonResponse({ assembly: { assemblyId: "asm:1" }, role: request.role, confirmed: {
+        confirmedAt: "2026-10-20T12:00:00Z", inscription: "PR92",
+        customerPrice: request.manualProductNetPrice ? result.commercialPrice : null,
+      } });
+    }
     if (url.endsWith("/seller")) {
       return jsonResponse({
         configured: options.sellerConfigured !== false,
@@ -452,6 +460,60 @@ describe("ConfiguratorPage", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/assemblies/asm%3A1/members", expect.objectContaining({ method: "POST" })));
     expect(screen.queryByRole("button", { name: "Îngheață oferta" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Înapoi la ansamblu" })).toHaveAttribute("href", "/ansamblu?assembly=asm%3A1");
+  });
+
+  it("waits for the member save and displays the persisted price rather than the preliminary calculation", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    const original = fetchMock.getMockImplementation()!;
+    let pricedSave!: (value: Awaited<ReturnType<typeof jsonResponse>>) => void;
+    fetchMock.mockImplementation((input, init) => {
+      if (String(input).endsWith("/members") && init?.method === "POST") {
+        const request = JSON.parse(String(init.body)) as { manualProductNetPrice?: number };
+        if (request.manualProductNetPrice) return new Promise(resolve => { pricedSave = resolve; });
+      }
+      return original(input, init);
+    });
+    renderConfigurator({ assemblyId: "asm:1", memberRole: "SIGNAGE_LETTERS" });
+    const user = userEvent.setup();
+    await screen.findByLabelText("Textul literelor");
+    await user.click(screen.getByRole("tab", { name: /Verificare/ }));
+    await user.click(await screen.findByRole("button", { name: "Confirmă configurația" }));
+    await user.type(await screen.findByLabelText("Preț net al produsului, fără TVA"), "605");
+    await user.click(screen.getByRole("button", { name: "Confirmă prețul" }));
+    await waitFor(() => expect(pricedSave).toBeDefined());
+    expect(screen.queryByRole("button", { name: "Actualizează prețul" })).toBeNull();
+    // The stored result is authoritative, even if the preliminary calculation differs.
+    pricedSave({ ok: true, status: 200, json: async () => ({ assembly: { assemblyId: "asm:1" }, role: "SIGNAGE_LETTERS", confirmed: {
+      confirmedAt: "2026-10-20T12:30:00Z", inscription: "PR92", customerPrice: { netPrice: 604.99, vatAmount: 127.05, grossPrice: 732.04, currency: "EUR" },
+    } }) });
+    await waitFor(() => expect(screen.getByTestId("customer-price")).toHaveTextContent("604,99 EUR"));
+    expect(screen.getByTestId("customer-price")).toHaveTextContent("732,04 EUR");
+    expect(screen.getByRole("button", { name: "Actualizează prețul" })).toBeEnabled();
+  });
+
+  it.each(["refused", "unconfirmed"])("keeps the manual draft and offers retry after a %s member save", async (failure) => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    const original = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation((input, init) => {
+      if (String(input).endsWith("/members") && init?.method === "POST") {
+        const request = JSON.parse(String(init.body)) as { manualProductNetPrice?: number };
+        if (request.manualProductNetPrice) return failure === "refused"
+          ? jsonResponse({ error: "save_failed", reasons: ["Salvarea membrului a eșuat."] }, 409)
+          : jsonResponse({});
+      }
+      return original(input, init);
+    });
+    renderConfigurator({ assemblyId: "asm:1", memberRole: "SIGNAGE_LETTERS" });
+    const user = userEvent.setup();
+    await screen.findByLabelText("Textul literelor");
+    await user.click(screen.getByRole("tab", { name: /Verificare/ }));
+    await user.click(await screen.findByRole("button", { name: "Confirmă configurația" }));
+    await user.type(await screen.findByLabelText("Preț net al produsului, fără TVA"), "605");
+    await user.click(screen.getByRole("button", { name: "Confirmă prețul" }));
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(failure === "refused" ? "Salvarea membrului a eșuat." : "Salvarea prețului în ansamblu nu a fost confirmată."));
+    expect(screen.getByLabelText("Preț net al produsului, fără TVA")).toHaveValue("605");
+    expect(screen.queryByRole("button", { name: "Actualizează prețul" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Confirmă prețul" })).toBeEnabled();
   });
 
   function confirmedMemberResponse(membersEditable: boolean) {

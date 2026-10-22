@@ -20,8 +20,9 @@ function legacyChildReason(roleLabel: string): string {
 }
 
 /**
- * Chooses the child record a member confirmation persists. A child with recorded rates is reused
- * as stored. A legacy child froze no per-rate evidence, so its historical rates cannot be proven:
+ * Chooses the immutable child record a member confirmation persists. An explicit complete
+ * commercial change gets its own record; a technical-only confirmation keeps the stored price.
+ * A legacy child froze no per-rate evidence, so its historical rates cannot be proven:
  * `candidate` (evaluated on current rates) is kept as a separate record that names the legacy
  * child it re-prices. The legacy record, and every truth or quote referencing it, stays unchanged.
  */
@@ -33,6 +34,21 @@ export function resolveConfirmedChildRecord(
     return candidate;
   }
   if (existing.unconfirmedRates) {
+    const priced = candidate.commercial?.completeness === "COMPLETE" &&
+      candidate.childQuoteSnapshotId && candidate.childQuoteContentHash;
+    if (priced && canonicalContentHash(candidate.commercial) !== canonicalContentHash(existing.commercial)) {
+      return {
+        ...candidate,
+        truthId: `pctc:${canonicalContentHash({
+          organizationId: candidate.organizationId,
+          sourceTruthId: existing.truthId,
+          truthHash: candidate.truthHash,
+          aggregateHash: candidate.aggregateHash,
+          childQuoteContentHash: candidate.childQuoteContentHash,
+          commercial: candidate.commercial,
+        })}`,
+      };
+    }
     return existing;
   }
   const basis: ChildRateEvidenceBasis = {

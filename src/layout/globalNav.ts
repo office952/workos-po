@@ -48,7 +48,7 @@ export const GLOBAL_NAV: readonly GlobalNavGroup[] = [
   {
     id: "operations",
     label: "Operațiuni",
-    summary: "Lucrări, planificare și atelier.",
+    summary: "Lucrări și atelier.",
     items: [
       {
         id: "jobs",
@@ -56,13 +56,6 @@ export const GLOBAL_NAV: readonly GlobalNavGroup[] = [
         href: "/lucrari",
         purpose: "Continuă lucrările eliberate.",
         midWidthPriority: true,
-      },
-      {
-        id: "planning",
-        label: "Planificare",
-        href: "/planificare",
-        purpose: "Vezi efortul planificat pe zone și utilaje.",
-        midWidthPriority: false,
       },
       {
         id: "atelier",

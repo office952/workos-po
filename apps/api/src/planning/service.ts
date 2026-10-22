@@ -29,6 +29,8 @@ export type PlanningWorkloadTaskTransport = {
   jobHref: string | null;
   executionHref: string;
   assignedProvider: WorkloadTaskItem["assignedProvider"];
+  providerBindingState: WorkloadTaskItem["providerBindingState"];
+  providerBindingLabel: string | null;
   plannedEffortMinutes: number | null;
   requiresProvider: boolean;
   canEditEffort: boolean;
@@ -50,6 +52,7 @@ export type PlanningWorkloadTransport = {
   canEditEffort: boolean;
   providers: readonly PlanningWorkloadProviderTransport[];
   unassigned: readonly PlanningWorkloadTaskTransport[];
+  manual: readonly PlanningWorkloadTaskTransport[];
 };
 
 export function presentPlanningWorkload(
@@ -84,6 +87,7 @@ export function presentWorkloadProjection(
     canEditEffort,
     providers: projection.providers.map((group) => presentProviderGroup(group, canEditEffort)),
     unassigned: projection.unassigned.map((task) => presentWorkloadTask(task, canEditEffort)),
+    manual: projection.manual.map((task) => presentWorkloadTask(task, canEditEffort)),
   };
 }
 
@@ -125,6 +129,8 @@ function presentWorkloadTask(
     jobHref: task.jobId ? `/lucrari/${encodeURIComponent(task.jobId)}` : task.jobHref,
     executionHref: plannerExecutionHref(task),
     assignedProvider: task.assignedProvider,
+    providerBindingState: task.providerBindingState,
+    providerBindingLabel: task.providerBindingLabel,
     plannedEffortMinutes: task.plannedEffortMinutes,
     requiresProvider: task.requiresProvider,
     canEditEffort: canEditEffort && task.status === "PLANNED",
@@ -137,5 +143,6 @@ function plannerExecutionHref(task: WorkloadTaskItem): string {
   if (task.jobId) {
     params.set("job", task.jobId);
   }
-  return `/executie/${encodeURIComponent(task.executionPlanId)}?${params.toString()}`;
+  params.set("plan", task.executionPlanId);
+  return `/atelier?${params.toString()}`;
 }

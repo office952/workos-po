@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { navigate } from "../routing/navigate";
 import { acceptAssemblyQuote, type AssemblyQuoteAcceptanceResult } from "../api/assemblies";
 import type { AssemblyQuoteCostTransport, AssemblyQuoteTransport } from "../api/types";
 import { Button } from "../components/Button";
@@ -141,10 +142,12 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
     invalidateAfterAcceptAssemblyQuote({ assemblyId: quote.assemblyId, requestId: quote.requestId });
     if (result.ok) {
       setAcceptedOrderId(result.orderSnapshotId);
+      navigate(jobHref(result.orderSnapshotId));
       return;
     }
     if (result.kind === "already_accepted" && result.orderSnapshotId) {
       setAcceptedOrderId(result.orderSnapshotId);
+      navigate(jobHref(result.orderSnapshotId));
     }
     setRefusal(result);
   }
@@ -217,7 +220,7 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
                         setConfirming(true);
                       }}
                     >
-                      Acceptă oferta și creează comanda
+                      Confirmă comanda
                     </Button>
                   ) : (
                     <a className="offers-next" href={assemblyHref(quote.assemblyId)}>
@@ -261,7 +264,7 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
                   </p>
                   <div className="offers-confirm__actions">
                     <Button disabled={accepting} onClick={() => void accept()}>
-                      {accepting ? "Se creează comanda…" : "Confirmă acceptarea"}
+                      {accepting ? "Se creează comanda…" : "Da, confirm comanda"}
                     </Button>
                     <Button variant="secondary" disabled={accepting} onClick={cancelConfirmation}>
                       Renunță

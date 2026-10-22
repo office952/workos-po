@@ -1,3 +1,4 @@
+import { readJobRecord } from "./record.js";
 import type { Hono } from "hono";
 import {
   freezeProductionReleaseFromOrder,
@@ -35,6 +36,15 @@ export function registerJobRoutes(app: Hono<ApiEnv>): void {
     return c.json(presentJobDetail(c, runtime, located));
   });
 
+  app.get("/api/jobs/:jobId/record", (c) => {
+    const runtime = getProductSystem(c);
+    const jobId = httpPathIdentity(c.req.path, "/api/jobs/", "/record");
+    const located = locateJob(runtime, jobId);
+    if (!located) return c.json({ error: "not_found" }, 404);
+    const plan = located.job.planId ? runtime.readExecutionPlan(located.job.planId) : null;
+    return c.json({ record: readJobRecord(runtime.assemblyPlane().db, jobId, plan, new Date().toISOString()) });
+  });
+
   app.patch("/api/jobs/:jobId/planning", requireOwnerRole(), async (c) => {
     const runtime = getProductSystem(c);
     const jobId = httpPathIdentity(c.req.path, "/api/jobs/", "/planning");
@@ -64,7 +74,44 @@ export function registerJobRoutes(app: Hono<ApiEnv>): void {
     });
   });
 
-  app.post("/api/jobs/:jobId/production-release", (c) => {
+  // One synchronous transaction owns release + plan. Retrying returns the same identities.
+  app.post("/api/jobs/:jobId/production", requireOwnerRole(), (c) => {
+    const runtime = getProductSystem(c);
+    const jobId = httpPathIdentity(c.req.path, "/api/jobs/", "/production");
+    const result = runtime.assemblyPlane().db.transaction(() => {
+      const product = runtime.readOrderSnapshot(jobId);
+      if (product) {
+        const frozen = freezeProductionReleaseFromOrder(product);
+        if (!frozen.ok) return { ok: false as const, error: frozen.error, reasons: frozen.reasons };
+        const release = runtime.acceptProductionSnapshot(frozen.snapshot);
+        const plan = runtime.persistExecutionPlan(materializeExecutionPlanFromSnapshot(release.snapshot));
+        return { ok: true as const, created: release.created || plan.created,
+          releaseSnapshotId: release.snapshot.snapshotId, planId: plan.record.plan.planId };
+      }
+      const order = runtime.readAssemblyOrder(jobId);
+      if (!order) return null;
+      let release = runtime.readAssemblyProductionForOrder(jobId);
+      const releaseCreated = release === null;
+      if (!release) {
+        const projected = projectAssemblyProduction(order, {
+          snapshotId: `asmp:${order.contentHash.slice(0, 24)}`,
+          createdAt: new Date().toISOString(),
+        });
+        if (!projected.ok) return { ok: false as const, error: projected.error, reasons: projected.reasons };
+        release = projected.snapshot;
+        runtime.saveAssemblyProduction(release);
+      }
+      const plan = runtime.persistExecutionPlan(materializeAssemblyExecutionPlan(release));
+      return { ok: true as const, created: releaseCreated || plan.created,
+        releaseSnapshotId: release.snapshotId, planId: plan.record.plan.planId };
+    }).immediate();
+    if (!result) return c.json({ error: "not_found" }, 404);
+    if (!result.ok) return c.json({ error: result.error, reasons: result.reasons }, 422);
+    return c.json({ created: result.created, releaseSnapshotId: result.releaseSnapshotId,
+      executionPlan: { plan: { planId: result.planId } } });
+  });
+
+  app.post("/api/jobs/:jobId/production-release", requireOwnerRole(), (c) => {
     const runtime = getProductSystem(c);
     const jobId = httpPathIdentity(c.req.path, "/api/jobs/", "/production-release");
     const product = runtime.readOrderSnapshot(jobId);
@@ -98,7 +145,7 @@ export function registerJobRoutes(app: Hono<ApiEnv>): void {
     return c.json({ created: true, releaseSnapshotId: projected.snapshot.snapshotId });
   });
 
-  app.post("/api/jobs/:jobId/execution-plan", (c) => {
+  app.post("/api/jobs/:jobId/execution-plan", requireOwnerRole(), (c) => {
     const runtime = getProductSystem(c);
     const jobId = httpPathIdentity(c.req.path, "/api/jobs/", "/execution-plan");
     const product = runtime.readOrderSnapshot(jobId);

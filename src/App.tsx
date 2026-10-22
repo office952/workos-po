@@ -13,7 +13,9 @@ import {
   canonicalLocation,
   parseAppRoute,
   parseJobContext,
+  parsePlanContext,
   parseJobSheetSection,
+  parseJobsView,
   parseOperationalReturn,
   parseSpineContext,
   parseTaskContext,
@@ -40,12 +42,10 @@ import { AssemblyPage } from "./surfaces/AssemblyPage";
 import { ClientDetailPage } from "./surfaces/ClientDetailPage";
 import { ClientsPage } from "./surfaces/ClientsPage";
 import { ConfiguratorPage, readAssemblyMemberRole } from "./surfaces/ConfiguratorPage";
-import { ExecutionPage } from "./surfaces/ExecutionPage";
 import { FailClosedPage } from "./surfaces/FailClosedPage";
 import { FoundationProofPage } from "./surfaces/FoundationProofPage";
 import { JobDetailPage } from "./surfaces/JobDetailPage";
 import { JobsPage } from "./surfaces/JobsPage";
-import { PlanningPage } from "./surfaces/PlanningPage";
 import { AssemblyQuotePage } from "./surfaces/AssemblyQuotePage";
 import { QuoteSnapshotPage } from "./surfaces/QuoteSnapshotPage";
 import { QuotesPage } from "./surfaces/QuotesPage";
@@ -124,26 +124,23 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
         />
       );
     case "jobs":
-      return <JobsPage />;
+      return <JobsPage view={parseJobsView(search)} />;
     case "job":
       return <JobDetailPage jobId={route.jobId} taskId={parseTaskContext(search)} section={parseJobSheetSection(search)} />;
     case "planning":
-      return <PlanningPage />;
+      return <JobsPage view="resources" />;
     case "atelier":
       return (
         <AtelierPage
           jobId={parseJobContext(search)}
           returnTo={parseOperationalReturn(search)}
+          planId={parsePlanContext(search)}
+          taskId={parseTaskContext(search)}
         />
       );
     case "execution":
-      return (
-        <ExecutionPage
-          planId={route.planId}
-          taskId={parseTaskContext(search)}
-          jobId={parseJobContext(search)}
-        />
-      );
+      // Defensive fallback; normal entry is replaced by canonicalLocation.
+      return <AtelierPage planId={route.planId} taskId={parseTaskContext(search)} jobId={parseJobContext(search)} />;
     case "admin":
       return <AdminHomePage />;
     case "admin-resources":

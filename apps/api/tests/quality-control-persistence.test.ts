@@ -8,6 +8,7 @@ import {
   type ExecutionPlanRecord,
   type ExecutionTask,
 } from "@workos-final/domain";
+import { writeWorkSessions } from "../src/execution/workSessionStore.js";
 import { insertExecutionPlanRecord } from "../src/execution/store.js";
 import {
   persistQualityCorrectionClose,
@@ -114,8 +115,12 @@ describe("quality control persistence", () => {
       ]),
     );
 
+    const tracked = task({ taskId: "task-qc", processId: INSPECT_FINISHED_LETTER_ID, status: "IN_PROGRESS", seq: 1,
+      workSessions: [{ sessionId: "qc-own", taskId: "task-qc", personId: "per-qc", personLabel: "Controlor", startedAt: "2026-09-27T08:00:00.000Z", endedAt: null, endKind: null }] });
+    writeWorkSessions(db, tracked, undefined);
     const failed = persistQualityFail(db, "task-qc", "per-qc", "Muchie vizibilă", "2026-09-27T10:00:00.000Z");
     expect(failed.ok).toBe(true);
+    expect(db.prepare("SELECT ended_at FROM execution_work_sessions WHERE session_id = 'qc-own'").get()).toEqual({ ended_at: null });
     const again = persistQualityFail(db, "task-qc", "per-qc", "Alt defect", "2026-09-27T10:01:00.000Z");
     expect(again).toMatchObject({ ok: false, error: "quality_correction_open" });
     const openRows = db
@@ -142,6 +147,7 @@ describe("quality control persistence", () => {
       return;
     }
     expect(passed.record.tasks.find((item) => item.taskId === "task-qc")?.status).toBe("COMPLETED");
+    expect(db.prepare("SELECT ended_at, end_kind FROM execution_work_sessions WHERE session_id = 'qc-own'").get()).toEqual({ ended_at: "2026-09-27T10:03:00.000Z", end_kind: "COMPLETED" });
     expect(passed.record.tasks.find((item) => item.taskId === "task-b")?.status).toBe("PLANNED");
     const duplicate = persistQualityPass(db, "task-qc", "per-qc", undefined, "2026-09-27T10:04:00.000Z");
     expect(duplicate).toMatchObject({ ok: true, alreadyApplied: true });

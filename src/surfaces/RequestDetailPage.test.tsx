@@ -221,7 +221,7 @@ describe("RequestDetailPage", () => {
     expect(screen.getByTestId("request-commercial-progress")).toHaveTextContent("Progres comercial");
     expect(screen.getByTestId("request-commercial-progress")).toHaveTextContent("Comandă creată");
     expect(screen.getByRole("link", { name: "Deschide comanda" })).toHaveAttribute("href", "/lucrari/asmo%3A1");
-    expect(screen.getByRole("link", { name: "Deschide execuția" })).toHaveAttribute("href", expect.stringContaining("plan%3A1"));
+    expect(screen.getByRole("link", { name: "Deschide în Atelier" })).toHaveAttribute("href", expect.stringContaining("plan%3A1"));
     expect(screen.getByText("Doar consultare (comandă acceptată)")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Alege produsul pentru această cerere" })).not.toBeInTheDocument();
     expect(screen.getByText("Adaugă altă lucrare la această cerere")).toBeInTheDocument();

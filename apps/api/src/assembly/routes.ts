@@ -290,20 +290,41 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
         candidate.productionInput = frozen.snapshot.productionInput;
       }
     }
-    const child = resolveConfirmedChildRecord(
+    const currentMember = definition.members.find(member => member.role === role);
+    const currentChild = currentMember
+      ? readConfirmedChild(plane.db, plane.organizationId, currentMember.confirmedTruthId)
+      : null;
+    // A technical-only confirmation must not reattach the original unpriced base
+    // after this assembly has already accepted a priced revision.
+    const keepCurrentPrice = !candidate.commercial && currentChild?.commercial &&
+      currentChild.unconfirmedRates && currentChild.truthHash === candidate.truthHash &&
+      currentChild.aggregateHash === candidate.aggregateHash;
+    const resolved = keepCurrentPrice ? currentChild : resolveConfirmedChildRecord(
       candidate,
       readConfirmedChild(plane.db, plane.organizationId, candidate.truthId),
     );
-    saveConfirmedChild(plane.db, child);
-    const attached = attachConfirmedChild(definition, child, role, new Date().toISOString());
-    if (!attached.ok) {
-      return c.json({ error: attached.error, reasons: attached.reasons }, 422);
-    }
-    saveAssemblyDefinition(plane.db, attached.definition);
+    const saved = plane.db.transaction(() => {
+      // Reuse the exact stored revision on retry, including its original timestamps.
+      const child = readConfirmedChild(plane.db, plane.organizationId, resolved.truthId) ?? resolved;
+      const latest = readAssemblyDefinition(plane.db, plane.organizationId, definition.assemblyId);
+      const refusal = assemblyMemberChangeRefusal({
+        membersEditable: !loadBundle(runtime, definition.assemblyId)?.order,
+      });
+      if (refusal) return { ok: false as const, status: 409 as const, body: refusal };
+      if (!latest) return { ok: false as const, status: 404 as const, body: { error: "not_found" } };
+      const attached = attachConfirmedChild(latest, child, role, new Date().toISOString());
+      if (!attached.ok) return { ok: false as const, status: 422 as const, body: { error: attached.error, reasons: attached.reasons } };
+      saveConfirmedChild(plane.db, child);
+      saveAssemblyDefinition(plane.db, attached.definition);
+      return { ok: true as const, child, definition: attached.definition };
+    }).immediate();
+    if (!saved.ok) return c.json(saved.body, saved.status);
     return c.json({
-      assembly: presentCurrent(runtime, attached.definition.assemblyId, c),
-      productLabel: child.productLabel,
-      inscription: child.inscription,
+      assembly: presentCurrent(runtime, saved.definition.assemblyId, c),
+      role,
+      confirmed: presentConfirmedAssemblyMember(saved.child, isOwner(c)),
+      productLabel: saved.child.productLabel,
+      inscription: saved.child.inscription,
     });
   });
 
@@ -458,15 +479,18 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     const body = await c.req.json().catch(() => null);
     const runtime = getProductSystem(c);
     const assemblyId = c.req.param("assemblyId");
-    const planned = planAssemblyAcceptance(runtime, {
-      assemblyId,
-      quoteSnapshotId: readString(body, "quoteSnapshotId"),
-      createdAt: new Date().toISOString(),
-    });
+    const planned = runtime.assemblyPlane().db.transaction(() => {
+      const result = planAssemblyAcceptance(runtime, {
+        assemblyId,
+        quoteSnapshotId: readString(body, "quoteSnapshotId"),
+        createdAt: new Date().toISOString(),
+      });
+      if (result.ok) saveAssemblyOrder(runtime.assemblyPlane().db, result.order);
+      return result;
+    }).immediate();
     if (!planned.ok) {
       return c.json(planned.body, planned.status);
     }
-    saveAssemblyOrder(runtime.assemblyPlane().db, planned.order);
     return c.json({
       assembly: presentCurrent(runtime, assemblyId, c),
       order: {

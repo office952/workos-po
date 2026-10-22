@@ -154,7 +154,7 @@ describe("GET /api/operator-task-inbox", () => {
     ).toBe(0);
   });
 
-  it("moves a claimed task into inProgressMine and hides it from Andrei", async () => {
+  it("keeps active participation mine and makes a running task joinable to eligible Andrei", async () => {
     const { app, runtime } = createIsolatedApp();
     const job = await createPlanWithInscription(app, "CLAIM-INBOX");
     await assignProvider(app, String(job.backCnc.taskId));
@@ -183,7 +183,7 @@ describe("GET /api/operator-task-inbox", () => {
       ((andreiInbox.inbox as JsonObject).availableReady as Array<JsonObject>).find(
         (item) => item.taskId === job.backCnc.taskId,
       ),
-    ).toBeUndefined();
+    ).toMatchObject({ canClaimStart: true, lane: "available_ready" });
   });
 
   it("shows unique CNC work as claimable without a prior provider click", async () => {

@@ -84,6 +84,14 @@ describe("task dossier cloud tenancy", () => {
       expect(file?.usedAt).toBeNull();
       const artifactId = String(file?.artifactId);
 
+      const ownRecord = await fixture.app.request(`/api/jobs/${encodeURIComponent(jobA)}/record`, { headers: { cookie: cookieA } });
+      expect(ownRecord.status).toBe(200);
+      const ownFiles = (((await ownRecord.json()) as Obj).record as Obj).files as Obj[];
+      expect(ownFiles.map(f => f.artifactId)).toContain(artifactId);
+      expect((await fixture.app.request(`/api/jobs/${encodeURIComponent(jobA)}/record`, { headers: { cookie: cookieB } })).status).toBe(404);
+      const otherRecord = await fixture.app.request(`/api/jobs/${encodeURIComponent(jobB)}/record`, { headers: { cookie: cookieB } });
+      expect(((((await otherRecord.json()) as Obj).record as Obj).files as Obj[]).map(f => f.artifactId)).not.toContain(artifactId);
+
       const foreignDownload = await fixture.app.request(
         `/api/execution-artifacts/${encodeURIComponent(artifactId)}/download`,
         { headers: { cookie: cookieB } },
