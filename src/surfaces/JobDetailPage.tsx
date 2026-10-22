@@ -22,12 +22,18 @@ import { loadExecutionPlan, loadJobDetail } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { presentJobLifecycle } from "../presentation/jobLifecycle";
+import {
+  presentJobSheetLead,
+  presentJobSheetSecondary,
+  presentJobSheetTitle,
+} from "../presentation/jobSheetIdentity";
 import { formatQuantity } from "../presentation/format";
 import { statusTone } from "../presentation/statusTone";
 import { atelierHref, executionHref, jobHref, quoteHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
 import { SiteInstallationContextPanel } from "./SiteInstallationContextPanel";
 import { ExecutionActualConsumptionHistory } from "./ExecutionActualConsumption";
+import { JobMaterialPreparation } from "./JobMaterialPreparation";
 import type { ExecutionTaskTransport } from "../api/types";
 
 type JobDetailPageProps = {
@@ -199,9 +205,10 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
       contextLabel="Lucrare"
       currentHref={jobHref(jobId)}
       workspace="traveler"
+      headerVariant="pilot-compact"
       eyebrow="Lucrare"
-      title={job?.inscription || job?.productLabel || "Lucrare"}
-      lead="Eliberează producția, materializează planul și compară planificat cu realizat."
+      title={job ? presentJobSheetTitle(job) : "Lucrare"}
+      lead={job ? presentJobSheetLead(job) : "Se citește lucrarea."}
       meta={job?.customerDisplayName ?? undefined}
       status={
         job ? (
@@ -238,7 +245,10 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
         <>
           <SurfacePanel title="Identitate" label="Identitate">
             <dl className="fact-grid">
-              <InfoRow label="Lucrare" value={job.productLabel} />
+              <InfoRow label="Lucrare" value={presentJobSheetTitle(job)} />
+              {presentJobSheetSecondary(job) ? (
+                <InfoRow label="Inscripție" value={presentJobSheetSecondary(job) ?? ""} />
+              ) : null}
               <InfoRow label="Client" value={job.customerDisplayName ?? "—"} />
               <InfoRow label="Tip" value={job.kindLabel} />
               <InfoRow label="Prioritate" value={job.priorityLabel} />
@@ -310,6 +320,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
           {jobResource.data?.siteInstallation ? (
             <SiteInstallationContextPanel context={jobResource.data.siteInstallation} />
           ) : null}
+          <JobMaterialPreparation jobId={jobId} />
           <SurfacePanel
             title="Traseu de producție"
             description="Ghid din starea lucrării. Nu este planul de producție."

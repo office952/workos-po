@@ -97,7 +97,7 @@ export function invalidateAfterProductionRelease(jobId: string): void {
 }
 
 export function invalidateAfterCreateExecutionPlan(jobId: string): void {
-  invalidateResources(resourceKeys.job(jobId), resourceKeys.jobs());
+  invalidateResources(resourceKeys.job(jobId), resourceKeys.jobs(), resourceKeys.jobMaterialPreparation(jobId));
   invalidateCustomerProjections();
 }
 
@@ -110,6 +110,12 @@ export function invalidateAfterExecutionTaskChange(planId: string): void {
   );
   invalidateResourcePrefix(resourceKeys.jobPrefix());
   invalidateCustomerProjections();
+}
+
+export function invalidateAfterJobMaterialDecision(jobId: string): void {
+  invalidateResources(resourceKeys.jobMaterialPreparation(jobId), resourceKeys.operatorInbox());
+  invalidateResourcePrefix("execution-plan:");
+  invalidateResourcePrefix(resourceKeys.jobPrefix());
 }
 
 export function invalidateAfterOperatorSessionChange(): void {

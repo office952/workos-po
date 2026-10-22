@@ -289,6 +289,14 @@ import {
   upsertMaterialConfirmation,
 } from "../execution/materialReadinessStore.js";
 import {
+  listJobMaterialRequests,
+  readJobMaterialPreparation,
+  recordJobMaterialDecision,
+  type JobMaterialDecisionInput,
+  type JobMaterialPreparation,
+  type JobMaterialRequest,
+} from "../materials/store.js";
+import {
   createStoredExternalProductionProvider,
   externalProductionProjection,
   listExternalProductionProviders,
@@ -431,6 +439,12 @@ export type ProductSystemRuntime = {
   }):
     | { ok: true; confirmation: MaterialReadinessConfirmation; alreadyApplied: boolean }
     | { ok: false; error: MaterialConfirmationError };
+  readJobMaterialPreparation(jobId: string): JobMaterialPreparation | null;
+  decideJobMaterial(
+    input: Omit<JobMaterialDecisionInput, "organizationId" | "record">,
+  ): ReturnType<typeof recordJobMaterialDecision> |
+    { ok: false; error: "job_not_found" | "plan_missing" };
+  listJobMaterialRequests(): JobMaterialRequest[];
   externalProductionContext(): ExternalExecutionProjection;
   readExternalProductionHandoff(): ExternalProductionHandoffModeRecord;
   setExternalProductionHandoffMode(
@@ -1020,6 +1034,34 @@ export function createProductSystemRuntimeFromOpenDb(
         confirmation: result.confirmation,
         alreadyApplied: result.unchanged,
       };
+    },
+    readJobMaterialPreparation(jobId) {
+      const job = projectJobOverview(
+        jobOverviewItems(db, currentProviderRegistry(), currentEligibility(), currentOrganizationId()),
+      ).jobs.find((item) => item.jobId === jobId);
+      if (!job) {
+        return null;
+      }
+      const record = job.planId ? getExecutionPlanRecord(db, job.planId) : null;
+      return readJobMaterialPreparation(db, currentOrganizationId(), jobId, record);
+    },
+    decideJobMaterial(input) {
+      const job = projectJobOverview(
+        jobOverviewItems(db, currentProviderRegistry(), currentEligibility(), currentOrganizationId()),
+      ).jobs.find((item) => item.jobId === input.jobId);
+      if (!job) {
+        return { ok: false, error: "job_not_found" };
+      }
+      const record = job.planId ? getExecutionPlanRecord(db, job.planId) : null;
+      if (!record) {
+        return { ok: false, error: "plan_missing" };
+      }
+      return recordJobMaterialDecision(db, {
+        ...input, record, organizationId: currentOrganizationId(),
+      });
+    },
+    listJobMaterialRequests() {
+      return listJobMaterialRequests(db, currentOrganizationId());
     },
     externalProductionContext() {
       return externalProductionProjection(db);

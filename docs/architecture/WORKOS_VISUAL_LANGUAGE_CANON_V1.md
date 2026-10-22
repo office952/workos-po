@@ -1,7 +1,11 @@
 # WorkOS visual language canon V1
 
-Status: OWNER-DIRECTED VISUAL CANON
-Applies to: future WorkOS UI/UX work unless a later explicit Owner decision changes it.
+```text
+STATUS = SUPERSEDED
+CURRENT_UIUX_AUTHORITY = docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md
+```
+
+Owner decision, 2026-10-16: this document is no longer the visual canon. The identity, 70/30 ratio, and palette guidance below are historical provenance. Do not apply them as current design rules.
 
 ## Core identity
 
@@ -274,9 +278,10 @@ Do not invent business states that do not exist in Product Truth/API contracts.
 
 ## Relationship to Figma and runtime
 
-Authority order for presentation decisions:
+This order is historical. It does not govern current presentation decisions. Use `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md`.
 
 ```text
+HISTORICAL_ORDER =
 1. explicit Owner decision
 2. this visual-language canon
 3. Owner-accepted Figma authority for surfaces/nodes it actually covers

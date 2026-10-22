@@ -51,6 +51,6 @@ Every personality still answers:
 - what should I do next
 - what happens if I act
 
-Shared language: `CALM INSTRUMENT`, existing tokens, existing shell grammar, Romanian operator UI, no second visual system.
+Shared language: the current UI/UX policy, the existing shell, Romanian operator UI, and one product. Do not invent a second visual system, and do not require the retired industrial identity.
 
 Personality changes rhythm, density, and dominant spatial idea. It does not change Product Truth.

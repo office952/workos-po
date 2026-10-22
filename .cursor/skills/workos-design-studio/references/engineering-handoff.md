@@ -28,7 +28,7 @@ PRIMARY_HIERARCHY
 INTERACTION_INTENT
 RESPONSIVE_INTENT
 STATE_INTENT
-FIGMA_OR_VISUAL_REFERENCE
+EXPERIENCE_REFERENCE
 KNOWN_CONSTRAINTS
 DO_NOT_INVENT
 ```
@@ -42,7 +42,7 @@ DO_NOT_INVENT
 - `INTERACTION_INTENT` — what the user does, not the React tree.
 - `RESPONSIVE_INTENT` — how the dominant idea survives 1440 / 1280 / 768.
 - `STATE_INTENT` — loading, empty, blocked, ready, error — only states that already exist or are marked `NOT_IMPLEMENTED`.
-- `FIGMA_OR_VISUAL_REFERENCE` — accepted node, partial reference, silent, or explicit off-Figma exploration. Never treat a runtime screenshot as authority.
+- `EXPERIENCE_REFERENCE` — the operator task and any explicit Owner direction. Figma is not required. A runtime screenshot is evidence, not a permanent visual canon.
 - `KNOWN_CONSTRAINTS` — Product Truth, permissions, frozen snapshots, Configurator hold, token/shell hold.
 - `DO_NOT_INVENT` — fields, statuses, routes, formulas, libraries, and visual systems that remain closed.
 
@@ -54,4 +54,4 @@ WORKOS PO API → typed transport → adapter → presentation → UI
 
 UI may code experience. UI must not duplicate ProductDefinition, formulas, pricing, readiness, eligibility, execution state, or database truth.
 
-`FIGMA_WRITE = NO` unless a later Owner GO says otherwise.
+`FIGMA_WRITE = NO` unless a later Owner GO says otherwise. Figma is not the current UI/UX authority.

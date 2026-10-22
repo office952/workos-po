@@ -2,7 +2,7 @@
 
 Design judgment. Not CSS values. Not tokens. Not a component library.
 
-Reference `CALM INSTRUMENT` from `docs/FIGMA_AUTHORITY.md`. Do not replace it.
+Follow `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md`. Do not treat a retired visual identity as the taste standard.
 
 ## Order of attention
 

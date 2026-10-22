@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { resetResourceCache } from "../data/resourceCache";
 import { ExecutionPage } from "./ExecutionPage";
 
 afterEach(() => {
@@ -458,6 +459,148 @@ describe("ExecutionPage", () => {
       "href",
       "/executie/exp%3A1?task=task-cut&job=ord-1",
     );
+  });
+
+  it("shows the plan material on the operation when readiness lines are not adopted", async () => {
+    resetResourceCache();
+    const led = {
+      taskId: "task-led",
+      processLabel: "Montare module LED",
+      status: "PLANNED",
+      statusLabel: "Planificat",
+      canComplete: false,
+      requiresCompletedQuantity: true,
+      plannedValue: 125,
+      completedQuantityLabel: null,
+      varianceLabel: null,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/operator-session")) {
+          return jsonResponse({
+            operator: { personId: "per:maria", displayName: "Maria Ansamblu Demo" },
+          });
+        }
+        if (url.includes("/material-preparation")) {
+          return jsonResponse({
+            preparation: {
+              jobId: "job-led",
+              planId: "exp:1",
+              lines: [
+                {
+                  resourceId: "MAT-LED-MODULE",
+                  label: "Modul LED 12V",
+                  unit: "buc",
+                  estimatedQuantity: 125,
+                  taskIds: ["task-led"],
+                  canCheck: true,
+                  latestCheck: null,
+                  openRequest: null,
+                },
+              ],
+            },
+          });
+        }
+        const plan = planPayload([led]);
+        const executionPlan = plan.executionPlan as { tasks: Array<Record<string, unknown>> };
+        executionPlan.tasks[0] = {
+          ...executionPlan.tasks[0],
+          resourceDemands: [
+            { resourceId: "SVC-PLACE-LED-MODULES", label: "Montare module LED", quantity: 125, unit: "buc" },
+            { resourceId: "MAT-LED-MODULE", label: "Modul LED 12V", quantity: 125, unit: "buc" },
+          ],
+          materialLines: [],
+          materialParticipation: "NOT_ADOPTED",
+        };
+        return jsonResponse({ ...plan, job: { jobId: "job-led", href: "/jobs/job-led" } });
+      }),
+    );
+
+    render(<ExecutionPage planId="exp:1" taskId="task-led" jobId="job-led" />);
+
+    expect(await screen.findByRole("heading", { name: "Materiale pentru operație" })).toBeInTheDocument();
+    expect(screen.getByText("Modul LED 12V")).toBeInTheDocument();
+    expect(screen.getByText(/Necesar estimat total pe lucrare: 125/)).toBeInTheDocument();
+    expect(screen.queryByText("Montare module LED", { selector: "strong" })).not.toBeInTheDocument();
+  });
+
+  it("warns that a missing material does not hide the engine start action", async () => {
+    resetResourceCache();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/operator-session")) {
+          return jsonResponse({
+            operator: { personId: "per:maria", displayName: "Maria Ansamblu Demo" },
+          });
+        }
+        if (url.includes("/material-preparation")) {
+          return jsonResponse({
+            preparation: {
+              jobId: "job-led",
+              planId: "exp:1",
+              lines: [
+                {
+                  resourceId: "MAT-LED-MODULE",
+                  label: "Modul LED 12V",
+                  unit: "buc",
+                  estimatedQuantity: 125,
+                  taskIds: ["task-led"],
+                  canCheck: true,
+                  latestCheck: {
+                    status: "MISSING",
+                    checkedByLabel: "Maria Ansamblu Demo",
+                    checkedAt: "2026-10-16T01:39:00.000Z",
+                  },
+                  openRequest: {
+                    requestId: "mreq:secret-id",
+                    requestedQuantity: 125,
+                    unit: "buc",
+                    status: "REQUESTED",
+                    requestedByLabel: "Maria Ansamblu Demo",
+                    requestedAt: "2026-10-16T01:39:00.000Z",
+                    requiresReview: false,
+                  },
+                },
+              ],
+            },
+          });
+        }
+        const plan = planPayload([
+          {
+            taskId: "task-led",
+            processLabel: "Montare module LED",
+            status: "PLANNED",
+            statusLabel: "Planificat",
+            canComplete: false,
+            requiresCompletedQuantity: true,
+            plannedValue: 125,
+            completedQuantityLabel: null,
+            varianceLabel: null,
+          },
+        ]);
+        const executionPlan = plan.executionPlan as { tasks: Array<Record<string, unknown>> };
+        executionPlan.tasks[0] = {
+          ...executionPlan.tasks[0],
+          canClaimStart: true,
+          resourceDemands: [
+            { resourceId: "MAT-LED-MODULE", label: "Modul LED 12V", quantity: 125, unit: "buc" },
+          ],
+          materialLines: [],
+          materialParticipation: "NOT_ADOPTED",
+          materialBlockLabel: null,
+        };
+        return jsonResponse({ ...plan, job: { jobId: "job-led", href: "/jobs/job-led" } });
+      }),
+    );
+
+    render(<ExecutionPage planId="exp:1" taskId="task-led" jobId="job-led" />);
+
+    expect(await screen.findByText(/Avertisment: materialul nu este suficient/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pornește" })).toBeEnabled();
   });
 
   it("keeps a deep-linked completed task selected so history stays inspectable", async () => {
@@ -2243,5 +2386,79 @@ describe("ExecutionPage missing-provider guidance", () => {
     expect(
       fetchMock.mock.calls.some(([url]) => String(url).endsWith("/api/workcenters")),
     ).toBe(false);
+  });
+
+  it("keeps completed quantity in the close step and shows a dependency without that field", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/operator-session")) {
+          return jsonResponse({
+            operator: { personId: "per:andrei", displayName: "Andrei Goghi" },
+          });
+        }
+        return jsonResponse({
+          executionPlan: {
+            plan: { planId: "exp:1", productLabel: "Litere", inscription: "WORKOS" },
+            statusLabel: "În lucru",
+            progress: {
+              total: 2,
+              completed: 0,
+              inProgress: 1,
+              planned: 1,
+              waitingDependencies: 1,
+              noProvider: 0,
+              varianceCount: 0,
+            },
+            tasks: [
+              {
+                ...taskPayload({
+                  taskId: "task-cut",
+                  processLabel: "Debitare foaie CNC",
+                  status: "IN_PROGRESS",
+                  statusLabel: "În lucru",
+                  canComplete: true,
+                  requiresCompletedQuantity: true,
+                  plannedValue: 12.5,
+                  completedQuantityLabel: null,
+                  varianceLabel: null,
+                }),
+                completionBlockedByActiveMachineRun: true,
+                canStopMachineRun: true,
+                activeMachineRunLabel: "Router 1",
+                activeMachineRunStartedLabel: "08:10",
+                machineRuns: [{ machineRunId: "run-1", active: true }],
+              },
+              {
+                ...taskPayload({
+                  taskId: "task-wait",
+                  processLabel: "Montare module LED",
+                  status: "PLANNED",
+                  statusLabel: "Planificat",
+                  canComplete: false,
+                  requiresCompletedQuantity: true,
+                  plannedValue: 125,
+                  completedQuantityLabel: null,
+                  varianceLabel: null,
+                }),
+                waitingFor: ["Debitare foaie CNC"],
+              },
+            ],
+          },
+        });
+      }),
+    );
+
+    render(<ExecutionPage planId="exp:1" taskId="task-wait" />);
+    expect(await screen.findByRole("heading", { name: "Următorul pas" })).toBeInTheDocument();
+    expect(screen.getAllByText("Așteaptă: Debitare foaie CNC").length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText("Cantitate realizată")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Pornește" })).not.toBeInTheDocument();
+
+    render(<ExecutionPage planId="exp:1" taskId="task-cut" />);
+    expect(await screen.findByLabelText("Cantitate realizată")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Închide sarcina" })).toBeDisabled();
+    expect(screen.getByText("Oprește rularea utilajului înainte de a închide sarcina.")).toBeInTheDocument();
   });
 });
