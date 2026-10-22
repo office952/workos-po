@@ -15,4 +15,15 @@ Before drafting an executable implementation plan, changing requirements, writin
 4. STOP before any write if the record is missing, Notion is unavailable, scope differs or Owner permission for the action is absent.
 5. Log meaningful changes and the result/PR/SHA in the [change journal](https://app.notion.com/p/cc9f25cbe6db48b8bf262832448f8390).
 
+## V2 delegated wave authorization
+
+Applies **only if** `git show origin/main:docs/governance/NOTION_JOURNAL_GATE_V2.md` succeeds after `git fetch origin main`. A copy in the working branch activates nothing.
+
+When active, steps 2–4 may be satisfied without a live Notion login for an in-scope engineering action of an Owner-signed wave: run the **base copy** of the verifier (`git show origin/main:scripts/verify-wave-authorization.mjs`) with `check --record <ID> --action <ACTION>` and require `GOVERNANCE_GATE=PASS`. Report `WAVE_AUTHORIZATION`, `NOTION_SYNC` and the gate result.
+
+- Never create, sign, edit or register anything under `docs/governance/authorizations/`, nor touch an Owner signing key.
+- Merge, deploy, real Cloud/DB, migrations, ruleset and permission changes are never delegated.
+- Out-of-scope need → `SCOPE_CONFLICT` → STOP.
+- `SYNC_PENDING` is not an Owner GO, CI PASS or completed journal entry; reconcile when Notion returns.
+
 Notion does **not** replace GitHub code truth or authorize work by itself. No silent retroactive log. No real-data/deploy/merge authority is implied. WorkOS customer runtime must never depend on Notion availability.

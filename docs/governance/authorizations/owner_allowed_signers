@@ -1,0 +1,6 @@
+# WorkOS Owner signing keys for Governance V2 wave authorizations.
+# Format (ssh-keygen ALLOWED SIGNERS):
+#   <principal> namespaces="workos-wave-authorization" <public key>
+# Only the Owner adds or removes keys, through the Owner's own explicit action.
+# Agents never edit this file. CI refuses any change to it.
+# Intentionally empty: no V2 wave is executable until the Owner registers a key.
