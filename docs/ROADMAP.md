@@ -12,7 +12,7 @@ NO PARALLEL PRODUCT TRUTH
 
 ## Current: PILOT-0 truth and readiness
 
-Living status as of 2026-10-14. Verified `main` is `162e98a5470211dc62cce6198e8cc58593fae158` (PR #75 merge); WorkOS Verify succeeded on that push. Later sections are historical records unless they say otherwise. Merge alone is never Owner acceptance.
+Living status reconciled on 2026-10-15 against GitHub `main` at observed baseline `aa3ce72b879792c064e8c549fd9f48de89235979` (PR #81 merge; PR #78 manual-first integrated; PR #76 V4 integrated). This is the verified source baseline **before the later documentation PR #80 merge**, not a permanently current main SHA or a claim of new Owner visual acceptance or real-environment pilot readiness. CI and runtime evidence apply only to their exact tested SHA. Later sections are historical records unless they say otherwise. Merge alone is never Owner acceptance.
 
 ### UI/UX authority (2026-10-16)
 
@@ -24,7 +24,7 @@ N-009 (PR #85, integrated on 2026-10-22) keeps a missing-material check as an ad
 
 ```text
 CURRENT_MILESTONE = PILOT-0_TRUTH_AND_READINESS
-MAIN = 162e98a5470211dc62cce6198e8cc58593fae158
+MAIN_LAST_VERIFIED_BASE = aa3ce72b879792c064e8c549fd9f48de89235979 (2026-10-15, before docs-only PR #80)
 SYNTHETIC_OPERATOR_RECOVERY_DRILL = EXECUTED / PASS / OWNER_ACCEPTANCE_PENDING
 DEPLOY_ROLLBACK_INCIDENT_RUNBOOK = TEMPLATE / NOT_EXECUTED / NOT_ACCEPTED
 REAL_ENVIRONMENT_PREFLIGHT = NOT_RUN / TARGET_NOT_IDENTIFIED
@@ -33,12 +33,18 @@ CUTOVER = HOLD
 REAL_CLOUD_WRITE = HOLD
 REAL_DB_WRITE = HOLD
 FIRST_REAL_BUSINESS_OPERATION = HOLD / NOT_AUTHORIZED
-ASSEMBLY_PRODUCTION_EIC = PARTIAL on main; V4 candidate below / NOT_MERGED
+ASSEMBLY_PRODUCTION_EIC = V4 OPERATION COST LOGIC INTEGRATED (PR #76); COMPLETENESS DEPENDS ON ORG EVIDENCE / NO PILOT COMPLETE CLAIM
 ASSEMBLY_QUOTE_PDF = INTEGRATED (PR #71) / OWNER_ACCEPTANCE_NOT_RECORDED
 ASSEMBLY_COMMERCIAL_ACCEPTANCE_V2 = INTEGRATED (PR #74) / OWNER_ACCEPTANCE_NOT_RECORDED
 V3_REQUEST_QUOTE_CUSTOMER_COHERENCE = INTEGRATED (PR #75) / OWNER_ACCEPTANCE_NOT_RECORDED
-V4_ASSEMBLY_PRODUCTION_EIC = CANDIDATE / NOT_MERGED / OWNER_ACCEPTANCE_NOT_RECORDED
+V4_ASSEMBLY_PRODUCTION_EIC = INTEGRATED (PR #76) / OWNER_ACCEPTANCE_NOT_RECORDED
+MIGRATION_041_CODE = INTEGRATED (PR #76) / ORGANIZATION PLANE
 MIGRATION_041_REAL_APPLICATION = HOLD / SEPARATE_APPROVED_PROCEDURE_REQUIRED
+NOTION_JOURNAL_GATE_V1 = INTEGRATED (PR #77) / CI METADATA FORMAT ONLY; LIVE NOTION GO NOT AUTOMATICALLY VERIFIED
+R001A_MANUAL_FIRST = INTEGRATED (PR #78) / POSTMERGE CI PASS / OWNER_VISUAL_ACCEPTANCE_PENDING
+R002_UX_V1 = INTEGRATED (PR #81) / POSTMERGE CI PASS / OWNER_VISUAL_ACCEPTANCE_PENDING
+N003_OPERATOR_E2E = 9/12 REPORTED SYNTHETIC PASS / F04 F09 F12 PENDING / OWNER_ACCEPTANCE_PENDING
+N007_GOVERNANCE_V2 = PR #79 DRAFT / NOT_MERGED / V1 REMAINS ACTIVE
 PILOT_GATE_A = HOLD
 PILOT_GATE_B = HOLD
 ```
@@ -151,17 +157,23 @@ Direction accepted; source candidate implemented on PR #92, runtime/visual valid
 | V1 operational safety and assembly VAT clarity (F04) | #73 `474ce5d` | Integrated | Not recorded |
 | V2 assembly commercial flow: acceptance on the exact frozen quote, P1 stale-configuration refusal | #74 `498f3ca` | Integrated | Not recorded |
 | V3 unified request, quote and customer commercial history | #75 `162e98a` | Integrated | Not recorded |
+| V4 assembly operation EIC and migration 041 code | #76 `bdf6904` | Integrated; per-organization cost completeness needs configured evidence, not a pilot pass | Not recorded |
+| Notion journal policy V1 and PR metadata CI guard | #77 `1a7bd6d` | Integrated; metadata syntax check does not verify live Notion authorization | Governance rule Owner-approved; no separate runtime acceptance |
+| R-001A manual-first offer pricing | #78 `31e5cac` | Integrated; verified exact SHA post-merge [WorkOS Verify](https://github.com/office952/workos-po/actions/runs/38644745895); EIC PARTIAL acceptance remains blocked | Visual acceptance not recorded |
+| R-002 UX V1 operator clarity | #81 `aa3ce72` | Integrated; verified exact SHA post-merge [WorkOS Verify](https://github.com/office952/workos-po/actions/runs/38688912646); QC/member browser follow-ups pending | Visual acceptance not recorded |
 
-Not integrated: draft #62 (synthetic staging gate), draft #63 (flat BACK; #66 kept its BACK rules and discarded the separate SKU) and open #65 (superseded by #66). PILOT-0 does not close or change them.
+Not integrated: draft #62 (synthetic staging gate), draft #63 (flat BACK; #66 kept its BACK rules and discarded the separate SKU), open #65 (superseded by #66) and draft #79 (Governance V2). PILOT-0 does not close or change them. The N-005 documentation reconciliation and merge evidence are tracked in Notion; this snapshot is not itself a claim about its PR merge state.
 
 ### Incomplete
 
-- Assembly production costing stays `PARTIAL` on `main`: mounting, final assembly inspection and assembly packaging have no cost evidence, and `reconcileAssemblyEic` cannot price assembly operations yet. Assemblies are excluded from cost-complete pilot claims. The V4 candidate below prices them from organization evidence; it is not merged.
-- Migration 041 (V4 candidate) runs automatically the first time a database is opened by a build that contains it. Applying it to any real database needs a separate Owner-approved procedure (backup, target identification, verification); merging V4 does not authorize it.
+- V4 assembly-operation costing is present on `main`: the domain can reconcile mounting, final inspection and packaging from versioned organization cost evidence. Without configured evidence/policies, individual operations remain gaps and their EIC stays `PARTIAL`; no blanket assembly cost-complete pilot claim is justified.
+- Migration 041 code is integrated through PR #76 and runs automatically when a database is first opened by a containing build. Opening or applying it to a **real** organization database remains on HOLD pending a separately approved procedure (backup, target identification, recovery and verification). Integration does not authorize real migration.
+- Manual-first R-001A is integrated, but commercial quote acceptance and order creation still require EIC COMPLETE; an EIC PARTIAL quote may be frozen but cannot be accepted or ordered under the current contract (AUD-PRICING-002 remains an open Owner business decision). Do not silently bypass the release gate.
+- The operator E2E journey was reported synthetically for nine Fxx scenarios on an equivalent source tree; F04/F09/F12 remain PENDING, QC browser chronology and member-role browser session are unverified. This is not a full-matrix or Owner visual acceptance.
 - Real-environment preflight not run; target environment and operator not identified.
 - Production deployment not authorized; deploy artifact form and host stop mechanism not decided.
 - First real job not authorized; no pilot organization provisioned or configured with Owner-confirmed rates.
-- Owner acceptance of the PR #54–#75 work above is not recorded.
+- Owner visual acceptance of recent integrations through PR #81 must be checked per work item; GitHub merge/CI alone does not imply acceptance. The recorded PILOT-0 business gates remain on HOLD.
 
 ### PILOT-0 evidence
 
@@ -1012,6 +1024,8 @@ PRICING_VAT_ACCEPTANCE_CHANGE = NO
 The customer registry, customer workspace and request detail read the same composition as Oferte (`commercialQuoteOverview` in the API runtime): every frozen product and assembly snapshot once, with its existing stage, superseded flag and order. An assembly quote belongs to a customer only through its persisted `requestId` and that request's customer (the request customer is locked once a quote is linked); a quote without a request is never attached to a customer or request. Request linked offers keep product links first, then every assembly snapshot of that request, so historical versions stay separately traceable and the request's `OPEN_QUOTE` target is unchanged. The request list (Cereri) projection is unchanged. Client and request rows open product quotes on the product route and assembly quotes on `/oferte/ansamblu/:id`; superseded versions without an order show the server's superseded label instead of an acceptance stage.
 
 ## V4 Assembly Production EIC
+
+Integrated on `main` by PR #76 (`bdf6904048f253f0639fdd98e1db26347c6b258c`, 2026-10-14). The candidate flags and branch/base below are **historical pre-merge evidence**; real application of migration 041 remains HOLD.
 
 ```text
 V4_ASSEMBLY_PRODUCTION_EIC = CANDIDATE / NOT_MERGED / OWNER_ACCEPTANCE_NOT_RECORDED
