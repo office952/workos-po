@@ -125,10 +125,21 @@ export function AccountArea({
         }}
         onKeyDown={onTriggerKeyDown}
       >
-        Cont
+        <svg className="account-area__icon" aria-hidden="true" viewBox="0 0 20 20">
+          <circle cx="10" cy="7" r="3.25" />
+          <path d="M3.75 17c.9-3.1 3.3-4.75 6.25-4.75s5.35 1.65 6.25 4.75" />
+        </svg>
+        <span className="account-area__trigger-label">Cont</span>
+        <svg className="account-area__chevron" aria-hidden="true" viewBox="0 0 20 20">
+          <path d="M5.5 8 10 12.5 14.5 8" />
+        </svg>
       </button>
       {open ? (
         <div id={menuId} className="account-area__menu" role="menu" aria-label="Cont">
+          <p className="account-area__menu-org" role="presentation">
+            {organizationName}
+            {roleLabel ? <span> · {roleLabel}</span> : null}
+          </p>
           <p className="account-area__user" title={userLabel} role="presentation">
             {userLabel}
           </p>

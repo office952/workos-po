@@ -13,7 +13,8 @@ import { SlicePage } from "../layout/SlicePage";
 import { presentContextMeta } from "../presentation/contextMeta";
 import { formatMoney } from "../presentation/format";
 import { assemblyHref, assemblyQuoteHref, jobHref, requestHref } from "../routing/appRoute";
-import { QuoteLines, QuoteRelations, QuoteSummary, type QuoteLine, type QuoteRelation, type QuoteTotal } from "./quoteDetail";
+import { QuoteLines, QuoteRelations, QuoteSummary, type QuoteRelation } from "./quoteDetail";
+import { presentAssemblyQuoteLines, presentAssemblyQuoteTotal } from "./quoteDocumentModel";
 import { useAssemblyQuoteDocument } from "./useAssemblyQuoteDocument";
 import "../styles/surfaces/offers.css";
 
@@ -22,46 +23,6 @@ type AssemblyQuotePageProps = {
 };
 
 type AcceptanceRefusal = Exclude<AssemblyQuoteAcceptanceResult, { ok: true }>;
-
-function sharedVatPercent(quote: AssemblyQuoteTransport): number | null {
-  const rates = new Set(quote.sections.map((section) => section.vatPercent));
-  return rates.size === 1 ? [...rates][0] ?? null : null;
-}
-
-function presentTotal(quote: AssemblyQuoteTransport): QuoteTotal {
-  return { ...quote.totals, vatPercent: sharedVatPercent(quote) };
-}
-
-function presentLines(quote: AssemblyQuoteTransport): QuoteLine[] {
-  const sections: QuoteLine[] = quote.sections.map((section) => ({
-    key: section.memberId,
-    title: section.roleLabel,
-    detail: [section.productLabel === section.roleLabel ? null : section.productLabel, section.inscription]
-      .filter(Boolean)
-      .join(" · ") || null,
-    netPrice: section.netPrice,
-    vatPercent: section.vatPercent,
-    vatAmount: section.vatAmount,
-    grossPrice: section.grossPrice,
-    currency: section.currency,
-  }));
-  const service = quote.serviceSection;
-  return service
-    ? [
-        ...sections,
-        {
-          key: "service",
-          title: service.label,
-          detail: "Serviciu",
-          netPrice: service.netPrice,
-          vatPercent: null,
-          vatAmount: service.vatAmount,
-          grossPrice: service.grossPrice,
-          currency: service.currency,
-        },
-      ]
-    : sections;
-}
 
 function presentRelations(quote: AssemblyQuoteTransport, orderSnapshotId: string | null): QuoteRelation[] {
   return [
@@ -196,7 +157,7 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
         {quote && item ? (
           <>
             <QuoteSummary
-              total={presentTotal(quote)}
+              total={presentAssemblyQuoteTotal(quote)}
               unavailableNote="Totalul ofertei nu este disponibil."
               facts={[
                 { label: "Stare", value: item.stageLabel },
@@ -278,7 +239,7 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
                 </InlineAlert>
               ) : null}
             </QuoteSummary>
-            <QuoteLines caption="Secțiuni ofertă" lines={presentLines(quote)} total={presentTotal(quote)} lineTax />
+            <QuoteLines caption="Secțiuni ofertă" lines={presentAssemblyQuoteLines(quote)} total={presentAssemblyQuoteTotal(quote)} lineTax />
             {quote.internalCost ? <InternalCostPanel cost={quote.internalCost} /> : null}
             {quote.internalCost === null ? (
               <p className="ui-note">Costul intern nu poate fi urmărit pentru această ofertă.</p>

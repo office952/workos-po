@@ -43,6 +43,17 @@ PILOT_GATE_A = HOLD
 PILOT_GATE_B = HOLD
 ```
 
+### Oferte · Masa de ofertare — locally accepted candidate N-012 (2026-10-22)
+
+Owner accepted Figma direction 2 and, after independent review of the correction, accepted the local implementation ([N-012](https://app.notion.com/p/4008ea98e40f8164b0aae793f248e6ff)). Published as a draft PR from `feat/oferte-masa-de-ofertare`, stacked on `review/job-sheet-section-views` at `d7ae46d` (draft PR #93). Not integrated on main; merge and deployment are not authorized. Frontend only: 15 modified (including this roadmap) and 10 new files; no engine, API, schema, dependency or data change.
+
+- Shared header band: numbered module plates grouped from `GLOBAL_NAV`, one context plate (live channel, organization, role, account), and a module switcher on tablet and phone.
+- Oferte: signal board whose counters are filters (stage tiles come from server labels), register rows (desktop) or cards with Oferta / Comanda doors (tablet, phone), and a dossier docked (≥1152px), sliding over (768–1151px) or full screen (<768px). Sheets: Ofertă (commercial document) and Comandă · lucrare (order from confirmation; job sheet progress). Acceptance stays on the offer page.
+- Selection and sheet live in `/oferte?oferta=…&foaie=comanda` (direct access, refresh, Back/Forward). The offer detail and the job are read separately through existing loaders; the job only when an order exists. A late answer for another offer is never shown.
+- Review correction: a PDF download rejected on the network now ends with a message and a working retry, and a late answer after the offer, dossier or session changed is dropped. A failed refresh after a successful read keeps the last read and says so, with a retry for that part only (offer and job independent). The global resource cache is unchanged.
+
+Verified on an isolated synthetic runtime (preview `localhost:5233`, API `127.0.0.1:8833`, own root under `%TEMP%`); reference runtimes untouched. Limits: job progress is the server label only (no per-operation ticks); phone cards do not show job progress because the quote list does not carry it; dossier action bars wrap to three rows at 1280 and 390; Clienți / Cereri / Lucrări alignment is the next stage, designed in Figma first. Owner accepted the local candidate: typecheck and 56/56 relevant tests passed in independent review; the full local run recorded 738/738 tests and the AGENTS checks passing.
+
 ### Job record and measured participation candidate (2026-10-21)
 
 Owner-approved scoped Figma direction, then explicit GO for implementation in the existing `office952/workos-po` PR #92. The existing sheet becomes a visible file-first record with exact revision/use evidence, all operation results and hours, per-person contributions and unified chronology. Eligible workers can join/leave independently; the canonical server and new additive migration 046 enforce one active personal interval per worker across jobs. First executor/start, legacy declared durations and old history remain intact; unknown labor is not backfilled or zero-filled. This supersedes the earlier “future participation” limitation only for the new source candidate, not for earlier runtime evidence. Contract and limits: [Production flow canon](architecture/PRODUCTION_FLOW_CANON.md#owner-approved-job-record-and-participation-2026-10-21).

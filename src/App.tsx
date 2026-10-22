@@ -113,7 +113,7 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
       );
     }
     case "quotes":
-      return <QuotesPage />;
+      return <QuotesPage search={search} />;
     case "assembly-quote":
       return <AssemblyQuotePage quoteSnapshotId={route.quoteSnapshotId} />;
     case "quote":
