@@ -1,93 +1,99 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import "../styles/surfaces/clients.css";
 import { presentCustomerId } from "../adapters/contextAdapter";
 import { createCustomer } from "../api/customers";
 import { TransportError } from "../api/http";
 import { Button } from "../components/Button";
 import { CreationDialog } from "../components/CreationDialog";
-import { EmptyState } from "../components/EmptyState";
-import { ErrorState } from "../components/ErrorState";
 import { InlineAlert } from "../components/InlineAlert";
 import { collectionViewState } from "../components/collectionViewState";
-import { StatusBadge } from "../components/StatusBadge";
 import { TextField } from "../components/TextField";
 import { invalidateAfterCreateCustomer } from "../data/invalidation";
 import { invalidateResources } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadCustomerRegistry } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
-import { SlicePage } from "../layout/SlicePage";
-import { matchesSearch } from "../presentation/listFilter";
+import { globalNavItems } from "../layout/globalNav";
+import { PageRegion } from "../layout/PageRegion";
 import { presentResourceAccess } from "../presentation/resourceAccess";
-import { statusTone } from "../presentation/statusTone";
-import { clientHref } from "../routing/appRoute";
+import { clientHref, clientsHref, parseClientsSelection } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
-import {
-  readClientsRegistryMemory,
-  writeClientsRegistryMemory,
-} from "../session/clientsRegistryMemory";
+import { readClientsRegistryMemory, writeClientsRegistryMemory } from "../session/clientsRegistryMemory";
+import { AgendaIndex } from "./clients/AgendaIndex";
+import { ClientCard } from "./clients/ClientCard";
+import { ClientsRegister } from "./clients/ClientsRegister";
+import { agendaLetter, clientSignals, filterClients, type ClientChip, type ClientFilters } from "./clients/clientsAgendaModel";
+import { DeskDialog, DeskDossier, type DeskVacancy } from "./desk/DeskDossier";
+import { DeskSignalBoard } from "./desk/DeskSignalBoard";
+import type { Density } from "./desk/DeskToolbar";
+import { useDeskLayout } from "./desk/useDeskLayout";
+import { useDeskSelection } from "./desk/useDeskSelection";
+import "../styles/layout/registry-desk.css";
+import "../styles/surfaces/clients-agenda.css";
 
-const ALL = "all";
+const MODULE_INDEX = String(globalNavItems().findIndex((item) => item.href === "/clienti") + 1).padStart(2, "0");
+const CHIPS: readonly ClientChip[] = ["all", "attention", "ACTIVE", "RETIRED"];
 
-export function ClientsPage() {
+/**
+ * Clienți: the agenda. An A–Z index over clients grouped by letter, and the client card in the
+ * dossier, read from the client's workspace. The selected client lives in the URL (?client=…).
+ */
+export function ClientsPage({ search = "" }: { search?: string }) {
   const loaded = useResource(resourceKeys.customers(), loadCustomerRegistry);
   const access = presentResourceAccess(loaded.error);
   const registry = access === "denied" ? { ...loaded, data: undefined } : loaded;
   const items = useMemo(() => registry.data?.customers ?? [], [registry.data]);
-  const summary = registry.data?.summary;
-  const remembered = readClientsRegistryMemory();
+  const [remembered] = useState(readClientsRegistryMemory);
+  const [filters, setFilters] = useState<ClientFilters>({
+    query: remembered.query,
+    chip: CHIPS.includes(remembered.statusChip as ClientChip) ? (remembered.statusChip as ClientChip) : "all",
+  });
+  const [density, setDensity] = useState<Density>("comfortable");
   const [name, setName] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
-  const [query, setQuery] = useState(remembered.query);
-  const [statusChip, setStatusChip] = useState(remembered.statusChip);
-  const [selectedId, setSelectedId] = useState<string | null>(remembered.selectedId);
   const [saveState, setSaveState] = useState<"idle" | "pending" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const creationScope = useRef(0);
+  const layout = useDeskLayout();
+  const selectedId = parseClientsSelection(search);
+
   useLayoutEffect(() => {
     creationScope.current += 1;
-    return () => { creationScope.current += 1; };
+    return () => {
+      creationScope.current += 1;
+    };
   }, []);
   if (createOpen && registry.status !== "success") setCreateOpen(false);
 
   useEffect(() => {
-    writeClientsRegistryMemory({ query, statusChip, selectedId });
-  }, [query, selectedId, statusChip]);
+    writeClientsRegistryMemory({ query: filters.query, statusChip: filters.chip, selectedId: null });
+  }, [filters]);
 
-  const visible = useMemo(
-    () =>
-      items.filter((customer) => {
-        const matchesChip =
-          statusChip === ALL ||
-          (statusChip === "attention" && customer.needsAttention) ||
-          (statusChip === "ACTIVE" && customer.status === "ACTIVE") ||
-          (statusChip === "RETIRED" && customer.status === "RETIRED");
-        return (
-          matchesChip &&
-          matchesSearch(query, [
-            customer.displayName,
-            customer.city,
-            customer.cui,
-            customer.contactName,
-            customer.phone,
-            customer.email,
-            customer.statusLabel,
-            customer.attentionLabel,
-          ])
-        );
-      }),
-    [items, query, statusChip],
-  );
+  const visible = useMemo(() => filterClients(items, filters), [items, filters]);
+  const order = useMemo(() => visible.map((customer) => customer.customerId), [visible]);
+  const letters = useMemo(() => [...new Set(visible.map((customer) => agendaLetter(customer.displayName)))], [visible]);
+  const view = collectionViewState(registry.status, items.length, visible.length);
+  const listReady = registry.status === "success" || items.length > 0;
+  const selected = items.find((customer) => customer.customerId === selectedId) ?? null;
+  const selection = useDeskSelection({ layout, selectedId, href: clientsHref, order, searchRef });
 
-  if (selectedId && registry.status === "success" && !items.some((item) => item.customerId === selectedId)) {
-    setSelectedId(null);
+  function changeFilters(next: ClientFilters): void {
+    setFilters(next);
+    if (selectedId && !filterClients(items, next).some((customer) => customer.customerId === selectedId)) selection.clear();
+  }
+
+  function onSignal(id: string): void {
+    const chip = id as ClientChip;
+    changeFilters({ ...filters, chip: filters.chip === chip && chip !== "all" ? "all" : chip });
+  }
+
+  function resetFilters(): void {
+    changeFilters({ query: "", chip: "all" });
+    searchRef.current?.focus();
   }
 
   async function create(): Promise<void> {
-    if (name.trim() === "" || saveState === "pending" || registry.status !== "success") {
-      return;
-    }
+    if (name.trim() === "" || saveState === "pending" || registry.status !== "success") return;
     setSaveState("pending");
     setSaveError(null);
     const scope = creationScope.current;
@@ -108,221 +114,98 @@ export function ClientsPage() {
     } catch (error) {
       if (scope !== creationScope.current) return;
       setSaveState("error");
-      setSaveError(
-        error instanceof TransportError
-          ? "Datele clientului nu sunt acceptate."
-          : "Clientul nu a putut fi creat.",
-      );
+      setSaveError(error instanceof TransportError ? "Datele clientului nu sunt acceptate." : "Clientul nu a putut fi creat.");
     }
   }
 
-  const view = collectionViewState(registry.status, items.length, visible.length);
-  const count = (value: number | undefined) =>
-    registry.status === "success" && value !== undefined ? String(value).padStart(2, "0") : "—";
+  const vacancy: DeskVacancy | null = selected
+    ? null
+    : !listReady
+      ? registry.status === "error"
+        ? access === "denied"
+          ? { title: "Dosarul nu este disponibil", body: "Accesul la registrul de clienți este refuzat în această organizație." }
+          : { title: "Dosarul nu este disponibil", body: "Lista de clienți nu a putut fi citită." }
+        : { title: "Se citește agenda", body: "Cartela se deschide după citirea listei de clienți." }
+      : selectedId
+        ? { title: "Clientul nu este în agendă", body: "Clientul cerut nu există sau nu este accesibil în această organizație." }
+        : {
+            title: "Niciun client selectat",
+            body: "Alege un client din agendă sau din index. Cartela arată identitatea, contactul, cererile deschise și totalurile de oferte și lucrări.",
+            hint: "↑ ↓ selectează · Enter deschide clientul",
+          };
+
+  const dossier = (
+    <DeskDossier
+      id="clienti-dosar"
+      label="Cartela clientului"
+      steps={{ previous: "Clientul anterior", next: "Clientul următor" }}
+      layout={layout}
+      position={selected ? { index: selection.index, count: visible.length } : null}
+      vacancy={vacancy}
+      onMove={selection.move}
+      onClose={layout === "docked" ? undefined : selection.close}
+    >
+      {selected ? <ClientCard key={selected.customerId} customer={selected} /> : null}
+    </DeskDossier>
+  );
 
   return (
-    <SlicePage
-      contextLabel="Clienți"
-      currentHref="/clienti"
-      workspace="stack"
-      surface="clients-registry"
-      headerVariant="pilot"
-      eyebrow="Registru comercial"
-      title="Clienți"
-      instrument={
-        <div className="pilot-instrument" role="group" aria-label="Filtre registru clienți">
-          <button
-            type="button"
-            className="pilot-instrument__metric"
-            aria-pressed={statusChip === ALL}
-            onClick={() => setStatusChip(ALL)}
-          >
-            <strong className="pilot-instrument__metric-value">{count(summary?.total)}</strong>
-            <span className="pilot-instrument__metric-label">Total</span>
-          </button>
-          <button
-            type="button"
-            className="pilot-instrument__metric"
-            aria-pressed={statusChip === "ACTIVE"}
-            onClick={() => setStatusChip("ACTIVE")}
-          >
-            <strong className="pilot-instrument__metric-value">{count(summary?.active)}</strong>
-            <span className="pilot-instrument__metric-label">Activi</span>
-          </button>
-          <button
-            type="button"
-            className="pilot-instrument__metric"
-            aria-pressed={statusChip === "RETIRED"}
-            onClick={() => setStatusChip("RETIRED")}
-          >
-            <strong className="pilot-instrument__metric-value">{count(summary?.retired)}</strong>
-            <span className="pilot-instrument__metric-label">Retrași</span>
-          </button>
-          <button
-            type="button"
-            className="pilot-instrument__metric pilot-instrument__metric--attention"
-            data-attention={(summary?.needsAttention ?? 0) > 0}
-            aria-pressed={statusChip === "attention"}
-            onClick={() => setStatusChip("attention")}
-          >
-            <strong className="pilot-instrument__metric-value">
-              {count(summary?.needsAttention)}
-            </strong>
-            <span className="pilot-instrument__metric-label">Necesită acțiune</span>
-          </button>
-        </div>
-      }
-    >
-      <section className="clients-register" aria-label="Registru clienți">
-        <div className="clients-toolbar">
-          <div className="clients-search">
-            <svg aria-hidden="true" viewBox="0 0 24 24">
-              <circle cx="10" cy="10" r="6" />
-              <path d="m15 15 5 5" />
-            </svg>
-            <label className="u-visually-hidden" htmlFor="clienti-cauta">
-              Caută
-            </label>
-            <input
-              ref={searchRef}
-              id="clienti-cauta"
-              type="search"
-              placeholder="Caută denumire, oraș sau contact"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
+    <PageRegion>
+      <div className="rdesk cagenda-desk" data-surface="clients-registry" data-layout={layout} data-density={density}>
+        <header className="rdesk__bar">
+          <div className="rdesk__title">
+            <p className="rdesk__eyebrow"><span aria-hidden="true" />{MODULE_INDEX} · Registru comercial</p>
+            <h1>Clienți</h1>
           </div>
-          {registry.status === "success" ? (
-            <button type="button" className="pilot-create" onClick={() => setCreateOpen(true)}>
-              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
-              Client nou
-            </button>
-          ) : null}
+          <DeskSignalBoard label="Filtre registru clienți" signals={clientSignals(registry.data, filters)} ready={listReady} onPress={onSignal} />
+        </header>
+        <div className="rdesk__instrument">
+          <AgendaIndex letters={letters} layout={layout} />
         </div>
-        {registry.status === "error" && registry.data ? (
-          <InlineAlert tone="error" title="Lista nu a putut fi actualizată">
-            Datele afișate sunt de la ultima citire reușită.
-            <Button variant="secondary" onClick={() => invalidateResources(resourceKeys.customers())}>
-              Reîncearcă
+        <div className="rdesk__work">
+          <ClientsRegister
+            layout={layout}
+            view={view}
+            denied={access === "denied"}
+            refreshFailed={registry.status === "error" && Boolean(registry.data)}
+            items={visible}
+            total={items.length}
+            filters={filters}
+            density={density}
+            canCreate={registry.status === "success"}
+            selectedId={selectedId}
+            searchRef={searchRef}
+            onFilters={changeFilters}
+            onDensity={setDensity}
+            onCreate={() => setCreateOpen(true)}
+            onReset={resetFilters}
+            onRetry={() => invalidateResources(resourceKeys.customers())}
+            onSelect={layout === "docked" ? selection.select : selection.open}
+            onOpen={selection.open}
+          />
+          {layout === "docked" ? dossier : null}
+        </div>
+        {selection.dialogOpen ? <DeskDialog layout={layout} label="Cartela clientului" onClose={selection.close}>{dossier}</DeskDialog> : null}
+        <span className="u-visually-hidden" aria-live="polite" aria-atomic="true">
+          {selected ? `Cartela afișează clientul ${selected.displayName}` : ""}
+        </span>
+      </div>
+      {createOpen && registry.status === "success" ? (
+        <CreationDialog title="Client nou" busy={saveState === "pending"} onDismiss={() => setCreateOpen(false)}>
+          <form onSubmit={(event) => { event.preventDefault(); void create(); }}>
+            <TextField id="customer-name" label="Denumire" value={name} onChange={setName} disabled={saveState === "pending"} />
+            <Button type="submit" disabled={name.trim() === "" || saveState === "pending"}>
+              Înregistrează clientul
             </Button>
-          </InlineAlert>
-        ) : null}
-        <div className="clients-register__strip">
-          <h2>{statusChip === "attention" ? "Necesită acțiune" : "Lista de clienți"}</h2>
-          <span className="clients-result" role={view !== "ready" ? "status" : undefined}>
-            {registry.status === "success" ? `${visible.length} din ${items.length}` : "—"}
-          </span>
-        </div>
-        {view === "loading" ? (
-          <p className="clients-feedback" role="status">
-            Se citesc clienții
-          </p>
-        ) : view === "error" ? (
-          <div className="clients-feedback">
-            <ErrorState
-              title={access === "denied" ? "Acces refuzat" : "Lista nu a putut fi citită"}
-            >
-              {access === "denied"
-                ? "Nu ai acces la registrul de clienți în această organizație."
-                : "Lista de clienți nu este disponibilă momentan."}
-              <Button
-                variant="secondary"
-                onClick={() => invalidateResources(resourceKeys.customers())}
-              >
-                Reîncearcă
-              </Button>
-            </ErrorState>
-          </div>
-        ) : view === "empty" ? (
-          <div className="clients-feedback">
-            <EmptyState title="Nu există încă clienți" description="Înregistrează primul client." />
-          </div>
-        ) : view === "filtered-empty" ? (
-          <div className="clients-feedback">
-            <EmptyState title="Niciun client nu corespunde filtrului." />
-          </div>
-        ) : (
-          <table className="clients-table">
-            <caption className="u-visually-hidden">Clienți înregistrați</caption>
-            <thead>
-              <tr>
-                <th scope="col">Client</th>
-                <th className="clients-table__place" scope="col">
-                  Localitate
-                </th>
-                <th className="clients-table__state" scope="col">
-                  Stare
-                </th>
-                <th className="clients-table__action" scope="col">
-                  Acțiune
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((customer) => (
-                <tr
-                  key={customer.customerId}
-                  data-attention={customer.needsAttention ? "true" : undefined}
-                >
-                  <td className="clients-table__identity">
-                    <a
-                      className="clients-object"
-                      href={clientHref(customer.customerId)}
-                      onClick={() => setSelectedId(customer.customerId)}
-                    >
-                      <span className="clients-object__title">{customer.displayName}</span>
-                      <span className="clients-object__detail">
-                        {[
-                          customer.contactName,
-                          customer.attentionLabel,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ") || customer.cui || customer.city || "Date de contact necompletate"}
-                      </span>
-                    </a>
-                  </td>
-                  <td className="clients-table__place">
-                    <span className="clients-place">{customer.city ?? "—"}</span>
-                  </td>
-                  <td className="clients-table__state">
-                    <StatusBadge
-                      label={customer.statusLabel}
-                      tone={statusTone("workflow")}
-                    />
-                  </td>
-                  <td className="clients-table__action">
-                    <a
-                      className="clients-next"
-                      href={clientHref(customer.customerId)}
-                      onClick={() => setSelectedId(customer.customerId)}
-                    >
-                      <span>Deschide</span>
-                      <span aria-hidden="true">→</span>
-                    </a>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-      {createOpen && registry.status === "success" ? <CreationDialog title="Client nou" busy={saveState === "pending"} onDismiss={() => setCreateOpen(false)}>
-        <form onSubmit={(event) => { event.preventDefault(); void create(); }}>
-          <TextField id="customer-name" label="Denumire" value={name} onChange={setName} disabled={saveState === "pending"} />
-          <Button
-            type="submit"
-            disabled={name.trim() === "" || saveState === "pending"}
-          >
-            Înregistrează clientul
-          </Button>
-          <p className="ui-note">Creează clientul și deschide hubul pentru continuare.</p>
-          {saveError ? (
-            <InlineAlert tone="error" title="Înregistrarea a eșuat">
-              {saveError}
-            </InlineAlert>
-          ) : null}
-        </form>
-      </CreationDialog> : null}
-    </SlicePage>
+            <p className="ui-note">Creează clientul și deschide hubul pentru continuare.</p>
+            {saveError ? (
+              <InlineAlert tone="error" title="Înregistrarea a eșuat">
+                {saveError}
+              </InlineAlert>
+            ) : null}
+          </form>
+        </CreationDialog>
+      ) : null}
+    </PageRegion>
   );
 }

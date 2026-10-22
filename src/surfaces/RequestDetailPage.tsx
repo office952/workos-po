@@ -40,7 +40,7 @@ export function RequestDetailPage({ requestId }: RequestDetailPageProps) {
   const request = useResource(resourceKeys.request(requestId), () => loadRequestDetail(requestId));
   const jobs = useResource(resourceKeys.jobs(), loadJobList);
   const requestJobs = useMemo(
-    () => (jobs.data ?? []).filter((item) => item.requestId === requestId),
+    () => (jobs.data?.jobs ?? []).filter((item) => item.requestId === requestId),
     [jobs.data, requestId],
   );
   const detail = request.data;

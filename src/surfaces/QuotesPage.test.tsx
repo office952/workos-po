@@ -204,6 +204,31 @@ function board() {
   return within(screen.getByRole("group", { name: "Filtre registru oferte" }));
 }
 
+describe("QuotesPage acceptance stamp", () => {
+  beforeEach(() => setLayout("docked"));
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    resetResourceCache();
+    window.history.replaceState({}, "", "/");
+  });
+
+  it("stamps only an acceptance the system confirmed, with the word Acceptată", async () => {
+    stubApi([standalone, assembly], [productDetail, assemblyDetail, jobDetail]);
+    window.history.replaceState({}, "", "/oferte?oferta=asmq%3A1");
+    const { unmount } = render(<Routed />);
+    const stamp = await screen.findByTestId("offer-acceptance-stamp");
+    expect(stamp).toHaveTextContent("Acceptată");
+    expect(stamp).not.toHaveTextContent("Cu comandă");
+    unmount();
+    resetResourceCache();
+    stubApi([standalone], [productDetail]);
+    window.history.replaceState({}, "", "/oferte?oferta=q-solo");
+    render(<Routed />);
+    await dossier().findByText("Litere");
+    expect(screen.queryByTestId("offer-acceptance-stamp")).not.toBeInTheDocument();
+  });
+});
+
 describe("QuotesPage", () => {
   it("counts server attention flags instead of explanatory labels and filters by them", async () => {
     stubApi([

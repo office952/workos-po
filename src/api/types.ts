@@ -326,6 +326,22 @@ export type RequestListItemTransport = {
   linkedAssemblyId: string | null;
 };
 
+/** Server summary of the whole request overview, by request status; null when absent. */
+export type RequestOverviewSummaryTransport = {
+  total: number | null;
+  needsAttention: number | null;
+  newCount: number | null;
+  inReview: number | null;
+  waitingCustomer: number | null;
+  readyForQuote: number | null;
+  blocked: number | null;
+};
+
+export type RequestOverviewTransport = {
+  summary: RequestOverviewSummaryTransport | null;
+  requests: RequestListItemTransport[];
+};
+
 export type RequestLinkedOfferTransport = {
   quoteSnapshotId: string;
   kind: "PRODUCT" | "ASSEMBLY";
@@ -560,10 +576,28 @@ export type JobListItemTransport = {
   needsAttention: boolean;
   attentionLabel: string | null;
   progressLabel: string | null;
+  /** Operation counts of the execution plan, when the server sends them; never derived from text. */
+  completedCount?: number | null;
+  taskCount?: number | null;
+  inProgressCount?: number | null;
   createdAt: string | null;
   releaseSnapshotId: string | null;
   planId: string | null;
   orderSnapshotId: string;
+};
+
+/** Server summary of the whole job overview; null when the payload carries none. */
+export type JobOverviewSummaryTransport = {
+  total: number | null;
+  active: number | null;
+  inExecution: number | null;
+  needsAttention: number | null;
+  completed: number | null;
+};
+
+export type JobOverviewTransport = {
+  summary: JobOverviewSummaryTransport | null;
+  jobs: JobListItemTransport[];
 };
 
 export type OperatorCandidateTransport = {

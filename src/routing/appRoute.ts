@@ -220,6 +220,38 @@ export function requestHref(requestId: string): string {
   return `/cereri/${encodeURIComponent(requestId)}`;
 }
 
+export function newRequestHref(customerId?: string | null): string {
+  return customerId ? `/cereri/noua?customer=${encodeURIComponent(customerId)}` : "/cereri/noua";
+}
+
+/**
+ * Registry selections: the row shown in the dossier lives in the URL, so direct links,
+ * refresh and Back/Forward restore it. The detail pages keep their own paths.
+ */
+export function parseClientsSelection(search: string): string | null {
+  return readSearchParam(search, "client");
+}
+
+export function clientsHref(customerId?: string | null): string {
+  return customerId ? `/clienti?${new URLSearchParams({ client: customerId }).toString()}` : "/clienti";
+}
+
+export function parseRequestsSelection(search: string): string | null {
+  return readSearchParam(search, "cerere");
+}
+
+export function requestsHref(requestId?: string | null): string {
+  return requestId ? `/cereri?${new URLSearchParams({ cerere: requestId }).toString()}` : "/cereri";
+}
+
+export function parseJobsSelection(search: string): string | null {
+  return readSearchParam(search, "lucrare");
+}
+
+export function jobsHref(jobId?: string | null): string {
+  return jobId ? `/lucrari?${new URLSearchParams({ lucrare: jobId }).toString()}` : "/lucrari";
+}
+
 export const JOB_SHEET_SECTIONS = ["situatie", "operatii", "fisiere", "oameni", "istoric", "date"] as const;
 const LEGACY_JOB_SECTIONS = ["documente", "rezultate", "materiale", "sursa", "plan", "operatie"] as const;
 export type JobSheetSection = (typeof JOB_SHEET_SECTIONS)[number];

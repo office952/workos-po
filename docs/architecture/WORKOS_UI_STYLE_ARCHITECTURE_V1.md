@@ -127,8 +127,9 @@ Dark/light should primarily change token values and calibrated state styling, no
 Each major product surface owns its page-specific presentation.
 
 Examples:
-- `requests.css` owns Cereri;
-- `offers.css` owns Oferte;
+- `requests-queue.css` owns Cereri (N-013);
+- `offers.css` and `offers-desk.css` own Oferte;
+- `layout/registry-desk.css` owns the shared registry desk frame of Clienți, Cereri and Lucrări (N-013);
 - `workshop.css` owns Atelier.
 
 Use a clear class namespace per surface, for example:

@@ -1,18 +1,40 @@
-import type { JobListItemTransport, SiteInstallationOperationalTransport } from "../api/types";
+import type {
+  JobListItemTransport,
+  JobOverviewSummaryTransport,
+  JobOverviewTransport,
+  SiteInstallationOperationalTransport,
+} from "../api/types";
 import { presentSiteInstallation } from "./executionAdapter";
-import { asBoolean, asRecord, asString } from "./record";
+import { asBoolean, asNumber, asRecord, asString } from "./record";
 
 export function presentJobList(payload: unknown): JobListItemTransport[] {
+  return presentJobOverview(payload).jobs;
+}
+
+/** The job overview with its server summary; the summary is null when the payload has none. */
+export function presentJobOverview(payload: unknown): JobOverviewTransport {
   const record = asRecord(payload);
   const overview = asRecord(record?.overview);
   const jobs = overview?.jobs;
-  if (!Array.isArray(jobs)) {
-    return [];
-  }
-  return jobs.flatMap((item) => {
-    const presented = presentJobItem(item);
-    return presented ? [presented] : [];
-  });
+  const summary = asRecord(overview?.summary);
+  const presentedSummary: JobOverviewSummaryTransport | null = summary
+    ? {
+        total: asNumber(summary.total),
+        active: asNumber(summary.active),
+        inExecution: asNumber(summary.inExecution),
+        needsAttention: asNumber(summary.needsAttention),
+        completed: asNumber(summary.completed),
+      }
+    : null;
+  return {
+    summary: presentedSummary,
+    jobs: Array.isArray(jobs)
+      ? jobs.flatMap((item) => {
+          const presented = presentJobItem(item);
+          return presented ? [presented] : [];
+        })
+      : [],
+  };
 }
 
 export function presentJobItem(value: unknown): JobListItemTransport | null {
@@ -44,6 +66,9 @@ export function presentJobItem(value: unknown): JobListItemTransport | null {
     needsAttention: asBoolean(row.needsAttention) ?? false,
     attentionLabel: asString(row.attentionLabel),
     progressLabel: asString(row.progressLabel),
+    completedCount: asNumber(row.completedCount),
+    taskCount: asNumber(row.taskCount),
+    inProgressCount: asNumber(row.inProgressCount),
     createdAt: asString(row.createdAt),
     releaseSnapshotId: asString(row.releaseSnapshotId),
     planId: asString(row.planId),

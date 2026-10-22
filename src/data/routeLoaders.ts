@@ -9,7 +9,7 @@ import {
 } from "../adapters/customerAdapter";
 import { presentExecutionPlan } from "../adapters/executionAdapter";
 import { presentHealth, type HealthPresentation } from "../adapters/healthAdapter";
-import { presentJobDetail, presentJobList } from "../adapters/jobAdapter";
+import { presentJobDetail, presentJobOverview } from "../adapters/jobAdapter";
 import { presentPlanningWorkload } from "../adapters/planningAdapter";
 import {
   presentInboxDisplayNote,
@@ -24,7 +24,7 @@ import {
   presentQuoteEnvelope,
   presentQuoteList,
 } from "../adapters/quoteListAdapter";
-import { presentRequestDetail, presentRequestList } from "../adapters/requestAdapter";
+import { presentRequestDetail, presentRequestOverview } from "../adapters/requestAdapter";
 import { presentCommercialPolicyAdmin } from "../adapters/commercialPolicyAdapter";
 import { presentResourcesAdmin } from "../adapters/resourcesAdapter";
 import { presentFormulasAdmin } from "../adapters/formulasAdapter";
@@ -99,8 +99,9 @@ export async function loadCustomer(customerId: string) {
   return presented;
 }
 
+/** The whole request overview (requests and server summary), cached under resourceKeys.requests(). */
 export async function loadRequestList() {
-  return presentRequestList(await fetchRequests());
+  return presentRequestOverview(await fetchRequests());
 }
 
 export async function loadRequestDetail(requestId: string) {
@@ -159,8 +160,9 @@ export async function loadQuoteOrder(productCode: string, quoteSnapshotId: strin
   }
 }
 
+/** The whole job overview (jobs and server summary), cached under resourceKeys.jobs(). */
 export async function loadJobList() {
-  return presentJobList(await fetchJobOverview());
+  return presentJobOverview(await fetchJobOverview());
 }
 
 export async function loadPlanningWorkload() {

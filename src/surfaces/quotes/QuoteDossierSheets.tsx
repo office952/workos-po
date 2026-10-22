@@ -46,13 +46,18 @@ function RefreshFailed({ children, onRetry }: { children: string; onRetry: () =>
   );
 }
 
+/** Stages in which the server confirms the acceptance; an order exists only after acceptance. */
+const ACCEPTED_STAGES = new Set(["QUOTE_ACCEPTED", "ORDER_CREATED"]);
+
+/**
+ * The stamp has one meaning: the system confirmed the acceptance. The list carries no
+ * acceptance date, so the creation date is not shown in its place.
+ */
 function Stamp({ item }: { item: QuoteListItemTransport }) {
-  if (!item.orderSnapshotId) return null;
-  const created = createdLabel(item)?.split(",")[0] ?? null;
+  if (!item.stage || !ACCEPTED_STAGES.has(item.stage)) return null;
   return (
-    <span className="offers-stamp" aria-hidden="true">
-      <span className="offers-stamp__label">{item.stageLabel}</span>
-      {created ? <span className="offers-stamp__date">{created}</span> : null}
+    <span className="offers-stamp" data-testid="offer-acceptance-stamp" aria-hidden="true">
+      <span className="offers-stamp__label">Acceptată</span>
     </span>
   );
 }

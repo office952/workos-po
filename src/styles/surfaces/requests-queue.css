@@ -1,0 +1,388 @@
+/* Cereri · intake queue: preparation trays by request status, the time axis of entries
+   grouped by day, commercial progress segments and the intake slip. */
+
+/* ─── Preparation trays (page instrument) ─── */
+.rtray {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  min-width: 0;
+}
+
+.rtray__caption {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding-bottom: 8px;
+}
+
+.rtray__caption span {
+  color: var(--wos-brass-text);
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rtray__caption small {
+  color: var(--shell-muted);
+  font: 500 9px/1.2 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rtray__trays {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.rtray__tray {
+  display: grid;
+  flex: 0 0 auto;
+  align-content: start;
+  justify-items: start;
+  gap: 2px;
+  min-width: 112px;
+  min-height: 44px;
+  padding: 0 14px 10px;
+  border: 1px solid var(--color-border);
+  border-top: 0;
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.rtray__tray[data-apart] {
+  margin-left: 14px;
+}
+
+.rtray__tray:hover {
+  background: var(--color-surface);
+}
+
+.rtray__tray:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.rtray__tray[aria-pressed="true"] {
+  background: var(--wos-lightbox);
+  box-shadow: inset 0 -2px 0 var(--shell-brass);
+}
+
+.rtray__lip {
+  width: calc(100% + 28px);
+  height: 4px;
+  margin: 0 -14px 6px;
+  background: var(--color-border-strong);
+}
+
+.rtray__tray[data-filled] .rtray__lip {
+  background: var(--shell-brass);
+}
+
+.rtray__count {
+  font: 600 28px/1.05 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.rtray__tray:not([data-filled]) .rtray__count {
+  color: var(--shell-muted);
+}
+
+.rtray__label {
+  color: var(--color-text-secondary);
+  font: 500 13px/1.25 var(--font-sans);
+  white-space: nowrap;
+}
+
+/* ─── Register: time axis and day groups ─── */
+.rtray-table__time {
+  width: 78px;
+}
+
+.rtray-table__state {
+  width: 132px;
+}
+
+.rtray-table__progress {
+  width: 164px;
+}
+
+.rtray-table__action {
+  width: 200px;
+}
+
+.rtray-table td.rtray-table__time {
+  padding-left: 34px;
+  color: var(--color-text-secondary);
+  font: 400 12px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.rtray-axis {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 14px;
+  width: 2px;
+  background: color-mix(in srgb, var(--shell-brass) 45%, transparent);
+}
+
+.rtray-axis::after {
+  content: "";
+  position: absolute;
+  top: calc(50% - 5px);
+  left: -4px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--shell-brass);
+  border-radius: 50%;
+  background: var(--shell-chassis);
+  box-sizing: border-box;
+}
+
+.rtray-table tr[data-selected] .rtray-axis::after {
+  background: var(--shell-brass);
+}
+
+.rtray-table__day th {
+  height: auto;
+}
+
+.rtray-table__day th > span,
+.rtray-day__head > span {
+  color: var(--wos-brass-text);
+  font: 600 11px/1.3 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rtray-table__day th > small,
+.rtray-day__head > small {
+  margin-left: 12px;
+  color: var(--shell-muted);
+  font: 400 11px var(--font-mono);
+}
+
+.rtray-progress {
+  display: grid;
+  gap: 5px;
+}
+
+.rtray-progress__segments {
+  display: flex;
+  gap: 3px;
+}
+
+.rtray-progress__segments > span {
+  width: 36px;
+  height: 5px;
+  background: var(--color-border);
+}
+
+.rtray-progress__segments > span[data-on="done"] {
+  background: color-mix(in srgb, var(--shell-signal) 55%, transparent);
+}
+
+.rtray-progress__segments > span[data-on="last"] {
+  background: var(--shell-signal);
+}
+
+.rtray-progress__label {
+  color: var(--color-text-primary);
+  font: 400 12px/1.3 var(--font-sans);
+}
+
+.rtray-progress__label[data-empty] {
+  color: var(--shell-muted);
+}
+
+/* Cards */
+.rtray-days {
+  display: grid;
+  gap: 16px;
+}
+
+.rtray-day__head {
+  display: flex;
+  align-items: baseline;
+  margin: 0 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--shell-brass) 45%, transparent);
+}
+
+.rtray-card__time {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font: 400 12px var(--font-mono);
+}
+
+.rtray-card__time > span {
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--shell-brass);
+  border-radius: 50%;
+}
+
+.rtray-card__title {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font: 600 15px/1.3 var(--font-sans);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.rtray-card__state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 20px;
+}
+
+/* Pagination */
+.rtray-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  padding-top: 16px;
+  color: var(--color-text-secondary);
+  font: 400 13px var(--font-sans);
+}
+
+.rtray-pages label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rtray-pages select,
+.rtray-pages button {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: 500 13px var(--font-sans);
+}
+
+.rtray-pages button[aria-current="page"] {
+  border-color: var(--shell-signal);
+  box-shadow: inset 0 -2px 0 var(--shell-signal);
+  font-weight: 600;
+}
+
+.rtray-pages button:disabled {
+  color: var(--color-text-muted);
+}
+
+.rtray-pages select:focus-visible,
+.rtray-pages button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.rtray-pages__steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.rtray-pages__steps > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ─── Intake slip ─── */
+.rtray-entry {
+  display: grid;
+  flex: 0 0 auto;
+  justify-items: end;
+  gap: 2px;
+  padding: 8px 12px;
+  background: var(--color-surface-raised);
+  box-shadow: inset 3px 0 var(--shell-brass);
+}
+
+.rtray-entry strong {
+  font: 600 16px/1.1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.rtray-entry small {
+  color: var(--shell-muted);
+  font: 500 10px/1.2 var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.rtray-sheet__facts dd {
+  margin-top: 6px;
+}
+
+.rtray-sheet__description {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+}
+
+.rtray-sheet__none {
+  padding-top: 8px;
+  color: var(--shell-muted);
+}
+
+.rdesk-sheet__lead a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 1439px) {
+  .rtray-table__state {
+    width: 120px;
+  }
+
+  .rtray-table__progress {
+    width: 150px;
+  }
+
+  .rtray-table__action {
+    width: 188px;
+  }
+}
+
+@media (max-width: 767px) {
+  .rtray {
+    display: grid;
+    gap: 8px;
+  }
+
+  .rtray__caption {
+    display: flex;
+    gap: 8px;
+    padding: 0;
+  }
+
+  .rtray__tray {
+    min-width: 104px;
+  }
+
+  .rtray__count {
+    font-size: 22px;
+  }
+
+  .rtray-pages__steps {
+    margin-left: 0;
+  }
+}

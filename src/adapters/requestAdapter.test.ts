@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { presentRequestDetail, presentRequestList } from "./requestAdapter";
+import { presentRequestDetail, presentRequestList, presentRequestOverview } from "./requestAdapter";
 
 describe("request adapter", () => {
   it("projects createdAt and next-action fields without calling them updatedAt", () => {
@@ -229,5 +229,21 @@ describe("request adapter", () => {
     });
     expect(empty?.installationFacts?.facadeOtherNote).toBeNull();
     expect(empty?.installationFacts?.fixingOtherNote).toBeNull();
+  });
+});
+
+describe("presentRequestOverview", () => {
+  it("keeps the server summary beside the requests and never invents one", () => {
+    const withSummary = presentRequestOverview({
+      overview: {
+        summary: { total: 3, needsAttention: 1, newCount: 2, inReview: 0, waitingCustomer: 1, readyForQuote: 0, blocked: 0 },
+        requests: [{ requestId: "r1", title: "Litere" }],
+      },
+    });
+    expect(withSummary.summary).toEqual({ total: 3, needsAttention: 1, newCount: 2, inReview: 0, waitingCustomer: 1, readyForQuote: 0, blocked: 0 });
+    expect(withSummary.requests).toHaveLength(1);
+    const partial = presentRequestOverview({ overview: { summary: { total: 1 }, requests: [] } });
+    expect(partial.summary?.newCount).toBeNull();
+    expect(presentRequestOverview({ overview: { requests: [] } }).summary).toBeNull();
   });
 });

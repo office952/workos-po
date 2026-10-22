@@ -84,11 +84,11 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
     case "home":
       return <LaunchpadPage />;
     case "clients":
-      return <ClientsPage />;
+      return <ClientsPage search={search} />;
     case "client":
       return <ClientDetailPage customerId={route.customerId} />;
     case "requests":
-      return <RequestsPage />;
+      return <RequestsPage search={search} />;
     case "new-request":
       return <NewRequestPage key={search} />;
     case "request":
@@ -124,7 +124,7 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
         />
       );
     case "jobs":
-      return <JobsPage view={parseJobsView(search)} />;
+      return <JobsPage view={parseJobsView(search)} search={search} />;
     case "job":
       return <JobDetailPage jobId={route.jobId} taskId={parseTaskContext(search)} section={parseJobSheetSection(search)} />;
     case "planning":

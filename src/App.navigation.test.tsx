@@ -30,7 +30,7 @@ describe("App navigation", () => {
     vi.stubGlobal("fetch", fetchMock);
     window.history.replaceState({}, "", "/lucrari");
     render(<App />);
-    const search = await screen.findByRole("searchbox", { name: "Caută lucrări" });
+    const search = await screen.findByRole("searchbox", { name: "Caută" });
     const user = userEvent.setup();
     await user.type(search, "NORD");
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("planning/workload"))).toBe(false);
@@ -41,7 +41,7 @@ describe("App navigation", () => {
     expect(document.querySelector(".app-shell__bar")).toBe(shell);
     expect(screen.queryByRole("link", { name: "Planificare" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("link", { name: "Lista lucrărilor" }));
-    expect(await screen.findByRole("searchbox", { name: "Caută lucrări" })).toHaveValue("NORD");
+    expect(await screen.findByRole("searchbox", { name: "Caută" })).toHaveValue("NORD");
     expect(fetchMock.mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
   });
 
@@ -99,7 +99,7 @@ describe("App navigation", () => {
     const firstCustomerReads = customerReads();
 
     await userEvent.setup().click(screen.getByRole("link", { name: "Cereri" }));
-    expect(await screen.findByRole("heading", { name: "Cereri de ofertă" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Cereri", level: 1 })).toBeInTheDocument();
     expect(document.querySelector(".app-shell__bar")).toBe(shell);
 
     window.history.back();
@@ -111,7 +111,7 @@ describe("App navigation", () => {
     expect(customerReads()).toBe(firstCustomerReads);
 
     await userEvent.setup().click(screen.getByRole("link", { name: "Cereri" }));
-    expect(await screen.findByRole("heading", { name: "Cereri de ofertă" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Cereri", level: 1 })).toBeInTheDocument();
     window.history.back();
     window.dispatchEvent(new PopStateEvent("popstate"));
     await waitFor(() => {
