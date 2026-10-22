@@ -26,6 +26,7 @@ export const resourceKeys = {
   executionPlan: (planId: string) => `execution-plan:${planId}`,
   jobMaterialPreparation: (jobId: string) => `job-material-preparation:${jobId}`,
   jobFiles: (jobId: string) => `job-files:${jobId}`,
+  taskDossier: (taskId: string) => `task-dossier:${taskId}`,
   operatorSession: () => "operator-session",
   operatorCandidates: () => "operator-candidates",
   operatorInbox: () => "operator-inbox",

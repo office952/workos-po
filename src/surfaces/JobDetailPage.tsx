@@ -33,6 +33,9 @@ import { atelierHref, executionHref, jobHref, quoteHref } from "../routing/appRo
 import { navigate } from "../routing/navigate";
 import { SiteInstallationContextPanel } from "./SiteInstallationContextPanel";
 import { ExecutionActualConsumptionHistory } from "./ExecutionActualConsumption";
+import { JobTaskWorkbench } from "./JobTaskWorkbench";
+import { JobTaskFingerprint } from "./JobTaskFingerprint";
+import "../styles/surfaces/job-task-workbench.css";
 import { JobFilesPanel } from "./JobFilesPanel";
 import { JobMaterialPreparation } from "./JobMaterialPreparation";
 import type { ExecutionTaskTransport } from "../api/types";
@@ -95,6 +98,8 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
     loadExecutionPlan(planId ?? ""),
   );
   const plan = planResource.data ?? null;
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const selectedTask = plan?.tasks.find((task) => task.taskId === selectedTaskId) ?? plan?.tasks.find((task) => task.status === "IN_PROGRESS") ?? plan?.tasks[0] ?? null;
   const [actionState, setActionState] = useState<"idle" | "pending" | "error">("idle");
   const [actionError, setActionError] = useState<string | null>(null);
   const [draftScope, setDraftScope] = useState(jobId);
@@ -103,6 +108,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
   const [planningMessage, setPlanningMessage] = useState<string | null>(null);
   if (draftScope !== jobId) {
     setDraftScope(jobId);
+    setSelectedTaskId(null);
     setPriorityDraft(null);
     setTargetDraft(null);
     setPlanningMessage(null);
@@ -206,6 +212,8 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
       contextLabel="Lucrare"
       currentHref={jobHref(jobId)}
       workspace="traveler"
+      surface="job-detail"
+      instrument={plan ? <JobTaskFingerprint tasks={plan.tasks} selectedTaskId={selectedTask?.taskId ?? null} onSelect={setSelectedTaskId} /> : undefined}
       headerVariant="pilot-compact"
       eyebrow="Lucrare"
       title={job ? presentJobSheetTitle(job) : "Lucrare"}
@@ -244,6 +252,10 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
       ) : null}
       {job ? (
         <>
+          {job.stage === "EXECUTION_COMPLETED" ? <p className="job-sheet-completed">Producția este finalizată. Livrarea și montajul nu sunt confirmate de această stare.</p> : null}
+          {job.needsAttention && job.attentionLabel ? <p className="job-sheet-attention">{job.attentionLabel}</p> : null}
+          {planResource.status === "error" ? <InlineAlert tone="error" title="Planul nu a putut fi citit">Datele planului nu au putut fi actualizate.</InlineAlert> : null}
+          {plan ? <JobTaskWorkbench key={jobId} jobId={jobId} plan={plan} taskId={selectedTask?.taskId ?? null} onSelect={setSelectedTaskId} /> : null}
           <SurfacePanel title="Identitate" label="Identitate">
             <dl className="fact-grid">
               <InfoRow label="Lucrare" value={presentJobSheetTitle(job)} />
@@ -256,7 +268,8 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
               <InfoRow label="Termen" value={job.targetDateLabel} />
               <InfoRow label="Stare" value={job.stageLabel} />
               <InfoRow label="Progres" value={job.progressLabel ?? "—"} />
-              <InfoRow label="Atenție" value={job.attentionLabel ?? "Fără atenție specială"} />
+
+              {job.attentionLabel && !job.needsAttention ? <InfoRow label="Mesaj operațional" value={job.attentionLabel} /> : null}
               <InfoRow label="Următoarea acțiune" value={job.nextActionLabel} />
               {materialAttention ? (
                 <InfoRow label="Material" value={materialAttention} />
@@ -321,7 +334,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
           {jobResource.data?.siteInstallation ? (
             <SiteInstallationContextPanel context={jobResource.data.siteInstallation} />
           ) : null}
-          <JobFilesPanel jobId={jobId} />
+          {plan ? <details className="job-sheet-archive"><summary>Fișierele lucrării · arhivă și încărcare</summary><JobFilesPanel jobId={jobId} /></details> : <JobFilesPanel jobId={jobId} />}
           <JobMaterialPreparation jobId={jobId} />
           <SurfacePanel
             title="Traseu de producție"
@@ -354,6 +367,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
                       <p>{plan.timeSummary.actualKnownLabel}</p>
                     </div>
                   ) : null}
+                  <details className="job-sheet-results"><summary>Detalii complete pentru {plan.tasks.length} operații</summary>
                   {plan.tasks.map((task) => (
                     <div key={task.taskId} className="stack">
                       <p className="section-label">
@@ -389,6 +403,7 @@ export function JobDetailPage({ jobId }: JobDetailPageProps) {
                       ) : null}
                     </div>
                   ))}
+                  </details>
                 </>
               )}
             </div>

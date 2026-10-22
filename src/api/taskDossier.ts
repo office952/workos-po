@@ -25,6 +25,7 @@ export type DossierFile = {
   downloadHref: string;
   linkedToTask: boolean;
   authorLabel?: string | null;
+  supersedesArtifactId?: string | null;
 };
 
 export type DossierHistoryEvent = {
@@ -81,7 +82,7 @@ export async function reportTaskIssue(
 export async function uploadTaskArtifact(
   taskId: string,
   file: File,
-  options?: { purpose?: string; note?: string },
+  options?: { purpose?: string; note?: string; supersedesArtifactId?: string },
 ): Promise<TaskDossier> {
   const form = new FormData();
   form.set("file", file);
@@ -91,6 +92,7 @@ export async function uploadTaskArtifact(
   if (options?.note) {
     form.set("note", options.note);
   }
+  if (options?.supersedesArtifactId) form.set("supersedesArtifactId", options.supersedesArtifactId);
   const body = (await postForm(
     `/api/execution-tasks/${encodeURIComponent(taskId)}/artifacts`,
     form,
