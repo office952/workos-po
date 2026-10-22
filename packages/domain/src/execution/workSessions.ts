@@ -54,6 +54,37 @@ export function intervalUnionMilliseconds(intervals: readonly { startedAt: strin
   return total;
 }
 
+/**
+ * Why part of an operation's labor has no individual sessions. Only canonical facts qualify:
+ * a recorded start (or completion) with no personal session at that start. Pauses, an unfinished
+ * operation, or gaps between two moments are never treated as missing work, and the gap is not
+ * attributed to any person.
+ */
+export type WorkEvidenceGap = 'UNTRACKED_START' | 'NO_INDIVIDUAL_SESSIONS';
+
+export const WORK_EVIDENCE_GAP_LABELS: Record<WorkEvidenceGap, string> = {
+  UNTRACKED_START: 'Operația a fost pornită fără sesiune individuală; evidența pe persoane începe după pornire.',
+  NO_INDIVIDUAL_SESSIONS: 'Operația are pornire sau finalizare înregistrată, dar nicio sesiune individuală.',
+};
+
+export function workEvidenceGap(task: Pick<ExecutionTask, 'executionMode' | 'startedAt' | 'completedAt' | 'workSessions'>): WorkEvidenceGap | null {
+  if (task.executionMode === 'EXTERNAL') return null;
+  const sessions = task.workSessions ?? [];
+  if (!task.startedAt) return !sessions.length && task.completedAt ? 'NO_INDIVIDUAL_SESSIONS' : null;
+  if (!sessions.length) return 'NO_INDIVIDUAL_SESSIONS';
+  return sessions.some(s => s.startedAt === task.startedAt) ? null : 'UNTRACKED_START';
+}
+
+function taskCoverageLabel(task: ExecutionTask, complete: boolean, activeSessions: number, gap: WorkEvidenceGap | null): string {
+  if (task.executionMode === 'EXTERNAL') return 'Producție externă';
+  if (complete) return 'Complet';
+  if (activeSessions && gap) return 'Provizoriu · sesiune activă · parțial nedocumentat';
+  if (gap) return 'Parțial · timp nedocumentat';
+  if (activeSessions) return 'Provizoriu · sesiune activă';
+  if (!task.startedAt) return 'Neîncepută';
+  return 'În lucru · fără sesiuni active';
+}
+
 export function projectWorkHours(record: ExecutionPlanRecord, asOf: string) {
   const applicable = record.tasks.filter(t => t.executionMode !== 'EXTERNAL');
   const tasks = record.tasks.map(task => {
@@ -61,6 +92,8 @@ export function projectWorkHours(record: ExecutionPlanRecord, asOf: string) {
     const milliseconds = sessions.length ? sessions.reduce((n, s) => n + sessionMilliseconds(s, asOf), 0) : null;
     const trackedFromStart = sessions.some(s => s.startedAt === task.startedAt);
     const complete = task.status === 'COMPLETED' && trackedFromStart && sessions.every(s => s.endedAt !== null);
+    const activeSessionCount = sessions.filter(s => s.endedAt === null).length;
+    const evidenceGap = workEvidenceGap(task);
     const people = [...new Set(sessions.map(s => s.personId))].map(id => {
       const own = sessions.filter(s => s.personId === id);
       const ms = own.reduce((n, s) => n + sessionMilliseconds(s, asOf), 0);
@@ -69,7 +102,9 @@ export function projectWorkHours(record: ExecutionPlanRecord, asOf: string) {
     return { taskId: task.taskId, processLabel: task.processLabel, scopeLabel: task.scopeLabel, seqLabel: task.seqLabel,
       status: task.status, startedAt: task.startedAt ?? task.handedOffAt ?? null, completedAt: task.completedAt,
       milliseconds, timeLabel: task.executionMode === 'EXTERNAL' ? 'Nu se aplică' : workTimeLabel(milliseconds), complete,
-      coverageLabel: task.executionMode === 'EXTERNAL' ? 'Producție externă' : complete ? 'Complet' : sessions.some(s => !s.endedAt) ? 'Provizoriu · sesiune activă' : 'Parțial · timp nedocumentat',
+      coverageLabel: taskCoverageLabel(task, complete, activeSessionCount, evidenceGap),
+      activeSessionCount, provisional: activeSessionCount > 0,
+      undocumented: evidenceGap !== null, evidenceGap, evidenceGapLabel: evidenceGap ? WORK_EVIDENCE_GAP_LABELS[evidenceGap] : null,
       declaredDurationLabel: task.actualDurationMinutes === null ? null : workTimeLabel(task.actualDurationMinutes * 60000),
       machineTimeLabel: task.machineRuns.length ? workTimeLabel(task.machineRuns.filter(r => r.completedAt !== null).reduce((n, r) => n + Math.max(0, Date.parse(r.completedAt!) - Date.parse(r.startedAt)), 0)) : null,
       people, sessions: sessions.map(s => ({ ...s, milliseconds: sessionMilliseconds(s, asOf), timeLabel: workTimeLabel(sessionMilliseconds(s, asOf)) })) };
@@ -88,8 +123,16 @@ export function projectWorkHours(record: ExecutionPlanRecord, asOf: string) {
   const finished = record.tasks.length > 0 && record.tasks.every(t => t.status === 'COMPLETED');
   const runs = record.tasks.flatMap(t => t.machineRuns);
   const machineMs = runs.length ? runs.filter(r => r.completedAt !== null).reduce((n, r) => n + Math.max(0, Date.parse(r.completedAt!) - Date.parse(r.startedAt)), 0) : null;
-  return { asOf, milliseconds: total, totalLabel: !applicable.length && record.tasks.length ? 'Nu se aplică' : workTimeLabel(total), complete, completeTasks, applicableTasks: applicable.length,
-    coverageLabel: !applicable.length && record.tasks.length ? 'Nu se aplică · producție externă' : complete ? 'Evidența orelor: completă' : sessions.some(s => !s.endedAt) ? 'Ore provizorii · sesiuni active' : 'Evidența orelor: parțială',
+  const activeSessionCount = sessions.filter(s => s.endedAt === null).length;
+  const provisionalTaskCount = tasks.filter(t => t.provisional).length;
+  const undocumentedTaskCount = tasks.filter(t => t.undocumented).length;
+  const idleTaskCount = tasks.filter(t => t.status === 'IN_PROGRESS' && !t.provisional).length;
+  return { asOf, milliseconds: total, activeSessionCount, provisionalTaskCount, undocumentedTaskCount, idleTaskCount, totalLabel: !applicable.length && record.tasks.length ? 'Nu se aplică' : workTimeLabel(total), complete, completeTasks, applicableTasks: applicable.length,
+    coverageLabel: !applicable.length && record.tasks.length ? 'Nu se aplică · producție externă' : complete ? 'Evidența orelor: completă'
+      : activeSessionCount && undocumentedTaskCount ? 'Ore provizorii · sesiuni active · evidență parțială'
+      : activeSessionCount ? 'Ore provizorii · sesiuni active'
+      : undocumentedTaskCount ? 'Evidența orelor: parțială'
+      : starts.length ? 'Evidența orelor: fără lipsuri · lucrare în curs' : 'Evidența orelor: lucrare neîncepută',
     startedAt: starts[0] ?? null, completedAt: finished ? ends.at(-1) ?? null : null,
     elapsedLabel: starts[0] ? workTimeLabel(Date.parse(finished ? ends.at(-1)! : asOf) - Date.parse(starts[0])) : 'Neînceput',
     activeTimeLabel: sessions.length ? workTimeLabel(intervalUnionMilliseconds(sessions, asOf)) : 'Neînregistrat',

@@ -220,8 +220,8 @@ export function requestHref(requestId: string): string {
   return `/cereri/${encodeURIComponent(requestId)}`;
 }
 
-export const JOB_SHEET_SECTIONS = ["situatie", "operatii", "documente", "rezultate"] as const;
-const LEGACY_JOB_SECTIONS = ["fisiere", "materiale", "sursa", "plan", "operatie"] as const;
+export const JOB_SHEET_SECTIONS = ["situatie", "operatii", "fisiere", "oameni", "istoric", "date"] as const;
+const LEGACY_JOB_SECTIONS = ["documente", "rezultate", "materiale", "sursa", "plan", "operatie"] as const;
 export type JobSheetSection = (typeof JOB_SHEET_SECTIONS)[number];
 export type JobSheetSectionInput = JobSheetSection | (typeof LEGACY_JOB_SECTIONS)[number];
 
@@ -235,9 +235,9 @@ export function parseJobSheetSection(search: string): JobSheetSection {
 }
 
 export function canonicalJobSection(section: JobSheetSectionInput): JobSheetSection {
-  if (section === "plan" || section === "operatie") return "operatii";
-  if (section === "materiale" || section === "fisiere") return "documente";
-  if (section === "sursa") return "situatie";
+  if (section === "plan" || section === "operatie" || section === "rezultate") return "operatii";
+  if (section === "documente") return "fisiere";
+  if (section === "materiale" || section === "sursa") return "date";
   return section;
 }
 
@@ -409,7 +409,7 @@ export function canonicalLocation(pathname: string, search: string): string | nu
   if (job && section && (LEGACY_JOB_SECTIONS as readonly string[]).includes(section)) {
     return jobHref(decodeURIComponent(job[1]), {
       taskId: readSearchParam(search, "task"), section: section as JobSheetSectionInput,
-    }) + (section === "sursa" ? "#sursa" : "");
+    });
   }
   if (pathname === "/catalog") {
     const previous = parseSpineContext(search);

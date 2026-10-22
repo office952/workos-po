@@ -28,6 +28,22 @@ const emptyDossier = {
 };
 
 describe("TaskDossierPanel", () => {
+  it("shows assigned files in the job record and opens other files only for an explicit association", async () => {
+    const assigned = { artifactId: "assigned", originalFileName: "folosit.pdf", mimeType: "application/pdf", sizeLabel: "1 KB", category: "TECHNICAL", purpose: null, purposeLabel: null, note: null, usedAt: null, preview: "PDF", uploadedAt: "2026-10-20T08:00:00Z", downloadHref: "/api/execution-artifacts/assigned/download", linkedToTask: true };
+    const available = { ...assigned, artifactId: "available", originalFileName: "alt-desen.pdf", linkedToTask: false };
+    const fetch = vi.fn(() => jsonResponse({ dossier: { ...emptyDossier.dossier, files: [assigned], planFiles: [assigned, available] } }));
+    vi.stubGlobal("fetch", fetch);
+    const user = userEvent.setup();
+    render(<TaskDossierPanel taskId="task-1" canInstruct recordMode />);
+    expect(await screen.findByRole("button", { name: "folosit.pdf" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "alt-desen.pdf" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Asociază un fișier existent" }));
+    expect(screen.getByRole("button", { name: "alt-desen.pdf" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Închide asocierea" }));
+    expect(screen.queryByRole("button", { name: "alt-desen.pdf" })).toBeNull();
+    expect(fetch.mock.calls).toHaveLength(1);
+  });
+
   it("uploads an explicit revision through the shared dossier without changing file use or operation state", async () => {
     const previous = { artifactId: "old-1", originalFileName: "desen-v1.pdf", mimeType: "application/pdf", sizeLabel: "1 KB", category: "TECHNICAL", purpose: null, purposeLabel: null, note: null, usedAt: null, preview: "PDF", uploadedAt: "2026-10-20T08:00:00Z", downloadHref: "/api/execution-artifacts/old-1/download", linkedToTask: true };
     const fetch = vi.fn((_input: RequestInfo, _init?: RequestInit) => {

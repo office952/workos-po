@@ -1,0 +1,189 @@
+/* People evidence belongs to the existing job sheet; all colors follow its theme.
+   Controls are scoped under .job-record .job-people so the sheet's generic link-style
+   button reset (.job-record button:not(.hit)) cannot win, whatever the import order. */
+.job-people { display: grid; gap: 16px; min-width: 0; }
+
+/* Total lucrare */
+.job-record__section > .job-people__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; margin-bottom: 20px; }
+.job-sheet .job-record .job-people__head h2 { margin: 0; }
+.job-people__read { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; font-size: 13px; color: var(--color-text-secondary); }
+.job-people__read time { color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
+.job-people__totals { display: grid; grid-template-columns: minmax(0,1.35fr) repeat(3,minmax(0,1fr)); gap: 0; margin: 0; }
+.job-people__totals > div { min-width: 0; padding: 4px 20px; border-left: 1px solid var(--color-border); }
+.job-people__totals > div:first-child { border-left: 0; padding-left: 0; }
+.job-people__totals dt { color: var(--color-text-secondary); font-size: 13px; }
+.job-people__totals dd { margin: 6px 0 4px; font-size: 22px; font-weight: 600; line-height: 1.25; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.job-people__total-main dt { color: var(--color-text-primary); font-weight: 600; }
+.job-people__totals .job-people__total-main dd { font-size: 34px; line-height: 1.15; }
+.job-people__badges { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.job-people__totals .job-people__evidence dd { font-size: 13px; font-weight: 500; margin-top: 8px; }
+
+/* Motivele evidenței parțiale, la cerere */
+.job-people__gaps { margin-top: 12px; font-size: 13px; }
+.job-people__gaps summary { display: inline-flex; align-items: center; min-height: 40px; padding: 4px 0; cursor: pointer; color: var(--job-sheet-action); font-weight: 500; }
+.job-people__gaps summary:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+.job-people__gaps ul { display: grid; gap: 6px; margin: 4px 0 0; padding: 10px 12px; list-style: none; border-left: 3px solid var(--color-warning); background: var(--color-warning-soft); }
+.job-people__gaps li { display: grid; gap: 2px; }
+.job-people__gaps li a { font-weight: 600; min-height: 28px; display: inline-flex; align-items: center; }
+.job-people__gaps li span { color: var(--color-text-secondary); }
+.job-people__totals small { display: block; font-size: 12px; line-height: 1.45; color: var(--color-text-secondary); }
+.job-record .job-people__other { display: flex; flex-wrap: wrap; gap: 4px 24px; margin: 16px 0 0; padding-top: 12px; border-top: 1px solid var(--color-border); font-size: 13px; color: var(--color-text-secondary); }
+.job-people__other b { font-weight: 600; color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
+.job-people__other-note { margin-left: auto; color: var(--color-text-muted, var(--color-text-secondary)); font-size: 12px; }
+
+/* Lucrează acum */
+.job-people__now { border-color: var(--job-sheet-action); }
+.job-record .job-people__now > h3 { display: flex; align-items: center; gap: 8px; font-size: 15px; margin-bottom: 12px; }
+.job-people__pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--job-sheet-action); box-shadow: 0 0 0 4px var(--color-selection-fill); }
+.job-people__now-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(min(100%,300px),1fr)); gap: 12px; }
+.job-people__now-grid article { display: grid; align-content: start; gap: 2px; padding: 8px 16px 12px; border: 1px solid var(--color-border); border-left: 3px solid var(--job-sheet-action); border-radius: var(--radius-control); background: var(--color-surface); }
+.job-people__now-grid a { display: inline-flex; align-items: center; min-height: 40px; font-size: 15px; font-weight: 600; }
+.job-people__now-grid article > span { color: var(--color-text-secondary); font-size: 12px; }
+.job-people__now-grid ul { display: grid; gap: 8px; margin: 8px 0 0; padding: 8px 0 0; border-top: 1px solid var(--color-border); list-style: none; }
+.job-people__now-grid li { display: grid; gap: 1px; }
+.job-people__now-grid li strong { font-size: 14px; }
+.job-people__now-grid li small { color: var(--color-text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
+.job-people__now-grid .job-people__now-gap { margin-top: 4px; }
+.job-people__now--quiet { border-color: var(--color-border); padding-block: 14px; }
+.job-record .job-people__now--quiet p { display: grid; gap: 2px; margin: 0; }
+.job-people__now--quiet strong { font-size: 15px; }
+.job-people__now--quiet span { color: var(--color-text-secondary); font-size: 13px; }
+.job-people__now--quiet a { font-weight: 600; }
+
+/* Registru pe persoane */
+.job-record__section > .job-people__register-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-start; gap: 4px 16px; margin-bottom: 16px; }
+.job-record .job-people__register-head h3 { font-size: 16px; }
+.job-record .job-people__register-head p { margin: 0; font-size: 13px; color: var(--color-text-secondary); }
+.job-people__toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; }
+.job-people__filters { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 3px; border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface-raised); }
+.job-record .job-people .job-people__filters button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 6px 12px; border: 1px solid transparent; border-radius: var(--radius-control); background: transparent; color: var(--color-text-secondary); font-size: 13px; font-weight: 500; text-decoration: none; }
+.job-record .job-people .job-people__filters button:hover { color: var(--color-text-primary); }
+.job-record .job-people .job-people__filters button[aria-pressed="true"] { background: var(--color-surface); border-color: var(--color-border-strong); color: var(--color-text-primary); font-weight: 600; }
+.job-people__count { min-width: 22px; padding: 1px 6px; border-radius: var(--radius-badge, 999px); background: var(--color-surface-alt, var(--color-border)); color: var(--color-text-secondary); font-size: 12px; text-align: center; font-variant-numeric: tabular-nums; }
+.job-people__filters button[aria-pressed="true"] .job-people__count { background: var(--color-selection-fill); color: var(--job-sheet-action); }
+.job-people__operation { display: flex; align-items: center; gap: 10px; min-width: 0; max-width: 100%; font-size: 13px; font-weight: 500; }
+.job-people__operation select { font: inherit; font-weight: 400; color: inherit; background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); min-height: 44px; padding: 8px 12px; width: min(100%,340px); max-width: 100%; }
+.job-people__selected { display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 12px 32px; margin-top: 16px; padding: 12px 16px; border: 1px solid var(--color-border); border-left: 3px solid var(--job-sheet-action); border-radius: var(--radius-control); background: var(--color-selection-fill); }
+.job-people__selected-name { display: grid; min-width: 0; }
+.job-people__selected-name > span,.job-people__selected dt { font-size: 12px; color: var(--color-text-secondary); }
+.job-people__selected-name > strong { font-size: 15px; }
+.job-people__selected-name > small { font-size: 12px; color: var(--color-text-secondary); }
+.job-people__selected dl { display: flex; flex-wrap: wrap; gap: 4px 32px; margin: 0; }
+.job-people__selected dd { margin: 2px 0 0; font-size: 14px; }
+.job-people__selected dl > div:first-child dd { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.job-record .job-people__selected-gap { grid-column: 1/-1; margin: 0; font-size: 13px; color: var(--color-text-secondary); }
+.job-record .job-people .job-people__clear,.job-record .job-people .job-people__expand { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 6px 14px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-text-primary); font-size: 13px; font-weight: 500; text-decoration: none; white-space: nowrap; }
+.job-record .job-people .job-people__clear:hover,.job-record .job-people .job-people__expand:hover { border-color: var(--job-sheet-action); }
+.job-record .job-people__result-count { margin: 12px 0; font-size: 12px; color: var(--color-text-secondary); }
+.job-people__list { display: grid; gap: 12px; }
+
+/* Persoană */
+.job-people__person { min-width: 0; padding: 16px; border: 1px solid var(--color-border); border-radius: var(--radius-panel); background: var(--color-surface); }
+.job-people__person[data-active="true"] { border-left: 3px solid var(--job-sheet-action); }
+.job-people__person-head { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 12px 16px; }
+.job-people__avatar { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border: 1px solid var(--color-border); border-radius: 50%; font-size: 13px; font-weight: 600; background: var(--color-surface-raised); color: var(--color-text-secondary); }
+.job-people__avatar[data-active="true"] { color: var(--job-sheet-action); border-color: var(--job-sheet-action); background: var(--color-selection-fill); }
+.job-people__identity { min-width: 0; }
+.job-people__identity h4 { margin: 0; font-size: 16px; line-height: 1.35; overflow-wrap: break-word; }
+.job-record .job-people__identity p { margin: 2px 0 0; font-size: 13px; line-height: 1.4; color: var(--color-text-secondary); }
+.job-record .job-people__identity p[data-active="true"] { color: var(--job-sheet-action); font-weight: 500; }
+.job-people__identity time { font-variant-numeric: tabular-nums; }
+.job-people__person-total { display: grid; justify-items: end; gap: 1px; text-align: right; font-variant-numeric: tabular-nums; }
+.job-people__person-total > span,.job-people__person-total > small { font-size: 12px; color: var(--color-text-secondary); }
+.job-people__person-total > strong { font-size: 22px; line-height: 1.2; }
+.job-people__person-total b { font-weight: 600; color: var(--color-text-primary); white-space: nowrap; }
+.job-people__person-total > small.job-people__person-job { margin-top: 2px; padding-top: 2px; border-top: 1px dashed var(--color-border); }
+.job-people__person-total[data-scope="operation"] > strong { padding: 0 8px; border-radius: var(--radius-control); background: var(--color-selection-fill); color: var(--job-sheet-action); }
+
+/* Contribuții pe operații */
+.job-people__contributions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.job-record .job-people .job-people__contributions button { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; max-width: 100%; min-height: 36px; padding: 4px 10px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-text-primary); font-size: 13px; text-decoration: none; }
+.job-record .job-people .job-people__contributions button:hover { border-color: var(--job-sheet-action); }
+.job-record .job-people .job-people__contributions button[aria-pressed="true"] { background: var(--color-selection-fill); border-color: var(--job-sheet-action); }
+.job-people__contributions button > span { font-weight: 600; color: var(--job-sheet-action); font-variant-numeric: tabular-nums; }
+.job-people__contributions button > strong { padding-left: 6px; border-left: 1px solid var(--color-border); font-weight: 600; font-variant-numeric: tabular-nums; }
+.job-people__contributions button .job-record__icon { width: 15px; height: 15px; color: var(--color-warning); }
+
+/* Sesiuni */
+.job-people__sessions { table-layout: fixed; border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 14px; }
+.job-people__sessions caption { text-align: left; font-size: 12px; color: var(--color-text-secondary); padding-bottom: 6px; }
+.job-people__sessions th,.job-people__sessions td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--color-border); overflow-wrap: anywhere; vertical-align: middle; }
+.job-people__sessions th { font-size: 12px; font-weight: 600; background: var(--color-surface-raised); color: var(--color-text-secondary); }
+.job-people__sessions th:first-child { width: 32%; }
+.job-people__sessions th:nth-child(4) { width: 13%; }
+.job-people__sessions th:last-child { width: 20%; }
+.job-people__sessions tr[data-active="true"] { background: var(--color-selection-fill); }
+.job-people__sessions td > a { display: inline-flex; min-height: 28px; align-items: center; font-weight: 600; }
+.job-people__sessions td > small { display: block; color: var(--color-text-secondary); font-size: 12px; }
+.job-people__sessions time,.job-people__sessions strong { font-variant-numeric: tabular-nums; }
+.job-people__end { color: var(--color-text-secondary); }
+.job-people__next-day { display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: var(--radius-badge); background: var(--color-selection-fill); color: var(--color-text-primary); font-size: 11px; font-weight: 500; }
+.job-record .job-people__shown { flex-basis: 100%; margin: 0; font-size: 12px; color: var(--color-text-secondary); }
+.job-people__end[data-active="true"] { color: var(--job-sheet-action); font-weight: 600; }
+.job-people__person-foot { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 12px 24px; margin-top: 12px; }
+.job-people__person-foot:not(:has(.job-people__expand)) { justify-content: flex-end; }
+
+/* Axă secundară: geometrie calendaristică, fără durate */
+.job-people__axis { flex: 0 1 380px; min-width: 0; display: grid; gap: 3px; color: var(--color-text-secondary); font-size: 11px; font-variant-numeric: tabular-nums; }
+.job-people__axis-row { display: grid; grid-template-columns: 56px minmax(0,1fr); align-items: center; gap: 8px; }
+.job-people__axis-row > span { white-space: nowrap; }
+.job-people__axis-ticks { display: flex; justify-content: space-between; }
+.job-people__axis-lane { height: 10px; border-radius: 2px; position: relative; background: var(--color-surface-raised); background-image: linear-gradient(to right,var(--color-border) 1px,transparent 1px); background-size: 25% 100%; }
+.job-people__axis-segment { position: absolute; top: 1px; bottom: 1px; border-radius: 2px; background: var(--job-sheet-action); opacity: .55; }
+.job-people__axis-segment[data-active="true"] { opacity: 1; background: repeating-linear-gradient(135deg,var(--job-sheet-action) 0 3px,var(--color-surface) 3px 5px); }
+.job-people__axis-segment[data-selected="true"] { opacity: 1; }
+.job-people__axis-segment[data-dimmed="true"] { opacity: .18; }
+.job-people__axis > small { margin-left: 64px; }
+
+.job-record .job-people :is(select,button,a):focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+@media(max-width:1100px) {
+  .job-people__totals { grid-template-columns: repeat(2,minmax(0,1fr)); row-gap: 16px; }
+  .job-people__totals > div:nth-child(3) { border-left: 0; padding-left: 0; }
+  .job-people__other-note { margin-left: 0; flex-basis: 100%; }
+  .job-people__selected { grid-template-columns: minmax(0,1fr) auto; }
+  .job-people__selected dl { grid-column: 1/-1; grid-row: 2; }
+}
+@media(max-width:767px) {
+  .job-people { gap: 12px; }
+  .job-record__section > .job-people__head { flex-direction: row; margin-bottom: 12px; }
+  .job-people__totals { column-gap: 16px; row-gap: 12px; }
+  .job-people__totals > div { border: 0; padding: 0; }
+  .job-people__totals > div:first-child { grid-column: 1/-1; }
+  .job-people__totals > div:last-child { grid-column: 1/-1; padding-top: 12px; border-top: 1px solid var(--color-border); }
+  .job-people__totals dd { font-size: 19px; margin: 2px 0; }
+  .job-people__totals .job-people__total-main dd { font-size: 28px; }
+  .job-people__totals small[data-aside] { display: none; }
+  .job-people__other-note { display: none; }
+  .job-people__totals > div:last-child small { display: none; }
+  .job-people__now--quiet { padding-block: 10px; }
+  .job-record .job-people__other { gap: 2px 16px; margin-top: 12px; }
+  .job-people__toolbar { align-items: stretch; flex-direction: column; }
+  .job-people__filters { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .job-record .job-people .job-people__filters button { flex-direction: column; justify-content: center; gap: 2px; padding: 4px 6px; min-height: 52px; text-align: center; line-height: 1.2; }
+  .job-record .job-people :is(.job-people__contributions button,.job-people__clear,.job-people__expand) { min-height: 44px; }
+  .job-people__operation { display: grid; gap: 6px; width: 100%; }
+  .job-people__operation select { width: 100%; }
+  .job-people__selected { grid-template-columns: minmax(0,1fr); }
+  .job-people__selected dl { grid-row: auto; }
+  .job-record .job-people .job-people__clear { justify-self: start; }
+  .job-people__person { padding: 14px 12px; }
+  .job-people__person-head { gap: 8px 10px; align-items: start; }
+  .job-people__avatar { width: 32px; height: 32px; font-size: 12px; }
+  .job-people__identity h4 { font-size: 15px; }
+  .job-people__person-total > strong { font-size: 19px; }
+  /* Operation scope adds a second total line; give it its own row so the name keeps its width. */
+  .job-people__person-total[data-scope="operation"] { grid-column: 2 / -1; grid-row: 2; justify-items: start; text-align: left; }
+  .job-people__sessions,.job-people__sessions tbody { display: block; }
+  .job-people__sessions caption { display: block; }
+  .job-people__sessions thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .job-people__sessions tr { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px 16px; padding: 10px 0; border-bottom: 1px solid var(--color-border); }
+  .job-people__sessions tr[data-active="true"] { padding-inline: 8px; }
+  .job-people__sessions td { display: block; padding: 0; border: 0; min-width: 0; }
+  .job-people__sessions td:first-child { grid-column: 1/-1; }
+  .job-people__sessions td > a { min-height: 32px; }
+  .job-people__sessions td::before { content: attr(data-label); display: block; color: var(--color-text-secondary); font-size: 11px; }
+  .job-people__sessions td:first-child::before { display: none; }
+  .job-people__person-foot { flex-direction: column; align-items: stretch; }
+  .job-people__axis { flex-basis: auto; }
+}

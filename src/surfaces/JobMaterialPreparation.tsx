@@ -21,6 +21,8 @@ type Props = {
   jobId: string;
   onlyResourceIds?: readonly string[];
   returnTo?: string;
+  /** Finished-job consultation: keep recorded checks and requests, without production next-step prompts. */
+  consultation?: boolean;
 };
 
 function displayQuantity(value: number): string {
@@ -48,7 +50,7 @@ function estimatedLabel(line: JobMaterialLineTransport, jobTotal: boolean): stri
     : "Necesar estimat: " + quantity;
 }
 
-export function JobMaterialPreparation({ jobId, onlyResourceIds, returnTo }: Props) {
+export function JobMaterialPreparation({ jobId, onlyResourceIds, returnTo, consultation = false }: Props) {
   const key = resourceKeys.jobMaterialPreparation(jobId);
   const resource = useResource(key, () => fetchJobMaterialPreparation(jobId));
   const session = useResource(resourceKeys.operatorSession(), loadOperatorSession);
@@ -103,14 +105,14 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds, returnTo }: Pro
         <p className="ui-note">Se citește necesarul din planul lucrării.</p>
       ) : null}
       {resource.data && resource.data.planId === null ? (
-        <p className="ui-note">Necesarul de execuție va apărea după crearea planului.</p>
+        <p className="ui-note">{consultation ? "Nu există un necesar de execuție înregistrat." : "Necesarul de execuție va apărea după crearea planului."}</p>
       ) : null}
       {resource.data?.planId && lines.length === 0 ? (
         <p className="ui-note">Nu există materiale planificate în această selecție.</p>
       ) : null}
       {resource.data?.planId && lines.length > 0 ? (
         <>
-          <p className="job-materials__intro">{lines.length} materiale de verificat · Cantități estimate din plan</p>
+          <p className="job-materials__intro">{consultation ? `${lines.length} materiale · necesar estimat și verificări păstrate` : `${lines.length} materiale de verificat · Cantități estimate din plan`}</p>
           {actionError ? (
             <InlineAlert tone="error" title="Verificarea a eșuat">{actionError}</InlineAlert>
           ) : null}
@@ -138,8 +140,9 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds, returnTo }: Pro
                 ) : null}
                 {line.latestCheck?.status === "MISSING" ? (
                   <p className="job-materials__warning" role="status">
-                    Avertisment: materialul nu este suficient pentru lucrare. Pornirea operației
-                    rămâne decisă de WorkOS.
+                    {consultation
+                      ? "Verificarea a înregistrat material insuficient."
+                      : "Avertisment: materialul nu este suficient pentru lucrare. Pornirea operației rămâne decisă de WorkOS."}
                   </p>
                 ) : null}
                 {line.openRequest ? (
@@ -160,7 +163,7 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds, returnTo }: Pro
                         displayWhen(line.openRequest.requestedAt) + ". Nu este o comandă."}
                   </p>
                 ) : null}
-                {line.canCheck && personName ? (
+                {!consultation && line.canCheck && personName ? (
                   <div className="job-materials__actions">
                     <Button
                       variant="secondary"
@@ -183,7 +186,7 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds, returnTo }: Pro
               </article>
             );
           })}
-          {!personName ? (
+          {consultation ? null : !personName ? (
             <p className="ui-note">
               Verificarea și solicitarea necesită identificarea personală a operatorului.{" "}
               <a className="text-link" href={atelierHref({ jobId, returnTo })}>
@@ -206,7 +209,9 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds, returnTo }: Pro
   ) : (
     <SurfacePanel
       title="Necesar și verificare materiale"
-      description="Disponibilitate și solicitări de aprovizionare pentru această lucrare."
+      description={consultation
+        ? "Necesar estimat, verificări și solicitări păstrate. Consumul efectiv este în operații."
+        : "Disponibilitate și solicitări de aprovizionare pentru această lucrare."}
       label="Necesar și verificare materiale"
     >
       {body}

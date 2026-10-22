@@ -38,6 +38,42 @@ describe('recorded labor hours', () => {
     expect(h.milliseconds).toBe(60000); expect(h.totalLabel).toBe('1 min');
   });
 
+  it('projects active sessions and a canonical untracked start separately, so both stay visible', () => {
+    const r = record([session('1', 'Ion', '13:50', null)]);
+    r.tasks = r.tasks.map(t => ({ ...t, status: 'IN_PROGRESS', completedAt: null }));
+    const h = projectWorkHours(r, date('14:20'));
+    const t = h.tasks[0]!;
+    expect(t.activeSessionCount).toBe(1); expect(t.provisional).toBe(true);
+    expect(t.undocumented).toBe(true); expect(t.evidenceGap).toBe('UNTRACKED_START');
+    expect(t.evidenceGapLabel).toMatch(/pornită fără sesiune individuală/);
+    expect(t.coverageLabel).toBe('Provizoriu · sesiune activă · parțial nedocumentat');
+    expect(h.activeSessionCount).toBe(1); expect(h.provisionalTaskCount).toBe(1); expect(h.undocumentedTaskCount).toBe(1);
+    expect(h.coverageLabel).toBe('Ore provizorii · sesiuni active · evidență parțială');
+    // The gap names no person and adds no time: totals stay the sum of recorded sessions.
+    expect(JSON.stringify(t.evidenceGapLabel)).not.toMatch(/Ion/); expect(h.milliseconds).toBe(30 * 60000);
+  });
+
+  it('never infers missing work from pauses: a tracked, interrupted, unfinished operation stays in progress', () => {
+    const r = record([session('1', 'Maria', '13:30', '14:00'), session('2', 'Ion', '15:10', '15:40')]);
+    r.tasks = r.tasks.map(t => ({ ...t, status: 'IN_PROGRESS', completedAt: null }));
+    const h = projectWorkHours(r, date('16:00'));
+    const t = h.tasks[0]!;
+    expect(t.undocumented).toBe(false); expect(t.evidenceGap).toBeNull(); expect(t.provisional).toBe(false);
+    expect(t.coverageLabel).toBe('În lucru · fără sesiuni active');
+    expect(h.idleTaskCount).toBe(1); expect(h.undocumentedTaskCount).toBe(0); expect(h.complete).toBe(false);
+    expect(h.coverageLabel).toBe('Evidența orelor: fără lipsuri · lucrare în curs');
+    expect(h.milliseconds).toBe(60 * 60000);
+  });
+
+  it('keeps legacy work without sessions undocumented and an unstarted operation neutral', () => {
+    const legacy = projectWorkHours(record([]), date('15:00')).tasks[0]!;
+    expect(legacy.evidenceGap).toBe('NO_INDIVIDUAL_SESSIONS'); expect(legacy.coverageLabel).toBe('Parțial · timp nedocumentat');
+    const r = record([]); r.tasks = r.tasks.map(t => ({ ...t, status: 'PLANNED', startedAt: null, completedAt: null }));
+    const planned = projectWorkHours(r, date('15:00'));
+    expect(planned.tasks[0]!.undocumented).toBe(false); expect(planned.tasks[0]!.coverageLabel).toBe('Neîncepută');
+    expect(planned.coverageLabel).toBe('Evidența orelor: lucrare neîncepută');
+  });
+
   it('marks external-only labor as not applicable while retaining handoff-to-return elapsed time', () => {
     const r = record([]);
     r.tasks = r.tasks.map(t => ({ ...t, executionMode: 'EXTERNAL', startedAt: null, handedOffAt: date('13:40') }));

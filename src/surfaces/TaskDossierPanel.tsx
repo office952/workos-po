@@ -74,6 +74,7 @@ export function TaskDossierPanel({
   operatorIdentified = true,
   canWriteFiles = true,
   sessionScope = "",
+  recordMode = false,
 }: {
   taskId: string;
   taskLabel?: string;
@@ -81,6 +82,7 @@ export function TaskDossierPanel({
   operatorIdentified?: boolean;
   canWriteFiles?: boolean;
   sessionScope?: string;
+  recordMode?: boolean;
 }) {
   const [dossier, setDossier] = useState<TaskDossier | null>(null);
   const [loadError, setLoadError] = useState<"none" | "initial" | "stale" | "session" | "forbidden">("none");
@@ -116,6 +118,7 @@ export function TaskDossierPanel({
     }));
   }
   const [composer, setComposer] = useState<Composer>(null);
+  const [associationTask, setAssociationTask] = useState<string | null>(null);
   if (draftScope !== sessionScope) {
     setDraftScope(sessionScope);
     setDrafts({});
@@ -123,6 +126,7 @@ export function TaskDossierPanel({
     setErrors({});
     setSelectedByTask({});
     setComposer(null);
+    setAssociationTask(null);
   }
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
   const pending = pendingTaskId === taskId;
@@ -263,7 +267,9 @@ export function TaskDossierPanel({
             ))}
           </DossierSection>
           {previewFile ? <JobArtifactPreview file={previewFile} /> : null}
-          {current.planFiles.some((item) => !item.linkedToTask) ? (
+          {current.planFiles.some((item) => !item.linkedToTask) && (!recordMode || canWriteFiles) ? <section className="task-dossier__association">
+            {recordMode ? <Button variant="secondary" aria-expanded={associationTask === taskId} onClick={() => setAssociationTask(associationTask === taskId ? null : taskId)}>{associationTask === taskId ? 'Închide asocierea' : 'Asociază un fișier existent'}</Button> : null}
+            {!recordMode || associationTask === taskId ? (
             <DossierSection title="Fișierele generale ale lucrării" empty={null}>
               {current.planFiles
                 .filter((item) => !item.linkedToTask)
@@ -292,7 +298,8 @@ export function TaskDossierPanel({
                   </div>
                 ))}
             </DossierSection>
-          ) : null}
+            ) : null}
+          </section> : null}
         </div>
       ) : null}
 
