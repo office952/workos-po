@@ -93,7 +93,7 @@ describe("AppShell", () => {
     );
   });
 
-  it("keeps mid-width overflow destinations under Mai multe", async () => {
+  it("switches modules on tablet from one sheet with every module, grouped", async () => {
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       configurable: true,
@@ -112,28 +112,29 @@ describe("AppShell", () => {
     });
 
     render(
-      <AppShell contextLabel="Clienți" mode="slice" currentHref="/catalog">
+      <AppShell contextLabel="Catalog" mode="slice" currentHref="/catalog">
         <div>conținut</div>
       </AppShell>,
     );
 
-    expect(document.querySelector(".app-shell__nav-compact")).not.toBeNull();
-    expect(screen.getByRole("link", { name: "Clienți" })).toBeInTheDocument();
-    const more = screen.getByRole("button", { name: "Mai multe" });
-    expect(more).toHaveAttribute("aria-expanded", "false");
-    await userEvent.click(more);
-    expect(more).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("menuitem", { name: "Catalog" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    expect(screen.getByRole("menuitem", { name: "Oferte" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Navigare principală" })).not.toBeInTheDocument();
+    const switcher = screen.getByRole("button", { name: /Catalog/ });
+    expect(switcher).toHaveTextContent("06");
+    expect(switcher).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(switcher);
+    expect(switcher).toHaveAttribute("aria-expanded", "true");
+    const sheet = screen.getByRole("navigation", { name: "Navigare principală" });
+    expect(sheet).toHaveTextContent("Comercial");
+    expect(sheet).toHaveTextContent("Operațiuni");
+    expect(sheet).toHaveTextContent("Administrare");
+    expect(screen.getByRole("link", { name: "Catalog" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Oferte" })).toHaveAttribute("href", "/oferte");
     await userEvent.keyboard("{Escape}");
-    expect(more).toHaveAttribute("aria-expanded", "false");
-    expect(more).toHaveFocus();
+    expect(switcher).toHaveAttribute("aria-expanded", "false");
+    expect(switcher).toHaveFocus();
   });
 
-  it("keeps only the current destination plus overflow on phone", async () => {
+  it("keeps the phone band to the current module and opens all modules on demand", async () => {
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       configurable: true,
@@ -157,14 +158,14 @@ describe("AppShell", () => {
       </AppShell>,
     );
 
-    expect(document.querySelector(".app-shell__nav-mobile")).not.toBeNull();
-    expect(screen.getByRole("link", { name: "Cereri" })).toHaveAttribute("aria-current", "page");
     expect(screen.queryByRole("link", { name: "Clienți" })).not.toBeInTheDocument();
-
-    const more = screen.getByRole("button", { name: "Mai multe" });
-    await userEvent.click(more);
-    expect(screen.getByRole("menuitem", { name: "Clienți" })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: "Atelier" })).toBeInTheDocument();
+    const switcher = screen.getByRole("button", { name: /Cereri/ });
+    await userEvent.keyboard("{Tab}");
+    switcher.focus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(screen.getByRole("link", { name: "Clienți" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Atelier" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Cereri" })).toHaveAttribute("aria-current", "page");
   });
 
   it("moves through the shell from the keyboard", async () => {

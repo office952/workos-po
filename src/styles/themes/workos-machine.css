@@ -25,6 +25,13 @@
   --shell-button-ink: #ffffff;
   --shell-live-shadow: rgb(53 109 96 / 34%);
   --shell-overlay-shadow: rgb(0 0 0 / 22%);
+  /* Documents on the light table, and AA-safe tones for small brass and warning text. */
+  --wos-paper: #fbf8f2;
+  --wos-lightbox: #faf7f0;
+  --wos-table: #e9e3d8;
+  --wos-brass-text: #7a5823;
+  --wos-warning-text: #85561a;
+  --wos-document-shadow: 0 1px 0 rgb(23 21 18 / 6%), 0 14px 24px -10px rgb(43 33 22 / 16%);
 
   --color-canvas: #efebe4;
   --color-surface: var(--shell-panel);
@@ -77,6 +84,12 @@
   --shell-button-ink: #08110e;
   --shell-live-shadow: rgb(143 200 181 / 42%);
   --shell-overlay-shadow: rgb(0 0 0 / 34%);
+  --wos-paper: #1f1c18;
+  --wos-lightbox: #1b1915;
+  --wos-table: #100f0d;
+  --wos-brass-text: #b8872b;
+  --wos-warning-text: #d6a04b;
+  --wos-document-shadow: 0 1px 0 rgb(0 0 0 / 40%), 0 18px 32px -12px rgb(0 0 0 / 60%);
 
   --color-canvas: var(--shell-deck);
   --color-surface: var(--shell-panel);

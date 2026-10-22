@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  parseQuotesSelection,
+  quotesHref,
   assemblyQuoteHref,
   canonicalLocation,
   atelierHref,
@@ -170,4 +172,20 @@ it("retires execution and job subpages without losing task context or redirectin
   expect(canonicalLocation("/lucrari/job-1", "?sectiune=rezultate")).toBe("/lucrari/job-1?sectiune=operatii");
   expect(canonicalLocation("/atelier", "?job=job-1&plan=plan-1&task=task-1")).toBeNull();
   expect(canonicalLocation("/lucrari/job-1", "?sectiune=operatii&task=task-1")).toBeNull();
+});
+
+describe("Oferte dossier selection", () => {
+  it("round-trips the selected offer and its front sheet", () => {
+    const href = quotesHref({ quoteId: "asmq:asmt:1", sheet: "comanda" });
+    expect(href).toBe("/oferte?oferta=asmq%3Aasmt%3A1&foaie=comanda");
+    expect(parseQuotesSelection(href.slice("/oferte".length))).toEqual({ quoteId: "asmq:asmt:1", sheet: "comanda" });
+  });
+
+  it("defaults to the offer sheet and drops a sheet without an offer", () => {
+    expect(quotesHref({ quoteId: "q-1" })).toBe("/oferte?oferta=q-1");
+    expect(quotesHref({ sheet: "comanda" })).toBe("/oferte");
+    expect(parseQuotesSelection("?foaie=comanda")).toEqual({ quoteId: null, sheet: "oferta" });
+    expect(parseQuotesSelection("?oferta=q-1&foaie=altceva")).toEqual({ quoteId: "q-1", sheet: "oferta" });
+    expect(parseQuotesSelection("")).toEqual({ quoteId: null, sheet: "oferta" });
+  });
 });

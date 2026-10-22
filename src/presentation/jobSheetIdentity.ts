@@ -17,6 +17,15 @@ export function presentJobSheetSecondary(job: JobListItemTransport): string | nu
   return product && product !== title ? product : null;
 }
 
+export function jobSheetFinished(job: JobListItemTransport): boolean {
+  return job.stage === "EXECUTION_COMPLETED";
+}
+
+/** Stage shown on the job sheet header and wherever the job is summarized. */
+export function presentJobSheetStage(job: JobListItemTransport): string {
+  return jobSheetFinished(job) ? "Producție finalizată" : job.stageLabel;
+}
+
 export function presentJobSheetLead(job: JobListItemTransport): string {
   switch (job.nextAction) {
     case "RELEASE_TO_PRODUCTION":

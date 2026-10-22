@@ -15,7 +15,7 @@ import { loadExecutionPlan, loadJobDetail, loadOperatorSession } from '../data/r
 import { useResource } from '../data/useResource';
 import { PageRegion } from '../layout/PageRegion';
 import { canPublishInstructions } from '../presentation/dossierAccess';
-import { presentJobSheetTitle, presentJobSheetSecondary } from '../presentation/jobSheetIdentity';
+import { presentJobSheetTitle, presentJobSheetSecondary, presentJobSheetStage } from '../presentation/jobSheetIdentity';
 import { atelierHref, canonicalJobSection, jobHref, quoteHref, type JobSheetSection, type JobSheetSectionInput } from '../routing/appRoute';
 import { navigate } from '../routing/navigate';
 import { useCloudSession } from '../session/CloudSessionContext';
@@ -86,7 +86,7 @@ export function JobDetailPage({ jobId, taskId = null, section }: Props) {
     <header className="job-sheet__header"><a className="job-sheet__back" href="/lucrari">← Lucrări</a>
       <div className="job-sheet__identity-row"><div className="job-sheet__identity"><p className="job-sheet__eyebrow">Fișa lucrării</p><h1>{job ? presentJobSheetTitle(job) : 'Lucrare'}</h1><p>{job?.customerDisplayName ?? 'Se citește lucrarea.'}{secondary ? ' · ' + secondary : ''}</p></div>
         <div className="job-sheet__header-action"><Button variant="secondary" onClick={() => window.print()}>Tipărește fișa</Button>{planId && !finished ? <a className="job-sheet__link-button" href={atelierHref({ jobId, planId, taskId: selectedTask?.taskId })}>Deschide în Atelier</a> : null}</div></div>
-      {job ? <div className="job-sheet__planning"><strong className="job-sheet__state">{finished ? 'Producție finalizată' : job.stageLabel}</strong><span>Prioritate: {job.priorityLabel}</span><span>Termen: {job.targetDateLabel}</span><span>{job.progressLabel}</span>
+      {job ? <div className="job-sheet__planning"><strong className="job-sheet__state">{presentJobSheetStage(job)}</strong><span>Prioritate: {job.priorityLabel}</span><span>Termen: {job.targetDateLabel}</span><span>{job.progressLabel}</span>
         {job.planningEditable && !finished ? <details className="job-sheet__planning-editor"><summary>Modifică prioritatea și termenul</summary><form onSubmit={event => { event.preventDefault(); void savePlanning(); }}><SelectField id="job-priority" label="Prioritate" value={priority} options={[{ value: 'STANDARD', label: 'Standard' }, { value: 'HIGH', label: 'Ridicată' }, { value: 'URGENT', label: 'Urgentă' }]} onChange={setPriorityDraft}/><TextField id="job-target" label="Termen" value={targetDate} onChange={setTargetDraft}/><Button type="submit" disabled={pending}>Salvează</Button></form></details> : null}</div> : null}
       {finished ? <p className="job-sheet__completion-note">Producția este finalizată. Livrarea și montajul nu sunt confirmate de această stare.</p> : null}
       {job && !planId && owner && !finished ? <Button disabled={pending} onClick={() => void sendToProduction()}>{pending ? 'Se pregătește producția…' : 'Trimite în producție'}</Button> : null}
@@ -102,7 +102,7 @@ export function JobDetailPage({ jobId, taskId = null, section }: Props) {
         section={active}
         record={report.data ?? null}
         productionFinished={finished}
-        summaryContext={job ? { statusLabel: finished ? 'Producție finalizată' : job.stageLabel, progressLabel: job.progressLabel, attentionLabel: finished ? null : job.attentionLabel } : undefined}
+        summaryContext={job ? { statusLabel: presentJobSheetStage(job), progressLabel: job.progressLabel, attentionLabel: finished ? null : job.attentionLabel } : undefined}
         canWriteFiles={owner || Boolean(session.data)}
         operationHref={operationHref}
         selectedTaskId={selectedTask?.taskId ?? null}

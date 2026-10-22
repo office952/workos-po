@@ -294,6 +294,28 @@ export function jobsViewHref(view: JobsView): string {
   return view === "resources" ? "/lucrari?vedere=utilaje" : "/lucrari";
 }
 
+/** The Oferte dossier: which offer is open and which sheet is in front. */
+export type QuotesSheet = "oferta" | "comanda";
+
+export type QuotesSelection = { quoteId: string | null; sheet: QuotesSheet };
+
+export function parseQuotesSelection(search: string): QuotesSelection {
+  const quoteId = readSearchParam(search, "oferta");
+  return {
+    quoteId,
+    sheet: quoteId && readSearchParam(search, "foaie") === "comanda" ? "comanda" : "oferta",
+  };
+}
+
+export function quotesHref(selection: { quoteId?: string | null; sheet?: QuotesSheet } = {}): string {
+  if (!selection.quoteId) {
+    return "/oferte";
+  }
+  const params = new URLSearchParams({ oferta: selection.quoteId });
+  if (selection.sheet === "comanda") params.set("foaie", "comanda");
+  return `/oferte?${params.toString()}`;
+}
+
 export function atelierHref(
   context: { jobId?: string | null; planId?: string | null; taskId?: string | null; returnTo?: string | null } = {},
 ): string {

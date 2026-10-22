@@ -1,0 +1,451 @@
+/* WorkOS header band (Masa de ofertare).
+   One 56px band for every slice page: lit module plates, groups separated by brass rivets,
+   and one context plate for live channel, organization, role and account.
+   Tablet and phone switch modules from a sheet. Layout only; colors come from workos-machine. */
+.app-shell[data-nav-mode] {
+  --shell-height: 56px;
+}
+
+.app-shell .app-shell__bar--band {
+  display: block;
+  min-height: var(--shell-height);
+  padding: 0;
+  background: var(--shell-chassis);
+  border-bottom: 1px solid var(--shell-edge-strong);
+  box-shadow: none;
+}
+
+.app-shell__band {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-height: var(--shell-height);
+  padding: 0 32px;
+}
+
+.app-shell__bar--band .app-shell__brand {
+  flex: 0 0 auto;
+  gap: 10px;
+  min-height: var(--shell-height);
+  padding-right: 20px;
+}
+
+.app-shell__bar--band .app-shell__brand-system {
+  display: block;
+  font-size: 0.5625rem;
+  letter-spacing: 0.08em;
+}
+
+.app-shell__bar--band .app-shell__brand:focus-visible,
+.app-shell__module:focus-visible,
+.app-shell__switcher-trigger:focus-visible,
+.app-shell__switcher-item:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.app-shell__modules {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.app-shell__module-group {
+  display: flex;
+  align-items: stretch;
+}
+
+.app-shell__module-group:not([data-first])::before {
+  content: "";
+  flex: 0 0 auto;
+  align-self: center;
+  width: 4px;
+  height: 4px;
+  margin: 0 5px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--shell-brass) 70%, transparent);
+}
+
+.app-shell__module {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  color: var(--shell-muted);
+  font: 500 0.6875rem/1 var(--font-mono);
+  letter-spacing: 0.035em;
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition:
+    background-color var(--motion-edit) var(--ease-work),
+    color var(--motion-edit) var(--ease-work);
+}
+
+.app-shell__module-index {
+  color: var(--wos-brass-text);
+  font: 600 0.5625rem/1 var(--font-mono);
+  letter-spacing: 0.05em;
+}
+
+.app-shell__module:hover {
+  color: var(--shell-ink);
+  background: var(--shell-brass-soft);
+}
+
+.app-shell__module[aria-current="page"] {
+  padding-left: 24px;
+  color: var(--shell-ink);
+  background: var(--shell-panel-strong);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 55%),
+    inset 0 -2px 6px color-mix(in srgb, var(--shell-brass) 10%, transparent);
+}
+
+:root[data-resolved-theme="dark"] .app-shell__module[aria-current="page"] {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 5%),
+    inset 0 -8px 16px color-mix(in srgb, var(--shell-brass) 14%, transparent);
+}
+
+.app-shell__module[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--shell-brass);
+}
+
+.app-shell__module[aria-current="page"]::after,
+.app-shell__channel-signal {
+  content: "";
+  width: 6px;
+  height: 6px;
+  background: var(--shell-signal);
+  box-shadow: 0 0 8px var(--shell-live-shadow);
+}
+
+.app-shell__module[aria-current="page"]::after {
+  position: absolute;
+  left: 11px;
+  top: calc(50% - 3px);
+}
+
+.app-shell__spacer {
+  flex: 1 1 auto;
+  min-width: 12px;
+}
+
+.app-shell__plate {
+  flex: 0 0 auto;
+  align-self: center;
+  display: flex;
+  align-items: stretch;
+  min-height: 40px;
+  border: 1px solid var(--shell-edge-strong);
+  border-radius: 2px;
+  background: var(--shell-panel);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 70%),
+    0 1px 2px rgb(23 21 18 / 6%);
+}
+
+:root[data-resolved-theme="dark"] .app-shell__plate {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%);
+}
+
+.app-shell__channel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.app-shell__channel-signal {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.app-shell__channel-kicker {
+  color: var(--shell-muted);
+  font: 600 0.5625rem/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.app-shell__channel-name {
+  color: var(--shell-ink);
+  font: 500 0.6875rem/1 var(--font-mono);
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.app-shell .app-shell__band .app-shell__account {
+  align-self: stretch;
+  display: flex;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border-left: 1px solid var(--shell-edge);
+}
+
+.app-shell .app-shell__band .account-area {
+  gap: 0;
+}
+
+.app-shell .app-shell__band .account-area__summary {
+  gap: 8px;
+  padding: 0 12px;
+  border-right: 1px solid var(--shell-edge);
+}
+
+.app-shell .app-shell__band .account-area__org {
+  max-width: 11rem;
+  font: 400 0.75rem/1 var(--font-mono);
+}
+
+.app-shell .app-shell__band .account-area__role {
+  padding: 3px 6px;
+  border: 1px solid var(--shell-edge-strong);
+  border-radius: 0;
+  color: var(--shell-muted);
+  font: 600 0.5625rem/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.app-shell .app-shell__band .account-area__trigger {
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--shell-ink);
+  font: 500 0.6875rem/1 var(--font-mono);
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.app-shell .app-shell__band .account-area__trigger:hover {
+  background: var(--shell-brass-soft);
+}
+
+.app-shell .app-shell__band .account-area__trigger:focus-visible {
+  outline-offset: -2px;
+}
+
+.account-area__icon,
+.account-area__chevron,
+.app-shell__switcher-chevron {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.account-area__chevron,
+.app-shell__switcher-chevron {
+  color: var(--shell-muted);
+}
+
+.account-area__menu-org {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 500 0.75rem/1.3 var(--font-mono);
+}
+
+.account-area__menu-org span {
+  color: var(--color-text-secondary);
+}
+
+.app-shell .app-shell__band .account-area__menu {
+  top: calc(100% + 8px);
+}
+
+/* Module switcher (tablet and phone) */
+.app-shell__switcher {
+  position: relative;
+  align-self: center;
+}
+
+.app-shell__switcher-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel-strong);
+  color: var(--shell-ink);
+  font: 500 0.6875rem/1 var(--font-mono);
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 55%);
+}
+
+.app-shell__switcher-trigger::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  right: -1px;
+  height: 2px;
+  background: var(--shell-brass);
+}
+
+.app-shell__switcher-trigger[aria-expanded="true"] .app-shell__switcher-chevron {
+  transform: rotate(180deg);
+}
+
+.app-shell__switcher-sheet {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 60;
+  display: grid;
+  gap: 14px;
+  width: min(22rem, calc(100vw - 24px));
+  padding: 10px 16px 16px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--shell-panel);
+  box-shadow: 0 18px 48px var(--shell-overlay-shadow);
+}
+
+.app-shell__switcher-group {
+  display: grid;
+}
+
+.app-shell__switcher-heading {
+  margin: 0 0 6px;
+  color: var(--shell-muted);
+  font: 600 0.5625rem/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.app-shell__switcher-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--shell-ink);
+  font: 500 0.875rem/1.2 var(--font-sans);
+  text-decoration: none;
+}
+
+.app-shell__switcher-item:hover {
+  background: var(--shell-brass-soft);
+}
+
+.app-shell__switcher-item[aria-current="page"] {
+  background: var(--shell-brass-soft);
+  box-shadow: inset 2px 0 0 var(--shell-brass);
+}
+
+@media (max-width: 1439px) {
+  .app-shell__bar--band .app-shell__module {
+    padding-inline: 10px;
+  }
+
+  .app-shell__bar--band .app-shell__module[aria-current="page"] {
+    padding-left: 22px;
+  }
+
+  .app-shell__bar--band .app-shell__module[aria-current="page"]::after {
+    left: 9px;
+  }
+
+  .app-shell__bar--band .app-shell__channel-name,
+  .app-shell__bar--band .account-area__trigger-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 1151px) {
+  .app-shell__band {
+    gap: 12px;
+    padding: 0 24px;
+  }
+
+  .app-shell__bar--band .app-shell__brand {
+    padding-right: 0;
+  }
+
+  .app-shell__bar--band .app-shell__brand-system {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-shell[data-nav-mode] {
+    --shell-height: 52px;
+  }
+
+  .app-shell__band {
+    gap: 10px;
+    padding: 0 8px 0 12px;
+  }
+
+  .app-shell__bar--band .app-shell__brand-copy,
+  .app-shell__channel-kicker {
+    display: none;
+  }
+
+  .app-shell__plate {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .app-shell .app-shell__band .app-shell__account {
+    border-left: 0;
+  }
+
+  .app-shell .app-shell__band .account-area__trigger {
+    width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border: 1px solid var(--shell-edge-strong);
+    background: var(--shell-panel);
+  }
+
+  .app-shell .app-shell__band .account-area__chevron {
+    display: none;
+  }
+
+  .app-shell__switcher {
+    position: static;
+  }
+
+  .app-shell__switcher-sheet {
+    top: 100%;
+    left: 0;
+    right: 0;
+    width: auto;
+    border-width: 0 0 1px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell__module[aria-current="page"]::after,
+  .app-shell__channel-signal {
+    box-shadow: none;
+  }
+}

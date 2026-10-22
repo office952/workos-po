@@ -16,7 +16,6 @@ import { loadQuoteEnvelope, loadQuoteSnapshot } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { CommercialPricePanel } from "../presentation/commercialPrice";
-import { presentCustomerPrice } from "../presentation/customerPrice";
 import { formatMoney } from "../presentation/format";
 import { triggerBrowserDownload } from "../presentation/download";
 import { presentCostLine, selectLineByResource } from "../presentation/costLine";
@@ -25,57 +24,14 @@ import { FrozenRateAcknowledgementNotice } from "../presentation/rateAcknowledge
 import { ALUMINIUM_RETURN_PROFILE_RESOURCE_ID } from "../reference/lettersProduct";
 import { clientHref, jobHref, quoteHref, requestHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
-import { QuoteLines, QuoteRelations, QuoteSummary, type QuoteLine, type QuoteRelation, type QuoteTotal } from "./quoteDetail";
+import { QuoteLines, QuoteRelations, QuoteSummary, type QuoteRelation, type QuoteTotal } from "./quoteDetail";
+import { presentProductQuoteLines, presentProductQuoteTotal } from "./quoteDocumentModel";
 import "../styles/surfaces/offers.css";
 
 type QuoteSnapshotPageProps = {
   productCode: string;
   quoteSnapshotId: string;
 };
-
-/** Same total as the quote document: the frozen job total when the quote carries several lines. */
-function presentFrozenTotal(snapshot: QuoteSnapshotTransport): QuoteTotal | null {
-  const product = presentCustomerPrice(snapshot.commercial);
-  if (!snapshot.jobCommercial) {
-    return product;
-  }
-  const job = presentCustomerPrice(snapshot.jobCommercial);
-  return job ? { ...job, vatPercent: job.vatPercent ?? product?.vatPercent ?? null } : null;
-}
-
-function inscriptionLabel(productCode: string): string {
-  return productCode === "PRD-LOGO-FRONTLIT-PLEXI-AL06" ? "Denumire logo" : "Text";
-}
-
-function presentLines(snapshot: QuoteSnapshotTransport, total: QuoteTotal | null): QuoteLine[] {
-  const inscription = snapshot.inscription
-    ? `${inscriptionLabel(snapshot.productCode)}: ${snapshot.inscription}`
-    : null;
-  if (snapshot.offerLines.length === 0) {
-    return [
-      {
-        key: "product",
-        title: snapshot.productLabel,
-        detail: inscription,
-        netPrice: total?.netPrice ?? null,
-        vatPercent: total?.vatPercent ?? null,
-        vatAmount: total?.vatAmount ?? null,
-        grossPrice: total?.grossPrice ?? null,
-        currency: total?.currency ?? snapshot.currency ?? "EUR",
-      },
-    ];
-  }
-  return snapshot.offerLines.map((line) => ({
-    key: `${line.kind}-${line.label}`,
-    title: line.kind === "PRODUCT" ? snapshot.productLabel : line.label,
-    detail: line.kind === "PRODUCT" ? inscription : null,
-    netPrice: line.netPrice,
-    vatPercent: null,
-    vatAmount: null,
-    grossPrice: null,
-    currency: line.currency ?? "EUR",
-  }));
-}
 
 function quoteAcceptanceIdentity(
   envelope: QuoteListItemTransport | null,
@@ -189,7 +145,7 @@ export function QuoteSnapshotPage({
     : null;
   const presented = profile ? presentCostLine(profile) : null;
   const orderSnapshotId = presentedEnvelope?.orderSnapshotId ?? null;
-  const total = presentedSnapshot ? presentFrozenTotal(presentedSnapshot) : null;
+  const total = presentedSnapshot ? presentProductQuoteTotal(presentedSnapshot) : null;
 
   return (
     <SlicePage
@@ -277,7 +233,7 @@ export function QuoteSnapshotPage({
             </QuoteSummary>
             <QuoteLines
               caption="Ce se ofertează"
-              lines={presentLines(presentedSnapshot, total)}
+              lines={presentProductQuoteLines(presentedSnapshot, total)}
               total={presentedSnapshot.offerLines.length > 0 ? total : null}
               lineTax={presentedSnapshot.offerLines.length === 0}
             />
