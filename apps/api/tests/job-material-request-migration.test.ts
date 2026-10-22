@@ -1,6 +1,7 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   applyMigrations,
@@ -11,6 +12,15 @@ import {
 } from "../src/persistence/sqlite.js";
 
 const MIGRATION = "043_job_material_request_quantity_optional.sql";
+const MIGRATION_SQL = readFileSync(
+  fileURLToPath(new URL(`../src/persistence/migrations/${MIGRATION}`, import.meta.url)),
+  "utf8",
+);
+const CEILING = 1000000000;
+const QUANTITY_TRIGGERS = [
+  "trg_job_material_requests_quantity_insert",
+  "trg_job_material_requests_quantity_update",
+];
 const temps: string[] = [];
 
 afterEach(() => {
@@ -157,42 +167,6 @@ describe("job material request quantity migration", () => {
     });
   });
 
-  it("rolls back a copy that would reject a historical quantity and then retries", () => {
-    withDb((db) => {
-      applyHistorical042(db);
-      insertPlan(db, "plan-1");
-      insertCheck(db, { checkId: "mcheck:kept", planId: "plan-1", resourceId: "MAT-LED" });
-      insertCheck(db, { checkId: "mcheck:huge", planId: "plan-1", resourceId: "MAT-HUGE" });
-      insertRequest(db, {
-        requestId: "mreq:kept", checkId: "mcheck:kept", planId: "plan-1",
-        resourceId: "MAT-LED", estimated: 120, requested: 140,
-      });
-      insertRequest(db, {
-        requestId: "mreq:huge", checkId: "mcheck:huge", planId: "plan-1",
-        resourceId: "MAT-HUGE", estimated: 1, requested: 1000000001,
-      });
-
-      expect(() => applySelectedMigrations(db, [MIGRATION])).toThrow(/CHECK/i);
-
-      expect(registered(db)).toBe(false);
-      expect(shadowExists(db)).toBe(false);
-      expect(db.inTransaction).toBe(false);
-      expect(db.pragma("foreign_keys", { simple: true })).toBe(1);
-      expect(row(db, "mreq:kept")).toEqual({ requested_quantity: 140, estimated_quantity: 120 });
-      expect(quantity(db, "mreq:huge")).toBe(1000000001);
-      expect(tableSql(db)).toContain("requested_quantity >= estimated_quantity");
-
-      db.prepare("DELETE FROM job_material_requests WHERE request_id = ?").run("mreq:huge");
-      applySelectedMigrations(db, [MIGRATION]);
-
-      expect(registered(db)).toBe(true);
-      expect(row(db, "mreq:kept")).toEqual({ requested_quantity: 140, estimated_quantity: 120 });
-      expect(quantity(db, "mreq:huge")).toBeUndefined();
-      expect(foreignKeyViolations(db)).toEqual([]);
-      expect(shadowExists(db)).toBe(false);
-    });
-  });
-
   it("rolls back an orphan foreign key and retries after that row is removed", () => {
     withDb((db) => {
       applyHistorical042(db);
@@ -283,12 +257,217 @@ describe("job material request quantity migration", () => {
   });
 });
 
+describe("job material request migration with historical quantities above the ceiling", () => {
+  it("upgrades every quantity the older 042 draft admitted, without deleting rows", () => {
+    withDb((db) => {
+      seedHistoricalQuantities(db);
+
+      applySelectedMigrations(db, [MIGRATION]);
+
+      expect(registered(db)).toBe(true);
+      expect(allQuantities(db)).toEqual(HISTORICAL_ROWS);
+      expect(tableSql(db)).toContain("requested_quantity IS NULL");
+      expect(tableSql(db)).not.toContain("requested_quantity >= estimated_quantity");
+      expect(indexNames(db)).toContain("idx_job_material_requests_open");
+      expect(triggerNames(db)).toEqual(QUANTITY_TRIGGERS);
+      expect(foreignKeyViolations(db)).toEqual([]);
+      expect(shadowExists(db)).toBe(false);
+      expect(db.inTransaction).toBe(false);
+      expect(db.pragma("foreign_keys", { simple: true })).toBe(1);
+    });
+  });
+
+  it("keeps the current ceiling for new and changed purchase quantities", () => {
+    withDb((db) => {
+      seedHistoricalQuantities(db);
+      applySelectedMigrations(db, [MIGRATION]);
+
+      insertCheck(db, { checkId: "mcheck:new-over", planId: "plan-1", resourceId: "MAT-NEW-OVER" });
+      expect(() => insertRequest(db, {
+        requestId: "mreq:new-over", checkId: "mcheck:new-over", planId: "plan-1",
+        resourceId: "MAT-NEW-OVER", estimated: 1, requested: CEILING + 1,
+      })).toThrow(/requested_quantity/i);
+      insertRequest(db, {
+        requestId: "mreq:new-ceiling", checkId: "mcheck:new-over", planId: "plan-1",
+        resourceId: "MAT-NEW-OVER", estimated: 1, requested: CEILING,
+      });
+      expect(quantity(db, "mreq:new-ceiling")).toBe(CEILING);
+      insertCheck(db, { checkId: "mcheck:new-null", planId: "plan-1", resourceId: "MAT-NEW-NULL" });
+      insertRequest(db, {
+        requestId: "mreq:new-null", checkId: "mcheck:new-null", planId: "plan-1",
+        resourceId: "MAT-NEW-NULL", estimated: 3, requested: null,
+      });
+      expect(quantity(db, "mreq:new-null")).toBeNull();
+      insertCheck(db, { checkId: "mcheck:new-zero", planId: "plan-1", resourceId: "MAT-NEW-ZERO" });
+      expect(() => insertRequest(db, {
+        requestId: "mreq:new-zero", checkId: "mcheck:new-zero", planId: "plan-1",
+        resourceId: "MAT-NEW-ZERO", estimated: 1, requested: 0,
+      })).toThrow(/CHECK/i);
+
+      db.prepare("UPDATE job_material_requests SET status = 'CANCELLED' WHERE request_id = ?")
+        .run("mreq:over");
+      expect(row(db, "mreq:over")).toEqual({ requested_quantity: CEILING + 1, estimated_quantity: 1 });
+      expect(() => db.prepare(
+        "UPDATE job_material_requests SET requested_quantity = ? WHERE request_id = ?",
+      ).run(CEILING + 1, "mreq:kept")).toThrow(/requested_quantity/i);
+      expect(() => db.prepare(
+        "UPDATE job_material_requests SET requested_quantity = ? WHERE request_id = ?",
+      ).run(CEILING + 2, "mreq:over")).toThrow(/requested_quantity/i);
+      db.prepare("UPDATE job_material_requests SET requested_quantity = ? WHERE request_id = ?")
+        .run(150, "mreq:kept");
+      expect(quantity(db, "mreq:kept")).toBe(150);
+      db.prepare("UPDATE job_material_requests SET requested_quantity = NULL WHERE request_id = ?")
+        .run("mreq:kept");
+      expect(quantity(db, "mreq:kept")).toBeNull();
+    });
+  });
+
+  it("keeps the open-request uniqueness per organization", () => {
+    withDb((db) => {
+      seedHistoricalQuantities(db);
+      applySelectedMigrations(db, [MIGRATION]);
+
+      insertCheck(db, { checkId: "mcheck:org2", planId: "plan-1", resourceId: "MAT-LED", organizationId: "org-2" });
+      insertRequest(db, {
+        requestId: "mreq:org2", checkId: "mcheck:org2", planId: "plan-1",
+        resourceId: "MAT-LED", estimated: 120, requested: null, organizationId: "org-2",
+      });
+      insertCheck(db, { checkId: "mcheck:org1-again", planId: "plan-1", resourceId: "MAT-LED" });
+      expect(() => insertRequest(db, {
+        requestId: "mreq:org1-again", checkId: "mcheck:org1-again", planId: "plan-1",
+        resourceId: "MAT-LED", estimated: 120, requested: null,
+      })).toThrow(/UNIQUE/i);
+      expect(db.prepare(
+        "SELECT organization_id, request_id FROM job_material_requests WHERE resource_id = 'MAT-LED' ORDER BY organization_id",
+      ).all()).toEqual([
+        { organization_id: "org-1", request_id: "mreq:kept" },
+        { organization_id: "org-2", request_id: "mreq:org2" },
+      ]);
+    });
+  });
+
+  it("retries after a failed upgrade without removing historical rows", () => {
+    withDbPath((db, path) => {
+      seedHistoricalQuantities(db);
+      const holder = openSqliteDatabaseWithoutMigrations(path);
+      try {
+        holder.exec("BEGIN IMMEDIATE");
+        db.pragma("busy_timeout = 0");
+
+        expect(() => applySelectedMigrations(db, [MIGRATION])).toThrow(/locked|busy/i);
+
+        holder.exec("ROLLBACK");
+      } finally {
+        holder.close();
+      }
+      expect(registered(db)).toBe(false);
+      expect(shadowExists(db)).toBe(false);
+      expect(db.inTransaction).toBe(false);
+      expect(db.pragma("foreign_keys", { simple: true })).toBe(1);
+      expect(allQuantities(db)).toEqual(HISTORICAL_ROWS);
+      expect(tableSql(db)).toContain("requested_quantity >= estimated_quantity");
+
+      applySelectedMigrations(db, [MIGRATION]);
+
+      expect(registered(db)).toBe(true);
+      expect(allQuantities(db)).toEqual(HISTORICAL_ROWS);
+      expect(triggerNames(db)).toEqual(QUANTITY_TRIGGERS);
+      expect(foreignKeyViolations(db)).toEqual([]);
+    });
+  });
+
+  it("records the migration when its schema committed before the ledger row", () => {
+    withDb((db) => {
+      seedHistoricalQuantities(db);
+      db.exec(MIGRATION_SQL);
+      expect(registered(db)).toBe(false);
+      expect(allQuantities(db)).toEqual(HISTORICAL_ROWS);
+
+      applySelectedMigrations(db, [MIGRATION]);
+
+      expect(registered(db)).toBe(true);
+      expect(db.prepare("SELECT COUNT(*) AS n FROM schema_migrations WHERE id = ?").get(MIGRATION))
+        .toEqual({ n: 1 });
+      expect(allQuantities(db)).toEqual(HISTORICAL_ROWS);
+      expect(indexNames(db).filter((name) => name === "idx_job_material_requests_open")).toHaveLength(1);
+      expect(triggerNames(db)).toEqual(QUANTITY_TRIGGERS);
+      expect(shadowExists(db)).toBe(false);
+      expect(foreignKeyViolations(db)).toEqual([]);
+      expect(db.pragma("foreign_keys", { simple: true })).toBe(1);
+    });
+  });
+
+  it("carries historical quantities through every later migration", () => {
+    withDb((db) => {
+      seedHistoricalQuantities(db);
+
+      applyMigrations(db);
+
+      const ledger = db.prepare("SELECT id FROM schema_migrations ORDER BY id").all()
+        .map((item) => (item as { id: string }).id);
+      expect(ledger).toEqual(listOperationalMigrationFiles());
+      expect(allQuantities(db)).toEqual(HISTORICAL_ROWS);
+      expect(triggerNames(db)).toEqual(QUANTITY_TRIGGERS);
+      expect(foreignKeyViolations(db)).toEqual([]);
+
+      applyMigrations(db);
+      expect(allQuantities(db)).toEqual(HISTORICAL_ROWS);
+    });
+  });
+});
+
+const HISTORICAL_ROWS = [
+  { request_id: "mreq:boundary", estimated_quantity: CEILING, requested_quantity: CEILING },
+  { request_id: "mreq:fraction", estimated_quantity: 0.25, requested_quantity: 0.5 },
+  { request_id: "mreq:huge", estimated_quantity: 2, requested_quantity: 5000000000000 },
+  { request_id: "mreq:kept", estimated_quantity: 120, requested_quantity: 140 },
+  { request_id: "mreq:over", estimated_quantity: 1, requested_quantity: CEILING + 1 },
+];
+
+function seedHistoricalQuantities(db: SqliteDatabase): void {
+  applyHistorical042(db);
+  insertPlan(db, "plan-1");
+  const resources: Record<string, string> = {
+    "mreq:boundary": "MAT-BOUND",
+    "mreq:fraction": "MAT-FRACTION",
+    "mreq:huge": "MAT-HUGE",
+    "mreq:kept": "MAT-LED",
+    "mreq:over": "MAT-OVER",
+  };
+  for (const item of HISTORICAL_ROWS) {
+    const checkId = item.request_id.replace("mreq:", "mcheck:");
+    insertCheck(db, { checkId, planId: "plan-1", resourceId: resources[item.request_id] });
+    insertRequest(db, {
+      requestId: item.request_id, checkId, planId: "plan-1", resourceId: resources[item.request_id],
+      estimated: item.estimated_quantity, requested: item.requested_quantity,
+    });
+  }
+}
+
+function allQuantities(db: SqliteDatabase): unknown[] {
+  return db.prepare(
+    "SELECT request_id, estimated_quantity, requested_quantity FROM job_material_requests " +
+    "WHERE request_id IN (" + HISTORICAL_ROWS.map(() => "?").join(", ") + ") ORDER BY request_id",
+  ).all(...HISTORICAL_ROWS.map((item) => item.request_id));
+}
+
+function triggerNames(db: SqliteDatabase): string[] {
+  return db.prepare(
+    "SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'job_material_requests' ORDER BY name",
+  ).all().map((item) => (item as { name: string }).name);
+}
+
 function withDb(run: (db: SqliteDatabase) => void): void {
+  withDbPath((db) => run(db));
+}
+
+function withDbPath(run: (db: SqliteDatabase, path: string) => void): void {
   const dir = mkdtempSync(join(tmpdir(), "workos-n009-migration-"));
   temps.push(dir);
-  const db = openSqliteDatabaseWithoutMigrations(join(dir, "app.sqlite"));
+  const path = join(dir, "app.sqlite");
+  const db = openSqliteDatabaseWithoutMigrations(path);
   try {
-    run(db);
+    run(db, path);
   } finally {
     db.close();
   }
@@ -315,14 +494,14 @@ function insertPlan(db: SqliteDatabase, planId: string): void {
 
 function insertCheck(
   db: SqliteDatabase,
-  input: { checkId: string; planId: string; resourceId: string },
+  input: { checkId: string; planId: string; resourceId: string; organizationId?: string },
 ): void {
   db.prepare(
     "INSERT INTO job_material_checks (check_id, action_key, organization_id, job_id, plan_id, " +
     "resource_id, status, checked_by_person_id, checked_by_label, checked_at) " +
-    "VALUES (?, ?, 'org-1', 'job-1', ?, ?, 'MISSING', 'per-1', 'Operator Vechi', ?)",
-  ).run(input.checkId, "action:" + input.checkId, input.planId, input.resourceId,
-    "2026-10-16T00:00:00.000Z");
+    "VALUES (?, ?, ?, 'job-1', ?, ?, 'MISSING', 'per-1', 'Operator Vechi', ?)",
+  ).run(input.checkId, "action:" + input.checkId, input.organizationId ?? "org-1", input.planId,
+    input.resourceId, "2026-10-16T00:00:00.000Z");
 }
 
 function insertRequest(
@@ -334,14 +513,16 @@ function insertRequest(
     resourceId: string;
     estimated: number;
     requested: number | null;
+    organizationId?: string;
   },
 ): void {
   db.prepare(
     "INSERT INTO job_material_requests (request_id, organization_id, job_id, plan_id, resource_id, " +
     "estimated_quantity, requested_quantity, unit, status, source_check_id, requested_by_person_id, " +
-    "requested_by_label, requested_at) VALUES (?, 'org-1', 'job-1', ?, ?, ?, ?, 'buc', 'REQUESTED', ?, " +
+    "requested_by_label, requested_at) VALUES (?, ?, 'job-1', ?, ?, ?, ?, 'buc', 'REQUESTED', ?, " +
     "'per-1', 'Operator Vechi', '2026-10-16T00:00:00.000Z')",
-  ).run(input.requestId, input.planId, input.resourceId, input.estimated, input.requested, input.checkId);
+  ).run(input.requestId, input.organizationId ?? "org-1", input.planId, input.resourceId,
+    input.estimated, input.requested, input.checkId);
 }
 
 function row(db: SqliteDatabase, requestId: string): { requested_quantity: number; estimated_quantity: number } {
