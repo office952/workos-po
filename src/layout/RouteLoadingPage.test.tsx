@@ -6,7 +6,7 @@ import { RouteLoadingPage } from "./RouteLoadingPage";
 describe("pilot loading chrome", () => {
   it.each([
     [{ name: "clients" }, "Clienți", 4],
-    [{ name: "requests" }, "Cereri de ofertă", 2],
+    [{ name: "requests" }, "Cereri", 2],
     [{ name: "client", customerId: "cus-1" }, "Client", 3],
   ] as const)("keeps the expected metric slots for %s without inventing counts or actions", (route, title, metricCount) => {
     render(<RouteLoadingPage route={route as AppRoute} />);

@@ -1,9 +1,9 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { invalidateResources, resetResourceCache } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
-import { readClientsRegistryMemory, writeClientsRegistryMemory } from "../session/clientsRegistryMemory";
+import { readClientsRegistryMemory } from "../session/clientsRegistryMemory";
 import { ClientsPage } from "./ClientsPage";
 
 afterEach(() => {
@@ -21,12 +21,38 @@ function jsonResponse(status: number, body: unknown) {
   });
 }
 
+const registry = (customers: unknown[], summary = { total: customers.length, active: customers.length, retired: 0, needsAttention: 0 }) => ({
+  registry: { summary, customers },
+});
+
+const ALPHA = {
+  customerId: "cus-a", displayName: "Alpha Clima SRL", status: "ACTIVE", statusLabel: "Activ",
+  openRequestCount: 1, quoteCount: 2, jobCount: 3, needsAttention: true, attentionLabel: "1 lucrare necesită acțiune",
+};
+const LUMEN = {
+  customerId: "cus-l", displayName: "Lumen Signs SRL", status: "ACTIVE", statusLabel: "Activ",
+  cui: "RO41234567", city: "Cluj-Napoca", contactName: "Ioana Marin", phone: "0722 000 111", email: "ioana@lumen.test", address: "Str. Demo 10",
+  openRequestCount: 0, quoteCount: 0, jobCount: 0, needsAttention: false, attentionLabel: null,
+};
+
+function workspace(customer: Record<string, unknown>, lists: { requests?: unknown[]; quotes?: unknown[]; jobs?: unknown[] } = {}, canCreateRequest = true) {
+  return { workspace: { customer, canCreateRequest, requests: lists.requests ?? [], quotes: lists.quotes ?? [], jobs: lists.jobs ?? [] } };
+}
+
+function route(handlers: Record<string, () => Promise<unknown>>) {
+  return vi.fn((input: RequestInfo) => {
+    const url = String(input);
+    const match = Object.keys(handlers).find((key) => url.endsWith(key));
+    return match ? handlers[match]!() : jsonResponse(404, {});
+  });
+}
+
 describe("ClientsPage", () => {
   it.each([401, 403])("hides a cached registry and its create form after a %i refresh", async (status) => {
-    const fetchMock = vi.fn(() => jsonResponse(200, { registry: { customers: [{ customerId: "cus-1", displayName: "Atelier Nord", status: "ACTIVE" }] } }));
+    const fetchMock = vi.fn(() => jsonResponse(200, registry([{ customerId: "cus-1", displayName: "Atelier Nord", status: "ACTIVE" }])));
     vi.stubGlobal("fetch", fetchMock);
     render(<ClientsPage />);
-    await screen.findByRole("link", { name: /Atelier Nord/ });
+    await screen.findByRole("link", { name: "Atelier Nord" });
     await userEvent.click(screen.getByRole("button", { name: "Client nou" }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     fetchMock.mockImplementation(() => jsonResponse(status, {}));
@@ -38,22 +64,116 @@ describe("ClientsPage", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("remembers the client opened using the row action", async () => {
-    vi.stubGlobal("fetch", vi.fn(() => jsonResponse(200, { registry: { customers: [{ customerId: "cus-1", displayName: "Atelier Nord", status: "ACTIVE" }] } })));
+  it("files clients alphabetically under letter groups with monograms and an index of present letters", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => jsonResponse(200, registry([LUMEN, ALPHA, { customerId: "cus-s", displayName: "Șantier Est SRL", status: "ACTIVE" }]))));
     render(<ClientsPage />);
-    const link = await screen.findByRole("link", { name: /Deschide/ });
-    link.addEventListener("click", (event) => event.preventDefault());
-    await userEvent.click(link);
-    expect(readClientsRegistryMemory().selectedId).toBe("cus-1");
+    await screen.findByRole("link", { name: "Alpha Clima SRL" });
+    const groups = screen.getAllByRole("rowheader").map((cell) => cell.textContent);
+    expect(groups).toEqual(["A", "L", "S"]);
+    const rows = screen.getAllByRole("row").filter((row) => row.hasAttribute("data-row-id"));
+    expect(rows.map((row) => row.getAttribute("data-row-id"))).toEqual(["cus-a", "cus-l", "cus-s"]);
+    expect(within(rows[0]!).getByText("AC")).toBeInTheDocument();
+    const index = screen.getByRole("navigation", { name: "Index alfabetic al clienților" });
+    expect(within(index).getByRole("button", { name: "Clienți la litera A" })).toBeEnabled();
+    expect(within(index).getByRole("button", { name: "Niciun client la litera B" })).toBeDisabled();
   });
-  it("restores context without painting the previously opened client as selected", async () => {
-    writeClientsRegistryMemory({ query: "", statusChip: "all", selectedId: "cus-1" });
-    vi.stubGlobal("fetch", vi.fn(() => jsonResponse(200, { registry: { customers: [{ customerId: "cus-1", displayName: "Atelier Nord", status: "ACTIVE" }] } })));
+
+  it("separates open requests from offer and job totals", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => jsonResponse(200, registry([ALPHA]))));
     render(<ClientsPage />);
-    const link = await screen.findByRole("link", { name: /Atelier Nord/ });
-    expect(link.closest("tr")).not.toHaveAttribute("data-selected");
-    expect(readClientsRegistryMemory().selectedId).toBe("cus-1");
+    const row = (await screen.findByRole("link", { name: "Alpha Clima SRL" })).closest("tr")!;
+    expect(within(row).getByText(/Cereri deschise/)).toHaveTextContent("Cereri deschise 1");
+    expect(within(row).getByText(/oferte/)).toHaveTextContent("Total oferte 2 · lucrări 3");
   });
+
+  it("selects a row into the URL and restores the selection from a direct link", async () => {
+    window.history.replaceState({}, "", "/clienti");
+    vi.stubGlobal("fetch", route({
+      "/api/customers": () => jsonResponse(200, registry([ALPHA, LUMEN])),
+      "/api/customers/cus-l/workspace": () => jsonResponse(200, workspace(LUMEN)),
+    }));
+    const { rerender } = render(<ClientsPage search="" />);
+    const row = (await screen.findByRole("link", { name: "Lumen Signs SRL" })).closest("tr")!;
+    await userEvent.click(row);
+    expect(window.location.search).toBe("?client=cus-l");
+    rerender(<ClientsPage search="?client=cus-l" />);
+    expect(row).toHaveAttribute("data-selected");
+    const card = await screen.findByRole("article", { name: "Cartela clientului Lumen Signs SRL" });
+    expect(within(card).getByText("CUI RO41234567")).toBeInTheDocument();
+    expect(within(card).getByRole("link", { name: "0722 000 111" })).toHaveAttribute("href", "tel:0722000111");
+    expect(within(card).getByRole("link", { name: "ioana@lumen.test" })).toHaveAttribute("href", "mailto:ioana@lumen.test");
+    expect(await within(card).findByText("Clientul nu are încă cereri, oferte sau lucrări.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Cerere nouă/ })).toHaveAttribute("href", "/cereri/noua?customer=cus-l");
+  });
+
+  it("shows missing contact fields as not filled and keeps the card's attention and recent documents apart", async () => {
+    vi.stubGlobal("fetch", route({
+      "/api/customers": () => jsonResponse(200, registry([ALPHA])),
+      "/api/customers/cus-a/workspace": () => jsonResponse(200, workspace(ALPHA, {
+        requests: [{ requestId: "req-1", title: "Litere recepție", reference: "CER-1", status: "NEW", statusLabel: "Nouă", createdAt: "2026-10-20T10:00:00Z", needsAttention: false }],
+        jobs: [{ jobId: "job-1", productCode: "P", productLabel: "Litere", inscription: "ALPHA", stage: "EXECUTION_PLANNED", stageLabel: "Plan de execuție", needsAttention: true, attentionLabel: "Lipsă utilaj dedicat", createdAt: "2026-10-21T10:00:00Z" }],
+      }, false)),
+    }));
+    render(<ClientsPage search="?client=cus-a" />);
+    const card = await screen.findByRole("article", { name: "Cartela clientului Alpha Clima SRL" });
+    expect(within(card).getAllByText("necompletat")).toHaveLength(5);
+    expect(within(card).getByText("CUI necompletat")).toBeInTheDocument();
+    expect(await within(card).findByText("Necesită acțiune · 1")).toBeInTheDocument();
+    expect(within(card).getByRole("link", { name: "ALPHA" })).toHaveAttribute("href", "/lucrari?lucrare=job-1");
+    expect(within(card).getByText("Ultimele documente · 1")).toBeInTheDocument();
+    expect(within(card).getByRole("link", { name: "CER-1" })).toHaveAttribute("href", "/cereri?cerere=req-1");
+    // Without the server's permission the card offers no new request.
+    expect(screen.queryByRole("link", { name: /Cerere nouă/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Fișa clientului" })).toHaveAttribute("href", "/clienti/cus-a");
+  });
+
+  it("reads the card independently: a failed workspace read keeps the register and offers a retry", async () => {
+    let fail = true;
+    vi.stubGlobal("fetch", route({
+      "/api/customers": () => jsonResponse(200, registry([ALPHA])),
+      "/api/customers/cus-a/workspace": () => (fail ? jsonResponse(503, {}) : jsonResponse(200, workspace(ALPHA))),
+    }));
+    render(<ClientsPage search="?client=cus-a" />);
+    expect(await screen.findByText("Documentele clientului nu au putut fi citite")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Alpha Clima SRL" })).toBeInTheDocument();
+    fail = false;
+    await userEvent.click(screen.getByRole("button", { name: "Reîncearcă" }));
+    expect(await screen.findByText("Clientul nu are încă cereri, oferte sau lucrări.")).toBeInTheDocument();
+  });
+
+  it("never shows a late card answer for a client that is no longer selected", async () => {
+    let releaseAlpha!: () => void;
+    vi.stubGlobal("fetch", route({
+      "/api/customers": () => jsonResponse(200, registry([ALPHA, LUMEN])),
+      "/api/customers/cus-a/workspace": () => new Promise((resolve) => {
+        releaseAlpha = () => resolve(jsonResponse(200, workspace(ALPHA, { quotes: [{ quoteSnapshotId: "q-late", productCode: "P", reference: "OF-LATE", needsAttention: true }] })));
+      }).then((value) => value),
+      "/api/customers/cus-l/workspace": () => jsonResponse(200, workspace(LUMEN)),
+    }));
+    const { rerender } = render(<ClientsPage search="?client=cus-a" />);
+    await screen.findByText("Se citesc documentele clientului…");
+    rerender(<ClientsPage search="?client=cus-l" />);
+    const card = await screen.findByRole("article", { name: "Cartela clientului Lumen Signs SRL" });
+    expect(await within(card).findByText("Clientul nu are încă cereri, oferte sau lucrări.")).toBeInTheDocument();
+    await act(async () => { releaseAlpha(); });
+    expect(screen.queryByText("OF-LATE")).not.toBeInTheDocument();
+    expect(screen.getByRole("article", { name: "Cartela clientului Lumen Signs SRL" })).toBeInTheDocument();
+  });
+
+  it("filters by the signal board and clears a selection the filter hides", async () => {
+    window.history.replaceState({}, "", "/clienti?client=cus-l");
+    vi.stubGlobal("fetch", route({
+      "/api/customers": () => jsonResponse(200, registry([ALPHA, LUMEN], { total: 2, active: 2, retired: 0, needsAttention: 1 })),
+      "/api/customers/cus-l/workspace": () => jsonResponse(200, workspace(LUMEN)),
+    }));
+    render(<ClientsPage search="?client=cus-l" />);
+    await screen.findByRole("article", { name: /Lumen Signs SRL/ });
+    await userEvent.click(screen.getByRole("button", { name: /Necesită acțiune/ }));
+    expect(screen.queryByRole("link", { name: "Lumen Signs SRL" })).not.toBeInTheDocument();
+    expect(window.location.search).toBe("");
+    expect(readClientsRegistryMemory().statusChip).toBe("attention");
+  });
+
   it("creates a customer through the public customers API", async () => {
     const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
       const url = String(input);
@@ -63,23 +183,16 @@ describe("ClientsPage", () => {
       return jsonResponse(200, { customers: [], registry: { summary: { total: 0, active: 0, retired: 0, needsAttention: 0 }, customers: [] } });
     });
     vi.stubGlobal("fetch", fetchMock);
-    const assign = vi.fn();
-    vi.stubGlobal("location", { ...window.location, assign });
-
     render(<ClientsPage />);
-    expect(document.querySelector(".page-workspace--stack")).not.toBeNull();
+    expect(document.querySelector('[data-surface="clients-registry"]')).not.toBeNull();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     await userEvent.click(await screen.findByRole("button", { name: "Client nou" }));
     await userEvent.setup().type(screen.getByLabelText("Denumire"), "Atelier Nord");
     await userEvent.keyboard("{Enter}");
-
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
         "/api/customers",
-        expect.objectContaining({
-          method: "POST",
-          body: expect.stringContaining("Atelier Nord"),
-        }),
+        expect.objectContaining({ method: "POST", body: expect.stringContaining("Atelier Nord") }),
       );
     });
   });
@@ -88,38 +201,21 @@ describe("ClientsPage", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
-        jsonResponse(200, {
-          registry: {
-            summary: { total: 2, active: 2, retired: 0, needsAttention: 0 },
-            customers: [
-              { customerId: "cus-1", displayName: "Atelier Nord", status: "ACTIVE", city: "Cluj" },
-              { customerId: "cus-2", displayName: "Atelier Nord", status: "ACTIVE", city: "Iași" },
-            ],
-          },
-        }),
+        jsonResponse(200, registry([
+          { customerId: "cus-1", displayName: "Atelier Nord", status: "ACTIVE", city: "Cluj" },
+          { customerId: "cus-2", displayName: "Atelier Nord", status: "ACTIVE", city: "Iași" },
+        ])),
       ),
     );
-
     render(<ClientsPage />);
-    const links = await screen.findAllByRole("link", { name: /Atelier Nord/ });
-    expect(links.some((link) => link.getAttribute("href") === "/clienti/cus-1")).toBe(true);
-    expect(links.some((link) => link.getAttribute("href") === "/clienti/cus-2")).toBe(true);
-    expect(screen.getAllByText("Cluj").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Iași").length).toBeGreaterThan(0);
+    const links = await screen.findAllByRole("link", { name: "Atelier Nord" });
+    expect(links.map((link) => link.getAttribute("href"))).toEqual(expect.arrayContaining(["/clienti/cus-1", "/clienti/cus-2"]));
+    expect(screen.getByText(/^Cluj/)).toBeInTheDocument();
+    expect(screen.getByText(/^Iași/)).toBeInTheDocument();
   });
 
   it("keeps search when the registry is shown again", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(() =>
-        jsonResponse(200, {
-          registry: {
-            summary: { total: 1, active: 1, retired: 0, needsAttention: 0 },
-            customers: [{ customerId: "cus-1", displayName: "Atelier Nord", status: "ACTIVE", city: "Cluj" }],
-          },
-        }),
-      ),
-    );
+    vi.stubGlobal("fetch", vi.fn(() => jsonResponse(200, registry([{ customerId: "cus-1", displayName: "Atelier Nord", status: "ACTIVE", city: "Cluj" }]))));
     const { unmount } = render(<ClientsPage />);
     await userEvent.setup().type(await screen.findByLabelText("Caută"), "Nord");
     unmount();
@@ -132,17 +228,11 @@ describe("ClientsPage", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<ClientsPage />);
     expect(await screen.findByText("Acces refuzat")).toBeInTheDocument();
-    fetchMock.mockImplementation(() =>
-      jsonResponse(200, {
-        registry: {
-          summary: { total: 0, active: 0, retired: 0, needsAttention: 0 },
-          customers: [],
-        },
-      }),
-    );
+    fetchMock.mockImplementation(() => jsonResponse(200, registry([])));
     await userEvent.setup().click(screen.getByRole("button", { name: "Reîncearcă" }));
     expect(await screen.findByText("Nu există încă clienți")).toBeInTheDocument();
   });
+
   it("keeps a draft when closed and reopens only through the CTA", async () => {
     vi.stubGlobal("fetch", vi.fn(() => jsonResponse(200, { registry: { customers: [] } })));
     render(<ClientsPage />);
@@ -170,5 +260,4 @@ describe("ClientsPage", () => {
     await act(async () => { release(await jsonResponse(201, { customer: { customerId: "cus-new", displayName: "Atelier nou" } })); });
     expect(window.location.pathname).toBe("/cereri");
   });
-
 });

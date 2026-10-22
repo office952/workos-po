@@ -26,6 +26,8 @@ import {
 } from "./cloudAuth";
 import { clearConfiguratorSession } from "./configuratorSession";
 import { clearClientsRegistryMemory } from "./clientsRegistryMemory";
+import { clearRegistryMemory } from "./registryMemory";
+import { JOBS_MEMORY_KEY, REQUESTS_MEMORY_KEY } from "./registryMemoryKeys";
 import { cloudSessionScope, readRememberedCloudScope, rememberCloudScope } from "./cloudSessionScope";
 import {
   advanceCloudBoundaryVersion,
@@ -63,6 +65,7 @@ function forgetOrganizationBoundState(): void {
   invalidateAfterCloudBoundaryChange();
   clearConfiguratorSession();
   clearClientsRegistryMemory();
+  clearRegistryMemory(REQUESTS_MEMORY_KEY, JOBS_MEMORY_KEY);
 }
 
 export function CloudSessionProvider({ children }: { children: ReactNode }) {

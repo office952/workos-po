@@ -1,0 +1,1527 @@
+/* Registry desk: the shared frame of Clienți, Cereri and Lucrări, aligned with Oferte (N-012).
+   Page bar with signal board, the page instrument, register, docked or dialog dossier.
+   docked ≥1152px · overlay 768–1151px · full <768px. Each page keeps its own instrument and
+   document in its surface stylesheet; nothing here encodes a business rule. */
+.rdesk {
+  --desk-gutter: 32px;
+  --desk-dossier: 480px;
+  min-width: 0;
+}
+
+/* ─── Page bar ─── */
+.rdesk__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 24px;
+  padding: 20px var(--desk-gutter) 18px;
+}
+
+.rdesk__title {
+  display: grid;
+  gap: 6px;
+}
+
+.rdesk__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--wos-brass-text);
+  font: 400 0.6875rem/1 var(--font-mono);
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+}
+
+.rdesk__eyebrow > span {
+  width: 14px;
+  height: 2px;
+  background: var(--shell-brass);
+}
+
+.rdesk__title h1 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 56px/1 var(--font-brand);
+  letter-spacing: -0.055em;
+}
+
+/* The page instrument sits under the bar; it belongs to the page, not to this frame. */
+.rdesk__instrument {
+  min-width: 0;
+  padding: 0 var(--desk-gutter) 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.rdesk__views {
+  display: flex;
+  gap: 20px;
+  padding: 0 var(--desk-gutter);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.rdesk__views a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-text-secondary);
+  font: 500 14px var(--font-sans);
+  text-decoration: none;
+}
+
+.rdesk__views a[aria-current="page"] {
+  color: var(--color-text-primary);
+  box-shadow: inset 0 -2px 0 var(--shell-signal);
+  font-weight: 600;
+}
+
+.rdesk__views a:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ─── Signal board: counters that filter ─── */
+.rdesk-board {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.rdesk-board__tile {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-areas: "lamp count" "lamp label";
+  align-items: center;
+  justify-content: start;
+  column-gap: 12px;
+  min-height: 60px;
+  padding: 8px 16px 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--motion-edit) var(--ease-work), border-color var(--motion-edit) var(--ease-work);
+}
+
+.rdesk-board__tile[data-group-start] {
+  margin-left: 18px;
+}
+
+.rdesk-board__tile[data-group-start]::before {
+  content: "";
+  position: absolute;
+  left: -13px;
+  top: calc(50% - 2px);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--shell-brass) 70%, transparent);
+}
+
+.rdesk-board__tile:hover {
+  background: var(--color-surface-raised);
+}
+
+.rdesk-board__tile:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.rdesk-board__tile[aria-pressed="true"] {
+  border-color: var(--shell-edge-strong);
+  background: var(--color-surface);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%), inset 0 -2px 0 var(--color-text-primary);
+}
+
+.rdesk-board__tile[data-tone="attention"][aria-pressed="true"] {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%), inset 0 -2px 0 var(--shell-warning);
+}
+
+:root[data-resolved-theme="dark"] .rdesk-board__tile[aria-pressed="true"] {
+  box-shadow: inset 0 -2px 0 var(--color-text-primary);
+}
+
+:root[data-resolved-theme="dark"] .rdesk-board__tile[data-tone="attention"][aria-pressed="true"] {
+  box-shadow: inset 0 -2px 0 var(--shell-warning);
+}
+
+.rdesk-board__lamp {
+  grid-area: lamp;
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--shell-edge-strong);
+}
+
+.rdesk-board__tile[data-lit] .rdesk-board__lamp {
+  border-color: transparent;
+  background: var(--shell-signal);
+  box-shadow: 0 0 8px var(--shell-live-shadow);
+}
+
+.rdesk-board__tile[data-tone="attention"][data-lit] .rdesk-board__lamp {
+  background: var(--shell-warning);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--shell-warning) 55%, transparent);
+}
+
+.rdesk-board__count {
+  grid-area: count;
+  font: 600 26px/1.05 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.rdesk-board__label {
+  grid-area: label;
+  color: var(--color-text-secondary);
+  font: 500 13px/1.3 var(--font-sans);
+}
+
+.rdesk-board__tile[aria-pressed="true"] .rdesk-board__label {
+  color: var(--color-text-primary);
+}
+
+.rdesk-board__tile[data-tone="attention"] .rdesk-board__count,
+.rdesk-board__tile[data-tone="attention"] .rdesk-board__label {
+  color: var(--wos-warning-text);
+}
+
+/* ─── Work area ─── */
+/* Docked, the desk fills the viewport under the header: register and dossier scroll
+   independently, so the dossier and its actions stay in view while the list moves. */
+.rdesk[data-layout="docked"] {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--shell-height));
+  height: calc(100dvh - var(--shell-height));
+  min-height: 560px;
+}
+
+.rdesk__work {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--desk-dossier);
+  min-height: 0;
+}
+
+.rdesk[data-layout="docked"] .rdesk__work {
+  flex: 1 1 auto;
+}
+
+.rdesk[data-layout="docked"] .rdesk-register {
+  overflow-y: auto;
+}
+
+.rdesk[data-layout="overlay"] .rdesk__work,
+.rdesk[data-layout="full"] .rdesk__work {
+  display: block;
+}
+
+.rdesk-register {
+  min-width: 0;
+  padding: 0 24px 32px var(--desk-gutter);
+}
+
+.rdesk-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  padding: 16px 0;
+}
+
+.rdesk-search {
+  position: relative;
+  display: flex;
+  flex: 1 1 18rem;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 8px 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  background: var(--color-surface);
+}
+
+.rdesk-search:hover {
+  border-color: var(--color-border-strong);
+}
+
+.rdesk-search:focus-within {
+  border-color: var(--shell-signal);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.rdesk-search > svg,
+.rdesk-search__clear svg {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.rdesk-search input {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: 400 14px var(--font-sans);
+}
+
+.rdesk-search input::placeholder {
+  color: var(--shell-muted);
+  opacity: 1;
+}
+
+.rdesk-search input:focus-visible {
+  outline: 0;
+}
+
+.rdesk-search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.rdesk-search__key {
+  padding: 2px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  color: var(--shell-muted);
+  font: 400 12px/1.4 var(--font-mono);
+}
+
+.rdesk-search__clear {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.rdesk-search__clear:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+}
+
+/* Filters: segmented on desktop, chips below. */
+.rdesk-segment {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--color-border);
+}
+
+.rdesk-segment__label {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border-right: 1px solid var(--color-border);
+  color: var(--shell-muted);
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rdesk-segment button,
+.rdesk-density button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: 500 13px var(--font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.rdesk-segment button:hover,
+.rdesk-density button:hover {
+  color: var(--color-text-primary);
+  background: var(--color-surface-raised);
+}
+
+.rdesk-segment button[aria-pressed="true"],
+.rdesk-density button[aria-pressed="true"] {
+  color: var(--color-text-primary);
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 -2px 0 var(--shell-signal);
+  font-weight: 600;
+}
+
+.rdesk-density button[aria-pressed="true"] {
+  box-shadow: inset 0 -2px 0 var(--shell-brass);
+}
+
+.rdesk-segment button:focus-visible,
+.rdesk-density button:focus-visible,
+.rdesk-chips button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.rdesk-density {
+  display: flex;
+  border: 1px solid var(--color-border);
+}
+
+.rdesk-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.rdesk-chips .rdesk-segment__label {
+  padding: 0 8px 0 0;
+  border: 0;
+}
+
+.rdesk-chips button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: 500 13px var(--font-sans);
+  cursor: pointer;
+}
+
+.rdesk-chips button[aria-pressed="true"] {
+  border-color: var(--shell-signal);
+  background: var(--shell-signal-soft);
+}
+
+.rdesk-create {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 20px 0 16px;
+  border: 1px solid var(--shell-signal);
+  border-radius: 2px;
+  background: var(--shell-signal);
+  color: var(--shell-button-ink);
+  font: 600 14px var(--font-sans);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.rdesk-create:hover {
+  border-color: var(--shell-signal-strong);
+  background: var(--shell-signal-strong);
+}
+
+.rdesk-create:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.rdesk-create svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+}
+
+/* Caption */
+.rdesk-caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding-bottom: 10px;
+}
+
+.rdesk-caption h2 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 15px/1.35 var(--font-sans);
+}
+
+.rdesk-caption__count {
+  color: var(--shell-muted);
+  font: 400 12px var(--font-mono);
+}
+
+.rdesk-reset,
+.rdesk-sort {
+  min-height: 44px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--shell-signal);
+  font: 600 13px var(--font-sans);
+  cursor: pointer;
+}
+
+.rdesk-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.rdesk-sort > span:first-child {
+  color: var(--shell-muted);
+  font: 500 10px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rdesk-reset:hover,
+.rdesk-sort:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.rdesk-reset:focus-visible,
+.rdesk-sort:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+}
+
+.rdesk-caption__keys {
+  margin-left: auto;
+  color: var(--shell-muted);
+  font: 600 9px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ─── Register table (docked) ─── */
+.rdesk-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  text-align: left;
+}
+
+.rdesk-table thead th {
+  height: 36px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--color-border-strong);
+  color: var(--shell-muted);
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rdesk-table thead th[data-align="end"] {
+  text-align: right;
+}
+
+.rdesk-table td {
+  position: relative;
+  height: 64px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  vertical-align: middle;
+}
+
+.rdesk[data-density="compact"] .rdesk-table td {
+  height: 48px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.rdesk-table td[data-align="end"] {
+  text-align: right;
+}
+
+.rdesk-table tbody tr[data-row] {
+  cursor: pointer;
+  transition: background-color var(--motion-edit) var(--ease-work);
+}
+
+.rdesk-table tbody tr[data-row]:hover {
+  background: var(--color-surface-raised);
+}
+
+.rdesk-table tbody tr[data-row]:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.rdesk-table tbody tr[data-attention] > td:first-child {
+  box-shadow: inset 3px 0 var(--shell-warning);
+}
+
+.rdesk-table tbody tr[data-selected] {
+  background: var(--wos-lightbox);
+}
+
+.rdesk-table tbody tr[data-selected] > td {
+  box-shadow: inset 0 1px var(--shell-signal), inset 0 -1px var(--shell-signal);
+}
+
+.rdesk-table tbody tr[data-selected] > td:first-child {
+  box-shadow: inset 3px 0 var(--shell-signal), inset 0 1px var(--shell-signal), inset 0 -1px var(--shell-signal);
+}
+
+.rdesk-table tbody tr[data-selected][data-attention] > td:first-child {
+  box-shadow: inset 3px 0 var(--shell-warning), inset 6px 0 var(--shell-signal), inset 0 1px var(--shell-signal), inset 0 -1px var(--shell-signal);
+}
+
+.rdesk[data-layout="docked"] .rdesk-table tbody tr[data-selected] > td:last-child::after {
+  content: "";
+  position: absolute;
+  top: calc(50% - 10px);
+  right: -12px;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-left: 10px solid var(--shell-signal);
+}
+
+/* Group heading row (letter, day) inside the table. */
+.rdesk-table th[scope="rowgroup"] {
+  padding: 14px 12px 6px;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+}
+
+/* Shared cell vocabulary */
+.rdesk-title {
+  display: block;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font: 600 15px/1.3 var(--font-sans);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+a.rdesk-title:hover {
+  color: var(--shell-signal);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+a.rdesk-title:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.rdesk-sub {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font: 400 12px/1.35 var(--font-sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rdesk-sub[data-missing] {
+  color: var(--shell-muted);
+}
+
+.rdesk-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-primary);
+  font: 500 11px/1.3 var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.rdesk-lamp {
+  flex: 0 0 auto;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--shell-muted);
+}
+
+.rdesk-lamp[data-filled] {
+  border-color: transparent;
+  background: var(--shell-signal);
+}
+
+.rdesk-attention {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--wos-warning-text);
+  font: 400 12px/1.35 var(--font-sans);
+}
+
+.rdesk-attention::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  background: var(--shell-warning);
+}
+
+.rdesk-next {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 164px;
+  max-width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-strong);
+  background: transparent;
+  color: var(--shell-signal);
+  font: 600 14px/1.2 var(--font-sans);
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.rdesk-next[data-priority] {
+  border-color: color-mix(in srgb, var(--shell-signal) 55%, var(--color-border));
+  background: var(--shell-signal-soft);
+}
+
+.rdesk-next:hover {
+  border-color: var(--shell-signal);
+  background: var(--shell-signal-soft);
+}
+
+.rdesk-next:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.rdesk-next > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rdesk-step {
+  display: block;
+  margin-top: 4px;
+  color: var(--shell-muted);
+  font: 400 12px/1.35 var(--font-sans);
+}
+
+.rdesk-empty .empty-state {
+  padding: 32px 20px;
+}
+
+.rdesk-skeleton {
+  display: grid;
+  gap: 1px;
+}
+
+.rdesk-skeleton > span {
+  display: block;
+  height: 64px;
+  background: linear-gradient(90deg, var(--color-surface-alt) 0 22%, transparent 22% 28%, var(--color-surface-alt) 28% 60%, transparent 60%);
+  background-size: 100% 10px;
+  background-repeat: no-repeat;
+  background-position: 12px center;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+/* ─── Cards (overlay / full) ─── */
+.rdesk-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rdesk-group {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rdesk-group + .rdesk-group {
+  margin-top: 14px;
+}
+
+.rdesk-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  background: var(--color-surface);
+}
+
+.rdesk-card[data-attention] {
+  box-shadow: inset 3px 0 var(--shell-warning);
+}
+
+.rdesk-card[data-selected] {
+  outline: 2px solid var(--shell-signal);
+  outline-offset: -1px;
+}
+
+.rdesk-card__open {
+  display: grid;
+  flex: 1 1 auto;
+  align-content: start;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 14px 14px 12px 16px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rdesk-card__open:hover {
+  background: var(--color-surface-raised);
+}
+
+.rdesk-card__open:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.rdesk-card__open > * {
+  min-width: 0;
+}
+
+.rdesk-card__doors {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  border-top: 1px solid var(--color-border);
+}
+
+.rdesk-door {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 0 12px 0 14px;
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.rdesk-door + .rdesk-door {
+  border-left: 1px solid var(--color-border);
+}
+
+.rdesk-door svg {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.rdesk-door > span {
+  display: grid;
+  min-width: 0;
+}
+
+.rdesk-door strong {
+  font: 600 14px/1.2 var(--font-sans);
+}
+
+.rdesk-door small {
+  overflow: hidden;
+  color: var(--shell-muted);
+  font: 400 12px/1.3 var(--font-sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rdesk-door[data-next] {
+  background: var(--shell-signal-soft);
+  color: var(--shell-signal);
+}
+
+a.rdesk-door:hover {
+  background: var(--shell-signal-soft);
+}
+
+a.rdesk-door:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+/* ─── Dossier frame ─── */
+.rdesk-dossier {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--shell-chassis);
+}
+
+.rdesk-dossier[data-layout="docked"] {
+  min-height: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--shell-edge-strong);
+}
+
+.rdesk-dossier__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 12px 20px;
+}
+
+.rdesk-dossier__position {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  color: var(--shell-muted);
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rdesk-dossier__position strong {
+  color: var(--color-text-primary);
+  font: 500 12px/1 var(--font-mono);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.rdesk-dossier__hint {
+  color: var(--shell-muted);
+  font: 600 9px/1.3 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rdesk-dossier__nav {
+  display: flex;
+  gap: 8px;
+}
+
+.rdesk-dossier__step,
+.rdesk-dossier__close {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--shell-panel);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.rdesk-dossier__step svg,
+.rdesk-dossier__close svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.rdesk-dossier__step svg[data-up] {
+  transform: rotate(180deg);
+}
+
+.rdesk-dossier__step:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.rdesk-dossier__close {
+  display: inline-flex;
+  gap: 8px;
+  width: auto;
+  height: 44px;
+  padding: 0 14px 0 12px;
+  font: 600 14px var(--font-sans);
+}
+
+.rdesk-dossier__step:focus-visible,
+.rdesk-dossier__close:focus-visible,
+.rdesk-dossier__primary:focus-visible,
+.rdesk-dossier__secondary:focus-visible,
+.rdesk-dossier__retry:focus-visible,
+.rdesk-sheet a:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* The light table under the document. */
+.rdesk-dossier__table {
+  position: relative;
+  flex: 1 0 auto;
+  padding: 20px 28px 24px 20px;
+  background-color: var(--wos-lightbox);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--color-border) 45%, transparent) 0.5px, transparent 0.5px),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-border) 45%, transparent) 0.5px, transparent 0.5px);
+  background-size: 20px 20px;
+}
+
+:root[data-resolved-theme="dark"] .rdesk-dossier__table {
+  background-image:
+    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--shell-brass) 9%, transparent), transparent 70%),
+    linear-gradient(color-mix(in srgb, var(--color-border) 55%, transparent) 0.5px, transparent 0.5px),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-border) 55%, transparent) 0.5px, transparent 0.5px);
+  background-size: 100% 100%, 20px 20px, 20px 20px;
+}
+
+.rdesk-dossier__paper {
+  position: relative;
+  padding: 20px 22px 22px;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--wos-paper);
+  box-shadow: var(--wos-document-shadow);
+  animation: rdesk-sheet-settle var(--motion-navigate) var(--ease-work);
+}
+
+@keyframes rdesk-sheet-settle {
+  from {
+    transform: translateY(-6px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+.rdesk-dossier__vacant {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  padding: 36px 24px;
+  border: 1px dashed var(--color-border-strong);
+  color: var(--color-text-secondary);
+  font: 400 14px/1.5 var(--font-sans);
+}
+
+.rdesk-dossier__vacant p {
+  margin: 0;
+}
+
+.rdesk-dossier__vacant-plate {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px dashed var(--color-border-strong);
+  background: var(--color-surface);
+}
+
+.rdesk-dossier__vacant-plate svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.rdesk-dossier__vacant-title {
+  color: var(--color-text-primary);
+  font: 600 15px/1.35 var(--font-sans);
+}
+
+.rdesk-dossier__loading {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font: 400 12px/1.45 var(--font-sans);
+}
+
+.rdesk-dossier__spinner {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+  border: 1.5px solid var(--shell-signal);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: rdesk-spin 900ms linear infinite;
+}
+
+@keyframes rdesk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rdesk-dossier__error {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--shell-fault-soft);
+  box-shadow: inset 3px 0 var(--shell-fault);
+  color: var(--color-text-primary);
+  font: 400 12px/1.45 var(--font-sans);
+}
+
+.rdesk-dossier__error-title {
+  margin: 0;
+  font: 600 14px/1.3 var(--font-sans);
+}
+
+.rdesk-dossier__retry {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: 600 14px var(--font-sans);
+  cursor: pointer;
+}
+
+.rdesk-dossier__stale {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  background: var(--shell-warning-soft);
+  box-shadow: inset 3px 0 var(--shell-warning);
+  color: var(--color-text-primary);
+  font: 400 12px/1.45 var(--font-sans);
+}
+
+.rdesk-dossier__stale p {
+  flex: 1 1 14rem;
+  margin: 0;
+}
+
+.rdesk-dossier__actions {
+  display: grid;
+  gap: 8px;
+  padding: 14px 20px 16px;
+  border-top: 1px solid var(--shell-edge-strong);
+  background: var(--shell-panel);
+}
+
+.rdesk-dossier[data-layout="docked"] .rdesk-dossier__actions,
+.rdesk-dossier[data-layout="full"] .rdesk-dossier__actions {
+  position: sticky;
+  bottom: 0;
+}
+
+.rdesk-dossier__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.rdesk-dossier__primary,
+.rdesk-dossier__secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid var(--shell-signal);
+  border-radius: 2px;
+  background: var(--shell-signal);
+  color: var(--shell-button-ink);
+  font: 600 14px var(--font-sans);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.rdesk-dossier__primary:hover {
+  border-color: var(--shell-signal-strong);
+  background: var(--shell-signal-strong);
+}
+
+.rdesk-dossier__secondary {
+  border-color: var(--shell-edge-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+}
+
+.rdesk-dossier__secondary:hover {
+  border-color: var(--shell-brass);
+  background: var(--shell-brass-soft);
+}
+
+.rdesk-dossier__destinations {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-secondary);
+  font: 400 12px/1.4 var(--font-sans);
+}
+
+.rdesk-dossier__destinations strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+/* Shared sheet vocabulary for the three documents. */
+.rdesk-sheet {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.rdesk-sheet p {
+  margin: 0;
+}
+
+.rdesk-sheet__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  color: var(--shell-muted);
+  font: 500 11px/1.3 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rdesk-sheet__identity {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.rdesk-sheet__identity > div {
+  min-width: 0;
+}
+
+.rdesk-sheet__name {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font: 600 26px/1.15 var(--font-brand);
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+.rdesk-sheet__ref {
+  color: var(--color-text-primary);
+  font: 600 24px/1.2 var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.rdesk-sheet__lead {
+  margin-top: 4px !important;
+  color: var(--color-text-primary);
+  font: 600 15px/1.35 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.rdesk-sheet__text {
+  color: var(--color-text-secondary);
+  font: 400 14px/1.45 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.rdesk-sheet__perforation {
+  width: 100%;
+  height: 0;
+  margin: 0;
+  border: 0;
+  border-top: 1px dashed var(--color-border);
+}
+
+.rdesk-sheet__label {
+  color: var(--shell-muted);
+  font: 500 11px/1.4 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rdesk-sheet__list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rdesk-sheet__list-head {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.rdesk-sheet__list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.rdesk-sheet__item-title {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font: 500 14px/1.3 var(--font-sans);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+a.rdesk-sheet__item-title:hover {
+  color: var(--shell-signal);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.rdesk-sheet__item-value {
+  color: var(--color-text-primary);
+  font: 500 12px/1.3 var(--font-mono);
+  text-align: right;
+}
+
+.rdesk-sheet__item-value[data-tone="attention"] {
+  color: var(--wos-warning-text);
+}
+
+.rdesk-sheet__item-detail {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font: 400 12px/1.35 var(--font-sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rdesk-sheet__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 10px 16px;
+  margin: 0;
+}
+
+.rdesk-sheet__facts dt {
+  color: var(--shell-muted);
+  font: 500 10px/1.3 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rdesk-sheet__facts dd {
+  margin: 2px 0 0;
+  color: var(--color-text-primary);
+  font: 500 13px/1.35 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.rdesk-sheet__facts dd[data-missing] {
+  color: var(--shell-muted);
+  font-weight: 400;
+}
+
+.rdesk-sheet__note {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font: 400 12px/1.45 var(--font-sans);
+}
+
+.rdesk-sheet__note[data-tone="attention"] {
+  color: var(--wos-warning-text);
+}
+
+.rdesk-sheet__note[data-tone="attention"]::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  background: var(--shell-warning);
+}
+
+/* ─── Dialog (overlay / full) ─── */
+.rdesk-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
+
+.rdesk-dialog__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(23 21 18 / 34%);
+  animation: rdesk-fade var(--motion-navigate) var(--ease-work);
+}
+
+.rdesk-dialog__panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(440px, 100%);
+  overflow-y: auto;
+  background: var(--shell-chassis);
+  box-shadow: 0 18px 48px var(--shell-overlay-shadow);
+  animation: rdesk-slide var(--motion-navigate) var(--ease-work);
+}
+
+.rdesk-dialog[data-layout="full"] .rdesk-dialog__panel {
+  left: 0;
+  width: auto;
+  box-shadow: none;
+}
+
+.rdesk-dialog__panel > .rdesk-dossier {
+  flex: 1 0 auto;
+}
+
+@keyframes rdesk-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rdesk-slide {
+  from {
+    transform: translateX(24px);
+  }
+}
+
+/* ─── Responsive reductions ─── */
+@media (max-width: 1439px) {
+  .rdesk {
+    --desk-dossier: 420px;
+  }
+
+  .rdesk__title h1 {
+    font-size: 48px;
+  }
+}
+
+@media (max-width: 1151px) {
+  .rdesk {
+    --desk-gutter: 24px;
+  }
+
+  .rdesk__title h1 {
+    font-size: 40px;
+  }
+
+  .rdesk-register {
+    padding: 0 var(--desk-gutter) 32px;
+  }
+
+  .rdesk-dossier__bar {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 767px) {
+  .rdesk {
+    --desk-gutter: 16px;
+  }
+
+  .rdesk__bar {
+    display: grid;
+    gap: 12px;
+    padding: 16px var(--desk-gutter) 14px;
+  }
+
+  .rdesk__title {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .rdesk__eyebrow > span {
+    display: none;
+  }
+
+  .rdesk__title h1 {
+    font-size: 34px;
+  }
+
+  .rdesk-board {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rdesk-board__tile {
+    min-width: 0;
+  }
+
+  .rdesk-board__tile[data-group-start] {
+    margin-left: 0;
+  }
+
+  .rdesk-board__tile[data-group-start]::before {
+    display: none;
+  }
+
+  .rdesk-register {
+    padding: 0 var(--desk-gutter) 40px;
+  }
+
+  .rdesk-search {
+    flex-basis: 100%;
+  }
+
+  .rdesk-create {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .rdesk-cards {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .rdesk-dossier__bar {
+    padding: 8px 12px;
+  }
+
+  .rdesk-dossier__table {
+    padding: 16px 20px 20px 12px;
+  }
+
+  .rdesk-dossier__paper {
+    padding: 18px 16px 20px;
+  }
+
+  .rdesk-dossier__actions {
+    padding: 12px 12px 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rdesk-dossier__paper,
+  .rdesk-dialog__scrim,
+  .rdesk-dialog__panel,
+  .rdesk-dossier__spinner {
+    animation: none;
+  }
+}

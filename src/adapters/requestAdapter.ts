@@ -7,20 +7,41 @@ import type {
   RequestInstallationScopeTransport,
   RequestLinkedOfferTransport,
   RequestListItemTransport,
+  RequestOverviewSummaryTransport,
+  RequestOverviewTransport,
 } from "../api/types";
 import { asBoolean, asNumber, asRecord, asString, asStringList } from "./record";
 
 export function presentRequestList(payload: unknown): RequestListItemTransport[] {
+  return presentRequestOverview(payload).requests;
+}
+
+/** The request overview with its server summary; the summary is null when the payload has none. */
+export function presentRequestOverview(payload: unknown): RequestOverviewTransport {
   const record = asRecord(payload);
   const overview = asRecord(record?.overview);
   const requests = overview?.requests;
-  if (!Array.isArray(requests)) {
-    return [];
-  }
-  return requests.flatMap((item) => {
-    const presented = presentRequestListItem(item);
-    return presented ? [presented] : [];
-  });
+  const summary = asRecord(overview?.summary);
+  const presentedSummary: RequestOverviewSummaryTransport | null = summary
+    ? {
+        total: asNumber(summary.total),
+        needsAttention: asNumber(summary.needsAttention),
+        newCount: asNumber(summary.newCount),
+        inReview: asNumber(summary.inReview),
+        waitingCustomer: asNumber(summary.waitingCustomer),
+        readyForQuote: asNumber(summary.readyForQuote),
+        blocked: asNumber(summary.blocked),
+      }
+    : null;
+  return {
+    summary: presentedSummary,
+    requests: Array.isArray(requests)
+      ? requests.flatMap((item) => {
+          const presented = presentRequestListItem(item);
+          return presented ? [presented] : [];
+        })
+      : [],
+  };
 }
 
 export function presentRequestListItem(value: unknown): RequestListItemTransport | null {

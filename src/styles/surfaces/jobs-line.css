@@ -1,0 +1,410 @@
+/* Lucrări · production line: stations with job tokens, route nodes, operation progress and
+   the traveler sheet. Shapes show the server stage and counts; no rule is computed here. */
+
+/* ─── Production line (page instrument) ─── */
+.jline {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  max-width: 980px;
+  padding: 12px 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+}
+
+.jline__station {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 2px 4px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.jline__station:hover .jline__label {
+  color: var(--color-text-primary);
+}
+
+.jline__station:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.jline__station[aria-pressed="true"] {
+  background: var(--wos-lightbox);
+  box-shadow: inset 0 -2px 0 var(--shell-brass);
+}
+
+.jline__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.jline__count {
+  font: 600 30px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.jline__station[data-empty] .jline__count {
+  color: var(--shell-muted);
+}
+
+.jline__label {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font: 500 13px/1.2 var(--font-sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jline__track {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 16px;
+}
+
+.jline__track::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 0;
+  left: 0;
+  height: 4px;
+  background: color-mix(in srgb, var(--shell-brass) 60%, transparent);
+}
+
+.jline__station:first-child .jline__track::before {
+  left: 50%;
+}
+
+.jline__station:last-child .jline__track::before {
+  right: 50%;
+}
+
+.jline__node {
+  position: absolute;
+  top: 1px;
+  left: calc(50% - 7px);
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--shell-brass);
+  border-radius: 50%;
+  background: var(--shell-brass);
+}
+
+.jline__station[data-empty] .jline__node {
+  background: var(--color-surface-raised);
+}
+
+.jline__tokens {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  min-height: 20px;
+}
+
+.jline__token {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 9rem;
+  padding: 2px 6px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  background: var(--wos-paper);
+  color: var(--color-text-primary);
+  font: 600 9px/1.4 var(--font-mono);
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.jline__token[data-attention]::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  background: var(--shell-warning);
+}
+
+.jline__token[data-more] {
+  border-style: dashed;
+  color: var(--shell-muted);
+}
+
+.jline__none {
+  color: var(--color-text-muted);
+  font: 400 11px var(--font-mono);
+}
+
+.jline[data-compact] {
+  max-width: none;
+  padding: 8px 2px;
+}
+
+.jline[data-compact] .jline__head {
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.jline[data-compact] .jline__count {
+  font-size: 18px;
+}
+
+.jline[data-compact] .jline__label {
+  max-width: 100%;
+  font: 500 10px/1.2 var(--font-mono);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.jline[data-compact] .jline__track {
+  order: -1;
+}
+
+/* ─── Register cells ─── */
+.jline-table__route {
+  width: 214px;
+}
+
+.jline-table__action {
+  width: 212px;
+}
+
+.jline-title {
+  display: -webkit-box;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.jline-table td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.jline-table .jline-table__route > * + * {
+  margin-top: 6px;
+}
+
+.jline-route {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.jline-route li {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: var(--color-surface-raised);
+}
+
+.jline-route li + li {
+  margin-left: 20px;
+}
+
+.jline-route li + li::before {
+  content: "";
+  position: absolute;
+  top: 2.5px;
+  right: calc(100% + 1.5px);
+  width: 20px;
+  height: 2px;
+  background: var(--color-border);
+}
+
+.jline-route li[data-mark="done"] {
+  border-color: var(--shell-brass);
+  background: var(--shell-brass);
+}
+
+.jline-route li[data-mark="done"]::before,
+.jline-route li[data-mark="current"]::before {
+  background: var(--shell-brass);
+}
+
+.jline-route li[data-mark="current"] {
+  border: 2.5px solid var(--shell-brass);
+}
+
+.jline-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font: 400 12px/1.3 var(--font-mono);
+}
+
+.jline-progress[data-empty] {
+  color: var(--shell-muted);
+  font-family: var(--font-sans);
+}
+
+.jline-progress__track {
+  position: relative;
+  display: block;
+  flex: 0 0 110px;
+  height: 6px;
+  overflow: hidden;
+  background: var(--color-border);
+}
+
+.jline-progress__track > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--shell-brass);
+}
+
+.jline-progress__track > span[data-complete] {
+  background: var(--shell-signal);
+}
+
+.jline-progress__value {
+  font-variant-numeric: tabular-nums;
+}
+
+.jline-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 4px;
+  color: var(--color-text-secondary);
+  font: 500 11px/1.3 var(--font-mono);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.jline-flags [data-tone="attention"] {
+  color: var(--wos-warning-text);
+}
+
+.jline-card__title {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font: 600 15px/1.3 var(--font-sans);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.jline-card__route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+/* ─── Traveler sheet ─── */
+.jline-ring {
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 86px;
+  height: 86px;
+}
+
+.jline-ring svg {
+  position: absolute;
+  inset: 0;
+}
+
+.jline-ring circle {
+  fill: none;
+  stroke-width: 7;
+}
+
+.jline-ring__track {
+  stroke: var(--color-border);
+}
+
+.jline-ring__value {
+  stroke: var(--shell-brass);
+}
+
+.jline-ring__label {
+  position: relative;
+  display: grid;
+  justify-items: center;
+}
+
+.jline-ring__label strong {
+  font: 600 15px/1.1 var(--font-mono);
+}
+
+.jline-ring__label small {
+  color: var(--shell-muted);
+  font: 500 9px/1.2 var(--font-mono);
+  text-transform: uppercase;
+}
+
+.jline-sheet__progress {
+  display: grid;
+  gap: 4px;
+}
+
+.jline-sheet__value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.jline-sheet__value strong {
+  font: 600 34px/1.1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.jline-sheet__value span {
+  color: var(--color-text-secondary);
+  font: 500 14px var(--font-mono);
+}
+
+.jline-sheet__route li {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.jline-sheet__route li[data-mark="future"] .rdesk-sheet__item-value,
+.jline-sheet__route li[data-mark="unknown"] .rdesk-sheet__item-value {
+  color: var(--shell-muted);
+}
+
+.jline-desk__workload {
+  padding: 16px var(--desk-gutter) 32px;
+}
+
+@media (max-width: 1439px) {
+  .jline-table__route {
+    width: 196px;
+  }
+
+  .jline-table__action {
+    width: 200px;
+  }
+}
+
+@media (max-width: 767px) {
+  .jline-route li + li {
+    margin-left: 14px;
+  }
+
+  .jline-route li + li::before {
+    width: 14px;
+  }
+}
