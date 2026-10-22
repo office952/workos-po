@@ -25,12 +25,15 @@ import {
   parseEffortFields,
   plannedEffortErrorMessage,
 } from "../presentation/plannedEffort";
+import "../styles/surfaces/planning.css";
+import { matchesSearch } from "../presentation/listFilter";
 import { statusTone } from "../presentation/statusTone";
 
 const TASK_COLUMNS = ["Lucrare", "Proces", "Stare", "Timp estimat"] as const;
 
 export function PlanningPage() {
   const workload = useResource(resourceKeys.planningWorkload(), loadPlanningWorkload);
+  const [query, setQuery] = useState("");
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [hours, setHours] = useState("");
   const [minutes, setMinutes] = useState("");
@@ -45,6 +48,13 @@ export function PlanningPage() {
     workload.status === "success" &&
     providers.length === 0 &&
     unassigned.length === 0;
+
+  const matches = (task: PlanningWorkloadTaskTransport) => matchesSearch(query, [task.productLabel, task.inscription, task.processLabel, task.customerDisplayName ?? "", task.scopeLabel, task.assignedProvider?.label ?? ""]);
+  const shownUnassigned = unassigned.filter(matches);
+  const shownProviders = providers.map(group => ({
+    ...group,
+    shownTasks: query.trim() && matchesSearch(query, [group.provider.label]) ? group.tasks : group.tasks.filter(matches),
+  })).filter(group => !query.trim() || group.shownTasks.length > 0 || matchesSearch(query, [group.provider.label]));
 
   function beginEdit(task: PlanningWorkloadTaskTransport): void {
     const fields = effortFieldsFromMinutes(task.plannedEffortMinutes);
@@ -84,9 +94,11 @@ export function PlanningPage() {
       contextLabel="Planificare"
       currentHref="/planificare"
       workspace="operational"
+      surface="planning"
+      headerVariant="pilot-compact"
       eyebrow="Planificare"
       title="Planificare"
-      lead="Ce lucru este acum pe fiecare zonă sau utilaj și cât timp estimat avem."
+      lead="Operații, alocări și timp estimat pe zone și utilaje."
     >
       {actionError ? (
         <InlineAlert tone="error" title="Timpul estimat nu s-a salvat">
@@ -122,21 +134,25 @@ export function PlanningPage() {
 
       {workload.status === "success" || data ? (
         <>
+          <div className="planner-toolbar">
+            <label className="production-search"><span className="u-visually-hidden">Caută în planificare</span><input type="search" value={query} placeholder="Caută lucrare, client, operație sau utilaj" onChange={event => setQuery(event.target.value)} /></label>
+            <p className="planner-scope">{unassigned.length} operații nealocate · {providers.length} zone și utilaje</p>
+          </div>
           <SurfacePanel
             variant="flush"
             label="Lucru nealocat"
             title="Lucru nealocat"
             description="Sarcini deschise care cer o zonă sau un utilaj, dar nu au alocare."
           >
-            {unassigned.length === 0 ? (
-              <EmptyState title="Nu există sarcini nealocate." />
+            {shownUnassigned.length === 0 ? (
+              <EmptyState title={query ? "Nicio operație nealocată pentru această căutare." : "Nu există sarcini nealocate."} />
             ) : (
               <Worklist
                 label="Sarcini nealocate"
                 variant="operational"
                 columns={TASK_COLUMNS}
               >
-                {unassigned.map((task) => (
+                {shownUnassigned.map((task) => (
                   <PlannerTaskRow
                     key={task.taskId}
                     task={task}
@@ -156,6 +172,7 @@ export function PlanningPage() {
             )}
           </SurfacePanel>
 
+          {query.trim() && shownProviders.length === 0 ? <EmptyState title="Nicio zonă sau utilaj pentru această căutare." /> : null}
           <div className="planner-floor">
             {providers.length === 0 ? (
               <SurfacePanel variant="flush" label="Zone și utilaje" title="Zone și utilaje">
@@ -165,7 +182,7 @@ export function PlanningPage() {
                 />
               </SurfacePanel>
             ) : (
-              providers.map((group) => (
+              shownProviders.map((group) => (
                 <SurfacePanel
                   key={`${group.provider.kind}:${group.provider.id}`}
                   variant="flush"
@@ -174,12 +191,13 @@ export function PlanningPage() {
                   description={group.provider.kindLabel || undefined}
                   meta={
                     <ProviderEffortSummary
+                      filtered={query.trim().length > 0}
                       knownQueuedMinutes={group.knownQueuedMinutes}
                       unknownEffortCount={group.unknownEffortCount}
                     />
                   }
                 >
-                  {group.tasks.length === 0 ? (
+                  {group.shownTasks.length === 0 ? (
                     <EmptyState title="Nicio sarcină deschisă pe această zonă sau utilaj." />
                   ) : (
                     <Worklist
@@ -187,7 +205,7 @@ export function PlanningPage() {
                       variant="operational"
                       columns={TASK_COLUMNS}
                     >
-                      {group.tasks.map((task) => (
+                      {group.shownTasks.map((task) => (
                         <PlannerTaskRow
                           key={task.taskId}
                           task={task}
@@ -215,14 +233,17 @@ export function PlanningPage() {
 }
 
 function ProviderEffortSummary({
+  filtered,
   knownQueuedMinutes,
   unknownEffortCount,
 }: {
+  filtered: boolean;
   knownQueuedMinutes: number;
   unknownEffortCount: number;
 }) {
   return (
     <p className="planner-summary">
+      {filtered ? <span>Întreaga zonă / utilaj</span> : null}
       <span>{formatKnownQueuedEffort(knownQueuedMinutes, unknownEffortCount)}</span>
       {unknownEffortCount > 0 ? (
         <span>{formatUnknownEffortCount(unknownEffortCount)}</span>
@@ -262,6 +283,7 @@ function PlannerTaskRow({
     task.priorityLabel,
     task.targetDateLabel,
     task.scopeLabel,
+    task.inscription !== identity ? task.inscription : null,
   ]
     .filter((part) => part && part.length > 0)
     .join(" · ");
@@ -282,6 +304,7 @@ function PlannerTaskRow({
         </span>
         <form
           className="planner-effort-form"
+          aria-label={`Timp estimat pentru ${task.processLabel}`}
           onSubmit={(event) => {
             event.preventDefault();
             onSave();
@@ -292,14 +315,16 @@ function PlannerTaskRow({
             label="Ore"
             value={hours}
             onChange={onHoursChange}
-            hint="Gol înseamnă fără estimare."
+            inputMode="numeric"
           />
           <TextField
             id={`effort-minutes-${task.taskId}`}
             label="Minute"
+            inputMode="numeric"
             value={minutes}
             onChange={onMinutesChange}
           />
+          <p className="planner-effort-form__hint">Gol înseamnă fără estimare.</p>
           <Button type="submit" disabled={pending}>
             Salvează
           </Button>

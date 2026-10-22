@@ -2,11 +2,22 @@ import { describe, expect, it } from "vitest";
 import {
   atelierHref,
   jobHref,
+  parseJobSheetSection,
   parseOperationalReturn,
   sanitizeOperationalReturn,
 } from "./appRoute";
 
 describe("operational return", () => {
+  it("preserves a job section and task across personal identification", () => {
+    const target = jobHref("job:1", { taskId: "task:2", section: "materiale" });
+    const href = atelierHref({ jobId: "job:1", returnTo: target });
+    expect(parseOperationalReturn(href.slice(href.indexOf("?")))).toBe(target);
+    expect(parseJobSheetSection("?task=task:2&sectiune=materiale")).toBe("materiale");
+    expect(parseJobSheetSection("?task=task:2")).toBe("operatie");
+    expect(parseJobSheetSection("?sectiune=unknown")).toBe("situatie");
+    expect(parseJobSheetSection("")).toBe("situatie");
+    expect(sanitizeOperationalReturn("/lucrari/job-1?sectiune=unknown")).toBe("/lucrari/job-1");
+  });
   it("keeps a supported internal operation route and drops foreign targets", () => {
     expect(sanitizeOperationalReturn("/executie/exp:1?task=task:1&job=job-1")).toBe(
       "/executie/exp:1?task=task%3A1&job=job-1",

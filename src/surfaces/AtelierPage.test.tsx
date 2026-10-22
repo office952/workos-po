@@ -171,7 +171,7 @@ describe("AtelierPage", () => {
     expect(screen.queryByText("246810")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Intră în atelier" }));
 
-    expect(await screen.findByText("Autentificat: Andrei")).toBeInTheDocument();
+    expect(await screen.findByText("Andrei")).toBeInTheDocument();
     const identifyCall = fetchMock.mock.calls.find(
       ([url, init]) =>
         String(url).includes("/operator-session") && String(init?.method) === "POST",
@@ -371,7 +371,7 @@ describe("AtelierPage", () => {
     expect(await screen.findByText("1 în lucru de tine")).toBeInTheDocument();
     expect(screen.getByText("1 pot fi pornite")).toBeInTheDocument();
     expect(screen.queryByText(/urmează/)).not.toBeInTheDocument();
-    expect(screen.getByText("În lucru de tine · Router 1")).toBeInTheDocument();
+    expect(screen.getByText("Router 1")).toBeInTheDocument();
     expect(screen.getByText("Necesită alocare: Debitare CNC")).toBeInTheDocument();
     expect(screen.getByText("Așteaptă: Debitare foaie CNC")).toBeInTheDocument();
     expect(screen.getByText("Modul LED nu este confirmat disponibil.")).toBeInTheDocument();

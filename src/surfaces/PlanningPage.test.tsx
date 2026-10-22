@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PlanningPage } from "./PlanningPage";
@@ -91,6 +91,31 @@ function workloadPayload(overrides: Record<string, unknown> = {}) {
 }
 
 describe("PlanningPage", () => {
+  it("filters work by client without discarding an unsaved estimate or posting it", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(workloadPayload()));
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<PlanningPage />);
+    await screen.findByText("CNC Router");
+    await user.click(screen.getByRole("button", { name: "45 min" }));
+    const form = screen.getByRole("form", { name: "Timp estimat pentru Debitare CNC" });
+    await user.clear(within(form).getByLabelText("Ore"));
+    await user.type(within(form).getByLabelText("Ore"), "2");
+    const search = screen.getByRole("searchbox", { name: "Caută în planificare" });
+    await user.type(search, "Client Ansamblu");
+    expect(screen.queryByText("CNC Router")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Alocă în execuție" })).toHaveAttribute("href", "/executie/exp:1?task=task:open&job=job-1");
+    await user.clear(search);
+    await user.type(search, "CNC Router");
+    expect(screen.getByLabelText("Ore")).toHaveValue("2");
+    expect(screen.getByText("Întreaga zonă / utilaj")).toBeInTheDocument();
+    await user.clear(search);
+    expect(screen.getByLabelText("Ore")).toHaveValue("2");
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+    await user.click(screen.getByRole("button", { name: "Anulează" }));
+    expect(screen.queryByLabelText("Ore")).not.toBeInTheDocument();
+  });
+
   it("shows provider groups, job context, and a separate unassigned allocation link", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(workloadPayload())));
 

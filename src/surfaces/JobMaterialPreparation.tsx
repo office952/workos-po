@@ -110,16 +110,14 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds, returnTo }: Pro
       ) : null}
       {resource.data?.planId && lines.length > 0 ? (
         <>
-          <p className="ui-note">
-            Necesarul estimat vine din plan. Verificarea nu numără piese și nu cumpără materiale.
-          </p>
+          <p className="job-materials__intro">{lines.length} materiale de verificat · Cantități estimate din plan</p>
           {actionError ? (
             <InlineAlert tone="error" title="Verificarea a eșuat">{actionError}</InlineAlert>
           ) : null}
           {lines.map((line) => {
             const requestPending = line.openRequest !== null;
             return (
-              <article className="job-materials__line" key={line.resourceId}>
+              <article className="job-materials__line" key={line.resourceId} data-status={line.latestCheck?.status ?? "UNKNOWN"}>
                 <div className="job-materials__row">
                   <div className="job-materials__identity">
                     <strong>{line.label}</strong>
@@ -193,7 +191,7 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds, returnTo }: Pro
               </a>
             </p>
           ) : (
-            <p className="ui-note">Operator identificat: {personName}. Verificarea salvează numele și ora.</p>
+            <p className="job-materials__operator">Operator identificat: {personName}. Verificarea salvează numele și ora.</p>
           )}
         </>
       ) : null}
@@ -208,7 +206,7 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds, returnTo }: Pro
   ) : (
     <SurfacePanel
       title="Necesar și verificare materiale"
-      description="Pregătire pentru execuție. Solicitarea nu cumpără automat materiale."
+      description="Disponibilitate și solicitări de aprovizionare pentru această lucrare."
       label="Necesar și verificare materiale"
     >
       {body}

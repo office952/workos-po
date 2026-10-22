@@ -34,6 +34,7 @@ import {
 } from "../presentation/dossierAccess";
 import { laterDocumentVersions } from "../presentation/dossierRevision";
 import { formatTimestamp } from "../presentation/format";
+import { presentJobStartBlockReason, presentJobProvider, presentRecordedExecutor } from "../presentation/jobOperationNotes";
 import { atelierHref, executionHref } from "../routing/appRoute";
 import { useCloudSession } from "../session/CloudSessionContext";
 import { readCloudBoundaryVersion } from "../session/sessionExpiryBridge";
@@ -80,6 +81,7 @@ type Props = {
   plan: ExecutionPlanTransport;
   taskId: string | null;
   onSelect: (id: string) => void;
+  active?: boolean;
 };
 
 export function JobTaskWorkbench(props: Props) {
@@ -113,6 +115,7 @@ function JobTaskWorkbenchBody({
   plan,
   taskId,
   onSelect,
+  active = true,
   identified,
   canInstruct,
   canWriteFiles,
@@ -177,8 +180,8 @@ function JobTaskWorkbenchBody({
       .toLocaleLowerCase("ro-RO");
   const visible = plan.tasks.filter((item) =>
     normalize(
-      `${item.seqLabel} ${item.processLabel} ${item.scopeLabel} ${item.assignmentLabel} ${item.executorLabel ?? ""}`,
-    ).includes(normalize(query)),
+      `${item.seqLabel} ${item.processLabel} ${item.scopeLabel} ${presentJobProvider(item)} ${presentRecordedExecutor(item)}`,
+    ).includes(normalize(query.trim())),
   );
   const groups = new Map<string, typeof visible>();
   for (const item of visible) {
@@ -218,16 +221,17 @@ function JobTaskWorkbenchBody({
   }, []);
   const focusedEntry = useRef<string | null>(null);
   useEffect(() => {
-    if (!savedEntry || savedEntry.taskId !== taskId || focusedEntry.current === savedEntry.entryId) {
+    if (!active || !savedEntry || savedEntry.taskId !== taskId || focusedEntry.current === savedEntry.entryId) {
       return;
     }
     focusedEntry.current = savedEntry.entryId;
     document.getElementById(`dossier-entry-${savedEntry.entryId}`)?.focus({ preventScroll: true });
-  }, [savedEntry, taskId]);
+  }, [savedEntry, taskId, active]);
   useEffect(() => {
     function keydown(event: KeyboardEvent) {
       if (
         event.key === "Escape" &&
+        active &&
         expanded &&
         !document.querySelector("dialog[open]")
       ) {
@@ -237,7 +241,7 @@ function JobTaskWorkbenchBody({
     }
     document.addEventListener("keydown", keydown);
     return () => document.removeEventListener("keydown", keydown);
-  }, [expanded]);
+  }, [expanded, active]);
 
   function chooseTask(next: string) {
     onSelect(next);
@@ -415,20 +419,35 @@ function JobTaskWorkbenchBody({
     >
       <section className="job-task-navigator" aria-label="Lista operațiilor">
         <header>
-          <div>
+          <div className="job-task-navigator__heading">
             <h2>Operații</h2>
             <span>{plan.tasks.length}</span>
           </div>
-          <label className="u-visually-hidden" htmlFor={`${id}-search`}>
-            Caută operație sau responsabil
-          </label>
-          <input
-            id={`${id}-search`}
-            type="search"
-            value={query}
-            placeholder="Caută operație sau responsabil…"
-            onChange={(event) => setQuery(event.target.value)}
-          />
+          <div className="job-task-navigator__search">
+            <label className="u-visually-hidden" htmlFor={`${id}-search`}>
+              Caută operație sau responsabil
+            </label>
+            <input
+              id={`${id}-search`}
+              type="search"
+              value={query}
+              placeholder="Caută operație sau responsabil…"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+          <div className="job-task-navigator__compact">
+            <SelectField
+              id={`${id}-operation`}
+              label="Schimbă operația"
+              value={taskId ?? ""}
+              disabled={plan.tasks.length === 0}
+              options={plan.tasks.map((item) => ({
+                value: item.taskId,
+                label: `${item.seqLabel} · ${item.processLabel} · ${item.scopeLabel}`,
+              }))}
+              onChange={chooseTask}
+            />
+          </div>
         </header>
         <div className="job-task-navigator__list">
           {[...groups].map(([scope, operations]) => (
@@ -455,7 +474,7 @@ function JobTaskWorkbenchBody({
                     <span className="job-task-row__copy">
                       <strong>{item.processLabel}</strong>
                       <small>
-                        {item.executorLabel ?? item.assignmentLabel}
+                        {item.executorLabel ?? item.startedByLabel ?? presentJobProvider(item)}
                       </small>
                       <span className="job-task-row__state">
                         {item.statusLabel}
@@ -536,10 +555,11 @@ function JobTaskWorkbenchBody({
                 <h2 ref={taskHeading} tabIndex={-1}>
                   {task.processLabel}
                 </h2>
-                <p>
-                  {task.statusLabel} · {task.assignmentLabel}
-                  {task.executorLabel ? ` · ${task.executorLabel}` : ""}
-                </p>
+                <div className="job-task-context__facts">
+                  <span className="job-task-context__status" data-status={task.status}>{task.statusLabel}</span>
+                  <span>{presentJobProvider(task)}</span>
+                  <span>Executant înregistrat: {presentRecordedExecutor(task)}</span>
+                </div>
               </div>
               <div className="job-task-context__actions">
                 <a
@@ -617,7 +637,7 @@ function JobTaskWorkbenchBody({
               </p>
             ) : null}
             {[
-              task.startBlockReason,
+              presentJobStartBlockReason(task.startBlockReason),
               task.materialBlockLabel,
               task.externalBlockLabel,
               task.qualityBlockLabel,
@@ -626,7 +646,7 @@ function JobTaskWorkbenchBody({
                 {[
                   ...new Set(
                     [
-                      task.startBlockReason,
+                      presentJobStartBlockReason(task.startBlockReason),
                       task.materialBlockLabel,
                       task.externalBlockLabel,
                       task.qualityBlockLabel,
@@ -673,7 +693,7 @@ function JobTaskWorkbenchBody({
               </p>
             ) : (
               <>
-                <section aria-label="Instrucțiuni pentru această operație">
+                <section className="job-task-instructions" aria-label="Instrucțiuni pentru această operație">
                   <h3>
                     Instrucțiuni <span>{instructions.length}</span>
                   </h3>
@@ -933,7 +953,7 @@ function JobTaskWorkbenchBody({
           </>
         )}
       </section>
-      {allFiles ? (
+      {active && allFiles ? (
         <CreationDialog
           title="Fișierele operației"
           onDismiss={() => setAllFiles(false)}
@@ -963,7 +983,7 @@ function JobTaskWorkbenchBody({
           </div>
         </CreationDialog>
       ) : null}
-      {composer && captured ? (
+      {active && composer && captured ? (
         <CreationDialog
           title={
             composer.kind === "file"

@@ -220,17 +220,28 @@ export function requestHref(requestId: string): string {
   return `/cereri/${encodeURIComponent(requestId)}`;
 }
 
+export const JOB_SHEET_SECTIONS = ["situatie", "fisiere", "materiale", "rezultate", "sursa", "plan", "operatie"] as const;
+export type JobSheetSection = (typeof JOB_SHEET_SECTIONS)[number];
+
+export function parseJobSheetSection(search: string): JobSheetSection {
+  const value = readSearchParam(search, "sectiune");
+  if (value && (JOB_SHEET_SECTIONS as readonly string[]).includes(value)) {
+    return value as JobSheetSection;
+  }
+  // Existing task links continue to open that operation's dossier.
+  return readSearchParam(search, "task") ? "operatie" : "situatie";
+}
+
 export function jobHref(
   jobId: string,
-  context: { taskId?: string | null } = {},
+  context: { taskId?: string | null; section?: JobSheetSection } = {},
 ): string {
   const path = `/lucrari/${encodeURIComponent(jobId)}`;
-  if (!context.taskId) {
-    return path;
-  }
   const params = new URLSearchParams();
-  params.set("task", context.taskId);
-  return `${path}?${params.toString()}`;
+  if (context.taskId) params.set("task", context.taskId);
+  if (context.section) params.set("sectiune", context.section);
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
 }
 
 export function executionHref(
@@ -318,6 +329,10 @@ export function sanitizeOperationalReturn(value: string | null | undefined): str
   const job = url.searchParams.get("job");
   if (task && /^[\w:.-]+$/.test(task)) {
     params.set("task", task);
+  }
+  const section = url.searchParams.get("sectiune");
+  if (url.pathname.startsWith("/lucrari/") && section && (JOB_SHEET_SECTIONS as readonly string[]).includes(section)) {
+    params.set("sectiune", section);
   }
   if (
     (url.pathname === "/atelier" || url.pathname.startsWith("/executie/")) &&

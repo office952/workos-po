@@ -205,6 +205,42 @@ beforeEach(() => {
 });
 
 describe("JobTaskWorkbench", () => {
+  it("uses the compact operation selector without losing a draft or changing saved records", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    await screen.findByTestId("preview");
+    await user.click(screen.getByRole("button", { name: "Adaugă observație" }));
+    await user.type(screen.getByLabelText("Observație"), "Verifică muchia");
+    await user.click(screen.getByRole("button", { name: "Închide formularul" }));
+    const selector = screen.getByRole("combobox", { name: "Schimbă operația" });
+    await user.selectOptions(selector, "task-2");
+    await screen.findByRole("heading", { name: "Operația 2" });
+    expect(selector).toHaveValue("task-2");
+    await user.selectOptions(selector, "task-1");
+    await screen.findByRole("heading", { name: "Operația 1" });
+    await user.click(screen.getByRole("button", { name: "Adaugă observație" }));
+    expect(screen.getByLabelText("Observație")).toHaveValue("Verifică muchia");
+    expect(mocks.observe).not.toHaveBeenCalled();
+    expect(mocks.issue).not.toHaveBeenCalled();
+    expect(mocks.link).not.toHaveBeenCalled();
+    expect(mocks.use).not.toHaveBeenCalled();
+  });
+
+  it("keeps the recorded executor visible and searchable when only the start record names them", async () => {
+    const selected = vi.fn();
+    const current = plan(2);
+    current.tasks[0] = { ...current.tasks[0], startedByLabel: "Ștefan Ionescu" };
+    render(<JobTaskWorkbench jobId="job-1" plan={current} taskId="task-1" onSelect={selected} />);
+    await screen.findByTestId("preview");
+    expect(within(screen.getByRole("region", { name: "Operația selectată" })).getByText("Executant înregistrat: Ștefan Ionescu")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "  stefan  " } });
+    const list = within(screen.getByRole("region", { name: "Lista operațiilor" }));
+    expect(list.getByRole("button", { name: /01 Operația 1/ })).toBeInTheDocument();
+    expect(list.queryByRole("button", { name: /02 Operația 2/ })).toBeNull();
+    expect(selected).not.toHaveBeenCalled();
+    expect(mocks.load.mock.calls.every(([id]) => id === "task-1")).toBe(true);
+  });
+
   it("loads only the selected dossier for 100 tasks and retains selection during search", async () => {
     const user = userEvent.setup();
     render(<Harness count={100} />);
