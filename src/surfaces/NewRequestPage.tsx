@@ -14,8 +14,9 @@ import { resourceKeys } from "../data/resourceKeys";
 import { loadCatalogProducts, loadCustomerList, loadCustomerWorkspace } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
-import { configuratorHref, requestHref } from "../routing/appRoute";
+import { clientHref, configuratorHref, requestHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
+import { useUnsavedChangesGuard } from "../routing/useUnsavedChangesGuard";
 import { readConfiguratorSession, writeConfiguratorSession } from "../session/configuratorSession";
 import "../styles/surfaces/request-intake.css";
 
@@ -23,6 +24,9 @@ export function NewRequestPage() {
   const customers = useResource(resourceKeys.customerIntake(), loadCustomerList);
   const catalog = useResource(resourceKeys.catalog(), loadCatalogProducts);
   const [customerId, setCustomerId] = useState(new URLSearchParams(window.location.search).get("customer") ?? "");
+  // N-018 · opened from a client page, the way back and "Anulează" return there.
+  const [originCustomerId] = useState(() => new URLSearchParams(window.location.search).get("customer"));
+  const exitHref = originCustomerId ? clientHref(originCustomerId) : "/cereri";
   const workspace = useResource(customerId ? resourceKeys.customerWorkspace(customerId) : null, () => loadCustomerWorkspace(customerId));
   const [newCustomer, setNewCustomer] = useState(false);
   const [query, setQuery] = useState("");
@@ -41,6 +45,8 @@ export function NewRequestPage() {
   const visibleCustomers = allCustomers.filter(c => c.customerId === customerId || [c.displayName, c.cui, c.city].some(value => value?.toLocaleLowerCase("ro").includes(query.toLocaleLowerCase("ro"))));
   const selectedProduct = catalog.data?.find(product => product.code === productCode);
   const canSave = !pending && !lookupPending && Boolean(title.trim() && description.trim()) && (newCustomer ? Boolean(name.trim()) : workspace.data?.canCreateRequest === true);
+  const dirty = !pending && [title, description, ...(newCustomer ? [cui, name, address, city] : [])].some(value => value.trim() !== "");
+  const unsavedGuard = useUnsavedChangesGuard({ dirty, subject: "Titlul și descrierea cererii" });
 
   async function lookup() {
     const scope = ++generation.current;
@@ -85,7 +91,7 @@ export function NewRequestPage() {
       if (scope !== generation.current) return;
       const previous = readConfiguratorSession();
       writeConfiguratorSession({ ...previous, customerId: ownedId, requestId, productCode, customerLabel: selected?.displayName ?? name.trim(), requestLabel: title.trim() });
-      navigate(productCode ? configuratorHref({ customerId: ownedId, requestId, productCode }) : requestHref(requestId));
+      navigate(productCode ? configuratorHref({ customerId: ownedId, requestId, productCode }) : requestHref(requestId), "push", { bypassGuard: true });
     } catch (e) {
       if (scope !== generation.current) return;
       if (e instanceof TransportError && readTransportErrorCode(e.body) === "duplicate_cui") {
@@ -101,7 +107,7 @@ export function NewRequestPage() {
     <span className="product-picker__action">{productCode === null ? "Selectat" : "Alege"}</span>
   </button>;
 
-  return <SlicePage contextLabel="Cereri" currentHref="/cereri/noua" workspace="stack" surface="cereri-intake" eyebrow="Registru comercial" title="Cerere nouă" lead="Alege clientul, descrie lucrarea și selectează produsul. Poți decide produsul și mai târziu." action={<a className="text-link request-intake__back" href="/cereri">← Toate cererile</a>}>
+  return <SlicePage contextLabel="Cereri" currentHref="/cereri/noua" workspace="stack" surface="cereri-intake" eyebrow="Cerere nouă" title="Ce dorește clientul?" action={<a className="text-link request-intake__back" href={exitHref}>{originCustomerId ? "← Fișa clientului" : "← Toate cererile"}</a>}>
     <form className="request-intake-form" onSubmit={e => { e.preventDefault(); void save(); }}>
       <div className="request-intake-form__context">
       <fieldset className="request-intake-form__section" disabled={pending || lookupPending}><legend>1. Client</legend>
@@ -130,10 +136,12 @@ export function NewRequestPage() {
         {catalog.status === "error" && <InlineAlert tone="error" title="Produsele nu au putut fi citite">Poți salva cererea cu produsul momentan indecis.<Button variant="secondary" onClick={() => invalidateResources(resourceKeys.catalog())}>Reîncearcă</Button></InlineAlert>}
       </fieldset>
       {error && <InlineAlert tone="error" title="Verifică înainte de continuare">{error}</InlineAlert>}
-      <div className="request-intake-form__footer">
-        <div className="request-intake__summary"><strong>{newCustomer ? name.trim() || "Client nou" : (customerId && selected?.displayName) || "Client de selectat"} · {productCode ? selectedProduct?.label ?? "Produs selectat" : "Momentan indecis"}</strong><p className="request-intake__hint">{productCode ? "Cererea se salvează înainte de configurarea produsului." : "După salvare poți alege produsul din cerere."}</p></div>
-        <div className="request-intake-form__actions"><a className="text-link" href="/cereri">Anulează</a><Button type="submit" disabled={!canSave}>{pending ? "Se salvează…" : productCode ? "Creează cererea și configurează" : "Salvează cererea"}</Button></div>
-      </div>
+      {/* N-018 · Rezumat: beside the form on desktop, a bar at the bottom on phone. */}
+      <section className="request-intake-form__footer" aria-labelledby="request-intake-summary">
+        <div className="request-intake__summary"><h2 id="request-intake-summary" className="request-intake__summary-title">Rezumat</h2><ul className="request-intake__summary-lines"><li>{newCustomer ? name.trim() || "Client nou" : (customerId && selected?.displayName) || "Client de selectat"}</li><li>{title.trim() || "Titlul cererii, necompletat"}</li><li>{productCode ? `Produs: ${selectedProduct?.label ?? "selectat"}` : "Produs: momentan indecis"}</li></ul><p className="request-intake__hint">{productCode ? "Cererea se salvează înainte de configurarea produsului." : "După salvare poți alege produsul din cerere."}</p></div>
+        <div className="request-intake-form__actions"><a className="text-link" href={exitHref}>Anulează</a><Button type="submit" disabled={!canSave}>{pending ? "Se salvează…" : productCode ? "Creează cererea și configurează" : "Salvează cererea"}</Button></div>
+      </section>
     </form>
+    {unsavedGuard}
   </SlicePage>;
 }

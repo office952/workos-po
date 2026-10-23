@@ -52,15 +52,18 @@ describe('job record page', () => {
     expect(screen.queryByRole('button', { name: '01 · Lipire' })).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('region', { name: 'Fișierele lucrării' })).toBeNull();
   });
-  it('opens only the explicitly requested task under its row', async () => {
+  it('opens only the explicitly requested task in the bench, with its own Atelier destination', async () => {
     const scroll = vi.fn();
     HTMLElement.prototype.scrollIntoView = scroll;
-    fixture(); render(<JobDetailPage jobId="job-1" taskId="task-1"/>);
+    fixture(); render(<JobDetailPage jobId="job-1" taskId="task-1" section="operatii"/>);
     const detail = await screen.findByRole('region', { name: 'Dosarul operației selectate' });
-    const toggle = screen.getByRole('button', { name: '01 · Lipire' });
-    expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    expect(toggle.closest('tr')?.nextElementSibling).toContainElement(detail);
-    expect(screen.getByRole('link', { name: 'Deschide operația în Atelier' })).toHaveAttribute('href', '/atelier?job=job-1&plan=plan-1&task=task-1');
+    expect(within(screen.getByRole('navigation', { name: 'Comutator operații' })).getByText(/^Operația 01 din 2/)).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Operațiile lucrării' })).toContainElement(detail);
+    // With an operation open, the header's job-level Atelier entry gives way to the operation's own.
+    expect(screen.queryByRole('link', { name: 'Deschide lucrarea în Atelier' })).toBeNull();
+    const atelier = new URL(screen.getByRole('link', { name: 'Deschide operația 01 în Atelier' }).getAttribute('href')!, 'https://workos.local');
+    expect(atelier.pathname).toBe('/atelier');
+    expect(Object.fromEntries(atelier.searchParams)).toEqual({ job: 'job-1', plan: 'plan-1', task: 'task-1', return: '/lucrari/job-1?task=task-1&sectiune=operatii' });
     expect(document.activeElement).not.toBe(screen.getByRole('heading', { name: '01 · Lipire' }));
     expect(scroll).not.toHaveBeenCalled();
   });
@@ -75,7 +78,7 @@ describe('job record page', () => {
     const note = screen.getByLabelText('Observație'); await user.type(note, 'Ciornă nesalvată');
     expect(screen.queryByText('Planul de execuție nu există încă.')).toBeNull();
     await act(async () => { finish({ ok: true, status: 200, json: async () => ({ record: jobRecordFixture }) }); });
-    await screen.findByRole('table', { name: 'Registrul operațiilor' });
+    await screen.findByRole('navigation', { name: 'Comutator operații' });
     expect(screen.queryByRole('region', { name: 'Fișierele lucrării' })).toBeNull();
     expect(screen.getByLabelText('Observație')).toBe(note);
     expect(note).toHaveValue('Ciornă nesalvată'); expect(note).toHaveFocus();

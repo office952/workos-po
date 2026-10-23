@@ -63,30 +63,3 @@ export function Deadline({ job }: { job: JobListItemTransport }) {
     </span>
   );
 }
-
-/** Progress ring for the traveler sheet, drawn from the counts only. */
-export function ProgressRing({ job }: { job: JobListItemTransport }) {
-  const progress = operationProgress(job);
-  if (!progress) return null;
-  const radius = 36;
-  const length = 2 * Math.PI * radius;
-  return (
-    <span className="jline-ring" aria-hidden="true">
-      <svg viewBox="0 0 86 86">
-        <circle cx="43" cy="43" r={radius} className="jline-ring__track" />
-        <circle
-          cx="43"
-          cy="43"
-          r={radius}
-          className="jline-ring__value"
-          strokeDasharray={`${progress.fraction * length} ${length}`}
-          transform="rotate(-90 43 43)"
-        />
-      </svg>
-      <span className="jline-ring__label">
-        <strong>{`${progress.completed}/${progress.total}`}</strong>
-        <small>operații</small>
-      </span>
-    </span>
-  );
-}

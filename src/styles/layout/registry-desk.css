@@ -886,6 +886,28 @@ a.rdesk-door:focus-visible {
   padding: 12px 20px;
 }
 
+/* N-018 · tablet: closing alone on the first row, position and previous/next on the second. */
+.rdesk-dossier[data-layout="overlay"] .rdesk-dossier__bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "close close"
+    "position nav";
+}
+
+.rdesk-dossier[data-layout="overlay"] .rdesk-dossier__close {
+  grid-area: close;
+  justify-self: end;
+}
+
+.rdesk-dossier[data-layout="overlay"] .rdesk-dossier__position {
+  grid-area: position;
+}
+
+.rdesk-dossier[data-layout="overlay"] .rdesk-dossier__nav {
+  grid-area: nav;
+}
+
 .rdesk-dossier__position {
   display: flex;
   flex: 1 1 auto;
@@ -1515,6 +1537,54 @@ a.rdesk-sheet__item-title:hover {
   .rdesk-dossier__actions {
     padding: 12px 12px 14px;
   }
+}
+
+/* N-018 · filter chips (phone): one row, horizontal scroll, active chip marked and kept in view. */
+.rdesk-filterchips {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.rdesk-filterchips::-webkit-scrollbar {
+  display: none;
+}
+
+.rdesk-filterchips__chip {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--shell-panel);
+  color: var(--color-text-primary);
+  font: 500 13px var(--font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.rdesk-filterchips__chip[aria-pressed="true"] {
+  border: 2px solid var(--shell-signal);
+  background: var(--shell-signal-soft);
+  font-weight: 600;
+}
+
+.rdesk-filterchips__count {
+  font: 600 13px var(--font-mono);
+}
+
+.rdesk-filterchips__chip[data-tone="attention"] .rdesk-filterchips__count {
+  color: var(--wos-warning-text);
+}
+
+.rdesk-filterchips__chip:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {

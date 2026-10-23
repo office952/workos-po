@@ -18,15 +18,24 @@ import {
   parseJobsView,
   parseOperationalReturn,
   parseSpineContext,
+  parseFileContext,
   parseTaskContext,
   type AppRoute,
 } from "./routing/appRoute";
 import {
+  activeNavigationGuard,
   navigate,
   readAppLocation,
   sameOriginNavigation,
   type AppLocation,
 } from "./routing/navigate";
+import {
+  entryIndex,
+  isNavigateDispatch,
+  notePopNavigation,
+  settleArrival,
+  trackScrollPositions,
+} from "./routing/navigationMemory";
 import {
   isAuthEntryPath,
   resolveCloudAuthGate,
@@ -86,13 +95,13 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
     case "clients":
       return <ClientsPage search={search} />;
     case "client":
-      return <ClientDetailPage customerId={route.customerId} />;
+      return <ClientDetailPage customerId={route.customerId} search={search} />;
     case "requests":
       return <RequestsPage search={search} />;
     case "new-request":
       return <NewRequestPage key={search} />;
     case "request":
-      return <RequestDetailPage requestId={route.requestId} />;
+      return <RequestDetailPage requestId={route.requestId} search={search} />;
     case "catalog":
       return <CatalogPage />;
     case "assembly":
@@ -126,7 +135,7 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
     case "jobs":
       return <JobsPage view={parseJobsView(search)} search={search} />;
     case "job":
-      return <JobDetailPage jobId={route.jobId} taskId={parseTaskContext(search)} section={parseJobSheetSection(search)} />;
+      return <JobDetailPage jobId={route.jobId} taskId={parseTaskContext(search)} section={parseJobSheetSection(search)} fileId={parseFileContext(search)} />;
     case "planning":
       return <JobsPage view="resources" />;
     case "atelier":
@@ -224,8 +233,59 @@ function AppRuntime() {
   const cloud = useCloudSession();
   const [location, setLocation] = useState(syncCanonicalLocation);
 
+  useEffect(() => trackScrollPositions(), []);
+
   useEffect(() => {
-    function onPop(): void {
+    settleArrival();
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    let held: string | null = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    let heldIndex = entryIndex(window.history.state);
+    // N-018 · a held Back/Forward is undone with history.go and, once the page lets it go,
+    // repeated with the same step, so the stack (and Forward) stays exactly as the browser had it.
+    let undoing = false;
+    let releasing = false;
+    let releaseAfterUndo: (() => void) | null = null;
+    function onPop(event: PopStateEvent): void {
+      if (!isNavigateDispatch(event)) {
+        if (undoing) {
+          undoing = false;
+          const release = releaseAfterUndo;
+          releaseAfterUndo = null;
+          release?.();
+          return;
+        }
+        const guard = releasing ? null : activeNavigationGuard();
+        releasing = false;
+        const destination = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        if (guard && held && destination !== held) {
+          const toIndex = entryIndex(event.state);
+          if (toIndex !== null && heldIndex !== null && toIndex !== heldIndex) {
+            const delta = heldIndex - toIndex;
+            undoing = true;
+            window.history.go(delta);
+            const proceed = () => {
+              const step = () => {
+                releasing = true;
+                window.history.go(-delta);
+              };
+              if (undoing) releaseAfterUndo = step;
+              else step();
+            };
+            if (!guard(destination, proceed)) proceed();
+            return;
+          }
+          // Entries this tab did not number: put the page back and continue as a new entry.
+          window.history.pushState({}, "", held);
+          const proceed = () => navigate(destination, "push", { bypassGuard: true });
+          if (!guard(destination, proceed)) proceed();
+          return;
+        }
+        notePopNavigation();
+      }
+      held = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      heldIndex = entryIndex(window.history.state);
       setLocation(syncCanonicalLocation());
     }
     function onClick(event: MouseEvent): void {

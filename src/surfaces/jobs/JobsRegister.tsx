@@ -175,7 +175,7 @@ export function JobsRegister(props: Props) {
   const { layout, view, refreshFailed, filters, sort, density, searchRef, onFilters, onSort, onDensity, onReset, onRetry, items, total } = props;
   const ready = view !== "loading" && view !== "error";
   return (
-    <section className="rdesk-register" aria-label="Registru de producție" data-register>
+    <section className="rdesk-register" aria-label="Registru de producție" data-register data-scroll-memory="registru">
       <div className="rdesk-toolbar">
         <DeskSearch
           id="lucrari-cauta"

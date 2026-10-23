@@ -1,11 +1,11 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { navigate } from "../routing/navigate";
 import { acceptAssemblyQuote, type AssemblyQuoteAcceptanceResult } from "../api/assemblies";
 import type { AssemblyQuoteCostTransport, AssemblyQuoteTransport } from "../api/types";
 import { Button } from "../components/Button";
 import { InlineAlert } from "../components/InlineAlert";
 import { LoadingFloor } from "../components/LoadingFloor";
 import { invalidateAfterAcceptAssemblyQuote } from "../data/invalidation";
+import { invalidateResources } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadAssemblyQuote } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
@@ -14,6 +14,7 @@ import { presentContextMeta } from "../presentation/contextMeta";
 import { formatMoney } from "../presentation/format";
 import { assemblyHref, assemblyQuoteHref, jobHref, requestHref } from "../routing/appRoute";
 import { QuoteLines, QuoteRelations, QuoteSummary, type QuoteRelation } from "./quoteDetail";
+import { AcceptanceResult } from "./quotes/AcceptanceResult";
 import { presentAssemblyQuoteLines, presentAssemblyQuoteTotal } from "./quoteDocumentModel";
 import { useAssemblyQuoteDocument } from "./useAssemblyQuoteDocument";
 import "../styles/surfaces/offers.css";
@@ -101,14 +102,13 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
     setAccepting(false);
     setConfirming(false);
     invalidateAfterAcceptAssemblyQuote({ assemblyId: quote.assemblyId, requestId: quote.requestId });
+    // N-018 · the offer stays open and shows the acceptance result; the job opens from there.
     if (result.ok) {
       setAcceptedOrderId(result.orderSnapshotId);
-      navigate(jobHref(result.orderSnapshotId));
       return;
     }
     if (result.kind === "already_accepted" && result.orderSnapshotId) {
       setAcceptedOrderId(result.orderSnapshotId);
-      navigate(jobHref(result.orderSnapshotId));
     }
     setRefusal(result);
   }
@@ -128,17 +128,13 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
         <a className="offers-detail__back text-link" href="/oferte">← Toate ofertele</a>
         {loaded.status === "error" && !quote ? (
           <InlineAlert tone="error" title="Oferta nu a putut fi citită">
-            Oferta de ansamblu nu este disponibilă. Redeschide oferta din ansamblu sau din lista de oferte.
+            Oferta de ansamblu nu este disponibilă. Redeschide oferta din ansamblu sau din lista de oferte.{" "}
+            <Button variant="secondary" onClick={() => invalidateResources(resourceKeys.assemblyQuote(quoteSnapshotId))}>Reîncearcă</Button>
           </InlineAlert>
         ) : null}
         {quote?.superseded ? (
           <InlineAlert tone="pending" title="Versiune înlocuită">
             Ansamblul are o ofertă mai nouă. Această versiune rămâne înghețată pentru istoric și nu poate fi acceptată.
-          </InlineAlert>
-        ) : null}
-        {acceptedOrderId && !refusal ? (
-          <InlineAlert tone="success" title="Oferta a fost acceptată">
-            Comanda a fost creată din această ofertă înghețată.
           </InlineAlert>
         ) : null}
         {refusal ? (
@@ -202,6 +198,9 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
                     : quote.acceptance.reason ?? "Oferta este înghețată."
               }
             >
+              {orderSnapshotId ? (
+                <AcceptanceResult reference={item.reference} orderSnapshotId={orderSnapshotId} immediate={Boolean(acceptedOrderId) && !refusal} />
+              ) : null}
               {confirming && canAccept ? (
                 <section
                   ref={confirmRef}

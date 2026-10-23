@@ -215,7 +215,7 @@ export function RequestsRegister(props: Props) {
   const { layout, view, refreshFailed, filters, sort, density, searchRef, onFilters, onSort, onDensity, onReset, onRetry, visibleCount, total, paging } = props;
   const ready = view !== "loading" && view !== "error";
   return (
-    <section className="rdesk-register" aria-label="Registru cereri" data-register>
+    <section className="rdesk-register" aria-label="Registru cereri" data-register data-scroll-memory="registru">
       <div className="rdesk-toolbar">
         <DeskSearch
           id="cereri-cauta"

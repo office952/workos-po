@@ -31,6 +31,11 @@ import { navigate } from "../routing/navigate";
 import { OperationWorkspace } from "./OperationWorkspace";
 import { atelierHref, executionHref } from "../routing/appRoute";
 
+/** N-018 · the way back is named after where it really leads. */
+function returnLabel(returnTo: string): string {
+  return returnTo.startsWith("/lucrari/") ? "Revino la fișa lucrării" : "Revino la operație";
+}
+
 type AtelierPageProps = {
   jobId?: string | null;
   returnTo?: string | null;
@@ -175,6 +180,7 @@ export function AtelierPage({ jobId = null, returnTo = null, planId = null, task
     >
       {currentSession && lastSelection.planId ? <div className="atelier-selection" hidden={!planId}>
         <a className="atelier-selection__back text-link" href={atelierHref({ jobId })}>← Lista mea de operații</a>
+        {returnTo?.startsWith("/lucrari/") ? <a className="atelier-selection__back text-link" href={returnTo}>← Fișa lucrării</a> : null}
         <OperationWorkspace planId={lastSelection.planId} taskId={lastSelection.taskId} jobId={lastSelection.jobId} active={Boolean(planId)} />
       </div> : null}
       <div hidden={Boolean(currentSession && planId)} className="atelier-inbox">
@@ -253,7 +259,7 @@ export function AtelierPage({ jobId = null, returnTo = null, planId = null, task
                 {returnTo ? (
                   <p>
                     <a className="text-link" href={returnTo}>
-                      Revino la operație
+                      {returnLabel(returnTo)}
                     </a>
                   </p>
                 ) : null}
@@ -274,7 +280,7 @@ export function AtelierPage({ jobId = null, returnTo = null, planId = null, task
             </p>
             {returnTo ? (
               <a className="text-link" href={returnTo}>
-                Revino la operație
+                {returnLabel(returnTo)}
               </a>
             ) : null}
             {inbox.status === "success" ? (

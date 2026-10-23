@@ -195,6 +195,13 @@
   text-underline-offset: 3px;
 }
 
+/* N-018 · empty contact fields, grouped and quiet; existing contacts stay in front. */
+.cagenda-card__missing {
+  margin: 8px 0 0;
+  color: var(--color-text-muted);
+  font: 400 12px/1.45 var(--font-sans);
+}
+
 .cagenda-card__relation {
   display: grid;
   gap: 8px;
@@ -259,6 +266,83 @@
   }
 }
 
+/* N-018 · phone, compact agenda: title with Client nou, search, filter chips and the A–Z toggle. */
+.cagenda-compact {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cagenda-compact__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cagenda-compact__toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--shell-panel);
+  color: var(--color-text-primary);
+  font: 600 12px var(--font-mono);
+  cursor: pointer;
+}
+
+.cagenda-compact__toggle[aria-expanded="true"] {
+  border-color: var(--shell-signal);
+  background: var(--shell-signal-soft);
+}
+
+.cagenda-compact__toggle svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.cagenda-compact__toggle svg[data-open] {
+  transform: rotate(180deg);
+}
+
+.cagenda-compact__toggle:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.cagenda-compact__panel {
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--shell-panel);
+}
+
+.cagenda-desk[data-layout="full"] .rdesk__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.cagenda-desk[data-layout="full"] .rdesk__eyebrow {
+  display: none;
+}
+
+.cagenda-desk[data-layout="full"] .rdesk__title h1 {
+  font-size: 28px;
+}
+
+.cagenda-desk[data-layout="full"] .rdesk__bar .rdesk-create {
+  flex: 0 0 auto;
+  min-height: 44px;
+}
+
 @media (max-width: 767px) {
   .cagenda {
     align-items: flex-start;
@@ -280,4 +364,10 @@
     height: 56px;
     font-size: 19px;
   }
+}
+
+/* N-018 · Enter on a row moves focus into the card; the card shows where focus is. */
+#clienti-dosar:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
 }

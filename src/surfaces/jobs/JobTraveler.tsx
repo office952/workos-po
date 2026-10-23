@@ -3,7 +3,6 @@ import { formatTimestamp } from "../../presentation/format";
 import { presentJobWorklistAction } from "../../presentation/worklistAction";
 import { jobHref } from "../../routing/appRoute";
 import { DeskActions, DeskSheet } from "../desk/DeskDossier";
-import { ProgressRing } from "./JobParts";
 import { jobName, operationProgress, progressText, ROUTE_MARK_LABEL, routeMarks, STATIONS } from "./jobRegistryModel";
 
 /** Where a presented action lands, said in words; derived from the href the presenter built. */
@@ -19,9 +18,10 @@ export function JobTraveler({ job }: { job: JobListItemTransport }) {
   const sheetHref = jobHref(job.jobId);
   const marks = routeMarks(job.stage);
   const progress = operationProgress(job);
+  const operationsHref = jobHref(job.jobId, { section: "operatii" });
   const created = formatTimestamp(job.createdAt);
   const destinations = [{ action: action.actionLabel, target: destination(action.actionHref, job) }];
-  if (action.actionHref !== sheetHref) destinations.push({ action: "Fișa completă", target: "fișa lucrării" });
+  if (action.actionHref !== sheetHref) destinations.push({ action: "Fișa lucrării", target: "fișa completă a lucrării" });
 
   return (
     <DeskSheet
@@ -33,7 +33,7 @@ export function JobTraveler({ job }: { job: JobListItemTransport }) {
             <span aria-hidden="true">→</span>
           </a>
           {action.actionHref !== sheetHref ? (
-            <a className="rdesk-dossier__secondary" href={sheetHref}>Fișa completă</a>
+            <a className="rdesk-dossier__secondary" href={sheetHref}>Fișa lucrării</a>
           ) : null}
         </DeskActions>
       }
@@ -48,14 +48,25 @@ export function JobTraveler({ job }: { job: JobListItemTransport }) {
           <p className="rdesk-sheet__lead">{job.customerDisplayName ?? "Client neprecizat"}</p>
           {job.inscription && job.inscription !== jobName(job) ? <p className="rdesk-sheet__text">{job.inscription}</p> : null}
         </div>
-        <ProgressRing job={job} />
       </div>
       <dl className="rdesk-sheet__facts">
         <div><dt>Tip</dt><dd>{job.kindLabel}</dd></div>
         <div><dt>Prioritate</dt><dd>{job.priorityLabel}</dd></div>
         <div><dt>Termen</dt><dd data-missing={!job.targetDate || undefined}>{job.targetDateLabel}</dd></div>
       </dl>
+      {job.attentionLabel ? <p className="rdesk-sheet__note" data-tone="attention">{job.attentionLabel}</p> : null}
       <hr className="rdesk-sheet__perforation" />
+      {/* N-018 · the list item carries only how many operations are in progress; their names and
+          components are not in this contract, so the dossier sends to the Operații section. */}
+      {progress?.inProgress ? (
+        <div className="jline-sheet__now">
+          <p className="rdesk-sheet__label">În lucru</p>
+          <p className="rdesk-sheet__text">
+            {progress.inProgress === 1 ? "1 operație în lucru" : `${progress.inProgress} operații în lucru`}
+            {action.actionHref !== operationsHref ? <>{" · "}<a href={operationsHref}>Vezi operațiile</a></> : null}
+          </p>
+        </div>
+      ) : null}
       <div className="jline-sheet__progress">
         <p className="rdesk-sheet__label">Progres operații</p>
         {progress ? (
@@ -85,7 +96,6 @@ export function JobTraveler({ job }: { job: JobListItemTransport }) {
       {job.nextActionLabel ? (
         <p className="rdesk-sheet__note">{`Pas următor: ${job.nextActionLabel}`}</p>
       ) : null}
-      {job.attentionLabel ? <p className="rdesk-sheet__note" data-tone="attention">{job.attentionLabel}</p> : null}
     </DeskSheet>
   );
 }
