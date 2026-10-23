@@ -14,3 +14,13 @@
 .creation-dialog__close:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .creation-dialog form { display: grid; gap: 16px; }
 .creation-dialog .ui-note { margin: 0; }
+
+/* N-018 · unsaved-changes question: save and continue, stay, leave. */
+.unsaved-guard__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.creation-dialog > .alert { margin-top: 16px; }
+
+/* N-018 · leaving a creation form with typed text: the confirmation stays inside the dialog. */
+.creation-dialog__abandon { display: grid; gap: 8px; margin-top: 20px; padding: 14px 16px; border: 1px solid var(--wos-warning-text); background: var(--color-surface-raised); }
+.creation-dialog__abandon p { margin: 0; }
+.creation-dialog__abandon .unsaved-guard__actions { margin-top: 8px; }
+.creation-dialog__abandon-title { font: 600 15px/1.3 var(--font-sans); }

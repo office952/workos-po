@@ -11,6 +11,7 @@ import { Button } from "../components/Button";
 import { InlineAlert } from "../components/InlineAlert";
 import { LoadingFloor } from "../components/LoadingFloor";
 import { invalidateAfterCreateOrder } from "../data/invalidation";
+import { invalidateResources } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadQuoteEnvelope, loadQuoteSnapshot } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
@@ -23,8 +24,8 @@ import { presentContextMeta } from "../presentation/contextMeta";
 import { FrozenRateAcknowledgementNotice } from "../presentation/rateAcknowledgement";
 import { ALUMINIUM_RETURN_PROFILE_RESOURCE_ID } from "../reference/lettersProduct";
 import { clientHref, jobHref, quoteHref, requestHref } from "../routing/appRoute";
-import { navigate } from "../routing/navigate";
 import { QuoteLines, QuoteRelations, QuoteSummary, type QuoteRelation, type QuoteTotal } from "./quoteDetail";
+import { AcceptanceResult } from "./quotes/AcceptanceResult";
 import { presentProductQuoteLines, presentProductQuoteTotal } from "./quoteDocumentModel";
 import "../styles/surfaces/offers.css";
 
@@ -72,6 +73,7 @@ export function QuoteSnapshotPage({
   const [actionState, setActionState] = useState<"idle" | "pending" | "error">("idle");
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [acceptedOrderId, setAcceptedOrderId] = useState<string | null>(null);
   const [documentState, setDocumentState] = useState<"idle" | "pending" | "error">("idle");
   const [documentError, setDocumentError] = useState<string | null>(null);
   const acceptingRef = useRef(false);
@@ -108,9 +110,10 @@ export function QuoteSnapshotPage({
       const orderId = presentOrderSnapshotId(await confirmQuoteOrder(productCode, quoteSnapshotId));
       if (!orderId) throw new Error("missing_order");
       invalidateAfterCreateOrder(quoteSnapshotId, snapshot.data?.requestId);
+      // N-018 · the offer stays open with the acceptance result; the job opens from there.
+      setAcceptedOrderId(orderId);
       setConfirming(false);
       setActionState("idle");
-      navigate(jobHref(orderId));
     } catch (error) {
       setActionState("error");
       setActionError(
@@ -144,7 +147,7 @@ export function QuoteSnapshotPage({
     ? selectLineByResource(presentedSnapshot.lines, ALUMINIUM_RETURN_PROFILE_RESOURCE_ID)
     : null;
   const presented = profile ? presentCostLine(profile) : null;
-  const orderSnapshotId = presentedEnvelope?.orderSnapshotId ?? null;
+  const orderSnapshotId = presentedEnvelope?.orderSnapshotId ?? acceptedOrderId;
   const total = presentedSnapshot ? presentProductQuoteTotal(presentedSnapshot) : null;
 
   return (
@@ -166,7 +169,8 @@ export function QuoteSnapshotPage({
         <a className="offers-detail__back text-link" href="/oferte">← Toate ofertele</a>
         {snapshot.status === "error" && !presentedSnapshot ? (
           <InlineAlert tone="error" title="Oferta nu a putut fi citită">
-            Oferta nu este disponibilă.
+            Oferta nu este disponibilă.{" "}
+            <Button variant="secondary" onClick={() => invalidateResources(resourceKeys.quote(productCode, quoteSnapshotId), resourceKeys.quoteEnvelope(quoteSnapshotId))}>Reîncearcă</Button>
           </InlineAlert>
         ) : null}
         {presentedSnapshot ? (
@@ -218,6 +222,13 @@ export function QuoteSnapshotPage({
                   pending={actionState === "pending"}
                   onConfirm={() => void accept()}
                   onCancel={cancelAcceptance}
+                />
+              ) : null}
+              {orderSnapshotId ? (
+                <AcceptanceResult
+                  reference={presentedEnvelope?.reference || quoteSnapshotId}
+                  orderSnapshotId={orderSnapshotId}
+                  immediate={acceptedOrderId === orderSnapshotId}
                 />
               ) : null}
               {documentError ? (
@@ -335,7 +346,7 @@ function QuoteAcceptanceConfirmation({
           {pending ? "Se creează comanda…" : "Da, confirm comanda"}
         </Button>
         <Button variant="secondary" disabled={pending} onClick={onCancel}>
-          Anulează
+          Renunță
         </Button>
       </div>
     </section>

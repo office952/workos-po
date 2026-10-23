@@ -293,7 +293,7 @@ function Skeleton({ layout }: { layout: QuotesLayout }) {
 export function QuotesRegister(props: Props) {
   const { layout, view, refreshFailed, onRetry, onReset } = props;
   return (
-    <section className="offers-v2__register" aria-label="Registru oferte" data-register>
+    <section className="offers-v2__register" aria-label="Registru oferte" data-register data-scroll-memory="registru">
       <Toolbar {...props} />
       {refreshFailed && props.total > 0 ? (
         <InlineAlert tone="error" title="Lista nu a putut fi actualizată">

@@ -16,7 +16,12 @@ export type ArtifactPreviewSource = Pick<
   "artifactId" | "originalFileName" | "sizeLabel" | "downloadHref" | "preview"
 >;
 
-export function JobArtifactPreview({ file }: { file: ArtifactPreviewSource | null }) {
+/**
+ * `embedded`: shown inside a viewer that already names the file and offers the one download of
+ * the consulted version (N-018), so the preview drops its own header and download links; error
+ * messages and the PDF fallback stay, pointing to that action. Default: unchanged standalone view.
+ */
+export function JobArtifactPreview({ file, embedded = false }: { file: ArtifactPreviewSource | null; embedded?: boolean }) {
   const [preview, setPreview] = useState<Preview | null>(null);
   const [retry, setRetry] = useState(0);
   const id = file?.artifactId ?? "";
@@ -99,8 +104,8 @@ export function JobArtifactPreview({ file }: { file: ArtifactPreviewSource | nul
     );
   const current = preview?.id === id ? preview : null;
   return (
-    <section className="job-document" aria-label="Documentul selectat">
-      <header>
+    <section className="job-document" aria-label="Documentul selectat" data-embedded={embedded || undefined}>
+      {embedded ? null : <header>
         <div>
           <span className="job-workbench__eyebrow">
             {extension.toUpperCase()} · {file.sizeLabel}
@@ -110,7 +115,7 @@ export function JobArtifactPreview({ file }: { file: ArtifactPreviewSource | nul
         <AuthenticatedDownloadLink href={file.downloadHref}>
           Descarcă fișierul ↗
         </AuthenticatedDownloadLink>
-      </header>
+      </header>}
       <div className="job-document__body" aria-busy={supported && !current}>
         {!supported ? (
           <div className="job-document__empty">
@@ -161,13 +166,17 @@ export function JobArtifactPreview({ file }: { file: ArtifactPreviewSource | nul
         )}
       </div>
       {current?.kind === "pdf" ? (
-        <p className="job-document__fallback">
-          Dacă browserul nu afișează PDF-ul,{" "}
-          <AuthenticatedDownloadLink href={file.downloadHref}>
-            descarcă documentul
-          </AuthenticatedDownloadLink>
-          .
-        </p>
+        embedded ? (
+          <p className="job-document__fallback">Dacă browserul nu afișează PDF-ul, folosește „Descarcă această versiune”.</p>
+        ) : (
+          <p className="job-document__fallback">
+            Dacă browserul nu afișează PDF-ul,{" "}
+            <AuthenticatedDownloadLink href={file.downloadHref}>
+              descarcă documentul
+            </AuthenticatedDownloadLink>
+            .
+          </p>
+        )
       ) : null}
     </section>
   );

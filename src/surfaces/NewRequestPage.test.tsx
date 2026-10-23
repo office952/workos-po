@@ -2,6 +2,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetResourceCache } from "../data/resourceCache";
+import { navigate } from "../routing/navigate";
 import { NewRequestPage } from "./NewRequestPage";
 
 const customer = { customerId: "cus-1", displayName: "Client test", cui: "RO12345678", status: "ACTIVE" };
@@ -109,5 +110,47 @@ describe("request intake", () => {
     expect(screen.getByLabelText("Client selectat")).toHaveTextContent("Client test");
     expect(screen.getByRole("button", { name: "Salvează cererea" })).toBeDisabled();
     expect(screen.getByText("Nu poți crea o cerere pentru acest client.")).toBeInTheDocument();
+  });
+  describe("N-018 · leaving with typed text", () => {
+    it("returns to the client it came from, and asks only when title or description were typed", async () => {
+      window.history.replaceState({}, "", "/cereri/noua?customer=cus-1");
+      vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => reads(input)));
+      render(<NewRequestPage />);
+      expect(screen.getByRole("link", { name: "← Fișa clientului" })).toHaveAttribute("href", "/clienti/cus-1");
+      expect(screen.getByRole("link", { name: "Anulează" })).toHaveAttribute("href", "/clienti/cus-1");
+      // Nothing typed: leaving asks nothing.
+      act(() => navigate("/clienti/cus-1"));
+      expect(window.location.pathname).toBe("/clienti/cus-1");
+      expect(screen.queryByRole("heading", { name: "Ai modificări nesalvate" })).toBeNull();
+    });
+
+    it("holds a navigation once text is typed: Rămân keeps the text, Pleacă leaves; there is no save from the question", async () => {
+      window.history.replaceState({}, "", "/cereri/noua?customer=cus-1");
+      vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => reads(input)));
+      render(<NewRequestPage />);
+      await brief();
+      act(() => navigate("/clienti/cus-1"));
+      expect(await screen.findByRole("heading", { name: "Ai modificări nesalvate" })).toBeInTheDocument();
+      expect(screen.getByText("Titlul și descrierea cererii nu sunt salvate. Dacă pleci spre fișa clientului, se pierd.")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Salvează și continuă" })).toBeNull();
+      expect(window.location.pathname).toBe("/cereri/noua");
+      await userEvent.click(screen.getByRole("button", { name: "Rămân pe pagină" }));
+      expect(screen.getByLabelText("Titlu cerere")).toHaveValue("Litere atelier");
+      act(() => navigate("/clienti/cus-1"));
+      await userEvent.click(await screen.findByRole("button", { name: "Pleacă fără salvare" }));
+      expect(window.location.pathname).toBe("/clienti/cus-1");
+    });
+
+    it("saving with typed text opens the new request without asking", async () => {
+      window.history.replaceState({}, "", "/cereri/noua?customer=cus-1");
+      vi.stubGlobal("fetch", vi.fn((input: RequestInfo, init?: RequestInit) => init?.method === "POST" ? json({ request: { requestId: "req-new" } }, 201) : reads(input)));
+      render(<NewRequestPage />);
+      await brief();
+      const save = screen.getByRole("button", { name: "Salvează cererea" });
+      await waitFor(() => expect(save).toBeEnabled());
+      await userEvent.click(save);
+      await waitFor(() => expect(window.location.pathname).toBe("/cereri/req-new"));
+      expect(screen.queryByRole("heading", { name: "Ai modificări nesalvate" })).toBeNull();
+    });
   });
 });

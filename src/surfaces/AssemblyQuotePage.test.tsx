@@ -74,6 +74,14 @@ function acceptanceServer(acceptResponse: AcceptResponse | null) {
     if (init?.method === "POST") {
       return acceptResponse ? Promise.resolve(acceptResponse) : Promise.reject(new TypeError("Failed to fetch"));
     }
+    if (_path.startsWith("/api/jobs/")) {
+      const jobId = decodeURIComponent(_path.slice("/api/jobs/".length));
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({ job: {
+        jobId, kind: "ASSEMBLY", productCode: "SIGN_ASSEMBLY", productLabel: "Panou ACM + litere", inscription: "NORD",
+        stage: "ORDER_CREATED", stageLabel: "Comandă creată", nextAction: "RELEASE_TO_PRODUCTION", nextActionLabel: "Trimite în producție",
+        orderSnapshotId: jobId, releaseSnapshotId: null,
+      }, execution: { planId: null } }) });
+    }
     return Promise.resolve({
       ok: true,
       status: 200,
@@ -174,7 +182,17 @@ describe("AssemblyQuotePage", () => {
     const confirm = screen.getByRole("button", { name: "Da, confirm comanda" });
     await user.dblClick(confirm);
 
-    await waitFor(() => expect(window.location.pathname).toBe("/lucrari/asmo%3A9"));
+    // N-018 · the offer stays open: the result says what acceptance did and, apart, where the job is.
+    const result = await screen.findByRole("region", { name: "Rezultatul acceptării" });
+    expect(result).toHaveFocus();
+    expect(window.location.pathname.startsWith("/lucrari")).toBe(false);
+    expect(within(result).getByText("Oferta acceptată")).toBeInTheDocument();
+    expect(within(result).getByTestId("offer-acceptance-stamp")).toHaveTextContent("Acceptată");
+    expect(within(result).getByText("Comanda creată")).toBeInTheDocument();
+    expect(within(result).getByText("Lucrarea")).toBeInTheDocument();
+    expect(await within(result).findByText("Comandă creată")).toBeInTheDocument();
+    expect(within(result).getByText("Urmează: Trimite în producție, din fișa lucrării.")).toBeInTheDocument();
+    expect(within(result).getByRole("link", { name: "Fișa lucrării →" })).toHaveAttribute("href", "/lucrari/asmo%3A9");
     expect(posts(fetchMock)).toEqual([
       ["/api/assemblies/asm%3A1/accept", { quoteSnapshotId: "asmq:1" }],
     ]);
@@ -221,7 +239,8 @@ describe("AssemblyQuotePage", () => {
     render(<AssemblyQuotePage quoteSnapshotId="asmq:1" />);
     await user.click(await screen.findByRole("button", { name: "Confirmă comanda" }));
     await user.click(screen.getByRole("button", { name: "Da, confirm comanda" }));
-    await waitFor(() => expect(window.location.pathname).toBe("/lucrari/asmo%3A7"));
+    const result = await screen.findByRole("region", { name: "Rezultatul acceptării" });
+    expect(await within(result).findByText("Comandă creată")).toBeInTheDocument();
     const summary = screen.getByRole("region", { name: "Rezumat comercial" });
     expect(within(summary).getByRole("link", { name: "Deschide comanda" })).toHaveAttribute("href", "/lucrari/asmo%3A7");
     expect(screen.queryByRole("button", { name: /Confirmă comanda/ })).not.toBeInTheDocument();

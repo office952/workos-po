@@ -17,15 +17,18 @@ import { PageRegion } from "../layout/PageRegion";
 import { presentResourceAccess } from "../presentation/resourceAccess";
 import { clientHref, clientsHref, parseClientsSelection } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
+import { useUnsavedChangesGuard } from "../routing/useUnsavedChangesGuard";
 import { readClientsRegistryMemory, writeClientsRegistryMemory } from "../session/clientsRegistryMemory";
+import { jumpToLetter } from "./clients/agendaAnchors";
 import { AgendaIndex } from "./clients/AgendaIndex";
 import { ClientCard } from "./clients/ClientCard";
 import { ClientsRegister } from "./clients/ClientsRegister";
 import { agendaLetter, clientSignals, filterClients, type ClientChip, type ClientFilters } from "./clients/clientsAgendaModel";
 import { DeskDialog, DeskDossier, type DeskVacancy } from "./desk/DeskDossier";
 import { DeskSignalBoard } from "./desk/DeskSignalBoard";
-import type { Density } from "./desk/DeskToolbar";
+import { PlusIcon, type Density } from "./desk/DeskToolbar";
 import { useDeskLayout } from "./desk/useDeskLayout";
+import { focusRow } from "./desk/deskKeys";
 import { useDeskSelection } from "./desk/useDeskSelection";
 import "../styles/layout/registry-desk.css";
 import "../styles/surfaces/clients-agenda.css";
@@ -50,11 +53,16 @@ export function ClientsPage({ search = "" }: { search?: string }) {
   const [density, setDensity] = useState<Density>("comfortable");
   const [name, setName] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  // N-018 · leaving "Client nou" with a typed name asks first; the answer may resume a held navigation.
+  const [abandon, setAbandon] = useState<{ proceed: (() => void) | null } | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "pending" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const creationScope = useRef(0);
   const layout = useDeskLayout();
+  const compact = layout === "full";
+  const [indexOpen, setIndexOpen] = useState(false);
+  const [jumpedLetter, setJumpedLetter] = useState<string | null>(null);
   const selectedId = parseClientsSelection(search);
 
   useLayoutEffect(() => {
@@ -76,6 +84,36 @@ export function ClientsPage({ search = "" }: { search?: string }) {
   const listReady = registry.status === "success" || items.length > 0;
   const selected = items.find((customer) => customer.customerId === selectedId) ?? null;
   const selection = useDeskSelection({ layout, selectedId, href: clientsHref, order, searchRef });
+  const currentLetter = jumpedLetter && letters.includes(jumpedLetter) ? jumpedLetter : letters[0] ?? null;
+  const canCreate = registry.status === "success";
+  const typedName = createOpen && registry.status === "success" && name.trim() !== "" && saveState !== "pending";
+  useUnsavedChangesGuard({ dirty: typedName, subject: "Denumirea clientului", onHold: (proceed) => setAbandon({ proceed }) });
+
+  function dismissCreate(): void {
+    if (saveState === "pending") return;
+    if (name.trim() !== "") {
+      setAbandon({ proceed: null });
+      return;
+    }
+    setCreateOpen(false);
+  }
+
+  function confirmAbandon(): void {
+    const resume = abandon?.proceed ?? null;
+    setAbandon(null);
+    setName("");
+    setSaveError(null);
+    setSaveState("idle");
+    setCreateOpen(false);
+    resume?.();
+  }
+
+  function jumpFromCompactIndex(letter: string): void {
+    setJumpedLetter(letter);
+    setIndexOpen(false);
+    // The panel closes first, so the jump lands where the list will actually be.
+    window.requestAnimationFrame(() => jumpToLetter(letter));
+  }
 
   function changeFilters(next: ClientFilters): void {
     setFilters(next);
@@ -110,7 +148,9 @@ export function ClientsPage({ search = "" }: { search?: string }) {
       setName("");
       setCreateOpen(false);
       setSaveState("idle");
-      navigate(clientHref(created));
+      // N-018 · the client page confirms the registration once (244:7377).
+      try { sessionStorage.setItem("workos.client.registered", created); } catch { /* the notice is optional */ }
+      navigate(clientHref(created), "push", { bypassGuard: true });
     } catch (error) {
       if (scope !== creationScope.current) return;
       setSaveState("error");
@@ -131,7 +171,7 @@ export function ClientsPage({ search = "" }: { search?: string }) {
         : {
             title: "Niciun client selectat",
             body: "Alege un client din agendă sau din index. Cartela arată identitatea, contactul, cererile deschise și totalurile de oferte și lucrări.",
-            hint: "↑ ↓ selectează · Enter deschide clientul",
+            hint: "↑ ↓ selectează · Enter deschide cartela · Fișa clientului deschide pagina completă",
           };
 
   const dossier = (
@@ -144,6 +184,7 @@ export function ClientsPage({ search = "" }: { search?: string }) {
       vacancy={vacancy}
       onMove={selection.move}
       onClose={layout === "docked" ? undefined : selection.close}
+      onEscape={layout === "docked" && selectedId ? () => focusRow(selectedId) : undefined}
     >
       {selected ? <ClientCard key={selected.customerId} customer={selected} /> : null}
     </DeskDossier>
@@ -157,11 +198,19 @@ export function ClientsPage({ search = "" }: { search?: string }) {
             <p className="rdesk__eyebrow"><span aria-hidden="true" />{MODULE_INDEX} · Registru comercial</p>
             <h1>Clienți</h1>
           </div>
-          <DeskSignalBoard label="Filtre registru clienți" signals={clientSignals(registry.data, filters)} ready={listReady} onPress={onSignal} />
+          {compact ? (
+            canCreate ? (
+              <button type="button" className="rdesk-create" onClick={() => setCreateOpen(true)}><PlusIcon />Client nou</button>
+            ) : null
+          ) : (
+            <DeskSignalBoard label="Filtre registru clienți" signals={clientSignals(registry.data, filters)} ready={listReady} onPress={onSignal} />
+          )}
         </header>
-        <div className="rdesk__instrument">
-          <AgendaIndex letters={letters} layout={layout} />
-        </div>
+        {compact ? null : (
+          <div className="rdesk__instrument">
+            <AgendaIndex letters={letters} layout={layout} />
+          </div>
+        )}
         <div className="rdesk__work">
           <ClientsRegister
             layout={layout}
@@ -172,7 +221,32 @@ export function ClientsPage({ search = "" }: { search?: string }) {
             total={items.length}
             filters={filters}
             density={density}
-            canCreate={registry.status === "success"}
+            canCreate={!compact && canCreate}
+            filtersSlot={
+              compact ? (
+                <div className="cagenda-compact">
+                  <div className="cagenda-compact__row">
+                    <DeskSignalBoard variant="chips" label="Filtre registru clienți" signals={clientSignals(registry.data, filters)} ready={listReady} onPress={onSignal} />
+                    <button
+                      type="button"
+                      className="cagenda-compact__toggle"
+                      aria-expanded={indexOpen}
+                      aria-controls="clienti-index-compact"
+                      aria-label={`Index alfabetic${currentLetter ? `, litera curentă ${currentLetter}` : ""}`}
+                      onClick={() => setIndexOpen((open) => !open)}
+                    >
+                      <span>A–Z{currentLetter ? ` · ${currentLetter}` : ""}</span>
+                      <svg aria-hidden="true" viewBox="0 0 20 20" data-open={indexOpen || undefined}><path d="M5.5 8 10 12.5 14.5 8" /></svg>
+                    </button>
+                  </div>
+                  {indexOpen ? (
+                    <div id="clienti-index-compact" className="cagenda-compact__panel">
+                      <AgendaIndex letters={letters} layout={layout} onJump={jumpFromCompactIndex} />
+                    </div>
+                  ) : null}
+                </div>
+              ) : null
+            }
             selectedId={selectedId}
             searchRef={searchRef}
             onFilters={changeFilters}
@@ -191,13 +265,23 @@ export function ClientsPage({ search = "" }: { search?: string }) {
         </span>
       </div>
       {createOpen && registry.status === "success" ? (
-        <CreationDialog title="Client nou" busy={saveState === "pending"} onDismiss={() => setCreateOpen(false)}>
+        <CreationDialog title="Client nou" busy={saveState === "pending"} onDismiss={dismissCreate}>
           <form onSubmit={(event) => { event.preventDefault(); void create(); }}>
             <TextField id="customer-name" label="Denumire" value={name} onChange={setName} disabled={saveState === "pending"} />
             <Button type="submit" disabled={name.trim() === "" || saveState === "pending"}>
               Înregistrează clientul
             </Button>
             <p className="ui-note">Creează clientul și deschide hubul pentru continuare.</p>
+            {abandon ? (
+              <section className="creation-dialog__abandon" role="alertdialog" aria-labelledby="client-nou-abandon">
+                <p id="client-nou-abandon" className="creation-dialog__abandon-title">Renunți la clientul nou?</p>
+                <p>Denumirea introdusă nu este salvată.</p>
+                <div className="unsaved-guard__actions">
+                  <Button autoFocus onClick={() => setAbandon(null)}>Rămân în formular</Button>
+                  <Button variant="secondary" onClick={confirmAbandon}>Renunță</Button>
+                </div>
+              </section>
+            ) : null}
             {saveError ? (
               <InlineAlert tone="error" title="Înregistrarea a eșuat">
                 {saveError}

@@ -533,9 +533,16 @@
   white-space: nowrap;
 }
 
+/* N-018 · the server product label may take two lines (1280) before it is cut. */
 .offers-v2__product {
+  display: -webkit-box;
   color: var(--color-text-secondary);
   font: 400 12px/1.35 var(--font-sans);
+  overflow-wrap: anywhere;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .offers-v2__value {
@@ -825,6 +832,28 @@ a.offer-card__door:focus-visible {
   align-items: center;
   gap: 8px 12px;
   padding: 12px 20px;
+}
+
+/* N-018 · tablet: closing alone on the first row, position and previous/next on the second. */
+.offers-dossier[data-layout="overlay"] .offers-dossier__bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "close close"
+    "position nav";
+}
+
+.offers-dossier[data-layout="overlay"] .offers-dossier__close {
+  grid-area: close;
+  justify-self: end;
+}
+
+.offers-dossier[data-layout="overlay"] .offers-dossier__position {
+  grid-area: position;
+}
+
+.offers-dossier[data-layout="overlay"] .offers-dossier__nav {
+  grid-area: nav;
 }
 
 .offers-dossier__position {

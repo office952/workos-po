@@ -1,0 +1,210 @@
+/* N-018 · Fișa clientului · Relație: Acum and the threads grouped by request, then a quiet note
+   for the relation journal, which has no source yet. Presentation only; every label and state
+   comes from the workspace. */
+
+/* One column that uses the width but stops at a reading measure, so the state and action of a row
+   stay near its document. 138:748 has a populated journal beside it; without a source no column is kept. */
+.crel {
+  display: grid;
+  gap: 28px;
+  min-width: 0;
+  max-width: 64rem;
+}
+
+.crel__note {
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-subtle);
+  color: var(--color-text-muted);
+  font: 400 12px/1.45 var(--font-sans);
+}
+
+.crel__block {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.crel__title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 18px/1.3 var(--font-sans);
+}
+
+.crel__quiet {
+  margin: 0;
+  color: var(--color-text-muted);
+  font: 400 13px/1.45 var(--font-sans);
+}
+
+/* ─── Acum ─── */
+.crel-now {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.crel-now__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "kind title action"
+    "reason reason action";
+  align-items: center;
+  gap: 4px 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--wos-warning-text);
+  background: var(--color-surface-raised);
+}
+
+.crel-now__item > .crel-doc__kind { grid-area: kind; }
+.crel-now__item > .crel-doc__title { grid-area: title; }
+.crel-now__item > .clients-next { grid-area: action; }
+
+.crel-now__reason {
+  grid-area: reason;
+  color: var(--wos-warning-text);
+  font: 500 13px/1.4 var(--font-sans);
+}
+
+/* ─── Threads ─── */
+.crel-threads {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.crel-thread {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+}
+
+.crel-thread__head,
+.crel-doc {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+}
+
+.crel-thread__docs {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 0 0 14px;
+  border-top: 1px solid var(--color-border-subtle);
+  list-style: none;
+}
+
+.crel-doc__kind {
+  color: var(--shell-muted);
+  font: 600 10px/1.4 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.crel-doc__title,
+.crel-thread__open {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text-primary);
+  font: 500 14px/1.4 var(--font-sans);
+}
+
+.crel-doc__title {
+  text-underline-offset: 3px;
+}
+
+.crel-thread__open {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+  font-weight: 600;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.crel-thread__open:focus-visible,
+.crel-doc__title:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.crel-doc__state {
+  justify-self: end;
+  color: var(--color-text-secondary);
+  font: 400 12px/1.4 var(--font-sans);
+  text-align: right;
+}
+
+.crel-doc[data-attention] .crel-doc__state {
+  color: var(--wos-warning-text);
+  font-weight: 500;
+}
+
+.crel-doc__detail {
+  grid-column: 2 / -1;
+  color: var(--color-text-secondary);
+  font: 400 12px/1.4 var(--font-sans);
+}
+
+.crel-thread__loose {
+  grid-column: 1 / -1;
+  color: var(--shell-muted);
+  font: 600 10px/1.4 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.crel-thread__none {
+  padding-left: 14px;
+}
+
+@media (max-width: 767px) {
+  .crel-now__item {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "kind title"
+      "reason reason"
+      "action action";
+  }
+
+  /* The action gets its own row at full width: the label stays on one line and the target is 44 px. */
+  .crel-now__item > .clients-next {
+    width: 100%;
+    height: auto;
+    margin-top: 6px;
+  }
+
+  .crel-thread__head,
+  .crel-doc {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .crel-doc__kind {
+    grid-column: 1 / -1;
+  }
+
+  .crel-doc__detail {
+    grid-column: 1 / -1;
+  }
+
+  .crel-thread__docs {
+    padding-left: 8px;
+  }
+}
+
+/* N-018 · once, right after "Client nou". */
+.client-hub__registered { margin: 0; padding: 10px 14px; border: 1px solid var(--shell-signal); background: var(--shell-signal-soft); color: var(--color-text-primary); font: 500 14px/1.4 var(--font-sans); }

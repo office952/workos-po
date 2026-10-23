@@ -1,8 +1,10 @@
+import type { ReactNode } from "react";
 import type { SiteInstallationOperationalTransport } from "../../api/types";
 import { JobMaterialPreparation } from "../JobMaterialPreparation";
 import { SiteInstallationContextPanel } from "../SiteInstallationContextPanel";
 
 export function JobRecordDates({
+  planning = null,
   jobId,
   returnTo,
   consultation,
@@ -10,6 +12,8 @@ export function JobRecordDates({
   sourceHref,
   sourceLabel,
 }: {
+  /** N-018 · the priority and deadline editor lives here, with its unsaved-changes state. */
+  planning?: ReactNode;
   jobId: string;
   returnTo: string;
   consultation: boolean;
@@ -26,6 +30,7 @@ export function JobRecordDates({
             <p>Materiale, montaj și sursa comercială. Consumul efectiv se consultă pe operație.</p>
           </div>
         </header>
+        {planning}
         <JobMaterialPreparation jobId={jobId} returnTo={returnTo} consultation={consultation} />
         <div className="job-record__dates-grid">
         <section aria-label="Context de montaj"><h3>Montaj</h3>{site ? <SiteInstallationContextPanel context={site} /> : <p>Nu există context de montaj înregistrat.</p>}</section>
