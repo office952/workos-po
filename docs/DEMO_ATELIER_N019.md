@@ -35,7 +35,7 @@ pnpm demo:history         # aplică o singură dată istoricul sintetic H1 (API 
 pnpm demo:chronology-plan # read-only: rândurile ferestrei de configurare și verificarea coliziunilor
 pnpm demo:chronology      # o singură dată: corecția cronologiei de configurare (allowlist, tranzacție, API oprit)
 pnpm demo:report          # raportul intervalelor C1 din datele serverului (demo-atelier-c1-report.json)
-node scripts/demo-atelier.mjs restore <țintă goală> [backup]   # restaurare autonomă: date + metadate demo + credențiale desigilate local
+node scripts/demo-atelier.mjs restore --target <țintă goală> --data-backup <bkp-*> [--bundle <bkp-*.demo-n019>] [--key-root <dir>]   # restaurare autonomă; nu cere și nu citește rădăcina configurată
 pnpm demo:restore-verify  # restaurează ultimul backup într-o rădăcină nouă și o verifică prin comenzile documentate pe 8892 (vezi „Backup și restaurare”)
 pnpm demo:stop            # oprește numai procesul identificat pozitiv (PID + marker în linia de comandă)
 ```
@@ -159,7 +159,15 @@ Pentru Cereri, Oferte și Lucrări: Delta pentru revizii, Helix/Pine pentru ofer
 
 **Cheia locală:** `%LOCALAPPDATA%\WorkOS\demo-atelier-keys\demo-atelier-n019.key` (`WORKOS_DEMO_ATELIER_KEY_ROOT`), 32 de octeți aleatori, creată la primul pachet, în afara rădăcinii, a backup-urilor și a Git. Fără ea, credențialele din pachet nu pot fi recuperate. Datele se pot restaura, dar parola și PIN-urile trebuie apoi resetate prin instrumentele de administrare.
 
-**Restaurare autonomă:** `node scripts/demo-atelier.mjs restore <țintă goală> [backup]`. Primește doar intrări explicite (backup de date, pachet, cheie, țintă goală) și nu citește rădăcina originală. Verifică pachetul, restaurează datele, apoi scrie marcajele, registrul, starea ciclului și credențialele desigilate numai în țintă. Nu restaurează PID-uri, lease-uri sau starea runner-ului și nu pornește nimic. Pornirea, verificările, H1 și ciclurile rămân comenzi separate, iar H1 și corecția de cronologie sunt refuzate de registrul restaurat.
+**Restaurare autonomă:** `node scripts/demo-atelier.mjs restore --target <țintă goală> --data-backup <bkp-*> [--bundle <dir>] [--key-root <dir>]`. Implicit, pachetul este `<bkp-*>.demo-n019`, iar cheia este în `WORKOS_DEMO_ATELIER_KEY_ROOT` sau în directorul per utilizator.
+
+Comanda primește doar intrări explicite (backup de date, pachet, cheie, țintă goală). Nu cere, nu verifică și nu citește rădăcina configurată (`WORKOS_DEMO_ATELIER_ROOT` sau implicită). Funcționează deci și când originalul lipsește.
+
+După restaurare: `WORKOS_DEMO_ATELIER_ROOT=<țintă>` (și `WORKOS_DEMO_ATELIER_PORT` dacă e nevoie), apoi `node scripts/demo-atelier.mjs start`.
+
+Comenzile care operează pe un mediu existent (`start`, `status`, `prepare`, `history`, `backup` etc.) păstrează protecțiile: rădăcina trebuie inițializată și situată în afara `%TEMP%`, a worktree-urilor și a repo-ului. `WORKOS_DEMO_ATELIER_ALLOW_TEMP=1` relaxează doar verificarea `%TEMP%`, explicit, pentru rădăcini de test de unică folosință.
+
+Regresia `apps/api/tests/demo-atelier-script.test.ts` rulează chiar comanda documentată cu originalul șters, apoi `start` și autentificarea din ținta restaurată. Verifică pachetul, restaurează datele, apoi scrie marcajele, registrul, starea ciclului și credențialele desigilate numai în țintă. Nu restaurează PID-uri, lease-uri sau starea runner-ului și nu pornește nimic. Pornirea, verificările, H1 și ciclurile rămân comenzi separate, iar H1 și corecția de cronologie sunt refuzate de registrul restaurat.
 
 **Probă (`pnpm demo:restore-verify`):** restaurează într-o rădăcină nouă și rulează comenzile documentate cu `WORKOS_DEMO_ATELIER_ROOT` și `WORKOS_DEMO_ATELIER_PORT=8892` îndreptate spre copia restaurată:
 - `start`, `verify`, `manifest`, `prepare` (așteptat: 0 pași aplicați);

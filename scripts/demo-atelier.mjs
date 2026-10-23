@@ -3,7 +3,7 @@
 import { execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -31,12 +31,30 @@ function fail(code, detail) {
   process.exit(1);
 }
 
+/**
+ * A persistent demo root lives outside %TEMP%, session folders, worktrees and
+ * the repository. WORKOS_DEMO_ATELIER_ALLOW_TEMP=1 is an explicit opt-in for
+ * throwaway test roots only; the repository/worktree refusal always applies.
+ */
 function guardRoot(root) {
-  const temp = resolve(process.env.TEMP ?? process.env.TMPDIR ?? "/tmp").toLowerCase();
-  const lowered = root.toLowerCase();
-  if (lowered.startsWith(temp) || lowered.startsWith(repoRoot.toLowerCase()) || lowered.includes(`${join("workspace", "workos-po")}`.toLowerCase())) {
+  const lowered = resolve(root).toLowerCase();
+  if (lowered.startsWith(repoRoot.toLowerCase()) || lowered.includes(`${join("workspace", "workos-po")}`.toLowerCase())) {
+    fail("demo_root_location_refused", `${root} must be outside worktrees and the repository.`);
+  }
+  if (process.env.WORKOS_DEMO_ATELIER_ALLOW_TEMP === "1") {
+    console.log(`TEMPORARY_DEMO_ROOT = ${root} (explicit opt-in; not a persistent environment)`);
+    return;
+  }
+  const temps = [process.env.TEMP, process.env.TMPDIR, tmpdir(), "/tmp"].filter(Boolean).map((item) => resolve(item).toLowerCase());
+  if (temps.some((temp) => lowered.startsWith(temp))) {
     fail("demo_root_location_refused", `${root} must be outside %TEMP%, session folders, worktrees and the repository.`);
   }
+}
+
+function readFlag(name) {
+  const index = process.argv.indexOf(`--${name}`);
+  const value = index >= 0 ? process.argv[index + 1] : undefined;
+  return value && !value.startsWith("--") ? value : undefined;
 }
 
 const pidPath = (root) => join(root, "demo-atelier-api.pid.json");
@@ -198,7 +216,7 @@ function gitHead() {
       hash.update(file);
       if (existsSync(join(repoRoot, file))) hash.update(readFileSync(join(repoRoot, file)));
     }
-    return `${head}+uncommitted(${changed.length} files, sha256 ${hash.digest("hex").slice(0, 12)})`;
+    return `${head}+uncommitted.${changed.length}files.sha256-${hash.digest("hex").slice(0, 12)}`;
   } catch {
     return "unknown";
   }
@@ -318,6 +336,29 @@ function differences(left, right, path = "", out = []) {
 
 const command = process.argv[2] ?? "status";
 if (process.env.NODE_ENV === "production") fail("demo_atelier_production_refused");
+if (command === "restore") {
+  // Autonomous restore: explicit inputs only. The configured root
+  // (WORKOS_DEMO_ATELIER_ROOT / default) is neither required nor read.
+  // node scripts/demo-atelier.mjs restore --target <empty dir> --data-backup <bkp-*> [--bundle <bkp-*.demo-n019>] [--key-root <dir>]
+  const target = readFlag("target");
+  const dataBackup = readFlag("data-backup");
+  if (!target || !dataBackup) {
+    fail("demo_restore_usage", "restore --target <empty dir> --data-backup <bkp-*> [--bundle <dir>] [--key-root <dir>]");
+  }
+  const targetRoot = resolve(target);
+  guardRoot(targetRoot);
+  const bundle = resolve(readFlag("bundle") ?? `${resolve(dataBackup)}.demo-n019`);
+  const keyRoot = readFlag("key-root");
+  try {
+    await cli("restore", ["--data-backup", resolve(dataBackup), "--bundle", bundle, ...(keyRoot ? ["--key-root", resolve(keyRoot)] : [])], process.env, targetRoot);
+  } catch (error) {
+    fail("demo_restore_failed", error instanceof Error ? error.message : String(error));
+  }
+  console.log(`DEMO_RESTORE_TARGET = ${targetRoot}`);
+  console.log(`Next: set WORKOS_DEMO_ATELIER_ROOT=${targetRoot} (and WORKOS_DEMO_ATELIER_PORT if needed), then: node scripts/demo-atelier.mjs start`);
+  process.exit(0);
+}
+
 guardRoot(ROOT);
 const hasMarker = existsSync(join(ROOT, MARKER_FILE));
 
@@ -390,12 +431,6 @@ try {
     }
     console.log(`DEMO_BACKUP = ${latestBackup()}`);
     console.log(`DEMO_BUNDLE = ${latestBackup()}.demo-n019`);
-  } else if (command === "restore") {
-    // node scripts/demo-atelier.mjs restore <empty target> [data backup]; explicit inputs only.
-    const target = process.argv[3];
-    const backup = process.argv[4] ?? latestBackup();
-    if (!target || !backup) fail("demo_restore_usage", "restore <empty target dir> [data backup dir]");
-    await cli("restore", ["--data-backup", backup, "--bundle", `${backup}.demo-n019`], process.env, resolve(target));
   } else if (command === "restore-verify") {
     const backup = process.argv[3] ?? latestBackup();
     if (!backup) fail("demo_backup_missing");
