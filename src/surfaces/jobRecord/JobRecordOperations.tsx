@@ -1,20 +1,85 @@
 import { createPortal } from "react-dom";
-import { Fragment, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { JobRecord, WorkHoursTask } from "../../api/jobRecord";
 import { Button } from "../../components/Button";
 import { InlineAlert } from "../../components/InlineAlert";
 import { exportHours } from "./exportHours";
 import { moment } from "./format";
 import { Heading } from "./presentation";
+import "../../styles/surfaces/job-operation-bench.css";
 
 function quantityText(task: WorkHoursTask): string {
   if (!task.plannedQuantity) return "Planificat: neînregistrat";
   return `Planificat: ${task.plannedQuantity.value.toLocaleString("ro-RO")} ${task.plannedQuantity.unit}`;
 }
 
+/**
+ * N-018 · compact operation switcher: the current operation with its place in the plan, the
+ * previous and next operations by name, and every operation grouped by component with its state.
+ */
+function OperationSwitcher({ tasks, current, onOpen }: { tasks: readonly WorkHoursTask[]; current: WorkHoursTask; onOpen: (taskId: string) => void }) {
+  const [listOpen, setListOpen] = useState(false);
+  const listId = useId();
+  const index = tasks.findIndex((task) => task.taskId === current.taskId);
+  const previous = index > 0 ? tasks[index - 1] : null;
+  const next = index >= 0 && index < tasks.length - 1 ? tasks[index + 1] : null;
+  const groups: { scope: string; tasks: WorkHoursTask[] }[] = [];
+  for (const task of tasks) {
+    const group = groups.find((item) => item.scope === task.scopeLabel);
+    if (group) group.tasks.push(task);
+    else groups.push({ scope: task.scopeLabel, tasks: [task] });
+  }
+  function choose(taskId: string) {
+    setListOpen(false);
+    onOpen(taskId);
+  }
+  return (
+    <nav className="op-switcher" aria-label="Comutator operații">
+      <div className="op-switcher__head">
+        <p className="op-switcher__place">{`Operația ${current.seqLabel} din ${tasks.length} · ${current.scopeLabel}`}</p>
+        <button type="button" className="op-switcher__all" aria-expanded={listOpen} aria-controls={listId} onClick={() => setListOpen((open) => !open)}>
+          Toate operațiile <span aria-hidden="true">{listOpen ? "▴" : "▾"}</span>
+        </button>
+      </div>
+      {listOpen ? (
+        <div id={listId} className="op-switcher__list">
+          {groups.map((group) => (
+            <section key={group.scope} aria-label={group.scope}>
+              <p className="op-switcher__group">{`${group.scope} · ${group.tasks.filter((task) => task.status === "COMPLETED").length}/${group.tasks.length}`}</p>
+              <ul>
+                {group.tasks.map((task) => (
+                  <li key={task.taskId}>
+                    <button type="button" aria-current={task.taskId === current.taskId ? "true" : undefined} onClick={() => choose(task.taskId)}>
+                      <span className="op-switcher__seq">{task.seqLabel}</span>
+                      <span><strong>{task.processLabel}</strong><small>{task.statusLabel}{task.people.length ? ` · ${task.people.length} ${task.people.length === 1 ? "persoană" : "persoane"}` : ""}</small></span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      ) : null}
+      <div className="op-switcher__steps">
+        {previous ? (
+          <button type="button" className="op-switcher__step" onClick={() => onOpen(previous.taskId)}>
+            <span aria-hidden="true">‹</span><span><small>Anterioara</small>{`${previous.seqLabel} · ${previous.processLabel}`}</span>
+          </button>
+        ) : <span className="op-switcher__step" data-empty>Prima operație</span>}
+        {next ? (
+          <button type="button" className="op-switcher__step" data-next onClick={() => onOpen(next.taskId)}>
+            <span><small>Următoarea</small>{`${next.seqLabel} · ${next.processLabel}`}</span><span aria-hidden="true">›</span>
+          </button>
+        ) : <span className="op-switcher__step" data-empty>Ultima operație</span>}
+      </div>
+    </nav>
+  );
+}
+
 function OperationEvidence({ task }: { task: WorkHoursTask }) {
   return (
     <>
+      <div data-op-part="brief">
       <h4>Rezultate</h4>
       <div className="job-record__facts-grid">
         <div>
@@ -46,6 +111,8 @@ function OperationEvidence({ task }: { task: WorkHoursTask }) {
           {!task.qualityLabel ? <p>Control neînregistrat</p> : null}
         </div>
       </div>
+      </div>
+      <div data-op-part="people">
       <h4>Sesiuni</h4>
       {task.sessions.length ? (
         <table className="job-record__table">
@@ -64,9 +131,18 @@ function OperationEvidence({ task }: { task: WorkHoursTask }) {
           <tfoot><tr><th scope="row">TOTAL OPERAȚIE</th><td /><td /><td>{task.timeLabel}</td></tr></tfoot>
         </table>
       ) : <p>Fără sesiuni înregistrate. Orele lipsă rămân neînregistrate.</p>}
+      </div>
     </>
   );
 }
+
+const OPERATION_TABS = [
+  { id: "brief", label: "Pe scurt" },
+  { id: "files", label: "Fișiere" },
+  { id: "people", label: "Oameni" },
+  { id: "history", label: "Istoric" },
+] as const;
+type OperationTab = (typeof OPERATION_TABS)[number]["id"];
 
 export function JobRecordOperations({
   record,
@@ -78,6 +154,8 @@ export function JobRecordOperations({
   onOpen,
   onClose,
   dossier,
+  viewer = null,
+  viewerExpanded = false,
 }: {
   record: JobRecord | null;
   selectedTaskId: string | null;
@@ -88,6 +166,9 @@ export function JobRecordOperations({
   onOpen: (taskId: string) => void;
   onClose: () => void;
   dossier: ReactNode;
+  /** N-018 · the file viewer next to the open operation. */
+  viewer?: ReactNode;
+  viewerExpanded?: boolean;
 }) {
   const detailId = useId();
   const hours = record?.hours ?? null;
@@ -116,6 +197,11 @@ export function JobRecordOperations({
   const open = Boolean(selectedTaskId);
   const [placed, setPlaced] = useState(false);
   const label = selected ? `${selected.seqLabel} · ${selected.processLabel}` : selectedLabel;
+  // N-018 · sub-tabs of the open operation; they only show or hide blocks, so drafts survive.
+  const [opTab, setOpTab] = useState<{ taskId: string | null; tab: OperationTab }>({ taskId: selectedTaskId, tab: "brief" });
+  if (opTab.taskId !== selectedTaskId) setOpTab({ taskId: selectedTaskId, tab: "brief" });
+  const fileCount = selected && record ? record.files.filter((file) => file.usages.some((usage) => usage.taskId === selected.taskId)).length : null;
+  const tabCount = (tab: OperationTab): number | null => (tab === "files" ? fileCount : tab === "people" ? selected?.people.length ?? null : null);
 
   useLayoutEffect(() => {
     const slot = rootRef.current?.querySelector<HTMLElement>("[data-detail-slot='open']");
@@ -129,19 +215,42 @@ export function JobRecordOperations({
     setPlaced((current) => current === nextPlaced ? current : nextPlaced);
   }, [host, selectedTaskId, record]);
 
+  // Closing the bench brings the register back; focus returns to the operation that was open.
+  const lastOpen = useRef<string | null>(null);
+  useEffect(() => {
+    if (selectedTaskId) {
+      lastOpen.current = selectedTaskId;
+      return;
+    }
+    const previous = lastOpen.current;
+    lastOpen.current = null;
+    if (previous) toggles.current.get(previous)?.focus();
+  }, [selectedTaskId]);
+
   function close() {
-    if (selectedTaskId) toggles.current.get(selectedTaskId)?.focus();
     onClose();
   }
 
   const detail = open || dossier ? createPortal(
-    <section id={detailId} className="job-record__operation-detail" aria-label="Dosarul operației selectate">
+    <section id={detailId} className="job-record__operation-detail" aria-label="Dosarul operației selectate" data-op-tab={selected ? opTab.tab : undefined}>
       <header>
-        <h3>{label ?? "Operație"}</h3>
+        <h3 tabIndex={-1}>{label ?? "Operație"}</h3>
         <Button variant="secondary" onClick={close}>Închide detaliul</Button>
       </header>
       {selected ? <p>{selected.scopeLabel} · {selected.statusLabel}</p> : null}
-      {workspaceHref ? <a className="job-sheet__link-button" href={workspaceHref}>Deschide operația în Atelier</a> : null}
+      {workspaceHref ? <a className="job-sheet__link-button" href={workspaceHref}>{selected ? `Deschide operația ${selected.seqLabel} în Atelier` : "Deschide operația în Atelier"}</a> : null}
+      {selected ? (
+        <div className="op-tabs" role="group" aria-label="Părțile operației">
+          {OPERATION_TABS.map((tab) => {
+            const count = tabCount(tab.id);
+            return (
+              <button key={tab.id} type="button" aria-pressed={opTab.tab === tab.id} onClick={() => setOpTab({ taskId: selectedTaskId, tab: tab.id })}>
+                {count === null ? tab.label : `${tab.label} · ${count}`}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
       {selected ? <OperationEvidence task={selected} /> : open ? <p>Rezultatele și sesiunile se afișează după citirea evidenței.</p> : null}
       {dossier}
     </section>,
@@ -159,13 +268,20 @@ export function JobRecordOperations({
       </header>
       {planUnavailable ? <InlineAlert tone="error" title="Operațiile nu au putut fi citite">Drepturile și detaliile operațiilor nu sunt disponibile.</InlineAlert> : null}
       {invalidTask ? <InlineAlert tone="error" title="Operația nu există în această lucrare">Linkul nu a fost înlocuit cu altă operație.</InlineAlert> : null}
-      {hours ? <div className="job-record__operation-toolbar">
+      {hours && selected ? (
+        <div className="op-bench" data-viewer={viewer ? "" : undefined} data-expanded={viewer && viewerExpanded ? "" : undefined}>
+          <OperationSwitcher tasks={hours.tasks} current={selected} onOpen={onOpen} />
+          <div data-detail-slot="open" />
+          {viewer}
+        </div>
+      ) : null}
+      {hours && !selected ? <div className="job-record__operation-toolbar">
         <label className="job-record__search">Caută operație, componentă sau persoană<input type="search" value={query} onChange={event => changeFilter(event.target.value, filter)}/></label>
         <div className="job-plan__filters" role="group" aria-label="Filtrează operațiile">
           {[['ALL', 'Toate'], ['IN_PROGRESS', 'În lucru'], ['COMPLETED', 'Finalizate']].map(([status, label]) => <button key={status} type="button" aria-pressed={filter === status} onClick={() => changeFilter(query, status!)}>{label} · {hours.tasks.filter(task => status === 'ALL' || task.status === status).length}</button>)}
         </div>
       </div> : null}
-      {hours ? (
+      {hours && !selected ? (
         <table className="job-record__table job-record__operations-table">
           <caption className="u-visually-hidden">Registrul operațiilor</caption>
           <thead><tr><th scope="col">Operație / componentă</th><th scope="col">Stare</th><th scope="col">Participanți</th><th scope="col">Ore</th><th scope="col">Început / final</th></tr></thead>
@@ -218,8 +334,8 @@ export function JobRecordOperations({
             </tr>
           </tfoot>
         </table>
-      ) : record ? <p>Planul de execuție nu există încă.</p> : null}
-      {hours && !visibleTasks.length ? <p role="status">Nicio operație nu corespunde filtrelor.</p> : null}
+      ) : record && !hours ? <p>Planul de execuție nu există încă.</p> : null}
+      {hours && !selected && !visibleTasks.length ? <p role="status">Nicio operație nu corespunde filtrelor.</p> : null}
       {hours ? <section className="job-record__print-sheet" hidden aria-label="Rezultatele operațiilor pentru tipărire">
         <h2>Rezultatele operațiilor</h2>
         {hours.tasks.map((task) => <article key={task.taskId}>

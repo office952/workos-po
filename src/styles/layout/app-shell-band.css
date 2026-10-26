@@ -367,14 +367,23 @@
     left: 9px;
   }
 
-  .app-shell__bar--band .app-shell__channel-name,
-  .app-shell__bar--band .account-area__trigger-label {
+  /*
+   * N-018 · one rule for every module under 1440: the channel stays as its lamp (its name is
+   * kept for screen readers and in the title), organisation and role move into the Cont menu,
+   * where they are already listed, so Cont is never clipped.
+   */
+  .app-shell__bar--band .app-shell__channel-kicker,
+  .app-shell__bar--band .app-shell__channel-name {
     position: absolute;
     width: 1px;
     height: 1px;
     overflow: hidden;
     clip: rect(0 0 0 0);
     white-space: nowrap;
+  }
+
+  .app-shell .app-shell__band .account-area__summary {
+    display: none;
   }
 }
 
@@ -428,6 +437,15 @@
 
   .app-shell .app-shell__band .account-area__chevron {
     display: none;
+  }
+
+  .app-shell__bar--band .account-area__trigger-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 
   .app-shell__switcher {

@@ -149,4 +149,22 @@ describe("JobArtifactPreview", () => {
     view.unmount();
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:test-1");
   });
+  it('keeps its header and download links by default, and drops them when embedded in a viewer (N-018)', async () => {
+    download.mockResolvedValue(result('%PDF-1.4', 'application/pdf'));
+    const { unmount } = render(<JobArtifactPreview file={file('a')} />);
+    expect(await screen.findByTitle('a.pdf')).toBeInTheDocument();
+    expect(screen.getAllByRole('link').map((link) => link.textContent)).toEqual(['Descarcă fișierul ↗', 'descarcă documentul']);
+    unmount();
+    render(<JobArtifactPreview file={file('a')} embedded />);
+    expect(await screen.findByTitle('a.pdf')).toBeInTheDocument();
+    expect(screen.queryAllByRole('link')).toHaveLength(0);
+    expect(screen.getByText('Dacă browserul nu afișează PDF-ul, folosește „Descarcă această versiune”.')).toBeInTheDocument();
+  });
+
+  it('keeps the error message and the retry when embedded (N-018)', async () => {
+    download.mockResolvedValue({ ok: false, status: 500, body: null });
+    render(<JobArtifactPreview file={file('b')} embedded />);
+    expect(await screen.findByText(/Documentul nu a putut fi citit/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reîncearcă previzualizarea' })).toBeInTheDocument();
+  });
 });

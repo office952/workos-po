@@ -57,7 +57,7 @@ describe('file-first job record', () => {
     expect(screen.queryByRole('region', { name: 'Operațiile lucrării' })).toBeNull();
   });
 
-  it('keeps one operations register and opens results under the chosen row', async () => {
+  it('keeps one operations register and opens an operation in the bench with the compact switcher', async () => {
     const scroll = vi.fn();
     HTMLElement.prototype.scrollIntoView = scroll;
     const user = userEvent.setup();
@@ -67,29 +67,32 @@ describe('file-first job record', () => {
     expect(within(register).getAllByText('Utilaj: Fără rulări înregistrate').length).toBeGreaterThan(0);
     expect(within(register).getAllByText(/Început:/).length).toBeGreaterThan(0);
     expect(within(register).getAllByText(/Final:/).length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: '01 · Lipire' }).closest('.job-record')).toBeTruthy();
     expect(screen.queryByRole('region', { name: 'Rezultatele lucrării' })).toBeNull();
     expect(within(register).queryByText('Realizat: 4 buc')).toBeNull();
     await user.click(screen.getByRole('button', { name: '01 · Lipire' }));
+    // N-018 · the bench replaces the register; the switcher names the place and the neighbours.
+    expect(screen.queryByRole('table', { name: 'Registrul operațiilor' })).toBeNull();
+    const switcher = screen.getByRole('navigation', { name: 'Comutator operații' });
+    expect(within(switcher).getByText(/^Operația 01 din 2 · /)).toBeInTheDocument();
+    expect(within(switcher).getByText('Prima operație')).toBeInTheDocument();
     const detail = screen.getByRole('region', { name: 'Dosarul operației selectate' });
-    const row = screen.getByRole('button', { name: '01 · Lipire' }).closest('tr');
-    expect(row?.nextElementSibling).toContainElement(detail);
     expect(within(detail).getByText('Realizat: 4 buc')).toBeVisible();
     expect(within(detail).getByText('Conform planului')).toBeVisible();
     expect(within(detail).getByText('35 min')).toBeInTheDocument();
     expect(within(detail).getByText('40 min')).toBeInTheDocument();
     expect(within(detail).getByText('TOTAL OPERAȚIE')).toBeInTheDocument();
-    const opened = screen.getByRole('button', { name: '01 · Lipire' });
-    expect(opened).toHaveAttribute('aria-expanded', 'true');
-    expect(opened).toHaveAttribute('aria-controls', detail.id);
     expect(scroll).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: '02 · Control' }));
+    await user.click(within(switcher).getByRole('button', { name: /Următoareas*02 · Control/ }));
     expect(screen.getAllByRole('region', { name: 'Dosarul operației selectate' })).toHaveLength(1);
-    expect(screen.getByRole('button', { name: '01 · Lipire' })).toHaveAttribute('aria-expanded', 'false');
-    const second = screen.getByRole('button', { name: '02 · Control' });
-    expect(second).toHaveAttribute('aria-expanded', 'true');
-    expect(second.closest('tr')?.nextElementSibling).toContainElement(screen.getByRole('region', { name: 'Dosarul operației selectate' }));
+    expect(within(screen.getByRole('navigation', { name: 'Comutator operații' })).getByText(/^Operația 02 din 2 · /)).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Dosarul operației selectate' })).queryByText('Realizat: 4 buc')).toBeNull();
+    const all = within(screen.getByRole('navigation', { name: 'Comutator operații' })).getByRole('button', { name: /Toate operațiile/ });
+    await user.click(all);
+    expect(all).toHaveAttribute('aria-expanded', 'true');
+    const current = within(screen.getByRole('navigation', { name: 'Comutator operații' })).getAllByRole('button').find((button) => button.getAttribute('aria-current') === 'true');
+    expect(current).toHaveTextContent('Control');
+    await user.click(within(screen.getByRole('navigation', { name: 'Comutator operații' })).getByRole('button', { name: /01s*Lipire/ }));
+    expect(within(screen.getByRole('navigation', { name: 'Comutator operații' })).getByText(/^Operația 01 din 2 · /)).toBeInTheDocument();
   });
 
   it('prints every operation result from any section without exposing drafts', () => {
@@ -106,13 +109,39 @@ describe('file-first job record', () => {
     expect(screen.queryByRole('table', { name: 'Registrul operațiilor' })).toBeNull();
   });
 
-  it('returns focus to the row control when the detail closes', async () => {
+  it('splits the open operation into sub-tabs with counts and keeps the other parts mounted (N-018)', async () => {
     const user = userEvent.setup();
     render(<View record={jobRecordFixture} section="operatii" />);
-    const open = screen.getByRole('button', { name: '01 · Lipire' });
-    await user.click(open);
+    await user.click(screen.getByRole('button', { name: '01 · Lipire' }));
+    const detail = screen.getByRole('region', { name: 'Dosarul operației selectate' });
+    const tabs = within(detail).getByRole('group', { name: 'Părțile operației' });
+    expect(within(tabs).getAllByRole('button').map((button) => button.textContent)).toEqual(['Pe scurt', 'Fișiere · 1', 'Oameni · 2', 'Istoric']);
+    expect(detail).toHaveAttribute('data-op-tab', 'brief');
+    await user.click(within(tabs).getByRole('button', { name: 'Oameni · 2' }));
+    expect(detail).toHaveAttribute('data-op-tab', 'people');
+    expect(within(tabs).getByRole('button', { name: 'Oameni · 2' })).toHaveAttribute('aria-pressed', 'true');
+    // Hidden parts stay in the document (drafts survive); the sessions belong to Oameni.
+    expect(within(detail).getByText('Realizat: 4 buc').closest('[data-op-part]')).toHaveAttribute('data-op-part', 'brief');
+    expect(within(detail).getByText('TOTAL OPERAȚIE').closest('[data-op-part]')).toHaveAttribute('data-op-part', 'people');
+    // Another operation starts on Pe scurt.
+    await user.click(within(screen.getByRole('navigation', { name: 'Comutator operații' })).getByRole('button', { name: /Următoarea/ }));
+    expect(screen.getByRole('region', { name: 'Dosarul operației selectate' })).toHaveAttribute('data-op-tab', 'brief');
+  });
+
+  it('does not claim a missing plan while an operation is open in the bench (N-018 review)', async () => {
+    const user = userEvent.setup();
+    render(<View record={jobRecordFixture} section="operatii" />);
+    await user.click(screen.getByRole('button', { name: '01 · Lipire' }));
+    expect(screen.queryByText('Planul de execuție nu există încă.')).toBeNull();
+  });
+
+  it('returns focus to the row control when the bench closes', async () => {
+    const user = userEvent.setup();
+    render(<View record={jobRecordFixture} section="operatii" />);
+    await user.click(screen.getByRole('button', { name: '01 · Lipire' }));
     await user.click(screen.getByRole('button', { name: 'Închide detaliul' }));
-    expect(open).toHaveFocus();
+    const open = screen.getByRole('button', { name: '01 · Lipire' });
+    await waitFor(() => expect(open).toHaveFocus());
     expect(open).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('region', { name: 'Dosarul operației selectate' })).toBeNull();
     await user.click(open);
@@ -158,17 +187,28 @@ describe('file-first job record', () => {
     expect(within(quality).getByText('Control neînregistrat')).toBeVisible();
   });
 
-  it('closes a detail excluded by search and allows returning to its operation', async () => {
+  it('filters the register after the bench closes and reopens an operation from it', async () => {
     const user = userEvent.setup();
     render(<View record={jobRecordFixture} section="operatii" />);
     await user.click(screen.getByRole('button', { name: '01 · Lipire' }));
+    expect(screen.queryByRole('searchbox', { name: 'Caută operație, componentă sau persoană' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Închide detaliul' }));
     await user.type(screen.getByRole('searchbox', { name: 'Caută operație, componentă sau persoană' }), 'Control');
-    expect(screen.queryByRole('region', { name: 'Dosarul operației selectate' })).toBeNull();
     expect(screen.queryByRole('button', { name: '01 · Lipire' })).toBeNull();
     expect(screen.getByRole('button', { name: '02 · Control' })).toBeVisible();
     await user.clear(screen.getByRole('searchbox'));
     await user.click(screen.getByRole('button', { name: '01 · Lipire' }));
     expect(screen.getByRole('region', { name: 'Dosarul operației selectate' })).toBeVisible();
+  });
+
+  it('groups versions per file: 1 fișier · 2 versiuni, each version keeping its own uses (N-018)', () => {
+    render(<View record={jobRecordFixture} section="fisiere" />);
+    expect(screen.getByText(/^1 fișier · 2 versiuni/)).toBeInTheDocument();
+    const files = screen.getByRole('table', { name: 'Fișiere, utilizări și autorii înregistrărilor' });
+    expect(within(files).getByRole('rowheader', { name: 'litere.dxf · 2 versiuni' })).toBeInTheDocument();
+    expect(within(files).getAllByText(/^v[12]$/).map((node) => node.textContent)).toEqual(['v1', 'v2']);
+    expect(within(files).getByText('Utilizare înregistrată')).toBeInTheDocument();
+    expect(within(files).getByText('Asociat · utilizare neconfirmată')).toBeInTheDocument();
   });
 
   it('opens a specific revision without changing its uses and restores keyboard focus', async () => {

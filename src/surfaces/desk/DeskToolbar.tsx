@@ -95,7 +95,8 @@ export function DeskCaption({
   count: string;
   showReset: boolean;
   onReset: () => void;
-  keys: boolean;
+  /** Shows the keyboard line; a string replaces the default wording for one register. */
+  keys: boolean | string;
   children?: ReactNode;
 }) {
   return (
@@ -108,7 +109,7 @@ export function DeskCaption({
         </button>
       ) : null}
       {children}
-      {keys ? <span className="rdesk-caption__keys" aria-hidden="true">↑ ↓ selectează · Enter deschide · / caută</span> : null}
+      {keys ? <span className="rdesk-caption__keys" aria-hidden="true">{typeof keys === "string" ? keys : "↑ ↓ selectează · Enter deschide · / caută"}</span> : null}
     </div>
   );
 }

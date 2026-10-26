@@ -10,6 +10,8 @@ import type { QuotesLayout } from "./useQuotesLayout";
 export type DossierEmpty = "none" | "filtered" | "not-found" | "loading" | "unavailable";
 
 type Props = {
+  /** Replaces the register wording when the dossier opens outside Oferte (e.g. over a request). */
+  emptyCopy?: { title: string; body: string; hint: string | null };
   layout: QuotesLayout;
   item: QuoteListItemTransport | null;
   empty: DossierEmpty;
@@ -130,8 +132,8 @@ function Contents({ item, sheet, onSheet }: { item: QuoteListItemTransport; shee
 }
 
 /** The dossier beside (or over) the register: offer and order sheets on a light table. */
-export function QuoteDossier({ layout, item, empty, sheet, position, onSheet, onMove, onClose }: Props) {
-  const copy = EMPTY_COPY[empty];
+export function QuoteDossier({ layout, item, empty, sheet, position, onSheet, onMove, onClose, emptyCopy }: Props) {
+  const copy = emptyCopy ?? EMPTY_COPY[empty];
   const movable = item !== null && position.index >= 0;
 
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
@@ -144,7 +146,7 @@ export function QuoteDossier({ layout, item, empty, sheet, position, onSheet, on
   }
 
   return (
-    <aside id="oferte-dosar" className="offers-dossier" data-layout={layout} aria-label="Dosarul ofertei" onKeyDown={onKeyDown}>
+    <aside id="oferte-dosar" className="offers-dossier" data-layout={layout} data-scroll-memory={layout === "docked" ? "dosar" : undefined} aria-label="Dosarul ofertei" onKeyDown={onKeyDown}>
       <div className="offers-dossier__bar">
         {onClose ? (
           <button type="button" className="offers-dossier__close" onClick={onClose} data-dossier-close>

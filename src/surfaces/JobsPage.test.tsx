@@ -176,7 +176,7 @@ describe("JobsPage", () => {
     expect(within(traveler).getByText("Comandă creată")).toBeInTheDocument();
     const dossier = screen.getByRole("complementary", { name: "Fișa de traseu a lucrării" });
     expect(within(dossier).getByRole("link", { name: "Deschide lucrarea" })).toHaveAttribute("href", "/lucrari/urban-1");
-    expect(within(dossier).queryByRole("link", { name: "Fișa completă" })).not.toBeInTheDocument();
+    expect(within(dossier).queryByRole("link", { name: "Fișa lucrării" })).not.toBeInTheDocument();
   });
 
   it("offers the full sheet beside operations in the traveler and steps through the register", async () => {
@@ -185,7 +185,9 @@ describe("JobsPage", () => {
     render(<JobsPage search="?lucrare=nord-3" />);
     const dossier = await screen.findByRole("complementary", { name: "Fișa de traseu a lucrării" });
     expect(within(dossier).getByRole("link", { name: "Vezi operațiile" })).toHaveAttribute("href", "/lucrari/nord-3?sectiune=operatii");
-    expect(within(dossier).getByRole("link", { name: "Fișa completă" })).toHaveAttribute("href", "/lucrari/nord-3");
+    expect(within(dossier).getByRole("link", { name: "Fișa lucrării" })).toHaveAttribute("href", "/lucrari/nord-3");
+    expect(within(dossier).getByText(/1 operație în lucru/)).toBeInTheDocument();
+    expect(within(dossier).getAllByRole("link", { name: "Vezi operațiile" })).toHaveLength(1);
     expect(within(dossier).getByText("1 din 2")).toBeInTheDocument();
     await userEvent.click(within(dossier).getByRole("button", { name: "Lucrarea următoare" }));
     expect(window.location.search).toBe("?lucrare=alpha-2");

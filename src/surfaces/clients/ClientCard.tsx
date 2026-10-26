@@ -5,15 +5,37 @@ import { loadCustomerWorkspace } from "../../data/routeLoaders";
 import { useResource } from "../../data/useResource";
 import { clientHref, newRequestHref } from "../../routing/appRoute";
 import { DeskActions, DeskLoading, DeskReadError, DeskSheet, DeskStale } from "../desk/DeskDossier";
-import { cardSections, clientDocuments, type ClientDocument } from "./clientsAgendaModel";
+import { cardSections, clientDocuments, contactFacts, type ClientDocument } from "./clientsAgendaModel";
 import { ClientState, Monogram } from "./ClientsRegister";
 
-function Fact({ label, value, href }: { label: string; value: string | null; href?: string }) {
+/**
+ * N-018 · the contacts that exist stay in front; the empty fields are grouped in one quiet
+ * line. The line only reports: editing does not exist on the card.
+ */
+function ContactBlock({ person }: { person: CustomerTransport }) {
+  const facts = contactFacts(person);
+  // The CUI, when present, is shown under the name as identity; it is only listed here when missing.
+  const present = facts.filter((fact) => fact.value && fact.label !== "CUI");
+  const missing = facts.filter((fact) => !fact.value).map((fact) => fact.missingLabel);
   return (
-    <div>
-      <dt>{label}</dt>
-      <dd data-missing={!value || undefined}>{value ? href ? <a href={href}>{value}</a> : value : "necompletat"}</dd>
-    </div>
+    <>
+      {present.length ? (
+        <dl className="rdesk-sheet__facts cagenda-card__facts">
+          {present.map((fact) => (
+            <div key={fact.label}>
+              <dt>{fact.label}</dt>
+              <dd>{fact.href ? <a href={fact.href}>{fact.value}</a> : fact.value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      {missing.length ? (
+        <p className="cagenda-card__missing">
+          {present.length ? "Necompletat: " : "Date de contact necompletate: "}
+          {missing.join(", ")}.
+        </p>
+      ) : null}
+    </>
   );
 }
 
@@ -82,17 +104,11 @@ export function ClientCard({ customer }: { customer: CustomerRegistryItemTranspo
       <div className="rdesk-sheet__identity">
         <div>
           <p className="rdesk-sheet__name">{person.displayName}</p>
-          <p className="rdesk-sheet__lead">{person.cui ? `CUI ${person.cui}` : "CUI necompletat"}</p>
+          {person.cui ? <p className="rdesk-sheet__lead">{`CUI ${person.cui}`}</p> : null}
         </div>
         <Monogram name={person.displayName} size="large" />
       </div>
-      <dl className="rdesk-sheet__facts cagenda-card__facts">
-        <Fact label="Persoană de contact" value={person.contactName} />
-        <Fact label="Telefon" value={person.phone} href={person.phone ? `tel:${person.phone.replace(/\s+/g, "")}` : undefined} />
-        <Fact label="E-mail" value={person.email} href={person.email ? `mailto:${person.email}` : undefined} />
-        <Fact label="Localitate" value={person.city} />
-        <Fact label="Adresă" value={person.address} />
-      </dl>
+      <ContactBlock person={person} />
       <hr className="rdesk-sheet__perforation" />
       <div className="cagenda-card__relation">
         <p className="rdesk-sheet__label">Relație</p>

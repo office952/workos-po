@@ -1,0 +1,169 @@
+/* N-018 · Lucrări · bancul operației: the compact switcher (current operation, previous/next by
+   name, every operation grouped by component) above the open operation. Presentation only. */
+
+.op-bench {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.op-switcher {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+}
+
+.op-switcher__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.op-switcher__place,
+.op-switcher__group {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 600 11px/1.3 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Scoped under .job-record so the generic job-sheet link-button rule does not flatten them. */
+.job-record .op-switcher button.op-switcher__all,
+.job-record .op-switcher button.op-switcher__step,
+.job-record .op-switcher span.op-switcher__step,
+.job-record .op-switcher .op-switcher__list button {
+  min-height: 40px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: 500 13px/1.3 var(--font-sans);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.job-record .op-switcher button.op-switcher__all {
+  padding: 0 12px;
+}
+
+.op-switcher__steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 260px));
+  gap: 8px;
+}
+
+.job-record .op-switcher .op-switcher__step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+}
+
+.job-record .op-switcher .op-switcher__step[data-empty] {
+  color: var(--color-text-secondary);
+  cursor: default;
+}
+
+.op-switcher__step small {
+  display: block;
+  color: var(--color-text-secondary);
+  font: 600 9px/1.3 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.op-switcher__list {
+  display: grid;
+  gap: 8px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.op-switcher__list ul {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.job-record .op-switcher .op-switcher__list button {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  width: 100%;
+  padding: 6px 10px;
+  border-color: transparent;
+}
+
+.job-record .op-switcher .op-switcher__list button[aria-current="true"] {
+  border-color: var(--shell-signal);
+  background: var(--shell-signal-soft);
+}
+
+.op-switcher__list small {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.op-switcher__seq {
+  font: 600 12px/1.6 var(--font-mono);
+}
+
+.op-switcher button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Sub-tabs of the open operation: each shows its blocks; the others stay mounted, hidden. */
+.job-record .op-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 8px 0 4px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.job-record .op-tabs button[type="button"] {
+  min-height: 40px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--color-text-secondary);
+  font: 500 14px/1.3 var(--font-sans);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.job-record .op-tabs button[type="button"][aria-pressed="true"] {
+  border-bottom-color: var(--shell-signal);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.job-record .op-tabs button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.job-record__operation-detail[data-op-tab="brief"] [data-op-part]:not([data-op-part~="brief"]),
+.job-record__operation-detail[data-op-tab="files"] [data-op-part]:not([data-op-part~="files"]),
+.job-record__operation-detail[data-op-tab="people"] [data-op-part]:not([data-op-part~="people"]),
+.job-record__operation-detail[data-op-tab="history"] [data-op-part]:not([data-op-part~="history"]) {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .op-switcher__steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

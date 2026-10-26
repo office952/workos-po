@@ -25,6 +25,9 @@ export function JobRecordView({
   onOpenTask,
   onCloseTask,
   dossier,
+  viewer = null,
+  viewerExpanded = false,
+  files,
   dates,
   summaryContext,
   productionFinished = false,
@@ -41,6 +44,10 @@ export function JobRecordView({
   onOpenTask: (taskId: string) => void;
   onCloseTask: () => void;
   dossier: ReactNode;
+  viewer?: ReactNode;
+  viewerExpanded?: boolean;
+  /** The Fișiere section, built by the page (its file detail lives in the URL). */
+  files?: ReactNode;
   dates: ReactNode;
   summaryContext?: JobSummaryContext;
   productionFinished?: boolean;
@@ -66,10 +73,12 @@ export function JobRecordView({
           onOpen={onOpenTask}
           onClose={onCloseTask}
           dossier={dossier}
+          viewer={section === "operatii" ? viewer : null}
+          viewerExpanded={viewerExpanded}
         />
       </Section>
       <Section active={section} section="fisiere">
-        {record ? <JobRecordFiles record={record} canWriteFiles={canWriteFiles} operationHref={operationHref} /> : null}
+        {files ?? (record ? <JobRecordFiles record={record} canWriteFiles={canWriteFiles} operationHref={operationHref} /> : null)}
       </Section>
       <Section active={section} section="oameni">
         {record ? <JobRecordPeople key={record.jobId} record={record} productionFinished={productionFinished} operationHref={operationHref} /> : null}
