@@ -43,6 +43,7 @@ const entry = (over: Partial<HistoryEntry>): HistoryEntry => ({
   historicalWorkId: null,
   documents: [],
   photoCount: 0,
+  representativePhotoId: null,
   matchedOn: [],
   ...over,
 });

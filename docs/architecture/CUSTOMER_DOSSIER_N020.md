@@ -153,6 +153,7 @@ Decizia Ownerului (2026-10-23): în fișa clientului, „Lucrări” înseamnă 
 | `POST /api/customers/:id/documents` (multipart) | `uploadDocuments` |
 | `PATCH …/documents/:docId`, `POST …/documents/:docId/links`, `DELETE …/documents/:docId/links?kind=&subjectId=` | `editDocuments` |
 | `POST /api/customers/:id/historical-works`, `PATCH …/historical-works/:workId` | `recordHistoricalWork` |
+| `PUT /api/customers/:id/works/representative-photo` (N-021) | `editDocuments` |
 | `GET /api/customers/:id/commercial-terms` | `read` |
 | `PUT /api/customers/:id/commercial-terms` | `editCommercialTerms` |
 
@@ -507,4 +508,31 @@ Referința vizuală: Figma `rM71g74Ph0mkAjAtWuLahy`, pagina 12, secțiunea `842:
 **Limite:**
 - Sediul fiecărei cereri și lucrări nu e pliat ca în R1; poziția reviziei în Date comerciale diferă de R1.
 - Clientul inactiv nu are probă în browser.
-- Fotografia reprezentativă, încărcarea cu procent sau anulare, calendarul „Termen”, importul siglei și statisticile financiare cer GO-uri separate.
+- Încărcarea cu procent sau anulare, calendarul „Termen”, importul siglei și statisticile financiare cer GO-uri separate. Fotografia reprezentativă: N-021, mai jos.
+
+## N-021 · Fotografia reprezentativă a lucrării (implementare locală, în review)
+
+Înregistrare Notion: [N-021](https://app.notion.com/p/4058ea98e40f81338e9cfd7e0fc3c92b). Nu este sigla clientului, fotografia sediului, coperta cererii sau portofoliul.
+
+- **Ce este.** Pentru o lucrare (lucrare WorkOS `JOB` sau lucrare istorică `HISTORICAL_WORK`) un utilizator autorizat alege cel mult o fotografie. O poate schimba sau poate reveni la regula automată (`representativePhoto()`: după montaj, altfel simulare, altfel înainte).
+- **Eligibilitate (server).** Fotografia trebuie să fie:
+  - un document `PHOTO` al aceluiași client, în planul aceleiași organizații;
+  - asociată explicit acelei lucrări (`customer_document_links`).
+
+  O fotografie a cererii nu devine a lucrării. Pentru o cerere cu două lucrări, asocierea cu lucrarea se face întâi prin „Asociază”. Aceeași fotografie poate reprezenta mai multe lucrări, ales separat pentru fiecare.
+- **Persistență.** Migrația `048_work_representative_photos.sql` este aditivă: un rând per lucrare, cu `document_id` (NULL = automat), `revision` care doar crește și motivul invalidării (`UNLINKED` / `NOT_A_PHOTO`). Fișierul și asocierile nu se copiază și nu se schimbă. Etapa reală a fotografiei rămâne: o simulare aleasă e „Imagine aleasă: simulare”. Nu se schimbă starea, progresul sau rezultatele comerciale.
+- **API.** `PUT …/works/representative-photo` cu `{ workKind, workId, documentId | null, expectedRevision }` (0 = niciodată aleasă).
+  - Scrierea e o singură instrucțiune păzită: revizie + eligibilitate (`INSERT … WHERE EXISTS … ON CONFLICT DO NOTHING` sau `UPDATE … WHERE revision = ? AND EXISTS …`).
+  - Răspunsuri: `409 stale_revision` cu `selection` actuală; `422 subject_not_of_customer` / `photo_not_eligible` cu `reason` (`NOT_FOUND`, `NOT_A_PHOTO`, `NOT_LINKED`); `400 invalid_payload` cu `field`.
+  - O operație respinsă nu scrie nimic și nu înregistrează eveniment.
+  - Evenimente: `WORK_REPRESENTATIVE_PHOTO_SELECTED` / `_CLEARED` / `_INVALIDATED`.
+- **Invalidare.** Dezlegarea fotografiei de lucrare sau trecerea documentului la alt tip pune alegerea deoparte în aceeași tranzacție, cu eveniment. Lucrarea revine la regula automată și spune o dată de ce. „Revino la alegerea automată” confirmă nota.
+- **Proiecții.** `/works` (`representativePhoto`: `revision`, `status` `AUTOMATIC` / `MANUAL` / `INVALIDATED` / `UNAVAILABLE`, `documentId`), `/dossier` (`representativePhotos` per lucrare, cu referința ofertei/cererii) și `/history` (`representativePhotoId`). În Istoric alegerea se folosește numai pentru o lucrare istorică sau un proiect cu exact o lucrare. Un proiect cu mai multe lucrări păstrează regula automată.
+- **Interfață.**
+  - Fotografii: „⋯” → „Setează ca reprezentativă…” (sau „Fotografie reprezentativă…” când e deja aleasă), numai cu `editDocuments`.
+  - Dialogul (`photos/RepresentativePhotoDialog.tsx`) cere lucrarea exactă când sunt mai multe și arată alegerea curentă a fiecăreia.
+  - Stări: se salvează, salvat, eroare cu „Reîncearcă” (lucrarea aleasă rămâne), conflict (dosarul se recitește), fotografie indisponibilă, fotografie fără lucrare (cu „Asociază unei lucrări…”).
+  - Pe țiglă: un singur rând discret „Reprezentativă pentru N lucrări”.
+  - Lucrări: imaginea aleasă validă, apoi regula automată, apoi contextul cererii (regula GO 12), apoi „Fără fotografie”.
+  - Stil: `client-representative-photo.css`.
+- **Limite.** Alegerea se face din Fotografii, nu din cardul lucrării. Autorul unei modificări concurente nu e afișat. Migrația 048 a rulat numai pe baze sintetice izolate.

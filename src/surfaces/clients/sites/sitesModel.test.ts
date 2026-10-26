@@ -40,7 +40,7 @@ const dossier = {
   vocabulary: { documentKinds: [{ value: "INVOICE", label: "Factură" }, { value: "PHOTO", label: "Fotografie" }], photoStages: [{ value: "BEFORE", label: "Înainte" }, { value: "SIMULATION", label: "Simulare" }, { value: "AFTER", label: "După montaj" }] },
 } as unknown as CustomerDossierModel;
 
-const entry = (over: Partial<HistoryEntry>): HistoryEntry => ({ entryId: "e", kind: "PROJECT", title: "Proiect", reference: null, eventDateLabel: "23 oct. 2026", year: 2026, state: null, stateLabel: "", provenance: "WORKOS", provenanceLabel: "", site: null, siteAtTimeLabel: null, description: null, request: null, states: [], branches: [], historicalWorkId: null, documents: [], photoCount: 0, matchedOn: [], ...over });
+const entry = (over: Partial<HistoryEntry>): HistoryEntry => ({ entryId: "e", kind: "PROJECT", title: "Proiect", reference: null, eventDateLabel: "23 oct. 2026", year: 2026, state: null, stateLabel: "", provenance: "WORKOS", provenanceLabel: "", site: null, siteAtTimeLabel: null, description: null, request: null, states: [], branches: [], historicalWorkId: null, documents: [], photoCount: 0, representativePhotoId: null, matchedOn: [], ...over });
 const entries = [
   entry({ entryId: "p1", title: "Casetă depozit", site: { siteId: "s1", name: "Depozit", line: "", active: true }, request: { requestId: "r1", reference: "CER-1", title: "", statusLabel: "" }, documents: [before, simulation] }),
   entry({ entryId: "document:site-photo", kind: "DOCUMENT", title: "Fațadă", provenance: "UPLOAD", site: { siteId: "s1", name: "Depozit", line: "", active: true }, documents: [atSite] }),

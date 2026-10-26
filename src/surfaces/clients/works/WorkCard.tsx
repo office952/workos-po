@@ -7,7 +7,8 @@ import { follow } from "../dossier/history/follow";
 import { summarizeMatch } from "../dossier/history/matchSummary";
 import { orderedPhotos } from "../dossier/historyModel";
 import { NoPhoto, PhotoFrame, StateTag } from "../dossier/historyParts";
-import { carried, stateText, workDate, workEyebrow, workImage } from "./worksModel";
+import { carried, representativeNotice, stateText, workDate, workEyebrow, workImage } from "./worksModel";
+import "../../../styles/surfaces/client-representative-photo.css";
 
 export type OpenPhotos = { photos: DossierDocument[]; startId: string; context: string };
 
@@ -42,8 +43,9 @@ export function WorkCard({
   const openLabel = item.job ? "Deschide fișa lucrării" : "Deschide înregistrarea";
   const match = summarizeMatch(item.matchedOn).map((group) => group.label).join(" · ");
   const ownPhotos = orderedPhotos(photos);
+  const notice = representativeNotice(item);
   const media =
-    image.kind === "own" ? (
+    image.kind === "own" || image.kind === "chosen" ? (
       <PhotoFrame document={image.photo} size="thumb" label={`Deschide fotografia ${image.photo.title}`} onOpen={() => onPhotos({ photos: ownPhotos, startId: image.photo.documentId, context: item.title })} />
     ) : image.kind === "request" ? (
       <PhotoFrame
@@ -80,7 +82,13 @@ export function WorkCard({
       </div>
       <div className="dwcard__media">
         {media}
-        {image.caption ? <p className="dwcard__caption">{mode === "phone" ? image.caption.replace(/^Imagine: /, "").replace(/^./, (first) => first.toLocaleUpperCase("ro")) : image.caption}</p> : null}
+        {image.caption || notice ? (
+          <div className="dwcard__caption">
+            {image.caption ? <p>{mode === "phone" ? image.caption.replace(/^Imagine: /, "").replace(/^./, (first) => first.toLocaleUpperCase("ro")) : image.caption}</p> : null}
+            {/* N-021 · a choice set aside: said once, next to the automatic image that replaced it. */}
+            {notice ? <p className="dwcard__notice">{notice}</p> : null}
+          </div>
+        ) : null}
       </div>
       <div className="dwcard__side">
         {openHref ? (

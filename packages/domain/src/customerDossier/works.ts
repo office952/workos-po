@@ -13,6 +13,7 @@ import {
   type CustomerHistoryInput,
   type CustomerHistoryState,
 } from "./history.js";
+import type { WorkRepresentativePhotoProjection } from "./representativePhotos.js";
 
 /**
  * N-020 · Owner decision: on the client page "Lucrări" is every work of the client — each WorkOS
@@ -66,6 +67,11 @@ export type CustomerWorkItem = {
    * request has more than one job, so the photos cannot be read as this job's.
    */
   requestPhotos: { requestId: string; photos: readonly CustomerDocumentProjection[]; shared: boolean } | null;
+  /**
+   * N-021 · the photo an operator chose for this work, checked against its own photos, with the
+   * revision the next change must name. Request photos are never the work's choice.
+   */
+  representativePhoto: WorkRepresentativePhotoProjection;
   matchedOn: readonly string[];
 };
 
@@ -128,7 +134,7 @@ type Draft = Omit<CustomerWorkItem, "matchedOn" | "photoCount"> & {
 type Dimension = "year" | "site" | "state";
 
 export function projectCustomerWorks(input: CustomerHistoryInput, query: CustomerWorksQuery): CustomerWorksProjection {
-  const { documentsFor, siteView, siteOfJob } = createDossierProjectionContext(input);
+  const { documentsFor, siteView, siteOfJob, representativeOf } = createDossierProjectionContext(input);
   const requestsById = new Map(input.requests.map((request) => [request.requestId, request]));
   const drafts: Draft[] = [];
   // The request of each job: its own, or the request of the quote its order came from.
@@ -173,6 +179,7 @@ export function projectCustomerWorks(input: CustomerHistoryInput, query: Custome
       historicalWorkId: null,
       documents,
       requestPhotos: requestContextPhotos(request?.requestId ?? null, documents),
+      representativePhoto: representativeOf("JOB", job.jobId, documents),
       sortKey: job.createdAt,
       periodYears: [Number(job.createdAt.slice(0, 4))],
       searchFields: [
@@ -208,6 +215,7 @@ export function projectCustomerWorks(input: CustomerHistoryInput, query: Custome
       historicalWorkId: work.workId,
       documents,
       requestPhotos: null,
+      representativePhoto: representativeOf("HISTORICAL_WORK", work.workId, documents),
       sortKey: partialDateSortKey(work.eventDate),
       periodYears: yearsBetween(partialDateYear(work.eventDate), partialDateYear(work.eventDateEnd ?? work.eventDate)),
       searchFields: [

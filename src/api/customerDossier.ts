@@ -76,6 +76,17 @@ export async function unlinkCustomerDocument(customerId: string, documentId: str
   if (!result.ok) throw new TransportError(`Cererea ${path} a eșuat.`, result.status, result.body);
 }
 
+/**
+ * N-021 · choose the representative photo of one work, change it, or go back to the automatic choice
+ * (`documentId: null`). `expectedRevision` is the work's revision as read (0 when never chosen).
+ */
+export function setWorkRepresentativePhoto(
+  customerId: string,
+  body: { workKind: "JOB" | "HISTORICAL_WORK"; workId: string; documentId: string | null; expectedRevision: number },
+): Promise<unknown> {
+  return putJson(`${base(customerId)}/works/representative-photo`, body);
+}
+
 export function fetchCustomerCommercialTerms(customerId: string): Promise<unknown> {
   return getJson(`${base(customerId)}/commercial-terms`);
 }
