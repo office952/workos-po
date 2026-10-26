@@ -15,6 +15,8 @@ import type { SqliteDatabase } from "../persistence/sqlite.js";
 import {
   customerExists,
   dossierPlane,
+  MISSING_EXPECTED_REVISION,
+  readExpectedRevision,
   recordDossierEvent,
   requireDossierPermission,
   subjectBelongsToCustomer,
@@ -113,8 +115,12 @@ export function siteUsage(db: SqliteDatabase, siteId: string) {
   };
 }
 
-function writeSite(db: SqliteDatabase, site: CustomerSite, insert: boolean): void {
-  const values = [
+function insertSite(db: SqliteDatabase, site: CustomerSite): void {
+  db.prepare(
+    `INSERT INTO customer_sites (name, address, city, contact_name, phone, access_notes, status, revision, updated_at,
+       site_id, customer_id, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
     site.name,
     site.address,
     site.city,
@@ -124,19 +130,38 @@ function writeSite(db: SqliteDatabase, site: CustomerSite, insert: boolean): voi
     site.status,
     site.revision,
     site.updatedAt,
-  ];
-  if (insert) {
-    db.prepare(
-      `INSERT INTO customer_sites (name, address, city, contact_name, phone, access_notes, status, revision, updated_at,
-         site_id, customer_id, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(...values, site.siteId, site.customerId, site.createdAt);
-    return;
-  }
-  db.prepare(
-    `UPDATE customer_sites SET name = ?, address = ?, city = ?, contact_name = ?, phone = ?, access_notes = ?,
-       status = ?, revision = ?, updated_at = ? WHERE site_id = ? AND customer_id = ?`,
-  ).run(...values, site.siteId, site.customerId);
+    site.siteId,
+    site.customerId,
+    site.createdAt,
+  );
+}
+
+/**
+ * Compare-and-swap: writes the site only while it is still at `expectedRevision`, and moves the
+ * revision on by one in the same statement. False when another edit (from this process or any
+ * other connection to the same database) got there first; nothing is then written.
+ */
+export function updateCustomerSiteAtRevision(db: SqliteDatabase, site: CustomerSite, expectedRevision: number): boolean {
+  const result = db
+    .prepare(
+      `UPDATE customer_sites SET name = ?, address = ?, city = ?, contact_name = ?, phone = ?, access_notes = ?,
+         status = ?, updated_at = ?, revision = revision + 1
+       WHERE site_id = ? AND customer_id = ? AND revision = ?`,
+    )
+    .run(
+      site.name,
+      site.address,
+      site.city,
+      site.contactName,
+      site.phone,
+      site.accessNotes,
+      site.status,
+      site.updatedAt,
+      site.siteId,
+      site.customerId,
+      expectedRevision,
+    );
+  return result.changes === 1;
 }
 
 export function registerCustomerSiteRoutes(app: Hono<ApiEnv>): void {
@@ -166,7 +191,7 @@ export function registerCustomerSiteRoutes(app: Hono<ApiEnv>): void {
       updatedAt: now,
     };
     plane.db.transaction(() => {
-      writeSite(plane.db, site, true);
+      insertSite(plane.db, site);
       recordDossierEvent(plane.db, { customerId, kind: "SITE_CREATED", subjectId: site.siteId, actorAccountId: plane.actorAccountId, occurredAt: now });
     })();
     return c.json({ site: presentCustomerSite(site, siteUsage(plane.db, site.siteId)) }, 201);
@@ -175,21 +200,26 @@ export function registerCustomerSiteRoutes(app: Hono<ApiEnv>): void {
   app.patch("/api/customers/:customerId/sites/:siteId", requireDossierPermission("editSites"), async (c) => {
     const plane = dossierPlane(c);
     const customerId = c.req.param("customerId");
-    const current = getCustomerSite(plane.db, customerId, c.req.param("siteId"));
-    if (!current) return c.json({ error: "not_found" }, 404);
+    const siteId = c.req.param("siteId");
+    // The request is read and validated first; the current version is read after it, with no
+    // await before the guarded write, so nothing can slip in between in this process.
     const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
-    if (body && typeof body.expectedRevision === "number" && body.expectedRevision !== current.revision) {
-      return c.json({ error: "stale_revision", site: presentCustomerSite(current, siteUsage(plane.db, current.siteId)) }, 409);
-    }
+    const expectedRevision = readExpectedRevision(body);
+    if (expectedRevision === null) return c.json(MISSING_EXPECTED_REVISION, 400);
     const { expectedRevision: _ignored, ...fields } = body ?? {};
     void _ignored;
     const read = readCustomerSitePatch(fields);
     if (!read.ok) return c.json({ error: "invalid_payload" }, 400);
+    const current = getCustomerSite(plane.db, customerId, siteId);
+    if (!current) return c.json({ error: "not_found" }, 404);
+    const stale = (site: CustomerSite) => c.json({ error: "stale_revision", site: presentCustomerSite(site, siteUsage(plane.db, site.siteId)) }, 409);
+    if (expectedRevision !== current.revision) return stale(current);
     const now = new Date().toISOString();
     const next = applyCustomerSitePatch(current, read.patch, now);
     if (next.changed) {
-      plane.db.transaction(() => {
-        writeSite(plane.db, next.site, false);
+      // Another connection may still have written since the read: the guarded write decides.
+      const applied = plane.db.transaction(() => {
+        if (!updateCustomerSiteAtRevision(plane.db, next.site, expectedRevision)) return false;
         recordDossierEvent(plane.db, {
           customerId,
           kind: read.patch.status && read.patch.status !== current.status ? `SITE_${read.patch.status}` : "SITE_UPDATED",
@@ -198,7 +228,12 @@ export function registerCustomerSiteRoutes(app: Hono<ApiEnv>): void {
           occurredAt: now,
           detail: { revision: next.site.revision },
         });
+        return true;
       })();
+      if (!applied) {
+        const latest = getCustomerSite(plane.db, customerId, siteId);
+        return latest ? stale(latest) : c.json({ error: "not_found" }, 404);
+      }
     }
     return c.json({ alreadyApplied: !next.changed, site: presentCustomerSite(next.site, siteUsage(plane.db, current.siteId)) });
   });

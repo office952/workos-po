@@ -63,6 +63,17 @@ export function dossierPlane(c: ApiContext): DossierPlane {
   return { runtime, db: runtime.assemblyPlane().db, documentsRoot: runtime.documentsRoot, actorAccountId: actorUserId(c) };
 }
 
+/**
+ * The revision an edit is based on: required on every PATCH of an existing site, document or
+ * historical work, a positive integer. Without it an edit would overwrite blindly.
+ */
+export function readExpectedRevision(body: unknown): number | null {
+  const value = body && typeof body === "object" ? (body as Record<string, unknown>).expectedRevision : undefined;
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 ? value : null;
+}
+
+export const MISSING_EXPECTED_REVISION = { error: "invalid_payload", field: "expectedRevision" } as const;
+
 export function customerExists(db: SqliteDatabase, customerId: string): boolean {
   return Boolean(db.prepare("SELECT 1 FROM customers WHERE customer_id = ?").get(customerId));
 }

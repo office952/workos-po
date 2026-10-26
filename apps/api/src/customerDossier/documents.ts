@@ -26,11 +26,39 @@ import {
 import {
   customerExists,
   dossierPlane,
+  MISSING_EXPECTED_REVISION,
+  readExpectedRevision,
   recordDossierEvent,
   requireDossierPermission,
   subjectBelongsToCustomer,
   type DossierPlane,
 } from "./access.js";
+
+/**
+ * Compare-and-swap for a document's metadata: written only while the document is still at
+ * `expectedRevision`, with the revision moved on by one in the same statement. False when another
+ * edit (from this process or another connection to the same database) got there first.
+ */
+export function updateCustomerDocumentAtRevision(db: SqliteDatabase, document: CustomerDocument, expectedRevision: number): boolean {
+  const result = db
+    .prepare(
+      `UPDATE customer_documents SET kind = ?, photo_stage = ?, title = ?, document_number = ?, document_date = ?,
+         description = ?, revision = revision + 1
+       WHERE document_id = ? AND customer_id = ? AND revision = ?`,
+    )
+    .run(
+      document.kind,
+      document.photoStage,
+      document.title,
+      document.documentNumber,
+      document.documentDate,
+      document.description,
+      document.documentId,
+      document.customerId,
+      expectedRevision,
+    );
+  return result.changes === 1;
+}
 
 /** Files live once, in the plane's documents root, under customers/<customerId>/. */
 export function customerDocumentScope(customerId: string): string[] {
@@ -248,38 +276,27 @@ export function registerCustomerDocumentRoutes(app: Hono<ApiEnv>): void {
   app.patch("/api/customers/:customerId/documents/:documentId", requireDossierPermission("editDocuments"), async (c) => {
     const plane = dossierPlane(c);
     const customerId = c.req.param("customerId");
-    const current = getCustomerDocument(plane.db, customerId, c.req.param("documentId"));
-    if (!current) return c.json({ error: "not_found" }, 404);
+    const documentId = c.req.param("documentId");
+    // The request is read and validated first; the current version is read after it, with no
+    // await before the guarded write, so nothing can slip in between in this process.
     const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
-    if (body && typeof body.expectedRevision === "number" && body.expectedRevision !== current.revision) {
-      return c.json({ error: "stale_revision" }, 409);
-    }
+    const expectedRevision = readExpectedRevision(body);
+    if (expectedRevision === null) return c.json(MISSING_EXPECTED_REVISION, 400);
     const { expectedRevision: _ignored, ...fields } = body ?? {};
     void _ignored;
     const read = readCustomerDocumentPatch(fields);
     if (!read.ok) return c.json({ error: "invalid_metadata" }, 400);
+    const current = getCustomerDocument(plane.db, customerId, documentId);
+    if (!current) return c.json({ error: "not_found" }, 404);
+    if (expectedRevision !== current.revision) return c.json({ error: "stale_revision" }, 409);
     const next = applyCustomerDocumentPatch(current, read.patch);
     if (!next.ok) return c.json({ error: "invalid_metadata" }, 400);
     if (next.changed) {
       const now = new Date().toISOString();
       const document = next.document;
-      plane.db.transaction(() => {
-        plane.db
-          .prepare(
-            `UPDATE customer_documents SET kind = ?, photo_stage = ?, title = ?, document_number = ?, document_date = ?,
-               description = ?, revision = ? WHERE document_id = ? AND customer_id = ?`,
-          )
-          .run(
-            document.kind,
-            document.photoStage,
-            document.title,
-            document.documentNumber,
-            document.documentDate,
-            document.description,
-            document.revision,
-            document.documentId,
-            customerId,
-          );
+      // Another connection may still have written since the read: the guarded write decides.
+      const applied = plane.db.transaction(() => {
+        if (!updateCustomerDocumentAtRevision(plane.db, document, expectedRevision)) return false;
         recordDossierEvent(plane.db, {
           customerId,
           kind: "DOCUMENT_METADATA_UPDATED",
@@ -288,7 +305,9 @@ export function registerCustomerDocumentRoutes(app: Hono<ApiEnv>): void {
           occurredAt: now,
           detail: { revision: document.revision, previous: { title: current.title, kind: current.kind, documentNumber: current.documentNumber } },
         });
+        return true;
       })();
+      if (!applied) return c.json({ error: "stale_revision" }, 409);
     }
     return c.json({ alreadyApplied: !next.changed, revision: next.document.revision });
   });

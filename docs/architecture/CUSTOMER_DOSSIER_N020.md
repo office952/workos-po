@@ -156,7 +156,12 @@ Decizia Ownerului (2026-10-23): în fișa clientului, „Lucrări” înseamnă 
 | `GET /api/customers/:id/commercial-terms` | `read` |
 | `PUT /api/customers/:id/commercial-terms` | `editCommercialTerms` |
 
-Modificările acceptă `expectedRevision`; o revizie depășită → `409 stale_revision`.
+Revizia unei modificări:
+- **`PATCH` pe sedii, documente și lucrări istorice** cere `expectedRevision`, un întreg pozitiv; fără el răspunsul e `400 invalid_payload` cu `field: "expectedRevision"`.
+  - Scrierea e atomică: `UPDATE … SET …, revision = revision + 1 WHERE … AND revision = ?`, cu verificarea rândurilor modificate, deci și între conexiuni sau instanțe pe aceeași bază.
+  - O revizie depășită sau o scriere concurentă câștigată de altă cerere dă `409 stale_revision` (cu sediul sau lucrarea actuală; pentru documente doar codul). Nu se scrie nimic și nu se înregistrează niciun eveniment.
+  - Două modificări simultane pe aceeași revizie: una reușește, cealaltă primește 409 (`apps/api/tests/customer-dossier-concurrency.test.ts`).
+- **`PUT /commercial-terms`**: neschimbat. `expectedRevision` rămâne opțional; o salvare fără el adaugă o revizie nouă, iar istoricul append-only nu pierde nimic.
 
 ## Izolare și permisiuni
 

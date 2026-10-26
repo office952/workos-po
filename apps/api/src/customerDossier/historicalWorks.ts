@@ -9,8 +9,43 @@ import {
 import type { Hono } from "hono";
 import type { ApiEnv } from "../cloud/context.js";
 import type { SqliteDatabase } from "../persistence/sqlite.js";
-import { customerExists, dossierPlane, recordDossierEvent, requireDossierPermission } from "./access.js";
+import {
+  customerExists,
+  dossierPlane,
+  MISSING_EXPECTED_REVISION,
+  readExpectedRevision,
+  recordDossierEvent,
+  requireDossierPermission,
+} from "./access.js";
 import { getCustomerSite } from "./sites.js";
+
+/**
+ * Compare-and-swap for a historical work: written only while it is still at `expectedRevision`,
+ * with the revision moved on by one in the same statement. False when another edit (from this
+ * process or another connection to the same database) got there first.
+ */
+export function updateHistoricalWorkAtRevision(db: SqliteDatabase, work: HistoricalWork, expectedRevision: number): boolean {
+  const result = db
+    .prepare(
+      `UPDATE customer_historical_works SET site_id = ?, site_snapshot_json = ?, title = ?, reference = ?, description = ?,
+         event_date = ?, event_date_end = ?, updated_at = ?, revision = revision + 1
+       WHERE work_id = ? AND customer_id = ? AND revision = ?`,
+    )
+    .run(
+      work.siteId,
+      work.siteSnapshot ? JSON.stringify(work.siteSnapshot) : null,
+      work.title,
+      work.reference,
+      work.description,
+      work.eventDate,
+      work.eventDateEnd,
+      work.updatedAt,
+      work.workId,
+      work.customerId,
+      expectedRevision,
+    );
+  return result.changes === 1;
+}
 
 type WorkRow = {
   work_id: string;
@@ -123,12 +158,15 @@ export function registerHistoricalWorkRoutes(app: Hono<ApiEnv>): void {
   app.patch("/api/customers/:customerId/historical-works/:workId", requireDossierPermission("recordHistoricalWork"), async (c) => {
     const plane = dossierPlane(c);
     const customerId = c.req.param("customerId");
-    const current = getHistoricalWork(plane.db, customerId, c.req.param("workId"));
-    if (!current) return c.json({ error: "not_found" }, 404);
+    const workId = c.req.param("workId");
+    // The request is read and its revision validated first; the current version is read after
+    // it (the fields are checked against it), with no await before the guarded write.
     const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
-    if (body && typeof body.expectedRevision === "number" && body.expectedRevision !== current.revision) {
-      return c.json({ error: "stale_revision", work: current }, 409);
-    }
+    const expectedRevision = readExpectedRevision(body);
+    if (expectedRevision === null) return c.json(MISSING_EXPECTED_REVISION, 400);
+    const current = getHistoricalWork(plane.db, customerId, workId);
+    if (!current) return c.json({ error: "not_found" }, 404);
+    if (expectedRevision !== current.revision) return c.json({ error: "stale_revision", work: current }, 409);
     const now = new Date().toISOString();
     const read = readHistoricalWorkInput(body, fieldsOf(current), now.slice(0, 10));
     if (!read.ok) return c.json({ error: "invalid_payload", field: read.field }, 400);
@@ -145,27 +183,16 @@ export function registerHistoricalWorkRoutes(app: Hono<ApiEnv>): void {
     if (!changed) return c.json({ alreadyApplied: true, work: current });
     next.revision = current.revision + 1;
     next.updatedAt = now;
-    plane.db.transaction(() => {
-      plane.db
-        .prepare(
-          `UPDATE customer_historical_works SET site_id = ?, site_snapshot_json = ?, title = ?, reference = ?, description = ?,
-             event_date = ?, event_date_end = ?, updated_at = ?, revision = ? WHERE work_id = ? AND customer_id = ?`,
-        )
-        .run(
-          next.siteId,
-          next.siteSnapshot ? JSON.stringify(next.siteSnapshot) : null,
-          next.title,
-          next.reference,
-          next.description,
-          next.eventDate,
-          next.eventDateEnd,
-          now,
-          next.revision,
-          next.workId,
-          customerId,
-        );
+    // Another connection may still have written since the read: the guarded write decides.
+    const applied = plane.db.transaction(() => {
+      if (!updateHistoricalWorkAtRevision(plane.db, next, expectedRevision)) return false;
       recordDossierEvent(plane.db, { customerId, kind: "HISTORICAL_WORK_UPDATED", subjectId: next.workId, actorAccountId: plane.actorAccountId, occurredAt: now, detail: { revision: next.revision } });
+      return true;
     })();
+    if (!applied) {
+      const latest = getHistoricalWork(plane.db, customerId, workId);
+      return latest ? c.json({ error: "stale_revision", work: latest }, 409) : c.json({ error: "not_found" }, 404);
+    }
     return c.json({ alreadyApplied: false, work: next });
   });
 }

@@ -94,7 +94,7 @@ describe("customer dossier — organization isolation and permissions", () => {
 
     // Member: reads, uploads and edits sites; cannot change financial terms.
     expect((await memberA.raw(contentHref)).status).toBe(200);
-    expect((await memberA.json("PATCH", `/api/customers/${customerA}/sites/${siteA.siteId}`, { phone: "0700 111 222" })).status).toBe(200);
+    expect((await memberA.json("PATCH", `/api/customers/${customerA}/sites/${siteA.siteId}`, { phone: "0700 111 222", expectedRevision: siteA.revision })).status).toBe(200);
     expect((await memberA.upload(customerA, { kind: "RECEPTION", title: "PV recepție" })).status).toBe(201);
     const memberTerms = await memberA.json("GET", `/api/customers/${customerA}/commercial-terms`);
     expect(memberTerms.status).toBe(200);

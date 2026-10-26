@@ -125,7 +125,7 @@ describe("client dossier seed", () => {
 
     // The operator renames a site and changes the terms; a run with a lost ledger adopts, never resets.
     const siteA = afterFirst.sites.find((site) => site.name === "Sediu A") as Json;
-    await client.request("PATCH", `/api/customers/${customer}/sites/${siteA.siteId}`, { name: "Sediu A redenumit" });
+    await client.request("PATCH", `/api/customers/${customer}/sites/${siteA.siteId}`, { name: "Sediu A redenumit", expectedRevision: siteA.revision });
     await client.request("PUT", `/api/customers/${customer}/commercial-terms`, { paymentTermDays: 45 });
     rmSync(join(root, "client-dossier-seed-ledger.json"));
     const third = await seedClientDossier({ client, upload, root, scenario });

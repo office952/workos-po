@@ -484,7 +484,7 @@ describe("customer dossier — history", () => {
 
     // Current data changes: customer address, site address and name, payment terms.
     expect((await send(app, "PATCH", `/api/customers/${customerId}`, { address: "Adresa nouă 99" })).status).toBe(200);
-    expect((await send(app, "PATCH", `/api/customers/${customerId}/sites/${site.siteId}`, { name: "Atelier mutat", address: "Str. Nouă 5" })).status).toBe(200);
+    expect((await send(app, "PATCH", `/api/customers/${customerId}/sites/${site.siteId}`, { name: "Atelier mutat", address: "Str. Nouă 5", expectedRevision: site.revision })).status).toBe(200);
     const terms2 = await send(app, "PUT", `/api/customers/${customerId}/commercial-terms`, { paymentTermDays: 15, expectedRevision: 1 });
     expect(((await body(terms2)).terms as Json).revision).toBe(2);
     expect((await send(app, "PUT", `/api/customers/${customerId}/commercial-terms`, { paymentTermDays: 10, expectedRevision: 1 })).status).toBe(409);
