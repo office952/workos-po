@@ -9,6 +9,7 @@ import { readClientsRegistryMemory, writeClientsRegistryMemory } from "./session
 import { cloudSessionScope, rememberCloudScope } from "./session/cloudSessionScope";
 import { presentCloudSession } from "./adapters/cloudSessionAdapter";
 import { readConfiguratorSession, writeConfiguratorSession } from "./session/configuratorSession";
+import { EMPTY_LIST_CONTEXT, readClientListMemory, writeClientListMemory } from "./surfaces/clients/dossier/listContext";
 
 async function openAccountMenu(): Promise<void> {
   await userEvent.click(screen.getByRole("button", { name: "Cont" }));
@@ -117,6 +118,8 @@ describe("App Cloud auth integration", () => {
     await screen.findByRole("heading", { name: "Client Alpha" });
 
     writeClientsRegistryMemory({ query: "Client Alpha", selectedId: "cus-one", statusChip: "attention" });
+    // N-020 · the list context of each client section belongs to the session too.
+    for (const section of ["istoric", "lucrari", "fotografii", "documente", "cereri"] as const) writeClientListMemory("cus-one", section, { ...EMPTY_LIST_CONTEXT, q: "Alpha", provenance: "UPLOAD", stage: "BEFORE" });
     act(() => invalidateResources(resourceKeys.customerWorkspace("cus-one")));
     await waitFor(() => expect(releaseOld).toBeTypeOf("function"));
     await openAccountMenu();
@@ -127,6 +130,7 @@ describe("App Cloud auth integration", () => {
     expect(screen.queryByText("0740000001")).not.toBeInTheDocument();
     expect(readResource(resourceKeys.customerWorkspace("cus-one")).data).toBeUndefined();
     expect(readClientsRegistryMemory()).toEqual({ query: "", selectedId: null, statusChip: "all" });
+    for (const section of ["istoric", "lucrari", "fotografii", "documente", "cereri"] as const) expect(readClientListMemory("cus-one", section)).toEqual(EMPTY_LIST_CONTEXT);
     await act(async () => { releaseOld(hubFor("Client Alpha")); });
     expect(readResource(resourceKeys.customerWorkspace("cus-one")).data).toBeUndefined();
     await act(async () => { releaseNew(nextStatus === 200 ? hubFor("Client Beta") : jsonResponse({ error: "denied" }, nextStatus)); });

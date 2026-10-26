@@ -351,6 +351,7 @@ import {
   bindOperationalPlaneIdentity,
   readOperationalPlaneIdentity,
 } from "../cloud/planeIdentity.js";
+import { countHistoricalWorksByCustomer } from "../customerDossier/counts.js";
 
 export type AssemblyQuoteRecord = {
   item: QuoteOverviewItem;
@@ -1452,6 +1453,7 @@ export function createProductSystemRuntimeFromOpenDb(
         currentEligibility(),
         currentOrganizationId(),
       );
+      const historicalWorks = countHistoricalWorksByCustomer(db);
       return projectCustomerRegistry(
         listCustomers(db).map((customer) =>
           projectCustomerRegistryItem({
@@ -1459,6 +1461,7 @@ export function createProductSystemRuntimeFromOpenDb(
             requests: requestsForCustomer(requests, customer.customerId),
             quotes: quotesForCustomer(quotes, customer.customerId),
             jobs: jobsForCustomer(jobs, customer.customerId),
+            historicalWorkCount: historicalWorks.get(customer.customerId) ?? 0,
           }),
         ),
       );
@@ -1484,6 +1487,7 @@ export function createProductSystemRuntimeFromOpenDb(
           ),
           customerId,
         ),
+        historicalWorkCount: countHistoricalWorksByCustomer(db).get(customerId) ?? 0,
       });
     },
     readCommercialRequest(requestId) {

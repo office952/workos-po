@@ -22,6 +22,7 @@ import {
   presentAcceptanceId,
   presentOrderSnapshotId,
   presentQuoteEnvelope,
+  presentQuotePreviewDetail,
   presentQuoteList,
 } from "../adapters/quoteListAdapter";
 import { presentRequestDetail, presentRequestOverview } from "../adapters/requestAdapter";
@@ -134,6 +135,15 @@ export async function loadQuoteEnvelope(quoteSnapshotId: string) {
   } catch {
     return null;
   }
+}
+
+/** The frozen offer's labelled measurements and acceptance time (offer preview, N-020). */
+export async function loadQuotePreviewDetail(quoteSnapshotId: string) {
+  const presented = presentQuotePreviewDetail(await fetchQuoteEnvelope(quoteSnapshotId));
+  if (!presented) {
+    throw new Error("unpresentable");
+  }
+  return presented;
 }
 
 export async function loadAssemblyQuote(quoteSnapshotId: string) {

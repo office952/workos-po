@@ -56,6 +56,32 @@ export function presentQuoteEnvelope(payload: unknown): QuoteListItemTransport |
   return presentQuoteListItem(record?.quote ?? record?.overview ?? record);
 }
 
+/** A measurement of the frozen offer exactly as the server labels it (value and unit unconverted). */
+export type QuotePreviewMeasurement = { label: string; value: number; unit: string };
+
+/**
+ * N-020 · what the offer preview of Cereri și oferte reads from `GET /api/quotes/:id` beyond the list
+ * row: the confirmed measurements the server already labels (`quoteSnapshot.truth.measurements`)
+ * and the acceptance time. Unlabelled measurements and the quantities are left out: naming or
+ * choosing them is the domain's (`projectQuoteDocument`), which is not exposed as data.
+ */
+export type QuotePreviewDetail = { measurements: QuotePreviewMeasurement[]; acceptedAt: string | null };
+
+export function presentQuotePreviewDetail(payload: unknown): QuotePreviewDetail | null {
+  const record = asRecord(payload);
+  if (!record) return null;
+  const truth = asRecord(asRecord(record.quoteSnapshot)?.truth);
+  const raw = Array.isArray(truth?.measurements) ? truth.measurements : [];
+  const measurements = raw.flatMap((item): QuotePreviewMeasurement[] => {
+    const row = asRecord(item);
+    const label = asString(row?.label);
+    const unit = asString(row?.unit);
+    if (!row || !label || !unit || typeof row.value !== "number" || row.confirmed !== true) return [];
+    return [{ label, value: row.value, unit }];
+  });
+  return { measurements, acceptedAt: asString(asRecord(record.acceptance)?.acceptedAt) };
+}
+
 export function presentQuoteAcceptanceFact(stage: string | null): string {
   switch (stage) {
     case "QUOTE_ACCEPTED":

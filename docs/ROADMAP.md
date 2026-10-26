@@ -66,6 +66,77 @@ MIGRATIONS_042_046_REAL_APPLICATION = HOLD / SEPARATE_APPROVED_PROCEDURE_REQUIRE
 DEPLOY_PRODUCTION = HOLD / NOT_AUTHORIZED
 ```
 
+### Dosarul clientului N-020 · sites, documents and photos, commercial terms, historical works, searchable history — IMPLEMENTED_LOCAL_IN_REVIEW (2026-10-23)
+
+Owner GO for implementation, tests, migrations on isolated synthetic copies, a persistent seed and documentation ([N-020](https://app.notion.com/p/4028ea98e40f81d39351e3d4fc7887e8)). Branch `feat/n020-dosar-client` from the N-018 head `f383da6` (PR #98, still draft); the N-019 mechanism (PR #97) is not merged into it and was used only from its own checkout to restore the demo copy. Contract and limits: `docs/architecture/CUSTOMER_DOSSIER_N020.md`. Migration `047_customer_dossier.sql` is additive. The client page gains Istoric, Documente, Fotografii, Sedii and Date comerciale as working sections; the final vertical-history design is a later step and this is not a visual acceptance. Not authorized: real data, the original N-019 demo, credential changes, Figma, QC/welding, P1/P2, commit, push, merge, deploy.
+
+Independent review corrections (2026-10-23, same GO record): the history state follows the canonical job stage (order created, released, plan prepared, execution in progress, finished) instead of one "in execution" bucket; a request shows each quote → order → job branch exactly once with its own state, so a finished branch no longer hides an active branch or a pending quote; the Istoric search, filters and page live in the URL and in the per-client register memory, so a change of section, Back/Forward and refresh keep them. Regressions were run first against the audited candidate (all failing) and pass after the fix.
+
+Owner decision on the client's Lucrări (2026-10-23, same record): the client tab lists every work of the client — each WorkOS job and each historical record, once — with provenance, filters (Toate · În WorkOS · Istorice, year, site, state), "X rezultate din Y lucrări" and its context kept; the tab, card and Clienți register show the same total (`workCount`), with `jobCount` kept explicitly as WorkOS production only. Historical records open their own detail; the global Lucrări production register is unchanged.
+
+Owner GO 8 · vertical history (2026-10-24, same record): implementation of Figma page 10 v2.1 (`rM71g74Ph0mkAjAtWuLahy`, `422:190`), still IMPLEMENTED_LOCAL_IN_REVIEW, uncommitted, from v3 `bc80c73c` (the candidate tree is recorded in the handoff manifest and in Notion). Istoric is the client page's default view and carries the former Relație summary; tabs Istoric · Lucrări · Documente · Fotografii · Sedii · Date comerciale with server counts; Cereri și oferte (every request and offer, with preview) opens from the header and the summary; former `?sectiune=prezentare` / `?cerere=` links open their equivalent. The header folds into one sticky line while scrolling. History: rail (jump to year, sites, state, provenance with counts), search, active-filter chips, year axis, collapsed cards (thumbnail with stage and "Ilustrativ" marks, state or mixed branches, relation line, offers/files/photos) and expanded entries (`?deschis=`) with photos in work order, one request node and each offer → job branch once ("Nicio lucrare — oferta nu este acceptată" when no work). Fotografii: cards per project in date order, stages before → simulation → after, rail filters (`etapa`, site, year); viewer with stage switch, arrows, Esc, focus return. Sedii show the latest documented photo with its date. New server filter `provenance=WORKOS|HISTORICAL_RECORD|UPLOAD` with facet counts (each facet excludes its own dimension; filters combine with AND; uploads have no state). Modular stylesheet `client-history.css`; no dependency, schema or seed change. Illustrative Figma images were not uploaded: every one depicts a subject already present as a schematic fixture and documents cannot be replaced or deleted, so an upload would duplicate it (Owner decision). Route 8 (add a document through the app) was proved on an isolated copy (`demo-dosar-client-n020-ruta8-izolat`, 8897), so the reviewed Alpha set on 8895 keeps Istoric 8 · Lucrări 5 · Documente 9 · Fotografii 10 · Sedii 3.
+
+Owner GO 9 · UI/UX fidelity to Figma page 10 (2026-10-24, same record), still IMPLEMENTED_LOCAL_IN_REVIEW, uncommitted, from the audited tree `5b991856`. The client header, summary, search bar and scroll layers now follow the responsive composition of the design:
+- **Desktop:** one 68 px client row plus the tabs, folding to a 56 px line; the WorkOS bar is sticky on the client page only.
+- **Tablet:** "CUI · Contacte ▾", "⋯" and the fixed search bar with years and "Filtre".
+- **Phone:** "Contacte ▾" holds the contacts, the way back and the secondary actions; "Cerere" sits at the top with no duplicate at the bottom; the summary is a row of chips.
+- **Photos:** repeated actions in a per-photo menu.
+- **First project, measured (Figma → app):** 1280×720 375 → 373 px (2 complete); 768×1024 345 → 341 (4); 390×844 330 → 328 (2); 360×800 330 → 328 (2).
+- **Visual copy:** `demo-dosar-client-n020-vizual` (8899) was restored with the N-019 tool and seeded with `--illustrative-images`. The 10 Figma crops replace the schematic photos one for one, with the same documents, stages, dates and links. The reference copy on 8895 is unchanged.
+
+Owner GO 10 · targeted corrections on GO 9 (2026-10-24, same record), still IMPLEMENTED_LOCAL_IN_REVIEW, uncommitted, from the audited tree `b1cfd86f`:
+- **Filter reset.** A manual change in Istoric, Lucrări or Fotografii is now written to the list memory before the URL changes, so a reset to "no filters" is no longer taken for a return that restores the previous filters. Regressions were written first: 8 of 9 failed on the audited tree and all 9 pass after the fix. The defect was also reproduced in the browser on the audited build. Session isolation is asserted.
+- **Phone menus.** "Contacte" holds only contacts; the way back is a visible 44 px "←"; the secondary actions are a separate "Acțiuni" menu.
+- **Night fidelity** against the v2.1 exports n01–n05: filled monogram, dark stage chips, unframed viewer, list-style filter sheet, outlined phone pills, rail width per frame.
+
+Owner GO 11 · coherent refinement of every client hub view (2026-10-24, same record), still IMPLEMENTED_LOCAL_IN_REVIEW, uncommitted, from the audited tree `ff120c41`. The GO 10 fixes and the vertical history structure are kept.
+- **Common language.** Links read by colour, icon and place; they are underlined on hover and keyboard focus only, fixed per component. The historical cards lost their dashed border: the Owner's black dashes came from `.dwork[data-provenance=HISTORICAL_RECORD]` (`border-style: dashed`, medium width, `currentColor`), not from focus.
+- **Header.** The name wraps in full on the phone. The contact line reads the address together with the locality, and keeps "Toate contactele" below 1600 px.
+- **Cereri și oferte.** One view with the selection in the URL (`selectie=cereri|oferte`, `q`): every request, including those without an offer, and every offer, including those without an order or a work. Each row shows its amount and currency, request, work (`orderSnapshotId`), state and server action. "Toate cererile" and "Toate ofertele" lead to their own selection.
+- **Lucrări.** One card family for WorkOS and historical works, with a rail and year groups. Provenance is shown once. A historical work opens its record next to the same rail.
+- **Documente.** Year groups and a rail by type, year, attachment and site. "Previzualizează" is kept apart from "Descarcă". Associate and edit sit in a menu, by permission.
+- **Sedii.** A simulation is never the documented photo. The card links to the site's history, photos and documents.
+- **Date comerciale.** The view opens to read; "Modifică" opens the guarded form, by permission. A separate list shows the contract documents.
+- **Financial summary.** Proposal only, kept outside the repository (handoff package). No module was built.
+
+Owner GO 12 · header and summary refinement plus the GO 11 remainders (2026-10-24, same record), still IMPLEMENTED_LOCAL_IN_REVIEW, uncommitted, from the audited tree `3787feae`. This is a local refinement of page 10 authorized by the Owner; Figma was not changed.
+- **Header.**
+  - The name is the main landmark, wraps at every width and carries its status beside it.
+  - One secondary line holds the CUI and the contact values. Their labels stay for screen readers.
+  - "Contacte ▾" and "Acțiuni" stay separate, and the vertical rule is gone.
+  - On the phone, a long name folds "Cerere nouă" to its "+".
+- **Summary.** Five landmarks replace the table cells:
+  - open requests, offers ("N cu comandă"), attention (the only warm accent), works ("N în WorkOS · N istorice");
+  - the dossier is a group of three links: documents, photos, sites.
+  - Each landmark is one named link, with no nested links. The summary now sits above the search, next to the list.
+  - The attention leads to Cereri și oferte with `atentie=1` and shows every row it counts, a waiting job included. Its wording is specific only when the kind and reason are known (`attentionModel.ts`; superseded in the N-020 design final stage 1 by „De urmărit”, `history/watchModel.ts`, and removed with `HubSummary.tsx`).
+- **List context.** `listContext.ts` now also covers Documente (`q`, `tip`, `an`, `legat`, `sediu`) and Cereri și oferte (`selectie`, `q`, `atentie`).
+  - It is restored per client and session, and a reset stays a reset.
+  - A request preview (`cerere=`) neither restores nor overwrites the context.
+- **Works projection (domain).**
+  - `facets.yearCounts`, site counts and state counts are computed under the other active filters.
+  - `requestPhotos` gives a job without its own photo its request photos as context, with `shared` when the request has several jobs.
+  - The UI marks the thumbnail "Din cerere · nu e fotografia lucrării", or shows a precise note with access to the project photos.
+- **Widths.** Sedii and Date comerciale no longer add a second gutter, and the site cards fill the row (`auto-fit`).
+- **Financial summary.** Proposal v2 only (cumulative indicators, balances, partial invoicing, advances, currencies, reversals), kept outside the repository.
+
+Owner GO · R1 presentation of the client dossier (2026-10-26, same record). It implemented the consolidated R1 direction (Figma `rM71g74Ph0mkAjAtWuLahy`, page 12, section `842:31657`) over stages 1–8:
+- the header and contact card;
+- short-label navigation, with a dot only where the server flags attention;
+- one result bar in every list ("X din Y", removable chips, "Arată toate cele Y");
+- the compact "De urmărit";
+- Documente actions with a "⋯" menu, by permission;
+- the photo grid by year;
+- three equal Sedii cards;
+- equal Date comerciale cards;
+- one corner and control height.
+
+Two corrections followed the independent review:
+- At 1280 the contact card leaves the e-mail to the contacts panel and meets the 86 px action stack.
+- At 1100–1379 the Documente table uses `table-layout: auto`. Its year rows span six columns while Tip and Sediu are hidden, so the fixed layout had left two empty columns.
+
+Verdict `R1_LOCAL_READY_FOR_OWNER_ACCEPTANCE`; the Owner accepted the direction locally and authorized a Draft PR for independent review, stacked on N-018 (PR #98). No merge, no deploy. Non-blocking advisories are recorded in N-020: Sedii composition variations, the Date comerciale revision position, the inactive client without a browser proof, and the missing "casete/dungă" reference. Future work needs separate GOs: the representative photo, upload with progress or cancel, the "Termen" calendar, logo import and financial statistics.
+
 ### Continuitate N-018 · navigation, registers, client relation, job sheet — draft PR for independent review (2026-10-23)
 
 Publication status: the whole N-018 candidate (continuity and its review corrections, the client page refinement and its finishing pass) is published as one commit on `feat/n018-continuitate` in a draft PR to `main`, for independent review. This is an intermediate publication, not a visual acceptance: the client page is an intermediate implementation and the Owner has not accepted its result as final. The next direction is the complete client dossier with a vertical history, once the functions and data it needs exist; that extension is not in this PR. P1 (the request's next action), P2 (dedicated PDF viewer), destination-label uniformization, QC and welding stay separate; the sections under "Mai multe · în pregătire" and the relation journal are placeholders, not delivered functions. Merge and deploy are not authorized.

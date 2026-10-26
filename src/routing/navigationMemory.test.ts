@@ -139,6 +139,34 @@ describe("navigation memory · client page continuity (N-018)", () => {
   });
 });
 
+describe("navigation memory · return to a Sedii card (N-020 etapa 7)", () => {
+  const sitesPage =
+    '<main id="continut-principal"><h1>Alpha</h1>' +
+    '<a href="/clienti/c-1?sectiune=fotografii">Fotografii</a>' +
+    '<a href="/clienti/c-1?sectiune=fotografii" data-row-id="site:s-1:Fotografii">Fotografii · 4 la Depozit</a></main>';
+
+  it("comes back to the position the page had when the reader left, with focus on the card's link", () => {
+    document.body.innerHTML = sitesPage;
+    window.history.replaceState({}, "", "/clienti/c-1?sectiune=sedii");
+    const sitesKey = currentEntryKey();
+    // The reader stopped at 260; the link was below the screen, so it came into view (574) before the
+    // click. The position that counts is the one at the moment of leaving.
+    setScroll(260);
+    setScroll(574);
+    document.querySelector<HTMLElement>("[data-row-id]")!.focus();
+    navigate("/clienti/c-1?sectiune=fotografii&sediu=s-1");
+    document.body.innerHTML = '<main id="continut-principal"><h1>Alpha</h1></main>';
+    settleArrival();
+    setScroll(0);
+    document.body.innerHTML = sitesPage;
+    window.history.replaceState({ workosKey: sitesKey }, "", "/clienti/c-1?sectiune=sedii");
+    notePopNavigation();
+    settleArrival();
+    expect(window.scrollTo).toHaveBeenLastCalledWith(0, 574);
+    expect(document.activeElement?.getAttribute("data-row-id")).toBe("site:s-1:Fotografii");
+  });
+});
+
 describe("navigation guard", () => {
   it("holds a navigation until the page lets it proceed", () => {
     let resume: (() => void) | null = null;

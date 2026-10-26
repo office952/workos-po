@@ -54,18 +54,20 @@ function workspace(customerId: string, displayName: string, extras: Record<strin
 describe("ClientDetailPage", () => {
   it("does not present false zero counts while the client loads", async () => {
     let release!: (response: unknown) => void;
-    vi.stubGlobal("fetch", vi.fn(() => new Promise((resolve) => { release = resolve; })));
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => new Promise((resolve) => { if (String(input).endsWith("/workspace")) release = resolve; })));
     render(<ClientDetailPage customerId="cus-1" />);
     const sections = screen.getByRole("navigation", { name: "Secțiuni client" });
-    expect(within(sections).getByRole("link", { name: "Cereri și oferte" })).toBeInTheDocument();
+    expect(within(sections).getByRole("link", { name: "Istoric" })).toBeInTheDocument();
     expect(within(sections).getByRole("link", { name: "Lucrări" })).toBeInTheDocument();
-    expect(screen.queryByText(/cereri? deschis/i)).toBeNull();
+    expect(within(sections).getByRole("link", { name: "Cereri și oferte" })).toBeInTheDocument();
+    expect(screen.queryByText(/0 cereri/)).toBeNull();
     await waitFor(() => expect(release).toBeTypeOf("function"));
     await act(async () => release(await jsonResponse(200, workspace("cus-1", "Atelier Nord"))));
     expect(await screen.findByRole("heading", { name: "Atelier Nord" })).toBeInTheDocument();
-    expect(within(sections).getByRole("link", { name: "Cereri 0, Oferte 0" })).toBeInTheDocument();
-    expect(within(sections).getByRole("link", { name: "Lucrări 0" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Nicio cerere deschisă" })).toHaveAttribute("href", "/clienti/cus-1?sectiune=cereri");
+    // R1 (846:32109) · short labels: the counts are in each view, never in the navigation.
+    expect(within(sections).getByRole("link", { name: "Lucrări" })).toBeInTheDocument();
+    expect(within(sections).getByRole("link", { name: "Cereri și oferte" })).toHaveAttribute("href", "/clienti/cus-1?sectiune=cereri");
+    expect(within(sections).queryByText(/0 cereri|0 oferte/)).toBeNull();
   });
   it.each([401, 403])("hides an already loaded client after a %i refresh", async (status) => {
     const fetchMock = vi.fn(() => jsonResponse(200, workspace("cus-1", "Atelier Nord")));
@@ -94,7 +96,8 @@ describe("ClientDetailPage", () => {
     expect(screen.getByRole("heading", { name: "Atelier Nord" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Cerere nouă" })).not.toBeInTheDocument();
     fetchMock.mockImplementation(() => jsonResponse(200, workspace("cus-1", "Atelier actualizat")));
-    await userEvent.click(screen.getByRole("button", { name: "Reîncearcă" }));
+    // The first "Reîncearcă" is the client's (the history below has its own).
+    await userEvent.click(screen.getAllByRole("button", { name: "Reîncearcă" })[0]!);
     expect(await screen.findByRole("heading", { name: "Atelier actualizat" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cerere nouă" })).toBeInTheDocument();
   });
@@ -125,32 +128,25 @@ describe("ClientDetailPage", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Atelier Nord" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     const sections = screen.getByRole("navigation", { name: "Secțiuni client" });
-    expect(within(sections).getAllByRole("link").map((link) => link.textContent)).toEqual(["Relație", "Cereri 0, · Oferte 0", "Lucrări 0"]);
-    // Sections without a source are only listed, under "Mai multe", and are not links.
-    expect(within(sections).queryByRole("link", { name: /Documente|Fotografii|Portofoliu|Fișiere/ })).toBeNull();
+    // N-020 design final (574:2203) · Istoric first, then Cereri și oferte as a section of its own.
+    expect(within(sections).getAllByRole("link").map((link) => link.textContent)).toEqual(["Istoric", "Cereri și oferte", "Lucrări", "Documente", "Fotografii", "Sedii", "Date comerciale"]);
+    expect(within(sections).getByRole("link", { name: "Istoric" })).toHaveAttribute("aria-current", "page");
+    // Sections without a source are not in the tabs.
+    expect(within(sections).queryByRole("link", { name: /Portofoliu|Fișiere|Relație/ })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Cerere nouă" }));
     expect(window.location.pathname).toBe("/cereri/noua");
   });
 
-  it("lists the sections in preparation under Mai multe and closes the list with Escape (N-018)", async () => {
-    window.history.replaceState({}, "", "/clienti/cus-1");
+  it.each([
+    ["/clienti/cus-1?sectiune=prezentare", "istoric"],
+    ["/clienti/cus-1?sectiune=prezentare&cerere=req-1", "cereri"],
+    ["/clienti/cus-1?cerere=req-1", "cereri"],
+  ])("opens a former Relație link %s on its equivalent section (N-020)", async (href, section) => {
+    window.history.replaceState({}, "", href);
     vi.stubGlobal("fetch", vi.fn(() => jsonResponse(200, workspace("cus-1", "Atelier Nord"))));
-    render(<ClientDetailPage customerId="cus-1" />);
+    const { container } = render(<ClientDetailPage customerId="cus-1" />);
     await screen.findByRole("heading", { level: 1, name: "Atelier Nord" });
-    const more = screen.getByRole("button", { name: /Mai multe/ });
-    expect(more).toHaveAttribute("aria-expanded", "false");
-    await userEvent.click(more);
-    expect(more).toHaveAttribute("aria-expanded", "true");
-    const list = document.getElementById(more.getAttribute("aria-controls")!)!;
-    expect(list).toBeVisible();
-    expect(within(list).getByText("În pregătire")).toBeInTheDocument();
-    for (const name of ["Documente", "Fotografii", "Portofoliu", "Fișiere"]) expect(within(list).getByText(name)).toBeInTheDocument();
-    expect(within(list).getAllByText("în pregătire")).toHaveLength(4);
-    expect(within(list).queryByRole("link")).toBeNull();
-    expect(within(list).getByText(/se găsesc în fișa fiecărei lucrări/)).toBeInTheDocument();
-    await userEvent.keyboard("{Escape}");
-    expect(more).toHaveAttribute("aria-expanded", "false");
-    expect(more).toHaveFocus();
+    expect(container.querySelector("[data-surface='client-hub']")).toHaveAttribute("data-section", section);
   });
 
   it("changes section by replacing the history entry, so Back leaves the page (N-018)", async () => {
@@ -168,25 +164,30 @@ describe("ClientDetailPage", () => {
     render(<Live />);
     await screen.findByRole("heading", { level: 1, name: "Atelier Nord" });
     const before = window.history.length;
-    await userEvent.click(screen.getByRole("link", { name: "Cereri 1, Oferte 0" }));
+    await userEvent.click(screen.getByRole("link", { name: /^Cereri și oferte/ }));
     expect(window.location.search).toBe("?sectiune=cereri");
-    expect(await screen.findByRole("table", { name: "Cereri" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Cereri 1, Oferte 0" })).toHaveAttribute("aria-current", "page");
-    await userEvent.click(screen.getByRole("link", { name: "Lucrări 0" }));
+    expect(await screen.findByRole("region", { name: "Cereri și oferte" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^Cereri și oferte/ })).toHaveAttribute("aria-current", "page");
+    await userEvent.click(screen.getByRole("link", { name: "Lucrări" }));
     expect(window.location.search).toBe("?sectiune=lucrari");
     expect(window.history.length).toBe(before);
   });
 
-  it("counts requests and offers apart in the section tab, from the server summary (N-018)", async () => {
-    const payload = workspace("cus-1", "Atelier Nord");
-    Object.assign(payload.workspace.summary, { requestCount: 3, quoteCount: 2, jobCount: 1 });
+  it("marks with a dot only the sections the server flags; the navigation carries no counts (R1)", async () => {
+    const payload = workspace("cus-1", "Atelier Nord", {
+      quotes: [{ quoteSnapshotId: "q1", productCode: "LIT", reference: "OF-1", requestId: "req-1", needsAttention: true, attentionLabel: "Urmează acceptarea", superseded: false }],
+      jobs: [{ jobId: "j1", requestId: "req-1", needsAttention: false, stage: "EXECUTION_IN_PROGRESS", stageLabel: "În lucru", productLabel: "Litere" }],
+    });
+    Object.assign(payload.workspace.summary, { requestCount: 3, openRequestCount: 2, quoteCount: 2, jobCount: 1, historicalWorkCount: 2, workCount: 3 });
     vi.stubGlobal("fetch", vi.fn(() => jsonResponse(200, payload)));
     render(<ClientDetailPage customerId="cus-1" />);
     await screen.findByRole("heading", { level: 1, name: "Atelier Nord" });
     const sections = screen.getByRole("navigation", { name: "Secțiuni client" });
-    expect(within(sections).getByRole("link", { name: "Cereri 3, Oferte 2" })).toHaveAttribute("href", "/clienti/cus-1?sectiune=cereri");
-    expect(within(sections).getByRole("link", { name: "Lucrări 1" })).toBeInTheDocument();
-    expect(within(sections).queryByText(/· 5|5/)).toBeNull();
+    expect(within(sections).getByRole("link", { name: "Cereri și oferte · necesită atenție" })).toHaveAttribute("href", "/clienti/cus-1?sectiune=cereri");
+    // A work in execution is normal activity: no dot on Lucrări.
+    expect(within(sections).getByRole("link", { name: "Lucrări" })).toBeInTheDocument();
+    expect(within(sections).getByRole("link", { name: "Istoric" })).toHaveAttribute("href", "/clienti/cus-1");
+    expect(within(sections).queryByText(/\d/)).toBeNull();
   });
 
   it("shows the contacts that exist next to the name and groups the missing ones in one line (N-018)", async () => {
@@ -195,10 +196,20 @@ describe("ClientDetailPage", () => {
     vi.stubGlobal("fetch", vi.fn(() => jsonResponse(200, payload)));
     render(<ClientDetailPage customerId="cus-1" />);
     await screen.findByRole("heading", { level: 1, name: "Atelier Nord" });
-    expect(screen.getByText("CUI RO123")).toBeInTheDocument();
+    // N-020 design final (574:2203) · the status next to the name, then "CUI · localitate".
+    expect(screen.getByText("Client activ")).toBeInTheDocument();
+    expect(screen.getByText("CUI RO123 · Cluj")).toBeInTheDocument();
+    // The principal contact in its own column; the full list and the missing fields open from "Toate contactele".
     expect(screen.getByRole("link", { name: "0700 000 111" })).toHaveAttribute("href", "tel:0700000111");
     expect(screen.getByText("Ana Pop")).toBeInTheDocument();
-    expect(screen.getByText("Necompletat: e-mail, adresă.")).toBeInTheDocument();
+    const toggle = screen.getByRole("button", { name: "Toate contactele (1)" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(toggle);
+    const panel = screen.getByRole("region", { name: "Contactele clientului" });
+    expect(within(panel).getByText("Necompletat în fișa clientului: e-mail, adresă.")).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveFocus();
     expect(screen.queryByText("—")).toBeNull();
   });
 
@@ -215,7 +226,7 @@ describe("ClientDetailPage", () => {
       vi.stubGlobal("fetch", vi.fn(() => jsonResponse(200, workspace("cus-1", "Atelier Nord"))));
       const go = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
       render(<ClientDetailPage customerId="cus-1" />);
-      const back = await screen.findByRole("link", { name: /← Clienți · litera A · rândul Atelier Nord/ });
+      const back = await screen.findByRole("link", { name: /^Clienți · litera A · rândul Atelier Nord/ });
       expect(back).toHaveAttribute("href", "/clienti?client=cus-1");
       await userEvent.click(back);
       expect(go).toHaveBeenCalledWith(-1);
@@ -226,7 +237,7 @@ describe("ClientDetailPage", () => {
       vi.stubGlobal("fetch", vi.fn(() => jsonResponse(200, workspace("cus-1", "Atelier Nord"))));
       const go = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
       render(<ClientDetailPage customerId="cus-1" />);
-      const back = await screen.findByRole("link", { name: /← Clienți/ });
+      const back = await screen.findByRole("link", { name: /^Clienți ·/ });
       expect(back).toHaveAttribute("href", "/clienti?client=cus-1");
       await userEvent.click(back);
       expect(go).not.toHaveBeenCalled();
@@ -236,35 +247,42 @@ describe("ClientDetailPage", () => {
       at({ workosKey: "k", workosIndex: 1, workosFrom: from, workosFromIndex: 0 });
       vi.stubGlobal("fetch", vi.fn(() => jsonResponse(200, workspace("cus-1", "Atelier Nord"))));
       render(<ClientDetailPage customerId="cus-1" />);
-      expect(await screen.findByRole("link", { name: /← Clienți/ })).toHaveAttribute("href", "/clienti?client=cus-1");
+      expect(await screen.findByRole("link", { name: /^Clienți ·/ })).toHaveAttribute("href", "/clienti?client=cus-1");
     });
   });
 
-  it("names a frontend step to the job sheet Fișa lucrării and keeps the server's own labels (N-018)", async () => {
+  it("opens a WorkOS work on its job sheet from Lucrări, which lists every work of the client (N-020)", async () => {
     window.history.replaceState({}, "", "/clienti/cus-1?sectiune=lucrari");
-    const job = (overrides: Record<string, unknown>) => ({
-      jobId: "job-1", kind: "PRODUCT", productCode: "PRD-1", inscription: "NORD", productLabel: "Litere", customerId: "cus-1", customerDisplayName: "Atelier Nord",
-      stage: "RELEASED", stageLabel: "Eliberată", priorityLabel: "Standard", targetDateLabel: "Fără termen", progressLabel: "",
-      nextAction: "RELEASE_TO_PRODUCTION", nextActionLabel: "Trimite în producție", needsAttention: false, attentionLabel: null, planId: null, requestId: null,
-      ...overrides,
+    const item = (workId: string, overrides: Record<string, unknown>) => ({
+      workId, provenance: "WORKOS", provenanceLabel: "În WorkOS", title: "Litere", detail: null, reference: null, eventDateLabel: "1 oct. 2026", year: 2026,
+      state: "ELIBERATA", stateLabel: "Eliberată în producție", site: null, siteAtTimeLabel: null, description: null, job: null, request: null, quote: null,
+      historicalWorkId: null, documents: [], photoCount: 0, matchedOn: [], ...overrides,
     });
-    vi.stubGlobal("fetch", vi.fn(() => jsonResponse(200, workspace("cus-1", "Atelier Nord", {
-      jobs: [job({}), job({ jobId: "job-2", inscription: "GATA", nextAction: "VIEW_COMPLETED", nextActionLabel: "Lucrare finalizată", stageLabel: "Finalizată" })],
-    }))));
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      if (/\/works(\?|$)/.test(url)) {
+        return jsonResponse(200, { works: { total: 2, page: 1, pageCount: 1, totals: { all: 2, workos: 1, historical: 1 }, facets: { years: [2026, 2021], states: [], sites: [] }, items: [
+          item("job:job-1", { title: "Litere Nord", job: { jobId: "job-1", stageLabel: "Eliberată", progressLabel: null } }),
+          item("historical:h1", { provenance: "HISTORICAL_RECORD", provenanceLabel: "Înregistrare istorică", title: "Firmă 2021", historicalWorkId: "h1", state: "FINALIZAT" }),
+        ] } });
+      }
+      return jsonResponse(200, workspace("cus-1", "Atelier Nord"));
+    }));
     render(<ClientDetailPage customerId="cus-1" search="?sectiune=lucrari" />);
-    const table = await screen.findByRole("table", { name: "Lucrări" });
-    expect(within(table).getByRole("link", { name: /Fișa lucrării/ })).toHaveAttribute("href", "/lucrari/job-1");
-    expect(within(table).getByRole("link", { name: /Lucrare finalizată/ })).toHaveAttribute("href", "/lucrari/job-2");
+    // N-020 etapa 4 (644:12426): the way in is the card's own button, named with the work.
+    expect(await screen.findByRole("link", { name: "Deschide fișa lucrării: Litere Nord" })).toHaveAttribute("href", "/lucrari/job-1");
+    expect(screen.getByRole("link", { name: "Deschide înregistrarea: Firmă 2021" })).toHaveAttribute("href", "/clienti/cus-1?sectiune=lucrari&lucrare=h1");
+    expect(screen.getByText("2 lucrări · 1 în WorkOS · 1 înregistrare istorică")).toBeInTheDocument();
   });
 
   it("restores a future section from the URL", async () => {
-    window.history.replaceState({}, "", "/clienti/cus-1?sectiune=documente");
+    window.history.replaceState({}, "", "/clienti/cus-1?sectiune=portofoliu");
     vi.stubGlobal(
       "fetch",
       vi.fn(() => jsonResponse(200, workspace("cus-1", "Atelier Nord"))),
     );
     render(<ClientDetailPage customerId="cus-1" />);
-    expect(await screen.findByText(/Facturile, contractele și anexele/)).toBeInTheDocument();
+    expect(await screen.findByText(/portofoliul acestui client/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /încarcă|semnează|emite/i })).not.toBeInTheDocument();
   });
 
@@ -384,17 +402,22 @@ describe("ClientDetailPage", () => {
     );
 
     render(<ClientDetailPage customerId="cus-1" />);
-    const table = await screen.findByRole("table", { name: "Oferte" });
-    const rows = table.querySelectorAll("tbody tr");
-    expect(rows).toHaveLength(3);
-    expect(screen.getByRole("link", { name: /OF-1/ })).toHaveAttribute(
+    const table = await screen.findByRole("region", { name: "Cereri și oferte" });
+    expect(within(table).getByRole("link", { name: "Deschide oferta OF-1" })).toHaveAttribute(
       "href",
       "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/qts%3A1",
     );
-    expect(screen.getByRole("link", { name: /OF-NOU/ })).toHaveAttribute("href", "/oferte/ansamblu/asmq%3Anew");
-    expect(screen.getByRole("link", { name: /OF-VECHI/ })).toHaveAttribute("href", "/oferte/ansamblu/asmq%3Aold");
-    expect(screen.getAllByText("Ansamblu · Panou ACM + litere volumetrice · CRQ-104")).toHaveLength(2);
-    expect(screen.getByText("Înlocuită de o versiune mai nouă")).toBeInTheDocument();
+    expect(within(table).getByRole("link", { name: "Deschide oferta OF-NOU" })).toHaveAttribute("href", "/oferte/ansamblu/asmq%3Anew");
+    expect(within(table).getByRole("link", { name: "Deschide oferta OF-VECHI" })).toHaveAttribute("href", "/oferte/ansamblu/asmq%3Aold");
+    expect(within(table).getAllByText("Panou ACM + litere volumetrice")).toHaveLength(2);
+    // An offer without an amount in the list: neither hidden nor uncalculated is claimed, and it is never 0.
+    expect(within(table).getAllByText("Valoare indisponibilă")).toHaveLength(3);
+    // A superseded version (608:9487): the server's words, struck through, never the current offer.
+    const old = within(table).getByRole("link", { name: "Deschide oferta OF-VECHI" }).closest("li")!;
+    expect(old).toHaveAttribute("data-superseded", "true");
+    expect(within(old).getByText("Înlocuită de o versiune mai nouă")).toBeInTheDocument();
+    expect(within(old).getByText("Nu e oferta curentă")).toBeInTheDocument();
+    // An order whose job is not in the list keeps the server's way in.
     expect(screen.getByRole("link", { name: /Deschide comanda/ })).toHaveAttribute("href", "/lucrari/asmo%3A1");
     expect(table.querySelectorAll('a[href^="/quotes/SIGN_ASSEMBLY"]')).toHaveLength(0);
   });
@@ -451,50 +474,65 @@ describe("ClientDetailPage", () => {
       }));
     }
 
-    it("shows what waits now with the server step, threads by request and an honest journal note", async () => {
-      window.history.replaceState({}, "", "/clienti/cus-1");
+    it("shows every request with its state apart from its commercial progress, and each offer once", async () => {
+      window.history.replaceState({}, "", "/clienti/cus-1?sectiune=cereri");
       serve();
       render(<Harness customerId="cus-1" />);
-      const now = await screen.findByRole("region", { name: "Acum" });
-      expect(within(now).getByText("Urmează acceptarea")).toBeInTheDocument();
-      expect(within(now).getByRole("link", { name: /Marchează acceptată|Acceptă|ofert/i })).toBeInTheDocument();
-      const threads = screen.getByRole("region", { name: "Fire pe cerere" });
-      const thread = within(threads).getByRole("button", { name: "Previzualizează cererea Firmă luminoasă" }).closest("li")!;
-      expect(within(thread).getByRole("link", { name: "OF-1" })).toBeInTheDocument();
-      // No journal source: a quiet note after the content, not a section or a reserved column.
-      const note = screen.getByText("Jurnalul relației nu este disponibil în această etapă.");
-      expect(note.tagName).toBe("P");
-      expect(screen.queryByRole("heading", { name: "Jurnalul relației" })).toBeNull();
-      expect(threads.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-      expect(screen.getByRole("link", { name: "Relație" })).toHaveAttribute("aria-current", "page");
+      const view = await screen.findByRole("region", { name: "Cereri și oferte" });
+      // Pe cereri (640:11188): the request once, its state as the server sends it, the progress apart.
+      const card = within(view).getByRole("heading", { level: 3, name: "Firmă luminoasă" }).closest("li")!;
+      expect(within(card).getByText("Deschisă")).toBeInTheDocument();
+      expect(within(card).getByText("1 ofertă în așteptare · fără lucrare")).toBeInTheDocument();
+      expect(within(card).getByRole("link", { name: "Vezi în Istoric: Firmă luminoasă" })).toHaveAttribute("href", "/clienti/cus-1?deschis=project%3Areq-1");
+      expect(within(card).getByRole("link", { name: "Deschide cererea CRQ-104" })).toHaveAttribute("href", "/cereri/req-1");
+      // The offer: the server's attention reason, no work yet, its two ways in.
+      const offer = within(card).getByRole("link", { name: "Deschide oferta OF-1" }).closest("li")!;
+      expect(offer).toHaveAttribute("data-attention", "true");
+      expect(within(offer).getByText("Urmează acceptarea")).toBeInTheDocument();
+      expect(within(offer).getByText("Fără lucrare · oferta nu are comandă")).toBeInTheDocument();
+      expect(within(offer).getByRole("button", { name: "Previzualizează oferta OF-1" })).toBeInTheDocument();
+      // Reached directly (not from Istoric), there is no way back to name.
+      expect(within(view).queryByRole("link", { name: "← Istoric" })).toBeNull();
+      expect(screen.getByRole("link", { name: /^Cereri și oferte/ })).toHaveAttribute("aria-current", "page");
     });
 
-    it("pushes the first preview, closes with Esc through Back and returns focus to the opener", async () => {
-      window.history.replaceState({}, "", "/clienti/cus-1");
+    it("pushes the first offer preview, closes it with Esc through Back and returns focus to the opener", async () => {
+      window.history.replaceState({}, "", "/clienti/cus-1?sectiune=cereri");
       serve();
       render(<Harness customerId="cus-1" />);
-      const opener = await screen.findByRole("button", { name: "Previzualizează cererea Firmă luminoasă" });
+      const opener = await screen.findByRole("button", { name: "Previzualizează oferta OF-1" });
       const before = window.history.length;
       await userEvent.click(opener);
-      expect(window.location.search).toBe("?cerere=req-1");
+      expect(window.location.search).toBe("?sectiune=cereri&oferta=qts%3A1");
       expect(window.history.length).toBe(before + 1);
-      expect(await screen.findByRole("dialog", { name: "Previzualizare cerere" })).toBeInTheDocument();
+      const dialog = await screen.findByRole("dialog", { name: "Oferta OF-1" });
+      // The focus starts on the offer's title (659:14083); the list behind keeps its place.
+      await waitFor(() => expect(within(dialog).getByRole("heading", { level: 2, name: "Litere volumetrice" })).toHaveFocus());
       await userEvent.keyboard("{Escape}");
-      await waitFor(() => expect(window.location.search).toBe(""));
+      await waitFor(() => expect(window.location.search).toBe("?sectiune=cereri"));
       await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
       await waitFor(() => expect(opener).toHaveFocus());
     });
 
-    it("opens a direct link to a preview and closes it by replacing the entry", async () => {
+    it("opens a direct link to an offer preview and closes it by replacing the entry", async () => {
+      window.history.replaceState({}, "", "/clienti/cus-1?sectiune=cereri&oferta=qts%3A1");
+      serve();
+      render(<Harness customerId="cus-1" />);
+      expect(await screen.findByRole("dialog", { name: "Oferta OF-1" })).toBeInTheDocument();
+      const before = window.history.length;
+      await userEvent.click(screen.getByRole("button", { name: "Închide" }));
+      expect(window.location.pathname).toBe("/clienti/cus-1");
+      expect(window.location.search).toBe("?sectiune=cereri");
+      expect(window.history.length).toBe(before);
+    });
+
+    it("opens a former request-preview link on Cereri și oferte, at that request", async () => {
       window.history.replaceState({}, "", "/clienti/cus-1?cerere=req-1");
       serve();
       render(<Harness customerId="cus-1" />);
-      expect(await screen.findByRole("dialog", { name: "Previzualizare cerere" })).toBeInTheDocument();
-      const before = window.history.length;
-      await userEvent.click(screen.getByRole("button", { name: /Închide dosarul|Registru/ }));
-      expect(window.location.pathname).toBe("/clienti/cus-1");
-      expect(window.location.search).toBe("");
-      expect(window.history.length).toBe(before);
+      const view = await screen.findByRole("region", { name: "Cereri și oferte" });
+      expect(within(view).getByRole("heading", { level: 3, name: "Firmă luminoasă" }).closest("li")).toHaveAttribute("data-arrival-target", "true");
+      expect(screen.queryByRole("dialog")).toBeNull();
     });
   });
   it("says once, right after Client nou, that the client was registered (N-018)", async () => {

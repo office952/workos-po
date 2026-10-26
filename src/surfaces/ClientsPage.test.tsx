@@ -104,7 +104,7 @@ describe("ClientsPage", () => {
     expect(within(card).getByText("CUI RO41234567")).toBeInTheDocument();
     expect(within(card).getByRole("link", { name: "0722 000 111" })).toHaveAttribute("href", "tel:0722000111");
     expect(within(card).getByRole("link", { name: "ioana@lumen.test" })).toHaveAttribute("href", "mailto:ioana@lumen.test");
-    expect(await within(card).findByText("Clientul nu are încă cereri, oferte sau lucrări.")).toBeInTheDocument();
+    expect(await within(card).findByText("Clientul nu are încă cereri, oferte sau lucrări în WorkOS.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Cerere nouă/ })).toHaveAttribute("href", "/cereri/noua?customer=cus-l");
   });
 
@@ -168,7 +168,7 @@ describe("ClientsPage", () => {
     expect(screen.getByRole("link", { name: "Alpha Clima SRL" })).toBeInTheDocument();
     fail = false;
     await userEvent.click(screen.getByRole("button", { name: "Reîncearcă" }));
-    expect(await screen.findByText("Clientul nu are încă cereri, oferte sau lucrări.")).toBeInTheDocument();
+    expect(await screen.findByText("Clientul nu are încă cereri, oferte sau lucrări în WorkOS.")).toBeInTheDocument();
   });
 
   it("never shows a late card answer for a client that is no longer selected", async () => {
@@ -184,7 +184,7 @@ describe("ClientsPage", () => {
     await screen.findByText("Se citesc documentele clientului…");
     rerender(<ClientsPage search="?client=cus-l" />);
     const card = await screen.findByRole("article", { name: "Cartela clientului Lumen Signs SRL" });
-    expect(await within(card).findByText("Clientul nu are încă cereri, oferte sau lucrări.")).toBeInTheDocument();
+    expect(await within(card).findByText("Clientul nu are încă cereri, oferte sau lucrări în WorkOS.")).toBeInTheDocument();
     await act(async () => { releaseAlpha(); });
     expect(screen.queryByText("OF-LATE")).not.toBeInTheDocument();
     expect(screen.getByRole("article", { name: "Cartela clientului Lumen Signs SRL" })).toBeInTheDocument();

@@ -1,0 +1,629 @@
+/* N-020 · Dosarul clientului: Istoric, Documente, Fotografii, Sedii, Date comerciale.
+   Functional validation surface; the final vertical-history design comes later. Tokens only. */
+
+.cdos {
+  display: grid;
+  gap: var(--space-16);
+  min-width: 0;
+  padding: var(--space-16) var(--chub-gutter, var(--page-gutter)) var(--space-32);
+}
+
+.cdos-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-12) var(--space-24);
+}
+
+.cdos-title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 20px/1.25 var(--font-sans);
+}
+
+.cdos-title--small {
+  font-size: 16px;
+}
+
+.cdos-sub {
+  max-width: var(--readable-text-width, 72ch);
+  margin: 4px 0 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.45 var(--font-sans);
+}
+
+.cdos-sub--right {
+  margin: 0;
+  text-align: right;
+}
+
+/* ─── Fields (native controls, same look as field__control) ─── */
+.cdos-filters,
+.cdos-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+  align-items: flex-end;
+}
+
+.cdos-field {
+  display: grid;
+  flex: 1 1 160px;
+  gap: 4px;
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font: 500 12px/1.3 var(--font-sans);
+}
+
+.cdos-field--grow {
+  flex: 3 1 260px;
+}
+
+.cdos-filters > .cdos-field:not(.cdos-field--grow) {
+  max-width: 280px;
+}
+
+.cdos-field--wide {
+  grid-column: 1 / -1;
+}
+
+.cdos-field input:not([type="checkbox"]):not([type="file"]),
+.cdos-field select,
+.cdos-field textarea {
+  width: 100%;
+  min-height: var(--target-min);
+  padding: 0 var(--space-12);
+  border: var(--stroke) solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: 400 14px/1.4 var(--font-sans);
+}
+
+.cdos-field textarea {
+  padding-block: var(--space-8);
+  resize: vertical;
+}
+
+.cdos-field input[type="file"] {
+  min-height: var(--target-min);
+  color: var(--color-text-primary);
+}
+
+.cdos-field small {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.cdos-field__error {
+  color: var(--color-danger) !important;
+}
+
+.cdos-field :disabled {
+  background: var(--color-surface-raised);
+  color: var(--color-text-secondary);
+}
+
+.cdos input:focus-visible,
+.cdos select:focus-visible,
+.cdos textarea:focus-visible,
+.cdos button:focus-visible,
+.cdos a:focus-visible,
+.cdos-form :focus-visible {
+  outline: var(--focus-width, 2px) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.cdos-form {
+  display: grid;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.cdos-actions,
+.cdos-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8) var(--space-12);
+  align-items: center;
+}
+
+.cdos-link,
+.cdos-doc__open {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--shell-signal, var(--color-info));
+  font: 500 13px/1.4 var(--font-sans);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.cdos-link:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+.cdos-count {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 500 12px/1.3 var(--font-mono);
+}
+
+/* ─── History: one vertical list, newest first ─── */
+.cdos-timeline {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 2px solid var(--color-border);
+}
+
+.cdos-entry {
+  position: relative;
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  gap: var(--space-16);
+  padding: var(--space-16) 0 var(--space-16) var(--space-16);
+  border-bottom: 1px solid var(--color-border-subtle, var(--color-border));
+}
+
+.cdos-entry::before {
+  position: absolute;
+  top: 22px;
+  left: -7px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--color-surface);
+  border-radius: 50%;
+  background: var(--color-text-muted);
+  content: "";
+}
+
+.cdos-entry[data-state="FINALIZAT"]::before { background: var(--color-success); }
+.cdos-entry[data-state="OFERTARE"]::before { background: var(--color-info); }
+.cdos-entry[data-kind="HISTORICAL_WORK"]::before { background: var(--color-surface); border-color: var(--color-success); }
+
+.cdos-entry__when {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+}
+
+.cdos-entry__date {
+  color: var(--color-text-primary);
+  font: 600 13px/1.3 var(--font-mono);
+}
+
+.cdos-entry__state {
+  color: var(--color-text-secondary);
+  font: 500 12px/1.3 var(--font-sans);
+}
+
+.cdos-entry__body {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cdos-entry__title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--space-8);
+  align-items: baseline;
+  margin: 0;
+  font: 600 15px/1.35 var(--font-sans);
+}
+
+.cdos-entry__title a {
+  color: var(--color-text-primary);
+}
+
+.cdos-entry__ref {
+  color: var(--color-text-secondary);
+  font: 500 12px/1.3 var(--font-mono);
+}
+
+.cdos-entry__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px var(--space-12);
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+.cdos-entry__provenance[data-provenance="HISTORICAL_RECORD"] {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.cdos-entry__description {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 400 13px/1.45 var(--font-sans);
+  white-space: pre-line;
+}
+
+.cdos-entry__relations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--space-16);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+.cdos-entry__relations li {
+  display: flex;
+  gap: 6px;
+}
+
+.cdos-entry__relations span {
+  color: var(--color-text-secondary);
+}
+
+.cdos-entry__docs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.cdos-entry__match {
+  margin: 0;
+  color: var(--color-text-muted);
+  font: 400 12px/1.3 var(--font-sans);
+}
+
+.cdos-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+  align-items: center;
+  justify-content: space-between;
+  color: var(--color-text-secondary);
+  font: 500 13px/1.3 var(--font-sans);
+}
+
+/* ─── Documents ─── */
+.cdos-doc {
+  display: inline-flex;
+  gap: var(--space-8);
+  align-items: center;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 4px var(--space-8) 4px 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.cdos-doc__thumb,
+.cdos-doc__icon {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.cdos-doc__icon {
+  display: grid;
+  place-items: center;
+  background: var(--color-surface-alt, var(--color-surface-raised));
+  color: var(--color-text-secondary);
+  font: 600 10px/1 var(--font-mono);
+}
+
+.cdos-doc__text {
+  display: grid;
+  min-width: 0;
+}
+
+.cdos-doc__open {
+  overflow: hidden;
+  max-width: 260px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cdos-doc__meta {
+  display: block;
+  color: var(--color-text-secondary);
+  font: 400 12px/1.3 var(--font-sans);
+}
+
+.cdos-doc__download {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.cdos-places {
+  display: grid;
+  gap: 2px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.cdos-places--none {
+  color: var(--color-text-muted);
+}
+
+.cdos-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-16);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cdos-photo {
+  display: grid;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.cdos-photo__open {
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-raised);
+  cursor: zoom-in;
+}
+
+.cdos-photo__open img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-control);
+  object-fit: cover;
+}
+
+.cdos-photo__text {
+  display: grid;
+  gap: 2px;
+}
+
+.cdos-photo__stage {
+  color: var(--color-text-secondary);
+  font: 600 11px/1.3 var(--font-sans);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cdos-photo__title {
+  color: var(--color-text-primary);
+  font: 500 14px/1.35 var(--font-sans);
+}
+
+/* Dossier dialogs reuse CreationDialog; a long form needs more room than 32rem. */
+.creation-dialog:has(.cdos-form) {
+  width: min(44rem, calc(100% - 32px));
+}
+
+.cdos-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-8) var(--space-16);
+}
+
+.cdos-links__group {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.cdos-links__group legend {
+  margin-bottom: 4px;
+  color: var(--color-text-primary);
+  font: 600 12px/1.3 var(--font-sans);
+}
+
+.cdos-check {
+  display: flex;
+  gap: var(--space-8);
+  align-items: flex-start;
+  min-height: 28px;
+  color: var(--color-text-primary);
+  font: 400 13px/1.35 var(--font-sans);
+}
+
+.cdos-check input {
+  margin-top: 2px;
+}
+
+.cdos-current-links {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+.cdos-current-links li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+  justify-content: space-between;
+}
+
+.cdos-confirm {
+  display: grid;
+  gap: var(--space-12);
+  margin-bottom: var(--space-12);
+}
+
+/* ─── 768: the date column narrows ─── */
+@media (max-width: 1023px) {
+  .cdos-entry {
+    grid-template-columns: 112px minmax(0, 1fr);
+  }
+}
+
+/* ─── 390: one column; tables read as stacked rows ─── */
+@media (max-width: 767px) {
+  .cdos {
+    padding-inline: 16px;
+    padding-bottom: 96px;
+  }
+
+  .cdos-entry {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .cdos-entry__when {
+    display: flex;
+    gap: var(--space-8);
+  }
+
+  .cdos-sub--right {
+    text-align: left;
+  }
+
+  .cdos-doc__open {
+    max-width: 200px;
+  }
+
+  .cdos-form {
+    min-width: 0;
+  }
+
+}
+
+/* ─── Branches of a request: quote → order → job, each with its own state ─── */
+.cdos-branches {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+.cdos-branch {
+  display: grid;
+  grid-template-columns: minmax(150px, max-content) minmax(0, 1fr);
+  gap: 2px var(--space-12);
+  align-items: baseline;
+  padding: 4px 0 4px var(--space-8);
+  border-left: 3px solid var(--color-border-strong);
+}
+
+.cdos-branch[data-state="FINALIZAT"] { border-left-color: var(--color-success); }
+.cdos-branch[data-state="IN_EXECUTIE"],
+.cdos-branch[data-state="PLAN_PREGATIT"],
+.cdos-branch[data-state="ELIBERATA"] { border-left-color: var(--color-warning); }
+.cdos-branch[data-state="COMANDA_CREATA"],
+.cdos-branch[data-state="OFERTA_ACCEPTATA"],
+.cdos-branch[data-state="OFERTARE"] { border-left-color: var(--color-info); }
+
+.cdos-branch__state {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.cdos-branch__chain {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.cdos-branch__note {
+  color: var(--color-text-secondary);
+}
+
+.cdos-entry[data-state="IN_EXECUTIE"]::before,
+.cdos-entry[data-state="PLAN_PREGATIT"]::before,
+.cdos-entry[data-state="ELIBERATA"]::before { background: var(--color-warning); }
+.cdos-entry[data-state="COMANDA_CREATA"]::before,
+.cdos-entry[data-state="OFERTA_ACCEPTATA"]::before { background: var(--color-info); }
+
+@media (max-width: 767px) {
+  .cdos-branch {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ─── Lucrări: every work of the client (WorkOS + historical) ─── */
+.cdos-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.cdos-kind {
+  display: inline-flex;
+  gap: var(--space-8);
+  align-items: center;
+  min-height: var(--target-min);
+  padding: 0 var(--space-12);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: 500 13px/1.3 var(--font-sans);
+  cursor: pointer;
+}
+
+.cdos-kind[aria-pressed="true"] {
+  border-color: var(--shell-signal, var(--color-info));
+  box-shadow: inset 0 -2px 0 var(--shell-signal, var(--color-info));
+  font-weight: 600;
+}
+
+.cdos-kind__count {
+  color: var(--color-text-secondary);
+  font: 500 12px/1 var(--font-mono);
+}
+
+.cdos-works {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--color-border);
+}
+
+.cdos-back {
+  justify-self: start;
+  color: var(--shell-signal, var(--color-info));
+  font: 500 13px/1.3 var(--font-sans);
+}
+
+.cdos-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8) var(--space-24);
+  margin: var(--space-8) 0 0;
+}
+
+.cdos-facts div {
+  display: grid;
+  gap: 2px;
+}
+
+.cdos-facts dt {
+  color: var(--color-text-secondary);
+  font: 500 12px/1.3 var(--font-sans);
+}
+
+.cdos-facts dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 400 14px/1.4 var(--font-sans);
+}

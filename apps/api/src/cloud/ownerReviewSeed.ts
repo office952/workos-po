@@ -44,7 +44,7 @@ export type OwnerReviewSeedReport = {
 };
 
 const LETTERS = "PRD-LETTERS-FRONTLIT-PLEXI-AL06";
-const ACM = "PRD-ACM-CASSETTE-NONE";
+export const ACM = "PRD-ACM-CASSETTE-NONE";
 // Synthetic review data only; new quotes require an Owner-entered manual net price.
 const SYNTHETIC_MANUAL_NET_PRICE = 500;
 
@@ -59,7 +59,7 @@ function lettersValues(inscription: string): Record<string, unknown> {
   };
 }
 
-function acmValues(inscription: string): Record<string, unknown> {
+export function acmValues(inscription: string): Record<string, unknown> {
   return {
     "root.inscription": inscription,
     "face.widthMm": 1000,
@@ -68,7 +68,7 @@ function acmValues(inscription: string): Record<string, unknown> {
   };
 }
 
-async function requireOk(
+export async function requireOk(
   response: SeedHttpResponse,
   label: string,
 ): Promise<Record<string, unknown>> {
@@ -152,7 +152,7 @@ async function ensureSeller(client: SeedHttpClient): Promise<void> {
   );
 }
 
-async function quotesForRequest(
+export async function quotesForRequest(
   client: SeedHttpClient,
   requestId: string,
 ): Promise<Array<Record<string, unknown>>> {

@@ -203,20 +203,29 @@ export function DossierDialog({
   layout,
   onClose,
   children,
+  variant,
+  label = "Dosarul ofertei",
+  initialFocus = "[data-dossier-close]",
 }: {
   layout: QuotesLayout;
   onClose: () => void;
   children: ReactNode;
+  /** The offer preview of Cereri și oferte: a 560 px drawer, a sheet on the phone (668:15454 / 668:16010). */
+  variant?: "drawer";
+  label?: string;
+  /** Where the focus goes when the dialog opens. */
+  initialFocus?: string;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
+  const initialFocusRef = useRef(initialFocus);
   useEffect(() => {
     closeRef.current = onClose;
   }, [onClose]);
 
   useEffect(() => {
     const panel = panelRef.current;
-    panel?.querySelector<HTMLElement>("[data-dossier-close]")?.focus();
+    panel?.querySelector<HTMLElement>(initialFocusRef.current)?.focus();
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function onKeyDown(event: globalThis.KeyboardEvent) {
@@ -248,9 +257,9 @@ export function DossierDialog({
   }, []);
 
   return (
-    <div className="offers-dialog" data-layout={layout}>
+    <div className="offers-dialog" data-layout={layout} data-variant={variant}>
       <div className="offers-dialog__scrim" aria-hidden="true" onClick={onClose} />
-      <div ref={panelRef} className="offers-dialog__panel" role="dialog" aria-modal="true" aria-label="Dosarul ofertei">
+      <div ref={panelRef} className="offers-dialog__panel" role="dialog" aria-modal="true" aria-label={label}>
         {children}
       </div>
     </div>

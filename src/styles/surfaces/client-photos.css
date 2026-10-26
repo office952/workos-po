@@ -1,0 +1,620 @@
+/* N-020 etapa 6 · Fotografii (Figma 675:17860 / 675:18371 galerie 1440, 675:18640 filtrat,
+   707:21500 la 1280, 707:21048 la 768, 677:18467 / 677:18746 telefon, 677:18943 la 360,
+   Noapte 679:19396 / 679:19805, stări 679:18951, colecție mare 679:18994). Machine theme tokens
+   only (Light and Night); `data-mode` switches desktop / tablet / phone like Documente. The images
+   keep the existing photo frame (3:2, cover, stage and "Ilustrativ" marks on the image). */
+
+.dpgal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  min-width: 0;
+  padding: 6px 0 40px;
+}
+
+.dpgal__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
+.dpgal__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  min-width: 0;
+}
+
+.dpgal__title {
+  margin: 0;
+  font: 600 26px/1.2 var(--font-brand);
+}
+
+.dpgal__totals {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.3 var(--font-sans);
+}
+
+.dpgal__upload {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--shell-signal);
+  background: var(--shell-signal);
+  color: var(--wos-paper);
+  font: 600 14px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.dpgal__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.dpgal__search {
+  display: flex;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.dpgal__field {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 12px 0 14px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel);
+  color: var(--color-text-muted);
+}
+
+.dpgal__field:focus-within {
+  border-color: var(--shell-signal);
+  box-shadow: inset 0 0 0 1px var(--shell-signal);
+}
+
+.dpgal__field input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 38px;
+  border: 0;
+  background: none;
+  color: var(--color-text-primary);
+  font: 400 14px/1.2 var(--font-sans);
+  outline: none;
+}
+
+.dpgal__field input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.dpgal__clear {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+  font: 600 13px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.dpgal__menus {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dpgal__sheet-button,
+.dpgal__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--wos-paper);
+  color: var(--color-text-primary);
+  font: 600 14px/1.2 var(--font-sans);
+  cursor: pointer;
+}
+
+.dpgal__sheet-button[data-active] {
+  border-color: var(--shell-signal);
+}
+
+.dpgal__result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 20px;
+  min-height: 54px;
+  padding: 12px 14px;
+  background: var(--shell-deck);
+}
+
+.dpgal__result-text {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  font: 400 14px/1.4 var(--font-sans);
+}
+
+.dpgal__result-text strong {
+  font-weight: 600;
+}
+
+.dpgal__result-text span {
+  color: var(--color-text-secondary);
+}
+
+.dpgal__result-actions,
+.dpgal__state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.dpgal__open {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dpgal__result-actions button,
+.dpgal__open {
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+  font: 600 14px/1.3 var(--font-sans);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.dpgal__result-actions button:hover,
+.dpgal__open:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dpgal__notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: end;
+  margin: 0;
+  padding: 10px 14px;
+  background: var(--color-text-primary);
+  color: var(--wos-paper);
+  font: 500 13.5px/1.3 var(--font-sans);
+}
+
+.dpgal__state {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding: 18px 20px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel);
+  color: var(--color-text-secondary);
+  font: 400 14px/1.45 var(--font-sans);
+}
+
+.dpgal__state p {
+  margin: 0;
+}
+
+.dpgal__state-title {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.dpgal__skeleton {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 160px));
+  gap: 10px;
+  justify-self: stretch;
+}
+
+.dpgal__skeleton span {
+  aspect-ratio: 3 / 2;
+  background: var(--shell-panel-strong);
+}
+
+/* ─── Years and the adaptive grid (R1 · 897:36578) ───
+   The years in dossier, each a block; the project cards inside in the server's order, each as wide
+   as its photos and wrapping; small years side by side. Nothing is reordered to fill a gap. */
+.dpgal {
+  --dpgal-tile: 300px;
+}
+
+.dpgal__years {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+}
+
+.dpgal__years-label {
+  margin-right: 4px;
+  color: var(--color-text-secondary);
+  font: 500 13px/1.3 var(--font-sans);
+}
+
+.dpgal__year-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--cdh-radius, 6px);
+  background: none;
+  cursor: pointer;
+}
+
+.dpgal__year-link:hover {
+  background: var(--shell-deck);
+}
+
+.dpgal__year-number {
+  color: var(--shell-signal-deep);
+  font: 600 14px/1 var(--font-sans);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dpgal__year-count {
+  color: var(--color-text-secondary);
+  font: 400 13px/1 var(--font-sans);
+}
+
+.dpgal__blocks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 28px 32px;
+}
+
+.dpgal__year {
+  display: grid;
+  flex: 0 1 auto;
+  gap: 12px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.dpgal__year-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  font: 600 26px/1.1 var(--font-brand);
+  scroll-margin-top: var(--dh-sticky-top, 120px);
+}
+
+.dpgal__year-title span {
+  color: var(--color-text-muted);
+  font: 500 12px/1 var(--font-mono);
+}
+
+.dpgal__year-title:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 4px;
+}
+
+/* ─── Groups (675:18371) ─── */
+.dpgal__groups {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dpgal__group {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  padding: 16px 16px 18px;
+  border: 1px solid var(--shell-edge);
+  border-radius: var(--cdh-card-radius, 8px);
+  background: var(--shell-panel);
+}
+
+/* The link stays under the title, so a card as narrow as one photo never squeezes it. */
+.dpgal__group-head {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.dpgal__group-heading {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dpgal__group-title {
+  margin: 0;
+  font: 600 18px/1.3 var(--font-brand);
+  overflow-wrap: anywhere;
+}
+
+.dpgal__group-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+.dpgal__site {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-primary);
+}
+
+.dpgal__count {
+  font: 500 12px/1.3 var(--font-mono);
+}
+
+.dpgal__group-head .dpgal__open {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+}
+
+/* The photos keep their size and proportion (3:2): the card is as wide as they are. */
+.dpgal__tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dpgal__tile {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  width: var(--dpgal-tile);
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 1379px) {
+  .dpgal {
+    --dpgal-tile: 264px;
+  }
+}
+
+.dpgal__tile[data-saved] .dphoto {
+  outline: 2px solid var(--shell-signal);
+  outline-offset: 2px;
+}
+
+.dpgal__caption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font: 600 13.5px/1.3 var(--font-sans);
+}
+
+.dpgal__stage {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dpgal__date {
+  flex: none;
+  color: var(--color-text-secondary);
+  font: 500 12.5px/1.3 var(--font-mono);
+}
+
+.dpgal__sub,
+.dpgal__also {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 12.5px/1.4 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.dpgal__also {
+  color: var(--color-text-muted);
+}
+
+.dpgal__menu {
+  position: relative;
+  flex: none;
+}
+
+.dpgal__more {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--shell-edge-strong);
+  border-radius: var(--cdh-radius, 6px);
+  background: var(--shell-panel);
+  color: var(--color-text-primary);
+  font: 600 16px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.dpgal__more:hover,
+.dpgal__more[aria-expanded="true"] {
+  border-color: var(--color-text-primary);
+  background: var(--shell-deck);
+}
+
+.dpgal__menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  display: grid;
+  min-width: 200px;
+  padding: 6px;
+  border: 1px solid var(--shell-edge-strong);
+  border-radius: var(--cdh-card-radius, 8px);
+  background: var(--shell-panel);
+  box-shadow: 0 12px 28px rgb(0 0 0 / 18%);
+}
+
+.dpgal__menu-panel a,
+.dpgal__menu-panel button {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 0;
+  background: none;
+  color: var(--color-text-primary);
+  font: 500 14px/1.2 var(--font-sans);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.dpgal__menu-panel a,
+.dpgal__menu-panel button {
+  border-radius: var(--cdh-radius, 6px);
+}
+
+.dpgal__menu-panel a:hover,
+.dpgal__menu-panel button:hover {
+  background: var(--shell-deck);
+}
+
+.dpgal__group-foot {
+  margin: 12px 0 0;
+}
+
+.dpgal__note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font: 400 12.5px/1.4 var(--font-sans);
+}
+
+.dpgal a:focus-visible,
+.dpgal button:focus-visible,
+.dpgal input:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ─── Tablet (898:89330): years and cards stacked, two photos per row inside a card ─── */
+.dpgal[data-mode="tablet"] .dpgal__years,
+.dpgal[data-mode="phone"] .dpgal__years {
+  gap: 0 4px;
+}
+
+.dpgal[data-mode="tablet"] .dpgal__year,
+.dpgal[data-mode="tablet"] .dpgal__group,
+.dpgal[data-mode="phone"] .dpgal__year,
+.dpgal[data-mode="phone"] .dpgal__group {
+  flex-basis: 100%;
+}
+
+.dpgal[data-mode="tablet"] .dpgal__tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dpgal[data-mode="tablet"] .dpgal__tile,
+.dpgal[data-mode="phone"] .dpgal__tile {
+  width: auto;
+}
+
+/* ─── Phone (677:18467 / 677:18943): two small photos per row, the link under the group ─── */
+.dpgal[data-mode="phone"] .dpgal__title {
+  font-size: 22px;
+}
+
+.dpgal[data-mode="phone"] .dpgal__totals {
+  font: 500 12px/1.3 var(--font-mono);
+}
+
+.dpgal[data-mode="phone"] .dpgal__search {
+  flex-basis: 0;
+}
+
+.dpgal[data-mode="phone"] .dpgal__field,
+.dpgal[data-mode="phone"] .dpgal__sheet-button,
+.dpgal[data-mode="phone"] .dpgal__upload {
+  min-height: 44px;
+}
+
+.dpgal[data-mode="phone"] .dpgal__result {
+  flex-wrap: nowrap;
+}
+
+.dpgal[data-mode="phone"] .dpgal__result-text {
+  display: grid;
+  gap: 2px;
+}
+
+.dpgal[data-mode="phone"] .dpgal__group {
+  padding: 14px 12px;
+}
+
+.dpgal[data-mode="phone"] .dpgal__group-title {
+  font-size: 17px;
+}
+
+.dpgal[data-mode="phone"] .dpgal__tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 8px;
+}
+
+.dpgal[data-mode="phone"] .dpgal__year-title {
+  font-size: 22px;
+}
+
+.dpgal[data-mode="phone"] .dpgal__caption {
+  font-size: 12.5px;
+}
+
+.dpgal[data-mode="phone"] .dpgal__sub,
+.dpgal[data-mode="phone"] .dpgal__also {
+  font-size: 12px;
+}
+
+.dpgal[data-mode="phone"] .dpgal__open {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+}

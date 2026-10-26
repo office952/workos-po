@@ -103,7 +103,7 @@ export function useUnsavedChangesGuard({ dirty, subject, save, onHold, onDiscard
     leave();
   }
 
-  const where = describeDestination(held.destination);
+  const where = describeDestination(held.destination, window.location.pathname);
   const canSave = Boolean(save);
   return (
     <CreationDialog title="Ai modificări nesalvate" busy={saving} onDismiss={stay}>

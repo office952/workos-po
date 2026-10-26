@@ -1,0 +1,337 @@
+/* N-020 · the offer previewed over Cereri și oferte (Figma 668:15454 / 668:15766 desktop drawer
+   560 px; Noapte 648:14101; telefon 668:16010 / 668:16192: a sheet whose short head and actions stay
+   while its content scrolls). The dialog itself is the dossier's (`offers-dialog`); machine theme
+   tokens only, so Light and Night share the rules. */
+
+.offers-dialog[data-variant="drawer"] .offers-dialog__panel {
+  width: min(560px, 100%);
+  overflow: hidden;
+  background: var(--wos-paper);
+}
+
+.odrawer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  color: var(--color-text-primary);
+}
+
+.odrawer__bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 66px;
+  padding: 12px 16px 12px 24px;
+  border-bottom: 1px solid var(--shell-edge);
+}
+
+.odrawer__kicker,
+.odrawer__short {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 500 11px/1.3 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.odrawer__short {
+  display: none;
+  color: var(--color-text-primary);
+  font: 600 13px/1.3 var(--font-mono);
+  letter-spacing: 0;
+}
+
+.odrawer__close,
+.odrawer__secondary {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--wos-paper);
+  color: var(--color-text-primary);
+  font: 600 14px/1 var(--font-sans);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.odrawer__body {
+  display: grid;
+  flex: 1 1 auto;
+  align-content: start;
+  gap: 18px;
+  min-height: 0;
+  padding: 20px 24px 24px;
+  overflow-y: auto;
+}
+
+.odrawer__title {
+  margin: 0;
+  font: 600 22px/1.25 var(--font-brand);
+  outline-offset: 4px;
+}
+
+.odrawer__for,
+.odrawer__text {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.45 var(--font-sans);
+}
+
+.odrawer__facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 0;
+}
+
+.odrawer__facts .dstate::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.odrawer__facts .dstate {
+  min-height: 24px;
+  gap: 7px;
+  border-radius: 0;
+  font-size: 12.5px;
+}
+
+.odrawer__facts .dstate svg {
+  display: none;
+}
+
+.odrawer__dates {
+  color: var(--color-text-secondary);
+  font: 400 12.5px/1.3 var(--font-sans);
+}
+
+.odrawer__part {
+  display: grid;
+  gap: 4px;
+}
+
+.odrawer__label {
+  margin: 0 0 4px;
+  color: var(--color-text-muted);
+  font: 500 10.5px/1.3 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.odrawer__rows {
+  display: grid;
+  margin: 0;
+}
+
+.odrawer__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 33px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--shell-edge);
+}
+
+.odrawer__row:last-child {
+  border-bottom: 0;
+}
+
+.odrawer__row dt {
+  color: var(--color-text-secondary);
+  font: 400 13.5px/1.35 var(--font-sans);
+}
+
+.odrawer__row dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 500 14px/1.35 var(--font-mono);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.odrawer__row[data-strong] dd {
+  font: 600 18px/1.25 var(--font-mono);
+}
+
+.odrawer__work {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 12px;
+  border: 1px solid var(--shell-edge);
+}
+
+.odrawer__work-text {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  min-width: 0;
+}
+
+.odrawer__work-title {
+  font: 600 14px/1.3 var(--font-sans);
+}
+
+.odrawer__work-meta {
+  color: var(--color-text-secondary);
+  font: 400 12.5px/1.35 var(--font-sans);
+}
+
+.odrawer__state {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+.odrawer__state[data-error] {
+  padding: 10px 12px;
+  border: 1px solid var(--shell-fault);
+  color: var(--color-text-primary);
+}
+
+.odrawer__state[data-error] p {
+  margin: 0;
+}
+
+.odrawer__skeleton {
+  display: block;
+  width: 60%;
+  height: 10px;
+  background: var(--shell-deck);
+}
+
+.odrawer__retry {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--wos-paper);
+  color: var(--color-text-primary);
+  font: 600 13px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.odrawer__actions {
+  display: grid;
+  flex: none;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 14px 24px 16px;
+  border-top: 1px solid var(--shell-edge);
+  background: var(--wos-paper);
+}
+
+.odrawer__primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  background: var(--shell-signal);
+  color: var(--shell-button-ink);
+  font: 600 14px/1 var(--font-sans);
+  text-decoration: none;
+}
+
+.odrawer__actions .odrawer__secondary {
+  min-height: 44px;
+}
+
+.odrawer__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 16px;
+  color: var(--shell-signal);
+  font: 600 14px/1 var(--font-sans);
+  text-decoration: none;
+}
+
+.odrawer__link:hover,
+.odrawer__primary:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.odrawer__action-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--shell-fault);
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+/* The title takes the focus when the preview opens (659:14083) so a reader starts there; it is not
+   a control, so it carries no ring. Every control keeps its visible focus. */
+.odrawer__title:focus {
+  outline: none;
+}
+
+.odrawer a:focus-visible,
+.odrawer button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Telefon (668:16010): a sheet from below the WorkOS bar; the short head and the actions stay. */
+@media (max-width: 767px) {
+  .offers-dialog[data-variant="drawer"] .offers-dialog__panel {
+    top: 24px;
+    left: 0;
+    width: auto;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .odrawer__bar {
+    min-height: 62px;
+    padding: 10px 16px;
+  }
+
+  .odrawer__kicker {
+    display: none;
+  }
+
+  .odrawer__short {
+    display: block;
+  }
+
+  .odrawer__body {
+    gap: 14px;
+    padding: 12px 16px 18px;
+  }
+
+  .odrawer__title {
+    font-size: 21px;
+  }
+
+  .odrawer__actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 12px 16px 14px;
+  }
+
+  .odrawer__primary {
+    grid-column: 1 / -1;
+  }
+
+  /* 668:16010: on the phone the request is a secondary button like the PDF one. */
+  .odrawer__link {
+    justify-content: center;
+    min-height: 44px;
+    border: 1px solid var(--shell-edge-strong);
+    color: var(--color-text-primary);
+  }
+}

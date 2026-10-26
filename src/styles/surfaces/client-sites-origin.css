@@ -1,0 +1,45 @@
+/* N-020 etapa 7 · the way back to Sedii above Istoric / Lucrări / Documente / Fotografii (712:22460,
+   712:22814, 719:75304, 712:23047): the back button, then the result line of the list, one row. */
+.dorigin {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 12px;
+  margin: 0;
+}
+
+.dorigin__back {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--wos-paper);
+  color: var(--color-text-primary);
+  font: 600 14px/1.2 var(--font-sans);
+  text-decoration: none;
+}
+
+.dorigin__back:hover {
+  border-color: var(--shell-signal);
+}
+
+.dorigin__back:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* The result line of the list keeps its own look and takes the rest of the row. */
+.dorigin > :not(.dorigin__back) {
+  flex: 1 1 320px;
+  min-width: 0;
+  margin: 0;
+}
+
+@media (max-width: 767px) {
+  .dorigin__back {
+    flex: 1 1 100%;
+    min-height: 44px;
+  }
+}

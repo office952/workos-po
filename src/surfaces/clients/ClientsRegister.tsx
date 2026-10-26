@@ -38,8 +38,11 @@ export function Monogram({ name, size }: { name: string; size?: "large" }) {
   return <span className="cagenda-mono" data-size={size} aria-hidden="true">{monogram(name)}</span>;
 }
 
-/** Open requests apart from the totals: openRequestCount vs quoteCount and jobCount. */
-export function Relation({ customer }: { customer: Pick<CustomerRegistryItemTransport, "openRequestCount" | "quoteCount" | "jobCount"> }) {
+/**
+ * Open requests apart from the totals: openRequestCount vs quoteCount and workCount. "lucrări" is
+ * every work of the client (WorkOS jobs and historical records, N-020), the same number as its tab.
+ */
+export function Relation({ customer }: { customer: Pick<CustomerRegistryItemTransport, "openRequestCount" | "quoteCount" | "jobCount" | "historicalWorkCount" | "workCount"> }) {
   return (
     <span className="cagenda-rel">
       <span className="cagenda-rel__open" data-zero={customer.openRequestCount === 0 || undefined}>
@@ -47,7 +50,7 @@ export function Relation({ customer }: { customer: Pick<CustomerRegistryItemTran
         Cereri deschise <strong>{customer.openRequestCount}</strong>
       </span>
       <span className="cagenda-rel__total">
-        <small>Total</small> oferte <strong>{customer.quoteCount}</strong> · lucrări <strong>{customer.jobCount}</strong>
+        <small>Total</small> oferte <strong>{customer.quoteCount}</strong> · <span title={`În WorkOS: ${customer.jobCount} · istorice: ${customer.historicalWorkCount}`}>lucrări <strong>{customer.workCount}</strong></span>
       </span>
     </span>
   );

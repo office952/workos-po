@@ -41,7 +41,7 @@ export function invalidateAfterAcceptQuote(
 ): void {
   const keys = [resourceKeys.quotes()];
   if (quoteSnapshotId) {
-    keys.push(resourceKeys.quoteEnvelope(quoteSnapshotId));
+    keys.push(resourceKeys.quoteEnvelope(quoteSnapshotId), resourceKeys.quotePreviewDetail(quoteSnapshotId));
   }
   if (requestId) {
     keys.push(resourceKeys.request(requestId));
@@ -56,7 +56,7 @@ export function invalidateAfterCreateOrder(
 ): void {
   const keys = [resourceKeys.quotes(), resourceKeys.jobs()];
   if (quoteSnapshotId) {
-    keys.push(resourceKeys.quoteEnvelope(quoteSnapshotId));
+    keys.push(resourceKeys.quoteEnvelope(quoteSnapshotId), resourceKeys.quotePreviewDetail(quoteSnapshotId));
   }
   if (requestId) {
     keys.push(resourceKeys.request(requestId));

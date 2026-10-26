@@ -1,0 +1,121 @@
+/* N-020 · the expanded WorkOS project in Istoric (Figma 813:31187 / 813:31490 desktop, 813:31793
+   768, 813:31918 390; Rând ofertă 605:8715, Rând document 557:3592). The request once, each offer
+   once with its work, the request's material apart from each work's. Colours are the machine
+   theme tokens (bg/paper = --wos-paper, bg/canvas = --color-canvas), so Light and Night share it. */
+
+/* ─── The request, once (Nod cerere) ─── */
+.hproj-request {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  min-height: 62px;
+  padding: 10px 14px;
+  border: 1px solid var(--shell-edge);
+  background: var(--wos-paper);
+}
+
+.hproj-request__kicker,
+.hproj-request__ref,
+.hproj-request__title,
+.hproj-request__meta {
+  margin: 0;
+}
+
+.hproj-request__kicker {
+  color: var(--color-text-muted);
+  font: 500 10.5px/1.3 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hproj-request__ref {
+  color: var(--color-text-primary);
+  font: 500 14px/1.3 var(--font-mono);
+}
+
+.hproj-request__title {
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.3 var(--font-sans);
+}
+
+.hproj-request__meta {
+  color: var(--color-text-muted);
+  font: 400 12px/1.3 var(--font-sans);
+}
+
+.hproj-request__open {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  margin-left: auto;
+  padding: 0 16px;
+  color: var(--shell-signal);
+  font: 600 14px/1 var(--font-sans);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.hproj-request__open:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ─── Offers and their works (the rows: client-offer-row.css) ─── */
+.hproj-branches .hcard__label {
+  margin-bottom: 10px;
+}
+
+/* ─── The request's photos and documents; each work's ─── */
+.hcard__none {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/19px var(--font-sans);
+}
+
+.hproj-works {
+  display: grid;
+  gap: 10px;
+}
+
+.hproj-works .hcard__label {
+  margin: 0;
+}
+
+.hproj-works__group {
+  display: grid;
+  gap: 6px;
+}
+
+.hproj-works__title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 13px/1.35 var(--font-sans);
+}
+
+/* ─── 768 (813:31793) and the phone (813:31918): "Restrânge" under the head, offers as cards ─── */
+@media (max-width: 1099px) {
+  .hcard[data-expanded][data-kind="PROJECT"] .hcard__head {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .hcard[data-expanded][data-kind="PROJECT"] .hcard__collapse {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 767px) {
+  .hproj-request {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 10px 12px;
+  }
+
+  .hproj-request__open {
+    margin-left: 0;
+    padding: 0 16px;
+  }
+}
