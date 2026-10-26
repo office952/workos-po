@@ -1,5 +1,5 @@
 import { jobRecordFixture } from './test/jobRecordFixture';
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
@@ -56,6 +56,10 @@ describe("simplified production journey", () => {
     render(<App />);
     await user.click(await screen.findByRole("button", { name: "Confirmă comanda" }));
     await user.click(screen.getByRole("button", { name: "Da, confirm comanda" }));
+    // N-018 · acceptance shows its result on the offer; production is a separate step on the job.
+    const result = await screen.findByRole("region", { name: "Rezultatul acceptării" });
+    expect(screen.queryByRole("button", { name: "Trimite în producție" })).toBeNull();
+    await user.click(within(result).getByRole("link", { name: "Fișa lucrării →" }));
     await user.click(await screen.findByRole("button", { name: "Trimite în producție" }));
     await screen.findByRole("heading", { name: "Situația lucrării" });
     expect(window.location.pathname).toBe("/lucrari/job-1");

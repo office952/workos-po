@@ -14,6 +14,8 @@ type Props = {
   vacancy: DeskVacancy | null;
   onMove: (delta: number) => void;
   onClose?: () => void;
+  /** Docked only: Escape inside the dossier hands focus back (for example to the selected row). */
+  onEscape?: () => void;
   children?: ReactNode;
 };
 
@@ -29,10 +31,15 @@ function Arrow({ up }: { up?: boolean }) {
  * The dossier frame shared by the registers: position in the register, previous/next, close
  * on tablet and phone, then either the page document or the vacant state.
  */
-export function DeskDossier({ id, label, steps, layout, position, vacancy, onMove, onClose, children }: Props) {
+export function DeskDossier({ id, label, steps, layout, position, vacancy, onMove, onClose, onEscape, children }: Props) {
   const movable = position !== null && position.index >= 0;
 
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === "Escape" && onEscape && !isTypingTarget(event.target)) {
+      event.preventDefault();
+      onEscape();
+      return;
+    }
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
     if (isTypingTarget(event.target) || !movable) return;
     if (event.target instanceof Element && event.target.closest('[role="tablist"]')) return;
@@ -41,7 +48,7 @@ export function DeskDossier({ id, label, steps, layout, position, vacancy, onMov
   }
 
   return (
-    <aside id={id} className="rdesk-dossier" data-layout={layout} aria-label={label} onKeyDown={onKeyDown}>
+    <aside id={id} className="rdesk-dossier" data-layout={layout} data-scroll-memory={layout === "docked" ? "dosar" : undefined} aria-label={label} tabIndex={-1} onKeyDown={onKeyDown}>
       <div className="rdesk-dossier__bar">
         {onClose ? (
           <button type="button" className="rdesk-dossier__close" onClick={onClose} data-dossier-close>

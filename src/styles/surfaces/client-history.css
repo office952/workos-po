@@ -1,0 +1,1706 @@
+/* N-020 · Dosarul clientului cu istoric vertical (Figma rM71g74Ph0mkAjAtWuLahy, page 10 · v2.1):
+   client band (422:190, folded 422:1407), Istoric with rail, summary and year axis, the photo
+   viewer (426:6678 / 450:7173), Fotografii (422:6637, 447:7051 / 7586 / 8245), Lucrări and Sedii
+   marks. Colours come from the machine theme tokens, so Light and Night follow the shell. */
+
+[data-surface="client-hub"] {
+  --dh-card: var(--color-surface);
+  --dh-rail: var(--shell-panel);
+  --dh-line: var(--color-border);
+  --dh-axis: var(--color-border-strong);
+  --dh-dot: var(--shell-brass);
+  --dh-offer-bg: var(--shell-brass-soft);
+  --dh-offer-ink: var(--wos-brass-text);
+  --dh-exec-bg: var(--shell-warning-soft);
+  --dh-exec-ink: var(--wos-warning-text);
+  --dh-done-bg: var(--shell-signal-soft);
+  --dh-done-ink: var(--shell-signal-deep);
+  --dh-doc-bg: var(--color-surface-alt);
+  --dh-mark-bg: rgb(255 255 255 / 92%);
+  --dh-mark-ink: #1f2522;
+}
+
+:root[data-resolved-theme="dark"] [data-surface="client-hub"] {
+  --dh-done-ink: var(--shell-signal-strong);
+}
+
+/* ─── Shared parts ─── */
+.dicon {
+  flex: none;
+  vertical-align: -0.15em;
+}
+
+.dhist-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+  font: 500 14px/1.3 var(--font-sans);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.dhist-link:hover {
+  color: var(--shell-signal-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+:root[data-resolved-theme="dark"] .dhist-link:hover {
+  color: var(--shell-signal-strong);
+}
+
+.dhist a:focus-visible,
+.dhist button:focus-visible,
+.dhist input:focus-visible,
+.dhist select:focus-visible,
+.dsheet button:focus-visible,
+.dworks a:focus-visible,
+.dworks button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.dstate {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 0 8px;
+  border-radius: var(--radius-badge);
+  background: var(--color-surface-alt);
+  color: var(--color-text-secondary);
+  font: 500 13px/1.2 var(--font-sans);
+  white-space: nowrap;
+}
+
+.dstate[data-tone="offer"] {
+  background: var(--dh-offer-bg);
+  color: var(--dh-offer-ink);
+}
+
+.dstate[data-tone="order"],
+.dstate[data-tone="production"],
+.dstate[data-tone="execution"] {
+  background: var(--dh-exec-bg);
+  color: var(--dh-exec-ink);
+}
+
+.dstate[data-tone="done"] {
+  background: var(--dh-done-bg);
+  color: var(--dh-done-ink);
+}
+
+.dprov {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-badge);
+  color: var(--color-text-secondary);
+  font: 500 12px/1.2 var(--font-sans);
+  white-space: nowrap;
+}
+
+.dpill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-alt);
+  color: var(--color-text-primary);
+  font: 500 13px/1.2 var(--font-sans);
+  white-space: nowrap;
+}
+
+.dpill[data-quiet] {
+  color: var(--color-text-muted);
+}
+
+.dphoto {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-badge);
+  background: var(--color-surface-alt);
+  cursor: default;
+}
+
+button.dphoto {
+  cursor: zoom-in;
+}
+
+button.dphoto:hover img {
+  transform: scale(1.02);
+}
+
+.dphoto img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 160ms ease;
+}
+
+.dphoto--none[data-size="thumb"] span {
+  font-size: 11px;
+}
+
+.dphoto--none {
+  border-style: dashed;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 4px;
+  color: var(--color-text-muted);
+  font: 500 12px/1.2 var(--font-sans);
+}
+
+/* R1 (marcaje imagine): the stage and „Ilustrativ” stacked at the top left. The stage is a dark
+   chip with white text on every theme (it sits on the photo, not on the page); „Ilustrativ” is a
+   light chip with a brass edge, so it never reads as a stage. */
+.dmarks {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  pointer-events: none;
+}
+
+.dmarks[data-small] {
+  top: 5px;
+  left: 5px;
+}
+
+.dmark {
+  padding: 3px 6px;
+  border-radius: 3px;
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dmark--stage {
+  background: rgb(20 18 15 / 80%);
+  color: #ffffff;
+}
+
+.dmark--illustrative {
+  border: 1px solid #b8872b;
+  background: #f7f4ee;
+  color: #7a5520;
+}
+
+.dmark[data-small] {
+  padding: 2px 4px;
+  font-size: 9.5px;
+}
+
+.dfile {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 6px 8px 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-badge);
+  background: var(--color-surface);
+}
+
+.dfile__icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 2px;
+  background: var(--color-surface-alt);
+  color: var(--color-text-secondary);
+}
+
+.dfile__text {
+  display: grid;
+  min-width: 0;
+}
+
+.dfile__open {
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-primary);
+  font: 500 14px/1.3 var(--font-sans);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dfile__open:hover {
+  color: var(--shell-signal);
+}
+
+.dfile__meta {
+  color: var(--color-text-muted);
+  font: 400 12px/1.3 var(--font-sans);
+}
+
+.dfile__download {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.dfile__download:hover {
+  color: var(--shell-signal);
+}
+
+/* ─── Istoric layout ─── */
+.dhist__layout {
+  display: grid;
+  grid-template-columns: 224px minmax(0, 1fr);
+  margin: calc(var(--space-24) * -1) calc(var(--chub-gutter) * -1) 0;
+}
+
+.dhist-rail {
+  position: sticky;
+  top: var(--dh-sticky-top, 0px);
+  align-self: start;
+  max-height: calc(100vh - var(--dh-sticky-top, 0px));
+  overflow-y: auto;
+  padding: 20px 16px 24px var(--chub-gutter);
+  background: var(--dh-rail);
+  border-right: 1px solid var(--dh-line);
+}
+
+.dhist-main {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+  min-width: 0;
+  padding: 20px var(--chub-gutter) 48px 28px;
+}
+
+.dfilters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 22px;
+}
+
+.dfilters__title,
+.dentry__label {
+  margin: 0 0 8px;
+  color: var(--color-text-muted);
+  font: 500 11px/1.2 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.dfilters ul {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dfilter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-badge);
+  background: none;
+  color: var(--color-text-primary);
+  font: 450 14px/1.3 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+
+.dfilter:hover {
+  background: var(--color-surface);
+}
+
+.dfilter[aria-pressed="true"] {
+  border-color: var(--shell-signal);
+  background: var(--color-surface);
+  font-weight: 600;
+}
+
+.dfilter[data-empty] {
+  color: var(--color-text-muted);
+}
+
+.dfilter__label {
+  display: inline-flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* A long state ("Eliberată în producție · 1") wraps inside the rail instead of widening it. */
+.dfilters .dstate {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.dfilters {
+  min-width: 0;
+}
+
+.dfilters ul,
+.dfilters li {
+  min-width: 0;
+}
+
+.dfilter__label small {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 11.5px;
+  font-weight: 400;
+}
+
+.dfilter[data-inline] .dfilter__count {
+  display: none;
+}
+
+.dfilter__count {
+  color: var(--color-text-muted);
+  font: 500 12px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.dfilters__years .dfilter {
+  min-height: 38px;
+  font: 500 21px/1.1 var(--font-brand);
+}
+
+.dfilters__note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font: 400 12px/1.45 var(--font-sans);
+}
+
+.dhist-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.dhist-field {
+  display: flex;
+  flex: 0 1 480px;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-badge);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.dhist-field:focus-within {
+  border-color: var(--shell-signal);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.dhist-field input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-primary);
+  font: 400 15px/1.3 var(--font-sans);
+}
+
+.dhist-field input:focus-visible {
+  outline: none;
+}
+
+.dhist-toolbar {
+  display: none;
+  gap: 8px;
+}
+
+.dhist-scope {
+  flex: 1 1 260px;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+.dhist-active {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.dchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--shell-signal);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: 500 13px/1.2 var(--font-sans);
+  cursor: pointer;
+}
+
+/* Year axis */
+.dhist-axis {
+  display: grid;
+  gap: 28px;
+}
+
+.dhist-year {
+  display: grid;
+  gap: 12px;
+}
+
+.dhist-year__title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 27px/1.1 var(--font-brand);
+  scroll-margin-top: calc(var(--dh-sticky-top, 0px) + 16px);
+}
+
+.dhist-year__title:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 4px;
+}
+
+.dhist-year__title span {
+  color: var(--color-text-muted);
+  font: 500 12px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dhist-entries {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dhist-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 92px 24px minmax(0, 1fr);
+  align-items: start;
+}
+
+.dhist-row::before {
+  position: absolute;
+  top: -12px;
+  bottom: -12px;
+  left: 103px;
+  width: 1px;
+  background: var(--dh-axis);
+  content: "";
+}
+
+.dhist-row__date {
+  margin: 0;
+  padding-top: 18px;
+  color: var(--color-text-secondary);
+  font: 500 12px/1.5 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dhist-row__dot {
+  position: relative;
+  z-index: 1;
+  justify-self: center;
+  width: 9px;
+  height: 9px;
+  margin-top: 22px;
+  border: 2px solid var(--color-canvas);
+  border-radius: 50%;
+  background: var(--dh-dot);
+  box-sizing: content-box;
+}
+
+.dhist-row__dot[data-kind="DOCUMENT"] {
+  background: var(--color-text-muted);
+}
+
+/* Entry card */
+.dentry {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) auto;
+  gap: 14px 16px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--dh-line);
+  border-radius: var(--radius-badge);
+  background: var(--dh-card);
+}
+
+.dentry[data-kind="DOCUMENT"] {
+  background: var(--dh-doc-bg);
+}
+
+.dentry[data-expanded] {
+  scroll-margin-top: calc(var(--dh-sticky-top, 0px) + 16px);
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  padding: 16px 18px 18px;
+  border-color: var(--shell-signal);
+  border-style: solid;
+}
+
+.dentry__media {
+  min-width: 0;
+}
+
+.dentry__docicon {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 3 / 2;
+  border: 1px solid var(--dh-line);
+  border-radius: var(--radius-badge);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+}
+
+.dentry__body,
+.dentry__head {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dentry__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font: 500 11px/1.3 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.dentry__eyebrow span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dentry__title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 18px/1.25 var(--font-brand);
+}
+
+.dentry__title[data-level="expanded"] {
+  font-size: 22px;
+}
+
+.dentry__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+.dentry__meta > span,
+.dentry__meta > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dentry__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 2px 0 0;
+}
+
+.dhist-states {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.dhist-states__mixed {
+  color: var(--color-text-secondary);
+  font: 500 13px/1.2 var(--font-sans);
+}
+
+.dentry__relation {
+  color: var(--color-text-secondary);
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+.dentry__match {
+  margin: 0;
+  color: var(--color-text-muted);
+  font: 400 12px/1.4 var(--font-sans);
+}
+
+.dentry__access {
+  display: grid;
+  align-content: space-between;
+  justify-items: end;
+  gap: 12px;
+}
+
+.dentry__pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  margin: 0;
+}
+
+.dentry__expanded-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dentry__collapse {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: 500 13px/1.2 var(--font-sans);
+  cursor: pointer;
+}
+
+.dentry__columns {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: 20px;
+}
+
+.dentry__columns:has(> :only-child) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Wide (422:1797): photos in a column, then the request node beside its branches. */
+@media (min-width: 1361px) {
+  .dentry[data-kind="PROJECT"] .dentry__columns {
+    grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
+  }
+
+  .dentry[data-kind="PROJECT"] .dentry__photo-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dtree {
+    grid-template-columns: minmax(200px, 0.8fr) minmax(0, 2fr);
+    align-items: start;
+  }
+}
+
+.dentry__photo-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dentry__caption {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font: 500 12px/1.3 var(--font-sans);
+}
+
+.dentry__detail {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+}
+
+.dentry__description {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 400 14px/1.55 var(--font-sans);
+}
+
+.dentry__file-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dentry__none {
+  margin: 0;
+  color: var(--color-text-muted);
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+.dentry__access-note {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--shell-brass);
+  background: var(--color-surface-alt);
+  color: var(--color-text-secondary);
+  font: 400 13px/1.45 var(--font-sans);
+}
+
+.dentry__actions {
+  margin: 0;
+}
+
+/* Branch tree: one request, then one branch per offer */
+.dtree {
+  display: grid;
+  gap: 14px;
+}
+
+.dtree__request {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--dh-line);
+  border-radius: var(--radius-badge);
+  background: var(--color-surface-alt);
+}
+
+.dtree__node-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 14px/1.3 var(--font-sans);
+}
+
+.dtree__node-title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.dtree__node-title a:hover {
+  color: var(--shell-signal);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dtree__ref {
+  color: var(--color-text-muted);
+  font: 500 12px/1 var(--font-mono);
+}
+
+.dtree__node-meta {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+.dtree__branches ol {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0 0 0 14px;
+  border-left: 2px solid var(--dh-axis);
+  list-style: none;
+}
+
+.dtree__branch {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1.25fr);
+  align-items: start;
+  gap: 8px;
+}
+
+.dtree__offer,
+.dtree__job {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--dh-line);
+  border-radius: var(--radius-badge);
+  background: var(--color-surface);
+}
+
+.dtree__job[data-none] {
+  border-style: dashed;
+  background: transparent;
+}
+
+.dtree__job[data-none] .dtree__node-title {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.dtree__arrow {
+  padding-top: 12px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.dhist-add {
+  margin: 0;
+}
+
+/* Filter sheet (tablet, phone) */
+.dsheet {
+  width: min(520px, 100vw);
+  max-width: 100vw;
+  max-height: 88vh;
+  margin: auto auto 0;
+  padding: 0 16px 16px;
+  border: 1px solid var(--dh-line);
+  border-radius: 8px 8px 0 0;
+  background: var(--dh-rail);
+  color: var(--color-text-primary);
+}
+
+.dsheet::backdrop {
+  background: rgb(0 0 0 / 40%);
+}
+
+.dsheet__head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 -16px 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--dh-line);
+  background: var(--dh-rail);
+}
+
+.dsheet__head h2 {
+  flex: 1 1 auto;
+  margin: 0;
+  font: 600 17px/1.2 var(--font-brand);
+}
+
+.dsheet__close {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.dsheet__apply {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  min-height: 46px;
+  margin-top: 16px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--shell-signal);
+  color: var(--shell-button-ink);
+  font: 600 15px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.dhist-filters-button,
+.dhist-yearpick select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-badge);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: 500 14px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.dhist-filters-button[data-active] {
+  border-color: var(--shell-signal);
+  color: var(--shell-signal);
+}
+
+.dseg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.dseg button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-right: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text-secondary);
+  font: 500 14px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.dseg button:last-child {
+  border-right: 0;
+}
+
+.dseg button[aria-pressed="true"] {
+  background: var(--shell-signal);
+  color: var(--shell-button-ink);
+}
+
+.dselect {
+  display: grid;
+  gap: 4px;
+  color: var(--color-text-muted);
+  font: 500 11px/1.2 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dselect select {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: 400 14px/1 var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* ─── Responsive (Figma page 10) ─── */
+
+/* Desktop spacing (422:1008): search 40, 14, summary 78, 14, year 30, 10, cards 117 apart by 10. */
+.dhist-main {
+  gap: 14px;
+  padding-top: 18px;
+}
+
+.dhist-year {
+  gap: 10px;
+}
+
+.dhist-entries {
+  gap: 10px;
+}
+
+/* Desktop: the rail has the years and filters; the compact bar is for tablet and phone. */
+.dhist-toolbar,
+.dentry__eyebrow-date,
+.dentry__offers-inline,
+.dpill__short {
+  display: none;
+}
+
+@media (max-width: 1360px) {
+  .dentry__columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The rail scrolls on its own under the fixed layers, so every filter stays reachable. */
+.dhist-rail {
+  top: var(--dh-sticky-top, 0px);
+  max-height: calc(100vh - var(--dh-sticky-top, 0px));
+}
+
+.dhist-year__title {
+  scroll-margin-top: calc(var(--dh-sticky-top, 0px) + 16px);
+}
+
+.dentry[data-expanded] {
+  scroll-margin-top: calc(var(--dh-sticky-top, 0px) + 16px);
+}
+
+/* ─── Tablet and phone: one column, a fixed search bar, summary chips ─── */
+@media (max-width: 1099px) {
+  .dhist__layout {
+    grid-template-columns: minmax(0, 1fr);
+    margin: 0;
+    border-top: 0;
+  }
+
+  .dhist-rail {
+    display: none;
+  }
+
+  .dhist-main {
+    gap: 14px;
+    padding: 0 0 40px;
+  }
+
+  .chub .chub__body {
+    padding-top: 0;
+  }
+
+  /* 422:3015 / 422:4135: search, year and "Filtre" stay under the tabs. */
+  .dhist-search {
+    position: sticky;
+    z-index: 15;
+    top: var(--dh-sticky-top, 0px);
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin: 0 calc(var(--chub-gutter) * -1);
+    padding: 8px var(--chub-gutter) 9px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-canvas);
+  }
+
+  .dhist-field {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 42px;
+  }
+
+  .dhist-toolbar {
+    display: flex;
+    flex: none;
+    gap: 8px;
+  }
+
+  .dhist-years {
+    display: inline-flex;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-badge);
+    background: var(--color-surface);
+  }
+
+  .dhist-years button {
+    min-width: 56px;
+    min-height: 40px;
+    padding: 0 10px;
+    border: 0;
+    border-right: 1px solid var(--color-border);
+    background: none;
+    color: var(--color-text-primary);
+    font: 500 14px/1 var(--font-sans);
+    cursor: pointer;
+  }
+
+  .dhist-years button:last-child {
+    border-right: 0;
+  }
+
+  .dhist-years button[aria-pressed="true"] {
+    background: var(--shell-signal-soft);
+    color: var(--shell-signal-deep);
+  }
+
+  .dhist-yearpick {
+    display: none;
+  }
+
+  .dhist-filters-button {
+    min-height: 40px;
+  }
+
+  /* The scope line stays a status for screen readers; it no longer pushes the list down. */
+  .dhist-scope {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Cards (422:3015): the date moves into the eyebrow; the axis is a line at the left. */
+  .dhist-axis {
+    gap: 16px;
+  }
+
+  .dhist-year__title {
+    padding-left: 14px;
+    font-size: 24px;
+  }
+
+  .dhist-row {
+    grid-template-columns: 14px minmax(0, 1fr);
+  }
+
+  .dhist-row::before {
+    left: 4px;
+  }
+
+  .dhist-row__date,
+  .dhist-row__dot,
+  .dentry__meta > .dentry__meta-date {
+    display: none;
+  }
+
+  .dhist-row > .dentry {
+    grid-column: 2;
+  }
+
+  .dentry__eyebrow-date {
+    display: inline;
+  }
+
+  .dentry {
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 10px 12px;
+    padding: 13px;
+  }
+
+  .dentry__title {
+    font-size: 17px;
+  }
+
+  .dentry__access {
+    display: flex;
+    grid-column: 1 / -1;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .dentry__pills {
+    justify-content: flex-start;
+  }
+
+  .dentry[data-expanded] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dtree__branch {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dtree__arrow {
+    display: none;
+  }
+}
+
+/* ─── Phone (422:4135) ─── */
+@media (max-width: 767px) {
+  .dhist-years {
+    display: none;
+  }
+
+  .dhist-yearpick {
+    display: block;
+  }
+
+  .dhist-yearpick select {
+    width: 64px;
+    min-height: 44px;
+    padding: 0 6px;
+  }
+
+  .dhist-search {
+    padding-block: 6px 7px;
+  }
+
+  .dhist-field {
+    min-height: 44px;
+  }
+
+  .dhist-filters-button {
+    justify-content: center;
+    width: 44px;
+    min-height: 44px;
+    padding: 0;
+  }
+
+  .dhist-filters-button__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .dhist-main {
+    gap: 12px;
+  }
+
+  .dhist-axis {
+    gap: 12px;
+  }
+
+  .dhist-year {
+    gap: 8px;
+  }
+
+  .dhist-entries {
+    gap: 8px;
+  }
+
+  .dhist-year__title {
+    padding-left: 12px;
+    font-size: 22px;
+  }
+
+  .dhist-row {
+    grid-template-columns: 12px minmax(0, 1fr);
+  }
+
+  .dhist-row::before {
+    left: -2px;
+  }
+
+  .dentry {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 6px 10px;
+    padding: 13px 13px 5px;
+  }
+
+  .dentry__media .dphoto,
+  .dentry__docicon {
+    aspect-ratio: 4 / 3;
+  }
+
+  .dentry__head {
+    gap: 3px;
+  }
+
+  .dentry__title {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 16px;
+    line-height: 21px;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .dentry__eyebrow-ref,
+  .dentry__relation,
+  .dpill[data-variant="offers"] {
+    display: none;
+  }
+
+  .dentry__offers-inline {
+    display: inline;
+  }
+
+  .dentry__status {
+    gap: 4px 8px;
+  }
+
+  .dpill {
+    min-height: 39px;
+    padding: 0 11px;
+    border-color: transparent;
+    background: none;
+  }
+
+  .dpill__long {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .dpill__short {
+    display: inline;
+  }
+
+  .dentry__access .dhist-link {
+    min-height: 39px;
+    padding: 0 6px;
+  }
+
+  .dentry__expanded-head {
+    flex-direction: column;
+  }
+
+  .dentry__photo-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dfile {
+    width: 100%;
+  }
+}
+
+/* ─── Overflow guards (GO 9) ─── */
+/* Grid children keep the column width: long server labels never widen the list past the screen. */
+.dhist-main,
+.dhist-axis,
+.dhist-year,
+.dhist-entries,
+.dhist-row,
+.dentry,
+.dentry__body {
+  min-width: 0;
+}
+
+.dhist-main {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* One status line: the state keeps its words; the relation line yields first. */
+.dentry__status {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.dentry__status .dhist-states {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.dentry__relation {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .dentry__status,
+  .dentry__status .dhist-states {
+    flex-wrap: wrap;
+  }
+
+  .dentry .dstate {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .dentry__meta {
+    flex-wrap: nowrap;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .dentry__meta > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 1099px) {
+  .dhist-scope.dhist-scope--keep {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+  }
+}
+
+/* The text input fills its labelled field, so the whole 40–44 px field is the hit area. */
+.dhist-field {
+  align-items: stretch;
+}
+
+.dhist-field > .dicon {
+  align-self: center;
+}
+
+.dhist-field input {
+  align-self: stretch;
+}
+
+/* ─── Expanded project on phone (GO 9 · 422:4383) ─── */
+.dentry__photo-index {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .dentry[data-expanded] .dentry__photo-list {
+    grid-template-columns: none;
+    grid-auto-columns: 100%;
+    grid-auto-flow: column;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .dentry[data-expanded] .dentry__photo-list > li {
+    scroll-snap-align: start;
+  }
+
+  .dentry__photo-index {
+    display: inline;
+    color: var(--color-text-muted);
+    font: 500 12px/1 var(--font-mono);
+  }
+
+  .dentry__expanded-head {
+    flex-direction: row;
+  }
+
+  .dentry__collapse {
+    width: 44px;
+    min-height: 44px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .dentry__collapse-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* The state keeps its full width; the relation line takes what is left and ends with an ellipsis. */
+.dentry__status .dhist-states {
+  flex: none;
+  max-width: 100%;
+}
+
+.dentry__status .dentry__relation {
+  flex: 1 1 auto;
+}
+
+/* Tablet (422:3305): two large photos side by side in an expanded project. */
+@media (min-width: 768px) and (max-width: 1099px) {
+  .dentry[data-expanded] .dentry__photo-list {
+    grid-template-columns: repeat(2, minmax(0, 300px));
+  }
+}
+
+/* Rail (422:1008): 208 px, 20 px inside, so site names fit on one line as in the design. */
+@media (min-width: 1100px) {
+  .dhist__layout {
+    grid-template-columns: 208px minmax(0, 1fr);
+  }
+
+  .dhist-rail {
+    padding: 14px 15px 24px 20px;
+  }
+}
+
+/* Phone (422:4135 / 422:5018): files, photos and "Extinde" stay on one row. */
+@media (max-width: 767px) {
+  .dentry__access {
+    flex-wrap: nowrap;
+  }
+
+  .dentry__pills {
+    flex-wrap: nowrap;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .dpill {
+    gap: 5px;
+    padding: 0 6px;
+  }
+
+  .dentry__access .dhist-link {
+    flex: none;
+  }
+}
+
+/* ─── GO 10 · Night fidelity (n01–n05) ─── */
+
+/* Stage labels on images: dark chips at night (n02, n03); "Simulare" keeps its amber edge. */
+:root[data-resolved-theme="dark"] .dmark--stage {
+  border: 1px solid rgb(244 241 234 / 18%);
+}
+
+/* Night rail: the page background with a dividing line (n01, n02). */
+:root[data-resolved-theme="dark"] .dhist-rail {
+  background: var(--color-canvas);
+}
+
+/* Filter sheet (n04): a list with a choice mark, the count at the right, one line per option. */
+.dfilter__mark {
+  display: none;
+}
+
+.dfilters[data-sheet] {
+  gap: 18px;
+}
+
+.dfilters[data-sheet] ul {
+  gap: 0;
+}
+
+.dfilters[data-sheet] li + li .dfilter {
+  border-top: 1px solid var(--dh-line);
+}
+
+.dfilters[data-sheet] .dfilter {
+  min-height: 45px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-weight: 450;
+}
+
+.dfilters[data-sheet] .dfilter[aria-pressed="true"] {
+  background: none;
+  font-weight: 450;
+}
+
+.dfilters[data-sheet] .dfilter__mark {
+  display: block;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+  border: 1.5px solid var(--color-text-secondary);
+  border-radius: 50%;
+}
+
+.dfilters[data-sheet] .dfilter[aria-pressed="true"] .dfilter__mark {
+  border-color: var(--shell-signal);
+  background: var(--shell-signal);
+  box-shadow: inset 0 0 0 3px var(--color-canvas);
+}
+
+.dfilters[data-sheet] .dfilter__label {
+  font-size: 15px;
+}
+
+.dfilters[data-sheet] .dfilter__label small {
+  display: inline;
+  margin-left: 4px;
+}
+
+.dsheet {
+  padding-top: 0;
+  background: var(--color-canvas);
+}
+
+.dsheet__head {
+  background: var(--color-canvas);
+}
+
+.dsheet__head::before {
+  position: absolute;
+  top: 6px;
+  left: calc(50% - 20px);
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border-strong);
+  content: "";
+}
+
+@media (min-width: 768px) {
+  .dsheet {
+    width: 100vw;
+    max-width: 100vw;
+  }
+}
+
+/* Phone pills keep their outline (n03, 422:4135). */
+@media (max-width: 767px) {
+  .dpill {
+    min-height: 38px;
+    border-color: var(--color-border);
+    padding: 0 8px;
+  }
+}
+
+/* n04: plain labels; state and provenance use square marks, the sites round ones. */
+.dfilters[data-sheet] .dfilter,
+.dfilters[data-sheet] .dfilter[aria-pressed="true"],
+.dfilters[data-sheet] .dfilter__label {
+  font-weight: 400;
+}
+
+.dfilters[data-sheet] [data-choice] .dfilter__mark {
+  border-radius: 3px;
+}
+
+.dfilters[data-sheet] [data-choice="provenance"] .dfilter__label > .dicon {
+  display: none;
+}
+
+/* Count pills read as quiet labels (422:1008, n03). */
+.dpill {
+  font-weight: 400;
+}
+
+/* Rail: the chosen option is a filled row (n02, 422:6637). */
+.dfilters:not([data-sheet]) .dfilter[aria-pressed="true"] {
+  border-color: transparent;
+  background: var(--color-surface-alt);
+}
+
+:root[data-resolved-theme="dark"] .dfilters:not([data-sheet]) .dfilter[aria-pressed="true"] {
+  background: rgb(255 255 255 / 7%);
+}
+
+/* The rail follows the frame width (422:190 · 248 px, 422:599 · 224 px, 422:1008 · 208 px). */
+@media (min-width: 1360px) {
+  .dhist__layout {
+    grid-template-columns: 224px minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 1600px) {
+  .dhist__layout {
+    grid-template-columns: 248px minmax(0, 1fr);
+  }
+}

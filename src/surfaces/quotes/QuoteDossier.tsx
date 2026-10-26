@@ -10,6 +10,8 @@ import type { QuotesLayout } from "./useQuotesLayout";
 export type DossierEmpty = "none" | "filtered" | "not-found" | "loading" | "unavailable";
 
 type Props = {
+  /** Replaces the register wording when the dossier opens outside Oferte (e.g. over a request). */
+  emptyCopy?: { title: string; body: string; hint: string | null };
   layout: QuotesLayout;
   item: QuoteListItemTransport | null;
   empty: DossierEmpty;
@@ -130,8 +132,8 @@ function Contents({ item, sheet, onSheet }: { item: QuoteListItemTransport; shee
 }
 
 /** The dossier beside (or over) the register: offer and order sheets on a light table. */
-export function QuoteDossier({ layout, item, empty, sheet, position, onSheet, onMove, onClose }: Props) {
-  const copy = EMPTY_COPY[empty];
+export function QuoteDossier({ layout, item, empty, sheet, position, onSheet, onMove, onClose, emptyCopy }: Props) {
+  const copy = emptyCopy ?? EMPTY_COPY[empty];
   const movable = item !== null && position.index >= 0;
 
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
@@ -144,7 +146,7 @@ export function QuoteDossier({ layout, item, empty, sheet, position, onSheet, on
   }
 
   return (
-    <aside id="oferte-dosar" className="offers-dossier" data-layout={layout} aria-label="Dosarul ofertei" onKeyDown={onKeyDown}>
+    <aside id="oferte-dosar" className="offers-dossier" data-layout={layout} data-scroll-memory={layout === "docked" ? "dosar" : undefined} aria-label="Dosarul ofertei" onKeyDown={onKeyDown}>
       <div className="offers-dossier__bar">
         {onClose ? (
           <button type="button" className="offers-dossier__close" onClick={onClose} data-dossier-close>
@@ -201,20 +203,29 @@ export function DossierDialog({
   layout,
   onClose,
   children,
+  variant,
+  label = "Dosarul ofertei",
+  initialFocus = "[data-dossier-close]",
 }: {
   layout: QuotesLayout;
   onClose: () => void;
   children: ReactNode;
+  /** The offer preview of Cereri și oferte: a 560 px drawer, a sheet on the phone (668:15454 / 668:16010). */
+  variant?: "drawer";
+  label?: string;
+  /** Where the focus goes when the dialog opens. */
+  initialFocus?: string;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
+  const initialFocusRef = useRef(initialFocus);
   useEffect(() => {
     closeRef.current = onClose;
   }, [onClose]);
 
   useEffect(() => {
     const panel = panelRef.current;
-    panel?.querySelector<HTMLElement>("[data-dossier-close]")?.focus();
+    panel?.querySelector<HTMLElement>(initialFocusRef.current)?.focus();
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function onKeyDown(event: globalThis.KeyboardEvent) {
@@ -246,9 +257,9 @@ export function DossierDialog({
   }, []);
 
   return (
-    <div className="offers-dialog" data-layout={layout}>
+    <div className="offers-dialog" data-layout={layout} data-variant={variant}>
       <div className="offers-dialog__scrim" aria-hidden="true" onClick={onClose} />
-      <div ref={panelRef} className="offers-dialog__panel" role="dialog" aria-modal="true" aria-label="Dosarul ofertei">
+      <div ref={panelRef} className="offers-dialog__panel" role="dialog" aria-modal="true" aria-label={label}>
         {children}
       </div>
     </div>

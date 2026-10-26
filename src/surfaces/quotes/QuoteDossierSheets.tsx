@@ -287,7 +287,7 @@ export function OrderActions({ item, onOffer }: { item: QuoteListItemTransport; 
     <div className="offers-dossier__actions">
       <div className="offers-dossier__buttons">
         <a className="offers-dossier__primary" href={jobHref(item.orderSnapshotId)}>
-          <span>Deschide fișa lucrării</span>
+          <span>Fișa lucrării</span>
           <span aria-hidden="true">→</span>
         </a>
         <button type="button" className="offers-dossier__secondary" onClick={onOffer}>
@@ -295,7 +295,7 @@ export function OrderActions({ item, onOffer }: { item: QuoteListItemTransport; 
         </button>
       </div>
       <ul className="offers-dossier__destinations">
-        <li><strong>Deschide fișa lucrării</strong> → Lucrări, fișa acestei comenzi</li>
+        <li><strong>Fișa lucrării</strong> → Lucrări, fișa acestei comenzi</li>
         <li><strong>Înapoi la ofertă</strong> → foaia Ofertă din acest dosar</li>
       </ul>
     </div>

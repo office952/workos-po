@@ -7,6 +7,12 @@ export const resourceKeys = {
   customer: (customerId: string) => `customer:${customerId}`,
   customerWorkspace: (customerId: string) => `customer-workspace:${customerId}`,
   customerWorkspacePrefix: () => "customer-workspace:",
+  customerDossier: (customerId: string) => `customer-dossier:${customerId}`,
+  customerHistory: (customerId: string, query: string) => `customer-history:${customerId}:${query}`,
+  customerHistoryPrefix: (customerId: string) => `customer-history:${customerId}:`,
+  customerWorks: (customerId: string, query: string) => `customer-works:${customerId}:${query}`,
+  customerWorksPrefix: (customerId: string) => `customer-works:${customerId}:`,
+  customerCommercialTerms: (customerId: string) => `customer-terms:${customerId}`,
   requests: () => "requests",
   request: (requestId: string) => `request:${requestId}`,
   catalog: () => "catalog",
@@ -14,6 +20,7 @@ export const resourceKeys = {
   quote: (productCode: string, quoteSnapshotId: string) =>
     `quote:${productCode}:${quoteSnapshotId}`,
   quoteEnvelope: (quoteSnapshotId: string) => `quote-envelope:${quoteSnapshotId}`,
+  quotePreviewDetail: (quoteSnapshotId: string) => `quote-preview-detail:${quoteSnapshotId}`,
   assemblyQuote: (quoteSnapshotId: string) => `assembly-quote:${quoteSnapshotId}`,
   quoteAcceptance: (productCode: string, quoteSnapshotId: string) =>
     `quote-acceptance:${productCode}:${quoteSnapshotId}`,

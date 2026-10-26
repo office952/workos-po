@@ -65,6 +65,8 @@ function presentRegistryItem(value: unknown): CustomerRegistryItemTransport | nu
     openRequestCount: asNumber(row.openRequestCount) ?? 0,
     quoteCount: asNumber(row.quoteCount) ?? 0,
     jobCount: asNumber(row.jobCount) ?? 0,
+    historicalWorkCount: asNumber(row.historicalWorkCount) ?? 0,
+    workCount: asNumber(row.workCount) ?? (asNumber(row.jobCount) ?? 0) + (asNumber(row.historicalWorkCount) ?? 0),
     needsAttention: asBoolean(row.needsAttention) ?? false,
     attentionLabel: asString(row.attentionLabel),
   };
@@ -87,6 +89,8 @@ export function presentCustomerRegistry(payload: unknown): CustomerRegistryTrans
         openRequestCount: 0,
         quoteCount: 0,
         jobCount: 0,
+        historicalWorkCount: 0,
+        workCount: 0,
         needsAttention: false,
         attentionLabel: null,
       }));
@@ -145,6 +149,8 @@ export function presentCustomerWorkspace(payload: unknown): CustomerWorkspaceTra
       jobCount: asNumber(summary?.jobCount) ?? jobs.length,
       jobNeedsAction:
         asNumber(summary?.jobNeedsAction) ?? jobs.filter((item) => item.needsAttention).length,
+      historicalWorkCount: asNumber(summary?.historicalWorkCount) ?? 0,
+      workCount: asNumber(summary?.workCount) ?? (asNumber(summary?.jobCount) ?? jobs.length) + (asNumber(summary?.historicalWorkCount) ?? 0),
     },
     requests,
     quotes,

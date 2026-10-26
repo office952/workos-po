@@ -1,0 +1,78 @@
+/* N-018 · Oferte · masa de decizie after acceptance: the acceptance result and, apart, the job as
+   the server reports it. Presentation only. */
+
+.offers-acceptance {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+}
+
+.offers-acceptance p {
+  margin: 0;
+}
+
+.offers-acceptance__title,
+.offers-acceptance__label {
+  color: var(--offers-muted, var(--color-text-secondary));
+  font: 600 10px/1.3 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.offers-acceptance__done {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.offers-acceptance__done li {
+  display: grid;
+  gap: 2px;
+  padding-left: 22px;
+  position: relative;
+}
+
+.offers-acceptance__done li::before {
+  content: "✓";
+  position: absolute;
+  left: 2px;
+  top: 0;
+  color: var(--shell-signal);
+  font-weight: 600;
+}
+
+.offers-acceptance__done span {
+  color: var(--color-text-secondary);
+  font: 400 12px/1.4 var(--font-sans);
+}
+
+.offers-acceptance__job {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+}
+
+.offers-acceptance__name,
+.offers-acceptance__stage {
+  font: 600 14px/1.35 var(--font-sans);
+}
+
+.offers-acceptance__next {
+  color: var(--color-text-secondary);
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+.offers-acceptance__link {
+  color: var(--shell-signal);
+  font: 600 13px/1.4 var(--font-sans);
+  text-underline-offset: 3px;
+}
+
+.offers-acceptance__stamp {
+  justify-self: start;
+  margin-bottom: 4px;
+}

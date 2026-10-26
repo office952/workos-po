@@ -189,31 +189,50 @@ export function registryQuoteHref(item: {
 }
 
 export const CLIENT_HUB_SECTIONS = [
-  "prezentare",
+  "istoric",
   "lucrari",
   "cereri",
   "documente",
   "fotografii",
+  "sedii",
+  "comercial",
   "portofoliu",
   "fisiere",
 ] as const;
 
 export type ClientHubSection = (typeof CLIENT_HUB_SECTIONS)[number];
 
+/**
+ * N-020 · Istoric is the client page's default view and holds what Relație showed. A former
+ * Relație link (no section or ?sectiune=prezentare) opens Istoric, or Cereri și oferte when it
+ * previews a request (?cerere=…).
+ */
 export function parseClientHubSection(search: string): ClientHubSection {
   const value = readSearchParam(search, "sectiune");
   if (value && (CLIENT_HUB_SECTIONS as readonly string[]).includes(value)) {
     return value as ClientHubSection;
   }
-  return "prezentare";
+  if ((!value || value === "prezentare") && readSearchParam(search, "cerere")) return "cereri";
+  return "istoric";
 }
 
 export function clientHref(customerId: string, section?: ClientHubSection): string {
   const path = `/clienti/${encodeURIComponent(customerId)}`;
-  if (!section || section === "prezentare") {
+  if (!section || section === "istoric") {
     return path;
   }
   return `${path}?sectiune=${encodeURIComponent(section)}`;
+}
+
+export function readClientRequestPreview(search: string): string | null {
+  return readSearchParam(search, "cerere");
+}
+
+/** N-018 · a request previewed over the client page (?cerere=…); the section stays in the URL. */
+export function clientRequestPreviewHref(customerId: string, section: ClientHubSection, requestId: string | null): string {
+  const base = clientHref(customerId, section);
+  if (!requestId) return base;
+  return `${base}${base.includes("?") ? "&" : "?"}${new URLSearchParams({ cerere: requestId }).toString()}`;
 }
 
 export function requestHref(requestId: string): string {
@@ -275,12 +294,14 @@ export function canonicalJobSection(section: JobSheetSectionInput): JobSheetSect
 
 export function jobHref(
   jobId: string,
-  context: { taskId?: string | null; section?: JobSheetSectionInput } = {},
+  context: { taskId?: string | null; section?: JobSheetSectionInput; fileId?: string | null } = {},
 ): string {
   const path = `/lucrari/${encodeURIComponent(jobId)}`;
   const params = new URLSearchParams();
   if (context.taskId) params.set("task", context.taskId);
   if (context.section) params.set("sectiune", canonicalJobSection(context.section));
+  // N-018 · the file open in the viewer, so Back, refresh and a direct link keep it.
+  if (context.fileId) params.set("fisier", context.fileId);
   const query = params.toString();
   return query ? `${path}?${query}` : path;
 }
@@ -490,6 +511,10 @@ export function parseJobContext(search: string): string | null {
 
 export function parsePlanContext(search: string): string | null {
   return readSearchParam(search, "plan");
+}
+
+export function parseFileContext(search: string): string | null {
+  return readSearchParam(search, "fisier");
 }
 
 export function parseTaskContext(search: string): string | null {

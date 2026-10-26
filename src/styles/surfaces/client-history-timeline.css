@@ -1,0 +1,1385 @@
+/* N-020 design final · Istoric (Figma 604:8132, 649:14128, 588:8038, 588:6732, 588:7090,
+   649:14364, 580:4114, 578:2874; card extins 604:8766 / 579:6351). Colours from the machine
+   theme tokens, so Light and Night share the rules. The search sticks under the header band; on
+   the desktop the years stay in their own column. */
+
+.hist {
+  --hist-tools-h: 68px;
+  display: grid;
+  /* One column no wider than the section: an implicit `auto` track would grow to the widest
+     child's min-content (the filled search row at 360 px) and push every child past the screen. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  min-width: 0;
+  /* The section body already has 24 px above; the title sits 31 px under the tabs (604:8132). */
+  padding: 6px 0 40px;
+}
+
+.hist__origin {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 12px;
+  margin: 0;
+}
+
+.hist__origin > .hcard__button {
+  min-height: 46px;
+}
+
+.hist__origin > .hresult {
+  flex: 1 1 320px;
+  min-height: 46px;
+  padding-block: 6px;
+}
+
+.hist__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+}
+
+.hist__title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 28px/1.15 var(--font-brand);
+  letter-spacing: -0.01em;
+}
+
+.hist__first {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.3 var(--font-sans);
+}
+
+/* ─── De urmărit (R1 · 904:37515) ─── */
+.hwatch {
+  border: 1px solid var(--shell-edge);
+  border-radius: var(--cdh-card-radius, 8px);
+  background: var(--shell-panel);
+}
+
+.hwatch__control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 20px;
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.hwatch__title {
+  flex: none;
+  font: 600 14px/1.3 var(--font-sans);
+}
+
+/* What the server flags is warm; the normal activity stays quiet. */
+.hwatch__part {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hwatch__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+
+.hwatch__dot[data-tone="attention"] {
+  background: var(--shell-brass);
+}
+
+.hwatch__summary {
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font: 400 13.5px/1.35 var(--font-sans);
+}
+
+.hwatch__part[data-tone="attention"] .hwatch__summary {
+  color: var(--shell-brass);
+  font-weight: 600;
+}
+
+.hwatch__sep {
+  width: 1px;
+  height: 22px;
+  overflow: hidden;
+  background: var(--shell-edge);
+  color: transparent;
+}
+
+.hwatch__toggle,
+.hwatch__action {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  min-height: 40px;
+  color: var(--shell-signal);
+  font: 600 13.5px/1.2 var(--font-sans);
+  text-decoration: none;
+}
+
+.hwatch__toggle {
+  margin-left: auto;
+}
+
+.hwatch__control:hover .hwatch__toggle,
+.hwatch__action:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Opened: "Necesită atenție" and "În desfășurare" side by side, each situation once. */
+.hwatch__columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+  gap: 0 24px;
+  padding: 4px 20px 16px;
+  border-top: 1px solid var(--shell-edge);
+}
+
+.hwatch__column {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.hwatch__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0;
+}
+
+.hwatch__count {
+  display: grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1.5px solid var(--shell-edge-strong);
+  border-radius: var(--cdh-radius, 6px);
+  color: var(--color-text-secondary);
+  font: 600 14px/1 var(--font-brand);
+}
+
+.hwatch__column[data-tone="attention"] .hwatch__count {
+  border-color: var(--shell-brass);
+  color: var(--shell-brass);
+}
+
+.hwatch__head-title {
+  color: var(--color-text-secondary);
+  font: 600 14px/1.3 var(--font-sans);
+}
+
+.hwatch__column[data-tone="attention"] .hwatch__head-title {
+  color: var(--shell-brass);
+}
+
+.hwatch__head-note {
+  color: var(--color-text-muted);
+  font: 400 12px/1.3 var(--font-sans);
+}
+
+.hwatch__list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hwatch__item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 48px;
+  padding: 6px 0;
+}
+
+.hwatch__text {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hwatch__item-title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 500 14px/1.35 var(--font-sans);
+}
+
+.hwatch__item[data-tone="attention"] .hwatch__item-title {
+  font-weight: 600;
+}
+
+.hwatch__details {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 12.5px/1.4 var(--font-sans);
+}
+
+/* ─── Search and filters ─── */
+.hist__tools {
+  position: sticky;
+  z-index: 12;
+  top: var(--dh-sticky-top, 0px);
+  margin: 0 calc(var(--chub-gutter) * -1);
+  /* 604:8132: 23 px from De urmărit to the search (20 px gap + 3). */
+  padding: 3px var(--chub-gutter);
+  background: var(--color-canvas);
+}
+
+/* Folded header (579:6351): the sticky bar names the section next to the search. */
+.chub[data-band-compact] .hist[data-mode="desktop"] .htools::before {
+  content: "Istoric";
+  flex: none;
+  margin-right: 8px;
+  color: var(--color-text-primary);
+  font: 600 20px/1 var(--font-brand);
+}
+
+.htools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+}
+
+.htools__field {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px 0 14px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel);
+  color: var(--color-text-muted);
+}
+
+.htools__field:focus-within,
+.htools__field[data-filled] {
+  border-color: var(--shell-signal);
+  box-shadow: inset 0 0 0 1px var(--shell-signal);
+}
+
+.htools__label {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.htools__field input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 42px;
+  border: 0;
+  background: none;
+  color: var(--color-text-primary);
+  font: 400 14px/1.2 var(--font-sans);
+  outline: none;
+}
+
+.htools__field input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.htools__clear {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+  font: 600 13px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.htools__filters {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.htools__count {
+  color: var(--color-text-muted);
+  font: 400 13px/1 var(--font-sans);
+  white-space: nowrap;
+}
+
+.hfilter {
+  position: relative;
+}
+
+.hfilter__button,
+.htools__sheet-button,
+.hjump__year,
+.hcard__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--shell-panel);
+  color: var(--color-text-primary);
+  font: 500 13px/1 var(--font-sans);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.hfilter__button:hover,
+.htools__sheet-button:hover,
+.hjump__year:hover,
+.hcard__button:hover,
+.hfilter__button[aria-expanded="true"] {
+  border-color: var(--color-text-primary);
+}
+
+.hfilter__button[data-active],
+.htools__sheet-button[data-active] {
+  border-color: var(--shell-signal);
+  color: var(--shell-signal);
+  font-weight: 600;
+}
+
+.htools__sheet-button {
+  min-height: 44px;
+  padding: 0 18px;
+  font-weight: 600;
+}
+
+.hfilter__menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  min-width: 220px;
+  max-height: 320px;
+  margin: 0;
+  padding: 6px 0;
+  overflow-y: auto;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel);
+  box-shadow: var(--shell-overlay-shadow, 0 12px 32px -16px rgb(0 0 0 / 40%));
+  list-style: none;
+}
+
+.hfilter__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-left: 3px solid transparent;
+  background: none;
+  color: var(--color-text-primary);
+  font: 400 13.5px/1.2 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+
+.hfilter__option:hover,
+.hfilter__option:focus-visible {
+  background: var(--shell-deck);
+}
+
+.hfilter__option[aria-pressed="true"] {
+  border-left-color: var(--shell-brass);
+  font-weight: 600;
+}
+
+.hfilter__option[data-empty] {
+  color: var(--color-text-muted);
+}
+
+.hfilter__count {
+  color: var(--color-text-muted);
+  font: 500 11px/1 var(--font-mono);
+}
+
+.hresult {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  min-height: 52px;
+  padding: 10px 14px;
+  background: var(--shell-deck);
+}
+
+.hresult__text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 400 14px/1.4 var(--font-sans);
+}
+
+.hresult__filters {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.hresult__actions {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+}
+
+.hresult__action,
+.hcard__link {
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+  font: 600 14px/1.2 var(--font-sans);
+  cursor: pointer;
+}
+
+.hresult__action:hover,
+.hcard__link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.hjump {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.hjump__label {
+  color: var(--color-text-secondary);
+  font: 400 13px/1 var(--font-sans);
+}
+
+.hjump__year {
+  min-height: 36px;
+  font-weight: 600;
+}
+
+/* ─── Years and the axis ─── */
+.hist__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.hist[data-mode="desktop"] .hist__layout {
+  grid-template-columns: 112px minmax(0, 1fr);
+}
+
+.hist__rail {
+  position: sticky;
+  top: calc(var(--dh-sticky-top, 0px) + var(--hist-tools-h) + 16px);
+}
+
+.hrail__title {
+  margin: 0 0 8px;
+  color: var(--color-text-muted);
+  font: 500 10px/1.2 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.hrail__list {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hrail__year {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px 0 10px;
+  border: 0;
+  border-left: 2px solid transparent;
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.hrail__label {
+  font: 500 18px/1 var(--font-brand);
+}
+
+.hrail__count {
+  color: var(--color-text-muted);
+  font: 500 11px/1 var(--font-mono);
+}
+
+.hrail__year:hover:not(:disabled) {
+  color: var(--color-text-primary);
+}
+
+.hrail__year[aria-current="true"] {
+  border-left-color: var(--color-text-primary);
+  background: var(--shell-deck);
+  color: var(--color-text-primary);
+}
+
+.hrail__year[aria-current="true"] .hrail__label {
+  font-weight: 600;
+}
+
+.hrail__year:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.hrail__top {
+  display: inline-flex;
+  gap: 6px;
+  min-height: 36px;
+  margin-top: 6px;
+  padding: 0 10px 0 16px;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+  font: 600 14px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.hist__main {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.hist__axis {
+  display: grid;
+  gap: 28px;
+}
+
+.hyear {
+  display: grid;
+  gap: 14px;
+}
+
+.hyear__title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 26px/1.1 var(--font-brand);
+  scroll-margin-top: calc(var(--dh-sticky-top, 0px) + var(--hist-tools-h) + 12px);
+}
+
+.hyear__title:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 4px;
+}
+
+.hyear__count {
+  color: var(--color-text-muted);
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.hyear__count + .hyear__age {
+  margin-left: -6px;
+}
+
+.hyear__age {
+  color: var(--shell-brass);
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.hyear__entries {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0 0 0 30px;
+  border-left: 2px solid var(--shell-edge);
+  list-style: none;
+}
+
+.hist__state {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 14px/1.4 var(--font-sans);
+}
+
+.hist__none {
+  display: grid;
+  gap: 4px;
+  padding: 24px;
+  border: 1px dashed var(--shell-edge-strong);
+}
+
+.hist__none p {
+  margin: 0;
+}
+
+.hist__none-title {
+  color: var(--color-text-primary);
+  font: 600 16px/1.3 var(--font-brand);
+}
+
+.hist-empty {
+  display: grid;
+  gap: 10px;
+  padding: 28px 24px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel);
+}
+
+.hist-empty h3 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 20px/1.3 var(--font-brand);
+}
+
+.hist-empty p {
+  max-width: 72ch;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 14px/1.5 var(--font-sans);
+}
+
+.hist-empty__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 6px;
+}
+
+.hist-empty__actions .cdh-create {
+  width: auto;
+}
+
+.hist-empty__actions .hcard__button {
+  min-height: 44px;
+}
+
+/* ─── Cards ─── */
+.hcard {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr) auto;
+  gap: 18px;
+  padding: 14px;
+  border: 1px solid var(--shell-edge);
+  border-radius: 4px;
+  background: var(--shell-panel);
+}
+
+.hcard[data-attention] {
+  border-color: var(--shell-brass);
+}
+
+.hcard[data-kind="DOCUMENT"] {
+  background: var(--shell-deck);
+}
+
+.hcard__media .dphoto {
+  width: 168px;
+  height: 112px;
+  aspect-ratio: auto;
+}
+
+.hcard__body {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.hcard__eyebrow {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 500 11px/1.4 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hcard__eyebrow-date {
+  text-transform: none;
+}
+
+.hcard__title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 20px/1.25 var(--font-brand);
+  overflow-wrap: anywhere;
+}
+
+.hcard__title[data-level="expanded"] {
+  font-size: 24px;
+}
+
+.hcard__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+.hcard__then {
+  color: var(--color-text-muted);
+}
+
+.hcard__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding-top: 10px;
+}
+
+.hcard__states {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* The history writes a state as a dot and its words (N020/Stare 557:3559). */
+.hist .dstate {
+  min-height: 24px;
+  gap: 7px;
+  border-radius: 0;
+  font-size: 12.5px;
+}
+
+.hist .dstate svg {
+  display: none;
+}
+
+/* Execution, production and order are neutral here (Stare 557:3559 in 604:8199: info at 15 %,
+   primary text): the warm colour is kept for what the server marks for attention. Only the N-020
+   history surface; the shared --dh-* tokens of the other views stay as they are. */
+.hist .dstate[data-tone="execution"],
+.hist .dstate[data-tone="production"],
+.hist .dstate[data-tone="order"] {
+  background: color-mix(in srgb, var(--color-info) 15%, transparent);
+  color: var(--color-text-primary);
+}
+
+.hist .dstate[data-tone="execution"]::before,
+.hist .dstate[data-tone="production"]::before,
+.hist .dstate[data-tone="order"]::before {
+  background: var(--color-info);
+}
+
+.hist .dstate::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* An uploaded document has no state: said in words, not as a state tag. */
+.hnostate {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 24px;
+  padding: 0 8px;
+  background: var(--shell-panel-strong);
+  color: var(--color-text-secondary);
+  font: 500 12.5px/1.2 var(--font-sans);
+}
+
+.hnostate::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Why the card matched (compact) and the full list on demand. */
+.hmatch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 12px;
+  margin-top: 6px;
+  min-width: 0;
+}
+
+.hmatch__line {
+  margin: 0;
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+.hmatch__lead {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.hmatch__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+  font: 600 13px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.hmatch__toggle:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.hmatch__list {
+  display: grid;
+  flex-basis: 100%;
+  gap: 4px;
+  margin: 2px 0 0;
+  padding: 10px 12px 10px 28px;
+  border-left: 2px solid var(--shell-edge-strong);
+  background: var(--shell-deck);
+  color: var(--color-text-secondary);
+  font: 400 13px/1.45 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.hchain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 400 12.5px/1.4 var(--font-sans);
+}
+
+.hchain__step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hchain__arrow {
+  margin-right: 2px;
+  color: var(--color-text-muted);
+}
+
+.hchain__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--shell-signal);
+}
+
+.hchain__step[data-tone="attention"] .hchain__dot {
+  background: var(--shell-brass);
+}
+
+.hchain__step[data-tone="none"] {
+  color: var(--color-text-secondary);
+}
+
+.hchain__step[data-tone="none"] .hchain__dot {
+  border: 1px solid var(--color-text-muted);
+  background: none;
+}
+
+.hcard__side {
+  display: grid;
+  align-content: space-between;
+  justify-items: end;
+  gap: 12px;
+}
+
+.hcard__counts {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 12.5px/1.3 var(--font-sans);
+  white-space: nowrap;
+}
+
+.hcard__button {
+  min-height: 36px;
+  padding: 0 16px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.hdoc-tile {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 3px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel-strong);
+  color: var(--color-text-secondary);
+}
+
+.hdoc-tile[data-large] {
+  width: 168px;
+  height: 112px;
+  background: var(--shell-panel);
+}
+
+.hdoc-tile__kind {
+  font: 600 10px/1 var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.hdoc-tile[data-large] .hdoc-tile__kind {
+  font-size: 12px;
+}
+
+.hdoc-tile__format {
+  font: 500 9px/1 var(--font-mono);
+}
+
+/* Expanded */
+.hcard[data-expanded] {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  padding: 18px;
+  border-color: var(--color-text-primary);
+}
+
+.hcard[data-expanded][data-attention] {
+  border-color: var(--shell-brass);
+}
+
+.hcard__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hcard__head-text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.hcard__head .hcard__status {
+  padding-top: 6px;
+}
+
+.hcard__columns {
+  display: grid;
+  grid-template-columns: minmax(0, 490px) minmax(0, 1fr);
+  gap: 24px;
+}
+
+.hcard__columns > :only-child {
+  grid-column: 1 / -1;
+}
+
+.hcard__label {
+  margin: 0 0 8px;
+  color: var(--color-text-secondary);
+  font: 500 11px/1.3 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* A project without files of its own keeps its photos at the width of the other cards (579:6351). */
+.hcard__photos {
+  max-width: 490px;
+}
+
+.hcard__photo-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hcard__caption {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font: 400 12px/1.3 var(--font-mono);
+}
+
+.hcard__carousel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.hcard__carousel .hcard__caption {
+  margin: 0;
+}
+
+.hcard__detail {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.hfile-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hfile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 76px;
+  padding: 10px 16px;
+  border: 1px solid var(--shell-edge);
+  background: var(--color-canvas);
+}
+
+.hfile__text {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 3px;
+  min-width: 0;
+}
+
+.hfile__title {
+  color: var(--color-text-primary);
+  font: 600 14px/1.3 var(--font-sans);
+}
+
+.hfile__meta {
+  color: var(--color-text-secondary);
+  font: 400 11.5px/1.4 var(--font-mono);
+}
+
+.hfile__actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+}
+
+.hfile__preview {
+  min-height: 36px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+  font: 600 14px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.hfile__download {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--shell-panel);
+  color: var(--color-text-primary);
+  font: 600 14px/1 var(--font-sans);
+  text-decoration: none;
+}
+
+.hcard__description {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.5 var(--font-sans);
+}
+
+.hcard__access {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+.hcard__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 26px;
+  margin: 0;
+}
+
+.hcard__actions .hcard__button {
+  min-height: 40px;
+}
+
+/* ─── Focus ─── */
+.hist a:focus-visible,
+.hist button:focus-visible,
+.hist input:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.htools__field input:focus-visible {
+  outline: none;
+}
+
+/* ─── Widths ─── */
+@media (max-width: 1279px) {
+  .hcard__columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1099px) {
+  /* Below 1100 the section body has no top padding (client-history.css): the title keeps 23 px. */
+  .hist {
+    gap: 16px;
+    padding-top: 23px;
+  }
+
+  .hyear__entries {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .hwatch__control {
+    padding: 10px 16px;
+  }
+
+  /* 588:7090: title 28 → watch 16 → search 16 → years 16 → 2026 (no extra band around the search). */
+  .hist__tools {
+    padding: 0 var(--chub-gutter);
+  }
+
+  .hist__title {
+    line-height: 1;
+  }
+
+  .hjump__year {
+    min-height: 34px;
+  }
+
+  .htools {
+    min-height: 44px;
+  }
+
+  /* Tablet and phone (588:7090 / 649:14364): a small image next to what and where; the state, the
+     line of the project and the counts with "Extinde" run under them, across the card. */
+  .hcard:not([data-expanded]) {
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 4px 12px;
+  }
+
+  .hcard:not([data-expanded]) .hcard__media {
+    grid-row: 1 / span 3;
+    grid-column: 1;
+  }
+
+  .hcard:not([data-expanded]) .hcard__media .dphoto,
+  .hcard:not([data-expanded]) .hcard__media .hdoc-tile[data-large] {
+    width: 96px;
+    height: 64px;
+  }
+
+  .hcard:not([data-expanded]) .hcard__body {
+    display: contents;
+  }
+
+  .hcard:not([data-expanded]) .hcard__eyebrow,
+  .hcard:not([data-expanded]) .hcard__title,
+  .hcard:not([data-expanded]) .hcard__meta {
+    grid-column: 2;
+  }
+
+  .hcard:not([data-expanded]) .hcard__status,
+  .hcard:not([data-expanded]) .hmatch,
+  .hcard:not([data-expanded]) .hcard__side {
+    grid-column: 1 / -1;
+  }
+
+  .hcard:not([data-expanded]) .hcard__status {
+    padding-top: 8px;
+  }
+
+  /* 588:7090: the title 17 px; the project line as plain text, no step dots. */
+  .hcard:not([data-expanded]) .hcard__title {
+    font-size: 17px;
+  }
+
+  .hcard:not([data-expanded]) .hchain__dot {
+    display: none;
+  }
+
+  .hcard:not([data-expanded]) .hchain {
+    color: var(--color-text-secondary);
+  }
+
+  .hcard__side {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 8px;
+  }
+
+}
+
+@media (max-width: 767px) {
+  .hist {
+    gap: 14px;
+    padding-top: 16px;
+  }
+
+  /* Phone (649:14364): the dark bar already names the section; the heading stays for readers. */
+  .hist__head {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .hwatch__control {
+    padding: 8px 14px;
+  }
+
+  .hwatch__sep {
+    display: none;
+  }
+
+  .hwatch__title {
+    flex: 1 1 auto;
+  }
+
+  .hwatch__toggle {
+    order: 2;
+  }
+
+  .hwatch__part {
+    order: 5;
+    flex-basis: 100%;
+  }
+
+  .hwatch__columns {
+    padding: 0 14px 12px;
+  }
+
+  .hwatch__item {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 2px 12px;
+  }
+
+  .hwatch__text {
+    flex-basis: 100%;
+  }
+
+  /* Phone (649:14364): the situation and its way in; references and amounts are in the view it opens. */
+  .hwatch__details {
+    display: none;
+  }
+
+  .hwatch__action {
+    min-height: 44px;
+  }
+
+
+
+  .hjump {
+    gap: 6px;
+  }
+
+  .hjump__year {
+    padding: 0 10px;
+  }
+
+  .hcard {
+    padding: 12px;
+  }
+
+  .hcard__title,
+  .hcard:not([data-expanded]) .hcard__title {
+    font-size: 18px;
+  }
+
+  .hcard__title[data-level="expanded"] {
+    font-size: 21px;
+  }
+
+  .hcard[data-expanded] {
+    padding: 14px;
+  }
+
+  .hcard__head {
+    flex-direction: column;
+  }
+
+  /* Phone: "Restrânge" follows the head in the flow, so the title keeps the whole width. */
+  .hcard__head .hcard__collapse {
+    align-self: flex-start;
+  }
+
+  .hcard__photo-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hfile {
+    flex-wrap: wrap;
+    padding: 12px;
+  }
+
+  .hfile__text {
+    flex-basis: calc(100% - 60px);
+  }
+
+  .hfile__actions {
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+
+  .hresult {
+    padding: 10px 12px;
+  }
+}

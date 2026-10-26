@@ -366,7 +366,7 @@ describe("QuotesPage", () => {
     await userEvent.click(dossier().getByRole("button", { name: "Reîncearcă" }));
     expect(await dossier().findByText("3 / 17 finalizate")).toBeInTheDocument();
     expect(dossier().getByText("Progresul lucrării")).toBeInTheDocument();
-    expect(dossier().getByRole("link", { name: /Deschide fișa lucrării/ })).toHaveAttribute("href", "/lucrari/asmo%3A1");
+    expect(dossier().getByRole("link", { name: /Fișa lucrării/ })).toHaveAttribute("href", "/lucrari/asmo%3A1");
   });
 
   it("does not read a job for an offer without an order", async () => {

@@ -1,4 +1,4 @@
-import { render, screen, within, waitFor } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetResourceCache } from "../data/resourceCache";
@@ -138,7 +138,7 @@ describe("QuoteSnapshotPage", () => {
     expect(passiveLifecycleGets(fetchMock)).toEqual([]);
   });
 
-  it("confirms the exact quote and opens its job in one command", async () => {
+  it("confirms the exact quote in one command and shows the acceptance result with its job", async () => {
     let stage: "QUOTE_CREATED" | "QUOTE_ACCEPTED" = "QUOTE_CREATED";
     const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
       const url = String(input);
@@ -187,7 +187,10 @@ describe("QuoteSnapshotPage", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Confirmă comanda" }));
     await user.click(screen.getByRole("button", { name: "Da, confirm comanda" }));
-    await waitFor(() => expect(window.location.pathname).toBe("/lucrari/ord-1"));
+    // N-018 · the offer stays open with the acceptance result; the job opens from it.
+    const result = await screen.findByRole("region", { name: "Rezultatul acceptării" });
+    expect(within(result).getByRole("link", { name: "Fișa lucrării →" })).toHaveAttribute("href", "/lucrari/ord-1");
+    expect(window.location.pathname.startsWith("/lucrari")).toBe(false);
     const acceptCall = fetchMock.mock.calls.find(
       (call) => String(call[0]).endsWith("/confirm-order") && call[1]?.method === "POST",
     );
@@ -236,7 +239,7 @@ describe("QuoteSnapshotPage", () => {
 
     await user.click(accept);
     expect(screen.getByRole("region", { name: "Confirmi acceptarea ofertei OF-104?" })).toHaveFocus();
-    await user.click(screen.getByRole("button", { name: "Anulează" }));
+    await user.click(screen.getByRole("button", { name: "Renunță" }));
     expect(screen.queryByRole("region", { name: /Confirmi acceptarea/ })).not.toBeInTheDocument();
     expect(accept).toHaveFocus();
     expect(acceptancePosts(fetchMock)).toEqual([]);
@@ -294,7 +297,10 @@ describe("QuoteSnapshotPage", () => {
       status: 200,
       json: async () => ({ created: true, orderSnapshot: { orderSnapshotId: "ord-1" } }),
     });
-    await waitFor(() => expect(window.location.pathname).toBe("/lucrari/ord-1"));
+    // N-018 · the offer stays open with the acceptance result; the job opens from it.
+    const result = await screen.findByRole("region", { name: "Rezultatul acceptării" });
+    expect(within(result).getByRole("link", { name: "Fișa lucrării →" })).toHaveAttribute("href", "/lucrari/ord-1");
+    expect(window.location.pathname.startsWith("/lucrari")).toBe(false);
     expect(acceptancePosts(fetchMock)).toHaveLength(1);
   });
 
@@ -318,7 +324,7 @@ describe("QuoteSnapshotPage", () => {
     expect(acceptancePosts(fetchMock)[0]).toMatch(/\/confirm-order$/);
   });
 
-  it("creates an order from the envelope and opens /lucrari/:orderSnapshotId", async () => {
+  it("creates an order from the envelope and links its job from the acceptance result", async () => {
     const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith("/confirm-order") && init?.method === "POST") {
@@ -369,7 +375,10 @@ describe("QuoteSnapshotPage", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Confirmă comanda" }));
     await user.click(screen.getByRole("button", { name: "Da, confirm comanda" }));
-    await waitFor(() => expect(window.location.pathname).toBe("/lucrari/ord-1"));
+    // N-018 · the offer stays open with the acceptance result; the job opens from it.
+    const result = await screen.findByRole("region", { name: "Rezultatul acceptării" });
+    expect(within(result).getByRole("link", { name: "Fișa lucrării →" })).toHaveAttribute("href", "/lucrari/ord-1");
+    expect(window.location.pathname.startsWith("/lucrari")).toBe(false);
     const orderCall = fetchMock.mock.calls.find(
       (call) => String(call[0]).endsWith("/confirm-order") && call[1]?.method === "POST",
     );
@@ -446,6 +455,23 @@ describe("QuoteSnapshotPage", () => {
       true,
     );
     expect(passiveLifecycleGets(fetchMock)).toEqual([]);
+  });
+
+  it("offers a retry when the offer cannot be read (N-018)", async () => {
+    let fail = true;
+    const fetchMock = vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      if (fail) return Promise.resolve({ ok: false, status: 500, json: async () => ({}) });
+      if (url.endsWith("/api/quotes/q-a")) return Promise.resolve({ ok: true, status: 200, json: async () => ({ quote: createdEnvelope() }) });
+      if (url.includes("/quote-snapshots/q-a")) return Promise.resolve({ ok: true, status: 200, json: async () => ({ quoteSnapshot: frozenSnapshot() }) });
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<QuoteSnapshotPage productCode={productCode} quoteSnapshotId="q-a" />);
+    const retry = await screen.findByRole("button", { name: "Reîncearcă" });
+    fail = false;
+    await userEvent.click(retry);
+    expect(await screen.findByRole("button", { name: "Confirmă comanda" })).toBeInTheDocument();
   });
 });
 

@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import { useEffect, useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetResourceCache } from "../data/resourceCache";
@@ -73,6 +74,24 @@ function stubDetail(detail: unknown, extra?: (url: string, init?: RequestInit) =
 }
 
 describe("RequestDetailPage", () => {
+  it("opened from the client page, offers the way back to that page and tab; after a direct link, the request list (N-018)", async () => {
+    stubDetail(requestDetail());
+    window.history.replaceState({}, "", "/clienti/cus-1?sectiune=cereri");
+    window.history.pushState({}, "", "/cereri/req-1");
+    window.history.replaceState({ workosKey: "k", workosIndex: 1, workosFrom: "/clienti/cus-1?sectiune=cereri", workosFromIndex: 0 }, "", "/cereri/req-1");
+    const go = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
+    const { unmount } = render(<RequestDetailPage requestId="req-1" />);
+    const back = await screen.findByRole("link", { name: "← Fișa clientului" });
+    expect(back).toHaveAttribute("href", "/clienti/cus-1?sectiune=cereri");
+    await userEvent.click(back);
+    expect(go).toHaveBeenCalledWith(-1);
+    unmount();
+    go.mockRestore();
+    window.history.replaceState({}, "", "/cereri/req-1");
+    render(<RequestDetailPage requestId="req-1" />);
+    expect(await screen.findByRole("link", { name: "← Toate cererile" })).toHaveAttribute("href", "/cereri");
+  });
+
   it("keeps request identity in the header and product continuation inside the request", async () => {
     stubDetail(requestDetail());
 
@@ -1024,3 +1043,101 @@ function stubOfferMutation(initial: unknown, next: unknown) {
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
+
+describe("N-018 · offer preview over the request", () => {
+    const offer = (id: string, reference: string) => ({ quoteSnapshotId: id, kind: "PRODUCT", kindLabel: "Produs", productCode: "PRD-TEST", productLabel: "Litere test", reference, stageLabel: "Creată", superseded: false, attentionLabel: null, orderSnapshotId: null });
+    const envelope = (id: string, reference: string) => ({ quote: { quoteSnapshotId: id, kind: "PRODUCT", kindLabel: "Produs", productCode: "PRD-TEST", productLabel: "Litere test", reference, inscription: "", stage: "QUOTE_CREATED", stageLabel: "Creată", nextAction: "ACCEPT_QUOTE", nextActionLabel: "Acceptă oferta", needsAttention: false, attentionLabel: null, superseded: false, sectionCount: 1, grossDisplay: null, currency: "EUR", customerDisplayName: "Atelier Nord", requestId: "req-1", requestReference: "CRQ-104", orderSnapshotId: null, assemblyId: null, createdAt: null } });
+
+    function Harness() {
+      const [search, setSearch] = useState(window.location.search);
+      useEffect(() => {
+        const sync = () => setSearch(window.location.search);
+        window.addEventListener("popstate", sync);
+        return () => window.removeEventListener("popstate", sync);
+      }, []);
+      return <RequestDetailPage requestId="req-1" search={search} />;
+    }
+
+    function serve() {
+      stubDetail(requestDetail({ linkedOffers: [offer("q-1", "OF-1"), offer("q-2", "OF-2")] }), (url) => {
+        if (url.endsWith("/api/quotes/q-1")) return new Response(JSON.stringify(envelope("q-1", "OF-1")), { status: 200 });
+        if (url.endsWith("/api/quotes/q-2")) return new Response(JSON.stringify(envelope("q-2", "OF-2")), { status: 200 });
+        return null;
+      });
+    }
+
+    it("pushes the first preview, replaces on the next offer and closes back with focus on the opener", async () => {
+      serve();
+      window.history.replaceState({}, "", "/cereri/req-1");
+      render(<Harness />);
+      const opener = await screen.findByRole("button", { name: "Previzualizează oferta OF-1" });
+      const depth = window.history.length;
+      await userEvent.click(opener);
+      expect(new URLSearchParams(window.location.search).get("oferta")).toBe("q-1");
+      expect(window.history.length).toBe(depth + 1);
+      const dossier = await screen.findByRole("complementary", { name: "Dosarul ofertei" });
+      expect(await within(dossier).findByText("1 din 2")).toBeInTheDocument();
+      await userEvent.click(within(dossier).getByRole("button", { name: /următoare/i }));
+      expect(new URLSearchParams(window.location.search).get("oferta")).toBe("q-2");
+      expect(window.history.length).toBe(depth + 1);
+      await userEvent.keyboard("{Escape}");
+      await waitFor(() => expect(window.location.search).toBe(""));
+      expect(window.location.pathname).toBe("/cereri/req-1");
+      await waitFor(() => expect(screen.queryByRole("complementary", { name: "Dosarul ofertei" })).toBeNull());
+      await waitFor(() => expect(screen.getByRole("button", { name: "Previzualizează oferta OF-1" })).toHaveFocus());
+    });
+
+    it("opens from a direct link and closes by replacing, staying on the request", async () => {
+      serve();
+      window.history.replaceState({}, "", "/cereri/req-1?oferta=q-2");
+      render(<Harness />);
+      const dossier = await screen.findByRole("complementary", { name: "Dosarul ofertei" });
+      const depth = window.history.length;
+      await userEvent.click(within(dossier).getByRole("button", { name: /Închide dosarul|Registru/ }));
+      expect(window.location.pathname).toBe("/cereri/req-1");
+      expect(window.location.search).toBe("");
+      expect(window.history.length).toBe(depth);
+    });
+  });
+describe('N-018 · firul cererii în patru pași', () => {
+    const steps = () => within(screen.getByRole('list', { name: 'Firul cererii' })).getAllByRole('listitem').filter((item) => item.classList.contains('request-thread__step'));
+
+    it('orders the existing sections in four steps and puts the server action on the step it leads to', async () => {
+      stubDetail(requestDetail({ nextAction: 'OPEN_QUOTE', nextActionLabel: 'Deschide oferta', linkedOffers: [
+        { quoteSnapshotId: 'q-1', productCode: 'PRD-LETTERS-FRONTLIT-PLEXI-AL06', reference: 'OF-1' },
+        { quoteSnapshotId: 'q-2', productCode: 'PRD-LETTERS-FRONTLIT-PLEXI-AL06', reference: 'OF-2' },
+      ] }));
+      render(<RequestDetailPage requestId="req-1" />);
+      await screen.findByRole('list', { name: 'Firul cererii' });
+      expect(steps().map((step) => step.querySelector('h2')?.textContent)).toEqual(['1 · Brief', '2 · Ce se realizează', '3 · Oferta · 2', '4 · Lucrarea']);
+      const [brief, , offer, job] = steps();
+      expect(within(brief!).getByRole('heading', { name: 'Ce dorește clientul' })).toBeInTheDocument();
+      expect(within(offer!).getByRole('link', { name: 'Deschide oferta OF-1' })).toBeInTheDocument();
+      expect(within(offer!).getByRole('link', { name: 'Deschide oferta OF-2' })).toBeInTheDocument();
+      expect(offer).toHaveAttribute('data-current');
+      expect(within(offer!).getByText('Acțiunea curentă')).toBeInTheDocument();
+      expect(within(offer!).getByRole('link', { name: 'Deschide oferta →' })).toHaveAttribute('href', '/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1');
+      expect(within(job!).getByText('Nicio lucrare încă.')).toBeInTheDocument();
+      expect(screen.queryByText(/Continuă aici/)).toBeNull();
+      expect(screen.getAllByText('Acțiunea curentă')).toHaveLength(1);
+    });
+
+    it('keeps the product choice in step 2 when the server asks for it', async () => {
+      stubDetail(requestDetail(), (url) => url.endsWith('/product-catalog')
+        ? new Response(JSON.stringify({ tree: [{ kind: 'product', code: 'PRD-TEST', label: 'Litere test' }] }), { status: 200 })
+        : url.includes('/assemblies') ? new Response(JSON.stringify({ canCreate: false, offerings: [], assemblies: [] }), { status: 200 }) : null);
+      render(<RequestDetailPage requestId="req-1" />);
+      await screen.findByRole('list', { name: 'Firul cererii' });
+      const work = steps()[1]!;
+      expect(work).toHaveAttribute('data-current');
+      expect(await within(work).findByRole('button', { name: /Litere test/ })).toBeInTheDocument();
+    });
+
+    it('marks no step when the server gives no action', async () => {
+      stubDetail(requestDetail({ nextAction: null, nextActionLabel: null }));
+      render(<RequestDetailPage requestId="req-1" />);
+      await screen.findByRole('list', { name: 'Firul cererii' });
+      expect(steps().some((step) => step.hasAttribute('data-current'))).toBe(false);
+      expect(screen.queryByText('Acțiunea curentă')).toBeNull();
+    });
+  });

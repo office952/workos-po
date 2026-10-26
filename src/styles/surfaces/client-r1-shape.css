@@ -1,0 +1,196 @@
+/* R1 · forma comună a dosarului de client (842:31657).
+   One corner for controls (6) and one for cards (8); the primary section buttons 40 px on desktop
+   and 44 on the phone; cards in one row share their height. Sedii as three cards (854:32977).
+   Shape only: no business content, colours from the Machine theme tokens. */
+
+/* ─── Corners ─── */
+[data-surface="client-hub"] :is(.hcard, .dreqcard, .dwcard, .dcom-card, .dcom-panel, .dsite2, .dsites2__billing, .dsites2__assign) {
+  border-radius: var(--cdh-card-radius, 8px);
+}
+
+[data-surface="client-hub"] :is(.htools__field, .dreqs__field, .dworks__field, .ddocs2__field, .dpgal__field, .dreqs__segment, .dworks__segment, .ddocs2__upload, .dpgal__upload, .dsites2__add, .dworks__button, .dsite2__dest, .dsite2__actions button, .dsites2__assign-row select) {
+  border-radius: var(--cdh-radius, 6px);
+}
+
+/* ─── Primary section buttons ─── */
+[data-surface="client-hub"] :is(.ddocs2__upload, .dpgal__upload, .dsites2__add, .dworks__button) {
+  min-height: 40px;
+}
+
+[data-surface="client-hub"] :is(.ddocs2[data-mode="phone"] .ddocs2__upload, .dpgal[data-mode="phone"] .dpgal__upload, .dsites2[data-mode="phone"] .dsites2__add, .dworks[data-mode="phone"] .dworks__button) {
+  min-height: 44px;
+}
+
+/* ─── Date comerciale (854:33322): the cards of a row share their height ─── */
+[data-surface="client-hub"] .dcom-groups {
+  align-items: stretch;
+}
+
+/* ─── Sedii (854:32977): three equal cards, the photo on top, destinations and actions at the foot ─── */
+[data-surface="client-hub"] .dsites2[data-mode="desktop"] .dsites2__list {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  align-items: stretch;
+  gap: 16px;
+}
+
+[data-surface="client-hub"] .dsites2[data-mode="desktop"] .dsite2 {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+[data-surface="client-hub"] .dsites2[data-mode="desktop"] .dsite2__media {
+  gap: 0;
+}
+
+[data-surface="client-hub"] .dsites2[data-mode="desktop"] .dsite2__media > :first-child {
+  width: 100%;
+  border-radius: 0;
+}
+
+[data-surface="client-hub"] .dsites2[data-mode="desktop"] .dsite2__caption {
+  padding: 14px 18px 0;
+  font-size: 11.5px;
+}
+
+[data-surface="client-hub"] .dsites2[data-mode="desktop"] .dsite2__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 18px 18px;
+}
+
+[data-surface="client-hub"] .dsites2[data-mode="desktop"] .dsite2__foot {
+  display: grid;
+  justify-content: stretch;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+[data-surface="client-hub"] .dsites2[data-mode="desktop"] .dsite2__go,
+[data-surface="client-hub"] .dsites2[data-mode="tablet"] .dsite2__go {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+/* A destination: icon, label, its count at the right, the arrow when there is something to show. */
+[data-surface="client-hub"] .dsite2__dest {
+  min-height: 40px;
+  padding: 0 12px;
+}
+
+[data-surface="client-hub"] .dsites2[data-mode="desktop"] .dsite2__dest,
+[data-surface="client-hub"] .dsites2[data-mode="tablet"] .dsite2__dest {
+  justify-content: flex-start;
+  min-width: 0;
+}
+
+[data-surface="client-hub"] .dsite2__dest .dicon {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+[data-surface="client-hub"] .dsite2__dest-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-surface="client-hub"] .dsite2__dest-count {
+  margin-left: auto;
+  font: 600 16px/1 var(--font-brand);
+}
+
+[data-surface="client-hub"] .dsite2__dest-arrow {
+  color: var(--color-text-muted);
+  font-size: 16px;
+}
+
+[data-surface="client-hub"] .dsite2__dest[data-zero] {
+  border-color: var(--shell-edge);
+}
+
+[data-surface="client-hub"] .dsite2__dest[data-zero] .dsite2__dest-count {
+  margin-right: 14px;
+  color: var(--color-text-muted);
+}
+
+/* Modifică outlined, Dezactivează / Reactivează quieter beside it. */
+[data-surface="client-hub"] .dsite2__actions {
+  align-items: center;
+  gap: 8px;
+}
+
+[data-surface="client-hub"] .dsite2__actions button {
+  min-height: 40px;
+  padding: 0 14px;
+  color: var(--color-text-secondary);
+}
+
+[data-surface="client-hub"] .dsite2__actions button:first-child {
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--shell-panel);
+  color: var(--color-text-primary);
+}
+
+[data-surface="client-hub"] .dsite2__actions button:hover {
+  background: var(--shell-deck);
+}
+
+[data-surface="client-hub"] .dsites2[data-mode="phone"] .dsite2__actions button {
+  min-height: 44px;
+}
+
+/* "Adaugă sediu" is the section's own primary action (854:32977): filled, the header's "Cerere nouă" outlined. */
+[data-surface="client-hub"] .dsites2__add {
+  border-color: var(--shell-signal);
+  background: var(--shell-signal);
+  color: var(--wos-paper);
+}
+
+[data-surface="client-hub"] .dsites2__add:hover {
+  border-color: var(--shell-signal-strong);
+  background: var(--shell-signal-strong);
+}
+
+/* ─── Date comerciale (854:33322): titled cards, each label above its value ─── */
+[data-surface="client-hub"] .dcom-card {
+  align-content: start;
+  padding: 18px 20px 12px;
+}
+
+[data-surface="client-hub"] .dcom-card__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-text-primary);
+  font: 600 18px/1.25 var(--font-brand);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+[data-surface="client-hub"] .dcom-card__title .dicon {
+  flex: none;
+  color: var(--shell-signal);
+}
+
+[data-surface="client-hub"] .dcom-card .dcom-list > div {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3px;
+  padding: 12px 0;
+}
+
+[data-surface="client-hub"] .dcom-card .dcom-list > div:last-child {
+  border-bottom: 0;
+}
+
+[data-surface="client-hub"] .dcom-card .dcom-list dt {
+  font-size: 12.5px;
+}

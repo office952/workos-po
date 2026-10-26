@@ -1,0 +1,377 @@
+/* N-020 etapa 5 · the document dialogs: upload (672:16509 → 672:17657; telefon 673:17851), metadata
+   and conflict (705:22325 → 756:460 → 756:840 → 773:185), associations (758:185 → 758:2610;
+   telefon 786:634 → 760:213 → 786:708). They live in the common CreationDialog; these rules only
+   shape their own parts. Machine theme tokens only (Light and Night). */
+
+/* ─── Upload ─── */
+.ddocupload__file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 10px 12px;
+  border: 1px dashed var(--shell-edge-strong);
+}
+
+.ddocupload__pick {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--wos-paper);
+  color: var(--color-text-primary);
+  font: 600 14px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.ddocupload__pick[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ddocupload__pick:focus-within {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.ddocupload__name {
+  min-width: 0;
+  color: var(--color-text-primary);
+  font: 400 13.5px/1.35 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.ddocupload__file[data-empty] .ddocupload__name {
+  color: var(--color-text-muted);
+}
+
+.ddocupload__fields {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ddocupload__wait {
+  align-self: center;
+  outline: none;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.3 var(--font-sans);
+}
+
+.ddocupload .cdos-links[data-columns="3"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ddocupload .cdos-links__group legend {
+  color: var(--color-text-muted);
+  font: 500 10.5px/1.3 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ─── Metadata and conflict ─── */
+.ddocform {
+  display: grid;
+  gap: 16px;
+}
+
+
+.ddocform__date {
+  max-width: 50%;
+}
+
+.ddocform .cdos-field[data-flagged] input,
+.ddocform .cdos-field[data-flagged] select,
+.ddocform .cdos-field[data-flagged] textarea {
+  border-color: var(--shell-brass);
+  box-shadow: inset 0 0 0 1px var(--shell-brass);
+}
+
+.ddocform__label,
+.ddoclinks__label {
+  margin: 0;
+  color: var(--color-text-muted);
+  font: 500 10.5px/1.3 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ddocform__diff {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ddocform__diff li {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--shell-deck);
+}
+
+.ddocform__diff li[data-both] {
+  border-left: 3px solid var(--shell-brass);
+}
+
+.ddocform__diff-title {
+  margin: 0;
+  font: 600 14px/1.3 var(--font-sans);
+}
+
+.ddocform__diff dl {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.ddocform__diff dl > div {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.ddocform__diff dt {
+  color: var(--color-text-secondary);
+  font: 400 12.5px/1.4 var(--font-sans);
+}
+
+.ddocform__diff dd {
+  margin: 0;
+  font: 400 13.5px/1.4 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+/* ─── Associations ─── */
+.ddoclinks {
+  display: grid;
+  gap: 14px;
+}
+
+
+.ddoclinks__list {
+  display: grid;
+  gap: 10px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ddoclinks__row {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr) auto;
+  gap: 8px 14px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel);
+}
+
+.ddoclinks__row[data-saved] {
+  border-color: transparent;
+  background: var(--shell-deck);
+}
+
+.ddoclinks__row[data-state="failed"] {
+  border-color: var(--color-danger, #b3261e);
+}
+
+.ddoclinks__row[data-state="confirm"],
+.ddoclinks__row[data-state="removing"] {
+  border-color: var(--shell-brass);
+}
+
+.ddoclinks__kind {
+  justify-self: start;
+  padding: 2px 6px;
+  border: 1px solid var(--shell-edge-strong);
+  color: var(--color-text-secondary);
+  font: 500 10px/1.3 var(--font-mono);
+  letter-spacing: 0.06em;
+}
+
+.ddoclinks__text {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ddoclinks__title {
+  font: 600 14px/1.35 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.ddoclinks__detail {
+  color: var(--color-text-secondary);
+  font: 500 11.5px/1.4 var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.ddoclinks__now,
+.ddoclinks__done {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--shell-signal);
+  font: 500 12.5px/1.35 var(--font-sans);
+}
+
+.ddoclinks__done {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--shell-signal);
+  background: var(--shell-deck);
+  color: var(--color-text-primary);
+}
+
+.ddoclinks__ask {
+  color: var(--color-text-secondary);
+  font: 400 12.5px/1.4 var(--font-sans);
+}
+
+.ddoclinks__error {
+  color: var(--color-danger, #b3261e);
+  font: 400 12.5px/1.4 var(--font-sans);
+}
+
+.ddoclinks__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.ddoclinks__link {
+  min-height: 36px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+  font: 600 14px/1.2 var(--font-sans);
+  cursor: pointer;
+}
+
+.ddoclinks__link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ddoclinks__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--shell-edge);
+  background: var(--wos-paper);
+  color: var(--color-text-muted);
+}
+
+.ddoclinks__search:focus-within {
+  border-color: var(--shell-signal);
+  box-shadow: inset 0 0 0 1px var(--shell-signal);
+}
+
+.ddoclinks__search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 40px;
+  border: 0;
+  background: none;
+  color: var(--color-text-primary);
+  font: 400 14px/1.2 var(--font-sans);
+  outline: none;
+}
+
+.creation-dialog:has(.ddoclinks) {
+  width: min(56rem, calc(100% - 32px));
+}
+
+@media (max-width: 767px) {
+  .ddocupload .cdos-links[data-columns="3"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ddocform__date {
+    max-width: none;
+  }
+
+  .ddocform__diff dl > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .ddoclinks__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ddoclinks__actions {
+    justify-content: flex-start;
+  }
+}
+
+/* Each column of the association choice lists its items from the top, at their own height. */
+.ddocupload .cdos-links {
+  align-items: start;
+}
+
+.ddocupload .cdos-links__group {
+  align-content: start;
+}
+
+.ddoclinks__result,
+.ddocform__notice,
+.ddocupload__done {
+  display: grid;
+  gap: 10px;
+  outline: none;
+}
+
+.ddoclinks__result:empty,
+.ddocform__notice:empty,
+.ddocupload__done:empty {
+  display: none;
+}
+
+.ddoclinks__result:focus-visible,
+.ddocform__notice:focus-visible,
+.ddocupload__done:focus-visible,
+.ddocupload__wait:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 3px;
+}
+
+/* ─── Photo upload (707:23176 → 677:19575): the chosen image, then Tip · Etapă · Data on one row ─── */
+.ddocupload__thumb {
+  flex: none;
+  width: 96px;
+  aspect-ratio: 3 / 2;
+  border: 1px solid var(--shell-edge);
+  object-fit: cover;
+}
+
+.ddocupload .cdos-row[data-photo] {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 767px) {
+  .ddocupload .cdos-row[data-photo] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The comparison of a conflict takes the focus when it opens (the pressed button is gone). */
+.ddocform__compare {
+  outline: none;
+}
+
+.ddocform__compare:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 3px;
+}

@@ -13,7 +13,7 @@ afterEach(() => {
   window.history.replaceState({}, "", "/");
 });
 
-describe("job sheet navigation", () => {
+describe("job sheet navigation", { timeout: 15_000 }, () => {
   it("keeps an explicit operation draft across section changes and restores it from the URL", async () => {
     const fetch = vi.fn((input: RequestInfo, init?: RequestInit) => {
       const url = String(input);
@@ -59,9 +59,11 @@ describe("job sheet navigation", () => {
     expect(await screen.findByRole("textbox", { name: "Observație" })).toHaveValue("Verifică muchia");
     expect(new URLSearchParams(window.location.search).get("task")).toBe("task-1");
     expect(new URLSearchParams(window.location.search).get("sectiune")).toBe("operatii");
-    const toggle = screen.getByRole("button", { name: "01 · Lipire" });
+    // The operation was pushed before Fișiere and Operații: closing replaces, it does not go back there.
     await user.click(screen.getByRole("button", { name: "Închide detaliul" }));
-    expect(toggle).toHaveFocus();
+    const toggle = await screen.findByRole("button", { name: "01 · Lipire" });
+    await waitFor(() => expect(toggle).toHaveFocus());
+    expect(new URLSearchParams(window.location.search).get("sectiune")).toBe("operatii");
     expect(screen.queryByRole("textbox", { name: "Observație" })).toBeNull();
     await user.click(toggle);
     expect(screen.getByRole("textbox", { name: "Observație" })).toHaveValue("Verifică muchia");

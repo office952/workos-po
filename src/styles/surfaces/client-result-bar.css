@@ -1,0 +1,202 @@
+/* R1 · Bara de rezultat (Figma 845:31815) and the filter triggers of the dossier lists. Complete:
+   the whole list and its order, quietly. Filtered: a tinted band with a full outline (never an edge
+   stripe), the filter badge, "X din Y", the removable chips and "Arată toate cele Y". */
+
+.rbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  min-height: 40px;
+  min-width: 0;
+}
+
+.rbar[data-state="complete"] {
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.rbar[data-state="filtered"],
+.rbar[data-state="zero"] {
+  padding: 8px 10px 8px 12px;
+  border: 1px solid var(--shell-brass);
+  border-radius: var(--cdh-radius, 6px);
+  background: var(--shell-brass-soft);
+}
+
+.rbar__summary {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 4px;
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 500 14px/1.35 var(--font-sans);
+}
+
+.rbar[data-state="complete"] .rbar__summary {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.rbar__shown {
+  font: 600 20px/1 var(--font-brand);
+}
+
+.rbar__detail,
+.rbar__sort {
+  margin: 0;
+  color: var(--color-text-muted);
+  font: 400 13px/1.35 var(--font-sans);
+}
+
+.rbar__tag {
+  color: var(--shell-brass);
+  font-weight: 500;
+}
+
+.rbar__pending {
+  margin-left: 8px;
+  color: var(--color-text-muted);
+  font: 400 12.5px/1.35 var(--font-sans);
+}
+
+/* A new answer is on its way: the previous numbers stay readable, visibly not current. */
+.rbar[data-pending] .rbar__shown,
+.rbar[data-pending] .rbar__summary {
+  opacity: 0.62;
+}
+
+.rbar__badge {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--cdh-radius, 6px);
+  background: var(--shell-brass);
+  color: var(--shell-button-ink);
+}
+
+.rbar__chips {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rbar__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 4px 0 10px;
+  border: 1px solid var(--shell-signal);
+  border-radius: var(--cdh-radius, 6px);
+  background: var(--shell-panel);
+  color: var(--color-text-secondary);
+  font: 400 13px/1.2 var(--font-sans);
+}
+
+.rbar__chip-value {
+  overflow-wrap: anywhere;
+  color: var(--shell-signal-deep);
+  font-weight: 600;
+}
+
+.rbar__chip-remove {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--cdh-radius, 6px);
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.rbar__chip-remove:hover {
+  background: var(--shell-signal-soft);
+  color: var(--color-text-primary);
+}
+
+.rbar__all {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  margin-left: auto;
+  padding: 0 14px;
+  border: 1px solid var(--shell-brass);
+  border-radius: var(--cdh-radius, 6px);
+  background: var(--shell-panel);
+  color: var(--color-text-primary);
+  font: 600 13.5px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.rbar__all:hover {
+  background: var(--shell-brass-soft);
+}
+
+.rbar button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Phone: the chips on their own line, the reset across the width (898:89711). */
+@media (max-width: 767px) {
+  .rbar[data-state="filtered"],
+  .rbar[data-state="zero"] {
+    padding: 10px 12px 12px;
+  }
+
+  .rbar__badge {
+    display: none;
+  }
+
+  .rbar__chips {
+    flex-basis: 100%;
+  }
+
+  .rbar__all {
+    justify-content: center;
+    width: 100%;
+    min-height: 44px;
+    margin-left: 0;
+  }
+}
+
+/* ─── Filter triggers (844:31784): "Tip" when off, "Tip · Factură" tinted when on ─── */
+[data-surface="client-hub"] .hfilter__button {
+  border-radius: var(--cdh-radius, 6px);
+}
+
+[data-surface="client-hub"] .hfilter__button[data-active] {
+  border-color: var(--shell-signal);
+  background: var(--shell-signal-soft);
+  color: var(--shell-signal-deep);
+}
+
+[data-surface="client-hub"] .hfilter__menu {
+  border-radius: var(--cdh-card-radius, 8px);
+}
+
+/* "Filtre" without a choice is a plain button; "Filtre · N" is tinted like an active trigger. */
+[data-surface="client-hub"] :is(.htools__sheet-button, .dreqs__sheet-button, .ddocs2__sheet-button, .dpgal__sheet-button, .dworks__sheet-button) {
+  border-radius: var(--cdh-radius, 6px);
+}
+
+[data-surface="client-hub"] :is(.htools__sheet-button, .dreqs__sheet-button, .ddocs2__sheet-button, .dpgal__sheet-button, .dworks__sheet-button)[data-active] {
+  border-color: var(--shell-signal);
+  background: var(--shell-signal-soft);
+  color: var(--shell-signal-deep);
+  font-weight: 600;
+}

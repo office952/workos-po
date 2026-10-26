@@ -1,0 +1,496 @@
+/* N-020 · GO 11 · the views of the client hub after Istoric (Figma rM71g74Ph0mkAjAtWuLahy, page 10 ·
+   v2.1): Cereri și oferte (422:2757), Lucrări (422:5579, 422:5950), Documente (422:6080), Sedii
+   (422:6840) and Date comerciale (422:6952). They share the rail, the card and the link language of
+   Istoric (client-history.css); colours come from the machine theme tokens (Light and Night). */
+
+/* ─── Common link language ───
+   A link reads as a link by its colour, icon and place; the underline comes on hover and keyboard
+   focus only (Figma page 10 has no permanent underlines). Titles that are links keep the text
+   colour and take the signal colour on hover. */
+.cdos-link:hover,
+.cdos-link:focus-visible,
+.cdos-doc__open:hover,
+.cdos-doc__open:focus-visible,
+.dlink:hover,
+.dlink:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dlink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--shell-signal);
+  font: 500 13px/1.3 var(--font-sans);
+  text-decoration: none;
+}
+
+.dreq-row__title a,
+.dentry__meta > a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.dreq-row__title a:hover,
+.dreq-row__title a:focus-visible,
+.dentry__meta > a:hover,
+.dentry__meta > a:focus-visible {
+  color: var(--shell-signal);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dentry__meta > a {
+  color: var(--shell-signal);
+}
+
+.dworks a:focus-visible,
+.dworks button:focus-visible,
+.dreq a:focus-visible,
+.dreq button:focus-visible,
+.ddocs a:focus-visible,
+.ddocs button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ─── Cereri și oferte (422:2757) ─── */
+.dreq-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+}
+
+.dreq-head__back {
+  font-size: 13px;
+}
+
+.dreq-head__title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 24px/1.15 var(--font-brand);
+}
+
+.dreq-head__scope {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+.dreq-group {
+  display: grid;
+  gap: 8px;
+}
+
+.dreq-group__title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 16px/1.2 var(--font-sans);
+}
+
+.dreq-group__title span {
+  color: var(--color-text-muted);
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dreq-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dreq-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 16px;
+  min-width: 0;
+  padding: 12px 16px;
+  border: 1px solid var(--dh-line);
+  border-radius: var(--radius-badge);
+  background: var(--dh-card);
+}
+
+.dreq-row[data-kind="offer"] {
+  grid-template-columns: 40px 140px minmax(0, 1fr) auto;
+}
+
+.dreq-row__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-badge);
+  background: var(--dh-doc-bg);
+  color: var(--color-text-secondary);
+}
+
+.dreq-row__body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dreq-row__title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 16px/1.3 var(--font-sans);
+}
+
+.dreq-row[data-kind="offer"] .dreq-row__title {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.dreq-row__open {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dreq-row__open:hover,
+.dreq-row__open:focus-visible {
+  color: var(--shell-signal);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dreq-row__amount {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dreq-row__value {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 17px/1.2 var(--font-brand);
+  white-space: nowrap;
+}
+
+.dreq-row__value[data-none] {
+  color: var(--color-text-muted);
+  font: 400 13px/1.3 var(--font-sans);
+  white-space: normal;
+}
+
+.dreq-row__ref {
+  margin: 0;
+  color: var(--color-text-muted);
+  font: 500 11px/1.2 var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.dreq-row__side {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 16px;
+  min-width: 0;
+}
+
+.dreq-row__links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.dreq-row__links .dhist-link,
+.dreq-row__job {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.dreq-row__nojob {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-muted);
+  font: 400 13px/1.3 var(--font-sans);
+}
+
+.dreq-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: var(--radius-badge);
+  background: var(--dh-doc-bg);
+  color: var(--color-text-secondary);
+  font: 500 13px/1.2 var(--font-sans);
+}
+
+.dreq-chip[data-tone="open"],
+.dreq-chip[data-tone="attention"] {
+  background: var(--dh-offer-bg);
+  color: var(--dh-offer-ink);
+}
+
+.dreq-chip[data-tone="work"] {
+  background: var(--dh-done-bg);
+  color: var(--dh-done-ink);
+}
+
+.dreq-row[data-superseded] {
+  opacity: 0.78;
+}
+
+.dreq-empty {
+  margin: 0;
+  padding: 20px;
+  border: 1px solid var(--dh-line);
+  border-radius: var(--radius-badge);
+  background: var(--dh-card);
+  color: var(--color-text-secondary);
+  font: 400 14px/1.45 var(--font-sans);
+}
+
+.dreq-switch {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.dreq-switch button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  background: var(--dh-card);
+  color: var(--color-text-primary);
+  font: 400 13px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.dreq-switch button[aria-pressed="true"] {
+  border-color: var(--shell-signal);
+  background: var(--shell-signal);
+  color: var(--shell-button-ink);
+}
+
+@media (max-width: 1360px) {
+  .dreq-row,
+  .dreq-row[data-kind="offer"] {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .dreq-row[data-kind="offer"] .dreq-row__amount {
+    grid-column: 2;
+  }
+
+  .dreq-row[data-kind="offer"] .dreq-row__body,
+  .dreq-row__side {
+    grid-column: 2;
+  }
+
+  .dreq-row__side {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 767px) {
+  .dreq-row,
+  .dreq-row[data-kind="offer"] {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 12px;
+  }
+
+  .dreq-row__icon {
+    display: none;
+  }
+
+  .dreq-row[data-kind="offer"] .dreq-row__amount,
+  .dreq-row[data-kind="offer"] .dreq-row__body,
+  .dreq-row__side {
+    grid-column: 1;
+  }
+
+  .dreq-head__title {
+    font-size: 21px;
+  }
+}
+
+/* ─── Documente (422:6080) ─── */
+.ddocs-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ddoc {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 16px;
+  min-width: 0;
+  padding: 14px 18px;
+  border: 1px solid var(--dh-line);
+  border-radius: var(--radius-badge);
+  background: var(--dh-card);
+}
+
+.ddoc__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-badge);
+  background: var(--dh-doc-bg);
+  color: var(--color-text-secondary);
+}
+
+.ddoc__body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ddoc__title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 15px/1.3 var(--font-sans);
+}
+
+.ddoc__meta {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 500 12px/1.3 var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+.ddoc__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 12px/1.4 var(--font-sans);
+}
+
+.ddoc__links > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.ddoc__file {
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.ddoc__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px 16px;
+}
+
+.ddoc__actions .dhist-link {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.ddoc__nopreview {
+  color: var(--color-text-muted);
+  font: 400 13px/1.3 var(--font-sans);
+}
+
+.ddoc__menu {
+  position: relative;
+}
+
+.ddoc__menu-panel {
+  top: calc(100% + 4px);
+  right: 0;
+  left: auto;
+}
+
+@media (max-width: 1099px) {
+  .ddoc {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .ddoc__actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 767px) {
+  .ddoc {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 12px;
+  }
+
+  .ddoc__icon {
+    display: none;
+  }
+
+  .ddoc__actions {
+    grid-column: 1;
+  }
+}
+
+/* ─── Phone: the new views read in full (GO 11) ─── */
+@media (max-width: 767px) {
+  /* The meta line of a card wraps instead of cutting the site or the date (the history keeps its one-line row). */
+  .dreq-row .dentry__meta {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .dreq-row .dentry__meta > span,
+  .dreq-row .dentry__meta > a {
+    overflow: visible;
+    white-space: normal;
+  }
+
+  /* Cereri și oferte: the search across the row, the selection under it. */
+  .dreq .dhist-field {
+    flex: 1 1 100%;
+  }
+
+  .dreq .dhist-toolbar {
+    flex: 1 1 auto;
+  }
+}
+
+/* Tablet and phone: the search bar of the new views wraps like Fotografii — the field and its
+   controls on one line, the count and "Golește" under them. */
+@media (max-width: 1099px) {
+  .ddocs .dhist-search,
+  .dreq .dhist-search {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .ddocs .dhist-field,
+  .dreq .dhist-field {
+    flex: 1 1 200px;
+  }
+
+  .ddocs .dhist-scope--keep,
+  .dreq .dhist-scope--keep {
+    flex: 1 1 auto;
+    order: 4;
+    font-size: 12px;
+  }
+}

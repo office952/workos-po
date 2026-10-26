@@ -1,41 +1,43 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import "../styles/layout/pilot-page.css";
 import "../styles/surfaces/clients.css";
+import "../styles/surfaces/clients-agenda.css";
 import "../styles/surfaces/client-hub.css";
-import type {
-  JobListItemTransport,
-  QuoteListItemTransport,
-  RequestListItemTransport,
-} from "../api/types";
+import "../styles/surfaces/client-relation.css";
+import "../styles/surfaces/client-dossier.css";
+import "../styles/surfaces/client-history.css";
+import "../styles/surfaces/client-band.css";
+import "../styles/surfaces/client-hub-views.css";
+import "../styles/surfaces/client-dossier-header.css";
+import "../styles/surfaces/client-history-timeline.css";
+import "../styles/surfaces/client-history-project.css";
+import "../styles/surfaces/client-offer-row.css";
+import "../styles/surfaces/client-result-bar.css";
+import "../styles/surfaces/client-r1-shape.css";
 import { Button } from "../components/Button";
-import { EmptyState } from "../components/EmptyState";
 import { ErrorState } from "../components/ErrorState";
-import { StatusBadge } from "../components/StatusBadge";
 import { SurfacePanel } from "../components/SurfacePanel";
 import { invalidateResources } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadCustomerWorkspace } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
-import { SlicePage } from "../layout/SlicePage";
-import { CLIENT_HUB_FUTURE_COPY, CLIENT_HUB_SECTION_LABEL } from "../presentation/clientHub";
-import { formatTimestamp } from "../presentation/format";
-import { presentQuoteHistoryState } from "../presentation/quoteHistory";
-import { presentRequestRegistryStatus } from "../presentation/requestListStatus";
+import { PageRegion } from "../layout/PageRegion";
+import { CLIENT_HUB_FUTURE_COPY, CLIENT_HUB_SECTION_LABEL, isPreparingSection } from "../presentation/clientHub";
 import { presentResourceAccess } from "../presentation/resourceAccess";
-import { statusTone } from "../presentation/statusTone";
-import {
-  presentJobWorklistAction,
-  presentQuoteWorklistAction,
-  presentRequestWorklistAction,
-} from "../presentation/worklistAction";
-import {
-  CLIENT_HUB_SECTIONS,
-  clientHref,
-  jobHref,
-  parseClientHubSection,
-  registryQuoteHref,
-  requestHref,
-} from "../routing/appRoute";
-import { navigate } from "../routing/navigate";
+import { parseClientHubSection } from "../routing/appRoute";
+import { ClientRequestsSection } from "./clients/requests/ClientRequestsSection";
+import { ClientCommercialSection } from "./clients/commercial/ClientCommercialSection";
+import { ClientDocumentsSection } from "./clients/documents/ClientDocumentsSection";
+import { ClientHistorySection } from "./clients/dossier/ClientHistorySection";
+import { ClientPhotosSection } from "./clients/photos/ClientPhotosSection";
+import { ClientBand } from "./clients/dossier/ClientBand";
+import { useCommercialTerms, useCustomerDossier } from "./clients/dossier/dossierModel";
+import type { ClientAction } from "./clients/dossier/header/ClientActions";
+import type { SectionAttention, SectionCounts } from "./clients/dossier/header/ClientSectionNav";
+import { clientActionHref } from "./clients/dossier/header/entryAction";
+import { HistoricalWorkDialog } from "./clients/dossier/HistoricalWorkDialog";
+import { ClientSitesSection } from "./clients/sites/ClientSitesSection";
+import { ClientWorksSection } from "./clients/works/ClientWorksSection";
 import {
   bindConfiguratorSessionToCustomer,
   readConfiguratorSession,
@@ -44,16 +46,38 @@ import {
 
 type ClientDetailPageProps = {
   customerId: string;
+  /** The current query; defaults to the window location for standalone renders. */
+  search?: string;
 };
 
-export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
+/**
+ * Dosarul clientului (N-020 design final · Figma 574:2203): one header for every section — the
+ * identity, the principal contact and all contacts, "+ Cerere nouă" and "Alte acțiuni" by server
+ * permission, and the section navigation; while scrolling it folds and stays at the top (579:6351,
+ * phone 580:4114). Istoric is the default view. Every number, state and action comes from the
+ * customer workspace, the commercial terms and the dossier projections.
+ */
+export function ClientDetailPage({ customerId, search = window.location.search }: ClientDetailPageProps) {
   const loaded = useResource(resourceKeys.customerWorkspace(customerId), () =>
     loadCustomerWorkspace(customerId),
   );
   const access = presentResourceAccess(loaded.error);
   const workspace = access === "denied" ? { ...loaded, data: undefined } : loaded;
   const customer = workspace.data?.customer;
-  const section = parseClientHubSection(window.location.search);
+  const section = parseClientHubSection(search);
+  const dossier = useCustomerDossier(customerId);
+  const terms = useCommercialTerms(customerId);
+  // N-018 · right after "Client nou", the page says once that the client was registered.
+  const [registered] = useState(() => {
+    try {
+      if (sessionStorage.getItem("workos.client.registered") !== customerId) return false;
+      sessionStorage.removeItem("workos.client.registered");
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  const [recording, setRecording] = useState(false);
   useEffect(() => {
     if (!customer || workspace.status !== "success") {
       return;
@@ -64,266 +88,86 @@ export function ClientDetailPage({ customerId }: ClientDetailPageProps) {
   }, [customer, customerId, workspace.status]);
 
   const canCreate = workspace.status === "success" && workspace.data?.canCreateRequest === true;
+  const permissions = dossier.data?.permissions;
+  // R1 (846:32109): the navigation has short labels; the counts are in each view. A dot marks a
+  // section only where the server flags an offer, a request or a work as needing attention.
+  const ws = workspace.data;
+  const attention: SectionAttention = {
+    cereri: ws && (ws.quotes.some((quote) => quote.needsAttention && !quote.superseded) || ws.requests.some((request) => request.needsAttention)) ? "necesită atenție" : null,
+    lucrari: ws && ws.jobs.some((job) => job.needsAttention) ? "necesită atenție" : null,
+  };
+  const hints: SectionCounts = { lucrari: "În WorkOS și înregistrări istorice" };
+  // One dominant action per screen: where the section shows its own primary action (by permission),
+  // "Cerere nouă" takes the teal outline.
+  const sectionPrimary =
+    ((section === "documente" || section === "fotografii") && permissions?.uploadDocuments) ||
+    (section === "sedii" && permissions?.editSites) ||
+    (section === "comercial" && permissions?.editCommercialTerms);
+  const createTone = sectionPrimary ? "accent" : "primary";
+  // "Alte acțiuni" (Figma 579:5140): each item only with its server permission.
+  const actions: ClientAction[] = [
+    permissions?.recordHistoricalWork ? { key: "record", label: "Adaugă lucrare istorică", onSelect: () => setRecording(true) } : null,
+    permissions?.uploadDocuments ? { key: "upload", label: "Încarcă document", href: clientActionHref(customerId, "documente", "incarca") } : null,
+    permissions?.editSites ? { key: "site", label: "Adaugă sediu", href: clientActionHref(customerId, "sedii", "adauga") } : null,
+    permissions?.editCommercialTerms ? { key: "terms", label: "Modifică datele comerciale", href: clientActionHref(customerId, "comercial", "modifica") } : null,
+  ].filter((action): action is ClientAction => action !== null);
+  const contactsEditHref = permissions?.editCommercialTerms ? clientActionHref(customerId, "comercial", "modifica") : null;
 
   return (
-    <SlicePage
-      contextLabel="Client"
-      currentHref={clientHref(customerId, section)}
-      workspace="object"
-      surface="client-hub"
-      headerVariant="pilot"
-      eyebrow="Client"
-      title={customer?.displayName ?? "Client"}
-      instrument={
-        <ul className="pilot-instrument client-hub__counts" aria-label="Relația cu clientul">
-          <li><a className="pilot-instrument__metric" href={clientHref(customerId, "cereri")}><strong className="pilot-instrument__metric-value">{workspace.data?.summary.requestCount ?? "—"}</strong><span className="pilot-instrument__metric-label">Cereri</span></a></li>
-          <li><a className="pilot-instrument__metric" href={clientHref(customerId, "cereri")}><strong className="pilot-instrument__metric-value">{workspace.data?.summary.quoteCount ?? "—"}</strong><span className="pilot-instrument__metric-label">Oferte</span></a></li>
-          <li><a className="pilot-instrument__metric" href={clientHref(customerId, "lucrari")}><strong className="pilot-instrument__metric-value">{workspace.data?.summary.jobCount ?? "—"}</strong><span className="pilot-instrument__metric-label">Lucrări</span></a></li>
-        </ul>
-      }
-    >
-      <div className="client-hub">
-        <div className="client-hub__toolbar">
-        <div className="client-hub__context">
-          <a className="client-hub__back" href="/clienti">← Toți clienții</a>
-          {customer ? <StatusBadge label={customer.statusLabel} tone={statusTone("workflow")} /> : null}
-        </div>
-        <nav className="client-hub__nav" aria-label="Secțiuni client">
-          {CLIENT_HUB_SECTIONS.map((item) => (
-            <a
-              key={item}
-              href={clientHref(customerId, item)}
-              aria-current={item === section ? "page" : undefined}
-            >
-              {CLIENT_HUB_SECTION_LABEL[item]}
-            </a>
-          ))}
-        </nav>
-        {canCreate ? (
-          <button type="button" className="pilot-create" onClick={() => navigate(`/cereri/noua?customer=${encodeURIComponent(customerId)}`)}>
-            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
-            Cerere nouă
-          </button>
-        ) : null}
-        </div>
-        {(workspace.status === "idle" || workspace.status === "loading") && !workspace.data ? (
-          <p role="status">Se citește hubul clientului</p>
-        ) : null}
-        {workspace.status === "error" ? (
-          <ErrorState title={access === "denied" ? "Acces refuzat" : "Clientul nu a putut fi citit"}>
-            {access === "denied"
-              ? "Nu ai acces la acest client în organizația curentă."
-              : workspace.data
-                ? "Actualizarea a eșuat. Datele afișate sunt de la ultima citire reușită."
-                : "Datele clientului nu sunt disponibile."}
-            <Button
-              variant="secondary"
-              onClick={() => invalidateResources(resourceKeys.customerWorkspace(customerId))}
-            >
-              Reîncearcă
-            </Button>
-          </ErrorState>
-        ) : null}
-        {workspace.data && section === "prezentare" ? (
-          <div className="client-hub__layout">
-            <div className="client-hub__main">
-              <SurfacePanel title="Identitate" label="Identitate client">
-                <dl className="client-hub__facts">
-                  <div>
-                    <dt>Denumire</dt>
-                    <dd>{customer?.displayName}</dd>
-                </div>
-                <div>
-                  <dt>Stare</dt>
-                  <dd>{customer?.statusLabel}</dd>
-                </div>
-                <div>
-                  <dt>Localitate</dt>
-                  <dd>{customer?.city ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt>Contact</dt>
-                  <dd>{customer?.contactName ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt>Telefon</dt>
-                  <dd>{customer?.phone ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt>Email</dt>
-                  <dd>{customer?.email ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt>Adresă</dt>
-                  <dd>{customer?.address ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt>CUI</dt>
-                  <dd>{customer?.cui ?? "—"}</dd>
-                </div>
-              </dl>
+    <PageRegion>
+      <div className="chub" data-surface="client-hub" data-section={section}>
+        <ClientBand
+          customerId={customerId}
+          customer={customer ?? null}
+          terms={terms.data ?? null}
+          canCreate={canCreate}
+          actions={actions}
+          section={section}
+          attention={attention}
+          hints={hints}
+          contactsEditHref={contactsEditHref}
+          createTone={createTone}
+        />
+        <div className="chub__body client-hub">
+          {registered ? <p className="client-hub__registered" role="status">Clientul a fost înregistrat.</p> : null}
+          {(workspace.status === "idle" || workspace.status === "loading") && !workspace.data ? (
+            <p role="status">Se citește fișa clientului</p>
+          ) : null}
+          {workspace.status === "error" ? (
+            <ErrorState title={access === "denied" ? "Acces refuzat" : "Clientul nu a putut fi citit"}>
+              {access === "denied"
+                ? "Nu ai acces la acest client în organizația curentă."
+                : workspace.data
+                  ? "Actualizarea a eșuat. Datele afișate sunt de la ultima citire reușită."
+                  : "Datele clientului nu sunt disponibile."}
+              <Button
+                variant="secondary"
+                onClick={() => invalidateResources(resourceKeys.customerWorkspace(customerId))}
+              >
+                Reîncearcă
+              </Button>
+            </ErrorState>
+          ) : null}
+          {/* N-020 · Istoric: the default view, with the former Relație summary on top. */}
+          {workspace.data && section === "istoric" ? <ClientHistorySection key={customerId} customerId={customerId} search={search} workspace={workspace.data} canCreate={canCreate} onRecord={permissions?.recordHistoricalWork ? () => setRecording(true) : null} uploadHref={permissions?.uploadDocuments ? clientActionHref(customerId, "documente", "incarca") : null} /> : null}
+          {/* Cereri și oferte (Corecții GO 17): Pe cereri / Toate ofertele, În așteptare, the offer preview. */}
+          {workspace.data && section === "cereri" ? <ClientRequestsSection key={customerId} customerId={customerId} workspace={workspace.data} search={search} /> : null}
+          {workspace.data && section === "lucrari" ? <ClientWorksSection customerId={customerId} search={search} /> : null}
+          {workspace.data && section === "documente" ? <ClientDocumentsSection customerId={customerId} search={search} /> : null}
+          {workspace.data && section === "fotografii" ? <ClientPhotosSection customerId={customerId} search={search} /> : null}
+          {workspace.data && section === "sedii" ? <ClientSitesSection customerId={customerId} search={search} /> : null}
+          {workspace.data && section === "comercial" ? <ClientCommercialSection customerId={customerId} search={search} customer={customer ?? null} /> : null}
+          {workspace.data && isPreparingSection(section) ? (
+            <SurfacePanel title={CLIENT_HUB_SECTION_LABEL[section]} label={CLIENT_HUB_SECTION_LABEL[section]} meta="În pregătire">
+              <>
+                <p className="client-hub__future client-hub__future-title">{CLIENT_HUB_FUTURE_COPY[section].title}</p>
+                <p className="client-hub__future">{CLIENT_HUB_FUTURE_COPY[section].body}</p>
+              </>
             </SurfacePanel>
-            </div>
-          </div>
-        ) : null}
-        {workspace.data && section === "lucrari" ? (
-          <HubCollection
-            title="Lucrări"
-            emptyTitle="Nu există lucrări"
-            emptyBody="Lucrările eliberate pentru acest client apar aici."
-            columns={["Lucrare", "Stare", "Acțiune"]}
-            rows={workspace.data.jobs.map((job) => jobRow(job))}
-          />
-        ) : null}
-        {workspace.data && section === "cereri" ? (
-          <div className="client-hub__layout">
-            <div className="client-hub__main client-hub__collections">
-              <HubCollection
-                title="Cereri"
-                emptyTitle="Nu există cereri"
-                emptyBody="Creează cererea lucrării pentru acest client."
-                columns={["Cerere", "Stare", "Acțiune"]}
-                rows={workspace.data.requests.map((item) => requestRow(item))}
-              />
-              <HubCollection
-                title="Oferte"
-                emptyTitle="Nu există oferte"
-                emptyBody="Ofertele acestui client vor apărea aici."
-                columns={["Ofertă", "Stare", "Acțiune"]}
-                rows={workspace.data.quotes.map((item) => quoteRow(item))}
-              />
-            </div>
-          </div>
-        ) : null}
-        {workspace.data && section in CLIENT_HUB_FUTURE_COPY ? (
-          <SurfacePanel
-            title={CLIENT_HUB_SECTION_LABEL[section]}
-            label={CLIENT_HUB_SECTION_LABEL[section]}
-          >
-            <>
-              <p className="client-hub__future">
-                {CLIENT_HUB_FUTURE_COPY[section as keyof typeof CLIENT_HUB_FUTURE_COPY].title}
-              </p>
-              <p className="client-hub__future">
-                {CLIENT_HUB_FUTURE_COPY[section as keyof typeof CLIENT_HUB_FUTURE_COPY].body}
-              </p>
-            </>
-          </SurfacePanel>
-        ) : null}
-      </div>
-    </SlicePage>
-  );
-}
-
-type HubRow = {
-  key: string;
-  href: string;
-  title: string;
-  detail?: string;
-  state: string;
-  actionHref: string;
-  actionLabel: string;
-};
-
-function requestRow(item: RequestListItemTransport): HubRow {
-  const action = presentRequestWorklistAction(item);
-  const registry = presentRequestRegistryStatus({
-    statusLabel: item.statusLabel,
-    contextLabel: item.contextLabel,
-  });
-  return {
-    key: item.requestId,
-    href: requestHref(item.requestId),
-    title: item.title,
-    detail: [item.reference && item.reference !== item.title ? item.reference : null, formatTimestamp(item.createdAt)]
-      .filter(Boolean)
-      .join(" · "),
-    state: registry.stateLabel,
-    actionHref: action.actionHref,
-    actionLabel: action.actionLabel,
-  };
-}
-
-function quoteRow(item: QuoteListItemTransport): HubRow {
-  const action = presentQuoteWorklistAction(item);
-  return {
-    key: item.quoteSnapshotId,
-    href: registryQuoteHref(item),
-    title: item.reference,
-    detail: [item.kindLabel, item.productLabel, item.requestReference].filter(Boolean).join(" · "),
-    state: presentQuoteHistoryState(item),
-    actionHref: action.actionHref,
-    actionLabel: action.actionLabel,
-  };
-}
-
-function jobRow(job: JobListItemTransport): HubRow {
-  const action = presentJobWorklistAction(job);
-  return {
-    key: job.jobId,
-    href: jobHref(job.jobId),
-    title: job.kind === "ASSEMBLY" ? job.productLabel : job.inscription || job.productLabel,
-    detail: [job.priorityLabel, job.targetDateLabel].filter(Boolean).join(" · "),
-    state: job.stageLabel,
-    actionHref: action.actionHref,
-    actionLabel: action.actionLabel,
-  };
-}
-
-function HubCollection({
-  title,
-  emptyTitle,
-  emptyBody,
-  columns,
-  rows,
-}: {
-  title: string;
-  emptyTitle: string;
-  emptyBody: string;
-  columns: readonly string[];
-  rows: readonly HubRow[];
-}) {
-  return (
-    <SurfacePanel variant="flush" title={title} label={title} meta={`${rows.length}`}>
-      {rows.length === 0 ? (
-        <div className="clients-feedback">
-          <EmptyState title={emptyTitle} description={emptyBody} />
+          ) : null}
         </div>
-      ) : (
-        <table className="clients-table">
-          <caption className="u-visually-hidden">{title}</caption>
-          <thead>
-            <tr>
-              {columns.map((column, index) => (
-                <th key={column} scope="col" className={index === 0 ? "clients-table__identity" : index === 1 ? "clients-table__state" : "clients-table__action"}>
-                  {column}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.key}>
-                <td className="clients-table__identity">
-                  <a className="clients-object" href={row.href}>
-                    <span className="clients-object__title">{row.title}</span>
-                    {row.detail ? <span className="clients-object__detail">{row.detail}</span> : null}
-                  </a>
-                </td>
-                <td className="clients-table__state">
-                  <StatusBadge label={row.state} tone={statusTone("workflow")} />
-                </td>
-                <td className="clients-table__action">
-                  <a className="clients-next" href={row.actionHref}>
-                    <span>{row.actionLabel}</span>
-                    <span aria-hidden="true">→</span>
-                  </a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </SurfacePanel>
+      </div>
+      {recording && dossier.data ? <HistoricalWorkDialog customerId={customerId} dossier={dossier.data} onClose={() => setRecording(false)} /> : null}
+    </PageRegion>
   );
 }

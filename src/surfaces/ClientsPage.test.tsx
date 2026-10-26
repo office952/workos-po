@@ -4,10 +4,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { invalidateResources, resetResourceCache } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { readClientsRegistryMemory } from "../session/clientsRegistryMemory";
+import { navigate } from "../routing/navigate";
 import { ClientsPage } from "./ClientsPage";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   sessionStorage.clear();
   resetResourceCache();
   window.history.replaceState({}, "", "/");
@@ -102,11 +104,38 @@ describe("ClientsPage", () => {
     expect(within(card).getByText("CUI RO41234567")).toBeInTheDocument();
     expect(within(card).getByRole("link", { name: "0722 000 111" })).toHaveAttribute("href", "tel:0722000111");
     expect(within(card).getByRole("link", { name: "ioana@lumen.test" })).toHaveAttribute("href", "mailto:ioana@lumen.test");
-    expect(await within(card).findByText("Clientul nu are încă cereri, oferte sau lucrări.")).toBeInTheDocument();
+    expect(await within(card).findByText("Clientul nu are încă cereri, oferte sau lucrări în WorkOS.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Cerere nouă/ })).toHaveAttribute("href", "/cereri/noua?customer=cus-l");
   });
 
-  it("shows missing contact fields as not filled and keeps the card's attention and recent documents apart", async () => {
+  it("keeps the accepted keyboard model: arrows select, Enter opens the card, Escape returns to the row (N-018)", async () => {
+    window.history.replaceState({}, "", "/clienti");
+    vi.stubGlobal("fetch", route({
+      "/api/customers": () => jsonResponse(200, registry([ALPHA, LUMEN])),
+      "/api/customers/cus-a/workspace": () => jsonResponse(200, workspace(ALPHA)),
+      "/api/customers/cus-l/workspace": () => jsonResponse(200, workspace(LUMEN)),
+    }));
+    const { rerender } = render(<ClientsPage search="" />);
+    expect(await screen.findByText("↑ ↓ selectează · Enter deschide cartela · / caută")).toBeInTheDocument();
+    const alpha = (await screen.findByRole("link", { name: "Alpha Clima SRL" })).closest("tr")!;
+    alpha.focus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(window.location.search).toBe("?client=cus-l");
+    rerender(<ClientsPage search="?client=cus-l" />);
+    const lumen = screen.getAllByRole("row").find((row) => row.getAttribute("data-row-id") === "cus-l")!;
+    expect(lumen).toHaveFocus();
+    expect(lumen).toHaveAttribute("data-arrival-target");
+    await userEvent.keyboard("{Enter}");
+    const dossier = document.getElementById("clienti-dosar")!;
+    await waitFor(() => expect(dossier).toHaveFocus());
+    expect(window.location.pathname).toBe("/clienti");
+    await userEvent.keyboard("{Escape}");
+    expect(lumen).toHaveFocus();
+    // The full client page stays one explicit action away.
+    expect(within(lumen).getByRole("link", { name: "Deschide clientul" })).toHaveAttribute("href", "/clienti/cus-l");
+  });
+
+  it("groups the missing contact fields in one quiet line and keeps the card's attention and recent documents apart", async () => {
     vi.stubGlobal("fetch", route({
       "/api/customers": () => jsonResponse(200, registry([ALPHA])),
       "/api/customers/cus-a/workspace": () => jsonResponse(200, workspace(ALPHA, {
@@ -116,8 +145,9 @@ describe("ClientsPage", () => {
     }));
     render(<ClientsPage search="?client=cus-a" />);
     const card = await screen.findByRole("article", { name: "Cartela clientului Alpha Clima SRL" });
-    expect(within(card).getAllByText("necompletat")).toHaveLength(5);
-    expect(within(card).getByText("CUI necompletat")).toBeInTheDocument();
+    expect(within(card).getByText("Date de contact necompletate: CUI, persoană de contact, telefon, e-mail, localitate, adresă.")).toBeInTheDocument();
+    expect(within(card).queryByText("necompletat")).not.toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: /necompletat/i })).not.toBeInTheDocument();
     expect(await within(card).findByText("Necesită acțiune · 1")).toBeInTheDocument();
     expect(within(card).getByRole("link", { name: "ALPHA" })).toHaveAttribute("href", "/lucrari?lucrare=job-1");
     expect(within(card).getByText("Ultimele documente · 1")).toBeInTheDocument();
@@ -138,7 +168,7 @@ describe("ClientsPage", () => {
     expect(screen.getByRole("link", { name: "Alpha Clima SRL" })).toBeInTheDocument();
     fail = false;
     await userEvent.click(screen.getByRole("button", { name: "Reîncearcă" }));
-    expect(await screen.findByText("Clientul nu are încă cereri, oferte sau lucrări.")).toBeInTheDocument();
+    expect(await screen.findByText("Clientul nu are încă cereri, oferte sau lucrări în WorkOS.")).toBeInTheDocument();
   });
 
   it("never shows a late card answer for a client that is no longer selected", async () => {
@@ -154,7 +184,7 @@ describe("ClientsPage", () => {
     await screen.findByText("Se citesc documentele clientului…");
     rerender(<ClientsPage search="?client=cus-l" />);
     const card = await screen.findByRole("article", { name: "Cartela clientului Lumen Signs SRL" });
-    expect(await within(card).findByText("Clientul nu are încă cereri, oferte sau lucrări.")).toBeInTheDocument();
+    expect(await within(card).findByText("Clientul nu are încă cereri, oferte sau lucrări în WorkOS.")).toBeInTheDocument();
     await act(async () => { releaseAlpha(); });
     expect(screen.queryByText("OF-LATE")).not.toBeInTheDocument();
     expect(screen.getByRole("article", { name: "Cartela clientului Lumen Signs SRL" })).toBeInTheDocument();
@@ -233,15 +263,37 @@ describe("ClientsPage", () => {
     expect(await screen.findByText("Nu există încă clienți")).toBeInTheDocument();
   });
 
-  it("keeps a draft when closed and reopens only through the CTA", async () => {
+  it("asks before abandoning a typed name: staying keeps it, Renunță closes and discards (N-018)", async () => {
     vi.stubGlobal("fetch", vi.fn(() => jsonResponse(200, { registry: { customers: [] } })));
     render(<ClientsPage />);
     await userEvent.click(await screen.findByRole("button", { name: "Client nou" }));
     await userEvent.type(screen.getByLabelText("Denumire"), "Atelier nou");
     await userEvent.click(screen.getByRole("button", { name: "Închide formularul" }));
+    const question = screen.getByRole("alertdialog", { name: "Renunți la clientul nou?" });
+    expect(within(question).getByText("Denumirea introdusă nu este salvată.")).toBeInTheDocument();
+    await userEvent.click(within(question).getByRole("button", { name: "Rămân în formular" }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(screen.getByLabelText("Denumire")).toHaveValue("Atelier nou");
+    await userEvent.click(screen.getByRole("button", { name: "Închide formularul" }));
+    await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Renunță" }));
     expect(screen.queryByLabelText("Denumire")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Client nou" }));
-    expect(screen.getByLabelText("Denumire")).toHaveValue("Atelier nou");
+    expect(screen.getByLabelText("Denumire")).toHaveValue("");
+    // Without text, closing asks nothing.
+    await userEvent.click(screen.getByRole("button", { name: "Închide formularul" }));
+    expect(screen.queryByLabelText("Denumire")).not.toBeInTheDocument();
+  });
+
+  it("holds an in-app navigation while a name is typed and resumes it after Renunță (N-018)", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => jsonResponse(200, { registry: { customers: [] } })));
+    window.history.replaceState({}, "", "/clienti");
+    render(<ClientsPage />);
+    await userEvent.click(await screen.findByRole("button", { name: "Client nou" }));
+    await userEvent.type(screen.getByLabelText("Denumire"), "Atelier nou");
+    act(() => navigate("/cereri"));
+    expect(window.location.pathname).toBe("/clienti");
+    await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Renunță" }));
+    expect(window.location.pathname).toBe("/cereri");
   });
 
   it("does not navigate after a pending customer creation has left the page", async () => {
@@ -259,5 +311,47 @@ describe("ClientsPage", () => {
     window.history.replaceState({}, "", "/cereri");
     await act(async () => { release(await jsonResponse(201, { customer: { customerId: "cus-new", displayName: "Atelier nou" } })); });
     expect(window.location.pathname).toBe("/cereri");
+  });
+
+  describe("on a phone (compact agenda)", () => {
+    function phone() {
+      vi.stubGlobal("matchMedia", (query: string) => ({
+        matches: true, media: query, addEventListener: () => {}, removeEventListener: () => {},
+      }));
+    }
+
+    it("puts Client nou in the header, filters as chips and the A–Z index behind a toggle", async () => {
+      phone();
+      vi.stubGlobal("fetch", route({ "/customers": () => jsonResponse(200, registry([ALPHA, LUMEN], { total: 2, active: 2, retired: 0, needsAttention: 1 })) }));
+      render(<ClientsPage />);
+      await screen.findByText("Alpha Clima SRL");
+
+      const header = screen.getByRole("heading", { level: 1, name: "Clienți" }).closest("header")!;
+      expect(within(header).getByRole("button", { name: "Client nou" })).toBeInTheDocument();
+      expect(screen.getAllByRole("button", { name: "Client nou" })).toHaveLength(1);
+
+      const toggle = screen.getByRole("button", { name: /Index alfabetic, litera curentă A/ });
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      expect(document.getElementById("clienti-index-compact")).toBeNull();
+      await userEvent.click(toggle);
+      expect(toggle).toHaveAttribute("aria-expanded", "true");
+      expect(document.getElementById("clienti-index-compact")).not.toBeNull();
+
+      const attention = document.querySelector<HTMLButtonElement>('.rdesk-filterchips [data-signal-id="attention"]')!;
+      // jsdom has no layout: the row is 200px wide and the chip sits past its right edge.
+      const rect = (left: number, right: number) => ({ left, right, top: 0, bottom: 40, width: right - left, height: 40, x: left, y: 0, toJSON: () => ({}) });
+      vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+        if (this.classList.contains("rdesk-filterchips")) return rect(0, 200) as DOMRect;
+        if (this.getAttribute("data-signal-id") === "attention") {
+          const shift = document.querySelector(".rdesk-filterchips")?.scrollLeft ?? 0;
+          return rect(250 - shift, 330 - shift) as DOMRect;
+        }
+        return rect(0, 0) as DOMRect;
+      });
+      await userEvent.click(attention);
+      expect(attention).toHaveAttribute("aria-pressed", "true");
+      expect(document.querySelector(".rdesk-filterchips")!.scrollLeft).toBe(130);
+      expect(screen.queryByText("Lumen Signs SRL")).toBeNull();
+    });
   });
 });

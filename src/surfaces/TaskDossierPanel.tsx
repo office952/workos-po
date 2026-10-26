@@ -75,6 +75,8 @@ export function TaskDossierPanel({
   canWriteFiles = true,
   sessionScope = "",
   recordMode = false,
+  openFileId = null,
+  onOpenFile,
 }: {
   taskId: string;
   taskLabel?: string;
@@ -83,6 +85,9 @@ export function TaskDossierPanel({
   canWriteFiles?: boolean;
   sessionScope?: string;
   recordMode?: boolean;
+  /** N-018 · in the job sheet a file opens in the viewer next to the operation, through the URL. */
+  openFileId?: string | null;
+  onOpenFile?: (artifactId: string) => void;
 }) {
   const [dossier, setDossier] = useState<TaskDossier | null>(null);
   const [loadError, setLoadError] = useState<"none" | "initial" | "stale" | "session" | "forbidden">("none");
@@ -110,7 +115,11 @@ export function TaskDossierPanel({
   const fileNote = draft.fileNote;
   const notice = notices[taskId] ?? null;
   const actionError = errors[taskId] ?? null;
-  const selectedArtifactId = selectedByTask[taskId] ?? null;
+  const selectedArtifactId = onOpenFile ? openFileId : selectedByTask[taskId] ?? null;
+  function selectFile(artifactId: string): void {
+    if (onOpenFile) onOpenFile(artifactId);
+    else setSelectedByTask((existing) => ({ ...existing, [taskId]: artifactId }));
+  }
   function patchDraft(task: string, patch: Partial<TaskDraft>): void {
     setDrafts((current) => ({
       ...current,
@@ -205,7 +214,7 @@ export function TaskDossierPanel({
 
   return (
     <aside className="task-dossier" aria-label="Dosar tehnic">
-      <header className="task-dossier__heading"><p className="task-dossier__eyebrow">Pentru această operație</p><h3>Fișiere și instrucțiuni</h3></header>
+      <header className="task-dossier__heading" data-op-part="brief files"><p className="task-dossier__eyebrow">Pentru această operație</p><h3>Fișiere și instrucțiuni</h3></header>
       {notice ? (
         <InlineAlert tone="success" title="Salvat">
           {notice}
@@ -243,12 +252,12 @@ export function TaskDossierPanel({
       ) : null}
       {current ? (
         <div className="task-dossier__body">
-          <DossierSection title="Instrucțiuni" empty={null}>
+          <DossierSection title="Instrucțiuni" empty={null} part="brief">
             {current.instructions.map((entry) => (
               <DossierNote key={entry.entryId} entry={entry} />
             ))}
           </DossierSection>
-          <DossierSection title="Fișierele operației" empty="Nu sunt fișiere asociate acestei operații.">
+          <DossierSection title="Fișierele operației" empty="Nu sunt fișiere asociate acestei operații." part="brief files">
             {current.files.map((item) => (
               <FileRow
                 key={item.artifactId}
@@ -256,7 +265,7 @@ export function TaskDossierPanel({
                 pending={pending}
                 canWrite={canWriteFiles}
                 selected={item.artifactId === selectedArtifactId}
-                onSelect={() => setSelectedByTask((existing) => ({ ...existing, [taskId]: item.artifactId }))}
+                onSelect={() => selectFile(item.artifactId)}
                 onMarkUsed={() =>
                   void run(
                     () => markTaskArtifactUsed(taskId, item.artifactId),
@@ -266,8 +275,8 @@ export function TaskDossierPanel({
               />
             ))}
           </DossierSection>
-          {previewFile ? <JobArtifactPreview file={previewFile} /> : null}
-          {current.planFiles.some((item) => !item.linkedToTask) && (!recordMode || canWriteFiles) ? <section className="task-dossier__association">
+          {previewFile && !onOpenFile ? <JobArtifactPreview file={previewFile} /> : null}
+          {current.planFiles.some((item) => !item.linkedToTask) && (!recordMode || canWriteFiles) ? <section className="task-dossier__association" data-op-part="files">
             {recordMode ? <Button variant="secondary" aria-expanded={associationTask === taskId} onClick={() => setAssociationTask(associationTask === taskId ? null : taskId)}>{associationTask === taskId ? 'Închide asocierea' : 'Asociază un fișier existent'}</Button> : null}
             {!recordMode || associationTask === taskId ? (
             <DossierSection title="Fișierele generale ale lucrării" empty={null}>
@@ -278,9 +287,7 @@ export function TaskDossierPanel({
                     <FileRow
                       file={item}
                       selected={item.artifactId === selectedArtifactId}
-                      onSelect={() =>
-                        setSelectedByTask((existing) => ({ ...existing, [taskId]: item.artifactId }))
-                      }
+                      onSelect={() => selectFile(item.artifactId)}
                     />
                     <Button
                       variant="ghost"
@@ -303,7 +310,7 @@ export function TaskDossierPanel({
         </div>
       ) : null}
 
-      <section className="task-dossier__messages" aria-label="Mesaje pentru această operație">
+      <section className="task-dossier__messages" aria-label="Mesaje pentru această operație" data-op-part="brief">
 
       <h3>Mesaje pentru {taskLabel}</h3>
       <div className="task-dossier__actions">
@@ -508,17 +515,17 @@ export function TaskDossierPanel({
       ) : null}
       {current ? (
         <div className="task-dossier__body">
-          <DossierSection title="Observații" empty={null}>
+          <DossierSection title="Observații" empty={null} part="brief">
             {current.observations.map((entry) => (
               <DossierNote key={entry.entryId} entry={entry} />
             ))}
           </DossierSection>
-          <DossierSection title="Probleme semnalate" empty={null}>
+          <DossierSection title="Probleme semnalate" empty={null} part="brief">
             {current.issues.map((entry) => (
               <DossierNote key={entry.entryId} entry={entry} problem />
             ))}
           </DossierSection>
-          <section className="task-dossier__archive" aria-label="Istoricul operației">
+          <section className="task-dossier__archive" aria-label="Istoricul operației" data-op-part="history">
             <h3>Istoricul operației</h3>
             {current.history.length === 0 ? (
               <p className="task-dossier__meta">Nu există evenimente în dosarul acestei operații.</p>
@@ -533,7 +540,7 @@ export function TaskDossierPanel({
             )}
           </section>
           {laterVersions.length > 0 ? (
-            <p className="job-workbench__revision">
+            <p className="job-workbench__revision" data-op-part="files">
               Există o versiune ulterioară a documentului selectat:{" "}
               {laterVersions.map((item) => item.originalFileName).join(", ")}. Asocierea și
               utilizarea rămân la documentul deschis.{" "}
@@ -561,23 +568,26 @@ export function TaskDossierPanel({
 function DossierSection({
   title,
   empty,
+  part,
   children,
 }: {
   title: string;
   empty: string | null;
+  /** N-018 · which sub-tab of the operation bench shows this block ("brief", "files", "history"). */
+  part?: string;
   children: ReactNode;
 }) {
   const list = Array.isArray(children) ? children.filter(Boolean) : children ? [children] : [];
   if (list.length === 0) {
     return empty ? (
-      <section>
+      <section data-op-part={part}>
         <h3>{title}</h3>
         <p>{empty}</p>
       </section>
     ) : null;
   }
   return (
-    <section>
+    <section data-op-part={part}>
       <h3>{title}</h3>
       {children}
     </section>

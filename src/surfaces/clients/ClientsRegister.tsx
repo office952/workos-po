@@ -1,4 +1,4 @@
-import type { KeyboardEvent, Ref } from "react";
+import type { KeyboardEvent, ReactNode, Ref } from "react";
 import type { CustomerRegistryItemTransport } from "../../api/types";
 import type { CollectionViewState } from "../../components/collectionViewState";
 import { EmptyState } from "../../components/EmptyState";
@@ -30,14 +30,19 @@ type Props = {
   onRetry: () => void;
   onSelect: (customerId: string) => void;
   onOpen: (customerId: string) => void;
+  /** Phone (compact): filter chips and the A–Z toggle, right under the search. */
+  filtersSlot?: ReactNode;
 };
 
 export function Monogram({ name, size }: { name: string; size?: "large" }) {
   return <span className="cagenda-mono" data-size={size} aria-hidden="true">{monogram(name)}</span>;
 }
 
-/** Open requests apart from the totals: openRequestCount vs quoteCount and jobCount. */
-export function Relation({ customer }: { customer: Pick<CustomerRegistryItemTransport, "openRequestCount" | "quoteCount" | "jobCount"> }) {
+/**
+ * Open requests apart from the totals: openRequestCount vs quoteCount and workCount. "lucrări" is
+ * every work of the client (WorkOS jobs and historical records, N-020), the same number as its tab.
+ */
+export function Relation({ customer }: { customer: Pick<CustomerRegistryItemTransport, "openRequestCount" | "quoteCount" | "jobCount" | "historicalWorkCount" | "workCount"> }) {
   return (
     <span className="cagenda-rel">
       <span className="cagenda-rel__open" data-zero={customer.openRequestCount === 0 || undefined}>
@@ -45,7 +50,7 @@ export function Relation({ customer }: { customer: Pick<CustomerRegistryItemTran
         Cereri deschise <strong>{customer.openRequestCount}</strong>
       </span>
       <span className="cagenda-rel__total">
-        <small>Total</small> oferte <strong>{customer.quoteCount}</strong> · lucrări <strong>{customer.jobCount}</strong>
+        <small>Total</small> oferte <strong>{customer.quoteCount}</strong> · <span title={`În WorkOS: ${customer.jobCount} · istorice: ${customer.historicalWorkCount}`}>lucrări <strong>{customer.workCount}</strong></span>
       </span>
     </span>
   );
@@ -100,6 +105,7 @@ function Table({ items, selectedId, onSelect }: Props) {
                 data-row
                 data-row-id={customer.customerId}
                 data-selected={selected || undefined}
+                data-arrival-target={selected || undefined}
                 data-attention={customer.needsAttention || undefined}
                 tabIndex={0}
                 aria-selected={selected}
@@ -114,6 +120,8 @@ function Table({ items, selectedId, onSelect }: Props) {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
                     onSelect(customer.customerId);
+                    // Enter opens the card: focus moves into it; Escape there returns to this row.
+                    if (event.key === "Enter") window.requestAnimationFrame(() => document.getElementById("clienti-dosar")?.focus());
                   } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
                     event.preventDefault();
                     moveRowFocus(event.currentTarget, event.key === "ArrowDown" ? 1 : -1, onSelect);
@@ -152,7 +160,7 @@ function Cards({ items, selectedId, onOpen }: Props) {
               const line = identityLine(customer);
               const contact = [customer.contactName, customer.phone].filter(Boolean).join("  ·  ");
               return (
-                <li key={customer.customerId} className="rdesk-card" data-attention={customer.needsAttention || undefined} data-selected={customer.customerId === selectedId || undefined}>
+                <li key={customer.customerId} className="rdesk-card" data-attention={customer.needsAttention || undefined} data-selected={customer.customerId === selectedId || undefined} data-arrival-target={customer.customerId === selectedId || undefined}>
                   <button
                     type="button"
                     className="rdesk-card__open"
@@ -190,10 +198,10 @@ function Cards({ items, selectedId, onOpen }: Props) {
 
 /** The agenda register: search, density, new client, then clients grouped by letter. */
 export function ClientsRegister(props: Props) {
-  const { layout, view, denied, refreshFailed, filters, density, canCreate, searchRef, onFilters, onDensity, onCreate, onReset, onRetry, items, total } = props;
+  const { layout, view, denied, refreshFailed, filters, density, canCreate, searchRef, onFilters, onDensity, onCreate, onReset, onRetry, items, total, filtersSlot } = props;
   const ready = view !== "loading" && view !== "error";
   return (
-    <section className="rdesk-register" aria-label="Registru clienți" data-register>
+    <section className="rdesk-register" aria-label="Registru clienți" data-register data-scroll-memory="registru">
       <div className="rdesk-toolbar">
         <DeskSearch
           id="clienti-cauta"
@@ -208,6 +216,7 @@ export function ClientsRegister(props: Props) {
           <button type="button" className="rdesk-create" onClick={onCreate}><PlusIcon />Client nou</button>
         ) : null}
       </div>
+      {filtersSlot}
       {refreshFailed && total > 0 ? (
         <InlineAlert tone="error" title="Lista nu a putut fi actualizată">
           Datele afișate sunt de la ultima citire reușită.
@@ -219,7 +228,7 @@ export function ClientsRegister(props: Props) {
         count={ready ? `${items.length} din ${total}` : denied ? "—" : "Se citesc clienții"}
         showReset={filters.query.trim() !== "" || filters.chip !== "all"}
         onReset={onReset}
-        keys={layout === "docked"}
+        keys={layout === "docked" ? "↑ ↓ selectează · Enter deschide cartela · / caută" : false}
       />
       <div aria-busy={view === "loading" || view === "refreshing"}>
         {view === "error" ? (

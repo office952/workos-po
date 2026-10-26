@@ -1,0 +1,519 @@
+/* N-020 etapa 7 · Sedii (Figma 759:451 / 759:185 desktop, 759:1284 dezactivat, 778:730 la 1280,
+   778:537 la 768, 778:185 / 778:361 telefon, 778:996 Noapte, stări 716:185 / 716:451 / 716:682).
+   Machine theme tokens only (Light and Night); `data-mode` switches desktop / tablet / phone. */
+
+.dsites2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  min-width: 0;
+  padding: 6px 0 40px;
+}
+
+.dsites2__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
+.dsites2__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  min-width: 0;
+}
+
+.dsites2__title {
+  margin: 0;
+  font: 600 26px/1.2 var(--font-brand);
+}
+
+.dsites2__scope {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.35 var(--font-sans);
+}
+
+.dsites2__add,
+.dsites2__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--wos-paper);
+  color: var(--color-text-primary);
+  font: 600 14px/1.2 var(--font-sans);
+  cursor: pointer;
+}
+
+.dsites2__billing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 20px;
+  padding: 12px 14px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-deck);
+  color: var(--color-text-secondary);
+  font: 400 13px/1.45 var(--font-sans);
+}
+
+.dsites2__billing p {
+  margin: 0;
+  min-width: 0;
+}
+
+.dsites2__link {
+  color: var(--shell-signal);
+  font: 600 14px/1.3 var(--font-sans);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.dsites2__notice-slot {
+  outline: none;
+}
+
+.dsites2__notice-slot:empty {
+  display: none;
+}
+
+.dsites2__notice-slot:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 3px;
+}
+
+.dsites2__notice {
+  display: grid;
+  gap: 3px;
+  padding: 12px 14px;
+  border: 1px solid var(--shell-signal);
+  background: var(--shell-panel);
+  font: 400 13px/1.45 var(--font-sans);
+}
+
+.dsites2__notice p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.dsites2__notice .dsites2__notice-title {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.dsites2__state {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  margin: 0;
+  padding: 18px 20px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel);
+  color: var(--color-text-secondary);
+  font: 400 14px/1.45 var(--font-sans);
+}
+
+.dsites2__state p {
+  margin: 0;
+}
+
+.dsites2__state--empty {
+  justify-items: center;
+  padding: 44px 20px;
+  text-align: center;
+}
+
+.dsites2__state-title {
+  color: var(--color-text-primary);
+  font: 600 16px/1.3 var(--font-sans);
+}
+
+/* ─── Cards (759:451) ─── */
+.dsites2__list {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dsite2 {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 24px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel);
+}
+
+/* An inactive site stays, set apart (759:1284): the deck ground and the INACTIV mark. */
+.dsite2[data-status="INACTIVE"] {
+  background: var(--shell-deck);
+}
+
+.dsite2__media {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dsite2__caption {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 12px/1.4 var(--font-sans);
+}
+
+.dsite2__body {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dsite2__title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dsite2__name {
+  margin: 0;
+  font: 600 20px/1.25 var(--font-brand);
+  overflow-wrap: anywhere;
+}
+
+.dsite2__badge {
+  flex: none;
+  padding: 2px 8px;
+  border: 1px solid var(--shell-edge-strong);
+  color: var(--color-text-secondary);
+  font: 500 10.5px/1.4 var(--font-mono);
+  letter-spacing: 0.06em;
+}
+
+.dsite2__address {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  font: 400 14px/1.4 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.dsite2__address .dicon {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.dsite2__contact,
+.dsite2__direct {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.45 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.dsite2__contact a {
+  color: inherit;
+}
+
+.dsite2__access {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 2px 0;
+  padding: 8px 12px;
+  background: var(--shell-deck);
+  color: var(--color-text-secondary);
+  font: 400 13px/1.45 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.dsite2[data-status="INACTIVE"] .dsite2__access {
+  background: var(--shell-panel);
+}
+
+.dsite2__access .dicon {
+  flex: none;
+  color: var(--shell-brass);
+}
+
+.dsite2__usage {
+  margin: 4px 0 0;
+  font: 500 12.5px/1.45 var(--font-mono);
+}
+
+.dsite2__last {
+  margin: 0;
+  font: 400 13px/1.45 var(--font-sans);
+}
+
+.dsite2__last:empty {
+  display: none;
+}
+
+.dsite2__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  margin-top: 6px;
+}
+
+.dsite2__go {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+
+.dsite2__dest {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--wos-paper);
+  color: var(--color-text-primary);
+  font: 600 14px/1.2 var(--font-sans);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.dsite2__dest:hover {
+  border-color: var(--shell-signal);
+}
+
+/* A destination with nothing to show stays reachable, quieter and without the arrow. */
+.dsite2__dest[data-zero] {
+  border-color: transparent;
+  background: none;
+  color: var(--shell-signal);
+  font-weight: 500;
+}
+
+.dsite2__actions {
+  display: flex;
+  gap: 20px;
+  margin: 0;
+}
+
+.dsite2__actions button {
+  min-height: 36px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+  font: 600 14px/1.2 var(--font-sans);
+  cursor: pointer;
+}
+
+.dsites2 a:focus-visible,
+.dsites2 button:focus-visible,
+.dsites2 select:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ─── Site of each request and job (759:185) ─── */
+.dsites2__assign {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.dsites2__assign-title {
+  margin: 0;
+  font: 600 18px/1.3 var(--font-brand);
+}
+
+.dsites2__assign-note {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.45 var(--font-sans);
+}
+
+.dsites2__assign-list {
+  display: grid;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dsites2__assign-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 284px);
+  align-items: center;
+  gap: 8px 20px;
+  padding: 10px 0;
+  border-top: 1px solid var(--shell-edge);
+}
+
+.dsites2__assign-row p {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  min-width: 0;
+  font: 400 14px/1.4 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.dsites2__assign-kind {
+  color: var(--color-text-muted);
+  font: 500 10px/1.3 var(--font-mono);
+  letter-spacing: 0.08em;
+}
+
+.dsites2__assign-row select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--wos-paper);
+  color: var(--color-text-primary);
+  font: 400 14px/1.2 var(--font-sans);
+}
+
+/* ─── Status dialog (759:682) and form rows (715:925) ─── */
+.dsitestatus {
+  display: grid;
+  gap: 6px;
+  font: 400 14px/1.45 var(--font-sans);
+}
+
+.dsitestatus h3 {
+  margin: 8px 0 0;
+  font: 600 14px/1.3 var(--font-sans);
+}
+
+.dsitestatus h3:first-child {
+  margin-top: 0;
+}
+
+.dsitestatus ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-secondary);
+}
+
+.dsitestatus li::before {
+  content: "· ";
+}
+
+.dsiteform__row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* ─── Tablet (778:537) ─── */
+.dsites2[data-mode="tablet"] .dsite2 {
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 18px;
+  padding: 16px;
+}
+
+.dsites2[data-mode="tablet"] .dsite2__foot {
+  display: grid;
+  justify-content: start;
+}
+
+/* ─── Phone (778:185 / 778:361) ─── */
+.dsites2[data-mode="phone"] .dsites2__heading {
+  display: grid;
+  gap: 2px;
+}
+
+.dsites2[data-mode="phone"] .dsites2__title {
+  font-size: 22px;
+}
+
+.dsites2[data-mode="phone"] .dsites2__add {
+  width: 100%;
+  min-height: 44px;
+}
+
+.dsites2[data-mode="phone"] .dsites2__billing {
+  display: grid;
+}
+
+.dsites2[data-mode="phone"] .dsite2 {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  padding: 14px 12px;
+}
+
+/* The name, the address and the contact come first; the photo follows, small, with its caption beside it. */
+.dsites2[data-mode="phone"] .dsite2__body {
+  display: contents;
+}
+
+.dsites2[data-mode="phone"] .dsite2__body > * {
+  order: 5;
+}
+
+.dsites2[data-mode="phone"] .dsite2__title-row {
+  order: 1;
+}
+
+.dsites2[data-mode="phone"] .dsite2__address {
+  order: 2;
+}
+
+.dsites2[data-mode="phone"] .dsite2__contact {
+  order: 3;
+}
+
+.dsites2[data-mode="phone"] .dsite2__media {
+  order: 4;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+
+.dsites2[data-mode="phone"] .dsite2__name {
+  font-size: 18px;
+}
+
+.dsites2[data-mode="phone"] .dsite2__go {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+}
+
+.dsites2[data-mode="phone"] .dsite2__dest {
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 8px;
+}
+
+.dsites2[data-mode="phone"] .dsite2__foot {
+  display: grid;
+  gap: 8px;
+}
+
+.dsites2[data-mode="phone"] .dsites2__assign-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 767px) {
+  .dsiteform__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

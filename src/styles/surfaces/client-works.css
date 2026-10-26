@@ -1,0 +1,793 @@
+/* N-020 etapa 4 · Lucrări (Figma rM71g74Ph0mkAjAtWuLahy, page 12): list 644:12426, documents on
+   demand 644:12878, Istorice + 2021 644:13352 / 644:13543, 1280 647:13900, 768 647:14189, phone
+   644:13766 / 644:14072, 360 644:14328, record 648:13642 / phone 649:14469, Noapte 648:14211 /
+   648:14447, states 616:12643, two works of one request 648:13594. Machine theme tokens only, so
+   Light and Night share the rules. The width comes from `data-mode` (useBandMode: phone < 768,
+   tablet < 1100), the same switch as the header and Cereri și oferte. */
+
+.dworks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  min-width: 0;
+  padding: 6px 0 40px;
+}
+
+/* ─── Title and totals ─── */
+.dworks__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+}
+
+.dworks__title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 26px/1.2 var(--font-brand);
+}
+
+.dworks__totals {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.3 var(--font-sans);
+}
+
+/* ─── Search · provenance · An, Sediu, Stare ─── */
+.dworks__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.dworks__search {
+  display: flex;
+  flex: 1 1 320px;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.dworks__field {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 12px 0 14px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel);
+  color: var(--color-text-muted);
+}
+
+.dworks__field:focus-within,
+.dworks__field[data-filled] {
+  border-color: var(--shell-signal);
+  box-shadow: inset 0 0 0 1px var(--shell-signal);
+}
+
+.dworks__field input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 38px;
+  border: 0;
+  background: none;
+  color: var(--color-text-primary);
+  font: 400 14px/1.2 var(--font-sans);
+  outline: none;
+}
+
+.dworks__field input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.dworks__clear {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+  font: 600 13px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.dworks__segment {
+  display: flex;
+  flex: none;
+}
+
+.dworks__segment button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--wos-paper);
+  color: var(--color-text-primary);
+  font: 500 14px/1 var(--font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dworks__segment button + button {
+  margin-left: -1px;
+}
+
+.dworks__segment button[aria-pressed="true"] {
+  border-color: var(--color-text-primary);
+  background: var(--color-text-primary);
+  color: var(--wos-paper);
+  font-weight: 600;
+}
+
+.dworks__menus {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+
+.dworks__sheet-button,
+.dworks__button,
+.dwcard__open,
+.dwdetail__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--wos-paper);
+  color: var(--color-text-primary);
+  font: 600 14px/1.2 var(--font-sans);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.dworks__sheet-button {
+  flex: none;
+  white-space: nowrap;
+}
+
+.dworks__sheet-button[data-active] {
+  border-color: var(--shell-signal);
+}
+
+/* ─── The result line, only with a search or a filter (644:13352) ─── */
+.dworks__result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 20px;
+  min-height: 54px;
+  padding: 12px 14px;
+  background: var(--shell-deck);
+}
+
+.dworks__result-text {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 400 14px/1.4 var(--font-sans);
+}
+
+.dworks__result-text strong {
+  font-weight: 600;
+}
+
+.dworks__result-text span {
+  color: var(--color-text-secondary);
+}
+
+.dworks__result-actions,
+.dworks__state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.dworks__result-actions button,
+.dworks__link,
+.dwcard__toggle,
+.dwdetail__link {
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+  font: 600 14px/1.25 var(--font-sans);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.dwdetail__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+}
+
+.dworks__result-actions button:hover,
+.dworks__link:hover,
+.dwcard__toggle:hover,
+.dwdetail__link:hover,
+.dwcard__open:hover,
+.dwdetail__back:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ─── States (616:12643): no results, loading, error ─── */
+.dworks__state {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  margin: 0;
+  padding: 18px 20px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel);
+  color: var(--color-text-secondary);
+  font: 400 14px/1.45 var(--font-sans);
+}
+
+.dworks__state p {
+  margin: 0;
+}
+
+.dworks__state-title {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.dworks__skeleton {
+  justify-self: stretch;
+  height: 54px;
+  background: var(--shell-panel-strong);
+}
+
+/* ─── Years and cards ─── */
+.dworks__years {
+  display: grid;
+  gap: 26px;
+}
+
+.dworks__years[aria-busy="true"] {
+  opacity: 0.6;
+}
+
+.dworks__year {
+  display: grid;
+  gap: 14px;
+}
+
+.dworks__year-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 26px/1.1 var(--font-brand);
+}
+
+.dworks__year-title span {
+  color: var(--color-text-muted);
+  font: 500 10.5px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dworks__list {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Desktop (644:12426): image · identity · the way in; the caption under the meta; documents below. */
+.dwcard {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "thumb body side"
+    "thumb cap side"
+    ". more more";
+  gap: 6px 18px;
+  align-items: start;
+  min-width: 0;
+  padding: 14px 18px 14px 14px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel);
+}
+
+.dwcard__body {
+  display: grid;
+  grid-area: body;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dwcard__media {
+  display: contents;
+}
+
+.dwcard__media > .dphoto {
+  grid-area: thumb;
+  align-self: start;
+}
+
+.dwcard__caption {
+  grid-area: cap;
+  margin: 0;
+  color: var(--color-text-muted);
+  font: 400 12px/1.4 var(--font-sans);
+}
+
+.dwcard__side {
+  display: grid;
+  grid-area: side;
+  justify-items: end;
+  gap: 12px;
+}
+
+.dwcard__more {
+  display: grid;
+  grid-area: more;
+  gap: 14px;
+  padding-top: 10px;
+}
+
+.dwcard__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 500 11px/1.4 var(--font-mono);
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+
+.dwcard__eyebrow svg {
+  flex: none;
+}
+
+.dwcard__title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 19px/1.3 var(--font-brand);
+  overflow-wrap: anywhere;
+}
+
+.dwcard__detail,
+.dwcard__match {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.4 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.dwcard__match {
+  font-size: 12px;
+}
+
+.dwcard__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 400 13.5px/1.35 var(--font-sans);
+}
+
+.dwcard__site {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.dwcard__date {
+  color: var(--color-text-secondary);
+}
+
+.dwcard__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dwcard__nodocs {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 500 13px/1.3 var(--font-sans);
+}
+
+.dwcard__label {
+  margin: 0;
+  color: var(--color-text-muted);
+  font: 500 10.5px/1.3 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dwcard__group {
+  display: grid;
+  gap: 8px;
+}
+
+.dwcard__photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dwcard__photos li {
+  width: 120px;
+}
+
+/* A state is a dot and its words (Stare 557:3559), as in Istoric; execution reads neutral. */
+.dworks .dstate {
+  min-height: 24px;
+  gap: 7px;
+  border-radius: 0;
+  font-size: 12.5px;
+}
+
+.dworks .dstate svg {
+  display: none;
+}
+
+.dworks .dstate::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.dworks .dstate[data-tone="execution"],
+.dworks .dstate[data-tone="production"],
+.dworks .dstate[data-tone="order"] {
+  background: color-mix(in srgb, var(--color-info) 15%, transparent);
+  color: var(--color-text-primary);
+}
+
+.dworks .dstate[data-tone="execution"]::before,
+.dworks .dstate[data-tone="production"]::before,
+.dworks .dstate[data-tone="order"]::before {
+  background: var(--color-info);
+}
+
+.dworks__pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px 18px;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.3 var(--font-sans);
+}
+
+/* ─── The record of a historical work (648:13642) ─── */
+.dwdetail {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.dwdetail__back {
+  justify-self: start;
+  min-height: 32px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+}
+
+.dwdetail__card {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding: 22px 26px 26px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel);
+}
+
+.dwdetail__eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 500 11px/1.4 var(--font-mono);
+}
+
+.dwdetail__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--shell-edge-strong);
+  color: var(--color-text-secondary);
+  font: 500 10.5px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dwdetail__title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 30px/1.2 var(--font-brand);
+  overflow-wrap: anywhere;
+}
+
+.dwdetail__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 32px;
+  margin: 0;
+}
+
+.dwdetail__facts > div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dwdetail__facts dt {
+  color: var(--color-text-muted);
+  font: 500 10.5px/1.3 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dwdetail__facts dd {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 400 15px/1.4 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.dwdetail__facts small {
+  color: var(--color-text-secondary);
+  font-size: 12.5px;
+}
+
+.dwdetail__note {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-deck);
+  color: var(--color-text-secondary);
+  font: 400 13.5px/1.45 var(--font-sans);
+}
+
+.dwdetail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+
+.dwdetail__columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px 32px;
+  align-items: start;
+}
+
+.dwdetail__photos,
+.dwdetail__about {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.dwdetail__photo-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dwdetail__photo-list li {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dwdetail__caption {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 12.5px/1.35 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.dwdetail__description {
+  margin: 0 0 6px;
+  color: var(--color-text-primary);
+  font: 400 14px/1.55 var(--font-sans);
+}
+
+.dwdetail__none {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+/* ─── Tablet (768 · 647:14189): the search with "An, sediu, stare", the provenance under it ─── */
+.dworks[data-mode="tablet"] .dworks__search,
+.dworks[data-mode="phone"] .dworks__search {
+  flex: 1 1 100%;
+}
+
+.dworks[data-mode="tablet"] .dwcard {
+  grid-template-columns: 120px minmax(0, 1fr);
+  grid-template-areas:
+    "thumb body"
+    "thumb cap"
+    "thumb side"
+    "more more";
+  align-items: center;
+}
+
+.dworks[data-mode="tablet"] .dwcard__side {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-items: start;
+  gap: 8px 24px;
+}
+
+.dworks[data-mode="tablet"] .dwdetail__columns,
+.dworks[data-mode="phone"] .dwdetail__columns {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* ─── Phone (644:13766 / 644:14072, 360 644:14328): identity first, then the image, then the ways in ─── */
+.dworks[data-mode="phone"] .dworks__title,
+.dworks[data-mode="phone"] .dworks__year-title {
+  font-size: 22px;
+}
+
+.dworks[data-mode="phone"] .dworks__segment {
+  flex: 1 1 100%;
+}
+
+.dworks[data-mode="phone"] .dworks__segment button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 8px;
+}
+
+.dworks[data-mode="phone"] .dworks__sheet-button,
+.dworks[data-mode="phone"] .dworks__field {
+  min-height: 44px;
+}
+
+.dworks[data-mode="phone"] .dworks__result {
+  flex-wrap: nowrap;
+}
+
+.dworks[data-mode="phone"] .dworks__result-text {
+  display: grid;
+  gap: 2px;
+}
+
+.dworks[data-mode="phone"] .dwcard {
+  grid-template-columns: 88px minmax(0, 1fr);
+  grid-template-areas:
+    "body body"
+    "thumb cap"
+    "side side"
+    "more more";
+  gap: 10px 12px;
+  align-items: center;
+  padding: 14px;
+}
+
+.dworks[data-mode="phone"] .dwcard__title {
+  font-size: 18px;
+}
+
+.dworks[data-mode="phone"] .dwcard__caption {
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+}
+
+.dworks[data-mode="phone"] .dwcard__side {
+  justify-items: stretch;
+  gap: 4px;
+}
+
+.dworks[data-mode="phone"] .dwcard__open {
+  min-height: 44px;
+}
+
+.dworks[data-mode="phone"] .dwcard__toggle,
+.dworks[data-mode="phone"] .dwcard__nodocs {
+  justify-self: center;
+  min-height: 40px;
+}
+
+.dworks[data-mode="phone"] .dwcard__nodocs {
+  display: flex;
+  align-items: center;
+}
+
+.dworks[data-mode="phone"] .dwcard__photos li {
+  width: calc(50% - 5px);
+}
+
+.dworks[data-mode="phone"] .dwdetail__back {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--wos-paper);
+  color: var(--color-text-primary);
+}
+
+.dworks[data-mode="phone"] .dwdetail__card {
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.dworks[data-mode="phone"] .dwdetail__title {
+  font-size: 24px;
+}
+
+.dworks[data-mode="phone"] .dwdetail__facts {
+  display: grid;
+  gap: 8px;
+}
+
+.dworks[data-mode="phone"] .dwdetail__facts > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+}
+
+.dworks[data-mode="phone"] .dwdetail__photo-list {
+  gap: 8px;
+}
+
+/* The shared Button is a hit area around its visible box: both span the row on the phone. */
+.dworks[data-mode="phone"] .dwdetail__actions > button {
+  flex: 1 1 100%;
+}
+
+.dworks[data-mode="phone"] .dwdetail__actions .button {
+  width: 100%;
+  min-height: 44px;
+}
+
+/* Focus stays visible on every control (the section's own rules, as the other client views). */
+.dworks a:focus-visible,
+.dworks button:focus-visible,
+.dworks input:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}

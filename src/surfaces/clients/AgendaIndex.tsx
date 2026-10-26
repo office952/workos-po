@@ -7,7 +7,16 @@ import { ALPHABET, OTHER_LETTER } from "./clientsAgendaModel";
  * stay visible but inactive. The phone shows only the letters in the list, wrapping, so
  * every one stays reachable without horizontal scrolling.
  */
-export function AgendaIndex({ letters, layout }: { letters: readonly string[]; layout: DeskLayout }) {
+export function AgendaIndex({
+  letters,
+  layout,
+  onJump,
+}: {
+  letters: readonly string[];
+  layout: DeskLayout;
+  /** The compact phone index closes itself first and then jumps; without it, jump directly. */
+  onJump?: (letter: string) => void;
+}) {
   const present = new Set(letters);
   const shown = layout === "full" ? letters : [...ALPHABET, ...(present.has(OTHER_LETTER) ? [OTHER_LETTER] : [])];
   return (
@@ -24,7 +33,7 @@ export function AgendaIndex({ letters, layout }: { letters: readonly string[]; l
                 data-present={active || undefined}
                 disabled={!active}
                 aria-label={active ? `Clienți la litera ${letter}` : `Niciun client la litera ${letter}`}
-                onClick={() => jumpToLetter(letter)}
+                onClick={() => (onJump ? onJump(letter) : jumpToLetter(letter))}
               >
                 {letter}
               </button>

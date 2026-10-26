@@ -1,0 +1,1004 @@
+/* N-020 design final · antetul dosarului clientului (Figma 574:2203, restrâns 579:6351, tabletă
+   588:7090, telefon 649:14364 / 580:4114, meniuri 579:5369 / 579:5140, foaia 588:8844). One header
+   for every section of the client; colours come from the machine theme tokens, so Light and Night
+   follow the same rules. */
+
+[data-surface="client-hub"] {
+  --cdh-gutter: 48px;
+  /* The sections below the header share its gutter (Figma 574:2203: 48 / 32 / 24 / 16). */
+  --chub-gutter: var(--cdh-gutter);
+  --cdh-bar-bg: var(--shell-ink);
+  --cdh-bar-fg: var(--shell-chassis);
+  --cdh-bar-muted: rgb(240 237 231 / 64%);
+  /* R1: one corner shape for every control of the dossier, a larger one for cards. */
+  --cdh-radius: 6px;
+  --cdh-card-radius: 8px;
+}
+
+/* Night (R1 finisare): the phone section bar stays a dark band on the dark page, a raised panel
+   with light text and the brass line under it, instead of flipping to a light bar. */
+:root[data-resolved-theme="dark"] [data-surface="client-hub"] {
+  --cdh-bar-bg: var(--shell-panel-strong);
+  --cdh-bar-fg: var(--shell-ink);
+  --cdh-bar-muted: rgb(244 241 236 / 62%);
+}
+
+/* ─── Identity, contact, actions ─── */
+.cdh {
+  position: relative;
+  z-index: 22;
+  display: grid;
+  gap: 14px;
+  padding: 16px var(--cdh-gutter) 20px;
+  background: var(--color-canvas);
+}
+
+.cdh__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  min-height: 28px;
+  color: var(--shell-signal);
+  font: 500 13px/1.3 var(--font-sans);
+  text-decoration: none;
+}
+
+.cdh__back:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cdh__main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.cdh__mono .cagenda-mono,
+.chub .cdh__mono .cagenda-mono,
+:root[data-resolved-theme="dark"] .chub .cdh__mono .cagenda-mono,
+.chub .cdh-band__id .cagenda-mono,
+:root[data-resolved-theme="dark"] .chub .cdh-band__id .cagenda-mono {
+  border-color: var(--shell-signal);
+  background: var(--shell-signal);
+  color: var(--shell-button-ink);
+}
+
+.cdh__mono .cagenda-mono[data-size="large"] {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--cdh-radius);
+  font: 600 20px/1 var(--font-brand);
+}
+
+.cdh__id {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cdh__name {
+  overflow: hidden;
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 32px/1.15 var(--font-brand);
+  letter-spacing: -0.01em;
+  /* R1 (860:33589): a long name wraps on several lines; nothing is cut or shrunk. */
+  overflow-wrap: anywhere;
+}
+
+.cdh__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0;
+}
+
+.cdh__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: var(--cdh-radius);
+  background: var(--shell-signal-soft);
+  color: var(--shell-signal);
+  font: 500 12px/1 var(--font-sans);
+}
+
+/* R1 (890:88464): a client that is not active has a neutral state, not the green one. */
+.cdh__status:not([data-status="ACTIVE"]) {
+  background: var(--shell-deck);
+  color: var(--color-text-secondary);
+}
+
+.cdh__status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.cdh__facts {
+  color: var(--color-text-muted);
+  font: 500 12px/1.3 var(--font-mono);
+  letter-spacing: 0.03em;
+}
+
+/* Contacts: a column on the desktop, one line on the tablet, a card on the phone. */
+.cdh-contacts {
+  position: relative;
+  min-width: 0;
+}
+
+/* R1 contact card (846:31701): initials, name and role, the ways one under the other. Its height
+   follows its content; 86 px (the two stacked actions) is only the minimum. */
+.cdh-contacts[data-variant="column"] {
+  display: grid;
+  flex: 0 1 auto;
+  grid-template-columns: 40px minmax(0, auto) minmax(0, auto);
+  align-items: center;
+  column-gap: 14px;
+  min-width: 0;
+  min-height: 86px;
+  padding: 10px 18px 10px 14px;
+  border: 1px solid var(--shell-edge);
+  border-radius: var(--cdh-card-radius);
+  background: var(--shell-panel);
+}
+
+.cdh-contacts__avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--shell-deck);
+  color: var(--color-text-secondary);
+  font: 600 13px/1 var(--font-sans);
+}
+
+.cdh-contacts__ways {
+  display: grid;
+  justify-items: start;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cdh-contact__way {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+  overflow-wrap: anywhere;
+  color: var(--shell-signal);
+  font: 500 12.5px/1.3 var(--font-sans);
+  text-decoration: none;
+}
+
+.cdh-contact__way:hover {
+  text-decoration: underline;
+}
+
+.cdh-contact__role,
+.cdh-contact__missing {
+  margin: 0;
+  color: var(--color-text-muted);
+  font: 400 12px/1.35 var(--font-sans);
+}
+
+.cdh-contacts[data-variant="line"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  padding-top: 14px;
+}
+
+.cdh-contacts[data-variant="card"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel);
+}
+
+.cdh-contacts__kicker,
+.cdh-panel__kicker {
+  margin: 0;
+  color: var(--color-text-muted);
+  font: 500 10px/1.3 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cdh-contact {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cdh-contact[data-variant="line"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+}
+
+.cdh-contact__name,
+.cdh-panel__name {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 13px/1.35 var(--font-sans);
+}
+
+.cdh-contacts[data-variant="card"] .cdh-contact__name {
+  font-size: 14px;
+}
+
+.cdh-contact__ways {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  font: 400 12.5px/1.4 var(--font-sans);
+}
+
+.cdh-contact__ways[data-inline] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+}
+
+.cdh-contact__ways a,
+.cdh-panel a:not(.cdh-panel__edit) {
+  overflow-wrap: anywhere;
+  color: var(--shell-signal);
+  text-decoration: none;
+}
+
+.cdh-contact__ways a:hover,
+.cdh-panel a:not(.cdh-panel__edit):hover {
+  text-decoration: underline;
+}
+
+.cdh-contact__sep {
+  margin-right: 8px;
+  color: var(--color-text-muted);
+}
+
+.cdh-contact__ways:not([data-inline]) .cdh-contact__sep {
+  display: none;
+}
+
+.cdh-contact__none {
+  margin: 0;
+  color: var(--color-text-muted);
+  font: 400 13px/1.35 var(--font-sans);
+}
+
+.cdh-contacts__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 4px;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+  font: 600 13px/1.2 var(--font-sans);
+  cursor: pointer;
+}
+
+.cdh-contacts[data-variant="column"] .cdh-contacts__toggle {
+  min-height: 24px;
+}
+
+.cdh-contacts[data-variant="column"] .cdh-panel {
+  right: 0;
+  left: auto;
+}
+
+.cdh-panel {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 6px);
+  left: 0;
+  display: grid;
+  width: min(316px, calc(100vw - 32px));
+  padding: 4px 14px 12px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel);
+  box-shadow: var(--shell-overlay-shadow, 0 12px 32px -16px rgb(0 0 0 / 40%));
+}
+
+.cdh-contacts[data-variant="card"] .cdh-panel {
+  right: 0;
+  left: auto;
+}
+
+.cdh-panel__group {
+  display: grid;
+  gap: 3px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--shell-edge);
+}
+
+.cdh-panel__text,
+.cdh-panel__missing {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+.cdh-panel__missing {
+  padding-top: 10px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.cdh-panel__edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  min-height: 36px;
+  margin-top: 6px;
+  color: var(--shell-signal);
+  font: 600 13px/1.2 var(--font-sans);
+  text-decoration: none;
+}
+
+/* Actions: "+ Cerere nouă" over "Alte acțiuni" (desktop, tablet); side by side on the phone. */
+/* R1: "Cerere nouă" over "Alte acțiuni", the same width and height (40 + 6 + 40 = the 86 px of the
+   contact card); centred on the row, so a taller card (long name, larger text) never cuts them. */
+.cdh-actions {
+  display: grid;
+  flex: 0 0 auto;
+  min-width: 150px;
+  gap: 6px;
+  align-self: center;
+}
+
+.cdh-actions[data-layout="row"] {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.cdh-create,
+.cdh-more__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  border: 1px solid var(--shell-signal);
+  border-radius: var(--cdh-radius);
+  font: 600 13.5px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.cdh-create {
+  min-height: 40px;
+  padding: 0 16px;
+  background: var(--shell-signal);
+  color: var(--shell-button-ink);
+}
+
+.cdh-create:hover {
+  border-color: var(--shell-signal-strong);
+  background: var(--shell-signal-strong);
+}
+
+/* R1 Accent (844:31757): where the section has its own primary action, "Cerere nouă" keeps its
+   teal identity as an outline, distinct from the neutral "Alte acțiuni". */
+.cdh-create[data-tone="accent"] {
+  border: 1.5px solid var(--shell-signal);
+  background: var(--shell-panel);
+  color: var(--shell-signal-deep);
+}
+
+.cdh-create[data-tone="accent"]:hover {
+  border-color: var(--shell-signal-strong);
+  background: var(--shell-signal-soft);
+}
+
+.cdh-more {
+  position: relative;
+}
+
+.cdh-more__button {
+  min-height: 40px;
+  padding: 0 14px;
+  border-color: var(--shell-edge-strong);
+  background: var(--shell-panel);
+  color: var(--color-text-primary);
+}
+
+.cdh-more__button:hover,
+.cdh-more__button[aria-expanded="true"] {
+  border-color: var(--color-text-primary);
+}
+
+.cdh-actions[data-layout="row"] .cdh-create,
+.cdh-actions[data-layout="row"] .cdh-more__button {
+  min-height: 44px;
+}
+
+.cdh-menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  min-width: 216px;
+  margin: 0;
+  padding: 6px 0;
+  border: 1px solid var(--shell-edge);
+  border-radius: var(--cdh-card-radius);
+  background: var(--shell-panel);
+  box-shadow: var(--shell-overlay-shadow, 0 12px 32px -16px rgb(0 0 0 / 40%));
+  list-style: none;
+}
+
+.cdh-menu__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  background: none;
+  color: var(--color-text-primary);
+  font: 400 13.5px/1.2 var(--font-sans);
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cdh-menu__item:hover,
+.cdh-menu__item:focus-visible {
+  background: var(--shell-deck);
+}
+
+.cdh-menu__attention {
+  color: var(--shell-brass);
+  font: 500 12px/1.2 var(--font-sans);
+}
+
+/* ─── The band: sections, and the folded identity while scrolling ─── */
+.cdh-band {
+  position: sticky;
+  z-index: 20;
+  top: var(--dh-shell-h, 0px);
+  display: flex;
+  align-items: stretch;
+  gap: 0 24px;
+  padding: 0 var(--cdh-gutter);
+  border-bottom: 1px solid var(--shell-edge);
+  background: var(--color-canvas);
+}
+
+.cdh-band[data-compact]:not([data-mode="phone"]) {
+  gap: 0 22px;
+  /* 579:6351: "+ Cerere nouă" closes the line at the right edge, without the gutter. */
+  padding-right: 0;
+  box-shadow: 0 6px 16px -12px rgb(0 0 0 / 45%);
+}
+
+.cdh-band__id {
+  display: flex;
+  /* The name keeps its room (579:6351); the tabs scroll sideways when the line is short. */
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 260px;
+}
+
+.cdh-band__id .cagenda-mono {
+  width: 32px;
+  height: 32px;
+  font-size: 12px;
+}
+
+.cdh-band__name {
+  overflow: hidden;
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 17px/1.2 var(--font-brand);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cdh-band__create {
+  flex: none;
+  align-self: center;
+  width: auto;
+}
+
+.cdh-tabs {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.cdh-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.cdh-tabs__list {
+  display: flex;
+  align-items: stretch;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cdh-tabs__list > li {
+  display: flex;
+  flex: none;
+}
+
+.cdh-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  margin-bottom: -1px;
+  padding: 3px 18px 0;
+  border: 1px solid transparent;
+  border-top-width: 3px;
+  color: var(--color-text-secondary);
+  font: 500 15px/1.2 var(--font-sans);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.cdh-tab:hover {
+  color: var(--color-text-primary);
+}
+
+.cdh-tab .dicon {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.cdh-tab[aria-current="page"] .dicon,
+.cdh-tab[data-current] .dicon {
+  color: var(--color-text-primary);
+}
+
+/* R1 (846:32109): the server flags this section (offers waiting, a work to look at). */
+.cdh-tab__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--shell-brass);
+}
+
+/* Filă secțiune 559:202: the current tab joins the page (its background, side rules, brass bar). */
+.cdh-tab[aria-current="page"],
+.cdh-tab[data-current] {
+  border-color: var(--color-border-subtle);
+  border-top-color: var(--shell-brass);
+  border-bottom-color: var(--color-canvas);
+  border-radius: var(--cdh-radius) var(--cdh-radius) 0 0;
+  background: var(--color-canvas);
+  color: var(--color-text-primary);
+  font: 600 17px/1.2 var(--font-brand);
+}
+
+.cdh-band[data-compact] .cdh-tab {
+  min-height: 60px;
+}
+
+.cdh-tabs__more {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.cdh-tabs__more-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+  font: 600 13px/1 var(--font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cdh-tabs__more .cdh-menu {
+  right: auto;
+  left: 0;
+}
+
+/* The band's menu leaves the scrolling list: the list does not clip it. Folded, the tabs shown are
+   only those that fit (fitSections), so nothing runs past the list there either. */
+.cdh-band[data-mode="tablet"] .cdh-tabs,
+.cdh-band[data-compact] .cdh-tabs {
+  position: relative;
+  overflow: visible;
+}
+
+/* The hidden copy of every tab the folded line is fitted with: laid out, never seen or scrolled to. */
+.cdh-tabs__measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  visibility: hidden;
+  list-style: none;
+  pointer-events: none;
+}
+
+.cdh-tabs__measure > li {
+  display: flex;
+  flex: none;
+}
+
+/* Even the current tab and the menu would not fit beside the full name: the name gives up the room
+   (shortened, its full form in the page header and in its title). */
+.cdh-band[data-tight] .cdh-band__id {
+  max-width: var(--cdh-band-id-max, 260px);
+}
+
+/* ─── Phone: "Secțiunea · Schimbă" (649:14364), folded "← client / Istoric · 2021" (580:4114) ─── */
+.cdh-phonenav {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 60px;
+  margin: 0 calc(var(--cdh-gutter) * -1);
+  padding: 0 16px;
+  /* R1: the brass line runs under the bar, never as a stripe on the left edge. */
+  border-bottom: 3px solid var(--shell-brass);
+  background: var(--cdh-bar-bg);
+  color: var(--cdh-bar-fg);
+}
+
+.cdh-phonenav__back {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 44px;
+  color: inherit;
+  font: 500 20px/1 var(--font-sans);
+  text-decoration: none;
+}
+
+.cdh-phonenav__current {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+}
+
+.cdh-phonenav__kicker {
+  color: var(--cdh-bar-muted);
+  font: 500 10px/1.2 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cdh-phonenav__client {
+  overflow: hidden;
+  font: 600 14px/1.25 var(--font-sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cdh-phonenav__label {
+  overflow: hidden;
+  font: 600 18px/1.2 var(--font-brand);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cdh-phonenav[data-compact] .cdh-phonenav__label {
+  font-size: 17px;
+}
+
+.cdh-phonenav__change {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: 600 14px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.cdh-sheet {
+  position: fixed;
+  inset: auto 0 0;
+  width: 100%;
+  max-width: none;
+  max-height: min(86vh, 720px);
+  margin: 0;
+  padding: 14px 0 16px;
+  border: 0;
+  border-radius: 14px 14px 0 0;
+  background: var(--color-canvas);
+  color: var(--color-text-primary);
+  overflow-y: auto;
+}
+
+.cdh-sheet::backdrop {
+  background: rgb(0 0 0 / 38%);
+}
+
+.cdh-sheet::before {
+  content: "";
+  display: block;
+  width: 40px;
+  height: 4px;
+  margin: 0 auto 14px;
+  border-radius: 2px;
+  background: var(--shell-edge-strong);
+}
+
+.cdh-sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px 14px;
+}
+
+.cdh-sheet__head h2 {
+  overflow: hidden;
+  margin: 0;
+  font: 600 15px/1.3 var(--font-sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cdh-sheet__close {
+  flex: none;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--shell-edge-strong);
+  border-radius: var(--cdh-radius);
+  background: var(--shell-panel);
+  color: var(--color-text-primary);
+  font: 600 14px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.cdh-sheet__list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0 12px;
+  list-style: none;
+}
+
+.cdh-sheet__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 8px 12px;
+  border-radius: var(--cdh-radius);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.cdh-sheet__item .dicon {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+/* The current section: the colours of the bar on the whole row, with no edge stripe. */
+.cdh-sheet__item[aria-current="page"] {
+  background: var(--cdh-bar-bg);
+  color: var(--cdh-bar-fg);
+}
+
+.cdh-sheet__item[aria-current="page"] .dicon {
+  color: inherit;
+}
+
+.cdh-sheet__text {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cdh-sheet__label {
+  font: 600 16px/1.2 var(--font-brand);
+}
+
+.cdh-sheet__hint {
+  color: var(--color-text-muted);
+  font: 400 12.5px/1.3 var(--font-sans);
+}
+
+.cdh-sheet__item[aria-current="page"] .cdh-sheet__hint {
+  color: var(--cdh-bar-muted);
+}
+
+.cdh-sheet__attention {
+  color: var(--shell-brass);
+  font: 500 12.5px/1.3 var(--font-sans);
+}
+
+/* ─── Focus ─── */
+.cdh a:focus-visible,
+.cdh button:focus-visible,
+.cdh-band a:focus-visible,
+.cdh-band button:focus-visible,
+.cdh-sheet a:focus-visible,
+.cdh-sheet button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.cdh-phonenav a:focus-visible,
+.cdh-phonenav button:focus-visible,
+.cdh-sheet__item[aria-current="page"]:focus-visible {
+  outline-color: var(--shell-brass);
+  outline-offset: -3px;
+}
+
+.cdh-tab:focus-visible,
+.cdh-menu__item:focus-visible {
+  outline-offset: -3px;
+}
+
+/* ─── Widths ─── */
+/* R1 at 1280 (846:31701): the card keeps the name, the phone and "Toate contactele"; the e-mail
+   (and its "necompletat" note) stays in the contacts panel, so the card meets the 86 px of the
+   action stack. The height still follows the content: a long name wraps, nothing is cut. */
+@media (max-width: 1379px) {
+  .cdh-contacts[data-variant="column"] {
+    grid-template-columns: 40px auto max-content;
+    min-width: auto;
+  }
+
+  /* The longest word of the contact's name is the narrowest the card gets; the client's name, on
+     the left, wraps instead of overlapping the card. */
+  .cdh-contacts[data-variant="column"] .cdh-contact {
+    min-width: auto;
+  }
+
+  .cdh-contacts[data-variant="column"] [data-way="email"] {
+    display: none;
+  }
+
+  .cdh-contacts[data-variant="column"] .cdh-contact__way,
+  .cdh-contacts[data-variant="column"] .cdh-contacts__toggle {
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 1279px) {
+  [data-surface="client-hub"] {
+    --cdh-gutter: 32px;
+  }
+
+  .cdh-contacts[data-variant="column"] {
+    column-gap: 12px;
+  }
+}
+
+@media (max-width: 1099px) {
+  [data-surface="client-hub"] {
+    --cdh-gutter: 24px;
+  }
+
+  .cdh {
+    gap: 12px;
+    padding-bottom: 18px;
+  }
+
+  .cdh__name {
+    font-size: 28px;
+  }
+
+  .cdh__main {
+    align-items: flex-start;
+  }
+
+  .cdh__mono {
+    padding-top: 8px;
+  }
+
+  .cdh-contacts[data-variant="line"] {
+    border-top: 0;
+  }
+}
+
+/* Tablet (588:7090 · 610:10072): "← Toți clienții" 8 px under the bar, the identity centred
+   on a 48 px monogram next to the two stacked actions, the contact line 50 px high, the tabs 12 px
+   under it. The way back keeps a 24 px target (WCAG 2.5.8) instead of the 18 px text box. */
+@media (min-width: 768px) and (max-width: 1099px) {
+  .cdh {
+    gap: 12px;
+    padding: 5px var(--cdh-gutter) 12px;
+  }
+
+  .cdh__back {
+    min-height: 24px;
+  }
+
+  .cdh__main {
+    align-items: center;
+  }
+
+  .cdh__mono {
+    padding-top: 0;
+  }
+
+  .cdh__mono .cagenda-mono[data-size="large"] {
+    width: 48px;
+    height: 48px;
+    font-size: 16px;
+  }
+
+  .cdh-contacts[data-variant="line"] {
+    align-items: center;
+    min-height: 50px;
+    padding-top: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  [data-surface="client-hub"] {
+    --cdh-gutter: 16px;
+  }
+
+  .cdh {
+    gap: 12px;
+    padding-bottom: 16px;
+  }
+
+  .cdh__name {
+    font-size: 26px;
+  }
+
+  .cdh-band {
+    padding: 0 var(--cdh-gutter);
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 379px) {
+  .cdh__name {
+    font-size: 24px;
+  }
+
+  .cdh-actions[data-layout="row"] .cdh-more__button {
+    padding: 0 10px;
+  }
+}

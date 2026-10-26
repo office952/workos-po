@@ -1,4 +1,4 @@
-import type { CustomerRegistryItemTransport, CustomerRegistryTransport, CustomerWorkspaceTransport } from "../../api/types";
+import type { CustomerRegistryItemTransport, CustomerRegistryTransport, CustomerTransport, CustomerWorkspaceTransport } from "../../api/types";
 import { matchesSearch } from "../../presentation/listFilter";
 import { jobsHref, quotesHref, requestsHref } from "../../routing/appRoute";
 import type { DeskSignal } from "../desk/DeskSignalBoard";
@@ -16,6 +16,20 @@ function plain(value: string): string {
 export function agendaLetter(name: string): string {
   const first = plain(name.trim()).charAt(0).toUpperCase();
   return ALPHABET.includes(first) ? first : OTHER_LETTER;
+}
+
+export type ContactFact = { label: string; missingLabel: string; value: string | null; href?: string };
+
+/** Contact facts in card order; links only for values that exist. Shared by the card and the client page. */
+export function contactFacts(person: Pick<CustomerTransport, "cui" | "contactName" | "phone" | "email" | "city" | "address">): ContactFact[] {
+  return [
+    { label: "CUI", missingLabel: "CUI", value: person.cui },
+    { label: "Persoană de contact", missingLabel: "persoană de contact", value: person.contactName },
+    { label: "Telefon", missingLabel: "telefon", value: person.phone, href: person.phone ? `tel:${person.phone.replace(/\s+/g, "")}` : undefined },
+    { label: "E-mail", missingLabel: "e-mail", value: person.email, href: person.email ? `mailto:${person.email}` : undefined },
+    { label: "Localitate", missingLabel: "localitate", value: person.city },
+    { label: "Adresă", missingLabel: "adresă", value: person.address },
+  ];
 }
 
 /** Presentation-only monogram: first letters of the first two words that are not a legal form. */
