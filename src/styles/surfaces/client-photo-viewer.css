@@ -1,0 +1,328 @@
+/* N-020 etapa 6 · the photo viewer (Figma 707:22997 desktop, 707:23510 telefon, 675:19198 /
+   675:19286 stări, 677:19922 din Lucrări, Noapte 679:19945): the whole screen, dark in both themes
+   (a photo is read on a neutral dark ground); the bar on top, the image centred with its own
+   proportions, previous / next beside it, thumbnails under it. On a phone: "Închide" top right,
+   "← Anterioara" / "Următoarea →" under the image, then the link to the origin and "Descarcă".
+   The viewer's own palette is fixed on purpose: it does not follow the page theme. */
+
+.dviewer {
+  --viewer-ground: #121312;
+  --viewer-panel: #2a2b28;
+  --viewer-text: #f4f1ea;
+  --viewer-muted: rgb(244 241 234 / 72%);
+  --viewer-edge: rgb(255 255 255 / 24%);
+  --viewer-button: #faf6ec;
+  --viewer-button-text: #161614;
+
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--viewer-ground);
+  color: var(--viewer-text);
+}
+
+.dviewer[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+}
+
+.dviewer::backdrop {
+  background: rgb(8 9 8 / 92%);
+}
+
+.dviewer a:focus-visible,
+.dviewer button:focus-visible {
+  outline: 2px solid #f4d58d;
+  outline-offset: 2px;
+}
+
+.dviewer__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  padding: 12px 16px 12px 24px;
+}
+
+.dviewer__title {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.dviewer__title h2 {
+  margin: 0;
+  font: 600 18px/1.25 var(--font-brand);
+}
+
+.dviewer__title p {
+  margin: 3px 0 0;
+  color: var(--viewer-muted);
+  font: 400 13px/1.35 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.dviewer__stages {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--viewer-edge);
+}
+
+.dviewer__stages button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  background: var(--viewer-ground);
+  color: var(--viewer-text);
+  font: 500 13.5px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.dviewer__stages button[aria-pressed="true"] {
+  background: var(--viewer-button);
+  color: var(--viewer-button-text);
+}
+
+.dviewer__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--viewer-edge);
+  background: var(--viewer-button);
+  color: var(--viewer-button-text);
+  font: 600 14px/1.1 var(--font-sans);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Previous and next stand beside the image (707:22997), whatever its width. */
+.dviewer__stage {
+  display: grid;
+  grid-template-columns: minmax(64px, 1fr) minmax(0, auto) minmax(64px, 1fr);
+  align-items: center;
+  gap: 16px;
+  min-height: 0;
+  padding: 16px 0;
+}
+
+.dviewer__step {
+  justify-self: end;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 54px;
+  border: 1px solid var(--viewer-edge);
+  background: var(--viewer-button);
+  color: var(--viewer-button-text);
+  font: 600 16px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.dviewer__stage > .dviewer__step:first-child {
+  grid-column: 1;
+}
+
+.dviewer__stage > .dviewer__figure {
+  grid-column: 2;
+  max-width: calc(100vw - 176px);
+}
+
+.dviewer__stage > .dviewer__figure + .dviewer__step {
+  justify-self: start;
+}
+
+.dviewer__figure {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+}
+
+.dviewer__frame {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* The image keeps its proportions and fills the stage as far as its height or width allows: a
+   small file is drawn larger, a very wide one stays inside the width (contain). */
+.dviewer__frame img {
+  display: block;
+  width: auto;
+  height: min(calc(100dvh - 250px), 900px, calc((100vw - 176px) / var(--ratio, 1)));
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.dviewer__state {
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  width: min(960px, calc(100vw - 176px));
+  height: min(640px, 100%);
+  min-height: 220px;
+  padding: 24px;
+  background: var(--viewer-panel);
+  color: var(--viewer-text);
+  font: 400 14px/1.45 var(--font-sans);
+  text-align: center;
+}
+
+.dviewer__state strong {
+  font: 600 16px/1.3 var(--font-sans);
+}
+
+.dviewer__state span {
+  max-width: 520px;
+  color: var(--viewer-muted);
+}
+
+.dviewer__state .dviewer__action {
+  justify-self: center;
+  margin-top: 6px;
+}
+
+.dviewer__thumbs {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 0;
+  padding: 4px 16px 16px;
+  list-style: none;
+}
+
+.dviewer__thumbs button {
+  display: block;
+  width: 96px;
+  aspect-ratio: 3 / 2;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  background: none;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.dviewer__thumbs button[aria-current="true"] {
+  border-color: var(--viewer-text);
+  opacity: 1;
+}
+
+.dviewer__thumbs img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dviewer__note {
+  margin: 0;
+  padding: 0 16px 16px;
+  color: var(--viewer-muted);
+  font: 400 13px/1.4 var(--font-sans);
+  text-align: center;
+}
+
+/* ─── Phone (707:23510) ─── */
+.dviewer[data-mode="phone"] .dviewer__bar {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  padding: 12px 16px;
+}
+
+.dviewer[data-mode="phone"] .dviewer__title {
+  flex: 1 1 auto;
+}
+
+.dviewer[data-mode="phone"] .dviewer__title h2 {
+  font-size: 16px;
+}
+
+.dviewer[data-mode="phone"] .dviewer__close {
+  flex: 0 0 auto;
+}
+
+.dviewer[data-mode="phone"] .dviewer__stage {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 8px 0;
+}
+
+.dviewer[data-mode="phone"] .dviewer__stage > .dviewer__figure {
+  grid-column: 1;
+}
+
+.dviewer[data-mode="phone"] .dviewer__stage > .dviewer__figure {
+  max-width: 100%;
+}
+
+.dviewer[data-mode="phone"] .dviewer__state {
+  width: calc(100vw - 32px);
+}
+
+.dviewer[data-mode="phone"] .dviewer__frame img {
+  width: auto;
+  height: min(calc(100dvh - 300px), calc(100vw / var(--ratio, 1)));
+  max-width: 100%;
+}
+
+.dviewer__phone {
+  display: grid;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+
+.dviewer__caption {
+  margin: 0;
+  font: 500 14px/1.35 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.dviewer__steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.dviewer__steps .dviewer__action {
+  min-height: 48px;
+}
+
+.dviewer__links {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+}
+
+.dviewer__links .dviewer__action {
+  min-height: 40px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: #8fcfb4;
+}
+
+/* A short window: the image gives way, the controls stay. */
+@media (max-height: 560px) {
+  .dviewer__frame img {
+    height: min(calc(100dvh - 190px), calc((100vw - 176px) / var(--ratio, 1)));
+  }
+
+  .dviewer[data-mode="phone"] .dviewer__frame img {
+    height: min(calc(100dvh - 230px), calc(100vw / var(--ratio, 1)));
+  }
+
+  .dviewer__thumbs button {
+    width: 72px;
+  }
+}

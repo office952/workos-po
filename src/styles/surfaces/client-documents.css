@@ -1,0 +1,685 @@
+/* N-020 etapa 5 · Documente (Figma 670:16320 listă 1440, 707:22045 tabel simplificat la 1280,
+   670:16887 căutare, 673:18393 tabletă, 673:17004 / 673:17508 telefon, Noapte 674:18069 /
+   674:18581, stări 674:17282). Machine theme tokens only (Light and Night); the width switch is
+   `data-mode` (phone < 768, tablet < 1100) and, inside desktop, the narrow table under 1380 px. */
+
+.ddocs2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  min-width: 0;
+  padding: 6px 0 40px;
+}
+
+.ddocs2__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
+.ddocs2__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  min-width: 0;
+}
+
+.ddocs2__title {
+  margin: 0;
+  font: 600 26px/1.2 var(--font-brand);
+}
+
+.ddocs2__totals {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.3 var(--font-sans);
+}
+
+.ddocs2__upload {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--shell-signal);
+  background: var(--shell-signal);
+  color: var(--wos-paper);
+  font: 600 14px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.ddocs2__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.ddocs2__search {
+  display: flex;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.ddocs2__field {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 12px 0 14px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel);
+  color: var(--color-text-muted);
+}
+
+.ddocs2__field:focus-within,
+.ddocs2__field[data-filled] {
+  border-color: var(--shell-signal);
+  box-shadow: inset 0 0 0 1px var(--shell-signal);
+}
+
+.ddocs2__field input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 38px;
+  border: 0;
+  background: none;
+  color: var(--color-text-primary);
+  font: 400 14px/1.2 var(--font-sans);
+  outline: none;
+}
+
+.ddocs2__field input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.ddocs2__clear {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+  font: 600 13px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.ddocs2__menus {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ddocs2__sheet-button,
+.ddocs2__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--wos-paper);
+  color: var(--color-text-primary);
+  font: 600 14px/1.2 var(--font-sans);
+  cursor: pointer;
+}
+
+.ddocs2__sheet-button[data-active] {
+  border-color: var(--shell-signal);
+}
+
+.ddocs2__result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 20px;
+  min-height: 54px;
+  padding: 12px 14px;
+  background: var(--shell-deck);
+}
+
+.ddocs2__result-text {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  font: 400 14px/1.4 var(--font-sans);
+}
+
+.ddocs2__result-text strong {
+  font-weight: 600;
+}
+
+.ddocs2__result-text span {
+  color: var(--color-text-secondary);
+}
+
+.ddocs2__result-actions,
+.ddocs2__state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.ddocs2__result-actions button,
+.ddocs2__link,
+.ddocs2__action {
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+  font: 600 14px/1.2 var(--font-sans);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.ddocs2__result-actions button:hover,
+.ddocs2__link:hover,
+.ddocs2__action:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ddocs2__notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: end;
+  margin: 0;
+  padding: 10px 14px;
+  background: var(--color-text-primary);
+  color: var(--wos-paper);
+  font: 500 13.5px/1.3 var(--font-sans);
+}
+
+.ddocs2__state {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding: 18px 20px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel);
+  color: var(--color-text-secondary);
+  font: 400 14px/1.45 var(--font-sans);
+}
+
+.ddocs2__state p {
+  margin: 0;
+}
+
+.ddocs2__state-title {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.ddocs2__skeleton {
+  justify-self: stretch;
+  height: 40px;
+  background: var(--shell-panel-strong);
+}
+
+.ddocs2__note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font: 400 12.5px/1.4 var(--font-sans);
+}
+
+.ddocs2__muted {
+  color: var(--color-text-muted);
+}
+
+/* ─── Desktop table (670:16320) ─── */
+.ddocs2__table {
+  width: 100%;
+  border: 1px solid var(--shell-edge);
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: var(--cdh-card-radius, 8px);
+  background: var(--shell-panel);
+}
+
+.ddocs2__table thead th {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--shell-edge);
+  color: var(--color-text-muted);
+  font: 500 10.5px/1.3 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.ddocs2__year th {
+  padding: 18px 16px 8px;
+  font: 600 20px/1.2 var(--font-brand);
+  text-align: left;
+}
+
+.ddocs2__year span {
+  margin-left: 8px;
+  color: var(--color-text-muted);
+  font: 500 10.5px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ddocs2__year small {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-text-secondary);
+  font: 400 12px/1.4 var(--font-sans);
+}
+
+.ddocs2__row td {
+  padding: 12px 10px;
+  border-top: 1px solid var(--shell-edge);
+  vertical-align: middle;
+  font: 400 13.5px/1.35 var(--font-sans);
+}
+
+.ddocs2__row td:first-child {
+  padding-left: 16px;
+}
+
+.ddocs2__row[data-saved] td {
+  background: var(--shell-deck);
+}
+
+.ddocs2__kind {
+  color: var(--color-text-secondary);
+  font: 500 10.5px/1.35 var(--font-mono) !important;
+  letter-spacing: 0.04em;
+}
+
+.ddocs2__col-kind {
+  width: 120px;
+}
+
+.ddocs2__name {
+  margin: 0;
+  font: 600 14px/1.35 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.ddocs2__number {
+  margin: 3px 0 0;
+  color: var(--color-text-secondary);
+  font: 500 11.5px/1.35 var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.ddocs2__date {
+  font-family: var(--font-mono) !important;
+  white-space: nowrap;
+}
+
+.ddocs2__date small,
+.ddocs2__links small {
+  display: block;
+  color: var(--color-text-muted);
+  font: 400 11px/1.3 var(--font-sans);
+}
+
+.ddocs2__site span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 10px;
+}
+
+.ddocs2__links .ddocs2__wide {
+  display: grid;
+  gap: 2px;
+  color: var(--color-text-secondary);
+  font-size: 12.5px;
+}
+
+.ddocs2__file {
+  color: var(--color-text-secondary);
+  font: 500 11.5px/1.3 var(--font-mono) !important;
+  white-space: nowrap;
+}
+
+/* R1 · Acțiuni document (880:35989): one row of 40 px controls, the "⋯" inside the table with room
+   to its right; on the phone 44 px across the card. */
+.ddocs2__actions {
+  white-space: nowrap;
+}
+
+.ddocs2__actions,
+.ddocs2__card-actions {
+  --ddoc-action-h: 40px;
+}
+
+.ddocs2__actions > *:not(:last-child),
+.ddocs2__card-actions > *:not(:last-child) {
+  margin-right: 6px;
+}
+
+.ddocs2__col-actions {
+  text-align: right;
+}
+
+.ddocs2__actions {
+  padding-right: 16px !important;
+  text-align: right;
+}
+
+.ddocs2__action[data-kind="open"] {
+  min-height: var(--ddoc-action-h);
+  padding: 0 14px;
+  border: 1px solid var(--shell-edge-strong);
+  border-radius: var(--cdh-radius, 6px);
+  background: var(--shell-panel);
+  color: var(--color-text-primary);
+}
+
+.ddocs2__action[data-kind="open"]:hover {
+  border-color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.ddocs2__action[data-kind="download"] {
+  gap: 6px;
+  min-height: var(--ddoc-action-h);
+  padding: 0 10px;
+  border-radius: var(--cdh-radius, 6px);
+  color: var(--shell-signal-deep);
+}
+
+.ddocs2__narrow {
+  display: none;
+}
+
+.ddocs2__menu {
+  position: relative;
+  display: inline-block;
+}
+
+.ddocs2__more {
+  display: inline-grid;
+  place-items: center;
+  width: var(--ddoc-action-h, 40px);
+  height: var(--ddoc-action-h, 40px);
+  padding: 0;
+  border: 1px solid var(--shell-edge-strong);
+  border-radius: var(--cdh-radius, 6px);
+  background: var(--shell-panel);
+  color: var(--color-text-primary);
+  font: 600 16px/1 var(--font-sans);
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.ddocs2__more:hover,
+.ddocs2__more[aria-expanded="true"] {
+  border-color: var(--color-text-primary);
+  background: var(--shell-deck);
+}
+
+.ddocs2__menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  display: grid;
+  gap: 2px;
+  width: 240px;
+  padding: 6px;
+  border: 1px solid var(--shell-edge-strong);
+  border-radius: var(--cdh-card-radius, 8px);
+  background: var(--shell-panel);
+  box-shadow: 0 12px 28px rgb(0 0 0 / 18%);
+  white-space: normal;
+}
+
+/* Near the bottom of the viewport the menu opens upward (881:36365). */
+.ddocs2__menu-panel[data-up] {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
+.ddocs2__menu-panel button {
+  display: grid;
+  gap: 1px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--cdh-radius, 6px);
+  background: none;
+  color: var(--color-text-primary);
+  font: 600 14px/1.25 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ddocs2__menu-panel button small {
+  color: var(--color-text-secondary);
+  font: 400 12px/1.3 var(--font-sans);
+}
+
+.ddocs2__menu-panel button:hover,
+.ddocs2__menu-panel button:focus-visible {
+  background: var(--shell-deck);
+}
+
+/* 1280 (707:22045): the narrow table — document with its type, date, context, actions. */
+@media (max-width: 1379px) {
+  .ddocs2__col-kind,
+  .ddocs2__col-site,
+  .ddocs2__col-file {
+    display: none;
+  }
+
+  .ddocs2__wide {
+    display: none !important;
+  }
+
+  .ddocs2__narrow {
+    display: inline;
+  }
+
+  .ddocs2__links .ddocs2__narrow {
+    color: var(--color-text-secondary);
+    font-size: 13px;
+  }
+
+  .ddocs2__links small {
+    display: inline;
+    margin-left: 8px;
+  }
+
+  .ddocs2__row td:nth-child(2) {
+    padding-left: 16px;
+  }
+}
+
+/* ─── Tablet and phone cards (673:18393 / 673:17004) ─── */
+.ddocs2__years {
+  display: grid;
+  gap: 22px;
+}
+
+.ddocs2__group {
+  display: grid;
+  gap: 10px;
+}
+
+.ddocs2__group-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  font: 600 22px/1.1 var(--font-brand);
+}
+
+.ddocs2__group-title span {
+  color: var(--color-text-muted);
+  font: 500 10.5px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ddocs2__group-note {
+  margin: -4px 0 0;
+  color: var(--color-text-secondary);
+  font: 400 12.5px/1.4 var(--font-sans);
+}
+
+.ddocs2__cards {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ddocs2__card {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px 14px 12px;
+  border: 1px solid var(--shell-edge);
+  border-radius: var(--cdh-card-radius, 8px);
+  background: var(--shell-panel);
+}
+
+.ddocs2__card[data-saved] {
+  background: var(--shell-deck);
+}
+
+.ddocs2__card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+}
+
+.ddocs2__card-top .ddocs2__kind {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ddocs2__card .ddocs2__date {
+  flex: none;
+  font: 500 12.5px/1.35 var(--font-mono);
+}
+
+.ddocs2__card-context,
+.ddocs2__card-upload {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.4 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.ddocs2__card-upload {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.ddocs2__card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 0;
+  min-height: 44px;
+  padding-top: 6px;
+}
+
+.ddocs2[data-mode="phone"] .ddocs2__card-actions,
+.ddocs2[data-mode="tablet"] .ddocs2__card-actions {
+  --ddoc-action-h: 44px;
+}
+
+.ddocs2[data-mode="phone"] .ddocs2__card-actions .ddocs2__action[data-kind="open"] {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+.ddocs2__card-actions .ddocs2__file {
+  margin-left: auto;
+}
+
+.ddocs2__card-actions .ddocs2__menu {
+  margin-left: auto;
+}
+
+.ddocs2__card-actions .ddocs2__file + .ddocs2__menu {
+  margin-left: 0;
+}
+
+.ddocs2[data-mode="phone"] .ddocs2__title {
+  font-size: 22px;
+}
+
+.ddocs2[data-mode="phone"] .ddocs2__search {
+  flex-basis: 0;
+}
+
+.ddocs2[data-mode="phone"] .ddocs2__field,
+.ddocs2[data-mode="phone"] .ddocs2__sheet-button,
+.ddocs2[data-mode="phone"] .ddocs2__upload {
+  min-height: 44px;
+}
+
+.ddocs2[data-mode="phone"] .ddocs2__result {
+  flex-wrap: nowrap;
+}
+
+.ddocs2[data-mode="phone"] .ddocs2__result-text {
+  display: grid;
+  gap: 2px;
+}
+
+.ddocs2 a:focus-visible,
+.ddocs2 button:focus-visible,
+.ddocs2 input:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Fixed column widths at 1440 (670:16320): the long columns take the rest. */
+.ddocs2__table {
+  table-layout: fixed;
+}
+
+.ddocs2__table thead th:nth-child(1) { width: 128px; }
+.ddocs2__table thead th:nth-child(2) { width: 25%; }
+.ddocs2__table thead th:nth-child(3) { width: 108px; }
+.ddocs2__table thead th:nth-child(4) { width: 14%; }
+.ddocs2__table thead th:nth-child(6) { width: 304px; }
+
+/* 1100–1379 (707:22045): Tip and Sediu are hidden, but the year rows still span all six columns,
+   so a fixed layout keeps two empty columns that share the free width with Context (~270 px left
+   unused at 1280). The automatic layout gives the empty columns nothing: Context takes the rest. */
+@media (max-width: 1379px) {
+  .ddocs2__table {
+    table-layout: auto;
+  }
+
+  .ddocs2__table thead th:nth-child(2) { width: 30%; }
+  .ddocs2__table thead th:nth-child(6) { width: 304px; }
+}
+
+.ddocs2__action {
+  display: inline-flex;
+  align-items: center;
+}

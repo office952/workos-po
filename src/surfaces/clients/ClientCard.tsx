@@ -115,7 +115,7 @@ export function ClientCard({ customer }: { customer: CustomerRegistryItemTranspo
         <div className="cagenda-card__counts">
           <span data-tone="open"><strong>{customer.openRequestCount}</strong><small>Cereri deschise</small></span>
           <span><strong>{customer.quoteCount}</strong><small>Oferte · total</small></span>
-          <span><strong>{customer.jobCount}</strong><small>Lucrări · total</small></span>
+          <span title={`În WorkOS: ${customer.jobCount} · istorice: ${customer.historicalWorkCount}`}><strong>{customer.workCount}</strong><small>Lucrări · total</small></span>
         </div>
       </div>
       {customer.attentionLabel ? <p className="rdesk-sheet__note" data-tone="attention">{customer.attentionLabel}</p> : null}
@@ -133,7 +133,7 @@ export function ClientCard({ customer }: { customer: CustomerRegistryItemTranspo
             <DeskStale onRetry={retry}>Actualizarea clientului a eșuat. Se afișează ultima citire reușită.</DeskStale>
           ) : null}
           {sections && sections.attention.length + sections.recent.length === 0 ? (
-            <p className="rdesk-sheet__text cagenda-card__none">Clientul nu are încă cereri, oferte sau lucrări.</p>
+            <p className="rdesk-sheet__text cagenda-card__none">Clientul nu are încă cereri, oferte sau lucrări în WorkOS.</p>
           ) : sections ? (
             <>
               <Documents title="Necesită acțiune" state="Semnal" items={sections.attention} />

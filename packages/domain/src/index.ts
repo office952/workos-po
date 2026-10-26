@@ -1310,3 +1310,4 @@ export {
 
 export * from "./execution/workSessions.js";
 export * from "./execution/workParticipation.js";
+export * from "./customerDossier/index.js";

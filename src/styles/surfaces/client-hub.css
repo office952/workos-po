@@ -11,6 +11,10 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   min-width: 0;
+  /* Back/Forward put the page where it was (navigationMemory). The band folds while that happens and
+     grows by 8 px; the browser's scroll anchoring would add those 8 px on top of every return
+     (486 → 494 → 502). The position is the memory's alone, so no anchor is taken in the page. */
+  overflow-anchor: none;
 }
 
 /* ─── Header ─── */

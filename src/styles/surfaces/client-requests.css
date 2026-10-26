@@ -1,0 +1,575 @@
+/* N-020 · Cereri și oferte (Corecții GO 17: 640:11188 / 640:11601 / 640:12261 / 640:11942 at 1440,
+   647:13268 at 1280, 647:13600 at 768, 643:12057 / 643:12385 / 643:12651 at 390, 643:12900 at 360;
+   stări 608:9874, cazuri 608:9487). The offer rows are client-offer-row.css. Machine theme tokens
+   only, so Light and Night share the rules; links are underlined on hover, never permanently. */
+
+.dreqs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  min-width: 0;
+  padding: 6px 0 40px;
+}
+
+.dreqs__back,
+.dreqs__secondary,
+.dreqcard__open,
+.dreqs__sheet-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--wos-paper);
+  color: var(--color-text-primary);
+  font: 600 14px/1 var(--font-sans);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dreqs__title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 26px/1.2 var(--font-brand);
+}
+
+/* ─── Afișare · Filtru · căutare · Sediu, An ─── */
+.dreqs__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.dreqs__display,
+.dreqs__filter {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.dreqs__tool-label {
+  color: var(--color-text-muted);
+  font: 500 10.5px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dreqs__segment {
+  display: flex;
+}
+
+.dreqs__segment button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--wos-paper);
+  color: var(--color-text-primary);
+  font: 500 14px/1 var(--font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dreqs__segment button + button {
+  margin-left: -1px;
+}
+
+.dreqs__segment button[aria-pressed="true"] {
+  border-color: var(--color-text-primary);
+  background: var(--color-text-primary);
+  color: var(--wos-paper);
+  font-weight: 600;
+}
+
+/* În așteptare: a filter of its own (659:14083), a 2 px brass edge and ✕ when active. */
+.dreqs__chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  border: 1px solid var(--shell-edge-strong);
+  border-radius: 999px;
+  background: var(--wos-paper);
+}
+
+.dreqs__chip[data-active] {
+  border: 2px solid var(--shell-brass);
+}
+
+.dreqs__chip-toggle,
+.dreqs__chip-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--color-text-primary);
+  font: 600 14px/1 var(--font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dreqs__chip[data-active] .dreqs__chip-toggle {
+  padding-right: 6px;
+}
+
+.dreqs__chip-clear {
+  padding: 0 12px 0 6px;
+  color: var(--color-text-secondary);
+}
+
+.dreqs__chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--shell-brass);
+}
+
+.dreqs__search {
+  display: flex;
+  flex: 1 1 320px;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.dreqs__field {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 12px 0 14px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel);
+  color: var(--color-text-muted);
+}
+
+.dreqs__field:focus-within,
+.dreqs__field[data-filled] {
+  border-color: var(--shell-signal);
+  box-shadow: inset 0 0 0 1px var(--shell-signal);
+}
+
+.dreqs__field input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 38px;
+  border: 0;
+  background: none;
+  color: var(--color-text-primary);
+  font: 400 14px/1.2 var(--font-sans);
+  outline: none;
+}
+
+.dreqs__field input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.dreqs__clear {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+  font: 600 13px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.dreqs__menus {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+
+.dreqs__sheet-button[data-active] {
+  border-color: var(--shell-signal);
+}
+
+/* ─── The result line, only with a search or a filter ─── */
+.dreqs__result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 20px;
+  min-height: 54px;
+  padding: 12px 14px;
+  background: var(--shell-deck);
+}
+
+.dreqs__result-text {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 400 14px/1.4 var(--font-sans);
+}
+
+.dreqs__result-text strong {
+  font-weight: 600;
+}
+
+.dreqs__result-text span {
+  color: var(--color-text-secondary);
+}
+
+.dreqs__result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+}
+
+.dreqs__result-actions button,
+.dreqs__link {
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--shell-signal);
+  font: 600 14px/1 var(--font-sans);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.dreqs__result-actions button:hover,
+.dreqs__link:hover,
+.dreqcard__link:hover,
+.dreqcard__open:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ─── Lists ─── */
+.dreqs__list {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dreqs__list[data-flat] {
+  gap: 10px;
+}
+
+/* A request, once, with its offers (Pe cereri). */
+.dreqcard {
+  display: grid;
+  gap: 10px;
+  padding: 18px 20px 20px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel);
+}
+
+.dreqcard__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px 24px;
+  align-items: center;
+}
+
+.dreqcard__identity {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dreqcard__kicker,
+.dreqcard__label,
+.dreqflat__context {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 500 11px/1.4 var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.dreqcard__kind,
+.dreqcard__label {
+  text-transform: uppercase;
+}
+
+.dreqcard__label {
+  color: var(--color-text-muted);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+}
+
+.dreqcard__title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 19px/1.3 var(--font-brand);
+  overflow-wrap: anywhere;
+}
+
+.dreqcard__site {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.35 var(--font-sans);
+}
+
+.dreqcard__facts {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+}
+
+.dreqcard__facts > div {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+}
+
+.dreqcard__facts dt {
+  color: var(--color-text-muted);
+  font: 500 10px/1.3 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dreqcard__facts dd {
+  margin: 0;
+}
+
+.dreqcard__progress {
+  color: var(--color-text-primary);
+  font: 400 14px/1.4 var(--font-sans);
+}
+
+.dreqcard__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  margin: 0;
+}
+
+.dreqcard__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  color: var(--shell-signal);
+  font: 600 14px/1 var(--font-sans);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* The request's state is neutral (659:14083: it and the commercial progress have their own cycles). */
+.dreqs .dstate {
+  min-height: 24px;
+  gap: 7px;
+  border-radius: 0;
+  font-size: 12.5px;
+}
+
+.dreqs .dstate::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.dreqs .dstate svg {
+  display: none;
+}
+
+.dreqcard__empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px dashed var(--shell-edge-strong);
+  color: var(--color-text-secondary);
+  font: 400 13.5px/1.45 var(--font-sans);
+}
+
+/* Toate ofertele: the request each offer belongs to, as a line above it. */
+.dreqflat {
+  display: grid;
+  gap: 6px;
+}
+
+.dreqs__loose {
+  display: grid;
+  gap: 10px;
+}
+
+.dreqs__hidden {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px dashed var(--shell-edge-strong);
+  color: var(--color-text-secondary);
+  font: 400 13.5px/1.45 var(--font-sans);
+}
+
+/* ─── States (608:9874) ─── */
+.dreqs__none {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 18px 20px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell-panel);
+  color: var(--color-text-secondary);
+  font: 400 14px/1.45 var(--font-sans);
+}
+
+.dreqs__none p {
+  margin: 0;
+}
+
+.dreqs__none-title {
+  color: var(--color-text-primary);
+  font: 600 17px/1.3 var(--font-brand);
+}
+
+.dreqs__none-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 20px;
+}
+
+.dreqs a:focus-visible,
+.dreqs button:focus-visible,
+.dreqs input:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.dreqs__field input:focus-visible {
+  outline: none;
+}
+
+/* ─── 1280 and below (647:13268): the head of a request keeps one line while it fits ─── */
+@media (max-width: 1279px) {
+  .dreqcard__head {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .dreqcard__actions {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ─── Tablet (647:13600): no section title, the tools on two lines, the request head stacked ─── */
+@media (max-width: 1099px) {
+  .dreqs {
+    gap: 14px;
+    padding-top: 20px;
+  }
+
+  .dreqs__title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .dreqs__search {
+    flex-basis: 100%;
+  }
+
+  .dreqcard {
+    padding: 16px;
+  }
+
+  .dreqcard__head {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .dreqcard__actions {
+    grid-column: auto;
+  }
+}
+
+/* ─── Phone (643:12385 / 643:12900): the two modes share the width; the request's facts on one line ─── */
+@media (max-width: 767px) {
+  .dreqs__display,
+  .dreqs__segment {
+    flex: 1 1 100%;
+  }
+
+  .dreqs__segment button {
+    flex: 1 1 0;
+    min-height: 44px;
+    padding: 0 8px;
+  }
+
+  .dreqs__filter {
+    flex: 1 1 100%;
+  }
+
+  .dreqs__filter .dreqs__sheet-button {
+    margin-left: auto;
+    min-height: 44px;
+  }
+
+  .dreqs__chip {
+    min-height: 44px;
+  }
+
+  .dreqs__field {
+    min-height: 44px;
+  }
+
+  .dreqs__result {
+    padding: 10px 12px;
+  }
+
+  .dreqcard {
+    padding: 14px;
+  }
+
+  .dreqcard__title {
+    font-size: 18px;
+  }
+
+  .dreqcard__facts {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+  }
+
+  .dreqcard__facts dt {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .dreqcard__facts > div {
+    display: flex;
+    align-items: center;
+  }
+
+  .dreqcard__open,
+  .dreqs__back {
+    min-height: 44px;
+  }
+}

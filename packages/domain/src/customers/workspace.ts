@@ -31,7 +31,12 @@ export type CustomerRegistryItem = {
   statusLabel: string;
   openRequestCount: number;
   quoteCount: number;
+  /** WorkOS production jobs only. */
   jobCount: number;
+  /** Historical records of works done before or outside WorkOS (N-020). */
+  historicalWorkCount: number;
+  /** Every work of the client: WorkOS jobs and historical records (N-020 · "Lucrări"). */
+  workCount: number;
   needsAttention: boolean;
   attentionLabel: string | null;
   href: string;
@@ -68,8 +73,13 @@ export type CustomerWorkspaceProjection = {
     requestNeedsAction: number;
     quoteCount: number;
     quoteNeedsAction: number;
+    /** WorkOS production jobs only. */
     jobCount: number;
     jobNeedsAction: number;
+    /** Historical records (N-020). */
+    historicalWorkCount: number;
+    /** WorkOS jobs and historical records: the client's "Lucrări". */
+    workCount: number;
   };
   nextActions: readonly CustomerWorkspaceNextAction[];
   recentActivity: readonly CustomerWorkspaceActivity[];
@@ -151,6 +161,7 @@ export function projectCustomerRegistryItem(input: {
   requests: readonly RequestOverviewItem[];
   quotes: readonly QuoteOverviewItem[];
   jobs: readonly JobOverviewItem[];
+  historicalWorkCount?: number;
 }): CustomerRegistryItem {
   const openRequestCount = input.requests.filter(
     (request) => request.status !== "CANCELLED",
@@ -176,6 +187,8 @@ export function projectCustomerRegistryItem(input: {
     openRequestCount,
     quoteCount: input.quotes.length,
     jobCount: input.jobs.length,
+    historicalWorkCount: input.historicalWorkCount ?? 0,
+    workCount: input.jobs.length + (input.historicalWorkCount ?? 0),
     needsAttention: attention.needsAttention,
     attentionLabel: attention.attentionLabel,
     href: customerHref(input.customer.customerId),
@@ -207,6 +220,7 @@ export function projectCustomerWorkspace(input: {
   requests: readonly RequestOverviewItem[];
   quotes: readonly QuoteOverviewItem[];
   jobs: readonly JobOverviewItem[];
+  historicalWorkCount?: number;
 }): CustomerWorkspaceProjection {
   const openRequestCount = input.requests.filter(
     (request) => request.status !== "CANCELLED",
@@ -226,6 +240,8 @@ export function projectCustomerWorkspace(input: {
       quoteNeedsAction,
       jobCount: input.jobs.length,
       jobNeedsAction,
+      historicalWorkCount: input.historicalWorkCount ?? 0,
+      workCount: input.jobs.length + (input.historicalWorkCount ?? 0),
     },
     nextActions: deriveWorkspaceNextActions({
       customerId: input.customer.customerId,

@@ -1,0 +1,359 @@
+/* N-020 etapa 5 · the one document viewer of the client page (Figma 707:22391 · 707:22609 · 739:888;
+   telefon B02 / 786:367 / 786:479; Noapte 674:18277): header with the title and the two ways out,
+   the file at the left, the facts at the right; on the phone everything in one column with
+   "Descarcă" and "⋯" in a fixed bar. Machine theme tokens only (Light and Night). */
+
+.ddocview {
+  width: min(1240px, calc(100% - 48px));
+  height: min(820px, calc(100dvh - 48px));
+  max-width: none;
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--shell-panel);
+  color: var(--color-text-primary);
+}
+
+.ddocview[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.ddocview::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.ddocview__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 16px 14px 22px;
+  border-bottom: 1px solid var(--shell-edge);
+}
+
+.ddocview__heading {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ddocview__title {
+  margin: 0;
+  font: 600 19px/1.3 var(--font-brand);
+  overflow-wrap: anywhere;
+}
+
+.ddocview__meta {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 500 11.5px/1.4 var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.ddocview__head-actions {
+  display: flex;
+  flex: none;
+  gap: 12px;
+}
+
+.ddocview__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--wos-paper);
+  color: var(--color-text-primary);
+  font: 600 14px/1.2 var(--font-sans);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ddocview__button--primary {
+  border-color: var(--shell-signal);
+  background: var(--shell-signal);
+  color: var(--wos-paper);
+}
+
+.ddocview__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  min-height: 0;
+}
+
+.ddocview__frame {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  background: var(--shell-deck);
+}
+
+.ddocview__file {
+  margin: 0;
+  padding: 6px 12px;
+  background: var(--shell-panel-strong);
+  color: var(--color-text-secondary);
+  font: 500 11.5px/1.4 var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.ddocview__page {
+  display: grid;
+  min-height: 0;
+  padding: 16px;
+  overflow: auto;
+}
+
+.ddocview__pdf {
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  border: 1px solid var(--shell-edge);
+  background: var(--wos-paper);
+}
+
+.ddocview__image {
+  max-width: 100%;
+  max-height: 100%;
+  margin: auto;
+  object-fit: contain;
+}
+
+.ddocview__state {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 10px;
+  margin: 0;
+  padding: 18px 20px;
+  color: var(--color-text-secondary);
+  font: 400 14px/1.45 var(--font-sans);
+}
+
+.ddocview__state p {
+  margin: 0;
+}
+
+.ddocview__state-title {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.ddocview__skeleton {
+  justify-self: stretch;
+  height: 360px;
+  background: var(--shell-panel-strong);
+}
+
+.ddocview__facts {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 18px 22px;
+  overflow: auto;
+  border-left: 1px solid var(--shell-edge);
+}
+
+.ddocview__facts dl {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+}
+
+.ddocview__facts dt {
+  color: var(--color-text-muted);
+  font: 500 10.5px/1.3 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ddocview__facts dd {
+  margin: 4px 0 0;
+  font: 400 14px/1.45 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.ddocview__mono {
+  font-family: var(--font-mono) !important;
+}
+
+.ddocview__links {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ddocview__links a {
+  color: var(--shell-signal);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ddocview__links a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ddocview__site {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: 12px;
+  color: var(--color-text-secondary);
+}
+
+.ddocview__proof {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 12.5px/1.45 var(--font-sans);
+}
+
+.ddocview__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 12px 22px;
+  border-top: 1px solid var(--shell-edge);
+}
+
+.ddocview__foot:empty {
+  display: none;
+}
+
+.ddocview__menu {
+  position: relative;
+}
+
+.ddocview__menu-panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 2;
+  display: grid;
+  min-width: 200px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--shell-panel);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+}
+
+.ddocview__menu-panel button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  background: none;
+  color: var(--color-text-primary);
+  font: 500 14px/1.2 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ddocview__menu-panel button + button {
+  border-top: 1px solid var(--shell-edge);
+}
+
+.ddocview a:focus-visible,
+.ddocview button:focus-visible,
+.ddocview iframe:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Tablet: the facts under the file. */
+.ddocview[data-mode="tablet"] .ddocview__body {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(360px, 1fr) auto;
+  overflow: auto;
+}
+
+.ddocview[data-mode="tablet"] .ddocview__facts {
+  border-top: 1px solid var(--shell-edge);
+  border-left: 0;
+  overflow: visible;
+}
+
+/* Phone (B02 / 786:367): the whole screen, one column, the bar fixed at the bottom. */
+.ddocview[data-mode="phone"] {
+  width: 100%;
+  height: 100dvh;
+  border: 0;
+}
+
+.ddocview[data-mode="phone"] .ddocview__head {
+  padding: 12px 16px;
+}
+
+.ddocview[data-mode="phone"] .ddocview__title {
+  font-size: 17px;
+}
+
+.ddocview[data-mode="phone"] .ddocview__body {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  overflow: auto;
+}
+
+.ddocview[data-mode="phone"] .ddocview__page {
+  min-height: 360px;
+  padding: 12px;
+}
+
+.ddocview[data-mode="phone"] .ddocview__pdf {
+  min-height: 340px;
+}
+
+.ddocview[data-mode="phone"] .ddocview__facts {
+  border-left: 0;
+  overflow: visible;
+  padding: 16px;
+}
+
+.ddocview[data-mode="phone"] .ddocview__foot {
+  padding: 12px 16px;
+}
+
+.ddocview[data-mode="phone"] .ddocview__button {
+  min-height: 48px;
+}
+
+.ddocview[data-mode="phone"] .ddocview__foot .ddocview__button--primary {
+  flex: 1 1 auto;
+}
+
+/* Phone and tablet: the file has its own height; the facts follow under it, never over it. */
+.ddocview[data-mode="phone"] .ddocview__frame,
+.ddocview[data-mode="tablet"] .ddocview__frame {
+  grid-template-rows: auto 380px;
+}
+
+.ddocview[data-mode="phone"] .ddocview__page,
+.ddocview[data-mode="tablet"] .ddocview__page {
+  min-height: 0;
+}
+
+.ddocview[data-mode="phone"] .ddocview__pdf,
+.ddocview[data-mode="tablet"] .ddocview__pdf {
+  min-height: 0;
+}
+
+/* Phone and tablet: the body is one scrolling column, so its parts keep their own height
+   (grid rows in a fixed-height dialog would shrink the file to nothing under the facts). */
+.ddocview[data-mode="phone"] .ddocview__body,
+.ddocview[data-mode="tablet"] .ddocview__body {
+  display: block;
+}
+
+.ddocview[data-mode="phone"] .ddocview__frame,
+.ddocview[data-mode="tablet"] .ddocview__frame {
+  min-height: auto;
+}
+
+.ddocview[data-mode="tablet"] .ddocview__frame {
+  grid-template-rows: auto 520px;
+}

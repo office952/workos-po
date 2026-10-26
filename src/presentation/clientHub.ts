@@ -1,20 +1,35 @@
 import type { ClientHubSection } from "../routing/appRoute";
 
 export const CLIENT_HUB_SECTION_LABEL: Record<ClientHubSection, string> = {
-  prezentare: "Relație",
+  istoric: "Istoric",
   lucrari: "Lucrări",
   cereri: "Cereri și oferte",
   documente: "Documente",
   fotografii: "Fotografii",
+  sedii: "Sedii",
+  comercial: "Date comerciale",
   portofoliu: "Portofoliu",
   fisiere: "Fișiere",
 };
 
-/** The working sections of the client page, in reading order (V2.2 · 183:4345). */
-export const CLIENT_HUB_PRIMARY_SECTIONS = ["prezentare", "cereri", "lucrari"] as const satisfies readonly ClientHubSection[];
+/**
+ * The sections of the client page, in reading order (N-020 design final · Figma 574:2203 tabs and
+ * the phone sheet 588:8844). Istoric comes first; Cereri și oferte is a section of its own.
+ */
+export const CLIENT_HUB_PRIMARY_SECTIONS = ["istoric", "cereri", "lucrari", "documente", "fotografii", "sedii", "comercial"] as const satisfies readonly ClientHubSection[];
 
-/** Sections without a source yet: grouped under "Mai multe" and marked "În pregătire". */
-export const CLIENT_HUB_PREPARING_SECTIONS = ["documente", "fotografii", "portofoliu", "fisiere"] as const satisfies readonly ClientHubSection[];
+/** What each section holds (phone sheet 588:8844). Lucrări reads its line from the server counts. */
+export const CLIENT_HUB_SECTION_HINT: Partial<Record<ClientHubSection, string>> = {
+  istoric: "Tot ce s-a făcut, pe ani",
+  cereri: "Cereri, oferte, previzualizare",
+  documente: "Contracte, facturi, procese-verbale",
+  fotografii: "Înainte · simulare · după montaj",
+  sedii: "Locuri de montaj și acces",
+  comercial: "Facturare, contacte, condiții",
+};
+
+/** Sections without a source yet: not in the tabs; a direct link shows "În pregătire". */
+export const CLIENT_HUB_PREPARING_SECTIONS = ["portofoliu", "fisiere"] as const satisfies readonly ClientHubSection[];
 
 export type ClientHubPreparingSection = (typeof CLIENT_HUB_PREPARING_SECTIONS)[number];
 
@@ -23,14 +38,6 @@ export function isPreparingSection(section: ClientHubSection): section is Client
 }
 
 export const CLIENT_HUB_FUTURE_COPY: Record<ClientHubPreparingSection, { title: string; body: string }> = {
-  documente: {
-    title: "În pregătire",
-    body: "Facturile, contractele și anexele acestui client vor fi disponibile aici într-o etapă următoare.",
-  },
-  fotografii: {
-    title: "În pregătire",
-    body: "Fotografiile lucrărilor acestui client vor fi disponibile aici într-o etapă următoare.",
-  },
   portofoliu: {
     title: "În pregătire",
     body: "Lucrările alese pentru portofoliul acestui client vor apărea aici într-o etapă următoare.",

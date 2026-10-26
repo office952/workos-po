@@ -1,0 +1,644 @@
+/* N-020 etapa 8 · Date comerciale (Figma 795:185 § 8: consultare 720:185, 1280 723:448, 768 726:185,
+   360 726:783; formular 720:651 / 734:185; eroare 754:26442, conflict 754:26646 → 754:26844 →
+   754:27045 → 767:185; telefon 783:31001 → 755:241 → 755:297 → 783:31053 → 783:31110; Noapte
+   727:76983 / 727:77092). Machine theme tokens only, so Light and Night follow the theme. */
+
+.cdos.dcom {
+  gap: 16px;
+  padding: 26px 0 48px;
+}
+
+.dcom a:focus-visible,
+.dcom button:focus-visible,
+.dcom input:focus-visible,
+.dcom select:focus-visible,
+.dcom textarea:focus-visible,
+.dcom [tabindex="-1"]:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ─── Title: name, revision, the server's note, Modifică ─── */
+.dcom-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dcom-head__text {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dcom-head__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 14px;
+}
+
+.dcom-title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 24px/1.3 var(--font-brand);
+}
+
+.dcom-head__meta {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 12.5px/1.3 var(--font-mono);
+}
+
+.dcom-head__notice {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.35 var(--font-sans);
+}
+
+/* ─── Read view: three cards, a label column and the value ─── */
+.dcom-groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+}
+
+.dcom-card {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 16px 18px 8px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px;
+  background: var(--shell-panel);
+}
+
+.dcom-card__title,
+.dcom-panel__title {
+  margin: 0;
+  padding: 0;
+  color: var(--color-text-secondary);
+  font: 500 10.5px/1.3 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dcom-list {
+  display: grid;
+  margin: 0;
+}
+
+.dcom-list > div {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.dcom-list dt {
+  color: var(--color-text-secondary);
+  font: 400 13.5px/1.35 var(--font-sans);
+}
+
+.dcom-list dd {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.dcom-value,
+.dcom-ref {
+  color: var(--color-text-primary);
+  font: 500 14px/1.35 var(--font-sans);
+}
+
+.dcom-sub {
+  color: var(--color-text-secondary);
+  font: 400 13px/1.35 var(--font-sans);
+}
+
+.dcom-source {
+  color: var(--shell-muted);
+  font: 400 10.5px/1.35 var(--font-mono);
+}
+
+.dcom-missing {
+  color: var(--shell-muted);
+  font: 400 13.5px/1.35 var(--font-sans);
+}
+
+.dcom-ref {
+  color: var(--shell-signal);
+}
+
+.dcom-ref__open {
+  justify-self: start;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.35 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+
+.dcom-ref__open:hover {
+  color: var(--shell-signal);
+  text-decoration: underline;
+}
+
+/* ─── No version yet (721:77046) and the way to the contracts (720:647) ─── */
+.dcom-empty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 28px 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--shell-panel);
+  color: var(--color-text-secondary);
+  font: 400 13.5px/1.45 var(--font-sans);
+  text-align: center;
+}
+
+.dcom-empty p {
+  max-width: 64ch;
+  margin: 0;
+}
+
+.dcom-empty .dcom-empty__title {
+  color: var(--color-text-primary);
+  font: 600 18px/1.3 var(--font-brand);
+}
+
+.dcom-contracts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 12px 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.dcom-contracts p {
+  flex: 1 1 320px;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13.5px/1.4 var(--font-sans);
+}
+
+.dcom-contracts__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 16px;
+  color: var(--shell-signal);
+  font: 600 14px/1.2 var(--font-sans);
+  text-decoration: none;
+}
+
+.dcom-contracts__link:hover {
+  text-decoration: underline;
+}
+
+/* ─── Messages ─── */
+.dcom .alert--success {
+  border-color: var(--shell-signal);
+  background: var(--color-surface-raised);
+}
+
+.dcom .alert--error {
+  border: 2px solid var(--shell-fault);
+  background: var(--color-surface-raised);
+}
+
+.dcom .alert--error .alert__title {
+  color: var(--shell-fault);
+}
+
+.dcom .alert--pending {
+  border-color: var(--shell-warning);
+  background: var(--color-surface-raised);
+}
+
+.dcom .dcom-resumed .alert--pending {
+  border-color: var(--color-border);
+}
+
+.dcom .alert__body {
+  color: var(--color-text-secondary);
+  font-size: 13.5px;
+}
+
+.dcom-alert__lines {
+  display: grid;
+  gap: 4px;
+}
+
+.dcom-notice:focus,
+.dcom-bar__notice:focus,
+.dcom-compare:focus {
+  outline: none;
+}
+
+/* ─── Form (734:185): panels, one row of fields per line ─── */
+.dcom-edit,
+.dcom-form {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.dcom-panel {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  margin: 0;
+  padding: 18px 20px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px;
+  background: var(--shell-panel);
+}
+
+.dcom-panel__title {
+  float: left;
+  width: 100%;
+}
+
+.dcom-row {
+  display: grid;
+  grid-template-columns: repeat(var(--columns, 1), minmax(0, 1fr));
+  align-items: start;
+  gap: 14px 16px;
+}
+
+.dcom-row[data-columns="2"] {
+  --columns: 2;
+}
+
+.dcom-row[data-columns="3"] {
+  --columns: 3;
+}
+
+.dcom-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dcom-field label {
+  color: var(--color-text-primary);
+  font: 500 13px/1.3 var(--font-sans);
+}
+
+.dcom-field input,
+.dcom-field select,
+.dcom-field textarea {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  background: var(--wos-paper);
+  color: var(--color-text-primary);
+  font: 400 14px/1.35 var(--font-sans);
+}
+
+.dcom-field textarea {
+  min-height: 72px;
+  padding-block: 10px;
+  resize: vertical;
+}
+
+.dcom-field input::placeholder {
+  color: var(--shell-muted);
+}
+
+.dcom-field input:focus,
+.dcom-field select:focus,
+.dcom-field textarea:focus {
+  border-color: var(--color-focus-ring);
+  box-shadow: inset 0 0 0 1px var(--color-focus-ring);
+}
+
+.dcom-field[data-state="invalid"] :is(input, select, textarea) {
+  border: 2px solid var(--shell-fault);
+}
+
+.dcom-field[data-state="check"] :is(input, select, textarea) {
+  border: 2px solid var(--shell-warning);
+}
+
+.dcom-field__note {
+  margin: 0;
+  color: var(--shell-muted);
+  font: 400 12px/1.35 var(--font-sans);
+}
+
+.dcom-field__note[data-tone="error"] {
+  color: var(--shell-fault);
+  font-size: 12.5px;
+}
+
+.dcom-edit__note {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+/* The actions under the form; with a message (an error, a conflict, the resumed version) they stay
+   at the bottom of the screen while the form scrolls (754:26442 / 754:26646 / 754:27045). */
+.dcom-bar {
+  display: grid;
+  gap: 10px;
+}
+
+.dcom-bar__notice:empty {
+  display: none;
+}
+
+.dcom-bar[data-fixed] {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin: 0 calc(var(--chub-gutter, var(--page-gutter, 48px)) * -1);
+  padding: 14px var(--chub-gutter, var(--page-gutter, 48px)) 16px;
+  border-top: 1px solid var(--color-border);
+  background: var(--shell-panel);
+  box-shadow: 0 -4px 12px rgb(0 0 0 / 8%);
+}
+
+.dcom-bar[data-fixed] .alert__title {
+  font-size: 15px;
+}
+
+/* „Se salvează…” (721:185): the pressed button keeps the focus while the one request runs. */
+.dcom .hit[aria-disabled="true"],
+.dcom .hit[aria-disabled="true"] .button {
+  cursor: progress;
+}
+
+.dcom .hit[aria-disabled="true"] .button--primary {
+  background: var(--color-surface-raised);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-strong);
+}
+
+/* Close with unsaved values, on a phone (726:1766). */
+.dcom-closing {
+  display: grid;
+  gap: 10px;
+}
+
+.dcom-closing p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13.5px/1.4 var(--font-sans);
+}
+
+.dcom-closing .dcom-closing__title {
+  color: var(--color-text-primary);
+  font: 600 19px/1.3 var(--font-brand);
+}
+
+/* ─── Comparison (754:26844; telefon 755:297) ─── */
+.dcom-compare {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.dcom-compare__head {
+  display: grid;
+  gap: 4px;
+}
+
+.dcom-compare__lead {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13.5px/1.4 var(--font-sans);
+}
+
+.dcom-compare__table {
+  width: 100%;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--shell-panel);
+  table-layout: fixed;
+}
+
+.dcom-compare__table th,
+.dcom-compare__table td {
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-text-primary);
+  font: 400 14px/1.35 var(--font-sans);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.dcom-compare__table thead th {
+  color: var(--color-text-secondary);
+  font: 500 10.5px/1.3 var(--font-mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.dcom-compare__table thead th:first-child,
+.dcom-compare__table tbody th {
+  width: 22%;
+}
+
+.dcom-compare__table tbody th {
+  font-weight: 500;
+}
+
+.dcom-compare__table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.dcom-compare__table tr[data-both] > * {
+  background: var(--color-surface-raised);
+}
+
+.dcom-compare__note {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--shell-warning);
+  border-radius: 3px;
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+  font: 400 13.5px/1.4 var(--font-sans);
+}
+
+.dcom-compare__cards {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dcom-compare__cards li {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px;
+  background: var(--shell-panel);
+}
+
+.dcom-compare__cards li[data-both] {
+  border-color: var(--shell-warning);
+}
+
+.dcom-compare__field {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 15px/1.3 var(--font-sans);
+}
+
+.dcom-compare__cards dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.dcom-compare__cards dl > div {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.dcom-compare__cards dt {
+  color: var(--color-text-secondary);
+  font: 400 13.5px/1.35 var(--font-sans);
+}
+
+.dcom-compare__cards dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 500 14px/1.35 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.dcom-compare__hint {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 12.5px/1.35 var(--font-sans);
+}
+
+/* ─── 1280 (723:448): identity and contacts side by side, the terms under them ─── */
+@media (max-width: 1360px) {
+  .dcom-groups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ─── 768 (726:185): one column, the revision under the title ─── */
+@media (max-width: 1099px) {
+  .dcom-groups {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dcom-head__line {
+    display: grid;
+  }
+
+  .dcom-row[data-columns="3"] {
+    --columns: 2;
+  }
+
+  .dcom-row[data-columns="3"] > .dcom-field:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ─── Phone (726:783 / 726:412): label above value, Modifică across the screen, the form in a
+   full-screen dialog with its actions at the bottom ─── */
+@media (max-width: 767px) {
+  .cdos.dcom {
+    padding-top: 18px;
+  }
+
+  .dcom-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dcom-head > .hit,
+  .dcom-head > .hit > .button {
+    width: 100%;
+  }
+
+  .dcom-title {
+    font-size: 23px;
+  }
+
+  .dcom-card {
+    padding: 14px 16px 6px;
+  }
+
+  .dcom-list > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .dcom-contracts {
+    padding: 12px 16px;
+  }
+
+  .dcom-contracts__link {
+    padding: 0;
+  }
+
+  /* The dialog title on one line, as on the page (783:31001). */
+  .creation-dialog[data-frame]:has(.dcom-edit, .dcom-compare) .creation-dialog__heading h2 {
+    font-size: 19px;
+    line-height: 1.3;
+  }
+
+  .creation-dialog .dcom-panel {
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+
+  .creation-dialog .dcom-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .creation-dialog .dcom-row > .dcom-field:last-child {
+    grid-column: auto;
+  }
+
+  .creation-dialog .dcom-field input,
+  .creation-dialog .dcom-field select {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .creation-dialog .dcom-edit__note {
+    display: none;
+  }
+
+  .dcom-compare__cards + .cdos-bar,
+  .dcom-compare > .cdos-bar {
+    margin-top: auto;
+  }
+}
+
+/* „Doar citire” (721:1475): a neutral note, not a warning. */
+.dcom > .alert--pending {
+  border-color: var(--color-border);
+}

@@ -271,7 +271,12 @@ export type CustomerTransport = {
 export type CustomerRegistryItemTransport = CustomerTransport & {
   openRequestCount: number;
   quoteCount: number;
+  /** WorkOS production jobs only. */
   jobCount: number;
+  /** N-020 · historical records. */
+  historicalWorkCount: number;
+  /** N-020 · the client's "Lucrări": WorkOS jobs and historical records. */
+  workCount: number;
   needsAttention: boolean;
   attentionLabel: string | null;
 };
@@ -292,8 +297,13 @@ export type CustomerWorkspaceSummaryTransport = {
   requestNeedsAction: number;
   quoteCount: number;
   quoteNeedsAction: number;
+  /** WorkOS production jobs only. */
   jobCount: number;
   jobNeedsAction: number;
+  /** N-020 · historical records. */
+  historicalWorkCount: number;
+  /** N-020 · the client's "Lucrări": WorkOS jobs and historical records. */
+  workCount: number;
 };
 
 export type CustomerWorkspaceTransport = {
