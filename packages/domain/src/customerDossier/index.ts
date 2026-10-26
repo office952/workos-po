@@ -3,4 +3,5 @@ export * from "./documents.js";
 export * from "./historicalWorks.js";
 export * from "./history.js";
 export * from "./sites.js";
+export * from "./representativePhotos.js";
 export * from "./works.js";

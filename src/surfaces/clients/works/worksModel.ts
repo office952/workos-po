@@ -1,6 +1,7 @@
 import type { CustomerWorksModel, DossierDocument, WorkItem } from "../../../adapters/customerDossierAdapter";
 import { attachedFiles, countLabel, representativePhoto } from "../dossier/historyModel";
 import type { ListContext } from "../dossier/listContext";
+import { invalidationText } from "../photos/representativeModel";
 
 /**
  * N-020 etapa 4 · Lucrări (Figma 644:12426 · 644:12878 · 644:13352 · 648:13642 · 648:13594).
@@ -56,24 +57,41 @@ export function carried(item: WorkItem): { files: DossierDocument[]; photos: Dos
 }
 
 export type WorkImage =
+  | { kind: "chosen"; photo: DossierDocument; caption: string }
   | { kind: "own"; photo: DossierDocument; caption: string }
   | { kind: "request"; photo: DossierDocument; caption: string }
   | { kind: "shared"; caption: string }
   | { kind: "none"; caption: null };
 
 /**
- * The image of a card (GO 12 rule, unchanged): the work's own representative photo, named by its
- * stage; without one, the photo of its request only when the request has this single work —
- * marked as coming from the request, never as the work's; when the request has several works its
- * photos are not shown here. Nothing is assigned to the work.
+ * The image of a card: first the photo an operator chose for the work (N-021), when the server
+ * still finds it among the work's own photos — named by its real stage, so a chosen simulation stays
+ * a simulation; then (GO 12 rule, unchanged) the work's own representative photo by the automatic
+ * rule; without one, the photo of its request only when the request has this single work — marked
+ * as coming from the request, never as the work's; when the request has several works its photos
+ * are not shown here. Nothing is assigned to the work.
  */
 export function workImage(item: WorkItem): WorkImage {
+  const chosenId = item.representativePhoto.status === "MANUAL" ? item.representativePhoto.documentId : null;
+  const chosen = chosenId ? item.documents.find((document) => document.documentId === chosenId && document.kind === "PHOTO") : undefined;
+  if (chosen) return { kind: "chosen", photo: chosen, caption: `Imagine aleasă: ${(chosen.photoStageLabel ?? "fotografie").toLocaleLowerCase("ro")}` };
   const own = representativePhoto(item.documents);
   if (own) return { kind: "own", photo: own, caption: `Imagine: ${(own.photoStageLabel ?? "fotografie").toLocaleLowerCase("ro")}` };
   const context = item.requestPhotos && !item.requestPhotos.shared ? representativePhoto(item.requestPhotos.photos) : null;
   if (context) return { kind: "request", photo: context, caption: `Imagine: ${(context.photoStageLabel ?? "fotografie").toLocaleLowerCase("ro")} din cerere · nu e fotografia lucrării` };
   if (item.requestPhotos?.shared) return { kind: "shared", caption: "Fotografiile cererii sunt comune mai multor lucrări: nu sunt afișate aici" };
   return { kind: "none", caption: null };
+}
+
+/**
+ * N-021 · a choice the server set aside (the photo was unlinked from the work or stopped being a
+ * photo, or is no longer found): said once under the image the automatic rule now shows.
+ */
+export function representativeNotice(item: WorkItem): string | null {
+  const { status, invalidatedReason } = item.representativePhoto;
+  if (status === "INVALIDATED") return invalidationText(invalidatedReason);
+  if (status === "UNAVAILABLE") return "Fotografia aleasă nu mai este disponibilă · se folosește alegerea automată";
+  return null;
 }
 
 /**

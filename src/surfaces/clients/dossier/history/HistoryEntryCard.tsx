@@ -3,7 +3,7 @@ import type { CustomerDossierModel, DossierDocument, HistoryEntry } from "../../
 import type { QuoteListItemTransport, RequestListItemTransport } from "../../../../api/types";
 import type { BandMode } from "../bandModel";
 import { DossierIcon } from "../dossierIcons";
-import { attachedFiles, countLabel, offerCount, representativePhoto } from "../historyModel";
+import { attachedFiles, countLabel, entryPhoto, offerCount } from "../historyModel";
 import { openDocument, type Opened } from "./opened";
 import { NoPhoto, PhotoFrame, StateTag } from "../historyParts";
 import { clientListHref, EMPTY_LIST_CONTEXT } from "../listContext";
@@ -139,7 +139,7 @@ export function CollapsedCard({
   useEffect(() => {
     if (focusOnMount) expandRef.current?.focus({ preventScroll: true });
   }, [focusOnMount]);
-  const photo = representativePhoto(entry.documents);
+  const photo = entryPhoto(entry);
   const uploaded = entry.kind === "DOCUMENT" ? entry.documents[0] ?? null : null;
   return (
     <article className="hcard" data-kind={entry.kind} data-attention={projectNeedsAttention(entry, quotes) || undefined} aria-label={entry.title}>

@@ -3,6 +3,7 @@ import {
   CUSTOMER_HISTORY_STATES,
   CUSTOMER_PHOTO_STAGES,
   createCustomerDocumentLinkLabeler,
+  createDossierProjectionContext,
   customerDocumentKindLabel,
   customerHistoryStateLabel,
   customerPhotoStageLabel,
@@ -19,6 +20,7 @@ import type { ApiEnv } from "../cloud/context.js";
 import { dossierPermissions, dossierPlane, requireDossierPermission, type DossierPlane } from "./access.js";
 import { customerDocumentContentHref, listCustomerDocumentLinks, listCustomerDocuments } from "./documents.js";
 import { listHistoricalWorks } from "./historicalWorks.js";
+import { listWorkRepresentativeSelections } from "./representativePhotos.js";
 import { listCustomerSites, listSiteAssignments, presentCustomerSite, siteUsage } from "./sites.js";
 
 /**
@@ -38,6 +40,7 @@ export function readCustomerHistoryInput(plane: DossierPlane, customerId: string
     documentLinks: listCustomerDocumentLinks(plane.db, customerId),
     sites: listCustomerSites(plane.db, customerId),
     siteAssignments: listSiteAssignments(plane.db, customerId),
+    representativePhotos: listWorkRepresentativeSelections(plane.db, customerId),
     documentContentHref: (documentId, disposition) => customerDocumentContentHref(customerId, documentId, disposition),
   };
 }
@@ -65,6 +68,7 @@ export function registerCustomerHistoryRoutes(app: Hono<ApiEnv>): void {
     const input = readCustomerHistoryInput(plane, customerId);
     if (!input) return c.json({ error: "not_found" }, 404);
     const label = createCustomerDocumentLinkLabeler(input);
+    const { representativeOf } = createDossierProjectionContext(input);
     return c.json({
       dossier: {
         customerId,
@@ -81,6 +85,17 @@ export function registerCustomerHistoryRoutes(app: Hono<ApiEnv>): void {
           projectCustomerDocument(document, input.documentLinks.get(document.documentId) ?? [], label, input.documentContentHref),
         ),
         historicalWorks: input.historicalWorks,
+        // N-021 · every work's representative-photo choice, checked against its own photos, with the revision to name.
+        // `reference` tells two works with the same title apart: the offer and request of a job, the record's own reference.
+        representativePhotos: [
+          ...input.jobs.map((job) => {
+            const quote = input.quotes.find((item) => item.orderSnapshotId !== null && item.orderSnapshotId === job.orderSnapshotId);
+            const request = input.requests.find((item) => item.requestId === (job.requestId ?? quote?.requestId));
+            const reference = [quote?.reference, request?.reference].filter(Boolean).join(" · ") || null;
+            return { workKind: "JOB" as const, workId: job.jobId, reference, ...representativeOf("JOB", job.jobId) };
+          }),
+          ...input.historicalWorks.map((work) => ({ workKind: "HISTORICAL_WORK" as const, workId: work.workId, reference: work.reference, ...representativeOf("HISTORICAL_WORK", work.workId) })),
+        ],
         linkTargets: {
           requests: input.requests.map((request) => ({ subjectId: request.requestId, label: `${request.reference} · ${request.title}` })),
           jobs: input.jobs.map((job) => ({

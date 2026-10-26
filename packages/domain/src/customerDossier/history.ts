@@ -18,6 +18,7 @@ import {
   partialDateYear,
   type HistoricalWork,
 } from "./historicalWorks.js";
+import { projectWorkRepresentativePhoto, workRepresentativeKey, type WorkRepresentativeKind, type WorkRepresentativeSelection } from "./representativePhotos.js";
 import { customerSiteLine, type CustomerSite, type CustomerSiteSnapshot, type CustomerSiteSubjectKind } from "./sites.js";
 
 /**
@@ -182,6 +183,12 @@ export type CustomerHistoryEntry = {
   historicalWorkId: string | null;
   documents: readonly CustomerDocumentProjection[];
   photoCount: number;
+  /**
+   * N-021 · the photo an operator chose for the work, only where the entry is that one work without
+   * ambiguity: a historical work, or a project with exactly one job. Null otherwise (the automatic
+   * rule applies; a project of several works never takes the choice of one of them).
+   */
+  representativePhotoId: string | null;
   /** Why this entry matched a text query ("Document: Factură F-2021-118"); empty without a query. */
   matchedOn: readonly string[];
 };
@@ -228,6 +235,8 @@ export type CustomerHistoryInput = {
   documentLinks: ReadonlyMap<string, readonly CustomerDocumentLink[]>;
   sites: readonly CustomerSite[];
   siteAssignments: ReadonlyArray<{ subjectKind: CustomerSiteSubjectKind; subjectId: string; siteId: string; snapshot: CustomerSiteSnapshot }>;
+  /** N-021 · the stored representative-photo choices, by `workRepresentativeKey`. */
+  representativePhotos?: ReadonlyMap<string, WorkRepresentativeSelection>;
   documentContentHref: (documentId: string, disposition: "inline" | "attachment") => string;
 };
 
@@ -419,11 +428,14 @@ export function createDossierProjectionContext(input: CustomerHistoryInput) {
     const assigned = assignment.get(`JOB:${job.jobId}`) ?? (job.requestId ? assignment.get(`REQUEST:${job.requestId}`) : undefined);
     return assigned ? siteView(assigned.siteId, assigned.snapshot) : { site: null, siteAtTimeLabel: null };
   };
-  return { assignment, projectedDocuments, documentsFor, siteView, siteOfJob };
+  /** N-021 · the choice of one work, checked against the work's own documents. */
+  const representativeOf = (workKind: WorkRepresentativeKind, workId: string, own: readonly CustomerDocumentProjection[] = documentsFor(workKind, workId)) =>
+    projectWorkRepresentativePhoto(input.representativePhotos?.get(workRepresentativeKey(workKind, workId)), own);
+  return { assignment, projectedDocuments, documentsFor, siteView, siteOfJob, representativeOf };
 }
 
 export function projectCustomerHistory(input: CustomerHistoryInput, query: CustomerHistoryQuery): CustomerHistoryProjection {
-  const { assignment, projectedDocuments, documentsFor, siteView } = createDossierProjectionContext(input);
+  const { assignment, projectedDocuments, documentsFor, siteView, representativeOf } = createDossierProjectionContext(input);
 
   const drafts: Draft[] = [];
   const claimedQuotes = new Set<string>();
@@ -529,6 +541,7 @@ export function projectCustomerHistory(input: CustomerHistoryInput, query: Custo
       branches,
       historicalWorkId: null,
       documents,
+      representativePhotoId: jobIds.length === 1 && jobIds[0] ? representativeOf("JOB", jobIds[0]).documentId : null,
       searchFields: [
         ["Titlu", title],
         ["Referință", request?.reference ?? null],
@@ -590,6 +603,7 @@ export function projectCustomerHistory(input: CustomerHistoryInput, query: Custo
       branches: [],
       historicalWorkId: work.workId,
       documents,
+      representativePhotoId: representativeOf("HISTORICAL_WORK", work.workId, documents).documentId,
       searchFields: [
         ["Titlu", work.title],
         ["Referință", work.reference],
@@ -626,6 +640,7 @@ export function projectCustomerHistory(input: CustomerHistoryInput, query: Custo
       branches: [],
       historicalWorkId: null,
       documents: [projected],
+      representativePhotoId: null,
       searchFields: documentSearchFields(projected),
     });
   }

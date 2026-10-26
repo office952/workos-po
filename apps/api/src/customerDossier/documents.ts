@@ -33,6 +33,7 @@ import {
   subjectBelongsToCustomer,
   type DossierPlane,
 } from "./access.js";
+import { invalidateWorkRepresentativePhotos } from "./representativePhotos.js";
 
 /**
  * Compare-and-swap for a document's metadata: written only while the document is still at
@@ -305,6 +306,10 @@ export function registerCustomerDocumentRoutes(app: Hono<ApiEnv>): void {
           occurredAt: now,
           detail: { revision: document.revision, previous: { title: current.title, kind: current.kind, documentNumber: current.documentNumber } },
         });
+        // N-021 · a document that is no longer a photo cannot stay the representative photo of any work.
+        if (current.kind === "PHOTO" && document.kind !== "PHOTO") {
+          invalidateWorkRepresentativePhotos(plane.db, { customerId, documentId: document.documentId, reason: "NOT_A_PHOTO", work: null, at: now, actorAccountId: plane.actorAccountId });
+        }
         return true;
       })();
       if (!applied) return c.json({ error: "stale_revision" }, 409);
@@ -352,6 +357,10 @@ export function registerCustomerDocumentRoutes(app: Hono<ApiEnv>): void {
           .run(document.documentId, kind, subjectId).changes > 0;
       if (removed) {
         recordDossierEvent(plane.db, { customerId, kind: "DOCUMENT_UNLINKED", subjectId: document.documentId, actorAccountId: plane.actorAccountId, occurredAt: now, detail: { kind, subjectId } });
+        // N-021 · unlinked from a work, the photo stops being that work's chosen photo (same transaction).
+        if (kind === "JOB" || kind === "HISTORICAL_WORK") {
+          invalidateWorkRepresentativePhotos(plane.db, { customerId, documentId: document.documentId, reason: "UNLINKED", work: { workKind: kind, workId: subjectId }, at: now, actorAccountId: plane.actorAccountId });
+        }
       }
     })();
     return c.json({ alreadyApplied: !removed });

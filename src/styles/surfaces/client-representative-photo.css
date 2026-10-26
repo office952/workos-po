@@ -1,0 +1,190 @@
+/* N-021 · Fotografia reprezentativă a lucrării: the chooser dialog and the discreet marks on the
+   photo tile and the work card. Theme tokens only (Lumină and Noapte follow them). */
+
+.drep {
+  display: grid;
+  gap: 16px;
+}
+
+.drep__photo {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.drep__photo .dphoto {
+  width: 96px;
+}
+
+.drep__photo .ui-note {
+  margin: 0;
+}
+
+.drep__result:empty {
+  display: none;
+}
+
+.drep__result:focus {
+  outline: none;
+}
+
+.drep__result:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.drep__works {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.drep__legend {
+  padding: 0;
+  font: 600 14px/1.35 var(--font-sans);
+}
+
+.drep__works > .ui-note {
+  margin: 0;
+}
+
+.drep__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.drep__work {
+  border: 1px solid var(--shell-edge);
+  border-radius: var(--cdh-radius, 6px);
+  background: var(--shell-panel);
+}
+
+.drep__work[data-selected] {
+  border-color: var(--color-selection-edge);
+  background: var(--color-selection-fill);
+}
+
+.drep__option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  min-height: 44px;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.drep__option input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+}
+
+.drep__option:has(input:focus-visible) {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+  border-radius: var(--cdh-radius, 6px);
+}
+
+.drep__text {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.drep__kind {
+  justify-self: start;
+  padding: 1px 6px;
+  border: 1px solid var(--shell-edge-strong);
+  color: var(--color-text-secondary);
+  font: 600 11px/1.4 var(--font-sans);
+  letter-spacing: 0.04em;
+}
+
+.drep__label {
+  font: 600 14px/1.35 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.drep__detail,
+.drep__state {
+  color: var(--color-text-secondary);
+  font: 400 12.5px/1.4 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.drep__state[data-status="THIS"] {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.drep__state[data-status="INVALIDATED"],
+.drep__state[data-status="UNAVAILABLE"] {
+  color: var(--color-text-primary);
+}
+
+.drep__empty {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding: 14px;
+  border: 1px solid var(--shell-edge);
+  border-radius: var(--cdh-radius, 6px);
+  background: var(--shell-deck);
+}
+
+.drep__empty-title,
+.drep__empty .ui-note {
+  margin: 0;
+}
+
+.drep__empty-title {
+  font: 600 14px/1.35 var(--font-sans);
+}
+
+/* The discreet mark on a gallery tile: the photo represents a work (no extra button on the card).
+   Its own line under the caption, so the stage and the date keep their room. */
+.dpgal__rep {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 2px 0 0;
+  color: var(--color-text-primary);
+  font: 600 12px/1.4 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+/* The longest entry ("Setează ca reprezentativă…") stays on one line. */
+.dpgal .dpgal__menu-panel {
+  min-width: 232px;
+}
+
+/* The work card: what its image is when chosen, and a choice set aside. */
+.dwcard__caption > p {
+  margin: 0;
+}
+
+.dwcard__caption > .dwcard__notice {
+  margin: 2px 0 0;
+  color: var(--color-text-secondary);
+  font: 400 12px/1.4 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+/* Phone: the photo stays wide enough for its stage and „Ilustrativ” marks. */
+@media (max-width: 420px) {
+  .drep__photo {
+    grid-template-columns: 88px minmax(0, 1fr);
+  }
+
+  .drep__photo .dphoto {
+    width: 88px;
+  }
+}

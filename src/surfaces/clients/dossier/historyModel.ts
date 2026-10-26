@@ -43,6 +43,15 @@ export function representativePhoto(documents: readonly DossierDocument[]): Doss
 }
 
 /**
+ * N-021 · the image of a history entry: the photo chosen for its work when the server says the entry
+ * is that one work (a historical work, or a project with exactly one job), else the automatic rule.
+ */
+export function entryPhoto(entry: Pick<HistoryEntry, "documents" | "representativePhotoId">): DossierDocument | null {
+  const chosen = entry.representativePhotoId ? entry.documents.find((document) => document.documentId === entry.representativePhotoId && isPhoto(document)) : undefined;
+  return chosen ?? representativePhoto(entry.documents);
+}
+
+/**
  * "Ilustrativ" is the provenance of an image (generated or schematic, not a photo of a real
  * mounting). It is declared on the document itself, in its title or description; the dossier
  * schema has no separate flag.

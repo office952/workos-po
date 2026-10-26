@@ -39,6 +39,26 @@ export type DossierSite = {
 
 export type DossierLinkTarget = { subjectId: string; label: string };
 
+/**
+ * N-021 · a work's representative-photo choice as the server checked it. Only `MANUAL` carries a
+ * photo; every other status means the automatic choice applies. `revision` is what a change names.
+ */
+export type RepresentativeStatus = "AUTOMATIC" | "MANUAL" | "INVALIDATED" | "UNAVAILABLE";
+export type RepresentativeChoice = {
+  revision: number;
+  status: RepresentativeStatus;
+  documentId: string | null;
+  invalidatedReason: "UNLINKED" | "NOT_A_PHOTO" | null;
+};
+export type WorkRepresentative = RepresentativeChoice & { workKind: "JOB" | "HISTORICAL_WORK"; workId: string; reference: string | null };
+
+export function presentRepresentativeChoice(value: unknown): RepresentativeChoice {
+  const record = asRecord(value);
+  const status = record?.status === "MANUAL" || record?.status === "INVALIDATED" || record?.status === "UNAVAILABLE" ? record.status : "AUTOMATIC";
+  const reason = record?.invalidatedReason === "UNLINKED" || record?.invalidatedReason === "NOT_A_PHOTO" ? record.invalidatedReason : null;
+  return { revision: asNumber(record?.revision) ?? 0, status, documentId: status === "MANUAL" ? asString(record?.documentId) : null, invalidatedReason: reason };
+}
+
 export type CustomerDossierModel = {
   customerId: string;
   permissions: Record<"read" | "editSites" | "uploadDocuments" | "editDocuments" | "recordHistoricalWork" | "editCommercialTerms", boolean>;
@@ -48,6 +68,8 @@ export type CustomerDossierModel = {
   documents: DossierDocument[];
   historicalWorks: Array<{ workId: string; title: string; eventDate: string; eventDateEnd: string | null; reference: string | null; description: string | null; siteId: string | null; revision: number }>;
   linkTargets: { requests: DossierLinkTarget[]; jobs: DossierLinkTarget[]; historicalWorks: DossierLinkTarget[]; sites: DossierLinkTarget[] };
+  /** N-021 · every work's representative-photo choice (a work the server does not list has none). */
+  representativePhotos: WorkRepresentative[];
 };
 
 export type HistoryBranch = {
@@ -81,6 +103,8 @@ export type HistoryEntry = {
   historicalWorkId: string | null;
   documents: DossierDocument[];
   photoCount: number;
+  /** N-021 · the photo chosen for the work, only where the entry is one work without ambiguity. */
+  representativePhotoId: string | null;
   matchedOn: string[];
 };
 
@@ -251,6 +275,12 @@ export function presentCustomerDossier(payload: unknown): CustomerDossierModel |
       historicalWorks: linkTargets(targets?.historicalWorks),
       sites: linkTargets(targets?.sites),
     },
+    representativePhotos: list(dossier.representativePhotos).flatMap((item): WorkRepresentative[] => {
+      const record = asRecord(item);
+      const workKind = record?.workKind === "JOB" || record?.workKind === "HISTORICAL_WORK" ? record.workKind : null;
+      const workId = asString(record?.workId);
+      return workKind && workId ? [{ workKind, workId, reference: asString(record?.reference), ...presentRepresentativeChoice(record) }] : [];
+    }),
   };
 }
 
@@ -329,6 +359,7 @@ export function presentCustomerHistory(payload: unknown): CustomerHistoryModel |
             return document ? [document] : [];
           }),
           photoCount: asNumber(record.photoCount) ?? 0,
+          representativePhotoId: asString(record.representativePhotoId),
           matchedOn: list(record.matchedOn).filter((value): value is string => typeof value === "string"),
         },
       ];
@@ -441,6 +472,8 @@ export type WorkItem = {
   photoCount: number;
   /** GO 12 · the request photos, as context only, when the job has none of its own (server). */
   requestPhotos: { requestId: string; photos: DossierDocument[]; shared: boolean } | null;
+  /** N-021 · the operator's choice for this work, checked by the server against its own photos. */
+  representativePhoto: RepresentativeChoice;
   matchedOn: string[];
 };
 
@@ -512,6 +545,7 @@ export function presentCustomerWorks(payload: unknown): CustomerWorksModel | nul
                   shared: requestPhotos.shared === true,
                 }
               : null,
+          representativePhoto: presentRepresentativeChoice(item.representativePhoto),
           matchedOn: list(item.matchedOn).filter((entry): entry is string => typeof entry === "string"),
         },
       ];

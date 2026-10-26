@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DossierDocument, WorkItem } from "../../../adapters/customerDossierAdapter";
 import { EMPTY_LIST_CONTEXT } from "../dossier/listContext";
-import { activeFilters, carried, listTrail, totalsLine, workDate, workEyebrow, workImage } from "./worksModel";
+import { activeFilters, carried, listTrail, representativeNotice, totalsLine, workDate, workEyebrow, workImage } from "./worksModel";
 
 const photo = (documentId: string, stage: string, stageLabel: string) =>
   ({ documentId, kind: "PHOTO", photoStage: stage, photoStageLabel: stageLabel, preview: "IMAGE", title: documentId, documentDate: null }) as unknown as DossierDocument;
@@ -28,6 +28,7 @@ const work = (overrides: Partial<WorkItem>): WorkItem =>
     documents: [],
     photoCount: 0,
     requestPhotos: null,
+    representativePhoto: { revision: 0, status: "AUTOMATIC", documentId: null, invalidatedReason: null },
     matchedOn: [],
     ...overrides,
   }) as WorkItem;
@@ -49,6 +50,25 @@ describe("Lucrări · what a card says (N-020 etapa 4)", () => {
     const shared = workImage(work({ requestPhotos: { requestId: "r1", photos: [photo("s1", "SIMULATION", "Simulare")], shared: true } }));
     expect(shared).toEqual({ kind: "shared", caption: "Fotografiile cererii sunt comune mai multor lucrări: nu sunt afișate aici" });
     expect(workImage(work({}))).toEqual({ kind: "none", caption: null });
+  });
+
+  it("shows the chosen photo first, with its real stage; a choice set aside falls back and is said once (N-021)", () => {
+    const documents = [photo("after", "AFTER", "După montaj"), photo("sim", "SIMULATION", "Simulare")];
+    const chosen = workImage(work({ documents, representativePhoto: { revision: 2, status: "MANUAL", documentId: "sim", invalidatedReason: null } }));
+    expect(chosen).toMatchObject({ kind: "chosen", caption: "Imagine aleasă: simulare" });
+    expect(chosen.kind === "chosen" ? chosen.photo.documentId : null).toBe("sim");
+    expect(representativeNotice(work({ documents }))).toBeNull();
+    // Invalidated or unavailable: the automatic rule (after) and a notice under it.
+    const unlinked = work({ documents, representativePhoto: { revision: 3, status: "INVALIDATED", documentId: null, invalidatedReason: "UNLINKED" } });
+    expect(workImage(unlinked)).toMatchObject({ kind: "own", caption: "Imagine: după montaj" });
+    expect(representativeNotice(unlinked)).toBe("Fotografia aleasă a fost dezlegată de lucrare · se folosește alegerea automată");
+    expect(representativeNotice(work({ representativePhoto: { revision: 3, status: "INVALIDATED", documentId: null, invalidatedReason: "NOT_A_PHOTO" } }))).toContain("nu mai este o fotografie");
+    expect(representativeNotice(work({ representativePhoto: { revision: 1, status: "UNAVAILABLE", documentId: null, invalidatedReason: null } }))).toContain("nu mai este disponibilă");
+    // A manual id the documents no longer carry never becomes the image.
+    expect(workImage(work({ documents, representativePhoto: { revision: 1, status: "MANUAL", documentId: "gone", invalidatedReason: null } }))).toMatchObject({ kind: "own" });
+    // Request photos are never the work's choice: the shared rule stays.
+    const shared = work({ requestPhotos: { requestId: "r1", photos: [photo("s1", "SIMULATION", "Simulare")], shared: true }, representativePhoto: { revision: 1, status: "MANUAL", documentId: "s1", invalidatedReason: null } });
+    expect(workImage(shared)).toMatchObject({ kind: "shared" });
   });
 
   it("counts documents apart from photos, and has nothing to open when there is neither", () => {

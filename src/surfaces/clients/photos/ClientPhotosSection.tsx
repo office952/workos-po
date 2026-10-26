@@ -25,6 +25,8 @@ import { ResultBar } from "../dossier/ResultBar";
 import { filterChip, type ResultChip } from "../dossier/resultBarModel";
 import { fromSitesOrigin } from "../sites/originFromSites";
 import { SitesOriginBand } from "../sites/SitesOrigin";
+import { RepresentativePhotoDialog } from "./RepresentativePhotoDialog";
+import { representedWorks } from "./representativeModel";
 import { buildPhotosView, PHOTO_GROUP_PARAM, PHOTO_KEY_SEPARATOR, PHOTO_PARAM, photoKey, readPhotoKey, type PhotoGroup, type PhotosView, type PhotoTile } from "./photosModel";
 import "../../../styles/surfaces/client-photos.css";
 
@@ -53,8 +55,9 @@ export function ClientPhotosSection({ customerId, search = "" }: { customerId: s
   const [sheetOpen, setSheetOpen] = useState(false);
   const [linking, setLinking] = useState<DossierDocument | null>(null);
   const [editing, setEditing] = useState<DossierDocument | null>(null);
+  const [representing, setRepresenting] = useState<DossierDocument | null>(null);
   const notice = useDocumentNotice();
-  const rememberMenu = useMenuReturn(Boolean(linking || editing), ".dpgal__menu", ".dpgal__more");
+  const rememberMenu = useMenuReturn(Boolean(linking || editing || representing), ".dpgal__menu", ".dpgal__more");
   function linkFromMenu(photo: DossierDocument) {
     rememberMenu();
     setLinking(photo);
@@ -63,7 +66,13 @@ export function ClientPhotosSection({ customerId, search = "" }: { customerId: s
     rememberMenu();
     setEditing(photo);
   }
+  function representFromMenu(photo: DossierDocument) {
+    rememberMenu();
+    setRepresenting(photo);
+  }
   const data = dossier.data;
+  // N-021 · the works a photo represents now (a valid manual choice), for the discreet mark on its tile.
+  const represented = (photo: DossierDocument) => (data ? representedWorks(photo, data).map((target) => target.label) : []);
   const entries = history.data?.entries ?? null;
   useEntryAction(search, "incarca", data?.permissions.uploadDocuments === true, () => setUploading(true));
 
@@ -230,7 +239,7 @@ export function ClientPhotosSection({ customerId, search = "" }: { customerId: s
           <p>Schimbă textul sau elimină un filtru din bara de mai sus; „Arată toate” readuce galeria completă.</p>
         </div>
       ) : (
-        <PhotoYears groups={view.shownGroups} mode={mode} canEdit={canEdit} savedId={notice?.documentId ?? null} onOpen={(group, tile) => preview.open(photoKey(group.key, tile.photo.documentId))} onLink={linkFromMenu} onEdit={editFromMenu} />
+        <PhotoYears groups={view.shownGroups} mode={mode} canEdit={canEdit} savedId={notice?.documentId ?? null} onOpen={(group, tile) => preview.open(photoKey(group.key, tile.photo.documentId))} onLink={linkFromMenu} onEdit={editFromMenu} onRepresent={representFromMenu} represented={represented} />
       )}
       {view && view.withoutPhotos.length ? (
         <p className="dpgal__note">{`Nu apare aici: ${view.withoutPhotos.join(", ")} — ${view.withoutPhotos.length === 1 ? "nu are fotografii încărcate, ceea ce nu înseamnă că nu a fost executată" : "nu au fotografii încărcate, ceea ce nu înseamnă că nu au fost executate"}.`}</p>
@@ -260,6 +269,15 @@ export function ClientPhotosSection({ customerId, search = "" }: { customerId: s
       ) : null}
       {linking && data ? <LinkDocumentDialog customerId={customerId} dossier={data} document={data.documents.find((item) => item.documentId === linking.documentId) ?? linking} onClose={() => setLinking(null)} /> : null}
       {editing && data ? <EditDocumentDialog customerId={customerId} dossier={data} document={editing} onClose={() => setEditing(null)} /> : null}
+      {representing && data ? (
+        <RepresentativePhotoDialog
+          customerId={customerId}
+          dossier={data}
+          photo={data.documents.find((item) => item.documentId === representing.documentId) ?? representing}
+          onClose={() => setRepresenting(null)}
+          onLink={(photo) => { setRepresenting(null); setLinking(photo); }}
+        />
+      ) : null}
     </section>
   );
 }
@@ -291,7 +309,15 @@ function PhotoFilterGroups({ view, context, apply }: { view: PhotosView; context
   );
 }
 
-type TileActions = { canEdit: boolean; savedId: string | null; onLink: (document: DossierDocument) => void; onEdit: (document: DossierDocument) => void };
+type TileActions = {
+  canEdit: boolean;
+  savedId: string | null;
+  onLink: (document: DossierDocument) => void;
+  onEdit: (document: DossierDocument) => void;
+  onRepresent: (document: DossierDocument) => void;
+  /** N-021 · the works this photo represents now (labels), empty when none. */
+  represented: (document: DossierDocument) => string[];
+};
 
 /** The groups of one year, in the server's order, and the photos they show (each counted once). */
 function yearBlocks(groups: readonly PhotoGroup[]): Array<{ year: number; groups: PhotoGroup[]; photos: number }> {
@@ -316,7 +342,7 @@ function yearBlocks(groups: readonly PhotoGroup[]): Array<{ year: number; groups
  * years sit side by side; on the phone everything stacks. A year link moves to that year and its
  * heading takes the focus.
  */
-function PhotoYears({ groups, mode, canEdit, savedId, onOpen, onLink, onEdit }: TileActions & { groups: readonly PhotoGroup[]; mode: BandMode; onOpen: (group: PhotoGroup, tile: PhotoTile) => void }) {
+function PhotoYears({ groups, mode, onOpen, ...actions }: TileActions & { groups: readonly PhotoGroup[]; mode: BandMode; onOpen: (group: PhotoGroup, tile: PhotoTile) => void }) {
   const blocks = yearBlocks(groups);
   const anchor = (year: number) => `dpgal-an-${year}`;
   const jump = (year: number) => {
@@ -347,7 +373,7 @@ function PhotoYears({ groups, mode, canEdit, savedId, onOpen, onLink, onEdit }: 
             </h3>
             <ol className="dpgal__groups">
               {block.groups.map((group) => (
-                <PhotoGroupCard key={group.key} group={group} mode={mode} canEdit={canEdit} savedId={savedId} onOpen={(tile) => onOpen(group, tile)} onLink={onLink} onEdit={onEdit} />
+                <PhotoGroupCard key={group.key} group={group} mode={mode} onOpen={(tile) => onOpen(group, tile)} {...actions} />
               ))}
             </ol>
           </section>
@@ -358,7 +384,7 @@ function PhotoYears({ groups, mode, canEdit, savedId, onOpen, onLink, onEdit }: 
 }
 
 /** One group (675:18371): what it is, where it leads, its photos in the order of the work. */
-function PhotoGroupCard({ group, mode, canEdit, savedId, onOpen, onLink, onEdit }: TileActions & { group: PhotoGroup; mode: BandMode; onOpen: (tile: PhotoTile) => void }) {
+function PhotoGroupCard({ group, mode, onOpen, ...actions }: TileActions & { group: PhotoGroup; mode: BandMode; onOpen: (tile: PhotoTile) => void }) {
   const { entry } = group;
   const titleId = useId();
   const open = group.open ? (
@@ -389,7 +415,7 @@ function PhotoGroupCard({ group, mode, canEdit, savedId, onOpen, onLink, onEdit 
         </header>
         <ol className="dpgal__tiles">
           {group.shown.map((tile, index) => (
-            <PhotoTileView key={tile.photo.documentId} group={group} tile={tile} index={index} mode={mode} canEdit={canEdit} savedId={savedId} onOpen={onOpen} onLink={onLink} onEdit={onEdit} />
+            <PhotoTileView key={tile.photo.documentId} group={group} tile={tile} index={index} mode={mode} onOpen={onOpen} {...actions} />
           ))}
         </ol>
         {mode === "phone" ? <p className="dpgal__group-foot">{open}</p> : null}
@@ -398,26 +424,51 @@ function PhotoGroupCard({ group, mode, canEdit, savedId, onOpen, onLink, onEdit 
   );
 }
 
-function PhotoTileView({ group, tile, index, mode, canEdit, savedId, onOpen, onLink, onEdit }: TileActions & { group: PhotoGroup; tile: PhotoTile; index: number; mode: BandMode; onOpen: (tile: PhotoTile) => void }) {
+function PhotoTileView({ group, tile, index, mode, canEdit, savedId, onOpen, onLink, onEdit, onRepresent, represented }: TileActions & { group: PhotoGroup; tile: PhotoTile; index: number; mode: BandMode; onOpen: (tile: PhotoTile) => void }) {
   const { photo } = tile;
   const stage = photo.photoStageLabel ?? "Fără etapă";
   const day = formatDay(photo.documentDate) ?? `încărcată ${formatDay(photo.uploadedAt) ?? ""}`;
+  const works = represented(photo);
+  const representedText = works.length ? `Reprezentativă pentru ${works.join(", ")}` : null;
   return (
     <li className="dpgal__tile" data-photo-tile={photoKey(group.key, photo.documentId)} data-saved={savedId === photo.documentId || undefined}>
-      <PhotoFrame document={photo} size="tile" label={`Deschide fotografia ${index + 1} din ${group.shown.length}: ${stage} · ${photo.title}`} onOpen={() => onOpen(tile)} />
+      <PhotoFrame document={photo} size="tile" label={`Deschide fotografia ${index + 1} din ${group.shown.length}: ${stage} · ${photo.title}${representedText ? ` · ${representedText}` : ""}`} onOpen={() => onOpen(tile)} />
       <div className="dpgal__caption">
         <span className="dpgal__stage">{mode === "phone" ? `${index + 1} · ${stage} · ${day}` : `${index + 1} · ${stage}`}</span>
         {mode === "phone" ? null : <span className="dpgal__date">{day}</span>}
-        <TileMenu photo={photo} canEdit={canEdit} onLink={onLink} onEdit={onEdit} />
+        <TileMenu photo={photo} canEdit={canEdit} representsWork={works.length > 0} onLink={onLink} onEdit={onEdit} onRepresent={onRepresent} />
       </div>
+      {representedText ? (
+        <p className="dpgal__rep" title={representedText}>
+          <DossierIcon name="check" size={11} />
+          {works.length === 1 ? "Reprezentativă pentru 1 lucrare" : `Reprezentativă pentru ${works.length} lucrări`}
+        </p>
+      ) : null}
       <p className="dpgal__sub">{mode === "phone" ? tile.originLabel : `${photo.title} · ${tile.originLabel}`}</p>
       {tile.alsoIn.length ? <p className="dpgal__also">{`Apare și la: ${tile.alsoIn.join(", ")}`}</p> : null}
     </li>
   );
 }
 
-/** Descarcă, and by permission Asociază / Modifică datele, in one "⋯" per photo. */
-function TileMenu({ photo, canEdit, onLink, onEdit }: { photo: DossierDocument; canEdit: boolean; onLink: (document: DossierDocument) => void; onEdit: (document: DossierDocument) => void }) {
+/**
+ * Descarcă, and by permission Asociază / Modifică datele / the representative photo of a work, in one
+ * "⋯" per photo. The last one says what it will do: choose, or change the choice already made.
+ */
+function TileMenu({
+  photo,
+  canEdit,
+  representsWork,
+  onLink,
+  onEdit,
+  onRepresent,
+}: {
+  photo: DossierDocument;
+  canEdit: boolean;
+  representsWork: boolean;
+  onLink: (document: DossierDocument) => void;
+  onEdit: (document: DossierDocument) => void;
+  onRepresent: (document: DossierDocument) => void;
+}) {
   const { open, setOpen, rootRef, buttonRef, onKeyDown } = useDisclosure();
   const id = useId();
   return (
@@ -432,6 +483,7 @@ function TileMenu({ photo, canEdit, onLink, onEdit }: { photo: DossierDocument; 
             <>
               <button type="button" onClick={() => { setOpen(false); onLink(photo); }}>Asociază</button>
               <button type="button" onClick={() => { setOpen(false); onEdit(photo); }}>Modifică datele</button>
+              <button type="button" onClick={() => { setOpen(false); onRepresent(photo); }}>{representsWork ? "Fotografie reprezentativă…" : "Setează ca reprezentativă…"}</button>
             </>
           ) : null}
         </div>
