@@ -987,6 +987,23 @@
     font-size: 26px;
   }
 
+  /* N-024: the client's mark stays beside the name on the phone, compact (44 px) and level with
+     the name's first line; the name keeps the width left and wraps under nothing. */
+  .cdh__main {
+    gap: 12px;
+  }
+
+  .cdh__mono {
+    flex: none;
+    padding-top: 0;
+  }
+
+  .cdh__mono .cagenda-mono[data-size="large"] {
+    width: 44px;
+    height: 44px;
+    font-size: 14px;
+  }
+
   .cdh-band {
     padding: 0 var(--cdh-gutter);
     border-bottom: 0;

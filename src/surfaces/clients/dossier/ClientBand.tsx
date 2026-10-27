@@ -20,7 +20,8 @@ import { useSectionDetail } from "./header/sectionDetail";
  * with "Toate contactele" (579:5369), "+ Cerere nouă" over "Alte acțiuni" (579:5140), then the
  * section tabs. Scrolled, identity, tabs and "+ Cerere nouă" fold into one line under the WorkOS
  * bar (579:6351). Tablet (588:7090): the contact on one line under the identity and the tabs with
- * "+ N secțiuni". Phone (649:14364): the contact in a card, the actions in a row and a dark
+ * "+ N secțiuni". Phone (649:14364): the mark beside the name (N-024; not in the sticky bar), the
+ * contact in a card, the actions in a row and a dark
  * "Secțiunea · Schimbă" bar that stays at the top and, scrolled, names the client and what is in
  * view (580:4114).
  */
@@ -128,7 +129,7 @@ export function ClientBand({
           <span aria-hidden="true">Toți clienții</span>
         </a>
         <div className="cdh__main">
-          {customer && mode !== "phone" ? <span className="cdh__mono"><ClientMark name={customer.displayName} logo={logo} size="large" /></span> : null}
+          {customer ? <span className="cdh__mono"><ClientMark name={customer.displayName} logo={logo} size="large" /></span> : null}
           <div className="cdh__id">
             <h1 className="cdh__name" title={name}>{name}</h1>
             {customer ? (
