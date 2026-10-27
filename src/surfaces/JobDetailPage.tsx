@@ -7,7 +7,6 @@ import { Button } from '../components/Button';
 import { InlineAlert } from '../components/InlineAlert';
 import { LoadingFloor } from '../components/LoadingFloor';
 import { SelectField } from '../components/SelectField';
-import { TextField } from '../components/TextField';
 import { resourceKeys } from '../data/resourceKeys';
 import { invalidateAfterCreateExecutionPlan, invalidateAfterProductionRelease } from '../data/invalidation';
 import { invalidateResources } from '../data/resourceCache';
@@ -24,6 +23,7 @@ import { useUnsavedChangesGuard } from '../routing/useUnsavedChangesGuard';
 import { useCloudSession } from '../session/CloudSessionContext';
 import { readCloudBoundaryVersion } from '../session/sessionExpiryBridge';
 import { JobRecordDates } from './jobRecord/JobRecordDates';
+import { JobDeadlineField } from './jobRecord/JobDeadlineField';
 import { JobFileViewer } from './jobRecord/JobFileViewer';
 import { JobContextTrail } from './jobRecord/JobContextTrail';
 import { JobRecordFiles } from './jobRecord/JobRecordFiles';
@@ -60,8 +60,10 @@ export function JobDetailPage({ jobId, taskId = null, section, fileId = null }: 
   const [planningError, setPlanningError] = useState<string | null>(null);
   const [priorityDraft, setPriorityDraft] = useState<string | null>(null);
   const [targetDraft, setTargetDraft] = useState<string | null>(null);
+  // N-022 · a half-typed date in the calendar control: never saved, never read as "no deadline".
+  const [targetIncomplete, setTargetIncomplete] = useState(false);
   const [draftScope, setDraftScope] = useState(jobId);
-  if (draftScope !== jobId) { setDraftScope(jobId); setPriorityDraft(null); setTargetDraft(null); setError(null); setNotice(null); setPlanningError(null); }
+  if (draftScope !== jobId) { setDraftScope(jobId); setPriorityDraft(null); setTargetDraft(null); setTargetIncomplete(false); setError(null); setNotice(null); setPlanningError(null); }
   const priority = priorityDraft ?? job?.priority ?? 'STANDARD';
   const targetDate = targetDraft ?? job?.targetDate ?? '';
   const sourceHref = job?.kind === 'ASSEMBLY' ? jobResource.data?.quoteHref : jobResource.data?.quoteSnapshotId
@@ -81,18 +83,19 @@ export function JobDetailPage({ jobId, taskId = null, section, fileId = null }: 
     finally { setPending(false); }
   }
   async function savePlanning(): Promise<boolean> {
-    if (!job?.planningEditable || pending || finished) return false;
+    if (!job?.planningEditable || pending || finished || targetIncomplete) return false;
     setPending(true); setPlanningError(null); setNotice(null);
     try {
       await patchJobPlanning(jobId, { priority, targetDate: targetDate.trim() || null });
-      setPriorityDraft(null); setTargetDraft(null); setNotice('Prioritatea și termenul au fost salvate.'); invalidateAfterProductionRelease(jobId);
+      setPriorityDraft(null); setTargetDraft(null); setTargetIncomplete(false); setNotice('Prioritatea și termenul au fost salvate.'); invalidateAfterProductionRelease(jobId);
       return true;
     } catch { setPlanningError('Prioritatea și termenul nu au putut fi salvate.'); return false; }
     finally { setPending(false); }
   }
   // N-018 · drafts that differ from the saved planning hold navigation behind one question.
-  const planningDirty = Boolean(job?.planningEditable && !finished && ((priorityDraft !== null && priorityDraft !== job.priority) || (targetDraft !== null && targetDraft.trim() !== (job.targetDate ?? ''))));
-  const unsavedGuard = useUnsavedChangesGuard({ dirty: planningDirty, subject: 'Prioritatea și termenul', save: savePlanning, onDiscard: () => { setPriorityDraft(null); setTargetDraft(null); setPlanningError(null); } });
+  const planningDirty = Boolean(job?.planningEditable && !finished && ((priorityDraft !== null && priorityDraft !== job.priority) || (targetDraft !== null && targetDraft.trim() !== (job.targetDate ?? '')) || targetIncomplete));
+  function discardPlanning() { setPriorityDraft(null); setTargetDraft(null); setTargetIncomplete(false); setPlanningError(null); }
+  const unsavedGuard = useUnsavedChangesGuard({ dirty: planningDirty, subject: 'Prioritatea și termenul', save: savePlanning, onDiscard: discardPlanning });
   // N-018 · an operation opened from the register pushes one entry; switching replaces it and
   // closing goes back to that entry (or replaces it after a direct link or a refresh).
   const taskEntry = useRef<string | null>(null);
@@ -170,9 +173,11 @@ export function JobDetailPage({ jobId, taskId = null, section, fileId = null }: 
     <header><h3 id="job-planning-title">Prioritatea și termenul</h3>{planningDirty ? <span className="job-planning__dirty">Modificări nesalvate</span> : null}</header>
     <form onSubmit={event => { event.preventDefault(); void savePlanning(); }}>
       <SelectField id="job-priority" label="Prioritate" value={priority} options={[{ value: 'STANDARD', label: 'Standard' }, { value: 'HIGH', label: 'Ridicată' }, { value: 'URGENT', label: 'Urgentă' }]} onChange={setPriorityDraft}/>
-      <TextField id="job-target" label="Termen" value={targetDate} onChange={setTargetDraft}/>
-      <Button type="submit" disabled={pending || !planningDirty}>{pending ? 'Se salvează…' : 'Salvează'}</Button>
-      <Button variant="secondary" disabled={pending || !planningDirty} onClick={() => { setPriorityDraft(null); setTargetDraft(null); setPlanningError(null); }}>Renunță la modificări</Button>
+      <JobDeadlineField id="job-target" value={targetDate} incomplete={targetIncomplete} savedLabel={job.targetDateLabel} disabled={pending} onChange={(value, incomplete) => { setTargetDraft(value); setTargetIncomplete(incomplete); }}/>
+      <div className="job-planning__actions">
+        <Button type="submit" disabled={pending || !planningDirty || targetIncomplete}>{pending ? 'Se salvează…' : 'Salvează'}</Button>
+        <Button variant="secondary" disabled={pending || !planningDirty} onClick={discardPlanning}>Renunță la modificări</Button>
+      </div>
     </form>
     <p className="job-planning__hint">Cât timp există modificări nesalvate, secțiunile, revenirea și Atelierul cer confirmarea plecării.</p>
     {planningError ? <InlineAlert tone="error" title="Salvarea a eșuat">{planningError}<Button variant="secondary" disabled={pending} onClick={() => void savePlanning()}>Reîncearcă salvarea</Button></InlineAlert> : null}
