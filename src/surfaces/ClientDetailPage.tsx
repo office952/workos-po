@@ -35,6 +35,7 @@ import { useCommercialTerms, useCustomerDossier } from "./clients/dossier/dossie
 import type { ClientAction } from "./clients/dossier/header/ClientActions";
 import type { SectionAttention, SectionCounts } from "./clients/dossier/header/ClientSectionNav";
 import { clientActionHref } from "./clients/dossier/header/entryAction";
+import { CustomerLogoDialog } from "./clients/dossier/CustomerLogoDialog";
 import { HistoricalWorkDialog } from "./clients/dossier/HistoricalWorkDialog";
 import { ClientSitesSection } from "./clients/sites/ClientSitesSection";
 import { ClientWorksSection } from "./clients/works/ClientWorksSection";
@@ -78,6 +79,13 @@ export function ClientDetailPage({ customerId, search = window.location.search }
     }
   });
   const [recording, setRecording] = useState(false);
+  // N-023 · „Sigla clientului”, from „Alte acțiuni”.
+  const [editingLogo, setEditingLogo] = useState(false);
+  // The menu item that opened the dialog is gone: the focus goes back to „Alte acțiuni”.
+  const closeLogoDialog = () => {
+    setEditingLogo(false);
+    window.requestAnimationFrame(() => document.querySelector<HTMLElement>(".cdh-more__button")?.focus());
+  };
   useEffect(() => {
     if (!customer || workspace.status !== "success") {
       return;
@@ -110,6 +118,7 @@ export function ClientDetailPage({ customerId, search = window.location.search }
     permissions?.uploadDocuments ? { key: "upload", label: "Încarcă document", href: clientActionHref(customerId, "documente", "incarca") } : null,
     permissions?.editSites ? { key: "site", label: "Adaugă sediu", href: clientActionHref(customerId, "sedii", "adauga") } : null,
     permissions?.editCommercialTerms ? { key: "terms", label: "Modifică datele comerciale", href: clientActionHref(customerId, "comercial", "modifica") } : null,
+    permissions?.editLogo && ws ? { key: "logo", label: "Sigla clientului", onSelect: () => setEditingLogo(true) } : null,
   ].filter((action): action is ClientAction => action !== null);
   const contactsEditHref = permissions?.editCommercialTerms ? clientActionHref(customerId, "comercial", "modifica") : null;
 
@@ -119,6 +128,7 @@ export function ClientDetailPage({ customerId, search = window.location.search }
         <ClientBand
           customerId={customerId}
           customer={customer ?? null}
+          logo={ws?.logo ?? null}
           terms={terms.data ?? null}
           canCreate={canCreate}
           actions={actions}
@@ -168,6 +178,7 @@ export function ClientDetailPage({ customerId, search = window.location.search }
         </div>
       </div>
       {recording && dossier.data ? <HistoricalWorkDialog customerId={customerId} dossier={dossier.data} onClose={() => setRecording(false)} /> : null}
+      {editingLogo && ws ? <CustomerLogoDialog customerId={customerId} name={ws.customer.displayName} logo={ws.logo} logoRevision={ws.logoRevision} onClose={closeLogoDialog} /> : null}
     </PageRegion>
   );
 }

@@ -5,3 +5,4 @@ export * from "./history.js";
 export * from "./sites.js";
 export * from "./representativePhotos.js";
 export * from "./works.js";
+export * from "./logo.js";

@@ -18,6 +18,8 @@ export const CUSTOMER_DOSSIER_ACTIONS = [
   "editDocuments",
   "recordHistoricalWork",
   "editCommercialTerms",
+  // N-023 · set, replace or clear the customer logo.
+  "editLogo",
 ] as const;
 export type CustomerDossierAction = (typeof CUSTOMER_DOSSIER_ACTIONS)[number];
 
@@ -29,6 +31,7 @@ export const CUSTOMER_DOSSIER_PERMISSIONS: Record<CustomerDossierAction, readonl
   recordHistoricalWork: ["owner", "member"],
   // Payment terms, advance and currency are financial agreements: owner only, as prices are.
   editCommercialTerms: ["owner"],
+  editLogo: ["owner", "member"],
 };
 
 export function canDossier(c: ApiContext, action: CustomerDossierAction): boolean {

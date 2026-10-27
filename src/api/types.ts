@@ -279,6 +279,16 @@ export type CustomerRegistryItemTransport = CustomerTransport & {
   workCount: number;
   needsAttention: boolean;
   attentionLabel: string | null;
+  /** N-023 · the active logo, or null (the monogram is shown). */
+  logo: CustomerLogoTransport | null;
+};
+
+/** N-023 · the active customer logo as the API serves it: never a storage key or a path. */
+export type CustomerLogoTransport = {
+  revision: number;
+  contentHref: string;
+  width: number;
+  height: number;
 };
 
 export type CustomerRegistryTransport = {
@@ -308,6 +318,10 @@ export type CustomerWorkspaceSummaryTransport = {
 
 export type CustomerWorkspaceTransport = {
   customer: CustomerTransport;
+  /** N-023 · the active logo, or null (the monogram is shown). */
+  logo: CustomerLogoTransport | null;
+  /** N-023 · the revision a logo change must name (0 while there never was one). */
+  logoRevision: number;
   canCreateRequest: boolean;
   summary: CustomerWorkspaceSummaryTransport;
   requests: RequestListItemTransport[];

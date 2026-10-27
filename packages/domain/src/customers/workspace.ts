@@ -1,6 +1,7 @@
 import type { JobOverviewItem } from "../jobs/overview.js";
 import type { QuoteOverviewItem } from "../quotes/overview.js";
 import type { RequestOverviewItem } from "../requests/overview.js";
+import type { CustomerLogoRef } from "../customerDossier/logo.js";
 import { matchesSearchFields } from "../searchNormalize.js";
 import {
   customerStatusLabel,
@@ -40,6 +41,8 @@ export type CustomerRegistryItem = {
   needsAttention: boolean;
   attentionLabel: string | null;
   href: string;
+  /** N-023 · the active logo, or null: the monogram is shown. */
+  logo: CustomerLogoRef | null;
 };
 
 export type CustomerRegistryProjection = {
@@ -65,6 +68,10 @@ export type CustomerWorkspaceActivity = {
 
 export type CustomerWorkspaceProjection = {
   customer: Customer;
+  /** N-023 · the active logo, or null: the monogram is shown. */
+  logo: CustomerLogoRef | null;
+  /** N-023 · the revision a logo change must name; 0 while the customer never had one. */
+  logoRevision: number;
   statusLabel: string;
   canCreateRequest: boolean;
   summary: {
@@ -162,6 +169,7 @@ export function projectCustomerRegistryItem(input: {
   quotes: readonly QuoteOverviewItem[];
   jobs: readonly JobOverviewItem[];
   historicalWorkCount?: number;
+  logo?: CustomerLogoRef | null;
 }): CustomerRegistryItem {
   const openRequestCount = input.requests.filter(
     (request) => request.status !== "CANCELLED",
@@ -192,6 +200,7 @@ export function projectCustomerRegistryItem(input: {
     needsAttention: attention.needsAttention,
     attentionLabel: attention.attentionLabel,
     href: customerHref(input.customer.customerId),
+    logo: input.logo ?? null,
   };
 }
 
@@ -221,6 +230,8 @@ export function projectCustomerWorkspace(input: {
   quotes: readonly QuoteOverviewItem[];
   jobs: readonly JobOverviewItem[];
   historicalWorkCount?: number;
+  logo?: CustomerLogoRef | null;
+  logoRevision?: number;
 }): CustomerWorkspaceProjection {
   const openRequestCount = input.requests.filter(
     (request) => request.status !== "CANCELLED",
@@ -230,6 +241,8 @@ export function projectCustomerWorkspace(input: {
   const jobNeedsAction = input.jobs.filter((job) => job.needsAttention).length;
   return {
     customer: input.customer,
+    logo: input.logo ?? null,
+    logoRevision: input.logoRevision ?? 0,
     statusLabel: customerStatusLabel(input.customer.status),
     canCreateRequest: input.customer.status === "ACTIVE",
     summary: {

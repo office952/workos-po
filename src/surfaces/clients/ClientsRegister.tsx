@@ -9,7 +9,8 @@ import { clickedControl, moveRowFocus } from "../desk/deskKeys";
 import { DeskCaption, DeskDensity, DeskSearch, DeskSkeleton, PlusIcon, type Density } from "../desk/DeskToolbar";
 import type { DeskLayout } from "../desk/useDeskLayout";
 import { letterAnchor } from "./agendaAnchors";
-import { groupByLetter, identityLine, monogram, type ClientFilters } from "./clientsAgendaModel";
+import { groupByLetter, identityLine, type ClientFilters } from "./clientsAgendaModel";
+import { ClientMark } from "./ClientMark";
 
 type Props = {
   layout: DeskLayout;
@@ -33,10 +34,6 @@ type Props = {
   /** Phone (compact): filter chips and the A–Z toggle, right under the search. */
   filtersSlot?: ReactNode;
 };
-
-export function Monogram({ name, size }: { name: string; size?: "large" }) {
-  return <span className="cagenda-mono" data-size={size} aria-hidden="true">{monogram(name)}</span>;
-}
 
 /**
  * Open requests apart from the totals: openRequestCount vs quoteCount and workCount. "lucrări" is
@@ -69,7 +66,7 @@ function Identity({ customer }: { customer: CustomerRegistryItemTransport }) {
   const line = identityLine(customer);
   return (
     <span className="cagenda-id">
-      <Monogram name={customer.displayName} />
+      <ClientMark name={customer.displayName} logo={customer.logo} />
       <span className="cagenda-id__text">
         <a className="rdesk-title" href={clientHref(customer.customerId)} title={customer.displayName}>{customer.displayName}</a>
         <span className="rdesk-sub" data-missing={line.missing || undefined}>{line.text}</span>
@@ -170,7 +167,7 @@ function Cards({ items, selectedId, onOpen }: Props) {
                     onClick={() => onOpen(customer.customerId)}
                   >
                     <span className="cagenda-id">
-                      <Monogram name={customer.displayName} />
+                      <ClientMark name={customer.displayName} logo={customer.logo} />
                       <span className="cagenda-id__text">
                         <span className="rdesk-title">{customer.displayName}</span>
                         <span className="rdesk-sub" data-missing={line.missing || undefined}>{line.text}</span>

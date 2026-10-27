@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { CommercialTermsModel } from "../../../adapters/customerDossierAdapter";
-import type { CustomerTransport } from "../../../api/types";
+import type { CustomerLogoTransport, CustomerTransport } from "../../../api/types";
 import { clientsHref, newRequestHref, type ClientHubSection } from "../../../routing/appRoute";
 import { navigate } from "../../../routing/navigate";
 import { hrefPath, originBack } from "../../../routing/originBack";
 import { agendaLetter } from "../clientsAgendaModel";
-import { Monogram } from "../ClientsRegister";
+import { ClientMark } from "../ClientMark";
 import { useBandMode } from "./bandModel";
 import { DossierIcon } from "./dossierIcons";
 import { ClientActions, type ClientAction } from "./header/ClientActions";
@@ -27,6 +27,7 @@ import { useSectionDetail } from "./header/sectionDetail";
 export function ClientBand({
   customerId,
   customer,
+  logo = null,
   terms,
   canCreate,
   actions,
@@ -38,6 +39,8 @@ export function ClientBand({
 }: {
   customerId: string;
   customer: CustomerTransport | null;
+  /** N-023 · the active logo; the monogram without one. */
+  logo?: CustomerLogoTransport | null;
   terms: CommercialTermsModel | null;
   canCreate: boolean;
   /** "Alte acțiuni": only what the dossier permissions allow. */
@@ -125,7 +128,7 @@ export function ClientBand({
           <span aria-hidden="true">Toți clienții</span>
         </a>
         <div className="cdh__main">
-          {customer && mode !== "phone" ? <span className="cdh__mono"><Monogram name={customer.displayName} size="large" /></span> : null}
+          {customer && mode !== "phone" ? <span className="cdh__mono"><ClientMark name={customer.displayName} logo={logo} size="large" /></span> : null}
           <div className="cdh__id">
             <h1 className="cdh__name" title={name}>{name}</h1>
             {customer ? (
@@ -149,7 +152,7 @@ export function ClientBand({
       <div ref={band} className="cdh-band" data-compact={compact || undefined} data-mode={mode}>
         {compact && mode !== "phone" ? (
           <div className="cdh-band__id">
-            {customer ? <Monogram name={customer.displayName} /> : null}
+            {customer ? <ClientMark name={customer.displayName} logo={logo} /> : null}
             <p className="cdh-band__name" title={name}>{name}</p>
           </div>
         ) : null}

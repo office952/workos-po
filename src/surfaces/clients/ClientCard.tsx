@@ -6,7 +6,8 @@ import { useResource } from "../../data/useResource";
 import { clientHref, newRequestHref } from "../../routing/appRoute";
 import { DeskActions, DeskLoading, DeskReadError, DeskSheet, DeskStale } from "../desk/DeskDossier";
 import { cardSections, clientDocuments, contactFacts, type ClientDocument } from "./clientsAgendaModel";
-import { ClientState, Monogram } from "./ClientsRegister";
+import { ClientMark } from "./ClientMark";
+import { ClientState } from "./ClientsRegister";
 
 /**
  * N-018 · the contacts that exist stay in front; the empty fields are grouped in one quiet
@@ -106,7 +107,7 @@ export function ClientCard({ customer }: { customer: CustomerRegistryItemTranspo
           <p className="rdesk-sheet__name">{person.displayName}</p>
           {person.cui ? <p className="rdesk-sheet__lead">{`CUI ${person.cui}`}</p> : null}
         </div>
-        <Monogram name={person.displayName} size="large" />
+        <ClientMark name={person.displayName} logo={data ? data.logo : customer.logo} size="large" />
       </div>
       <ContactBlock person={person} />
       <hr className="rdesk-sheet__perforation" />
