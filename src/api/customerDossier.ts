@@ -1,4 +1,4 @@
-import { getJson, patchJson, postForm, postJson, putJson, sendJson, TransportError } from "./http";
+import { getJson, patchJson, postForm, postJson, putForm, putJson, sendJson, TransportError } from "./http";
 
 /** N-020 · transport for the customer dossier (sites, documents, terms, historical works, history). */
 const base = (customerId: string) => `/api/customers/${encodeURIComponent(customerId)}`;
@@ -85,6 +85,25 @@ export function setWorkRepresentativePhoto(
   body: { workKind: "JOB" | "HISTORICAL_WORK"; workId: string; documentId: string | null; expectedRevision: number },
 ): Promise<unknown> {
   return putJson(`${base(customerId)}/works/representative-photo`, body);
+}
+
+/**
+ * N-023 · set or replace the customer logo. `expectedRevision` is the logo revision as read (0 when
+ * the customer never had one); a stale one fails with 409 `stale_revision` and the current logo.
+ */
+export function setCustomerLogo(customerId: string, file: File, expectedRevision: number): Promise<unknown> {
+  const form = new FormData();
+  form.set("file", file);
+  form.set("expectedRevision", String(expectedRevision));
+  return putForm(`${base(customerId)}/logo`, form);
+}
+
+/** N-023 · back to the monogram (a new revision without a file). */
+export async function clearCustomerLogo(customerId: string, expectedRevision: number): Promise<unknown> {
+  const path = `${base(customerId)}/logo?expectedRevision=${expectedRevision}`;
+  const result = await sendJson("DELETE", path);
+  if (!result.ok) throw new TransportError(`Cererea ${path} a eșuat.`, result.status, result.body);
+  return result.body;
 }
 
 export function fetchCustomerCommercialTerms(customerId: string): Promise<unknown> {

@@ -98,10 +98,18 @@ export async function putJson(path: string, body: unknown): Promise<unknown> {
   return result.body;
 }
 
-export async function postForm(path: string, body: FormData): Promise<unknown> {
+export function postForm(path: string, body: FormData): Promise<unknown> {
+  return sendForm("POST", path, body);
+}
+
+export function putForm(path: string, body: FormData): Promise<unknown> {
+  return sendForm("PUT", path, body);
+}
+
+async function sendForm(method: "POST" | "PUT", path: string, body: FormData): Promise<unknown> {
   const boundaryVersion = readCloudBoundaryVersion();
   const response = await fetch(path, {
-    method: "POST",
+    method,
     credentials: "same-origin",
     headers: {
       Accept: "application/json",

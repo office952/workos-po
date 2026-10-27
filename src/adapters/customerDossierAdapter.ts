@@ -61,7 +61,7 @@ export function presentRepresentativeChoice(value: unknown): RepresentativeChoic
 
 export type CustomerDossierModel = {
   customerId: string;
-  permissions: Record<"read" | "editSites" | "uploadDocuments" | "editDocuments" | "recordHistoricalWork" | "editCommercialTerms", boolean>;
+  permissions: Record<"read" | "editSites" | "uploadDocuments" | "editDocuments" | "recordHistoricalWork" | "editCommercialTerms" | "editLogo", boolean>;
   vocabulary: { documentKinds: Option[]; photoStages: Option[]; historyStates: Option[]; maxFileBytes: number };
   sites: DossierSite[];
   siteAssignments: Array<{ subjectKind: "REQUEST" | "JOB"; subjectId: string; siteId: string }>;
@@ -229,6 +229,7 @@ export function presentCustomerDossier(payload: unknown): CustomerDossierModel |
       editDocuments: can("editDocuments"),
       recordHistoricalWork: can("recordHistoricalWork"),
       editCommercialTerms: can("editCommercialTerms"),
+      editLogo: can("editLogo"),
     },
     vocabulary: {
       documentKinds: options(vocabulary?.documentKinds),

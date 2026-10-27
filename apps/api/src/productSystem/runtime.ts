@@ -352,6 +352,7 @@ import {
   readOperationalPlaneIdentity,
 } from "../cloud/planeIdentity.js";
 import { countHistoricalWorksByCustomer } from "../customerDossier/counts.js";
+import { customerLogoRef, listActiveCustomerLogos, readLatestCustomerLogoRevision } from "../customerDossier/logoStore.js";
 
 export type AssemblyQuoteRecord = {
   item: QuoteOverviewItem;
@@ -1454,6 +1455,7 @@ export function createProductSystemRuntimeFromOpenDb(
         currentOrganizationId(),
       );
       const historicalWorks = countHistoricalWorksByCustomer(db);
+      const logos = listActiveCustomerLogos(db);
       return projectCustomerRegistry(
         listCustomers(db).map((customer) =>
           projectCustomerRegistryItem({
@@ -1462,6 +1464,7 @@ export function createProductSystemRuntimeFromOpenDb(
             quotes: quotesForCustomer(quotes, customer.customerId),
             jobs: jobsForCustomer(jobs, customer.customerId),
             historicalWorkCount: historicalWorks.get(customer.customerId) ?? 0,
+            logo: logos.get(customer.customerId) ?? null,
           }),
         ),
       );
@@ -1471,6 +1474,7 @@ export function createProductSystemRuntimeFromOpenDb(
       if (!customer) {
         return null;
       }
+      const latestLogo = readLatestCustomerLogoRevision(db, customerId);
       return projectCustomerWorkspace({
         customer,
         requests: requestsForCustomer(requestOverviewItems(db, currentOrganizationId()), customerId),
@@ -1488,6 +1492,8 @@ export function createProductSystemRuntimeFromOpenDb(
           customerId,
         ),
         historicalWorkCount: countHistoricalWorksByCustomer(db).get(customerId) ?? 0,
+        logo: customerLogoRef(latestLogo),
+        logoRevision: latestLogo?.revision ?? 0,
       });
     },
     readCommercialRequest(requestId) {

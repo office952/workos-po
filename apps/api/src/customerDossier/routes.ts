@@ -4,6 +4,7 @@ import { registerCustomerCommercialTermsRoutes } from "./commercialTerms.js";
 import { registerCustomerDocumentRoutes } from "./documents.js";
 import { registerHistoricalWorkRoutes } from "./historicalWorks.js";
 import { registerCustomerHistoryRoutes } from "./history.js";
+import { registerCustomerLogoRoutes } from "./logo.js";
 import { registerWorkRepresentativePhotoRoutes } from "./representativePhotos.js";
 import { registerCustomerSiteRoutes } from "./sites.js";
 
@@ -15,4 +16,5 @@ export function registerCustomerDossierRoutes(app: Hono<ApiEnv>): void {
   registerHistoricalWorkRoutes(app);
   registerCustomerHistoryRoutes(app);
   registerWorkRepresentativePhotoRoutes(app);
+  registerCustomerLogoRoutes(app);
 }

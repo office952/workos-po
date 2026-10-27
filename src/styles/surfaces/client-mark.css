@@ -1,0 +1,44 @@
+/* N-023 · the client's mark: a logo on a neutral plate, or the monogram (sized by each context's
+   `.cagenda-mono` rules). The plate stays light in both themes so a dark logo on a transparent
+   background stays readable at night; the file itself is never changed. The logo is contained,
+   never cropped or stretched, with a protective margin around it. */
+:root {
+  --client-mark-plate: #ffffff;
+  --client-mark-edge: var(--shell-edge, #c9c0b1);
+}
+
+:root[data-resolved-theme="dark"] {
+  --client-mark-plate: #f1eee8;
+  --client-mark-edge: #55504a;
+}
+
+/* Wins over the register's outlined monogram and the header's filled one, in both themes. */
+.cagenda-mono.client-mark[data-logo],
+.chub .cagenda-mono.client-mark[data-logo],
+:root[data-resolved-theme] .chub .cagenda-mono.client-mark[data-logo] {
+  /* A block box, not the monogram's centring grid: the image's 100 % must resolve against the mark. */
+  display: block;
+  overflow: hidden;
+  box-sizing: border-box;
+  /* The protective margin follows the mark: every context sizes the monogram's font with the mark
+     (11–24 px for 28–72 px marks), so 0.3 em is about a tenth of the side. A percentage would be
+     taken from the parent's width, not the mark's. */
+  padding: max(2px, 0.3em);
+  border: 1px solid var(--client-mark-edge);
+  background: var(--client-mark-plate);
+  color: inherit;
+}
+
+.client-mark[data-logo] img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+
+@media (forced-colors: active) {
+  .cagenda-mono.client-mark[data-logo] {
+    border-color: CanvasText;
+  }
+}

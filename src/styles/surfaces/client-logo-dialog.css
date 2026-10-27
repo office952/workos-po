@@ -1,0 +1,121 @@
+/* N-023 · „Sigla clientului”: the current mark next to the preview, the file choice, the answers.
+   Theme tokens only (Lumină and Noapte follow them); the marks use client-mark.css. */
+
+.dlogo {
+  display: grid;
+  gap: 16px;
+}
+
+.dlogo__result:empty {
+  display: none;
+}
+
+.dlogo__result:focus {
+  outline: none;
+}
+
+.dlogo__result:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.dlogo__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dlogo__panel {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--shell-edge);
+  border-radius: 8px;
+}
+
+.dlogo__panel[data-empty] {
+  border-style: dashed;
+}
+
+.dlogo__panel .ui-note {
+  margin: 0;
+}
+
+.dlogo__heading {
+  margin: 0;
+  font: 600 13px/1.3 var(--font-sans);
+  color: var(--shell-muted);
+}
+
+.dlogo__stage {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  min-height: 72px;
+}
+
+.dlogo__file {
+  overflow-wrap: anywhere;
+}
+
+.dlogo__choose {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+}
+
+.dlogo__choose .ui-note {
+  margin: 0;
+}
+
+/* The native input stays in the tab order (Enter/Space opens the picker); its label is the button. */
+.dlogo__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.dlogo__pick {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--shell-edge-strong);
+  border-radius: 6px;
+  background: var(--shell-panel);
+  color: var(--shell-ink);
+  font: 600 14px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.dlogo__pick:hover {
+  border-color: var(--shell-signal);
+}
+
+.dlogo__input:focus-visible + .dlogo__pick {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.dlogo__pick[data-disabled] {
+  opacity: 0.55;
+  cursor: default;
+  pointer-events: none;
+}
+
+.dlogo__error {
+  margin: 0;
+  color: var(--shell-fault);
+  font: 500 14px/1.4 var(--font-sans);
+}
+
+@media (max-width: 520px) {
+  .dlogo__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

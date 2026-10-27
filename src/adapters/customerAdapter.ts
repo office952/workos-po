@@ -1,4 +1,5 @@
 import type {
+  CustomerLogoTransport,
   CustomerRegistryItemTransport,
   CustomerRegistryTransport,
   CustomerTransport,
@@ -42,6 +43,20 @@ export function presentCustomer(value: unknown): CustomerTransport | null {
   };
 }
 
+/**
+ * N-023 · the active logo, or null. Only the API's own content route is accepted as a source, so a
+ * malformed payload can never make the interface load an image from elsewhere.
+ */
+export function presentCustomerLogo(value: unknown): CustomerLogoTransport | null {
+  const logo = asRecord(value);
+  const revision = asNumber(logo?.revision);
+  const width = asNumber(logo?.width);
+  const height = asNumber(logo?.height);
+  const contentHref = asString(logo?.contentHref);
+  if (!revision || !width || !height || !contentHref || !contentHref.startsWith("/api/customers/")) return null;
+  return { revision, contentHref, width, height };
+}
+
 export function presentCustomerList(payload: unknown): CustomerTransport[] {
   const record = asRecord(payload);
   const customers = record?.customers;
@@ -69,6 +84,7 @@ function presentRegistryItem(value: unknown): CustomerRegistryItemTransport | nu
     workCount: asNumber(row.workCount) ?? (asNumber(row.jobCount) ?? 0) + (asNumber(row.historicalWorkCount) ?? 0),
     needsAttention: asBoolean(row.needsAttention) ?? false,
     attentionLabel: asString(row.attentionLabel),
+    logo: presentCustomerLogo(row.logo),
   };
 }
 
@@ -93,6 +109,7 @@ export function presentCustomerRegistry(payload: unknown): CustomerRegistryTrans
         workCount: 0,
         needsAttention: false,
         attentionLabel: null,
+        logo: null,
       }));
   return {
     summary: {
@@ -135,8 +152,11 @@ export function presentCustomerWorkspace(payload: unknown): CustomerWorkspaceTra
         return presented ? [presented] : [];
       })
     : [];
+  const logoRevision = asNumber(workspace.logoRevision);
   return {
     customer,
+    logo: presentCustomerLogo(workspace.logo),
+    logoRevision: logoRevision !== null && Number.isInteger(logoRevision) && logoRevision >= 0 ? logoRevision : 0,
     canCreateRequest: workspace.canCreateRequest,
     summary: {
       requestCount: asNumber(summary?.requestCount) ?? requests.length,

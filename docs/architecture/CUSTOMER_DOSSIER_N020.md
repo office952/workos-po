@@ -154,6 +154,8 @@ Decizia Ownerului (2026-10-23): în fișa clientului, „Lucrări” înseamnă 
 | `PATCH …/documents/:docId`, `POST …/documents/:docId/links`, `DELETE …/documents/:docId/links?kind=&subjectId=` | `editDocuments` |
 | `POST /api/customers/:id/historical-works`, `PATCH …/historical-works/:workId` | `recordHistoricalWork` |
 | `PUT /api/customers/:id/works/representative-photo` (N-021) | `editDocuments` |
+| `GET /api/customers/:id/logo/content?revision=N` (N-023) | `read` |
+| `PUT /api/customers/:id/logo` (multipart), `DELETE /api/customers/:id/logo?expectedRevision=N` (N-023) | `editLogo` |
 | `GET /api/customers/:id/commercial-terms` | `read` |
 | `PUT /api/customers/:id/commercial-terms` | `editCommercialTerms` |
 
@@ -508,7 +510,7 @@ Referința vizuală: Figma `rM71g74Ph0mkAjAtWuLahy`, pagina 12, secțiunea `842:
 **Limite:**
 - Sediul fiecărei cereri și lucrări nu e pliat ca în R1; poziția reviziei în Date comerciale diferă de R1.
 - Clientul inactiv nu are probă în browser.
-- Încărcarea cu procent sau anulare, calendarul „Termen”, importul siglei și statisticile financiare cer GO-uri separate. Fotografia reprezentativă: N-021, mai jos.
+- Încărcarea cu procent sau anulare, calendarul „Termen”, importul siglei și statisticile financiare cer GO-uri separate. Fotografia reprezentativă: N-021, mai jos. Sigla administrată manual: N-023, mai jos; importul automat al siglei rămâne neimplementat.
 
 ## N-021 · Fotografia reprezentativă a lucrării (implementare locală, în review)
 
@@ -536,3 +538,37 @@ Referința vizuală: Figma `rM71g74Ph0mkAjAtWuLahy`, pagina 12, secțiunea `842:
   - Lucrări: imaginea aleasă validă, apoi regula automată, apoi contextul cererii (regula GO 12), apoi „Fără fotografie”.
   - Stil: `client-representative-photo.css`.
 - **Limite.** Alegerea se face din Fotografii, nu din cardul lucrării. Autorul unei modificări concurente nu e afișat. Migrația 048 a rulat numai pe baze sintetice izolate.
+
+## N-023 · Sigla clientului V1 (implementare locală, în review)
+
+Înregistrare Notion: [N-023](https://app.notion.com/p/4068ea98e40f81009f27f216af919eb1). Este identitatea vizuală a clientului, administrată manual. Nu este o fotografie (`PHOTO`), fotografia unei lucrări (N-021), un document al dosarului, un produs din Catalog sau fișierul grafic de fabricație; `customer_documents.kind` nu primește un tip nou. Nu schimbă oferte, comenzi sau instantanee comerciale acceptate. Este opțională: un client fără siglă funcționează complet și afișează monograma.
+
+- **Persistență.** Migrația `049_customer_logo.sql` este aditivă: tabelul `customer_logo_revisions`, cheia primară `(customer_id, revision)`. Fiecare modificare este o revizie nouă cu prezența siglei (`has_logo`), cheia opacă a fișierului, SHA-256, MIME validat, lățime, înălțime, octeți, numele original, proveniența `UPLOAD`, actorul și momentul. Revenirea la monogramă este o revizie fără fișier (CHECK: câmpurile fișierului sunt fie toate prezente, fie toate absente). Sigla activă este cea mai mare revizie. Nicio revizie și niciun fișier nu se șterg automat. 047 și 048 nu se schimbă.
+- **Stocare.** Aceeași stocare a dosarului: `writeScopedDocumentBytes` sub `documents/customers/<clientId>/logo/`, cu cheie opacă; fișierele nu se suprascriu. Un fișier nou a cărui revizie nu poate fi înregistrată (conflict sau eșec de tranzacție) este șters imediat; un eșec la scriere nu înregistrează nimic.
+- **API.**
+  - `PUT /api/customers/:id/logo`: multipart `file` + `expectedRevision` (0 = clientul nu a avut nicio revizie). Răspuns `{ logo, logoRevision, alreadyApplied }`; `400 invalid_payload` cu `field`; `413 file_too_large`; `422 invalid_logo` cu `reason` (`UNSUPPORTED_FORMAT`, `TYPE_MISMATCH`, `MALFORMED`, `ANIMATED`, `DIMENSIONS`, `EMPTY`); `404`; `409 stale_revision` cu sigla actuală; `503 storage_unavailable`.
+  - `DELETE /api/customers/:id/logo?expectedRevision=N`: revenire la monogramă.
+  - `GET /api/customers/:id/logo/content?revision=N`: conținutul unei revizii (implicit cea activă).
+  - Citire: `/workspace` poartă `logo: { revision, contentHref, width, height } | null` și `logoRevision`; registrul `/api/customers` poartă `logo` pentru fiecare client. Transportul nu conține căi fizice, chei de stocare sau SHA-256.
+- **Concurență.** `INSERT … SELECT … WHERE COALESCE(MAX(revision), 0) = ? ON CONFLICT (customer_id, revision) DO NOTHING`, în aceeași tranzacție cu evenimentul: verificarea și scrierea sunt o singură instrucțiune, iar cheia primară oprește și un al doilea scriitor de pe altă conexiune. Două salvări pe aceeași revizie: una reușește, cealaltă primește 409 și nu scrie nimic. `alreadyApplied` se confirmă numai când nu se schimbă nimic real (aceeași siglă activă la revizia citită sau monograma deja activă) ori la reluarea propriei cereri (revizia imediat următoare, același actor, același conținut). Orice altă schimbare intervenită este conflict.
+- **Jurnal.** `CUSTOMER_LOGO_SET` și `CUSTOMER_LOGO_CLEARED` în `customer_dossier_events`: actorul, clientul, revizia, revizia și SHA-256 anterioare, formatul și dimensiunile.
+- **Formate și validare (V1).** PNG, JPEG, WebP; cel mult 2 MB și 4096 px pe latură. Formatul se recunoaște numai din octeți; tipul declarat și extensia trebuie să corespundă.
+  - PNG: semnătura, fiecare chunk cu lungime și CRC, IHDR valid, PLTE pentru paletă, IDAT consecutive, IEND final fără nimic după; datele imaginii se decomprimă (zlib, în flux) și trebuie să aibă exact dimensiunea anunțată, cu un tip de filtru valid la începutul fiecărui rând.
+  - JPEG: fiecare segment în limitele fișierului, un singur cadru cu dimensiuni și componente valide, tabele de cuantizare și Huffman înaintea scanării, antetul scanării, datele de entropie până la EOI, nimic după EOI.
+  - WebP: containerul RIFF acoperă exact fișierul, chunk-urile se succed exact, o singură imagine statică VP8 sau VP8L (direct sau într-un VP8X cu aceeași pânză).
+  - Refuzate: SVG, GIF, animații (APNG, WebP animat), fișiere goale, deteriorate, trunchiate sau cu formatul ascuns sub altă extensie ori alt tip declarat. Fără bibliotecă nouă (`packages/domain/src/customerDossier/logo.ts`, `apps/api/src/customerDossier/logo.ts`).
+- **Livrare.** Sesiune obligatorie (401); organizația activă (planul ei, deci clientul altei organizații = 404); clientul din cale (revizia altui client = 404); SHA-256 verificat la fiecare citire (409 dacă fișierul s-a schimbat, 410 dacă lipsește); `X-Content-Type-Options: nosniff`; `Cache-Control: private, no-cache` cu `ETag` = SHA-256 (304 la revalidare); `Content-Security-Policy: default-src 'none'; sandbox`; `Cross-Origin-Resource-Policy: same-origin`.
+- **Permisiuni.** Citire: `read` (owner, member). Administrare: acțiunea nouă `editLogo` (owner, member), verificată pe server și publicată în `dossier.permissions`; fără ea, „Sigla clientului” nu apare în „Alte acțiuni”.
+- **Registru.** Toate siglele active se citesc într-o singură interogare (`listActiveCustomerLogos`), fără o cerere per client. Imaginea are URL per revizie, revalidat prin ETag.
+- **Interfață.**
+  - `ClientMark` (`src/surfaces/clients/ClientMark.tsx`, `client-mark.css`) înlocuiește monograma în registrul Clienți (tabel și carduri), cartela clientului, antetul fișei și banda compactă. Arată sigla când există și se încarcă, altfel monograma (și la o eroare de încărcare; o revizie nouă primește din nou o șansă). Sigla este decorativă (numele rămâne vizibil), conținută (`object-fit: contain`), nedecupată și neîntinsă, pe o placă neutră deschisă cu margine de protecție, în Lumină și în Noapte: o siglă neagră pe fundal transparent rămâne lizibilă. Avatarurile contactelor nu se schimbă.
+  - Dialogul (`dossier/CustomerLogoDialog.tsx`, `client-logo-dialog.css`): „Acum” (sigla sau monograma) lângă „Previzualizare” (mărime mare și mică); „Alege fișier” (câmp nativ, accesibil din tastatură); verificare înainte de trimitere (format, mărime, decodare în browser, dimensiuni); „Confirmă sigla”, „Anulează”, „Folosește monograma”, „Închide”; salvare în curs, succes, refuz explicat, eroare cu „Reîncearcă”, conflict cu sigla actuală și fișierul ales păstrat.
+  - Nimic nu se trimite înainte de confirmare. Selecția nesalvată este protejată (închidere, Escape, navigare), iar URL-urile temporare se eliberează. După salvare se recitesc fișa, registrul și dosarul, fără refresh manual. La închidere focusul revine pe „Alte acțiuni”. Interfața nu folosește termeni tehnici.
+- **Probe (2026-10-27).** Teste: domeniu 4, API 9 (ciclu, livrare, reluare, concurență între conexiuni, eșec la scriere și la tranzacție, formate, izolare client/organizație, 401/403/404), plus migrația 049; frontend 13 (`ClientMark`, adaptor, registru și cartelă, dialog, model). Browser pe runtime sintetic izolat (rădăcină `%TEMP%\workos-n023-logo-synthetic`, API 8853, UI 5253; porturile 5173, 8895 și 8899 neatinse): fără siglă, încărcare, salvare, afișare, refresh, înlocuire, conflict real și reconfirmare, monogramă, refuz SVG / fișier stricat, eșec de rețea simulat în tab și reîncercare; 1440, 1280, 768, 390, 360 px, Lumină și Noapte, siglă neagră pe fundal transparent în Noapte; sigle sintetice generate în browser.
+- **Limite.**
+  - Importul automat de pe website: NEIMPLEMENTAT (etapă viitoare, GO separat).
+  - JPEG și WebP sunt verificate structural pe server, nu decodate complet. Browserul decodează imaginea înainte de confirmare, iar `ClientMark` revine la monogramă dacă o imagine nu se poate afișa.
+  - Placa este deschisă în ambele teme: o siglă albă pe fundal transparent nu are contrast pe ea.
+  - Istoricul reviziilor nu are încă o vedere în interfață; reviziile anterioare rămân în bază și se pot citi prin `?revision=N`.
+  - Clientul inactiv: acoperit de teste (registru), fără probă separată în browser.
+  - Migrația 049 a rulat numai pe baze sintetice izolate.

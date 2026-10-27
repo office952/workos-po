@@ -45,6 +45,9 @@ describe("migration 047 — customer dossier", () => {
     const db = new Database(path);
     for (const table of DOSSIER_TABLES) db.exec(`DROP TABLE ${table}`);
     db.prepare("DELETE FROM schema_migrations WHERE id = '047_customer_dossier.sql'").run();
+    // A plane at 046 has no later customer table either (N-023 · 049 references customers too).
+    db.exec("DROP TABLE customer_logo_revisions");
+    db.prepare("DELETE FROM schema_migrations WHERE id = '049_customer_logo.sql'").run();
     const before = {
       customers: db.prepare("SELECT * FROM customers ORDER BY customer_id").all(),
       requests: db.prepare("SELECT * FROM commercial_requests ORDER BY request_id").all(),
@@ -54,7 +57,7 @@ describe("migration 047 — customer dossier", () => {
 
     const upgraded = createProductSystemRuntime(path, { documentsRoot: join(dir, "documents") });
     upgraded.close();
-    expect(tables(path)).toEqual(["customers", ...DOSSIER_TABLES].sort());
+    expect(tables(path)).toEqual(["customers", ...DOSSIER_TABLES, "customer_logo_revisions"].sort());
     const after = new Database(path, { readonly: true });
     try {
       expect(after.prepare("SELECT * FROM customers ORDER BY customer_id").all()).toEqual(before.customers);
