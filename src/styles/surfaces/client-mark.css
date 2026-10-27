@@ -1,15 +1,19 @@
 /* N-023 · the client's mark: a logo on a neutral plate, or the monogram (sized by each context's
-   `.cagenda-mono` rules). The plate stays light in both themes so a dark logo on a transparent
-   background stays readable at night; the file itself is never changed. The logo is contained,
-   never cropped or stretched, with a protective margin around it. */
+   `.cagenda-mono` rules). The logo is contained, never cropped or stretched, with a protective
+   margin around it; the file itself is never changed.
+   N-024 · the plate is a warm mid-neutral, the same in both themes, so a white logo on a
+   transparent background stays visible (about 3.6:1) as well as a black one (about 5:1); a light
+   plate hid white logos. A logo whose colours sit near the plate's own tone can still read weakly:
+   there is no recolouring or inversion. The edge and a faint inner ring set the plate off the page
+   in Lumină and Noapte. */
 :root {
-  --client-mark-plate: #ffffff;
-  --client-mark-edge: var(--shell-edge, #c9c0b1);
+  --client-mark-plate: #8c8780;
+  --client-mark-edge: rgb(0 0 0 / 22%);
+  --client-mark-ring: rgb(255 255 255 / 22%);
 }
 
 :root[data-resolved-theme="dark"] {
-  --client-mark-plate: #f1eee8;
-  --client-mark-edge: #55504a;
+  --client-mark-edge: rgb(255 255 255 / 16%);
 }
 
 /* Wins over the register's outlined monogram and the header's filled one, in both themes. */
@@ -26,6 +30,7 @@
   padding: max(2px, 0.3em);
   border: 1px solid var(--client-mark-edge);
   background: var(--client-mark-plate);
+  box-shadow: inset 0 0 0 1px var(--client-mark-ring);
   color: inherit;
 }
 
@@ -40,5 +45,6 @@
 @media (forced-colors: active) {
   .cagenda-mono.client-mark[data-logo] {
     border-color: CanvasText;
+    box-shadow: none;
   }
 }
