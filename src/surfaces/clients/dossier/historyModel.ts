@@ -90,6 +90,18 @@ export function requestDocuments(entry: HistoryEntry): DossierDocument[] {
   return entry.documents.filter((document) => !document.links.some((link) => link.kind === "JOB" && jobIds.has(link.subjectId)));
 }
 
+/**
+ * The badge of a history card. `OFERTARE` is one canonical stage for two facts the server already
+ * separates: a quote that exists and is not yet accepted stays "Ofertare"; a request with no quote
+ * on any branch is still waiting for that quote, so the card says "De ofertat". The state code and
+ * the server label are left as they are. Mixed branches keep each branch's own label.
+ */
+export function presentedStateLabel(entry: HistoryEntry): string {
+  const waitingForQuote =
+    entry.kind === "PROJECT" && entry.state === "OFERTARE" && entry.branches.every((branch) => branch.quote === null);
+  return waitingForQuote ? "De ofertat" : entry.stateLabel;
+}
+
 /** One line telling how a project went, from the relations the server returned. */
 export function relationSummary(entry: HistoryEntry): string {
   if (entry.kind === "HISTORICAL_WORK") return "fără cerere sau ofertă în WorkOS";
