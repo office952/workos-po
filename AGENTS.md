@@ -161,3 +161,14 @@ Do not stop, reclaim ports, reset or repurpose the Owner reference runtime for p
 **Owner-approved: Notion is the permanent journal for WorkOS past, present and future development.** Before any actionable planning, requirement change, implementation, docs/tests/config change, commit, push, PR, merge, deployment or migration, verify a durable record in the [WorkOS implementation registry](https://app.notion.com/p/cc42b70f86354dd7b08e6a00b4cb5156), with its stable ID, exact URL, scope and the separately applicable Owner GO. Log the result and evidence afterward. New scope means updating Notion **before** changing it.
 
 Canonical procedure: [docs/governance/NOTION_JOURNAL_GATE_V1.md](docs/governance/NOTION_JOURNAL_GATE_V1.md). If the Notion record is missing, unverifiable, or Notion is inaccessible, **STOP BEFORE WRITE**. A PR must include its implementation record ID/URL. Neither a Notion entry nor this rule authorizes merge, real-data operations or deploy. Notion is for **development governance**, never a business-runtime dependency.
+
+### Governance V2 — delegated wave authorization
+
+[docs/governance/NOTION_JOURNAL_GATE_V2.md](docs/governance/NOTION_JOURNAL_GATE_V2.md) applies **only if it exists on protected `origin/main`** (`git show origin/main:docs/governance/NOTION_JOURNAL_GATE_V2.md`). A copy in a working branch activates nothing.
+
+When active, an in-scope engineering action of an Owner-signed wave may proceed without a live Notion login if the **base copy** of `scripts/verify-wave-authorization.mjs check` reports `GOVERNANCE_GATE=PASS`. Otherwise V1 applies unchanged.
+
+- Never create, sign, edit or register anything under `docs/governance/authorizations/`, and never use or generate an Owner signing key. That is self-approval.
+- V2 never delegates merge, deploy, real Cloud/DB access or write, migrations, ruleset or permission changes. These keep requiring a separate, live, specific Owner decision.
+- Work outside the signed scope is `SCOPE_CONFLICT`: STOP and return to the Owner.
+- Record Notion synchronization honestly in the wave ledger. `SYNC_PENDING` is never an Owner GO, a CI PASS or a completed journal entry.
