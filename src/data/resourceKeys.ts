@@ -16,6 +16,7 @@ export const resourceKeys = {
   requests: () => "requests",
   request: (requestId: string) => `request:${requestId}`,
   catalog: () => "catalog",
+  catalogCapabilities: () => "catalog-capabilities",
   quotes: () => "quotes",
   quote: (productCode: string, quoteSnapshotId: string) =>
     `quote:${productCode}:${quoteSnapshotId}`,
