@@ -659,6 +659,12 @@
   font: 600 16px/1.3 var(--font-brand);
 }
 
+.hist__none .hcard__button {
+  justify-self: start;
+  margin-top: 8px;
+  min-height: 44px;
+}
+
 .hist-empty {
   display: grid;
   gap: 10px;

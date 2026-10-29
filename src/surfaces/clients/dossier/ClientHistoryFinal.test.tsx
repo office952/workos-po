@@ -63,6 +63,43 @@ const historyOf = (customerId: string, entries: unknown[], totalEntries = entrie
   customerId,
 });
 
+const ghimbav = {
+  ...project("cus-1"),
+  title: "Litere Ghimbav",
+  year: 2021,
+  eventDateLabel: "iun. 2021",
+};
+
+function yearHistory(customerId: string, entries: unknown[], yearCounts: Array<{ year: number; count: number }>) {
+  return {
+    history: {
+      total: entries.length,
+      page: 1,
+      pageCount: 1,
+      entries,
+      totals: { entries: 5, projects: 5, historicalWorks: 0, uploads: 0, documents: 0, photos: 0 },
+      facets: {
+        years: [2026, 2021],
+        yearCounts,
+        states: [],
+        provenances: [{ provenance: "WORKOS", label: "În WorkOS", count: entries.length }],
+        sites: [],
+      },
+    },
+    customerId,
+  };
+}
+
+/** Totals keep both years. A list filtered to 2026 does not contain „Ghimbav 2021”; the facet still counts 2021. */
+function yearSearchReply(url: string, id: string) {
+  if (!url.includes("/history")) return undefined;
+  const params = new URL(url, "http://x").searchParams;
+  if (params.get("pageSize") === "1") return json(200, yearHistory(id, [project(id)], [{ year: 2026, count: 4 }, { year: 2021, count: 2 }]));
+  if (params.get("year") === "2026") return json(200, yearHistory(id, [], [{ year: 2026, count: 0 }, { year: 2021, count: 1 }]));
+  if (params.get("q")?.includes("Ghimbav") || params.get("year") === "2021") return json(200, yearHistory(id, [ghimbav], [{ year: 2026, count: 0 }, { year: 2021, count: 1 }]));
+  return undefined;
+}
+
 type Reply = (url: string, id: string) => Promise<unknown> | undefined;
 let reply: Reply = () => undefined;
 
@@ -375,6 +412,136 @@ describe("Istoric · design final, stage 1", () => {
     await userEvent.click(within(screen.getByRole("list", { name: "Alte acțiuni" })).getByRole("button", { name: "Încarcă document" }));
     expect(await screen.findByRole("dialog", { name: /Încarcă document/ })).toBeInTheDocument();
     await waitFor(() => expect(window.location.search).toBe("?sectiune=documente"));
+  });
+
+  it("a search without a year leaves the years it reaches enabled and the others dimmed", async () => {
+    reply = yearSearchReply;
+    window.history.replaceState({}, "", "/clienti/cus-1?q=Ghimbav%202021");
+    render(<Harness />);
+    const rail = await screen.findByRole("navigation", { name: "Salt la an" });
+    expect(within(rail).getByRole("button", { name: /^2021 · 1 intrare/ })).toBeEnabled();
+    expect(within(rail).getByRole("button", { name: /^2026 · niciun rezultat/ })).toBeDisabled();
+    expect(within(rail).getByRole("button", { name: /^2026/ })).toHaveTextContent("20264");
+    expect(screen.queryByRole("button", { name: "Caută în toți anii" })).toBeNull();
+    expect(await screen.findByRole("heading", { level: 4, name: "Litere Ghimbav" })).toBeInTheDocument();
+  });
+
+  it("a search with the matching year keeps that year and still dims the year it does not reach", async () => {
+    reply = yearSearchReply;
+    window.history.replaceState({}, "", "/clienti/cus-1?q=Ghimbav%202021&an=2021&provenienta=WORKOS");
+    render(<Harness />);
+    const rail = await screen.findByRole("navigation", { name: "Salt la an" });
+    expect(within(rail).getByRole("button", { name: /^2021 · 1 intrare/ })).toBeEnabled();
+    expect(within(rail).getByRole("button", { name: /^2026 · niciun rezultat/ })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Caută în toți anii" })).toBeNull();
+    expect(new URLSearchParams(window.location.search).get("an")).toBe("2021");
+    expect(new URLSearchParams(window.location.search).get("provenienta")).toBe("WORKOS");
+  });
+
+  it("a conflicting year stays dimmed, and Caută în toți anii clears only the year", async () => {
+    const urls: string[] = [];
+    reply = (url, id) => {
+      urls.push(url);
+      return yearSearchReply(url, id);
+    };
+    window.history.replaceState({}, "", "/clienti/cus-1?q=pastrat");
+    window.history.pushState({}, "", "/clienti/cus-1?q=Ghimbav%202021&an=2026&provenienta=WORKOS");
+    const view = render(<Harness />);
+    const rail = await screen.findByRole("navigation", { name: "Salt la an" });
+    // 2026 is the selected year and has no match; 2021 is the year the search reaches.
+    expect(within(rail).getByRole("button", { name: /^2026 · niciun rezultat/ })).toBeDisabled();
+    expect(within(rail).getByRole("button", { name: /^2021 · 1 intrare/ })).toBeEnabled();
+    expect(within(rail).getByRole("button", { name: /^2021/ })).toHaveTextContent("20211");
+    expect(screen.getByText("Nicio intrare nu conține textul căutat cu filtrele alese.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Elimină filtrul An: 2026" })).toBeInTheDocument();
+    const recover = screen.getByRole("button", { name: "Caută în toți anii" });
+    recover.focus();
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("an")).toBeNull());
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get("q")).toBe("Ghimbav 2021");
+    expect(params.get("provenienta")).toBe("WORKOS");
+    expect(screen.getByRole("searchbox", { name: "Caută în istoric" })).toHaveFocus();
+    expect(await screen.findByRole("heading", { level: 4, name: "Litere Ghimbav" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Caută în toți anii" })).toBeNull();
+    const list = urls.filter((url) => url.includes("/history") && url.includes("pageSize=20")).at(-1) ?? "";
+    expect(new URL(list, "http://x").searchParams.get("year")).toBeNull();
+    expect(new URL(list, "http://x").searchParams.get("q")).toBe("Ghimbav 2021");
+    expect(new URL(list, "http://x").searchParams.get("provenance")).toBe("WORKOS");
+    // Refresh reads the recovered address back.
+    view.unmount();
+    render(<Harness />);
+    expect(await screen.findByRole("heading", { level: 4, name: "Litere Ghimbav" })).toBeInTheDocument();
+    expect(new URLSearchParams(window.location.search).get("an")).toBeNull();
+    expect((screen.getByRole("searchbox", { name: "Caută în istoric" }) as HTMLInputElement).value).toBe("Ghimbav 2021");
+    // The recovery replaced the conflicting address, so Back returns to the previous one and Forward to the recovered search.
+    await act(async () => {
+      window.history.back();
+      await new Promise((resolve) => window.addEventListener("popstate", resolve, { once: true }));
+    });
+    await waitFor(() => expect(window.location.search).toBe("?q=pastrat"));
+    await act(async () => {
+      window.history.forward();
+      await new Promise((resolve) => window.addEventListener("popstate", resolve, { once: true }));
+    });
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("q")).toBe("Ghimbav 2021"));
+    expect(new URLSearchParams(window.location.search).get("an")).toBeNull();
+    expect(new URLSearchParams(window.location.search).get("provenienta")).toBe("WORKOS");
+  });
+
+  it("clicking the year the search reaches replaces only the conflicting year", async () => {
+    reply = yearSearchReply;
+    window.history.replaceState({}, "", "/clienti/cus-1?q=Ghimbav%202021&an=2026&provenienta=WORKOS");
+    render(<Harness />);
+    const rail = await screen.findByRole("navigation", { name: "Salt la an" });
+    await userEvent.click(within(rail).getByRole("button", { name: /^2021 · 1 intrare/ }));
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("an")).toBe("2021"));
+    expect(new URLSearchParams(window.location.search).get("q")).toBe("Ghimbav 2021");
+    expect(new URLSearchParams(window.location.search).get("provenienta")).toBe("WORKOS");
+    expect(await screen.findByRole("heading", { level: 4, name: "Litere Ghimbav" })).toBeInTheDocument();
+  });
+
+  it("does not offer Caută în toți anii when the search reaches no year", async () => {
+    reply = (url, id) => {
+      if (!url.includes("/history")) return undefined;
+      const params = new URL(url, "http://x").searchParams;
+      const counts = params.get("pageSize") === "1"
+        ? [{ year: 2026, count: 4 }, { year: 2021, count: 2 }]
+        : [{ year: 2026, count: 0 }, { year: 2021, count: 0 }];
+      return json(200, yearHistory(id, [], counts));
+    };
+    window.history.replaceState({}, "", "/clienti/cus-1?q=nimic&an=2026&provenienta=WORKOS");
+    render(<Harness />);
+    const rail = await screen.findByRole("navigation", { name: "Salt la an" });
+    expect(within(rail).getByRole("button", { name: /^2026 · niciun rezultat/ })).toBeDisabled();
+    expect(within(rail).getByRole("button", { name: /^2021 · niciun rezultat/ })).toBeDisabled();
+    expect(screen.getByText("Niciun rezultat")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Caută în toți anii" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Elimină filtrul An: 2026" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Elimină filtrul Proveniență: În WorkOS" })).toBeInTheDocument();
+  });
+
+  it("on a phone, the jump row offers the year the search reaches and not the conflicting year", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query.includes("max-width: 767px"),
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+    reply = yearSearchReply;
+    window.history.replaceState({}, "", "/clienti/cus-1?q=Ghimbav%202021&an=2026&provenienta=WORKOS");
+    render(<Harness />);
+    const jump = await screen.findByRole("group", { name: "Salt la an" });
+    expect(within(jump).getByRole("button", { name: "Salt la 2021 · 1 intrare" })).toBeEnabled();
+    expect(within(jump).queryByRole("button", { name: /2026/ })).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Salt la an" })).toBeNull();
+    const recover = screen.getByRole("button", { name: "Caută în toți anii" });
+    recover.focus();
+    await userEvent.keyboard(" ");
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("an")).toBeNull());
+    expect(new URLSearchParams(window.location.search).get("q")).toBe("Ghimbav 2021");
+    expect(new URLSearchParams(window.location.search).get("provenienta")).toBe("WORKOS");
+    expect(screen.getByRole("searchbox", { name: "Caută în istoric" })).toHaveFocus();
   });
 
   it("without the permission, an address with actiune does not open the form", async () => {

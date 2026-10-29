@@ -97,10 +97,13 @@ export function ClientHistorySection({
   const groups = data ? groupByYear(data.entries) : [];
   const inView = useYearInView(customerId, groups.map((group) => group.year));
 
-  // Every year of the client (unfiltered), and the years the current search and filters reach.
+  // Every year of the client (unfiltered), and the years the current search and the other filters
+  // reach. yearCounts already leave the year filter out, so a selected year with no matches stays
+  // dimmed and a year the search still reaches stays selectable.
   const allYears = [...(totals.data?.facets.yearCounts ?? [])].sort((left, right) => right.year - left.year);
   const firstYear = allYears.length ? allYears[allYears.length - 1]?.year ?? null : null;
-  const present = new Set<number>(context.year ? [Number(context.year)] : (data?.facets.yearCounts ?? []).filter((item) => item.count > 0).map((item) => item.year));
+  const reachedYears = (data?.facets.yearCounts ?? []).filter((item) => item.count > 0);
+  const present = new Set<number>(reachedYears.map((item) => item.year));
   // A year the search reaches shows how many entries it has now (588:8038, 712:22460); one it does
   // not reach keeps its whole count, dimmed (588:8038).
   const shownCount = new Map((data?.facets.yearCounts ?? []).map((item) => [item.year, item.count]));
@@ -220,6 +223,11 @@ export function ClientHistorySection({
                 <div className="hist__state hist__none" role="status">
                   <p className="hist__none-title">Niciun rezultat</p>
                   <p>{context.q ? "Nicio intrare nu conține textul căutat cu filtrele alese." : "Nicio intrare nu se potrivește filtrelor alese."}</p>
+                  {context.year && reachedYears.length > 0 ? (
+                    <button type="button" className="hcard__button" onClick={() => { apply({ year: "" }); focusSearch(); }}>
+                      Caută în toți anii
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
               {groups.length ? (
