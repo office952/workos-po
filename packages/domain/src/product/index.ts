@@ -136,6 +136,18 @@ export {
   computeCategoryDepth,
   projectProductSystemAdministration,
 } from "./productSystemAdmin.js";
+export {
+  CATALOG_CAPABILITIES_SCHEMA_VERSION,
+  CATALOG_CAPABILITY_CLASSES,
+  CATALOG_CAPABILITY_SUPPORTS,
+  projectCatalogCapabilities,
+  type CatalogCapabilitiesManifest,
+  type CatalogCapabilityClass,
+  type CatalogCapabilityElement,
+  type CatalogCapabilityProduct,
+  type CatalogCapabilityProjectionInput,
+  type CatalogEnablementCapability,
+} from "./catalogCapabilities.js";
 export { BACK_COMPONENT_ID, forexBackContract } from "./back.js";
 export {
   FACE_AREA_FIELD,
