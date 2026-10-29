@@ -1,13 +1,17 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   cpSync,
   existsSync,
+  lstatSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
+  renameSync,
+  rmdirSync,
   rmSync,
   statSync,
 } from "node:fs";
-import { dirname, isAbsolute, join, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
 import Database from "better-sqlite3";
 import { API_CONTRACT_ID, HEALTH_SERVICE_NAME } from "../ops/contract.js";
 import { opsLog } from "../ops/log.js";
@@ -65,14 +69,114 @@ function sha256File(filePath: string): string {
   return createHash("sha256").update(readFileSync(filePath)).digest("hex");
 }
 
-function isNonEmptyDir(dir: string): boolean {
-  if (!existsSync(dir)) {
-    return false;
+function errorCode(error: unknown): string | undefined {
+  if (typeof error !== "object" || error === null || !("code" in error)) {
+    return undefined;
   }
-  if (!statSync(dir).isDirectory()) {
+  const code = error.code;
+  return typeof code === "string" ? code : undefined;
+}
+
+// A restore target is usable only when the directory entry itself is absent or an empty real directory.
+// lstat does not follow links. stat would treat a junction to an empty directory as a real directory,
+// and existsSync is false for a broken link. A symbolic link or junction is refused and never removed.
+function assertRealEmptyOrAbsent(targetRoot: string): "absent" | "empty_directory" {
+  let entry;
+  try {
+    entry = lstatSync(targetRoot);
+  } catch (error) {
+    if (errorCode(error) === "ENOENT") {
+      return "absent";
+    }
+    fail("restore_target_invalid");
+  }
+  if (entry.isSymbolicLink() || !entry.isDirectory()) {
+    fail("restore_target_not_empty");
+  }
+  let names: string[];
+  try {
+    names = readdirSync(targetRoot);
+  } catch {
+    fail("restore_target_not_empty");
+  }
+  if (names.length > 0) {
+    fail("restore_target_not_empty");
+  }
+  return "empty_directory";
+}
+
+function targetEntryPresent(targetRoot: string): boolean {
+  try {
+    lstatSync(targetRoot);
     return true;
+  } catch (error) {
+    if (errorCode(error) === "ENOENT") {
+      return false;
+    }
+    fail("restore_target_invalid");
   }
-  return existsSync(join(dir, "control")) || existsSync(join(dir, "organizations"));
+}
+
+// Presence checks shared with business-storage classification, plus the runtime lease.
+// A control/ directory without control-plane.sqlite is not a marker: the missing database
+// is not treated as a WorkOS storage root.
+function looksLikeCloudRoot(dir: string): boolean {
+  return (
+    existsSync(join(dir, "control", "control-plane.sqlite")) ||
+    existsSync(join(dir, "ops", "runtime-lease.json")) ||
+    existsSync(join(dir, "organizations")) ||
+    existsSync(join(dir, "product-system.sqlite"))
+  );
+}
+
+// Isolation from live Cloud roots must not depend on the caller declaring the source root: after an
+// incident the source may be unknown or gone. Refuse any target nested inside an existing Cloud root.
+function assertNotInsideCloudRoot(targetRoot: string): void {
+  let current = targetRoot;
+  do {
+    current = dirname(current);
+    if (looksLikeCloudRoot(current)) {
+      fail("restore_target_not_isolated");
+    }
+  } while (current !== dirname(current));
+}
+
+function createStagingRoot(targetRoot: string): string {
+  const parent = dirname(targetRoot);
+  mkdirSync(parent, { recursive: true });
+  const stagingRoot = join(parent, `.${basename(targetRoot)}.restore-${randomUUID()}`);
+  try {
+    mkdirSync(stagingRoot);
+  } catch {
+    fail("restore_target_invalid");
+  }
+  return stagingRoot;
+}
+
+// Publishes the validated staging root at the target path. The directory entry is classified again here,
+// and a symbolic link or junction is refused before any removal. An empty real directory is removed with
+// a non-recursive rmdir, so content that appeared after the check makes the publish fail instead of being
+// deleted. The recheck narrows that window; it is not an atomic guard against a concurrent replacement.
+function publishStagingRoot(stagingRoot: string, targetRoot: string): void {
+  const kind = assertRealEmptyOrAbsent(targetRoot);
+  if (kind === "empty_directory") {
+    try {
+      rmdirSync(targetRoot);
+    } catch {
+      fail("restore_target_not_empty");
+    }
+  }
+  try {
+    renameSync(stagingRoot, targetRoot);
+  } catch {
+    if (targetEntryPresent(targetRoot)) {
+      fail("restore_target_not_empty");
+    }
+    if (kind === "empty_directory") {
+      mkdirSync(targetRoot);
+    }
+    fail("restore_target_invalid");
+  }
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -400,6 +504,7 @@ export function restoreCloudBackup(input: {
   backupDir: string;
   targetRoot: string;
   sourceCloudRoot?: string;
+  beforePublish?: () => void;
 }): CloudRestoreResult {
   const backupDir = resolve(input.backupDir);
   const targetRoot = resolve(input.targetRoot);
@@ -410,25 +515,28 @@ export function restoreCloudBackup(input: {
     assertRestoreIsolation(input.sourceCloudRoot, targetRoot);
   }
   assertRestoreIsolation(backupDir, targetRoot);
-  if (isNonEmptyDir(targetRoot)) {
-    fail("restore_target_not_empty");
-  }
+  assertNotInsideCloudRoot(targetRoot);
+  assertRealEmptyOrAbsent(targetRoot);
 
   const manifest = readManifest(backupDir);
   verifyArtifacts(backupDir, manifest);
   validateBackupSchemaLedgers(backupDir, manifest);
 
-  mkdirSync(targetRoot, { recursive: true });
+  // Everything is written into a staging root owned by this restore. On failure only that root is removed;
+  // the target path is touched only by the final publish.
+  const stagingRoot = createStagingRoot(targetRoot);
   try {
     for (const artifact of manifest.artifacts) {
       const from = resolveConfinedBackupPath(backupDir, artifact.path);
-      const to = resolveConfinedBackupPath(targetRoot, artifact.path);
+      const to = resolveConfinedBackupPath(stagingRoot, artifact.path);
       mkdirSync(dirname(to), { recursive: true });
       cpSync(from, to);
     }
-    verifyRestoredPlanes(targetRoot, manifest);
+    verifyRestoredPlanes(stagingRoot, manifest);
+    input.beforePublish?.();
+    publishStagingRoot(stagingRoot, targetRoot);
   } catch (error) {
-    rmSync(targetRoot, { recursive: true, force: true });
+    rmSync(stagingRoot, { recursive: true, force: true });
     throw error;
   }
 

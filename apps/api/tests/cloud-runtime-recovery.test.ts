@@ -2,19 +2,25 @@ import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
+  readlinkSync,
+  rmdirSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 import { createCloudBackup, CloudBackupError, type CloudBackupManifest } from "../src/cloud/backup.js";
 import { CloudRestoreError, restoreCloudBackup } from "../src/cloud/restore.js";
+import { runCloudRestoreCli } from "../src/cloud/restoreCli.js";
 import {
   ProductionOriginConfigError,
   mutatingOriginAllowed,
@@ -644,5 +650,453 @@ describe("restore target isolation", () => {
     });
     expect(restored.organizationCount).toBe(1);
     expect(restored.planeCount).toBe(1);
+  });
+
+  function expectRestoreCode(run: () => unknown, code: string): void {
+    try {
+      run();
+      throw new Error(`expected ${code}`);
+    } catch (error) {
+      expect((error as CloudRestoreError).code ?? (error as Error).message).toBe(code);
+    }
+  }
+
+  function tamperPlaneIdentity(backupDir: string): void {
+    const manifest = readManifest(backupDir);
+    const first = manifest.organizations[0];
+    if (!first) {
+      throw new Error("missing organization");
+    }
+    first.planeId = "plane-tampered-n026";
+    writeManifest(backupDir, manifest);
+  }
+
+  it("C1: refuses a target with unrelated content before writing anything", async () => {
+    const { cloudRoot, backupDir } = await backupSimpleCloud();
+    const parent = trackTempDir();
+    const targetRoot = join(parent, "occupied");
+    mkdirSync(join(targetRoot, "keep"), { recursive: true });
+    writeFileSync(join(targetRoot, "keep", "marker.txt"), "pre-existing");
+    expectRestoreCode(
+      () => restoreCloudBackup({ backupDir, targetRoot, sourceCloudRoot: cloudRoot }),
+      "restore_target_not_empty",
+    );
+    expect(readFileSync(join(targetRoot, "keep", "marker.txt"), "utf8")).toBe("pre-existing");
+    expect(readdirSync(targetRoot)).toEqual(["keep"]);
+    expect(readdirSync(parent)).toEqual(["occupied"]);
+  });
+
+  it("C2: a late failure removes only the restore's own staging root", async () => {
+    const { cloudRoot, backupDir } = await backupSimpleCloud();
+    tamperPlaneIdentity(backupDir);
+    const parent = trackTempDir();
+    writeFileSync(join(parent, "sibling.txt"), "pre-existing");
+    const absentTarget = join(parent, "absent");
+    expectRestoreCode(
+      () => restoreCloudBackup({ backupDir, targetRoot: absentTarget, sourceCloudRoot: cloudRoot }),
+      "plane_identity_mismatch",
+    );
+    expect(existsSync(absentTarget)).toBe(false);
+    expect(readdirSync(parent)).toEqual(["sibling.txt"]);
+    expect(readFileSync(join(parent, "sibling.txt"), "utf8")).toBe("pre-existing");
+
+    const emptyTarget = join(parent, "empty");
+    mkdirSync(emptyTarget);
+    expectRestoreCode(
+      () => restoreCloudBackup({ backupDir, targetRoot: emptyTarget, sourceCloudRoot: cloudRoot }),
+      "plane_identity_mismatch",
+    );
+    expect(readdirSync(emptyTarget)).toEqual([]);
+    expect(readdirSync(parent).sort()).toEqual(["empty", "sibling.txt"]);
+  });
+
+  it("C3: refuses a target nested in a Cloud root without a declared source root", async () => {
+    const { cloudRoot, backupDir } = await backupSimpleCloud();
+    const nested = join(cloudRoot, "nested-restore");
+    const deeper = join(cloudRoot, "organizations", "x", "restore");
+    expectRestoreCode(() => restoreCloudBackup({ backupDir, targetRoot: nested }), "restore_target_not_isolated");
+    expectRestoreCode(() => restoreCloudBackup({ backupDir, targetRoot: deeper }), "restore_target_not_isolated");
+    expectRestoreCode(
+      () => runCloudRestoreCli(["--backup", backupDir, "--target", nested], {}),
+      "restore_target_not_isolated",
+    );
+    expect(existsSync(nested)).toBe(false);
+    expect(existsSync(join(cloudRoot, "organizations", "x"))).toBe(false);
+  });
+
+  it("C4: restores into an absent nested path and an empty directory without leftovers", async () => {
+    const { cloudRoot, backupDir } = await backupSimpleCloud();
+    const parent = trackTempDir();
+    const absentTarget = join(parent, "a", "restored");
+    const restored = restoreCloudBackup({ backupDir, targetRoot: absentTarget });
+    expect(restored.planeCount).toBe(1);
+    expect(existsSync(join(absentTarget, "control", "control-plane.sqlite"))).toBe(true);
+    expect(readdirSync(join(parent, "a"))).toEqual(["restored"]);
+
+    const emptyTarget = join(parent, "empty");
+    mkdirSync(emptyTarget);
+    restoreCloudBackup({ backupDir, targetRoot: emptyTarget, sourceCloudRoot: cloudRoot });
+    expect(existsSync(join(emptyTarget, "control", "control-plane.sqlite"))).toBe(true);
+    expect(readdirSync(parent).sort()).toEqual(["a", "empty"]);
+    for (const restoredRoot of [absentTarget, emptyTarget]) {
+      const entry = lstatSync(restoredRoot);
+      expect(entry.isSymbolicLink()).toBe(false);
+      expect(entry.isDirectory()).toBe(true);
+    }
+  });
+
+  it("refuses an organizations-only parent when the source root is not declared", async () => {
+    const { backupDir } = await backupSimpleCloud();
+    const parent = trackTempDir();
+    mkdirSync(join(parent, "organizations"));
+    const targetRoot = join(parent, "absent-child");
+    expectRestoreCode(
+      () => restoreCloudBackup({ backupDir, targetRoot }),
+      "restore_target_not_isolated",
+    );
+    expectRestoreCode(
+      () => runCloudRestoreCli(["--backup", backupDir, "--target", targetRoot], {}),
+      "restore_target_not_isolated",
+    );
+    expect(existsSync(targetRoot)).toBe(false);
+    expect(readdirSync(parent)).toEqual(["organizations"]);
+    expect(stagingNames(parent)).toEqual([]);
+  });
+
+  it("refuses a deeper target inside an organizations-only parent and leaves the contents", async () => {
+    const { backupDir } = await backupSimpleCloud();
+    const parent = trackTempDir();
+    const keptDir = join(parent, "organizations", "plane-a");
+    mkdirSync(keptDir, { recursive: true });
+    const markerPath = join(keptDir, "keep.txt");
+    writeFileSync(markerPath, "untouched");
+    const targetRoot = join(keptDir, "nested-restore");
+    expectRestoreCode(
+      () => restoreCloudBackup({ backupDir, targetRoot }),
+      "restore_target_not_isolated",
+    );
+    expect(existsSync(targetRoot)).toBe(false);
+    expect(readFileSync(markerPath, "utf8")).toBe("untouched");
+    expect(readdirSync(keptDir)).toEqual(["keep.txt"]);
+    expect(stagingNames(keptDir)).toEqual([]);
+    expect(readdirSync(parent)).toEqual(["organizations"]);
+  });
+
+  it("refuses a parent that contains only a root-level product-system database", async () => {
+    const { backupDir } = await backupSimpleCloud();
+    const parent = trackTempDir();
+    writeFileSync(join(parent, "product-system.sqlite"), "");
+    const targetRoot = join(parent, "absent-child");
+    expectRestoreCode(
+      () => restoreCloudBackup({ backupDir, targetRoot }),
+      "restore_target_not_isolated",
+    );
+    expect(existsSync(targetRoot)).toBe(false);
+    expect(readdirSync(parent)).toEqual(["product-system.sqlite"]);
+    expect(stagingNames(parent)).toEqual([]);
+  });
+
+  it("restores beside a control directory that has no control-plane database", async () => {
+    const { backupDir } = await backupSimpleCloud();
+    const parent = trackTempDir();
+    mkdirSync(join(parent, "control"));
+    writeFileSync(join(parent, "control", "note.txt"), "no-database");
+    const targetRoot = join(parent, "restored");
+    const restored = restoreCloudBackup({ backupDir, targetRoot });
+    expect(restored.organizationCount).toBe(1);
+    expect(restored.planeCount).toBe(1);
+    expect(existsSync(join(targetRoot, "control", "control-plane.sqlite"))).toBe(true);
+    expect(readFileSync(join(parent, "control", "note.txt"), "utf8")).toBe("no-database");
+    expect(readdirSync(join(parent, "control"))).toEqual(["note.txt"]);
+    expect(readdirSync(parent).sort()).toEqual(["control", "restored"]);
+  });
+
+  it("restores into a new root that is outside existing WorkOS storage", async () => {
+    const { backupDir } = await backupSimpleCloud();
+    const parent = trackTempDir();
+    const targetRoot = join(parent, "fresh");
+    const restored = restoreCloudBackup({ backupDir, targetRoot });
+    expect(restored.organizationCount).toBe(1);
+    expect(restored.planeCount).toBe(1);
+    expect(existsSync(join(targetRoot, "control", "control-plane.sqlite"))).toBe(true);
+    expect(existsSync(join(targetRoot, "organizations"))).toBe(true);
+    expect(readdirSync(parent)).toEqual(["fresh"]);
+  });
+
+  function fileSha256(filePath: string): string {
+    return createHash("sha256").update(readFileSync(filePath)).digest("hex");
+  }
+
+  function linkSnapshot(linkPath: string): { symbolicLink: boolean; directory: boolean; target: string } {
+    const entry = lstatSync(linkPath);
+    return {
+      symbolicLink: entry.isSymbolicLink(),
+      directory: entry.isDirectory(),
+      target: readlinkSync(linkPath),
+    };
+  }
+
+  function stagingNames(parent: string): string[] {
+    return readdirSync(parent).filter((name) => name.includes(".restore-"));
+  }
+
+  function createDirectoryLink(target: string, linkPath: string): void {
+    symlinkSync(target, linkPath, process.platform === "win32" ? "junction" : "dir");
+  }
+
+  function recordProbe(name: string, probe: unknown): void {
+    const dir = process.env.N026_P2_EVIDENCE;
+    if (!dir) {
+      return;
+    }
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, `${name}.json`), `${JSON.stringify(probe, null, 2)}\n`);
+  }
+
+  function directorySymlinkStatus(): "available" | "EPERM" | "EACCES" {
+    const parent = mkdtempSync(join(tmpdir(), "n026-symlink-probe-"));
+    try {
+      const destination = join(parent, "dest");
+      mkdirSync(destination);
+      symlinkSync(destination, join(parent, "link"), "dir");
+      return "available";
+    } catch (error) {
+      const code = typeof error === "object" && error !== null && "code" in error ? error.code : undefined;
+      if (code === "EPERM" || code === "EACCES") {
+        return code;
+      }
+      throw error;
+    } finally {
+      rmSync(parent, { recursive: true, force: true });
+    }
+  }
+
+  const symlinkStatus = directorySymlinkStatus();
+
+  it("J1: refuses a junction to the Cloud root and leaves both unchanged", async () => {
+    const { cloudRoot, backupDir } = await backupSimpleCloud();
+    const parent = trackTempDir();
+    const linkPath = join(parent, "j1");
+    const markerPath = join(cloudRoot, "control", "control-plane.sqlite");
+    const beforeNames = readdirSync(cloudRoot).sort();
+    const beforeHash = fileSha256(markerPath);
+    createDirectoryLink(cloudRoot, linkPath);
+    const beforeLink = linkSnapshot(linkPath);
+    expect(beforeLink.symbolicLink).toBe(true);
+    expect(resolve(beforeLink.target)).toBe(resolve(cloudRoot));
+    let code = "";
+    expectRestoreCode(() => {
+      try {
+        restoreCloudBackup({ backupDir, targetRoot: linkPath, sourceCloudRoot: cloudRoot });
+      } catch (error) {
+        code = error instanceof CloudRestoreError ? error.code : "";
+        throw error;
+      }
+    }, "restore_target_not_empty");
+    const afterLink = linkSnapshot(linkPath);
+    expect(afterLink).toEqual(beforeLink);
+    expect(fileSha256(markerPath)).toBe(beforeHash);
+    expect(readdirSync(cloudRoot).sort()).toEqual(beforeNames);
+    expect(stagingNames(parent)).toEqual([]);
+    recordProbe("J1", {
+      code,
+      beforeLink,
+      afterLink,
+      markerPath,
+      markerHashBefore: beforeHash,
+      markerHashAfter: fileSha256(markerPath),
+      destinationNamesBefore: beforeNames,
+      destinationNamesAfter: readdirSync(cloudRoot).sort(),
+      staging: stagingNames(parent),
+    });
+  });
+
+  it("J2: refuses a junction to an occupied directory and keeps the marker", async () => {
+    const { cloudRoot, backupDir } = await backupSimpleCloud();
+    const parent = trackTempDir();
+    const destination = join(parent, "occupied-dest");
+    mkdirSync(destination);
+    const markerPath = join(destination, "marker.txt");
+    writeFileSync(markerPath, "occupied-marker");
+    const beforeHash = fileSha256(markerPath);
+    const linkPath = join(parent, "j2");
+    createDirectoryLink(destination, linkPath);
+    const beforeLink = linkSnapshot(linkPath);
+    let code = "";
+    expectRestoreCode(() => {
+      try {
+        restoreCloudBackup({ backupDir, targetRoot: linkPath, sourceCloudRoot: cloudRoot });
+      } catch (error) {
+        code = error instanceof CloudRestoreError ? error.code : "";
+        throw error;
+      }
+    }, "restore_target_not_empty");
+    const afterLink = linkSnapshot(linkPath);
+    expect(afterLink).toEqual(beforeLink);
+    expect(fileSha256(markerPath)).toBe(beforeHash);
+    expect(readFileSync(markerPath, "utf8")).toBe("occupied-marker");
+    expect(readdirSync(destination)).toEqual(["marker.txt"]);
+    expect(stagingNames(parent)).toEqual([]);
+    recordProbe("J2", {
+      code,
+      beforeLink,
+      afterLink,
+      markerHashBefore: beforeHash,
+      markerHashAfter: fileSha256(markerPath),
+      destinationNames: readdirSync(destination),
+      staging: stagingNames(parent),
+    });
+  });
+
+  it("J3: refuses a junction to an empty directory and keeps the junction", async () => {
+    const { cloudRoot, backupDir } = await backupSimpleCloud();
+    const parent = trackTempDir();
+    const destination = join(parent, "empty-dest");
+    mkdirSync(destination);
+    const linkPath = join(parent, "j3");
+    createDirectoryLink(destination, linkPath);
+    const beforeLink = linkSnapshot(linkPath);
+    expect(beforeLink.symbolicLink).toBe(true);
+    expect(beforeLink.directory).toBe(false);
+    let code = "";
+    expectRestoreCode(() => {
+      try {
+        restoreCloudBackup({ backupDir, targetRoot: linkPath, sourceCloudRoot: cloudRoot });
+      } catch (error) {
+        code = error instanceof CloudRestoreError ? error.code : "";
+        throw error;
+      }
+    }, "restore_target_not_empty");
+    const afterLink = linkSnapshot(linkPath);
+    expect(afterLink).toEqual(beforeLink);
+    expect(lstatSync(linkPath).isSymbolicLink()).toBe(true);
+    expect(lstatSync(linkPath).isDirectory()).toBe(false);
+    expect(readdirSync(destination)).toEqual([]);
+    expect(existsSync(join(destination, "control"))).toBe(false);
+    expect(stagingNames(parent)).toEqual([]);
+    recordProbe("J3", {
+      code,
+      beforeLink,
+      afterLink,
+      destinationNames: readdirSync(destination),
+      staging: stagingNames(parent),
+    });
+  });
+
+  it("J4: refuses a broken junction explicitly and keeps the link", async () => {
+    const { cloudRoot, backupDir } = await backupSimpleCloud();
+    const parent = trackTempDir();
+    const missing = join(parent, "missing-dest");
+    const linkPath = join(parent, "j4");
+    createDirectoryLink(missing, linkPath);
+    const beforeLink = linkSnapshot(linkPath);
+    expect(existsSync(linkPath)).toBe(false);
+    expect(beforeLink.symbolicLink).toBe(true);
+    let code = "";
+    expectRestoreCode(() => {
+      try {
+        restoreCloudBackup({ backupDir, targetRoot: linkPath, sourceCloudRoot: cloudRoot });
+      } catch (error) {
+        code = error instanceof CloudRestoreError ? error.code : "";
+        throw error;
+      }
+    }, "restore_target_not_empty");
+    const afterLink = linkSnapshot(linkPath);
+    expect(afterLink).toEqual(beforeLink);
+    expect(existsSync(missing)).toBe(false);
+    expect(stagingNames(parent)).toEqual([]);
+    recordProbe("J4", {
+      code,
+      existsSyncBefore: false,
+      lstatSymbolicLinkBefore: beforeLink.symbolicLink,
+      beforeLink,
+      afterLink,
+      missingDestinationExists: existsSync(missing),
+      staging: stagingNames(parent),
+    });
+  });
+
+  it.skipIf(symlinkStatus !== "available")(
+    "refuses a symbolic link to an empty directory and keeps the link",
+    async () => {
+      const { cloudRoot, backupDir } = await backupSimpleCloud();
+      const parent = trackTempDir();
+      const destination = join(parent, "symlink-dest");
+      mkdirSync(destination);
+      const linkPath = join(parent, "symlink-empty");
+      symlinkSync(destination, linkPath, "dir");
+      const beforeLink = linkSnapshot(linkPath);
+      expect(beforeLink.symbolicLink).toBe(true);
+      let code = "";
+      expectRestoreCode(() => {
+        try {
+          restoreCloudBackup({ backupDir, targetRoot: linkPath, sourceCloudRoot: cloudRoot });
+        } catch (error) {
+          code = error instanceof CloudRestoreError ? error.code : "";
+          throw error;
+        }
+      }, "restore_target_not_empty");
+      const afterLink = linkSnapshot(linkPath);
+      expect(afterLink).toEqual(beforeLink);
+      expect(readdirSync(destination)).toEqual([]);
+      expect(stagingNames(parent)).toEqual([]);
+      recordProbe("SYMLINK", {
+        code,
+        beforeLink,
+        afterLink,
+        destinationNames: readdirSync(destination),
+        staging: stagingNames(parent),
+      });
+    },
+  );
+
+  it("refuses a link substituted for an empty directory before publish", async () => {
+    const { cloudRoot, backupDir } = await backupSimpleCloud();
+    const parent = trackTempDir();
+    const destination = join(parent, "race-dest");
+    mkdirSync(destination);
+    const markerPath = join(destination, "marker.txt");
+    writeFileSync(markerPath, "race-marker");
+    const beforeHash = fileSha256(markerPath);
+    const targetRoot = join(parent, "race-target");
+    mkdirSync(targetRoot);
+    expect(lstatSync(targetRoot).isSymbolicLink()).toBe(false);
+    expect(lstatSync(targetRoot).isDirectory()).toBe(true);
+    let code = "";
+    expectRestoreCode(
+      () => {
+        try {
+          restoreCloudBackup({
+            backupDir,
+            targetRoot,
+            sourceCloudRoot: cloudRoot,
+            beforePublish() {
+              rmdirSync(targetRoot);
+              createDirectoryLink(destination, targetRoot);
+            },
+          });
+        } catch (error) {
+          code = error instanceof CloudRestoreError ? error.code : "";
+          throw error;
+        }
+      },
+      "restore_target_not_empty",
+    );
+    const afterLink = linkSnapshot(targetRoot);
+    expect(afterLink.symbolicLink).toBe(true);
+    expect(resolve(afterLink.target)).toBe(resolve(destination));
+    expect(fileSha256(markerPath)).toBe(beforeHash);
+    expect(readFileSync(markerPath, "utf8")).toBe("race-marker");
+    expect(readdirSync(destination)).toEqual(["marker.txt"]);
+    expect(existsSync(join(destination, "control"))).toBe(false);
+    expect(stagingNames(parent)).toEqual([]);
+    recordProbe("PUBLISH_RACE", {
+      code,
+      afterLink,
+      markerHashBefore: beforeHash,
+      markerHashAfter: fileSha256(markerPath),
+      destinationNames: readdirSync(destination),
+      staging: stagingNames(parent),
+    });
   });
 });
