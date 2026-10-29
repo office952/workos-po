@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { presentCatalogCapabilities } from "../adapters/catalogCapabilitiesAdapter";
 import { presentProductSystem } from "../adapters/productSystemAdapter";
 import { fetchCatalogCapabilities } from "../api/catalogCapabilities";
@@ -41,6 +41,18 @@ export function CatalogPage() {
   const [rename, setRename] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    function syncFromLocation() {
+      const next = readCatalogSelection(window.location.search);
+      setCode(next.productCode);
+      setComponentId(next.componentId);
+      setRename(null);
+      setError(null);
+    }
+    window.addEventListener("popstate", syncFromLocation);
+    return () => window.removeEventListener("popstate", syncFromLocation);
+  }, []);
   const product = manifest?.products.find((item) => item.code === code) ?? null;
   const unknownProduct = Boolean(manifest && code && !product);
   const component = product?.components.find((item) => item.id === componentId) ?? product?.components[0] ?? null;

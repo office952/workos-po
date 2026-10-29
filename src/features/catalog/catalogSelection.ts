@@ -1,3 +1,5 @@
+import { navigate } from "../../routing/navigate";
+
 export type CatalogSelection = {
   productCode: string | null;
   componentId: string | null;
@@ -25,10 +27,6 @@ export function catalogSelectionHref(selection: CatalogSelection): string {
   return query ? `/catalog?${query}` : "/catalog";
 }
 
-export function writeCatalogSelection(selection: CatalogSelection): void {
-  const next = catalogSelectionHref(selection);
-  const current = `${window.location.pathname}${window.location.search}`;
-  if (current !== next) {
-    window.history.replaceState({}, "", next);
-  }
+export function writeCatalogSelection(selection: CatalogSelection, mode: "push" | "replace" = "push"): void {
+  navigate(catalogSelectionHref(selection), mode);
 }

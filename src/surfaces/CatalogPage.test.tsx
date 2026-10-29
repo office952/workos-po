@@ -191,6 +191,29 @@ describe("Catalog workspace", () => {
     expect(await screen.findByRole("button", { name: /Litere test/ })).toBeInTheDocument();
   });
 
+  it("restores product and component selection on Back and Forward", async () => {
+    window.history.replaceState({}, "", "/catalog");
+    vi.stubGlobal("fetch", routeFetch());
+    render(<CatalogPage />);
+    await userEvent.click(await screen.findByRole("button", { name: /Litere test/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Spate", pressed: false }));
+    await userEvent.click(screen.getByRole("button", { name: "Față", pressed: false }));
+    expect(screen.getByRole("button", { name: "Față", pressed: true })).toBeInTheDocument();
+    window.history.back();
+    expect(await screen.findByRole("button", { name: "Spate", pressed: true })).toBeInTheDocument();
+    expect(window.location.search).toContain("component=BACK");
+    window.history.back();
+    expect(await screen.findByRole("button", { name: "Față", pressed: true })).toBeInTheDocument();
+    window.history.forward();
+    expect(await screen.findByRole("button", { name: "Spate", pressed: true })).toBeInTheDocument();
+    window.history.replaceState({}, "", "/catalog?product=PRD-TEST&component=BACK");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    expect(await screen.findByRole("button", { name: "Spate", pressed: true })).toBeInTheDocument();
+    window.history.replaceState({}, "", "/catalog");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    expect(await screen.findByText("Selectează un produs pentru construcție și proprietăți.")).toBeInTheDocument();
+  });
+
   it("keeps product and component selection stable, including an unknown deep link", async () => {
     window.history.replaceState({}, "", "/catalog?product=PRD-TEST&component=BACK");
     vi.stubGlobal("fetch", routeFetch());
