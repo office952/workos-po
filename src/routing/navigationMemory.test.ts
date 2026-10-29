@@ -80,6 +80,65 @@ describe("navigation memory", () => {
 });
 
 describe("navigation memory · client page continuity (N-018)", () => {
+  it("opens the next client section below the sticky band, and does it again the same way", () => {
+    document.body.innerHTML = '<div data-section-top></div><div style="position:sticky;top:57px"></div><h2>Documente</h2>';
+    const anchor = document.querySelector<HTMLElement>("[data-section-top]")!;
+    // Scrolled past the entry: the entry is 217px above the viewport. The stuck band would
+    // report its own top as 57, which must not be the measurement.
+    vi.spyOn(anchor, "getBoundingClientRect").mockReturnValue({ top: -217 } as DOMRect);
+    window.history.replaceState({}, "", "/clienti/c-1?sectiune=lucrari");
+    setScroll(442);
+    navigate("/clienti/c-1?sectiune=documente", "replace");
+    settleArrival();
+    expect(window.scrollTo).toHaveBeenLastCalledWith(0, 168);
+    vi.mocked(window.scrollTo).mockClear();
+    setScroll(442);
+    navigate("/clienti/c-1?sectiune=fotografii", "replace");
+    settleArrival();
+    expect(window.scrollTo).toHaveBeenLastCalledWith(0, 168);
+  });
+
+  it("does not jump when a search, a year or an opened entry changes inside the same section", () => {
+    document.body.innerHTML = '<div data-section-top></div><div style="position:sticky;top:57px"></div>';
+    window.history.replaceState({}, "", "/clienti/c-1?sectiune=istoric");
+    setScroll(480);
+    navigate("/clienti/c-1?sectiune=istoric&q=autoutilitara&an=2021", "replace");
+    settleArrival();
+    navigate("/clienti/c-1?sectiune=istoric&q=autoutilitara&an=2021&deschis=historical:1", "replace");
+    settleArrival();
+    expect(window.scrollTo).not.toHaveBeenCalled();
+  });
+
+  it("keeps a job-sheet section entry when the following bar sticks at the top of the window", () => {
+    document.body.innerHTML = '<div data-section-top></div><div class="job-sheet__sticky" style="position:sticky;top:0"></div>';
+    const anchor = document.querySelector<HTMLElement>("[data-section-top]")!;
+    vi.spyOn(anchor, "getBoundingClientRect").mockReturnValue({ top: -500 } as DOMRect);
+    window.history.replaceState({}, "", "/lucrari/j-1?sectiune=fisiere");
+    setScroll(900);
+    navigate("/lucrari/j-1?sectiune=oameni");
+    settleArrival();
+    expect(window.scrollTo).toHaveBeenLastCalledWith(0, 400);
+  });
+
+  it("still restores the page Back returns to after a client section change", () => {
+    document.body.innerHTML = '<main id="continut-principal"><h1>Clienți</h1></main>';
+    window.history.replaceState({}, "", "/clienti");
+    setScroll(320);
+    const registryKey = currentEntryKey();
+    navigate("/clienti/c-1?sectiune=lucrari");
+    document.body.innerHTML = '<main id="continut-principal"><h1>Alpha</h1><div data-section-top></div><div style="position:sticky;top:57px"></div></main>';
+    const anchor = document.querySelector<HTMLElement>("[data-section-top]")!;
+    vi.spyOn(anchor, "getBoundingClientRect").mockReturnValue({ top: -217 } as DOMRect);
+    settleArrival();
+    setScroll(442);
+    navigate("/clienti/c-1?sectiune=documente", "replace");
+    settleArrival();
+    window.history.replaceState({ workosKey: registryKey }, "", "/clienti");
+    notePopNavigation();
+    settleArrival();
+    expect(window.scrollTo).toHaveBeenLastCalledWith(0, 320);
+  });
+
   it("starts a replaced section at that section, like a pushed one", () => {
     document.body.innerHTML = '<nav data-section-top></nav>';
     const anchor = document.querySelector<HTMLElement>("[data-section-top]")!;

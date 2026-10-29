@@ -243,9 +243,24 @@ function revealArrivalTarget(): void {
   step();
 }
 
+/**
+ * A sticky bar placed immediately after the section entry covers `top` pixels of the viewport
+ * (the client band sticks below the application bar). A bar that sticks at 0, as on the job
+ * sheet, adds nothing. The entry itself must not be the sticky bar: once stuck, its visual top
+ * is the stick line and no longer the place the section starts.
+ */
+function stickyInsetAfter(anchor: HTMLElement): number {
+  const next = anchor.nextElementSibling;
+  if (!(next instanceof HTMLElement)) return 0;
+  const style = getComputedStyle(next);
+  if (style.position !== "sticky" && style.position !== "fixed") return 0;
+  const inset = Number.parseFloat(style.top);
+  return Number.isFinite(inset) && inset > 0 ? inset : 0;
+}
+
 function settleSection(): void {
   const anchor = document.querySelector<HTMLElement>("[data-section-top]");
-  const top = anchor ? anchor.getBoundingClientRect().top + window.scrollY : 0;
+  const top = anchor ? Math.max(0, anchor.getBoundingClientRect().top + window.scrollY - stickyInsetAfter(anchor)) : 0;
   if (window.scrollY > top) window.scrollTo(0, top);
   document.querySelectorAll<HTMLElement>("[data-scroll-memory]").forEach((element) => {
     if (element.dataset.scrollMemory?.startsWith("sectiune")) element.scrollTop = 0;
@@ -254,7 +269,8 @@ function settleSection(): void {
 
 /**
  * Applies the arrival rule after the new location rendered. Pop: restore. Push to another
- * page: top and title focus. Push to another section of the same page: that section's top.
+ * page: top and title focus. Push to another section of the same page: that section's top,
+ * below a sticky bar that follows the entry.
  */
 export function settleArrival(): void {
   const current = arrival;

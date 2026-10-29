@@ -87,6 +87,21 @@ afterEach(() => {
 });
 
 describe("client header on tablet and phone (N-020 design final)", () => {
+  it("puts the section-arrival mark before the sticky band, on tablet and on the phone", async () => {
+    for (const mode of ["tablet", "phone"] as const) {
+      viewport(mode);
+      serve();
+      const view = render(<ClientDetailPage customerId="cus-1" search="" />);
+      await screen.findByRole("heading", { level: 1, name: "Alpha Clima" });
+      const anchor = document.querySelector("[data-section-top]");
+      const band = document.querySelector(".cdh-band");
+      expect(band?.contains(anchor)).toBe(false);
+      expect(anchor?.nextElementSibling).toBe(band);
+      view.unmount();
+      resetResourceCache();
+    }
+  });
+
   it("tablet (588:7090): Alte acțiuni by permission, Escape and a click elsewhere close it, the focus returns", async () => {
     viewport("tablet");
     serve();

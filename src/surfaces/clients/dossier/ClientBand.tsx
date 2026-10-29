@@ -149,7 +149,7 @@ export function ClientBand({
         {customer && mode === "phone" ? <ClientContacts contacts={contacts} variant="card" editHref={contactsEditHref} /> : null}
         {mode === "phone" ? <ClientActions canCreate={canCreate} onCreate={createRequest} actions={actions} layout="row" createTone={createTone} /> : null}
       </header>
-      <div ref={sentinel} className="chub-sentinel" aria-hidden="true" />
+      <div ref={sentinel} className="chub-sentinel" data-section-top aria-hidden="true" />
       <div ref={band} className="cdh-band" data-compact={compact || undefined} data-mode={mode}>
         {compact && mode !== "phone" ? (
           <div className="cdh-band__id">
