@@ -3,7 +3,7 @@ import type { CustomerDossierModel, DossierDocument, HistoryEntry } from "../../
 import type { QuoteListItemTransport, RequestListItemTransport } from "../../../../api/types";
 import type { BandMode } from "../bandModel";
 import { DossierIcon } from "../dossierIcons";
-import { attachedFiles, countLabel, entryPhoto, offerCount } from "../historyModel";
+import { attachedFiles, countLabel, entryPhoto, offerCount, presentedStateLabel } from "../historyModel";
 import { openDocument, type Opened } from "./opened";
 import { NoPhoto, PhotoFrame, StateTag } from "../historyParts";
 import { clientListHref, EMPTY_LIST_CONTEXT } from "../listContext";
@@ -83,7 +83,7 @@ function EntryState({ entry }: { entry: HistoryEntry }) {
     );
   }
   const progress = entry.branches.length === 1 ? entry.branches[0]?.job?.progressLabel?.split(" · ")[0] ?? null : null;
-  return <StateTag state={entry.state ?? entry.states[0] ?? null} label={[entry.stateLabel, progress].filter(Boolean).join(" · ")} />;
+  return <StateTag state={entry.state ?? entry.states[0] ?? null} label={[presentedStateLabel(entry), progress].filter(Boolean).join(" · ")} />;
 }
 
 function Chain({ steps }: { steps: ChainStep[] }) {
@@ -188,7 +188,7 @@ export function CollapsedCard({
  * An expanded entry. A project (813:31187 / 813:31490 / 813:31793 / 813:31918, ProjectTree): the
  * request once, each offer once with its work, the request's photos and documents apart from each
  * work's. A historical work (579:6351 / 588:8220): its photos in the order of the work, the files with
- * Previzualizează and Descarcă, the description, "Deschide fișa lucrării" and the site's history.
+ * Previzualizează and Descarcă, the description, the historical record in Lucrări and the site's history.
  */
 export function ExpandedCard({
   customerId,
@@ -272,7 +272,7 @@ export function ExpandedCard({
         <p className="hcard__actions">
           {workHref ? (
             <a className="hcard__button" href={workHref} onClick={(event) => follow(event, workHref)}>
-              Deschide fișa lucrării
+              Vezi înregistrarea istorică
               <DossierIcon name="right" size={13} />
             </a>
           ) : null}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DossierDocument, HistoryEntry } from "../../../adapters/customerDossierAdapter";
-import { branchDocuments, groupByYear, isIllustrative, orderedPhotos, relationSummary, representativePhoto, requestDocuments } from "./historyModel";
+import { branchDocuments, groupByYear, isIllustrative, orderedPhotos, presentedStateLabel, relationSummary, representativePhoto, requestDocuments } from "./historyModel";
 
 const doc = (documentId: string, over: Partial<DossierDocument>): DossierDocument => ({
   documentId,
@@ -85,6 +85,29 @@ describe("history presentation model", () => {
     expect(requestDocuments(project).map((item) => item.documentId)).toEqual(["survey"]);
     expect(relationSummary(project)).toBe("Cerere → 2 oferte → 1 lucrare");
     expect(relationSummary(entry({ branches: [project.branches[0]!] }))).toBe("Cerere → 1 ofertă → fără lucrare încă");
+  });
+
+  it("says De ofertat only while a request still has no quote", () => {
+    const quoteBranch = {
+      branchId: "q1",
+      state: "OFERTARE",
+      stateLabel: "Ofertare",
+      quote: { quoteSnapshotId: "q1", kind: "PRODUCT" as const, productCode: "P", reference: "OF-1", stageLabel: "Creată", superseded: false },
+      orderSnapshotId: null,
+      job: null,
+      site: null,
+    };
+    const secondQuote = { ...quoteBranch, branchId: "q2", quote: { ...quoteBranch.quote, quoteSnapshotId: "q2", reference: "OF-2" } };
+    const accepted = { ...quoteBranch, state: "OFERTA_ACCEPTATA", stateLabel: "Ofertă acceptată, fără comandă", quote: { ...quoteBranch.quote, stageLabel: "Acceptată" } };
+    const waiting = entry({ state: "OFERTARE", stateLabel: "Ofertare", states: ["OFERTARE"], request: { requestId: "r", reference: "CER", title: "Fără ofertă", statusLabel: "Deschisă" } });
+    const undecided = entry({ ...waiting, title: "Produs neales" });
+    expect(presentedStateLabel(waiting)).toBe("De ofertat");
+    expect(presentedStateLabel(undecided)).toBe("De ofertat");
+    expect(presentedStateLabel(entry({ state: "OFERTARE", stateLabel: "Ofertare", branches: [quoteBranch] }))).toBe("Ofertare");
+    expect(presentedStateLabel(entry({ state: "OFERTARE", stateLabel: "Ofertare", branches: [quoteBranch, secondQuote] }))).toBe("Ofertare");
+    expect(presentedStateLabel(entry({ state: "OFERTA_ACCEPTATA", stateLabel: "Ofertă acceptată, fără comandă", branches: [accepted] }))).toBe("Ofertă acceptată, fără comandă");
+    expect(presentedStateLabel(entry({ state: null, stateLabel: "Ramuri în stări diferite", branches: [quoteBranch, { ...quoteBranch, branchId: "j", state: "FINALIZAT", stateLabel: "Finalizată" }] }))).toBe("Ramuri în stări diferite");
+    expect(presentedStateLabel(entry({ kind: "HISTORICAL_WORK", state: "FINALIZAT", stateLabel: "Finalizată" }))).toBe("Finalizată");
   });
 
   it("groups by year without reordering the server order", () => {
