@@ -149,7 +149,7 @@ function SectionTabs({ customerId, section, attention, mode, compact }: { custom
   const visible = compact && fit ? fit.visible : mode === "tablet" ? tabletVisible(section) : ALL_SECTIONS;
   const rest = ALL_SECTIONS.filter((item) => !visible.includes(item));
   return (
-    <nav ref={navRef} className="cdh-tabs" aria-label="Secțiuni client" data-section-top>
+    <nav ref={navRef} className="cdh-tabs" aria-label="Secțiuni client">
       {compact ? (
         // The widths the folded line is fitted with: every tab as drawn, never focusable or read.
         <ul ref={probeRef} className="cdh-tabs__measure" aria-hidden="true">
@@ -247,7 +247,7 @@ function PhoneSections({
   const [open, setOpen] = useState(false);
   const label = CLIENT_HUB_SECTION_LABEL[section];
   return (
-    <nav className="cdh-phonenav" aria-label="Secțiuni client" data-compact={compact || undefined} data-section-top>
+    <nav className="cdh-phonenav" aria-label="Secțiuni client" data-compact={compact || undefined}>
       {compact ? (
         <a className="cdh-phonenav__back" href={back.href} onClick={back.onClick} aria-label="Toți clienții">
           <span aria-hidden="true">←</span>
