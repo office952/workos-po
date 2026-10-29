@@ -39,6 +39,10 @@ import {
 import { processProviderCoverage } from "../workcenters/projection.js";
 import { coverageForCapability, providersForCapability } from "../workcenters/providers.js";
 import { processWhereUsed, type ProcessUse } from "./whereUsed.js";
+import {
+  OPERATIONAL_PROCESS_GRAPH_WRITE_STATE,
+  type OperationalProcessGraphWriteState,
+} from "./writeState.js";
 
 export type ProcessAdminRecord = {
   id: string;
@@ -85,7 +89,7 @@ export type OperationalProcessesAdminProjection = {
   processes: readonly ProcessAdminRecord[];
   capabilities: readonly CapabilityAdminRecord[];
   compositions: readonly ProcessCompositionInspection[];
-  writeState: "NOT_IMPLEMENTED";
+  writeState: OperationalProcessGraphWriteState;
 };
 
 export function projectOperationalProcessesAdministration(
@@ -124,7 +128,7 @@ export function projectOperationalProcessesAdministration(
       };
     }),
     compositions: lettersCompositions(),
-    writeState: "NOT_IMPLEMENTED",
+    writeState: OPERATIONAL_PROCESS_GRAPH_WRITE_STATE,
   };
 }
 

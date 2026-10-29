@@ -17,6 +17,13 @@ export const FACE_BACK_RETURN_FIELD = "face.backReturnMm";
 export const FACE_THICKNESS_FIELD = "face.thicknessMm";
 export const FACE_MISSING_CASSETTE_GEOMETRY = "Dimensiunile casetei nu sunt confirmate";
 
+/** Developed blank area is an ACM body calculation. It is not a nesting result. */
+export const ACM_DEVELOPED_SHEET_AREA = {
+  id: "cassette_blank_area",
+  label: "Foaie dezvoltată (implicit, nu nesting)",
+  nesting: false,
+} as const;
+
 function cassetteResult(
   status: ComponentCalculationResult["status"],
   quantities: ComponentCalculationResult["quantities"],
@@ -177,8 +184,8 @@ export const acmCassetteBodyContract: ComponentCalculationContract = {
       },
       {
         componentId: "FACE",
-        id: "cassette_blank_area",
-        label: "Foaie dezvoltată (implicit, nu nesting)",
+        id: ACM_DEVELOPED_SHEET_AREA.id,
+        label: ACM_DEVELOPED_SHEET_AREA.label,
         value: squareMetersFromMm2(blankAreaMm2),
         unit: "m2",
         basis: "calculated_from_settings",

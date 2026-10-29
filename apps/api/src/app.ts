@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { registerCatalogCapabilityRoutes } from "./catalog/capabilityRoutes.js";
 import { registerCloudRoutes } from "./cloud/routes.js";
 import type { ApiEnv } from "./cloud/context.js";
 import type { ControlPlane } from "./cloud/controlPlane.js";
@@ -179,6 +180,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<ApiEnv> {
   registerInventoryRoutes(app);
   registerSystemProjectionRoutes(app);
   registerProductSystemAdminRoutes(app);
+  registerCatalogCapabilityRoutes(app);
 
   if (options.staticRoot) {
     registerStaticSite(app, options.staticRoot);
