@@ -277,6 +277,55 @@ describe("Catalog workspace", () => {
     expect(screen.queryByText("Panou ACM casetat")).not.toBeInTheDocument();
   });
 
+  it("saves a published variant through the catalog preset endpoint", async () => {
+    const body = capabilities();
+    const withPreset = {
+      ...body,
+      products: [{
+        ...body.products[0],
+        presetContract: {
+          schemaVersion: "organization-preset.v1",
+          persistence: "ORGANIZATION_VERSIONED",
+          canonicalWriter: { method: "POST", path: "/api/catalog/presets", permission: "owner" },
+          templateCode: "PRD-TEST",
+          templateVersion: "1",
+          eligibleFields: [{
+            fieldId: "volume.depthMm",
+            label: "Adâncime volum (mm)",
+            componentId: "VOLUME",
+            options: [
+              { value: "80", label: "80 mm", support: "SELECTABLE", rejectionCode: null, rejectionMessage: null },
+              { value: "GROOVED", label: "Cu canal", support: "NOT_PREPARED", rejectionCode: "groove_recipe_missing", rejectionMessage: "Spatele cu canal nu are încă o rețetă de prelucrare." },
+            ],
+          }],
+          whereUsed: { available: false, reason: "no_request_reference_index" },
+        },
+      }],
+    };
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/api/catalog/presets")) {
+        return json({ canEdit: true, templateCode: "PRD-TEST", presets: [] });
+      }
+      return routeFetch(withPreset)(input, init);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<CatalogPage />);
+    await userEvent.click(await screen.findByRole("button", { name: /Litere test/ }));
+    expect(screen.getByText("Cu canal: Spatele cu canal nu are încă o rețetă de prelucrare.")).toBeInTheDocument();
+    await userEvent.type(await screen.findByLabelText("Numele variantei"), "Cant 80 vopsit");
+    await userEvent.selectOptions(screen.getByLabelText("Adâncime volum (mm)"), "80");
+    await userEvent.click(screen.getByRole("button", { name: "Publică" }));
+    const saved = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+    expect(saved?.[0]).toBe("/api/catalog/presets");
+    expect(JSON.parse(String(saved?.[1]?.body))).toMatchObject({
+      templateCode: "PRD-TEST",
+      lifecycle: "PUBLISHED",
+      name: "Cant 80 vopsit",
+      selections: [{ fieldId: "volume.depthMm", value: "80" }],
+    });
+  });
+
   it("keeps the workspace stylesheet modular and responsive", () => {
     const css = readFileSync("src/styles/surfaces/catalog-workspace.css", "utf8");
     const ui = readFileSync("src/styles/ui.css", "utf8");

@@ -147,6 +147,14 @@ describe("catalog capabilities v1", () => {
 
     const letters = product(manifest, CANONICAL_PRODUCT_CODE);
     expect(letters.templateVersion).toBe(lettersTemplate?.version);
+    expect(letters.presetContract.persistence).toBe("ORGANIZATION_VERSIONED");
+    expect(letters.presetContract.canonicalWriter).toEqual({
+      method: "POST",
+      path: "/api/catalog/presets",
+      permission: "owner",
+    });
+    expect(letters.presetContract.eligibleFields.map((field) => field.fieldId)).toContain("volume.depthMm");
+    expect(letters.presetContract.eligibleFields.map((field) => field.fieldId)).not.toContain("root.inscription");
     expect(letters.components.map((item) => item.typeId)).toEqual([
       "PLEXIGLAS_FACE",
       "ALUMINIUM_VOLUME",

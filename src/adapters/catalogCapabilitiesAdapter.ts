@@ -41,6 +41,18 @@ export type CatalogComponentView = {
   properties: CatalogPropertyView[];
 };
 
+export type CatalogPresetFieldView = {
+  fieldId: string;
+  label: string;
+  options: { value: string; label: string }[];
+  blocked: { value: string; label: string; message: string }[];
+};
+
+export type CatalogPresetContractView = {
+  templateVersion: string;
+  fields: CatalogPresetFieldView[];
+};
+
 export type CatalogWorkspaceProduct = {
   code: string;
   label: string;
@@ -50,6 +62,7 @@ export type CatalogWorkspaceProduct = {
   components: CatalogComponentView[];
   workFacts: CatalogPropertyView[];
   productFacts: CatalogPropertyView[];
+  preset: CatalogPresetContractView | null;
 };
 
 export type CatalogCapabilitiesPermissions = {
@@ -108,6 +121,7 @@ type ParsedProduct = {
   components: ParsedComponent[];
   withoutRequestSection: string[];
   elements: ParsedElement[];
+  preset: CatalogPresetContractView | null;
 };
 
 function objectList(value: unknown): Record<string, unknown>[] | null {
@@ -373,6 +387,46 @@ function parseEnablement(row: Record<string, unknown> | null): { label: string; 
   return { label: enablementLabel(enabled), tone: enablementTone(enabled) };
 }
 
+function parsePreset(value: unknown): CatalogPresetContractView | null {
+  const row = asRecord(value);
+  const writer = asRecord(row?.canonicalWriter);
+  if (
+    !row ||
+    row.schemaVersion !== "organization-preset.v1" ||
+    row.persistence !== "ORGANIZATION_VERSIONED" ||
+    writer?.method !== "POST" ||
+    writer.path !== "/api/catalog/presets" ||
+    writer.permission !== "owner"
+  ) {
+    return null;
+  }
+  const templateVersion = asString(row.templateVersion);
+  const fields = objectList(row.eligibleFields);
+  if (!templateVersion || !fields) return null;
+  const parsed: CatalogPresetFieldView[] = [];
+  for (const field of fields) {
+    const fieldId = asString(field.fieldId);
+    const label = asString(field.label);
+    const options = objectList(field.options);
+    if (!fieldId || !label || !options) return null;
+    const selectable: { value: string; label: string }[] = [];
+    const blocked: { value: string; label: string; message: string }[] = [];
+    for (const option of options) {
+      const valueText = asString(option.value);
+      const optionLabel = asString(option.label);
+      if (!valueText || !optionLabel) return null;
+      if (option.support === "SELECTABLE") selectable.push({ value: valueText, label: optionLabel });
+      else if (option.support === "NOT_PREPARED") {
+        const message = asString(option.rejectionMessage);
+        if (!message) return null;
+        blocked.push({ value: valueText, label: optionLabel, message });
+      } else return null;
+    }
+    parsed.push({ fieldId, label, options: selectable, blocked });
+  }
+  return { templateVersion, fields: parsed };
+}
+
 function parseProduct(row: Record<string, unknown>): ParsedProduct | null {
   const code = asString(row.templateCode);
   const label = asString(row.label);
@@ -400,6 +454,7 @@ function parseProduct(row: Record<string, unknown>): ParsedProduct | null {
     components: components.filter((item): item is ParsedComponent => item !== null),
     withoutRequestSection: withoutRequest,
     elements: elements.filter((item): item is ParsedElement => item !== null),
+    preset: parsePreset(row.presetContract),
   };
 }
 
@@ -499,6 +554,7 @@ function presentProduct(product: ParsedProduct, products: readonly ParsedProduct
     enablementTone: product.enablementTone,
     workFacts: views.filter((item) => item.element.componentId === "ROOT").map((item) => item.view),
     productFacts: views.filter((item) => item.element.componentId === null).map((item) => item.view),
+    preset: product.preset,
     components: product.components.map((component) => ({
       id: component.id,
       label: component.label,
@@ -546,5 +602,6 @@ function emptyProduct(): ParsedProduct {
     components: [],
     withoutRequestSection: [],
     elements: [],
+    preset: null,
   };
 }

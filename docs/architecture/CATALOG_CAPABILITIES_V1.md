@@ -48,4 +48,4 @@ Cloud mode uses the existing session middleware. Owner and member may read. Edit
 
 ## Out of this contract
 
-Catalog UI, presets, process-graph rendering, new persistence, and commercial or EIC changes are outside R003-A.
+Catalog UI reads `presetContract` on each product. R003-C stores organization revisions through `POST /api/catalog/presets`. See `ORGANIZATION_PRESET_V1.md`.
