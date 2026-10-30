@@ -7,6 +7,10 @@ import {
 } from "../product/componentEvaluation.js";
 import { selectedComponentIds } from "../product/compiler.js";
 import { getComponentType } from "../product/componentTypes.js";
+import {
+  ACM_CASSETTE_NONE_PRODUCT_CODE,
+  ACM_CASSETTE_NONE_PROOF_VALUES,
+} from "../product/acmCassetteNone.js";
 import { CANONICAL_PRODUCT_CODE } from "../product/frontlitPlexiAl06.js";
 import { LOGO_PRODUCT_CODE } from "../product/logoFrontlitPlexiAl06.js";
 import { starterFormulaVersionsForType } from "../product/resolveFormulas.js";
@@ -403,6 +407,7 @@ function costAggregateFromEvaluations(
 
 export function logoProcessCompositionInspections(
   template: ProductTemplate,
+  options: ProcessCompositionOptions = {},
 ): ProcessCompositionInspection[] {
   if (template.code !== LOGO_PRODUCT_CODE) {
     return [];
@@ -426,13 +431,38 @@ export function logoProcessCompositionInspections(
       },
       {
         formulaVersionsForType: starterFormulaVersionsForType,
+        ...options,
       },
     ),
   }));
 }
 
+export function acmProcessCompositionInspections(
+  template: ProductTemplate,
+  options: ProcessCompositionOptions = {},
+): ProcessCompositionInspection[] {
+  if (template.code !== ACM_CASSETTE_NONE_PRODUCT_CODE) {
+    return [];
+  }
+  return [
+    {
+      id: "acm-cassette-proof",
+      label: "Panou de referință",
+      summary: "Corp ACM și cadru intern, fără iluminare. Dimensiunile sunt exemplul de referință deja definit, nu o lucrare.",
+      values: ACM_CASSETTE_NONE_PROOF_VALUES,
+    },
+  ].map((branch) => ({
+    ...branch,
+    composition: composeProductProcesses(template, branch.values, {
+      formulaVersionsForType: starterFormulaVersionsForType,
+      ...options,
+    }),
+  }));
+}
+
 export function lettersProcessCompositionInspections(
   template: ProductTemplate,
+  options: ProcessCompositionOptions = {},
 ): ProcessCompositionInspection[] {
   if (template.code !== CANONICAL_PRODUCT_CODE) {
     return [];
@@ -465,6 +495,7 @@ export function lettersProcessCompositionInspections(
       "volume.confirmedPerimeterMm": 12500,
     }, {
       formulaVersionsForType: starterFormulaVersionsForType,
+      ...options,
     }),
   }));
 }

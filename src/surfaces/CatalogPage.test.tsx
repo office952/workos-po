@@ -120,9 +120,102 @@ function routeFetch(body = capabilities(), system = definitions) {
     const url = String(input);
     if (init?.method === "PATCH") return json({});
     if (url.includes("/api/catalog/capabilities")) return json(body);
+    if (url.includes("/api/catalog/process-graph")) return json(emptyGraph());
     if (url.includes("/api/product-system-admin")) return json(system);
     return json({}, 404);
   });
+}
+
+function emptyGraph() {
+  return {
+    schemaVersion: "catalog-process-graph.v1",
+    readOnly: true,
+    mutatesConfiguration: false,
+    writeState: "NOT_IMPLEMENTED",
+    status: "NO_REFERENCE_SCENARIO",
+    productCode: "PRD-TEST",
+    productLabel: "Litere test",
+    templateVersion: "1",
+    canViewFinancialAmounts: false,
+    scenario: null,
+    scenarios: [],
+    graph: null,
+  };
+}
+
+function graphPayload() {
+  const node = (id: string, label: string, dependsOn: string[], successors: string[], recipe: unknown) => ({
+    id,
+    processId: id,
+    processLabel: label,
+    scope: "FACE",
+    scopeLabel: "Față",
+    typeId: id === "cut" ? "PLEXIGLAS_FACE" : null,
+    typeLabel: id === "cut" ? "Plexiglas" : null,
+    conditionLabel: null,
+    reason: `${label} din scenariu.`,
+    dependsOn,
+    successors,
+    nodeReadiness: "REQUIRED",
+    nodeReadinessLabel: "Necesar",
+    blockers: id === "cut" ? ["Geometria lipsește."] : [],
+    recipe,
+  });
+  return {
+    schemaVersion: "catalog-process-graph.v1",
+    readOnly: true,
+    mutatesConfiguration: false,
+    writeState: "NOT_IMPLEMENTED",
+    status: "READY",
+    productCode: "PRD-TEST",
+    productLabel: "Litere test",
+    templateVersion: "1",
+    canViewFinancialAmounts: true,
+    scenario: {
+      id: "letters-finish-none",
+      label: "Fără finisaj",
+      summary: "Față fără finisaj aplicat.",
+      illustrative: true,
+      note: "Scenariu ilustrativ. Nu este un deviz.",
+    },
+    scenarios: [
+      { id: "letters-finish-none", label: "Fără finisaj", summary: "Față fără finisaj aplicat." },
+      { id: "letters-finish-vinyl", label: "Colantat", summary: "Cu folie." },
+    ],
+    graph: {
+      directEdgeIds: ["cut>pack"],
+      simplifiedEdgeIds: ["cut>pack"],
+      hiddenEdgeIds: [],
+      hiddenEdgeCount: 0,
+      topologicalOrder: ["cut", "pack"],
+      technologicalProcessCompletenessLabel: "Parțială",
+      executionReadinessLabel: "Pregătită pentru execuție",
+      costCompletenessLabel: "Incompletă",
+      lightingCalculationReadinessLabel: "Nu se aplică",
+      completenessLabel: "Parțială",
+      completenessReasons: ["Lipsește o dovadă."],
+      nodes: [
+        node("cut", "Debitare", [], ["pack"], {
+          recipeId: "RCP",
+          recipeLabel: "Debitare față",
+          recipeKindLabel: "Rețetă serviciu",
+          recipeLifecycleLabel: "Activă",
+          quantityBasisLabel: "Perimetru",
+          resourceId: "SVC",
+          resourceLabel: "Serviciu CNC",
+          unitLabel: "m",
+          evidenceState: "MISSING",
+          evidenceSourceLabel: null,
+          evidenceClassificationLabel: null,
+          sharedWithNodeIds: [],
+          rate: null,
+          currency: null,
+        }),
+        node("pack", "Ambalare", ["cut"], [], null),
+      ],
+      edges: [{ id: "cut>pack", fromNodeId: "cut", toNodeId: "pack" }],
+    },
+  };
 }
 
 afterEach(() => { vi.unstubAllGlobals(); resetResourceCache(); sessionStorage.clear(); window.history.replaceState({}, "", "/"); });
@@ -324,6 +417,32 @@ describe("Catalog workspace", () => {
       name: "Cant 80 vopsit",
       selections: [{ fieldId: "volume.depthMm", value: "80" }],
     });
+  });
+
+  it("shows the read-only route, keeps the selection, and does not start work", async () => {
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/api/catalog/process-graph")) return json(graphPayload());
+      return routeFetch()(input, init);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<CatalogPage />);
+    await userEvent.click(await screen.findByRole("button", { name: /Litere test/ }));
+    expect(await screen.findByRole("heading", { name: "Traseu tehnologic" })).toBeInTheDocument();
+    expect(screen.getByText("Scenariu ilustrativ. Nu este un deviz.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Salvează traseu" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pornește" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Debitare" }));
+    expect(screen.getByRole("heading", { name: "Debitare" })).toBeInTheDocument();
+    expect(screen.getByText("Tarif lipsă. Absența nu este zero.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Dovezile de cost" })).toHaveAttribute("href", "/admin/resources");
+    expect(screen.getByRole("link", { name: "Setările componentei" })).toHaveAttribute("href", "/admin/technical?component=PLEXIGLAS_FACE");
+    await userEvent.click(screen.getByRole("button", { name: "Toate relațiile" }));
+    expect(screen.getByRole("heading", { name: "Debitare" })).toBeInTheDocument();
+    expect(screen.queryByText("PLEXIGLAS_FACE")).not.toBeInTheDocument();
+    expect(screen.queryByText("cut")).not.toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("Scenariu ilustrativ"), "letters-finish-vinyl");
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("scenario=letters-finish-vinyl"))).toBe(true);
   });
 
   it("keeps the workspace stylesheet modular and responsive", () => {

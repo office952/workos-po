@@ -31,6 +31,8 @@ It does not persist a second product model and it does not calculate price, cost
 | `REQUEST_FACT` | Fields present on the template form schema |
 | `UNSUPPORTED_OR_FUTURE` | Evidenced gaps: grooved-back channel recipe when absent, organization presets, process-graph editing |
 
+Process-graph editing stays unimplemented. The read-only route is `docs/architecture/CATALOG_PROCESS_GRAPH_V1.md`.
+
 `SCHEMA_SELECTABLE` means the schema offers the option. It is not a production, cost, or recipe verdict. `GROOVED` stays `NOT_PREPARED` while `forexBackChannelRecipe()` is absent. `PLATFORM_STARTER` versions are not marked organization-confirmed. Inactive enablement returns `enabledForNewWork: null` instead of the platform default.
 
 Logo remains in the platform library. The code-default enablement list does not turn it on.

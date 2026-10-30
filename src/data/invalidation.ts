@@ -136,6 +136,7 @@ export function invalidateAfterCloudBoundaryChange(): void {
 
 export function invalidateAfterCostEvidenceChange(): void {
   invalidateResources(resourceKeys.resourcesAdmin(), resourceKeys.assemblyOperationCostAdmin());
+  invalidateResourcePrefix("catalog-process-graph:");
 }
 
 export function invalidateAfterCommercialPolicyChange(): void {

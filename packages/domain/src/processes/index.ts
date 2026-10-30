@@ -68,7 +68,9 @@ export {
   compositionNodeId,
   deriveExecutionReadiness,
   executionReadinessLabel,
+  acmProcessCompositionInspections,
   lettersProcessCompositionInspections,
+  logoProcessCompositionInspections,
   topologicalOrder,
   type CompositionCompleteness,
   type CompositionNodeReadiness,
@@ -80,6 +82,14 @@ export {
   type ProcessCompositionOptions,
   type ProductProcessComposition,
 } from "./composition.js";
+export {
+  CATALOG_PROCESS_GRAPH_SCHEMA_VERSION,
+  catalogProcessGraphScenarios,
+  projectCatalogProcessGraph,
+  type CatalogProcessGraph,
+  type CatalogProcessGraphNode,
+  type CatalogProcessGraphScenario,
+} from "./graphProjection.js";
 export {
   projectOperationalProcessesAdministration,
   type CapabilityAdminRecord,
@@ -96,3 +106,7 @@ export {
   type ProcessRequirementCondition,
 } from "./requirements.js";
 export { processWhereUsed, type ProcessUse } from "./whereUsed.js";
+export {
+  OPERATIONAL_PROCESS_GRAPH_WRITE_STATE,
+  type OperationalProcessGraphWriteState,
+} from "./writeState.js";

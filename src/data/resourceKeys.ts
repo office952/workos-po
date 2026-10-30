@@ -18,6 +18,8 @@ export const resourceKeys = {
   catalog: () => "catalog",
   catalogCapabilities: () => "catalog-capabilities",
   catalogPresets: (templateCode: string) => `catalog-presets:${templateCode}`,
+  catalogProcessGraph: (productCode: string, scenarioId: string | null) =>
+    `catalog-process-graph:${productCode}:${scenarioId ?? "default"}`,
   quotes: () => "quotes",
   quote: (productCode: string, quoteSnapshotId: string) =>
     `quote:${productCode}:${quoteSnapshotId}`,

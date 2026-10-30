@@ -1,0 +1,91 @@
+.process-graph {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  overflow-wrap: anywhere;
+}
+.process-graph h2,
+.process-graph h3,
+.process-graph h4 { margin: 0; }
+.process-graph h2 { font-size: 1.15rem; }
+.process-graph__header,
+.process-graph__scenario,
+.process-graph__inspector,
+.process-graph__board { display: grid; gap: 8px; }
+.process-graph__scenario select,
+.process-graph__modes button,
+.process-graph__text-node,
+.process-graph__node {
+  color: inherit;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+.process-graph__scenario select,
+.process-graph__modes button,
+.process-graph__text-node { min-height: 44px; }
+.process-graph__modes { display: flex; flex-wrap: wrap; gap: 8px; }
+.process-graph__modes button { padding: 8px 12px; cursor: pointer; }
+.process-graph__modes button[aria-pressed="true"] {
+  background: var(--color-surface-alt);
+  box-shadow: inset 3px 0 0 var(--color-focus-ring);
+}
+.process-graph__stage-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(16rem, 22rem);
+  gap: 16px;
+  align-items: start;
+}
+.process-graph__stage {
+  min-width: 0;
+  overflow: auto;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-canvas);
+  min-height: 12rem;
+}
+.process-graph__canvas { position: relative; transform-origin: top left; }
+.process-graph__edges { position: absolute; inset: 0; }
+.process-graph__edges line { stroke: var(--color-border-strong); stroke-width: 1.5; }
+.process-graph__slot { position: absolute; width: 168px; }
+.process-graph__node {
+  width: 100%;
+  min-height: 72px;
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  text-align: left;
+  cursor: pointer;
+}
+.process-graph__node[aria-pressed="true"] {
+  background: var(--color-selection-fill);
+  box-shadow: inset 3px 0 0 var(--color-focus-ring);
+}
+.process-graph__node-scope,
+.process-graph__node-state { color: var(--color-text-secondary); font-size: 12px; }
+.process-graph__inspector {
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+}
+.process-graph__inspector ul { margin: 0; padding-left: 1.1rem; }
+.process-graph__links,
+.process-graph__text-list { display: grid; gap: 8px; }
+.process-graph__text-list { list-style: none; margin: 0; padding: 0; }
+.process-graph__text-node { width: 100%; text-align: left; padding: 8px 12px; cursor: pointer; }
+.process-graph__text-node[aria-pressed="true"] { background: var(--color-surface-alt); }
+.process-graph__stage:focus-visible,
+.process-graph :is(a, button, select):focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+.process-graph__stage-row { order: 2; }
+.process-graph__text-list { order: 3; }
+@media (max-width: 1279px) {
+  .process-graph__stage-row { order: 3; grid-template-columns: minmax(0, 1fr); }
+  .process-graph__text-list { order: 2; }
+}
+@media (max-width: 767px) {
+  .process-graph { padding: 12px; }
+}
