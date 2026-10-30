@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import type { ProcessGraphView } from "../../../adapters/catalogProcessGraphAdapter";
 import { DependencyTextList } from "./DependencyTextList";
 import { GraphInspector } from "./GraphInspector";
@@ -25,6 +25,7 @@ export function ProductProcessGraph({ view }: ProductProcessGraphProps) {
   const selected = view.nodes.find((node) => node.id === selection.selectedNodeId) ?? null;
   const width = Math.max(...placed.map((item) => item.x), 0) + COLUMN;
   const height = Math.max(...placed.map((item) => item.y), 0) + ROW;
+  const markerId = useId().replace(/:/g, "");
 
   return (
     <div className="process-graph__board">
@@ -35,10 +36,11 @@ export function ProductProcessGraph({ view }: ProductProcessGraphProps) {
         <button type="button" onClick={selection.zoomIn}>Mărește</button>
       </div>
       {selection.viewMode === "SIMPLIFIED" ? (
-        <p className="ui-note">Relații ascunse pentru că sunt deja implicate: {view.hiddenEdgeCount}.</p>
+        <p className="ui-note">Relații ascunse pentru că sunt deja implicate: {view.hiddenEdgeCount}. Săgeata intră în operația care urmează.</p>
       ) : (
-        <p className="ui-note">Toate relațiile directe ale motorului.</p>
+        <p className="ui-note">Toate relațiile directe ale motorului. Săgeata intră în operația care urmează.</p>
       )}
+      <p className="ui-note">Operațiile din prima coloană nu au o operație anterioară și pot începe independent.</p>
       <div className="process-graph__stage-row">
         <div
           className="process-graph__stage"
@@ -56,6 +58,11 @@ export function ProductProcessGraph({ view }: ProductProcessGraphProps) {
         >
           <div className="process-graph__canvas" style={{ width, height, transform: `scale(${selection.zoom})` }}>
             <svg className="process-graph__edges" width={width} height={height} aria-hidden="true">
+              <defs>
+                <marker id={markerId} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                  <path d="M0 0 L8 4 L0 8 Z" />
+                </marker>
+              </defs>
               {view.edges.filter((edge) => activeEdgeIds.includes(edge.id)).map((edge) => {
                 const from = placed.find((item) => item.id === edge.fromNodeId);
                 const to = placed.find((item) => item.id === edge.toNodeId);
@@ -63,10 +70,11 @@ export function ProductProcessGraph({ view }: ProductProcessGraphProps) {
                 return (
                   <line
                     key={edge.id}
-                    x1={from.x + 80}
+                    markerEnd={`url(#${markerId})`}
+                    x1={from.x + 168}
                     y1={from.y + 36}
-                    x2={to.x + 80}
-                    y2={to.y + 12}
+                    x2={to.x - 4}
+                    y2={to.y + 36}
                   />
                 );
               })}

@@ -431,7 +431,7 @@ describe("Catalog workspace", () => {
     await userEvent.click(await screen.findByRole("button", { name: /Litere test/ }));
     expect(await screen.findByRole("heading", { name: "Traseu tehnologic" })).toBeInTheDocument();
     expect(screen.getByText("Scenariu ilustrativ. Nu este un deviz.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Salvează traseu" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Săgeata intră în operația care urmează/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Pornește" })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Debitare" }));
     expect(screen.getByRole("heading", { name: "Debitare" })).toBeInTheDocument();

@@ -46,8 +46,11 @@
   min-height: 12rem;
 }
 .process-graph__canvas { position: relative; transform-origin: top left; }
-.process-graph__edges { position: absolute; inset: 0; }
-.process-graph__edges line { stroke: var(--color-border-strong); stroke-width: 1.5; }
+.process-graph__edges { position: absolute; inset: 0; color: var(--color-focus-ring); overflow: visible; }
+.process-graph__edges line { stroke: currentColor; stroke-width: 1.5; }
+.process-graph__edges path { fill: currentColor; }
+.process-graph__node-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.process-graph__mark { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; }
 .process-graph__slot { position: absolute; width: 168px; }
 .process-graph__node {
   width: 100%;
