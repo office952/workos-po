@@ -8,13 +8,14 @@ import { Button } from "../components/Button";
 import { InlineAlert } from "../components/InlineAlert";
 import { LoadingFloor } from "../components/LoadingFloor";
 import { TextField } from "../components/TextField";
-import { invalidateResources } from "../data/resourceCache";
+import { invalidateResourcePrefix, invalidateResources } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { useResource } from "../data/useResource";
 import { CatalogConstruction } from "../features/catalog/CatalogConstruction";
 import { CatalogLibrary } from "../features/catalog/CatalogLibrary";
 import { CatalogProperties } from "../features/catalog/CatalogProperties";
 import { CatalogVariants } from "../features/catalog/CatalogVariants";
+import { CatalogProcessSection } from "../features/catalog/graph/CatalogProcessSection";
 import { readCatalogSelection, writeCatalogSelection } from "../features/catalog/catalogSelection";
 import { SlicePage } from "../layout/SlicePage";
 import "../styles/surfaces/catalog-workspace.css";
@@ -84,6 +85,7 @@ export function CatalogPage() {
       await updateProductLabel(product.code, rename.trim(), systemProduct.displayRevision);
       setRename(null);
       invalidateResources(resourceKeys.productSystem(), resourceKeys.catalog(), resourceKeys.catalogCapabilities());
+      invalidateResourcePrefix("catalog-process-graph:");
     } catch (caught) {
       setError(caught instanceof TransportError && caught.status === 409 ? "Denumirea a fost modificată între timp. Reîncarcă produsul înainte de salvare." : "Denumirea nu a putut fi salvată.");
     } finally {
@@ -150,6 +152,7 @@ export function CatalogPage() {
               <CatalogConstruction product={product} component={component} systemType={systemType} unknownProduct={unknownProduct} onChooseComponent={chooseComponent} />
               <CatalogProperties product={product} component={component} platformLimits={manifest.platformLimits} permissions={manifest.permissions} unknownProduct={unknownProduct} />
             </div>
+            <CatalogProcessSection key={`process-graph-${product?.code ?? "none"}`} productCode={product?.code ?? null} />
           </>
         )}
       </div>
