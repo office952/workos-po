@@ -31,6 +31,7 @@ export function CatalogProcessSection({ productCode }: CatalogProcessSectionProp
       <header className="process-graph__header">
         <h2 id="process-graph-heading">Traseu tehnologic</h2>
         <p>Consultare. Traseul nu se salvează și nu pornește o lucrare.</p>
+        <p>Relațiile și capabilitățile vin din definiția produsului. Starea de execuție descrie definiția, nu o lucrare pornită.</p>
       </header>
       {graph.status === "error" ? (
         <InlineAlert tone="error" title={errorTitle(graph.error)}>

@@ -17,6 +17,9 @@ export function GraphInspector({ node }: GraphInspectorProps) {
       <p>{node.dependsOnLabels.length > 0 ? node.dependsOnLabels.join(", ") : "Nicio operație anterioară."}</p>
       <h4>Urmează după această operație</h4>
       <p>{node.successorLabels.length > 0 ? node.successorLabels.join(", ") : "Nicio operație ulterioară."}</p>
+      <h4>Capabilitate cerută</h4>
+      <p>{node.capabilityLabel ?? "Capabilitatea nu este înregistrată pentru această operație."}</p>
+      <p>Nu se atribuie oameni sau utilaje din acest ecran.</p>
       <h4>Condiție</h4>
       <p>{node.conditionLabel ?? "Operație mereu inclusă în acest scenariu."}</p>
       <h4>Blocaje confirmate</h4>
@@ -31,6 +34,7 @@ export function GraphInspector({ node }: GraphInspectorProps) {
         {node.technicalHref ? <a className="text-link" href={node.technicalHref}>Setările componentei</a> : null}
         {node.formulaHref ? <a className="text-link" href={node.formulaHref}>Formulele componentei</a> : null}
         {node.recipe ? <a className="text-link" href={node.recipe.resourcesHref}>Dovezile de cost</a> : null}
+        <a className="text-link" href="/admin/products">Disponibilitatea produsului</a>
       </p>
     </div>
   );
@@ -46,7 +50,9 @@ function RecipeDetails({ recipe }: { recipe: ProcessGraphRecipeView }) {
       <p>{rateText(recipe)}</p>
       {recipe.sharedWithLabels.length > 0 ? (
         <p>Aceeași dovadă este folosită și de: {recipe.sharedWithLabels.join(", ")}. Ofertele și comenzile deja înregistrate nu se recalculează din acest ecran.</p>
-      ) : null}
+      ) : (
+        <p>Nicio altă operație din acest scenariu nu folosește aceeași dovadă. Impactul asupra altor produse nu este calculat aici.</p>
+      )}
     </>
   );
 }

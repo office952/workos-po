@@ -15,6 +15,10 @@ import {
   recipeQuantityBasisLabel,
 } from "../resources/recipes.js";
 import {
+  getOperationalProcess,
+  getProductionCapability,
+} from "./catalog.js";
+import {
   acmProcessCompositionInspections,
   lettersProcessCompositionInspections,
   logoProcessCompositionInspections,
@@ -80,6 +84,8 @@ export type CatalogProcessGraphNode = {
   readonly nodeReadiness: CompositionNodeReadiness;
   readonly nodeReadinessLabel: string;
   readonly blockers: readonly string[];
+  /** Capability class required by the process definition. Not an assigned machine or person. */
+  readonly capabilityLabel: string | null;
   readonly recipe: ProcessGraphRecipeContext | null;
 };
 
@@ -182,6 +188,10 @@ export function projectCatalogProcessGraph(
   composition: ProductProcessComposition,
   evidenceRows: readonly CostEvidence[] = costEvidence,
 ): CatalogProcessGraph {
+  const ids = composition.nodes.map((node) => node.id);
+  if (new Set(ids).size !== ids.length) {
+    throw new Error("process_graph_duplicate_node");
+  }
   const order = topologicalOrder(composition.nodes);
   if (order.join("\n") !== composition.derivedOrder.join("\n")) {
     throw new Error("process_graph_order_drift");
@@ -355,8 +365,15 @@ function toGraphNode(
     nodeReadiness: node.nodeReadiness,
     nodeReadinessLabel: node.nodeReadinessLabel,
     blockers: node.blockers,
+    capabilityLabel: capabilityLabelFor(node.processId),
     recipe: recipe ? { ...recipe, sharedWithNodeIds } : null,
   };
+}
+
+function capabilityLabelFor(processId: string): string | null {
+  const process = getOperationalProcess(processId);
+  if (!process) return null;
+  return getProductionCapability(process.requiredCapabilityId)?.label ?? null;
 }
 
 function classificationLabel(

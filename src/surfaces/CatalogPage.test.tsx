@@ -159,6 +159,7 @@ function graphPayload() {
     nodeReadiness: "REQUIRED",
     nodeReadinessLabel: "Necesar",
     blockers: id === "cut" ? ["Geometria lipsește."] : [],
+    capabilityLabel: id === "cut" ? "Debitare CNC" : null,
     recipe,
   });
   return {
@@ -435,7 +436,10 @@ describe("Catalog workspace", () => {
     await userEvent.click(screen.getByRole("button", { name: "Debitare" }));
     expect(screen.getByRole("heading", { name: "Debitare" })).toBeInTheDocument();
     expect(screen.getByText("Tarif lipsă. Absența nu este zero.")).toBeInTheDocument();
+    expect(screen.getByText("Debitare CNC")).toBeInTheDocument();
+    expect(screen.getByText("Nicio altă operație din acest scenariu nu folosește aceeași dovadă. Impactul asupra altor produse nu este calculat aici.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Dovezile de cost" })).toHaveAttribute("href", "/admin/resources");
+    expect(screen.getByRole("link", { name: "Disponibilitatea produsului" })).toHaveAttribute("href", "/admin/products");
     expect(screen.getByRole("link", { name: "Setările componentei" })).toHaveAttribute("href", "/admin/technical?component=PLEXIGLAS_FACE");
     await userEvent.click(screen.getByRole("button", { name: "Toate relațiile" }));
     expect(screen.getByRole("heading", { name: "Debitare" })).toBeInTheDocument();

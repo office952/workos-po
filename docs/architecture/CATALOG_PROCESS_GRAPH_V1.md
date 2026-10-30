@@ -27,7 +27,7 @@ Organization formula versions and technical settings are passed into the same co
 
 ## Page
 
-Catalog keeps the product in `/catalog?product=`. The scenario, the selected operation, simplified or direct mode, and zoom stay in the page. The inspector shows dependencies, successors, the inclusion condition, and the blockers already on the node. Links go to the existing technical-setting, formula, and cost-evidence pages. There is no save action and no start action.
+Catalog keeps the product in `/catalog?product=`. The scenario, the selected operation, simplified or direct mode, and zoom stay in the page. The inspector shows dependencies, successors, the capability class required by the process definition, the inclusion condition, and the blockers already on the node. The capability is not an assigned machine or person. When no other operation in the same scenario shares the evidence, the inspector says so and does not invent impact on other products. Links go to the existing technical-setting, formula, cost-evidence, and product-availability pages. There is no save action and no start action.
 
 The textual list is the alternative to the map. Below 1280px it is placed before the map. Styles live in `src/styles/surfaces/catalog-process-graph.css`.
 

@@ -58,6 +58,9 @@
   text-align: left;
   cursor: pointer;
 }
+.process-graph__node[data-readiness="REQUIRED_INCOMPLETE"] { background: var(--color-warning-soft); }
+.process-graph__node[data-readiness="REQUIRED_BLOCKED"] { background: var(--color-danger-soft); }
+.process-graph__node[data-readiness="REQUIRED"] { box-shadow: inset 3px 0 0 var(--color-success); }
 .process-graph__node[aria-pressed="true"] {
   background: var(--color-selection-fill);
   box-shadow: inset 3px 0 0 var(--color-focus-ring);

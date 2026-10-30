@@ -76,6 +76,7 @@ export function ProductProcessGraph({ view }: ProductProcessGraphProps) {
                 <ProcessNode
                   label={item.node.processLabel}
                   scopeLabel={item.node.scopeLabel}
+                  readiness={item.node.nodeReadiness}
                   readinessLabel={item.node.nodeReadinessLabel}
                   selected={item.id === selection.selectedNodeId}
                   onSelect={() => selection.select(item.id)}

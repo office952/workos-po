@@ -64,6 +64,7 @@ describe("catalog process graph projection", () => {
     expect(face?.recipe?.resourceId).toBe(SVC_CNC_FACE_ID);
     expect(back?.recipe?.resourceId).toBe(SVC_CNC_BACK_ID);
     expect(face?.recipe?.rate).not.toBe(back?.recipe?.rate);
+    expect(face?.capabilityLabel).toBe("Debitare CNC");
     expect(JSON.stringify(graph)).not.toContain('"cost"');
   });
 

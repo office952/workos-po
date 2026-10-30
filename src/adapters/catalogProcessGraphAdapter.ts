@@ -36,6 +36,7 @@ export type ProcessGraphNodeView = {
   nodeReadiness: ProcessGraphNodeReadiness;
   nodeReadinessLabel: string;
   blockers: string[];
+  capabilityLabel: string | null;
   technicalHref: string | null;
   formulaHref: string | null;
   recipe: ProcessGraphRecipeView | null;
@@ -240,7 +241,9 @@ function nodeOf(
   const dependsOn = asStringList(record.dependsOn);
   const successors = asStringList(record.successors);
   const blockers = asStringList(record.blockers);
+  const capabilityLabel = record.capabilityLabel === null ? null : asString(record.capabilityLabel);
   if (!id || !processLabel || !scopeLabel || !reason || !nodeReadinessLabel || !isReadiness(readiness)) return null;
+  if (record.capabilityLabel !== null && !capabilityLabel) return null;
   if (dependsOn.some((item) => !labels.has(item)) || successors.some((item) => !labels.has(item))) return null;
   const typeId = record.typeId === null ? null : asString(record.typeId);
   if (record.typeId !== null && !typeId) return null;
@@ -261,6 +264,7 @@ function nodeOf(
     nodeReadiness: readiness,
     nodeReadinessLabel,
     blockers,
+    capabilityLabel,
     technicalHref: typeId ? `/admin/technical?component=${encodeURIComponent(typeId)}` : null,
     formulaHref: typeId ? `/admin/formulas?component=${encodeURIComponent(typeId)}` : null,
     recipe,
