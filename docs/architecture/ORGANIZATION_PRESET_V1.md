@@ -1,14 +1,18 @@
 # Organization preset V1
 
-Status: local contract for R003-C. This is not a persistence authorization.
+Status: R003-C source implementation. The authenticated Owner writes a new revision through `POST /api/catalog/presets`. Migration `050_organization_product_preset_revisions.sql` is append-only and is verified on synthetic databases only. Deploying the migration, or applying it to a real Cloud root or business database, remains a separate authorization.
 
 ```text
 SCHEMA_VERSION = organization-preset.v1
 AUTHORITY = packages/domain/src/product/organizationPreset.ts
 READ_PROJECTION = CatalogCapabilitiesManifest.products[].presetContract
-WRITES = NONE
+WRITER = POST /api/catalog/presets (authenticated Owner)
 PERSISTENCE = ORGANIZATION_VERSIONED
+MIGRATION = 050_organization_product_preset_revisions.sql (append-only)
 ROUTE = POST /api/catalog/presets
+SYNTHETIC_VERIFICATION = YES
+REAL_DATA_MIGRATION = NOT_AUTHORIZED
+DEPLOY = NOT_AUTHORIZED
 ```
 
 ## Layers
@@ -38,8 +42,8 @@ Where-used is `{ available: false, reason: "no_request_reference_index" }` until
 
 ## Persistence
 
-Migration `050_organization_product_preset_revisions.sql` appends one immutable revision per save. Rows are scoped by `organization_id`. The active lifecycle is the latest revision. `POST /api/catalog/presets` calls `planOrganizationPresetRevision` and inserts the planned revision. Owner may create, publish and retire. Member may read published and retired revisions. Drafts stay with the owner.
+Migration `050_organization_product_preset_revisions.sql` appends one immutable revision per save. Rows are scoped by `organization_id`. The active lifecycle is the latest revision. `POST /api/catalog/presets` calls `planOrganizationPresetRevision` and inserts the planned revision. The route requires the authenticated Owner role. Owner may create, publish and retire. Member may read published and retired revisions. Drafts stay with the owner.
 
-The migration runs with the existing synthetic test databases. It is not an authorization to migrate a real Cloud root.
+That writer and migration exist in source. Automated checks use isolated synthetic databases. They do not authorize deployment or a migration of a real Cloud root or business database.
 
 Where-used remains unavailable until request rows reference a preset. Applying a published preset in the Configurator copies only the stored selections. Job text, colors and measurements already on the draft stay unless they are themselves one of those selections. Quote and production snapshot tables are not updated by a preset save.

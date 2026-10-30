@@ -394,15 +394,19 @@ export function ConfiguratorPage({
     };
   }, [draftKey, drafts, productCode, requestId, assemblyId, memberRole, seedApplied, previewAttempt]);
 
-  function updateField(fieldId: string, value: string): void {
+  function invalidateStaleCommercialDraft(): void {
     confirmGeneration.current += 1;
     draftsDirtyRef.current = true;
     setPreviewState("pending");
-    setDrafts((current) => ({ ...current, [fieldId]: value }));
     setConfirmation(null);
     setPricedResultKey(null);
     setConfirmState("idle");
     setFreezeState("idle");
+  }
+
+  function updateField(fieldId: string, value: string): void {
+    invalidateStaleCommercialDraft();
+    setDrafts((current) => ({ ...current, [fieldId]: value }));
   }
 
   async function confirm(): Promise<void> {
@@ -693,8 +697,7 @@ export function ConfiguratorPage({
                 productCode={productCode}
                 drafts={drafts}
                 onApply={(next) => {
-                  draftsDirtyRef.current = true;
-                  setPreviewState("pending");
+                  invalidateStaleCommercialDraft();
                   setDrafts(next);
                 }}
               />

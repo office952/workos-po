@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { resetResourceCache } from "../data/resourceCache";
 import { writeConfiguratorSession } from "../session/configuratorSession";
 import {
   ConfiguratorPage,
@@ -1603,6 +1604,206 @@ describe("ConfiguratorPage", () => {
     expect(second["volume.confirmedPerimeterMm"]).toBe(8400);
     expect(second["face.confirmedAreaMm2"]).toBe(180000);
     expect(second["root.inscription"]).toBe("NORD LOGO");
+  });
+});
+
+const PUBLISHED_PRESET_ID = "pst.depth80";
+
+const presetPreviewBody = {
+  ...previewBody,
+  formSchema: {
+    id: "form",
+    sections: [
+      {
+        id: "product",
+        title: "Produs",
+        fields: [
+          { id: "root.inscription", label: "Textul literelor", type: "text", required: true },
+          { id: "face.confirmedAreaMm2", label: "Suprafață confirmată", type: "text", required: false },
+          { id: "volume.confirmedPerimeterMm", label: "Perimetru confirmat", type: "text", required: false },
+          { id: "volume.depthMm", label: "Adâncime volum", type: "text", required: false },
+          { id: "volume.finish", label: "Finisaj", type: "text", required: false },
+          { id: "note.site", label: "Notă de șantier", type: "text", required: false },
+        ],
+      },
+    ],
+  },
+};
+
+const publishedPresetPayload = {
+  canEdit: true,
+  templateCode: LETTERS_PRODUCT,
+  presets: [
+    {
+      presetId: PUBLISHED_PRESET_ID,
+      revision: 2,
+      lifecycle: "PUBLISHED",
+      name: "Cant 80 vopsit",
+      description: "",
+      templateCode: LETTERS_PRODUCT,
+      templateVersion: "1",
+      selections: [
+        { fieldId: "volume.depthMm", value: "80" },
+        { fieldId: "volume.finish", value: "painted" },
+      ],
+      supersedesRevision: 1,
+    },
+  ],
+};
+
+function seedPresetDrafts(lastQuote: {
+  productCode: string;
+  quoteSnapshotId: string;
+  customerId: string | null;
+  requestId: string | null;
+} | null = null) {
+  writeConfiguratorSession({
+    drafts: {
+      "root.inscription": "VITRINA",
+      "face.confirmedAreaMm2": "250000",
+      "volume.confirmedPerimeterMm": "12500",
+      "volume.depthMm": "30",
+      "volume.finish": "raw",
+      "note.site": "acces din spate",
+    },
+    draftContext: contextProps(),
+    customerId: "cus-1",
+    requestId: "req-1",
+    productCode: LETTERS_PRODUCT,
+    lastQuote,
+  });
+}
+
+function installPresetFetch(options: { hangConfirmAfter?: number } = {}) {
+  let confirmCalls = 0;
+  const late: { release: (() => void) | null } = { release: null };
+  const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes("/api/catalog/presets")) return jsonResponse(publishedPresetPayload);
+    if (url.includes("/members/SIGNAGE_LETTERS")) {
+      return jsonResponse({ customerId: "cus-1", requestId: "req-1", productCode: LETTERS_PRODUCT, values: null });
+    }
+    if (url.endsWith("/preview")) return jsonResponse(presetPreviewBody);
+    if (url.endsWith("/confirm")) {
+      confirmCalls += 1;
+      const body = manualConfirmBody({ rate: 12, cost: 40 }, init);
+      if (options.hangConfirmAfter !== undefined && confirmCalls > options.hangConfirmAfter) {
+        return new Promise((resolve) => {
+          late.release = () => resolve({ ok: true, status: 200, json: async () => body });
+        });
+      }
+      return jsonResponse(body);
+    }
+    if (url.endsWith("/seller")) return jsonResponse({ configured: true, seller: { legalName: "Isolated" } });
+    if (url.endsWith("/customers") || url.endsWith("/requests")) return jsonResponse({ error: "not-used-by-product" }, 500);
+    if (url.endsWith("/quote-snapshots")) {
+      return jsonResponse({
+        created: true,
+        quoteSnapshot: {
+          quoteSnapshotId: "q-live",
+          productCode: LETTERS_PRODUCT,
+          productLabel: "Litere",
+          inscription: "text",
+          sourceReviewId: "crv1:letters-ready",
+          eic: { completeness: "COMPLETE", currency: "EUR", total: 40, lines: [] },
+        },
+      });
+    }
+    return jsonResponse({});
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return {
+    fetchMock,
+    releaseLateConfirm() {
+      if (!late.release) throw new Error("late confirm was not started");
+      const release = late.release;
+      late.release = null;
+      release();
+    },
+  };
+}
+
+async function applyPublishedPreset(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("tab", { name: "Configurație" }));
+  await user.selectOptions(screen.getByRole("combobox", { name: "Variantă publicată" }), PUBLISHED_PRESET_ID);
+}
+
+describe("published preset application", () => {
+  afterEach(() => {
+    resetResourceCache();
+  });
+
+  it("invalidates a confirmed price and blocks freeze as soon as a published preset is applied", async () => {
+    seedPresetDrafts({
+      productCode: LETTERS_PRODUCT,
+      quoteSnapshotId: "q-historical",
+      customerId: "cus-1",
+      requestId: "req-1",
+    });
+    const { fetchMock } = installPresetFetch();
+    renderConfigurator();
+    const user = await confirmReady();
+    expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeEnabled();
+    expect(screen.getByTestId("customer-price")).toBeInTheDocument();
+    const snapshotsBefore = fetchMock.mock.calls.filter((call) => String(call[0]).includes("/quote-snapshots")).length;
+
+    await applyPublishedPreset(user);
+
+    expect(screen.queryByRole("button", { name: "Îngheață oferta", hidden: true })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("customer-price")).not.toBeInTheDocument();
+    expect(screen.getByText("Se actualizează")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: /Pregătire ofertă/ }));
+    expect(screen.getByText("Prețul clientului apare după calculul de pe server.")).toBeInTheDocument();
+    expect(screen.getByText("După confirmarea configurației introduci prețul net pentru această ofertă. Costul intern rămâne separat.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Deschide oferta înghețată" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Îngheață oferta" })).not.toBeInTheDocument();
+    const snapshotsAfter = fetchMock.mock.calls.filter((call) => String(call[0]).includes("/quote-snapshots")).length;
+    expect(snapshotsAfter).toBe(snapshotsBefore);
+  });
+
+  it("ignores a late confirmation response after a preset application", async () => {
+    seedPresetDrafts();
+    const harness = installPresetFetch({ hangConfirmAfter: 2 });
+    renderConfigurator();
+    const user = await confirmReady();
+    await user.click(screen.getByRole("button", { name: "Actualizează prețul" }));
+    await applyPublishedPreset(user);
+    expect(screen.queryByTestId("customer-price")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Îngheață oferta", hidden: true })).not.toBeInTheDocument();
+    harness.releaseLateConfirm();
+    await waitFor(() => {
+      expect(screen.queryByTestId("customer-price")).not.toBeInTheDocument();
+    });
+    expect(screen.queryByRole("button", { name: "Îngheață oferta", hidden: true })).not.toBeInTheDocument();
+  });
+
+  it("allows freeze again after the new preview is reconfirmed", async () => {
+    seedPresetDrafts();
+    installPresetFetch();
+    renderConfigurator();
+    const user = await confirmReady();
+    await applyPublishedPreset(user);
+    expect(screen.queryByRole("button", { name: "Îngheață oferta", hidden: true })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Pregătit")).toBeInTheDocument());
+    await user.click(screen.getByRole("tab", { name: /Verificare/ }));
+    await user.click(screen.getByRole("button", { name: "Confirmă configurația" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeEnabled());
+    expect(screen.getByTestId("customer-price")).toBeInTheDocument();
+  });
+
+  it("keeps inscription, measurements and unrelated draft fields when a preset is applied", async () => {
+    seedPresetDrafts();
+    installPresetFetch();
+    renderConfigurator();
+    const user = userEvent.setup();
+    expect(await screen.findByLabelText("Textul literelor")).toHaveValue("VITRINA");
+    await applyPublishedPreset(user);
+    expect(screen.getByLabelText("Textul literelor")).toHaveValue("VITRINA");
+    expect(screen.getByLabelText("Suprafață confirmată")).toHaveValue("250000");
+    expect(screen.getByLabelText("Perimetru confirmat")).toHaveValue("12500");
+    expect(screen.getByLabelText("Notă de șantier")).toHaveValue("acces din spate");
+    expect(screen.getByLabelText("Adâncime volum")).toHaveValue("80");
+    expect(screen.getByLabelText("Finisaj")).toHaveValue("painted");
   });
 });
 
