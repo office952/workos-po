@@ -14,6 +14,7 @@ import { useResource } from "../data/useResource";
 import { CatalogConstruction } from "../features/catalog/CatalogConstruction";
 import { CatalogLibrary } from "../features/catalog/CatalogLibrary";
 import { CatalogProperties } from "../features/catalog/CatalogProperties";
+import { CatalogVariants } from "../features/catalog/CatalogVariants";
 import { readCatalogSelection, writeCatalogSelection } from "../features/catalog/catalogSelection";
 import { SlicePage } from "../layout/SlicePage";
 import "../styles/surfaces/catalog-workspace.css";
@@ -127,6 +128,7 @@ export function CatalogPage() {
                 </>
               ) : <p>{unknownProduct ? "Produsul indicat nu face parte din biblioteca curentă." : "Selectează un produs pentru construcție și proprietăți."}</p>}
             </div>
+            <CatalogVariants key={product?.code ?? "none"} productCode={product?.code ?? null} preset={product?.preset ?? null} />
             <div className="catalog-workspace__regions">
               <CatalogLibrary
                 products={manifest.products.map((item) => {

@@ -259,6 +259,15 @@ import {
   type ProductEnablementSaveResult,
 } from "../product/productEnablementStore.js";
 import {
+  currentOrganizationPresets,
+  listOrganizationPresetRevisions,
+  persistOrganizationPreset,
+  visiblePresetHistory,
+  type OrganizationPresetSaveInput,
+  type OrganizationPresetSaveResult,
+  type StoredOrganizationPreset,
+} from "../catalog/presetStore.js";
+import {
   listAssemblyOrders,
   listAssemblyQuotes,
   listRequestAssemblies,
@@ -403,6 +412,17 @@ export type ProductSystemRuntime = {
     drafts: readonly ProductEnablementDraft[],
     actorUserId: string | null,
   ): ProductEnablementSaveResult;
+  listOrganizationPresets(
+    templateCode: string | null,
+    actorRole: "owner" | "member",
+  ): StoredOrganizationPreset[];
+  readOrganizationPresetHistory(
+    presetId: string,
+    actorRole: "owner" | "member",
+  ): StoredOrganizationPreset[];
+  saveOrganizationPreset(
+    input: OrganizationPresetSaveInput,
+  ): OrganizationPresetSaveResult;
   presentNewWorkCatalog(): CatalogTreeNode[];
   persistQuoteSnapshot(snapshot: QuoteSnapshot): {
     created: boolean;
@@ -999,6 +1019,22 @@ export function createProductSystemRuntimeFromOpenDb(
     },
     saveProductEnablement(drafts, actorUserId) {
       return persistProductEnablementSave(db, drafts, actorUserId);
+    },
+    listOrganizationPresets(templateCode, actorRole) {
+      return currentOrganizationPresets(
+        listOrganizationPresetRevisions(db, currentOrganizationId(), templateCode),
+        actorRole,
+      );
+    },
+    readOrganizationPresetHistory(presetId, actorRole) {
+      return visiblePresetHistory(
+        listOrganizationPresetRevisions(db, currentOrganizationId(), null),
+        presetId,
+        actorRole,
+      );
+    },
+    saveOrganizationPreset(input) {
+      return persistOrganizationPreset(db, currentOrganizationId(), input);
     },
     presentNewWorkCatalog() {
       const resolution = resolveStoredProductEnablement(db);

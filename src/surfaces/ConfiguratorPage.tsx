@@ -18,6 +18,7 @@ import { TransportError, postJson, readTransportErrorCode, readTransportReasons 
 import { postConfigurationPreview } from "../api/preview";
 import { postQuoteSnapshot } from "../api/quote";
 import { ConfigurationSections, type ConfigurationSectionsHandle } from "../components/ConfigurationSections";
+import { ConfiguratorPresetBar } from "../features/catalog/ConfiguratorPresetBar";
 import { ConfigurationReview } from "../components/ConfigurationReview";
 import { ConfigurationWorkAreas, type ConfigurationWorkArea } from "../components/ConfigurationWorkAreas";
 import { LoadingFloor } from "../components/LoadingFloor";
@@ -686,7 +687,19 @@ export function ConfiguratorPage({
           </InlineAlert>
         ) : null}
         {preview ? (
-          <ConfigurationSections
+          <>
+            {productCode ? (
+              <ConfiguratorPresetBar
+                productCode={productCode}
+                drafts={drafts}
+                onApply={(next) => {
+                  draftsDirtyRef.current = true;
+                  setPreviewState("pending");
+                  setDrafts(next);
+                }}
+              />
+            ) : null}
+            <ConfigurationSections
             ref={sectionsHandle}
             key={`${customerId}:${requestId}:${productCode}:${assemblyId}:${memberRole}`}
             preview={preview}
@@ -703,6 +716,7 @@ export function ConfiguratorPage({
               }));
             }}
           />
+          </>
         ) : null}
       </SurfacePanel>
       </div>

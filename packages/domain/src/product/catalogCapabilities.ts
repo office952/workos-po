@@ -17,6 +17,7 @@ import {
   type ProductEnablementResolution,
   type ProductEnablementSource,
 } from "./productEnablement.js";
+import { projectOrganizationPresetContract, type OrganizationPresetContract } from "./organizationPreset.js";
 import { getFormSchema, productTemplates } from "./productRegistry.js";
 import type { FormulaResolution } from "./resolveFormulas.js";
 import type { TechnicalSettingResolution } from "./resolveTechnicalSettings.js";
@@ -202,6 +203,7 @@ export type CatalogCapabilityProduct = {
     readonly canonicalWriter: CatalogCanonicalWriter;
   }[];
   readonly elements: readonly CatalogCapabilityElement[];
+  readonly presetContract: OrganizationPresetContract;
 };
 
 export type CatalogCapabilitiesManifest = {
@@ -310,6 +312,19 @@ function projectProduct(
       },
     ],
     elements,
+    presetContract: projectOrganizationPresetContract(template.code) ?? {
+      schemaVersion: "organization-preset.v1",
+      persistence: "ORGANIZATION_VERSIONED",
+      canonicalWriter: {
+        method: "POST",
+        path: "/api/catalog/presets",
+        permission: "owner",
+      },
+      templateCode: template.code,
+      templateVersion: template.version,
+      eligibleFields: [],
+      whereUsed: { available: false, reason: "no_request_reference_index" },
+    },
   };
 }
 
