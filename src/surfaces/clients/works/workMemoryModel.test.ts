@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { JobRecord } from "../../../api/jobRecord";
-import { hoursSentence, memoryMatches, planPresence, planSentence, quantityLine } from "./workMemoryModel";
+import { fileRevisionSentence, hoursSentence, memoryMatches, planPresence, planSentence, quantityLine, usageSentence } from "./workMemoryModel";
 
 const hours = { tasks: [{ taskId: "t1" }] } as JobRecord["hours"];
 
@@ -20,6 +20,17 @@ describe("work memory · missing and zero stay apart", () => {
       "Evidența orelor: lucrare neîncepută · Neînregistrat",
     );
     expect(quantityLine("Consum", 0, "m")).toBe("Consum: 0 m");
+  });
+
+  it("names a revision only when the previous version is in the record", () => {
+    const first = { artifactId: "a1", originalFileName: "schiță.dxf", supersedesArtifactId: null };
+    const next = { artifactId: "a2", originalFileName: "schiță.dxf", supersedesArtifactId: "a1" };
+    const orphan = { artifactId: "a3", originalFileName: "schiță.dxf", supersedesArtifactId: "missing" };
+    expect(fileRevisionSentence(first, [first, next])).toBe("Fișier inițial");
+    expect(fileRevisionSentence(next, [first, next])).toBe("Revizie 2 din 2 · versiunea anterioară rămâne păstrată");
+    expect(fileRevisionSentence(orphan, [orphan])).toBe("Revizie înregistrată · versiunea anterioară nu este în acest dosar");
+    expect(usageSentence(null)).toBe("Asociat · utilizare neconfirmată");
+    expect(usageSentence("2026-10-31T08:00:00.000Z")).toBe("Utilizare înregistrată");
   });
 
   it("every word must be found, without case or diacritics", () => {

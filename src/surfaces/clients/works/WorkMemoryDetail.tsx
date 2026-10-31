@@ -1,6 +1,7 @@
 import { useId } from "react";
 import type { WorkItem } from "../../../adapters/customerDossierAdapter";
 import { loadJobRecord, type JobRecord, type WorkHoursTask } from "../../../api/jobRecord";
+import { AuthenticatedDownloadLink } from "../../../presentation/AuthenticatedDownloadLink";
 import { resourceKeys } from "../../../data/resourceKeys";
 import { useResource } from "../../../data/useResource";
 import { clientHref, jobHref, requestHref } from "../../../routing/appRoute";
@@ -12,7 +13,7 @@ import { follow } from "../dossier/history/follow";
 import { StateTag } from "../dossier/historyParts";
 import { clientListHref, type ListContext } from "../dossier/listContext";
 import { useWorks } from "./useWorks";
-import { hoursSentence, memoryMatches, planPresence, planSentence, quantityLine, taskFields } from "./workMemoryModel";
+import { fileRevisionSentence, hoursSentence, memoryMatches, planPresence, planSentence, quantityLine, taskFields, usageSentence } from "./workMemoryModel";
 import { listTrail, stateText } from "./worksModel";
 import "../../../styles/surfaces/client-work-memory.css";
 
@@ -201,16 +202,27 @@ function MemoryBody({
             {!searching && files.length === 0 ? <p className="wmem__empty">Niciun fișier în dosarul tehnic</p> : null}
             {files.length ? (
               <ul className="wmem__list">
-                {files.map((file) => (
-                  <li key={file.artifactId} className="wmem__row">
-                    <strong>{file.originalFileName}</strong>
-                    <p>{[file.purposeLabel, file.sizeLabel, file.authorLabel ? file.authorLabel : "Autor neînregistrat", formatDay(file.uploadedAt)].filter(Boolean).join(" · ")}</p>
-                    {file.usages.map((usage) => {
-                      const href = jobHref(jobId, { section: "operatii", taskId: usage.taskId });
-                      return <a key={usage.taskId} href={href} onClick={(event) => follow(event, href)}>{usage.taskLabel}</a>;
-                    })}
-                  </li>
-                ))}
+                {files.map((file) => {
+                  const href = jobHref(jobId, { section: "fisiere", fileId: file.artifactId });
+                  return (
+                    <li key={file.artifactId} className="wmem__row">
+                      <a href={href} onClick={(event) => follow(event, href)}>{file.originalFileName}</a>
+                      <p>{fileRevisionSentence(file, record.files)}</p>
+                      <p>{[file.purposeLabel, file.sizeLabel, file.authorLabel ? file.authorLabel : "Autor neînregistrat", formatDay(file.uploadedAt)].filter(Boolean).join(" · ")}</p>
+                      {file.usages.length === 0 ? <p>Asociat lucrării · fără utilizare înregistrată pe operații</p> : null}
+                      {file.usages.map((usage) => {
+                        const taskHref = jobHref(jobId, { section: "operatii", taskId: usage.taskId });
+                        return (
+                          <div key={usage.taskId}>
+                            <p><a href={taskHref} onClick={(event) => follow(event, taskHref)}>{usage.taskLabel}</a></p>
+                            <p>{usageSentence(usage.usedAt)}</p>
+                          </div>
+                        );
+                      })}
+                      <AuthenticatedDownloadLink href={file.downloadHref}>Descarcă această versiune</AuthenticatedDownloadLink>
+                    </li>
+                  );
+                })}
               </ul>
             ) : null}
           </section>

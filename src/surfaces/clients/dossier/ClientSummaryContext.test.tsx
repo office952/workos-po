@@ -271,11 +271,11 @@ describe("Lucrări · request photo as context, server counts", () => {
     window.history.replaceState({}, "", "/clienti/cus-1?sectiune=lucrari");
     render(<Harness />);
     // N-020 etapa 4 (644:12426 · 648:13594): the request photo is named as the request's, under the card's meta.
-    const first = (await screen.findByRole("link", { name: "Deschide fișa lucrării: Recepție" })).closest("li")!;
+    const first = (await screen.findByRole("link", { name: "Deschide memoria lucrării: Recepție" })).closest("li")!;
     expect(within(first).getByText(/din cerere · nu e fotografia lucrării$/)).toBeInTheDocument();
     expect(within(first).getByRole("button", { name: "Deschide fotografia din cerere Releveu" })).toBeInTheDocument();
     // Several works on the request: its photos are not shown on any of them, and the card says why.
-    const second = screen.getByRole("link", { name: "Deschide fișa lucrării: Depozit" }).closest("li")!;
+    const second = screen.getByRole("link", { name: "Deschide memoria lucrării: Depozit" }).closest("li")!;
     expect(within(second).queryByRole("img")).toBeNull();
     expect(within(second).getByText("Fotografiile cererii sunt comune mai multor lucrări: nu sunt afișate aici")).toBeInTheDocument();
     // The An and Sediu counts are the server's.

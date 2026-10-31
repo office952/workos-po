@@ -1,4 +1,5 @@
-import type { JobRecord, WorkHoursTask } from "../../../api/jobRecord";
+import type { JobRecord, JobRecordFile, WorkHoursTask } from "../../../api/jobRecord";
+import { fileVersions } from "../../jobRecord/fileVersions";
 
 /**
  * R-005 · presentation of an already recorded job. Nothing here decides price, eligibility,
@@ -64,4 +65,24 @@ export function taskFields(task: WorkHoursTask): string[] {
 
 export function quantityLine(label: string, quantity: number, unit: string): string {
   return `${label}: ${quantity} ${unit}`;
+}
+
+type VersionFile = Pick<JobRecordFile, "artifactId" | "originalFileName" | "supersedesArtifactId">;
+
+/**
+ * Revision context follows the server's supersedes links. A number appears only when that
+ * chain is present in the record. Association is not recorded use.
+ */
+export function fileRevisionSentence(file: VersionFile, files: readonly VersionFile[]): string {
+  if (file.supersedesArtifactId && !files.some((item) => item.artifactId === file.supersedesArtifactId)) {
+    return "Revizie înregistrată · versiunea anterioară nu este în acest dosar";
+  }
+  const chain = fileVersions(files, file.artifactId);
+  const index = chain.findIndex((item) => item.artifactId === file.artifactId);
+  if (!file.supersedesArtifactId || chain.length < 2 || index < 1) return "Fișier inițial";
+  return `Revizie ${index + 1} din ${chain.length} · versiunea anterioară rămâne păstrată`;
+}
+
+export function usageSentence(usedAt: string | null): string {
+  return usedAt ? "Utilizare înregistrată" : "Asociat · utilizare neconfirmată";
 }

@@ -114,6 +114,12 @@
   min-height: 44px;
 }
 
+.dworks[data-mode="phone"] .wmem__row a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
 .wmem a:focus-visible,
 .wmem button:focus-visible,
 .wmem input:focus-visible {
