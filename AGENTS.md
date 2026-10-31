@@ -128,6 +128,14 @@ Structural rules that stay:
 - traceable operator actions and runtime browser evidence;
 - no replacement component library or styling framework without explicit Owner GO.
 
+## Mandatory reuse and demo continuity gate
+
+Before authoring or executing any substantial WorkOS UI/UX task, **STOP until the continuity preflight in** `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md` is satisfied. The reviewer must verify the existing WorkOS route, WorkOS-N Figma page/section, and relevant persistent synthetic scenarios (N-019 workshop, N-020 client dossier, N-028 Alpha Clima copy) against actual local roots, backups and branch/schema compatibility. Never infer running services from recorded ports.
+
+Do **not** start another Figma file/page, duplicate application surface, new persistent dataset or clean demo by default. A temporary minimal fixture may cover an isolated regression but does not replace realistic positive E2E browser proof. Protect all original demo roots and real data; use an expressly authorized isolated compatible copy for mutating tests, not reset/reseed/migrate-in-place. If the rich scenario is incompatible or inaccessible, record a HOLD and the smallest safe recovery plan; do not invent data or count a tiny fixture as full UX acceptance.
+
+The coordinating independent review checks this gate before giving Cursor a GO or an acceptance verdict. Link the actual verification in the existing PR/Notion journal; no new documentation workstream is required. Owner continuity decision: https://app.notion.com/p/40a8ea98e40f812cac6cf929dad44f5a.
+
 ## Current flow and status
 
 - Active responsibilities: `docs/architecture/REQUEST_CATALOG_CONFIGURATION_CANON.md`.
