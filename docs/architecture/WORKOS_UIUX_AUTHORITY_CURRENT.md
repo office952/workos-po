@@ -47,6 +47,38 @@ DESIGN_WORKSPACE = WorkOS-N / Figma
 
 Figma decides the **proposed presentation and interaction**, not technical product truth. It never defines formulas, materials, quantities, cost rates, pricing, state transitions, task eligibility, permissions, customer data or persistence contracts. The root frontend is current implementation evidence; it is not automatically the aesthetic standard to replicate.
 
+## Mandatory continuity and reuse preflight
+
+**Before every substantial WorkOS UI/UX prompt, new Cursor Agent, design change or runtime review**, the coordinating reviewer must establish what already exists. This is an execution gate, not a request to create another planning document. Write the short result in the existing task/PR/Notion journal; the Owner must not have to rediscover prior work.
+
+```text
+CONTINUITY_GATE = PASS / HOLD
+CANONICAL_REPO_AND_CURRENT_TASK =
+EXISTING_ROUTE_COMPONENTS_AND_REUSABLE_CONTRACTS =
+FIGMA_WORKOS_N_TARGET_PAGE_SECTION_AND_ACCEPTED_FRAMES =
+PERSISTENT_SYNTHETIC_ENVIRONMENT_CANDIDATES =
+DATA_SOURCE_SELECTED_AND_WHY =
+SOURCE_ROOT_READONLY_VERIFIED =
+CODE_SCHEMA_VERSION_AND_RUNTIME_COMPATIBILITY =
+BACKUP_AND_NONDESTRUCTIVE_TEST_COPY_PLAN =
+POSITIVE_REALISTIC_E2E_SCENARIO =
+GAPS_REQUIRING_OWNER_DECISION =
+```
+
+Required discovery sources (use live evidence, not stale port assumptions):
+
+- **Figma**: [WorkOS-N](https://www.figma.com/design/rM71g74Ph0mkAjAtWuLahy/WorkOS-N). Reuse the relevant existing design page, section, frames and components. A new Figma file/page or unrelated application/domain is **not** a default alternative.
+- **N-019, persistent synthetic workshop**: [Notion registry](https://app.notion.com/p/4028ea98e40f81309b27e25b039e80c3); expected local root `%LOCALAPPDATA%\WorkOS\demo-atelier-n019`; exact workers, jobs, technical files and machine evidence subject to **current local read-only verification**. Its reproducible preparation mechanism remains in [Draft PR #97](https://github.com/office952/workos-po/pull/97), not automatically available on `main`.
+- **N-020, client dossier synthetic scenario**: [Notion registry](https://app.notion.com/p/4028ea98e40f81d39351e3d4fc7887e8); original persistent root `%LOCALAPPDATA%\WorkOS\demo-dosar-client-n020`, if still present. Verify current schema and backup; do not assume its older API is compatible with the active branch.
+- **N-028, Alpha Clima copy on then-current main**: [Notion registry](https://app.notion.com/p/4088ea98e40f81268195cbe280899e5c); recorded copy `%LOCALAPPDATA%\WorkOS\demo-alpha-current-main`, with backup and schema 049 as of 2026-10-29. Verify actual files, lease, version, content and health before use. Historical frontend/API ports are **not** guaranteed live.
+- **New isolated fixture**: allowed for targeted tests, empty/error/security states or a specific missing scenario; it is **not a substitute** for a realistic positive E2E check when a protected compatible persistent scenario already exists. State the necessity and scope. New persistent environments or wholesale seed reconstruction require explicit Owner decision.
+
+**Protect all existing demo originals and real environments.** Never reset, reseed, overwrite, migrate in place, delete, repoint, stop or take over a protected runtime to make a test pass. For any mutating proof, use a separately verified compatible copy after explicit scoped authorization, with independent root identity and backup/restore evidence. Never put credentials, database files or secrets in Git, PR attachments or screenshots.
+
+A passing component test or minimal synthetic fixture proves its own assertions only. **UI/UX acceptance requires at least one nontrivial positive end-to-end journey** with recorded objects/operations/evidence, in addition to empty/error and permission states. If the existing rich scenario cannot safely run on the candidate code, record `DATA_COMPATIBILITY_HOLD`, keep the useful implementation in review, and state the smallest safe next action. Do not silently recreate the dataset or claim full visual acceptance.
+
+The coordinating independent reviewer (ChatGPT) owns this gate and checks that Cursor's claimed reuse, environment identity and browser evidence are traceable. A Cursor PASS alone is not Owner acceptance. Notion decision: https://app.notion.com/p/40a8ea98e40f812cac6cf929dad44f5a.
+
 ## Required workflow for substantial UI/UX work
 
 1. Discover the operator's real task, route and available canonical data/permissions.
