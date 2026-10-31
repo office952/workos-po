@@ -115,17 +115,17 @@ Normal operator UI does not expose internal jargon: hashes, DTO names, raw codes
 
 ## UI/UX authority
 
-Current policy: `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md`.
+Current policy: `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md` (Owner update 2026-10-31).
 
-Product Truth stays in the business engine. UI/UX work starts from the operator's task, compares alternatives, follows an explicit Owner decision, and is checked in the running application. The existing frontend is the implementation starting point. It is not an aesthetic standard that must be copied.
+**WorkOS-N is the single active Figma design workspace**: https://www.figma.com/design/rM71g74Ph0mkAjAtWuLahy/WorkOS-N (`rM71g74Ph0mkAjAtWuLahy`). For substantial new UI/UX changes, design and refine first in the relevant existing WorkOS-N page/section, secure scoped Owner design acceptance, then implement in the root frontend and prove Figma-to-browser parity. Do not create new Figma files or pages by default; preserve existing accepted and historical frames. A concept is not an approved design.
 
-Retired as current visual authority: Figma file WorkOs-F, other historical Figma files, `CALM INSTRUMENT`, `INDUSTRIAL HARDWARE / FUTURE INTELLIGENCE`, the 70/30 visual ratio, and mandatory grey/blue or Azure action palettes. Those documents remain provenance. Do not appoint a replacement Figma file.
+Product Truth stays in `apps/api` and `packages/domain`; the root frontend remains the presentation implementation. Figma does not own business contracts, permissions, pricing or execution. Historical WorkOs-F and other Figma files are not reinstated as live design authority. Prior mandatory palettes and visual prescriptions remain retired.
 
 Structural rules that stay:
 - one SaaS product and one business engine;
 - modular stylesheets, with no new major surface adding bulk to `src/styles/ui.css` (`docs/architecture/WORKOS_UI_STYLE_ARCHITECTURE_V1.md`);
 - accessibility, visible focus, keyboard use, and responsive layout that keeps the primary task readable;
-- traceable operator actions;
+- traceable operator actions and runtime browser evidence;
 - no replacement component library or styling framework without explicit Owner GO.
 
 ## Current flow and status
