@@ -79,6 +79,14 @@ A passing component test or minimal synthetic fixture proves its own assertions 
 
 The coordinating independent reviewer (ChatGPT) owns this gate and checks that Cursor's claimed reuse, environment identity and browser evidence are traceable. A Cursor PASS alone is not Owner acceptance. Notion decision: https://app.notion.com/p/40a8ea98e40f812cac6cf929dad44f5a.
 
+## Continuity across ChatGPT and Cursor sessions
+
+A new chat is not a new UI/UX mandate. **Cold-start gate:** read the current `AGENTS.md`, `docs/ROADMAP.md`, `docs/SOURCE_OF_TRUTH.md`, the active task's Notion journal and PR, then verify the actual branch/HEAD, current design authority and protected synthetic environments. Resume the last unfinished objective. If PR #113 has not merged, use its documented Owner policy rather than reverting to historical Figma rules.
+
+**Handoff gate:** the coordinating reviewer records a short checkpoint in the existing task journal / PR (not a new document): verified objective and stage; branch/HEAD/PR; what is integrated, Owner-accepted and still Draft; the relevant existing WorkOS-N page/frame; reusable N-019/N-020/N-028 root and schema/API compatibility; proof completed; unresolved blocker; prohibited mutations; and the one smallest next action requiring Owner GO. Reverify volatile facts in the next session; old process ports are only history.
+
+**Compatibility before copying:** for a frontend-only change, first inspect whether it can use the **already-running** API and its rich demo data without launching a newer API that automatically migrates the source. An authenticated browser session can still write to the control-plane database; do not confuse GET-only business views with a zero-write session. If this path cannot be verified safely, report HOLD and the precise required permission. Do not quietly make a new Figma file, dataset or full restore.
+
 ## Required workflow for substantial UI/UX work
 
 1. Discover the operator's real task, route and available canonical data/permissions.
