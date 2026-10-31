@@ -152,6 +152,17 @@ Forbidden under this standing exception: product/business data changes; adding c
 
 For frontend-only changes, first reuse the running N-028 API via the existing `WORKOS_API_PROXY_TARGET` where compatible; do not launch a newer API against N-028 and accidentally auto-migrate it. The latest R-005 status is in the [existing R-005 checkpoint](https://app.notion.com/p/40a8ea98e40f81d7ad0bedadc3d744e7); reverify current task and PR before proceeding.
 
+## Owner-controlled pause when changing Cursor folders
+
+**Owner instruction (2026-10-31): never rush a workspace/folder change.** Opening a different checkout, Cursor window, Agent chat or native worktree is a distinct **human-controlled handoff**, not a side effect of pasting a prompt. Before any change of workspace:
+
+1. Coordinator gives the Owner the **exact existing folder to open**, its task/repository role, whether to continue the same verified Agent or start a New Agent, and what existing work/processes must remain untouched. If a native `/worktree` will be created, identify the verified parent checkout but never guess the generated path.
+2. **STOP and wait for the Owner to change/select the folder in Cursor and explicitly confirm readiness.** Do not issue instructions that presume the switch has already happened. Do not impose time pressure or auto-advance after a progress report.
+3. After that confirmation, run a fresh **Cursor location + Git identity gate**: Cursor workspace root, `git rev-parse --show-toplevel`, `origin`, branch/detached state, HEAD, origin/main, merge-base, worktree status and `CURRENT_CHAT_ROOT_MATCHES_GIT_TOPLEVEL`. For native worktrees, apply PRE- and POST-worktree gates.
+4. Continue only when `OWNER_FOLDER_READY = YES` and `SAFE_TO_CONTINUE = YES`. If either is absent or mismatched, STOP and show evidence. The Owner controls the next handoff action.
+
+Never treat a textual path, screenshot, Cursor sidebar label, shell `cd`, or process port as proof that the Agent is attached to the intended repository. Never silently rebind by checkout/reset/stash, `move_agent_to_root`, or continuing the old Agent after a manual root switch. For a manual folder change use **File > Open Folder** in the intended Cursor window and a New Agent, then verify. This pause is mandatory for future chats/Agents even if previous worktree identities were verified; it does not require re-opening folders for read-only review of already delivered reports.
+
 ## New chat / Agent handoff gate (WorkOS)
 
 **Changing ChatGPT conversations, Cursor chats, Agents, machines or checkouts does not reset the WorkOS project.** At the first substantial response in a fresh session, the coordinating reviewer MUST perform a **cold start** before supplying an implementation prompt, announcing acceptance or starting new UI/data work:
