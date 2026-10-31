@@ -48,6 +48,7 @@ describe("Date comerciale · model", () => {
   });
 
   it("names another section of the client page by its tab when leaving with changes", () => {
+    expect(describeDestination("/clienti/cus-1?sectiune=lucrari&lucrare=job:j1")).toBe("memoria lucrării");
     expect(describeDestination("/clienti/cus-1?sectiune=sedii", "/clienti/cus-1")).toBe("Sedii");
     expect(describeDestination("/clienti/cus-1", "/clienti/cus-1")).toBe("Istoric");
     // From another page (the way back from a request), the client page keeps its own name.

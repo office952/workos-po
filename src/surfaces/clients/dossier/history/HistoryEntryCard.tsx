@@ -256,7 +256,7 @@ export function ExpandedCard({
 
       {project ? (
         <>
-          <ProjectTree entry={entry} quotes={quotes} requests={requests} mode={mode} onOpen={onOpen} onPreviewQuote={onPreviewQuote} />
+          <ProjectTree customerId={customerId} entry={entry} quotes={quotes} requests={requests} mode={mode} onOpen={onOpen} onPreviewQuote={onPreviewQuote} />
         </>
       ) : (
         <div className="hcard__columns">

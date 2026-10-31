@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import type { CustomerWorksModel, WorkItem } from "../../../adapters/customerDossierAdapter";
 import { Button } from "../../../components/Button";
-import { jobHref } from "../../../routing/appRoute";
+import "../../../styles/surfaces/client-work-memory.css";
 import { navigate } from "../../../routing/navigate";
 import { useBandMode } from "../dossier/bandModel";
 import { DossierIcon } from "../dossier/dossierIcons";
@@ -20,6 +20,7 @@ import { DocumentViewer } from "../documents/DocumentViewer";
 import { DOCUMENT_PARAM, useDocumentPreview } from "../documents/useDocumentPreview";
 import { useCustomerDossier } from "../dossier/dossierModel";
 import { HistoricalWorkDetail } from "./HistoricalWorkDetail";
+import { WorkMemoryDetail } from "./WorkMemoryDetail";
 import { useWorks } from "./useWorks";
 import { WorkCard, type OpenPhotos } from "./WorkCard";
 import { PROVENANCE_OPTIONS, provenanceCount, totalsLine } from "./worksModel";
@@ -60,15 +61,21 @@ function choicesOf(data: CustomerWorksModel, context: ListContext): Choices {
  * 648:14211 / 648:14447, stări 616:12643): every work of the client, each once — the jobs of
  * WorkOS and the historical records — as the server lists, searches, filters and pages them.
  * Search, provenance, year, site, state, page and the open card live in the address and in this
- * client's list memory. A WorkOS work opens its job sheet; a record opens its detail here.
+ * client's list memory. A WorkOS work opens its memory here; a historical record opens its detail here.
  */
 export function ClientWorksSection({ customerId, search }: { customerId: string; search: string }) {
   const mode = useBandMode();
   const workId = new URLSearchParams(search).get("lucrare");
+  const jobMemoryId = workId?.startsWith("job:") ? workId.slice("job:".length) : null;
   const list = useClientListContext(customerId, "lucrari", search);
   return (
-    <section className="dworks" data-mode={mode} data-dossier-section={workId ? "lucrare-istorica" : "lucrari"} aria-labelledby="dworks-title">
-      {workId ? (
+    <section className="dworks" data-mode={mode} data-dossier-section={jobMemoryId ? "memoria-lucrarii" : workId ? "lucrare-istorica" : "lucrari"} aria-labelledby="dworks-title">
+      {jobMemoryId ? (
+        <>
+          <h2 id="dworks-title" className="u-visually-hidden">Lucrări</h2>
+          <WorkMemoryDetail customerId={customerId} jobId={jobMemoryId} context={list.context} search={search} />
+        </>
+      ) : workId ? (
         <>
           <h2 id="dworks-title" className="u-visually-hidden">Lucrări</h2>
           <HistoricalWorkDetail customerId={customerId} workId={workId} context={list.context} mode={mode} search={search} />
@@ -108,7 +115,7 @@ function WorksList({ customerId, search, list, mode }: { customerId: string; sea
 
   // The open card is part of the address (replace: no new history entry), like the open entry of Istoric.
   const toggle = (item: WorkItem) => navigate(clientListHref(customerId, "lucrari", context, expanded === item.workId ? {} : { [EXPANDED_PARAM]: item.workId }), "replace");
-  const openHref = (item: WorkItem) => (item.job ? jobHref(item.job.jobId) : item.historicalWorkId ? clientListHref(customerId, "lucrari", context, { lucrare: item.historicalWorkId }) : null);
+  const openHref = (item: WorkItem) => (item.job ? clientListHref(customerId, "lucrari", context, { lucrare: `job:${item.job.jobId}` }) : item.historicalWorkId ? clientListHref(customerId, "lucrari", context, { lucrare: item.historicalWorkId }) : null);
   const clearSearch = () => {
     setText("");
     apply({ q: "" });

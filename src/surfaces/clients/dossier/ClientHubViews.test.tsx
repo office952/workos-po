@@ -157,7 +157,7 @@ describe("Cereri și oferte · one view, the selection in the URL", () => {
     const row = within(page).getByRole("link", { name: "Deschide oferta OF-1" }).closest("li")!;
     // Amount and currency, the work made from its order (server ids) with its own stage, the request it belongs to.
     expect(within(row).getByText("750,20 EUR")).toBeInTheDocument();
-    expect(within(row).getByRole("link", { name: "Lucrare · În execuție →" })).toHaveAttribute("href", "/lucrari/j1");
+    expect(within(row).getByRole("link", { name: "Lucrare · În execuție →" })).toHaveAttribute("href", "/clienti/cus-1?sectiune=lucrari&lucrare=job%3Aj1");
     expect(row.closest(".dreqflat")?.querySelector(".dreqflat__context")?.textContent).toBe("Cerere CER-1 · Casetă depozit");
     // Refresh: a new mount from the URL alone.
     view.unmount();
