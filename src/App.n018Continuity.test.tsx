@@ -222,7 +222,7 @@ describe("N-018 · context trail on the job sheet", { timeout: 15_000 }, () => {
     window.history.replaceState({}, "", "/lucrari/job-1?task=task-2&sectiune=operatii");
     render(<App />);
     const trail = await screen.findByRole("navigation", { name: "Firul lucrării" });
-    expect(within(trail).getByRole("link", { name: "Nord Market Demo SRL" })).toHaveAttribute("href", "/clienti/cus-1");
+    expect(within(trail).getByRole("link", { name: "Nord Market Demo SRL" })).toHaveAttribute("href", "/clienti/cus-1?sectiune=lucrari&lucrare=job%3Ajob-1");
     expect(await within(trail).findByRole("link", { name: "CER-847B52B5" })).toHaveAttribute("href", "/cereri/req-1");
     expect(await within(trail).findByRole("link", { name: "OF-3B592B0E" })).toHaveAttribute("href", "/oferte/ansamblu/asmq%3A1");
     expect(within(trail).getByRole("link", { name: "Panou și litere" })).toHaveAttribute("href", "/lucrari/job-1");

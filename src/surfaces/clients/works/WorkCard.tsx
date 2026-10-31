@@ -40,7 +40,7 @@ export function WorkCard({
   const image = workImage(item);
   const { files, photos, label } = carried(item);
   const historical = item.provenance === "HISTORICAL_RECORD";
-  const openLabel = item.job ? "Deschide fișa lucrării" : "Deschide înregistrarea";
+  const openLabel = item.job ? "Deschide memoria lucrării" : "Deschide înregistrarea";
   const match = summarizeMatch(item.matchedOn).map((group) => group.label).join(" · ");
   const ownPhotos = orderedPhotos(photos);
   const notice = representativeNotice(item);

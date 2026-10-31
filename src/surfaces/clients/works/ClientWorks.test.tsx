@@ -111,6 +111,7 @@ const historical = ["h2026", "h2025", "h2021"].map((id) =>
 let calls: string[] = [];
 let permissions = { read: true, editSites: true, uploadDocuments: true, editDocuments: true, recordHistoricalWork: true, editCommercialTerms: true };
 let worksFail = false;
+let recordFail = false;
 
 function Harness() {
   const [location, setLocation] = useState(() => `${window.location.pathname}${window.location.search}`);
@@ -153,6 +154,7 @@ function worksPayload(url: string, customerId: string) {
 beforeEach(() => {
   calls = [];
   worksFail = false;
+  recordFail = false;
   permissions = { read: true, editSites: true, uploadDocuments: true, editDocuments: true, recordHistoricalWork: true, editCommercialTerms: true };
   sessionStorage.clear();
   vi.stubGlobal(
@@ -178,6 +180,87 @@ beforeEach(() => {
       if (/\/works(\?|$)/.test(url)) {
         calls.push(url);
         return worksFail ? json(500, { error: "unavailable" }) : json(200, worksPayload(url, customerId));
+      }
+      if (/\/api\/jobs\/([^/]+)\/record$/.test(url)) {
+        const jobId = decodeURIComponent(url.split("/api/jobs/")[1]?.split("/")[0] ?? "");
+        if (recordFail) return json(500, { error: "unavailable" });
+        if (jobId === "j2") {
+          return json(200, {
+            record: {
+              jobId: "j2",
+              files: [
+                {
+                  artifactId: "art-1",
+                  originalFileName: "schiță.dxf",
+                  mimeType: "application/dxf",
+                  sizeLabel: "12 KB",
+                  purpose: "WORKING",
+                  purposeLabel: "Lucru",
+                  note: null,
+                  preview: "NONE",
+                  supersedesArtifactId: null,
+                  authorLabel: null,
+                  uploadedAt: "2026-10-30T08:00:00.000Z",
+                  downloadHref: "/api/execution-artifacts/art-1/download",
+                  usages: [],
+                },
+                {
+                  artifactId: "art-2",
+                  originalFileName: "schiță.dxf",
+                  mimeType: "application/dxf",
+                  sizeLabel: "14 KB",
+                  purpose: "WORKING",
+                  purposeLabel: "Lucru",
+                  note: null,
+                  preview: "NONE",
+                  supersedesArtifactId: "art-1",
+                  authorLabel: "Ana",
+                  uploadedAt: "2026-10-31T08:00:00.000Z",
+                  downloadHref: "/api/execution-artifacts/art-2/download",
+                  usages: [{ taskId: "task-1", taskLabel: "01 · Lipire", linkedAt: "2026-10-31T09:00:00.000Z", usedAt: null, usedByLabel: null }],
+                },
+              ],
+              hours: {
+                asOf: "2026-10-31T00:00:00.000Z",
+                totalLabel: "Neînregistrat",
+                complete: false,
+                completeTasks: 0,
+                applicableTasks: 1,
+                coverageLabel: "Evidența orelor: lucrare neîncepută",
+                startedAt: null,
+                completedAt: null,
+                elapsedLabel: "Neînceput",
+                activeTimeLabel: "Neînregistrat",
+                machineTimeLabel: "Neînregistrat",
+                machineActive: false,
+                people: [],
+                tasks: [{
+                  taskId: "task-1",
+                  processLabel: "Lipire",
+                  scopeLabel: "Litere",
+                  seqLabel: "01",
+                  status: "READY",
+                  startedAt: null,
+                  completedAt: null,
+                  timeLabel: "Neînregistrat",
+                  complete: false,
+                  coverageLabel: "Neîncepută",
+                  statusLabel: "Neîncepută",
+                  qualityLabel: null,
+                  completedQuantityLabel: null,
+                  varianceLabel: null,
+                  providerLabel: null,
+                  externalProviderLabel: null,
+                  actualConsumption: [],
+                  people: [],
+                  sessions: [],
+                }],
+              },
+              timeline: [],
+            },
+          });
+        }
+        return json(200, { record: { jobId, files: [], hours: null, timeline: [] } });
       }
       return json(404, {});
     }),
@@ -212,7 +295,7 @@ describe("Lucrări · the list (644:12426)", () => {
       expect(within(card).getByText("Finalizată")).toBeInTheDocument();
     }
     // A WorkOS work opens its existing job sheet.
-    expect(within(cards()[0]!).getByRole("link", { name: "Deschide fișa lucrării: Litere recepție" })).toHaveAttribute("href", "/lucrari/j2");
+    expect(within(cards()[0]!).getByRole("link", { name: "Deschide memoria lucrării: Litere recepție" })).toHaveAttribute("href", "/clienti/cus-1?sectiune=lucrari&lucrare=job%3Aj2");
   });
 
   it("tells works apart by their references and product, and names a request photo as the request's", async () => {
@@ -365,6 +448,60 @@ describe("Lucrări · the historical record (648:13642)", () => {
     expect(screen.getByText("Depozit Ghimbav · DN1 km 7")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Modifică" })).toBeInTheDocument();
     expect(calls.some((url) => url.includes("id=historical%3Ah2021"))).toBe(true);
+  });
+});
+
+describe("Memoria lucrării", () => {
+  it("opens the recorded operation and does not turn a missing plan into zero", async () => {
+    const user = userEvent.setup();
+    window.history.replaceState({}, "", "/clienti/cus-1?sectiune=lucrari");
+    render(<Harness />);
+    await user.click(await screen.findByRole("link", { name: "Deschide memoria lucrării: Litere recepție" }));
+    expect(await screen.findByRole("heading", { name: "Litere recepție" })).toBeInTheDocument();
+    expect(screen.getByText("Sediu neînregistrat")).toBeInTheDocument();
+    expect(screen.getByText("Evidența orelor: lucrare neîncepută · Neînregistrat")).toBeInTheDocument();
+    expect(screen.queryByText("Plan de execuție neînregistrat")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Dosarul tehnic · 01" })).toHaveAttribute("href", "/lucrari/j2?task=task-1&sectiune=operatii");
+    expect(screen.getByText("Niciun eveniment înregistrat")).toBeInTheDocument();
+    const versions = screen.getAllByRole("link", { name: "schiță.dxf" });
+    expect(versions.map((link) => link.getAttribute("href"))).toEqual([
+      "/lucrari/j2?sectiune=fisiere&fisier=art-1",
+      "/lucrari/j2?sectiune=fisiere&fisier=art-2",
+    ]);
+    expect(screen.getByText("Revizie 2 din 2 · versiunea anterioară rămâne păstrată")).toBeInTheDocument();
+    expect(screen.getByText("Asociat · utilizare neconfirmată")).toBeInTheDocument();
+    expect(screen.queryByText("Utilizare înregistrată")).not.toBeInTheDocument();
+    expect(screen.getByText("Consum neînregistrat")).toBeInTheDocument();
+    await user.type(screen.getByRole("searchbox"), "inexistent");
+    expect(await screen.findByText("Niciun rezultat pentru textul căutat în dosarul înregistrat")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Dosarul tehnic · 01" })).not.toBeInTheDocument();
+  });
+
+  it("says the plan is missing, not that the work has zero operations", async () => {
+    window.history.replaceState({}, "", "/clienti/cus-1?sectiune=lucrari&lucrare=job:j1");
+    render(<Harness />);
+    expect(await screen.findByRole("heading", { name: "Litere showroom" })).toBeInTheDocument();
+    expect(screen.getByText("Plan de execuție neînregistrat")).toBeInTheDocument();
+    expect(screen.getByText("Ore neînregistrate")).toBeInTheDocument();
+    expect(screen.queryByText("0 operații")).not.toBeInTheDocument();
+  });
+
+  it("keeps a failed record from looking like an empty dossier", async () => {
+    recordFail = true;
+    window.history.replaceState({}, "", "/clienti/cus-1?sectiune=lucrari&lucrare=job:j2");
+    render(<Harness />);
+    expect(await screen.findByText("Dosarul tehnic nu a putut fi citit.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Litere recepție" })).toBeInTheDocument();
+    expect(screen.queryByText("Niciun fișier în dosarul tehnic")).not.toBeInTheDocument();
+    expect(screen.queryByText("Plan fără operații înregistrate")).not.toBeInTheDocument();
+    expect(screen.queryByText("Se citește dosarul înregistrat…")).not.toBeInTheDocument();
+  });
+
+  it("does not read another client's job", async () => {
+    window.history.replaceState({}, "", "/clienti/cus-2?sectiune=lucrari&lucrare=job:j2");
+    render(<Harness />);
+    expect(await screen.findByText("Lucrarea nu există")).toBeInTheDocument();
+    expect(screen.queryByText("Lipire")).not.toBeInTheDocument();
   });
 });
 

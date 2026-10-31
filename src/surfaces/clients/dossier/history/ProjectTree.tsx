@@ -1,6 +1,6 @@
 import type { DossierDocument, HistoryBranch, HistoryEntry } from "../../../../adapters/customerDossierAdapter";
 import type { QuoteListItemTransport, RequestListItemTransport } from "../../../../api/types";
-import { jobHref, registryQuoteHref, requestHref } from "../../../../routing/appRoute";
+import { clientWorkMemoryHref, registryQuoteHref, requestHref } from "../../../../routing/appRoute";
 import type { BandMode } from "../bandModel";
 import { formatDay } from "../dossierModel";
 import { attachedFiles, orderedPhotos, requestDocuments } from "../historyModel";
@@ -33,12 +33,12 @@ function offerTag(branch: HistoryBranch, quote: QuoteListItemTransport | null): 
  * desktop in 813:31187 / 813:31490, the phone density at 768 and 390). The offer's tag and the work's
  * state are kept apart: the work says its own state and progress and opens its sheet.
  */
-function OfferRow({ branch, quote, onPreview }: { branch: HistoryBranch; quote: QuoteListItemTransport | null; onPreview: (quoteSnapshotId: string) => void }) {
+function OfferRow({ customerId, branch, quote, onPreview }: { customerId: string; branch: HistoryBranch; quote: QuoteListItemTransport | null; onPreview: (quoteSnapshotId: string) => void }) {
   const offer = branch.quote;
   const product = quote ? [quote.productLabel, quote.inscription].filter(Boolean).join(" · ") : branch.job ? [branch.job.productLabel, branch.job.inscription].filter(Boolean).join(" · ") : "";
   const tag = offerTag(branch, quote);
   const work = branch.job
-    ? { href: jobHref(branch.job.jobId), label: [`Lucrare · ${branch.stateLabel}`, branch.job.progressLabel].filter(Boolean).join(" · ") }
+    ? { href: clientWorkMemoryHref(customerId, branch.job.jobId), label: [`Lucrare · ${branch.stateLabel}`, branch.job.progressLabel].filter(Boolean).join(" · ") }
     : { text: !offer ? "Fără lucrare" : branch.orderSnapshotId ? `Fără lucrare încă · ${lower(branch.stateLabel)}` : "Fără lucrare · oferta nu are comandă" };
   return (
     <OfferRowView
@@ -64,6 +64,7 @@ function OfferRow({ branch, quote, onPreview }: { branch: HistoryBranch; quote: 
  * state, amount and count is the server's.
  */
 export function ProjectTree({
+  customerId,
   entry,
   quotes,
   requests,
@@ -71,6 +72,7 @@ export function ProjectTree({
   onOpen,
   onPreviewQuote,
 }: {
+  customerId: string;
   entry: HistoryEntry;
   quotes: readonly QuoteListItemTransport[];
   requests: readonly RequestListItemTransport[];
@@ -104,7 +106,7 @@ export function ProjectTree({
         <p className="hcard__label">{`Oferte și lucrările lor · ${entry.branches.length}`}</p>
         <ol className="hproj-branches__list">
           {entry.branches.map((branch) => (
-            <OfferRow key={branch.branchId} branch={branch} quote={quoteOf(branch)} onPreview={onPreviewQuote} />
+            <OfferRow key={branch.branchId} customerId={customerId} branch={branch} quote={quoteOf(branch)} onPreview={onPreviewQuote} />
           ))}
         </ol>
       </section>

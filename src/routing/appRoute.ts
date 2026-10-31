@@ -224,6 +224,15 @@ export function clientHref(customerId: string, section?: ClientHubSection): stri
   return `${path}?sectiune=${encodeURIComponent(section)}`;
 }
 
+/**
+ * R-005 · the client's own read-only memory of one WorkOS job.
+ * The production sheet and the technical dossier stay on the job; this is the way back to them.
+ */
+export function clientWorkMemoryHref(customerId: string, jobId: string): string {
+  const params = new URLSearchParams({ sectiune: "lucrari", lucrare: `job:${jobId}` });
+  return `/clienti/${encodeURIComponent(customerId)}?${params.toString()}`;
+}
+
 export function readClientRequestPreview(search: string): string | null {
   return readSearchParam(search, "cerere");
 }

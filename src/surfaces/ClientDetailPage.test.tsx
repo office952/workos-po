@@ -270,7 +270,7 @@ describe("ClientDetailPage", () => {
     }));
     render(<ClientDetailPage customerId="cus-1" search="?sectiune=lucrari" />);
     // N-020 etapa 4 (644:12426): the way in is the card's own button, named with the work.
-    expect(await screen.findByRole("link", { name: "Deschide fișa lucrării: Litere Nord" })).toHaveAttribute("href", "/lucrari/job-1");
+    expect(await screen.findByRole("link", { name: "Deschide memoria lucrării: Litere Nord" })).toHaveAttribute("href", "/clienti/cus-1?sectiune=lucrari&lucrare=job%3Ajob-1");
     expect(screen.getByRole("link", { name: "Deschide înregistrarea: Firmă 2021" })).toHaveAttribute("href", "/clienti/cus-1?sectiune=lucrari&lucrare=h1");
     expect(screen.getByText("2 lucrări · 1 în WorkOS · 1 înregistrare istorică")).toBeInTheDocument();
   });
