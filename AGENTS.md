@@ -163,6 +163,19 @@ For frontend-only changes, first reuse the running N-028 API via the existing `W
 
 Never treat a textual path, screenshot, Cursor sidebar label, shell `cd`, or process port as proof that the Agent is attached to the intended repository. Never silently rebind by checkout/reset/stash, `move_agent_to_root`, or continuing the old Agent after a manual root switch. For a manual folder change use **File > Open Folder** in the intended Cursor window and a New Agent, then verify. This pause is mandatory for future chats/Agents even if previous worktree identities were verified; it does not require re-opening folders for read-only review of already delivered reports.
 
+## Mandatory image evidence folders and exact file locations
+
+**Owner decision (2026-10-31): every set of WorkOS screenshots, visual comparisons or reported images MUST be saved as real files in its own dedicated evidence folder, and the report MUST state the verified absolute Windows path to the folder and to each individual image.** A sentence such as "screenshots are ready" without resolvable files and exact paths is NOT evidence completion.
+
+After verifying the correct Cursor Agent/root, use the existing Git-ignored `evidence/` directory (confirmed in `.gitignore`) with one distinct, Windows-safe folder per **task + capture run**, e.g. `<ACTUAL_VERIFIED_GIT_TOPLEVEL>\\evidence\\R-005\\<YYYYMMDD-HHMMSS>-memory-responsive\\`. The path shown here is a **template**, not proof of an existing directory. Resolve the full real drive/path on Windows from the verified root and **create the per-run folder before capturing**. Do not reuse or overwrite images from another run. Store screenshot sets/exports, `manifest.json` or `manifest.md`, and optionally a review ZIP inside that set folder; preserve files until Owner review. For an ephemeral worktree scheduled for deletion, copy/archive the evidence to a separately Owner-approved durable location first and report both actual paths. Never store images in protected N-019/N-020/N-028 data roots or backups, or commit screenshots/secrets to Git.
+
+Each report with images must include:
+- `EVIDENCE_SET_ID`, `EVIDENCE_FOLDER_ABSOLUTE_WINDOWS` and `EVIDENCE_FOLDER_EXISTS=YES/NO`;
+- `MANIFEST_ABSOLUTE_WINDOWS`, verified image count, and **every** `IMAGE_ABSOLUTE_WINDOWS_PATH` (not relative names alone), labeled by route/state, viewport pixel dimensions, theme, capture time and SHA-256 where possible;
+- `FILES_VERIFIED_ON_DISK=YES/NO`, plus the archive absolute path if one was created and privacy/sensitive-content checks before sharing.
+
+A reported capture that only exists in a browser/temporary tool or whose full file path cannot be verified is **`EVIDENCE_NOT_PERSISTED`**, not PASS; say so and do not invent paths or claim a folder exists. Report explicit absolute paths for other generated review artifacts too (reports, logs, ZIP/PDF), not just images. The evidence folder is a data-output location inside the **already-verified** checkout, **not** a reason to change Cursor workspace. Folder-switch Owner pause/identity gates remain mandatory whenever changing the actual workspace.
+
 ## New chat / Agent handoff gate (WorkOS)
 
 **Changing ChatGPT conversations, Cursor chats, Agents, machines or checkouts does not reset the WorkOS project.** At the first substantial response in a fresh session, the coordinating reviewer MUST perform a **cold start** before supplying an implementation prompt, announcing acceptance or starting new UI/data work:
