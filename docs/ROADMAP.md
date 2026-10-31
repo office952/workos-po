@@ -14,7 +14,11 @@ NO PARALLEL PRODUCT TRUTH
 
 Living status as of 2026-10-14. Verified `main` is `162e98a5470211dc62cce6198e8cc58593fae158` (PR #75 merge); WorkOS Verify succeeded on that push. Later sections are historical records unless they say otherwise. Merge alone is never Owner acceptance.
 
-### UI/UX authority (2026-10-16)
+### UI/UX design workspace — Owner update (2026-10-31)
+
+Owner designated **WorkOS-N**, Figma file `rM71g74Ph0mkAjAtWuLahy`, as the single active UI/UX design workspace for WorkOS. Design-first for substantial UI/UX changes; reuse existing Figma pages, frames and components rather than starting new files or pages. Individual frames require scoped Owner acceptance; all previous visual prescriptions remain retired. The engine remains Product Truth and the root frontend remains the implementation. See `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md` and [Owner decision](https://app.notion.com/p/40a8ea98e40f8165b7d7e7df523d805a). This policy decision does not change pilot/production readiness or authorize a new implementation wave.
+
+### UI/UX authority (2026-10-16; historical, superseded in its no-Figma-workspace aspect)
 
 Owner decision: Figma is not the current UI/UX authority. Product Truth stays in the engine. Experience work starts from the operator's task, explicit Owner direction, and verification in the running application. Policy: `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md`.
 
