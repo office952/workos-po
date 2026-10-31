@@ -128,6 +128,12 @@ Structural rules that stay:
 - traceable operator actions and runtime browser evidence;
 - no replacement component library or styling framework without explicit Owner GO.
 
+## WorkOS-N design writer: Claude app
+
+Owner decision (2026-10-31): **Claude app is the author/editor of Figma UI/UX designs in WorkOS-N**. ChatGPT owns product/design coordination, brief preparation, read-only independent review and checking Figma-to-browser evidence. Cursor implements scoped Owner-accepted designs in `office952/workos-po`; it does not become the default Figma drawing agent. Owner accepts specific design frames and subsequent integration separately.
+
+New ChatGPT chats and Cursor Agents must carry this role separation forward. Do not draw/edit in Figma through ChatGPT/Cursor by default or create competing files/pages. If Claude design execution is unavailable, mark a dependency and ask for an Owner decision rather than silently reassigning its role. See `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md` and [Owner design decision](https://app.notion.com/p/40a8ea98e40f8165b7d7e7df523d805a).
+
 ## Mandatory reuse and demo continuity gate
 
 Before authoring or executing any substantial WorkOS UI/UX task, **STOP until the continuity preflight in** `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md` is satisfied. The reviewer must verify the existing WorkOS route, WorkOS-N Figma page/section, and relevant persistent synthetic scenarios (N-019 workshop, N-020 client dossier, N-028 Alpha Clima copy) against actual local roots, backups and branch/schema compatibility. Never infer running services from recorded ports.
