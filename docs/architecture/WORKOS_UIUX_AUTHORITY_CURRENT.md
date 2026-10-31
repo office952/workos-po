@@ -79,6 +79,14 @@ A passing component test or minimal synthetic fixture proves its own assertions 
 
 The coordinating independent reviewer (ChatGPT) owns this gate and checks that Cursor's claimed reuse, environment identity and browser evidence are traceable. A Cursor PASS alone is not Owner acceptance. Notion decision: https://app.notion.com/p/40a8ea98e40f812cac6cf929dad44f5a.
 
+## N-028 synthetic browser review: standing session-write exception
+
+**Owner-approved, 2026-10-31:** for the already-existing N-028 `%LOCALAPPDATA%\WorkOS\demo-alpha-current-main`, normal application **login by an existing authorized synthetic account** may write the transient `platform_sessions` control-plane record required for read-only UI/UX browser verification. Normal subsequent reauthentication after session expiry is covered by the **same** standing permission, subject to re-verifying the local root, organization and API ownership each time. This permission belongs **only** to N-028's synthetic working-demo control plane. N-028 product/business data is still protected; N-019/N-020, the Hyperreview original, backups and real environments remain strictly protected.
+
+Before using the exception: identify exact runtime PID/lease and data root; confirm schema and product database before/after; reuse the already-running API if its GET contract matches the new frontend (Vite supports `WORKOS_API_PROXY_TARGET`); use credentials only via approved secure handling, never in logs or evidence. An expired or missing synthetic credential is **not** permission to provision a new user, reset passwords, insert SQL tokens or bypass login. Stop if needed.
+
+Authorized business interaction = **consultation only** (client/job/plan/task/file/version, navigation, focus, responsive/themes). No seed, restore, migration, product writes, operator execution action, permissions/identity change, organization switch, automatic logout/revoke, new Figma file/page, code change, deployment, real Cloud write or merge. Unexpected control-plane mutations beyond expected login/session bookkeeping require STOP. The exact Owner decision is in [N-028's existing journal](https://app.notion.com/p/4088ea98e40f81268195cbe280899e5c), and the active [R-005 checkpoint](https://app.notion.com/p/40a8ea98e40f81d7ad0bedadc3d744e7) supersedes the earlier `SESSION_WRITE_HOLD` solely for this permission.
+
 ## Continuity across ChatGPT and Cursor sessions
 
 A new chat is not a new UI/UX mandate. **Cold-start gate:** read the current `AGENTS.md`, `docs/ROADMAP.md`, `docs/SOURCE_OF_TRUTH.md`, the active task's Notion journal and PR, then verify the actual branch/HEAD, current design authority and protected synthetic environments. Resume the last unfinished objective. If PR #113 has not merged, use its documented Owner policy rather than reverting to historical Figma rules.
