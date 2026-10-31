@@ -136,6 +136,35 @@ Do **not** start another Figma file/page, duplicate application surface, new per
 
 The coordinating independent review checks this gate before giving Cursor a GO or an acceptance verdict. Link the actual verification in the existing PR/Notion journal; no new documentation workstream is required. Owner continuity decision: https://app.notion.com/p/40a8ea98e40f812cac6cf929dad44f5a.
 
+## New chat / Agent handoff gate (WorkOS)
+
+**Changing ChatGPT conversations, Cursor chats, Agents, machines or checkouts does not reset the WorkOS project.** At the first substantial response in a fresh session, the coordinating reviewer MUST perform a **cold start** before supplying an implementation prompt, announcing acceptance or starting new UI/data work:
+
+1. Prove the actual repository / branch / HEAD / checkout identity. Read the current `AGENTS.md`, `docs/ROADMAP.md`, `docs/SOURCE_OF_TRUTH.md` and the applicable domain/UI policy. Check the open PR and Notion decision/implementation journal for the **specific ongoing task**, not merely the latest conversation.
+2. Determine **what is integrated on main, implemented only in a Draft PR, Owner-accepted, unaccepted or blocked**. A passing CI is not integration or Owner acceptance. Reconcile any conflicting old report or chat summary against current GitHub/Notion evidence.
+3. For any UI/UX, real-data or synthetic-runtime task, apply the mandatory reuse preflight above **before** proposing a new Figma file/page, dataset, copy, startup or migration. WorkOS-N remains the single design workspace even when a candidate branch predates this policy. If the governance PR is not yet merged, read its current Draft and the [Owner decision](https://app.notion.com/p/40a8ea98e40f812cac6cf929dad44f5a), rather than assuming main already includes it.
+4. Present a compact `SESSION_RESUME` showing verified current objective, current PR/HEAD, last accepted outcome, existing reusable assets, outstanding evidence/risks, prohibitions and **one** next step. If evidence is unavailable, report `RESUME_HOLD`; never guess and do not ask the Owner to reconstruct the entire project history.
+
+**Before ending or handing off a substantial session**, update the **existing task's** Notion implementation/review journal and its open PR (when applicable), not a new planning document. The checkpoint must contain:
+
+```text
+SESSION_CHECKPOINT_VERSION = 1
+LAST_VERIFIED_AT =
+CURRENT_OBJECTIVE =
+CANONICAL_REPOSITORY / BRANCH / HEAD / PR =
+OWNER_ACCEPTED_VS_IMPLEMENTED_VS_INTEGRATED =
+EXISTING_FIGMA_WORKOS_N_PAGE_AND_FRAME =
+REUSABLE_SYNTHETIC_ENVIRONMENTS / SCHEMA / API_COMPATIBILITY =
+VERIFIED_TESTS_AND_BROWSER_EVIDENCE =
+OPEN_BLOCKER_AND_STOP_REASON =
+PROTECTED_DATA_AND_FORBIDDEN_MUTATIONS =
+NEXT_SMALLEST_SAFE_ACTION =
+OWNER_GO_REQUIRED_FOR =
+SOURCE_LINKS =
+```
+
+The checkpoint is a **navigation and decision handoff**, not a second Product Truth or replacement for live Git/Notion/Figma/runtime verification. Do not store secrets, credentials, real customer data or hardcoded temporary local ports as canonical truth. ChatGPT is responsible for checking this continuity chain; never presume a new chat automatically inherited all prior turns. Owner should need at most to say **"Continuam WorkOS"** when these connected project sources are available.
+
 ## Current flow and status
 
 - Active responsibilities: `docs/architecture/REQUEST_CATALOG_CONFIGURATION_CANON.md`.
