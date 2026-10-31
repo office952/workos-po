@@ -165,6 +165,14 @@ SOURCE_LINKS =
 
 The checkpoint is a **navigation and decision handoff**, not a second Product Truth or replacement for live Git/Notion/Figma/runtime verification. Do not store secrets, credentials, real customer data or hardcoded temporary local ports as canonical truth. ChatGPT is responsible for checking this continuity chain; never presume a new chat automatically inherited all prior turns. Owner should need at most to say **"Continuam WorkOS"** when these connected project sources are available.
 
+## Session change and continuity
+
+A new ChatGPT chat or Cursor Agent is NOT a new WorkOS project. Before any new implementation prompt, the coordinator must verify the current repository and Git identity, read this AGENTS contract, the living roadmap, relevant Notion task journal and open PR, and identify existing WorkOS-N design and persistent N-019/N-020/N-028 synthetic data. Do not assume a new chat inherited earlier discussions, and do not accept an old summary as current evidence.
+
+At the end of substantial work, update the existing task journal / PR with a small checkpoint: objective, branch/head/PR, current accepted-versus-Draft status, reusable Figma and data assets, actual runtime compatibility, unfinished proof, prohibitions, and the next authorized action. At the beginning of a new chat read that checkpoint and independently recheck changing facts. If inaccessible, report a hold rather than redesigning or reseeding.
+
+For frontend-only features, check whether the new frontend can reuse the existing API and protected demo data without launching a later API that would auto-migrate the database. Authentication may write a session even for read-only business views, so confirm permission before using an existing protected environment. The full UI/UX continuity policy is in `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md`. Governance is currently proposed in Draft PR #113 until separately merged.
+
 ## Current flow and status
 
 - Active responsibilities: `docs/architecture/REQUEST_CATALOG_CONFIGURATION_CANON.md`.
