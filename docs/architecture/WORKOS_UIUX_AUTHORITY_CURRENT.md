@@ -24,6 +24,20 @@ At the time of designation, WorkOS-N has pages for foundations, components, offe
 
 This decision does **not** authorize a redesign of every WorkOS route or migrating historical frames into WorkOS-N en masse. Existing separate R003-D/E and R-005 design files remain readable historical work; any future consolidation must identify the specific target page/section, provenance and Owner-approved scope.
 
+## Design authoring responsibility — Claude app
+
+**Owner clarification (2026-10-31): the Claude application is the designated author/editor of WorkOS UI/UX designs in the existing Figma file WorkOS-N.** This is an explicit ownership distinction, not an assumption that a ChatGPT or Cursor Figma integration should create the designs.
+
+```text
+FIGMA_DESIGN_AUTHOR = Claude app
+FIGMA_ACTIVE_FILE = WorkOS-N
+CHATGPT = product direction, Claude brief, coordination, independent UI/UX critique and Figma-code-runtime evidence review
+CURSOR = implementation in office952/workos-po after scoped Owner design approval, then browser proof
+OWNER = accepts specific design variants, implementation and merge separately
+```
+
+ChatGPT and Cursor may inspect relevant existing Figma evidence read-only where authorized, but do **not** take over drawing or editing WorkOS-N by default, create competing Figma design files/pages, or silently substitute another design tool for Claude. If Claude cannot author the required design, report the dependency and request a specific Owner decision instead of changing who owns design creation. This role split applies on every new chat/Agent handoff and must be checked alongside the WorkOS-N active-file rule. Claude-authored concepts remain drafts until the Owner accepts the **specific** page/frame/behavior; Cursor implementation is never automatic approval of design.
+
 ## Design acceptance is explicit and scoped
 
 Distinguish:
