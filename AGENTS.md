@@ -136,6 +136,16 @@ Do **not** start another Figma file/page, duplicate application surface, new per
 
 The coordinating independent review checks this gate before giving Cursor a GO or an acceptance verdict. Link the actual verification in the existing PR/Notion journal; no new documentation workstream is required. Owner continuity decision: https://app.notion.com/p/40a8ea98e40f812cac6cf929dad44f5a.
 
+## N-028 persistent demo: Owner-authorized synthetic login only
+
+Owner decision 2026-10-31: [N-028 operating policy](https://app.notion.com/p/4088ea98e40f81268195cbe280899e5c). `%LOCALAPPDATA%\WorkOS\demo-alpha-current-main` is the **existing reusable synthetic review environment**. For read-only UI/UX review, **normal login/session creation by an already existing authorized synthetic user is permitted** on N-028's **control-plane only**, including necessary re-authentication after normal session expiry. This scoped Owner approval persists across ChatGPT/Cursor chats; no repeated GO is needed solely for session expiry. It does NOT reclassify N-028 business data as mutable.
+
+Before login: reverify local root, organization, process lease, actual API, frontend-to-API compatibility, unchanged product DB/schema and authorized synthetic identity. Credentials/session tokens must never appear in prompts, files or logs. Do not bypass authentication or create/reset users to obtain access. Monitor the expected control-plane session delta and unchanged product DB after the read-only walk. STOP if unexpected writes, ambiguous identity, missing safe credentials or extra mutations are required.
+
+Forbidden under this standing exception: product/business data changes; adding clients, jobs, tasks or files; schema migration 050 or any migration; seed/restore/copy as a default; account/permission changes; organization switching; automatic logout or session revocation; modification of any N-019/N-020/Hyperreview/backup original; real Cloud; code/Figma writes or merge. Any of these needs its own scoped Owner GO.
+
+For frontend-only changes, first reuse the running N-028 API via the existing `WORKOS_API_PROXY_TARGET` where compatible; do not launch a newer API against N-028 and accidentally auto-migrate it. The latest R-005 status is in the [existing R-005 checkpoint](https://app.notion.com/p/40a8ea98e40f81d7ad0bedadc3d744e7); reverify current task and PR before proceeding.
+
 ## New chat / Agent handoff gate (WorkOS)
 
 **Changing ChatGPT conversations, Cursor chats, Agents, machines or checkouts does not reset the WorkOS project.** At the first substantial response in a fresh session, the coordinating reviewer MUST perform a **cold start** before supplying an implementation prompt, announcing acceptance or starting new UI/data work:
