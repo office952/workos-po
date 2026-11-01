@@ -108,9 +108,96 @@ const historical = ["h2026", "h2025", "h2021"].map((id) =>
   }),
 );
 
+const opTask = (seq: string, processLabel: string, status: string, statusLabel: string, extra: Record<string, unknown> = {}) => ({
+  taskId: `task-${Number(seq)}`,
+  processLabel,
+  scopeLabel: "Litere",
+  seqLabel: seq,
+  status,
+  startedAt: null,
+  completedAt: null,
+  timeLabel: "Neînregistrat",
+  complete: status === "COMPLETED",
+  coverageLabel: statusLabel,
+  statusLabel,
+  qualityLabel: null,
+  completedQuantityLabel: null,
+  varianceLabel: null,
+  providerLabel: null,
+  externalProviderLabel: null,
+  actualConsumption: [],
+  people: [],
+  sessions: [],
+  declaredDurationLabel: null,
+  machineTimeLabel: null,
+  ...extra,
+});
+
+const artifact = (artifactId: string, extra: Record<string, unknown>) => ({
+  artifactId,
+  originalFileName: "schiță.dxf",
+  mimeType: "application/dxf",
+  sizeLabel: "12 KB",
+  purpose: "WORKING",
+  purposeLabel: "Lucru",
+  note: null,
+  preview: "NONE",
+  supersedesArtifactId: null,
+  authorLabel: null,
+  uploadedAt: "2026-10-30T08:00:00.000Z",
+  downloadHref: `/api/execution-artifacts/${artifactId}/download`,
+  usages: [],
+  ...extra,
+});
+
+const planHours = (tasks: unknown[]) => ({
+  asOf: "2026-10-31T00:00:00.000Z",
+  totalLabel: "1 h 20 min",
+  complete: false,
+  completeTasks: 1,
+  applicableTasks: tasks.length,
+  coverageLabel: "Evidența orelor: 1 din 3 operații finalizate",
+  startedAt: "2026-10-29T08:00:00.000Z",
+  completedAt: null,
+  elapsedLabel: "2 zile",
+  activeTimeLabel: "1 h 20 min",
+  machineTimeLabel: "Neînregistrat",
+  machineActive: false,
+  people: [{ personId: "p1", label: "Ion Pop", timeLabel: "1 h 20 min", active: true }],
+  tasks,
+});
+
+/** A synthetic job record: one active, one planned and one finished operation, a revision chain, an association and a declared use. */
+const j2Record = () => ({
+  jobId: "j2",
+  files: [
+    artifact("art-1", { usages: [{ taskId: "task-3", taskLabel: "03 · Debitare", linkedAt: "2026-10-29T09:00:00.000Z", usedAt: "2026-10-29T10:00:00.000Z", usedByLabel: "Radu Ene" }] }),
+    artifact("art-2", { sizeLabel: "14 KB", supersedesArtifactId: "art-1", authorLabel: "Ana", uploadedAt: "2026-10-31T08:00:00.000Z", usages: [{ taskId: "task-1", taskLabel: "01 · Lipire", linkedAt: "2026-10-31T09:00:00.000Z", usedAt: null, usedByLabel: null }] }),
+    ...j2ExtraFiles,
+  ],
+  hours: planHours([
+    opTask("01", "Lipire", "IN_PROGRESS", "În lucru", { startedAt: "2026-10-31T07:00:00.000Z", timeLabel: "41 min", people: [{ personId: "p1", label: "Ion Pop", timeLabel: "41 min", active: true }] }),
+    opTask("02", "Vopsire", "PLANNED", "Planificată", { plannedConsumption: [{ resourceLabel: "Vopsea", quantity: 2, unit: "l" }] }),
+    opTask("03", "Debitare", "COMPLETED", "Finalizată", { completedAt: "2026-10-29T12:00:00.000Z", timeLabel: "39 min", completedQuantityLabel: "Realizat: 14,8 m" }),
+  ]),
+  timeline: Array.from({ length: 7 }, (_, index) => ({
+    eventId: `e${index + 1}`,
+    kind: "TASK_EVENT",
+    label: `Eveniment ${index + 1}`,
+    actorLabel: null,
+    occurredAt: `2026-10-2${index + 1}T08:00:00.000Z`,
+    taskId: null,
+    taskLabel: null,
+    detail: null,
+  })),
+});
+
 let calls: string[] = [];
+let j1Hours: ReturnType<typeof planHours> | null = null;
+let j2ExtraFiles: ReturnType<typeof artifact>[] = [];
 let permissions = { read: true, editSites: true, uploadDocuments: true, editDocuments: true, recordHistoricalWork: true, editCommercialTerms: true };
 let worksFail = false;
+let recordFail = false;
 
 function Harness() {
   const [location, setLocation] = useState(() => `${window.location.pathname}${window.location.search}`);
@@ -152,7 +239,10 @@ function worksPayload(url: string, customerId: string) {
 
 beforeEach(() => {
   calls = [];
+  j1Hours = null;
+  j2ExtraFiles = [];
   worksFail = false;
+  recordFail = false;
   permissions = { read: true, editSites: true, uploadDocuments: true, editDocuments: true, recordHistoricalWork: true, editCommercialTerms: true };
   sessionStorage.clear();
   vi.stubGlobal(
@@ -178,6 +268,12 @@ beforeEach(() => {
       if (/\/works(\?|$)/.test(url)) {
         calls.push(url);
         return worksFail ? json(500, { error: "unavailable" }) : json(200, worksPayload(url, customerId));
+      }
+      if (/\/api\/jobs\/([^/]+)\/record$/.test(url)) {
+        const jobId = decodeURIComponent(url.split("/api/jobs/")[1]?.split("/")[0] ?? "");
+        if (recordFail) return json(500, { error: "unavailable" });
+        if (jobId === "j2") return json(200, { record: j2Record() });
+        return json(200, { record: { jobId, files: [], hours: j1Hours, timeline: [] } });
       }
       return json(404, {});
     }),
@@ -212,7 +308,9 @@ describe("Lucrări · the list (644:12426)", () => {
       expect(within(card).getByText("Finalizată")).toBeInTheDocument();
     }
     // A WorkOS work opens its existing job sheet.
-    expect(within(cards()[0]!).getByRole("link", { name: "Deschide fișa lucrării: Litere recepție" })).toHaveAttribute("href", "/lucrari/j2");
+    expect(within(cards()[0]!).getByRole("link", { name: "Consultă memoria lucrării: Litere recepție" })).toHaveAttribute("href", "/clienti/cus-1?sectiune=lucrari&lucrare=job%3Aj2");
+    // A historical record keeps its own destination.
+    expect(within(cards()[2]!).getByRole("link", { name: /^Deschide înregistrarea: / })).toHaveAttribute("href", expect.stringContaining("lucrare=h2026"));
   });
 
   it("tells works apart by their references and product, and names a request photo as the request's", async () => {
@@ -365,6 +463,194 @@ describe("Lucrări · the historical record (648:13642)", () => {
     expect(screen.getByText("Depozit Ghimbav · DN1 km 7")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Modifică" })).toBeInTheDocument();
     expect(calls.some((url) => url.includes("id=historical%3Ah2021"))).toBe(true);
+  });
+});
+
+describe("Memoria lucrării", () => {
+  it("shows the recorded job once: identity, progress, operations by state, files and events, with one way out", async () => {
+    const user = userEvent.setup();
+    window.history.replaceState({}, "", "/clienti/cus-1?sectiune=lucrari");
+    render(<Harness />);
+    await user.click(await screen.findByRole("link", { name: "Consultă memoria lucrării: Litere recepție" }));
+    expect(await screen.findByRole("heading", { name: "Litere recepție" })).toBeInTheDocument();
+    expect(screen.getByText("Memoria lucrării · doar citire")).toBeInTheDocument();
+    expect(screen.getByText("Sediu neînregistrat")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Cerere CER-19E61523" })).toHaveAttribute("href", "/cereri/r2");
+    expect(screen.getByText("Ofertă OF-F5459079")).toBeInTheDocument();
+    // Progress is said once, from the recorded plan.
+    expect(await screen.findByText("1 finalizată")).toBeInTheDocument();
+    expect(screen.getByText("din 3")).toBeInTheDocument();
+    expect(screen.getByText("1 h 20 min")).toBeInTheDocument();
+    expect(screen.getByText("Ion Pop")).toBeInTheDocument();
+    // Operations grouped by state; the number keeps the position in the plan; Enter opens the technical dossier.
+    expect(screen.getByText("Grupate după stare · numărul indică poziția în plan · rândul deschide dosarul tehnic în Lucrări")).toBeInTheDocument();
+    expect(screen.getAllByRole("region").map((region) => region.getAttribute("aria-label")).filter(Boolean)).toEqual(["În lucru · 1", "Urmează · 1", "Finalizate · 1"]);
+    expect(screen.getByRole("link", { name: "01 · Lipire · Litere · dosarul tehnic" })).toHaveAttribute("href", "/lucrari/j2?task=task-1&sectiune=operatii");
+    expect(screen.getByRole("link", { name: "03 · Debitare · Litere · dosarul tehnic" })).toHaveAttribute("href", "/lucrari/j2?task=task-3&sectiune=operatii");
+    expect(screen.getByText("Prevăzut: 2 l · Vopsea")).toBeInTheDocument();
+    expect(screen.getByText("Realizat: 14,8 m · finalizată 29.10.2026")).toBeInTheDocument();
+    // One exit to the job sheet; every other link into Lucrări is an operation's technical dossier.
+    expect(screen.getByRole("link", { name: "Deschide fișa lucrării" })).toHaveAttribute("href", "/lucrari/j2");
+    const intoJobs = screen.getAllByRole("link").map((link) => link.getAttribute("href") ?? "").filter((href) => href.startsWith("/lucrari/"));
+    expect(intoJobs.filter((href) => !href.includes("task="))).toEqual(["/lucrari/j2"]);
+    // Files: one document, its revision chain newest first; association is not use.
+    expect(screen.getByText("Revizie 2 din 2 · Lucru")).toBeInTheDocument();
+    expect(screen.getByText("Fișier inițial · Lucru")).toBeInTheDocument();
+    expect(screen.getByText("12 KB · 30.10.2026 · autor neînregistrat · versiune păstrată")).toBeInTheDocument();
+    expect(screen.getByText("schiță.dxf v2 · asociat, utilizare neconfirmată")).toBeInTheDocument();
+    expect(screen.getByText("schiță.dxf v1 · utilizare înregistrată de Radu Ene")).toBeInTheDocument();
+    expect(screen.getByText("Utilizare înregistrată: 03 · Radu Ene · 29.10.2026")).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem").filter((entry) => entry.classList.contains("wmem-chip")).map((chip) => [chip.textContent, chip.hasAttribute("data-used")])).toEqual([
+      ["0101 · Lipire · asociat", false],
+      ["0303 · Debitare · utilizat", true],
+    ]);
+    // Events: the five latest first, then all on demand. Nothing here starts or stops work.
+    const events = () => screen.getAllByText(/^Eveniment \d$/).map((entry) => entry.textContent);
+    expect(events()).toEqual(["Eveniment 7", "Eveniment 6", "Eveniment 5", "Eveniment 4", "Eveniment 3"]);
+    const more = screen.getByRole("button", { name: "Arată toate cele 7 evenimente" });
+    expect(within(screen.getByRole("article")).getAllByRole("button").map((button) => button.textContent)).toEqual(["Arată toate cele 7 evenimente"]);
+    await user.click(more);
+    expect(more).toHaveAttribute("aria-expanded", "true");
+    expect(events()).toHaveLength(7);
+  });
+
+  it("searches inside the dossier, keeps the search in the address, and says when nothing matches", async () => {
+    const user = userEvent.setup();
+    window.history.replaceState({}, "", "/clienti/cus-1?sectiune=lucrari&tip=WORKOS&lucrare=job:j2");
+    render(<Harness />);
+    const box = await screen.findByRole("searchbox", { name: "Caută în dosar" });
+    await screen.findByText("3 operații · 1 fișier tehnic (2 versiuni) · 7 evenimente");
+    await user.type(box, "vopsire");
+    await waitFor(() => expect(search().get("gaseste")).toBe("vopsire"));
+    expect(search().get("tip")).toBe("WORKOS");
+    expect(screen.getByText("Rezultate pentru „vopsire”: 1 operație · 0 fișiere tehnice (0 versiuni) · 0 evenimente")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "02 · Vopsire · Litere · dosarul tehnic" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "01 · Lipire · Litere · dosarul tehnic" })).not.toBeInTheDocument();
+    expect(screen.getByText("Niciun fișier nu conține „vopsire”.")).toBeInTheDocument();
+    await user.clear(box);
+    await user.type(box, "inexistent");
+    expect(await screen.findByText("Niciun rezultat pentru textul căutat în dosarul înregistrat")).toBeInTheDocument();
+    expect(screen.getByText("Nicio operație nu conține „inexistent”.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Șterge căutarea" }));
+    await waitFor(() => expect(search().get("gaseste")).toBeNull());
+    expect(document.activeElement).toBe(box);
+  });
+
+  it("returns to the client's works with the filters kept", async () => {
+    const user = userEvent.setup();
+    window.history.replaceState({}, "", "/clienti/cus-1?sectiune=lucrari&tip=WORKOS");
+    render(<Harness />);
+    await user.click(await screen.findByRole("link", { name: "Consultă memoria lucrării: Litere recepție" }));
+    await screen.findByRole("heading", { name: "Litere recepție" });
+    await user.click(screen.getByRole("link", { name: /^Lucrările clientului/ }));
+    await waitFor(() => expect(search().get("lucrare")).toBeNull());
+    expect(search().get("tip")).toBe("WORKOS");
+    expect(await screen.findByText("2 din 5 lucrări")).toBeInTheDocument();
+  });
+
+  it("shows two revisions of the same file once each, under the version they revise (UX-S1)", async () => {
+    j2ExtraFiles = [artifact("art-3", { sizeLabel: "15 KB", supersedesArtifactId: "art-1", uploadedAt: "2026-10-31T09:00:00.000Z", usages: [{ taskId: "task-2", taskLabel: "02 · Vopsire", linkedAt: "2026-10-31T09:30:00.000Z", usedAt: null, usedByLabel: null }] })];
+    window.history.replaceState({}, "", "/clienti/cus-1?sectiune=lucrari&lucrare=job:j2");
+    render(<Harness />);
+    expect(await screen.findByText("3 operații · 1 fișier tehnic (3 versiuni) · 7 evenimente")).toBeInTheDocument();
+    expect(screen.getAllByText("Revizie paralelă a fișierului inițial · Lucru")).toHaveLength(2);
+    expect(screen.getByText("Fișier inițial · Lucru")).toBeInTheDocument();
+    expect(screen.queryByText(/Revizie \d din \d/)).not.toBeInTheDocument();
+    const downloads = screen.getAllByRole("link").filter((link) => link.classList.contains("wmem-download")).map((link) => link.getAttribute("href"));
+    expect(downloads).toEqual(["/api/execution-artifacts/art-3/download", "/api/execution-artifacts/art-2/download", "/api/execution-artifacts/art-1/download"]);
+    // On the operations, each keeps its own revision: no v2 is presumed for either branch.
+    expect(screen.getByText("schiță.dxf rev. · asociat, utilizare neconfirmată")).toBeInTheDocument();
+    expect(screen.getByText("schiță.dxf v1 · utilizare înregistrată de Radu Ene")).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem").filter((entry) => entry.classList.contains("wmem-chip")).map((chip) => [chip.textContent, chip.hasAttribute("data-used")])).toEqual([
+      ["0202 · Vopsire · asociat", false],
+      ["0101 · Lipire · asociat", false],
+      ["0303 · Debitare · utilizat", true],
+    ]);
+  });
+
+  it("says the plan is missing, not that the work has zero operations", async () => {
+    window.history.replaceState({}, "", "/clienti/cus-1?sectiune=lucrari&lucrare=job:j1");
+    render(<Harness />);
+    expect(await screen.findByRole("heading", { name: "Litere showroom" })).toBeInTheDocument();
+    expect(await screen.findByText("Plan de execuție neînregistrat")).toBeInTheDocument();
+    expect(screen.getByText("Fără plan de execuție înregistrat · ore și persoane neînregistrate")).toBeInTheDocument();
+    expect(screen.getByText("Niciun fișier în dosarul tehnic")).toBeInTheDocument();
+    expect(screen.queryByText(/0 operații/)).not.toBeInTheDocument();
+  });
+
+  it("tells an empty recorded plan apart from a missing one", async () => {
+    j1Hours = planHours([]);
+    window.history.replaceState({}, "", "/clienti/cus-1?sectiune=lucrari&lucrare=job:j1");
+    render(<Harness />);
+    expect(await screen.findByText("Plan fără operații înregistrate")).toBeInTheDocument();
+    expect(screen.queryByText("Plan de execuție neînregistrat")).not.toBeInTheDocument();
+    expect(screen.getByText("0 operații · 0 fișiere tehnice (0 versiuni) · 0 evenimente")).toBeInTheDocument();
+  });
+
+  it("says a finished job has nothing in progress or next, without inventing empty groups", async () => {
+    j1Hours = planHours([opTask("01", "Debitare", "COMPLETED", "Finalizată"), opTask("02", "Lipire", "COMPLETED", "Finalizată")]);
+    window.history.replaceState({}, "", "/clienti/cus-1?sectiune=lucrari&lucrare=job:j1");
+    render(<Harness />);
+    expect(await screen.findByText("În lucru 0 · Urmează 0 — toate operațiile planului sunt înregistrate ca finalizate.")).toBeInTheDocument();
+    expect(screen.getAllByRole("region").map((region) => region.getAttribute("aria-label")).filter(Boolean)).toEqual(["Finalizate · 2"]);
+    expect(screen.getByText("2 finalizate")).toBeInTheDocument();
+  });
+
+  it("shows one part at a time on tablet, kept in the address through refresh and Back/Forward", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("min-width: 768px"), media: query, addEventListener() {}, removeEventListener() {} }));
+    const user = userEvent.setup();
+    window.history.replaceState({}, "", "/clienti/cus-1?sectiune=lucrari&tip=WORKOS&lucrare=job%3Aj2");
+    const view = render(<Harness />);
+    // The context bar replaces the client header.
+    expect(await screen.findByRole("link", { name: /^Alpha Clima Lucrările clientului/ })).toHaveAttribute("href", "/clienti/cus-1?sectiune=lucrari&tip=WORKOS");
+    expect(screen.queryByRole("navigation", { name: "Secțiuni client" })).not.toBeInTheDocument();
+    const operations = await screen.findByRole("tab", { name: "Operații 3" });
+    expect(operations).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tabpanel", { name: "Operații 3" })).toBeVisible();
+    await user.click(screen.getByRole("tab", { name: "Fișiere 1" }));
+    await waitFor(() => expect(search().get("fila")).toBe("fisiere"));
+    expect(Object.fromEntries(search())).toEqual({ sectiune: "lucrari", tip: "WORKOS", lucrare: "job:j2", fila: "fisiere" });
+    expect(screen.getByRole("tabpanel", { name: "Fișiere 1" })).toBeVisible();
+    expect(screen.queryByRole("tabpanel", { name: "Operații 3" })).not.toBeInTheDocument();
+    // The arrows move between the tabs.
+    await user.keyboard("{ArrowRight}");
+    await waitFor(() => expect(search().get("fila")).toBe("evenimente"));
+    expect(document.activeElement).toBe(screen.getByRole("tab", { name: "Evenimente 7" }));
+    // Only the open tab is in the Tab order; Shift+Tab leaves the tab list instead of walking it.
+    expect(screen.getAllByRole("tab").map((tab) => [tab.getAttribute("aria-selected"), tab.tabIndex])).toEqual([["false", -1], ["false", -1], ["true", 0]]);
+    expect(screen.getByRole("tab", { name: "Evenimente 7" })).toHaveAttribute("aria-controls", screen.getByRole("tabpanel", { name: "Evenimente 7" }).id);
+    await user.tab({ shift: true });
+    expect(screen.getAllByRole("tab")).not.toContain(document.activeElement);
+    // Refresh reopens the same part.
+    view.unmount();
+    resetResourceCache();
+    render(<Harness />);
+    expect(await screen.findByRole("tab", { name: "Evenimente 7" })).toHaveAttribute("aria-selected", "true");
+    // To the job sheet and back: the part is still open.
+    act(() => navigate("/lucrari/j2"));
+    act(() => window.history.back());
+    await waitFor(() => expect(search().get("fila")).toBe("evenimente"));
+    expect(await screen.findByRole("tab", { name: "Evenimente 7" })).toHaveAttribute("aria-selected", "true");
+    act(() => window.history.forward());
+    await waitFor(() => expect(window.location.pathname).toBe("/lucrari/j2"));
+  });
+
+  it("keeps a failed record from looking like an empty dossier", async () => {
+    recordFail = true;
+    window.history.replaceState({}, "", "/clienti/cus-1?sectiune=lucrari&lucrare=job:j2");
+    render(<Harness />);
+    expect(await screen.findByText("Dosarul tehnic nu a putut fi citit.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Litere recepție" })).toBeInTheDocument();
+    expect(screen.queryByText("Niciun fișier în dosarul tehnic")).not.toBeInTheDocument();
+    expect(screen.queryByText("Plan fără operații înregistrate")).not.toBeInTheDocument();
+    expect(screen.queryByText("Se citește dosarul înregistrat…")).not.toBeInTheDocument();
+  });
+
+  it("does not read another client's job", async () => {
+    window.history.replaceState({}, "", "/clienti/cus-2?sectiune=lucrari&lucrare=job:j2");
+    render(<Harness />);
+    expect(await screen.findByText("Lucrarea nu există")).toBeInTheDocument();
+    expect(screen.queryByText("Lipire")).not.toBeInTheDocument();
   });
 });
 

@@ -3,7 +3,7 @@ import { resourceKeys } from "../../data/resourceKeys";
 import { loadQuoteEnvelope, loadRequestDetail } from "../../data/routeLoaders";
 import { useResource } from "../../data/useResource";
 import { presentJobSheetTitle } from "../../presentation/jobSheetIdentity";
-import { clientHref, jobHref, requestHref } from "../../routing/appRoute";
+import { clientWorkMemoryHref, jobHref, requestHref } from "../../routing/appRoute";
 
 /** The offer id behind a source link: the snapshot when known, otherwise the last path segment. */
 function sourceOfferId(quoteSnapshotId: string | null, sourceHref: string | null): string | null {
@@ -39,7 +39,7 @@ export function JobContextTrail({
   const offerId = sourceOfferId(quoteSnapshotId, sourceHref);
   const offer = useResource(offerId ? resourceKeys.quoteEnvelope(offerId) : null, () => loadQuoteEnvelope(offerId ?? ""));
   const steps: { key: string; label: string; href: string | null }[] = [];
-  if (job.customerId) steps.push({ key: "client", label: job.customerDisplayName ?? "Client", href: clientHref(job.customerId) });
+  if (job.customerId) steps.push({ key: "client", label: job.customerDisplayName ?? "Client", href: clientWorkMemoryHref(job.customerId, job.jobId) });
   if (requestId) steps.push({ key: "request", label: request.data?.reference || "Cerere", href: requestHref(requestId) });
   if (sourceHref) steps.push({ key: "offer", label: offer.data?.reference || "Ofertă", href: sourceHref });
   steps.push({ key: "job", label: presentJobSheetTitle(job), href: operationLabel ? jobHref(job.jobId) : null });

@@ -3,7 +3,7 @@ import type { CustomerWorkspaceTransport, QuoteListItemTransport, RequestListIte
 import { formatTimestamp } from "../../../presentation/format";
 import { presentQuoteHistoryState } from "../../../presentation/quoteHistory";
 import { presentQuoteWorklistAction } from "../../../presentation/worklistAction";
-import { clientHref, jobHref, registryQuoteHref, requestHref } from "../../../routing/appRoute";
+import { clientHref, clientWorkMemoryHref, registryQuoteHref, requestHref } from "../../../routing/appRoute";
 import { hrefPath, originBack } from "../../../routing/originBack";
 import { usePreviewHistory } from "../../../routing/usePreviewHistory";
 import { OfferPreviewDrawer } from "../../quotes/OfferPreviewDrawer";
@@ -36,9 +36,9 @@ function tagOf(quote: QuoteListItemTransport): OfferTag {
 }
 
 /** The work of an offer: its job (by order); an order whose job the list lacks keeps the server's way in. */
-function workOf(offer: OfferItem): OfferWork {
+function workOf(customerId: string, offer: OfferItem): OfferWork {
   const { quote, job } = offer;
-  if (job) return { href: jobHref(job.jobId), label: ["Lucrare", job.stageLabel, job.progressLabel?.split(" · ")[0] ?? null].filter(Boolean).join(" · ") };
+  if (job) return { href: clientWorkMemoryHref(customerId, job.jobId), label: ["Lucrare", job.stageLabel, job.progressLabel?.split(" · ")[0] ?? null].filter(Boolean).join(" · ") };
   if (quote.superseded && !quote.orderSnapshotId) return { text: "Nu e oferta curentă" };
   if (quote.orderSnapshotId) {
     const action = presentQuoteWorklistAction(quote);
@@ -47,10 +47,10 @@ function workOf(offer: OfferItem): OfferWork {
   return { text: "Fără lucrare · oferta nu are comandă" };
 }
 
-function OfferRow({ offer, onPreview }: { offer: OfferItem; onPreview: (id: string) => void }) {
+function OfferRow({ customerId, offer, onPreview }: { customerId: string; offer: OfferItem; onPreview: (id: string) => void }) {
   const { quote } = offer;
   const tag = tagOf(quote);
-  const work = workOf(offer);
+  const work = workOf(customerId, offer);
   return (
     <OfferRowView
       amount={offerAmount(quote)}
@@ -117,7 +117,7 @@ function RequestCard({ customerId, group, onPreview, arrival }: { customerId: st
           <p className="dreqcard__label">{countLabel(offers.length, "ofertă", "oferte")}</p>
           <ol className="hoffer-list">
             {offers.map((offer) => (
-              <OfferRow key={offer.quote.quoteSnapshotId} offer={offer} onPreview={onPreview} />
+              <OfferRow key={offer.quote.quoteSnapshotId} customerId={customerId} offer={offer} onPreview={onPreview} />
             ))}
           </ol>
         </>
@@ -134,7 +134,7 @@ function RequestCard({ customerId, group, onPreview, arrival }: { customerId: st
 }
 
 /** Toate ofertele (640:12261): each offer once, under the line of the request it belongs to. */
-function OfferLine({ offer, onPreview }: { offer: OfferItem; onPreview: (id: string) => void }) {
+function OfferLine({ customerId, offer, onPreview }: { customerId: string; offer: OfferItem; onPreview: (id: string) => void }) {
   return (
     <li className="dreqflat">
       <p className="dreqflat__context">
@@ -142,7 +142,7 @@ function OfferLine({ offer, onPreview }: { offer: OfferItem; onPreview: (id: str
         {offer.request ? ` ${[offer.request.reference, offer.request.title, offer.site ? `⌖ ${offer.site.name}` : null].filter(Boolean).join(" · ")}` : null}
       </p>
       <ol className="hoffer-list">
-        <OfferRow offer={offer} onPreview={onPreview} />
+        <OfferRow customerId={customerId} offer={offer} onPreview={onPreview} />
       </ol>
     </li>
   );
@@ -337,7 +337,7 @@ export function ClientRequestsSection({ customerId, workspace, search }: { custo
               <p className="dreqcard__label">{`Fără cerere · ${countLabel(data.loose.length, "ofertă", "oferte")}`}</p>
               <ol className="hoffer-list">
                 {data.loose.map((offer) => (
-                  <OfferRow key={offer.quote.quoteSnapshotId} offer={offer} onPreview={preview.open} />
+                  <OfferRow key={offer.quote.quoteSnapshotId} customerId={customerId} offer={offer} onPreview={preview.open} />
                 ))}
               </ol>
             </section>
@@ -352,7 +352,7 @@ export function ClientRequestsSection({ customerId, workspace, search }: { custo
       ) : (
         <ol className="dreqs__list" data-flat>
           {data.offers.map((offer) => (
-            <OfferLine key={offer.quote.quoteSnapshotId} offer={offer} onPreview={preview.open} />
+            <OfferLine key={offer.quote.quoteSnapshotId} customerId={customerId} offer={offer} onPreview={preview.open} />
           ))}
         </ol>
       )}

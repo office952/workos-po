@@ -211,6 +211,29 @@ describe('file-first job record', () => {
     expect(within(files).getByText('Asociat · utilizare neconfirmată')).toBeInTheDocument();
   });
 
+  it('shows two revisions of the same version once each, with no presumed v2 / v3 (UX-S1)', async () => {
+    const user = userEvent.setup();
+    const parallel = { ...jobRecordFixture.files[1]!, artifactId: 'file-alt', sizeLabel: '3 KB', uploadedAt: '2026-10-22T07:00:00Z', downloadHref: '/api/execution-artifacts/file-alt/download',
+      usages: [{ taskId: 'task-3', taskLabel: '03 · Vopsire', linkedAt: '2026-10-22T07:10:00Z', usedAt: '2026-10-22T09:00:00Z', usedByLabel: 'Ion' }] };
+    render(<View record={{ ...jobRecordFixture, files: [parallel, ...jobRecordFixture.files] }} section="fisiere" />);
+    expect(screen.getByText(/^1 fișier · 3 versiuni/)).toBeInTheDocument();
+    const files = screen.getByRole('table', { name: 'Fișiere, utilizări și autorii înregistrărilor' });
+    expect(within(files).getByRole('rowheader', { name: 'litere.dxf · 3 versiuni' })).toBeInTheDocument();
+    const rows = within(files).getAllByRole('row').slice(2);
+    expect(rows.map(row => within(row).getByRole('link', { name: 'Descarcă' }).getAttribute('href'))).toEqual([
+      '/api/execution-artifacts/file-old/download', '/api/execution-artifacts/file-new/download', '/api/execution-artifacts/file-alt/download',
+    ]);
+    expect(rows.map(row => row.querySelector('.job-record__version')?.textContent)).toEqual(['v1', 'rev.', 'rev.']);
+    expect(within(files).getAllByText('Revizie paralelă a fișierului inițial')).toHaveLength(2);
+    // Each revision keeps its own association and declared use.
+    expect(within(rows[1]!).getByText('Asociat · utilizare neconfirmată')).toBeInTheDocument();
+    expect(within(rows[2]!).getByText('Utilizare înregistrată')).toBeInTheDocument();
+    expect(within(rows[2]!).getByText(/Ion ·/)).toBeInTheDocument();
+    await user.click(within(rows[0]!).getByRole('button', { name: 'Utilizări și versiuni →' }));
+    const detail = await screen.findByRole('region', { name: 'Detalii fișier litere.dxf' });
+    expect(within(detail).getAllByRole('button', { name: /Versiune ulterioară/ })).toHaveLength(2);
+  });
+
   it('opens a specific revision without changing its uses and restores keyboard focus', async () => {
     const user = userEvent.setup();
     render(<View record={jobRecordFixture} section="fisiere" />);
@@ -222,6 +245,18 @@ describe('file-first job record', () => {
     expect(within(detail).getByRole('button', { name: /Versiune ulterioară/ })).toBeInTheDocument();
     await user.click(within(detail).getByRole('button', { name: 'Închide detaliul' }));
     expect(open).toHaveFocus();
+  });
+
+  it('names the version in the file detail and in its links, not only the file name and time', async () => {
+    const user = userEvent.setup();
+    render(<View record={jobRecordFixture} section="fisiere" />);
+    await user.click(screen.getAllByRole('button', { name: 'Utilizări și versiuni →' })[0]!);
+    const first = await screen.findByRole('region', { name: 'Detalii fișier litere.dxf' });
+    expect(within(first).getByRole('heading', { level: 3, name: 'litere.dxf v1' })).toBeInTheDocument();
+    await user.click(within(first).getByRole('button', { name: /^Versiune ulterioară: v2 · litere\.dxf · / }));
+    const second = await screen.findByRole('region', { name: 'Detalii fișier litere.dxf' });
+    expect(within(second).getByRole('heading', { level: 3, name: 'litere.dxf v2' })).toBeInTheDocument();
+    expect(within(second).getByRole('button', { name: /^Versiune anterioară: v1 · litere\.dxf · / })).toBeInTheDocument();
   });
 
   it('closes a filtered-out file detail and does not reopen it when the search clears', async () => {

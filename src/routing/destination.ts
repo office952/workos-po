@@ -14,7 +14,10 @@ export function describeDestination(href: string, fromPath?: string): string {
   if (path === "/atelier" || /^\/(?:executie|execution)\//.test(path)) return "Atelier";
   if (/^\/lucrari\/[^/]+$/.test(path)) return url.searchParams.get("sectiune") ? jobSheetSectionLabel(parseJobSheetSection(url.search)) : "fișa lucrării";
   if (path === "/lucrari") return "Lucrări";
-  if (/^\/clienti\/[^/]+$/.test(path)) return fromPath === path ? CLIENT_HUB_SECTION_LABEL[parseClientHubSection(url.search)] : "fișa clientului";
+  if (/^\/clienti\/[^/]+$/.test(path)) {
+    if (url.searchParams.get("lucrare")?.startsWith("job:")) return "memoria lucrării";
+    return fromPath === path ? CLIENT_HUB_SECTION_LABEL[parseClientHubSection(url.search)] : "fișa clientului";
+  }
   if (path === "/clienti") return "Clienți";
   if (/^\/cereri\/[^/]+$/.test(path)) return "cerere";
   if (path === "/cereri") return "Cereri";

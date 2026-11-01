@@ -156,7 +156,7 @@ describe("Istoric · design final, stage 1", () => {
     expect(branches).toHaveLength(2);
     expect(within(branches[0]!).getByRole("link", { name: "Deschide oferta OF-q1" })).toBeInTheDocument();
     // The work's own state and progress, apart from the offer's tag (813:31490).
-    expect(within(branches[0]!).getByRole("link", { name: "Lucrare · Execuție în curs · 0 / 12 finalizate →" })).toHaveAttribute("href", "/lucrari/j1");
+    expect(within(branches[0]!).getByRole("link", { name: "Lucrare · Execuție în curs · 0 / 12 finalizate →" })).toHaveAttribute("href", "/clienti/cus-1?sectiune=lucrari&lucrare=job%3Aj1");
     expect(within(branches[0]!).getByText("Cu comandă")).toBeInTheDocument();
     expect(branches[0]).not.toHaveAttribute("data-attention");
     expect(within(branches[1]!).getByRole("link", { name: "Deschide oferta OF-q2" })).toBeInTheDocument();

@@ -3,7 +3,7 @@ import type { JobRecordFile } from "../../api/jobRecord";
 import { Button } from "../../components/Button";
 import { AuthenticatedDownloadLink } from "../../presentation/AuthenticatedDownloadLink";
 import { JobArtifactPreview } from "../JobArtifactPreview";
-import { fileVersions } from "./fileVersions";
+import { fileVersions, versionTag, versionTrees } from "./fileVersions";
 import "../../styles/surfaces/job-file-viewer.css";
 
 /**
@@ -34,7 +34,13 @@ export function JobFileViewer({
   onClose: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const versionButtons = useRef(new Map<string, HTMLButtonElement>());
   const versions = fileVersions(files, fileId);
+  const nodes = new Map(versionTrees(files).flatMap((tree) => tree.nodes).map((node) => [node.file.artifactId, node]));
+  const tagOf = (artifactId: string) => {
+    const node = nodes.get(artifactId);
+    return node ? versionTag(node) : "rev.";
+  };
   const file = files.find((item) => item.artifactId === fileId) ?? null;
   const shownIndex = versions.findIndex((item) => item.artifactId === fileId);
   const anchorIndex = versions.findIndex((item) => item.artifactId === anchorId);
@@ -85,11 +91,15 @@ export function JobFileViewer({
             ? versions.map((item, index) => (
                 <button
                   key={item.artifactId}
+                  ref={(node) => {
+                    if (node) versionButtons.current.set(item.artifactId, node);
+                    else versionButtons.current.delete(item.artifactId);
+                  }}
                   type="button"
                   aria-pressed={item.artifactId === fileId}
                   onClick={() => onSwitch(item.artifactId)}
                 >
-                  {`v${index + 1}${index === anchorIndex ? " · asociată" : anchorIndex >= 0 && index > anchorIndex ? " · ulterioară" : anchorIndex >= 0 && index < anchorIndex ? " · anterioară" : ""}`}
+                  {`${tagOf(item.artifactId)}${index === anchorIndex ? " · asociată" : anchorIndex >= 0 && index > anchorIndex ? " · ulterioară" : anchorIndex >= 0 && index < anchorIndex ? " · anterioară" : ""}`}
                 </button>
               ))
             : null}
@@ -99,9 +109,19 @@ export function JobFileViewer({
       {consultingOther ? (
         <p className="job-viewer__banner" role="status">
           <span>
-            {`Consulți v${shownIndex + 1} (${shownIndex > anchorIndex ? "ulterioară" : "anterioară"}). Asocierea rămâne la v${anchorIndex + 1}; utilizarea declarată nu se schimbă.`}
+            {`Consulți ${tagOf(fileId)} (${shownIndex > anchorIndex ? "ulterioară" : "anterioară"}). Asocierea rămâne la ${tagOf(anchorId)}; utilizarea declarată nu se schimbă.`}
           </span>
-          <button type="button" onClick={() => onSwitch(anchorId)}>{`Revino la v${anchorIndex + 1}`}</button>
+          <button
+            type="button"
+            onClick={() => {
+              // The button leaves with its banner: focus moves to the version first, before the
+              // switch, while the page still has its height (a later focus loses Chrome's scroll anchor).
+              versionButtons.current.get(anchorId)?.focus({ preventScroll: true });
+              onSwitch(anchorId);
+            }}
+          >
+            {`Revino la ${tagOf(anchorId)}`}
+          </button>
         </p>
       ) : null}
       <div className="job-viewer__tools">
