@@ -247,6 +247,18 @@ describe('file-first job record', () => {
     expect(open).toHaveFocus();
   });
 
+  it('names the version in the file detail and in its links, not only the file name and time', async () => {
+    const user = userEvent.setup();
+    render(<View record={jobRecordFixture} section="fisiere" />);
+    await user.click(screen.getAllByRole('button', { name: 'Utilizări și versiuni →' })[0]!);
+    const first = await screen.findByRole('region', { name: 'Detalii fișier litere.dxf' });
+    expect(within(first).getByRole('heading', { level: 3, name: 'litere.dxf v1' })).toBeInTheDocument();
+    await user.click(within(first).getByRole('button', { name: /^Versiune ulterioară: v2 · litere\.dxf · / }));
+    const second = await screen.findByRole('region', { name: 'Detalii fișier litere.dxf' });
+    expect(within(second).getByRole('heading', { level: 3, name: 'litere.dxf v2' })).toBeInTheDocument();
+    expect(within(second).getByRole('button', { name: /^Versiune anterioară: v1 · litere\.dxf · / })).toBeInTheDocument();
+  });
+
   it('closes a filtered-out file detail and does not reopen it when the search clears', async () => {
     const user = userEvent.setup();
     const record = { ...jobRecordFixture, files: jobRecordFixture.files.map((file, index) => ({ ...file, originalFileName: index ? 'control.txt' : 'debitare.txt' })) };

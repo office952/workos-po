@@ -210,8 +210,8 @@ describe("work memory · files, versions, association and use", () => {
 
 describe("work memory · counts, search and the tab in the address", () => {
   it("counts from the record and says „de” where Romanian needs it", () => {
-    expect(recordCountsLine(12, 4, 5, 27)).toBe("12 operații · 4 fișiere (5 versiuni) · 27 evenimente");
-    expect(recordCountsLine(null, 1, 1, 1)).toBe("1 fișier (1 versiune) · 1 eveniment");
+    expect(recordCountsLine(12, 4, 5, 27)).toBe("12 operații · 4 fișiere tehnice (5 versiuni) · 27 evenimente");
+    expect(recordCountsLine(null, 1, 1, 1)).toBe("1 fișier tehnic (1 versiune) · 1 eveniment");
     expect(countWithDe(27, "eveniment", "evenimente")).toBe("27 de evenimente");
     expect(countWithDe(5, "eveniment", "evenimente")).toBe("5 evenimente");
     expect(countWithDe(100, "eveniment", "evenimente")).toBe("100 de evenimente");

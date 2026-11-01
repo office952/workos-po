@@ -519,11 +519,11 @@ describe("Memoria lucrării", () => {
     window.history.replaceState({}, "", "/clienti/cus-1?sectiune=lucrari&tip=WORKOS&lucrare=job:j2");
     render(<Harness />);
     const box = await screen.findByRole("searchbox", { name: "Caută în dosar" });
-    await screen.findByText("3 operații · 1 fișier (2 versiuni) · 7 evenimente");
+    await screen.findByText("3 operații · 1 fișier tehnic (2 versiuni) · 7 evenimente");
     await user.type(box, "vopsire");
     await waitFor(() => expect(search().get("gaseste")).toBe("vopsire"));
     expect(search().get("tip")).toBe("WORKOS");
-    expect(screen.getByText("Rezultate pentru „vopsire”: 1 operație · 0 fișiere (0 versiuni) · 0 evenimente")).toBeInTheDocument();
+    expect(screen.getByText("Rezultate pentru „vopsire”: 1 operație · 0 fișiere tehnice (0 versiuni) · 0 evenimente")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "02 · Vopsire · Litere · dosarul tehnic" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "01 · Lipire · Litere · dosarul tehnic" })).not.toBeInTheDocument();
     expect(screen.getByText("Niciun fișier nu conține „vopsire”.")).toBeInTheDocument();
@@ -552,7 +552,7 @@ describe("Memoria lucrării", () => {
     j2ExtraFiles = [artifact("art-3", { sizeLabel: "15 KB", supersedesArtifactId: "art-1", uploadedAt: "2026-10-31T09:00:00.000Z", usages: [{ taskId: "task-2", taskLabel: "02 · Vopsire", linkedAt: "2026-10-31T09:30:00.000Z", usedAt: null, usedByLabel: null }] })];
     window.history.replaceState({}, "", "/clienti/cus-1?sectiune=lucrari&lucrare=job:j2");
     render(<Harness />);
-    expect(await screen.findByText("3 operații · 1 fișier (3 versiuni) · 7 evenimente")).toBeInTheDocument();
+    expect(await screen.findByText("3 operații · 1 fișier tehnic (3 versiuni) · 7 evenimente")).toBeInTheDocument();
     expect(screen.getAllByText("Revizie paralelă a fișierului inițial · Lucru")).toHaveLength(2);
     expect(screen.getByText("Fișier inițial · Lucru")).toBeInTheDocument();
     expect(screen.queryByText(/Revizie \d din \d/)).not.toBeInTheDocument();
@@ -584,7 +584,7 @@ describe("Memoria lucrării", () => {
     render(<Harness />);
     expect(await screen.findByText("Plan fără operații înregistrate")).toBeInTheDocument();
     expect(screen.queryByText("Plan de execuție neînregistrat")).not.toBeInTheDocument();
-    expect(screen.getByText("0 operații · 0 fișiere (0 versiuni) · 0 evenimente")).toBeInTheDocument();
+    expect(screen.getByText("0 operații · 0 fișiere tehnice (0 versiuni) · 0 evenimente")).toBeInTheDocument();
   });
 
   it("says a finished job has nothing in progress or next, without inventing empty groups", async () => {
@@ -616,6 +616,11 @@ describe("Memoria lucrării", () => {
     await user.keyboard("{ArrowRight}");
     await waitFor(() => expect(search().get("fila")).toBe("evenimente"));
     expect(document.activeElement).toBe(screen.getByRole("tab", { name: "Evenimente 7" }));
+    // Only the open tab is in the Tab order; Shift+Tab leaves the tab list instead of walking it.
+    expect(screen.getAllByRole("tab").map((tab) => [tab.getAttribute("aria-selected"), tab.tabIndex])).toEqual([["false", -1], ["false", -1], ["true", 0]]);
+    expect(screen.getByRole("tab", { name: "Evenimente 7" })).toHaveAttribute("aria-controls", screen.getByRole("tabpanel", { name: "Evenimente 7" }).id);
+    await user.tab({ shift: true });
+    expect(screen.getAllByRole("tab")).not.toContain(document.activeElement);
     // Refresh reopens the same part.
     view.unmount();
     resetResourceCache();

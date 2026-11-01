@@ -2,8 +2,8 @@ import type { KeyboardEvent } from "react";
 import { MEMORY_TABS, type MemoryTab } from "../workMemoryModel";
 
 /**
- * R-005 · Comutator dosar (1041:39343), on phone and tablet: Operații, Fișiere, Evenimente. Each
- * tab is reachable with Tab and opens with Enter or Space; the arrows move between them too.
+ * R-005 · Comutator dosar (1041:39343), on phone and tablet: Operații, Fișiere, Evenimente. Only
+ * the open tab is in the Tab order; the arrows move to the next tab and open it.
  */
 export function MemoryTabs({ idBase, active, counts, onSelect }: { idBase: string; active: MemoryTab; counts: Record<MemoryTab, string>; onSelect: (tab: MemoryTab) => void }) {
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -24,6 +24,7 @@ export function MemoryTabs({ idBase, active, counts, onSelect }: { idBase: strin
           role="tab"
           aria-selected={active === tab.value}
           aria-controls={`${idBase}-panel-${tab.value}`}
+          tabIndex={active === tab.value ? 0 : -1}
           onClick={() => onSelect(tab.value)}
           onKeyDown={(event) => onKeyDown(event, index)}
         >

@@ -224,11 +224,14 @@ export function versionMeta(version: FileVersion): string {
   return [file.sizeLabel, formatDay(file.uploadedAt), file.authorLabel ?? "autor neînregistrat", version.kept ? "versiune păstrată" : null].filter(Boolean).join(" · ");
 }
 
-/** „12 operații · 4 fișiere (5 versiuni) · 27 evenimente”, counted from the record the server returned. */
+/**
+ * „12 operații · 4 fișiere tehnice (5 versiuni) · 27 evenimente”, counted from the record the server
+ * returned. Technical files of the job, not the documents of the client dossier the work card counts.
+ */
 export function recordCountsLine(tasks: number | null, documents: number, versions: number, events: number): string {
   return [
     tasks === null ? null : countLabel(tasks, "operație", "operații"),
-    `${countLabel(documents, "fișier", "fișiere")} (${countLabel(versions, "versiune", "versiuni")})`,
+    `${countLabel(documents, "fișier tehnic", "fișiere tehnice")} (${countLabel(versions, "versiune", "versiuni")})`,
     countLabel(events, "eveniment", "evenimente"),
   ]
     .filter(Boolean)

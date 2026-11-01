@@ -34,6 +34,7 @@ export function JobFileViewer({
   onClose: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const versionButtons = useRef(new Map<string, HTMLButtonElement>());
   const versions = fileVersions(files, fileId);
   const nodes = new Map(versionTrees(files).flatMap((tree) => tree.nodes).map((node) => [node.file.artifactId, node]));
   const tagOf = (artifactId: string) => {
@@ -90,6 +91,10 @@ export function JobFileViewer({
             ? versions.map((item, index) => (
                 <button
                   key={item.artifactId}
+                  ref={(node) => {
+                    if (node) versionButtons.current.set(item.artifactId, node);
+                    else versionButtons.current.delete(item.artifactId);
+                  }}
                   type="button"
                   aria-pressed={item.artifactId === fileId}
                   onClick={() => onSwitch(item.artifactId)}
@@ -106,7 +111,17 @@ export function JobFileViewer({
           <span>
             {`Consulți ${tagOf(fileId)} (${shownIndex > anchorIndex ? "ulterioară" : "anterioară"}). Asocierea rămâne la ${tagOf(anchorId)}; utilizarea declarată nu se schimbă.`}
           </span>
-          <button type="button" onClick={() => onSwitch(anchorId)}>{`Revino la ${tagOf(anchorId)}`}</button>
+          <button
+            type="button"
+            onClick={() => {
+              // The button leaves with its banner: focus moves to the version first, before the
+              // switch, while the page still has its height (a later focus loses Chrome's scroll anchor).
+              versionButtons.current.get(anchorId)?.focus({ preventScroll: true });
+              onSwitch(anchorId);
+            }}
+          >
+            {`Revino la ${tagOf(anchorId)}`}
+          </button>
         </p>
       ) : null}
       <div className="job-viewer__tools">
