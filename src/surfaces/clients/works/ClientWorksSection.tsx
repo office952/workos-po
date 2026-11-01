@@ -63,7 +63,7 @@ function choicesOf(data: CustomerWorksModel, context: ListContext): Choices {
  * Search, provenance, year, site, state, page and the open card live in the address and in this
  * client's list memory. A WorkOS work opens its memory here; a historical record opens its detail here.
  */
-export function ClientWorksSection({ customerId, search }: { customerId: string; search: string }) {
+export function ClientWorksSection({ customerId, search, clientName = null }: { customerId: string; search: string; clientName?: string | null }) {
   const mode = useBandMode();
   const workId = new URLSearchParams(search).get("lucrare");
   const jobMemoryId = workId?.startsWith("job:") ? workId.slice("job:".length) : null;
@@ -73,7 +73,7 @@ export function ClientWorksSection({ customerId, search }: { customerId: string;
       {jobMemoryId ? (
         <>
           <h2 id="dworks-title" className="u-visually-hidden">Lucrări</h2>
-          <WorkMemoryDetail customerId={customerId} jobId={jobMemoryId} context={list.context} search={search} />
+          <WorkMemoryDetail customerId={customerId} clientName={clientName} jobId={jobMemoryId} context={list.context} search={search} mode={mode} />
         </>
       ) : workId ? (
         <>

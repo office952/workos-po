@@ -37,10 +37,18 @@ export function activeFilters(context: ListContext, data: CustomerWorksModel | n
   return [kind, context.year ? `An ${context.year}` : null, site, state].filter((value): value is string => Boolean(value));
 }
 
-/** The way back from a record: "Lucrări · Istorice · 2021" — the list it was opened from. */
-export function listTrail(context: ListContext): string {
+/** R-005 · the address names a WorkOS job's memory (`lucrare=job:…`), not the list or a historical record. */
+export function isWorkMemorySearch(search: string): boolean {
+  return new URLSearchParams(search).get("lucrare")?.startsWith("job:") ?? false;
+}
+
+/**
+ * The way back from a record: "Lucrări · Istorice · 2021" — the list it was opened from. The work
+ * memory names the level instead of the module: "Lucrările clientului · În WorkOS · 2026".
+ */
+export function listTrail(context: ListContext, root = "Lucrări"): string {
   const kind = context.kind === "HISTORICAL" ? "Istorice" : context.kind === "WORKOS" ? "În WorkOS" : null;
-  return ["Lucrări", kind, context.year || null].filter(Boolean).join(" · ");
+  return [root, kind, context.year || null].filter(Boolean).join(" · ");
 }
 
 /** A WorkOS work is dated by its order becoming a job ("comandată …"); a record by its documented period. */

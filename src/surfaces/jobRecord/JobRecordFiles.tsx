@@ -8,20 +8,7 @@ import { Button } from '../../components/Button';
 import { resourceKeys } from '../../data/resourceKeys';
 import { invalidateResources } from '../../data/resourceCache';
 import { Heading, RecordIcon } from './presentation';
-import { fileVersions } from './fileVersions';
-
-/** N-018 · versions grouped per file, oldest first, following the recorded revision links. */
-function fileGroups(files: readonly JobRecordFile[]): JobRecordFile[][] {
-  const seen = new Set<string>();
-  const groups: JobRecordFile[][] = [];
-  for (const file of files) {
-    if (seen.has(file.artifactId)) continue;
-    const chain = fileVersions(files, file.artifactId);
-    chain.forEach((item) => seen.add(item.artifactId));
-    groups.push(chain);
-  }
-  return groups;
-}
+import { versionRelation, versionTag, versionTrees, type VersionNode } from './fileVersions';
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
@@ -50,9 +37,11 @@ export function JobRecordFiles({ record, canWriteFiles, operationHref, openFileI
   const fileDetail = useRef<HTMLElement>(null);
   const file = record.files.find(f => f.artifactId === selected) ?? null;
   const files = record.files.filter(f => fileMatchesQuery(f, query));
-  const groups = fileGroups(record.files);
-  const visibleGroups = groups.map(group => group.filter(f => files.includes(f))).filter(group => group.length > 0);
-  const versionOf = (f: JobRecordFile) => (groups.find(group => group.includes(f))?.indexOf(f) ?? 0) + 1;
+  const trees = versionTrees(record.files);
+  const visibleGroups = trees.map(tree => tree.nodes.filter(node => files.includes(node.file))).filter(group => group.length > 0);
+  const treeOf = (node: VersionNode<JobRecordFile>) => trees.find(tree => tree.nodes.includes(node))!;
+  const revisionLine = (node: VersionNode<JobRecordFile>) =>
+    node.parent && treeOf(node).linear ? 'Revizie nouă · versiunea anterioară rămâne păstrată' : versionRelation(treeOf(node), node, moment);
   function searchFiles(value: string) {
     setQuery(value);
     if (file && !fileMatchesQuery(file, value)) setSelected(null);
@@ -76,14 +65,14 @@ export function JobRecordFiles({ record, canWriteFiles, operationHref, openFileI
     if (previous) fileButtons.current.get(previous)?.focus();
   }, [routed, selected]);
   return <section className="job-record__section" aria-label="Fișierele lucrării">
-      <header><div><Heading icon="file">Fișierele lucrării</Heading><p>{`${plural(groups.length, 'fișier', 'fișiere')} · ${plural(record.files.length, 'versiune', 'versiuni')} · utilizări păstrate pe fiecare versiune.`}</p></div>{canWriteFiles ? <Button variant="secondary" aria-expanded={uploading} onClick={() => setUploading(v => !v)}>{uploading ? 'Închide încărcarea' : 'Adaugă fișier'}</Button> : null}</header>
+      <header><div><Heading icon="file">Fișierele lucrării</Heading><p>{`${plural(trees.length, 'fișier', 'fișiere')} · ${plural(record.files.length, 'versiune', 'versiuni')} · utilizări păstrate pe fiecare versiune.`}</p></div>{canWriteFiles ? <Button variant="secondary" aria-expanded={uploading} onClick={() => setUploading(v => !v)}>{uploading ? 'Închide încărcarea' : 'Adaugă fișier'}</Button> : null}</header>
       {uploading && canWriteFiles ? <JobFilesPanel jobId={record.jobId} uploadOnly onUploaded={() => invalidateResources(resourceKeys.jobRecord(record.jobId))}/> : null}
       <label className="job-record__search">Caută fișier sau operație<input type="search" value={query} onChange={e => searchFiles(e.target.value)}/></label>
-      {files.length ? <table className="job-record__table job-record__files"><caption className="u-visually-hidden">Fișiere, utilizări și autorii înregistrărilor</caption><thead><tr><th>Fișier / revizie</th><th>Unde a fost folosit</th><th>Încărcat de / când</th><th>Consultare</th></tr></thead>{visibleGroups.map(group => <tbody key={group[0]!.artifactId}><tr className="job-record__file-group"><th scope="rowgroup" colSpan={4}>{`${group[0]!.originalFileName} · ${plural(group.length, 'versiune', 'versiuni')}`}</th></tr>{group.map(f => <tr key={f.artifactId} data-selected={file?.artifactId === f.artifactId}>
-        <td data-label="Fișier / revizie"><strong>{f.originalFileName}</strong> <span className="job-record__version">{`v${versionOf(f)}`}</span><p>{f.sizeLabel} · {f.purposeLabel ?? 'Scop nedeclarat'}</p><p>{f.supersedesArtifactId ? 'Revizie nouă · versiunea anterioară rămâne păstrată' : 'Fișier inițial'}</p></td>
+      {files.length ? <table className="job-record__table job-record__files"><caption className="u-visually-hidden">Fișiere, utilizări și autorii înregistrărilor</caption><thead><tr><th>Fișier / revizie</th><th>Unde a fost folosit</th><th>Încărcat de / când</th><th>Consultare</th></tr></thead>{visibleGroups.map(group => <tbody key={group[0]!.file.artifactId}><tr className="job-record__file-group"><th scope="rowgroup" colSpan={4}>{`${group[0]!.file.originalFileName} · ${plural(group.length, 'versiune', 'versiuni')}`}</th></tr>{group.map(node => { const f = node.file; return <tr key={f.artifactId} data-selected={file?.artifactId === f.artifactId}>
+        <td data-label="Fișier / revizie"><strong>{f.originalFileName}</strong> <span className="job-record__version">{versionTag(node)}</span><p>{f.sizeLabel} · {f.purposeLabel ?? 'Scop nedeclarat'}</p><p>{revisionLine(node)}</p></td>
         <td data-label="Unde a fost folosit">{f.usages.length ? f.usages.map(u => <div key={u.taskId} className="job-record__use"><a href={operationHref(u.taskId)}>{u.taskLabel}</a><p><RecordIcon kind={u.usedAt ? 'check' : 'link'}/>{u.usedAt ? 'Utilizare înregistrată' : 'Asociat · utilizare neconfirmată'}</p>{u.usedAt ? <p>{u.usedByLabel ?? 'Autor neînregistrat'} · {moment(u.usedAt)}</p> : null}</div>) : <p>Asociat lucrării · fără utilizare înregistrată pe operații</p>}</td>
         <td data-label="Încărcat de / când">{f.authorLabel ?? 'Cont organizație'}<p>{moment(f.uploadedAt)}</p></td><td data-label="Consultare"><div className="job-record__file-actions"><AuthenticatedDownloadLink href={f.downloadHref}>Descarcă</AuthenticatedDownloadLink><button type="button" ref={n => { if (n) fileButtons.current.set(f.artifactId, n); }} onClick={() => openFile(f)}>Utilizări și versiuni →</button></div></td>
-      </tr>)}</tbody>)}</table> : <p>{record.files.length ? 'Niciun fișier în această căutare.' : 'Lucrarea nu are încă fișiere.'}</p>}
+      </tr>; })}</tbody>)}</table> : <p>{record.files.length ? 'Niciun fișier în această căutare.' : 'Lucrarea nu are încă fișiere.'}</p>}
       <p className="job-record__note">Asocierea și descărcarea nu confirmă utilizarea. O revizie nouă nu schimbă fișierul deja declarat folosit.</p>
       {file ? <section className="job-record__file-detail" ref={fileDetail} tabIndex={-1} aria-label={'Detalii fișier ' + file.originalFileName}><header><h3>{file.originalFileName}</h3><Button variant="secondary" onClick={() => { setSelected(null); if (!routed) fileButtons.current.get(file.artifactId)?.focus(); }}>Închide detaliul</Button></header><p>Încărcat: {moment(file.uploadedAt)} · {file.authorLabel ?? 'Cont organizație'}</p>{file.note ? <p>{file.note}</p> : null}<AuthenticatedDownloadLink href={file.downloadHref}>Descarcă această versiune</AuthenticatedDownloadLink><JobArtifactPreview file={file}/>
         <h4>Relații între versiuni</h4>{record.files.filter(f => f.artifactId === file.supersedesArtifactId || f.supersedesArtifactId === file.artifactId).map(f => <p key={f.artifactId}><button type="button" onClick={() => openFile(f)}>{f.artifactId === file.supersedesArtifactId ? 'Versiune anterioară: ' : 'Versiune ulterioară: '}{f.originalFileName} · {moment(f.uploadedAt)}</button></p>)}{!file.supersedesArtifactId && !record.files.some(f => f.supersedesArtifactId === file.artifactId) ? <p>Nu există alte revizii legate de acest fișier.</p> : null}

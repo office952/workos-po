@@ -3,7 +3,7 @@ import type { JobRecordFile } from "../../api/jobRecord";
 import { Button } from "../../components/Button";
 import { AuthenticatedDownloadLink } from "../../presentation/AuthenticatedDownloadLink";
 import { JobArtifactPreview } from "../JobArtifactPreview";
-import { fileVersions } from "./fileVersions";
+import { fileVersions, versionTag, versionTrees } from "./fileVersions";
 import "../../styles/surfaces/job-file-viewer.css";
 
 /**
@@ -35,6 +35,11 @@ export function JobFileViewer({
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const versions = fileVersions(files, fileId);
+  const nodes = new Map(versionTrees(files).flatMap((tree) => tree.nodes).map((node) => [node.file.artifactId, node]));
+  const tagOf = (artifactId: string) => {
+    const node = nodes.get(artifactId);
+    return node ? versionTag(node) : "rev.";
+  };
   const file = files.find((item) => item.artifactId === fileId) ?? null;
   const shownIndex = versions.findIndex((item) => item.artifactId === fileId);
   const anchorIndex = versions.findIndex((item) => item.artifactId === anchorId);
@@ -89,7 +94,7 @@ export function JobFileViewer({
                   aria-pressed={item.artifactId === fileId}
                   onClick={() => onSwitch(item.artifactId)}
                 >
-                  {`v${index + 1}${index === anchorIndex ? " · asociată" : anchorIndex >= 0 && index > anchorIndex ? " · ulterioară" : anchorIndex >= 0 && index < anchorIndex ? " · anterioară" : ""}`}
+                  {`${tagOf(item.artifactId)}${index === anchorIndex ? " · asociată" : anchorIndex >= 0 && index > anchorIndex ? " · ulterioară" : anchorIndex >= 0 && index < anchorIndex ? " · anterioară" : ""}`}
                 </button>
               ))
             : null}
@@ -99,9 +104,9 @@ export function JobFileViewer({
       {consultingOther ? (
         <p className="job-viewer__banner" role="status">
           <span>
-            {`Consulți v${shownIndex + 1} (${shownIndex > anchorIndex ? "ulterioară" : "anterioară"}). Asocierea rămâne la v${anchorIndex + 1}; utilizarea declarată nu se schimbă.`}
+            {`Consulți ${tagOf(fileId)} (${shownIndex > anchorIndex ? "ulterioară" : "anterioară"}). Asocierea rămâne la ${tagOf(anchorId)}; utilizarea declarată nu se schimbă.`}
           </span>
-          <button type="button" onClick={() => onSwitch(anchorId)}>{`Revino la v${anchorIndex + 1}`}</button>
+          <button type="button" onClick={() => onSwitch(anchorId)}>{`Revino la ${tagOf(anchorId)}`}</button>
         </p>
       ) : null}
       <div className="job-viewer__tools">

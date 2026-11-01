@@ -39,6 +39,8 @@ import { CustomerLogoDialog } from "./clients/dossier/CustomerLogoDialog";
 import { HistoricalWorkDialog } from "./clients/dossier/HistoricalWorkDialog";
 import { ClientSitesSection } from "./clients/sites/ClientSitesSection";
 import { ClientWorksSection } from "./clients/works/ClientWorksSection";
+import { isWorkMemorySearch } from "./clients/works/worksModel";
+import { useBandMode } from "./clients/dossier/bandModel";
 import {
   bindConfiguratorSessionToCustomer,
   readConfiguratorSession,
@@ -66,6 +68,9 @@ export function ClientDetailPage({ customerId, search = window.location.search }
   const workspace = access === "denied" ? { ...loaded, data: undefined } : loaded;
   const customer = workspace.data?.customer;
   const section = parseClientHubSection(search);
+  const mode = useBandMode();
+  // R-005 (1042:39264): on phone and tablet the memory of a job carries its own compact context bar in place of the client header.
+  const compactMemory = section === "lucrari" && mode !== "desktop" && isWorkMemorySearch(search);
   const dossier = useCustomerDossier(customerId);
   const terms = useCommercialTerms(customerId);
   // N-018 · right after "Client nou", the page says once that the client was registered.
@@ -125,19 +130,21 @@ export function ClientDetailPage({ customerId, search = window.location.search }
   return (
     <PageRegion>
       <div className="chub" data-surface="client-hub" data-section={section}>
-        <ClientBand
-          customerId={customerId}
-          customer={customer ?? null}
-          logo={ws?.logo ?? null}
-          terms={terms.data ?? null}
-          canCreate={canCreate}
-          actions={actions}
-          section={section}
-          attention={attention}
-          hints={hints}
-          contactsEditHref={contactsEditHref}
-          createTone={createTone}
-        />
+        {compactMemory ? null : (
+          <ClientBand
+            customerId={customerId}
+            customer={customer ?? null}
+            logo={ws?.logo ?? null}
+            terms={terms.data ?? null}
+            canCreate={canCreate}
+            actions={actions}
+            section={section}
+            attention={attention}
+            hints={hints}
+            contactsEditHref={contactsEditHref}
+            createTone={createTone}
+          />
+        )}
         <div className="chub__body client-hub">
           {registered ? <p className="client-hub__registered" role="status">Clientul a fost înregistrat.</p> : null}
           {(workspace.status === "idle" || workspace.status === "loading") && !workspace.data ? (
@@ -162,7 +169,7 @@ export function ClientDetailPage({ customerId, search = window.location.search }
           {workspace.data && section === "istoric" ? <ClientHistorySection key={customerId} customerId={customerId} search={search} workspace={workspace.data} canCreate={canCreate} onRecord={permissions?.recordHistoricalWork ? () => setRecording(true) : null} uploadHref={permissions?.uploadDocuments ? clientActionHref(customerId, "documente", "incarca") : null} /> : null}
           {/* Cereri și oferte (Corecții GO 17): Pe cereri / Toate ofertele, În așteptare, the offer preview. */}
           {workspace.data && section === "cereri" ? <ClientRequestsSection key={customerId} customerId={customerId} workspace={workspace.data} search={search} /> : null}
-          {workspace.data && section === "lucrari" ? <ClientWorksSection customerId={customerId} search={search} /> : null}
+          {workspace.data && section === "lucrari" ? <ClientWorksSection customerId={customerId} search={search} clientName={customer?.displayName ?? null} /> : null}
           {workspace.data && section === "documente" ? <ClientDocumentsSection customerId={customerId} search={search} /> : null}
           {workspace.data && section === "fotografii" ? <ClientPhotosSection customerId={customerId} search={search} /> : null}
           {workspace.data && section === "sedii" ? <ClientSitesSection customerId={customerId} search={search} /> : null}

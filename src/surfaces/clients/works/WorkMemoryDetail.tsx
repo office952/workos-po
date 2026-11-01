@@ -1,21 +1,41 @@
-import { useId } from "react";
+import { useId, type MouseEvent } from "react";
 import type { WorkItem } from "../../../adapters/customerDossierAdapter";
-import { loadJobRecord, type JobRecord, type WorkHoursTask } from "../../../api/jobRecord";
-import { AuthenticatedDownloadLink } from "../../../presentation/AuthenticatedDownloadLink";
+import { loadJobRecord, type JobRecord } from "../../../api/jobRecord";
 import { resourceKeys } from "../../../data/resourceKeys";
 import { useResource } from "../../../data/useResource";
-import { clientHref, jobHref, requestHref } from "../../../routing/appRoute";
+import { clientHref } from "../../../routing/appRoute";
 import { hrefPath, originBack } from "../../../routing/originBack";
 import { navigate } from "../../../routing/navigate";
-import { formatDay } from "../dossier/dossierModel";
+import type { BandMode } from "../dossier/bandModel";
 import { DossierIcon } from "../dossier/dossierIcons";
 import { follow } from "../dossier/history/follow";
-import { StateTag } from "../dossier/historyParts";
+import { countLabel } from "../dossier/historyModel";
 import { clientListHref, type ListContext } from "../dossier/listContext";
+import { MemoryEvents } from "./memory/MemoryEvents";
+import { MemoryFiles } from "./memory/MemoryFiles";
+import { MemoryHeader } from "./memory/MemoryHeader";
+import { MemoryOperations } from "./memory/MemoryOperations";
+import { MemoryProgress } from "./memory/MemoryProgress";
+import { MemoryTabs } from "./memory/MemoryTabs";
 import { useWorks } from "./useWorks";
-import { fileRevisionSentence, hoursSentence, memoryMatches, planPresence, planSentence, quantityLine, taskFields, usageSentence } from "./workMemoryModel";
-import { listTrail, stateText } from "./worksModel";
+import {
+  eventFields,
+  fileDocuments,
+  fileFields,
+  MEMORY_TAB_PARAM,
+  memoryMatches,
+  planPresence,
+  planSentence,
+  readMemoryTab,
+  recordCountsLine,
+  taskFields,
+  withMemoryParam,
+  type MemoryTab,
+} from "./workMemoryModel";
+import { listTrail } from "./worksModel";
 import "../../../styles/surfaces/client-work-memory.css";
+
+const SEARCH_PARAM = "gaseste";
 
 function originKind(href: string, customerId: string): "istoric" | "lucrari" | "cereri" | null {
   if (hrefPath(href) !== hrefPath(clientHref(customerId))) return null;
@@ -25,39 +45,59 @@ function originKind(href: string, customerId: string): "istoric" | "lucrari" | "
   return section === "lucrari" && !new URL(href, window.location.origin).searchParams.get("lucrare") ? "lucrari" : null;
 }
 
-function taskTitle(task: WorkHoursTask): string {
-  return [task.seqLabel, task.processLabel, task.scopeLabel].filter(Boolean).join(" · ");
-}
-
 /**
- * R-005 · Client → lucrare → dosarul înregistrat → dosarul tehnic al operației.
- * Reads the client's work and the existing job record. It does not write, price, or invent
- * payment, invoicing, delivery or a person who was not recorded.
+ * R-005 · Memoria lucrării (WorkOS-N 1037:37929 · telefon 1042:39258 · tabletă 1042:39717): the
+ * second level between the client's works and the job sheet. Reads the client's work and the
+ * existing job record. It does not write, price, or invent payment, invoicing, delivery or a person
+ * who was not recorded; the job sheet in Lucrări stays the only place where the job is managed.
  */
-export function WorkMemoryDetail({ customerId, jobId, context, search }: { customerId: string; jobId: string; context: ListContext; search: string }) {
+export function WorkMemoryDetail({
+  customerId,
+  clientName,
+  jobId,
+  context,
+  search,
+  mode,
+}: {
+  customerId: string;
+  clientName: string | null;
+  jobId: string;
+  context: ListContext;
+  search: string;
+  mode: BandMode;
+}) {
   const works = useWorks(customerId, { id: `job:${jobId}`, pageSize: 1 });
   const item = works.data?.items[0]?.job?.jobId === jobId ? works.data.items[0] : undefined;
   const record = useResource(item ? resourceKeys.jobRecord(jobId) : null, () => loadJobRecord(jobId));
-  const query = new URLSearchParams(search).get("gaseste") ?? "";
-  const searchId = useId();
-  const trail = listTrail(context);
+  const trail = listTrail(context, "Lucrările clientului");
   const back = originBack({ href: clientListHref(customerId, "lucrari", context), label: trail }, (href) => originKind(href, customerId) !== null);
   const origin = originKind(back.href, customerId);
-  const backText = back.onClick && origin === "istoric" ? "← Istoric" : back.onClick && origin === "cereri" ? "← Cereri și oferte" : `← ${trail}`;
-
-  function setQuery(value: string) {
-    const params = new URLSearchParams(search);
-    if (value) params.set("gaseste", value);
-    else params.delete("gaseste");
-    const next = params.toString();
-    navigate(`${window.location.pathname}${next ? `?${next}` : ""}`, "replace");
-  }
+  const backLabel = back.onClick && origin === "istoric" ? "Istoric" : back.onClick && origin === "cereri" ? "Cereri și oferte" : trail;
+  const [backHead, ...backRest] = backLabel.split(" · ");
+  const compact = mode !== "desktop";
+  const replaceParam = (name: string, value: string | null) => navigate(`${window.location.pathname}${withMemoryParam(search, name, value)}`, "replace");
+  const onBack = back.onClick ?? ((event: MouseEvent<HTMLAnchorElement>) => follow(event, back.href));
 
   return (
-    <div className="dwdetail wmem">
-      <a className="dwdetail__back" href={back.href} onClick={back.onClick ?? ((event) => follow(event, back.href))}>
-        {backText}
-      </a>
+    <div className="dwdetail wmem" data-mode={mode}>
+      {compact ? (
+        <a className="wmem-bar" href={back.href} onClick={onBack}>
+          <DossierIcon name="left" size={18} />
+          <span className="wmem-bar__text">
+            {clientName ? <span className="wmem-bar__client">{clientName}</span> : null}{" "}
+            <span className="wmem-bar__trail">{backLabel}</span>
+          </span>
+        </a>
+      ) : (
+        <div className="wmem-context">
+          <a className="wmem-back" href={back.href} onClick={onBack}>
+            <DossierIcon name="left" size={16} />
+            <strong>{backHead}</strong>
+            {backRest.length ? <span>{` · ${backRest.join(" · ")}`}</span> : null}
+          </a>
+          <p className="wmem-kicker">Memoria lucrării · doar citire</p>
+        </div>
+      )}
       {works.status === "error" && !works.data ? (
         <div className="dworks__state" role="alert">
           <p className="dworks__state-title">Memoria lucrării nu a putut fi citită.</p>
@@ -71,7 +111,23 @@ export function WorkMemoryDetail({ customerId, jobId, context, search }: { custo
         </div>
       ) : null}
       {!works.data && works.status !== "error" ? <p className="dworks__state" role="status">Se citește lucrarea…</p> : null}
-      {item ? <MemoryBody item={item} jobId={jobId} record={record.data ?? null} recordError={record.status === "error"} query={query} searchId={searchId} onQuery={setQuery} /> : null}
+      {item ? (
+        <MemoryBody
+          item={item}
+          jobId={jobId}
+          record={record.data ?? null}
+          recordError={record.status === "error"}
+          query={new URLSearchParams(search).get(SEARCH_PARAM) ?? ""}
+          onQuery={(value) => replaceParam(SEARCH_PARAM, value || null)}
+          tab={readMemoryTab(search)}
+          onTab={(tab) => replaceParam(MEMORY_TAB_PARAM, tab === "operatii" ? null : tab)}
+          mode={mode}
+        />
+      ) : null}
+      <p className="wmem-claim">
+        <DossierIcon name="warning" size={14} />
+        Lucrarea rămâne așa cum a fost înregistrată; o comandă repetată este o lucrare nouă. Plata, facturarea, livrarea și montajul nu sunt afirmate aici.
+      </p>
     </div>
   );
 }
@@ -82,65 +138,29 @@ function MemoryBody({
   record,
   recordError,
   query,
-  searchId,
   onQuery,
+  tab,
+  onTab,
+  mode,
 }: {
   item: WorkItem;
   jobId: string;
   record: JobRecord | null;
   recordError: boolean;
   query: string;
-  searchId: string;
   onQuery: (value: string) => void;
+  tab: MemoryTab;
+  onTab: (tab: MemoryTab) => void;
+  mode: BandMode;
 }) {
-  const presence = record ? planPresence(record.hours) : null;
-  const tasks = (record?.hours?.tasks ?? []).filter((task) => memoryMatches(query, taskFields(task)));
-  const events = (record?.timeline ?? []).filter((event) => memoryMatches(query, [event.label, event.actorLabel, event.taskLabel, event.detail, formatDay(event.occurredAt)]));
-  const files = (record?.files ?? []).filter((file) => memoryMatches(query, [file.originalFileName, file.purposeLabel, file.note, file.authorLabel, ...file.usages.map((usage) => usage.taskLabel)]));
-  const dossierHref = jobHref(jobId, { section: "situatie" });
-  const planHref = jobHref(jobId, { section: "operatii" });
-  const filesHref = jobHref(jobId, { section: "fisiere" });
-  const searching = query.trim().length > 0;
-
+  const searchId = useId();
+  const idBase = useId().replace(/:/g, "");
+  const compact = mode !== "desktop";
   return (
-    <article className="dwdetail__card" aria-labelledby="wmem-title">
-      <p className="dwdetail__eyebrow">
-        <span className="dwdetail__badge">
-          <DossierIcon name="wrench" size={12} />
-          În WorkOS
-        </span>
-        {item.reference ? <span>{item.reference}</span> : null}
-      </p>
-      <h3 id="wmem-title" className="dwdetail__title">{item.title}</h3>
-      {item.detail && item.detail !== item.title ? <p className="dwdetail__description">{item.detail}</p> : null}
-      <dl className="dwdetail__facts">
-        <div>
-          <dt>Stare</dt>
-          <dd><StateTag state={item.state} label={stateText(item)} /></dd>
-        </div>
-        <div>
-          <dt>Sediu la momentul lucrării</dt>
-          <dd>{item.site ? `${item.site.name}${item.siteAtTimeLabel ? ` · ${item.siteAtTimeLabel}` : ""}` : "Sediu neînregistrat"}</dd>
-        </div>
-        <div>
-          <dt>Data</dt>
-          <dd>{item.eventDateLabel}</dd>
-        </div>
-        <div>
-          <dt>Progres</dt>
-          <dd>{item.job?.progressLabel ?? "Progres neînregistrat"}</dd>
-        </div>
-      </dl>
-      <p className="wmem__note">Lucrarea rămâne așa cum a fost înregistrată. O comandă repetată este o lucrare nouă. Plata, facturarea, livrarea și montajul nu sunt afirmate aici.</p>
-      <p className="wmem__meta">
-        {item.request ? <a href={requestHref(item.request.requestId)} onClick={(event) => follow(event, requestHref(item.request!.requestId))}>{`Cerere ${item.request.reference}`}</a> : <span>Cerere neînregistrată</span>}
-        {item.quote ? <span>{`Ofertă ${item.quote.reference}`}</span> : <span>Ofertă neînregistrată</span>}
-      </p>
-      <nav className="wmem__ways" aria-label="Dosarul lucrării">
-        <a href={dossierHref} onClick={(event) => follow(event, dossierHref)}>Dosar general</a>
-        <a href={planHref} onClick={(event) => follow(event, planHref)}>Plan și operații</a>
-        <a href={filesHref} onClick={(event) => follow(event, filesHref)}>Fișierele lucrării</a>
-      </nav>
+    <article className="wmem-body" aria-labelledby="wmem-title">
+      <MemoryHeader item={item} jobId={jobId}>
+        <MemoryProgress hours={record ? record.hours : undefined} fallback={item.job?.progressLabel ?? null} />
+      </MemoryHeader>
       {recordError && !record ? (
         <div className="dworks__state" role="alert">
           <p className="dworks__state-title">Dosarul tehnic nu a putut fi citit.</p>
@@ -148,86 +168,111 @@ function MemoryBody({
         </div>
       ) : null}
       {!record && !recordError ? <p className="dworks__state" role="status">Se citește dosarul înregistrat…</p> : null}
-      {record ? (
-        <>
-          <label className="wmem__find" htmlFor={searchId}>
-            <DossierIcon name="search" size={14} />
-            <input id={searchId} type="search" value={query} autoComplete="off" placeholder="Caută în dosar: operație, fișier, eveniment" onChange={(event) => onQuery(event.target.value)} />
-          </label>
-          <p className="wmem__note">{hoursSentence(record.hours)}</p>
-          {searching && tasks.length + events.length + files.length === 0 ? <p className="wmem__empty" role="status">Niciun rezultat pentru textul căutat în dosarul înregistrat</p> : null}
-          <section className="wmem__block" aria-labelledby="wmem-tasks">
-            <h3 id="wmem-tasks">Operații</h3>
-            {presence && planSentence(presence) ? <p className="wmem__empty">{planSentence(presence)}</p> : null}
-            {tasks.length ? (
-              <ol className="wmem__list">
-                {tasks.map((task) => {
-                  const href = jobHref(jobId, { section: "operatii", taskId: task.taskId });
-                  return (
-                    <li key={task.taskId} className="wmem__row">
-                      <strong>{taskTitle(task)}</strong>
-                      <p>{[task.statusLabel, task.timeLabel, task.qualityLabel].filter(Boolean).join(" · ")}</p>
-                      {task.completedQuantityLabel ? <p>{task.completedQuantityLabel}</p> : null}
-                      {task.varianceLabel ? <p>{task.varianceLabel}</p> : null}
-                      {(task.plannedConsumption ?? []).map((row) => <p key={`plan-${row.resourceLabel}`}>{quantityLine("Prevăzut", row.quantity, row.unit)}{` · ${row.resourceLabel}`}</p>)}
-                      {task.actualConsumption.map((row) => <p key={`actual-${row.resourceLabel}`}>{quantityLine("Consum", row.actualQuantity, row.unit)}{` · ${row.resourceLabel}`}</p>)}
-                      {task.actualConsumption.length === 0 && (task.plannedConsumption ?? []).length === 0 ? <p>Consum neînregistrat</p> : null}
-                      <a href={href} onClick={(event) => follow(event, href)}>{`Dosarul tehnic · ${task.seqLabel}`}</a>
-                    </li>
-                  );
-                })}
-              </ol>
-            ) : null}
-          </section>
-          <section className="wmem__block" aria-labelledby="wmem-events">
-            <h3 id="wmem-events">Evenimente înregistrate</h3>
-            {!searching && events.length === 0 ? <p className="wmem__empty">Niciun eveniment înregistrat</p> : null}
-            {events.length ? (
-              <ol className="wmem__list">
-                {events.map((event) => {
-                  const href = event.taskId ? jobHref(jobId, { section: "operatii", taskId: event.taskId }) : null;
-                  return (
-                    <li key={event.eventId} className="wmem__row">
-                      <strong>{event.label}</strong>
-                      <p>{[formatDay(event.occurredAt), event.actorLabel, event.taskLabel, event.detail].filter(Boolean).join(" · ")}</p>
-                      {href ? <a href={href} onClick={(click) => follow(click, href)}>Dosarul tehnic al operației</a> : null}
-                    </li>
-                  );
-                })}
-              </ol>
-            ) : null}
-          </section>
-          <section className="wmem__block" aria-labelledby="wmem-files">
-            <h3 id="wmem-files">Fișiere în dosarul tehnic</h3>
-            {!searching && files.length === 0 ? <p className="wmem__empty">Niciun fișier în dosarul tehnic</p> : null}
-            {files.length ? (
-              <ul className="wmem__list">
-                {files.map((file) => {
-                  const href = jobHref(jobId, { section: "fisiere", fileId: file.artifactId });
-                  return (
-                    <li key={file.artifactId} className="wmem__row">
-                      <a href={href} onClick={(event) => follow(event, href)}>{file.originalFileName}</a>
-                      <p>{fileRevisionSentence(file, record.files)}</p>
-                      <p>{[file.purposeLabel, file.sizeLabel, file.authorLabel ? file.authorLabel : "Autor neînregistrat", formatDay(file.uploadedAt)].filter(Boolean).join(" · ")}</p>
-                      {file.usages.length === 0 ? <p>Asociat lucrării · fără utilizare înregistrată pe operații</p> : null}
-                      {file.usages.map((usage) => {
-                        const taskHref = jobHref(jobId, { section: "operatii", taskId: usage.taskId });
-                        return (
-                          <div key={usage.taskId}>
-                            <p><a href={taskHref} onClick={(event) => follow(event, taskHref)}>{usage.taskLabel}</a></p>
-                            <p>{usageSentence(usage.usedAt)}</p>
-                          </div>
-                        );
-                      })}
-                      <AuthenticatedDownloadLink href={file.downloadHref}>Descarcă această versiune</AuthenticatedDownloadLink>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : null}
-          </section>
-        </>
-      ) : null}
+      {record ? <RecordedDossier jobId={jobId} record={record} query={query} onQuery={onQuery} searchId={searchId} idBase={idBase} tab={compact ? tab : null} onTab={onTab} mode={mode} /> : null}
     </article>
+  );
+}
+
+function RecordedDossier({
+  jobId,
+  record,
+  query,
+  onQuery,
+  searchId,
+  idBase,
+  tab,
+  onTab,
+  mode,
+}: {
+  jobId: string;
+  record: JobRecord;
+  query: string;
+  onQuery: (value: string) => void;
+  searchId: string;
+  idBase: string;
+  /** The open tab on phone and tablet; null on desktop, where the three parts are side by side. */
+  tab: MemoryTab | null;
+  onTab: (tab: MemoryTab) => void;
+  mode: BandMode;
+}) {
+  const searching = query.trim().length > 0;
+  const quoted = `„${query.trim()}”`;
+  const allTasks = record.hours?.tasks ?? [];
+  const allDocuments = fileDocuments(record.files);
+  const tasks = allTasks.filter((task) => memoryMatches(query, taskFields(task)));
+  const documents = allDocuments.filter((document) => document.versions.some((version) => memoryMatches(query, fileFields(version.file))));
+  const versions = documents.reduce((sum, document) => sum + document.versions.length, 0);
+  const events = record.timeline.filter((event) => memoryMatches(query, eventFields(event)));
+  const presence = planPresence(record.hours);
+  const taskTotal = record.hours ? allTasks.length : null;
+  const of = (shown: number, total: number) => (searching ? `${shown} din ${total}` : String(total));
+  const counts: Record<MemoryTab, string> = {
+    operatii: taskTotal === null ? "—" : of(tasks.length, taskTotal),
+    fisiere: of(documents.length, allDocuments.length),
+    evenimente: of(events.length, record.timeline.length),
+  };
+  const nothingFound = searching && tasks.length + documents.length + events.length === 0;
+  const summary = searching ? `Rezultate pentru ${quoted}: ${recordCountsLine(tasks.length, documents.length, versions, events.length)}` : recordCountsLine(taskTotal, allDocuments.length, record.files.length, record.timeline.length);
+  const panel = (value: MemoryTab) =>
+    tab ? { id: `${idBase}-panel-${value}`, role: "tabpanel", "aria-labelledby": `${idBase}-tab-${value}`, hidden: tab !== value } : {};
+  const opsEmpty = planSentence(presence) ?? (searching && !tasks.length ? `Nicio operație nu conține ${quoted}.` : null);
+
+  return (
+    <>
+      <div className="wmem-find-row">
+        <div className="wmem-find" role="search">
+          <label htmlFor={searchId} className="u-visually-hidden">Caută în dosar</label>
+          <DossierIcon name="search" size={16} />
+          <input
+            id={searchId}
+            type="search"
+            value={query}
+            autoComplete="off"
+            placeholder={mode === "desktop" ? "Caută în dosar: operație, fișier, eveniment, persoană" : "Caută în dosar…"}
+            onChange={(event) => onQuery(event.target.value)}
+          />
+          {query ? (
+            <button type="button" className="wmem-find__clear" onClick={() => { onQuery(""); document.getElementById(searchId)?.focus(); }}>
+              <DossierIcon name="close" size={12} />
+              <span className="u-visually-hidden">Șterge căutarea</span>
+            </button>
+          ) : null}
+        </div>
+        {tab ? null : <p className="wmem-summary">{summary}</p>}
+      </div>
+      {nothingFound ? <p className="wmem-empty" role="status">Niciun rezultat pentru textul căutat în dosarul înregistrat</p> : null}
+      {tab ? <MemoryTabs idBase={idBase} active={tab} counts={counts} onSelect={onTab} /> : null}
+      <div className="wmem-columns">
+        <section className="wmem-part wmem-part--ops" aria-labelledby={`${idBase}-ops`} {...panel("operatii")}>
+          <div className="wmem-part__head">
+            <h4 id={`${idBase}-ops`} className={tab ? "u-visually-hidden" : undefined}>Operații</h4>
+            {tab ? null : <span className="wmem-part__count">{counts.operatii}</span>}
+            {presence === "recorded" ? <p className="wmem-part__note">{`Grupate după stare · numărul indică poziția în plan${tab ? "" : " · rândul deschide dosarul tehnic în Lucrări"}`}</p> : null}
+          </div>
+          <MemoryOperations jobId={jobId} tasks={tasks} files={record.files} mode={mode} emptyText={opsEmpty} searching={searching} />
+        </section>
+        <div className="wmem-side">
+          <section className="wmem-part" aria-labelledby={`${idBase}-files`} {...panel("fisiere")}>
+            <div className="wmem-part__head">
+              <h4 id={`${idBase}-files`} className={tab ? "u-visually-hidden" : undefined}>Fișiere tehnice</h4>
+              {tab ? null : <span className="wmem-part__count">{`${counts.fisiere} · ${countLabel(searching ? versions : record.files.length, "versiune", "versiuni")}`}</span>}
+            </div>
+            {record.files.length ? <p className="wmem-part__note">Asocierea cu o operație nu înseamnă utilizare. „Utilizat” apare doar când operatorul a declarat folosirea.</p> : null}
+            {documents.length ? (
+              <MemoryFiles documents={documents} tasks={allTasks} />
+            ) : (
+              <p className="wmem-empty">{searching && record.files.length ? `Niciun fișier nu conține ${quoted}.` : "Niciun fișier în dosarul tehnic"}</p>
+            )}
+          </section>
+          <section className="wmem-part" aria-labelledby={`${idBase}-events`} {...panel("evenimente")}>
+            <div className="wmem-part__head">
+              <h4 id={`${idBase}-events`} className={tab ? "u-visually-hidden" : undefined}>Evenimente înregistrate</h4>
+              {tab ? null : <span className="wmem-part__count">{counts.evenimente}</span>}
+            </div>
+            <MemoryEvents events={events} searching={searching} emptyText={searching && record.timeline.length ? `Niciun eveniment nu conține ${quoted}.` : "Niciun eveniment înregistrat"} />
+          </section>
+        </div>
+      </div>
+    </>
   );
 }
