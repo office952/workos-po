@@ -281,11 +281,11 @@
 .job-sheet__sticky[data-stuck] { box-shadow: 0 1px 0 var(--color-border); }
 /* Focus and anchored headings stop below the bar instead of under it. */
 html:has(.job-sheet__sticky) { scroll-padding-top: 64px; }
-@media (max-width: 767px) {
-  .job-sheet__sticky .job-sheet__tabs { display: flex; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-inline: 16px; }
-  .job-sheet__sticky .job-sheet__tabs::-webkit-scrollbar { display: none; }
-  .job-sheet__sticky .job-sheet__tabs a { flex: 0 0 auto; min-width: auto; padding-inline: 12px; white-space: nowrap; }
-  .job-sheet__sticky-identity { max-width: 38%; padding-left: 16px; font-size: 12px; }
-  html:has(.job-sheet__sticky) { scroll-padding-top: 60px; }
+@media (max-width: 768px) {
+  .job-sheet__sticky { flex-wrap: wrap; align-items: stretch; }
+  .job-sheet__sticky-identity { flex: 1 1 100%; max-width: none; padding-left: 16px; font-size: 12px; }
+  .job-sheet__sticky .job-sheet__tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); flex: 1 1 100%; overflow: visible; padding-inline: 12px; }
+  .job-sheet__sticky .job-sheet__tabs a { min-width: 0; padding-inline: 4px; font-size: 13px; white-space: normal; text-align: center; overflow-wrap: anywhere; }
+  html:has(.job-sheet__sticky) { scroll-padding-top: 132px; }
 }
 @media print { .job-sheet__sticky { position: static; box-shadow: none; } .job-sheet__sticky-identity { display: none !important; } }

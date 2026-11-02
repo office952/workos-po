@@ -5,8 +5,21 @@ import { Button } from "../../components/Button";
 import { InlineAlert } from "../../components/InlineAlert";
 import { exportHours } from "./exportHours";
 import { moment } from "./format";
+import { sessionPresenceLabel, taskEvidence } from "./peopleModel";
 import { Heading } from "./presentation";
 import "../../styles/surfaces/job-operation-bench.css";
+
+const OPERATION_FILTERS = [
+  { status: "ALL", label: "Toate" },
+  { status: "IN_PROGRESS", label: "În lucru" },
+  { status: "COMPLETED", label: "Finalizate" },
+  { status: "PLANNED", label: "Planificate" },
+] as const;
+type OperationFilter = (typeof OPERATION_FILTERS)[number]["status"];
+
+function resultCountLabel(count: number): string {
+  return count === 1 ? "1 rezultat" : `${count} rezultate`;
+}
 
 function quantityText(task: WorkHoursTask): string {
   if (!task.plannedQuantity) return "Planificat: neînregistrat";
@@ -173,15 +186,15 @@ export function JobRecordOperations({
   const detailId = useId();
   const hours = record?.hours ?? null;
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState('ALL');
+  const [filter, setFilter] = useState<OperationFilter>('ALL');
   const selected = hours?.tasks.find((task) => task.taskId === selectedTaskId) ?? null;
-  function matches(task: WorkHoursTask, text: string, status: string) {
+  function matches(task: WorkHoursTask, text: string, status: OperationFilter) {
     return (status === 'ALL' || task.status === status) &&
       [task.seqLabel, task.processLabel, task.scopeLabel, task.providerLabel, ...task.people.map(person => person.label)]
         .join(' ').toLocaleLowerCase('ro').includes(text.trim().toLocaleLowerCase('ro'));
   }
   const visibleTasks = hours?.tasks.filter(task => matches(task, query, filter)) ?? [];
-  function changeFilter(text: string, status: string) {
+  function changeFilter(text: string, status: OperationFilter) {
     setQuery(text);
     setFilter(status);
     if (selected && !matches(selected, text, status)) onClose();
@@ -278,8 +291,9 @@ export function JobRecordOperations({
       {hours && !selected ? <div className="job-record__operation-toolbar">
         <label className="job-record__search">Caută operație, componentă sau persoană<input type="search" value={query} onChange={event => changeFilter(event.target.value, filter)}/></label>
         <div className="job-plan__filters" role="group" aria-label="Filtrează operațiile">
-          {[['ALL', 'Toate'], ['IN_PROGRESS', 'În lucru'], ['COMPLETED', 'Finalizate']].map(([status, label]) => <button key={status} type="button" aria-pressed={filter === status} onClick={() => changeFilter(query, status!)}>{label} · {hours.tasks.filter(task => status === 'ALL' || task.status === status).length}</button>)}
+          {OPERATION_FILTERS.map(({ status, label }) => <button key={status} type="button" aria-pressed={filter === status} onClick={() => changeFilter(query, status)}>{label} · {hours.tasks.filter(task => status === 'ALL' || task.status === status).length}</button>)}
         </div>
+        <p className="job-record__result-count" role="status">{resultCountLabel(visibleTasks.length)}</p>
       </div> : null}
       {hours && !selected ? (
         <table className="job-record__table job-record__operations-table">
@@ -304,7 +318,10 @@ export function JobRecordOperations({
                       </button>
                       <p>{task.scopeLabel}{task.providerLabel || task.externalProviderLabel ? ` · ${task.externalProviderLabel ?? task.providerLabel}` : ''}</p>
                     </td>
-                    <td data-label="Stare"><span className="job-record__status" data-status={task.status}>{task.statusLabel}</span></td>
+                    <td data-label="Stare">
+                      <span className="job-record__status" data-status={task.status}>{task.statusLabel}</span>
+                      {task.status === "IN_PROGRESS" ? <p className="job-record__session" data-live={taskEvidence(task).activeSessions > 0 ? "true" : "false"}>{sessionPresenceLabel(task)}</p> : null}
+                    </td>
                     <td data-label="Participanți">{task.people.length ? task.people.map((person) => <p key={person.personId}>{person.label} · {person.timeLabel}{person.active ? " · activ" : ""}</p>) : "Fără sesiuni înregistrate"}</td>
                     <td data-label="Ore">
                       <p className="job-record__hours"><span>Oameni</span><strong>{task.timeLabel}</strong></p>
