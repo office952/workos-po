@@ -43,12 +43,12 @@ export type OwnerReviewSeedReport = {
   };
 };
 
-const LETTERS = "PRD-LETTERS-FRONTLIT-PLEXI-AL06";
+export const LETTERS = "PRD-LETTERS-FRONTLIT-PLEXI-AL06";
 export const ACM = "PRD-ACM-CASSETTE-NONE";
 // Synthetic review data only; new quotes require an Owner-entered manual net price.
 const SYNTHETIC_MANUAL_NET_PRICE = 500;
 
-function lettersValues(inscription: string): Record<string, unknown> {
+export function lettersValues(inscription: string): Record<string, unknown> {
   return {
     "root.inscription": inscription,
     "face.finish": "none",
@@ -97,7 +97,7 @@ async function ensureCustomer(
   return created.customer as { customerId: string; displayName: string };
 }
 
-async function ensureRequest(
+export async function ensureRequest(
   client: SeedHttpClient,
   customerId: string,
   title: string,
@@ -132,7 +132,7 @@ async function ensureRequest(
   return request;
 }
 
-async function ensureSeller(client: SeedHttpClient): Promise<void> {
+export async function ensureSeller(client: SeedHttpClient): Promise<void> {
   const current = await client.request("GET", "/api/seller");
   if (current.body?.configured && current.body?.seller) {
     return;
@@ -163,7 +163,7 @@ export async function quotesForRequest(
   return quotes.filter((item) => item.requestId === requestId);
 }
 
-async function freezeQuote(
+export async function freezeQuote(
   client: SeedHttpClient,
   productCode: string,
   values: Record<string, unknown>,
@@ -210,7 +210,7 @@ async function freezeQuote(
   return frozen.quoteSnapshot as Record<string, unknown>;
 }
 
-async function acceptAndOrder(
+export async function acceptAndOrder(
   client: SeedHttpClient,
   productCode: string,
   quoteSnapshotId: string,
@@ -238,7 +238,7 @@ async function acceptAndOrder(
   return { orderSnapshotId: orderSnapshot.orderSnapshotId };
 }
 
-async function releaseAndPlan(
+export async function releaseAndPlan(
   client: SeedHttpClient,
   productCode: string,
   orderSnapshotId: string,
@@ -394,7 +394,7 @@ async function ensurePerson(
   return person;
 }
 
-async function ensureAssemblyScenarioA(
+export async function ensureAssemblyScenarioA(
   client: SeedHttpClient,
   customerId: string,
   requestId: string,
@@ -554,7 +554,7 @@ type TaskRow = {
   eligibleProviders?: Array<{ id: string }>;
 };
 
-async function loadPlanTasks(
+export async function loadPlanTasks(
   client: SeedHttpClient,
   planId: string,
 ): Promise<TaskRow[]> {
