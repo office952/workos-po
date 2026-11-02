@@ -134,10 +134,6 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .op-bench[data-viewer] > :not(.job-viewer) {
-    display: none;
-  }
-
   .op-bench[data-viewer] > .job-viewer {
     grid-column: 1;
     grid-row: auto;

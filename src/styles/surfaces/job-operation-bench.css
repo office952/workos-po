@@ -61,7 +61,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  min-width: 0;
   padding: 6px 10px;
+}
+
+.op-switcher__step > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .job-record .op-switcher .op-switcher__step[data-empty] {
@@ -162,8 +168,19 @@
   display: none;
 }
 
-@media (max-width: 767px) {
-  .op-switcher__steps {
-    grid-template-columns: minmax(0, 1fr);
+@media (max-width: 1151px) {
+  .job-record .op-bench[data-viewer],
+  .job-record .op-bench[data-viewer][data-expanded] { grid-template-columns: minmax(0, 1fr); }
+  .job-record .op-bench[data-viewer][data-expanded] > :not(.job-viewer) { display: block; }
+  .job-record .op-bench[data-viewer] > .job-viewer,
+  .job-record .op-bench[data-viewer][data-expanded] > .job-viewer {
+    grid-column: 1;
+    grid-row: auto;
+    position: static;
   }
+}
+
+@media (max-width: 768px) {
+  .op-switcher { min-width: 0; overflow: visible; }
+  .op-switcher__steps { grid-template-columns: minmax(0, 1fr); }
 }

@@ -57,6 +57,11 @@ export function peopleRecords(hours: NonNullable<JobRecord['hours']>): PersonRec
   }).sort((a, b) => Number(b.active.length > 0) - Number(a.active.length > 0));
 }
 
+/** Open sessions are not the operation state. An in-progress operation can have none. */
+export function sessionPresenceLabel(task: WorkHoursTask): "Sesiune activă" | "Fără sesiuni active" {
+  return taskEvidence(task).activeSessions > 0 ? "Sesiune activă" : "Fără sesiuni active";
+}
+
 export function sessionCount(count: number) { return count === 1 ? '1 sesiune' : `${count} sesiuni`; }
 export function activeSessionsLabel(count: number) { return count === 1 ? '1 sesiune activă' : `${count} sesiuni active`; }
 export function operationCount(count: number) { return count === 1 ? '1 operație' : `${count} operații`; }
