@@ -12,9 +12,17 @@ NO PARALLEL PRODUCT TRUTH
 
 ## Current: PILOT-0 truth and readiness
 
-Living status as of 2026-10-14. Verified `main` is `162e98a5470211dc62cce6198e8cc58593fae158` (PR #75 merge); WorkOS Verify succeeded on that push. Later sections are historical records unless they say otherwise. Merge alone is never Owner acceptance.
+Living status as of 2026-10-14. Verified `main` on that date is `162e98a5470211dc62cce6198e8cc58593fae158` (PR #75 merge); WorkOS Verify succeeded on that push. Later sections are historical records unless they say otherwise. Merge alone is never Owner acceptance. Current `main` after the R-005 integration is the 2026-11-01 note below.
 
-### UI/UX authority (2026-10-16)
+### UI/UX design workspace — Owner update (2026-10-31)
+
+Owner designated **WorkOS-N**, Figma file `rM71g74Ph0mkAjAtWuLahy`, as the single active UI/UX design workspace for WorkOS. Design-first for substantial UI/UX changes; reuse existing Figma pages, frames and components rather than starting new files or pages. Individual frames require scoped Owner acceptance; all previous visual prescriptions remain retired. The engine remains Product Truth and the root frontend remains the implementation. See `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md` and [Owner decision](https://app.notion.com/p/40a8ea98e40f8165b7d7e7df523d805a). This policy decision does not change pilot/production readiness or authorize a new implementation wave.
+
+### R-005 client work memory — integrated on main (PR #112, 2026-11-01)
+
+PR #112 is integrated. Merge commit `094ad65405c24738b223925c741ed6a91bcb7721` brings `main` forward from `76adc8c068c6c4a1811d0fbcc22f3a0d68f1af8b` with published UX-FINAL `afff315fb4fda98c8f7d062e3538fb31fd3b3970`. WorkOS Verify passed on that UX-FINAL commit. N-028 browser evidence is `E2E_PARTIAL`, not `NOT_YET_RUN`. Parallel revisions have no compatible browser fixture. Organization isolation was not demonstrated end to end. Production deployment stays unauthorized. The 2026-10-14 status block remains that date's record.
+
+### UI/UX authority (2026-10-16; historical, superseded in its no-Figma-workspace aspect)
 
 Owner decision: Figma is not the current UI/UX authority. Product Truth stays in the engine. Experience work starts from the operator's task, explicit Owner direction, and verification in the running application. Policy: `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md`.
 
