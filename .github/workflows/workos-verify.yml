@@ -31,13 +31,13 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      - name: Test Notion PR journal gate
+      - name: Test PR traceability metadata
         if: github.event_name == 'pull_request'
-        run: node --test scripts/verify-notion-pr-metadata.test.mjs
+        run: node --test scripts/verify-pr-traceability.test.mjs
 
-      - name: Notion PR journal metadata gate
+      - name: PR traceability metadata
         if: github.event_name == 'pull_request'
-        run: node scripts/verify-notion-pr-metadata.mjs
+        run: node scripts/verify-pr-traceability.mjs
 
       - name: Install
         run: pnpm install --frozen-lockfile
