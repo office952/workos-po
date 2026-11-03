@@ -424,23 +424,18 @@ export function AssemblyPage() {
               <dl>
                 <InfoRow label="Comandă" value="Acceptată — comandă creată" />
               </dl>
+              <p className="ui-note">
+                Trimiterea în producție și continuarea în Atelier se fac din fișa lucrării.
+              </p>
               <a className="text-link" href={jobHref(assembly.orderId)}>
-                Deschide comanda
+                Deschide fișa lucrării
               </a>
+              {assembly.executionPlanId ? (
+                <a className="text-link" href={`/executie/${encodeURIComponent(assembly.executionPlanId)}`}>
+                  Deschide în Atelier
+                </a>
+              ) : null}
             </div>
-          ) : null}
-          {assembly.orderId && !assembly.productionId ? (
-            <Button disabled={pending} onClick={() => void run(`/api/assemblies/${assembly.assemblyId}/production`)}>
-              Eliberează în producție
-            </Button>
-          ) : null}
-          {assembly.productionId && !assembly.executionPlanId ? (
-            <Button
-              disabled={pending}
-              onClick={() => void run(`/api/assemblies/${assembly.assemblyId}/execution-plan`)}
-            >
-              Creează planul de execuție
-            </Button>
           ) : null}
           {operationCost ? (
             <AssemblyOperationCostPanel
@@ -470,13 +465,6 @@ export function AssemblyPage() {
                 </InlineAlert>
               ) : null}
             </SurfacePanel>
-          ) : null}
-          {assembly.executionPlanId ? (
-            <p>
-              <a className="text-link" href={`/executie/${encodeURIComponent(assembly.executionPlanId)}`}>
-                Deschide execuția
-              </a>
-            </p>
           ) : null}
         </div>
       ) : assemblyId && loaded.status === "loading" ? <LoadingFloor variant="facts" label="Se citește ansamblul" /> : null}

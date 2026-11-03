@@ -185,7 +185,9 @@ describe("AssemblyPage", () => {
     expect(screen.getByText("ABC · 647,68 EUR cu TVA")).toBeInTheDocument();
     expect(screen.getByText("461,64 EUR")).toBeInTheDocument();
     expect(screen.getByText(/Montaj litere pe panou, Control final/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Deschide comanda" })).toHaveAttribute("href", "/lucrari/asmo%3A1");
+    expect(screen.getByRole("link", { name: "Deschide fișa lucrării" })).toHaveAttribute("href", "/lucrari/asmo%3A1");
+    expect(screen.queryByRole("button", { name: "Eliberează în producție" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Creează planul de execuție" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Deschide oferta comercială" })).toHaveAttribute(
       "href",
       "/oferte/ansamblu/asmq%3Areleased",
