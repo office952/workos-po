@@ -571,7 +571,7 @@ export function OperationWorkspace({
       ) : null}
       {identified === false ? (
         <InlineAlert tone="pending" title="Operator neidentificat">
-          Intră în atelier înainte de a porni sau închide o sarcină.{" "}
+          Identifică operatorul înainte de a porni sau finaliza o operație. Deschiderea operației nu pornește lucrul.{" "}
           <a
             className="text-link"
             href={atelierHref({
@@ -579,13 +579,21 @@ export function OperationWorkspace({
               returnTo: executionHref(planId, { taskId, jobId: resolvedJobId }),
             })}
           >
-            Deschide atelierul
+            Identifică operatorul
           </a>
         </InlineAlert>
       ) : null}
       {allComplete ? (
-        <InlineAlert tone="pending" title="Lucrare executată">
-          Toate sarcinile din plan sunt închise. Compară planificat și realizat pe lucrare.
+        <InlineAlert tone="pending" title="Producție finalizată">
+          Toate operațiile din plan sunt închise. Livrarea și montajul nu sunt confirmate.
+          {resolvedJobId ? (
+            <>
+              {" "}
+              <a className="text-link" href={jobHref(resolvedJobId, { section: "situatie" })}>
+                Situația din fișa lucrării
+              </a>
+            </>
+          ) : null}
         </InlineAlert>
       ) : null}
       {actionError ? (
@@ -885,7 +893,7 @@ export function OperationWorkspace({
                   disabled={actionState === "pending" || identified !== true}
                   onClick={() => void start(currentTask)}
                 >
-                  {currentTask.status === "IN_PROGRESS" ? "Intră în operație" : "Pornește"}
+                  {currentTask.status === "IN_PROGRESS" ? "Continuă operația" : "Pornește operația"}
                 </Button>
               ) : null}
               {currentTask.canLeave ? <Button variant="secondary" disabled={actionState === "pending" || identified !== true}
@@ -918,7 +926,7 @@ export function OperationWorkspace({
                   }
                   onClick={() => void complete(currentTask)}
                 >
-                  Închide sarcina
+                  Finalizează operația
                 </Button>
               ) : null}
             </div>

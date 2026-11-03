@@ -76,7 +76,7 @@ describe("presentExecutionNextAction", () => {
       "Alocare utilaj / zonă necesară",
     );
     expect(presentExecutionNextAction(task({ canComplete: true }), true)).toBe(
-      "Poate fi închisă",
+      "Poate fi finalizată",
     );
     expect(
       presentExecutionNextAction(

@@ -105,7 +105,7 @@ describe("OperationWorkspace", () => {
     const currentAction = await screen.findByTestId("execution-next");
     expect(within(currentAction).getAllByText(reason)).toHaveLength(1);
     if (qualityBlockLabel) expect(within(currentAction).getByText(qualityBlockLabel)).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Închide sarcina" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Finalizează operația" })).toBeNull();
     expect(screen.getByRole("button", { name: "Ieși din operație" })).toBeEnabled();
   });
 
@@ -131,7 +131,7 @@ describe("OperationWorkspace", () => {
       writeResource(resourceKeys.operatorSession(), { personId, displayName: "Operator test" });
       invalidateAfterOperatorSessionChange();
     });
-    expect(await screen.findByRole("button", { name: "Pornește" })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "Pornește operația" })).toBeEnabled();
     expect(screen.queryByText("Necesită operator calificat")).not.toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/start"))).toBe(false);
     personId = "per:unqualified";
@@ -140,7 +140,7 @@ describe("OperationWorkspace", () => {
       invalidateAfterOperatorSessionChange();
     });
     await screen.findAllByText("Necesită operator calificat");
-    expect(screen.queryByRole("button", { name: "Pornește" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pornește operația" })).not.toBeInTheDocument();
   });
 
   it("explains a busy machine and allows retry without starting another run locally", async () => {
@@ -290,7 +290,7 @@ describe("OperationWorkspace", () => {
     expect(actualField).toHaveValue("11,8");
 
     await userEvent.setup().click(
-      within(measurableArticle as HTMLElement).getByRole("button", { name: "Închide sarcina" }),
+      within(measurableArticle as HTMLElement).getByRole("button", { name: "Finalizează operația" }),
     );
 
     await waitFor(() => {
@@ -341,7 +341,7 @@ describe("OperationWorkspace", () => {
     const actualField = await screen.findByLabelText("Cantitate realizată");
     await userEvent.setup().clear(actualField);
     await userEvent.setup().type(actualField, "abc");
-    await userEvent.setup().click(screen.getByRole("button", { name: "Închide sarcina" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Finalizează operația" }));
 
     expect(
       await screen.findByText(
@@ -352,7 +352,7 @@ describe("OperationWorkspace", () => {
       fetchMock.mock.calls.some(([url, init]) => String(url).includes("/complete") && init?.method === "POST"),
     ).toBe(false);
     expect(screen.getByLabelText("Cantitate realizată")).toHaveValue("abc");
-    expect(screen.getByRole("button", { name: "Închide sarcina" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Finalizează operația" })).toBeEnabled();
   });
 
   it("does not complete a measurable task until the operator enters an actual, including zero", async () => {
@@ -388,7 +388,7 @@ describe("OperationWorkspace", () => {
     const actualField = await screen.findByLabelText("Cantitate realizată");
     expect(actualField).toHaveValue("");
     expect(actualField).toHaveAccessibleDescription("Planificat: Lungime 3.2 m");
-    await user.click(screen.getByRole("button", { name: "Închide sarcina" }));
+    await user.click(screen.getByRole("button", { name: "Finalizează operația" }));
     expect(
       await screen.findByText(
         "Cantitatea realizată trebuie să fie un număr valid, zero sau pozitiv.",
@@ -399,7 +399,7 @@ describe("OperationWorkspace", () => {
     ).toBe(false);
 
     await user.type(actualField, "0");
-    await user.click(screen.getByRole("button", { name: "Închide sarcina" }));
+    await user.click(screen.getByRole("button", { name: "Finalizează operația" }));
     await waitFor(() => {
       const completeCall = fetchMock.mock.calls.find(
         ([url, init]) => String(url).includes("/complete") && init?.method === "POST",
@@ -494,9 +494,9 @@ describe("OperationWorkspace", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<OperationWorkspace planId="exp:1" />);
-    expect(await screen.findByRole("button", { name: "Închide sarcina" })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "Finalizează operația" })).toBeEnabled();
     expect(screen.queryByLabelText("Cantitate realizată")).toBeNull();
-    await userEvent.setup().click(screen.getByRole("button", { name: "Închide sarcina" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Finalizează operația" }));
     await waitFor(() => {
       const completeCall = fetchMock.mock.calls.find(
         ([url, init]) => String(url).includes("/complete") && init?.method === "POST",
@@ -738,7 +738,7 @@ describe("OperationWorkspace", () => {
     render(<OperationWorkspace planId="exp:1" taskId="task-led" jobId="job-led" />);
 
     expect(await screen.findByText(/Avertisment: materialul nu este suficient/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Pornește" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Pornește operația" })).toBeEnabled();
   });
 
   it("keeps a deep-linked completed task selected so history stays inspectable", async () => {
@@ -1100,7 +1100,7 @@ describe("OperationWorkspace", () => {
       "data-task-id",
       "task-wire",
     );
-    expect(screen.getByRole("button", { name: "Pornește" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Pornește operația" })).toBeEnabled();
     expect(screen.queryByRole("button", { name: /Alocă/ })).not.toBeInTheDocument();
   });
 
@@ -1253,7 +1253,7 @@ describe("OperationWorkspace", () => {
     expect(await screen.findAllByText("CNC Zebra")).not.toHaveLength(0);
     expect(screen.queryByText("Utilaj lipsește")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Alocă/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Pornește" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pornește operația" })).toBeInTheDocument();
   });
 
   it("shows an error and does not fake success when assignment fails", async () => {
@@ -1518,7 +1518,7 @@ describe("OperationWorkspace", () => {
     render(<OperationWorkspace planId="exp:1" />);
     expect(await screen.findByText("Operator neidentificat")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "01 Debitare foaie CNC" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Pornește" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Pornește operația" })).toBeDisabled();
     expect(screen.getAllByText("Identifică operatorul").length).toBeGreaterThan(0);
   });
 
@@ -1582,7 +1582,8 @@ describe("OperationWorkspace", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<OperationWorkspace planId="exp:1" />);
-    expect(await screen.findByText("Lucrare executată")).toBeInTheDocument();
+    expect(await screen.findByText("Producție finalizată")).toBeInTheDocument();
+    expect(screen.getByText(/Livrarea și montajul nu sunt confirmate/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /01 Debitare foaie CNC/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /04 Cablare electrică/ })).toBeInTheDocument();
     expect(screen.getAllByText("CNC Zebra").length).toBeGreaterThan(0);
@@ -1625,7 +1626,7 @@ describe("OperationWorkspace", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<OperationWorkspace planId="exp:1" />);
-    expect(await screen.findByRole("button", { name: "Pornește" })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "Pornește operația" })).toBeEnabled();
     expect(screen.queryByText("Utilaj lipsește")).not.toBeInTheDocument();
   });
 
@@ -1739,7 +1740,7 @@ describe("OperationWorkspace", () => {
     render(<OperationWorkspace planId="exp:1" />);
     await user.type(await screen.findByLabelText("Plexiglas opal 3 mm — consum efectiv"), "0,80");
     await user.type(screen.getByLabelText("Șuruburi inox — consum efectiv"), "11");
-    await user.click(screen.getByRole("button", { name: "Închide sarcina" }));
+    await user.click(screen.getByRole("button", { name: "Finalizează operația" }));
     await waitFor(() => {
       const completeCall = fetchMock.mock.calls.find(
         ([url, init]) => String(url).includes("/complete") && init?.method === "POST",
@@ -1808,7 +1809,7 @@ describe("OperationWorkspace", () => {
 
     render(<OperationWorkspace planId="exp:1" />);
     await user.type(await screen.findByLabelText("Plexiglas opal 3 mm — consum efectiv"), "0,80");
-    await user.click(screen.getByRole("button", { name: "Închide sarcina" }));
+    await user.click(screen.getByRole("button", { name: "Finalizează operația" }));
     await waitFor(() => {
       const completeCall = fetchMock.mock.calls.find(
         ([url, init]) => String(url).includes("/complete") && init?.method === "POST",
@@ -1857,10 +1858,10 @@ describe("OperationWorkspace", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<OperationWorkspace planId="exp:1" />);
-    expect(await screen.findByRole("button", { name: "Închide sarcina" })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "Finalizează operația" })).toBeEnabled();
     expect(screen.queryByRole("heading", { name: "Consum efectiv" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/consum efectiv/i)).not.toBeInTheDocument();
-    await userEvent.setup().click(screen.getByRole("button", { name: "Închide sarcina" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Finalizează operația" }));
     await waitFor(() => {
       const completeCall = fetchMock.mock.calls.find(
         ([url, init]) => String(url).includes("/complete") && init?.method === "POST",
@@ -1917,7 +1918,7 @@ describe("OperationWorkspace", () => {
     render(<OperationWorkspace planId="exp:1" />);
     await screen.findByRole("heading", { name: "03 Montaj LED" });
     expect(screen.queryByLabelText(/consum efectiv/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Închide sarcina" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Finalizează operația" })).not.toBeInTheDocument();
   });
 
   it("reloads persisted actual history after a successful completion", async () => {
@@ -1994,7 +1995,7 @@ describe("OperationWorkspace", () => {
 
     render(<OperationWorkspace planId="exp:1" />);
     await user.type(await screen.findByLabelText("Plexiglas opal 3 mm — consum efectiv"), "0,80");
-    await user.click(screen.getByRole("button", { name: "Închide sarcina" }));
+    await user.click(screen.getByRole("button", { name: "Finalizează operația" }));
     expect(await screen.findByText("Consum înregistrat")).toBeInTheDocument();
     expect(screen.getByText("0,8 m²")).toBeInTheDocument();
     expect(screen.getByText("Rest din foaie")).toBeInTheDocument();
@@ -2053,13 +2054,13 @@ describe("OperationWorkspace", () => {
 
     render(<OperationWorkspace planId="exp:1" />);
     await user.type(await screen.findByLabelText("Plexiglas opal 3 mm — consum efectiv"), "0,80");
-    await user.click(screen.getByRole("button", { name: "Închide sarcina" }));
+    await user.click(screen.getByRole("button", { name: "Finalizează operația" }));
     expect(
       await screen.findByText("Cantitatea consumată trebuie să fie un număr valid, zero sau pozitiv."),
     ).toBeInTheDocument();
     expect(screen.queryByText("invalid_quantity")).not.toBeInTheDocument();
     expect(screen.queryByText("Finalizat")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Închide sarcina" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Finalizează operația" })).toBeEnabled();
     expect(screen.getByLabelText("Plexiglas opal 3 mm — consum efectiv")).toHaveValue("0,80");
   });
 
@@ -2362,8 +2363,8 @@ describe("OperationWorkspace", () => {
     expect(screen.queryByText("În curs 1")).not.toBeInTheDocument();
     expect(screen.getAllByText("Atelier Extern").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Înregistrează revenirea" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Pornește" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Închide sarcina" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pornește operația" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Finalizează operația" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Pornește utilajul" })).not.toBeInTheDocument();
   });
 });
@@ -2587,11 +2588,11 @@ describe("OperationWorkspace missing-provider guidance", () => {
     expect(await screen.findByRole("heading", { name: "Următorul pas" })).toBeInTheDocument();
     expect(screen.getAllByText("Așteaptă: Debitare foaie CNC").length).toBeGreaterThan(0);
     expect(screen.queryByLabelText("Cantitate realizată")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Pornește" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pornește operația" })).not.toBeInTheDocument();
 
     render(<OperationWorkspace planId="exp:1" taskId="task-cut" />);
     expect(await screen.findByLabelText("Cantitate realizată")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Închide sarcina" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Finalizează operația" })).toBeDisabled();
     expect(screen.getByText("Oprește rularea utilajului înainte de a închide sarcina.")).toBeInTheDocument();
   });
 });

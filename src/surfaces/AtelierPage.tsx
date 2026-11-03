@@ -243,7 +243,7 @@ export function AtelierPage({ jobId = null, returnTo = null, planId = null, task
                 </>
               ) : (
                 <Button disabled={actionState === "pending"} onClick={() => void login()}>
-                  Intră în atelier
+                  Identifică operatorul
                 </Button>
               )}
           {actionError ? (

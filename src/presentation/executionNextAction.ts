@@ -59,10 +59,10 @@ export function presentExecutionNextAction(
   }
   if (task.completionParticipationBlock) return task.completionParticipationBlock;
   if (task.canComplete) {
-    return "Poate fi închisă";
+    return "Poate fi finalizată";
   }
   if (task.canClaimStart) {
-    return identified === false ? "Identifică operatorul" : task.status === "IN_PROGRESS" ? "Poți intra în operație" : "Poate fi pornită";
+    return identified === false ? "Identifică operatorul" : task.status === "IN_PROGRESS" ? "Poți continua operația" : "Poate fi pornită";
   }
   if (task.status === "COMPLETED") {
     return presentCompletedTaskAction(task);
