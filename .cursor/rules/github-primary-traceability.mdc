@@ -1,0 +1,17 @@
+---
+description: GitHub holds ordinary WorkOS traceability. Notion is optional. Owner GO stays mandatory.
+alwaysApply: true
+---
+
+# WorkOS GitHub-primary traceability
+
+Owner decision: ordinary WorkOS development is traced in GitHub. Notion is optional.
+
+Before planning, editing, committing, pushing, or opening a pull request:
+
+1. Read `docs/governance/GITHUB_PRIMARY_TRACEABILITY_V1.md`.
+2. Keep the reason, scope, Owner GO, tests, risks and evidence in the commit and pull request.
+3. STOP if Owner GO for that action is missing, or the work is outside that GO.
+4. Cite an existing Notion record when one already applies. Its absence does not block ordinary work.
+
+Notion does not replace GitHub code truth and does not authorize merge, deploy, or real-data changes. Customer runtime must not depend on Notion. Security, CI and branch protection stay in force.

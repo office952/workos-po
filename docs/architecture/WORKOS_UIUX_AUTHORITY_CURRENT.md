@@ -48,7 +48,7 @@ Distinguish:
 4. **Runtime-verified** — observed in the actual application using an authorized isolated synthetic runtime.
 5. **Integrated** — reviewed code merged after a separate Owner merge authorization.
 
-Record accepted Figma frame identifiers, relevant pages, behavior/states, scope and acceptance date in Notion and the implementation PR. Do not treat the entire Figma file, historical variants or a screenshot as implicitly accepted.
+Record accepted Figma frame identifiers, relevant pages, behavior/states, scope and acceptance date in the implementation pull request. An existing Notion record may carry the same note. Do not treat the entire Figma file, historical variants or a screenshot as implicitly accepted.
 
 ## Product authority is not Figma
 
@@ -63,7 +63,7 @@ Figma decides the **proposed presentation and interaction**, not technical produ
 
 ## Mandatory continuity and reuse preflight
 
-**Before every substantial WorkOS UI/UX prompt, new Cursor Agent, design change or runtime review**, the coordinating reviewer must establish what already exists. This is an execution gate, not a request to create another planning document. Write the short result in the existing task/PR/Notion journal; the Owner must not have to rediscover prior work.
+**Before every substantial WorkOS UI/UX prompt, new Cursor Agent, design change or runtime review**, the coordinating reviewer must establish what already exists. This is an execution gate, not a request to create another planning document. Write the short result in the existing pull request. Update a Notion record only when one already applies. The Owner must not have to rediscover prior work.
 
 ```text
 CONTINUITY_GATE = PASS / HOLD
@@ -115,7 +115,7 @@ This rule is mandatory for all future UI/UX work, **including Claude-to-Cursor a
 
 ## Continuity across ChatGPT and Cursor sessions
 
-A new chat is not a new UI/UX mandate. **Cold-start gate:** read the current `AGENTS.md`, `docs/ROADMAP.md`, `docs/SOURCE_OF_TRUTH.md`, the active task's Notion journal and PR, then verify the actual branch/HEAD, current design authority and protected synthetic environments. Resume the last unfinished objective. If PR #113 has not merged, use its documented Owner policy rather than reverting to historical Figma rules.
+A new chat is not a new UI/UX mandate. **Cold-start gate:** read the current `AGENTS.md`, `docs/ROADMAP.md`, `docs/SOURCE_OF_TRUTH.md`, and the open pull request, then verify the actual branch/HEAD, current design authority and protected synthetic environments. Read a Notion record when the pull request already cites one. Resume the last unfinished objective.
 
 **Handoff gate:** the coordinating reviewer records a short checkpoint in the existing task journal / PR (not a new document): verified objective and stage; branch/HEAD/PR; what is integrated, Owner-accepted and still Draft; the relevant existing WorkOS-N page/frame; reusable N-019/N-020/N-028 root and schema/API compatibility; proof completed; unresolved blocker; prohibited mutations; and the one smallest next action requiring Owner GO. Reverify volatile facts in the next session; old process ports are only history.
 

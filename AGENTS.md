@@ -140,7 +140,7 @@ Before authoring or executing any substantial WorkOS UI/UX task, **STOP until th
 
 Do **not** start another Figma file/page, duplicate application surface, new persistent dataset or clean demo by default. A temporary minimal fixture may cover an isolated regression but does not replace realistic positive E2E browser proof. Protect all original demo roots and real data; use an expressly authorized isolated compatible copy for mutating tests, not reset/reseed/migrate-in-place. If the rich scenario is incompatible or inaccessible, record a HOLD and the smallest safe recovery plan; do not invent data or count a tiny fixture as full UX acceptance.
 
-The coordinating independent review checks this gate before giving Cursor a GO or an acceptance verdict. Link the actual verification in the existing PR/Notion journal; no new documentation workstream is required. Owner continuity decision: https://app.notion.com/p/40a8ea98e40f812cac6cf929dad44f5a.
+The coordinating independent review checks this gate before giving Cursor a GO or an acceptance verdict. Link the actual verification in the existing pull request. Cite a Notion record only when one already exists. No new documentation workstream is required. Owner continuity decision: https://app.notion.com/p/40a8ea98e40f812cac6cf929dad44f5a.
 
 ## N-028 persistent demo: Owner-authorized synthetic login only
 
@@ -180,12 +180,12 @@ A reported capture that only exists in a browser/temporary tool or whose full fi
 
 **Changing ChatGPT conversations, Cursor chats, Agents, machines or checkouts does not reset the WorkOS project.** At the first substantial response in a fresh session, the coordinating reviewer MUST perform a **cold start** before supplying an implementation prompt, announcing acceptance or starting new UI/data work:
 
-1. Prove the actual repository / branch / HEAD / checkout identity. Read the current `AGENTS.md`, `docs/ROADMAP.md`, `docs/SOURCE_OF_TRUTH.md` and the applicable domain/UI policy. Check the open PR and Notion decision/implementation journal for the **specific ongoing task**, not merely the latest conversation.
-2. Determine **what is integrated on main, implemented only in a Draft PR, Owner-accepted, unaccepted or blocked**. A passing CI is not integration or Owner acceptance. Reconcile any conflicting old report or chat summary against current GitHub/Notion evidence.
-3. For any UI/UX, real-data or synthetic-runtime task, apply the mandatory reuse preflight above **before** proposing a new Figma file/page, dataset, copy, startup or migration. WorkOS-N remains the single design workspace even when a candidate branch predates this policy. If the governance PR is not yet merged, read its current Draft and the [Owner decision](https://app.notion.com/p/40a8ea98e40f812cac6cf929dad44f5a), rather than assuming main already includes it.
+1. Prove the actual repository / branch / HEAD / checkout identity. Read the current `AGENTS.md`, `docs/ROADMAP.md`, `docs/SOURCE_OF_TRUTH.md` and the applicable domain/UI policy. Check the open pull request and repository history for the **specific ongoing task**, not merely the latest conversation. An existing Notion record may be read when the pull request already cites it.
+2. Determine **what is integrated on main, implemented only in a Draft PR, Owner-accepted, unaccepted or blocked**. A passing CI is not integration or Owner acceptance. Reconcile any conflicting old report or chat summary against current GitHub evidence. A cited Notion page is additional context.
+3. For any UI/UX, real-data or synthetic-runtime task, apply the mandatory reuse preflight above **before** proposing a new Figma file/page, dataset, copy, startup or migration. WorkOS-N remains the single design workspace even when a candidate branch predates this policy. The continuity policy is `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md`. The [Owner decision](https://app.notion.com/p/40a8ea98e40f812cac6cf929dad44f5a) remains an optional reference.
 4. Present a compact `SESSION_RESUME` showing verified current objective, current PR/HEAD, last accepted outcome, existing reusable assets, outstanding evidence/risks, prohibitions and **one** next step. If evidence is unavailable, report `RESUME_HOLD`; never guess and do not ask the Owner to reconstruct the entire project history.
 
-**Before ending or handing off a substantial session**, update the **existing task's** Notion implementation/review journal and its open PR (when applicable), not a new planning document. The checkpoint must contain:
+**Before ending or handing off a substantial session**, update the open pull request with the checkpoint below, not a new planning document. Update a Notion record only when one already exists. The checkpoint must contain:
 
 ```text
 SESSION_CHECKPOINT_VERSION = 1
@@ -203,15 +203,15 @@ OWNER_GO_REQUIRED_FOR =
 SOURCE_LINKS =
 ```
 
-The checkpoint is a **navigation and decision handoff**, not a second Product Truth or replacement for live Git/Notion/Figma/runtime verification. Do not store secrets, credentials, real customer data or hardcoded temporary local ports as canonical truth. ChatGPT is responsible for checking this continuity chain; never presume a new chat automatically inherited all prior turns. Owner should need at most to say **"Continuam WorkOS"** when these connected project sources are available.
+The checkpoint is a **navigation and decision handoff**, not a second Product Truth or replacement for live Git, Figma and runtime verification. Notion remains an optional cross-reference. Do not store secrets, credentials, real customer data or hardcoded temporary local ports as canonical truth. ChatGPT is responsible for checking this continuity chain; never presume a new chat automatically inherited all prior turns. Owner should need at most to say **"Continuam WorkOS"** when these connected project sources are available.
 
 ## Session change and continuity
 
-A new ChatGPT chat or Cursor Agent is NOT a new WorkOS project. Before any new implementation prompt, the coordinator must verify the current repository and Git identity, read this AGENTS contract, the living roadmap, relevant Notion task journal and open PR, and identify existing WorkOS-N design and persistent N-019/N-020/N-028 synthetic data. Do not assume a new chat inherited earlier discussions, and do not accept an old summary as current evidence.
+A new ChatGPT chat or Cursor Agent is NOT a new WorkOS project. Before any new implementation prompt, the coordinator must verify the current repository and Git identity, read this AGENTS contract, the living roadmap, and the open pull request, and identify existing WorkOS-N design and persistent N-019/N-020/N-028 synthetic data. Read a Notion record when the pull request already cites one. Do not assume a new chat inherited earlier discussions, and do not accept an old summary as current evidence.
 
-At the end of substantial work, update the existing task journal / PR with a small checkpoint: objective, branch/head/PR, current accepted-versus-Draft status, reusable Figma and data assets, actual runtime compatibility, unfinished proof, prohibitions, and the next authorized action. At the beginning of a new chat read that checkpoint and independently recheck changing facts. If inaccessible, report a hold rather than redesigning or reseeding.
+At the end of substantial work, update the open pull request with a small checkpoint: objective, branch/head/PR, current accepted-versus-Draft status, reusable Figma and data assets, actual runtime compatibility, unfinished proof, prohibitions, and the next authorized action. At the beginning of a new chat read that checkpoint and independently recheck changing facts. If inaccessible, report a hold rather than redesigning or reseeding.
 
-For frontend-only features, check whether the new frontend can reuse the existing API and protected demo data without launching a later API that would auto-migrate the database. Authentication may write a session even for read-only business views, so confirm permission before using an existing protected environment. The full UI/UX continuity policy is in `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md`. Governance is currently proposed in Draft PR #113 until separately merged.
+For frontend-only features, check whether the new frontend can reuse the existing API and protected demo data without launching a later API that would auto-migrate the database. Authentication may write a session even for read-only business views, so confirm permission before using an existing protected environment. The full UI/UX continuity policy is in `docs/architecture/WORKOS_UIUX_AUTHORITY_CURRENT.md`. Ordinary development traceability is [GitHub-primary](docs/governance/GITHUB_PRIMARY_TRACEABILITY_V1.md).
 
 ## Current flow and status
 
@@ -241,8 +241,8 @@ No business database, ORM, migrations, seeds or destructive data operations with
 
 Do not stop, reclaim ports, reset or repurpose the Owner reference runtime for proof. Real data must remain outside Git. Report exact candidate checks and unresolved limits; do not copy old acceptance as new proof.
 
-## Mandatory Notion governance
+## GitHub traceability
 
-**Owner-approved: Notion is the permanent journal for WorkOS past, present and future development.** Before any actionable planning, requirement change, implementation, docs/tests/config change, commit, push, PR, merge, deployment or migration, verify a durable record in the [WorkOS implementation registry](https://app.notion.com/p/cc42b70f86354dd7b08e6a00b4cb5156), with its stable ID, exact URL, scope and the separately applicable Owner GO. Log the result and evidence afterward. New scope means updating Notion **before** changing it.
+**Owner-approved: GitHub is the record for ordinary WorkOS development. Notion is optional.** A pull request carries the reason, scope, Owner GO, tests, risks and evidence. An existing Notion page may be cited; its absence does not block ordinary planning, edits, commits or pull requests.
 
-Canonical procedure: [docs/governance/NOTION_JOURNAL_GATE_V1.md](docs/governance/NOTION_JOURNAL_GATE_V1.md). If the Notion record is missing, unverifiable, or Notion is inaccessible, **STOP BEFORE WRITE**. A PR must include its implementation record ID/URL. Neither a Notion entry nor this rule authorizes merge, real-data operations or deploy. Notion is for **development governance**, never a business-runtime dependency.
+Canonical procedure: [docs/governance/GITHUB_PRIMARY_TRACEABILITY_V1.md](docs/governance/GITHUB_PRIMARY_TRACEABILITY_V1.md). The earlier Notion journal gate is [superseded](docs/governance/NOTION_JOURNAL_GATE_V1.md). STOP before a write when Owner GO for that action is missing or the scope differs. Missing Owner authorization fails the pull request. A Notion page does not authorize merge, deploy, or real-data operations. Customer runtime must not depend on Notion. Security, CI and branch protection stay in force.
