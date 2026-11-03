@@ -169,7 +169,7 @@ describe("AtelierPage", () => {
 
     await userEvent.type(pin, "246810");
     expect(screen.queryByText("246810")).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Intră în atelier" }));
+    await userEvent.click(screen.getByRole("button", { name: "Identifică operatorul" }));
 
     expect(await screen.findByText("Andrei")).toBeInTheDocument();
     const identifyCall = fetchMock.mock.calls.find(
@@ -375,7 +375,7 @@ describe("AtelierPage", () => {
     expect(screen.getByText("Necesită alocare: Debitare CNC")).toBeInTheDocument();
     expect(screen.getByText("Așteaptă: Debitare foaie CNC")).toBeInTheDocument();
     expect(screen.getByText("Modul LED nu este confirmat disponibil.")).toBeInTheDocument();
-    expect(screen.getAllByText("Deschide execuția").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Deschide operația").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Pornește" })).not.toBeInTheDocument();
     expect(screen.getByText(/nu reprezintă programare sau prioritate/)).toBeInTheDocument();
   });

@@ -38,7 +38,7 @@ export function presentInboxLane(task: InboxTaskTransport): InboxLanePresentatio
     lane,
     laneLabel: LANE_LABEL[lane],
     reason: presentInboxReason(task, lane),
-    actionLabel: "Deschide execuția",
+    actionLabel: "Deschide operația",
     tone: LANE_TONE[lane],
   };
 }

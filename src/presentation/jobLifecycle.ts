@@ -1,6 +1,6 @@
 import type { JobListItemTransport } from "../api/types";
 
-export type LifecycleMark = "done" | "current" | "next";
+export type LifecycleMark = "done" | "current" | "next" | "blocked" | "unavailable";
 
 export type LifecycleStep = {
   id: string;
@@ -27,6 +27,10 @@ function markLabel(mark: LifecycleMark): string {
       return "Acum";
     case "next":
       return "Urmează";
+    case "blocked":
+      return "Incomplet";
+    case "unavailable":
+      return "Indisponibil";
     default: {
       const exhaustive: never = mark;
       return exhaustive;
@@ -34,26 +38,47 @@ function markLabel(mark: LifecycleMark): string {
   }
 }
 
+/** Steps before the focus are complete. Only the immediate successor is next. */
+function marksFor(length: number, focus: number, focusMark: "current" | "blocked" | "done"): LifecycleMark[] {
+  return Array.from({ length }, (_, index) => {
+    if (focusMark === "done") {
+      return "done";
+    }
+    if (index < focus) {
+      return "done";
+    }
+    if (index === focus) {
+      return focusMark;
+    }
+    if (index === focus + 1) {
+      return "next";
+    }
+    return "unavailable";
+  });
+}
+
 function step(id: string, label: string, mark: LifecycleMark): LifecycleStep {
   return { id, label, mark, markLabel: markLabel(mark) };
 }
 
-export function presentJobLifecycle(job: JobListItemTransport): LifecycleStep[] {
-  const complete = job.stage === "EXECUTION_COMPLETED";
-  const planned = job.planId !== null || complete;
-  const releasing = job.nextAction === "RELEASE_TO_PRODUCTION";
-  const creatingPlan = job.nextAction === "CREATE_EXECUTION_PLAN";
-  const released =
-    job.releaseSnapshotId !== null || creatingPlan || planned || complete;
-  const executing = planned && !complete;
+const JOURNEY = [
+  ["accepted", "Ofertă acceptată"],
+  ["created", "Lucrare"],
+  ["release", "Pregătire producție"],
+  ["plan", "Plan disponibil"],
+  ["execution", "Atelier"],
+  ["finished", "Producție finalizată"],
+] as const;
 
-  return [
-    step("accepted", "Ofertă acceptată", "done"),
-    step("created", "Lucrare creată", "done"),
-    step("release", "Eliberare în producție", markOf(released && !releasing, releasing)),
-    step("plan", "Plan de execuție", markOf(planned && !creatingPlan, creatingPlan)),
-    step("execution", "Atelier / execuție", markOf(complete, executing)),
-  ];
+export function presentJobLifecycle(job: JobListItemTransport): LifecycleStep[] {
+  const finished = job.stage === "EXECUTION_COMPLETED";
+  const hasPlan = job.planId !== null || finished;
+  const incompletePlan =
+    !finished && !hasPlan && (job.nextAction === "CREATE_EXECUTION_PLAN" || job.releaseSnapshotId !== null);
+  const focus = finished ? 5 : hasPlan ? 4 : incompletePlan ? 3 : 2;
+  const focusMark = finished ? "done" : incompletePlan ? "blocked" : "current";
+  const marks = marksFor(JOURNEY.length, focus, focusMark);
+  return JOURNEY.map(([id, label], index) => step(id, label, marks[index] ?? "unavailable"));
 }
 
 export function presentQuoteContinuation(input: {

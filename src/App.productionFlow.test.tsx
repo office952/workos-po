@@ -91,7 +91,7 @@ describe("simplified production journey", () => {
     const user = userEvent.setup();
     render(<App />);
     await user.type(await screen.findByLabelText("PIN"), "1234");
-    await user.click(screen.getByRole("button", { name: "Intră în atelier" }));
+    await user.click(screen.getByRole("button", { name: "Identifică operatorul" }));
     await user.type(await screen.findByLabelText("Cantitate realizată"), "2");
     expect(window.location.pathname).toBe("/atelier");
     expect(new URLSearchParams(window.location.search).get("task")).toBe("task-1");

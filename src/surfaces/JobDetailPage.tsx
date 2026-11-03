@@ -12,9 +12,11 @@ import { invalidateAfterCreateExecutionPlan, invalidateAfterProductionRelease } 
 import { invalidateResources } from '../data/resourceCache';
 import { loadExecutionPlan, loadJobDetail, loadOperatorSession } from '../data/routeLoaders';
 import { useResource } from '../data/useResource';
+import { LifecycleList } from '../components/LifecycleList';
 import { PageRegion } from '../layout/PageRegion';
 import { canPublishInstructions } from '../presentation/dossierAccess';
-import { presentJobSheetTitle, presentJobSheetSecondary, presentJobSheetStage } from '../presentation/jobSheetIdentity';
+import { presentJobLifecycle } from '../presentation/jobLifecycle';
+import { presentJobSheetLead, presentJobSheetTitle, presentJobSheetSecondary, presentJobSheetStage, presentReleaseHold } from '../presentation/jobSheetIdentity';
 import { atelierHref, canonicalJobSection, jobHref, quoteHref, type JobSheetSection, type JobSheetSectionInput } from '../routing/appRoute';
 import { navigate } from '../routing/navigate';
 import { currentEntryKey } from '../routing/navigationMemory';
@@ -70,6 +72,9 @@ export function JobDetailPage({ jobId, taskId = null, section, fileId = null }: 
     ? quoteHref(job?.productCode ?? '', jobResource.data.quoteSnapshotId) : null;
   const secondary = job ? presentJobSheetSecondary(job) : null;
   const finished = job?.stage === 'EXECUTION_COMPLETED';
+  const journeyJob = job ? { ...job, planId: planId ?? job.planId } : null;
+  const releaseKnown = cloud.ready && !cloud.unavailable;
+  const releaseHold = presentReleaseHold({ canRelease: owner, sessionKnown: releaseKnown, finished: Boolean(finished), planId });
   const active = activeSection(section, taskId);
   const sessionScope = [planId, cloud.user?.email, cloud.organization?.organizationId, readCloudBoundaryVersion(), session.data?.personId].join('|');
   const dossier: ReactNode = pinned ? <TaskDossierPanel key={sessionScope} taskId={pinned.taskId} taskLabel={`${pinned.seqLabel} ${pinned.processLabel}`} canInstruct={owner} operatorIdentified={Boolean(session.data)} canWriteFiles={owner || Boolean(session.data)} sessionScope={sessionScope} recordMode openFileId={fileId} onOpenFile={openFile} /> : null;
@@ -189,11 +194,14 @@ export function JobDetailPage({ jobId, taskId = null, section, fileId = null }: 
   return <PageRegion><div className="job-sheet" data-surface="job-detail" data-section={active}>
     <header className="job-sheet__header" ref={headerRef}><div className="job-sheet__context"><a className="job-sheet__back" href={back.href} onClick={back.onClick}>{back.text}</a>{job ? <JobContextTrail job={job} requestId={jobResource.data?.requestId ?? job.requestId ?? null} quoteSnapshotId={jobResource.data?.quoteSnapshotId ?? null} sourceHref={sourceHref ?? null} operationLabel={operationOpen && selectedTask ? `Operația ${selectedTask.seqLabel}` : null} /> : null}</div>
       <div className="job-sheet__identity-row"><div className="job-sheet__identity"><p className="job-sheet__eyebrow">Fișa lucrării</p><h1>{job ? presentJobSheetTitle(job) : 'Lucrare'}</h1><p>{job?.customerDisplayName ?? 'Se citește lucrarea.'}{secondary ? ' · ' + secondary : ''}</p></div>
-        <div className="job-sheet__header-action"><Button variant="secondary" onClick={() => window.print()}>Tipărește fișa</Button>{planId && !finished && !operationOpen ? <a className="job-sheet__link-button" href={atelierHref({ jobId, planId, returnTo: sheetReturn })}>Deschide lucrarea în Atelier</a> : null}</div></div>
+        <div className="job-sheet__header-action">{job && !planId && owner && !finished ? <Button disabled={pending} onClick={() => void sendToProduction()}>{pending ? 'Se pregătește producția…' : 'Trimite în producție'}</Button> : null}{planId && !finished && !operationOpen ? <a className="job-sheet__link-button job-sheet__link-button--primary" href={atelierHref({ jobId, planId, returnTo: sheetReturn })}>Deschide lucrarea în Atelier</a> : null}<Button variant="secondary" onClick={() => window.print()}>Tipărește fișa</Button></div></div>
       {job ? <div className="job-sheet__planning"><strong className="job-sheet__state">{presentJobSheetStage(job)}</strong><span>Prioritate: {job.priorityLabel}</span><span>Termen: {job.targetDateLabel}</span><span>{job.progressLabel}</span>
         {job.planningEditable && !finished && active !== 'date' ? <a className="job-sheet__planning-link" href={jobHref(jobId, { section: 'date' })}>Modifică în Date lucrare</a> : null}</div> : null}
+      {job ? <p className="job-sheet__lead">{presentJobSheetLead(journeyJob ?? job)}</p> : null}
+      {job?.needsAttention && job.attentionLabel ? <p className="job-sheet__hold">De rezolvat: {job.attentionLabel}</p> : null}
+      {releaseHold ? <p className="job-sheet__hold">{releaseHold}</p> : null}
       {finished ? <p className="job-sheet__completion-note">Producția este finalizată. Livrarea și montajul nu sunt confirmate de această stare.</p> : null}
-      {job && !planId && owner && !finished ? <Button disabled={pending} onClick={() => void sendToProduction()}>{pending ? 'Se pregătește producția…' : 'Trimite în producție'}</Button> : null}
+      {journeyJob ? <LifecycleList steps={presentJobLifecycle(journeyJob)} label="Parcursul lucrării" /> : null}
       {error ? <InlineAlert tone="error" title="Acțiunea nu a fost finalizată">{error}</InlineAlert> : null}
     </header>
     <JobSheetNav jobId={jobId} taskId={taskId} active={active} headerRef={headerRef} identity={job ? [presentJobSheetTitle(job), presentJobSheetStage(job), operationOpen && selectedTask ? `Operația ${selectedTask.seqLabel}` : null].filter(Boolean).join(' · ') : null} />

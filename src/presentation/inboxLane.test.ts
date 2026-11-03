@@ -30,7 +30,7 @@ describe("presentInboxLane", () => {
     expect(presentInboxLane(task({ lane: "in_progress_mine" }))).toMatchObject({
       lane: "in_progress_mine",
       laneLabel: "În lucru de tine",
-      actionLabel: "Deschide execuția",
+      actionLabel: "Deschide operația",
     });
     expect(presentInboxLane(task({ lane: "available_ready", canClaimStart: true }))).toMatchObject({
       lane: "ready",

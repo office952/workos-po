@@ -27,6 +27,9 @@ export function presentJobSheetStage(job: JobListItemTransport): string {
 }
 
 export function presentJobSheetLead(job: JobListItemTransport): string {
+  if (job.stage === "EXECUTION_COMPLETED") {
+    return "Producția este finalizată. Compară planificat cu realizat.";
+  }
   switch (job.nextAction) {
     case "RELEASE_TO_PRODUCTION":
       return "Comanda este confirmată. Trimite în producție pentru a pregăti operațiile și a face lucrarea disponibilă în Atelier.";
@@ -36,16 +39,26 @@ export function presentJobSheetLead(job: JobListItemTransport): string {
       return "Lucrarea este disponibilă în Atelier. Lucrul începe când un operator eligibil pornește o operație.";
     case "CONTINUE_EXECUTION":
       return job.nextActionLabel
-        ? `Execuția este deschisă. ${job.nextActionLabel}.`
-        : "Execuția este deschisă. Continuă lucrul pe sarcinile rămase.";
+        ? `Lucrul a început. ${job.nextActionLabel}.`
+        : "Lucrul a început. Continuă operațiile rămase în Atelier.";
     default:
       break;
-  }
-  if (job.stage === "EXECUTION_COMPLETED") {
-    return "Lucrarea este executată. Compară planificat cu realizat.";
   }
   if (job.nextActionLabel) {
     return `${job.stageLabel}. ${job.nextActionLabel}.`;
   }
   return job.stageLabel;
+}
+
+/** Who may send an unreleased job onward. The check is the existing owner gate, not a new permission. */
+export function presentReleaseHold(input: {
+  canRelease: boolean;
+  sessionKnown: boolean;
+  finished: boolean;
+  planId: string | null;
+}): string | null {
+  if (!input.sessionKnown || input.canRelease || input.finished || input.planId) {
+    return null;
+  }
+  return "Trimiterea în producție o face proprietarul organizației. Poți consulta fișa; lucrarea ajunge în Atelier după această pregătire.";
 }

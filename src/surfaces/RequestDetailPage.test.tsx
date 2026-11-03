@@ -1133,6 +1133,25 @@ describe('N-018 · firul cererii în patru pași', () => {
       expect(await within(work).findByRole('button', { name: /Litere test/ })).toBeInTheDocument();
     });
 
+    it('keeps a quoted simple product visible in the work step, apart from adding another product', async () => {
+      stubDetail(requestDetail({
+        nextAction: 'OPEN_QUOTE',
+        nextActionLabel: 'Deschide oferta',
+        canStartAdditionalWork: true,
+        linkedOffers: [{ quoteSnapshotId: 'q-9', kind: 'PRODUCT', kindLabel: 'Produs', productCode: 'PRD-LETTERS', productLabel: 'Litere volumetrice', reference: 'OF-9', stageLabel: 'Creată', superseded: false, attentionLabel: null, orderSnapshotId: null }],
+      }), (url) => url.endsWith('/product-catalog')
+        ? new Response(JSON.stringify({ tree: [{ kind: 'product', code: 'PRD-LOGO', label: 'Logo' }] }), { status: 200 })
+        : url.includes('/assemblies') ? new Response(JSON.stringify({ canCreate: false, offerings: [], assemblies: [] }), { status: 200 }) : null);
+      render(<RequestDetailPage requestId="req-1" />);
+      await screen.findByRole('list', { name: 'Firul cererii' });
+      const work = steps()[1]!;
+      expect(within(work).getByRole('heading', { name: 'Produs configurat' })).toBeInTheDocument();
+      expect(within(work).getByText('Litere volumetrice')).toBeInTheDocument();
+      expect(within(work).getByRole('link', { name: 'Vezi oferta OF-9' })).toHaveAttribute('href', '/quotes/PRD-LETTERS/q-9');
+      expect(within(work).getByRole('heading', { name: 'Produs separat' })).toBeInTheDocument();
+      expect(within(work).queryByText(/Nu există încă un produs/)).toBeNull();
+    });
+
     it('marks no step when the server gives no action', async () => {
       stubDetail(requestDetail({ nextAction: null, nextActionLabel: null }));
       render(<RequestDetailPage requestId="req-1" />);

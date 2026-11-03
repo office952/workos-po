@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
-import type { RequestAssemblyWorkTransport } from "../api/types";
+import type { RequestAssemblyWorkTransport, RequestLinkedOfferTransport } from "../api/types";
 import { InlineAlert } from "../components/InlineAlert";
 import { RequestProductSelection } from "../components/RequestProductSelection";
 import { InfoRow } from "../components/InfoRow";
@@ -75,6 +75,8 @@ export function RequestDetailPage({ requestId, search = window.location.search }
     [jobs.data, requestId],
   );
   const detail = request.data;
+  const quotedProducts = detail?.linkedOffers.filter((offer) => offer.kind === "PRODUCT") ?? [];
+  const quotedProductLabel = quotedProducts.find((offer) => !offer.superseded)?.productLabel ?? quotedProducts[0]?.productLabel ?? null;
   const primary = detail ? presentRequestPrimaryAction(detail) : null;
   const currentStep = primary ? stepOfDestination(primary.actionHref) : null;
   const createdLabel = formatTimestamp(detail?.createdAt ?? null);
@@ -176,6 +178,7 @@ export function RequestDetailPage({ requestId, search = window.location.search }
             <li className="request-thread__step" aria-labelledby="request-step-work" data-current={currentStep === 2 || undefined}>
               <h2 id="request-step-work" className="request-thread__title">2 · Ce se realizează</h2>
               {currentStep === 2 && primary ? <CurrentAction label={primary.actionLabel} href={primary.actionHref} /> : null}
+              {quotedProducts.length > 0 ? <RequestQuotedProducts offers={quotedProducts} /> : null}
               {detail.assemblies.length > 0 ? <RequestAssemblyWorkPanel assemblies={detail.assemblies} /> : null}
               {detail.nextAction === "CHOOSE_PRODUCT" && <RequestProductSelection key={detail.requestId} customerId={detail.customerId} requestId={detail.requestId} />}
               {detail.canStartAdditionalWork && (
@@ -184,11 +187,11 @@ export function RequestDetailPage({ requestId, search = window.location.search }
                   customerId={detail.customerId}
                   requestId={detail.requestId}
                   mode="additional"
-                  existingLabel={detail.assemblies[0]?.label ?? null}
+                  existingLabel={detail.assemblies[0]?.label ?? quotedProductLabel}
                 />
               )}
-              {detail.assemblies.length === 0 && detail.nextAction !== "CHOOSE_PRODUCT" && !detail.canStartAdditionalWork ? (
-                <p className="request-thread__empty">Nu există încă un ansamblu în această cerere.</p>
+              {detail.assemblies.length === 0 && quotedProducts.length === 0 && detail.nextAction !== "CHOOSE_PRODUCT" && !detail.canStartAdditionalWork ? (
+                <p className="request-thread__empty">Nu există încă un produs sau un ansamblu în această cerere.</p>
               ) : null}
             </li>
             <li className="request-thread__step" aria-labelledby="request-step-offer" data-current={currentStep === 3 || undefined}>
@@ -292,6 +295,35 @@ function CurrentAction({ label, href }: { label: string; href: string }) {
       <span className="request-thread__current-label">Acțiunea curentă</span>
       <a className="text-link" href={href}>{label} →</a>
     </p>
+  );
+}
+
+function RequestQuotedProducts({ offers }: { offers: readonly RequestLinkedOfferTransport[] }) {
+  const ordered = [...offers].sort((left, right) => Number(left.superseded) - Number(right.superseded));
+  return (
+    <SurfacePanel title="Produs configurat" label="Produs configurat">
+      <ul className="request-linked-offers">
+        {ordered.map((offer) => {
+          const name = offer.productLabel?.trim() || offer.kindLabel;
+          return (
+            <li key={offer.quoteSnapshotId} className="request-linked-offers__item">
+              <strong>{name}</strong>
+              <span className="request-linked-offers__meta">
+                {[offer.reference, presentQuoteHistoryState(offer)].filter(Boolean).join(" · ")}
+              </span>
+              <a className="text-link" href={registryQuoteHref(offer)}>
+                {offer.reference ? `Vezi oferta ${offer.reference}` : "Vezi oferta"}
+              </a>
+              {offer.orderSnapshotId ? (
+                <a className="text-link" href={jobHref(offer.orderSnapshotId)}>
+                  Deschide fișa lucrării
+                </a>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </SurfacePanel>
   );
 }
 
