@@ -68,7 +68,7 @@ describe("job sheet identity", () => {
     });
     expect(presentJobSheetTitle(nord)).toBe("Panou ACM + litere volumetrice");
     expect(presentJobSheetSecondary(nord)).toBe("Nord Market ACM · NORD");
-    expect(presentJobSheetLead(nord)).toBe("Execuția este deschisă. Continuă execuția.");
+    expect(presentJobSheetLead(nord)).toBe("Lucrul a început. Continuă execuția.");
   });
 
   it("describes a completed job without sending the operator back to release", () => {
@@ -78,6 +78,6 @@ describe("job sheet identity", () => {
       nextAction: "",
       nextActionLabel: "",
     });
-    expect(presentJobSheetLead(done)).toBe("Lucrarea este executată. Compară planificat cu realizat.");
+    expect(presentJobSheetLead(done)).toBe("Producția este finalizată. Compară planificat cu realizat.");
   });
 });
