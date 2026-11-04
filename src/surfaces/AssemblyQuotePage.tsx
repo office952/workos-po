@@ -11,10 +11,14 @@ import { loadAssemblyQuote } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { presentContextMeta } from "../presentation/contextMeta";
+import { presentQuoteAcceptancePermission } from "../presentation/quoteAcceptancePermission";
+import { useCloudSession } from "../session/CloudSessionContext";
 import { formatMoney } from "../presentation/format";
 import { assemblyHref, assemblyQuoteHref, jobHref, requestHref } from "../routing/appRoute";
 import { QuoteLines, QuoteRelations, QuoteSummary, type QuoteRelation } from "./quoteDetail";
 import { AcceptanceResult } from "./quotes/AcceptanceResult";
+import { QuoteDecisionNote } from "./quotes/QuoteDecisionNote";
+import "../styles/surfaces/quote-decision.css";
 import { presentAssemblyQuoteLines, presentAssemblyQuoteTotal } from "./quoteDocumentModel";
 import { useAssemblyQuoteDocument } from "./useAssemblyQuoteDocument";
 import "../styles/surfaces/offers.css";
@@ -69,9 +73,15 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
   const confirmRef = useRef<HTMLElement>(null);
   const acceptButtonRef = useRef<HTMLButtonElement>(null);
   const confirmTitleId = useId();
+  const cloud = useCloudSession();
 
   const orderSnapshotId = quote?.orderSnapshotId ?? acceptedOrderId;
-  const canAccept = Boolean(quote?.acceptance.canAccept && !quote.superseded && !orderSnapshotId);
+  const acceptancePermission = presentQuoteAcceptancePermission({
+    serverAllows: Boolean(quote?.acceptance.canAccept && !quote.superseded && !orderSnapshotId),
+    role: cloud.organization?.membershipRole ?? null,
+    roleReady: cloud.ready,
+  });
+  const canAccept = acceptancePermission.allowed;
 
   useEffect(() => {
     if (confirming) {
@@ -198,6 +208,7 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
                     : quote.acceptance.reason ?? "Oferta este înghețată."
               }
             >
+              <QuoteDecisionNote ordered={Boolean(orderSnapshotId)} permission={acceptancePermission.message} />
               {orderSnapshotId ? (
                 <AcceptanceResult reference={item.reference} orderSnapshotId={orderSnapshotId} immediate={Boolean(acceptedOrderId) && !refusal} />
               ) : null}

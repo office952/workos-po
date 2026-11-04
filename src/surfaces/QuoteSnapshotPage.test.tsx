@@ -4,11 +4,25 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetResourceCache } from "../data/resourceCache";
 import { QuoteSnapshotPage } from "./QuoteSnapshotPage";
 
+const session = vi.hoisted(() => ({ role: "owner" as "owner" | "member" | null, ready: true }));
+
+vi.mock("../session/CloudSessionContext", () => ({
+  useCloudSession: () => ({
+    ready: session.ready,
+    unavailable: false,
+    organization: session.role
+      ? { membershipRole: session.role, displayName: "Org", organizationId: "org" }
+      : null,
+  }),
+}));
+
 const productCode = "PRD-LETTERS-FRONTLIT-PLEXI-AL06";
 
 afterEach(() => {
   vi.unstubAllGlobals();
   resetResourceCache();
+  session.role = "owner";
+  session.ready = true;
 });
 
 describe("QuoteSnapshotPage", () => {
@@ -45,6 +59,15 @@ describe("QuoteSnapshotPage", () => {
     expect(screen.getByRole("button", { name: "Descarcă oferta PDF" })).toBeEnabled();
     expect(document.querySelector(".lifecycle")).toBeNull();
     expect(passiveLifecycleGets(fetchMock)).toEqual([]);
+  });
+
+  it("hides acceptance when the signed-in role is not the owner", async () => {
+    session.role = "member";
+    stubQuotePage({ envelope: createdEnvelope(), snapshot: frozenSnapshot() });
+    render(<QuoteSnapshotPage productCode={productCode} quoteSnapshotId="q-a" />);
+    expect(await screen.findByRole("button", { name: "Descarcă oferta PDF" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Confirmă comanda" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Rolul tău: Membru/)).toBeInTheDocument();
   });
 
   it("shows the frozen job total of a product with site installation, as the quote document does", async () => {

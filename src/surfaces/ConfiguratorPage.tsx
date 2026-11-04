@@ -653,6 +653,11 @@ export function ConfiguratorPage({
         <legend className="u-visually-hidden">Configurație și preț</legend>
       <section id="configuration-area-configuration" role="tabpanel" aria-labelledby="configuration-tab-configuration" hidden={workArea !== "configuration"}>
       <div id="configuratie" className="configuration-editor">
+      <p className="configuration-persistence" data-testid="configuration-persistence">
+        {assemblyId
+          ? "Previzualizarea nu salvează oferta. Confirmarea salvează membrul în ansamblu. Oferta comună apare numai după înghețare. O modificare după verificare anulează confirmarea afișată. Prețul introdus manual rămâne separat de valorile tehnice."
+          : "Configurarea neofertată rămâne în acest tab. Previzualizarea și confirmarea nu creează oferta. Oferta apare numai după înghețare. O modificare după verificare anulează confirmarea afișată. Prețul introdus manual rămâne separat de valorile tehnice. Reîmprospătarea poate păstra valorile; închiderea tabului le poate pierde."}
+      </p>
       <SurfacePanel
         variant="flush"
         label="Configurare"

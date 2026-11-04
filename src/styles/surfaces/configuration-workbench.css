@@ -13,6 +13,7 @@
 [data-surface="configuration-workbench"] > .page-region { padding-top: 0; }
 [data-surface="configuration-workbench"] [role="tabpanel"][hidden] { display: none; }
 .configuration-lock { display: contents; border: 0; padding: 0; margin: 0; min-width: 0; }
+.configuration-persistence { margin: 0 0 16px; color: var(--color-text-secondary); font: 400 14px/1.45 var(--font-sans); overflow-wrap: anywhere; }
 .configuration-areas { display: flex; width: 100%; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--color-border-strong); }
 .configuration-areas [role="tab"] {
   display: inline-flex; align-items: center; justify-content: center; gap: 12px;
