@@ -370,12 +370,20 @@ export type RequestLinkedOfferTransport = {
   quoteSnapshotId: string;
   kind: "PRODUCT" | "ASSEMBLY";
   kindLabel: string;
+  /** Present when the server names the assembly that owns this quote. */
+  assemblyId?: string | null;
   productCode: string;
   productLabel: string | null;
   reference: string | null;
+  stage?: string | null;
   stageLabel: string | null;
+  createdAt?: string | null;
   superseded: boolean;
+  needsAttention?: boolean;
   attentionLabel: string | null;
+  nextAction?: string | null;
+  grossDisplay?: string | null;
+  currency?: string | null;
   orderSnapshotId: string | null;
 };
 
