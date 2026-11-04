@@ -78,8 +78,10 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
   const orderSnapshotId = quote?.orderSnapshotId ?? acceptedOrderId;
   const acceptancePermission = presentQuoteAcceptancePermission({
     serverAllows: Boolean(quote?.acceptance.canAccept && !quote.superseded && !orderSnapshotId),
+    mode: cloud.mode,
     role: cloud.organization?.membershipRole ?? null,
     roleReady: cloud.ready,
+    unavailable: cloud.unavailable,
   });
   const canAccept = acceptancePermission.allowed;
 

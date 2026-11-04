@@ -10,6 +10,7 @@ vi.mock("../session/CloudSessionContext", () => ({
   useCloudSession: () => ({
     ready: session.ready,
     unavailable: false,
+    mode: "cloud" as const,
     organization: session.role
       ? { membershipRole: session.role, displayName: "Org", organizationId: "org" }
       : null,

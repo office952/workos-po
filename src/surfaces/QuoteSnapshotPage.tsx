@@ -149,8 +149,10 @@ export function QuoteSnapshotPage({
   const presentedEnvelope = envelope.data ?? null;
   const acceptancePermission = presentQuoteAcceptancePermission({
     serverAllows: presentedEnvelope?.nextAction === "ACCEPT_QUOTE" || presentedEnvelope?.nextAction === "CREATE_ORDER",
+    mode: cloud.mode,
     role: cloud.organization?.membershipRole ?? null,
     roleReady: cloud.ready,
+    unavailable: cloud.unavailable,
   });
   const stageLabel = presentedEnvelope?.stageLabel ?? presentedSnapshot?.stageLabel;
   const profile = presentedSnapshot
