@@ -234,6 +234,34 @@ describe("request commercial branches", () => {
     expect(model.local[0]?.href).toContain("product=P-LOCAL");
   });
 
+  it("keeps a local draft beside a frozen offer of the same product", () => {
+    const session = {
+      drafts: { width: "100" },
+      draftContext: { productCode: "P-LOCAL", requestId: "req-1", customerId: "cus-1" },
+      draftRecovery: {},
+      customerId: "cus-1",
+      requestId: "req-1",
+      productCode: "P-LOCAL",
+      lastQuote: null,
+    } as ConfiguratorSession;
+    const model = presentCommercialBranches({
+      offers: [offer({ quoteSnapshotId: "q-frozen", productCode: "P-LOCAL", reference: "OF-9" })],
+      assemblies: [],
+      jobs: [],
+      session,
+      requestId: "req-1",
+      customerId: "cus-1",
+      ...ready,
+    });
+    expect(model.branches).toHaveLength(1);
+    expect(model.local).toHaveLength(1);
+    expect(model.local[0]?.persisted).toBe(false);
+    expect(model.local[0]?.sessionKey).toContain("P-LOCAL");
+    expect(model.local[0]?.sessionKey).toContain("req-1");
+    expect(model.local[0]?.detail).toContain("OF-9");
+    expect(model.local[0]?.detail).toContain("separată");
+  });
+
   it("restores the same branch after a refresh key and keeps filter order", () => {
     const offers = Array.from({ length: 8 }, (_, index) => offer({
       quoteSnapshotId: `q-${index + 1}`,

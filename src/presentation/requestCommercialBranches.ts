@@ -654,12 +654,17 @@ function localConfigurations(input: {
       productCode: draft.productCode,
     });
     const withAssembly = draft.assemblyId ? `${href}${href.includes("?") ? "&" : "?"}assembly=${encodeURIComponent(draft.assemblyId)}` : href;
-    const named = input.offers.find((offer) => offer.productCode === draft.productCode)?.productLabel?.trim();
+    const frozen = input.offers.find((offer) => offer.productCode === draft.productCode && !offer.superseded);
+    const named = frozen?.productLabel?.trim()
+      || input.offers.find((offer) => offer.productCode === draft.productCode)?.productLabel?.trim();
+    const frozenReference = frozen?.reference?.trim();
     return {
       sessionKey,
       persisted: false as const,
       title: named ? `Configurare locală · ${named}` : "Configurare locală",
-      detail: "Nu e o ramură salvată. Reîmprospătarea acestui tab poate păstra valorile; închiderea tabului le poate pierde.",
+      detail: frozen
+        ? `Ciornă în acest tab, separată de oferta înghețată${frozenReference ? ` ${frozenReference}` : ""}. Nu înlocuiește oferta și nu e o ramură salvată.`
+        : "Nu e o ramură salvată. Reîmprospătarea acestui tab poate păstra valorile; închiderea tabului le poate pierde.",
       href: withAssembly,
     };
   });

@@ -39,7 +39,7 @@ export function CompactBranch({
         <BranchStage name="Ofertă" cell={branch.stages.offer} plain />
         <BranchStage name="Lucrare" cell={branch.stages.work} plain />
         <BranchStage name="Producție" cell={branch.stages.production} plain />
-        <span className="branch__chevron" aria-hidden="true">{expanded ? "Pliază" : "Extinde"}</span>
+        <span className="branch__chevron" aria-hidden="true">{expanded ? "▴" : "▾"}</span>
       </button>
       {expanded ? (
         <div className="branch__panel" id={panelId}>
@@ -73,9 +73,9 @@ export function CompactBranch({
               ))}
             </ul>
           ) : null}
-          {branch.priceLabel || branch.consultOnly || branch.revisionPending ? (
+          {(branch.kind === "assembly" && branch.priceLabel) || branch.consultOnly || branch.revisionPending ? (
             <dl className="fact-grid fact-grid--rail">
-              {branch.priceLabel ? <InfoRow label="Ofertă comună" value={branch.priceLabel} /> : null}
+              {branch.kind === "assembly" && branch.priceLabel ? <InfoRow label="Ofertă comună" value={branch.priceLabel} /> : null}
               {branch.revisionPending ? <InfoRow label="Revizie" value="Ansamblul a fost modificat după ofertă" /> : null}
               {branch.consultOnly ? <InfoRow label="Configurații" value="Doar consultare (comandă acceptată)" /> : null}
             </dl>
@@ -100,7 +100,7 @@ export function CompactBranch({
             </p>
           </div>
           {branch.primaryAction?.label.startsWith("Deschide oferta") ? (
-            <p className="branch__permission">Acceptarea se face în ofertă și o poate face numai proprietarul.</p>
+            <p className="branch__permission">Acceptarea se face în ofertă, când serverul o permite.</p>
           ) : null}
         </div>
       ) : null}

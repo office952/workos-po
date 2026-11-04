@@ -96,8 +96,8 @@ describe("RequestDetailPage", () => {
     stubDetail(requestDetail());
 
     render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByRole("heading", { name: "CRQ-104" })).toBeInTheDocument();
-    expect(screen.getByText("Litere vitrină")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Litere vitrină" })).toBeInTheDocument();
+    expect(screen.getByText("CRQ-104")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Atelier Nord" })).toHaveAttribute(
       "href",
       "/clienti/cus-1",
@@ -108,7 +108,7 @@ describe("RequestDetailPage", () => {
       "/cereri/req-1?alege-produs=1#alege-produs",
     );
     expect(screen.getByRole("heading", { name: "Ce dorește clientul" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Continuare" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Continuare" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Cerere", level: 2 })).not.toBeInTheDocument();
     expect(screen.queryByText(/Nu adăuga montaj/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Montajul nu face parte/i)).not.toBeInTheDocument();
@@ -157,12 +157,12 @@ describe("RequestDetailPage", () => {
     );
 
     render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByRole("link", { name: "Deschide oferta" })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: "Deschide oferta OF-1" })).toHaveAttribute(
       "href",
       "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
     );
+    expect(screen.queryByRole("link", { name: "Deschide oferta" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /catalog/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Deschide oferta OF-1" })).toBeInTheDocument();
   });
 
   function assemblyWork(overrides: Record<string, unknown> = {}) {
@@ -198,12 +198,12 @@ describe("RequestDetailPage", () => {
 
     render(<RequestDetailPage requestId="req-1" />);
     expect(await screen.findByRole("heading", { name: "Ce se realizează" })).toBeInTheDocument();
-    const assemblyLinks = screen.getAllByRole("link", { name: "Deschide ansamblul" });
+    const assemblyLinks = screen.getAllByRole("link", { name: /ansamblul/i });
     expect(assemblyLinks.length).toBeGreaterThan(0);
     for (const link of assemblyLinks) expect(link).toHaveAttribute("href", "/ansamblu?assembly=asm%3A1");
     expect(screen.getByRole("link", { name: "Deschide oferta comună" })).toHaveAttribute("href", "/oferte/ansamblu/asmq%3A1");
     expect(screen.getByText("766,34 EUR")).toBeInTheDocument();
-    expect(screen.getByText("Ofertă creată", { selector: "dd" })).toBeInTheDocument();
+    expect(screen.getByTestId("request-commercial-progress")).toHaveTextContent("Ofertă creată");
     expect(screen.queryByRole("link", { name: "Alege produs" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Alege produsul pentru această cerere" })).not.toBeInTheDocument();
     expect(screen.queryByText("Adaugă altă lucrare la această cerere")).not.toBeInTheDocument();
@@ -234,7 +234,6 @@ describe("RequestDetailPage", () => {
 
     render(<RequestDetailPage requestId="req-1" />);
     expect(await screen.findByText("Eliberat în producție")).toBeInTheDocument();
-    expect(screen.getByText("Comandă creată", { selector: "dd" })).toBeInTheDocument();
     expect(screen.getByTestId("request-administrative-status")).toHaveTextContent("Stare administrativă");
     expect(screen.getByTestId("request-administrative-status")).toHaveTextContent("Nouă");
     expect(screen.getByTestId("request-commercial-progress")).toHaveTextContent("Progres comercial");
@@ -339,7 +338,8 @@ describe("RequestDetailPage", () => {
   it("keeps the linked offers panel absent when the request has no quotes", async () => {
     stubDetail(requestDetail({ linkedOffers: [] }));
     render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByRole("heading", { name: "CRQ-104" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Litere vitrină" })).toBeInTheDocument();
+    expect(screen.getByText("CRQ-104")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Oferte legate" })).not.toBeInTheDocument();
   });
 
@@ -362,7 +362,8 @@ describe("RequestDetailPage", () => {
     );
 
     render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByRole("heading", { name: "CRQ-104" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Litere vitrină" })).toBeInTheDocument();
+    expect(screen.getByText("CRQ-104")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Deschide oferta" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Alege produs" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Deschide oferta OF-1" })).toBeInTheDocument();
@@ -379,7 +380,8 @@ describe("RequestDetailPage", () => {
     );
 
     render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByRole("heading", { name: "CRQ-104" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Litere vitrină" })).toBeInTheDocument();
+    expect(screen.getByText("CRQ-104")).toBeInTheDocument();
     expect(screen.getByText("Gata de ofertă")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Alege produs" })).not.toBeInTheDocument();
     expect(screen.getByText("Nicio acțiune disponibilă")).toBeInTheDocument();

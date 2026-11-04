@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { InlineAlert } from "../components/InlineAlert";
 import { RequestProductSelection } from "../components/RequestProductSelection";
-import { InfoRow } from "../components/InfoRow";
 import { LoadingFloor } from "../components/LoadingFloor";
-import { StatusBadge } from "../components/StatusBadge";
 import { SurfacePanel } from "../components/SurfacePanel";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadJobList, loadRequestDetail } from "../data/routeLoaders";
@@ -11,12 +9,10 @@ import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { formatTimestamp } from "../presentation/format";
 import {
-  branchCountLabel,
   filterBranches,
   preferredBranchKey,
   presentCommercialBranches,
 } from "../presentation/requestCommercialBranches";
-import { statusTone } from "../presentation/statusTone";
 import { presentRequestPrimaryAction } from "../presentation/worklistAction";
 import { clientHref, requestHref } from "../routing/appRoute";
 import { originBack } from "../routing/originBack";
@@ -25,7 +21,6 @@ import {
   writeConfiguratorSession,
 } from "../session/configuratorSession";
 import { RequestOfferPreview } from "./requests/RequestOfferPreview";
-import { ContextThread } from "./requests/ContextThread";
 import { RequestBranchList } from "./requests/RequestBranchList";
 import { usePreviewHistory } from "../routing/usePreviewHistory";
 import { navigate } from "../routing/navigate";
@@ -104,9 +99,8 @@ export function RequestDetailPage({ requestId, search = window.location.search }
   }
   const primary = detail ? presentRequestPrimaryAction(detail) : null;
   const createdLabel = formatTimestamp(detail?.createdAt ?? null);
-  const headerTitle = detail?.reference || detail?.title || "Cerere";
-  const headerLead =
-    detail && detail.reference && detail.reference !== detail.title ? detail.title : undefined;
+  const headerTitle = detail?.title?.trim() || detail?.reference || "Cerere";
+  const referenceLabel = detail?.reference && detail.reference !== headerTitle ? detail.reference : null;
   // N-018 · opened from the client page, the way back is that page on the same tab; after a
   // direct link it is the request list.
   const back = originBack({ href: "/cereri", label: "Toate cererile" });
@@ -131,55 +125,59 @@ export function RequestDetailPage({ requestId, search = window.location.search }
       currentHref={requestHref(requestId)}
       workspace="object"
       surface="cereri-detail"
-      headerVariant="pilot"
+      headerVariant="pilot-compact"
       eyebrow="Cerere"
       title={headerTitle}
-      lead={headerLead}
       meta={
         detail ? (
           <>
+            {referenceLabel ? <span>{referenceLabel}</span> : null}
             {detail.customerId && detail.customerDisplayName ? (
               <a className="text-link" href={clientHref(detail.customerId)}>
                 {detail.customerDisplayName}
               </a>
             ) : (
-              (detail.customerDisplayName ?? "Fără client")
+              <span>{detail.customerDisplayName ?? "Fără client"}</span>
             )}
-            {createdLabel ? <> · Creată {createdLabel}</> : null}
+            {createdLabel ? <span>Creată {createdLabel}</span> : null}
           </>
+        ) : undefined
+      }
+      status={
+        detail ? (
+          <div className="request-status-cluster">
+            <div data-testid="request-administrative-status">
+              <span className="section-label">Stare administrativă</span>
+              <strong>{detail.statusLabel}</strong>
+            </div>
+            <div data-testid="request-commercial-progress">
+              <span className="section-label">Progres comercial</span>
+              <strong>{detail.commercialProgressLabel?.trim() || "—"}</strong>
+            </div>
+          </div>
         ) : undefined
       }
     >
       <div className="commercial-toolbar request-detail__toolbar">
         <div className="commercial-toolbar__context">
           <a className="text-link" href={back.href} onClick={back.onClick}>{back.text}</a>
-          {detail ? (
-            <div className="request-progress" data-testid="request-progress">
-              <span className="request-progress__item" data-testid="request-administrative-status">
-                <span className="section-label">Stare administrativă</span>
-                <StatusBadge label={detail.statusLabel} tone={statusTone("workflow")} />
-              </span>
-              <span className="request-progress__item" data-testid="request-commercial-progress">
-                <span className="section-label">Progres comercial</span>
-                <StatusBadge
-                  label={detail.commercialProgressLabel?.trim() || "—"}
-                  tone={statusTone("workflow")}
-                />
-                {branches.branches.length > 0 ? (
-                  <span>{branchCountLabel(branches.branches.length, branches.branches.filter((branch) => branch.needsAttention).length)}</span>
-                ) : null}
-              </span>
-            </div>
-          ) : null}
         </div>
         {primary && branches.branches.length === 0 ? (
           <a className="hit" href={primary.actionHref}>
             <span className="button button--primary">{primary.actionLabel}</span>
           </a>
-        ) : primary ? (
-          <a className="text-link" href={primary.actionHref}>{primary.actionLabel}</a>
+        ) : !primary ? (
+          <p className="request-detail__next">Nicio acțiune disponibilă</p>
         ) : null}
       </div>
+      {shownBranch?.primaryAction ? (
+        <p className="request-detail__next">
+          <span className="section-label">Pasul următor</span>
+          <a className="text-link" href={`#branch-panel-${shownBranch.key}`}>
+            {shownBranch.indexLabel} {shownBranch.title}
+          </a>
+        </p>
+      ) : null}
       {request.status === "error" && !detail ? (
         <InlineAlert tone="error" title="Cererea nu a putut fi citită">
           Identitatea cererii nu este disponibilă.
@@ -188,11 +186,6 @@ export function RequestDetailPage({ requestId, search = window.location.search }
             {detail ? (
         <div className="request-branches-layout">
           <div className="stack">
-            <ContextThread
-              label="Fir de context"
-              summary={shownBranch ? `Ramura ${shownBranch.indexLabel} · ${shownBranch.title}` : null}
-              jump={shownBranch ? { href: "#request-branches-title", label: "Mergi la ramură" } : null}
-            />
             <RequestBranchList
               branches={branches.branches}
               visible={visibleBranches}
@@ -243,12 +236,6 @@ export function RequestDetailPage({ requestId, search = window.location.search }
               canUploadAttachments={detail.canUploadAttachments}
             />
             <RequestInstallationSection detail={detail} />
-            <SurfacePanel title="Continuare" label="Continuare">
-              <dl className="fact-grid fact-grid--rail">
-                <InfoRow label="Progres comercial" value={detail.commercialProgressLabel?.trim() || "—"} />
-                <InfoRow label="Următorul pas" value={primary ? primary.actionLabel : "Nicio acțiune disponibilă"} />
-              </dl>
-            </SurfacePanel>
           </aside>
         </div>
       ) : request.status !== "error" ? (
