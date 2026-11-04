@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
-import type { RequestAssemblyWorkTransport, RequestLinkedOfferTransport } from "../api/types";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { InlineAlert } from "../components/InlineAlert";
 import { RequestProductSelection } from "../components/RequestProductSelection";
 import { InfoRow } from "../components/InfoRow";
@@ -10,32 +9,30 @@ import { resourceKeys } from "../data/resourceKeys";
 import { loadJobList, loadRequestDetail } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
-import { formatMoney, formatTimestamp } from "../presentation/format";
-import { presentQuoteHistoryState } from "../presentation/quoteHistory";
+import { formatTimestamp } from "../presentation/format";
+import {
+  branchCountLabel,
+  filterBranches,
+  preferredBranchKey,
+  presentCommercialBranches,
+} from "../presentation/requestCommercialBranches";
 import { statusTone } from "../presentation/statusTone";
 import { presentRequestPrimaryAction } from "../presentation/worklistAction";
-import {
-  assemblyHref,
-  assemblyQuoteHref,
-  clientHref,
-  executionHref,
-  jobHref,
-  registryQuoteHref,
-  requestHref,
-} from "../routing/appRoute";
+import { clientHref, requestHref } from "../routing/appRoute";
 import { originBack } from "../routing/originBack";
 import {
   readConfiguratorSession,
   writeConfiguratorSession,
 } from "../session/configuratorSession";
-import { LinkedJobs } from "./LinkedJobs";
 import { RequestOfferPreview } from "./requests/RequestOfferPreview";
+import { ContextThread } from "./requests/ContextThread";
+import { RequestBranchList } from "./requests/RequestBranchList";
 import { usePreviewHistory } from "../routing/usePreviewHistory";
 import { navigate } from "../routing/navigate";
 import { RequestAttachmentsSection } from "./RequestAttachmentsSection";
 import { RequestInstallationSection } from "./RequestInstallationSection";
 import "../styles/surfaces/commercial.css";
-import "../styles/surfaces/request-thread.css";
+import "../styles/surfaces/request-branches.css";
 
 type RequestDetailPageProps = {
   requestId: string;
@@ -70,15 +67,42 @@ export function RequestDetailPage({ requestId, search = window.location.search }
   }, [previewId]);
   const request = useResource(resourceKeys.request(requestId), () => loadRequestDetail(requestId));
   const jobs = useResource(resourceKeys.jobs(), loadJobList);
-  const requestJobs = useMemo(
-    () => (jobs.data?.jobs ?? []).filter((item) => item.requestId === requestId),
-    [jobs.data, requestId],
-  );
   const detail = request.data;
-  const quotedProducts = detail?.linkedOffers.filter((offer) => offer.kind === "PRODUCT") ?? [];
-  const quotedProductLabel = quotedProducts.find((offer) => !offer.superseded)?.productLabel ?? quotedProducts[0]?.productLabel ?? null;
+  const quotedProductLabel = detail?.linkedOffers.find((offer) => offer.kind === "PRODUCT" && !offer.superseded)?.productLabel
+    ?? detail?.linkedOffers.find((offer) => offer.kind === "PRODUCT")?.productLabel
+    ?? null;
+  const branches = useMemo(
+    () => presentCommercialBranches({
+      offers: detail?.linkedOffers ?? [],
+      assemblies: detail?.assemblies ?? [],
+      jobs: jobs.data?.jobs ?? [],
+      jobsStatus: jobs.status === "error" ? "error" : jobs.status === "success" ? "ready" : "pending",
+      session: readConfiguratorSession(),
+      requestId,
+      customerId: detail?.customerId ?? null,
+    }),
+    [detail, jobs.data, jobs.status, requestId],
+  );
+  const [filter, setFilter] = useState<"all" | "attention">(
+    () => (new URLSearchParams(search).get("filtru") === "atentie" ? "attention" : "all"),
+  );
+  const [selection, setSelection] = useState<{ key: string | null; explicit: boolean }>(() => {
+    const params = new URLSearchParams(search);
+    return { key: params.get("ramura"), explicit: params.has("ramura") };
+  });
+  const [expandAll, setExpandAll] = useState(false);
+  const visibleBranches = filterBranches(branches.branches, filter);
+  const shownKey = selection.explicit
+    ? (selection.key && visibleBranches.some((branch) => branch.key === selection.key) ? selection.key : null)
+    : preferredBranchKey(visibleBranches, null);
+  const shownBranch = branches.branches.find((branch) => branch.key === shownKey) ?? null;
+  function rememberQuery(mutate: (params: URLSearchParams) => void): void {
+    const params = new URLSearchParams(search);
+    mutate(params);
+    const query = params.toString();
+    navigate(`${requestHref(requestId)}${query ? `?${query}` : ""}`, "replace");
+  }
   const primary = detail ? presentRequestPrimaryAction(detail) : null;
-  const currentStep = primary ? stepOfDestination(primary.actionHref) : null;
   const createdLabel = formatTimestamp(detail?.createdAt ?? null);
   const headerTitle = detail?.reference || detail?.title || "Cerere";
   const headerLead =
@@ -141,14 +165,19 @@ export function RequestDetailPage({ requestId, search = window.location.search }
                   label={detail.commercialProgressLabel?.trim() || "—"}
                   tone={statusTone("workflow")}
                 />
+                {branches.branches.length > 0 ? (
+                  <span>{branchCountLabel(branches.branches.length, branches.branches.filter((branch) => branch.needsAttention).length)}</span>
+                ) : null}
               </span>
             </div>
           ) : null}
         </div>
-        {primary ? (
+        {primary && branches.branches.length === 0 ? (
           <a className="hit" href={primary.actionHref}>
             <span className="button button--primary">{primary.actionLabel}</span>
           </a>
+        ) : primary ? (
+          <a className="text-link" href={primary.actionHref}>{primary.actionLabel}</a>
         ) : null}
       </div>
       {request.status === "error" && !detail ? (
@@ -156,101 +185,72 @@ export function RequestDetailPage({ requestId, search = window.location.search }
           Identitatea cererii nu este disponibilă.
         </InlineAlert>
       ) : null}
-      {detail ? (
-        <>
-          {/* N-018 · firul cererii: four steps built only from the request's own data and links.
-              Which action is current is the server's (P1); it is shown on the step its destination
-              belongs to, and in the toolbar as before. No step status is computed here. */}
-          <ol className="stack request-detail__main request-thread" aria-label="Firul cererii">
-            <li className="request-thread__step" aria-labelledby="request-step-brief" data-current={currentStep === 1 || undefined}>
-              <h2 id="request-step-brief" className="request-thread__title">1 · Brief</h2>
-              {currentStep === 1 && primary ? <CurrentAction label={primary.actionLabel} href={primary.actionHref} /> : null}
-              <SurfacePanel title="Ce dorește clientul" label="Ce dorește clientul">
-                <p>{detail.description || "Fără descriere."}</p>
-              </SurfacePanel>
-              <RequestAttachmentsSection
+            {detail ? (
+        <div className="request-branches-layout">
+          <div className="stack">
+            <ContextThread
+              label="Fir de context"
+              summary={shownBranch ? `Ramura ${shownBranch.indexLabel} · ${shownBranch.title}` : null}
+              jump={shownBranch ? { href: "#request-branches-title", label: "Mergi la ramură" } : null}
+            />
+            <RequestBranchList
+              branches={branches.branches}
+              visible={visibleBranches}
+              filter={filter}
+              onFilter={(next) => {
+                setFilter(next);
+                setExpandAll(false);
+                rememberQuery((params) => {
+                  if (next === "attention") params.set("filtru", "atentie");
+                  else params.delete("filtru");
+                });
+              }}
+              expandedKey={shownKey}
+              expandAll={expandAll}
+              onToggle={(key) => {
+                setExpandAll(false);
+                const next = shownKey === key ? null : key;
+                setSelection({ key: next, explicit: true });
+                rememberQuery((params) => {
+                  if (next) params.set("ramura", next);
+                  else params.delete("ramura");
+                });
+              }}
+              onExpandAll={() => setExpandAll((value) => !value)}
+              onPreview={(quoteSnapshotId) => preview.open(quoteSnapshotId)}
+              local={branches.local}
+            />
+            {detail.nextAction === "CHOOSE_PRODUCT" ? (
+              <RequestProductSelection key={detail.requestId} customerId={detail.customerId} requestId={detail.requestId} />
+            ) : null}
+            {detail.canStartAdditionalWork ? (
+              <RequestProductSelection
+                key={`${detail.requestId}:additional`}
+                customerId={detail.customerId}
                 requestId={detail.requestId}
-                attachments={detail.attachments}
-                canUploadAttachments={detail.canUploadAttachments}
+                mode="additional"
+                existingLabel={detail.assemblies[0]?.label ?? quotedProductLabel}
               />
-              <RequestInstallationSection detail={detail} />
-            </li>
-            <li className="request-thread__step" aria-labelledby="request-step-work" data-current={currentStep === 2 || undefined}>
-              <h2 id="request-step-work" className="request-thread__title">2 · Ce se realizează</h2>
-              {currentStep === 2 && primary ? <CurrentAction label={primary.actionLabel} href={primary.actionHref} /> : null}
-              {quotedProducts.length > 0 ? <RequestQuotedProducts offers={quotedProducts} /> : null}
-              {detail.assemblies.length > 0 ? <RequestAssemblyWorkPanel assemblies={detail.assemblies} /> : null}
-              {detail.nextAction === "CHOOSE_PRODUCT" && <RequestProductSelection key={detail.requestId} customerId={detail.customerId} requestId={detail.requestId} />}
-              {detail.canStartAdditionalWork && (
-                <RequestProductSelection
-                  key={`${detail.requestId}:additional`}
-                  customerId={detail.customerId}
-                  requestId={detail.requestId}
-                  mode="additional"
-                  existingLabel={detail.assemblies[0]?.label ?? quotedProductLabel}
-                />
-              )}
-              {detail.assemblies.length === 0 && quotedProducts.length === 0 && detail.nextAction !== "CHOOSE_PRODUCT" && !detail.canStartAdditionalWork ? (
-                <p className="request-thread__empty">Nu există încă un produs sau un ansamblu în această cerere.</p>
-              ) : null}
-            </li>
-            <li className="request-thread__step" aria-labelledby="request-step-offer" data-current={currentStep === 3 || undefined}>
-              <h2 id="request-step-offer" className="request-thread__title">{detail.linkedOffers.length ? `3 · Oferta · ${detail.linkedOffers.length}` : "3 · Oferta"}</h2>
-              {currentStep === 3 && primary ? <CurrentAction label={primary.actionLabel} href={primary.actionHref} /> : null}
-              {detail.linkedOffers.length > 0 ? (
-                <SurfacePanel variant="quiet" title="Oferte legate" label="Oferte legate">
-                  <ul className="request-linked-offers">
-                    {detail.linkedOffers.map((offer) => (
-                      <li key={offer.quoteSnapshotId} className="request-linked-offers__item">
-                        <button
-                          type="button"
-                          className="text-link"
-                          data-preview-opener={offer.quoteSnapshotId}
-                          aria-haspopup="dialog"
-                          onClick={() => preview.open(offer.quoteSnapshotId)}
-                        >
-                          {offer.reference ? `Previzualizează oferta ${offer.reference}` : "Previzualizează oferta"}
-                        </button>
-                        <a className="text-link" href={registryQuoteHref(offer)}>
-                          {offer.reference ? `Deschide oferta ${offer.reference}` : "Deschide oferta"}
-                        </a>
-                        <span className="request-linked-offers__meta">
-                          {[offer.kindLabel, offer.productLabel, presentQuoteHistoryState(offer)]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </span>
-                        {offer.orderSnapshotId ? (
-                          <a className="text-link" href={jobHref(offer.orderSnapshotId)}>
-                            Deschide comanda
-                          </a>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                </SurfacePanel>
-              ) : <p className="request-thread__empty">Nicio ofertă încă.</p>}
-            </li>
-            <li className="request-thread__step" aria-labelledby="request-step-job" data-current={currentStep === 4 || undefined}>
-              <h2 id="request-step-job" className="request-thread__title">{requestJobs.length ? `4 · Lucrarea · ${requestJobs.length}` : "4 · Lucrarea"}</h2>
-              {currentStep === 4 && primary ? <CurrentAction label={primary.actionLabel} href={primary.actionHref} /> : null}
-              {requestJobs.length ? <LinkedJobs title="Lucrări legate" jobs={requestJobs} /> : <p className="request-thread__empty">Nicio lucrare încă.</p>}
-            </li>
-          </ol>
+            ) : null}
+          </div>
           <aside className="stack request-detail__rail" aria-label="Continuare">
+            <SurfacePanel title="Ce dorește clientul" label="Ce dorește clientul">
+              <p>{detail.description || "Fără descriere."}</p>
+            </SurfacePanel>
+            <RequestAttachmentsSection
+              requestId={detail.requestId}
+              attachments={detail.attachments}
+              canUploadAttachments={detail.canUploadAttachments}
+            />
+            <RequestInstallationSection detail={detail} />
             <SurfacePanel title="Continuare" label="Continuare">
               <dl className="fact-grid fact-grid--rail">
-                <InfoRow
-                  label="Progres comercial"
-                  value={detail.commercialProgressLabel?.trim() || "—"}
-                />
-                <InfoRow
-                  label="Următorul pas"
-                  value={primary ? primary.actionLabel : "Nicio acțiune disponibilă"}
-                />
+                <InfoRow label="Progres comercial" value={detail.commercialProgressLabel?.trim() || "—"} />
+                <InfoRow label="Următorul pas" value={primary ? primary.actionLabel : "Nicio acțiune disponibilă"} />
               </dl>
             </SurfacePanel>
           </aside>
-        </>
+        </div>
       ) : request.status !== "error" ? (
         <SurfacePanel title="Ce dorește clientul" label="Ce dorește clientul" busy>
           <LoadingFloor variant="facts" label="Se citește cererea" />
@@ -274,106 +274,5 @@ export function RequestDetailPage({ requestId, search = window.location.search }
         );
       })() : null}
     </SlicePage>
-  );
-}
-
-/**
- * N-018 · where the server's current action leads, as a step of the thread. Only the destination
- * is read (no state is interpreted); an unknown destination places it nowhere.
- */
-function stepOfDestination(href: string): 1 | 2 | 3 | 4 | null {
-  const url = new URL(href, "https://workos.local");
-  if (url.pathname.startsWith("/lucrari")) return 4;
-  if (url.pathname.startsWith("/oferte") || url.pathname.startsWith("/quotes")) return 3;
-  if (url.searchParams.has("alege-produs") || url.pathname.startsWith("/configurator") || url.pathname === "/ansamblu") return 2;
-  return null;
-}
-
-function CurrentAction({ label, href }: { label: string; href: string }) {
-  return (
-    <p className="request-thread__current">
-      <span className="request-thread__current-label">Acțiunea curentă</span>
-      <a className="text-link" href={href}>{label} →</a>
-    </p>
-  );
-}
-
-function RequestQuotedProducts({ offers }: { offers: readonly RequestLinkedOfferTransport[] }) {
-  const ordered = [...offers].sort((left, right) => Number(left.superseded) - Number(right.superseded));
-  return (
-    <SurfacePanel title="Produs configurat" label="Produs configurat">
-      <ul className="request-linked-offers">
-        {ordered.map((offer) => {
-          const name = offer.productLabel?.trim() || offer.kindLabel;
-          return (
-            <li key={offer.quoteSnapshotId} className="request-linked-offers__item">
-              <strong>{name}</strong>
-              <span className="request-linked-offers__meta">
-                {[offer.reference, presentQuoteHistoryState(offer)].filter(Boolean).join(" · ")}
-              </span>
-              <a className="text-link" href={registryQuoteHref(offer)}>
-                {offer.reference ? `Vezi oferta ${offer.reference}` : "Vezi oferta"}
-              </a>
-              {offer.orderSnapshotId ? (
-                <a className="text-link" href={jobHref(offer.orderSnapshotId)}>
-                  Deschide fișa lucrării
-                </a>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
-    </SurfacePanel>
-  );
-}
-
-function RequestAssemblyWorkPanel({ assemblies }: { assemblies: RequestAssemblyWorkTransport[] }) {
-  return (
-    <SurfacePanel title="Lucrul comercial al cererii" label="Lucrul comercial al cererii">
-      <ul className="request-assembly-work">
-        {assemblies.map((work) => (
-          <li key={work.assemblyId} className="request-assembly-work__item">
-            <div className="request-assembly-work__heading">
-              <strong>{work.label}</strong>
-              <StatusBadge label={work.stageLabel} tone={statusTone("workflow")} />
-            </div>
-            <dl className="fact-grid fact-grid--rail">
-              {work.quoteGrossPrice !== null ? (
-                <InfoRow
-                  label="Ofertă comună"
-                  value={formatMoney(work.quoteGrossPrice, work.currency ?? "EUR")}
-                />
-              ) : null}
-              {work.revisionPending ? (
-                <InfoRow label="Revizie" value="Ansamblul a fost modificat după ofertă" />
-              ) : null}
-              {!work.membersEditable ? (
-                <InfoRow label="Configurații" value="Doar consultare (comandă acceptată)" />
-              ) : null}
-            </dl>
-            <p className="request-assembly-work__links">
-              <a className="text-link" href={assemblyHref(work.assemblyId)}>
-                {work.membersEditable && !work.quoteSnapshotId ? "Continuă ansamblul" : "Deschide ansamblul"}
-              </a>
-              {work.quoteSnapshotId ? (
-                <a className="text-link" href={assemblyQuoteHref(work.quoteSnapshotId)}>
-                  Deschide oferta comună
-                </a>
-              ) : null}
-              {work.orderSnapshotId ? (
-                <a className="text-link" href={jobHref(work.orderSnapshotId)}>
-                  Deschide comanda
-                </a>
-              ) : null}
-              {work.executionPlanId ? (
-                <a className="text-link" href={executionHref(work.executionPlanId)}>
-                  Deschide în Atelier
-                </a>
-              ) : null}
-            </p>
-          </li>
-        ))}
-      </ul>
-    </SurfacePanel>
   );
 }
