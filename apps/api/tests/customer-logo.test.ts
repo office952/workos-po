@@ -86,7 +86,13 @@ function stored<T>(sql: string, ...params: unknown[]): T[] {
 const logoRows = (customerId: string) => stored<Json>("SELECT * FROM customer_logo_revisions WHERE customer_id = ? ORDER BY revision", customerId);
 const logoEvents = (customerId: string) =>
   stored<{ event_kind: string; subject_id: string; actor_account_id: string; detail_json: string }>(
-    "SELECT event_kind, subject_id, actor_account_id, detail_json FROM customer_dossier_events WHERE customer_id = ? AND event_kind LIKE 'CUSTOMER_LOGO_%' ORDER BY occurred_at, event_id",
+    // One accepted logo change writes one event whose detail_json.revision is that revision.
+    // Revisions are unique and strictly increasing per customer. occurred_at has millisecond
+    // resolution and event_id is a random UUID, so those columns do not order this lifecycle.
+    `SELECT event_kind, subject_id, actor_account_id, detail_json
+     FROM customer_dossier_events
+     WHERE customer_id = ? AND event_kind LIKE 'CUSTOMER_LOGO_%'
+     ORDER BY CAST(json_extract(detail_json, '$.revision') AS INTEGER)`,
     customerId,
   );
 
@@ -151,6 +157,7 @@ describe("N-023 · customer logo lifecycle", () => {
 
     // The journal says who changed what, for this customer.
     const events = logoEvents(customerId);
+    expect(events.map((event) => (JSON.parse(event.detail_json) as Json).revision)).toEqual([1, 2, 3]);
     expect(events.map((event) => event.event_kind)).toEqual(["CUSTOMER_LOGO_SET", "CUSTOMER_LOGO_SET", "CUSTOMER_LOGO_CLEARED"]);
     expect(events.every((event) => event.subject_id === customerId && event.actor_account_id)).toBe(true);
     expect(JSON.parse(events[1]!.detail_json)).toMatchObject({ revision: 2, previousRevision: 1, mimeType: "image/jpeg", previousSha256: rows[0]!.sha256 });
