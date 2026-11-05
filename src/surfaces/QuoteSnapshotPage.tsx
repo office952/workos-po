@@ -25,7 +25,11 @@ import { FrozenRateAcknowledgementNotice } from "../presentation/rateAcknowledge
 import { ALUMINIUM_RETURN_PROFILE_RESOURCE_ID } from "../reference/lettersProduct";
 import { clientHref, jobHref, quoteHref, requestHref } from "../routing/appRoute";
 import { QuoteLines, QuoteRelations, QuoteSummary, type QuoteRelation, type QuoteTotal } from "./quoteDetail";
+import { presentQuoteAcceptancePermission } from "../presentation/quoteAcceptancePermission";
+import { useCloudSession } from "../session/CloudSessionContext";
 import { AcceptanceResult } from "./quotes/AcceptanceResult";
+import { QuoteDecisionNote } from "./quotes/QuoteDecisionNote";
+import "../styles/surfaces/quote-decision.css";
 import { presentProductQuoteLines, presentProductQuoteTotal } from "./quoteDocumentModel";
 import "../styles/surfaces/offers.css";
 
@@ -140,8 +144,16 @@ export function QuoteSnapshotPage({
     setDocumentState("idle");
   }
 
+  const cloud = useCloudSession();
   const presentedSnapshot = snapshot.data ?? null;
   const presentedEnvelope = envelope.data ?? null;
+  const acceptancePermission = presentQuoteAcceptancePermission({
+    serverAllows: presentedEnvelope?.nextAction === "ACCEPT_QUOTE" || presentedEnvelope?.nextAction === "CREATE_ORDER",
+    mode: cloud.mode,
+    role: cloud.organization?.membershipRole ?? null,
+    roleReady: cloud.ready,
+    unavailable: cloud.unavailable,
+  });
   const stageLabel = presentedEnvelope?.stageLabel ?? presentedSnapshot?.stageLabel;
   const profile = presentedSnapshot
     ? selectLineByResource(presentedSnapshot.lines, ALUMINIUM_RETURN_PROFILE_RESOURCE_ID)
@@ -187,6 +199,7 @@ export function QuoteSnapshotPage({
                 <>
                   <QuoteEnvelopeAction
                     envelope={presentedEnvelope}
+                    allowed={acceptancePermission.allowed}
                     pending={actionState === "pending" || confirming}
                     confirming={confirming}
                     acceptButtonRef={acceptButtonRef}
@@ -207,6 +220,9 @@ export function QuoteSnapshotPage({
               }
               note="Oferta este înghețată. Acceptarea și comanda păstrează această versiune."
             >
+              {presentedEnvelope ? (
+                <QuoteDecisionNote ordered={Boolean(orderSnapshotId)} permission={acceptancePermission.message} />
+              ) : null}
               {confirming && (presentedEnvelope?.nextAction === "ACCEPT_QUOTE" || presentedEnvelope?.nextAction === "CREATE_ORDER") ? (
                 <QuoteAcceptanceConfirmation
                   titleId={confirmTitleId}
@@ -355,6 +371,7 @@ function QuoteAcceptanceConfirmation({
 
 function QuoteEnvelopeAction({
   envelope,
+  allowed,
   pending,
   confirming,
   acceptButtonRef,
@@ -362,13 +379,14 @@ function QuoteEnvelopeAction({
   onCreateOrder,
 }: {
   envelope: QuoteListItemTransport | null;
+  allowed: boolean;
   pending: boolean;
   confirming: boolean;
   acceptButtonRef: Ref<HTMLButtonElement>;
   onAccept: () => void;
   onCreateOrder: () => void;
 }): ReactNode {
-  if (!envelope) {
+  if (!envelope || !allowed) {
     return null;
   }
   switch (envelope.nextAction) {

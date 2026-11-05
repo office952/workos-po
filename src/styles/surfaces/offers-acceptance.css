@@ -67,6 +67,10 @@
 }
 
 .offers-acceptance__link {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  min-height: var(--target-min);
   color: var(--shell-signal);
   font: 600 13px/1.4 var(--font-sans);
   text-underline-offset: 3px;

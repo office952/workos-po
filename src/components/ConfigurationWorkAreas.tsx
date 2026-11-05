@@ -8,29 +8,41 @@ const areas: readonly { id: ConfigurationWorkArea; label: string }[] = [
 ];
 
 /** These are work areas, not product lifecycle states. Switching never confirms. */
-export function ConfigurationWorkAreas({ selected, onSelect, disabled = false }: {
+export function ConfigurationWorkAreas({ selected, onSelect, disabled = false, notes = {} }: {
   selected: ConfigurationWorkArea;
   disabled?: boolean;
   onSelect: (area: ConfigurationWorkArea) => void;
+  notes?: Partial<Record<ConfigurationWorkArea, string>>;
 }) {
   const controls = useRef<(HTMLButtonElement | null)[]>([]);
   return <div className="configuration-areas" role="tablist" aria-label="Etapele configurării">
-    {areas.map((area, index) => <button key={area.id} type="button" role="tab"
-      disabled={disabled} id={`configuration-tab-${area.id}`} aria-controls={`configuration-area-${area.id}`}
-      aria-selected={selected === area.id} tabIndex={selected === area.id ? 0 : -1}
-      ref={(node) => { controls.current[index] = node; }}
-      onClick={() => onSelect(area.id)} onKeyDown={(event) => {
-        let next: number;
-        switch (event.key) {
-          case "ArrowRight": next = (index + 1) % areas.length; break;
-          case "ArrowLeft": next = (index + areas.length - 1) % areas.length; break;
-          case "Home": next = 0; break;
-          case "End": next = areas.length - 1; break;
-          default: return;
-        }
-        event.preventDefault();
-        onSelect(areas[next].id);
-        controls.current[next]?.focus();
-      }}><span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>{area.label}</button>)}
+    {areas.map((area, index) => {
+      const note = notes[area.id];
+      return <button key={area.id} type="button" role="tab"
+        disabled={disabled} id={`configuration-tab-${area.id}`} aria-controls={`configuration-area-${area.id}`}
+        aria-labelledby={`configuration-tab-${area.id}-label`}
+        aria-describedby={note ? `configuration-tab-${area.id}-note` : undefined}
+        aria-selected={selected === area.id} tabIndex={selected === area.id ? 0 : -1}
+        ref={(node) => { controls.current[index] = node; }}
+        onClick={() => onSelect(area.id)} onKeyDown={(event) => {
+          let next: number;
+          switch (event.key) {
+            case "ArrowRight": next = (index + 1) % areas.length; break;
+            case "ArrowLeft": next = (index + areas.length - 1) % areas.length; break;
+            case "Home": next = 0; break;
+            case "End": next = areas.length - 1; break;
+            default: return;
+          }
+          event.preventDefault();
+          onSelect(areas[next].id);
+          controls.current[next]?.focus();
+        }}>
+        <span className="configuration-areas__title">
+          <span className="configuration-areas__number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+          <span id={`configuration-tab-${area.id}-label`}>{area.label}</span>
+        </span>
+        {note ? <span id={`configuration-tab-${area.id}-note`} className="configuration-areas__note">{note}</span> : null}
+      </button>;
+    })}
   </div>;
 }

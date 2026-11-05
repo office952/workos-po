@@ -1,0 +1,343 @@
+import { describe, expect, it } from "vitest";
+import type { JobListItemTransport, RequestAssemblyWorkTransport, RequestLinkedOfferTransport } from "../api/types";
+import type { ConfiguratorSession } from "../session/configuratorSession";
+import {
+  filterBranches,
+  preferredBranchKey,
+  presentCommercialBranches,
+} from "./requestCommercialBranches";
+
+function offer(partial: Partial<RequestLinkedOfferTransport> & Pick<RequestLinkedOfferTransport, "quoteSnapshotId" | "productCode">): RequestLinkedOfferTransport {
+  return {
+    kind: "PRODUCT",
+    kindLabel: "Produs",
+    productLabel: "Litere",
+    reference: partial.quoteSnapshotId,
+    stageLabel: "Creată",
+    superseded: false,
+    attentionLabel: null,
+    orderSnapshotId: null,
+    ...partial,
+  };
+}
+
+function assembly(partial: Partial<RequestAssemblyWorkTransport> & Pick<RequestAssemblyWorkTransport, "assemblyId">): RequestAssemblyWorkTransport {
+  return {
+    label: "Panou ACM + litere",
+    stage: "QUOTE_CREATED",
+    stageLabel: "Ofertă creată",
+    quoteGrossPrice: null,
+    currency: null,
+    quoteSnapshotId: null,
+    orderSnapshotId: null,
+    hasProduction: false,
+    executionPlanId: null,
+    revisionPending: false,
+    membersEditable: true,
+    ...partial,
+  };
+}
+
+function job(partial: Partial<JobListItemTransport> & Pick<JobListItemTransport, "jobId" | "orderSnapshotId" | "stage" | "stageLabel">): JobListItemTransport {
+  return {
+    kind: "PRODUCT",
+    kindLabel: "Produs",
+    productCode: "P",
+    productLabel: "Litere",
+    inscription: "",
+    memberLabels: [],
+    customerId: null,
+    customerDisplayName: null,
+    requestId: "req-1",
+    nextAction: "OPEN_EXECUTION",
+    nextActionLabel: "Vezi operațiile",
+    priority: "NORMAL",
+    priorityLabel: "Normală",
+    targetDate: null,
+    targetDateLabel: "—",
+    planningEditable: false,
+    overdue: false,
+    needsAttention: false,
+    attentionLabel: null,
+    progressLabel: null,
+    createdAt: null,
+    releaseSnapshotId: null,
+    planId: null,
+    ...partial,
+  };
+}
+
+const ready = { jobsStatus: "ready" as const };
+
+describe("request commercial branches", () => {
+  it("keeps two offers with the same product code as two objects", () => {
+    const model = presentCommercialBranches({
+      offers: [
+        offer({ quoteSnapshotId: "q-a", productCode: "SAME", reference: "OF-A", createdAt: "2026-10-02T00:00:00.000Z" }),
+        offer({ quoteSnapshotId: "q-b", productCode: "SAME", reference: "OF-B", createdAt: "2026-10-01T00:00:00.000Z" }),
+      ],
+      assemblies: [],
+      jobs: [],
+      ...ready,
+    });
+    expect(model.branches.map((branch) => branch.key)).toEqual(["quote:q-b", "quote:q-a"]);
+    expect(new Set(model.branches.map((branch) => branch.quotes[0]?.quoteSnapshotId)).size).toBe(2);
+  });
+
+  it("keeps an older accepted assembly offer as the owner of the job", () => {
+    const model = presentCommercialBranches({
+      offers: [
+        offer({
+          quoteSnapshotId: "old",
+          kind: "ASSEMBLY",
+          kindLabel: "Ansamblu",
+          assemblyId: "asm-1",
+          productCode: "ASM",
+          reference: "OF-VECHE",
+          stage: "ORDER_CREATED",
+          stageLabel: "Cu comandă",
+          superseded: true,
+          orderSnapshotId: "order-old",
+          createdAt: "2026-09-01T00:00:00.000Z",
+        }),
+        offer({
+          quoteSnapshotId: "new",
+          kind: "ASSEMBLY",
+          kindLabel: "Ansamblu",
+          assemblyId: "asm-1",
+          productCode: "ASM",
+          reference: "OF-NOUA",
+          stage: "QUOTE_CREATED",
+          stageLabel: "Creată",
+          superseded: false,
+          needsAttention: true,
+          orderSnapshotId: null,
+          createdAt: "2026-10-01T00:00:00.000Z",
+        }),
+      ],
+      assemblies: [assembly({ assemblyId: "asm-1", quoteSnapshotId: "new", orderSnapshotId: "order-old", stage: "ORDER_CREATED", stageLabel: "Comandă creată" })],
+      jobs: [job({ jobId: "job-old", orderSnapshotId: "order-old", stage: "EXECUTION_IN_PROGRESS", stageLabel: "În lucru", progressLabel: "3/17", releaseSnapshotId: "rel-1", planId: "plan-1" })],
+      ...ready,
+    });
+    expect(model.branches).toHaveLength(1);
+    const branch = model.branches[0]!;
+    expect(branch.key).toBe("assembly:asm-1");
+    expect(branch.quotes.find((quote) => quote.quoteSnapshotId === "old")?.holdsJob).toBe(true);
+    expect(branch.quotes.find((quote) => quote.quoteSnapshotId === "new")?.holdsJob).toBe(false);
+    expect(branch.quotes.find((quote) => quote.quoteSnapshotId === "new")?.orderSnapshotId).toBeNull();
+    expect(branch.stages.work.href).toBe("/lucrari/order-old");
+    expect(branch.primaryAction?.label).toBe("Deschide oferta OF-NOUA");
+    expect(branch.primaryAction?.href).toBe("/oferte/ansamblu/new");
+    expect(branch.note).toContain("nu pe oferta curentă");
+  });
+
+  it("does not attach a job by product name or list position", () => {
+    const model = presentCommercialBranches({
+      offers: [
+        offer({ quoteSnapshotId: "q-1", productCode: "P", productLabel: "Aceleași litere", orderSnapshotId: "order-1" }),
+        offer({ quoteSnapshotId: "q-2", productCode: "P", productLabel: "Aceleași litere", orderSnapshotId: null }),
+      ],
+      assemblies: [],
+      jobs: [job({ jobId: "job-2", orderSnapshotId: "order-2", stage: "ORDER_CREATED", stageLabel: "Comandă creată", productLabel: "Aceleași litere" })],
+      ...ready,
+    });
+    expect(model.branches.every((branch) => branch.stages.work.href === null || branch.stages.work.detail === "Lucrarea acestei comenzi nu este în lista citită.")).toBe(true);
+    expect(model.branches[0]?.quotes[0]?.holdsJob).toBe(false);
+  });
+
+  it("shows an order without a release as not yet in production", () => {
+    const model = presentCommercialBranches({
+      offers: [offer({ quoteSnapshotId: "q-1", productCode: "P", orderSnapshotId: "order-1", stageLabel: "Cu comandă" })],
+      assemblies: [],
+      jobs: [job({ jobId: "job-1", orderSnapshotId: "order-1", stage: "ORDER_CREATED", stageLabel: "Comandă creată" })],
+      ...ready,
+    });
+    expect(model.branches[0]?.stages.production.detail).toBe("după trimiterea în producție");
+    expect(model.branches[0]?.note).toContain("Producția nu a pornit");
+  });
+
+  it("shows a release without a plan from the server stage", () => {
+    const model = presentCommercialBranches({
+      offers: [offer({ quoteSnapshotId: "q-1", productCode: "P", orderSnapshotId: "order-1" })],
+      assemblies: [],
+      jobs: [job({ jobId: "job-1", orderSnapshotId: "order-1", stage: "RELEASED", stageLabel: "Eliberată pentru producție", releaseSnapshotId: "rel-1" })],
+      ...ready,
+    });
+    expect(model.branches[0]?.stages.production.detail).toBe("fără plan de execuție");
+    expect(model.branches[0]?.note).toContain("nu are încă un plan");
+  });
+
+  it("shows partial plan progress from the server label", () => {
+    const model = presentCommercialBranches({
+      offers: [offer({ quoteSnapshotId: "q-1", productCode: "P", orderSnapshotId: "order-1" })],
+      assemblies: [],
+      jobs: [job({
+        jobId: "job-1",
+        orderSnapshotId: "order-1",
+        stage: "EXECUTION_IN_PROGRESS",
+        stageLabel: "În lucru",
+        progressLabel: "5/12",
+        releaseSnapshotId: "rel-1",
+        planId: "plan-1",
+        completedCount: 5,
+        taskCount: 12,
+      })],
+      ...ready,
+    });
+    expect(model.branches[0]?.stages.production.label).toBe("5/12");
+    expect(model.branches[0]?.stages.production.href).toContain("plan-1");
+  });
+
+  it("does not treat finished production as delivery or installation confirmation", () => {
+    const model = presentCommercialBranches({
+      offers: [offer({ quoteSnapshotId: "q-1", productCode: "P", orderSnapshotId: "order-1" })],
+      assemblies: [],
+      jobs: [job({
+        jobId: "job-1",
+        orderSnapshotId: "order-1",
+        stage: "EXECUTION_COMPLETED",
+        stageLabel: "Finalizată",
+        progressLabel: "7/7",
+        releaseSnapshotId: "rel-1",
+        planId: "plan-1",
+      })],
+      ...ready,
+    });
+    expect(model.branches[0]?.stages.production.label).toBe("7/7");
+    expect(model.branches[0]?.note).toContain("nu confirmă livrarea sau montajul");
+  });
+
+  it("shows an unquoted local draft apart from persistent branches and without a server id", () => {
+    const session = {
+      drafts: { width: "100" },
+      draftContext: { productCode: "P-LOCAL", requestId: "req-1", customerId: "cus-1" },
+      draftRecovery: {},
+      customerId: "cus-1",
+      requestId: "req-1",
+      productCode: "P-LOCAL",
+      lastQuote: null,
+    } as ConfiguratorSession;
+    const model = presentCommercialBranches({
+      offers: [],
+      assemblies: [],
+      jobs: [],
+      session,
+      requestId: "req-1",
+      customerId: "cus-1",
+      ...ready,
+    });
+    expect(model.branches).toHaveLength(0);
+    expect(model.local).toHaveLength(1);
+    expect(model.local[0]?.persisted).toBe(false);
+    expect(model.local[0]?.title).toBe("Configurare locală");
+    expect(JSON.stringify(model.local)).not.toContain("serverId");
+    expect(model.local[0]?.href).toContain("product=P-LOCAL");
+  });
+
+  it("keeps a local draft beside a frozen offer of the same product", () => {
+    const session = {
+      drafts: { width: "100" },
+      draftContext: { productCode: "P-LOCAL", requestId: "req-1", customerId: "cus-1" },
+      draftRecovery: {},
+      customerId: "cus-1",
+      requestId: "req-1",
+      productCode: "P-LOCAL",
+      lastQuote: null,
+    } as ConfiguratorSession;
+    const model = presentCommercialBranches({
+      offers: [offer({ quoteSnapshotId: "q-frozen", productCode: "P-LOCAL", reference: "OF-9" })],
+      assemblies: [],
+      jobs: [],
+      session,
+      requestId: "req-1",
+      customerId: "cus-1",
+      ...ready,
+    });
+    expect(model.branches).toHaveLength(1);
+    expect(model.local).toHaveLength(1);
+    expect(model.local[0]?.persisted).toBe(false);
+    expect(model.local[0]?.sessionKey).toContain("P-LOCAL");
+    expect(model.local[0]?.sessionKey).toContain("req-1");
+    expect(model.local[0]?.detail).toContain("OF-9");
+    expect(model.local[0]?.detail).toContain("separată");
+  });
+
+  it("restores the same branch after a refresh key and keeps filter order", () => {
+    const offers = Array.from({ length: 8 }, (_, index) => offer({
+      quoteSnapshotId: `q-${index + 1}`,
+      productCode: index % 2 === 0 ? "SAME" : `P-${index}`,
+      productLabel: index === 3 ? "Semnalistică interioară pentru recepția clădirii administrative cu nume foarte lung" : `Produs ${index + 1}`,
+      createdAt: `2026-10-${String(index + 1).padStart(2, "0")}T00:00:00.000Z`,
+      needsAttention: index === 2 || index === 6,
+      attentionLabel: index === 2 || index === 6 ? "Urmează acceptarea" : null,
+    }));
+    const model = presentCommercialBranches({ offers, assemblies: [], jobs: [], ...ready });
+    expect(model.branches).toHaveLength(8);
+    expect(model.branches.map((branch) => branch.indexLabel)).toEqual(["01", "02", "03", "04", "05", "06", "07", "08"]);
+    expect(preferredBranchKey(model.branches, "quote:q-7")).toBe("quote:q-7");
+    const filtered = filterBranches(model.branches, "attention");
+    expect(filtered.map((branch) => branch.indexLabel)).toEqual(["03", "07"]);
+    expect(filtered.map((branch) => branch.key)).toEqual(["quote:q-3", "quote:q-7"]);
+  });
+
+  it("recovers a local draft stored for the same request without turning it into a branch", () => {
+    const session = {
+      drafts: {},
+      draftContext: { productCode: null, requestId: null, customerId: null },
+      draftRecovery: {
+        "P-LOCAL\u001freq-1\u001fcus-1": {
+          context: { productCode: "P-LOCAL", requestId: "req-1", customerId: "cus-1" },
+          drafts: { height: "20" },
+        },
+      },
+      customerId: null,
+      requestId: null,
+      productCode: null,
+      lastQuote: null,
+    } as ConfiguratorSession;
+    const model = presentCommercialBranches({
+      offers: [offer({ quoteSnapshotId: "q-1", productCode: "OTHER" })],
+      assemblies: [],
+      jobs: [],
+      session,
+      requestId: "req-1",
+      ...ready,
+    });
+    expect(model.branches).toHaveLength(1);
+    expect(model.local).toHaveLength(1);
+  });
+
+  it("does not invent an assembly link when the quote does not name one", () => {
+    const model = presentCommercialBranches({
+      offers: [offer({ quoteSnapshotId: "orphan", kind: "ASSEMBLY", kindLabel: "Ansamblu", productCode: "ASM", productLabel: "Panou ACM + litere", assemblyId: null })],
+      assemblies: [assembly({ assemblyId: "asm-1", label: "Panou ACM + litere" })],
+      jobs: [],
+      ...ready,
+    });
+    expect(model.branches.map((branch) => branch.kind).sort()).toEqual(["assembly", "unlinked"]);
+    expect(model.branches.find((branch) => branch.kind === "unlinked")?.note).toContain("nu poate fi demonstrată");
+  });
+
+  it("reports an ambiguous job instead of choosing one", () => {
+    const model = presentCommercialBranches({
+      offers: [offer({ quoteSnapshotId: "q-1", productCode: "P", orderSnapshotId: "order-1" })],
+      assemblies: [],
+      jobs: [
+        job({ jobId: "a", orderSnapshotId: "order-1", stage: "ORDER_CREATED", stageLabel: "Comandă creată" }),
+        job({ jobId: "b", orderSnapshotId: "order-1", stage: "ORDER_CREATED", stageLabel: "Comandă creată" }),
+      ],
+      ...ready,
+    });
+    expect(model.branches[0]?.stages.work.detail).toContain("nu poate fi demonstrată");
+  });
+
+  it("does not claim the job was read when the job list failed", () => {
+    const model = presentCommercialBranches({
+      offers: [offer({ quoteSnapshotId: "q-1", productCode: "P", orderSnapshotId: "order-1" })],
+      assemblies: [],
+      jobs: [],
+      jobsStatus: "error",
+    });
+    expect(model.branches[0]?.stages.work.detail).toBe("Starea lucrării nu a putut fi citită.");
+  });
+});

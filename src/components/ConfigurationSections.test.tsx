@@ -99,7 +99,7 @@ function Harness() {
 }
 
 describe("ConfigurationSections", () => {
-  it("synchronizes outline, construction and inspector and focuses an explicitly bound dependency", async () => {
+  it("synchronizes the part list and editor and focuses an explicitly bound dependency", async () => {
     const onChange = vi.fn();
     const bound: PreviewTransport = { ...preview, formSchema: { ...preview.formSchema!, sections: [preview.formSchema!.sections[0], { ...preview.formSchema!.sections[1], componentId: "FACE" }] }, componentDetails: [{
       componentId: "BACK", label: "Spate", typeId: "BACK_TYPE", calculationLabel: "Calculat", facts: [],
@@ -108,21 +108,30 @@ describe("ConfigurationSections", () => {
     }] };
     render(<ConfigurationSections preview={bound} drafts={{ area: "45000" }} onChange={onChange} />);
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Selectează Spate" }));
-    expect(screen.getByRole("button", { name: "Selectează Spate" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: "Spate" }));
+    expect(screen.getByRole("button", { name: "Spate" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("region", { name: "Inspector: Spate" })).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Modifică Suprafață" }));
     expect(screen.getByRole("region", { name: "Inspector: Dimensiuni" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Dimensiuni" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByLabelText("Suprafață")).toHaveFocus();
     expect(screen.getByLabelText("Suprafață")).toHaveValue("45000");
     expect(onChange).not.toHaveBeenCalled();
-    await user.selectOptions(screen.getByRole("combobox", { name: "Strat de construcție" }), "component:BACK");
-    expect(screen.getByRole("button", { name: "Selectează Spate" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByTestId("configuration-section-selector")).toHaveTextContent("Strat selectat");
-    expect(screen.getByTestId("configuration-section-selector")).toHaveTextContent("Spate");
   });
 
-  it("keeps Volum selection aligned across mobile selector, canvas and inspector", async () => {
+  it("describes each part with its server-reported status and lists every missing fact once", () => {
+    render(<Harness />);
+    const parts = within(screen.getByRole("navigation", { name: "Structura produsului" }));
+    expect(parts.getByRole("button", { name: "Produs" })).toHaveAccessibleDescription("Complet");
+    expect(parts.getByRole("button", { name: "Dimensiuni" })).toHaveAccessibleDescription("1 lipsă");
+    expect(parts.getByRole("button", { name: "Spate" })).toHaveAccessibleDescription("Doar consultare");
+    const verification = within(screen.getByRole("complementary", { name: "Verificare" }));
+    expect(verification.getByText("Lipsesc · 1")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Completează: Suprafață" })).toHaveLength(1);
+  });
+
+  it("keeps Volum selection aligned across the mobile selector and editor", async () => {
+    mockViewport(true);
     const volumetric: PreviewTransport = {
       ...preview,
       formSchema: {
@@ -139,9 +148,11 @@ describe("ConfigurationSections", () => {
     };
     render(<ConfigurationSections preview={volumetric} drafts={{ depth: "60", area: "12000" }} onChange={vi.fn()} />);
     const user = userEvent.setup();
-    await user.selectOptions(screen.getByRole("combobox", { name: "Strat de construcție" }), "volume");
-    expect(screen.getByTestId("configuration-section-selector")).toHaveTextContent("Volum");
-    expect(screen.getByRole("button", { name: "Selectează Volum" })).toHaveAttribute("aria-pressed", "true");
+    const selector = screen.getByRole("combobox", { name: "Partea produsului" });
+    await user.selectOptions(selector, "volume");
+    expect(selector).toHaveValue("volume");
+    expect(screen.getByTestId("configuration-section-selector")).toHaveTextContent("Partea 2 din 3");
+    expect(screen.getByRole("option", { name: "02 · Volum · 1 lipsă" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Inspector: Volum" })).toBeVisible();
     expect(screen.getByLabelText("Adâncime")).toHaveValue("60");
   });
@@ -150,7 +161,6 @@ describe("ConfigurationSections", () => {
     const user = userEvent.setup();
     expect(screen.getByRole("region", { name: "Inspector: Produs" })).toBeVisible();
     expect(screen.queryByRole("region", { name: "Inspector: Dimensiuni" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Dimensiuni" })).toHaveTextContent("60 mm");
     await user.click(screen.getByRole("button", { name: "Dimensiuni" }));
     await user.selectOptions(screen.getByLabelText("Adâncime"), "80");
     await user.type(screen.getByLabelText("Suprafață"), "45000");
@@ -178,10 +188,12 @@ describe("ConfigurationSections", () => {
     expect(screen.getByRole("region", { name: "Compoziția produsului" })).toHaveTextContent("Spate");
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(onChange).not.toHaveBeenCalled();
-    await user.click(screen.getByRole("button", { name: "← Înapoi" }));
+    await user.click(screen.getByRole("button", { name: "← 03 Spate" }));
     expect(screen.getByRole("region", { name: "Inspector: Spate" })).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "← Înapoi" }));
+    await user.click(screen.getByRole("button", { name: "← 02 Dimensiuni" }));
     expect(screen.getByLabelText("Adâncime")).toHaveValue("60");
+    await user.click(screen.getByRole("button", { name: "03 Spate →" }));
+    expect(screen.getByRole("region", { name: "Inspector: Spate" })).toBeVisible();
   });
 
   it("exposes all selected components without duplicating schema-bound editors or inventing controls", async () => {
@@ -248,18 +260,19 @@ describe("ConfigurationSections", () => {
     expect(screen.getByRole("button", { name: "Dimensiuni" })).not.toHaveTextContent("De completat");
   });
 
-  it("keeps desktop order as outline, construction, then inspector", () => {
+  it("keeps desktop order as part structure, editor, then verification", () => {
     mockViewport(false);
     render(<ConfigurationSections preview={lettersPreview()} drafts={{}} onChange={() => undefined} />);
     expect(document.querySelector(".configuration-sections")).toHaveAttribute("data-layout", "desktop");
-    const outline = screen.getByRole("navigation", { name: "Ierarhie construcție" });
-    const construction = screen.getByRole("region", { name: "Plan de construcție" });
+    const outline = screen.getByRole("navigation", { name: "Structura produsului" });
     const inspector = screen.getByRole("region", { name: "Inspector: Față" });
-    expect(precedes(outline, construction)).toBe(true);
-    expect(precedes(construction, inspector)).toBe(true);
+    const verification = screen.getByRole("complementary", { name: "Verificare" });
+    expect(screen.queryByRole("combobox", { name: "Partea produsului" })).not.toBeInTheDocument();
+    expect(precedes(outline, inspector)).toBe(true);
+    expect(precedes(inspector, verification)).toBe(true);
   });
 
-  it("puts the editor before the construction diagram for tablet and phone, including keyboard order", async () => {
+  it("puts the selected part editor before the folded missing list for tablet and phone, including keyboard order", async () => {
     mockViewport(true);
     function CompactHarness() {
       const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -276,19 +289,21 @@ describe("ConfigurationSections", () => {
     render(<CompactHarness />);
 
     expect(document.querySelector(".configuration-sections")).toHaveAttribute("data-layout", "compact");
-    expect(screen.queryByRole("navigation", { name: "Ierarhie construcție" })).not.toBeInTheDocument();
-    const selector = screen.getByLabelText("Strat de construcție");
+    expect(screen.queryByRole("navigation", { name: "Structura produsului" })).not.toBeInTheDocument();
+    const selector = screen.getByLabelText("Partea produsului");
     const inspector = screen.getByRole("region", { name: "Inspector: Față" });
-    const construction = screen.getByRole("region", { name: "Plan de construcție" });
+    const missingList = screen.getByText("Lipsesc 1").closest("details")!;
+    expect(missingList).not.toHaveAttribute("open");
     expect(precedes(selector, inspector)).toBe(true);
-    expect(precedes(inspector, construction)).toBe(true);
+    expect(precedes(inspector, missingList)).toBe(true);
 
     const user = userEvent.setup();
     selector.focus();
     await user.tab();
     expect(inspector.contains(document.activeElement)).toBe(true);
-    expect(construction.contains(document.activeElement)).toBe(false);
 
+    await user.click(screen.getByText("Listă"));
+    expect(missingList).toHaveAttribute("open");
     await user.click(screen.getByRole("button", { name: "Completează: Textul literelor" }));
     const field = screen.getByLabelText("Textul literelor");
     expect(field).toHaveFocus();

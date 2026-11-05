@@ -49,6 +49,15 @@ export function AcceptanceResult({
           <>
             <p className="offers-acceptance__name">{presentJobSheetTitle(current)}</p>
             <p className="offers-acceptance__stage">{current.stageLabel}</p>
+            {current.stage === "ORDER_CREATED" ? (
+              <p className="offers-acceptance__next">Producția nu a pornit. Trimiterea în producție este un pas separat.</p>
+            ) : null}
+            {current.stage === "RELEASED" ? (
+              <p className="offers-acceptance__next">Lucrarea este eliberată și nu are încă un plan de execuție.</p>
+            ) : null}
+            {current.stage === "EXECUTION_COMPLETED" ? (
+              <p className="offers-acceptance__next">Producția este finalizată. Această stare nu confirmă livrarea sau montajul.</p>
+            ) : null}
             {!finished && current.nextActionLabel ? (
               <p className="offers-acceptance__next">{`Urmează: ${current.nextActionLabel}, din fișa lucrării.`}</p>
             ) : null}

@@ -21,6 +21,8 @@ import { ConfigurationSections, type ConfigurationSectionsHandle } from "../comp
 import { ConfiguratorPresetBar } from "../features/catalog/ConfiguratorPresetBar";
 import { ConfigurationReview } from "../components/ConfigurationReview";
 import { ConfigurationWorkAreas, type ConfigurationWorkArea } from "../components/ConfigurationWorkAreas";
+import { ConfiguratorReadinessIndicator } from "../components/ConfiguratorReadinessIndicator";
+import { ConfiguratorStateBar } from "../components/ConfiguratorStateBar";
 import { LoadingFloor } from "../components/LoadingFloor";
 import "../styles/surfaces/commercial.css";
 import "../styles/surfaces/configuration-workbench.css";
@@ -46,7 +48,6 @@ import { InfoRow } from "../components/InfoRow";
 import { InlineAlert } from "../components/InlineAlert";
 import { LoadingIndicator } from "../components/LoadingIndicator";
 import { SectionLabel } from "../components/SectionLabel";
-import { StatusBadge } from "../components/StatusBadge";
 import { SurfacePanel } from "../components/SurfacePanel";
 import { TextField } from "../components/TextField";
 import { SlicePage } from "../layout/SlicePage";
@@ -69,7 +70,16 @@ import {
   type ConfiguratorContext,
   type FrozenQuoteRef,
 } from "../session/configuratorSession";
-import type { WorkbenchNavigationState } from "../configuration/workbenchModel";
+import {
+  buildWorkbenchSections,
+  workbenchCompletion,
+  workbenchMissingEntries,
+  type WorkbenchNavigationState,
+} from "../configuration/workbenchModel";
+import {
+  resolveConfiguratorReadiness,
+  resolveConfiguratorWorkState,
+} from "../configuration/configuratorWorkState";
 
 function commercialResultKey(input: {
   manualNetDraft: string;
@@ -246,6 +256,7 @@ export function ConfiguratorPage({
   const [acknowledgedRateBinding, setAcknowledgedRateBinding] = useState<string | null>(null);
   const [overlapAssemblyId, setOverlapAssemblyId] = useState<string | null>(null);
   const [manualNetDraft, setManualNetDraft] = useState("");
+  const [frozenResultKey, setFrozenResultKey] = useState<string | null>(null);
   const seller = useResource(resourceKeys.seller(), loadSellerConfigured);
   const sellerConfigured = seller.status === "success" ? seller.data : null;
   const [lastQuote, setLastQuote] = useState<FrozenQuoteRef | null>(() =>
@@ -547,6 +558,7 @@ export function ConfiguratorPage({
         customerId,
         requestId,
       });
+      setFrozenResultKey(currentCommercialResultKey());
       invalidateAfterFreezeQuote(requestId);
       setFreezeState("idle");
     } catch (error) {
@@ -588,6 +600,36 @@ export function ConfiguratorPage({
     !validCustomerPrice ||
     !ratesAcknowledged;
   const priceNotReady = Boolean(confirmation && !validCustomerPrice);
+  const sections = preview ? buildWorkbenchSections(preview) : [];
+  const missingEntries = preview ? workbenchMissingEntries(sections, preview.missing) : [];
+  const completion = preview ? workbenchCompletion(sections, preview.missing, drafts) : null;
+  const confirmed = Boolean(confirmation) && !confirmPending;
+  const frozen = Boolean(visibleLastQuote && frozenResultKey !== null && frozenResultKey === currentCommercialResultKey());
+  const workState = resolveConfiguratorWorkState({ evaluated: previewState === "ready", confirmed, frozen });
+  const readiness = resolveConfiguratorReadiness({
+    hasProduct: Boolean(productCode),
+    previewState,
+    readiness: preview?.readiness ?? null,
+    missingCount: missingEntries.length,
+    missingParts: [...new Set(missingEntries.map((entry) => `${entry.sectionNumber} ${entry.sectionTitle}`))],
+    confirmed,
+    frozen,
+  });
+  const backHref = requestId ? requestHref(requestId) : "/cereri";
+  const backLabel = requestId ? "Înapoi la cerere" : "Înapoi la cereri";
+  const stateNote = assemblyId
+    ? workState === "CONFIRMED_CONFIGURATION" ? "Confirmarea a salvat această parte în ansamblu. Oferta comună se îngheață din ansamblu." : null
+    : workState === "CONFIRMED_CONFIGURATION" && manualNetDraft.trim()
+      ? "Prețul manual nu este salvat. Se păstrează numai la înghețarea ofertei."
+      : null;
+
+  function goToFirstMissing(): void {
+    const first = missingEntries[0];
+    if (!first) return;
+    setWorkArea("configuration");
+    window.requestAnimationFrame(() => sectionsHandle.current?.focusField(first.fieldId));
+  }
+
   return (
     <SlicePage
       contextLabel="Configurator"
@@ -596,42 +638,30 @@ export function ConfiguratorPage({
       surface="configuration-workbench"
       headerVariant="default"
       status={
-          <StatusBadge
-            label={
-              !productCode
-                ? "Fără produs"
-                : previewState === "pending"
-                  ? "Se actualizează"
-                  : previewState === "error"
-                    ? "Verificare indisponibilă"
-                : preview?.readiness === "ready"
-                  ? "Pregătit"
-                  : preview?.readiness === "blocked"
-                    ? "Incomplet"
-                    : "Se citește"
-            }
-            tone={
-              previewState !== "ready"
-                ? "pending"
-                : preview?.readiness === "ready"
-                ? "ready"
-                : preview?.readiness === "blocked" || !productCode
-                  ? "incomplete"
-                  : "pending"
-            }
-          />
-        }
-      eyebrow="Pregătire produs"
+        <ConfiguratorReadinessIndicator
+          readiness={readiness}
+          onGoToFirst={readiness.tone === "attention" && missingEntries.length > 0 ? goToFirstMissing : undefined}
+        />
+      }
+      eyebrow="Configurare · Produs"
       title={preview?.product.label ?? "Configurator"}
       lead=""
-      action={<a className="text-link" href={requestId ? requestHref(requestId) : "/cereri"}>← Înapoi la cerere</a>}
       meta={presentContextMeta([
         labelsMatchingContext(stored, context).customerLabel,
         labelsMatchingContext(stored, context).requestLabel,
         assemblyMemberContextLabel(memberRole),
       ])}
     >
-      <ConfigurationWorkAreas selected={workArea} onSelect={setWorkArea} disabled={freezePending || extensionPending} />
+      <ConfigurationWorkAreas
+        selected={workArea}
+        onSelect={setWorkArea}
+        disabled={freezePending || extensionPending}
+        notes={{
+          configuration: completion ? `${completion.settled} din ${completion.total} părți complete` : undefined,
+          review: confirmed ? "confirmată" : ready ? "gata de confirmare" : "după completare",
+          commercial: frozen ? "înghețată în ofertă" : confirmed ? "pasul următor" : "după confirmare",
+        }}
+      />
           {customerId === null || requestId === null ? (
             <InlineAlert tone="blocked" title="Context comercial incomplet">
               Completează clientul și cererea pentru a continua traseul asistat către ofertă.
@@ -718,14 +748,17 @@ export function ConfiguratorPage({
                 [configuratorContextKey(context)]: navigation,
               }));
             }}
+            footnote={
+              <p className="configuration-persistence" data-testid="configuration-persistence">
+                {assemblyId
+                  ? "Modificări locale, în această filă. Confirmarea salvează partea în ansamblu; oferta comună apare numai după înghețare."
+                  : "Modificări locale, în această filă. Verificarea întreabă serverul și nu creează oferta. Oferta apare doar când o îngheți; închiderea filei poate pierde valorile."}
+              </p>
+            }
           />
           </>
         ) : null}
       </SurfacePanel>
-      </div>
-      <div className="configuration-action-tray">
-        <div><strong>Următorul pas: verificarea configurației</strong><p>Verifică valorile înainte de confirmare. Costul și prețul se consultă la pregătirea ofertei.</p></div>
-        <Button disabled={!preview || previewState !== "ready" || confirmPending} onClick={() => setWorkArea("review")}>Verifică configurația</Button>
       </div>
       </section>
       <section id="configuration-area-review" role="tabpanel" aria-labelledby="configuration-tab-review" hidden={workArea !== "review"}>
@@ -764,13 +797,6 @@ export function ConfiguratorPage({
             </InlineAlert>
           ) : null}
         </SurfacePanel>
-      </div>
-      <div className="configuration-action-tray">
-        <div><strong>{ready ? "Configurația poate fi confirmată" : "Verifică datele configurației"}</strong><p>Confirmarea trimite valorile curente pentru calcul. Nu creează oferta.</p></div>
-        <div className="configuration-action-tray__buttons">
-          <Button variant="secondary" onClick={() => setWorkArea("configuration")}>Editează configurația</Button>
-          <Button disabled={!ready || confirmPending || !productCode} onClick={() => void confirm()}>Confirmă configurația</Button>
-        </div>
       </div>
       </section>
       <section id="configuration-area-commercial" role="tabpanel" aria-labelledby="configuration-tab-commercial" hidden={workArea !== "commercial"}>
@@ -1008,6 +1034,21 @@ export function ConfiguratorPage({
       </div>
       </div>
       </section>
+      <ConfiguratorStateBar state={workState} assembly={Boolean(assemblyId)} note={stateNote}>
+        <a className="hit configuration-state-bar__back" href={backHref}>
+          <span className="button button--ghost">{backLabel}</span>
+        </a>
+        {workArea === "configuration" ? (
+          <Button disabled={!preview || previewState !== "ready" || confirmPending} onClick={() => setWorkArea("review")}>
+            Verifică configurația
+          </Button>
+        ) : workArea === "review" ? (
+          <>
+            <Button variant="secondary" onClick={() => setWorkArea("configuration")}>Editează configurația</Button>
+            <Button disabled={!ready || confirmPending || !productCode} onClick={() => void confirm()}>Confirmă configurația</Button>
+          </>
+        ) : null}
+      </ConfiguratorStateBar>
       </fieldset>
       <div className="configuration-extension">
       {!assemblyId && customerId && requestId && activeProduct && <ExtendRequestProduct key={`${requestId}:${activeProduct}`} customerId={customerId} requestId={requestId} productCode={activeProduct} reviewId={preview?.reviewId ?? null} values={preview?.formSchema ? valuesForTransport(drafts, preview.formSchema) : valuesBeforeSchema(drafts)} drafts={drafts} confirmed={Boolean(confirmation && priceIsCurrent && !confirmPending && !freezePending && previewState !== "pending")} commercial={commercialPayload()} onPending={setExtensionPending} />}

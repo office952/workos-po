@@ -4,6 +4,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AssemblyQuotePage } from "./AssemblyQuotePage";
 import { resetResourceCache } from "../data/resourceCache";
 
+vi.mock("../session/CloudSessionContext", () => ({
+  useCloudSession: () => ({
+    ready: true,
+    unavailable: false,
+    mode: "cloud" as const,
+    organization: { membershipRole: "owner", displayName: "Org", organizationId: "org" },
+  }),
+}));
+
 afterEach(() => {
   vi.unstubAllGlobals();
   resetResourceCache();

@@ -96,8 +96,8 @@ describe("RequestDetailPage", () => {
     stubDetail(requestDetail());
 
     render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByRole("heading", { name: "CRQ-104" })).toBeInTheDocument();
-    expect(screen.getByText("Litere vitrină")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Litere vitrină" })).toBeInTheDocument();
+    expect(screen.getByText("CRQ-104")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Atelier Nord" })).toHaveAttribute(
       "href",
       "/clienti/cus-1",
@@ -108,7 +108,7 @@ describe("RequestDetailPage", () => {
       "/cereri/req-1?alege-produs=1#alege-produs",
     );
     expect(screen.getByRole("heading", { name: "Ce dorește clientul" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Continuare" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Continuare" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Cerere", level: 2 })).not.toBeInTheDocument();
     expect(screen.queryByText(/Nu adăuga montaj/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Montajul nu face parte/i)).not.toBeInTheDocument();
@@ -157,12 +157,12 @@ describe("RequestDetailPage", () => {
     );
 
     render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByRole("link", { name: "Deschide oferta" })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: "Deschide oferta OF-1" })).toHaveAttribute(
       "href",
       "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
     );
+    expect(screen.queryByRole("link", { name: "Deschide oferta" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /catalog/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Deschide oferta OF-1" })).toBeInTheDocument();
   });
 
   function assemblyWork(overrides: Record<string, unknown> = {}) {
@@ -197,13 +197,13 @@ describe("RequestDetailPage", () => {
     );
 
     render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByRole("heading", { name: "Lucrul comercial al cererii" })).toBeInTheDocument();
-    const assemblyLinks = screen.getAllByRole("link", { name: "Deschide ansamblul" });
+    expect(await screen.findByRole("heading", { name: "Ce se realizează" })).toBeInTheDocument();
+    const assemblyLinks = screen.getAllByRole("link", { name: /ansamblul/i });
     expect(assemblyLinks.length).toBeGreaterThan(0);
     for (const link of assemblyLinks) expect(link).toHaveAttribute("href", "/ansamblu?assembly=asm%3A1");
     expect(screen.getByRole("link", { name: "Deschide oferta comună" })).toHaveAttribute("href", "/oferte/ansamblu/asmq%3A1");
     expect(screen.getByText("766,34 EUR")).toBeInTheDocument();
-    expect(screen.getByText("Ofertă creată", { selector: "dd" })).toBeInTheDocument();
+    expect(screen.getByTestId("request-commercial-progress")).toHaveTextContent("Ofertă creată");
     expect(screen.queryByRole("link", { name: "Alege produs" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Alege produsul pentru această cerere" })).not.toBeInTheDocument();
     expect(screen.queryByText("Adaugă altă lucrare la această cerere")).not.toBeInTheDocument();
@@ -234,7 +234,6 @@ describe("RequestDetailPage", () => {
 
     render(<RequestDetailPage requestId="req-1" />);
     expect(await screen.findByText("Eliberat în producție")).toBeInTheDocument();
-    expect(screen.getByText("Comandă creată", { selector: "dd" })).toBeInTheDocument();
     expect(screen.getByTestId("request-administrative-status")).toHaveTextContent("Stare administrativă");
     expect(screen.getByTestId("request-administrative-status")).toHaveTextContent("Nouă");
     expect(screen.getByTestId("request-commercial-progress")).toHaveTextContent("Progres comercial");
@@ -272,6 +271,7 @@ describe("RequestDetailPage", () => {
             quoteSnapshotId: "asmq:new",
             kind: "ASSEMBLY",
             kindLabel: "Ansamblu",
+            assemblyId: "asm:1",
             productCode: "SIGN_ASSEMBLY_ACM_LETTERS_V1",
             productLabel: "Panou ACM + litere volumetrice",
             reference: "OF-NOU",
@@ -284,6 +284,7 @@ describe("RequestDetailPage", () => {
             quoteSnapshotId: "asmq:old",
             kind: "ASSEMBLY",
             kindLabel: "Ansamblu",
+            assemblyId: "asm:1",
             productCode: "SIGN_ASSEMBLY_ACM_LETTERS_V1",
             productLabel: "Panou ACM + litere volumetrice",
             reference: "OF-VECHI",
@@ -306,11 +307,7 @@ describe("RequestDetailPage", () => {
     );
 
     render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByRole("heading", { name: "Oferte legate" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Deschide oferta OF-1" })).toHaveAttribute(
-      "href",
-      "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
-    );
+    expect(await screen.findByRole("heading", { name: "Ce se realizează" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Deschide oferta OF-NOU" })).toHaveAttribute(
       "href",
       "/oferte/ansamblu/asmq%3Anew",
@@ -319,18 +316,20 @@ describe("RequestDetailPage", () => {
       "href",
       "/oferte/ansamblu/asmq%3Aold",
     );
-    expect(
-      screen.getByText("Ansamblu · Panou ACM + litere volumetrice · Înlocuită de o versiune mai nouă"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Ansamblu · Panou ACM + litere volumetrice · Cu comandă")).toBeInTheDocument();
-    expect(screen.getByText("Produs · Litere volumetrice · Creată")).toBeInTheDocument();
+    expect(screen.getByText(/Înlocuită de o versiune mai nouă/)).toBeInTheDocument();
     for (const link of screen.getAllByRole("link", { name: "Deschide comanda" })) {
       expect(link).toHaveAttribute("href", "/lucrari/asmo%3A1");
     }
-    expect(screen.getByRole("heading", { name: "Lucrul comercial al cererii" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Deschide oferta comună" })).toHaveAttribute(
       "href",
       "/oferte/ansamblu/asmq%3Anew",
+    );
+    const productRow = screen.getAllByRole("listitem").find((item) => item.textContent?.includes("Litere volumetrice"));
+    expect(productRow).toBeTruthy();
+    await userEvent.setup().click(within(productRow as HTMLElement).getByRole("button"));
+    expect(screen.getByRole("link", { name: "Deschide oferta OF-1" })).toHaveAttribute(
+      "href",
+      "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
     );
     expect(document.querySelectorAll('a[href^="/quotes/SIGN_ASSEMBLY"]')).toHaveLength(0);
     expect(document.body.textContent).not.toContain("asmq:");
@@ -339,7 +338,8 @@ describe("RequestDetailPage", () => {
   it("keeps the linked offers panel absent when the request has no quotes", async () => {
     stubDetail(requestDetail({ linkedOffers: [] }));
     render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByRole("heading", { name: "CRQ-104" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Litere vitrină" })).toBeInTheDocument();
+    expect(screen.getByText("CRQ-104")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Oferte legate" })).not.toBeInTheDocument();
   });
 
@@ -362,7 +362,8 @@ describe("RequestDetailPage", () => {
     );
 
     render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByRole("heading", { name: "CRQ-104" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Litere vitrină" })).toBeInTheDocument();
+    expect(screen.getByText("CRQ-104")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Deschide oferta" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Alege produs" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Deschide oferta OF-1" })).toBeInTheDocument();
@@ -379,7 +380,8 @@ describe("RequestDetailPage", () => {
     );
 
     render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByRole("heading", { name: "CRQ-104" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Litere vitrină" })).toBeInTheDocument();
+    expect(screen.getByText("CRQ-104")).toBeInTheDocument();
     expect(screen.getByText("Gata de ofertă")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Alege produs" })).not.toBeInTheDocument();
     expect(screen.getByText("Nicio acțiune disponibilă")).toBeInTheDocument();
@@ -1099,64 +1101,45 @@ describe("N-018 · offer preview over the request", () => {
       expect(window.history.length).toBe(depth);
     });
   });
-describe('N-018 · firul cererii în patru pași', () => {
-    const steps = () => within(screen.getByRole('list', { name: 'Firul cererii' })).getAllByRole('listitem').filter((item) => item.classList.contains('request-thread__step'));
-
-    it('orders the existing sections in four steps and puts the server action on the step it leads to', async () => {
-      stubDetail(requestDetail({ nextAction: 'OPEN_QUOTE', nextActionLabel: 'Deschide oferta', linkedOffers: [
-        { quoteSnapshotId: 'q-1', productCode: 'PRD-LETTERS-FRONTLIT-PLEXI-AL06', reference: 'OF-1' },
-        { quoteSnapshotId: 'q-2', productCode: 'PRD-LETTERS-FRONTLIT-PLEXI-AL06', reference: 'OF-2' },
+describe("N-030 · ramuri comerciale", () => {
+    it("keeps two offers of the same product as two branches and expands only one", async () => {
+      stubDetail(requestDetail({ nextAction: "OPEN_QUOTE", nextActionLabel: "Deschide oferta", linkedOffers: [
+        { quoteSnapshotId: "q-1", productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06", productLabel: "Litere volumetrice", reference: "OF-1" },
+        { quoteSnapshotId: "q-2", productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06", productLabel: "Litere volumetrice", reference: "OF-2" },
       ] }));
       render(<RequestDetailPage requestId="req-1" />);
-      await screen.findByRole('list', { name: 'Firul cererii' });
-      expect(steps().map((step) => step.querySelector('h2')?.textContent)).toEqual(['1 · Brief', '2 · Ce se realizează', '3 · Oferta · 2', '4 · Lucrarea']);
-      const [brief, , offer, job] = steps();
-      expect(within(brief!).getByRole('heading', { name: 'Ce dorește clientul' })).toBeInTheDocument();
-      expect(within(offer!).getByRole('link', { name: 'Deschide oferta OF-1' })).toBeInTheDocument();
-      expect(within(offer!).getByRole('link', { name: 'Deschide oferta OF-2' })).toBeInTheDocument();
-      expect(offer).toHaveAttribute('data-current');
-      expect(within(offer!).getByText('Acțiunea curentă')).toBeInTheDocument();
-      expect(within(offer!).getByRole('link', { name: 'Deschide oferta →' })).toHaveAttribute('href', '/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1');
-      expect(within(job!).getByText('Nicio lucrare încă.')).toBeInTheDocument();
-      expect(screen.queryByText(/Continuă aici/)).toBeNull();
-      expect(screen.getAllByText('Acțiunea curentă')).toHaveLength(1);
+      const list = await screen.findByRole("list", { name: "Ramuri comerciale" });
+      const rows = [...list.querySelectorAll<HTMLElement>(":scope > li")];
+      expect(rows).toHaveLength(2);
+      expect(rows[0]).toHaveAttribute("data-expanded", "true");
+      expect(rows[1]).not.toHaveAttribute("data-expanded");
+      expect(within(rows[0]!).getByRole("link", { name: "Deschide oferta OF-1" })).toHaveAttribute("href", "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1");
+      expect(screen.getByRole("heading", { name: "Ce dorește clientul" })).toBeInTheDocument();
+      await userEvent.setup().click(within(rows[1]!).getByRole("button"));
+      expect(screen.getByRole("link", { name: "Deschide oferta OF-2" })).toHaveAttribute("href", "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-2");
     });
 
-    it('keeps the product choice in step 2 when the server asks for it', async () => {
-      stubDetail(requestDetail(), (url) => url.endsWith('/product-catalog')
-        ? new Response(JSON.stringify({ tree: [{ kind: 'product', code: 'PRD-TEST', label: 'Litere test' }] }), { status: 200 })
-        : url.includes('/assemblies') ? new Response(JSON.stringify({ canCreate: false, offerings: [], assemblies: [] }), { status: 200 }) : null);
+    it("keeps the product choice when the server asks for it", async () => {
+      stubDetail(requestDetail(), (url) => url.endsWith("/product-catalog")
+        ? new Response(JSON.stringify({ tree: [{ kind: "product", code: "PRD-TEST", label: "Litere test" }] }), { status: 200 })
+        : url.includes("/assemblies") ? new Response(JSON.stringify({ canCreate: false, offerings: [], assemblies: [] }), { status: 200 }) : null);
       render(<RequestDetailPage requestId="req-1" />);
-      await screen.findByRole('list', { name: 'Firul cererii' });
-      const work = steps()[1]!;
-      expect(work).toHaveAttribute('data-current');
-      expect(await within(work).findByRole('button', { name: /Litere test/ })).toBeInTheDocument();
+      expect(await screen.findByRole("button", { name: /Litere test/ })).toBeInTheDocument();
     });
 
-    it('keeps a quoted simple product visible in the work step, apart from adding another product', async () => {
+    it("keeps a quoted simple product visible apart from adding another product", async () => {
       stubDetail(requestDetail({
-        nextAction: 'OPEN_QUOTE',
-        nextActionLabel: 'Deschide oferta',
+        nextAction: "OPEN_QUOTE",
+        nextActionLabel: "Deschide oferta",
         canStartAdditionalWork: true,
-        linkedOffers: [{ quoteSnapshotId: 'q-9', kind: 'PRODUCT', kindLabel: 'Produs', productCode: 'PRD-LETTERS', productLabel: 'Litere volumetrice', reference: 'OF-9', stageLabel: 'Creată', superseded: false, attentionLabel: null, orderSnapshotId: null }],
-      }), (url) => url.endsWith('/product-catalog')
-        ? new Response(JSON.stringify({ tree: [{ kind: 'product', code: 'PRD-LOGO', label: 'Logo' }] }), { status: 200 })
-        : url.includes('/assemblies') ? new Response(JSON.stringify({ canCreate: false, offerings: [], assemblies: [] }), { status: 200 }) : null);
+        linkedOffers: [{ quoteSnapshotId: "q-9", kind: "PRODUCT", kindLabel: "Produs", productCode: "PRD-LETTERS", productLabel: "Litere volumetrice", reference: "OF-9", stageLabel: "Creată", superseded: false, attentionLabel: null, orderSnapshotId: null }],
+      }), (url) => url.endsWith("/product-catalog")
+        ? new Response(JSON.stringify({ tree: [{ kind: "product", code: "PRD-LOGO", label: "Logo" }] }), { status: 200 })
+        : url.includes("/assemblies") ? new Response(JSON.stringify({ canCreate: false, offerings: [], assemblies: [] }), { status: 200 }) : null);
       render(<RequestDetailPage requestId="req-1" />);
-      await screen.findByRole('list', { name: 'Firul cererii' });
-      const work = steps()[1]!;
-      expect(within(work).getByRole('heading', { name: 'Produs configurat' })).toBeInTheDocument();
-      expect(within(work).getByText('Litere volumetrice')).toBeInTheDocument();
-      expect(within(work).getByRole('link', { name: 'Vezi oferta OF-9' })).toHaveAttribute('href', '/quotes/PRD-LETTERS/q-9');
-      expect(within(work).getByRole('heading', { name: 'Produs separat' })).toBeInTheDocument();
-      expect(within(work).queryByText(/Nu există încă un produs/)).toBeNull();
-    });
-
-    it('marks no step when the server gives no action', async () => {
-      stubDetail(requestDetail({ nextAction: null, nextActionLabel: null }));
-      render(<RequestDetailPage requestId="req-1" />);
-      await screen.findByRole('list', { name: 'Firul cererii' });
-      expect(steps().some((step) => step.hasAttribute('data-current'))).toBe(false);
-      expect(screen.queryByText('Acțiunea curentă')).toBeNull();
+      expect(await screen.findByText("Litere volumetrice")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Deschide oferta OF-9" })).toHaveAttribute("href", "/quotes/PRD-LETTERS/q-9");
+      expect(screen.getByRole("heading", { name: "Produs separat" })).toBeInTheDocument();
+      expect(screen.queryByText(/Nu există încă un produs/)).toBeNull();
     });
   });

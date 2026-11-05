@@ -1,0 +1,75 @@
+.offers-summary > .quote-decision,
+.offers-summary > .offers-acceptance,
+.offers-summary > .offers-confirm,
+.offers-summary > .alert {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 1100px) {
+  .offers-detail {
+    grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);
+    align-items: start;
+    column-gap: 24px;
+  }
+
+  .offers-detail > .offers-detail__back {
+    grid-column: 1 / -1;
+  }
+
+  .offers-detail > .offers-summary {
+    grid-column: 2;
+    grid-row: 2 / span 8;
+    align-self: start;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: none;
+    align-items: stretch;
+  }
+
+  .offers-detail > :not(.offers-summary):not(.offers-detail__back) {
+    grid-column: 1;
+  }
+
+  .offers-detail > .offers-summary .offers-summary__facts { order: 1; grid-area: auto; }
+  .offers-detail > .offers-summary .offers-summary__total { order: 2; grid-area: auto; }
+  .offers-detail > .offers-summary .quote-decision { order: 3; grid-area: auto; }
+  .offers-detail > .offers-summary .offers-summary__actions { order: 4; grid-area: auto; align-items: stretch; }
+  .offers-detail > .offers-summary .offers-acceptance,
+  .offers-detail > .offers-summary .offers-confirm,
+  .offers-detail > .offers-summary .alert { order: 5; }
+
+  .offers-detail > .offers-summary .offers-summary__note {
+    max-width: none;
+    text-align: left;
+  }
+}
+
+.quote-decision {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  min-width: 0;
+}
+
+.quote-decision h2 {
+  margin: 0;
+  font: 600 16px/1.3 var(--font-sans);
+}
+
+.quote-decision ul,
+.quote-decision p {
+  margin: 0;
+  font: 400 14px/1.45 var(--font-sans);
+}
+
+.quote-decision ul {
+  display: grid;
+  gap: 6px;
+  padding-left: 1.1rem;
+}
+
+.quote-decision li {
+  overflow-wrap: anywhere;
+}
