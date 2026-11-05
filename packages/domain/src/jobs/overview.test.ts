@@ -361,6 +361,165 @@ describe("job overview projection", () => {
     expect(futureGap.attentionLabel).toBeNull();
   });
 
+  it("follows canonical provider binding instead of a missing assignment", () => {
+    const attentionFor = (
+      task: Parameters<typeof taskStub>[0],
+      sibling?: Parameters<typeof taskStub>[0],
+    ) =>
+      projectJobOverviewItem({
+        order: order(),
+        release: release(),
+        planView: planView("PLANNED", {
+          tasks: sibling ? [taskStub(task), taskStub({ taskId: "task:2", ...sibling })] : [taskStub(task)],
+        }),
+      }).attentionLabel;
+
+    expect(
+      attentionFor({
+        status: "PLANNED",
+        requiresProvider: true,
+        assignedProvider: null,
+        providerBindingState: "UNIQUE_PENDING",
+        providerBindingLabel: "Se asociază automat: CNC 4020",
+        eligibleProviders: [{ id: "mch:cnc", kind: "MACHINE", label: "CNC 4020" }],
+      }),
+    ).toBeNull();
+
+    expect(
+      attentionFor({
+        status: "PLANNED",
+        requiresProvider: true,
+        assignedProvider: null,
+        providerBindingState: "NONE",
+        eligibleProviders: [],
+      }),
+    ).toBe("Lipsă utilaj dedicat");
+
+    expect(
+      attentionFor({
+        status: "PLANNED",
+        requiresProvider: true,
+        assignedProvider: null,
+        providerBindingState: "CHOICE_REQUIRED",
+        eligibleProviders: [
+          { id: "mch:a", kind: "MACHINE", label: "CNC unu" },
+          { id: "mch:b", kind: "MACHINE", label: "CNC doi" },
+        ],
+      }),
+    ).toBe("Alegere utilaj necesară");
+
+    expect(
+      attentionFor({
+        status: "PLANNED",
+        requiresProvider: true,
+        assignedProvider: { id: "mch:old", kind: "MACHINE", label: "Utilaj retras" },
+        providerBindingState: "UNAVAILABLE",
+        providerBindingLabel: "Utilajul alocat nu mai este eligibil",
+        eligibleProviders: [],
+      }),
+    ).toBe("Utilajul alocat nu mai este eligibil");
+
+    expect(
+      attentionFor({
+        status: "PLANNED",
+        requiresProvider: true,
+        waitingFor: ["Debitare CNC"],
+        assignedProvider: null,
+        providerBindingState: "NONE",
+      }),
+    ).toBeNull();
+
+    expect(
+      attentionFor({
+        status: "PLANNED",
+        requiresProvider: false,
+        providerRequirement: "NOT_REQUIRED",
+        providerBindingState: "NOT_REQUIRED",
+        assignedProvider: null,
+      }),
+    ).toBeNull();
+
+    expect(
+      attentionFor({
+        status: "PLANNED",
+        requiresProvider: true,
+        executionMode: "EXTERNAL",
+        providerBindingState: "EXTERNAL",
+        externalProviderLabel: "Atelier extern",
+        assignedProvider: null,
+      }),
+    ).toBeNull();
+
+    expect(
+      attentionFor({
+        status: "COMPLETED",
+        requiresProvider: true,
+        assignedProvider: null,
+        providerBindingState: "NONE",
+      }),
+    ).toBeNull();
+
+    expect(
+      attentionFor({
+        status: "IN_PROGRESS",
+        requiresProvider: true,
+        assignedProvider: { id: "mch:cnc", kind: "MACHINE", label: "CNC 4020" },
+        providerBindingState: "ASSIGNED",
+      }),
+    ).toBeNull();
+
+    expect(
+      attentionFor(
+        {
+          status: "PLANNED",
+          requiresProvider: true,
+          assignedProvider: null,
+          providerBindingState: "UNIQUE_PENDING",
+          eligibleProviders: [{ id: "mch:cnc", kind: "MACHINE", label: "CNC 4020" }],
+        },
+        {
+          status: "IN_PROGRESS",
+          requiresProvider: true,
+          assignedProvider: { id: "mch:cnc", kind: "MACHINE", label: "CNC 4020" },
+          providerBindingState: "ASSIGNED",
+          activeMachineRun: {
+            machineRunId: "mrun:1",
+            executionPlanId: "exp:test",
+            taskId: "task:2",
+            machineProviderId: "mch:cnc",
+            machineProviderLabel: "CNC 4020",
+            startedAt: "2026-08-17T09:00:00.000Z",
+            completedAt: null,
+            durationMinutes: null,
+            startedByOperatorId: "per:1",
+            startedByOperatorLabel: "Operator",
+            completedByOperatorId: null,
+            completedByOperatorLabel: null,
+            createdAt: "2026-08-17T09:00:00.000Z",
+            schemaVersion: 1,
+          },
+        },
+      ),
+    ).toBeNull();
+
+    expect(
+      attentionFor(
+        {
+          status: "PLANNED",
+          requiresProvider: true,
+          providerBindingState: "NONE",
+          assignedProvider: null,
+        },
+        {
+          status: "PLANNED",
+          requiresProvider: true,
+          providerBindingState: "CHOICE_REQUIRED",
+          assignedProvider: null,
+        },
+      ),
+    ).toBe("Lipsă utilaj dedicat");
+  });
+
   it("excludes completed jobs from the needs-action filter", () => {
     const overview = projectJobOverview([
       projectJobOverviewItem({ order: order("A"), release: null, planView: null }),

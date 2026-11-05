@@ -15,12 +15,14 @@ export function ExecutionActualConsumptionFields({
   plannedResources,
   drafts,
   disabled,
+  errorForResource,
   onChange,
 }: {
   taskId: string;
   plannedResources: readonly PlannedResourceTransport[];
   drafts: Record<string, string>;
   disabled: boolean;
+  errorForResource?: (resourceId: string) => string | undefined;
   onChange: (resourceId: string, value: string) => void;
 }) {
   return (
@@ -37,6 +39,7 @@ export function ExecutionActualConsumptionFields({
             id={actualConsumptionFieldId(taskId, resource.resourceId)}
             label={actualConsumptionFieldLabel(resource.label)}
             hint={resource.unit}
+            error={errorForResource?.(resource.resourceId)}
             value={drafts[actualConsumptionDraftKey(taskId, resource.resourceId)] ?? ""}
             inputMode="decimal"
             disabled={disabled}

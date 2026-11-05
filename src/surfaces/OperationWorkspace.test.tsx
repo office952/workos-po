@@ -338,21 +338,35 @@ describe("OperationWorkspace", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<OperationWorkspace planId="exp:1" />);
+    const user = userEvent.setup();
     const actualField = await screen.findByLabelText("Cantitate realizată");
-    await userEvent.setup().clear(actualField);
-    await userEvent.setup().type(actualField, "abc");
-    await userEvent.setup().click(screen.getByRole("button", { name: "Finalizează operația" }));
+    await user.clear(actualField);
+    await user.type(actualField, "abc");
+    await user.click(screen.getByRole("button", { name: "Finalizează operația" }));
 
-    expect(
-      await screen.findByText(
-        "Cantitatea realizată trebuie să fie un număr valid, zero sau pozitiv.",
-      ),
-    ).toBeInTheDocument();
+    const quantityError = "Cantitatea realizată trebuie să fie un număr valid, zero sau pozitiv.";
+    expect(await screen.findByText(quantityError)).toBeInTheDocument();
+    expect(actualField).toHaveAttribute("aria-invalid", "true");
+    expect(actualField).toHaveAccessibleDescription(new RegExp(quantityError));
+    expect(actualField.closest(".field")).toContainElement(
+      document.getElementById(`${actualField.id}-error`),
+    );
+    expect(actualField).toHaveFocus();
+    const actions = document.getElementById("execution-actions") as HTMLElement;
+    expect(within(actions).queryByRole("alert")).not.toBeInTheDocument();
+    expect(within(actions).queryByText("Conexiunea a eșuat")).not.toBeInTheDocument();
+    expect(within(actions).queryByText("Acțiunea a eșuat")).not.toBeInTheDocument();
     expect(
       fetchMock.mock.calls.some(([url, init]) => String(url).includes("/complete") && init?.method === "POST"),
     ).toBe(false);
-    expect(screen.getByLabelText("Cantitate realizată")).toHaveValue("abc");
+    expect(actualField).toHaveValue("abc");
     expect(screen.getByRole("button", { name: "Finalizează operația" })).toBeEnabled();
+
+    await user.clear(actualField);
+    await user.type(actualField, "12,5");
+    expect(screen.queryByText(quantityError)).not.toBeInTheDocument();
+    expect(actualField).not.toHaveAttribute("aria-invalid", "true");
+    expect(actualField).toHaveValue("12,5");
   });
 
   it("does not complete a measurable task until the operator enters an actual, including zero", async () => {
@@ -389,16 +403,20 @@ describe("OperationWorkspace", () => {
     expect(actualField).toHaveValue("");
     expect(actualField).toHaveAccessibleDescription("Planificat: Lungime 3.2 m");
     await user.click(screen.getByRole("button", { name: "Finalizează operația" }));
-    expect(
-      await screen.findByText(
-        "Cantitatea realizată trebuie să fie un număr valid, zero sau pozitiv.",
-      ),
-    ).toBeInTheDocument();
+    const quantityError = "Cantitatea realizată trebuie să fie un număr valid, zero sau pozitiv.";
+    expect(await screen.findByText(quantityError)).toBeInTheDocument();
+    expect(actualField).toHaveAttribute("aria-invalid", "true");
+    expect(actualField).toHaveFocus();
+    const actions = document.getElementById("execution-actions") as HTMLElement;
+    expect(actions).toContainElement(actualField);
+    expect(within(actions).queryByRole("alert")).not.toBeInTheDocument();
     expect(
       fetchMock.mock.calls.some(([url, init]) => String(url).includes("/complete") && init?.method === "POST"),
     ).toBe(false);
 
     await user.type(actualField, "0");
+    expect(screen.queryByText(quantityError)).not.toBeInTheDocument();
+    expect(actualField).toHaveValue("0");
     await user.click(screen.getByRole("button", { name: "Finalizează operația" }));
     await waitFor(() => {
       const completeCall = fetchMock.mock.calls.find(
@@ -406,6 +424,98 @@ describe("OperationWorkspace", () => {
       );
       expect(completeCall?.[1]?.body).toBe(JSON.stringify({ completedQuantity: 0 }));
     });
+  });
+
+  it("shows an active machine run as an operational refusal beside completion", async () => {
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({
+          operator: { personId: "per:andrei", displayName: "Andrei Goghi" },
+        });
+      }
+      if (url.includes("/complete") && init?.method === "POST") {
+        return jsonResponse({ error: "machine_run_active" }, 422);
+      }
+      return jsonResponse(
+        planPayload([
+          {
+            taskId: "task-cut",
+            processLabel: "Debitare foaie CNC",
+            status: "IN_PROGRESS",
+            statusLabel: "În lucru",
+            canComplete: true,
+            requiresCompletedQuantity: true,
+            plannedValue: 3.2,
+            completedQuantityLabel: null,
+            varianceLabel: null,
+          },
+        ]),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<OperationWorkspace planId="exp:1" />);
+    const actualField = await screen.findByLabelText("Cantitate realizată");
+    await user.type(actualField, "3,2");
+    await user.click(screen.getByRole("button", { name: "Finalizează operația" }));
+    const actions = document.getElementById("execution-actions") as HTMLElement;
+    const refusal = await within(actions).findByRole("alert");
+    expect(refusal).toHaveTextContent("Finalizarea nu este permisă");
+    expect(refusal).toHaveTextContent("Oprește rularea utilajului înainte de a închide sarcina.");
+    expect(actions).toContainElement(refusal);
+    expect(actualField).not.toHaveAttribute("aria-invalid", "true");
+    expect(actualField).toHaveValue("3,2");
+    expect(screen.queryByText("Conexiunea a eșuat")).not.toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(([url, init]) => String(url).includes("/complete") && init?.method === "POST"),
+    ).toBe(true);
+    expect(screen.getByRole("button", { name: "Finalizează operația" })).toBeEnabled();
+  });
+
+  it("does not describe a missing quantity as a connection failure", async () => {
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/operator-session")) {
+        return jsonResponse({
+          operator: { personId: "per:andrei", displayName: "Andrei Goghi" },
+        });
+      }
+      if (url.includes("/complete") && init?.method === "POST") {
+        return Promise.reject(new TypeError("Failed to fetch"));
+      }
+      return jsonResponse(
+        planPayload([
+          {
+            taskId: "task-cut",
+            processLabel: "Debitare foaie CNC",
+            status: "IN_PROGRESS",
+            statusLabel: "În lucru",
+            canComplete: true,
+            requiresCompletedQuantity: true,
+            plannedValue: 3.2,
+            completedQuantityLabel: null,
+            varianceLabel: null,
+          },
+        ]),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<OperationWorkspace planId="exp:1" />);
+    const actualField = await screen.findByLabelText("Cantitate realizată");
+    await user.type(actualField, "3");
+    await user.click(screen.getByRole("button", { name: "Finalizează operația" }));
+    const actions = document.getElementById("execution-actions") as HTMLElement;
+    const failure = await within(actions).findByRole("alert");
+    expect(failure).toHaveTextContent("Conexiunea a eșuat");
+    expect(failure).toHaveTextContent(
+      "Finalizarea nu a putut fi trimisă. Verifică conexiunea și încearcă din nou.",
+    );
+    expect(actions).toContainElement(failure);
+    expect(actualField).not.toHaveAttribute("aria-invalid", "true");
+    expect(actualField).toHaveValue("3");
+    expect(screen.queryByText("Finalizarea nu este permisă")).not.toBeInTheDocument();
   });
 
   it("keeps each task's entered actual when the operator changes task", async () => {

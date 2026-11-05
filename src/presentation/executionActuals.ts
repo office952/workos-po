@@ -32,7 +32,7 @@ export function collectActualConsumptionInput(
   taskId: string,
 ):
   | { ok: true; actualConsumption?: ExecutionTaskCompletionInput["actualConsumption"] }
-  | { ok: false } {
+  | { ok: false; resourceId: string } {
   const lines: NonNullable<ExecutionTaskCompletionInput["actualConsumption"]> = [];
   for (const resource of plannedResources) {
     const raw = drafts[actualConsumptionDraftKey(taskId, resource.resourceId)];
@@ -41,7 +41,7 @@ export function collectActualConsumptionInput(
     }
     const parsed = parseCompletedQuantity(raw);
     if (parsed === null) {
-      return { ok: false };
+      return { ok: false, resourceId: resource.resourceId };
     }
     lines.push({
       resourceId: resource.resourceId,

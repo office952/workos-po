@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { TransportError } from "../api/http";
 import {
   assignTaskProvider,
@@ -51,12 +51,13 @@ import "../styles/surfaces/task-dossier.css";
 import { parseCompletedQuantity } from "../presentation/completedQuantity";
 import {
   actualConsumptionDraftKey,
+  actualConsumptionFieldId,
   canEditActualConsumption,
   collectActualConsumptionInput,
 } from "../presentation/executionActuals";
 import { parseActualDurationDraft } from "../presentation/actualDuration";
 import {
-  presentExecutionCompletionError,
+  classifyExecutionCompletionFailure,
   presentMachineRunStartError,
   presentQualityError,
 } from "../presentation/executionCompletionError";
@@ -249,6 +250,39 @@ function compactTaskFacts(task: ExecutionTaskTransport): string[] {
   return parts;
 }
 
+function actionNoticeTitle(kind: "action" | "refusal" | "network"): string {
+  switch (kind) {
+    case "network":
+      return "Conexiunea a eșuat";
+    case "refusal":
+      return "Finalizarea nu este permisă";
+    case "action":
+      return "Acțiunea a eșuat";
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
+function ActionNotice({
+  kind,
+  message,
+  noticeRef,
+}: {
+  kind: "action" | "refusal" | "network";
+  message: string;
+  noticeRef: RefObject<HTMLDivElement | null>;
+}) {
+  return (
+    <div ref={noticeRef} tabIndex={-1}>
+      <InlineAlert tone="error" title={actionNoticeTitle(kind)}>
+        {message}
+      </InlineAlert>
+    </div>
+  );
+}
+
 function taskStatusKind(task: ExecutionTaskTransport) {
   if (task.status === "COMPLETED") {
     return statusTone("success");
@@ -276,6 +310,9 @@ export function OperationWorkspace({
   const [outlineQuery, setOutlineQuery] = useState("");
   const [actionState, setActionState] = useState<"idle" | "pending" | "error">("idle");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionErrorKind, setActionErrorKind] = useState<"action" | "refusal" | "network">("action");
+  const [fieldError, setFieldError] = useState<{ id: string; message: string } | null>(null);
+  const actionNoticeRef = useRef<HTMLDivElement>(null);
   const [actualDrafts, setActualDrafts] = useState<Record<string, string>>({});
   const [durationDrafts, setDurationDrafts] = useState<Record<string, string>>({});
   const [resourceActualDrafts, setResourceActualDrafts] = useState<Record<string, string>>(
@@ -298,6 +335,23 @@ export function OperationWorkspace({
     setQualityNotes({});
     setCorrectionNotes({});
     setActionError(null);
+    setFieldError(null);
+  }
+
+  function fieldMessage(id: string): string | undefined {
+    return fieldError?.id === id ? fieldError.message : undefined;
+  }
+
+  function rejectField(id: string, message: string): void {
+    setActionState("idle");
+    setActionError(null);
+    setFieldError({ id, message });
+  }
+
+  function clearFieldWhenValid(id: string, valid: boolean): void {
+    if (valid && fieldError?.id === id) {
+      setFieldError(null);
+    }
   }
 
   function actualQuantityDraft(task: ExecutionTaskTransport): string {
@@ -328,6 +382,7 @@ export function OperationWorkspace({
       invalidateAfterExecutionTaskChange(planId);
     } catch (error) {
       setActionState("error");
+      setActionErrorKind("action");
       setActionError(
         error instanceof TransportError
           ? "Alocarea utilajului nu este permisă pentru această sarcină."
@@ -348,6 +403,7 @@ export function OperationWorkspace({
       invalidateAfterExecutionTaskChange(planId);
     } catch (error) {
       setActionState("error");
+      setActionErrorKind("action");
       setActionError(error instanceof TransportError ? failure : "Acțiunea a eșuat.");
     }
   }
@@ -358,6 +414,7 @@ export function OperationWorkspace({
   ): Promise<void> {
     const note = (qualityNotes[task.taskId] ?? "").trim();
     if (result === "FAIL" && note.length === 0) {
+      setActionErrorKind("action");
       setActionError("Respingerea cere o notă.");
       return;
     }
@@ -373,6 +430,7 @@ export function OperationWorkspace({
       invalidateAfterExecutionTaskChange(planId);
     } catch (error) {
       setActionState("error");
+      setActionErrorKind("action");
       setActionError(presentQualityError(error));
     }
   }
@@ -380,6 +438,7 @@ export function OperationWorkspace({
   async function closeCorrection(task: ExecutionTaskTransport): Promise<void> {
     const note = (correctionNotes[task.taskId] ?? "").trim();
     if (note.length === 0) {
+      setActionErrorKind("action");
       setActionError("Închiderea corecției cere o notă.");
       return;
     }
@@ -391,6 +450,7 @@ export function OperationWorkspace({
       invalidateAfterExecutionTaskChange(planId);
     } catch (error) {
       setActionState("error");
+      setActionErrorKind("action");
       setActionError(presentQualityError(error));
     }
   }
@@ -404,6 +464,7 @@ export function OperationWorkspace({
       invalidateAfterExecutionTaskChange(planId);
     } catch (error) {
       setActionState("error");
+      setActionErrorKind("action");
       setActionError(presentMachineRunStartError(error));
     }
   }
@@ -421,6 +482,7 @@ export function OperationWorkspace({
       invalidateAfterExecutionTaskChange(planId);
     } catch (error) {
       setActionState("error");
+      setActionErrorKind("action");
       setActionError(
         error instanceof TransportError
           ? "Rularea utilajului nu poate fi oprită."
@@ -442,6 +504,7 @@ export function OperationWorkspace({
       invalidateAfterExecutionTaskChange(planId);
     } catch {
       setActionState("error");
+      setActionErrorKind("action");
       setActionError("Confirmarea materialului nu a putut fi salvată.");
     }
   }
@@ -455,17 +518,21 @@ export function OperationWorkspace({
       invalidateAfterExecutionTaskChange(planId);
     } catch (error) {
       setActionState("error");
+      setActionErrorKind("action");
       setActionError(presentExecutionStartError(error));
     }
   }
 
   async function complete(task: ExecutionTaskTransport): Promise<void> {
     const completionInput: ExecutionTaskCompletionInput = {};
+    const quantityFieldId = `actual-${task.taskId}`;
     if (task.requiresCompletedQuantity) {
       const parsed = parseCompletedQuantity(actualQuantityDraft(task));
       if (parsed === null) {
-        setActionState("error");
-        setActionError("Cantitatea realizată trebuie să fie un număr valid, zero sau pozitiv.");
+        rejectField(
+          quantityFieldId,
+          "Cantitatea realizată trebuie să fie un număr valid, zero sau pozitiv.",
+        );
         return;
       }
       completionInput.completedQuantity = parsed;
@@ -477,18 +544,23 @@ export function OperationWorkspace({
         task.taskId,
       );
       if (!collected.ok) {
-        setActionState("error");
-        setActionError("Cantitatea consumată trebuie să fie un număr valid, zero sau pozitiv.");
+        rejectField(
+          actualConsumptionFieldId(task.taskId, collected.resourceId),
+          "Cantitatea consumată trebuie să fie un număr valid, zero sau pozitiv.",
+        );
         return;
       }
       if (collected.actualConsumption) {
         completionInput.actualConsumption = collected.actualConsumption;
       }
     }
+    const durationFieldId = `actual-duration-${task.taskId}`;
     const duration = parseActualDurationDraft(durationDrafts[task.taskId] ?? "");
     if (!duration.ok) {
-      setActionState("error");
-      setActionError("Durata declarată trebuie să fie un număr întreg de minute, zero sau pozitiv.");
+      rejectField(
+        durationFieldId,
+        "Durata declarată trebuie să fie un număr întreg de minute, zero sau pozitiv.",
+      );
       return;
     }
     if (duration.actualDurationMinutes !== undefined) {
@@ -496,13 +568,16 @@ export function OperationWorkspace({
     }
     setActionState("pending");
     setActionError(null);
+    setFieldError(null);
     try {
       await completeExecutionTask(task.taskId, completionInput);
       setActionState("idle");
       invalidateAfterExecutionTaskChange(planId);
     } catch (error) {
+      const failure = classifyExecutionCompletionFailure(error);
       setActionState("error");
-      setActionError(presentExecutionCompletionError(error));
+      setActionErrorKind(failure.kind);
+      setActionError(failure.message);
     }
   }
 
@@ -534,6 +609,35 @@ export function OperationWorkspace({
   const outlineTaskId = currentTask?.taskId ?? null;
   const outlineTasks = (plan?.tasks ?? []).filter(task => matchesSearch(outlineQuery, [task.processLabel, task.scopeLabel, task.assignmentLabel, task.executorLabel ?? ""]));
   const outlineTaskIds = new Set(outlineTasks.map(task => task.taskId));
+
+  useEffect(() => {
+    if (!fieldError) {
+      return;
+    }
+    const node = document.getElementById(fieldError.id);
+    if (!(node instanceof HTMLElement)) {
+      return;
+    }
+    const frame = node.closest(".field");
+    const target = frame instanceof HTMLElement ? frame : node;
+    if (typeof target.scrollIntoView === "function") {
+      target.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+    node.focus({ preventScroll: true });
+  }, [fieldError]);
+
+  useEffect(() => {
+    if (!actionError) {
+      return;
+    }
+    const node = actionNoticeRef.current;
+    if (!node) {
+      return;
+    }
+    if (typeof node.scrollIntoView === "function") {
+      node.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+  }, [actionError]);
 
   useEffect(() => {
     if (!outlineTaskId) {
@@ -596,10 +700,8 @@ export function OperationWorkspace({
           ) : null}
         </InlineAlert>
       ) : null}
-      {actionError ? (
-        <InlineAlert tone="error" title="Acțiunea a eșuat">
-          {actionError}
-        </InlineAlert>
+      {actionError && !currentTask ? (
+        <ActionNotice kind={actionErrorKind} message={actionError} noticeRef={actionNoticeRef} />
       ) : null}
       {plan && taskId && !currentTask ? <InlineAlert tone="error" title="Operația nu există în această lucrare">
         Verifică linkul sau alege o operație din lista lucrării.
@@ -798,6 +900,7 @@ export function OperationWorkspace({
                     ? `Planificat: ${currentTask.plannedQuantityLabel}`
                     : undefined
                 }
+                error={fieldMessage(`actual-${currentTask.taskId}`)}
                 inputMode="decimal"
                 disabled={actionState === "pending"}
                 onChange={(value) => {
@@ -805,6 +908,10 @@ export function OperationWorkspace({
                     ...currentDrafts,
                     [currentTask.taskId]: value,
                   }));
+                  clearFieldWhenValid(
+                    `actual-${currentTask.taskId}`,
+                    parseCompletedQuantity(value) !== null,
+                  );
                 }}
               />
             ) : null}
@@ -815,6 +922,7 @@ export function OperationWorkspace({
                 id={`actual-duration-${currentTask.taskId}`}
                 label="Durată declarată, opțional (minute)"
                 value={durationDrafts[currentTask.taskId] ?? ""}
+                error={fieldMessage(`actual-duration-${currentTask.taskId}`)}
                 inputMode="numeric"
                 disabled={actionState === "pending"}
                 onChange={(value) => {
@@ -822,6 +930,10 @@ export function OperationWorkspace({
                     ...currentDrafts,
                     [currentTask.taskId]: value,
                   }));
+                  clearFieldWhenValid(
+                    `actual-duration-${currentTask.taskId}`,
+                    parseActualDurationDraft(value).ok,
+                  );
                 }}
               />
             ) : null}
@@ -855,11 +967,19 @@ export function OperationWorkspace({
                 plannedResources={currentTask.plannedResources}
                 drafts={resourceActualDrafts}
                 disabled={actionState === "pending"}
+                errorForResource={(resourceId) =>
+                  fieldMessage(actualConsumptionFieldId(currentTask.taskId, resourceId))
+                }
                 onChange={(resourceId, value) => {
                   setResourceActualDrafts((currentDrafts) => ({
                     ...currentDrafts,
                     [actualConsumptionDraftKey(currentTask.taskId, resourceId)]: value,
                   }));
+                  const trimmed = value.trim();
+                  clearFieldWhenValid(
+                    actualConsumptionFieldId(currentTask.taskId, resourceId),
+                    trimmed === "" || parseCompletedQuantity(value) !== null,
+                  );
                 }}
               />
             ) : (
@@ -886,6 +1006,9 @@ export function OperationWorkspace({
                 onFail={() => void recordQuality(currentTask, "FAIL")}
                 onCloseCorrection={() => void closeCorrection(currentTask)}
               />
+            ) : null}
+            {actionError ? (
+              <ActionNotice kind={actionErrorKind} message={actionError} noticeRef={actionNoticeRef} />
             ) : null}
             <div className="cluster">
               {currentTask.canClaimStart ? (

@@ -254,12 +254,14 @@ export function deriveJobAttention(input: {
   }
   // Claim-on-Start: PLANNED + executor null is normal. IN_PROGRESS alone is normal progress.
   // Waiting dependencies are normal DAG flow — not job attention.
-  // Provider attention only when absence is a CURRENT blocker (deps done).
+  // Provider attention uses the canonical binding projection for the current task only.
+  // Unique auto-binding is not a missing machine. Occupancy stays a machine-run refusal.
   if (input.tasks.some(isCurrentExternalProviderBlocker)) {
     return { needsAttention: true, attentionLabel: "Lipsă furnizor extern", overdue };
   }
-  if (input.tasks.some(isCurrentProviderBlocker)) {
-    return { needsAttention: true, attentionLabel: "Lipsă utilaj dedicat", overdue };
+  const providerAttention = currentDedicatedProviderAttention(input.tasks);
+  if (providerAttention) {
+    return { needsAttention: true, attentionLabel: providerAttention, overdue };
   }
   if (overdue) {
     return { needsAttention: true, attentionLabel: OVERDUE_ATTENTION_LABEL, overdue: true };
@@ -267,26 +269,59 @@ export function deriveJobAttention(input: {
   return { needsAttention: false, attentionLabel: null, overdue: false };
 }
 
-function isCurrentProviderBlocker(task: ExecutionTaskView): boolean {
-  if (task.executionMode === "EXTERNAL") {
-    return false;
+const DEDICATED_PROVIDER_ATTENTION = {
+  NONE: "Lipsă utilaj dedicat",
+  UNAVAILABLE: "Utilajul alocat nu mai este eligibil",
+  CHOICE_REQUIRED: "Alegere utilaj necesară",
+} as const;
+
+function currentDedicatedProviderAttention(tasks: readonly ExecutionTaskView[]): string | null {
+  let unavailable = false;
+  let choice = false;
+  for (const task of tasks) {
+    const kind = dedicatedProviderAttentionKind(task);
+    if (kind === "NONE") {
+      return DEDICATED_PROVIDER_ATTENTION.NONE;
+    }
+    if (kind === "UNAVAILABLE") {
+      unavailable = true;
+    }
+    if (kind === "CHOICE_REQUIRED") {
+      choice = true;
+    }
   }
-  if (task.status !== "PLANNED") {
-    return false;
+  if (unavailable) {
+    return DEDICATED_PROVIDER_ATTENTION.UNAVAILABLE;
   }
-  if (task.waitingFor.length > 0) {
-    return false;
+  if (choice) {
+    return DEDICATED_PROVIDER_ATTENTION.CHOICE_REQUIRED;
   }
-  if (!task.requiresProvider) {
-    return false;
+  return null;
+}
+
+function dedicatedProviderAttentionKind(
+  task: ExecutionTaskView,
+): "NONE" | "UNAVAILABLE" | "CHOICE_REQUIRED" | null {
+  if (task.executionMode === "EXTERNAL" || task.status !== "PLANNED" || task.waitingFor.length > 0) {
+    return null;
   }
-  if (task.assignedProvider === null) {
-    return true;
+  switch (task.providerBindingState) {
+    case "NONE":
+      return task.requiresProvider ? "NONE" : null;
+    case "UNAVAILABLE":
+      return "UNAVAILABLE";
+    case "CHOICE_REQUIRED":
+      return "CHOICE_REQUIRED";
+    case "UNIQUE_PENDING":
+    case "ASSIGNED":
+    case "NOT_REQUIRED":
+    case "EXTERNAL":
+      return null;
+    default: {
+      const _exhaustive: never = task.providerBindingState;
+      return _exhaustive;
+    }
   }
-  return !task.eligibleProviders.some(
-    (item) =>
-      item.id === task.assignedProvider?.id && item.kind === task.assignedProvider.kind,
-  );
 }
 
 function isCurrentExternalProviderBlocker(task: ExecutionTaskView): boolean {
