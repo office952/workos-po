@@ -84,6 +84,29 @@ describe("request commercial branches", () => {
     expect(new Set(model.branches.map((branch) => branch.quotes[0]?.quoteSnapshotId)).size).toBe(2);
   });
 
+  it("keeps eight product quotes on one request as eight branches", () => {
+    const offers = Array.from({ length: 8 }, (_, index) =>
+      offer({
+        quoteSnapshotId: `qts:branch-${index + 1}`,
+        productCode: index < 4 ? "PRD-LETTERS-FRONTLIT-PLEXI-AL06" : "PRD-ACM-CASSETTE-NONE",
+        reference: `OF-${index + 1}`,
+        createdAt: `2026-10-0${index + 1}T00:00:00.000Z`,
+      }),
+    );
+    const model = presentCommercialBranches({ offers, assemblies: [], jobs: [], ...ready });
+    expect(model.branches).toHaveLength(8);
+    expect(model.branches.map((branch) => branch.key).sort()).toEqual(
+      [1, 2, 3, 4, 5, 6, 7, 8].map((index) => `quote:qts:branch-${index}`).sort(),
+    );
+    const letters = model.branches.filter((branch) =>
+      ["qts:branch-1", "qts:branch-2", "qts:branch-3", "qts:branch-4"].includes(
+        branch.quotes[0]?.quoteSnapshotId ?? "",
+      ),
+    );
+    expect(letters).toHaveLength(4);
+    expect(new Set(letters.map((branch) => branch.quotes[0]?.quoteSnapshotId)).size).toBe(4);
+  });
+
   it("keeps an older accepted assembly offer as the owner of the job", () => {
     const model = presentCommercialBranches({
       offers: [

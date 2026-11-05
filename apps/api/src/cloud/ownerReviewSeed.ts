@@ -46,7 +46,7 @@ export type OwnerReviewSeedReport = {
 export const LETTERS = "PRD-LETTERS-FRONTLIT-PLEXI-AL06";
 export const ACM = "PRD-ACM-CASSETTE-NONE";
 // Synthetic review data only; new quotes require an Owner-entered manual net price.
-const SYNTHETIC_MANUAL_NET_PRICE = 500;
+export const SYNTHETIC_MANUAL_NET_PRICE = 500;
 
 export function lettersValues(inscription: string): Record<string, unknown> {
   return {
@@ -80,7 +80,7 @@ export async function requireOk(
   return response.body;
 }
 
-async function ensureCustomer(
+export async function ensureCustomer(
   client: SeedHttpClient,
   displayName: string,
 ): Promise<{ customerId: string; displayName: string }> {
