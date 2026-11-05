@@ -736,6 +736,28 @@ describe("ConfiguratorPage", () => {
     expect(String(confirmCall?.[1]?.body)).not.toContain("quoteCommercialTerms");
   });
 
+  it("separates local draft, server evaluation, confirmation and frozen quote in the state bar", async () => {
+    installFetch({ rate: 3, cost: 37.5 });
+    renderConfigurator();
+    const bar = await screen.findByTestId("configuration-state-bar");
+    await waitFor(() => expect(bar).toHaveAttribute("data-state", "SERVER_CHECK"));
+    expect(screen.getByTestId("configuration-readiness")).toHaveTextContent("Pregătit pentru verificare");
+    const user = await confirmReady();
+    expect(bar).toHaveAttribute("data-state", "CONFIRMED_CONFIGURATION");
+    expect(bar).toHaveTextContent("Prețul manual nu este salvat. Se păstrează numai la înghețarea ofertei.");
+    expect(screen.getByTestId("configuration-readiness")).toHaveTextContent("Configurație confirmată");
+    await user.click(screen.getByRole("button", { name: "Îngheață oferta" }));
+    await screen.findByRole("link", { name: "Deschide oferta înghețată" });
+    expect(bar).toHaveAttribute("data-state", "FROZEN_QUOTE");
+    expect(bar).not.toHaveTextContent("Prețul manual nu este salvat");
+    expect(screen.getByTestId("configuration-readiness")).toHaveTextContent("Înghețată în ofertă");
+    await user.click(screen.getByRole("tab", { name: "Configurație" }));
+    await user.type(screen.getByLabelText("Textul literelor"), "X");
+    expect(bar).toHaveAttribute("data-state", "LOCAL_DRAFT");
+    await waitFor(() => expect(bar).toHaveAttribute("data-state", "SERVER_CHECK"));
+    expect(screen.getByRole("link", { name: "Înapoi la cerere" })).toHaveAttribute("href", "/cereri/req-1");
+  });
+
   it("freezes only with existing customer context and does not create seller, customer, or request", async () => {
     const fetchMock = installFetch({ rate: 3, cost: 37.5 });
     window.history.replaceState(
@@ -1784,7 +1806,7 @@ describe("published preset application", () => {
     const user = await confirmReady();
     await applyPublishedPreset(user);
     expect(screen.queryByRole("button", { name: "Îngheață oferta", hidden: true })).not.toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText("Pregătit")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Pregătit pentru verificare")).toBeInTheDocument());
     await user.click(screen.getByRole("tab", { name: /Verificare/ }));
     await user.click(screen.getByRole("button", { name: "Confirmă configurația" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeEnabled());

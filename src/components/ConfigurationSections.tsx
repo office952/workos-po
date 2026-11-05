@@ -1,14 +1,19 @@
-import { useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from "react";
+import { useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import type { PreviewTransport } from "../api/types";
 import {
   buildWorkbenchSections,
-  fieldDisplayValue,
   resolveInitialWorkbenchNavigation,
+  workbenchFieldError,
   workbenchLayerStatus,
   workbenchLayerStatusLabel,
+  workbenchMissingEntries,
+  workbenchSectionMissing,
+  workbenchSectionNumber,
+  workbenchSectionSummary,
   type WorkbenchNavigationState,
+  type WorkbenchSection,
 } from "../configuration/workbenchModel";
-import { ConfigurationConstructionCanvas } from "./ConfigurationConstructionCanvas";
+import { ConfigurationVerificationPanel } from "./ConfigurationVerificationPanel";
 import { InfoRow } from "./InfoRow";
 import { SelectField } from "./SelectField";
 import { StatusBadge } from "./StatusBadge";
@@ -26,7 +31,7 @@ function resolveCompactWorkbenchOrder(): boolean {
   return window.matchMedia(COMPACT_WORKBENCH_QUERY).matches;
 }
 
-/** Tablet and phone stack the editor before the construction diagram, in DOM order. */
+/** Tablet and phone replace the part list with a selector and fold the missing list. */
 function useCompactWorkbenchOrder(): boolean {
   const [compact, setCompact] = useState(resolveCompactWorkbenchOrder);
 
@@ -52,7 +57,17 @@ type ConfigurationSectionsProps = {
   technicalState?: TechnicalDetailsState;
   initialNavigation?: WorkbenchNavigationState | null;
   onNavigationChange?: (navigation: WorkbenchNavigationState) => void;
+  footnote?: ReactNode;
 };
+
+function editorSummary(section: WorkbenchSection, missingCount: number): string {
+  if (section.fields.length === 0) return "Doar consultare · din definiția produsului";
+  if (missingCount > 0) {
+    return missingCount === 1 ? "1 informație obligatorie lipsă" : `${missingCount} informații obligatorii lipsă`;
+  }
+  const required = section.fields.filter((field) => field.required).length;
+  return required > 0 ? "Informațiile obligatorii sunt completate" : "Câmpuri opționale";
+}
 
 /** Navigation is presentation state. Schema and missing facts remain server-owned. */
 export function ConfigurationSections({
@@ -63,6 +78,7 @@ export function ConfigurationSections({
   technicalState = "current",
   initialNavigation = null,
   onNavigationChange,
+  footnote = null,
 }: ConfigurationSectionsProps) {
   const compact = useCompactWorkbenchOrder();
   const sections = buildWorkbenchSections(preview);
@@ -71,19 +87,10 @@ export function ConfigurationSections({
   const active = sections.find((section) => section.id === selected) ?? sections[0];
   const [compositionSelected, setCompositionSelected] = useState(initial.composition);
   const panelId = useId();
-  const focusField = useRef<string | null>(null);
+  const focusField = useRef<{ id: string; scroll: boolean } | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
-  const selectedIndex = compositionSelected ? sections.length : sections.indexOf(active);
-  const activeLayerStatus = compositionSelected
-    ? ("readonly" as const)
-    : active
-      ? workbenchLayerStatus(active, preview.missing, drafts)
-      : ("configurable" as const);
-  const activeLayerTitle = compositionSelected ? "Compoziție" : (active?.title ?? preview.product.label);
-  const availableMissing = preview.missing.flatMap((fact) => {
-    const section = sections.find((item) => item.fields.some((field) => field.id === fact.fieldId));
-    return section && fact.fieldId ? [{ ...fact, fieldId: fact.fieldId, sectionId: section.id }] : [];
-  });
+  const activeIndex = compositionSelected ? sections.length : Math.max(0, sections.indexOf(active));
+  const missingEntries = workbenchMissingEntries(sections, preview.missing);
 
   function publishNavigation(next: WorkbenchNavigationState): void {
     onNavigationChange?.(next);
@@ -91,10 +98,17 @@ export function ConfigurationSections({
 
   useLayoutEffect(() => {
     if (focusField.current) {
-      document.getElementById(focusField.current)?.focus({ preventScroll: true });
+      const { id, scroll } = focusField.current;
       focusField.current = null;
+      focusById(id, scroll);
     }
   });
+
+  function focusById(id: string, scroll: boolean): void {
+    const field = document.getElementById(id);
+    field?.focus({ preventScroll: true });
+    if (scroll) field?.scrollIntoView?.({ block: "center" });
+  }
 
   function selectSection(id: string): void {
     setSelected(id);
@@ -107,43 +121,50 @@ export function ConfigurationSections({
     publishNavigation({ sectionId: null, composition: true });
   }
 
-  function openField(fieldId: string): void {
+  function openField(fieldId: string, scroll = false): void {
     const section = sections.find((item) => item.fields.some((field) => field.id === fieldId));
     if (!section) return;
     if (!compositionSelected && active?.id === section.id) {
-      document.getElementById(fieldId)?.focus({ preventScroll: true });
+      focusById(fieldId, scroll);
       return;
     }
-    focusField.current = fieldId;
+    focusField.current = { id: fieldId, scroll };
     selectSection(section.id);
   }
 
-  useImperativeHandle(ref, () => ({ focusField: openField }));
+  useImperativeHandle(ref, () => ({ focusField: (fieldId: string) => openField(fieldId, true) }));
 
-  function selectComponent(componentId: string): void {
-    const section = sections.find((item) => item.componentId === componentId);
-    if (section) {
-      selectSection(section.id);
-    }
+  function step(to: number): void {
+    const next = sections[to];
+    if (next) selectSection(next.id);
+    else selectComposition();
+    editorRef.current?.scrollIntoView?.({ block: "nearest" });
   }
 
-  const construction = (
-    <ConfigurationConstructionCanvas
-      preview={preview}
-      sections={sections}
-      activeSection={active}
-      compositionSelected={compositionSelected}
-      drafts={drafts}
-      onSelectComponent={selectComponent}
-      technicalState={technicalState}
-    />
+  function stepLabel(index: number): string {
+    const target = sections[index];
+    return target ? `${workbenchSectionNumber(index)} ${target.title}` : "Compoziție";
+  }
+
+  const partNavigation = (
+    <div className="configuration-editor__steps" aria-label="Navigare între părți" role="group">
+      {activeIndex > 0 ? (
+        <button type="button" onClick={() => step(activeIndex - 1)}>← {stepLabel(activeIndex - 1)}</button>
+      ) : null}
+      {!compositionSelected ? (
+        <button type="button" onClick={() => step(activeIndex + 1)}>{stepLabel(activeIndex + 1)} →</button>
+      ) : null}
+    </div>
   );
 
   return (
     <div className="configuration-sections" data-layout={compact ? "compact" : "desktop"}>
-      <div className="configuration-section-selector" data-testid="configuration-section-selector">
-        <div className="configuration-section-selector__control">
-          <label htmlFor={`${panelId}-selector`}>Strat de construcție</label>
+      {compact ? (
+        <div className="configuration-section-selector" data-testid="configuration-section-selector">
+          <span className="configuration-section-selector__position" aria-hidden="true">
+            {compositionSelected ? "Compoziție" : `Partea ${activeIndex + 1} din ${sections.length}`}
+          </span>
+          <label className="u-visually-hidden" htmlFor={`${panelId}-selector`}>Partea produsului</label>
           <select
             id={`${panelId}-selector`}
             value={compositionSelected ? "composition" : active?.id ?? ""}
@@ -152,210 +173,177 @@ export function ConfigurationSections({
               else selectSection(event.target.value);
             }}
           >
-            {sections.map((section) => (
-              <option key={section.id} value={section.id}>
-                {section.title}
-              </option>
-            ))}
-            <option value="composition">Compoziție</option>
+            {sections.map((section, index) => {
+              const status = workbenchLayerStatus(section, preview.missing, drafts);
+              const summary = workbenchSectionSummary(status, workbenchSectionMissing(section, preview.missing).length);
+              return (
+                <option key={section.id} value={section.id}>
+                  {`${workbenchSectionNumber(index)} · ${section.title} · ${summary}`}
+                </option>
+              );
+            })}
+            <option value="composition">Compoziție · Doar consultare</option>
           </select>
         </div>
-        <div
-          className={`configuration-section-selector__active${
-            activeLayerStatus === "readonly" ? " configuration-section-selector__active--readonly" : ""
-          }`}
-          aria-live="polite"
-        >
-          <span className="configuration-section-selector__active-label">Strat selectat</span>
-          <strong>{activeLayerTitle}</strong>
-          <span className="configuration-section-selector__active-status">
-            {workbenchLayerStatusLabel(activeLayerStatus)}
-          </span>
-        </div>
-      </div>
-      {compact ? null : (
-      <nav className="configuration-outline" aria-label="Ierarhie construcție">
-        <div className="configuration-outline__heading">
-          <span className="section-label">Ierarhie construcție</span>
-          <p>Selectează stratul pe care îl editezi. Proprietățile apar în inspector.</p>
-        </div>
+      ) : (
+        <nav className="configuration-outline" aria-label="Structura produsului">
+          <span className="section-label configuration-outline__heading">Structura produsului</span>
+          <ol className="configuration-outline__parts">
+            {sections.map((section, index) => {
+              const status = workbenchLayerStatus(section, preview.missing, drafts);
+              const missingCount = workbenchSectionMissing(section, preview.missing).length;
+              const statusId = `${panelId}-status-${index}`;
+              return (
+                <li key={section.id}>
+                  <button
+                    type="button"
+                    className="configuration-layer"
+                    data-status={status}
+                    aria-label={section.title}
+                    aria-describedby={statusId}
+                    aria-pressed={!compositionSelected && active?.id === section.id}
+                    aria-controls={`${panelId}-${index}`}
+                    onClick={() => selectSection(section.id)}
+                  >
+                    <span className="configuration-layer__number" aria-hidden="true">
+                      {workbenchSectionNumber(index)}
+                    </span>
+                    <span className="configuration-layer__content">
+                      <strong>{section.title}</strong>
+                      <span id={statusId} className="configuration-layer__status">
+                        {workbenchSectionSummary(status, missingCount)}
+                      </span>
+                    </span>
+                    {status === "complete" ? <span className="configuration-layer__check" aria-hidden="true">✓</span> : null}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+          <button
+            type="button"
+            className="configuration-layer configuration-layer--composition"
+            data-status="readonly"
+            aria-pressed={compositionSelected}
+            aria-controls={`${panelId}-composition`}
+            onClick={selectComposition}
+          >
+            <span className="configuration-layer__content">
+              <strong>Compoziție</strong>
+              <span className="configuration-layer__status">Doar consultare</span>
+            </span>
+          </button>
+        </nav>
+      )}
+      <div className="configuration-inspector" ref={editorRef}>
         {sections.map((section, index) => {
-          const missing = preview.missing.filter((fact) =>
-            section.fields.some((field) => field.id === fact.fieldId),
-          );
-          const status = workbenchLayerStatus(section, preview.missing, drafts);
+          const missingCount = workbenchSectionMissing(section, preview.missing).length;
           return (
-            <button
+            <section
               key={section.id}
-              type="button"
-              className={`configuration-layer${
-                status === "readonly" ? " configuration-layer--readonly" : ""
-              }`}
-              aria-label={section.title}
-              aria-pressed={!compositionSelected && active?.id === section.id}
-              aria-controls={`${panelId}-${index}`}
-              onClick={() => selectSection(section.id)}
+              id={`${panelId}-${index}`}
+              aria-label={`Inspector: ${section.title}`}
+              hidden={compositionSelected || active?.id !== section.id}
             >
-              <span className="configuration-layer__number" aria-hidden="true">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <span className="configuration-layer__content">
-                <strong>{section.title}</strong>
-                <span className="configuration-layer__status">{workbenchLayerStatusLabel(status)}</span>
-                <span className="configuration-layer__values">
-                  {section.fields.length > 0
-                    ? section.fields
-                        .map((field) => fieldDisplayValue(field, drafts))
-                        .filter((value) => value !== "—")
-                        .slice(0, 3)
-                        .join(" · ") || "Valori de completat"
-                    : section.facts.map((fact) => fact.value).join(" · ") || "Componentă inclusă"}
-                </span>
-                {missing.length > 0 ? (
-                  <span className="configuration-layer__missing">
-                    De completat: {missing.map((fact) => fact.label).join(", ")}
-                  </span>
+              <div className="configuration-inspector__heading">
+                <div className="configuration-inspector__title">
+                  <div className="configuration-inspector__heading-row">
+                    <h3><span aria-hidden="true">{workbenchSectionNumber(index)} · </span>{section.title}</h3>
+                    {section.fields.length === 0 ? (
+                      <StatusBadge label={workbenchLayerStatusLabel("readonly")} tone="pending" />
+                    ) : null}
+                  </div>
+                  <p>{editorSummary(section, missingCount)}</p>
+                </div>
+                {partNavigation}
+              </div>
+              <div className="configuration-inspector__body">
+                <div className="configuration-inspector__fields">
+                  {section.fields.length === 0 ? (
+                    <div className="configuration-readonly">
+                      {section.facts.length > 0 ? (
+                        <dl>
+                          {section.facts.map((fact) => (
+                            <InfoRow key={fact.id} label={fact.label} value={fact.value} />
+                          ))}
+                        </dl>
+                      ) : null}
+                      <p>
+                        Proprietățile acestei părți provin din catalogul produsului și din faptele tehnice
+                        calculate pentru părțile configurate. Schema acestei lucrări nu permite modificarea
+                        independentă a componentei.
+                      </p>
+                      <a
+                        className="text-link"
+                        href={`/catalog?product=${encodeURIComponent(preview.product.code)}`}
+                      >
+                        Vezi definiția produsului
+                      </a>
+                    </div>
+                  ) : null}
+                  {section.fields.map((field) =>
+                    field.type === "select" ? (
+                      <SelectField
+                        key={field.id}
+                        id={field.id}
+                        label={field.label}
+                        value={drafts[field.id] ?? ""}
+                        hint={field.hint}
+                        error={workbenchFieldError(field, preview.missing, drafts[field.id], technicalState === "current")}
+                        options={field.options}
+                        onChange={(value) => onChange(field.id, value)}
+                      />
+                    ) : (
+                      <TextField
+                        key={field.id}
+                        id={field.id}
+                        label={field.label}
+                        value={drafts[field.id] ?? ""}
+                        hint={field.hint}
+                        error={workbenchFieldError(field, preview.missing, drafts[field.id], technicalState === "current")}
+                        inputMode={field.type === "number" ? "decimal" : "text"}
+                        onChange={(value) => onChange(field.id, value)}
+                      />
+                    ),
+                  )}
+                </div>
+                {section.fields.length > 0 &&
+                (section.componentId ? section.facts : preview.product.identityFacts).length > 0 ? (
+                  <aside
+                    className="configuration-definition"
+                    aria-label={`Definiție în context: ${section.title}`}
+                  >
+                    <span className="section-label">Din definiția produsului</span>
+                    <dl>
+                      {(section.componentId ? section.facts : preview.product.identityFacts).map((fact) => (
+                        <InfoRow key={fact.id} label={fact.label} value={fact.value} />
+                      ))}
+                    </dl>
+                  </aside>
                 ) : null}
-              </span>
-            </button>
+              </div>
+              {!compositionSelected
+                ? preview.componentDetails
+                    ?.filter((detail) => detail.componentId === section.componentId)
+                    .map((detail) => (
+                      <ConfigurationTechnicalDetails
+                        key={detail.componentId}
+                        details={detail}
+                        state={technicalState}
+                        onEditField={openField}
+                      />
+                    ))
+                : null}
+            </section>
           );
         })}
-        <button
-          type="button"
-          className="configuration-layer configuration-layer--composition"
-          aria-pressed={compositionSelected}
-          aria-controls={`${panelId}-composition`}
-          onClick={selectComposition}
-        >
-          <span className="configuration-layer__content">
-            <strong>Compoziție</strong>
-            <span className="configuration-layer__status">Doar consultare</span>
-            <span>
-              {preview.selectedComponents.map((component) => component.label).join(" · ") ||
-                "Proprietățile produsului"}
-            </span>
-          </span>
-        </button>
-      </nav>
-      )}
-      {compact ? null : construction}
-      <div className="configuration-inspector" ref={editorRef}>
-        {sections.map((section, index) => (
-          <section
-            key={section.id}
-            id={`${panelId}-${index}`}
-            aria-label={`Inspector: ${section.title}`}
-            hidden={compositionSelected || active?.id !== section.id}
-          >
-            <div
-              className={`configuration-inspector__heading${
-                section.fields.length === 0 ? " configuration-inspector__heading--readonly" : ""
-              }`}
-            >
-              <span className="section-label">
-                {section.fields.length > 0 ? "Proprietăți editabile" : "Informații din catalog"}
-              </span>
-              <div className="configuration-inspector__heading-row">
-                <h3>{section.title}</h3>
-                {section.fields.length === 0 ? (
-                  <StatusBadge label={workbenchLayerStatusLabel("readonly")} tone="pending" />
-                ) : null}
-              </div>
-              <p>
-                {section.fields.length > 0
-                  ? "Modificările se trimit la server pentru verificare și calcul."
-                  : "Strat consultabil: proprietățile provin din catalogul produsului și din faptele tehnice calculate pentru straturile configurate. Nu editezi aici componente independente de spate sau electrice."}
-              </p>
-            </div>
-            <div
-              className={`configuration-inspector__body${
-                section.fields.length === 0 ? " configuration-inspector__body--readonly" : ""
-              }`}
-            >
-              <div className="configuration-inspector__fields">
-                {section.fields.length === 0 ? (
-                  <div className="configuration-readonly">
-                    {section.facts.length > 0 ? (
-                      <dl>
-                        {section.facts.map((fact) => (
-                          <InfoRow key={fact.id} label={fact.label} value={fact.value} />
-                        ))}
-                      </dl>
-                    ) : null}
-                    <p>
-                      Informațiile afișate sunt complete pentru consultare. Lipsa câmpurilor editabile nu
-                      indică un strat incomplet — schema acestei lucrări nu permite modificarea independentă
-                      a componentei.
-                    </p>
-                    <a
-                      className="text-link"
-                      href={`/catalog?product=${encodeURIComponent(preview.product.code)}`}
-                    >
-                      Vezi definiția produsului
-                    </a>
-                  </div>
-                ) : null}
-                {section.fields.map((field) =>
-                  field.type === "select" ? (
-                    <SelectField
-                      key={field.id}
-                      id={field.id}
-                      label={field.label}
-                      value={drafts[field.id] ?? ""}
-                      hint={field.hint}
-                      error={preview.missing.find((fact) => fact.fieldId === field.id)?.label}
-                      options={field.options}
-                      onChange={(value) => onChange(field.id, value)}
-                    />
-                  ) : (
-                    <TextField
-                      key={field.id}
-                      id={field.id}
-                      label={field.label}
-                      value={drafts[field.id] ?? ""}
-                      hint={field.hint}
-                      error={preview.missing.find((fact) => fact.fieldId === field.id)?.label}
-                      inputMode={field.type === "number" ? "decimal" : "text"}
-                      onChange={(value) => onChange(field.id, value)}
-                    />
-                  ),
-                )}
-              </div>
-              {section.fields.length > 0 &&
-              (section.componentId ? section.facts : preview.product.identityFacts).length > 0 ? (
-                <aside
-                  className="configuration-definition"
-                  aria-label={`Definiție în context: ${section.title}`}
-                >
-                  <span className="section-label">Din definiția produsului</span>
-                  <dl>
-                    {(section.componentId ? section.facts : preview.product.identityFacts).map((fact) => (
-                      <InfoRow key={fact.id} label={fact.label} value={fact.value} />
-                    ))}
-                  </dl>
-                  <p>Proprietăți fixe ale produsului ales.</p>
-                </aside>
-              ) : null}
-            </div>
-            {!compositionSelected
-              ? preview.componentDetails
-                  ?.filter((detail) => detail.componentId === section.componentId)
-                  .map((detail) => (
-                    <ConfigurationTechnicalDetails
-                      key={detail.componentId}
-                      details={detail}
-                      state={technicalState}
-                      onEditField={openField}
-                    />
-                  ))
-              : null}
-          </section>
-        ))}
         <section id={`${panelId}-composition`} aria-label="Compoziția produsului" hidden={!compositionSelected}>
           <div className="configuration-inspector__heading">
-            <span className="section-label">Definiția produsului</span>
-            <h3>Compoziție</h3>
-            <p>Proprietățile fixe se consultă aici. Configurația acestei lucrări folosește definiția din catalog.</p>
+            <div className="configuration-inspector__title">
+              <h3>Compoziție</h3>
+              <p>Doar consultare · configurația acestei lucrări folosește definiția din catalog.</p>
+            </div>
+            {partNavigation}
           </div>
           {preview.product.identityFacts.length > 0 ? (
             <dl>
@@ -377,58 +365,15 @@ export function ConfigurationSections({
             </div>
           ) : null}
         </section>
-        {availableMissing.length > 0 ? (
-          <div className="configuration-missing" aria-label="Câmpuri de completat">
-            <span className="section-label">De completat</span>
-            {availableMissing.map((fact) => (
-              <button
-                key={fact.fieldId}
-                type="button"
-                onClick={() => {
-                  if (!compositionSelected && active?.id === fact.sectionId) {
-                    document.getElementById(fact.fieldId)?.focus();
-                  } else {
-                    focusField.current = fact.fieldId;
-                    selectSection(fact.sectionId);
-                  }
-                }}
-              >
-                Completează: {fact.label}
-              </button>
-            ))}
-          </div>
-        ) : null}
-        {sections.length > 0 ? (
-          <div className="configuration-inspector__navigation" aria-label="Navigare între secțiuni">
-            <button
-              type="button"
-              disabled={selectedIndex <= 0}
-              onClick={() => {
-                selectSection(sections[selectedIndex - 1].id);
-                editorRef.current?.scrollIntoView?.({ block: "nearest" });
-              }}
-            >
-              ← Înapoi
-            </button>
-            <span>
-              {selectedIndex + 1} / {sections.length + 1}
-            </span>
-            <button
-              type="button"
-              disabled={compositionSelected}
-              onClick={() => {
-                const next = sections[selectedIndex + 1];
-                if (next) selectSection(next.id);
-                else selectComposition();
-                editorRef.current?.scrollIntoView?.({ block: "nearest" });
-              }}
-            >
-              {selectedIndex === sections.length - 1 ? "Vezi compoziția →" : "Următorul strat →"}
-            </button>
-          </div>
-        ) : null}
+        {footnote ? <div className="configuration-inspector__footnote">{footnote}</div> : null}
       </div>
-      {compact ? construction : null}
+      <ConfigurationVerificationPanel
+        entries={missingEntries}
+        readiness={preview.readiness}
+        technicalState={technicalState}
+        compact={compact}
+        onOpen={(entry) => openField(entry.fieldId, true)}
+      />
     </div>
   );
 }

@@ -4,8 +4,6 @@ import type {
   PresentedFormSection,
   PreviewTransport,
 } from "../api/types";
-import type { TechnicalDetailsState } from "../components/ConfigurationTechnicalDetails";
-
 export type WorkbenchLayerStatus =
   | "configurable"
   | "complete"
@@ -93,48 +91,101 @@ export function fieldDisplayValue(
   return field.options.find((option) => option.value === value)?.label ?? value;
 }
 
-export function measuredFactsForCanvas(input: {
-  preview: PreviewTransport;
-  activeComponentId?: string;
-  drafts: Record<string, string>;
-  activeSection?: WorkbenchSection;
-  technicalState?: TechnicalDetailsState;
-}): Array<{ label: string; value: string; kind: "draft" | "calculated" | "catalog" }> {
-  const technicalCurrent = (input.technicalState ?? "current") === "current";
-  const facts: Array<{ label: string; value: string; kind: "draft" | "calculated" | "catalog" }> =
-    [];
-  if (input.activeSection) {
-    for (const field of input.activeSection.fields) {
-      const display = fieldDisplayValue(field, input.drafts);
-      if (display !== "—") {
-        facts.push({ label: field.label, value: display, kind: "draft" });
-      }
+export function workbenchSectionNumber(index: number): string {
+  return String(index + 1).padStart(2, "0");
+}
+
+export function workbenchSectionMissing(
+  section: WorkbenchSection,
+  missing: readonly MissingFact[],
+): MissingFact[] {
+  return missing.filter((fact) => section.fields.some((field) => field.id === fact.fieldId));
+}
+
+/**
+ * Inline error under a field, from the server's last list of missing facts.
+ * Hidden while the server has not answered for the current values.
+ */
+export function workbenchFieldError(
+  field: { id: string; label: string },
+  missing: readonly MissingFact[],
+  draft: string | undefined,
+  current: boolean,
+): string | undefined {
+  if (!current) return undefined;
+  const fact = missing.find((item) => item.fieldId === field.id);
+  if (!fact) return undefined;
+  const reason = draft?.trim()
+    ? "Valoare neacceptată. Serverul nu o poate folosi la verificare."
+    : "Obligatoriu. Serverul nu poate verifica fără această informație.";
+  return fact.label.trim() === field.label.trim() ? reason : `${reason} ${fact.label}`;
+}
+
+/** One short line under a part: what the server last reported for it. */
+export function workbenchSectionSummary(status: WorkbenchLayerStatus, missingCount: number): string {
+  switch (status) {
+    case "attention":
+      return missingCount > 0 ? `${missingCount} lipsă` : workbenchLayerStatusLabel(status);
+    case "complete":
+    case "configurable":
+    case "readonly":
+      return workbenchLayerStatusLabel(status);
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
     }
   }
-  const details = input.preview.componentDetails?.filter(
-    (detail) => detail.componentId === input.activeComponentId,
-  );
-  if (technicalCurrent) {
-    for (const detail of details ?? []) {
-      for (const fact of detail.facts) {
-        if (fact.kind === "MEASURED" || fact.kind === "CALCULATED") {
-          facts.push({
-            label: fact.label,
-            value: fact.value,
-            kind: fact.kind === "MEASURED" ? "draft" : "calculated",
-          });
-        }
-      }
-    }
+}
+
+/** Parts that need no more input: complete editable parts and consult-only parts. */
+export function workbenchCompletion(
+  sections: readonly WorkbenchSection[],
+  missing: readonly MissingFact[],
+  drafts: Record<string, string>,
+): { settled: number; total: number } {
+  const settled = sections.filter((section) => {
+    const status = workbenchLayerStatus(section, missing, drafts);
+    return status === "complete" || status === "readonly";
+  }).length;
+  return { settled, total: sections.length };
+}
+
+export type WorkbenchMissingEntry = MissingFact & {
+  fieldId: string;
+  sectionId: string;
+  sectionNumber: string;
+  sectionTitle: string;
+};
+
+/** Server-reported missing facts that the operator can open in a part of this schema. */
+export function workbenchMissingEntries(
+  sections: readonly WorkbenchSection[],
+  missing: readonly MissingFact[],
+): WorkbenchMissingEntry[] {
+  return missing.flatMap((fact) => {
+    const index = sections.findIndex((section) => section.fields.some((field) => field.id === fact.fieldId));
+    const section = sections[index];
+    return section && fact.fieldId
+      ? [{
+          ...fact,
+          fieldId: fact.fieldId,
+          sectionId: section.id,
+          sectionNumber: workbenchSectionNumber(index),
+          sectionTitle: section.title,
+        }]
+      : [];
+  });
+}
+
+/** "02 Față · 2" per part that still has missing facts, in schema order. */
+export function workbenchMissingByPart(entries: readonly WorkbenchMissingEntry[]): string[] {
+  const parts: { key: string; label: string; count: number }[] = [];
+  for (const entry of entries) {
+    const existing = parts.find((part) => part.key === entry.sectionId);
+    if (existing) existing.count += 1;
+    else parts.push({ key: entry.sectionId, label: `${entry.sectionNumber} ${entry.sectionTitle}`, count: 1 });
   }
-  if (facts.length === 0 && input.activeComponentId) {
-    for (const fact of input.preview.product.identityFacts) {
-      if (fact.componentId === input.activeComponentId) {
-        facts.push({ label: fact.label, value: fact.value, kind: "catalog" });
-      }
-    }
-  }
-  return facts.slice(0, 8);
+  return parts.map((part) => `${part.label} · ${part.count}`);
 }
 
 export function resolveInitialWorkbenchNavigation(
