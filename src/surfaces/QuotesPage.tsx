@@ -8,6 +8,7 @@ import { globalNavItems } from "../layout/globalNav";
 import { PageRegion } from "../layout/PageRegion";
 import { parseQuotesSelection, quotesHref, type QuotesSheet } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
+import { presentQuoteBranchPositions, presentQuoteRequestGroups } from "../presentation/quoteBranchPositions";
 import { DossierDialog, QuoteDossier, type DossierEmpty } from "./quotes/QuoteDossier";
 import {
   EMPTY_FILTERS,
@@ -46,6 +47,9 @@ export function QuotesPage({ search = "" }: { search?: string }) {
   const openerRef = useRef<string | null>(null);
   const previousSelection = useRef(selection.quoteId);
 
+  const [grouped, setGrouped] = useState(false);
+  const positions = useMemo(() => presentQuoteBranchPositions(items), [items]);
+  const groups = useMemo(() => presentQuoteRequestGroups(items), [items]);
   const visible = useMemo(() => filterQuotes(items, filters), [items, filters]);
   const tiles = useMemo(() => presentSignalTiles(items, filters), [items, filters]);
   const view = collectionViewState(quotes.status, items.length, visible.length);
@@ -138,6 +142,7 @@ export function QuotesPage({ search = "" }: { search?: string }) {
     <QuoteDossier
       layout={layout}
       item={selected}
+      branch={selected ? (positions.get(selected.quoteSnapshotId) ?? null) : null}
       empty={empty}
       sheet={selection.sheet}
       position={{ index, count: visible.length }}
@@ -170,6 +175,10 @@ export function QuotesPage({ search = "" }: { search?: string }) {
             filters={filters}
             showKind={showsKindFilter(items)}
             selectedId={selection.quoteId}
+            positions={positions}
+            groups={groups}
+            grouped={grouped}
+            onGrouped={setGrouped}
             searchRef={searchRef}
             onFilters={changeFilters}
             onReset={resetFilters}

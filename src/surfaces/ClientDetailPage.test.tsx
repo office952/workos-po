@@ -418,7 +418,8 @@ describe("ClientDetailPage", () => {
     expect(within(old).getByText("Înlocuită de o versiune mai nouă")).toBeInTheDocument();
     expect(within(old).getByText("Nu e oferta curentă")).toBeInTheDocument();
     // An order whose job is not in the list keeps the server's way in.
-    expect(screen.getByRole("link", { name: /Deschide comanda/ })).toHaveAttribute("href", "/lucrari/asmo%3A1");
+    expect(screen.getByRole("link", { name: /Fișa lucrării/ })).toHaveAttribute("href", "/lucrari/asmo%3A1");
+    expect(document.body.textContent).not.toContain("Deschide comanda");
     expect(table.querySelectorAll('a[href^="/quotes/SIGN_ASSEMBLY"]')).toHaveLength(0);
   });
 

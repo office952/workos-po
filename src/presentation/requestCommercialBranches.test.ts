@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { JobListItemTransport, RequestAssemblyWorkTransport, RequestLinkedOfferTransport } from "../api/types";
 import type { ConfiguratorSession } from "../session/configuratorSession";
 import {
+  branchFilterParam,
+  branchForQuote,
   filterBranches,
-  preferredBranchKey,
+  parseBranchFilter,
   presentCommercialBranches,
 } from "./requestCommercialBranches";
 
@@ -12,6 +14,7 @@ function offer(partial: Partial<RequestLinkedOfferTransport> & Pick<RequestLinke
     kind: "PRODUCT",
     kindLabel: "Produs",
     productLabel: "Litere",
+    inscription: null,
     reference: partial.quoteSnapshotId,
     stageLabel: "Creată",
     superseded: false,
@@ -297,10 +300,95 @@ describe("request commercial branches", () => {
     const model = presentCommercialBranches({ offers, assemblies: [], jobs: [], ...ready });
     expect(model.branches).toHaveLength(8);
     expect(model.branches.map((branch) => branch.indexLabel)).toEqual(["01", "02", "03", "04", "05", "06", "07", "08"]);
-    expect(preferredBranchKey(model.branches, "quote:q-7")).toBe("quote:q-7");
-    const filtered = filterBranches(model.branches, "attention");
+    expect(branchForQuote(model.branches, "q-7")?.key).toBe("quote:q-7");
+    expect(branchForQuote(model.branches, "missing")).toBeNull();
+    const filtered = filterBranches(model.branches, "action");
     expect(filtered.map((branch) => branch.indexLabel)).toEqual(["03", "07"]);
     expect(filtered.map((branch) => branch.key)).toEqual(["quote:q-3", "quote:q-7"]);
+  });
+
+  it("round-trips the filter through the address", () => {
+    expect(parseBranchFilter(null)).toBe("all");
+    expect(parseBranchFilter("actiune")).toBe("action");
+    expect(parseBranchFilter("atentie")).toBe("action");
+    expect(parseBranchFilter("comanda")).toBe("ordered");
+    expect(parseBranchFilter("altceva")).toBe("all");
+    expect(branchFilterParam("all")).toBeNull();
+    expect(parseBranchFilter(branchFilterParam("action"))).toBe("action");
+    expect(parseBranchFilter(branchFilterParam("ordered"))).toBe("ordered");
+  });
+
+  it("names each branch by its server inscription and keeps the product under it (D03)", () => {
+    const offers = ["SFC-L01", "SFC-L02", "SFC-A01"].map((inscription, index) =>
+      offer({
+        quoteSnapshotId: `q-${index + 1}`,
+        productCode: index < 2 ? "LETTERS" : "ACM",
+        productLabel: index < 2 ? "Litere volumetrice" : "Casetă ACM",
+        inscription,
+        reference: `OF-${index + 1}`,
+        createdAt: `2026-10-0${index + 1}T00:00:00.000Z`,
+      }),
+    );
+    const model = presentCommercialBranches({ offers, assemblies: [], jobs: [], ...ready });
+    expect(model.branches.map((branch) => branch.title)).toEqual(["SFC-L01", "SFC-L02", "SFC-A01"]);
+    expect(model.branches.map((branch) => branch.subtitle)).toEqual(["Litere volumetrice", "Litere volumetrice", "Casetă ACM"]);
+    expect(model.branches.map((branch) => branch.offerReference)).toEqual(["OF-1", "OF-2", "OF-3"]);
+  });
+
+  it("falls back to the product honestly when the server has no inscription", () => {
+    const model = presentCommercialBranches({
+      offers: [offer({ quoteSnapshotId: "q-1", productCode: "P", productLabel: "Litere volumetrice", inscription: null, reference: "OF-1" })],
+      assemblies: [],
+      jobs: [],
+      ...ready,
+    });
+    expect(model.branches[0]?.title).toBe("Litere volumetrice");
+    expect(model.branches[0]?.subtitle).toBeNull();
+  });
+
+  it("keeps each offer's own commercial state; one ordered branch does not complete the others (D07)", () => {
+    const model = presentCommercialBranches({
+      offers: [
+        offer({ quoteSnapshotId: "q-1", productCode: "P", stage: "ORDER_CREATED", stageLabel: "Cu comandă", orderSnapshotId: "order-1", createdAt: "2026-10-01T00:00:00.000Z" }),
+        offer({ quoteSnapshotId: "q-2", productCode: "P", stage: "QUOTE_ACCEPTED", stageLabel: "Acceptată", needsAttention: true, attentionLabel: "Urmează comanda", createdAt: "2026-10-02T00:00:00.000Z" }),
+        offer({ quoteSnapshotId: "q-3", productCode: "P", stage: "QUOTE_CREATED", stageLabel: "Creată", needsAttention: true, attentionLabel: "Urmează acceptarea", createdAt: "2026-10-03T00:00:00.000Z" }),
+      ],
+      assemblies: [],
+      jobs: [job({ jobId: "job-1", orderSnapshotId: "order-1", stage: "ORDER_CREATED", stageLabel: "Netrimisă în producție" })],
+      ...ready,
+    });
+    expect(model.branches.map((branch) => branch.state)).toEqual(["ordered", "accepted", "quoted"]);
+    expect(model.branches.map((branch) => branch.stateLabel)).toEqual(["Cu comandă", "Urmează comanda", "Urmează acceptarea"]);
+    expect(model.branches.map((branch) => branch.needsAction)).toEqual([false, true, true]);
+    expect(filterBranches(model.branches, "ordered").map((branch) => branch.key)).toEqual(["quote:q-1"]);
+  });
+
+  it("names the job destination truthfully (D08)", () => {
+    const model = presentCommercialBranches({
+      offers: [offer({ quoteSnapshotId: "q-1", productCode: "P", stage: "ORDER_CREATED", orderSnapshotId: "order-1" })],
+      assemblies: [],
+      jobs: [job({ jobId: "job-1", orderSnapshotId: "order-1", stage: "ORDER_CREATED", stageLabel: "Netrimisă în producție" })],
+      ...ready,
+    });
+    const branch = model.branches[0]!;
+    expect(branch.primaryAction?.label).toBe("Deschide fișa lucrării");
+    expect(branch.primaryAction?.href).toBe("/lucrari/order-1");
+    expect(branch.jobCell).toEqual({ label: "Fișa lucrării", href: "/lucrari/order-1", tone: expect.any(String) });
+    expect(branch.chain.map((step) => step.name)).toEqual(["Ofertă acceptată", "Comandă", "Fișa lucrării"]);
+    expect(branch.chain[2]?.value).toBe("Netrimisă în producție");
+    expect(JSON.stringify(branch)).not.toContain("Deschide comanda");
+  });
+
+  it("keeps the job link usable but says plainly when the job list could not be read", () => {
+    const model = presentCommercialBranches({
+      offers: [offer({ quoteSnapshotId: "q-1", productCode: "P", stage: "ORDER_CREATED", orderSnapshotId: "order-1" })],
+      assemblies: [],
+      jobs: [],
+      jobsStatus: "error",
+    });
+    expect(model.branches[0]?.jobCell.label).toBe("Necitită");
+    expect(model.branches[0]?.chain[2]?.value).toBe("Fișa lucrării nu a putut fi citită");
+    expect(model.branches[0]?.primaryAction?.href).toBe("/lucrari/order-1");
   });
 
   it("recovers a local draft stored for the same request without turning it into a branch", () => {

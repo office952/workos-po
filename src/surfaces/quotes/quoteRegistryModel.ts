@@ -65,6 +65,8 @@ export type SignalTile = {
   label: string;
   count: number;
   tone: "neutral" | "attention";
+  /** What the count is made of, said once beside it. */
+  scope: string | null;
   pressed: boolean;
   apply: (filters: RegistryFilters) => RegistryFilters;
 };
@@ -81,14 +83,16 @@ export function presentSignalTiles(
       label: "Toate",
       count: items.length,
       tone: "neutral",
+      scope: null,
       pressed: !filters.attention && filters.stage === ALL,
       apply: (current) => ({ ...current, attention: false, stage: ALL }),
     },
     {
       id: "attention",
-      label: "Necesită atenție",
+      label: "Necesită acțiune",
       count: items.filter((item) => item.needsAttention).length,
       tone: "attention",
+      scope: "oferte din tot registrul care urmează acceptarea sau comanda",
       pressed: filters.attention,
       apply: (current) => ({ ...current, attention: !current.attention }),
     },
@@ -100,6 +104,7 @@ export function presentSignalTiles(
         label: stage,
         count: items.filter((item) => item.stageLabel === stage).length,
         tone: "neutral",
+        scope: null,
         pressed: filters.stage === stage,
         apply: (current) => ({ ...current, stage: current.stage === stage ? ALL : stage }),
       });
@@ -114,6 +119,18 @@ export function formatCount(value: number): string {
 
 export function kindDetail(item: QuoteListItemTransport): string {
   return item.kind === "ASSEMBLY" ? `${item.kindLabel} · ${item.sectionCount} secțiuni` : item.kindLabel;
+}
+
+/** The inscription names the branch; without one the product stands in, never a code. */
+export function identityOf(item: QuoteListItemTransport): { title: string; subtitle: string | null } {
+  const inscription = item.inscription?.trim();
+  if (inscription) return { title: inscription, subtitle: item.productLabel || null };
+  return { title: item.productLabel || item.kindLabel || "Ofertă", subtitle: null };
+}
+
+/** Commercial state of this one offer: what follows it if anything, otherwise its stage. */
+export function commercialState(item: QuoteListItemTransport): string {
+  return item.attentionLabel?.trim() || item.stageLabel || "—";
 }
 
 export type ListValue = { amount: string; currency: string | null };

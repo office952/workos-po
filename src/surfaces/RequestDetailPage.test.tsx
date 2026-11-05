@@ -55,6 +55,22 @@ function requestDetail(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function RoutedRequest({ requestId = "req-1" }: { requestId?: string }) {
+  const [search, setSearch] = useState(window.location.search);
+  useEffect(() => {
+    const sync = () => setSearch(window.location.search);
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
+  return <RequestDetailPage requestId={requestId} search={search} />;
+}
+
+async function selectBranch(name: RegExp): Promise<HTMLElement> {
+  const list = await screen.findByRole("list", { name: "Ramuri comerciale" });
+  await userEvent.click(within(list).getByRole("button", { name }));
+  return screen.findByTestId("branch-detail");
+}
+
 function stubDetail(detail: unknown, extra?: (url: string, init?: RequestInit) => Response | null) {
   vi.stubGlobal(
     "fetch",
@@ -80,7 +96,7 @@ describe("RequestDetailPage", () => {
     window.history.pushState({}, "", "/cereri/req-1");
     window.history.replaceState({ workosKey: "k", workosIndex: 1, workosFrom: "/clienti/cus-1?sectiune=cereri", workosFromIndex: 0 }, "", "/cereri/req-1");
     const go = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
-    const { unmount } = render(<RequestDetailPage requestId="req-1" />);
+    const { unmount } = render(<RoutedRequest />);
     const back = await screen.findByRole("link", { name: "← Fișa clientului" });
     expect(back).toHaveAttribute("href", "/clienti/cus-1?sectiune=cereri");
     await userEvent.click(back);
@@ -88,25 +104,27 @@ describe("RequestDetailPage", () => {
     unmount();
     go.mockRestore();
     window.history.replaceState({}, "", "/cereri/req-1");
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     expect(await screen.findByRole("link", { name: "← Toate cererile" })).toHaveAttribute("href", "/cereri");
   });
 
   it("keeps request identity in the header and product continuation inside the request", async () => {
     stubDetail(requestDetail());
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     expect(await screen.findByRole("heading", { name: "Litere vitrină" })).toBeInTheDocument();
-    expect(screen.getByText("CRQ-104")).toBeInTheDocument();
+    expect(screen.getByText("Cerere · CRQ-104")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Atelier Nord" })).toHaveAttribute(
       "href",
       "/clienti/cus-1",
     );
-    expect(screen.getByText(/Creată/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Alege produs" })).toHaveAttribute(
+    expect(screen.getByText(/Înregistrată/)).toBeInTheDocument();
+    const next = screen.getByTestId("request-next-step");
+    expect(within(next).getByRole("link", { name: /Alege produs/ })).toHaveAttribute(
       "href",
       "/cereri/req-1?alege-produs=1#alege-produs",
     );
+    expect(screen.getByTestId("request-branches-empty")).toHaveTextContent("Cererea nu are încă oferte");
     expect(screen.getByRole("heading", { name: "Ce dorește clientul" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Continuare" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Cerere", level: 2 })).not.toBeInTheDocument();
@@ -129,7 +147,9 @@ describe("RequestDetailPage", () => {
       return null;
     });
     render(<RequestDetailPage requestId="req-new" />);
-    expect(await screen.findByRole("link", { name: "Alege produs" })).toHaveAttribute("href", "/cereri/req-new?alege-produs=1#alege-produs");
+    for (const link of await screen.findAllByRole("link", { name: /Alege produs/ })) {
+      expect(link).toHaveAttribute("href", "/cereri/req-new?alege-produs=1#alege-produs");
+    }
     expect(screen.queryByText("Nicio acțiune disponibilă")).not.toBeInTheDocument();
     await userEvent.click(await screen.findByRole("button", { name: /Litere test/ }));
     expect(window.location.pathname).toBe("/configurator");
@@ -146,6 +166,8 @@ describe("RequestDetailPage", () => {
         nextAction: "OPEN_QUOTE",
         nextActionLabel: "Deschide oferta",
         commercialProgressLabel: "Ofertă creată",
+        linkedQuoteSnapshotId: "q-1",
+        linkedQuoteProductCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
         linkedOffers: [
           {
             quoteSnapshotId: "q-1",
@@ -156,12 +178,13 @@ describe("RequestDetailPage", () => {
       }),
     );
 
-    render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByRole("link", { name: "Deschide oferta OF-1" })).toHaveAttribute(
+    render(<RoutedRequest />);
+    const next = await screen.findByTestId("request-next-step");
+    expect(within(next).getByRole("link", { name: /Deschide oferta · 01 .* · OF-1/ })).toHaveAttribute(
       "href",
       "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
     );
-    expect(screen.queryByRole("link", { name: "Deschide oferta" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Alege produs/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /catalog/i })).not.toBeInTheDocument();
   });
 
@@ -196,14 +219,19 @@ describe("RequestDetailPage", () => {
       }),
     );
 
-    render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByRole("heading", { name: "Ce se realizează" })).toBeInTheDocument();
-    const assemblyLinks = screen.getAllByRole("link", { name: /ansamblul/i });
-    expect(assemblyLinks.length).toBeGreaterThan(0);
-    for (const link of assemblyLinks) expect(link).toHaveAttribute("href", "/ansamblu?assembly=asm%3A1");
-    expect(screen.getByRole("link", { name: "Deschide oferta comună" })).toHaveAttribute("href", "/oferte/ansamblu/asmq%3A1");
+    render(<RoutedRequest />);
+    const next = await screen.findByTestId("request-next-step");
+    expect(within(next).getByRole("link", { name: /Deschide ansamblul · 01 Panou ACM \+ litere volumetrice/ })).toHaveAttribute(
+      "href",
+      "/ansamblu?assembly=asm%3A1",
+    );
     expect(screen.getByText("766,34 EUR")).toBeInTheDocument();
-    expect(screen.getByTestId("request-commercial-progress")).toHaveTextContent("Ofertă creată");
+    expect(screen.getByTestId("request-furthest-step")).toHaveTextContent("Ofertă creată");
+    const panel = await selectBranch(/Panou ACM/);
+    expect(within(panel).getByRole("link", { name: /Deschide oferta comună/ })).toHaveAttribute("href", "/oferte/ansamblu/asmq%3A1");
+    for (const link of within(panel).getAllByRole("link", { name: /ansamblul/i })) {
+      expect(link).toHaveAttribute("href", "/ansamblu?assembly=asm%3A1");
+    }
     expect(screen.queryByRole("link", { name: "Alege produs" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Alege produsul pentru această cerere" })).not.toBeInTheDocument();
     expect(screen.queryByText("Adaugă altă lucrare la această cerere")).not.toBeInTheDocument();
@@ -232,15 +260,15 @@ describe("RequestDetailPage", () => {
       }),
     );
 
-    render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByText("Eliberat în producție")).toBeInTheDocument();
-    expect(screen.getByTestId("request-administrative-status")).toHaveTextContent("Stare administrativă");
-    expect(screen.getByTestId("request-administrative-status")).toHaveTextContent("Nouă");
+    render(<RoutedRequest />);
+    expect(await screen.findByTestId("request-administrative-status")).toHaveTextContent("Starea cererii: Nouă");
     expect(screen.getByTestId("request-commercial-progress")).toHaveTextContent("Progres comercial");
-    expect(screen.getByTestId("request-commercial-progress")).toHaveTextContent("Comandă creată");
-    expect(screen.getByRole("link", { name: "Deschide comanda" })).toHaveAttribute("href", "/lucrari/asmo%3A1");
-    expect(screen.getByRole("link", { name: "Deschide în Atelier" })).toHaveAttribute("href", expect.stringContaining("plan%3A1"));
-    expect(screen.getByText("Doar consultare (comandă acceptată)")).toBeInTheDocument();
+    expect(screen.getByTestId("request-furthest-step")).toHaveTextContent("Comandă creată");
+    const panel = await selectBranch(/Panou ACM/);
+    expect(within(panel).getByRole("link", { name: /Deschide fișa lucrării/ })).toHaveAttribute("href", "/lucrari/asmo%3A1");
+    expect(within(panel).getByRole("link", { name: "Deschide în Atelier" })).toHaveAttribute("href", expect.stringContaining("plan%3A1"));
+    expect(within(panel).getByText(/doar consultare \(comandă acceptată\)/)).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("Deschide comanda");
     expect(screen.queryByRole("heading", { name: "Alege produsul pentru această cerere" })).not.toBeInTheDocument();
     expect(screen.getByText("Adaugă altă lucrare la această cerere")).toBeInTheDocument();
   });
@@ -306,28 +334,18 @@ describe("RequestDetailPage", () => {
       }),
     );
 
-    render(<RequestDetailPage requestId="req-1" />);
-    expect(await screen.findByRole("heading", { name: "Ce se realizează" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Deschide oferta OF-NOU" })).toHaveAttribute(
+    render(<RoutedRequest />);
+    const list = await screen.findByRole("list", { name: "Ramuri comerciale" });
+    expect(within(list).getAllByRole("button")).toHaveLength(2);
+    const assemblyPanel = await selectBranch(/Panou ACM/);
+    expect(within(assemblyPanel).getByRole("link", { name: /Deschide fișa lucrării/ })).toHaveAttribute("href", "/lucrari/asmo%3A1");
+    expect(within(assemblyPanel).getByRole("link", { name: "Deschide oferta OF-NOU" })).toHaveAttribute(
       "href",
       "/oferte/ansamblu/asmq%3Anew",
     );
-    expect(screen.getByRole("link", { name: "Deschide oferta OF-VECHI" })).toHaveAttribute(
-      "href",
-      "/oferte/ansamblu/asmq%3Aold",
-    );
-    expect(screen.getByText(/Înlocuită de o versiune mai nouă/)).toBeInTheDocument();
-    for (const link of screen.getAllByRole("link", { name: "Deschide comanda" })) {
-      expect(link).toHaveAttribute("href", "/lucrari/asmo%3A1");
-    }
-    expect(screen.getByRole("link", { name: "Deschide oferta comună" })).toHaveAttribute(
-      "href",
-      "/oferte/ansamblu/asmq%3Anew",
-    );
-    const productRow = screen.getAllByRole("listitem").find((item) => item.textContent?.includes("Litere volumetrice"));
-    expect(productRow).toBeTruthy();
-    await userEvent.setup().click(within(productRow as HTMLElement).getByRole("button"));
-    expect(screen.getByRole("link", { name: "Deschide oferta OF-1" })).toHaveAttribute(
+    expect(within(assemblyPanel).getByText(/Ofertă anterioară · OF-VECHI/)).toBeInTheDocument();
+    const productPanel = await selectBranch(/Litere volumetrice/);
+    expect(within(productPanel).getByRole("link", { name: /Deschide oferta OF-1/ })).toHaveAttribute(
       "href",
       "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
     );
@@ -337,10 +355,12 @@ describe("RequestDetailPage", () => {
 
   it("keeps the linked offers panel absent when the request has no quotes", async () => {
     stubDetail(requestDetail({ linkedOffers: [] }));
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     expect(await screen.findByRole("heading", { name: "Litere vitrină" })).toBeInTheDocument();
-    expect(screen.getByText("CRQ-104")).toBeInTheDocument();
+    expect(screen.getByText("Cerere · CRQ-104")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Oferte legate" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Ramuri comerciale" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("request-commercial-progress")).toHaveTextContent("Nicio ofertă încă");
   });
 
   it("does not invent OPEN_QUOTE or CHOOSE_PRODUCT when nextAction is absent", async () => {
@@ -361,13 +381,13 @@ describe("RequestDetailPage", () => {
       }),
     );
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     expect(await screen.findByRole("heading", { name: "Litere vitrină" })).toBeInTheDocument();
-    expect(screen.getByText("CRQ-104")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Deschide oferta" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Alege produs" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Deschide oferta OF-1" })).toBeInTheDocument();
+    expect(within(screen.getByTestId("request-next-step")).queryByRole("link")).toBeNull();
+    expect(screen.queryByRole("link", { name: /Alege produs/ })).not.toBeInTheDocument();
     expect(screen.getByText("Nicio acțiune disponibilă")).toBeInTheDocument();
+    const panel = await selectBranch(/OF-1/);
+    expect(within(panel).getByRole("link", { name: /Deschide oferta OF-1/ })).toBeInTheDocument();
   });
 
   it("works without a nextAction primary CTA", async () => {
@@ -379,11 +399,11 @@ describe("RequestDetailPage", () => {
       }),
     );
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     expect(await screen.findByRole("heading", { name: "Litere vitrină" })).toBeInTheDocument();
-    expect(screen.getByText("CRQ-104")).toBeInTheDocument();
+    expect(screen.getByText("Cerere · CRQ-104")).toBeInTheDocument();
     expect(screen.getByText("Gata de ofertă")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Alege produs" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Alege produs/ })).not.toBeInTheDocument();
     expect(screen.getByText("Nicio acțiune disponibilă")).toBeInTheDocument();
   });
 
@@ -395,7 +415,7 @@ describe("RequestDetailPage", () => {
       }),
     );
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     expect(await screen.findByText("Nu există fișiere atașate.")).toBeInTheDocument();
     expect(screen.getByText("Încărcarea nu este permisă pe această cerere.")).toBeInTheDocument();
     expect(screen.queryByLabelText("Alege fișier")).not.toBeInTheDocument();
@@ -416,7 +436,7 @@ describe("RequestDetailPage", () => {
       }),
     );
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     expect(await screen.findByRole("link", { name: "brief.pdf" })).toHaveAttribute(
       "href",
       "/api/requests/req-1/attachments/att-1/download",
@@ -454,7 +474,7 @@ describe("RequestDetailPage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const file = new File(["x"], "nou.pdf", { type: "application/pdf" });
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     const input = await screen.findByLabelText("Alege fișier");
     await userEvent.setup().upload(input, file);
     expect(screen.getByText("nou.pdf")).toBeInTheDocument();
@@ -470,7 +490,7 @@ describe("RequestDetailPage", () => {
   it("presents Romanian file-picker labels instead of native browser copy", async () => {
     stubDetail(requestDetail({ canUploadAttachments: true, attachments: [] }));
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     expect(await screen.findByLabelText("Alege fișier")).toBeInTheDocument();
     expect(screen.getByText("Niciun fișier selectat")).toBeInTheDocument();
     expect(screen.queryByText(/Choose File/i)).not.toBeInTheDocument();
@@ -515,7 +535,7 @@ describe("RequestDetailPage", () => {
       }),
     );
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     expect(await screen.findByText("Montaj la locație")).toBeInTheDocument();
     expect(screen.getByText("Sediu Nord")).toBeInTheDocument();
     expect(screen.getByText("Datele de montaj nu mai pot fi editate.")).toBeInTheDocument();
@@ -540,7 +560,7 @@ describe("RequestDetailPage", () => {
       }),
     );
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     expect(await screen.findByRole("button", { name: "Salvează datele de montaj" })).toBeEnabled();
     expect(screen.getByLabelText("Stradă")).toBeInTheDocument();
   });
@@ -548,7 +568,7 @@ describe("RequestDetailPage", () => {
   it("does not offer add installation when the service is unconfigured", async () => {
     stubDetail(requestDetail());
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     expect(
       await screen.findByText("Montajul la locație nu este selectat pe această cerere."),
     ).toBeInTheDocument();
@@ -577,7 +597,7 @@ describe("RequestDetailPage", () => {
       }),
     }), selectedDetail);
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     await userEvent.setup().click(await screen.findByRole("button", { name: "Adaugă montaj" }));
     expect(await screen.findByRole("button", { name: "Salvează datele de montaj" })).toBeEnabled();
     expect(readPatchBodies(fetchMock)).toEqual([
@@ -608,7 +628,7 @@ describe("RequestDetailPage", () => {
       }),
     );
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     await userEvent.setup().selectOptions(await screen.findByLabelText("Mod montaj"), "SUBCONTRACTED");
     await userEvent.setup().click(screen.getByRole("button", { name: "Adaugă montaj" }));
     expect((await screen.findAllByText("Subcontractat")).length).toBeGreaterThan(0);
@@ -646,7 +666,7 @@ describe("RequestDetailPage", () => {
       }),
     );
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     await userEvent.setup().selectOptions(await screen.findByLabelText("Mod montaj"), "SUBCONTRACTED");
     expect(readPatchBodies(fetchMock)).toEqual([{ siteInstallationMode: "SUBCONTRACTED" }]);
     expect(screen.queryByRole("option", { name: "Dezactivat" })).not.toBeInTheDocument();
@@ -667,7 +687,7 @@ describe("RequestDetailPage", () => {
       }),
     );
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     expect(await screen.findByText("Echipă internă")).toBeInTheDocument();
     expect(screen.queryByLabelText("Mod montaj")).not.toBeInTheDocument();
   });
@@ -691,7 +711,7 @@ describe("RequestDetailPage", () => {
       }),
     );
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     await userEvent.setup().click(await screen.findByRole("button", { name: "Elimină montaj" }));
     expect(
       await screen.findByText("Montajul la locație nu este selectat pe această cerere."),
@@ -739,7 +759,7 @@ describe("RequestDetailPage", () => {
       }),
     );
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     await userEvent.setup().click(await screen.findByRole("button", { name: "Elimină montaj" }));
     expect(await screen.findByText("Datele de montaj vor fi șterse")).toBeInTheDocument();
     expect(readPatchBodies(fetchMock)).toEqual([]);
@@ -792,7 +812,7 @@ describe("RequestDetailPage", () => {
       }),
     );
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     expect(await screen.findByText("Selecția de montaj nu mai poate fi modificată.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Adaugă montaj" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Elimină montaj" })).not.toBeInTheDocument();
@@ -823,7 +843,7 @@ describe("RequestDetailPage", () => {
       }),
     );
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     expect(await screen.findByText("Montajul păstrat pe cerere rămâne vizibil.")).toBeInTheDocument();
     expect(screen.getAllByText("Montaj la locație").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Adaugă montaj" })).not.toBeInTheDocument();
@@ -837,7 +857,7 @@ describe("RequestDetailPage", () => {
       facadeOtherNote: "Panou compozit existent pe structură metalică",
     }));
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     expect(await screen.findByLabelText("Tip suprafață — detalii")).toHaveValue(
       "Panou compozit existent pe structură metalică",
     );
@@ -868,7 +888,7 @@ describe("RequestDetailPage", () => {
       fixingOtherNote: "Bride speciale existente",
     }));
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     expect(await screen.findByLabelText("Metodă de fixare — detalii")).toHaveValue(
       "Bride speciale existente",
     );
@@ -884,7 +904,7 @@ describe("RequestDetailPage", () => {
     const user = userEvent.setup();
     const fetchMock = stubFactsSave(editableInstallationDetail());
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     await user.selectOptions(await screen.findByLabelText("Fațadă"), "OTHER");
     await user.click(screen.getByRole("button", { name: "Salvează datele de montaj" }));
     expect(screen.getAllByText("Completează detaliile pentru opțiunea „Altul”.").length).toBeGreaterThan(0);
@@ -910,7 +930,7 @@ describe("RequestDetailPage", () => {
       }),
     );
 
-    render(<RequestDetailPage requestId="req-1" />);
+    render(<RoutedRequest />);
     expect(await screen.findByLabelText("Echipă")).toHaveValue("2");
     expect(screen.getByLabelText("Durată planificată (ore)")).toHaveValue("3");
     await user.selectOptions(screen.getByLabelText("Mod montaj"), "SUBCONTRACTED");
@@ -1072,10 +1092,12 @@ describe("N-018 · offer preview over the request", () => {
       serve();
       window.history.replaceState({}, "", "/cereri/req-1");
       render(<Harness />);
-      const opener = await screen.findByRole("button", { name: "Previzualizează oferta OF-1" });
+      const panel = await selectBranch(/OF-1/);
+      const opener = within(panel).getByRole("button", { name: "Previzualizează oferta OF-1" });
       const depth = window.history.length;
       await userEvent.click(opener);
       expect(new URLSearchParams(window.location.search).get("oferta")).toBe("q-1");
+      expect(new URLSearchParams(window.location.search).get("ramura")).toBe("quote:q-1");
       expect(window.history.length).toBe(depth + 1);
       const dossier = await screen.findByRole("complementary", { name: "Dosarul ofertei" });
       expect(await within(dossier).findByText("1 din 2")).toBeInTheDocument();
@@ -1083,7 +1105,7 @@ describe("N-018 · offer preview over the request", () => {
       expect(new URLSearchParams(window.location.search).get("oferta")).toBe("q-2");
       expect(window.history.length).toBe(depth + 1);
       await userEvent.keyboard("{Escape}");
-      await waitFor(() => expect(window.location.search).toBe(""));
+      await waitFor(() => expect(window.location.search).toBe("?ramura=quote%3Aq-1"));
       expect(window.location.pathname).toBe("/cereri/req-1");
       await waitFor(() => expect(screen.queryByRole("complementary", { name: "Dosarul ofertei" })).toBeNull());
       await waitFor(() => expect(screen.getByRole("button", { name: "Previzualizează oferta OF-1" })).toHaveFocus());
@@ -1102,28 +1124,28 @@ describe("N-018 · offer preview over the request", () => {
     });
   });
 describe("N-030 · ramuri comerciale", () => {
-    it("keeps two offers of the same product as two branches and expands only one", async () => {
+    it("keeps two offers of the same product as two branches and selects none until the operator does", async () => {
       stubDetail(requestDetail({ nextAction: "OPEN_QUOTE", nextActionLabel: "Deschide oferta", linkedOffers: [
         { quoteSnapshotId: "q-1", productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06", productLabel: "Litere volumetrice", reference: "OF-1" },
         { quoteSnapshotId: "q-2", productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06", productLabel: "Litere volumetrice", reference: "OF-2" },
       ] }));
-      render(<RequestDetailPage requestId="req-1" />);
+      render(<RoutedRequest />);
       const list = await screen.findByRole("list", { name: "Ramuri comerciale" });
       const rows = [...list.querySelectorAll<HTMLElement>(":scope > li")];
       expect(rows).toHaveLength(2);
-      expect(rows[0]).toHaveAttribute("data-expanded", "true");
-      expect(rows[1]).not.toHaveAttribute("data-expanded");
-      expect(within(rows[0]!).getByRole("link", { name: "Deschide oferta OF-1" })).toHaveAttribute("href", "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1");
+      expect(rows.some((row) => row.hasAttribute("data-selected"))).toBe(false);
+      expect(screen.getByTestId("request-summary")).toHaveTextContent("Nicio ramură selectată");
       expect(screen.getByRole("heading", { name: "Ce dorește clientul" })).toBeInTheDocument();
-      await userEvent.setup().click(within(rows[1]!).getByRole("button"));
-      expect(screen.getByRole("link", { name: "Deschide oferta OF-2" })).toHaveAttribute("href", "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-2");
+      const panel = await selectBranch(/02 .*OF-2/);
+      expect(rows[1]).toHaveAttribute("data-selected", "true");
+      expect(within(panel).getByRole("link", { name: /Deschide oferta OF-2/ })).toHaveAttribute("href", "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-2");
     });
 
     it("keeps the product choice when the server asks for it", async () => {
       stubDetail(requestDetail(), (url) => url.endsWith("/product-catalog")
         ? new Response(JSON.stringify({ tree: [{ kind: "product", code: "PRD-TEST", label: "Litere test" }] }), { status: 200 })
         : url.includes("/assemblies") ? new Response(JSON.stringify({ canCreate: false, offerings: [], assemblies: [] }), { status: 200 }) : null);
-      render(<RequestDetailPage requestId="req-1" />);
+      render(<RoutedRequest />);
       expect(await screen.findByRole("button", { name: /Litere test/ })).toBeInTheDocument();
     });
 
@@ -1136,10 +1158,190 @@ describe("N-030 · ramuri comerciale", () => {
       }), (url) => url.endsWith("/product-catalog")
         ? new Response(JSON.stringify({ tree: [{ kind: "product", code: "PRD-LOGO", label: "Logo" }] }), { status: 200 })
         : url.includes("/assemblies") ? new Response(JSON.stringify({ canCreate: false, offerings: [], assemblies: [] }), { status: 200 }) : null);
-      render(<RequestDetailPage requestId="req-1" />);
+      render(<RoutedRequest />);
       expect(await screen.findByText("Litere volumetrice")).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: "Deschide oferta OF-9" })).toHaveAttribute("href", "/quotes/PRD-LETTERS/q-9");
+      const panel = await selectBranch(/Litere volumetrice/);
+      expect(within(panel).getByRole("link", { name: /Deschide oferta OF-9/ })).toHaveAttribute("href", "/quotes/PRD-LETTERS/q-9");
       expect(screen.getByRole("heading", { name: "Produs separat" })).toBeInTheDocument();
       expect(screen.queryByText(/Nu există încă un produs/)).toBeNull();
     });
   });
+
+describe("W2 · registru comercial compact", () => {
+  const inscriptions = ["SYN-L01", "SYN-L02", "SYN-L03", "SYN-L04", "SYN-A01", "SYN-A02", "SYN-A03", "SYN-A04"];
+  const ordered = new Set([1, 4]);
+  const offers = inscriptions.map((inscription, index) => ({
+    quoteSnapshotId: `q-${index + 1}`,
+    kind: "PRODUCT",
+    kindLabel: "Produs",
+    productCode: index < 4 ? "PRD-SYN-LETTERS" : "PRD-SYN-ACM",
+    productLabel: index < 4 ? "Litere sintetice" : "Casetă sintetică",
+    inscription,
+    reference: `OF-${index + 1}`,
+    createdAt: `2026-10-0${index + 1}T00:00:00.000Z`,
+    stage: ordered.has(index) ? "ORDER_CREATED" : "QUOTE_CREATED",
+    stageLabel: ordered.has(index) ? "Cu comandă" : "Creată",
+    needsAttention: !ordered.has(index),
+    attentionLabel: ordered.has(index) ? null : "Urmează acceptarea",
+    grossDisplay: `${100 + index},00`,
+    currency: "EUR",
+    superseded: false,
+    orderSnapshotId: ordered.has(index) ? `ord-${index + 1}` : null,
+  }));
+  const eightBranches = () => requestDetail({
+    nextAction: "OPEN_QUOTE",
+    nextActionLabel: "Deschide oferta",
+    commercialProgress: "ORDER_CREATED",
+    commercialProgressLabel: "Comandă creată",
+    linkedQuoteSnapshotId: "q-5",
+    linkedQuoteProductCode: "PRD-SYN-ACM",
+    linkedOffers: offers,
+  });
+
+  function Harness() {
+    const [search, setSearch] = useState(window.location.search);
+    useEffect(() => {
+      const sync = () => setSearch(window.location.search);
+      window.addEventListener("popstate", sync);
+      return () => window.removeEventListener("popstate", sync);
+    }, []);
+    return <RequestDetailPage requestId="req-1" search={search} />;
+  }
+
+  function rows(): HTMLElement[] {
+    return [...screen.getByRole("list", { name: "Ramuri comerciale" }).querySelectorAll<HTMLElement>(":scope > li")];
+  }
+
+  function rowButton(index: number): HTMLElement {
+    return within(rows()[index]!).getByRole("button");
+  }
+
+  it("names eight branches by inscription and shows a mixed request as partly ordered (D03 · D07)", async () => {
+    stubDetail(eightBranches());
+    window.history.replaceState({}, "", "/cereri/req-1");
+    render(<Harness />);
+    await screen.findByRole("list", { name: "Ramuri comerciale" });
+    expect(rows()).toHaveLength(8);
+    expect(rows().map((row) => row.querySelector(".ledger__title")?.textContent)).toEqual(inscriptions);
+    expect(rows()[0]).toHaveTextContent("Litere sintetice");
+    expect(rows()[0]).toHaveTextContent("OF-1");
+    expect(screen.getByTestId("request-commercial-progress")).toHaveTextContent("2 din 8 oferte au comandă · 6 urmează acceptarea");
+    expect(screen.getByTestId("request-furthest-step")).toHaveTextContent("Comandă creată · pe 2 ramuri");
+    expect(`${screen.getByTestId("request-progress-band").textContent} ${screen.getByRole("list", { name: "Ramuri comerciale" }).textContent}`).not.toMatch(/câștigat|închis/i);
+    expect(within(rows()[1]!).getByRole("link", { name: /Fișa lucrării/ })).toHaveAttribute("href", "/lucrari/ord-2");
+    expect(rows().filter((row) => row.hasAttribute("data-selected"))).toHaveLength(0);
+  });
+
+  it("keeps the request next step on the server target, whatever branch is selected (D04)", async () => {
+    stubDetail(eightBranches());
+    window.history.replaceState({}, "", "/cereri/req-1");
+    render(<Harness />);
+    const next = await screen.findByTestId("request-next-step");
+    const link = within(next).getByRole("link", { name: /Deschide oferta · 05 SYN-A01 · OF-5/ });
+    expect(link).toHaveAttribute("href", "/quotes/PRD-SYN-ACM/q-5");
+    const panel = await selectBranch(/03 SYN-L03/);
+    expect(within(screen.getByTestId("request-next-step")).getByRole("link")).toHaveAttribute("href", "/quotes/PRD-SYN-ACM/q-5");
+    expect(within(panel).getByRole("link", { name: /Deschide oferta OF-3/ })).toHaveAttribute("href", "/quotes/PRD-SYN-LETTERS/q-3");
+    expect(panel).toHaveTextContent("Celelalte 7 oferte rămân în starea lor");
+    expect(panel).not.toHaveTextContent("Pasul următor");
+  });
+
+  it("gives an ordered branch the job sheet as its own action (D08)", async () => {
+    stubDetail(eightBranches());
+    window.history.replaceState({}, "", "/cereri/req-1");
+    render(<Harness />);
+    const panel = await selectBranch(/02 SYN-L02/);
+    expect(within(panel).getByRole("link", { name: /Deschide fișa lucrării/ })).toHaveAttribute("href", "/lucrari/ord-2");
+    expect(within(panel).getByRole("link", { name: "Deschide oferta OF-2" })).toHaveAttribute("href", "/quotes/PRD-SYN-LETTERS/q-2");
+    expect(panel).toHaveTextContent("Comanda acestei ramuri nu schimbă celelalte 7 oferte");
+    expect(document.body.textContent).not.toContain("Deschide comanda");
+  });
+
+  it("keeps selection in the address: push on the first choice, replace between branches, Back clears it", async () => {
+    stubDetail(eightBranches());
+    window.history.replaceState({}, "", "/cereri/req-1");
+    render(<Harness />);
+    await screen.findByRole("list", { name: "Ramuri comerciale" });
+    const depth = window.history.length;
+    await userEvent.click(rowButton(2));
+    expect(new URLSearchParams(window.location.search).get("ramura")).toBe("quote:q-3");
+    expect(window.history.length).toBe(depth + 1);
+    await userEvent.click(rowButton(5));
+    expect(new URLSearchParams(window.location.search).get("ramura")).toBe("quote:q-6");
+    expect(window.history.length).toBe(depth + 1);
+    window.history.back();
+    await waitFor(() => expect(window.location.search).toBe(""));
+    await waitFor(() => expect(screen.getByTestId("request-summary")).toBeInTheDocument());
+    window.history.forward();
+    await waitFor(() => expect(screen.getByTestId("branch-detail")).toHaveTextContent("SYN-A02"));
+  });
+
+  it("after a direct link, selecting a branch keeps the way back on the request list", async () => {
+    stubDetail(eightBranches());
+    window.history.replaceState({}, "", "/cereri/req-1");
+    render(<Harness />);
+    await screen.findByRole("list", { name: "Ramuri comerciale" });
+    await userEvent.click(rowButton(2));
+    await screen.findByTestId("branch-detail");
+    expect(screen.getByRole("link", { name: "← Toate cererile" })).toHaveAttribute("href", "/cereri");
+    expect(screen.queryByRole("link", { name: "← Cerere" })).not.toBeInTheDocument();
+  });
+
+  it("restores a branch from a direct link and focuses its row", async () => {
+    stubDetail(eightBranches());
+    window.history.replaceState({}, "", "/cereri/req-1?ramura=quote%3Aq-4");
+    render(<Harness />);
+    expect(await screen.findByTestId("branch-detail")).toHaveTextContent("SYN-L04");
+    await waitFor(() => expect(rowButton(3)).toHaveFocus());
+    expect(rows()[3]).toHaveAttribute("data-selected", "true");
+  });
+
+  it("says plainly when the branch in the address is no longer on the request", async () => {
+    stubDetail(eightBranches());
+    window.history.replaceState({}, "", "/cereri/req-1?ramura=quote%3Agone");
+    render(<Harness />);
+    expect(await screen.findByText("Ramura din adresă nu mai este în această cerere")).toBeInTheDocument();
+    expect(screen.getByTestId("request-summary")).toBeInTheDocument();
+  });
+
+  it("moves with arrow keys, opens the branch action with Enter and returns with Escape", async () => {
+    stubDetail(eightBranches());
+    window.history.replaceState({}, "", "/cereri/req-1?ramura=quote%3Aq-1");
+    render(<Harness />);
+    await waitFor(() => expect(rowButton(0)).toHaveFocus());
+    await userEvent.keyboard("{ArrowDown}");
+    expect(new URLSearchParams(window.location.search).get("ramura")).toBe("quote:q-2");
+    expect(rowButton(1)).toHaveFocus();
+    await userEvent.keyboard("{End}");
+    expect(new URLSearchParams(window.location.search).get("ramura")).toBe("quote:q-8");
+    await userEvent.keyboard("{Home}");
+    expect(new URLSearchParams(window.location.search).get("ramura")).toBe("quote:q-1");
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("ramura")).toBeNull());
+    await userEvent.click(rowButton(1));
+    await userEvent.keyboard("{Enter}");
+    expect(window.location.pathname).toBe("/lucrari/ord-2");
+  });
+
+  it("filters to the branches that need action, keeps registration order and names what is hidden", async () => {
+    stubDetail(eightBranches());
+    window.history.replaceState({}, "", "/cereri/req-1");
+    render(<Harness />);
+    await userEvent.click(await screen.findByRole("button", { name: "Necesită acțiune · 6" }));
+    expect(new URLSearchParams(window.location.search).get("filtru")).toBe("actiune");
+    expect(rows().map((row) => row.querySelector(".ledger__index")?.textContent)).toEqual(["01", "03", "04", "06", "07", "08"]);
+    expect(screen.getByText("6 din 8 · ordinea înregistrării păstrată")).toBeInTheDocument();
+    expect(screen.getByText("Ascunse de filtru: 02 SYN-L02, 05 SYN-A01")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Cu comandă · 2" }));
+    expect(rows()).toHaveLength(2);
+  });
+
+  it("shows a stale server target as missing instead of choosing another offer", async () => {
+    stubDetail({ ...eightBranches(), linkedQuoteSnapshotId: "q-gone" });
+    window.history.replaceState({}, "", "/cereri/req-1");
+    render(<Harness />);
+    const next = await screen.findByTestId("request-next-step");
+    expect(next).toHaveTextContent("ținta indicată de server nu este în această cerere");
+    expect(within(next).queryByRole("link")).toBeNull();
+  });
+});

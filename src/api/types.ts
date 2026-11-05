@@ -374,6 +374,8 @@ export type RequestLinkedOfferTransport = {
   assemblyId?: string | null;
   productCode: string;
   productLabel: string | null;
+  /** The frozen quote's inscription; null when the server sends none or an empty one. */
+  inscription: string | null;
   reference: string | null;
   stage?: string | null;
   stageLabel: string | null;
@@ -485,6 +487,10 @@ export type RequestDetailTransport = {
   createdAt: string | null;
   nextAction: string;
   nextActionLabel: string;
+  /** Server target of the request-level next action, identical to the request overview row. */
+  nextActionHref: string | null;
+  linkedQuoteSnapshotId: string | null;
+  linkedQuoteProductCode: string | null;
   canUploadAttachments: boolean;
   linkedOffers: RequestLinkedOfferTransport[];
   linkedQuoteIds: string[];

@@ -117,6 +117,10 @@ export type RequestDetailProjection = {
   canWriteInstallationFacts: boolean;
   nextAction: RequestOverviewNextAction;
   nextActionLabel: string;
+  /** Same target as the request overview row: one request-level next action, never a UI choice. */
+  nextActionHref: string;
+  linkedQuoteSnapshotId: string | null;
+  linkedQuoteProductCode: string | null;
 };
 
 export function requestOverviewFilterLabel(filter: RequestOverviewFilter): string {
@@ -449,6 +453,7 @@ export function projectRequestDetail(input: {
     quotes: input.quotes,
     assemblies,
   });
+  const furthestQuote = furthestLinkedQuote(input.quotes);
   return {
     request: input.request,
     customerDisplayName: input.customerDisplayName,
@@ -490,5 +495,13 @@ export function projectRequestDetail(input: {
     canWriteInstallationFacts: selected && !hasLinkedQuotes,
     nextAction,
     nextActionLabel: requestOverviewNextActionLabel(nextAction),
+    nextActionHref: requestOverviewNextActionHref({
+      requestId: input.request.requestId,
+      nextAction,
+      quotes: input.quotes,
+      assemblies,
+    }),
+    linkedQuoteSnapshotId: furthestQuote?.quoteSnapshotId ?? null,
+    linkedQuoteProductCode: furthestQuote?.productCode ?? null,
   };
 }

@@ -29,6 +29,8 @@
   --wos-paper: #fbf8f2;
   --wos-lightbox: #faf7f0;
   --wos-table: #e9e3d8;
+  /* The one selected row of a register; paired with a 3px signal edge so color is not alone. */
+  --wos-selected: #edf4f1;
   --wos-brass-text: #7a5823;
   --wos-warning-text: #85561a;
   --wos-document-shadow: 0 1px 0 rgb(23 21 18 / 6%), 0 14px 24px -10px rgb(43 33 22 / 16%);
@@ -87,6 +89,7 @@
   --wos-paper: #1f1c18;
   --wos-lightbox: #1b1915;
   --wos-table: #100f0d;
+  --wos-selected: #16231f;
   --wos-brass-text: #b8872b;
   --wos-warning-text: #d6a04b;
   --wos-document-shadow: 0 1px 0 rgb(0 0 0 / 40%), 0 18px 32px -12px rgb(0 0 0 / 60%);

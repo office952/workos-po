@@ -59,7 +59,7 @@ function presentRelations(snapshot: QuoteSnapshotTransport, orderSnapshotId: str
       ? { key: "request", label: "Cerere", detail: snapshot.requestReference, href: requestHref(snapshot.requestId), action: "Deschide cererea" }
       : null,
     orderSnapshotId
-      ? { key: "order", label: "Comandă", detail: null, href: jobHref(orderSnapshotId), action: "Deschide comanda" }
+      ? { key: "order", label: "Comandă", detail: null, href: jobHref(orderSnapshotId), action: "Deschide fișa lucrării" }
       : null,
   ].filter((relation): relation is QuoteRelation => relation !== null);
 }
@@ -414,7 +414,7 @@ function QuoteEnvelopeAction({
       return (
         <a className="hit" href={jobHref(envelope.orderSnapshotId)}>
           <span className="button button--primary">
-            {envelope.nextActionLabel || "Deschide comanda"}
+            Deschide fișa lucrării
           </span>
         </a>
       );
