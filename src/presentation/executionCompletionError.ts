@@ -1,5 +1,18 @@
 import { readTransportErrorCode, TransportError } from "../api/http";
 
+export function classifyExecutionCompletionFailure(error: unknown): {
+  kind: "refusal" | "network";
+  message: string;
+} {
+  if (!(error instanceof TransportError)) {
+    return {
+      kind: "network",
+      message: "Finalizarea nu a putut fi trimisă. Verifică conexiunea și încearcă din nou.",
+    };
+  }
+  return { kind: "refusal", message: presentExecutionCompletionError(error) };
+}
+
 export function presentExecutionCompletionError(error: unknown): string {
   if (!(error instanceof TransportError)) {
     return "Finalizarea a eșuat.";

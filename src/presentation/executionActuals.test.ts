@@ -125,13 +125,13 @@ describe("execution actual consumption presentation", () => {
         { [actualConsumptionDraftKey("task:led", plexi.resourceId)]: "abc" },
         "task:led",
       ),
-    ).toEqual({ ok: false });
+    ).toEqual({ ok: false, resourceId: plexi.resourceId });
     expect(
       collectActualConsumptionInput(
         [plexi],
         { [actualConsumptionDraftKey("task:led", plexi.resourceId)]: "-1" },
         "task:led",
       ),
-    ).toEqual({ ok: false });
+    ).toEqual({ ok: false, resourceId: plexi.resourceId });
   });
 });

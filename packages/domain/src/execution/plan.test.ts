@@ -23,6 +23,8 @@ import { LED_PITCH_SETTING_ID } from "../product/technicalSettings.js";
 import type { DraftValues } from "../product/types.js";
 import { compileEic } from "../resources/eic.js";
 import { freezeAcceptedProductionSnapshot } from "../production/snapshot.js";
+import { deriveJobAttention } from "../jobs/overview.js";
+import { createWorkcenterRegistry } from "../workcenters/catalog.js";
 import {
   executionTaskId,
   materializeExecutionPlanFromSnapshot,
@@ -157,6 +159,56 @@ describe("persisted execution plan materialization", () => {
     expect(view.progress.status).not.toBe("COMPLETED");
     expect(cnc?.providerBindingState).toBe("UNIQUE_PENDING");
     expect(cnc?.canAssign).toBe(false);
+    expect(
+      deriveJobAttention({
+        stage: "EXECUTION_PLANNED",
+        progress: view.progress,
+        tasks: view.tasks,
+      }).attentionLabel,
+    ).toBeNull();
+    const withoutMachines = projectExecutionPlanView(
+      record,
+      [],
+      snapshot,
+      null,
+      null,
+      createWorkcenterRegistry([], []),
+    );
+    expect(
+      withoutMachines.tasks.some(
+        (task) =>
+          task.requiresProvider &&
+          task.providerBindingState === "NONE" &&
+          task.waitingFor.length === 0,
+      ),
+    ).toBe(true);
+    expect(
+      deriveJobAttention({
+        stage: "EXECUTION_PLANNED",
+        progress: withoutMachines.progress,
+        tasks: withoutMachines.tasks,
+      }).attentionLabel,
+    ).toBe("Lipsă utilaj dedicat");
+    const manualRecord = {
+      ...record,
+      tasks: record.tasks.map((task) => ({ ...task, providerRequirement: "NOT_REQUIRED" as const })),
+    };
+    const manual = projectExecutionPlanView(
+      manualRecord,
+      [],
+      snapshot,
+      null,
+      null,
+      createWorkcenterRegistry([], []),
+    );
+    expect(manual.tasks.every((task) => task.providerBindingState === "NOT_REQUIRED")).toBe(true);
+    expect(
+      deriveJobAttention({
+        stage: "EXECUTION_PLANNED",
+        progress: manual.progress,
+        tasks: manual.tasks,
+      }).attentionLabel,
+    ).toBeNull();
     expect(cnc?.canStart).toBe(false);
     expect(pack?.assignmentLabel).toBe("Nealocat");
     expect(record.tasks.every((item) => item.assignedProvider === null)).toBe(true);
