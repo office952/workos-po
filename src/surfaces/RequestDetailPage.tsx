@@ -1,58 +1,79 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { InlineAlert } from "../components/InlineAlert";
 import { RequestProductSelection } from "../components/RequestProductSelection";
 import { LoadingFloor } from "../components/LoadingFloor";
 import { SurfacePanel } from "../components/SurfacePanel";
+import { invalidateResources } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadJobList, loadRequestDetail } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
 import { formatTimestamp } from "../presentation/format";
 import {
+  branchFilterParam,
+  branchForQuote,
   filterBranches,
-  preferredBranchKey,
+  parseBranchFilter,
   presentCommercialBranches,
+  type BranchFilter,
+  type CommercialBranch,
 } from "../presentation/requestCommercialBranches";
-import { presentRequestPrimaryAction } from "../presentation/worklistAction";
-import { clientHref, requestHref } from "../routing/appRoute";
-import { originBack } from "../routing/originBack";
+import { presentRequestCommercialProgress } from "../presentation/requestCommercialProgress";
+import { presentRequestNextStep } from "../presentation/worklistAction";
+import { clientHref, requestHref, requestProductHref } from "../routing/appRoute";
+import { hrefPath, originBack } from "../routing/originBack";
 import {
   readConfiguratorSession,
   writeConfiguratorSession,
 } from "../session/configuratorSession";
 import { RequestOfferPreview } from "./requests/RequestOfferPreview";
-import { RequestBranchList } from "./requests/RequestBranchList";
+import { RequestProgressBand } from "./requests/RequestProgressBand";
+import { CommercialLedger } from "./requests/CommercialLedger";
+import { BranchDetail, RequestSummary } from "./requests/BranchDetail";
 import { usePreviewHistory } from "../routing/usePreviewHistory";
 import { navigate } from "../routing/navigate";
 import { RequestAttachmentsSection } from "./RequestAttachmentsSection";
 import { RequestInstallationSection } from "./RequestInstallationSection";
 import "../styles/surfaces/commercial.css";
 import "../styles/surfaces/request-branches.css";
+import "../styles/surfaces/commercial-state.css";
 
 type RequestDetailPageProps = {
   requestId: string;
-  /** The current query: an offer previewed over the page lives in ?oferta= (and &foaie=comanda). */
+  /**
+   * The current query is the only state of this page: the selected branch (?ramura=), the
+   * filter (?filtru=) and an offer previewed over the page (?oferta= and &foaie=comanda).
+   */
   search?: string;
 };
-
-function requestPreviewHref(requestId: string, offerId: string | null, sheet: "oferta" | "comanda" = "oferta"): string {
-  const base = `/cereri/${encodeURIComponent(requestId)}`;
-  if (!offerId) return base;
-  const params = new URLSearchParams({ oferta: offerId });
-  if (sheet === "comanda") params.set("foaie", "comanda");
-  return `${base}?${params.toString()}`;
-}
 
 export function RequestDetailPage({ requestId, search = window.location.search }: RequestDetailPageProps) {
   const query = new URLSearchParams(search);
   const previewId = query.get("oferta");
   const previewSheet = query.get("foaie") === "comanda" ? "comanda" : "oferta";
-  const preview = usePreviewHistory((id) => requestPreviewHref(requestId, id), previewId);
+  const requestedKey = query.get("ramura");
+  const filter = parseBranchFilter(query.get("filtru"));
+
+  function hrefWith(mutate: (params: URLSearchParams) => void): string {
+    const params = new URLSearchParams(search);
+    mutate(params);
+    const next = params.toString();
+    return `${requestHref(requestId)}${next ? `?${next}` : ""}`;
+  }
+
+  const preview = usePreviewHistory(
+    (id) =>
+      hrefWith((params) => {
+        params.delete("foaie");
+        if (id) params.set("oferta", id);
+        else params.delete("oferta");
+      }),
+    previewId,
+  );
   // Closing the preview returns focus to the control that opened it.
   const lastPreview = useRef<string | null>(null);
   useEffect(() => {
     if (previewId) {
-      // The first offer opened names the opener; moving to another offer keeps it.
       lastPreview.current ??= previewId;
       return;
     }
@@ -60,6 +81,7 @@ export function RequestDetailPage({ requestId, search = window.location.search }
     lastPreview.current = null;
     if (previous) document.querySelector<HTMLElement>(`[data-preview-opener="${CSS.escape(previous)}"]`)?.focus();
   }, [previewId]);
+
   const request = useResource(resourceKeys.request(requestId), () => loadRequestDetail(requestId));
   const jobs = useResource(resourceKeys.jobs(), loadJobList);
   const detail = request.data;
@@ -78,32 +100,77 @@ export function RequestDetailPage({ requestId, search = window.location.search }
     }),
     [detail, jobs.data, jobs.status, requestId],
   );
-  const [filter, setFilter] = useState<"all" | "attention">(
-    () => (new URLSearchParams(search).get("filtru") === "atentie" ? "attention" : "all"),
-  );
-  const [selection, setSelection] = useState<{ key: string | null; explicit: boolean }>(() => {
-    const params = new URLSearchParams(search);
-    return { key: params.get("ramura"), explicit: params.has("ramura") };
+  const all = branches.branches;
+  const visible = filterBranches(all, filter);
+  const selected = requestedKey ? (visible.find((branch) => branch.key === requestedKey) ?? null) : null;
+  const staleSelection = Boolean(detail && requestedKey && !all.some((branch) => branch.key === requestedKey));
+  const progress = presentRequestCommercialProgress({
+    branches: all,
+    commercialProgress: detail?.commercialProgress ?? null,
+    commercialProgressLabel: detail?.commercialProgressLabel ?? null,
   });
-  const [expandAll, setExpandAll] = useState(false);
-  const visibleBranches = filterBranches(branches.branches, filter);
-  const shownKey = selection.explicit
-    ? (selection.key && visibleBranches.some((branch) => branch.key === selection.key) ? selection.key : null)
-    : preferredBranchKey(visibleBranches, null);
-  const shownBranch = branches.branches.find((branch) => branch.key === shownKey) ?? null;
-  function rememberQuery(mutate: (params: URLSearchParams) => void): void {
-    const params = new URLSearchParams(search);
-    mutate(params);
-    const query = params.toString();
-    navigate(`${requestHref(requestId)}${query ? `?${query}` : ""}`, "replace");
+  const nextStep = detail ? presentRequestNextStep(detail) : { status: "none" as const };
+  const nextTarget = nextStep.status === "ready"
+    ? (branchForQuote(all, nextStep.targetQuoteSnapshotId)
+      ?? (nextStep.targetAssemblyId ? (all.find((branch) => branch.key === `assembly:${nextStep.targetAssemblyId}`) ?? null) : null))
+    : null;
+
+  // The first selection is a step the Back button can undo; moving between branches is not.
+  const pushedSelection = useRef(false);
+  const [focusOnMount] = useState(requestedKey !== null);
+  function select(key: string): void {
+    if (key === requestedKey) return;
+    const mode = requestedKey ? "replace" : "push";
+    if (mode === "push") pushedSelection.current = true;
+    navigate(hrefWith((params) => params.set("ramura", key)), mode);
   }
-  const primary = detail ? presentRequestPrimaryAction(detail) : null;
+  function clearSelection(): void {
+    const key = requestedKey;
+    if (pushedSelection.current) {
+      pushedSelection.current = false;
+      window.history.back();
+    } else {
+      navigate(hrefWith((params) => params.delete("ramura")), "replace");
+    }
+    if (key) {
+      window.requestAnimationFrame(() => {
+        document.querySelector<HTMLElement>(`[data-branch-key="${CSS.escape(key)}"]`)?.focus();
+      });
+    }
+  }
+  function changeFilter(next: BranchFilter): void {
+    pushedSelection.current = false;
+    const keepsSelection = requestedKey ? filterBranches(all, next).some((branch) => branch.key === requestedKey) : false;
+    navigate(
+      hrefWith((params) => {
+        const value = branchFilterParam(next);
+        if (value) params.set("filtru", value);
+        else params.delete("filtru");
+        if (!keepsSelection) params.delete("ramura");
+      }),
+      "replace",
+    );
+  }
+  function activate(branch: CommercialBranch): void {
+    if (branch.primaryAction) navigate(branch.primaryAction.href, "push");
+  }
+  function onRailKeyDown(event: KeyboardEvent<HTMLElement>): void {
+    if (event.key === "Escape" && selected && !previewId) {
+      event.preventDefault();
+      clearSelection();
+    }
+  }
+
   const createdLabel = formatTimestamp(detail?.createdAt ?? null);
   const headerTitle = detail?.title?.trim() || detail?.reference || "Cerere";
-  const referenceLabel = detail?.reference && detail.reference !== headerTitle ? detail.reference : null;
   // N-018 · opened from the client page, the way back is that page on the same tab; after a
   // direct link it is the request list.
-  const back = originBack({ href: "/cereri", label: "Toate cererile" });
+  // Selecting a branch pushes an entry of this same request; that entry is never "the way back".
+  const back = originBack(
+    { href: "/cereri", label: "Toate cererile" },
+    (originHref) => hrefPath(originHref) !== hrefPath(requestHref(requestId)),
+  );
+  const position = selected ? visible.findIndex((branch) => branch.key === selected.key) : -1;
 
   useEffect(() => {
     if (!detail) {
@@ -126,12 +193,11 @@ export function RequestDetailPage({ requestId, search = window.location.search }
       workspace="object"
       surface="cereri-detail"
       headerVariant="pilot-compact"
-      eyebrow="Cerere"
+      eyebrow={detail?.reference ? `Cerere · ${detail.reference}` : "Cerere"}
       title={headerTitle}
       meta={
         detail ? (
           <>
-            {referenceLabel ? <span>{referenceLabel}</span> : null}
             {detail.customerId && detail.customerDisplayName ? (
               <a className="text-link" href={clientHref(detail.customerId)}>
                 {detail.customerDisplayName}
@@ -139,22 +205,11 @@ export function RequestDetailPage({ requestId, search = window.location.search }
             ) : (
               <span>{detail.customerDisplayName ?? "Fără client"}</span>
             )}
-            {createdLabel ? <span>Creată {createdLabel}</span> : null}
+            {createdLabel ? <span>Înregistrată {createdLabel}</span> : null}
+            <span data-testid="request-administrative-status">
+              Starea cererii: <strong>{detail.statusLabel}</strong>
+            </span>
           </>
-        ) : undefined
-      }
-      status={
-        detail ? (
-          <div className="request-status-cluster">
-            <div data-testid="request-administrative-status">
-              <span className="section-label">Stare administrativă</span>
-              <strong>{detail.statusLabel}</strong>
-            </div>
-            <div data-testid="request-commercial-progress">
-              <span className="section-label">Progres comercial</span>
-              <strong>{detail.commercialProgressLabel?.trim() || "—"}</strong>
-            </div>
-          </div>
         ) : undefined
       }
     >
@@ -162,71 +217,103 @@ export function RequestDetailPage({ requestId, search = window.location.search }
         <div className="commercial-toolbar__context">
           <a className="text-link" href={back.href} onClick={back.onClick}>{back.text}</a>
         </div>
-        {primary && branches.branches.length === 0 ? (
-          <a className="hit" href={primary.actionHref}>
-            <span className="button button--primary">{primary.actionLabel}</span>
-          </a>
-        ) : !primary ? (
-          <p className="request-detail__next">Nicio acțiune disponibilă</p>
-        ) : null}
       </div>
-      {shownBranch?.primaryAction ? (
-        <p className="request-detail__next">
-          <span className="section-label">Pasul următor</span>
-          <a className="text-link" href={`#branch-panel-${shownBranch.key}`}>
-            {shownBranch.indexLabel} {shownBranch.title}
-          </a>
-        </p>
-      ) : null}
       {request.status === "error" && !detail ? (
         <InlineAlert tone="error" title="Cererea nu a putut fi citită">
           Identitatea cererii nu este disponibilă.
         </InlineAlert>
       ) : null}
-            {detail ? (
-        <div className="request-branches-layout">
-          <div className="stack">
-            <RequestBranchList
-              branches={branches.branches}
-              visible={visibleBranches}
-              filter={filter}
-              onFilter={(next) => {
-                setFilter(next);
-                setExpandAll(false);
-                rememberQuery((params) => {
-                  if (next === "attention") params.set("filtru", "atentie");
-                  else params.delete("filtru");
-                });
-              }}
-              expandedKey={shownKey}
-              expandAll={expandAll}
-              onToggle={(key) => {
-                setExpandAll(false);
-                const next = shownKey === key ? null : key;
-                setSelection({ key: next, explicit: true });
-                rememberQuery((params) => {
-                  if (next) params.set("ramura", next);
-                  else params.delete("ramura");
-                });
-              }}
-              onExpandAll={() => setExpandAll((value) => !value)}
-              onPreview={(quoteSnapshotId) => preview.open(quoteSnapshotId)}
-              local={branches.local}
-            />
-            {detail.nextAction === "CHOOSE_PRODUCT" ? (
-              <RequestProductSelection key={detail.requestId} customerId={detail.customerId} requestId={detail.requestId} />
-            ) : null}
-            {detail.canStartAdditionalWork ? (
-              <RequestProductSelection
-                key={`${detail.requestId}:additional`}
-                customerId={detail.customerId}
-                requestId={detail.requestId}
-                mode="additional"
-                existingLabel={detail.assemblies[0]?.label ?? quotedProductLabel}
+      {detail ? (
+        <>
+          <RequestProgressBand progress={progress} nextStep={nextStep} target={nextTarget} />
+          {staleSelection ? (
+            <InlineAlert tone="pending" title="Ramura din adresă nu mai este în această cerere">
+              Registrul arată ofertele actuale ale cererii; alege din nou ramura.
+            </InlineAlert>
+          ) : null}
+          <div className="request-workspace" data-branch-open={selected ? "true" : undefined}>
+            {all.length === 0 ? (
+              <section className="ledger ledger--empty" data-testid="request-branches-empty">
+                <p className="branch-detail__kicker">Ramuri comerciale · 0</p>
+                <h2 className="branch-detail__title">Cererea nu are încă oferte</h2>
+                <p>
+                  Fiecare ofertă apare aici pe un rând, recunoscută după înscripția ei, cu produsul, starea comercială și fișa lucrării.
+                </p>
+                {nextStep.status === "ready" && detail.nextAction === "CHOOSE_PRODUCT" ? (
+                  <p className="ledger__empty-action">
+                    <a className="hit" href={requestProductHref(requestId)}>
+                      <span className="button button--primary">
+                        {nextStep.label} <span aria-hidden="true">→</span>
+                      </span>
+                    </a>
+                    <span>Pasul vine de la server: cererea acceptă lucru nou.</span>
+                  </p>
+                ) : null}
+              </section>
+            ) : (
+              <CommercialLedger
+                branches={all}
+                visible={visible}
+                filter={filter}
+                selectedKey={selected?.key ?? null}
+                focusSelectedOnMount={focusOnMount}
+                onFilter={changeFilter}
+                onSelect={select}
+                onActivate={activate}
+                onClear={clearSelection}
               />
+            )}
+            {all.length > 0 ? (
+              <aside
+                id="branch-detail"
+                className="request-rail"
+                aria-label={selected ? `Ramura ${selected.indexLabel} ${selected.title}` : "Rezumatul cererii"}
+                data-open={selected ? "true" : undefined}
+                onKeyDown={onRailKeyDown}
+              >
+                {selected ? (
+                  <BranchDetail
+                    branch={selected}
+                    total={all.length}
+                    previous={visible[position - 1] ?? null}
+                    next={visible[position + 1] ?? null}
+                    onSelect={select}
+                    onClose={clearSelection}
+                    onPreview={(quoteSnapshotId) => preview.open(quoteSnapshotId)}
+                    onRetryJobs={jobs.status === "error" ? () => invalidateResources(resourceKeys.jobs()) : null}
+                  />
+                ) : (
+                  <RequestSummary progress={progress} />
+                )}
+              </aside>
             ) : null}
           </div>
-          <aside className="stack request-detail__rail" aria-label="Continuare">
+          {branches.local.length > 0 ? (
+            <ul className="branch-local" aria-label="Configurări locale">
+              {branches.local.map((item) => (
+                <li key={item.sessionKey}>
+                  <p>
+                    <strong>{item.title}</strong>
+                    <span>{item.detail}</span>
+                  </p>
+                  <a className="text-link" href={item.href}>Continuă configurarea</a>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {detail.nextAction === "CHOOSE_PRODUCT" ? (
+            <RequestProductSelection key={detail.requestId} customerId={detail.customerId} requestId={detail.requestId} />
+          ) : null}
+          {detail.canStartAdditionalWork ? (
+            <RequestProductSelection
+              key={`${detail.requestId}:additional`}
+              customerId={detail.customerId}
+              requestId={detail.requestId}
+              mode="additional"
+              existingLabel={detail.assemblies[0]?.label ?? quotedProductLabel}
+            />
+          ) : null}
+          <div className="request-context">
             <SurfacePanel title="Ce dorește clientul" label="Ce dorește clientul">
               <p>{detail.description || "Fără descriere."}</p>
             </SurfacePanel>
@@ -236,8 +323,8 @@ export function RequestDetailPage({ requestId, search = window.location.search }
               canUploadAttachments={detail.canUploadAttachments}
             />
             <RequestInstallationSection detail={detail} />
-          </aside>
-        </div>
+          </div>
+        </>
       ) : request.status !== "error" ? (
         <SurfacePanel title="Ce dorește clientul" label="Ce dorește clientul" busy>
           <LoadingFloor variant="facts" label="Se citește cererea" />
@@ -251,7 +338,14 @@ export function RequestDetailPage({ requestId, search = window.location.search }
             offerId={previewId}
             sheet={previewSheet}
             position={{ index, count: offers.length }}
-            onSheet={(sheet) => navigate(requestPreviewHref(requestId, previewId, sheet), "replace")}
+            onSheet={(sheet) =>
+              navigate(
+                hrefWith((params) => {
+                  if (sheet === "comanda") params.set("foaie", "comanda");
+                  else params.delete("foaie");
+                }),
+                "replace",
+              )}
             onMove={(delta) => {
               const next = offers[index + delta];
               if (next) preview.open(next.quoteSnapshotId);

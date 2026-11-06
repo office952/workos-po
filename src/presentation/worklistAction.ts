@@ -64,37 +64,54 @@ export function presentRequestWorklistAction(
   }
 }
 
-export function presentRequestPrimaryAction(
-  detail: RequestDetailTransport,
-): PresentedWorklistAction | null {
+/**
+ * The request-level next action: the server's nextAction and its own target (the same one the
+ * request register links to). A selected branch never changes it, and the UI never picks a quote.
+ */
+export type RequestNextStep =
+  | { status: "none" }
+  | {
+      status: "ready";
+      label: string;
+      href: string;
+      targetQuoteSnapshotId: string | null;
+      targetAssemblyId: string | null;
+    }
+  | { status: "target-missing"; label: string };
+
+export function presentRequestNextStep(detail: RequestDetailTransport): RequestNextStep {
   switch (detail.nextAction) {
     case "CHOOSE_PRODUCT":
       return {
-        actionLabel: detail.nextActionLabel || "Alege produs",
-        actionHref: requestProductHref(detail.requestId),
+        status: "ready",
+        label: detail.nextActionLabel || "Alege produs",
+        href: requestProductHref(detail.requestId),
+        targetQuoteSnapshotId: null,
+        targetAssemblyId: null,
       };
     case "OPEN_QUOTE": {
-      const offer =
-        detail.linkedOffers.find((item) => item.kind === "PRODUCT") ?? detail.linkedOffers[0];
-      if (!offer) {
-        return null;
+      const label = detail.nextActionLabel || "Deschide oferta";
+      const target = detail.linkedQuoteSnapshotId;
+      const offer = target ? detail.linkedOffers.find((item) => item.quoteSnapshotId === target) : null;
+      if (offer) {
+        return { status: "ready", label, href: registryQuoteHref(offer), targetQuoteSnapshotId: offer.quoteSnapshotId, targetAssemblyId: null };
       }
-      return {
-        actionLabel: detail.nextActionLabel || "Deschide oferta",
-        actionHref: registryQuoteHref(offer),
-      };
+      const fromServer = target ? null : quoteHrefFromEngineHref(detail.nextActionHref);
+      return fromServer
+        ? { status: "ready", label, href: fromServer, targetQuoteSnapshotId: null, targetAssemblyId: null }
+        : { status: "target-missing", label };
     }
-    case "OPEN_ASSEMBLY":
-      return detail.linkedAssemblyId
-        ? {
-            actionLabel: detail.nextActionLabel || "Deschide ansamblul",
-            actionHref: assemblyHref(detail.linkedAssemblyId),
-          }
-        : null;
+    case "OPEN_ASSEMBLY": {
+      const label = detail.nextActionLabel || "Deschide ansamblul";
+      const target = detail.linkedAssemblyId;
+      return target && detail.assemblies.some((item) => item.assemblyId === target)
+        ? { status: "ready", label, href: assemblyHref(target), targetQuoteSnapshotId: null, targetAssemblyId: target }
+        : { status: "target-missing", label };
+    }
     case "OPEN_REQUEST":
-      return null;
+      return { status: "none" };
     default:
-      return null;
+      return { status: "none" };
   }
 }
 
@@ -109,10 +126,7 @@ export function presentQuoteWorklistAction(
         : { actionLabel: "Deschide oferta", actionHref: detailHref };
     case "OPEN_ORDER":
       if (item.orderSnapshotId) {
-        return {
-          actionLabel: item.nextActionLabel || "Deschide comanda",
-          actionHref: jobHref(item.orderSnapshotId),
-        };
+        return { actionLabel: "Fișa lucrării", actionHref: jobHref(item.orderSnapshotId) };
       }
       return { actionLabel: "Deschide oferta", actionHref: detailHref };
     case "ACCEPT_QUOTE":

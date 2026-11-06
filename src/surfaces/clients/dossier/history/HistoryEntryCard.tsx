@@ -11,6 +11,7 @@ import { projectChain, projectNeedsAttention, type ChainStep } from "./branchCha
 import { DocTile, Files, Photos } from "./cardParts";
 import { follow } from "./follow";
 import { summarizeMatch } from "./matchSummary";
+import { ProjectBranches } from "./ProjectBranches";
 import { ProjectTree } from "./ProjectTree";
 
 /**
@@ -141,6 +142,8 @@ export function CollapsedCard({
   }, [focusOnMount]);
   const photo = entryPhoto(entry);
   const uploaded = entry.kind === "DOCUMENT" ? entry.documents[0] ?? null : null;
+  const requestId = entry.kind === "PROJECT" ? (entry.request?.requestId ?? null) : null;
+  const branchesShown = requestId !== null && quotes.some((quote) => quote.requestId === requestId);
   return (
     <article className="hcard" data-kind={entry.kind} data-attention={projectNeedsAttention(entry, quotes) || undefined} aria-label={entry.title}>
       <div className="hcard__media">
@@ -165,6 +168,7 @@ export function CollapsedCard({
           <EntryState entry={entry} />
           {entry.kind === "PROJECT" ? <Chain steps={projectChain(entry, quotes)} /> : null}
         </div>
+        {branchesShown && requestId ? <ProjectBranches requestId={requestId} quotes={quotes} /> : null}
         <MatchSummary matchedOn={entry.matchedOn} />
       </div>
       <div className="hcard__side">

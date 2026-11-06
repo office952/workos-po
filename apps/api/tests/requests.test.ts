@@ -176,6 +176,44 @@ describe("commercial request API", () => {
     expect((await readBody(created)).error).toBe("customer_unavailable");
   });
 
+  it("gives request detail the same next-action target as the request overview, with each branch inscription", async () => {
+    const app = createApp();
+    const customer = await createCustomer(app, "Client Ramuri");
+    const created = await readBody(
+      await createRequest(app, customer.customerId as string, "Ramuri distincte"),
+    );
+    const requestId = (created.request as JsonObject).requestId as string;
+    const ids: string[] = [];
+    for (const inscription of ["W2-L01", "W2-L02", "W2-L03"]) {
+      const frozen = await freezeQuote(app, CANONICAL_PRODUCT_CODE, lettersValues, inscription, customer.customerId as string, requestId);
+      expect(frozen.status).toBe(200);
+      ids.push(((await readBody(frozen)).quoteSnapshot as JsonObject).quoteSnapshotId as string);
+    }
+    const ordered = ids[0] as string;
+    await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots/${ordered}/acceptance`, { method: "POST" });
+    await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots/${ordered}/order`, { method: "POST" });
+
+    const detail = (await readBody(await app.request(`/api/requests/${requestId}`))).detail as JsonObject & {
+      linkedOffers: Array<JsonObject>;
+    };
+    const row = ((await readBody(await app.request("/api/requests"))).overview as { requests: JsonObject[] }).requests.find(
+      (item) => item.requestId === requestId,
+    ) as JsonObject;
+    expect(detail.linkedOffers.map((offer) => offer.inscription).sort()).toEqual(["W2-L01", "W2-L02", "W2-L03"]);
+    expect(detail).toMatchObject({
+      nextAction: row.nextAction,
+      nextActionLabel: row.nextActionLabel,
+      nextActionHref: row.nextActionHref,
+      linkedQuoteSnapshotId: row.linkedQuoteSnapshotId,
+      linkedQuoteProductCode: row.linkedQuoteProductCode,
+    });
+    expect(detail.linkedQuoteSnapshotId).toBe(ordered);
+    expect(detail.commercialProgress).toBe("ORDER_CREATED");
+    expect(
+      detail.linkedOffers.filter((offer) => offer.stage === "QUOTE_CREATED").map((offer) => offer.attentionLabel),
+    ).toEqual(["Urmează acceptarea", "Urmează acceptarea"]);
+  });
+
   it("links LETTERS and ACM quotes without mutating Quote Snapshot", async () => {
     const app = createApp();
     const customer = await createCustomer(app, "Client Mix");

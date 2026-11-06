@@ -117,7 +117,7 @@ describe("AssemblyQuotePage", () => {
     expect(within(summary).getByTestId("quote-total")).toHaveTextContent("TVA 21% 129,03 EUR");
     expect(within(summary).getByText("Cu comandă")).toBeInTheDocument();
     expect(within(summary).getByText("Acceptată — comandă creată")).toBeInTheDocument();
-    expect(within(summary).getByRole("link", { name: "Deschide comanda" })).toHaveAttribute("href", "/lucrari/asmo%3A1");
+    expect(within(summary).getByRole("link", { name: "Deschide fișa lucrării" })).toHaveAttribute("href", "/lucrari/asmo%3A1");
 
     const sections = within(screen.getByRole("table", { name: "Secțiuni ofertă" }));
     const acm = within(sections.getByRole("row", { name: "Panou ACM" }));
@@ -130,7 +130,7 @@ describe("AssemblyQuotePage", () => {
     expect(links.getByRole("link", { name: "Deschide cererea" })).toHaveAttribute("href", "/cereri/crq%3A1");
     expect(links.getByText("CRQ-7")).toBeInTheDocument();
     expect(links.getByRole("link", { name: "Deschide ansamblul" })).toHaveAttribute("href", "/ansamblu?assembly=asm%3A1");
-    expect(links.getByRole("link", { name: "Deschide comanda" })).toHaveAttribute("href", "/lucrari/asmo%3A1");
+    expect(links.getByRole("link", { name: "Deschide fișa lucrării" })).toHaveAttribute("href", "/lucrari/asmo%3A1");
     expect(screen.queryByRole("button", { name: /Accept|Creează|Pregătește/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/Cost intern/)).not.toBeInTheDocument();
   });
@@ -147,7 +147,7 @@ describe("AssemblyQuotePage", () => {
     expect(within(summary).getByRole("link", { name: "Deschide ansamblul" })).toHaveAttribute("href", "/ansamblu?assembly=asm%3A1");
     expect(within(summary).getByRole("button", { name: "Descarcă oferta PDF" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Confirmă comanda/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Deschide comanda" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Deschide fișa lucrării" })).not.toBeInTheDocument();
   });
 
   it("fails closed when the server does not project acceptance", async () => {
@@ -206,7 +206,7 @@ describe("AssemblyQuotePage", () => {
       ["/api/assemblies/asm%3A1/accept", { quoteSnapshotId: "asmq:1" }],
     ]);
     const summary = screen.getByRole("region", { name: "Rezumat comercial" });
-    expect(within(summary).getByRole("link", { name: "Deschide comanda" })).toHaveAttribute("href", "/lucrari/asmo%3A9");
+    expect(within(summary).getByRole("link", { name: "Deschide fișa lucrării" })).toHaveAttribute("href", "/lucrari/asmo%3A9");
     expect(within(summary).getByText("Acceptată — comandă creată")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Confirmă comanda/ })).not.toBeInTheDocument();
     const reads = () => fetchMock.mock.calls.filter(([path, init]) => path === "/api/quotes/asmq%3A1" && !init?.method?.match(/POST/)).length;
@@ -231,7 +231,7 @@ describe("AssemblyQuotePage", () => {
     expect(alert).toHaveTextContent("Oferta nu mai este curentă");
     expect(within(alert).getByRole("link", { name: "Deschide oferta curentă" })).toHaveAttribute("href", "/oferte/ansamblu/asmq%3A2");
     expect(screen.queryByText("Oferta a fost acceptată")).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Deschide comanda" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Deschide fișa lucrării" })).not.toBeInTheDocument();
   });
 
   it("shows the existing order when the quote was accepted in another tab", async () => {
@@ -251,7 +251,7 @@ describe("AssemblyQuotePage", () => {
     const result = await screen.findByRole("region", { name: "Rezultatul acceptării" });
     expect(await within(result).findByText("Comandă creată")).toBeInTheDocument();
     const summary = screen.getByRole("region", { name: "Rezumat comercial" });
-    expect(within(summary).getByRole("link", { name: "Deschide comanda" })).toHaveAttribute("href", "/lucrari/asmo%3A7");
+    expect(within(summary).getByRole("link", { name: "Deschide fișa lucrării" })).toHaveAttribute("href", "/lucrari/asmo%3A7");
     expect(screen.queryByRole("button", { name: /Confirmă comanda/ })).not.toBeInTheDocument();
   });
 

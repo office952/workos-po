@@ -1,8 +1,9 @@
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
 import type { QuoteListItemTransport } from "../../api/types";
 import { presentJobSheetStage } from "../../presentation/jobSheetIdentity";
-import type { QuotesSheet } from "../../routing/appRoute";
-import { isTypingTarget } from "./quoteRegistryModel";
+import type { QuoteBranchPosition } from "../../presentation/quoteBranchPositions";
+import { requestHref, type QuotesSheet } from "../../routing/appRoute";
+import { commercialState, identityOf, isTypingTarget } from "./quoteRegistryModel";
 import { OfferActions, OfferSheet, OrderActions, OrderSheet } from "./QuoteDossierSheets";
 import { useQuoteDocumentDownload, useQuoteDossier } from "./useQuoteDossier";
 import type { QuotesLayout } from "./useQuotesLayout";
@@ -14,6 +15,8 @@ type Props = {
   emptyCopy?: { title: string; body: string; hint: string | null };
   layout: QuotesLayout;
   item: QuoteListItemTransport | null;
+  /** Where the offer sits on its request, when the register knows it. */
+  branch?: QuoteBranchPosition | null;
   empty: DossierEmpty;
   sheet: QuotesSheet;
   position: { index: number; count: number };
@@ -100,6 +103,30 @@ function Tabs({
   );
 }
 
+/** Which branch of which request this offer is; the other offers of the request keep their own state. */
+function Identity({ item, branch }: { item: QuoteListItemTransport; branch: QuoteBranchPosition }) {
+  const identity = identityOf(item);
+  const others = branch.total - 1;
+  return (
+    <div className="offers-dossier__identity" data-testid="quote-branch-identity">
+      <p className="offers-dossier__identity-title">{identity.title}</p>
+      {identity.subtitle ? <p className="offers-dossier__identity-sub">{identity.subtitle}</p> : null}
+      <p className="offers-dossier__identity-sub">
+        <a className="text-link" href={`${requestHref(branch.requestId)}?ramura=${encodeURIComponent(branch.branchKey)}`}>
+          {[branch.requestReference ?? "Cererea", `ramura ${branch.indexLabel} din ${branch.total}`].join(" · ")}
+        </a>
+        {" · "}
+        {commercialState(item)}
+      </p>
+      {others > 0 ? (
+        <p className="offers-dossier__identity-note">
+          {others === 1 ? "Cealaltă ofertă a cererii rămâne în starea ei." : `Celelalte ${others} oferte ale cererii rămân în starea lor.`}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function Contents({ item, sheet, onSheet }: { item: QuoteListItemTransport; sheet: QuotesSheet; onSheet: (sheet: QuotesSheet) => void }) {
   const { offer, job } = useQuoteDossier(item);
   const pdf = useQuoteDocumentDownload(item);
@@ -132,7 +159,7 @@ function Contents({ item, sheet, onSheet }: { item: QuoteListItemTransport; shee
 }
 
 /** The dossier beside (or over) the register: offer and order sheets on a light table. */
-export function QuoteDossier({ layout, item, empty, sheet, position, onSheet, onMove, onClose, emptyCopy }: Props) {
+export function QuoteDossier({ layout, item, branch, empty, sheet, position, onSheet, onMove, onClose, emptyCopy }: Props) {
   const copy = emptyCopy ?? EMPTY_COPY[empty];
   const movable = item !== null && position.index >= 0;
 
@@ -180,6 +207,7 @@ export function QuoteDossier({ layout, item, empty, sheet, position, onSheet, on
           </button>
         </div>
       </div>
+      {item && branch ? <Identity item={item} branch={branch} /> : null}
       {item ? (
         <Contents key={item.quoteSnapshotId} item={item} sheet={sheet} onSheet={onSheet} />
       ) : (

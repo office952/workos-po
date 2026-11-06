@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createCustomer } from "../customers/identity.js";
 import { projectCustomerWorkspace } from "../customers/workspace.js";
 import type { QuoteOverviewItem } from "../quotes/overview.js";
+import type { RequestAssemblyWork } from "./assemblyWork.js";
 import { COMMERCIAL_REQUEST_STATUSES, type CommercialRequest } from "./commercialRequest.js";
 import {
   deriveRequestCommercialProgress,
@@ -219,6 +220,84 @@ describe("request overview projection", () => {
     expect(detail.canWriteInstallationFacts).toBe(false);
     expect(detail.installationOffer.canSelectNew).toBe(false);
     expect(detail.installationOffer.selected).toBe(false);
+  });
+
+  describe("request-level next action target (W2 · D04)", () => {
+    function branch(stage: QuoteOverviewItem["stage"], inscription: string, minute: number): QuoteOverviewItem {
+      return {
+        ...quote(stage, inscription),
+        createdAt: `2026-11-04T10:${String(minute).padStart(2, "0")}:00.000Z`,
+        orderSnapshotId: stage === "ORDER_CREATED" ? `ord:${inscription}` : null,
+      };
+    }
+    const eight = (stages: Partial<Record<number, QuoteOverviewItem["stage"]>> = {}) =>
+      Array.from({ length: 8 }, (_, index) => branch(stages[index] ?? "QUOTE_CREATED", `SFC-${index + 1}`, index));
+
+    function both(quotes: readonly QuoteOverviewItem[], assemblies: readonly RequestAssemblyWork[] = []) {
+      const source = request({ status: "IN_REVIEW" });
+      return {
+        item: projectRequestOverviewItem({ request: source, customerDisplayName: "Client", quotes, assemblies }),
+        detail: projectRequestDetail({ request: source, customerDisplayName: "Client", quotes, assemblies }),
+      };
+    }
+
+    function expectSameTarget(quotes: readonly QuoteOverviewItem[], assemblies: readonly RequestAssemblyWork[] = []) {
+      const { item, detail } = both(quotes, assemblies);
+      expect(detail.nextAction).toBe(item.nextAction);
+      expect(detail.nextActionLabel).toBe(item.nextActionLabel);
+      expect(detail.nextActionHref).toBe(item.nextActionHref);
+      expect(detail.linkedQuoteSnapshotId).toBe(item.linkedQuoteSnapshotId);
+      expect(detail.linkedQuoteProductCode).toBe(item.linkedQuoteProductCode);
+      expect(detail.linkedAssemblyId).toBe(item.linkedAssemblyId);
+      return detail;
+    }
+
+    it("has no quote target without quotes", () => {
+      const detail = expectSameTarget([]);
+      expect(detail.nextAction).toBe("CHOOSE_PRODUCT");
+      expect(detail.linkedQuoteSnapshotId).toBeNull();
+      expect(detail.nextActionHref).toBe("/requests/crq%3A11111111-2222-3333-4444-555555555555");
+    });
+
+    it("targets the only quote", () => {
+      const detail = expectSameTarget([branch("QUOTE_CREATED", "SFC-1", 0)]);
+      expect(detail.linkedQuoteSnapshotId).toBe("qts:SFC-1");
+      expect(detail.nextActionHref).toBe("/quotes/qts%3ASFC-1");
+    });
+
+    it("targets the newest of eight unaccepted quotes, as the overview does", () => {
+      expect(expectSameTarget(eight()).linkedQuoteSnapshotId).toBe("qts:SFC-8");
+    });
+
+    it("targets the newest ordered quote when two of eight have orders", () => {
+      expect(expectSameTarget(eight({ 1: "ORDER_CREATED", 4: "ORDER_CREATED" })).linkedQuoteSnapshotId).toBe("qts:SFC-5");
+    });
+
+    it("prefers an accepted quote over newer unaccepted ones", () => {
+      expect(expectSameTarget(eight({ 0: "QUOTE_ACCEPTED", 2: "QUOTE_ACCEPTED" })).linkedQuoteSnapshotId).toBe("qts:SFC-3");
+    });
+
+    it("targets the assembly when it is at least as advanced as any product quote", () => {
+      const assembly: RequestAssemblyWork = {
+        assemblyId: "asm:1",
+        label: "Fațadă",
+        stage: "ORDER_CREATED",
+        stageLabel: "Comandă creată",
+        quoteSnapshotId: "aqs:1",
+        quoteGrossPrice: 1000,
+        currency: "EUR",
+        orderSnapshotId: "ord:asm",
+        productionSnapshotId: null,
+        executionPlanId: null,
+        revisionPending: false,
+        membersEditable: false,
+        memberProductCodes: [],
+        updatedAt: "2026-11-04T11:00:00.000Z",
+      };
+      const detail = expectSameTarget(eight({ 0: "ORDER_CREATED" }), [assembly]);
+      expect(detail.nextAction).toBe("OPEN_ASSEMBLY");
+      expect(detail.nextActionHref).toBe("/assemblies/asm%3A1");
+    });
   });
 
   it("projects selected site installation without folding it into the request", () => {

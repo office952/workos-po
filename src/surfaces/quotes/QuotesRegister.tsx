@@ -4,11 +4,14 @@ import type { CollectionViewState } from "../../components/collectionViewState";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorState } from "../../components/ErrorState";
 import { InlineAlert } from "../../components/InlineAlert";
+import type { QuoteBranchPosition, QuoteRequestGroup } from "../../presentation/quoteBranchPositions";
 import { presentQuoteWorklistAction } from "../../presentation/worklistAction";
-import { jobHref, registryQuoteHref } from "../../routing/appRoute";
+import { jobHref, registryQuoteHref, requestHref } from "../../routing/appRoute";
 import {
   KIND_OPTIONS,
+  commercialState,
   createdLabel,
+  identityOf,
   createdShortLabel,
   hasActiveFilter,
   listValue,
@@ -25,6 +28,10 @@ type Props = {
   filters: RegistryFilters;
   showKind: boolean;
   selectedId: string | null;
+  positions: ReadonlyMap<string, QuoteBranchPosition>;
+  groups: ReadonlyMap<string, QuoteRequestGroup>;
+  grouped: boolean;
+  onGrouped: (grouped: boolean) => void;
   searchRef: Ref<HTMLInputElement>;
   onFilters: (next: RegistryFilters) => void;
   onReset: () => void;
@@ -54,13 +61,15 @@ function Value({ item }: { item: QuoteListItemTransport }) {
   );
 }
 
-function Attention({ item }: { item: QuoteListItemTransport }) {
-  if (!item.attentionLabel) return null;
-  return (
-    <span className="offers-v2__attention" data-flag={item.needsAttention || undefined}>
-      {item.attentionLabel}
-    </span>
-  );
+/** Where the row's link goes, named by the destination, not by the business step. */
+function destinationLabel(item: QuoteListItemTransport, href: string): string {
+  if (item.orderSnapshotId && href === jobHref(item.orderSnapshotId)) return "Fișa lucrării";
+  if (href.startsWith("/ansamblu")) return "Ansamblul";
+  return "Oferta";
+}
+
+function branchLabel(position: QuoteBranchPosition | undefined): string {
+  return position ? `${position.indexLabel} / ${position.total}` : "—";
 }
 
 function KindFilter({ layout, filters, onFilters }: Pick<Props, "layout" | "filters" | "onFilters">) {
@@ -109,7 +118,53 @@ function Toolbar(props: Props) {
         ) : null}
       </div>
       {showKind ? <KindFilter layout={layout} filters={filters} onFilters={onFilters} /> : null}
+      <button
+        type="button"
+        className="offers-group-toggle"
+        aria-pressed={props.grouped}
+        onClick={() => props.onGrouped(!props.grouped)}
+      >
+        Grupează după cerere
+      </button>
     </div>
+  );
+}
+
+type RowGroup = { key: string; group: QuoteRequestGroup | null; items: QuoteListItemTransport[] };
+
+/** Visible rows by request, in the order the register already shows them. */
+function groupRows(items: readonly QuoteListItemTransport[], groups: ReadonlyMap<string, QuoteRequestGroup>): RowGroup[] {
+  const result: RowGroup[] = [];
+  const byKey = new Map<string, RowGroup>();
+  for (const item of items) {
+    const key = item.requestId ?? "";
+    let row = byKey.get(key);
+    if (!row) {
+      row = { key, group: item.requestId ? (groups.get(item.requestId) ?? null) : null, items: [] };
+      byKey.set(key, row);
+      result.push(row);
+    }
+    row.items.push(item);
+  }
+  return result;
+}
+
+function GroupHeading({ group, shown }: { group: QuoteRequestGroup | null; shown: number }) {
+  if (!group?.requestId) return <span className="offers-group__title">Fără cerere</span>;
+  const total = group.total === 1 ? "1 ofertă" : `${group.total} oferte`;
+  return (
+    <>
+      <span className="offers-group__title">
+        {[group.requestReference, group.customerDisplayName].filter(Boolean).join(" · ") || "Cerere"}
+      </span>
+      <span className="offers-group__meta">
+        {total}
+        {shown < group.total ? ` · ${shown} în filtru` : ""} · {group.headline}
+      </span>
+      <a className="offers-group__open" href={requestHref(group.requestId)}>
+        Deschide cererea <span aria-hidden="true">→</span>
+      </a>
+    </>
   );
 }
 
@@ -117,7 +172,7 @@ function Caption({ view, items, total, filters, onReset, layout }: Props) {
   const ready = view !== "loading" && view !== "error";
   return (
     <div className="offers-v2__caption">
-      <h2>{filters.attention ? "Necesită atenție" : "Lista de oferte"}</h2>
+      <h2>{filters.attention ? "Necesită acțiune" : "Lista de oferte"}</h2>
       <span className="offers-v2__count" role={items.length === 0 || !ready ? "status" : undefined}>
         {ready ? `${items.length} din ${total}` : "Se citesc ofertele"}
       </span>
@@ -143,138 +198,180 @@ function moveFocus(from: HTMLElement, delta: number, onSelect: (id: string) => v
   if (id) onSelect(id);
 }
 
-function Table({ items, selectedId, onSelect }: Props) {
+function TableRow({ item, selected, position, onSelect }: { item: QuoteListItemTransport; selected: boolean; position: QuoteBranchPosition | undefined; onSelect: (id: string) => void }) {
+  const action = presentQuoteWorklistAction(item);
+  const identity = identityOf(item);
   return (
-    <table className="offers-v2__table">
+    <tr
+      data-quote-id={item.quoteSnapshotId}
+      data-selected={selected || undefined}
+      data-attention={item.needsAttention || undefined}
+      tabIndex={0}
+      aria-selected={selected}
+      aria-label={`Previzualizează oferta ${item.reference}`}
+      aria-controls="oferte-dosar"
+      onClick={(event) => {
+        if (clickedControl(event) || window.getSelection()?.toString()) return;
+        onSelect(item.quoteSnapshotId);
+      }}
+      onKeyDown={(event: KeyboardEvent<HTMLTableRowElement>) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect(item.quoteSnapshotId);
+        } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+          event.preventDefault();
+          moveFocus(event.currentTarget, event.key === "ArrowDown" ? 1 : -1, onSelect);
+        }
+      }}
+    >
+      <td className="offers-v2__col-client">
+        <span className="offers-v2__client" title={identity.title}>{identity.title}</span>
+        <span className="offers-v2__product" title={identity.subtitle ?? undefined}>
+          {[identity.subtitle, item.customerDisplayName ?? "Fără client"].filter(Boolean).join("  ·  ")}
+        </span>
+      </td>
+      <td className="offers-v2__col-ref">
+        <a className="offers-v2__ref" href={registryQuoteHref(item)}>{item.reference || "Ofertă"}</a>
+        <span className="offers-v2__meta" title={createdLabel(item) ?? undefined}>
+          {[item.requestReference, createdShortLabel(item)].filter(Boolean).join(" · ") || item.kindLabel}
+        </span>
+      </td>
+      <td className="offers-v2__col-branch">
+        <span aria-label={position ? `ramura ${position.indexLabel} din ${position.total}` : "fără cerere"}>{branchLabel(position)}</span>
+      </td>
+      <td className="offers-v2__col-state">
+        <span className="offers-v2__state" data-flag={item.needsAttention || undefined}>
+          <Lamp item={item} />
+          {commercialState(item)}
+        </span>
+      </td>
+      <td className="offers-v2__col-action">
+        <a className="offers-v2__next" data-priority={item.needsAttention || undefined} href={action.actionHref}>
+          <span>{destinationLabel(item, action.actionHref)}</span>
+          <span aria-hidden="true">→</span>
+        </a>
+      </td>
+      <td className="offers-v2__col-value"><Value item={item} /></td>
+    </tr>
+  );
+}
+
+function Table({ items, selectedId, onSelect, positions, groups, grouped }: Props) {
+  const sections = grouped ? groupRows(items, groups) : [{ key: "all", group: null, items: [...items] }];
+  return (
+    <table className="offers-v2__table" data-grouped={grouped || undefined}>
       <caption className="u-visually-hidden">Lista de oferte</caption>
       <thead>
         <tr>
+          <th scope="col" className="offers-v2__col-client">Înscripție · produs</th>
           <th scope="col" className="offers-v2__col-ref">Ofertă</th>
-          <th scope="col" className="offers-v2__col-client">Client · produs</th>
-          <th scope="col" className="offers-v2__col-value">Total cu TVA</th>
-          <th scope="col" className="offers-v2__col-state">Stare</th>
-          <th scope="col" className="offers-v2__col-action">Acțiune</th>
+          <th scope="col" className="offers-v2__col-branch">Ramura</th>
+          <th scope="col" className="offers-v2__col-state">Stare comercială</th>
+          <th scope="col" className="offers-v2__col-action">Destinație</th>
+          <th scope="col" className="offers-v2__col-value">Cu TVA</th>
         </tr>
       </thead>
-      <tbody>
-        {items.map((item) => {
-          const action = presentQuoteWorklistAction(item);
-          const selected = item.quoteSnapshotId === selectedId;
-          return (
-            <tr
-              key={item.quoteSnapshotId}
-              data-quote-id={item.quoteSnapshotId}
-              data-selected={selected || undefined}
-              data-attention={item.needsAttention || undefined}
-              tabIndex={0}
-              aria-selected={selected}
-              aria-label={`Previzualizează oferta ${item.reference}`}
-              aria-controls="oferte-dosar"
-              onClick={(event) => {
-                if (clickedControl(event) || window.getSelection()?.toString()) return;
-                onSelect(item.quoteSnapshotId);
-              }}
-              onKeyDown={(event: KeyboardEvent<HTMLTableRowElement>) => {
-                if (event.target !== event.currentTarget) return;
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  onSelect(item.quoteSnapshotId);
-                } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-                  event.preventDefault();
-                  moveFocus(event.currentTarget, event.key === "ArrowDown" ? 1 : -1, onSelect);
-                }
-              }}
-            >
-              <td className="offers-v2__col-ref">
-                <a className="offers-v2__ref" href={registryQuoteHref(item)}>{item.reference || "Ofertă"}</a>
-                <span className="offers-v2__meta" title={createdLabel(item) ?? undefined}>
-                  {item.kindLabel}
-                  {createdShortLabel(item) ? <span className="offers-v2__meta-time"> · {createdShortLabel(item)}</span> : null}
-                </span>
-              </td>
-              <td className="offers-v2__col-client">
-                <span className="offers-v2__client">{item.customerDisplayName ?? "Fără client"}</span>
-                <span className="offers-v2__product" title={item.productLabel || undefined}>
-                  {[item.productLabel, item.requestReference].filter(Boolean).join("  ·  ") || "—"}
-                </span>
-              </td>
-              <td className="offers-v2__col-value"><Value item={item} /></td>
-              <td className="offers-v2__col-state">
-                <span className="offers-v2__state"><Lamp item={item} />{item.stageLabel || "—"}</span>
-                <Attention item={item} />
-              </td>
-              <td className="offers-v2__col-action">
-                <a className="offers-v2__next" data-priority={item.needsAttention || undefined} href={action.actionHref}>
-                  <span>{action.actionLabel}</span>
-                  <span aria-hidden="true">→</span>
-                </a>
-              </td>
+      {sections.map((section) => (
+        <tbody key={section.key}>
+          {grouped ? (
+            <tr className="offers-group">
+              <th scope="rowgroup" colSpan={6}>
+                <GroupHeading group={section.group} shown={section.items.length} />
+              </th>
             </tr>
-          );
-        })}
-      </tbody>
+          ) : null}
+          {section.items.map((item) => (
+            <TableRow
+              key={item.quoteSnapshotId}
+              item={item}
+              selected={item.quoteSnapshotId === selectedId}
+              position={positions.get(item.quoteSnapshotId)}
+              onSelect={onSelect}
+            />
+          ))}
+        </tbody>
+      ))}
     </table>
   );
 }
 
-function Cards({ items, selectedId, onOpen }: Props) {
+function Card({ item, selected, position, onOpen }: { item: QuoteListItemTransport; selected: boolean; position: QuoteBranchPosition | undefined; onOpen: (id: string) => void }) {
+  const action = presentQuoteWorklistAction(item);
+  const offerHref = registryQuoteHref(item);
+  const orderHref = item.orderSnapshotId ? jobHref(item.orderSnapshotId) : null;
+  const value = listValue(item);
+  const identity = identityOf(item);
+  return (
+    <li
+      className="offer-card"
+      data-attention={item.needsAttention || undefined}
+      data-selected={selected || undefined}
+    >
+      <button
+        type="button"
+        className="offer-card__open"
+        data-quote-id={item.quoteSnapshotId}
+        aria-haspopup="dialog"
+        aria-label={`Deschide dosarul ofertei ${item.reference}`}
+        onClick={() => onOpen(item.quoteSnapshotId)}
+      >
+        <span className="offer-card__top">
+          <span className="offer-card__ref"><Lamp item={item} />{identity.title}</span>
+          <span className="offers-v2__value">
+            <span className="offers-v2__amount">{value?.amount ?? "—"}</span>
+            {value?.currency ? <span className="offers-v2__currency"> {value.currency}</span> : null}
+          </span>
+        </span>
+        <span className="offer-card__client">{[identity.subtitle, item.customerDisplayName ?? "Fără client"].filter(Boolean).join(" · ")}</span>
+        <span className="offer-card__product">
+          {[item.reference, position ? `ramura ${position.indexLabel} din ${position.total}` : null, item.requestReference].filter(Boolean).join(" · ")}
+        </span>
+        <span className="offer-card__meta">
+          <span className="offer-card__stage">{commercialState(item)}</span>
+        </span>
+      </button>
+      <div className="offer-card__doors">
+        <a className="offer-card__door" href={offerHref} data-next={action.actionHref === offerHref || undefined}>
+          <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M5 2.75h6.5l3.5 3.5v11H5zM11.5 2.75v3.5H15M7.5 10h5M7.5 13h5" /></svg>
+          <span><strong>Oferta</strong><small>{item.reference}</small></span>
+        </a>
+        {orderHref ? (
+          <a className="offer-card__door" href={orderHref} data-next={action.actionHref === orderHref || undefined}>
+            <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M3.5 6.5h13v10h-13zM7 6.5V4h6v2.5M3.5 10.5h13" /></svg>
+            <span><strong>Fișa lucrării</strong><small>Din comanda acestei oferte</small></span>
+          </a>
+        ) : (
+          <span className="offer-card__door" aria-disabled="true">
+            <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M3.5 6.5h13v10h-13zM7 6.5V4h6v2.5M3.5 10.5h13" /></svg>
+            <span><strong>Fișa lucrării</strong><small>Apare după comandă</small></span>
+          </span>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function Cards({ items, selectedId, onOpen, positions, groups, grouped }: Props) {
+  const sections = grouped ? groupRows(items, groups) : [{ key: "all", group: null, items: [...items] }];
   return (
     <ul className="offers-cards">
-      {items.map((item) => {
-        const action = presentQuoteWorklistAction(item);
-        const offerHref = registryQuoteHref(item);
-        const orderHref = item.orderSnapshotId ? jobHref(item.orderSnapshotId) : null;
-        const value = listValue(item);
-        return (
-          <li
-            key={item.quoteSnapshotId}
-            className="offer-card"
-            data-attention={item.needsAttention || undefined}
-            data-selected={item.quoteSnapshotId === selectedId || undefined}
-          >
-            <button
-              type="button"
-              className="offer-card__open"
-              data-quote-id={item.quoteSnapshotId}
-              aria-haspopup="dialog"
-              aria-label={`Deschide dosarul ofertei ${item.reference}`}
-              onClick={() => onOpen(item.quoteSnapshotId)}
-            >
-              <span className="offer-card__top">
-                <span className="offer-card__ref"><Lamp item={item} />{item.reference || "Ofertă"}</span>
-                <span className="offers-v2__value">
-                  <span className="offers-v2__amount">{value?.amount ?? "—"}</span>
-                  {value?.currency ? <span className="offers-v2__currency"> {value.currency}</span> : null}
-                </span>
-              </span>
-              <span className="offer-card__client">{item.customerDisplayName ?? "Fără client"}</span>
-              <span className="offer-card__product">{item.productLabel || "—"}</span>
-              <span className="offer-card__meta">
-                <span className="offer-card__stage">{item.stageLabel || "—"}</span>
-                {[item.kindLabel, item.requestReference].filter(Boolean).join(" · ")}
-              </span>
-              <Attention item={item} />
-            </button>
-            <div className="offer-card__doors">
-              <a className="offer-card__door" href={offerHref} data-next={action.actionHref === offerHref || undefined}>
-                <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M5 2.75h6.5l3.5 3.5v11H5zM11.5 2.75v3.5H15M7.5 10h5M7.5 13h5" /></svg>
-                <span><strong>Oferta</strong><small>{item.reference}</small></span>
-              </a>
-              {orderHref ? (
-                <a className="offer-card__door" href={orderHref} data-next={action.actionHref === orderHref || undefined}>
-                  <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M3.5 6.5h13v10h-13zM7 6.5V4h6v2.5M3.5 10.5h13" /></svg>
-                  <span><strong>Comanda</strong><small>Fișa lucrării</small></span>
-                </a>
-              ) : (
-                <span className="offer-card__door" aria-disabled="true">
-                  <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M3.5 6.5h13v10h-13zM7 6.5V4h6v2.5M3.5 10.5h13" /></svg>
-                  <span><strong>Comanda</strong><small>Fără comandă încă</small></span>
-                </span>
-              )}
-            </div>
+      {sections.map((section) => [
+        grouped ? (
+          <li key={`group:${section.key}`} className="offers-cards__group">
+            <GroupHeading group={section.group} shown={section.items.length} />
           </li>
-        );
-      })}
+        ) : null,
+        ...section.items.map((item) => (
+          <Card
+            key={item.quoteSnapshotId}
+            item={item}
+            selected={item.quoteSnapshotId === selectedId}
+            position={positions.get(item.quoteSnapshotId)}
+            onOpen={onOpen}
+          />
+        )),
+      ])}
     </ul>
   );
 }

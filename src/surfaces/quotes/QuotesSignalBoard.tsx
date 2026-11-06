@@ -33,11 +33,13 @@ export function QuotesSignalBoard({ tiles, ready, filters, onChange }: Props) {
           data-lit={tile.pressed || (tile.tone === "attention" && tile.count > 0) || undefined}
           data-group-start={index === 2 || undefined}
           aria-pressed={tile.pressed}
+          title={tile.scope ? `${tile.label}: ${tile.scope}` : undefined}
           onClick={() => onChange(tile.apply(filters))}
         >
           <span className="offers-board__lamp" aria-hidden="true" />
           <span className="offers-board__count">{ready ? formatCount(tile.count) : "—"}</span>
           <span className="offers-board__label">{tile.label}</span>
+          {tile.scope ? <span className="offers-board__scope">{tile.scope}</span> : null}
         </button>
       ))}
     </div>

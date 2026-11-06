@@ -154,7 +154,7 @@ describe("QuoteSnapshotPage", () => {
 
     render(<QuoteSnapshotPage productCode={productCode} quoteSnapshotId="q-a" />);
 
-    const links = await screen.findAllByRole("link", { name: "Deschide comanda" });
+    const links = await screen.findAllByRole("link", { name: "Deschide fișa lucrării" });
     expect(links[0]).toHaveAttribute("href", "/lucrari/ord-1");
     expect(links.every((link) => link.getAttribute("href") === "/lucrari/ord-1")).toBe(true);
     expect(screen.queryByRole("button", { name: "Confirmă comanda" })).not.toBeInTheDocument();

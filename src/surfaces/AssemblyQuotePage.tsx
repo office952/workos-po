@@ -36,7 +36,7 @@ function presentRelations(quote: AssemblyQuoteTransport, orderSnapshotId: string
       : null,
     { key: "assembly", label: "Ansamblu", detail: quote.label, href: assemblyHref(quote.assemblyId), action: "Deschide ansamblul" },
     orderSnapshotId
-      ? { key: "order", label: "Comandă", detail: null, href: jobHref(orderSnapshotId), action: "Deschide comanda" }
+      ? { key: "order", label: "Comandă", detail: null, href: jobHref(orderSnapshotId), action: "Deschide fișa lucrării" }
       : null,
   ].filter((relation): relation is QuoteRelation => relation !== null);
 }
@@ -176,7 +176,7 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
                 <>
                   {orderSnapshotId ? (
                     <a className="offers-next" href={jobHref(orderSnapshotId)}>
-                      <span>Deschide comanda</span>
+                      <span>Deschide fișa lucrării</span>
                       <span aria-hidden="true">→</span>
                     </a>
                   ) : canAccept ? (
