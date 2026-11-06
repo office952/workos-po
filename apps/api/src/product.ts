@@ -75,6 +75,7 @@ import {
   type CommercialPriceProjection,
   type FrozenRateAcknowledgement,
   type RateAcknowledgementError,
+  type CommercialRequestLinkResult,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
 import { getCookie } from "hono/cookie";
@@ -95,6 +96,74 @@ import { getCommercialRequestQuoteLinkByQuote } from "./requests/store.js";
 import { OPERATOR_SESSION_COOKIE } from "./operator/store.js";
 import { renderQuoteDocumentPdf } from "./quoteDocument/renderQuoteDocumentPdf.js";
 
+
+class RequestLinkedQuoteRollback extends Error {
+  readonly failure: {
+    error: string;
+    reasons: readonly string[];
+    status: 400 | 404 | 409 | 422;
+  };
+
+  constructor(failure: {
+    error: string;
+    reasons: readonly string[];
+    status: 400 | 404 | 409 | 422;
+  }) {
+    super(failure.error);
+    this.name = "RequestLinkedQuoteRollback";
+    this.failure = failure;
+  }
+}
+
+function presentRequestQuoteLinkFailure(
+  linked: Extract<CommercialRequestLinkResult, { ok: false }>,
+): RequestLinkedQuoteRollback["failure"] {
+  if ("reasons" in linked) {
+    return { error: linked.error, reasons: linked.reasons, status: 422 };
+  }
+  switch (linked.error) {
+    case "customer_mismatch":
+      return {
+        error: linked.error,
+        reasons: ["Oferta trebuie să folosească același client ca cererea."],
+        status: 400,
+      };
+    case "request_cancelled":
+      return {
+        error: linked.error,
+        reasons: ["Cererea anulată nu poate primi o ofertă nouă."],
+        status: 400,
+      };
+    case "not_found":
+      return {
+        error: linked.error,
+        reasons: ["Cererea de ofertă nu este disponibilă."],
+        status: 404,
+      };
+    case "quote_unavailable":
+      return {
+        error: linked.error,
+        reasons: ["Oferta nu s-a putut lega de cerere."],
+        status: 404,
+      };
+    case "quote_already_linked":
+      return {
+        error: linked.error,
+        reasons: ["Oferta este deja legată de altă cerere."],
+        status: 409,
+      };
+    case "commercial_request_closed":
+      return {
+        error: linked.error,
+        reasons: ["Cererea are urmărirea comercială încheiată."],
+        status: 409,
+      };
+    default: {
+      const _exhaustive: never = linked;
+      return _exhaustive;
+    }
+  }
+}
 
 function asDraftValues(value: unknown): DraftValues {
   if (typeof value !== "object" || value === null) {
@@ -932,23 +1001,44 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       );
     }
     const plane = runtime.assemblyPlane();
-    const outcome = plane.db.transaction(() => {
-      if (requestId) {
-        const closed = refuseNewQuoteIfClosed(plane.db, requestId);
-        if (closed) {
-          return { ok: false as const, error: closed.error, reasons: closed.reasons };
+    let outcome: {
+      ok: true;
+      stored: ReturnType<ProductSystemRuntime["persistQuoteSnapshot"]>;
+      linked: Extract<CommercialRequestLinkResult, { ok: true }> | null;
+    } | {
+      ok: false;
+      error: string;
+      reasons: readonly string[];
+    };
+    try {
+      outcome = plane.db.transaction(() => {
+        if (requestId) {
+          const closed = refuseNewQuoteIfClosed(plane.db, requestId);
+          if (closed) {
+            return { ok: false as const, error: closed.error, reasons: closed.reasons };
+          }
         }
+        const stored = runtime.persistQuoteSnapshot(frozen.snapshot);
+        if (!requestId) {
+          return { ok: true as const, stored, linked: null };
+        }
+        const linked = runtime.linkRequestQuote(requestId, stored.snapshot.quoteSnapshotId);
+        if (!linked.ok) {
+          // Returning {ok:false} would commit persistQuoteSnapshot. Throw to roll back
+          // a request-linked freeze so an unlinked snapshot cannot remain.
+          throw new RequestLinkedQuoteRollback(presentRequestQuoteLinkFailure(linked));
+        }
+        return { ok: true as const, stored, linked };
+      }).immediate();
+    } catch (caught) {
+      if (caught instanceof RequestLinkedQuoteRollback) {
+        return c.json(
+          { error: caught.failure.error, reasons: caught.failure.reasons },
+          caught.failure.status,
+        );
       }
-      const stored = runtime.persistQuoteSnapshot(frozen.snapshot);
-      if (!requestId) {
-        return { ok: true as const, stored, linked: null };
-      }
-      return {
-        ok: true as const,
-        stored,
-        linked: runtime.linkRequestQuote(requestId, stored.snapshot.quoteSnapshotId),
-      };
-    }).immediate();
+      throw caught;
+    }
     if (!outcome.ok) {
       return c.json({ error: outcome.error, reasons: outcome.reasons }, 409);
     }
@@ -964,14 +1054,11 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         commercialExperience: quoteExperience,
       });
     }
-    if (!outcome.linked?.ok) {
+    if (!outcome.linked) {
       return c.json({
-        created: outcome.stored.created,
-        quoteSnapshot: scopeQuoteSnapshot(outcome.stored.snapshot, access),
-        commercialExperience: quoteExperience,
-        requestLinkError: outcome.linked && "error" in outcome.linked ? outcome.linked.error : "quote_unavailable",
-        reasons: ["Oferta a fost creată, dar nu s-a legat de cerere."],
-      });
+        error: "quote_unavailable",
+        reasons: ["Oferta nu s-a putut lega de cerere."],
+      }, 404);
     }
     return c.json({
       created: outcome.stored.created,
