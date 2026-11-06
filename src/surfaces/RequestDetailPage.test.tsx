@@ -1415,6 +1415,45 @@ describe("W3-D06 · încheiere comercială", () => {
     });
   });
 
+  it("keeps the close-confirmation sentences readable and dismisses the dialog from the keyboard", async () => {
+    stubDetail(requestDetail({ commercial: commercial() }));
+    render(<RoutedRequest />);
+    await userEvent.click(await screen.findByRole("button", { name: "Încheie urmărirea comercială" }));
+    const dialog = await screen.findByRole("dialog", { name: "Închei urmărirea comercială?" });
+    expect(dialog).toHaveAttribute("data-frame");
+    expect(within(dialog).getByText(/Cererea nu are oferte/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/starea administrativă a cererii rămâne neschimbată/i)).toBeInTheDocument();
+    expect(within(dialog).getByText("Comenzile, lucrările și producția existente rămân neschimbate.")).toBeInTheDocument();
+    const confirm = within(dialog).getByRole("button", { name: "Încheie urmărirea comercială" });
+    expect(confirm.className).toMatch(/\bhit\b/);
+    expect(within(dialog).getByRole("button", { name: "Închide formularul" })).toHaveAttribute("type", "button");
+    dialog.dispatchEvent(new Event("cancel", { bubbles: true, cancelable: true }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Închei urmărirea comercială?" })).not.toBeInTheDocument());
+  });
+
+  it("shows a server refusal inside the close confirmation without leaving the dialog", async () => {
+    stubDetail(requestDetail({ commercial: commercial() }), (_url, init) => {
+      if (init?.method === "POST") {
+        return new Response(
+          JSON.stringify({
+            error: "commercial_revision_mismatch",
+            reasons: ["Revizia comercială s-a schimbat."],
+          }),
+          { status: 409 },
+        );
+      }
+      return null;
+    });
+    render(<RoutedRequest />);
+    await userEvent.click(await screen.findByRole("button", { name: "Încheie urmărirea comercială" }));
+    const dialog = await screen.findByRole("dialog", { name: "Închei urmărirea comercială?" });
+    await userEvent.type(within(dialog).getByLabelText("Motivul încheierii"), "Se închide.");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Încheie urmărirea comercială" }));
+    expect(await within(dialog).findByText("Revizia comercială s-a schimbat.")).toBeInTheDocument();
+    expect(within(dialog).getByRole("alert")).toHaveTextContent("Încheierea nu s-a aplicat");
+    expect(screen.getByRole("dialog", { name: "Închei urmărirea comercială?" })).toBeInTheDocument();
+  });
+
   it("saves a partial decision while the request stays open and refuses close until every unresolved offer is covered", async () => {
     const posts: unknown[] = [];
     const offers = [
@@ -1449,8 +1488,13 @@ describe("W3-D06 · încheiere comercială", () => {
     );
     render(<RoutedRequest />);
     await userEvent.click(await screen.findByRole("button", { name: "Încheie urmărirea comercială" }));
+    const workspace = document.querySelector(".request-workspace");
+    expect(workspace).toHaveAttribute("data-deciding", "true");
     const panel = await screen.findByTestId("commercial-decision-panel");
+    expect(panel.closest(".request-rail")).not.toBeNull();
+    expect(within(panel).getByText(/2 oferte cer o decizie/)).toBeInTheDocument();
     expect(within(panel).getByRole("button", { name: "Salvează și încheie comercial" })).toBeDisabled();
+    expect(within(panel).getByText(/este disponibil după ce toate ofertele nerezolvate au o decizie/)).toBeInTheDocument();
     const list = screen.getByRole("list", { name: "Ramuri comerciale" });
     await userEvent.click(within(list).getByRole("checkbox", { name: /Cere decizie: A/ }));
     await userEvent.type(within(panel).getByLabelText(/Motiv · Nu se mai urmărește/), "Nu mai urmărim A");

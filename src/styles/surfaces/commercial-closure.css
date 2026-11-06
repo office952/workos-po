@@ -9,6 +9,10 @@
 
 .cclose-bar .button {
   min-height: 44px;
+  white-space: normal;
+  line-height: 1.3;
+  height: auto;
+  text-align: center;
 }
 
 .cclose-banner {
@@ -26,6 +30,18 @@
   margin-top: 6px;
   color: var(--color-text-secondary);
   font: 400 14px/1.45 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.cclose,
+.cdecide,
+.cclose-banner,
+.cdecide p,
+.cdecide__hint,
+.cclose p,
+.cclose__keep {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .cclose {
@@ -38,6 +54,32 @@
   padding-left: 1.2em;
   color: var(--color-text-secondary);
   font: 400 14px/1.45 var(--font-sans);
+}
+
+.cclose .cdos-actions,
+.request-rail .cdecide__bar .cdos-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.cclose .cdos-actions > .hit,
+.request-rail .cdecide__bar .cdos-actions > .hit {
+  flex: 1 1 12rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cclose .cdos-actions > .hit > .button,
+.request-rail .cdecide__bar .cdos-actions > .hit > .button {
+  width: 100%;
+  height: auto;
+  min-height: 44px;
+  padding: 10px 12px;
+  white-space: normal;
+  line-height: 1.3;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .cdecide {
@@ -75,19 +117,25 @@
 
 .cdecide__offer {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(10rem, 14rem);
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px 12px;
   align-items: center;
+  min-width: 0;
   min-height: 44px;
 }
 
 .cdecide__offer select,
 .cdecide textarea,
 .ledger__pick input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 44px;
 }
 
-.cdecide__bar {
+.request-rail .cdecide__bar {
+  display: grid;
+  gap: 8px;
   position: sticky;
   bottom: 0;
   z-index: 2;
@@ -142,17 +190,9 @@
 }
 
 @media (max-width: 767px) {
-  .cdecide__offer {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .cdecide__bar .cdos-actions {
-    display: grid;
-    gap: 8px;
-  }
-
-  .cdecide__bar .cdos-actions > .hit {
-    width: 100%;
+  .cclose .cdos-actions > .hit,
+  .request-rail .cdecide__bar .cdos-actions > .hit {
+    flex-basis: 100%;
   }
 
   .ledger[data-selecting] .ledger__row {
