@@ -1,4 +1,11 @@
-import type { CommercialOfferDisposition } from "../commercial/closure/types.js";
+import type {
+  CommercialOfferDisposition,
+  CommercialState,
+} from "../commercial/closure/types.js";
+import {
+  projectOfferCommercialStatus,
+  type OfferCommercialStatusView,
+} from "../commercial/journey/offerStatus.js";
 import type { QuoteAcceptanceDecision } from "../commercial/quoteAcceptance.js";
 import type { OrderSnapshot } from "../commercial/orderSnapshot.js";
 import {
@@ -27,9 +34,9 @@ export type QuoteOverviewNextAction = (typeof QUOTE_OVERVIEW_NEXT_ACTIONS)[numbe
 
 export const QUOTE_OVERVIEW_FILTERS = [
   "ALL",
-  "NEEDS_ACTION",
-  "ACCEPTED",
+  "FOLLOW_UP",
   "ORDERED",
+  "DECIDED",
 ] as const;
 export type QuoteOverviewFilter = (typeof QUOTE_OVERVIEW_FILTERS)[number];
 
@@ -70,13 +77,18 @@ export type QuoteOverviewItem = {
   /** Latest commercial disposition, independent of acceptance/order. */
   disposition: CommercialOfferDisposition | null;
   dispositionLabel: string | null;
-};
+} & OfferCommercialStatusView;
 
 export type QuoteOverviewSummary = {
   total: number;
+  /** Offers that need the organization to act (never passive customer waiting). */
   needsAttention: number;
+  /** "De urmărit": waiting for the customer or for the order confirmation. */
+  followUp: number;
+  waitingCustomer: number;
   accepted: number;
   ordered: number;
+  decided: number;
   assemblies: number;
 };
 
@@ -136,12 +148,29 @@ export function quoteOverviewFilterLabel(filter: QuoteOverviewFilter): string {
   switch (filter) {
     case "ALL":
       return "Toate";
-    case "NEEDS_ACTION":
-      return "Necesită acțiune";
-    case "ACCEPTED":
-      return "Acceptate";
+    case "FOLLOW_UP":
+      return "De urmărit";
     case "ORDERED":
       return "Cu comandă";
+    case "DECIDED":
+      return "Decise";
+    default: {
+      const _exhaustive: never = filter;
+      return _exhaustive;
+    }
+  }
+}
+
+export function quoteOverviewFilterHint(filter: QuoteOverviewFilter): string {
+  switch (filter) {
+    case "ALL":
+      return "toate ofertele, inclusiv versiunile înlocuite";
+    case "FOLLOW_UP":
+      return "așteaptă răspunsul clientului sau confirmarea comenzii";
+    case "ORDERED":
+      return "lucrul continuă în fișa lucrării";
+    case "DECIDED":
+      return "refuzate de client sau scoase din urmărire";
     default: {
       const _exhaustive: never = filter;
       return _exhaustive;
@@ -195,22 +224,41 @@ export function quoteConfiguratorHref(item: {
   return `/products/${item.productCode}?quote=${encodeURIComponent(item.quoteSnapshotId)}`;
 }
 
-export function deriveQuoteOverviewAttention(stage: QuoteOverviewStage): {
+/**
+ * Attaches the shared commercial status. Attention means the organization must act;
+ * an offer waiting for the customer is followed up but never flagged.
+ */
+export function quoteOverviewCommercialFields(input: {
+  stage: QuoteOverviewStage;
+  superseded: boolean;
+  disposition: CommercialOfferDisposition | null;
+  commercialState: CommercialState | null;
+}): OfferCommercialStatusView & {
   needsAttention: boolean;
   attentionLabel: string | null;
 } {
-  switch (stage) {
-    case "QUOTE_CREATED":
-      return { needsAttention: true, attentionLabel: "Urmează acceptarea" };
-    case "QUOTE_ACCEPTED":
-      return { needsAttention: true, attentionLabel: "Urmează comanda" };
-    case "ORDER_CREATED":
-      return { needsAttention: false, attentionLabel: null };
-    default: {
-      const _exhaustive: never = stage;
-      return _exhaustive;
+  const status = projectOfferCommercialStatus({
+    ordered: input.stage === "ORDER_CREATED",
+    accepted: input.stage !== "QUOTE_CREATED",
+    superseded: input.superseded,
+    disposition: input.disposition,
+    commercialState: input.commercialState,
+  });
+  const attentionLabel = ((): string | null => {
+    switch (status.commercialStatus) {
+      case "ACCEPTED_WITHOUT_ORDER":
+        return "Urmează comanda";
+      case "UNDECIDED_AFTER_CLOSE":
+        return status.commercialStatusLabel;
+      default:
+        return null;
     }
-  }
+  })();
+  return {
+    ...status,
+    needsAttention: status.obligationKind === "ACTIONABLE",
+    attentionLabel,
+  };
 }
 
 export function projectQuoteOverviewItem(input: {
@@ -225,7 +273,12 @@ export function projectQuoteOverviewItem(input: {
     order: input.order,
   });
   const nextAction = deriveQuoteOverviewNextAction(stage);
-  const attention = deriveQuoteOverviewAttention(stage);
+  const commercial = quoteOverviewCommercialFields({
+    stage,
+    superseded: false,
+    disposition: null,
+    commercialState: null,
+  });
   const orderSnapshotId = input.order?.orderSnapshotId ?? null;
   const customerTotal = quoteSnapshotCustomerTotal(input.quote);
   return {
@@ -254,8 +307,7 @@ export function projectQuoteOverviewItem(input: {
       orderSnapshotId,
       nextAction,
     }),
-    needsAttention: attention.needsAttention,
-    attentionLabel: attention.attentionLabel,
+    ...commercial,
     acceptanceId: input.acceptance?.acceptanceId ?? null,
     orderSnapshotId,
     requestId: input.requestId ?? null,
@@ -275,8 +327,11 @@ export function projectQuoteOverview(
     summary: {
       total: sorted.length,
       needsAttention: sorted.filter((quote) => quote.needsAttention).length,
+      followUp: sorted.filter((quote) => quote.followUp).length,
+      waitingCustomer: sorted.filter((quote) => quote.obligationKind === "WAITING").length,
       accepted: sorted.filter((quote) => quote.stage === "QUOTE_ACCEPTED").length,
-      ordered: sorted.filter((quote) => quote.stage === "ORDER_CREATED").length,
+      ordered: sorted.filter((quote) => quote.commercialStatus === "ORDERED").length,
+      decided: sorted.filter((quote) => quote.decided).length,
       assemblies: sorted.filter((quote) => quote.kind === "ASSEMBLY").length,
     },
     quotes: sorted,
@@ -310,12 +365,12 @@ export function filterQuoteOverview(
     switch (filter) {
       case "ALL":
         return overview.quotes;
-      case "NEEDS_ACTION":
-        return overview.quotes.filter((quote) => quote.needsAttention);
-      case "ACCEPTED":
-        return overview.quotes.filter((quote) => quote.stage === "QUOTE_ACCEPTED");
+      case "FOLLOW_UP":
+        return overview.quotes.filter((quote) => quote.followUp);
       case "ORDERED":
-        return overview.quotes.filter((quote) => quote.stage === "ORDER_CREATED");
+        return overview.quotes.filter((quote) => quote.commercialStatus === "ORDERED");
+      case "DECIDED":
+        return overview.quotes.filter((quote) => quote.decided);
       default: {
         const _exhaustive: never = filter;
         return _exhaustive;

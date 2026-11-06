@@ -205,7 +205,7 @@ describe("unified Oferte registry", () => {
       nextAction: string;
       assemblies: { quoteSnapshotId: string | null }[];
     };
-    expect(requestDetail.nextAction).toBe("OPEN_ASSEMBLY");
+    expect(requestDetail.nextAction).toBe("OPEN_QUOTE");
     expect(requestDetail.assemblies[0]?.quoteSnapshotId).toBe(assembly?.quoteSnapshotId);
   });
 

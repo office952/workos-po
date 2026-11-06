@@ -1,6 +1,6 @@
 import type { QuoteOverviewItem, QuoteOverviewNextAction } from "../../quotes/overview.js";
 import {
-  deriveQuoteOverviewAttention,
+  quoteOverviewCommercialFields,
   quoteOverviewNextActionLabel,
 } from "../../quotes/overview.js";
 import { offerMayReceiveDisposition } from "./guards.js";
@@ -248,43 +248,28 @@ export function decorateQuoteOverviewItem(
   const resolution = resolveOfferCommercialStatus(offer);
   const disposition = offer.currentDisposition;
   const dispositionLabel = disposition ? commercialOfferDispositionLabel(disposition) : null;
-  let nextAction: QuoteOverviewNextAction = item.nextAction;
-  let attention = {
-    needsAttention: item.needsAttention,
-    attentionLabel: item.attentionLabel,
-  };
-  if (resolution.source === "DISPOSITION") {
-    nextAction = item.kind === "ASSEMBLY" ? "OPEN_ASSEMBLY" : "OPEN_QUOTE";
-    attention = { needsAttention: false, attentionLabel: dispositionLabel };
-  } else if (resolution.source === "SUPERSEDED_LINEAGE") {
-    attention = {
-      needsAttention: false,
-      attentionLabel: item.attentionLabel ?? "Înlocuită de o versiune mai nouă",
-    };
-  } else if (resolution.source === "ACCEPTED") {
-    attention = deriveQuoteOverviewAttention("QUOTE_ACCEPTED");
-  } else if (resolution.source === "UNRESOLVED" && commercialState === "CLOSED") {
-    nextAction = item.kind === "ASSEMBLY" ? "OPEN_ASSEMBLY" : "OPEN_QUOTE";
-    attention = { needsAttention: true, attentionLabel: "Fără decizie comercială" };
-  }
+  const commercial = quoteOverviewCommercialFields({
+    stage: item.stage,
+    superseded: item.superseded || offer.superseded,
+    disposition,
+    commercialState,
+  });
+  const opensOffer =
+    resolution.source === "DISPOSITION" ||
+    (resolution.source === "UNRESOLVED" && commercialState === "CLOSED");
+  const nextAction: QuoteOverviewNextAction = opensOffer
+    ? item.kind === "ASSEMBLY"
+      ? "OPEN_ASSEMBLY"
+      : "OPEN_QUOTE"
+    : item.nextAction;
   return {
     ...item,
+    ...commercial,
     disposition,
     dispositionLabel,
     nextAction,
     nextActionLabel: quoteOverviewNextActionLabel(nextAction),
-    needsAttention: attention.needsAttention,
-    attentionLabel: attention.attentionLabel,
   };
-}
-
-export function commercialNextActionWhenClosed(input: {
-  quotes: readonly QuoteOverviewItem[];
-}): "OPEN_QUOTE" | "OPEN_REQUEST" {
-  const obligation = input.quotes.find(
-    (quote) => quote.stage === "QUOTE_ACCEPTED" && !quote.orderSnapshotId,
-  );
-  return obligation ? "OPEN_QUOTE" : "OPEN_REQUEST";
 }
 
 const OWNER_ONLY_ACTIONS = new Set<CommercialAvailableAction>([

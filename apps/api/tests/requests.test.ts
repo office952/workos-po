@@ -131,7 +131,7 @@ describe("commercial request API", () => {
     expect(overview.requests[0]).toMatchObject({
       statusLabel: "Nouă",
       nextAction: "CHOOSE_PRODUCT",
-      nextActionLabel: "Alege produs",
+      nextActionLabel: "Alege produsul",
       customerDisplayName: "Client Cerere",
     });
 
@@ -143,7 +143,7 @@ describe("commercial request API", () => {
     expect(detail).toMatchObject({
       request: { requestId: request.requestId, customerId: customer.customerId, status: "NEW" },
       nextAction: "CHOOSE_PRODUCT",
-      nextActionLabel: "Alege produs",
+      nextActionLabel: "Alege produsul",
       linkedOffers: [],
     });
 
@@ -210,8 +210,15 @@ describe("commercial request API", () => {
     expect(detail.linkedQuoteSnapshotId).toBe(ordered);
     expect(detail.commercialProgress).toBe("ORDER_CREATED");
     expect(
-      detail.linkedOffers.filter((offer) => offer.stage === "QUOTE_CREATED").map((offer) => offer.attentionLabel),
-    ).toEqual(["Urmează acceptarea", "Urmează acceptarea"]);
+      detail.linkedOffers
+        .filter((offer) => offer.stage === "QUOTE_CREATED")
+        .map((offer) => [offer.commercialStatusLabel, offer.needsAttention]),
+    ).toEqual([
+      ["Urmează acceptarea", false],
+      ["Urmează acceptarea", false],
+    ]);
+    // Two offers wait for the customer and one has an order: the request itself is the target.
+    expect(detail.nextAction).toBe("OPEN_REQUEST");
   });
 
   it("links LETTERS and ACM quotes without mutating Quote Snapshot", async () => {

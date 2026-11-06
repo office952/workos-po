@@ -114,7 +114,10 @@ describe("quote overview API", () => {
       stage: "QUOTE_CREATED",
       stageLabel: "Creată",
       nextActionLabel: "Marchează acceptată",
-      needsAttention: true,
+      commercialStatus: "AWAITING_CUSTOMER",
+      commercialStatusLabel: "Urmează acceptarea",
+      followUp: true,
+      needsAttention: false,
       customerDisplayName: "Client QTA",
       grossDisplay: "484,00",
       currency: "EUR",
@@ -143,9 +146,12 @@ describe("quote overview API", () => {
     });
     expect(overview.summary).toMatchObject({
       total: 4,
-      needsAttention: 3,
+      needsAttention: 1,
+      followUp: 3,
+      waitingCustomer: 2,
       accepted: 1,
       ordered: 1,
+      decided: 0,
     });
     expect(created.quoteSnapshotId).toBe(byInscription.QTA.quoteSnapshotId);
     expect(acm.quoteSnapshotId).toBe(byInscription.QTD.quoteSnapshotId);

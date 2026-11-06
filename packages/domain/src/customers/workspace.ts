@@ -79,7 +79,12 @@ export type CustomerWorkspaceProjection = {
     openRequestCount: number;
     requestNeedsAction: number;
     quoteCount: number;
+    /** Offers without a request that need the organization; request offers count in their request. */
     quoteNeedsAction: number;
+    /** Actionable commercial items, each obligation once ("De rezolvat"). */
+    commercialActionableCount: number;
+    /** Offers waiting for the customer; passive, never flagged. */
+    commercialWaitingCount: number;
     /** WorkOS production jobs only. */
     jobCount: number;
     jobNeedsAction: number;
@@ -174,8 +179,7 @@ export function projectCustomerRegistryItem(input: {
   const openRequestCount = input.requests.filter(
     (request) => request.status !== "CANCELLED",
   ).length;
-  const requestNeedsAction = input.requests.filter((request) => request.needsAttention).length;
-  const quoteNeedsAction = input.quotes.filter((quote) => quote.needsAttention).length;
+  const { requestNeedsAction, quoteNeedsAction } = customerCommercialCounts(input);
   const jobNeedsAction = input.jobs.filter((job) => job.needsAttention).length;
   const attention = deriveCustomerAttention({
     requestNeedsAction,
@@ -236,8 +240,8 @@ export function projectCustomerWorkspace(input: {
   const openRequestCount = input.requests.filter(
     (request) => request.status !== "CANCELLED",
   ).length;
-  const requestNeedsAction = input.requests.filter((request) => request.needsAttention).length;
-  const quoteNeedsAction = input.quotes.filter((quote) => quote.needsAttention).length;
+  const commercialCounts = customerCommercialCounts(input);
+  const { requestNeedsAction, quoteNeedsAction } = commercialCounts;
   const jobNeedsAction = input.jobs.filter((job) => job.needsAttention).length;
   return {
     customer: input.customer,
@@ -251,6 +255,8 @@ export function projectCustomerWorkspace(input: {
       requestNeedsAction,
       quoteCount: input.quotes.length,
       quoteNeedsAction,
+      commercialActionableCount: commercialCounts.actionable,
+      commercialWaitingCount: commercialCounts.waiting,
       jobCount: input.jobs.length,
       jobNeedsAction,
       historicalWorkCount: input.historicalWorkCount ?? 0,
@@ -260,7 +266,7 @@ export function projectCustomerWorkspace(input: {
       customerId: input.customer.customerId,
       canCreateRequest: input.customer.status === "ACTIVE",
       requests: input.requests,
-      quotes: input.quotes,
+      quotes: unlinkedQuotes(input.quotes),
       jobs: input.jobs,
       requestNeedsAction,
       quoteNeedsAction,
@@ -291,6 +297,32 @@ export function requestsForCustomer(
   customerId: string,
 ): RequestOverviewItem[] {
   return requests.filter((request) => request.customerId === customerId);
+}
+
+function unlinkedQuotes(quotes: readonly QuoteOverviewItem[]): QuoteOverviewItem[] {
+  return quotes.filter((quote) => quote.requestId === null);
+}
+
+/**
+ * Offers linked to a request are counted once, inside that request's journey; quote-level
+ * counts only cover offers without a request.
+ */
+function customerCommercialCounts(input: {
+  requests: readonly RequestOverviewItem[];
+  quotes: readonly QuoteOverviewItem[];
+}): { requestNeedsAction: number; quoteNeedsAction: number; actionable: number; waiting: number } {
+  const unlinked = unlinkedQuotes(input.quotes);
+  const quoteNeedsAction = unlinked.filter((quote) => quote.needsAttention).length;
+  return {
+    requestNeedsAction: input.requests.filter((request) => request.needsAttention).length,
+    quoteNeedsAction,
+    actionable:
+      input.requests.reduce((sum, request) => sum + request.journey.actionableCount, 0) +
+      quoteNeedsAction,
+    waiting:
+      input.requests.reduce((sum, request) => sum + request.journey.waitingCount, 0) +
+      unlinked.filter((quote) => quote.obligationKind === "WAITING").length,
+  };
 }
 
 function deriveCustomerAttention(input: {
@@ -352,11 +384,11 @@ function deriveWorkspaceNextActions(input: {
   if (quote) {
     actions.push({
       label:
-        quote.stage === "QUOTE_ACCEPTED"
-          ? "1 ofertă acceptată trebuie transformată în comandă"
-          : input.quoteNeedsAction === 1
-            ? "1 ofertă așteaptă acceptarea"
-            : `${input.quoteNeedsAction} oferte necesită acțiune`,
+        input.quoteNeedsAction > 1
+          ? `${input.quoteNeedsAction} oferte necesită acțiune`
+          : quote.commercialStatus === "ACCEPTED_WITHOUT_ORDER"
+            ? "1 ofertă acceptată trebuie transformată în comandă"
+            : "1 ofertă necesită acțiune",
       href: quote.href,
     });
   }

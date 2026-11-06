@@ -1798,23 +1798,39 @@ export function createProductSystemRuntimeFromOpenDb(
   };
 }
 
+/** Cereri reads the same product and assembly offers as the request detail. */
 function requestOverviewItems(db: SqliteDatabase, organizationId: string) {
+  const assemblyQuotesByRequest = groupByRequest(assemblyQuoteOverviewItems(db, organizationId));
   return listCommercialRequests(db).map((request) => {
-    const quotes = decorateQuotesWithCommercial(
-      db,
-      organizationId,
-      linkedQuoteOverviewItems(db, request.requestId),
-    );
+    const quotes = decorateQuotesWithCommercial(db, organizationId, [
+      ...linkedQuoteOverviewItems(db, request.requestId),
+      ...(assemblyQuotesByRequest.get(request.requestId) ?? []),
+    ]);
     const ledger = readCommercialLedger(db, request.requestId, request.updatedAt);
     return projectRequestOverviewItem({
       request,
       customerDisplayName: getCustomer(db, request.customerId)?.displayName ?? null,
       quotes,
       assemblies: requestAssemblyWork(db, organizationId, request.requestId),
-      commercialState: ledger.state,
-      ledgerRevision: ledger.revision,
+      ledger: {
+        state: ledger.state,
+        revision: ledger.revision,
+        closedAt: ledger.closedAt,
+        reopenedAt: ledger.reopenedAt,
+      },
     });
   });
+}
+
+function groupByRequest(items: readonly QuoteOverviewItem[]): Map<string, QuoteOverviewItem[]> {
+  const grouped = new Map<string, QuoteOverviewItem[]>();
+  for (const item of items) {
+    if (!item.requestId) {
+      continue;
+    }
+    grouped.set(item.requestId, [...(grouped.get(item.requestId) ?? []), item]);
+  }
+  return grouped;
 }
 
 function requestAssemblyWork(db: SqliteDatabase, organizationId: string, requestId: string) {

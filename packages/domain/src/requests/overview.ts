@@ -1,11 +1,16 @@
 import type { CommercialRequestView } from "../commercial/closure/projection.js";
-import { commercialNextActionWhenClosed } from "../commercial/closure/projection.js";
 import {
   commercialStateLabel,
   type CommercialState,
 } from "../commercial/closure/types.js";
+import {
+  REQUEST_JOURNEY_NEXT_ACTIONS,
+  projectRequestCommercialJourney,
+  requestJourneyNextActionLabel,
+  type RequestCommercialJourney,
+  type RequestJourneyNextAction,
+} from "../commercial/journey/requestJourney.js";
 import type { QuoteOverviewItem, QuoteOverviewStage } from "../quotes/overview.js";
-import { quoteOverviewHref } from "../quotes/overview.js";
 import { matchesSearchFields } from "../searchNormalize.js";
 import {
   canUploadRequestAttachment,
@@ -34,12 +39,23 @@ import {
 } from "./commercialRequest.js";
 import {
   furthestRequestAssembly,
-  requestAssemblyCommercialRank,
+  requestAssemblyHref,
   type RequestAssemblyWork,
 } from "./assemblyWork.js";
 
-export const REQUEST_OVERVIEW_FILTERS = [
+export { requestAssemblyHref };
+
+/** Commercial filters are primary; administrative status filters stay as secondary controls. */
+export const REQUEST_COMMERCIAL_FILTERS = [
   "ALL",
+  "ACTIONABLE",
+  "NO_OFFER",
+  "COMMERCIAL_OPEN",
+  "COMMERCIAL_CLOSED",
+] as const;
+export type RequestCommercialFilter = (typeof REQUEST_COMMERCIAL_FILTERS)[number];
+
+export const REQUEST_ADMINISTRATIVE_FILTERS = [
   "NEW",
   "IN_REVIEW",
   "WAITING_CUSTOMER",
@@ -47,15 +63,16 @@ export const REQUEST_OVERVIEW_FILTERS = [
   "BLOCKED",
   "CANCELLED",
 ] as const;
+export type RequestAdministrativeFilter = (typeof REQUEST_ADMINISTRATIVE_FILTERS)[number];
+
+export const REQUEST_OVERVIEW_FILTERS = [
+  ...REQUEST_COMMERCIAL_FILTERS,
+  ...REQUEST_ADMINISTRATIVE_FILTERS,
+] as const;
 export type RequestOverviewFilter = (typeof REQUEST_OVERVIEW_FILTERS)[number];
 
-export const REQUEST_OVERVIEW_NEXT_ACTIONS = [
-  "OPEN_REQUEST",
-  "CHOOSE_PRODUCT",
-  "OPEN_QUOTE",
-  "OPEN_ASSEMBLY",
-] as const;
-export type RequestOverviewNextAction = (typeof REQUEST_OVERVIEW_NEXT_ACTIONS)[number];
+export const REQUEST_OVERVIEW_NEXT_ACTIONS = REQUEST_JOURNEY_NEXT_ACTIONS;
+export type RequestOverviewNextAction = RequestJourneyNextAction;
 
 export const REQUEST_COMMERCIAL_PROGRESS = [
   "QUOTE_CREATED",
@@ -81,6 +98,7 @@ export type RequestOverviewItem = {
   nextActionHref: string;
   needsAttention: boolean;
   attentionLabel: string | null;
+  /** Product and assembly offers, every version. */
   linkedQuoteCount: number;
   linkedQuoteSnapshotId: string | null;
   linkedQuoteProductCode: string | null;
@@ -88,16 +106,22 @@ export type RequestOverviewItem = {
   commercialState: CommercialState;
   commercialStateLabel: string;
   ledgerRevision: number;
+  journey: RequestCommercialJourney;
 };
 
 export type RequestOverviewSummary = {
   total: number;
+  /** Requests with at least one actionable item ("De rezolvat"). */
   needsAttention: number;
+  noOffer: number;
+  commerciallyOpen: number;
+  commerciallyClosed: number;
   newCount: number;
   inReview: number;
   waitingCustomer: number;
   readyForQuote: number;
   blocked: number;
+  cancelled: number;
 };
 
 export type RequestOverviewProjection = {
@@ -131,12 +155,21 @@ export type RequestDetailProjection = {
   linkedQuoteSnapshotId: string | null;
   linkedQuoteProductCode: string | null;
   commercial: CommercialRequestView | null;
+  journey: RequestCommercialJourney;
 };
 
 export function requestOverviewFilterLabel(filter: RequestOverviewFilter): string {
   switch (filter) {
     case "ALL":
       return "Toate";
+    case "ACTIONABLE":
+      return "De rezolvat";
+    case "NO_OFFER":
+      return "Fără ofertă";
+    case "COMMERCIAL_OPEN":
+      return "Deschise";
+    case "COMMERCIAL_CLOSED":
+      return "Încheiate";
     case "NEW":
       return "Noi";
     case "IN_REVIEW":
@@ -157,20 +190,7 @@ export function requestOverviewFilterLabel(filter: RequestOverviewFilter): strin
 }
 
 export function requestOverviewNextActionLabel(action: RequestOverviewNextAction): string {
-  switch (action) {
-    case "OPEN_REQUEST":
-      return "Deschide";
-    case "CHOOSE_PRODUCT":
-      return "Alege produs";
-    case "OPEN_QUOTE":
-      return "Deschide oferta";
-    case "OPEN_ASSEMBLY":
-      return "Deschide ansamblul";
-    default: {
-      const _exhaustive: never = action;
-      return _exhaustive;
-    }
-  }
+  return requestJourneyNextActionLabel(action);
 }
 
 export function requestCommercialProgressLabel(
@@ -190,6 +210,7 @@ export function requestCommercialProgressLabel(
   }
 }
 
+/** Furthest historical stage, for display only; it never chooses the next action. */
 export function deriveRequestCommercialProgress(
   quotes: readonly QuoteOverviewItem[],
   assemblies: readonly RequestAssemblyWork[] = [],
@@ -212,6 +233,7 @@ export function deriveRequestCommercialProgress(
   return null;
 }
 
+/** Furthest historical stage, for display only; it never chooses the next action. */
 export function furthestLinkedQuote(
   quotes: readonly QuoteOverviewItem[],
 ): QuoteOverviewItem | null {
@@ -230,29 +252,6 @@ const QUOTE_COMMERCIAL_RANK: Record<QuoteOverviewStage, number> = {
   QUOTE_ACCEPTED: 2,
   ORDER_CREATED: 3,
 };
-
-export function deriveRequestOverviewNextAction(input: {
-  status: CommercialRequestStatus;
-  quotes: readonly QuoteOverviewItem[];
-  assemblies?: readonly RequestAssemblyWork[];
-  commercialState?: CommercialState;
-}): RequestOverviewNextAction {
-  if (input.commercialState === "CLOSED") {
-    return commercialNextActionWhenClosed({ quotes: input.quotes });
-  }
-  const quote = furthestLinkedQuote(input.quotes);
-  const assembly = furthestRequestAssembly(input.assemblies ?? []);
-  if (
-    assembly &&
-    (!quote || requestAssemblyCommercialRank(assembly) >= QUOTE_COMMERCIAL_RANK[quote.stage])
-  ) {
-    return "OPEN_ASSEMBLY";
-  }
-  if (quote) {
-    return "OPEN_QUOTE";
-  }
-  return requestAcceptsNewProductWork(input.status) ? "CHOOSE_PRODUCT" : "OPEN_REQUEST";
-}
 
 export function requestAcceptsNewProductWork(status: CommercialRequestStatus): boolean {
   switch (status) {
@@ -275,96 +274,53 @@ export function requestOverviewHref(requestId: string): string {
   return `/requests/${encodeURIComponent(requestId)}`;
 }
 
-export function requestOverviewNextActionHref(input: {
-  requestId: string;
-  nextAction: RequestOverviewNextAction;
+export type RequestLedgerInput = {
+  state: CommercialState;
+  revision: number;
+  closedAt: string | null;
+  reopenedAt: string | null;
+};
+
+const OPEN_LEDGER: RequestLedgerInput = {
+  state: "OPEN",
+  revision: 0,
+  closedAt: null,
+  reopenedAt: null,
+};
+
+export function projectRequestJourney(input: {
+  request: CommercialRequest;
   quotes: readonly QuoteOverviewItem[];
-  assemblies?: readonly RequestAssemblyWork[];
-}): string {
-  switch (input.nextAction) {
-    case "OPEN_QUOTE": {
-      const quote = furthestLinkedQuote(input.quotes);
-      return quote
-        ? quoteOverviewHref({
-            productCode: quote.productCode,
-            quoteSnapshotId: quote.quoteSnapshotId,
-            orderSnapshotId: quote.orderSnapshotId,
-            nextAction: quote.nextAction,
-          })
-        : requestOverviewHref(input.requestId);
-    }
-    case "OPEN_ASSEMBLY": {
-      const assembly = furthestRequestAssembly(input.assemblies ?? []);
-      return assembly
-        ? requestAssemblyHref(assembly.assemblyId)
-        : requestOverviewHref(input.requestId);
-    }
-    case "OPEN_REQUEST":
-    case "CHOOSE_PRODUCT":
-      return requestOverviewHref(input.requestId);
-    default: {
-      const _exhaustive: never = input.nextAction;
-      return _exhaustive;
-    }
-  }
-}
-
-export function requestAssemblyHref(assemblyId: string): string {
-  return `/assemblies/${encodeURIComponent(assemblyId)}`;
-}
-
-export function deriveRequestOverviewAttention(input: {
-  status: CommercialRequestStatus;
-  hasLinkedQuotes: boolean;
-}): { needsAttention: boolean; attentionLabel: string | null } {
-  if (input.hasLinkedQuotes && input.status !== "BLOCKED") {
-    return { needsAttention: false, attentionLabel: null };
-  }
-  switch (input.status) {
-    case "NEW":
-    case "IN_REVIEW":
-    case "WAITING_CUSTOMER":
-    case "CANCELLED":
-      return { needsAttention: false, attentionLabel: null };
-    case "READY_FOR_QUOTE":
-      return { needsAttention: true, attentionLabel: "Urmează oferta" };
-    case "BLOCKED":
-      return { needsAttention: true, attentionLabel: "Blocat" };
-    default: {
-      const _exhaustive: never = input.status;
-      return _exhaustive;
-    }
-  }
+  assemblies: readonly RequestAssemblyWork[];
+  ledger: RequestLedgerInput;
+}): RequestCommercialJourney {
+  return projectRequestCommercialJourney({
+    status: input.request.status,
+    requestHref: requestOverviewHref(input.request.requestId),
+    acceptsNewProductWork: requestAcceptsNewProductWork(input.request.status),
+    offers: input.quotes,
+    assemblies: input.assemblies,
+    ledger: input.ledger,
+  });
 }
 
 export function projectRequestOverviewItem(input: {
   request: CommercialRequest;
   customerDisplayName: string | null;
+  /** Product and assembly offers linked to this request, decorated with commercial facts. */
   quotes: readonly QuoteOverviewItem[];
   assemblies?: readonly RequestAssemblyWork[];
-  commercialState?: CommercialState;
-  ledgerRevision?: number;
+  ledger?: RequestLedgerInput;
 }): RequestOverviewItem {
   const assemblies = input.assemblies ?? [];
-  const commercialState = input.commercialState ?? "OPEN";
+  const ledger = input.ledger ?? OPEN_LEDGER;
   const commercialProgress = deriveRequestCommercialProgress(input.quotes, assemblies);
-  const nextAction = deriveRequestOverviewNextAction({
-    status: input.request.status,
+  const journey = projectRequestJourney({
+    request: input.request,
     quotes: input.quotes,
     assemblies,
-    commercialState,
+    ledger,
   });
-  const outstandingOrder = input.quotes.some(
-    (quote) => quote.stage === "QUOTE_ACCEPTED" && !quote.orderSnapshotId,
-  );
-  const attention =
-    commercialState === "CLOSED" && outstandingOrder
-      ? { needsAttention: true, attentionLabel: "Urmează comanda" }
-      : deriveRequestOverviewAttention({
-          status: input.request.status,
-          hasLinkedQuotes:
-            input.quotes.length > 0 || assemblies.some((work) => work.quoteSnapshotId !== null),
-        });
   const furthestQuote = furthestLinkedQuote(input.quotes);
   return {
     requestId: input.request.requestId,
@@ -379,24 +335,20 @@ export function projectRequestOverviewItem(input: {
     commercialProgressLabel: commercialProgress
       ? requestCommercialProgressLabel(commercialProgress)
       : null,
-    nextAction,
-    nextActionLabel: requestOverviewNextActionLabel(nextAction),
+    nextAction: journey.nextAction,
+    nextActionLabel: journey.nextActionLabel,
     href: requestOverviewHref(input.request.requestId),
-    nextActionHref: requestOverviewNextActionHref({
-      requestId: input.request.requestId,
-      nextAction,
-      quotes: input.quotes,
-      assemblies,
-    }),
-    needsAttention: attention.needsAttention,
-    attentionLabel: attention.attentionLabel,
+    nextActionHref: journey.nextActionHref,
+    needsAttention: journey.needsAttention,
+    attentionLabel: journey.attentionLabel,
     linkedQuoteCount: input.quotes.length,
     linkedQuoteSnapshotId: furthestQuote?.quoteSnapshotId ?? null,
     linkedQuoteProductCode: furthestQuote?.productCode ?? null,
     linkedAssemblyId: furthestRequestAssembly(assemblies)?.assemblyId ?? null,
-    commercialState,
-    commercialStateLabel: commercialStateLabel(commercialState),
-    ledgerRevision: input.ledgerRevision ?? 0,
+    commercialState: ledger.state,
+    commercialStateLabel: commercialStateLabel(ledger.state),
+    ledgerRevision: ledger.revision,
+    journey,
   };
 }
 
@@ -406,17 +358,22 @@ export function projectRequestOverview(
   const sorted = [...requests].sort((left, right) =>
     right.createdAt.localeCompare(left.createdAt),
   );
+  const byStatus = (status: CommercialRequestStatus) =>
+    sorted.filter((request) => request.status === status).length;
   return {
     summary: {
       total: sorted.length,
       needsAttention: sorted.filter((request) => request.needsAttention).length,
-      newCount: sorted.filter((request) => request.status === "NEW").length,
-      inReview: sorted.filter((request) => request.status === "IN_REVIEW").length,
-      waitingCustomer: sorted.filter((request) => request.status === "WAITING_CUSTOMER")
+      noOffer: sorted.filter((request) => request.journey.offerSummary.count === 0).length,
+      commerciallyOpen: sorted.filter((request) => request.commercialState === "OPEN").length,
+      commerciallyClosed: sorted.filter((request) => request.commercialState === "CLOSED")
         .length,
-      readyForQuote: sorted.filter((request) => request.status === "READY_FOR_QUOTE")
-        .length,
-      blocked: sorted.filter((request) => request.status === "BLOCKED").length,
+      newCount: byStatus("NEW"),
+      inReview: byStatus("IN_REVIEW"),
+      waitingCustomer: byStatus("WAITING_CUSTOMER"),
+      readyForQuote: byStatus("READY_FOR_QUOTE"),
+      blocked: byStatus("BLOCKED"),
+      cancelled: byStatus("CANCELLED"),
     },
     requests: sorted,
   };
@@ -437,10 +394,18 @@ export function filterRequestOverview(
   filter: RequestOverviewFilter,
   query = "",
 ): readonly RequestOverviewItem[] {
-  const byStatus = ((): readonly RequestOverviewItem[] => {
+  const byFilter = ((): readonly RequestOverviewItem[] => {
     switch (filter) {
       case "ALL":
         return overview.requests;
+      case "ACTIONABLE":
+        return overview.requests.filter((request) => request.needsAttention);
+      case "NO_OFFER":
+        return overview.requests.filter((request) => request.journey.offerSummary.count === 0);
+      case "COMMERCIAL_OPEN":
+        return overview.requests.filter((request) => request.commercialState === "OPEN");
+      case "COMMERCIAL_CLOSED":
+        return overview.requests.filter((request) => request.commercialState === "CLOSED");
       case "NEW":
       case "IN_REVIEW":
       case "WAITING_CUSTOMER":
@@ -454,7 +419,7 @@ export function filterRequestOverview(
       }
     }
   })();
-  return byStatus.filter((item) => matchesRequestSearch(item, query));
+  return byFilter.filter((item) => matchesRequestSearch(item, query));
 }
 
 export function projectRequestDetail(input: {
@@ -478,11 +443,18 @@ export function projectRequestDetail(input: {
   const selected = input.request.optionalScopeIds.includes(SITE_INSTALLATION_SCOPE_ID);
   const installationFacts = selected ? (input.installationFacts ?? null) : null;
   const hasLinkedQuotes = input.hasLinkedQuotes ?? input.quotes.length > 0;
-  const nextAction = deriveRequestOverviewNextAction({
-    status: input.request.status,
+  const journey = projectRequestJourney({
+    request: input.request,
     quotes: input.quotes,
     assemblies,
-    commercialState,
+    ledger: commercial
+      ? {
+          state: commercial.state,
+          revision: commercial.revision,
+          closedAt: commercial.closedAt,
+          reopenedAt: commercial.reopenedAt,
+        }
+      : OPEN_LEDGER,
   });
   const furthestQuote = furthestLinkedQuote(input.quotes);
   return {
@@ -503,7 +475,6 @@ export function projectRequestDetail(input: {
     linkedAssemblyId: furthestRequestAssembly(assemblies)?.assemblyId ?? null,
     canStartAdditionalWork:
       commercialState === "OPEN" &&
-      nextAction !== "CHOOSE_PRODUCT" &&
       (assemblies.length > 0 || input.quotes.length > 0) &&
       requestAcceptsNewProductWork(input.request.status),
     attachments,
@@ -525,16 +496,12 @@ export function projectRequestDetail(input: {
     }),
     installationFacts,
     canWriteInstallationFacts: selected && !hasLinkedQuotes,
-    nextAction,
-    nextActionLabel: requestOverviewNextActionLabel(nextAction),
-    nextActionHref: requestOverviewNextActionHref({
-      requestId: input.request.requestId,
-      nextAction,
-      quotes: input.quotes,
-      assemblies,
-    }),
+    nextAction: journey.nextAction,
+    nextActionLabel: journey.nextActionLabel,
+    nextActionHref: journey.nextActionHref,
     linkedQuoteSnapshotId: furthestQuote?.quoteSnapshotId ?? null,
     linkedQuoteProductCode: furthestQuote?.productCode ?? null,
     commercial,
+    journey,
   };
 }

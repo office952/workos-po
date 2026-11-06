@@ -38,7 +38,12 @@ type QuoteItem = {
   orderSnapshotId: string | null;
 };
 type Workspace = {
-  summary: { quoteCount: number; quoteNeedsAction: number };
+  summary: {
+    quoteCount: number;
+    quoteNeedsAction: number;
+    commercialActionableCount: number;
+    commercialWaitingCount: number;
+  };
   quotes: QuoteItem[];
   recentActivity: { label: string }[];
 };
@@ -47,6 +52,8 @@ type RequestDetail = {
   linkedOffers: QuoteItem[];
   assemblies: { assemblyId: string; quoteSnapshotId: string | null; orderSnapshotId: string | null }[];
   nextAction: string;
+  nextActionHref: string;
+  journey: { actionableCount: number; waitingCount: number; orderCount: number };
   canChangeCustomer: boolean;
 };
 
@@ -221,12 +228,15 @@ describe("unified customer commercial history", () => {
       superseded: true,
       stage: "QUOTE_CREATED",
       needsAttention: false,
-      attentionLabel: "Înlocuită de o versiune mai nouă",
+      commercialStatus: "SUPERSEDED",
+      commercialStatusLabel: "Înlocuită de o versiune mai nouă",
       orderSnapshotId: null,
     });
 
-    // Two open product quotes need acceptance; the historical assembly version and the ordered one do not.
-    expect(alpha.summary.quoteNeedsAction).toBe(2);
+    // Two open product quotes wait for the customer: followed up, never flagged as the organization's work.
+    expect(alpha.summary.quoteNeedsAction).toBe(0);
+    expect(alpha.summary.commercialWaitingCount).toBe(2);
+    expect(alpha.summary.commercialActionableCount).toBe(0);
     expect(alpha.recentActivity.filter((item) => item.label.startsWith("Ofertă"))).toHaveLength(4);
 
     const beta = await workspace(app, world.beta);
@@ -269,7 +279,11 @@ describe("unified customer commercial history", () => {
 
     const before = await workspace(app, small);
     expect(before.quotes.map((item) => item.kind)).toEqual(["PRODUCT"]);
-    expect(before.summary).toMatchObject({ quoteCount: 1, quoteNeedsAction: 1 });
+    expect(before.summary).toMatchObject({
+      quoteCount: 1,
+      quoteNeedsAction: 0,
+      commercialWaitingCount: 1,
+    });
     const detailBefore = await requestDetail(app, smallRequest);
     expect(ids(detailBefore.linkedOffers)).toEqual([productId]);
     expect(detailBefore.assemblies).toEqual([]);
@@ -329,7 +343,10 @@ describe("unified request linked offers", () => {
       quoteSnapshotId: world.currentId,
       orderSnapshotId: ordered?.orderSnapshotId,
     });
-    expect(detail.nextAction).toBe("OPEN_ASSEMBLY");
+    // The assembly is ordered; the product offer still waits for the customer, so it is the target.
+    expect(detail.nextAction).toBe("OPEN_QUOTE");
+    expect(detail.nextActionHref).toBe(`/quotes/${encodeURIComponent(world.productId)}`);
+    expect(detail.journey).toMatchObject({ actionableCount: 0, waitingCount: 1, orderCount: 1 });
     expect(detail.canChangeCustomer).toBe(false);
 
     const registry = await registryQuotes(app);
@@ -343,15 +360,30 @@ describe("unified request linked offers", () => {
     expect(productOnly.assemblies).toEqual([]);
   });
 
-  it("keeps the request list projection unchanged for product-only and assembly requests", async () => {
+  it("gives the request list the same offers, journey and target as the request detail", async () => {
     const world = await advancedWorld();
     const { app } = world;
     const overview = (await json(await app.request("/api/requests"))).overview as {
-      requests: { requestId: string; linkedQuoteCount: number; linkedQuoteSnapshotId: string | null; nextAction: string }[];
+      requests: {
+        requestId: string;
+        linkedQuoteCount: number;
+        nextAction: string;
+        nextActionHref: string;
+        journey: unknown;
+      }[];
     };
+    for (const requestId of [world.mixedRequest, world.betaRequest, world.emptyRequest]) {
+      const row = overview.requests.find((item) => item.requestId === requestId);
+      const detail = await requestDetail(app, requestId);
+      expect(row?.linkedQuoteCount).toBe(detail.linkedOffers.length);
+      expect(row?.nextAction).toBe(detail.nextAction);
+      expect(row?.nextActionHref).toBe(detail.nextActionHref);
+      expect(row?.journey).toEqual(detail.journey);
+    }
     const mixed = overview.requests.find((item) => item.requestId === world.mixedRequest);
-    expect(mixed).toMatchObject({ linkedQuoteCount: 1, linkedQuoteSnapshotId: world.productId, nextAction: "OPEN_ASSEMBLY" });
+    // Product offer, the current and the superseded assembly version.
+    expect(mixed).toMatchObject({ linkedQuoteCount: 3, nextAction: "OPEN_REQUEST" });
     const productOnly = overview.requests.find((item) => item.requestId === world.betaRequest);
-    expect(productOnly).toMatchObject({ linkedQuoteCount: 1, linkedQuoteSnapshotId: world.betaProductId, nextAction: "OPEN_QUOTE" });
+    expect(productOnly).toMatchObject({ linkedQuoteCount: 1, nextAction: "OPEN_QUOTE" });
   });
 });

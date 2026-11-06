@@ -142,8 +142,10 @@ describe("quote overview projection", () => {
       customerDisplayName: "Client Demo LETTERS",
       grossDisplay: "624,82",
       currency: "EUR",
-      needsAttention: true,
-      attentionLabel: "Urmează acceptarea",
+      needsAttention: false,
+      attentionLabel: null,
+      commercialStatusLabel: "Urmează acceptarea",
+      obligationKind: "WAITING",
     });
     expect(created.href).toBe("/quotes/qts%3AWORKOS");
   });
@@ -179,7 +181,7 @@ describe("quote overview projection", () => {
     );
   });
 
-  it("keeps ordered quotes out of the needs-action filter", () => {
+  it("separates follow-up, ordered and decided offers; only the organization's work needs attention", () => {
     const overview = projectQuoteOverview([
       projectQuoteOverviewItem({ quote: quote("A"), acceptance: null, order: null }),
       projectQuoteOverviewItem({
@@ -195,13 +197,30 @@ describe("quote overview projection", () => {
     ]);
     expect(overview.summary).toEqual({
       total: 3,
-      needsAttention: 2,
+      needsAttention: 1,
+      followUp: 2,
+      waitingCustomer: 1,
       accepted: 1,
       ordered: 1,
+      decided: 0,
       assemblies: 0,
     });
-    expect(filterQuoteOverview(overview, "NEEDS_ACTION")).toHaveLength(2);
-    expect(filterQuoteOverview(overview, "ACCEPTED")[0]?.inscription).toBe("B");
+    const byInscription = (inscription: string) =>
+      overview.quotes.find((item) => item.inscription === inscription);
+    expect(byInscription("A")).toMatchObject({
+      commercialStatus: "AWAITING_CUSTOMER",
+      commercialStatusLabel: "Urmează acceptarea",
+      obligationKind: "WAITING",
+      needsAttention: false,
+    });
+    expect(byInscription("B")).toMatchObject({
+      commercialStatus: "ACCEPTED_WITHOUT_ORDER",
+      obligationKind: "ACTIONABLE",
+      needsAttention: true,
+      attentionLabel: "Urmează comanda",
+    });
+    expect(filterQuoteOverview(overview, "FOLLOW_UP").map((item) => item.inscription).sort()).toEqual(["A", "B"]);
+    expect(filterQuoteOverview(overview, "DECIDED")).toHaveLength(0);
     expect(filterQuoteOverview(overview, "ORDERED")[0]?.inscription).toBe("C");
     expect(filterQuoteOverview(overview, "ORDERED", "zz-missing")).toHaveLength(0);
     expect(JSON.stringify(overview)).not.toMatch(/contentHash|schemaVersion|SENT|draft/);

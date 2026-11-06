@@ -24,7 +24,6 @@ export {
   planSaveCommercialDecisions,
 } from "./operations.js";
 export {
-  commercialNextActionWhenClosed,
   decorateQuoteOverviewItem,
   presentCommercialAuditEvent,
   projectCommercialRequestView,
