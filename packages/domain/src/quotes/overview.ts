@@ -1,3 +1,4 @@
+import type { CommercialOfferDisposition } from "../commercial/closure/types.js";
 import type { QuoteAcceptanceDecision } from "../commercial/quoteAcceptance.js";
 import type { OrderSnapshot } from "../commercial/orderSnapshot.js";
 import {
@@ -20,6 +21,7 @@ export const QUOTE_OVERVIEW_NEXT_ACTIONS = [
   "CREATE_ORDER",
   "OPEN_ORDER",
   "OPEN_ASSEMBLY",
+  "OPEN_QUOTE",
 ] as const;
 export type QuoteOverviewNextAction = (typeof QUOTE_OVERVIEW_NEXT_ACTIONS)[number];
 
@@ -65,6 +67,9 @@ export type QuoteOverviewItem = {
   /** Existing commercial_request_quote_links only — optional provenance, not required. */
   requestId: string | null;
   requestReference: string | null;
+  /** Latest commercial disposition, independent of acceptance/order. */
+  disposition: CommercialOfferDisposition | null;
+  dispositionLabel: string | null;
 };
 
 export type QuoteOverviewSummary = {
@@ -105,6 +110,8 @@ export function quoteOverviewNextActionLabel(action: QuoteOverviewNextAction): s
       return "Deschide comanda";
     case "OPEN_ASSEMBLY":
       return "Deschide ansamblul";
+    case "OPEN_QUOTE":
+      return "Deschide oferta";
     default: {
       const _exhaustive: never = action;
       return _exhaustive;
@@ -253,6 +260,8 @@ export function projectQuoteOverviewItem(input: {
     orderSnapshotId,
     requestId: input.requestId ?? null,
     requestReference: input.requestReference ?? null,
+    disposition: null,
+    dispositionLabel: null,
   };
 }
 

@@ -1,3 +1,9 @@
+import type { CommercialRequestView } from "../commercial/closure/projection.js";
+import { commercialNextActionWhenClosed } from "../commercial/closure/projection.js";
+import {
+  commercialStateLabel,
+  type CommercialState,
+} from "../commercial/closure/types.js";
 import type { QuoteOverviewItem, QuoteOverviewStage } from "../quotes/overview.js";
 import { quoteOverviewHref } from "../quotes/overview.js";
 import { matchesSearchFields } from "../searchNormalize.js";
@@ -79,6 +85,9 @@ export type RequestOverviewItem = {
   linkedQuoteSnapshotId: string | null;
   linkedQuoteProductCode: string | null;
   linkedAssemblyId: string | null;
+  commercialState: CommercialState;
+  commercialStateLabel: string;
+  ledgerRevision: number;
 };
 
 export type RequestOverviewSummary = {
@@ -121,6 +130,7 @@ export type RequestDetailProjection = {
   nextActionHref: string;
   linkedQuoteSnapshotId: string | null;
   linkedQuoteProductCode: string | null;
+  commercial: CommercialRequestView | null;
 };
 
 export function requestOverviewFilterLabel(filter: RequestOverviewFilter): string {
@@ -225,7 +235,11 @@ export function deriveRequestOverviewNextAction(input: {
   status: CommercialRequestStatus;
   quotes: readonly QuoteOverviewItem[];
   assemblies?: readonly RequestAssemblyWork[];
+  commercialState?: CommercialState;
 }): RequestOverviewNextAction {
+  if (input.commercialState === "CLOSED") {
+    return commercialNextActionWhenClosed({ quotes: input.quotes });
+  }
   const quote = furthestLinkedQuote(input.quotes);
   const assembly = furthestRequestAssembly(input.assemblies ?? []);
   if (
@@ -328,19 +342,29 @@ export function projectRequestOverviewItem(input: {
   customerDisplayName: string | null;
   quotes: readonly QuoteOverviewItem[];
   assemblies?: readonly RequestAssemblyWork[];
+  commercialState?: CommercialState;
+  ledgerRevision?: number;
 }): RequestOverviewItem {
   const assemblies = input.assemblies ?? [];
+  const commercialState = input.commercialState ?? "OPEN";
   const commercialProgress = deriveRequestCommercialProgress(input.quotes, assemblies);
   const nextAction = deriveRequestOverviewNextAction({
     status: input.request.status,
     quotes: input.quotes,
     assemblies,
+    commercialState,
   });
-  const attention = deriveRequestOverviewAttention({
-    status: input.request.status,
-    hasLinkedQuotes:
-      input.quotes.length > 0 || assemblies.some((work) => work.quoteSnapshotId !== null),
-  });
+  const outstandingOrder = input.quotes.some(
+    (quote) => quote.stage === "QUOTE_ACCEPTED" && !quote.orderSnapshotId,
+  );
+  const attention =
+    commercialState === "CLOSED" && outstandingOrder
+      ? { needsAttention: true, attentionLabel: "Urmează comanda" }
+      : deriveRequestOverviewAttention({
+          status: input.request.status,
+          hasLinkedQuotes:
+            input.quotes.length > 0 || assemblies.some((work) => work.quoteSnapshotId !== null),
+        });
   const furthestQuote = furthestLinkedQuote(input.quotes);
   return {
     requestId: input.request.requestId,
@@ -370,6 +394,9 @@ export function projectRequestOverviewItem(input: {
     linkedQuoteSnapshotId: furthestQuote?.quoteSnapshotId ?? null,
     linkedQuoteProductCode: furthestQuote?.productCode ?? null,
     linkedAssemblyId: furthestRequestAssembly(assemblies)?.assemblyId ?? null,
+    commercialState,
+    commercialStateLabel: commercialStateLabel(commercialState),
+    ledgerRevision: input.ledgerRevision ?? 0,
   };
 }
 
@@ -441,8 +468,11 @@ export function projectRequestDetail(input: {
   hasLinkedQuotes?: boolean;
   assemblies?: readonly RequestAssemblyWork[];
   asOf?: string;
+  commercial?: CommercialRequestView | null;
 }): RequestDetailProjection {
   const assemblies = input.assemblies ?? [];
+  const commercial = input.commercial ?? null;
+  const commercialState = commercial?.state ?? "OPEN";
   const commercialProgress = deriveRequestCommercialProgress(input.quotes, assemblies);
   const attachments = (input.attachments ?? []).map(projectRequestAttachment);
   const selected = input.request.optionalScopeIds.includes(SITE_INSTALLATION_SCOPE_ID);
@@ -452,6 +482,7 @@ export function projectRequestDetail(input: {
     status: input.request.status,
     quotes: input.quotes,
     assemblies,
+    commercialState,
   });
   const furthestQuote = furthestLinkedQuote(input.quotes);
   return {
@@ -471,6 +502,7 @@ export function projectRequestDetail(input: {
     ),
     linkedAssemblyId: furthestRequestAssembly(assemblies)?.assemblyId ?? null,
     canStartAdditionalWork:
+      commercialState === "OPEN" &&
       nextAction !== "CHOOSE_PRODUCT" &&
       (assemblies.length > 0 || input.quotes.length > 0) &&
       requestAcceptsNewProductWork(input.request.status),
@@ -503,5 +535,6 @@ export function projectRequestDetail(input: {
     }),
     linkedQuoteSnapshotId: furthestQuote?.quoteSnapshotId ?? null,
     linkedQuoteProductCode: furthestQuote?.productCode ?? null,
+    commercial,
   };
 }

@@ -13,6 +13,7 @@ import type { FrozenEicReference } from "../production/snapshot.js";
 import type { ExecutionPlanView } from "../execution/plan.js";
 import type { ExecutionPlanPreview } from "../execution/preview.js";
 import type { SiteInstallationOperatorView } from "../installation/scope.js";
+import { scopeCommercialRequestView } from "./closure/projection.js";
 import type { RequestDetailProjection } from "../requests/overview.js";
 import { scopeFrozenRateAcknowledgement } from "./rateAcknowledgement.js";
 
@@ -363,11 +364,16 @@ export function scopeRequestDetailProjection(
   detail: RequestDetailProjection,
   access: FinancialAccessScope,
 ): RequestDetailProjection {
+  const commercial =
+    detail.commercial && access !== "owner"
+      ? scopeCommercialRequestView(detail.commercial, false)
+      : detail.commercial;
   if (!detail.installationScope) {
-    return detail;
+    return commercial === detail.commercial ? detail : { ...detail, commercial };
   }
   return {
     ...detail,
+    commercial,
     installationScope: scopeSiteInstallationOperatorView(detail.installationScope, access),
   };
 }

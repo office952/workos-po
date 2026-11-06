@@ -126,6 +126,13 @@ describe("commercial request identity", () => {
         { hasLinkedQuotes: false },
       ),
     ).toEqual({ ok: false, error: "invalid_status" });
+    expect(
+      updateCommercialRequest(
+        created.request,
+        { status: "CANCELLED" },
+        { hasLinkedQuotes: false, hasOrders: true },
+      ),
+    ).toEqual({ ok: false, error: "order_obligation_blocks_cancellation" });
   });
 
   it("locks customer after a quote is linked and never copies quote status", () => {
@@ -248,6 +255,15 @@ describe("commercial request identity", () => {
         existingLink: null,
       }),
     ).toEqual({ ok: false, error: "request_cancelled" });
+    expect(
+      linkCommercialRequestQuote({
+        request: selected.request,
+        quoteSnapshotId: "qts:letters:orphan",
+        quoteCustomerId: "cus:active",
+        existingLink: null,
+        commercialState: "CLOSED",
+      }),
+    ).toEqual({ ok: false, error: "commercial_request_closed" });
   });
 
   it("selects optional scopes idempotently and refuses unknown ids", () => {
