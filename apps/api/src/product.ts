@@ -86,7 +86,12 @@ import {
 } from "./execution/presentExecutionPlan.js";
 import { financialAccess } from "./financial/access.js";
 import { requireOwnerRole } from "./cloud/middleware.js";
+import {
+  refuseAcceptIfDispositioned,
+  refuseNewQuoteIfClosed,
+} from "./commercial/closureStore.js";
 import { httpPathIdentity } from "./httpPathIdentity.js";
+import { getCommercialRequestQuoteLinkByQuote } from "./requests/store.js";
 import { OPERATOR_SESSION_COOKIE } from "./operator/store.js";
 import { renderQuoteDocumentPdf } from "./quoteDocument/renderQuoteDocumentPdf.js";
 
@@ -751,6 +756,10 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
           422,
         );
       }
+      const closed = refuseNewQuoteIfClosed(runtime.assemblyPlane().db, requestId);
+      if (closed) {
+        return c.json({ error: closed.error, reasons: closed.reasons }, 409);
+      }
       if (request.customerId !== customerId) {
         return c.json(
           {
@@ -922,38 +931,53 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         422,
       );
     }
-    const stored = runtime.persistQuoteSnapshot(frozen.snapshot);
-    if (!requestId) {
-      const access = financialAccess(c, "commercial");
-      return c.json({
-        created: stored.created,
-        quoteSnapshot: scopeQuoteSnapshot(stored.snapshot, access),
-        commercialExperience: projectCommercialExperience({
-          commercialCompleteness: stored.snapshot.commercial.completeness,
-          quote: stored.snapshot,
-        }),
-      });
+    const plane = runtime.assemblyPlane();
+    const outcome = plane.db.transaction(() => {
+      if (requestId) {
+        const closed = refuseNewQuoteIfClosed(plane.db, requestId);
+        if (closed) {
+          return { ok: false as const, error: closed.error, reasons: closed.reasons };
+        }
+      }
+      const stored = runtime.persistQuoteSnapshot(frozen.snapshot);
+      if (!requestId) {
+        return { ok: true as const, stored, linked: null };
+      }
+      return {
+        ok: true as const,
+        stored,
+        linked: runtime.linkRequestQuote(requestId, stored.snapshot.quoteSnapshotId),
+      };
+    }).immediate();
+    if (!outcome.ok) {
+      return c.json({ error: outcome.error, reasons: outcome.reasons }, 409);
     }
-    const linked = runtime.linkRequestQuote(requestId, stored.snapshot.quoteSnapshotId);
     const access = financialAccess(c, "commercial");
     const quoteExperience = projectCommercialExperience({
-      commercialCompleteness: stored.snapshot.commercial.completeness,
-      quote: stored.snapshot,
+      commercialCompleteness: outcome.stored.snapshot.commercial.completeness,
+      quote: outcome.stored.snapshot,
     });
-    if (!linked.ok) {
+    if (!requestId) {
       return c.json({
-        created: stored.created,
-        quoteSnapshot: scopeQuoteSnapshot(stored.snapshot, access),
+        created: outcome.stored.created,
+        quoteSnapshot: scopeQuoteSnapshot(outcome.stored.snapshot, access),
         commercialExperience: quoteExperience,
-        requestLinkError: linked.error,
+      });
+    }
+    if (!outcome.linked?.ok) {
+      return c.json({
+        created: outcome.stored.created,
+        quoteSnapshot: scopeQuoteSnapshot(outcome.stored.snapshot, access),
+        commercialExperience: quoteExperience,
+        requestLinkError: outcome.linked && "error" in outcome.linked ? outcome.linked.error : "quote_unavailable",
         reasons: ["Oferta a fost creată, dar nu s-a legat de cerere."],
       });
     }
     return c.json({
-      created: stored.created,
-      quoteSnapshot: scopeQuoteSnapshot(stored.snapshot, access),
+      created: outcome.stored.created,
+      quoteSnapshot: scopeQuoteSnapshot(outcome.stored.snapshot, access),
       commercialExperience: quoteExperience,
-      requestLink: linked.link,
+      requestLink: outcome.linked.link,
     });
   });
 
@@ -1019,12 +1043,26 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       const acceptance = runtime.readQuoteAcceptance(snapshot.quoteSnapshotId) ?? recorded.decision;
       const frozen = freezeOrderSnapshot(snapshot, acceptance);
       if (!frozen.ok) return c.json({ error: frozen.error, reasons: frozen.reasons }, 422);
-      const stored = runtime.assemblyPlane().db.transaction(() => {
+      const plane = runtime.assemblyPlane();
+      const stored = plane.db.transaction(() => {
+        const link = getCommercialRequestQuoteLinkByQuote(plane.db, snapshot.quoteSnapshotId);
+        const refusal = refuseAcceptIfDispositioned(
+          plane.db,
+          plane.organizationId,
+          link?.requestId,
+          snapshot.quoteSnapshotId,
+        );
+        if (refusal) {
+          return { blocked: true as const, error: refusal.error, reasons: refusal.reasons };
+        }
         runtime.persistQuoteAcceptance(acceptance);
-        return runtime.persistOrderSnapshot(frozen.snapshot);
+        return { blocked: false as const, order: runtime.persistOrderSnapshot(frozen.snapshot) };
       }).immediate();
-      return c.json({ created: stored.created,
-        orderSnapshot: scopeOrderSnapshot(stored.snapshot, financialAccess(c, "commercial")) });
+      if (stored.blocked) {
+        return c.json({ error: stored.error, reasons: stored.reasons }, 422);
+      }
+      return c.json({ created: stored.order.created,
+        orderSnapshot: scopeOrderSnapshot(stored.order.snapshot, financialAccess(c, "commercial")) });
     },
   );
 
@@ -1044,10 +1082,26 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
           422,
         );
       }
-      const stored = runtime.persistQuoteAcceptance(recorded.decision);
+      const plane = runtime.assemblyPlane();
+      const stored = plane.db.transaction(() => {
+        const link = getCommercialRequestQuoteLinkByQuote(plane.db, snapshot.quoteSnapshotId);
+        const refusal = refuseAcceptIfDispositioned(
+          plane.db,
+          plane.organizationId,
+          link?.requestId,
+          snapshot.quoteSnapshotId,
+        );
+        if (refusal) {
+          return { blocked: true as const, error: refusal.error, reasons: refusal.reasons };
+        }
+        return { blocked: false as const, acceptance: runtime.persistQuoteAcceptance(recorded.decision) };
+      }).immediate();
+      if (stored.blocked) {
+        return c.json({ error: stored.error, reasons: stored.reasons }, 422);
+      }
       return c.json({
-        created: stored.created,
-        acceptanceDecision: stored.decision,
+        created: stored.acceptance.created,
+        acceptanceDecision: stored.acceptance.decision,
         quoteSnapshot: scopeQuoteSnapshot(snapshot, financialAccess(c, "commercial")),
       });
     },

@@ -76,6 +76,7 @@ import {
   saveAssemblyTruth,
   saveConfirmedChild,
 } from "./store.js";
+import { refuseNewQuoteIfClosed } from "../commercial/closureStore.js";
 import { persistAssemblyQuoteRequestLock } from "../requests/store.js";
 import { planAssemblyAcceptance } from "./acceptance.js";
 import { readCurrentAssemblyOperationCostPolicy } from "./operationCostPolicyStore.js";
@@ -133,6 +134,10 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     const request = runtime.readCommercialRequest(requestId);
     if (!request) {
       return c.json({ error: "not_found" }, 404);
+    }
+    const closed = refuseNewQuoteIfClosed(plane.db, requestId);
+    if (closed) {
+      return c.json({ error: closed.error, reasons: closed.reasons }, 409);
     }
     const resolution = runtime.resolveProductEnablement();
     const kind = readKind(body);
@@ -461,13 +466,26 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     if (!frozen.ok) {
       return c.json({ error: frozen.error, reasons: frozen.reasons }, 422);
     }
-    saveAssemblyQuote(plane.db, frozen.quote);
-    if (current.truth.requestId) {
-      persistAssemblyQuoteRequestLock(
-        plane.db,
-        current.truth.requestId,
-        frozen.quote.quoteSnapshotId,
-      );
+    const requestId = current.truth.requestId;
+    const saved = plane.db.transaction(() => {
+      if (requestId) {
+        const closed = refuseNewQuoteIfClosed(plane.db, requestId);
+        if (closed) {
+          return { ok: false as const, error: closed.error, reasons: closed.reasons };
+        }
+      }
+      saveAssemblyQuote(plane.db, frozen.quote);
+      if (requestId) {
+        persistAssemblyQuoteRequestLock(
+          plane.db,
+          requestId,
+          frozen.quote.quoteSnapshotId,
+        );
+      }
+      return { ok: true as const };
+    }).immediate();
+    if (!saved.ok) {
+      return c.json({ error: saved.error, reasons: saved.reasons }, 409);
     }
     return c.json({ assembly: presentCurrent(runtime, current.definition.assemblyId, c) });
   });
