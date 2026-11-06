@@ -44,3 +44,5 @@ The metadata check confirms that these fields are present and specific. It does 
 Real database or Cloud mutation, migrations against real data, deploy, and merge still need their own Owner authorization. Security, permissions, snapshot integrity, synthetic and real data isolation, CI, and branch protection stay in force. Customer runtime must not depend on Notion.
 
 If Notion is unavailable, continue ordinary work that is already traced in GitHub. Do not invent an Owner GO.
+
+Ordinary features follow [ONE_FEATURE_ONE_PR_V1.md](./ONE_FEATURE_ONE_PR_V1.md): intermediate commits on one feature branch; one final PR when the feature is E2E complete, unless the Owner approves a split.

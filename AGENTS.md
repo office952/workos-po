@@ -246,3 +246,18 @@ Do not stop, reclaim ports, reset or repurpose the Owner reference runtime for p
 **Owner-approved: GitHub is the record for ordinary WorkOS development. Notion is optional.** A pull request carries the reason, scope, Owner GO, tests, risks and evidence. An existing Notion page may be cited; its absence does not block ordinary planning, edits, commits or pull requests.
 
 Canonical procedure: [docs/governance/GITHUB_PRIMARY_TRACEABILITY_V1.md](docs/governance/GITHUB_PRIMARY_TRACEABILITY_V1.md). The earlier Notion journal gate is [superseded](docs/governance/NOTION_JOURNAL_GATE_V1.md). STOP before a write when Owner GO for that action is missing or the scope differs. Missing Owner authorization fails the pull request. A Notion page does not authorize merge, deploy, or real-data operations. Customer runtime must not depend on Notion. Security, CI and branch protection stay in force.
+
+## Permanent delivery policy
+
+**Owner-approved (2026-11-06):** one coherent end-to-end business feature is implemented in one dedicated worktree and one feature branch, then delivered as **one final PR**. Canonical procedure: [docs/governance/ONE_FEATURE_ONE_PR_V1.md](docs/governance/ONE_FEATURE_ONE_PR_V1.md).
+
+```text
+ONE_FEATURE_ONE_PR_BY_DEFAULT = YES
+INTERMEDIATE_COMMITS = YES
+MICRO_PR_BY_DEFAULT = NO
+EXCEPTION_REQUIRES_OWNER_GO = YES
+```
+
+Domain, API, persistence, UI, documentation and tests are implementation stages, not automatic PR boundaries. Intermediate commits are expected. Push the feature branch when useful for inspection. Open the final PR only when the feature is E2E complete and independently reviewable. A separate PR requires an explicit Owner GO based on demonstrated technical risk or a genuinely independent delivery dependency. Do not open an intermediate PR merely because one internal stage finished.
+
+This does not weaken Git identity gates, one-writer rules, synthetic-data isolation, Owner GOs, CI, or branch protection.
