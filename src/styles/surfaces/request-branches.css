@@ -91,6 +91,11 @@
   border-color: var(--shell-brass);
 }
 
+.request-band__bar li[data-state="dispositioned"] {
+  border-color: var(--color-text-secondary);
+  background: var(--color-text-secondary);
+}
+
 .request-band__bar li[data-state="unclear"] {
   border-color: var(--color-danger);
   border-style: dashed;

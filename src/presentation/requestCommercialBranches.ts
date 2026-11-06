@@ -57,7 +57,13 @@ export type BranchAction = {
 export type CommercialBranchKind = "product" | "assembly" | "unlinked";
 
 /** Where the branch's current offer stands, read from the server stage of that offer. */
-export type BranchCommercialState = "ordered" | "accepted" | "quoted" | "no-offer" | "unclear";
+export type BranchCommercialState =
+  | "ordered"
+  | "accepted"
+  | "quoted"
+  | "dispositioned"
+  | "no-offer"
+  | "unclear";
 
 export type BranchFilter = "all" | "action" | "ordered";
 
@@ -664,7 +670,7 @@ function offerState(offer: RequestLinkedOfferTransport): { state: BranchCommerci
     return { state: "accepted", label: offer.attentionLabel?.trim() || offer.stageLabel?.trim() || "—" };
   }
   if (offer.dispositionLabel) {
-    return { state: "quoted", label: offer.dispositionLabel };
+    return { state: "dispositioned", label: offer.dispositionLabel };
   }
   const label = offer.attentionLabel?.trim() || offer.stageLabel?.trim() || "—";
   if (offer.stage === "QUOTE_CREATED") return { state: "quoted", label };

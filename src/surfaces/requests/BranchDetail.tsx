@@ -77,7 +77,7 @@ export function BranchDetail({
             className="button button--secondary"
             onClick={() => onResume(current.quoteSnapshotId, current.reference ?? branch.title)}
           >
-            Reluează oferta
+            Reia oferta
           </button>
         ) : null}
         <p className="branch-detail__links">

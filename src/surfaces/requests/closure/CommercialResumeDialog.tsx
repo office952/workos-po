@@ -36,7 +36,7 @@ export function CommercialResumeDialog({
 
   return (
     <CreationDialog
-      title="Reluezi oferta?"
+      title="Reiei oferta?"
       subtitle={offerLabel}
       framed
       busy={busy}
@@ -69,7 +69,7 @@ export function CommercialResumeDialog({
               Renunță
             </Button>
             <Button type="submit" disabled={busy || !reason.trim()}>
-              Reluează oferta
+              Reia oferta
             </Button>
           </div>
         </div>

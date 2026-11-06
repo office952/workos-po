@@ -100,7 +100,8 @@
   grid-template-columns: 2.5rem 2.5rem minmax(0, 2.3fr) minmax(0, 1.25fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
 }
 
-.ledger__pick {
+/* Beat `.ledger__row > span { pointer-events: none }` so the overlay row button does not swallow the checkbox. */
+.ledger__row > .ledger__pick {
   position: relative;
   z-index: 2;
   pointer-events: auto;
@@ -109,10 +110,11 @@
   justify-content: center;
 }
 
-.ledger__pick input {
+.ledger__row > .ledger__pick input {
   width: 20px;
   height: 20px;
   margin: 0;
+  pointer-events: auto;
 }
 
 .ledger__row[data-decision="required"] {

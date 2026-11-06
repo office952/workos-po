@@ -28,7 +28,7 @@ export function acceptQuoteCommercialRefusal(
     return {
       error: "offer_not_resumable",
       reasons: [
-        "Oferta are o decizie comercială. Reluează-o explicit înainte de acceptare.",
+        "Oferta are o decizie comercială. Reia-o explicit înainte de acceptare.",
       ],
     };
   }
