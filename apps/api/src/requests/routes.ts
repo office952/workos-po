@@ -593,6 +593,7 @@ function requestMutationStatus(error: CommercialRequestMutationError): 400 | 404
     case "service_selection_locked":
     case "installation_facts_delete_confirmation_required":
     case "installation_price_locked":
+    case "order_obligation_blocks_cancellation":
       return 409;
     default: {
       const _exhaustive: never = error;
@@ -656,6 +657,7 @@ function requestLinkStatus(error: CommercialRequestLinkError): 400 | 404 | 409 {
     case "quote_unavailable":
       return 404;
     case "quote_already_linked":
+    case "commercial_request_closed":
       return 409;
     default: {
       const _exhaustive: never = error;

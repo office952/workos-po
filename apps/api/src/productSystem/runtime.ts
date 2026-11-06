@@ -300,6 +300,11 @@ import {
   persistUpdatedCommercialRequest,
 } from "../requests/store.js";
 import {
+  decorateQuotesWithCommercial,
+  projectStoredCommercialView,
+  readCommercialLedger,
+} from "../commercial/closureStore.js";
+import {
   getInstallationFacts,
   persistUpdatedInstallationFacts,
   requestHasLinkedQuotes,
@@ -1540,16 +1545,23 @@ export function createProductSystemRuntimeFromOpenDb(
       if (!request) {
         return null;
       }
+      const organizationId = currentOrganizationId();
+      const quotes = decorateQuotesWithCommercial(
+        db,
+        organizationId,
+        requestCommercialQuoteItems(db, organizationId, request.requestId),
+      );
       return projectRequestDetail({
         request,
         customerDisplayName: getCustomer(db, request.customerId)?.displayName ?? null,
-        quotes: requestCommercialQuoteItems(db, currentOrganizationId(), request.requestId),
+        quotes,
         attachments: listCommercialRequestAttachments(db, request.requestId),
         serviceOffer: readOrganizationServiceOffer(db),
         installationFacts: getInstallationFacts(db, request.requestId),
         installationEvidence: siteInstallationEvidenceFromRows(readActiveCostEvidence(db)),
         hasLinkedQuotes: requestHasLinkedQuotes(db, request.requestId),
-        assemblies: requestAssemblyWork(db, currentOrganizationId(), request.requestId),
+        assemblies: requestAssemblyWork(db, organizationId, request.requestId),
+        commercial: projectStoredCommercialView(db, organizationId, request.requestId, true, true),
       });
     },
     readRequestAssemblyWork(requestId) {
@@ -1787,14 +1799,22 @@ export function createProductSystemRuntimeFromOpenDb(
 }
 
 function requestOverviewItems(db: SqliteDatabase, organizationId: string) {
-  return listCommercialRequests(db).map((request) =>
-    projectRequestOverviewItem({
+  return listCommercialRequests(db).map((request) => {
+    const quotes = decorateQuotesWithCommercial(
+      db,
+      organizationId,
+      linkedQuoteOverviewItems(db, request.requestId),
+    );
+    const ledger = readCommercialLedger(db, request.requestId, request.updatedAt);
+    return projectRequestOverviewItem({
       request,
       customerDisplayName: getCustomer(db, request.customerId)?.displayName ?? null,
-      quotes: linkedQuoteOverviewItems(db, request.requestId),
+      quotes,
       assemblies: requestAssemblyWork(db, organizationId, request.requestId),
-    }),
-  );
+      commercialState: ledger.state,
+      ledgerRevision: ledger.revision,
+    });
+  });
 }
 
 function requestAssemblyWork(db: SqliteDatabase, organizationId: string, requestId: string) {
@@ -1834,10 +1854,12 @@ function quoteOverviewItems(db: SqliteDatabase) {
 
 /** One commercial history for Oferte, Clienți and Cereri: every frozen snapshot of both kinds, once. */
 function commercialQuoteOverview(db: SqliteDatabase, organizationId: string) {
-  return projectQuoteOverview([
-    ...quoteOverviewItems(db),
-    ...assemblyQuoteOverviewItems(db, organizationId),
-  ]);
+  return projectQuoteOverview(
+    decorateQuotesWithCommercial(db, organizationId, [
+      ...quoteOverviewItems(db),
+      ...assemblyQuoteOverviewItems(db, organizationId),
+    ]),
+  );
 }
 
 /** Product quotes keep their link order first, so the request's existing OPEN_QUOTE target is unchanged. */

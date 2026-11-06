@@ -75,6 +75,7 @@ import {
   type CommercialPriceProjection,
   type FrozenRateAcknowledgement,
   type RateAcknowledgementError,
+  type CommercialRequestLinkResult,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
 import { getCookie } from "hono/cookie";
@@ -86,10 +87,83 @@ import {
 } from "./execution/presentExecutionPlan.js";
 import { financialAccess } from "./financial/access.js";
 import { requireOwnerRole } from "./cloud/middleware.js";
+import {
+  refuseAcceptIfDispositioned,
+  refuseNewQuoteIfClosed,
+} from "./commercial/closureStore.js";
 import { httpPathIdentity } from "./httpPathIdentity.js";
+import { getCommercialRequestQuoteLinkByQuote } from "./requests/store.js";
 import { OPERATOR_SESSION_COOKIE } from "./operator/store.js";
 import { renderQuoteDocumentPdf } from "./quoteDocument/renderQuoteDocumentPdf.js";
 
+
+class RequestLinkedQuoteRollback extends Error {
+  readonly failure: {
+    error: string;
+    reasons: readonly string[];
+    status: 400 | 404 | 409 | 422;
+  };
+
+  constructor(failure: {
+    error: string;
+    reasons: readonly string[];
+    status: 400 | 404 | 409 | 422;
+  }) {
+    super(failure.error);
+    this.name = "RequestLinkedQuoteRollback";
+    this.failure = failure;
+  }
+}
+
+function presentRequestQuoteLinkFailure(
+  linked: Extract<CommercialRequestLinkResult, { ok: false }>,
+): RequestLinkedQuoteRollback["failure"] {
+  if ("reasons" in linked) {
+    return { error: linked.error, reasons: linked.reasons, status: 422 };
+  }
+  switch (linked.error) {
+    case "customer_mismatch":
+      return {
+        error: linked.error,
+        reasons: ["Oferta trebuie să folosească același client ca cererea."],
+        status: 400,
+      };
+    case "request_cancelled":
+      return {
+        error: linked.error,
+        reasons: ["Cererea anulată nu poate primi o ofertă nouă."],
+        status: 400,
+      };
+    case "not_found":
+      return {
+        error: linked.error,
+        reasons: ["Cererea de ofertă nu este disponibilă."],
+        status: 404,
+      };
+    case "quote_unavailable":
+      return {
+        error: linked.error,
+        reasons: ["Oferta nu s-a putut lega de cerere."],
+        status: 404,
+      };
+    case "quote_already_linked":
+      return {
+        error: linked.error,
+        reasons: ["Oferta este deja legată de altă cerere."],
+        status: 409,
+      };
+    case "commercial_request_closed":
+      return {
+        error: linked.error,
+        reasons: ["Cererea are urmărirea comercială încheiată."],
+        status: 409,
+      };
+    default: {
+      const _exhaustive: never = linked;
+      return _exhaustive;
+    }
+  }
+}
 
 function asDraftValues(value: unknown): DraftValues {
   if (typeof value !== "object" || value === null) {
@@ -751,6 +825,10 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
           422,
         );
       }
+      const closed = refuseNewQuoteIfClosed(runtime.assemblyPlane().db, requestId);
+      if (closed) {
+        return c.json({ error: closed.error, reasons: closed.reasons }, 409);
+      }
       if (request.customerId !== customerId) {
         return c.json(
           {
@@ -922,38 +1000,71 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         422,
       );
     }
-    const stored = runtime.persistQuoteSnapshot(frozen.snapshot);
-    if (!requestId) {
-      const access = financialAccess(c, "commercial");
-      return c.json({
-        created: stored.created,
-        quoteSnapshot: scopeQuoteSnapshot(stored.snapshot, access),
-        commercialExperience: projectCommercialExperience({
-          commercialCompleteness: stored.snapshot.commercial.completeness,
-          quote: stored.snapshot,
-        }),
-      });
+    const plane = runtime.assemblyPlane();
+    let outcome: {
+      ok: true;
+      stored: ReturnType<ProductSystemRuntime["persistQuoteSnapshot"]>;
+      linked: Extract<CommercialRequestLinkResult, { ok: true }> | null;
+    } | {
+      ok: false;
+      error: string;
+      reasons: readonly string[];
+    };
+    try {
+      outcome = plane.db.transaction(() => {
+        if (requestId) {
+          const closed = refuseNewQuoteIfClosed(plane.db, requestId);
+          if (closed) {
+            return { ok: false as const, error: closed.error, reasons: closed.reasons };
+          }
+        }
+        const stored = runtime.persistQuoteSnapshot(frozen.snapshot);
+        if (!requestId) {
+          return { ok: true as const, stored, linked: null };
+        }
+        const linked = runtime.linkRequestQuote(requestId, stored.snapshot.quoteSnapshotId);
+        if (!linked.ok) {
+          // Returning {ok:false} would commit persistQuoteSnapshot. Throw to roll back
+          // a request-linked freeze so an unlinked snapshot cannot remain.
+          throw new RequestLinkedQuoteRollback(presentRequestQuoteLinkFailure(linked));
+        }
+        return { ok: true as const, stored, linked };
+      }).immediate();
+    } catch (caught) {
+      if (caught instanceof RequestLinkedQuoteRollback) {
+        return c.json(
+          { error: caught.failure.error, reasons: caught.failure.reasons },
+          caught.failure.status,
+        );
+      }
+      throw caught;
     }
-    const linked = runtime.linkRequestQuote(requestId, stored.snapshot.quoteSnapshotId);
+    if (!outcome.ok) {
+      return c.json({ error: outcome.error, reasons: outcome.reasons }, 409);
+    }
     const access = financialAccess(c, "commercial");
     const quoteExperience = projectCommercialExperience({
-      commercialCompleteness: stored.snapshot.commercial.completeness,
-      quote: stored.snapshot,
+      commercialCompleteness: outcome.stored.snapshot.commercial.completeness,
+      quote: outcome.stored.snapshot,
     });
-    if (!linked.ok) {
+    if (!requestId) {
       return c.json({
-        created: stored.created,
-        quoteSnapshot: scopeQuoteSnapshot(stored.snapshot, access),
+        created: outcome.stored.created,
+        quoteSnapshot: scopeQuoteSnapshot(outcome.stored.snapshot, access),
         commercialExperience: quoteExperience,
-        requestLinkError: linked.error,
-        reasons: ["Oferta a fost creată, dar nu s-a legat de cerere."],
       });
     }
+    if (!outcome.linked) {
+      return c.json({
+        error: "quote_unavailable",
+        reasons: ["Oferta nu s-a putut lega de cerere."],
+      }, 404);
+    }
     return c.json({
-      created: stored.created,
-      quoteSnapshot: scopeQuoteSnapshot(stored.snapshot, access),
+      created: outcome.stored.created,
+      quoteSnapshot: scopeQuoteSnapshot(outcome.stored.snapshot, access),
       commercialExperience: quoteExperience,
-      requestLink: linked.link,
+      requestLink: outcome.linked.link,
     });
   });
 
@@ -1019,12 +1130,26 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       const acceptance = runtime.readQuoteAcceptance(snapshot.quoteSnapshotId) ?? recorded.decision;
       const frozen = freezeOrderSnapshot(snapshot, acceptance);
       if (!frozen.ok) return c.json({ error: frozen.error, reasons: frozen.reasons }, 422);
-      const stored = runtime.assemblyPlane().db.transaction(() => {
+      const plane = runtime.assemblyPlane();
+      const stored = plane.db.transaction(() => {
+        const link = getCommercialRequestQuoteLinkByQuote(plane.db, snapshot.quoteSnapshotId);
+        const refusal = refuseAcceptIfDispositioned(
+          plane.db,
+          plane.organizationId,
+          link?.requestId,
+          snapshot.quoteSnapshotId,
+        );
+        if (refusal) {
+          return { blocked: true as const, error: refusal.error, reasons: refusal.reasons };
+        }
         runtime.persistQuoteAcceptance(acceptance);
-        return runtime.persistOrderSnapshot(frozen.snapshot);
+        return { blocked: false as const, order: runtime.persistOrderSnapshot(frozen.snapshot) };
       }).immediate();
-      return c.json({ created: stored.created,
-        orderSnapshot: scopeOrderSnapshot(stored.snapshot, financialAccess(c, "commercial")) });
+      if (stored.blocked) {
+        return c.json({ error: stored.error, reasons: stored.reasons }, 422);
+      }
+      return c.json({ created: stored.order.created,
+        orderSnapshot: scopeOrderSnapshot(stored.order.snapshot, financialAccess(c, "commercial")) });
     },
   );
 
@@ -1044,10 +1169,26 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
           422,
         );
       }
-      const stored = runtime.persistQuoteAcceptance(recorded.decision);
+      const plane = runtime.assemblyPlane();
+      const stored = plane.db.transaction(() => {
+        const link = getCommercialRequestQuoteLinkByQuote(plane.db, snapshot.quoteSnapshotId);
+        const refusal = refuseAcceptIfDispositioned(
+          plane.db,
+          plane.organizationId,
+          link?.requestId,
+          snapshot.quoteSnapshotId,
+        );
+        if (refusal) {
+          return { blocked: true as const, error: refusal.error, reasons: refusal.reasons };
+        }
+        return { blocked: false as const, acceptance: runtime.persistQuoteAcceptance(recorded.decision) };
+      }).immediate();
+      if (stored.blocked) {
+        return c.json({ error: stored.error, reasons: stored.reasons }, 422);
+      }
       return c.json({
-        created: stored.created,
-        acceptanceDecision: stored.decision,
+        created: stored.acceptance.created,
+        acceptanceDecision: stored.acceptance.decision,
         quoteSnapshot: scopeQuoteSnapshot(snapshot, financialAccess(c, "commercial")),
       });
     },

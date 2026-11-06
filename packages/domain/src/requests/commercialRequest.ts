@@ -67,6 +67,7 @@ export const COMMERCIAL_REQUEST_MUTATION_ERRORS = [
   "installation_not_selected",
   "installation_price_locked",
   "invalid_manual_price",
+  "order_obligation_blocks_cancellation",
 ] as const;
 export type CommercialRequestMutationError =
   (typeof COMMERCIAL_REQUEST_MUTATION_ERRORS)[number];
@@ -81,6 +82,7 @@ export const COMMERCIAL_REQUEST_LINK_ERRORS = [
   "quote_already_linked",
   "customer_mismatch",
   "request_cancelled",
+  "commercial_request_closed",
 ] as const;
 export type CommercialRequestLinkError = (typeof COMMERCIAL_REQUEST_LINK_ERRORS)[number];
 
@@ -193,6 +195,7 @@ export function updateCommercialRequest(
     hasInstallationFacts?: boolean;
     nextCustomer?: Customer | null;
     serviceOffer?: OrganizationServiceOffer;
+    hasOrders?: boolean;
   },
   updatedAt = new Date().toISOString(),
 ): CommercialRequestMutationResult {
@@ -217,6 +220,9 @@ export function updateCommercialRequest(
   if (patch.status !== undefined) {
     if (!canChangeCommercialRequestStatus(current.status, patch.status)) {
       return { ok: false, error: "invalid_status" };
+    }
+    if (patch.status === "CANCELLED" && context.hasOrders) {
+      return { ok: false, error: "order_obligation_blocks_cancellation" };
     }
     next = { ...next, status: patch.status };
   }
@@ -328,9 +334,13 @@ export function linkCommercialRequestQuote(input: {
   existingLink: CommercialRequestQuoteLink | null;
   linkedAt?: string;
   installationReadiness?: Omit<SiteInstallationProjectionInput, "selected">;
+  commercialState?: "OPEN" | "CLOSED";
 }): CommercialRequestLinkResult {
   if (input.request.status === "CANCELLED") {
     return { ok: false, error: "request_cancelled" };
+  }
+  if (input.commercialState === "CLOSED") {
+    return { ok: false, error: "commercial_request_closed" };
   }
   if (!input.quoteSnapshotId.trim()) {
     return { ok: false, error: "quote_unavailable" };

@@ -24,6 +24,7 @@ export type RequestCommercialProgressView = {
   ordered: number;
   accepted: number;
   quoted: number;
+  dispositioned: number;
   withoutOffer: number;
   unclear: number;
   headline: string;
@@ -35,6 +36,7 @@ export type RequestCommercialProgressView = {
 const GROUP_ORDER: readonly { state: BranchCommercialState; label: string }[] = [
   { state: "ordered", label: "Cu comandă" },
   { state: "accepted", label: "Acceptate, fără comandă" },
+  { state: "dispositioned", label: "Decise comercial" },
   { state: "quoted", label: "Urmează acceptarea" },
   { state: "unclear", label: "Stare neclară" },
   { state: "no-offer", label: "Fără ofertă" },
@@ -53,7 +55,7 @@ function branchesWord(value: number): string {
 }
 
 function headline(view: Omit<RequestCommercialProgressView, "headline" | "segments" | "furthest" | "groups">): string {
-  const { offered, ordered, accepted, quoted, withoutOffer, unclear } = view;
+  const { offered, ordered, accepted, quoted, dispositioned, withoutOffer, unclear } = view;
   if (offered === 0 && withoutOffer === 0) return "Nicio ofertă încă";
   const parts: string[] = [];
   if (offered === 0) {
@@ -62,11 +64,20 @@ function headline(view: Omit<RequestCommercialProgressView, "headline" | "segmen
     parts.push(`${ordered} din ${offered} ${offers(offered)} ${ordered === 1 ? "are" : "au"} comandă`);
   } else if (accepted > 0) {
     parts.push(`${accepted} din ${offered} ${offers(offered)} ${accepted === 1 ? "acceptată" : "acceptate"}`);
+  } else if (quoted === 0 && dispositioned > 0) {
+    parts.push(
+      dispositioned === 1 ? "1 ofertă decisă comercial" : `${dispositioned} oferte decise comercial`,
+    );
   } else {
     parts.push(offered === 1 ? "1 ofertă, neacceptată" : `${offered} oferte, niciuna acceptată`);
   }
   if (ordered > 0 && accepted > 0) parts.push(`${accepted} urmează comanda`);
-  if (quoted > 0 && (ordered > 0 || accepted > 0)) parts.push(`${quoted} urmează acceptarea`);
+  if (quoted > 0 && (ordered > 0 || accepted > 0 || dispositioned > 0)) {
+    parts.push(`${quoted} urmează acceptarea`);
+  }
+  if (dispositioned > 0 && (ordered > 0 || accepted > 0 || quoted > 0)) {
+    parts.push(`${dispositioned} ${dispositioned === 1 ? "decisă comercial" : "decise comercial"}`);
+  }
   if (unclear > 0) parts.push(`${unclear} cu stare neclară`);
   if (withoutOffer > 0) parts.push(`${branchesWord(withoutOffer)} fără ofertă`);
   return parts.join(" · ");
@@ -95,6 +106,7 @@ export function presentRequestCommercialProgress(input: {
     ordered: count(branches, "ordered"),
     accepted: count(branches, "accepted"),
     quoted: count(branches, "quoted"),
+    dispositioned: count(branches, "dispositioned"),
     unclear: count(branches, "unclear"),
     withoutOffer: count(branches, "no-offer"),
   };
@@ -114,6 +126,12 @@ export function presentRequestCommercialProgress(input: {
     groups: GROUP_ORDER.map((group) => ({
       ...group,
       branches: branches.filter((branch) => branch.state === group.state),
-    })).filter((group) => group.branches.length > 0 || group.state === "ordered" || group.state === "accepted" || group.state === "quoted"),
+    })).filter(
+      (group) =>
+        group.branches.length > 0 ||
+        group.state === "ordered" ||
+        group.state === "accepted" ||
+        group.state === "quoted",
+    ),
   };
 }

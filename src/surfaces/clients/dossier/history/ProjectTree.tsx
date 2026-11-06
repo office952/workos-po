@@ -23,8 +23,14 @@ function workDocuments(entry: HistoryEntry, jobId: string): DossierDocument[] {
  */
 function offerTag(branch: HistoryBranch, quote: QuoteListItemTransport | null): { tone: "offer" | "done" | "neutral"; label: string } | null {
   if (!branch.quote) return null;
+  if (branch.outstandingOrderObligation) {
+    return { tone: "offer", label: branch.dispositionLabel || quote?.attentionLabel || "Urmează comanda" };
+  }
+  if (branch.dispositionLabel) {
+    return { tone: "neutral", label: branch.dispositionLabel };
+  }
   if (quote?.needsAttention && !quote.superseded && quote.attentionLabel) return { tone: "offer", label: quote.attentionLabel };
-  const label = [branch.quote.stageLabel, branch.quote.superseded ? "înlocuită" : null].filter(Boolean).join(" · ");
+  const label = [quote?.dispositionLabel, branch.quote.stageLabel, branch.quote.superseded ? "înlocuită" : null].filter(Boolean).join(" · ");
   return { tone: branch.orderSnapshotId ? "done" : "neutral", label };
 }
 

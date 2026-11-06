@@ -73,6 +73,8 @@ export function projectAssemblyQuoteOverviewItem(input: {
     orderSnapshotId: input.order?.orderSnapshotId ?? null,
     requestId: input.quote.requestId,
     requestReference: input.requestReference,
+    disposition: null,
+    dispositionLabel: null,
   };
 }
 

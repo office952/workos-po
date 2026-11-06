@@ -157,6 +157,9 @@ export type CustomerHistoryBranch = {
   job: { jobId: string; orderSnapshotId: string; stage: JobOverviewItem["stage"]; stageLabel: string; progressLabel: string | null; productLabel: string; inscription: string } | null;
   /** The site of the job when it differs from the request site. */
   site: { siteId: string; name: string; line: string; active: boolean } | null;
+  disposition: QuoteOverviewItem["disposition"];
+  dispositionLabel: string | null;
+  outstandingOrderObligation: boolean;
 };
 
 export type CustomerHistoryEntry = {
@@ -175,7 +178,15 @@ export type CustomerHistoryEntry = {
   /** Set when the site as recorded at the time differs from today's site data. */
   siteAtTimeLabel: string | null;
   description: string | null;
-  request: { requestId: string; reference: string; title: string; statusLabel: string } | null;
+  request: {
+    requestId: string;
+    reference: string;
+    title: string;
+    statusLabel: string;
+    commercialState: string | null;
+    commercialStateLabel: string | null;
+    outstandingOrderCount: number;
+  } | null;
   /** PROJECT only: one branch per quote (with its order and job) or per job without a quote here. */
   branches: readonly CustomerHistoryBranch[];
   /** Every distinct branch state (or the single state of a work); used by the state filter. */
@@ -479,6 +490,11 @@ export function projectCustomerHistory(input: CustomerHistoryInput, query: Custo
           }
         : null,
       site: job ? siteOfJob(job) : null,
+      disposition: quote?.disposition ?? null,
+      dispositionLabel: quote?.dispositionLabel ?? null,
+      outstandingOrderObligation: Boolean(
+        quote && quote.stage === "QUOTE_ACCEPTED" && !quote.orderSnapshotId,
+      ),
     };
   };
 
@@ -536,7 +552,15 @@ export function projectCustomerHistory(input: CustomerHistoryInput, query: Custo
       ...site,
       description: null,
       request: request
-        ? { requestId: request.requestId, reference: request.reference, title: request.title, statusLabel: request.statusLabel }
+        ? {
+            requestId: request.requestId,
+            reference: request.reference,
+            title: request.title,
+            statusLabel: request.statusLabel,
+            commercialState: request.commercialState,
+            commercialStateLabel: request.commercialStateLabel,
+            outstandingOrderCount: branches.filter((branch) => branch.outstandingOrderObligation).length,
+          }
         : null,
       branches,
       historicalWorkId: null,
@@ -545,6 +569,7 @@ export function projectCustomerHistory(input: CustomerHistoryInput, query: Custo
       searchFields: [
         ["Titlu", title],
         ["Referință", request?.reference ?? null],
+        ["Urmărire comercială", request?.commercialStateLabel ?? null],
         ...branches.flatMap((branch): Array<[string, string | null]> => {
           const quote = branch.quote ? input.quotes.find((item) => item.quoteSnapshotId === branch.quote?.quoteSnapshotId) : undefined;
           const quoteFields: Array<[string, string | null]> = quote
@@ -552,6 +577,7 @@ export function projectCustomerHistory(input: CustomerHistoryInput, query: Custo
                 [`Ofertă ${quote.reference}`, quote.reference],
                 [`Ofertă ${quote.reference}`, quote.inscription],
                 [`Ofertă ${quote.reference}`, quote.productLabel],
+                [`Ofertă ${quote.reference}`, quote.dispositionLabel],
               ]
             : [];
           return [

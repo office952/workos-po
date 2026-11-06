@@ -39,6 +39,9 @@ function requestItem(
     linkedQuoteSnapshotId: null,
     linkedQuoteProductCode: null,
     linkedAssemblyId: null,
+    commercialState: "OPEN",
+    commercialStateLabel: "Urmărire comercială deschisă",
+    ledgerRevision: 0,
     ...overrides,
   };
 }
@@ -74,6 +77,8 @@ function quoteItem(
     orderSnapshotId: null,
     requestId: null,
     requestReference: null,
+    disposition: null,
+    dispositionLabel: null,
     ...overrides,
   };
 }

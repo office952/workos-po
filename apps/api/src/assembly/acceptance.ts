@@ -1,5 +1,6 @@
 import { acceptAssemblyQuote, type AssemblyOrderSnapshot } from "@workos-final/domain";
 import type { getProductSystem } from "../cloud/context.js";
+import { refuseAcceptIfDispositioned } from "../commercial/closureStore.js";
 import {
   readAssemblyDefinition,
   readAssemblyOrderByQuote,
@@ -66,6 +67,22 @@ export function planAssemblyAcceptance(
     };
   }
   const existing = readAssemblyOrderByQuote(plane.db, plane.organizationId, current.quoteSnapshotId);
+  const dispositionRefusal = refuseAcceptIfDispositioned(
+    plane.db,
+    plane.organizationId,
+    current.requestId,
+    current.quoteSnapshotId,
+  );
+  if (dispositionRefusal) {
+    return {
+      ok: false,
+      status: 422,
+      body: {
+        error: dispositionRefusal.error,
+        reasons: [...dispositionRefusal.reasons],
+      },
+    };
+  }
   if (existing) {
     return {
       ok: false,

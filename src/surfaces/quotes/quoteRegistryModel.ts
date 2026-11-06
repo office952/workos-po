@@ -55,6 +55,7 @@ export function filterQuotes(
         item.nextActionLabel,
         item.requestReference,
         item.attentionLabel,
+        item.dispositionLabel,
         item.kindLabel,
       ]),
   );
@@ -130,7 +131,7 @@ export function identityOf(item: QuoteListItemTransport): { title: string; subti
 
 /** Commercial state of this one offer: what follows it if anything, otherwise its stage. */
 export function commercialState(item: QuoteListItemTransport): string {
-  return item.attentionLabel?.trim() || item.stageLabel || "—";
+  return item.dispositionLabel?.trim() || item.attentionLabel?.trim() || item.stageLabel || "—";
 }
 
 export type ListValue = { amount: string; currency: string | null };

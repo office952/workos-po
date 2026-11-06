@@ -48,6 +48,8 @@ export function presentQuoteListItem(value: unknown): QuoteListItemTransport | n
     requestId: asString(row.requestId),
     requestReference: asString(row.requestReference),
     orderSnapshotId: asString(row.orderSnapshotId),
+    disposition: asString(row.disposition),
+    dispositionLabel: asString(row.dispositionLabel),
   };
 }
 

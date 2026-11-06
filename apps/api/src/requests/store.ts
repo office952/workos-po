@@ -324,6 +324,7 @@ export function persistUpdatedCommercialRequest(
     const updated = updateCommercialRequest(current, patch, {
       hasLinkedQuotes: requestHasLinkedQuotes(db, requestId),
       hasInstallationFacts: getInstallationFacts(db, requestId) !== null,
+      hasOrders: requestHasExistingOrdersSql(db, requestId),
       serviceOffer: readOrganizationServiceOffer(db),
       nextCustomer:
         patch.customerId !== undefined && patch.customerId !== current.customerId
@@ -463,6 +464,7 @@ export function persistCommercialRequestQuoteLink(
       quoteCustomerId: quote.customer?.customerId,
       existingLink: getCommercialRequestQuoteLinkByQuote(db, quoteSnapshotId),
       installationReadiness: readInstallationReadiness(db, request),
+      commercialState: commercialStateOfRequest(db, requestId),
     });
     if (!linked.ok || linked.alreadyApplied) {
       return linked;
@@ -557,4 +559,47 @@ export function insertCommercialRequestAttachment(
     attachment.sha256,
     attachment.createdAt,
   );
+}
+
+function commercialStateOfRequest(
+  db: SqliteDatabase,
+  requestId: string,
+): "OPEN" | "CLOSED" {
+  const row = db
+    .prepare(`SELECT commercial_state FROM commercial_request_ledger WHERE request_id = ?`)
+    .get(requestId) as { commercial_state: string } | undefined;
+  return row?.commercial_state === "CLOSED" ? "CLOSED" : "OPEN";
+}
+
+function requestHasExistingOrdersSql(db: SqliteDatabase, requestId: string): boolean {
+  const product = db
+    .prepare(
+      `
+      SELECT 1 AS found
+      FROM commercial_request_quote_links AS link
+      INNER JOIN order_snapshots AS snapshot
+        ON snapshot.source_quote_snapshot_id = link.quote_snapshot_id
+      WHERE link.request_id = ?
+      LIMIT 1
+    `,
+    )
+    .get(requestId) as { found: number } | undefined;
+  if (product) {
+    return true;
+  }
+  const assembly = db
+    .prepare(
+      `
+      SELECT 1 AS found
+      FROM assembly_definitions AS definition
+      INNER JOIN assembly_quote_snapshots AS quote
+        ON quote.assembly_id = definition.assembly_id
+      INNER JOIN assembly_order_snapshots AS snapshot
+        ON snapshot.source_quote_snapshot_id = quote.quote_snapshot_id
+      WHERE definition.request_id = ?
+      LIMIT 1
+    `,
+    )
+    .get(requestId) as { found: number } | undefined;
+  return Boolean(assembly);
 }

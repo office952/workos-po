@@ -66,6 +66,8 @@ function quote(stage: QuoteOverviewItem["stage"], inscription = "HUB"): QuoteOve
     orderSnapshotId: stage === "ORDER_CREATED" ? "ord:1" : null,
     requestId: null,
     requestReference: null,
+    disposition: null,
+    dispositionLabel: null,
   };
 }
 

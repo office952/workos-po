@@ -60,6 +60,19 @@ describe("request commercial progress (W2 · D07)", () => {
     expect(view.headline).toBe("1 din 3 oferte are comandă · 1 urmează comanda · 1 urmează acceptarea");
   });
 
+  it("does not count commercially decided offers as still awaiting acceptance", () => {
+    const view = presentRequestCommercialProgress({
+      branches: states("ordered", "accepted", "dispositioned", "dispositioned", "quoted", "quoted"),
+      commercialProgress: "ORDER_CREATED",
+      commercialProgressLabel: "Comandă creată",
+    });
+    expect(view.headline).toBe(
+      "1 din 6 oferte are comandă · 1 urmează comanda · 2 urmează acceptarea · 2 decise comercial",
+    );
+    expect(view.groups.find((group) => group.state === "quoted")?.branches).toHaveLength(2);
+    expect(view.groups.find((group) => group.state === "dispositioned")?.branches).toHaveLength(2);
+  });
+
   it("says plainly when there is no offer", () => {
     const view = presentRequestCommercialProgress({ branches: [], commercialProgress: null, commercialProgressLabel: null });
     expect(view.headline).toBe("Nicio ofertă încă");

@@ -20,6 +20,11 @@
   background: linear-gradient(90deg, var(--shell-signal) 50%, transparent 50%);
 }
 
+.commercial-dot[data-state="dispositioned"] {
+  border-color: var(--color-text-secondary);
+  background: var(--color-text-secondary);
+}
+
 .commercial-dot[data-state="unclear"] {
   border-color: var(--color-danger);
   border-radius: 0;

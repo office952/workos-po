@@ -11,6 +11,7 @@ import "../styles/surfaces/client-hub-views.css";
 import "../styles/surfaces/client-dossier-header.css";
 import "../styles/surfaces/client-history-timeline.css";
 import "../styles/surfaces/client-history-project.css";
+import "../styles/surfaces/commercial-closure.css";
 import "../styles/surfaces/client-offer-row.css";
 import "../styles/surfaces/client-result-bar.css";
 import "../styles/surfaces/client-r1-shape.css";
