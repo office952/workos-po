@@ -80,6 +80,9 @@ export type HistoryBranch = {
   orderSnapshotId: string | null;
   job: { jobId: string; stageLabel: string; progressLabel: string | null; productLabel: string; inscription: string } | null;
   site: { siteId: string; name: string; line: string; active: boolean } | null;
+  disposition?: string | null;
+  dispositionLabel?: string | null;
+  outstandingOrderObligation?: boolean;
 };
 
 export type HistoryEntry = {
@@ -96,7 +99,15 @@ export type HistoryEntry = {
   site: { siteId: string; name: string; line: string; active: boolean } | null;
   siteAtTimeLabel: string | null;
   description: string | null;
-  request: { requestId: string; reference: string; title: string; statusLabel: string } | null;
+  request: {
+    requestId: string;
+    reference: string;
+    title: string;
+    statusLabel: string;
+    commercialState?: string | null;
+    commercialStateLabel?: string | null;
+    outstandingOrderCount?: number;
+  } | null;
   /** Distinct states of the entry's branches (or of the work); the filter matches any of them. */
   states: string[];
   branches: HistoryBranch[];
@@ -319,7 +330,15 @@ export function presentCustomerHistory(payload: unknown): CustomerHistoryModel |
           siteAtTimeLabel: asString(record.siteAtTimeLabel),
           description: asString(record.description),
           request: request && asString(request.requestId)
-            ? { requestId: text(request.requestId), reference: text(request.reference), title: text(request.title), statusLabel: text(request.statusLabel) }
+            ? {
+                requestId: text(request.requestId),
+                reference: text(request.reference),
+                title: text(request.title),
+                statusLabel: text(request.statusLabel),
+                commercialState: asString(request.commercialState),
+                commercialStateLabel: asString(request.commercialStateLabel),
+                outstandingOrderCount: asNumber(request.outstandingOrderCount) ?? 0,
+              }
             : null,
           historicalWorkId: asString(record.historicalWorkId),
           states: list(record.states).filter((value): value is string => typeof value === "string"),
@@ -352,6 +371,9 @@ export function presentCustomerHistory(payload: unknown): CustomerHistoryModel |
                 site: branchSite && asString(branchSite.siteId)
                   ? { siteId: text(branchSite.siteId), name: text(branchSite.name), line: text(branchSite.line), active: branchSite.active !== false }
                   : null,
+                disposition: asString(branch.disposition),
+                dispositionLabel: asString(branch.dispositionLabel),
+                outstandingOrderObligation: branch.outstandingOrderObligation === true,
               },
             ];
           }),

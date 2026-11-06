@@ -15,6 +15,7 @@ export function BranchDetail({
   onClose,
   onPreview,
   onRetryJobs,
+  onResume,
 }: {
   branch: CommercialBranch;
   total: number;
@@ -24,6 +25,7 @@ export function BranchDetail({
   onClose: () => void;
   onPreview: (quoteSnapshotId: string) => void;
   onRetryJobs: (() => void) | null;
+  onResume?: (quoteSnapshotId: string, label: string) => void;
 }) {
   const others = total - 1;
   const current = branch.quotes.find((quote) => !quote.superseded) ?? branch.quotes[0] ?? null;
@@ -67,6 +69,15 @@ export function BranchDetail({
         {onRetryJobs && branch.jobCell.tone === "attention" && branch.jobCell.label === "Necitită" ? (
           <button type="button" className="button button--secondary" onClick={onRetryJobs}>
             Reîncearcă citirea
+          </button>
+        ) : null}
+        {onResume && current?.resumable ? (
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={() => onResume(current.quoteSnapshotId, current.reference ?? branch.title)}
+          >
+            Reluează oferta
           </button>
         ) : null}
         <p className="branch-detail__links">

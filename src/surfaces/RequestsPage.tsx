@@ -28,6 +28,7 @@ import {
 } from "./requests/requestRegistryModel";
 import "../styles/layout/registry-desk.css";
 import "../styles/surfaces/requests-queue.css";
+import "../styles/surfaces/commercial-closure.css";
 
 const MODULE_INDEX = String(globalNavItems().findIndex((item) => item.href === "/cereri") + 1).padStart(2, "0");
 

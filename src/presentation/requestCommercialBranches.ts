@@ -46,6 +46,7 @@ export type BranchQuoteView = {
   currency: string | null;
   href: string;
   holdsJob: boolean;
+  resumable: boolean;
 };
 
 export type BranchAction = {
@@ -656,9 +657,16 @@ function offerActionLabel(offer: RequestLinkedOfferTransport): string {
 }
 
 function offerState(offer: RequestLinkedOfferTransport): { state: BranchCommercialState; label: string } {
+  if (offer.orderSnapshotId || offer.stage === "ORDER_CREATED") {
+    return { state: "ordered", label: offer.attentionLabel?.trim() || offer.stageLabel?.trim() || "—" };
+  }
+  if (offer.stage === "QUOTE_ACCEPTED") {
+    return { state: "accepted", label: offer.attentionLabel?.trim() || offer.stageLabel?.trim() || "—" };
+  }
+  if (offer.dispositionLabel) {
+    return { state: "quoted", label: offer.dispositionLabel };
+  }
   const label = offer.attentionLabel?.trim() || offer.stageLabel?.trim() || "—";
-  if (offer.orderSnapshotId || offer.stage === "ORDER_CREATED") return { state: "ordered", label };
-  if (offer.stage === "QUOTE_ACCEPTED") return { state: "accepted", label };
   if (offer.stage === "QUOTE_CREATED") return { state: "quoted", label };
   return { state: "unclear", label };
 }
@@ -777,6 +785,7 @@ function quoteViews(quotes: readonly RequestLinkedOfferTransport[], link: JobLin
       currency: quote.currency ?? null,
       href: quoteHrefFor(quote),
       holdsJob: Boolean(jobOrder && quote.orderSnapshotId === jobOrder),
+      resumable: Boolean(quote.resumable),
     }));
 }
 

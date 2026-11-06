@@ -73,6 +73,14 @@ function EntryState({ entry }: { entry: HistoryEntry }) {
     );
   }
   const mixed = entry.state === null && entry.branches.length > 1;
+  const closed = entry.request?.commercialState === "CLOSED" ? (
+    <span className="hcard__commercial" data-state="closed">
+      {entry.request?.commercialStateLabel}
+      {entry.request?.outstandingOrderCount
+        ? ` · comandă de creat (${entry.request.outstandingOrderCount})`
+        : ""}
+    </span>
+  ) : null;
   if (mixed) {
     return (
       <span className="hcard__states">
@@ -80,11 +88,17 @@ function EntryState({ entry }: { entry: HistoryEntry }) {
         {[...new Map(entry.branches.map((branch) => [branch.state, branch])).values()].map((branch) => (
           <StateTag key={branch.state} state={branch.state} label={branch.stateLabel} />
         ))}
+        {closed}
       </span>
     );
   }
   const progress = entry.branches.length === 1 ? entry.branches[0]?.job?.progressLabel?.split(" · ")[0] ?? null : null;
-  return <StateTag state={entry.state ?? entry.states[0] ?? null} label={[presentedStateLabel(entry), progress].filter(Boolean).join(" · ")} />;
+  return (
+    <span className="hcard__states">
+      <StateTag state={entry.state ?? entry.states[0] ?? null} label={[presentedStateLabel(entry), progress].filter(Boolean).join(" · ")} />
+      {closed}
+    </span>
+  );
 }
 
 function Chain({ steps }: { steps: ChainStep[] }) {

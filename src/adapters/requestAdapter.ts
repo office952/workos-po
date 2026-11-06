@@ -1,4 +1,8 @@
 import type {
+  CommercialActorTransport,
+  CommercialAuditEventTransport,
+  CommercialOfferViewTransport,
+  CommercialRequestTransport,
   RequestAssemblyWorkTransport,
   RequestAttachmentTransport,
   RequestDetailTransport,
@@ -68,6 +72,9 @@ export function presentRequestListItem(value: unknown): RequestListItemTransport
     linkedQuoteSnapshotId: asString(row.linkedQuoteSnapshotId),
     linkedQuoteProductCode: asString(row.linkedQuoteProductCode),
     linkedAssemblyId: asString(row.linkedAssemblyId),
+    commercialState: asString(row.commercialState),
+    commercialStateLabel: asString(row.commercialStateLabel),
+    ledgerRevision: asNumber(row.ledgerRevision),
   };
 }
 
@@ -78,7 +85,8 @@ export function presentRequestDetail(payload: unknown): RequestDetailTransport |
   if (!request || typeof request.requestId !== "string" || typeof request.title !== "string") {
     return null;
   }
-  const linkedOffers = presentLinkedOffers(detail?.linkedOffers);
+  const commercial = presentCommercialRequest(detail?.commercial);
+  const linkedOffers = decorateLinkedOffers(presentLinkedOffers(detail?.linkedOffers), commercial);
   const status = asString(request.status) ?? asString(detail?.status);
   const next = presentRequestNextAction({
     nextAction: asString(detail?.nextAction),
@@ -114,6 +122,7 @@ export function presentRequestDetail(payload: unknown): RequestDetailTransport |
     installationFacts: presentInstallationFacts(detail?.installationFacts),
     canWriteInstallationFacts: asBoolean(detail?.canWriteInstallationFacts) ?? false,
     canWriteInstallationPrice: asBoolean(detail?.canWriteInstallationPrice) ?? false,
+    commercial,
   };
 }
 
@@ -218,6 +227,10 @@ function presentLinkedOffers(value: unknown): RequestLinkedOfferTransport[] {
         grossDisplay: asString(row.grossDisplay),
         currency: asString(row.currency),
         orderSnapshotId: asString(row.orderSnapshotId),
+        disposition: asString(row.disposition),
+        dispositionLabel: asString(row.dispositionLabel),
+        decisionRequired: asBoolean(row.decisionRequired) ?? false,
+        resumable: asBoolean(row.resumable) ?? false,
       },
     ];
   });
@@ -328,5 +341,143 @@ function presentInstallationFacts(
     siteElectrical: asString(row.siteElectrical) ?? "",
     crewSize: asNumber(row.crewSize),
     plannedDurationHours: asNumber(row.plannedDurationHours),
+  };
+}
+
+function decorateLinkedOffers(
+  offers: RequestLinkedOfferTransport[],
+  commercial: CommercialRequestTransport | null,
+): RequestLinkedOfferTransport[] {
+  if (!commercial) {
+    return offers;
+  }
+  const byId = new Map(commercial.offers.map((offer) => [offer.quoteSnapshotId, offer]));
+  return offers.map((offer) => {
+    const view = byId.get(offer.quoteSnapshotId);
+    if (!view) {
+      return offer;
+    }
+    return {
+      ...offer,
+      disposition: view.disposition,
+      dispositionLabel: view.dispositionLabel,
+      decisionRequired: view.decisionRequired,
+      resumable: view.resumable,
+    };
+  });
+}
+
+function presentCommercialActor(value: unknown): CommercialActorTransport | null {
+  const row = asRecord(value);
+  const displayName = asString(row?.displayName);
+  if (!displayName) {
+    return null;
+  }
+  return {
+    displayName,
+    role: asString(row?.role) ?? "",
+    roleLabel: asString(row?.roleLabel) ?? "",
+    accountId: asString(row?.accountId),
+  };
+}
+
+function presentCommercialEvent(value: unknown): CommercialAuditEventTransport | null {
+  const row = asRecord(value);
+  const eventId = asString(row?.eventId);
+  const actor = presentCommercialActor(row?.actor);
+  if (!eventId || !actor) {
+    return null;
+  }
+  return {
+    eventId,
+    eventKind: asString(row?.eventKind) ?? "",
+    eventKindLabel: asString(row?.eventKindLabel) ?? "",
+    quoteSnapshotId: asString(row?.quoteSnapshotId),
+    disposition: asString(row?.disposition),
+    dispositionLabel: asString(row?.dispositionLabel),
+    reason: asString(row?.reason) ?? "",
+    occurredAt: asString(row?.occurredAt) ?? "",
+    actor,
+    operationId: asString(row?.operationId) ?? "",
+    correlationId: asString(row?.correlationId) ?? "",
+  };
+}
+
+function presentCommercialOffer(value: unknown): CommercialOfferViewTransport | null {
+  const row = asRecord(value);
+  const quoteSnapshotId = asString(row?.quoteSnapshotId);
+  if (!quoteSnapshotId) {
+    return null;
+  }
+  return {
+    quoteSnapshotId,
+    disposition: asString(row?.disposition),
+    dispositionLabel: asString(row?.dispositionLabel),
+    commerciallyResolved: asBoolean(row?.commerciallyResolved) ?? false,
+    resolutionSource: asString(row?.resolutionSource) ?? "",
+    outstandingOrderObligation: asBoolean(row?.outstandingOrderObligation) ?? false,
+    decisionRequired: asBoolean(row?.decisionRequired) ?? false,
+    resumable: asBoolean(row?.resumable) ?? false,
+    history: Array.isArray(row?.history)
+      ? row.history.flatMap((item) => {
+          const event = presentCommercialEvent(item);
+          return event ? [event] : [];
+        })
+      : [],
+  };
+}
+
+export function presentCommercialRequest(value: unknown): CommercialRequestTransport | null {
+  const row = asRecord(value);
+  const state = asString(row?.state);
+  if (!state) {
+    return null;
+  }
+  return {
+    state,
+    stateLabel: asString(row?.stateLabel) ?? state,
+    revision: asNumber(row?.revision) ?? 0,
+    closedAt: asString(row?.closedAt),
+    closedBy: presentCommercialActor(row?.closedBy),
+    closeReason: asString(row?.closeReason),
+    reopenedAt: asString(row?.reopenedAt),
+    reopenedBy: presentCommercialActor(row?.reopenedBy),
+    reopenReason: asString(row?.reopenReason),
+    offers: Array.isArray(row?.offers)
+      ? row.offers.flatMap((item) => {
+          const offer = presentCommercialOffer(item);
+          return offer ? [offer] : [];
+        })
+      : [],
+    availableActions: asStringList(row?.availableActions),
+    blockingReasons: Array.isArray(row?.blockingReasons)
+      ? row.blockingReasons.flatMap((item) => {
+          const reason = asRecord(item);
+          const code = asString(reason?.code);
+          const label = asString(reason?.label);
+          return code && label
+            ? [{ code, label, quoteSnapshotId: asString(reason?.quoteSnapshotId) }]
+            : [];
+        })
+      : [],
+    outstandingAcceptedWithoutOrder: Array.isArray(row?.outstandingAcceptedWithoutOrder)
+      ? row.outstandingAcceptedWithoutOrder.flatMap((item) => {
+          const obligation = asRecord(item);
+          const quoteSnapshotId = asString(obligation?.quoteSnapshotId);
+          const label = asString(obligation?.label);
+          return quoteSnapshotId && label ? [{ quoteSnapshotId, label }] : [];
+        })
+      : [],
+    unresolvedQuoteSnapshotIds: asStringList(row?.unresolvedQuoteSnapshotIds),
+    canClose: asBoolean(row?.canClose) ?? false,
+    canReopen: asBoolean(row?.canReopen) ?? false,
+    canSaveDecisions: asBoolean(row?.canSaveDecisions) ?? false,
+    canCreateQuote: asBoolean(row?.canCreateQuote) ?? false,
+    timeline: Array.isArray(row?.timeline)
+      ? row.timeline.flatMap((item) => {
+          const event = presentCommercialEvent(item);
+          return event ? [event] : [];
+        })
+      : [],
   };
 }

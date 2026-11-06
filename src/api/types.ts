@@ -348,6 +348,9 @@ export type RequestListItemTransport = {
   linkedQuoteSnapshotId: string | null;
   linkedQuoteProductCode: string | null;
   linkedAssemblyId: string | null;
+  commercialState?: string | null;
+  commercialStateLabel?: string | null;
+  ledgerRevision?: number | null;
 };
 
 /** Server summary of the whole request overview, by request status; null when absent. */
@@ -387,6 +390,10 @@ export type RequestLinkedOfferTransport = {
   grossDisplay?: string | null;
   currency?: string | null;
   orderSnapshotId: string | null;
+  disposition?: string | null;
+  dispositionLabel?: string | null;
+  decisionRequired?: boolean;
+  resumable?: boolean;
 };
 
 export type RequestAssemblyWorkTransport = {
@@ -504,6 +511,62 @@ export type RequestDetailTransport = {
   installationFacts: RequestInstallationFactsTransport | null;
   canWriteInstallationFacts: boolean;
   canWriteInstallationPrice: boolean;
+  commercial?: CommercialRequestTransport | null;
+};
+
+export type CommercialActorTransport = {
+  displayName: string;
+  role: string;
+  roleLabel: string;
+  accountId: string | null;
+};
+
+export type CommercialAuditEventTransport = {
+  eventId: string;
+  eventKind: string;
+  eventKindLabel: string;
+  quoteSnapshotId: string | null;
+  disposition: string | null;
+  dispositionLabel: string | null;
+  reason: string;
+  occurredAt: string;
+  actor: CommercialActorTransport;
+  operationId: string;
+  correlationId: string;
+};
+
+export type CommercialOfferViewTransport = {
+  quoteSnapshotId: string;
+  disposition: string | null;
+  dispositionLabel: string | null;
+  commerciallyResolved: boolean;
+  resolutionSource: string;
+  outstandingOrderObligation: boolean;
+  decisionRequired: boolean;
+  resumable: boolean;
+  history: CommercialAuditEventTransport[];
+};
+
+export type CommercialRequestTransport = {
+  state: string;
+  stateLabel: string;
+  revision: number;
+  closedAt: string | null;
+  closedBy: CommercialActorTransport | null;
+  closeReason: string | null;
+  reopenedAt: string | null;
+  reopenedBy: CommercialActorTransport | null;
+  reopenReason: string | null;
+  offers: CommercialOfferViewTransport[];
+  availableActions: string[];
+  blockingReasons: Array<{ code: string; label: string; quoteSnapshotId: string | null }>;
+  outstandingAcceptedWithoutOrder: Array<{ quoteSnapshotId: string; label: string }>;
+  unresolvedQuoteSnapshotIds: string[];
+  canClose: boolean;
+  canReopen: boolean;
+  canSaveDecisions: boolean;
+  canCreateQuote: boolean;
+  timeline: CommercialAuditEventTransport[];
 };
 
 export type CatalogProductTransport = {
@@ -540,6 +603,8 @@ export type QuoteListItemTransport = {
   requestId: string | null;
   requestReference: string | null;
   orderSnapshotId: string | null;
+  disposition?: string | null;
+  dispositionLabel?: string | null;
 };
 
 export type AssemblyQuoteSectionTransport = {

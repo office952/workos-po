@@ -1345,3 +1345,156 @@ describe("W2 · registru comercial compact", () => {
     expect(within(next).queryByRole("link")).toBeNull();
   });
 });
+
+describe("W3-D06 · încheiere comercială", () => {
+  function commercial(overrides: Record<string, unknown> = {}) {
+    return {
+      state: "OPEN",
+      stateLabel: "Urmărire comercială deschisă",
+      revision: 0,
+      closedAt: null,
+      closedBy: null,
+      closeReason: null,
+      reopenedAt: null,
+      reopenedBy: null,
+      reopenReason: null,
+      offers: [],
+      availableActions: ["CLOSE_OFFERLESS", "CREATE_QUOTE"],
+      blockingReasons: [],
+      outstandingAcceptedWithoutOrder: [],
+      unresolvedQuoteSnapshotIds: [],
+      canClose: true,
+      canReopen: false,
+      canSaveDecisions: false,
+      canCreateQuote: true,
+      timeline: [],
+      ...overrides,
+    };
+  }
+
+  it("closes an offerless request with a mandatory reason and keeps the administrative status apart", async () => {
+    const posts: Array<{ url: string; body: unknown }> = [];
+    stubDetail(requestDetail({ commercial: commercial() }), (url, init) => {
+      if (init?.method === "POST") {
+        posts.push({ url, body: JSON.parse(String(init.body ?? "{}")) });
+        return new Response(
+          JSON.stringify({
+            alreadyApplied: false,
+            detail: requestDetail({
+              commercial: commercial({
+                state: "CLOSED",
+                stateLabel: "Urmărire comercială încheiată",
+                revision: 1,
+                canClose: false,
+                canReopen: true,
+                canCreateQuote: false,
+                availableActions: ["REOPEN"],
+              }),
+            }),
+          }),
+          { status: 200 },
+        );
+      }
+      return null;
+    });
+    render(<RoutedRequest />);
+    expect(await screen.findByTestId("request-administrative-status")).toHaveTextContent("Gata de ofertă");
+    await userEvent.click(await screen.findByRole("button", { name: "Încheie urmărirea comercială" }));
+    const dialog = await screen.findByRole("dialog", { name: "Închei urmărirea comercială?" });
+    expect(within(dialog).getByText(/starea administrativă a cererii rămâne neschimbată/i)).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Încheie urmărirea comercială" })).toBeDisabled();
+    await userEvent.type(within(dialog).getByLabelText("Motivul încheierii"), "Nu se mai urmărește");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Încheie urmărirea comercială" }));
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0]?.url).toContain("/commercial/decisions");
+    expect(posts[0]?.body).toMatchObject({
+      groups: [],
+      close: true,
+      closeReason: "Nu se mai urmărește",
+      expectedRevision: 0,
+    });
+  });
+
+  it("saves a partial decision while the request stays open and refuses close until every unresolved offer is covered", async () => {
+    const posts: unknown[] = [];
+    const offers = [
+      { quoteSnapshotId: "q-1", kind: "PRODUCT", kindLabel: "Produs", productCode: "PRD-LETTERS", productLabel: "Litere", inscription: "A", reference: "OF-1", stage: "QUOTE_CREATED", stageLabel: "Creată", superseded: false, orderSnapshotId: null, decisionRequired: true },
+      { quoteSnapshotId: "q-2", kind: "PRODUCT", kindLabel: "Produs", productCode: "PRD-LETTERS", productLabel: "Litere", inscription: "B", reference: "OF-2", stage: "QUOTE_CREATED", stageLabel: "Creată", superseded: false, orderSnapshotId: null, decisionRequired: true },
+      { quoteSnapshotId: "q-3", kind: "PRODUCT", kindLabel: "Produs", productCode: "PRD-LETTERS", productLabel: "Litere", inscription: "C", reference: "OF-3", stage: "ORDER_CREATED", stageLabel: "Cu comandă", superseded: false, orderSnapshotId: "ord-3", decisionRequired: false },
+    ];
+    stubDetail(
+      requestDetail({
+        nextAction: "OPEN_QUOTE",
+        nextActionLabel: "Deschide oferta",
+        linkedOffers: offers,
+        commercial: commercial({
+          canClose: false,
+          canSaveDecisions: true,
+          availableActions: ["SAVE_DECISIONS"],
+          unresolvedQuoteSnapshotIds: ["q-1", "q-2"],
+          offers: [
+            { quoteSnapshotId: "q-1", decisionRequired: true, resumable: false },
+            { quoteSnapshotId: "q-2", decisionRequired: true, resumable: false },
+            { quoteSnapshotId: "q-3", decisionRequired: false, resumable: false },
+          ],
+        }),
+      }),
+      (_url, init) => {
+        if (init?.method === "POST") {
+          posts.push(JSON.parse(String(init.body ?? "{}")));
+          return new Response(JSON.stringify({ alreadyApplied: false, detail: requestDetail({ linkedOffers: offers, commercial: commercial({ revision: 1, canSaveDecisions: true, unresolvedQuoteSnapshotIds: ["q-2"] }) }) }), { status: 200 });
+        }
+        return null;
+      },
+    );
+    render(<RoutedRequest />);
+    await userEvent.click(await screen.findByRole("button", { name: "Încheie urmărirea comercială" }));
+    const panel = await screen.findByTestId("commercial-decision-panel");
+    expect(within(panel).getByRole("button", { name: "Salvează și încheie comercial" })).toBeDisabled();
+    const list = screen.getByRole("list", { name: "Ramuri comerciale" });
+    await userEvent.click(within(list).getByRole("checkbox", { name: /Cere decizie: A/ }));
+    await userEvent.type(within(panel).getByLabelText(/Motiv · Nu se mai urmărește/), "Nu mai urmărim A");
+    await userEvent.click(within(panel).getByRole("button", { name: "Salvează deciziile" }));
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0]).toMatchObject({
+      close: false,
+      groups: [{ disposition: "NOT_PURSUED", quoteSnapshotIds: ["q-1"] }],
+    });
+  });
+
+  it("distinguishes a closed commercial request from jobs and the administrative status", async () => {
+    stubDetail(
+      requestDetail({
+        nextAction: "OPEN_REQUEST",
+        nextActionLabel: "Deschide cererea",
+        statusLabel: "Gata de ofertă",
+        commercial: commercial({
+          state: "CLOSED",
+          stateLabel: "Urmărire comercială încheiată",
+          closeReason: "Nu se mai urmărește",
+          canClose: false,
+          canReopen: true,
+          canCreateQuote: false,
+          availableActions: ["REOPEN"],
+          outstandingAcceptedWithoutOrder: [{ quoteSnapshotId: "q-9", label: "Ofertă acceptată, fără comandă" }],
+        }),
+      }),
+    );
+    render(<RoutedRequest />);
+    expect(await screen.findByTestId("request-administrative-status")).toHaveTextContent("Gata de ofertă");
+    expect(screen.getByTestId("request-commercial-status")).toHaveTextContent("Urmărire comercială încheiată");
+    expect(screen.getByTestId("commercial-closed-banner")).toHaveTextContent("Comenzile, lucrările și producția existente nu se anulează");
+    expect(screen.getByTestId("commercial-closed-banner")).toHaveTextContent("O ofertă acceptată așteaptă comanda");
+    expect(screen.getByRole("button", { name: "Redeschide urmărirea comercială" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Încheie urmărirea comercială" })).not.toBeInTheDocument();
+  });
+
+  it("does not offer owner mutations when the server withholds them", async () => {
+    stubDetail(requestDetail({ commercial: commercial({ canClose: false, canSaveDecisions: false, canReopen: false, availableActions: ["CREATE_QUOTE"] }) }));
+    render(<RoutedRequest />);
+    await screen.findByRole("heading", { name: "Litere vitrină" });
+    expect(screen.queryByRole("button", { name: "Încheie urmărirea comercială" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Redeschide urmărirea comercială" })).not.toBeInTheDocument();
+  });
+});
+

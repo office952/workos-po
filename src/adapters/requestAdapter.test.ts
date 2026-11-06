@@ -230,6 +230,57 @@ describe("request adapter", () => {
     expect(empty?.installationFacts?.facadeOtherNote).toBeNull();
     expect(empty?.installationFacts?.fixingOtherNote).toBeNull();
   });
+
+  it("projects commercial closure onto the request and linked offers", () => {
+    const detail = presentRequestDetail({
+      detail: {
+        request: { requestId: "req-c", title: "Litere", customerId: "cus-1", status: "READY_FOR_QUOTE" },
+        nextAction: "OPEN_QUOTE",
+        linkedOffers: [
+          {
+            quoteSnapshotId: "q-1",
+            productCode: "PRD-LETTERS",
+            reference: "OF-1",
+            stage: "QUOTE_CREATED",
+          },
+        ],
+        commercial: {
+          state: "OPEN",
+          stateLabel: "Urmărire comercială deschisă",
+          revision: 2,
+          offers: [
+            {
+              quoteSnapshotId: "q-1",
+              disposition: "NOT_PURSUED",
+              dispositionLabel: "Nu se mai urmărește",
+              commerciallyResolved: true,
+              decisionRequired: false,
+              resumable: true,
+              outstandingOrderObligation: false,
+              history: [],
+            },
+          ],
+          availableActions: ["SAVE_DECISIONS", "RESUME_OFFER"],
+          unresolvedQuoteSnapshotIds: [],
+          canClose: true,
+          canReopen: false,
+          canSaveDecisions: true,
+          canCreateQuote: true,
+          timeline: [],
+        },
+      },
+    });
+    expect(detail?.commercial).toMatchObject({
+      state: "OPEN",
+      revision: 2,
+      canClose: true,
+    });
+    expect(detail?.linkedOffers[0]).toMatchObject({
+      disposition: "NOT_PURSUED",
+      dispositionLabel: "Nu se mai urmărește",
+      resumable: true,
+    });
+  });
 });
 
 describe("presentRequestOverview", () => {

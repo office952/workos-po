@@ -1,5 +1,7 @@
 import { useEffect, useRef, type KeyboardEvent } from "react";
+import type { RequestLinkedOfferTransport } from "../../api/types";
 import type { BranchFilter, CommercialBranch } from "../../presentation/requestCommercialBranches";
+import { offerDecisionLock } from "../../presentation/commercialClosureUi";
 
 /**
  * W2 · compact commercial register of one request (WorkOS-N 1162:16456 · 1164:1092 · 1165:530):
@@ -16,6 +18,10 @@ export function CommercialLedger({
   onSelect,
   onActivate,
   onClear,
+  selecting = false,
+  selectedQuoteIds,
+  offers,
+  onToggleQuote,
 }: {
   branches: readonly CommercialBranch[];
   visible: readonly CommercialBranch[];
@@ -26,6 +32,10 @@ export function CommercialLedger({
   onSelect: (key: string) => void;
   onActivate: (branch: CommercialBranch) => void;
   onClear: () => void;
+  selecting?: boolean;
+  selectedQuoteIds?: ReadonlySet<string>;
+  offers?: readonly RequestLinkedOfferTransport[];
+  onToggleQuote?: (quoteSnapshotId: string) => void;
 }) {
   const listRef = useRef<HTMLUListElement>(null);
   const focusOnMount = useRef(focusSelectedOnMount);
@@ -88,8 +98,10 @@ export function CommercialLedger({
   const products = branches.filter((branch) => branch.kind === "product").length;
   const assemblies = branches.filter((branch) => branch.kind !== "product").length;
 
+  const offerById = new Map((offers ?? []).map((offer) => [offer.quoteSnapshotId, offer]));
+
   return (
-    <section className="ledger" aria-labelledby="request-ledger-title">
+    <section className="ledger" aria-labelledby="request-ledger-title" data-selecting={selecting || undefined}>
       <div className="ledger__head">
         <h2 id="request-ledger-title" className="u-visually-hidden">Ramurile comerciale ale cererii</h2>
         <div className="ledger__filters" role="group" aria-label="Filtrează ramurile acestei cereri">
@@ -115,6 +127,7 @@ export function CommercialLedger({
         </p>
       </div>
       <div className="ledger__columns" aria-hidden="true">
+        {selecting ? <span>Decizie</span> : null}
         <span>#</span>
         <span>Înscripție · produs</span>
         <span>Ofertă</span>
@@ -130,6 +143,11 @@ export function CommercialLedger({
         <ul ref={listRef} className="ledger__rows" aria-label="Ramuri comerciale">
           {visible.map((branch) => {
             const selected = branch.key === selectedKey;
+            const quote = branch.quotes.find((item) => !item.superseded) ?? branch.quotes[0] ?? null;
+            const offer = quote ? offerById.get(quote.quoteSnapshotId) : undefined;
+            const lock = offer ? offerDecisionLock(offer) : null;
+            const required = lock?.selectable === true && lock.required;
+            const checked = Boolean(quote && selectedQuoteIds?.has(quote.quoteSnapshotId));
             return (
               <li
                 key={branch.key}
@@ -137,6 +155,7 @@ export function CommercialLedger({
                 data-selected={selected || undefined}
                 data-state={branch.state}
                 data-attention={branch.needsAttention || undefined}
+                data-decision={required ? "required" : lock && !lock.selectable ? "locked" : undefined}
               >
                 <button
                   type="button"
@@ -151,6 +170,27 @@ export function CommercialLedger({
                   onClick={() => onSelect(branch.key)}
                   onKeyDown={(event) => onKeyDown(event, branch)}
                 />
+                {selecting ? (
+                  <span className="ledger__pick">
+                    {quote && lock?.selectable && onToggleQuote ? (
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={!lock.selectable}
+                        aria-label={
+                          required
+                            ? `Cere decizie: ${branch.title}`
+                            : `Include în decizie: ${branch.title}`
+                        }
+                        onChange={() => onToggleQuote(quote.quoteSnapshotId)}
+                      />
+                    ) : (
+                      <span className="ledger__locked" title={lock && !lock.selectable ? lock.reason : undefined}>
+                        —
+                      </span>
+                    )}
+                  </span>
+                ) : null}
                 <span className="ledger__index">{branch.indexLabel}</span>
                 <span className="ledger__identity">
                   <span className="ledger__title" title={branch.title}>{branch.title}</span>

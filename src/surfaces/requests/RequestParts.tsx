@@ -80,9 +80,14 @@ export function CommercialProgress({ item }: { item: Pick<RequestListItemTranspo
 
 export function RequestState({ item }: { item: RequestListItemTransport }) {
   return (
-    <span className="rdesk-state">
-      <span className="rdesk-lamp" aria-hidden="true" />
-      {item.statusLabel || "—"}
+    <span className="rdesk-state-stack">
+      <span className="rdesk-state">
+        <span className="rdesk-lamp" aria-hidden="true" />
+        {item.statusLabel || "—"}
+      </span>
+      {item.commercialState === "CLOSED" ? (
+        <span className="rdesk-commercial-closed">{item.commercialStateLabel}</span>
+      ) : null}
     </span>
   );
 }
