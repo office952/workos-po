@@ -116,7 +116,7 @@ describe("AssemblyQuotePage", () => {
     expect(within(summary).getByTestId("quote-total")).toHaveTextContent("Net 614,45 EUR");
     expect(within(summary).getByTestId("quote-total")).toHaveTextContent("TVA 21% 129,03 EUR");
     expect(within(summary).getByText("Cu comandă")).toBeInTheDocument();
-    expect(within(summary).getByText("Acceptată — comandă creată")).toBeInTheDocument();
+    expect(within(summary).queryByText("Acceptată — comandă creată")).not.toBeInTheDocument();
     expect(within(summary).getByRole("link", { name: "Deschide fișa lucrării" })).toHaveAttribute("href", "/lucrari/asmo%3A1");
 
     const sections = within(screen.getByRole("table", { name: "Secțiuni ofertă" }));
@@ -142,7 +142,8 @@ describe("AssemblyQuotePage", () => {
     });
     render(<AssemblyQuotePage quoteSnapshotId="asmq:1" />);
     const summary = await screen.findByRole("region", { name: "Rezumat comercial" });
-    expect(within(summary).getByText("Neacceptată")).toBeInTheDocument();
+    expect(within(summary).getByText("Stare comercială")).toBeInTheDocument();
+    expect(within(summary).queryByText("Neacceptată")).not.toBeInTheDocument();
     expect(within(summary).getByText("Doar proprietarul poate accepta oferta și crea comanda.")).toBeInTheDocument();
     expect(within(summary).getByRole("link", { name: "Deschide ansamblul" })).toHaveAttribute("href", "/ansamblu?assembly=asm%3A1");
     expect(within(summary).getByRole("button", { name: "Descarcă oferta PDF" })).toBeInTheDocument();
@@ -207,7 +208,7 @@ describe("AssemblyQuotePage", () => {
     ]);
     const summary = screen.getByRole("region", { name: "Rezumat comercial" });
     expect(within(summary).getByRole("link", { name: "Deschide fișa lucrării" })).toHaveAttribute("href", "/lucrari/asmo%3A9");
-    expect(within(summary).getByText("Acceptată — comandă creată")).toBeInTheDocument();
+    expect(within(summary).queryByText("Acceptată — comandă creată")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Confirmă comanda/ })).not.toBeInTheDocument();
     const reads = () => fetchMock.mock.calls.filter(([path, init]) => path === "/api/quotes/asmq%3A1" && !init?.method?.match(/POST/)).length;
     await waitFor(() => expect(reads()).toBeGreaterThan(1));

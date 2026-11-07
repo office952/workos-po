@@ -18,6 +18,7 @@ import { assemblyHref, assemblyQuoteHref, jobHref, requestHref } from "../routin
 import { QuoteLines, QuoteRelations, QuoteSummary, type QuoteRelation } from "./quoteDetail";
 import { AcceptanceResult } from "./quotes/AcceptanceResult";
 import { QuoteDecisionNote } from "./quotes/QuoteDecisionNote";
+import { quoteDecisionMode } from "./quotes/quoteDecisionMode";
 import "../styles/surfaces/quote-decision.css";
 import { presentAssemblyQuoteLines, presentAssemblyQuoteTotal } from "./quoteDocumentModel";
 import { useAssemblyQuoteDocument } from "./useAssemblyQuoteDocument";
@@ -168,9 +169,8 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
               total={presentAssemblyQuoteTotal(quote)}
               unavailableNote="Totalul ofertei nu este disponibil."
               facts={[
-                { label: "Stare", value: item.stageLabel },
+                { label: "Stare comercială", value: item.commercialStatusLabel?.trim() || item.stageLabel || "—" },
                 { label: "Tip", value: `${item.kindLabel} · ${item.sectionCount} secțiuni` },
-                { label: "Comandă", value: orderSnapshotId ? "Acceptată — comandă creată" : "Neacceptată" },
               ]}
               actions={
                 <>
@@ -210,7 +210,14 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
                     : quote.acceptance.reason ?? "Oferta este înghețată."
               }
             >
-              <QuoteDecisionNote ordered={Boolean(orderSnapshotId)} permission={acceptancePermission.message} />
+              <QuoteDecisionNote
+                mode={quoteDecisionMode({
+                  ordered: Boolean(orderSnapshotId),
+                  status: item,
+                  nextAction: quote.superseded ? null : item.nextAction,
+                })}
+                permission={acceptancePermission.message}
+              />
               {orderSnapshotId ? (
                 <AcceptanceResult reference={item.reference} orderSnapshotId={orderSnapshotId} immediate={Boolean(acceptedOrderId) && !refusal} />
               ) : null}

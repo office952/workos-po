@@ -1,8 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode, type Ref } from "react";
-import {
-  presentOrderSnapshotId,
-  presentQuoteAcceptanceFact,
-} from "../adapters/quoteListAdapter";
+import { presentOrderSnapshotId } from "../adapters/quoteListAdapter";
 import { TransportError, readTransportReasons } from "../api/http";
 import { confirmQuoteOrder } from "../api/quote";
 import { fetchQuoteDocument } from "../api/quote";
@@ -29,6 +26,7 @@ import { presentQuoteAcceptancePermission } from "../presentation/quoteAcceptanc
 import { useCloudSession } from "../session/CloudSessionContext";
 import { AcceptanceResult } from "./quotes/AcceptanceResult";
 import { QuoteDecisionNote } from "./quotes/QuoteDecisionNote";
+import { quoteDecisionMode } from "./quotes/quoteDecisionMode";
 import "../styles/surfaces/quote-decision.css";
 import { presentProductQuoteLines, presentProductQuoteTotal } from "./quoteDocumentModel";
 import "../styles/surfaces/offers.css";
@@ -191,8 +189,7 @@ export function QuoteSnapshotPage({
               total={total}
               unavailableNote="Prețul pentru client nu este complet în această ofertă."
               facts={[
-                { label: "Stare", value: stageLabel ?? "—" },
-                { label: "Acceptare", value: presentQuoteAcceptanceFact(presentedEnvelope?.stage ?? null) },
+                { label: "Stare comercială", value: presentedEnvelope?.commercialStatusLabel?.trim() || stageLabel || "—" },
                 { label: "Tip", value: presentedEnvelope?.kindLabel || "Produs" },
               ]}
               actions={
@@ -221,7 +218,10 @@ export function QuoteSnapshotPage({
               note="Oferta este înghețată. Acceptarea și comanda păstrează această versiune."
             >
               {presentedEnvelope ? (
-                <QuoteDecisionNote ordered={Boolean(orderSnapshotId)} permission={acceptancePermission.message} />
+                <QuoteDecisionNote
+                  mode={quoteDecisionMode({ ordered: Boolean(orderSnapshotId), status: presentedEnvelope, nextAction: presentedEnvelope.nextAction })}
+                  permission={acceptancePermission.message}
+                />
               ) : null}
               {confirming && (presentedEnvelope?.nextAction === "ACCEPT_QUOTE" || presentedEnvelope?.nextAction === "CREATE_ORDER") ? (
                 <QuoteAcceptanceConfirmation
