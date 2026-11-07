@@ -12,13 +12,17 @@ import "../../../../styles/surfaces/commercial-state.css";
 export function ProjectBranches({ requestId, quotes }: { requestId: string; quotes: readonly QuoteListItemTransport[] }) {
   const branches = presentQuoteRequestBranches(quotes, requestId);
   if (branches.length === 0) return null;
-  const progress = presentRequestCommercialProgress({ branches, commercialProgress: null, commercialProgressLabel: null });
+  const progress = presentRequestCommercialProgress({ branches });
   const requestLink = requestHref(requestId);
   return (
     <div className="hbranches" data-testid="project-branches">
-      <ol className="hbranches__bar" aria-hidden="true" title={progress.headline}>
-        {progress.segments.map((segment) => (
-          <li key={segment.key} data-state={segment.state} />
+      <ol
+        className="hbranches__bar"
+        aria-hidden="true"
+        title={progress.groups.map((group) => `${group.branches.length} ${group.label.toLocaleLowerCase("ro")}`).join(" · ")}
+      >
+        {branches.map((branch) => (
+          <li key={branch.key} data-state={branch.state} />
         ))}
       </ol>
       <ul className="hbranches__chips" aria-label="Ramurile cererii">

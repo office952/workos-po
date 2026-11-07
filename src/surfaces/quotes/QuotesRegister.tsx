@@ -5,9 +5,11 @@ import { EmptyState } from "../../components/EmptyState";
 import { ErrorState } from "../../components/ErrorState";
 import { InlineAlert } from "../../components/InlineAlert";
 import type { QuoteBranchPosition, QuoteRequestGroup } from "../../presentation/quoteBranchPositions";
+import { presentOfferStatus } from "../../presentation/offerCommercialStatus";
 import { presentQuoteWorklistAction } from "../../presentation/worklistAction";
 import { jobHref, registryQuoteHref, requestHref } from "../../routing/appRoute";
 import {
+  COMMERCIAL_FILTERS,
   KIND_OPTIONS,
   commercialState,
   createdLabel,
@@ -47,7 +49,11 @@ function clickedControl(event: MouseEvent): boolean {
 }
 
 function Lamp({ item }: { item: QuoteListItemTransport }) {
-  return <span className="offers-lamp" data-filled={Boolean(item.orderSnapshotId) || undefined} aria-hidden="true" />;
+  return <span className="commercial-dot" data-state={presentOfferStatus(item).dot} aria-hidden="true" />;
+}
+
+function actionable(item: QuoteListItemTransport): boolean {
+  return item.obligationKind === "ACTIONABLE";
 }
 
 function Value({ item }: { item: QuoteListItemTransport }) {
@@ -59,13 +65,6 @@ function Value({ item }: { item: QuoteListItemTransport }) {
       {value.currency ? <span className="offers-v2__currency"> {value.currency}</span> : null}
     </span>
   );
-}
-
-/** Where the row's link goes, named by the destination, not by the business step. */
-function destinationLabel(item: QuoteListItemTransport, href: string): string {
-  if (item.orderSnapshotId && href === jobHref(item.orderSnapshotId)) return "Fișa lucrării";
-  if (href.startsWith("/ansamblu")) return "Ansamblul";
-  return "Oferta";
 }
 
 function branchLabel(position: QuoteBranchPosition | undefined): string {
@@ -159,7 +158,7 @@ function GroupHeading({ group, shown }: { group: QuoteRequestGroup | null; shown
       </span>
       <span className="offers-group__meta">
         {total}
-        {shown < group.total ? ` · ${shown} în filtru` : ""} · {group.headline}
+        {shown < group.total ? ` · ${shown} în filtru` : ""}
       </span>
       <a className="offers-group__open" href={requestHref(group.requestId)}>
         Deschide cererea <span aria-hidden="true">→</span>
@@ -172,7 +171,7 @@ function Caption({ view, items, total, filters, onReset, layout }: Props) {
   const ready = view !== "loading" && view !== "error";
   return (
     <div className="offers-v2__caption">
-      <h2>{filters.attention ? "Necesită acțiune" : "Lista de oferte"}</h2>
+      <h2>{filters.commercial === "ALL" ? "Lista de oferte" : COMMERCIAL_FILTERS.find((item) => item.id === filters.commercial)?.label}</h2>
       <span className="offers-v2__count" role={items.length === 0 || !ready ? "status" : undefined}>
         {ready ? `${items.length} din ${total}` : "Se citesc ofertele"}
       </span>
@@ -201,11 +200,13 @@ function moveFocus(from: HTMLElement, delta: number, onSelect: (id: string) => v
 function TableRow({ item, selected, position, onSelect }: { item: QuoteListItemTransport; selected: boolean; position: QuoteBranchPosition | undefined; onSelect: (id: string) => void }) {
   const action = presentQuoteWorklistAction(item);
   const identity = identityOf(item);
+  const status = presentOfferStatus(item);
   return (
     <tr
       data-quote-id={item.quoteSnapshotId}
       data-selected={selected || undefined}
-      data-attention={item.needsAttention || undefined}
+      data-attention={actionable(item) || undefined}
+      data-commercial={status.dot}
       tabIndex={0}
       aria-selected={selected}
       aria-label={`Previzualizează oferta ${item.reference}`}
@@ -241,14 +242,14 @@ function TableRow({ item, selected, position, onSelect }: { item: QuoteListItemT
         <span aria-label={position ? `ramura ${position.indexLabel} din ${position.total}` : "fără cerere"}>{branchLabel(position)}</span>
       </td>
       <td className="offers-v2__col-state">
-        <span className="offers-v2__state" data-flag={item.needsAttention || undefined}>
+        <span className="offers-v2__state offers-status" data-flag={actionable(item) || undefined}>
           <Lamp item={item} />
           {commercialState(item)}
         </span>
       </td>
       <td className="offers-v2__col-action">
-        <a className="offers-v2__next" data-priority={item.needsAttention || undefined} href={action.actionHref}>
-          <span>{destinationLabel(item, action.actionHref)}</span>
+        <a className="offers-v2__next" data-priority={status.stepTone === "attention" || undefined} href={action.actionHref}>
+          <span>{action.actionLabel}</span>
           <span aria-hidden="true">→</span>
         </a>
       </td>
@@ -268,7 +269,7 @@ function Table({ items, selectedId, onSelect, positions, groups, grouped }: Prop
           <th scope="col" className="offers-v2__col-ref">Ofertă</th>
           <th scope="col" className="offers-v2__col-branch">Ramura</th>
           <th scope="col" className="offers-v2__col-state">Stare comercială</th>
-          <th scope="col" className="offers-v2__col-action">Destinație</th>
+          <th scope="col" className="offers-v2__col-action">Următorul pas</th>
           <th scope="col" className="offers-v2__col-value">Cu TVA</th>
         </tr>
       </thead>
@@ -305,7 +306,7 @@ function Card({ item, selected, position, onOpen }: { item: QuoteListItemTranspo
   return (
     <li
       className="offer-card"
-      data-attention={item.needsAttention || undefined}
+      data-attention={actionable(item) || undefined}
       data-selected={selected || undefined}
     >
       <button

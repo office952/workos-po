@@ -26,7 +26,14 @@ const baseQuote = {
 };
 const request = (requestId: string, title: string, extra: Record<string, unknown> = {}) => ({ ...baseRequest, requestId, title, reference: `CER-${requestId}`, ...extra });
 const quote = (id: string, extra: Record<string, unknown> = {}) => ({ ...baseQuote, quoteSnapshotId: id, reference: `OF-${id}`, ...extra });
-const waiting = { needsAttention: true, attentionLabel: "Urmează acceptarea" };
+const waiting = {
+  commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Urmează acceptarea", obligationKind: "WAITING", followUp: true, decided: false,
+  needsAttention: false, attentionLabel: null,
+};
+const toOrder = {
+  commercialStatus: "ACCEPTED_WITHOUT_ORDER", commercialStatusLabel: "Acceptată · fără comandă", obligationKind: "ACTIONABLE", followUp: true, decided: false,
+  needsAttention: true, attentionLabel: "Urmează comanda",
+};
 
 let workspaceBody: unknown;
 let worksBody: unknown;
@@ -134,6 +141,8 @@ describe("De urmărit · one control, opened on purpose (649:14128)", () => {
     await waitFor(() => expect(watch()).not.toBeNull());
     const control = watchButton();
     expect(control).toHaveAttribute("aria-expanded", "false");
+    // Waiting for the customer is followed, not an alarm.
+    expect(watch()).toHaveAttribute("data-tone", "neutral");
     // R1: concrete, in the server words — not a vague count.
     expect(control).toHaveTextContent("2 oferte urmează acceptarea");
     expect(within(watch() as HTMLElement).queryByRole("link")).toBeNull();
@@ -145,14 +154,14 @@ describe("De urmărit · one control, opened on purpose (649:14128)", () => {
     expect(within(watch() as HTMLElement).getByText("2 oferte pentru Casetă: urmează acceptarea")).toBeInTheDocument();
     expect(within(watch() as HTMLElement).getByText("OF-q1 · 605,00 EUR · OF-q2 · 605,00 EUR")).toBeInTheDocument();
     await userEvent.click(within(watch() as HTMLElement).getByRole("link", { name: /Vezi ofertele în Cereri și oferte/ }));
-    // 659:14083: De urmărit opens Pe cereri + În așteptare, the request whole, with the way back.
+    // 659:14083: De urmărit opens Pe cereri + De urmărit, the request whole, with the way back.
     await waitFor(() => expect(search().get("atentie")).toBe("1"));
     expect(search().get("selectie")).toBeNull();
     const view = await screen.findByRole("region", { name: "Cereri și oferte" });
     expect(within(view).getByRole("button", { name: "Pe cereri · 1 cerere" })).toHaveAttribute("aria-pressed", "true");
-    expect(within(view).getByRole("button", { name: "În așteptare · 2" })).toHaveAttribute("aria-pressed", "true");
-    expect(within(view).getByText("1 din 1 cerere · 2 oferte în așteptare")).toBeInTheDocument();
-    expect(within(view).getByText("Filtru: În așteptare")).toBeInTheDocument();
+    expect(within(view).getByRole("button", { name: "De urmărit · 2" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(view).getByText("1 din 1 cerere · 2 oferte de urmărit")).toBeInTheDocument();
+    expect(within(view).getByText("Filtru: De urmărit")).toBeInTheDocument();
     expect(within(view).getByRole("link", { name: "Deschide oferta OF-q1" })).toBeInTheDocument();
     expect(within(view).getByRole("link", { name: "Deschide oferta OF-q2" })).toBeInTheDocument();
     expect(within(view).getByRole("link", { name: "← Istoric" })).toBeInTheDocument();
@@ -161,14 +170,14 @@ describe("De urmărit · one control, opened on purpose (649:14128)", () => {
   it("mixed attention: each situation once, warm, with its own destination", async () => {
     workspaceBody = workspaceOf(
       [request("r1", "Casetă", { needsAttention: true, attentionLabel: "Cerere nouă" })],
-      [quote("q1", waiting)],
+      [quote("q1", toOrder)],
       [job("j1", "RELEASED", { needsAttention: true, attentionLabel: "Fără plan de execuție" })],
     );
     window.history.replaceState({}, "", "/clienti/cus-1");
     render(<Harness />);
     await waitFor(() => expect(watch()).not.toBeNull());
     expect(watch()).toHaveAttribute("data-tone", "attention");
-    expect(watchButton()).toHaveTextContent("1 ofertă urmează acceptarea · Cererea Casetă: cerere nouă · Casetă: fără plan de execuție");
+    expect(watchButton()).toHaveTextContent("1 ofertă urmează comanda · Cererea Casetă: cerere nouă · Casetă: fără plan de execuție");
     expect(watchButton()).not.toHaveTextContent(/de urmărit ·|de urmărit$/);
     await userEvent.click(watchButton());
     const items = within(watch() as HTMLElement).getAllByRole("listitem");

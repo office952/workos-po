@@ -13,10 +13,9 @@ import {
   EMPTY_COMMERCIAL_DECISION_DRAFT,
   type CommercialDecisionDraft,
 } from "../presentation/commercialClosureUi";
-import { formatTimestamp } from "../presentation/format";
+import { formatShortDay, formatTimestamp } from "../presentation/format";
 import {
   branchFilterParam,
-  branchForQuote,
   filterBranches,
   parseBranchFilter,
   presentCommercialBranches,
@@ -24,7 +23,6 @@ import {
   type CommercialBranch,
 } from "../presentation/requestCommercialBranches";
 import { presentRequestCommercialProgress } from "../presentation/requestCommercialProgress";
-import { presentRequestNextStep } from "../presentation/worklistAction";
 import { clientHref, requestHref, requestProductHref } from "../routing/appRoute";
 import { hrefPath, originBack } from "../routing/originBack";
 import {
@@ -32,7 +30,8 @@ import {
   writeConfiguratorSession,
 } from "../session/configuratorSession";
 import { RequestOfferPreview } from "./requests/RequestOfferPreview";
-import { RequestProgressBand } from "./requests/RequestProgressBand";
+import { ObligationsPanel } from "./requests/ObligationsPanel";
+import { RequestMoreMenu, type RequestMenuAction } from "./requests/RequestMoreMenu";
 import { CommercialLedger } from "./requests/CommercialLedger";
 import { BranchDetail, RequestSummary } from "./requests/BranchDetail";
 import { CommercialCloseDialog } from "./requests/closure/CommercialCloseDialog";
@@ -48,6 +47,7 @@ import "../styles/surfaces/commercial.css";
 import "../styles/surfaces/request-branches.css";
 import "../styles/surfaces/commercial-state.css";
 import "../styles/surfaces/commercial-closure.css";
+import "../styles/surfaces/request-journey.css";
 
 type RequestDetailPageProps = {
   requestId: string;
@@ -108,6 +108,7 @@ export function RequestDetailPage({ requestId, search = window.location.search }
       session: readConfiguratorSession(),
       requestId,
       customerId: detail?.customerId ?? null,
+      journey: detail?.journey ?? null,
     }),
     [detail, jobs.data, jobs.status, requestId],
   );
@@ -115,16 +116,8 @@ export function RequestDetailPage({ requestId, search = window.location.search }
   const visible = filterBranches(all, filter);
   const selected = requestedKey ? (visible.find((branch) => branch.key === requestedKey) ?? null) : null;
   const staleSelection = Boolean(detail && requestedKey && !all.some((branch) => branch.key === requestedKey));
-  const progress = presentRequestCommercialProgress({
-    branches: all,
-    commercialProgress: detail?.commercialProgress ?? null,
-    commercialProgressLabel: detail?.commercialProgressLabel ?? null,
-  });
-  const nextStep = detail ? presentRequestNextStep(detail) : { status: "none" as const };
-  const nextTarget = nextStep.status === "ready"
-    ? (branchForQuote(all, nextStep.targetQuoteSnapshotId)
-      ?? (nextStep.targetAssemblyId ? (all.find((branch) => branch.key === `assembly:${nextStep.targetAssemblyId}`) ?? null) : null))
-    : null;
+  const progress = presentRequestCommercialProgress({ branches: all });
+  const journey = detail?.journey ?? null;
   const commercial = detail?.commercial ?? null;
   const [deciding, setDeciding] = useState(false);
   const [draft, setDraft] = useState<CommercialDecisionDraft>(EMPTY_COMMERCIAL_DECISION_DRAFT);
@@ -140,9 +133,15 @@ export function RequestDetailPage({ requestId, search = window.location.search }
     onDetail: (next) => writeResource(resourceKeys.request(requestId), next),
   });
   const canCreateQuote = commercial?.canCreateQuote !== false;
-  const ownerCanMutate = Boolean(
-    commercial && (commercial.canClose || commercial.canSaveDecisions || commercial.canReopen),
-  );
+  const menuActions: RequestMenuAction[] = [];
+  if (commercial && !deciding) {
+    if (commercial.state === "CLOSED" && commercial.canReopen) {
+      menuActions.push({ key: "reopen", label: "Redeschide urmărirea comercială", onSelect: () => setReopenOpen(true) });
+    }
+    if (commercial.state === "OPEN" && (commercial.canSaveDecisions || commercial.canClose)) {
+      menuActions.push({ key: "close", label: "Încheie urmărirea comercială", onSelect: enterDecisions });
+    }
+  }
 
   function enterDecisions(): void {
     if (commercial && commercial.unresolvedQuoteSnapshotIds.length === 0) {
@@ -283,17 +282,21 @@ export function RequestDetailPage({ requestId, search = window.location.search }
               <span>{detail.customerDisplayName ?? "Fără client"}</span>
             )}
             {createdLabel ? <span>Înregistrată {createdLabel}</span> : null}
-            <span data-testid="request-administrative-status">
-              Starea cererii: <strong>{detail.statusLabel}</strong>
-            </span>
-            {detail.commercial ? (
-              <span data-testid="request-commercial-status" data-state={detail.commercial.state}>
-                Urmărire comercială: <strong>{detail.commercial.stateLabel}</strong>
+            {journey ? (
+              <span className="request-phase" data-testid="request-commercial-status" data-phase={journey.phase}>
+                <span className="request-phase__mark" aria-hidden="true" />
+                {phaseText(journey.phase, journey.phaseLabel, journey.phaseAt)}
+              </span>
+            ) : null}
+            {journey?.administrativeNote ? (
+              <span className="request-phase__note" data-testid="request-administrative-status">
+                {journey.administrativeNote}
               </span>
             ) : null}
           </>
         ) : undefined
       }
+      action={<RequestMoreMenu actions={menuActions} />}
     >
       <div className="commercial-toolbar request-detail__toolbar">
         <div className="commercial-toolbar__context">
@@ -308,21 +311,7 @@ export function RequestDetailPage({ requestId, search = window.location.search }
       {detail ? (
         <>
           {commercial ? <CommercialStatusBanner commercial={commercial} administrativeLabel={detail.statusLabel} /> : null}
-          <RequestProgressBand progress={progress} nextStep={nextStep} target={nextTarget} />
-          {ownerCanMutate && !deciding ? (
-            <div className="cclose-bar" data-testid="commercial-closure-bar">
-              {commercial?.state === "CLOSED" && commercial.canReopen ? (
-                <button type="button" className="button button--secondary" onClick={() => setReopenOpen(true)}>
-                  Redeschide urmărirea comercială
-                </button>
-              ) : null}
-              {commercial?.state === "OPEN" && (commercial.canSaveDecisions || commercial.canClose) ? (
-                <button type="button" className="button button--primary" onClick={enterDecisions}>
-                  Încheie urmărirea comercială
-                </button>
-              ) : null}
-            </div>
-          ) : null}
+          {journey && !deciding ? <ObligationsPanel journey={journey} requestId={requestId} /> : null}
           {staleSelection ? (
             <InlineAlert tone="pending" title="Ramura din adresă nu mai este în această cerere">
               Registrul arată ofertele actuale ale cererii; alege din nou ramura.
@@ -336,14 +325,13 @@ export function RequestDetailPage({ requestId, search = window.location.search }
                 <p>
                   Fiecare ofertă apare aici pe un rând, recunoscută după înscripția ei, cu produsul, starea comercială și fișa lucrării.
                 </p>
-                {nextStep.status === "ready" && detail.nextAction === "CHOOSE_PRODUCT" ? (
+                {journey?.nextAction === "CHOOSE_PRODUCT" ? (
                   <p className="ledger__empty-action">
                     <a className="hit" href={requestProductHref(requestId)}>
                       <span className="button button--primary">
-                        {nextStep.label} <span aria-hidden="true">→</span>
+                        {journey.nextActionLabel} <span aria-hidden="true">→</span>
                       </span>
                     </a>
-                    <span>Pasul vine de la server: cererea acceptă lucru nou.</span>
                   </p>
                 ) : null}
               </section>
@@ -526,6 +514,11 @@ export function RequestDetailPage({ requestId, search = window.location.search }
       })() : null}
     </SlicePage>
   );
+}
+
+function phaseText(phase: string, label: string, at: string | null): string {
+  const day = phase === "CLOSED" || phase === "REOPENED" ? formatShortDay(at) : null;
+  return day ? `${label} · ${day}` : label;
 }
 
 function CommercialStatusBanner({

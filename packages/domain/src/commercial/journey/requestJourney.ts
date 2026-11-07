@@ -36,6 +36,9 @@ export type RequestJourneyItem = {
   kind: RequestJourneyItemKind;
   key: string;
   quoteSnapshotId: string | null;
+  /** Kind and product of the offer an item names, so a client can route without guessing. */
+  quoteKind: QuoteOverviewItem["kind"] | null;
+  productCode: string | null;
   assemblyId: string | null;
   title: string;
   detail: string;
@@ -92,6 +95,7 @@ type JourneyOffer = Pick<
   QuoteOverviewItem,
   | "quoteSnapshotId"
   | "kind"
+  | "productCode"
   | "productLabel"
   | "reference"
   | "createdAt"
@@ -197,13 +201,18 @@ function byCreatedThenId<T extends { createdAt: string; quoteSnapshotId: string 
 
 function offerItem(offer: JourneyOffer): RequestJourneyItem | null {
   const identity = `${offer.productLabel} · ${offer.reference}`;
+  const target = {
+    key: `offer:${offer.quoteSnapshotId}`,
+    quoteSnapshotId: offer.quoteSnapshotId,
+    quoteKind: offer.kind,
+    productCode: offer.productCode,
+    assemblyId: offer.assemblyId,
+  };
   switch (offer.commercialStatus) {
     case "ACCEPTED_WITHOUT_ORDER":
       return {
         kind: "CONFIRM_ORDER",
-        key: `offer:${offer.quoteSnapshotId}`,
-        quoteSnapshotId: offer.quoteSnapshotId,
-        assemblyId: offer.assemblyId,
+        ...target,
         title: "Confirmarea comenzii",
         detail: `${identity} · acceptată de client, fără comandă`,
         hint: "Se confirmă în ofertă, numai de proprietar.",
@@ -214,9 +223,7 @@ function offerItem(offer: JourneyOffer): RequestJourneyItem | null {
     case "UNDECIDED_AFTER_CLOSE":
       return {
         kind: "DECIDE_CLOSED_OFFER",
-        key: `offer:${offer.quoteSnapshotId}`,
-        quoteSnapshotId: offer.quoteSnapshotId,
-        assemblyId: offer.assemblyId,
+        ...target,
         title: "Ofertă fără decizie comercială",
         detail: `${identity} · urmărirea comercială este încheiată`,
         hint: "Redeschide urmărirea comercială pentru a decide oferta.",
@@ -227,9 +234,7 @@ function offerItem(offer: JourneyOffer): RequestJourneyItem | null {
     case "AWAITING_CUSTOMER":
       return {
         kind: "AWAITING_CUSTOMER",
-        key: `offer:${offer.quoteSnapshotId}`,
-        quoteSnapshotId: offer.quoteSnapshotId,
-        assemblyId: offer.assemblyId,
+        ...target,
         title: "Așteaptă răspunsul clientului",
         detail: identity,
         hint: "Nimic de făcut acum. Răspunsul clientului se înregistrează în ofertă.",
@@ -261,6 +266,8 @@ function requestLevelItems(input: {
         kind: "REQUEST_BLOCKED",
         key: "request:blocked",
         quoteSnapshotId: null,
+        quoteKind: null,
+        productCode: null,
         assemblyId: null,
         title: "Cerere blocată",
         detail: "Cererea are o problemă care trebuie rezolvată.",
@@ -277,6 +284,8 @@ function requestLevelItems(input: {
         kind: "PREPARE_OFFER",
         key: "request:prepare-offer",
         quoteSnapshotId: null,
+        quoteKind: null,
+        productCode: null,
         assemblyId: null,
         title: "Urmează oferta",
         detail: "Cererea este gata de ofertă și nu are încă un produs ales.",
@@ -301,6 +310,8 @@ function assemblyItems(assemblies: readonly RequestAssemblyWork[]): RequestJourn
       kind: "CONTINUE_ASSEMBLY" as const,
       key: `assembly:${work.assemblyId}`,
       quoteSnapshotId: null,
+      quoteKind: null,
+      productCode: null,
       assemblyId: work.assemblyId,
       title: "Continuă ansamblul",
       detail: `${work.label} · ${work.stageLabel}`,

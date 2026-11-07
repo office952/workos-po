@@ -1,4 +1,5 @@
 import type { QuoteListItemTransport } from "../api/types";
+import { presentOfferCommercialStatus } from "./commercialJourneyAdapter";
 import { asBoolean, asRecord, asString } from "./record";
 
 export function presentQuoteList(payload: unknown): QuoteListItemTransport[] {
@@ -50,6 +51,7 @@ export function presentQuoteListItem(value: unknown): QuoteListItemTransport | n
     orderSnapshotId: asString(row.orderSnapshotId),
     disposition: asString(row.disposition),
     dispositionLabel: asString(row.dispositionLabel),
+    ...presentOfferCommercialStatus(row),
   };
 }
 

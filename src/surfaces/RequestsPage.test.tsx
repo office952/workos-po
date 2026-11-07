@@ -32,6 +32,25 @@ function stubRequests(requests: unknown[], summary?: unknown, extra: Handlers = 
   );
 }
 
+const journey = (partial: Record<string, unknown> = {}) => ({
+  offerSummary: { count: 0, awaitingCustomer: 0, acceptedWithoutOrder: 0, ordered: 0, declined: 0, notPursued: 0, superseded: 0, undecided: 0, summaryLabel: "Fără ofertă" },
+  actionable: [],
+  waiting: [],
+  actionableCount: 0,
+  waitingCount: 0,
+  orderCount: 0,
+  nextAction: "OPEN_REQUEST",
+  nextActionLabel: "Deschide cererea",
+  nextActionHref: null,
+  needsAttention: false,
+  attentionLabel: null,
+  phase: "NEW",
+  phaseLabel: "Nouă",
+  phaseAt: null,
+  administrativeNote: null,
+  ...partial,
+});
+
 const manyRequests = (length: number) => Array.from({ length }, (_, index) => ({
   requestId: `page-${index + 1}`,
   title: `Cerere ${String(index + 1).padStart(2, "0")}`,
@@ -41,6 +60,7 @@ const manyRequests = (length: number) => Array.from({ length }, (_, index) => ({
   createdAt: new Date(Date.UTC(2026, 9, 6, 12) - index * 60_000).toISOString(),
   needsAttention: index % 2 === 0,
   nextAction: "OPEN_REQUEST",
+  journey: journey({ needsAttention: index % 2 === 0 }),
 }));
 
 const pageStatus = () => within(screen.getByRole("navigation", { name: "Paginare cereri" })).getByRole("status");
@@ -133,7 +153,7 @@ describe("RequestsPage", () => {
     expect(titles()[0]).toBe("Cerere 23");
     expect(screen.getByRole("button", { name: "Pagina 1" })).toHaveAttribute("aria-current", "page");
     await user.click(screen.getByRole("button", { name: "Pagina 2" }));
-    await user.click(screen.getByRole("button", { name: /Necesită acțiune/ }));
+    await user.click(screen.getByRole("button", { name: /De rezolvat/ }));
     expect(pageStatus()).toHaveTextContent("1–10 din 12 cereri");
   });
 
@@ -168,13 +188,13 @@ describe("RequestsPage", () => {
 
   it("combines attention and search and resets a filtered empty result", async () => {
     stubRequests([
-      { requestId: "a", title: "Litere", customerDisplayName: "Nord", statusLabel: "Nouă", needsAttention: true, nextAction: "OPEN_REQUEST" },
-      { requestId: "b", title: "Totem", customerDisplayName: "Nord", statusLabel: "Nouă", needsAttention: false, nextAction: "OPEN_REQUEST" },
+      { requestId: "a", title: "Litere", customerDisplayName: "Nord", statusLabel: "Nouă", nextAction: "OPEN_REQUEST", journey: journey({ needsAttention: true }) },
+      { requestId: "b", title: "Totem", customerDisplayName: "Nord", statusLabel: "Nouă", nextAction: "OPEN_REQUEST", journey: journey() },
     ]);
     const user = userEvent.setup();
     render(<RequestsPage />);
     await screen.findByRole("link", { name: "Litere" });
-    await user.click(screen.getByRole("button", { name: /Necesită acțiune/ }));
+    await user.click(screen.getByRole("button", { name: /De rezolvat/ }));
     await user.type(screen.getByRole("searchbox", { name: "Caută" }), "Totem");
     expect(screen.getByText("Nicio cerere nu corespunde filtrului.")).toBeInTheDocument();
     expect(screen.getByText("0 din 2")).toBeInTheDocument();
@@ -203,24 +223,51 @@ describe("RequestsPage", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
-  it("keeps the request state separate from the commercial progress", async () => {
+  it("shows the server's commercial phase and offer summary, with the administrative status only as a note", async () => {
     stubRequests([
       {
         requestId: "req-3", title: "Caseta", reference: "CER-C4D4C0E8", customerId: "cus-2", customerDisplayName: "NORD MARKET DEMO SRL",
-        status: "NEW", statusLabel: "Nouă", commercialProgress: "QUOTE_CREATED", commercialProgressLabel: "Ofertă creată",
-        createdAt: "2026-09-21T19:27:00.000Z", nextAction: "OPEN_REQUEST", nextActionLabel: "Deschide",
+        status: "WAITING_CUSTOMER", statusLabel: "Așteaptă clientul", createdAt: "2026-09-21T19:27:00.000Z", nextAction: "OPEN_REQUEST",
+        journey: journey({
+          phase: "OPEN",
+          phaseLabel: "Deschisă",
+          administrativeNote: "Administrativ: așteaptă clientul",
+          offerSummary: { count: 1, awaitingCustomer: 1, acceptedWithoutOrder: 0, ordered: 0, declined: 0, notPursued: 0, superseded: 0, undecided: 0, summaryLabel: "1 ofertă · 1 așteaptă clientul" },
+        }),
       },
-      { requestId: "req-4", title: "Fără ofertă", status: "IN_REVIEW", statusLabel: "În analiză", createdAt: "2026-09-20T19:27:00.000Z", nextAction: "OPEN_REQUEST" },
+      {
+        requestId: "req-4", title: "Încheiată", status: "IN_REVIEW", statusLabel: "În analiză", createdAt: "2026-09-20T19:27:00.000Z", nextAction: "OPEN_REQUEST",
+        journey: journey({ phase: "CLOSED", phaseLabel: "Încheiată comercial", phaseAt: "2026-10-04T10:00:00.000Z" }),
+      },
     ]);
     render(<RequestsPage />);
     const row = (await screen.findByRole("link", { name: "Caseta" })).closest("tr")!;
-    expect(within(row).getByText("Nouă")).toBeInTheDocument();
-    expect(within(row).getByText("Ofertă creată")).toBeInTheDocument();
-    const segments = row.querySelectorAll(".rtray-progress__segments > span");
-    expect([...segments].map((node) => node.getAttribute("data-on"))).toEqual(["last", null, null]);
-    const other = screen.getByRole("link", { name: "Fără ofertă" }).closest("tr")!;
-    expect(within(other).getByText("În analiză")).toBeInTheDocument();
-    expect(within(other).getByText("Fără ofertă", { selector: ".rtray-progress__label" })).toBeInTheDocument();
+    expect(within(row).getByText("Deschisă")).toHaveAttribute("data-phase", "OPEN");
+    expect(within(row).getByText("Administrativ: așteaptă clientul")).toBeInTheDocument();
+    expect(within(row).getByText("1 ofertă · 1 așteaptă clientul")).toBeInTheDocument();
+    const other = screen.getByRole("link", { name: "Încheiată" }).closest("tr")!;
+    expect(within(other).getByText("Încheiată comercial · 04.10")).toBeInTheDocument();
+    expect(within(other).getByText("Fără ofertă")).toBeInTheDocument();
+  });
+
+  it("filters on the server's commercial counts and journey, not on the administrative status", async () => {
+    stubRequests(
+      [
+        { requestId: "a", title: "Cu obligație", statusLabel: "Nouă", nextAction: "OPEN_REQUEST", journey: journey({ phase: "OPEN", needsAttention: true, offerSummary: { count: 1, awaitingCustomer: 0, acceptedWithoutOrder: 1, ordered: 0, declined: 0, notPursued: 0, superseded: 0, undecided: 0, summaryLabel: "1 ofertă · 1 acceptată fără comandă" } }) },
+        { requestId: "b", title: "Fără ofertă încă", statusLabel: "Nouă", nextAction: "OPEN_REQUEST", journey: journey() },
+        { requestId: "c", title: "Închisă", statusLabel: "Nouă", nextAction: "OPEN_REQUEST", journey: journey({ phase: "CLOSED", phaseLabel: "Încheiată comercial", offerSummary: { count: 1, awaitingCustomer: 0, acceptedWithoutOrder: 0, ordered: 0, declined: 1, notPursued: 0, superseded: 0, undecided: 0, summaryLabel: "1 ofertă · 1 refuzată" } }) },
+      ],
+      { total: 3, needsAttention: 1, noOffer: 1, commerciallyOpen: 2, commerciallyClosed: 1, newCount: 3, inReview: 0, waitingCustomer: 0, readyForQuote: 0, blocked: 0, cancelled: 0 },
+    );
+    const user = userEvent.setup();
+    render(<RequestsPage />);
+    await screen.findByRole("link", { name: "Cu obligație" });
+    await user.click(screen.getByRole("button", { name: /De rezolvat/ }));
+    expect(titles()).toEqual(["Cu obligație"]);
+    await user.click(screen.getByRole("button", { name: /Fără ofertă/ }));
+    expect(titles()).toEqual(["Fără ofertă încă"]);
+    await user.click(screen.getByRole("button", { name: /Încheiate/ }));
+    expect(titles()).toEqual(["Închisă"]);
   });
 
   it("selects into the URL, supports Enter and Space, and reads the slip's offers independently", async () => {
@@ -252,45 +299,38 @@ describe("RequestsPage", () => {
     expect(window.location.search).toBe("?cerere=page-3");
   });
 
-  it("opens request identity while OPEN_QUOTE opens the quote", async () => {
+  it("opens request identity while the journey's OPEN_QUOTE opens the named offer", async () => {
+    const item = { kind: "CONFIRM_ORDER", key: "offer:q-1", quoteSnapshotId: "q-1", quoteKind: "PRODUCT", productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06", assemblyId: null, title: "Confirmarea comenzii", detail: "", hint: null, actionLabel: "Confirmă comanda", href: "/quotes/q-1", action: "OPEN_QUOTE" };
     stubRequests([
       {
         requestId: "req-1", title: "Litere vitrină", reference: "CRQ-104", customerId: "cus-1", customerDisplayName: "Atelier Nord",
-        statusLabel: "Gata de ofertă", createdAt: "2026-09-01T10:00:00.000Z", nextAction: "OPEN_QUOTE", nextActionLabel: "Deschide oferta",
-        needsAttention: true, attentionLabel: "Urmează oferta", linkedQuoteSnapshotId: "q-1", linkedQuoteProductCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+        statusLabel: "Gata de ofertă", createdAt: "2026-09-01T10:00:00.000Z", nextAction: "OPEN_QUOTE",
+        journey: journey({ phase: "OPEN", nextAction: "OPEN_QUOTE", nextActionLabel: "Confirmă comanda", nextActionHref: "/quotes/q-1", actionable: [item], actionableCount: 1, needsAttention: true }),
       },
     ]);
     render(<RequestsPage />);
     expect(await screen.findByRole("link", { name: "Litere vitrină" })).toHaveAttribute("href", "/cereri/req-1");
     expect(screen.getByText("Atelier Nord · CRQ-104")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Deschide oferta" })).toHaveAttribute("href", "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1");
-    expect(screen.getByText("Urmează oferta")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Confirmă comanda/ })).toHaveAttribute("href", "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1");
   });
 
   it("preserves customer and request context for CHOOSE_PRODUCT", async () => {
     stubRequests([
-      { requestId: "req-2", title: "Litere", reference: "CRQ-105", customerId: "cus-9", customerDisplayName: "Client Nord", statusLabel: "Gata de ofertă", createdAt: "2026-09-01T10:00:00.000Z", nextAction: "CHOOSE_PRODUCT", nextActionLabel: "Alege produs" },
+      { requestId: "req-2", title: "Litere", reference: "CRQ-105", customerId: "cus-9", customerDisplayName: "Client Nord", statusLabel: "Gata de ofertă", createdAt: "2026-09-01T10:00:00.000Z", nextAction: "CHOOSE_PRODUCT", journey: journey({ nextAction: "CHOOSE_PRODUCT", nextActionLabel: "Alege produsul" }) },
     ]);
     render(<RequestsPage />);
-    expect(await screen.findByRole("link", { name: "Alege produs" })).toHaveAttribute("href", "/cereri/req-2?alege-produs=1#alege-produs");
+    expect(await screen.findByRole("link", { name: /Alege produsul/ })).toHaveAttribute("href", "/cereri/req-2?alege-produs=1#alege-produs");
     expect(screen.getByRole("link", { name: "Litere" })).toHaveAttribute("href", "/cereri/req-2");
   });
 
-  it("maps OPEN_QUOTE from current-main nextActionHref", async () => {
+  it("only opens the request when the server sent no journey", async () => {
     stubRequests([
-      {
-        requestId: "req-3", title: "Caseta", reference: "CER-C4D4C0E8", customerId: "cus-2", customerDisplayName: "NORD MARKET DEMO SRL",
-        status: "NEW", statusLabel: "Nouă", commercialProgressLabel: "Ofertă creată", createdAt: "2026-09-21T19:27:00.000Z",
-        nextAction: "OPEN_QUOTE", nextActionLabel: "Deschide oferta",
-        nextActionHref: "/quotes/qts%3APRD-ACM-CASSETTE-NONE%3Aabffbb338a5a65fc2f9c69d41798d58f4fb73d27e4941df6a05052bddb2ca6d4",
-      },
+      { requestId: "req-3", title: "Caseta", statusLabel: "Nouă", createdAt: "2026-09-21T19:27:00.000Z", nextAction: "OPEN_QUOTE", nextActionLabel: "Deschide oferta", nextActionHref: "/quotes/qts%3AP%3Aabc" },
     ]);
     render(<RequestsPage />);
     expect(await screen.findByRole("link", { name: "Caseta" })).toHaveAttribute("href", "/cereri/req-3");
-    expect(screen.getByRole("link", { name: "Deschide oferta" })).toHaveAttribute(
-      "href",
-      "/quotes/PRD-ACM-CASSETTE-NONE/qts%3APRD-ACM-CASSETTE-NONE%3Aabffbb338a5a65fc2f9c69d41798d58f4fb73d27e4941df6a05052bddb2ca6d4",
-    );
+    expect(screen.queryByRole("link", { name: /Deschide oferta/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Deschide cererea/ })).toHaveAttribute("href", "/cereri/req-3");
   });
 
   it("keeps search and filters when the register is shown again", async () => {
@@ -415,9 +455,9 @@ describe("RequestsPage page and selection context", () => {
     render(<Routed />);
     await screen.findByRole("link", { name: "Cerere 01" });
     await user.click(screen.getByRole("button", { name: "Pagina 3" }));
-    await user.click(screen.getByRole("button", { name: /Necesită acțiune/ }));
+    await user.click(screen.getByRole("button", { name: /De rezolvat/ }));
     expect(screen.getByRole("button", { name: "Pagina 1" })).toHaveAttribute("aria-current", "page");
-    await user.click(screen.getByRole("button", { name: /Necesită acțiune/ }));
+    await user.click(screen.getByRole("button", { name: /De rezolvat/ }));
     await user.click(screen.getByRole("button", { name: "Pagina 3" }));
     await user.click(screen.getByRole("button", { name: /Ordine/ }));
     expect(screen.getByRole("button", { name: "Pagina 1" })).toHaveAttribute("aria-current", "page");

@@ -1,8 +1,10 @@
 import type {
+  CommercialJourneyTransport,
   JobListItemTransport,
   RequestAssemblyWorkTransport,
   RequestLinkedOfferTransport,
 } from "../api/types";
+import { presentOfferStatus, type OfferDotState, type OfferStepTone } from "./offerCommercialStatus";
 import type { ConfiguratorSession } from "../session/configuratorSession";
 import { configuratorContextKey } from "../session/configuratorSession";
 import {
@@ -56,14 +58,12 @@ export type BranchAction = {
 
 export type CommercialBranchKind = "product" | "assembly" | "unlinked";
 
-/** Where the branch's current offer stands, read from the server stage of that offer. */
-export type BranchCommercialState =
-  | "ordered"
-  | "accepted"
-  | "quoted"
-  | "dispositioned"
-  | "no-offer"
-  | "unclear";
+/** Where the branch's current offer stands: the server's commercial status of that offer. */
+export type BranchCommercialState = OfferDotState;
+
+export type BranchObligation = "ACTIONABLE" | "WAITING" | "NONE";
+
+export type BranchStep = BranchAction & { tone: OfferStepTone };
 
 export type BranchFilter = "all" | "action" | "ordered";
 
@@ -96,8 +96,12 @@ export type CommercialBranch = {
   kindLabel: string;
   state: BranchCommercialState;
   stateLabel: string;
-  /** The server marks the current offer as waiting for acceptance or for its order. */
+  /** Server obligation of the branch: someone here must act, the customer must answer, or nothing. */
+  obligation: BranchObligation;
+  /** obligation === "ACTIONABLE"; passive customer waiting is never an action. */
   needsAction: boolean;
+  /** The row's own link: the offer, its job sheet or the assembly. */
+  step: BranchStep | null;
   /** Something about the branch cannot be shown as fact (job read error, ambiguous links, revision). */
   needsAttention: boolean;
   jobCell: BranchJobCell;
@@ -152,6 +156,8 @@ export function presentCommercialBranches(input: {
   session?: ConfiguratorSession | null;
   requestId?: string | null;
   customerId?: string | null;
+  /** The request's server journey; when present it alone says which branch must act or waits. */
+  journey?: CommercialJourneyTransport | null;
 }): CommercialBranchModel {
   const consumed = new Set<string>();
   const drafts: CommercialBranch[] = [];
@@ -207,11 +213,16 @@ export function presentCommercialBranches(input: {
     }
   }
 
-  const ordered = orderBranches(drafts).map((branch, index) => ({
-    ...branch,
-    index,
-    indexLabel: String(index + 1).padStart(2, "0"),
-  }));
+  const ordered = orderBranches(drafts).map((branch, index) => {
+    const obligation = input.journey ? journeyObligation(branch, input.journey) : branch.obligation;
+    return {
+      ...branch,
+      obligation,
+      needsAction: obligation === "ACTIONABLE",
+      index,
+      indexLabel: String(index + 1).padStart(2, "0"),
+    };
+  });
 
   return {
     branches: ordered,
@@ -313,14 +324,29 @@ function assemblyBranch(
     link.status === "error";
   const shown = current.length === 1 ? (current[0] ?? null) : null;
   const ordered = previousOrdered[0] ?? quotes.find((quote) => quote.orderSnapshotId) ?? null;
-  const state: { state: BranchCommercialState; label: string } = order.ambiguous || current.length > 1
+  const unclear = order.ambiguous || current.length > 1;
+  const statusOffer = unclear ? null : order.orderSnapshotId ? ordered : shown;
+  const status = statusOffer ? presentOfferStatus(statusOffer) : null;
+  const state: { state: BranchCommercialState; label: string } = unclear
     ? { state: "unclear", label: current.length > 1 ? "Mai multe oferte curente" : "Asociere neclară" }
-    : order.orderSnapshotId
-      ? { state: "ordered", label: ordered?.stageLabel?.trim() || assembly.stageLabel }
-      : shown
-        ? offerState(shown)
+    : status
+      ? { state: status.dot, label: status.label }
+      : order.orderSnapshotId
+        ? { state: "ordered", label: assembly.stageLabel }
         : { state: "no-offer", label: assembly.stageLabel || "Fără ofertă" };
   const reference = (shown ?? ordered)?.reference ?? null;
+  const obligation: BranchObligation = order.orderSnapshotId ? "NONE" : (status?.obligation ?? "NONE");
+  const step: BranchStep | null = unclear
+    ? null
+    : order.orderSnapshotId
+      ? { label: "Fișa lucrării", href: jobHref(order.orderSnapshotId), tone: "action" }
+      : status && shown
+        ? { label: status.stepLabel, href: quoteHrefFor(shown), tone: status.stepTone }
+        : {
+            label: assembly.membersEditable ? "Continuă ansamblul" : "Deschide ansamblul",
+            href: assemblyHref(assembly.assemblyId),
+            tone: "action",
+          };
   return {
     key: `assembly:${assembly.assemblyId}`,
     kind: "assembly",
@@ -333,7 +359,9 @@ function assemblyBranch(
     kindLabel: "Ansamblu",
     state: state.state,
     stateLabel: state.label,
-    needsAction: Boolean(shown?.needsAttention) && !order.orderSnapshotId,
+    obligation,
+    needsAction: obligation === "ACTIONABLE",
+    step,
     needsAttention,
     jobCell: jobCell(link),
     chain: branchChain({
@@ -369,7 +397,11 @@ function productBranch(
   const link = linkJob(jobs, jobsStatus, offer.orderSnapshotId);
   const needsAttention = link.status === "ambiguous" || link.status === "error";
   const product = offer.productLabel?.trim() || null;
-  const state = offerState(offer);
+  const status = presentOfferStatus(offer);
+  const step: BranchStep =
+    status.stepToJob && offer.orderSnapshotId
+      ? { label: status.stepLabel, href: jobHref(offer.orderSnapshotId), tone: status.stepTone }
+      : { label: status.stepLabel, href: quoteHrefFor(offer), tone: status.stepTone };
   return {
     key: `quote:${offer.quoteSnapshotId}`,
     kind: "product",
@@ -380,9 +412,11 @@ function productBranch(
     inscription: offer.inscription,
     offerReference: offer.reference,
     kindLabel: "Produs",
-    state: state.state,
-    stateLabel: state.label,
-    needsAction: Boolean(offer.needsAttention),
+    state: status.dot,
+    stateLabel: status.label,
+    obligation: status.obligation,
+    needsAction: status.obligation === "ACTIONABLE",
+    step,
     needsAttention,
     jobCell: jobCell(link),
     chain: branchChain({
@@ -662,19 +696,14 @@ function offerActionLabel(offer: RequestLinkedOfferTransport): string {
   return offer.reference ? `Deschide oferta ${offer.reference}` : "Deschide oferta";
 }
 
-function offerState(offer: RequestLinkedOfferTransport): { state: BranchCommercialState; label: string } {
-  if (offer.orderSnapshotId || offer.stage === "ORDER_CREATED") {
-    return { state: "ordered", label: offer.attentionLabel?.trim() || offer.stageLabel?.trim() || "—" };
-  }
-  if (offer.stage === "QUOTE_ACCEPTED") {
-    return { state: "accepted", label: offer.attentionLabel?.trim() || offer.stageLabel?.trim() || "—" };
-  }
-  if (offer.dispositionLabel) {
-    return { state: "dispositioned", label: offer.dispositionLabel };
-  }
-  const label = offer.attentionLabel?.trim() || offer.stageLabel?.trim() || "—";
-  if (offer.stage === "QUOTE_CREATED") return { state: "quoted", label };
-  return { state: "unclear", label };
+/** A branch acts or waits only when one of the server's journey items names its offer or assembly. */
+function journeyObligation(branch: CommercialBranch, journey: CommercialJourneyTransport): BranchObligation {
+  const names = (item: { quoteSnapshotId: string | null; assemblyId: string | null }) =>
+    (item.quoteSnapshotId !== null && branch.quotes.some((quote) => quote.quoteSnapshotId === item.quoteSnapshotId))
+    || (item.quoteSnapshotId === null && item.assemblyId !== null && branch.key === `assembly:${item.assemblyId}`);
+  if (journey.actionable.some(names)) return "ACTIONABLE";
+  if (journey.waiting.some(names)) return "WAITING";
+  return "NONE";
 }
 
 function jobCell(link: JobLink): BranchJobCell {
@@ -721,21 +750,22 @@ function branchChain(input: {
         name: accepted ? "Ofertă acceptată" : "Ofertă",
         value: [offer.reference, input.offerPrice].filter(Boolean).join(" · ") || "Ofertă",
         detail: accepted
-          ? offer.stageLabel?.trim() || null
-          : [createdDay(offer.createdAt) ? `Creată ${createdDay(offer.createdAt)}` : null, offer.attentionLabel?.toLocaleLowerCase("ro")]
+          ? offer.commercialStatusLabel?.trim() || offer.stageLabel?.trim() || null
+          : [createdDay(offer.createdAt) ? `Creată ${createdDay(offer.createdAt)}` : null, offer.commercialStatusLabel?.toLocaleLowerCase("ro")]
               .filter(Boolean)
               .join(" · ") || null,
-        tone: accepted ? "done" : offer.needsAttention ? "attention" : "current",
+        tone: accepted ? "done" : offer.obligationKind === "ACTIONABLE" ? "attention" : "current",
       }
     : { key: "offer", name: "Ofertă", value: "—", detail: "Apare după înghețarea configurației", tone: "empty" };
+  const awaitingOrder = offer?.commercialStatus === "ACCEPTED_WITHOUT_ORDER";
   const orderStep: BranchChainStep = orderSnapshotId
     ? { key: "order", name: "Comandă", value: "Comandă creată", detail: "Păstrează sumele acestei oferte", tone: "done" }
     : {
         key: "order",
         name: "Comandă",
         value: "—",
-        detail: offer?.stage === "QUOTE_ACCEPTED" ? offer.attentionLabel?.trim() || "Urmează comanda" : "Apare după acceptarea acestei oferte",
-        tone: offer?.stage === "QUOTE_ACCEPTED" ? "attention" : "empty",
+        detail: awaitingOrder ? "Urmează confirmarea comenzii" : "Apare după acceptarea acestei oferte",
+        tone: awaitingOrder ? "attention" : "empty",
       };
   return [offerStep, orderStep, jobStep(link)];
 }

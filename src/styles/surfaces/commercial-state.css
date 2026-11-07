@@ -1,4 +1,4 @@
-/* W2 · one commercial state per branch, shape and fill so color is never alone. */
+/* CJ1 · one server commercial status per offer, shape and fill so color is never alone. */
 
 .commercial-dot {
   display: inline-block;
@@ -17,14 +17,15 @@
 
 .commercial-dot[data-state="accepted"] {
   border-color: var(--shell-signal);
-  background: linear-gradient(90deg, var(--shell-signal) 50%, transparent 50%);
 }
 
-.commercial-dot[data-state="dispositioned"] {
+.commercial-dot[data-state="decided"],
+.commercial-dot[data-state="superseded"] {
   border-color: var(--color-text-secondary);
-  background: var(--color-text-secondary);
+  border-style: dotted;
 }
 
+.commercial-dot[data-state="undecided"],
 .commercial-dot[data-state="unclear"] {
   border-color: var(--color-danger);
   border-radius: 0;

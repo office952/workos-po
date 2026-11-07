@@ -307,6 +307,9 @@ export type CustomerWorkspaceSummaryTransport = {
   requestNeedsAction: number;
   quoteCount: number;
   quoteNeedsAction: number;
+  /** Server journey counts over the customer's requests and unlinked offers. */
+  commercialActionableCount: number;
+  commercialWaitingCount: number;
   /** WorkOS production jobs only. */
   jobCount: number;
   jobNeedsAction: number;
@@ -351,17 +354,80 @@ export type RequestListItemTransport = {
   commercialState?: string | null;
   commercialStateLabel?: string | null;
   ledgerRevision?: number | null;
+  /** Server commercial journey; null when the payload has none (the row then shows no obligation). */
+  journey: CommercialJourneyTransport | null;
 };
 
-/** Server summary of the whole request overview, by request status; null when absent. */
+/** One server-owned commercial status per offer; never derived in the UI. */
+export type OfferCommercialStatusTransport = {
+  commercialStatus: string | null;
+  commercialStatusLabel: string | null;
+  /** ACTIONABLE | WAITING | NONE */
+  obligationKind: string | null;
+  followUp: boolean;
+  decided: boolean;
+};
+
+/** One obligation of the request journey; it only navigates. */
+export type CommercialJourneyItemTransport = {
+  kind: string;
+  key: string;
+  quoteSnapshotId: string | null;
+  quoteKind: QuoteKindTransport | null;
+  productCode: string | null;
+  assemblyId: string | null;
+  title: string;
+  detail: string;
+  hint: string | null;
+  actionLabel: string;
+  href: string;
+  action: string;
+};
+
+export type CommercialJourneyOfferSummaryTransport = {
+  count: number;
+  awaitingCustomer: number;
+  acceptedWithoutOrder: number;
+  ordered: number;
+  declined: number;
+  notPursued: number;
+  superseded: number;
+  undecided: number;
+  summaryLabel: string;
+};
+
+export type CommercialJourneyTransport = {
+  offerSummary: CommercialJourneyOfferSummaryTransport;
+  actionable: CommercialJourneyItemTransport[];
+  waiting: CommercialJourneyItemTransport[];
+  actionableCount: number;
+  waitingCount: number;
+  orderCount: number;
+  nextAction: string;
+  nextActionLabel: string;
+  nextActionHref: string | null;
+  needsAttention: boolean;
+  attentionLabel: string | null;
+  /** NEW | OPEN | REOPENED | CLOSED */
+  phase: string;
+  phaseLabel: string;
+  phaseAt: string | null;
+  administrativeNote: string | null;
+};
+
+/** Server summary of the whole request overview; null when absent. */
 export type RequestOverviewSummaryTransport = {
   total: number | null;
   needsAttention: number | null;
+  noOffer: number | null;
+  commerciallyOpen: number | null;
+  commerciallyClosed: number | null;
   newCount: number | null;
   inReview: number | null;
   waitingCustomer: number | null;
   readyForQuote: number | null;
   blocked: number | null;
+  cancelled: number | null;
 };
 
 export type RequestOverviewTransport = {
@@ -394,7 +460,7 @@ export type RequestLinkedOfferTransport = {
   dispositionLabel?: string | null;
   decisionRequired?: boolean;
   resumable?: boolean;
-};
+} & OfferCommercialStatusTransport;
 
 export type RequestAssemblyWorkTransport = {
   assemblyId: string;
@@ -512,6 +578,7 @@ export type RequestDetailTransport = {
   canWriteInstallationFacts: boolean;
   canWriteInstallationPrice: boolean;
   commercial?: CommercialRequestTransport | null;
+  journey: CommercialJourneyTransport | null;
 };
 
 export type CommercialActorTransport = {
@@ -605,7 +672,7 @@ export type QuoteListItemTransport = {
   orderSnapshotId: string | null;
   disposition?: string | null;
   dispositionLabel?: string | null;
-};
+} & OfferCommercialStatusTransport;
 
 export type AssemblyQuoteSectionTransport = {
   memberId: string;

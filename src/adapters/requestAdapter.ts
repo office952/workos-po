@@ -14,6 +14,7 @@ import type {
   RequestOverviewSummaryTransport,
   RequestOverviewTransport,
 } from "../api/types";
+import { presentCommercialJourney, presentOfferCommercialStatus } from "./commercialJourneyAdapter";
 import { asBoolean, asNumber, asRecord, asString, asStringList } from "./record";
 
 export function presentRequestList(payload: unknown): RequestListItemTransport[] {
@@ -30,11 +31,15 @@ export function presentRequestOverview(payload: unknown): RequestOverviewTranspo
     ? {
         total: asNumber(summary.total),
         needsAttention: asNumber(summary.needsAttention),
+        noOffer: asNumber(summary.noOffer),
+        commerciallyOpen: asNumber(summary.commerciallyOpen),
+        commerciallyClosed: asNumber(summary.commerciallyClosed),
         newCount: asNumber(summary.newCount),
         inReview: asNumber(summary.inReview),
         waitingCustomer: asNumber(summary.waitingCustomer),
         readyForQuote: asNumber(summary.readyForQuote),
         blocked: asNumber(summary.blocked),
+        cancelled: asNumber(summary.cancelled),
       }
     : null;
   return {
@@ -75,6 +80,7 @@ export function presentRequestListItem(value: unknown): RequestListItemTransport
     commercialState: asString(row.commercialState),
     commercialStateLabel: asString(row.commercialStateLabel),
     ledgerRevision: asNumber(row.ledgerRevision),
+    journey: presentCommercialJourney(row.journey),
   };
 }
 
@@ -123,6 +129,7 @@ export function presentRequestDetail(payload: unknown): RequestDetailTransport |
     canWriteInstallationFacts: asBoolean(detail?.canWriteInstallationFacts) ?? false,
     canWriteInstallationPrice: asBoolean(detail?.canWriteInstallationPrice) ?? false,
     commercial,
+    journey: presentCommercialJourney(detail?.journey),
   };
 }
 
@@ -152,13 +159,15 @@ function presentRequestNextAction(input: {
 function labelForRequestNextAction(nextAction: string): string {
   switch (nextAction) {
     case "CHOOSE_PRODUCT":
-      return "Alege produs";
+      return "Alege produsul";
     case "OPEN_QUOTE":
       return "Deschide oferta";
     case "OPEN_ASSEMBLY":
       return "Deschide ansamblul";
+    case "OPEN_ORDER":
+      return "Fișa lucrării";
     case "OPEN_REQUEST":
-      return "Deschide";
+      return "Deschide cererea";
     default:
       return "Deschide";
   }
@@ -231,6 +240,7 @@ function presentLinkedOffers(value: unknown): RequestLinkedOfferTransport[] {
         dispositionLabel: asString(row.dispositionLabel),
         decisionRequired: asBoolean(row.decisionRequired) ?? false,
         resumable: asBoolean(row.resumable) ?? false,
+        ...presentOfferCommercialStatus(row),
       },
     ];
   });

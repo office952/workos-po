@@ -349,8 +349,13 @@ describe("ClientDetailPage", () => {
       stageLabel: "Creată",
       nextAction: "ACCEPT_QUOTE",
       nextActionLabel: "Marchează acceptată",
-      needsAttention: true,
-      attentionLabel: "Urmează acceptarea",
+      needsAttention: false,
+      attentionLabel: null,
+      commercialStatus: "AWAITING_CUSTOMER",
+      commercialStatusLabel: "Urmează acceptarea",
+      obligationKind: "WAITING",
+      followUp: true,
+      decided: false,
       superseded: false,
       requestId: "req-1",
       requestReference: "CRQ-104",
@@ -379,6 +384,11 @@ describe("ClientDetailPage", () => {
                 nextActionLabel: "Deschide comanda",
                 needsAttention: false,
                 attentionLabel: null,
+                commercialStatus: "ORDERED",
+                commercialStatusLabel: "Cu comandă",
+                obligationKind: "NONE",
+                followUp: false,
+                decided: true,
                 orderSnapshotId: "asmo:1",
               }),
               quote({
@@ -393,6 +403,11 @@ describe("ClientDetailPage", () => {
                 nextActionLabel: "Deschide ansamblul",
                 needsAttention: false,
                 attentionLabel: "Înlocuită de o versiune mai nouă",
+                commercialStatus: "SUPERSEDED",
+                commercialStatusLabel: "Înlocuită de o versiune mai nouă",
+                obligationKind: "NONE",
+                followUp: false,
+                decided: true,
                 superseded: true,
               }),
             ],
@@ -453,7 +468,8 @@ describe("ClientDetailPage", () => {
       quoteSnapshotId: "qts:1", kind: "PRODUCT", kindLabel: "Produs", assemblyId: null, sectionCount: 1, superseded: false,
       grossDisplay: null, currency: null, productCode: "P", productLabel: "Litere volumetrice", reference: "OF-1", inscription: "",
       customerDisplayName: "Atelier Nord", stage: "QUOTE_CREATED", stageLabel: "Creată", createdAt: null,
-      nextAction: "ACCEPT_QUOTE", nextActionLabel: "Marchează acceptată", needsAttention: true, attentionLabel: "Urmează acceptarea",
+      nextAction: "ACCEPT_QUOTE", nextActionLabel: "Marchează acceptată", needsAttention: false, attentionLabel: null,
+      commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Urmează acceptarea", obligationKind: "WAITING", followUp: true, decided: false,
       requestId: "req-1", requestReference: "CRQ-104", orderSnapshotId: null,
     };
 
@@ -483,12 +499,12 @@ describe("ClientDetailPage", () => {
       // Pe cereri (640:11188): the request once, its state as the server sends it, the progress apart.
       const card = within(view).getByRole("heading", { level: 3, name: "Firmă luminoasă" }).closest("li")!;
       expect(within(card).getByText("Deschisă")).toBeInTheDocument();
-      expect(within(card).getByText("1 ofertă în așteptare · fără lucrare")).toBeInTheDocument();
+      expect(within(card).getByText("1 ofertă · fără lucrare")).toBeInTheDocument();
       expect(within(card).getByRole("link", { name: "Vezi în Istoric: Firmă luminoasă" })).toHaveAttribute("href", "/clienti/cus-1?deschis=project%3Areq-1");
       expect(within(card).getByRole("link", { name: "Deschide cererea CRQ-104" })).toHaveAttribute("href", "/cereri/req-1");
-      // The offer: the server's attention reason, no work yet, its two ways in.
+      // The offer: the server's commercial status (waiting for the customer is not warm), no work yet, its two ways in.
       const offer = within(card).getByRole("link", { name: "Deschide oferta OF-1" }).closest("li")!;
-      expect(offer).toHaveAttribute("data-attention", "true");
+      expect(offer).not.toHaveAttribute("data-attention");
       expect(within(offer).getByText("Urmează acceptarea")).toBeInTheDocument();
       expect(within(offer).getByText("Fără lucrare · oferta nu are comandă")).toBeInTheDocument();
       expect(within(offer).getByRole("button", { name: "Previzualizează oferta OF-1" })).toBeInTheDocument();

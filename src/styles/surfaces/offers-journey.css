@@ -1,0 +1,88 @@
+/* CJ1 · Oferte commercial filters: "Ce înseamnă?" and the per-offer status (WorkOS-N 1226:19654). */
+
+.offers-board-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.offers-explain {
+  position: relative;
+}
+
+.offers-explain__button {
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--shell-signal-deep);
+  font: 500 13px/1.4 var(--font-sans);
+  cursor: pointer;
+}
+
+.offers-explain__button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.offers-explain__panel {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  right: 0;
+  display: grid;
+  gap: 10px;
+  width: min(22rem, 90vw);
+  margin: 4px 0 0;
+  padding: 14px 16px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--color-surface);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
+}
+
+.offers-explain__panel div {
+  display: grid;
+  gap: 2px;
+}
+
+.offers-explain__panel dt {
+  color: var(--color-text-primary);
+  font: 600 13px/1.4 var(--font-sans);
+}
+
+.offers-explain__panel dd {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 12px/1.4 var(--font-sans);
+}
+
+.offers-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.offers-sheet-v2__status {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 500 13px/1.4 var(--font-sans);
+}
+
+.offers-v2__table tr[data-commercial="decided"] .offers-v2__client,
+.offers-v2__table tr[data-commercial="superseded"] .offers-v2__client,
+.offers-v2__table tr[data-commercial="decided"] .offers-v2__value,
+.offers-v2__table tr[data-commercial="superseded"] .offers-v2__value {
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 767px) {
+  .offers-board-wrap {
+    display: grid;
+  }
+
+  .offers-explain__panel {
+    left: 0;
+    right: auto;
+  }
+}

@@ -20,9 +20,30 @@ function offer(partial: Partial<RequestLinkedOfferTransport> & Pick<RequestLinke
     superseded: false,
     attentionLabel: null,
     orderSnapshotId: null,
+    commercialStatus: "AWAITING_CUSTOMER",
+    commercialStatusLabel: "Urmează acceptarea",
+    obligationKind: "WAITING",
+    followUp: true,
+    decided: false,
     ...partial,
   };
 }
+
+const orderedStatus = {
+  commercialStatus: "ORDERED",
+  commercialStatusLabel: "Cu comandă",
+  obligationKind: "NONE",
+  followUp: false,
+  decided: false,
+};
+
+const acceptedStatus = {
+  commercialStatus: "ACCEPTED_WITHOUT_ORDER",
+  commercialStatusLabel: "Acceptată · fără comandă",
+  obligationKind: "ACTIONABLE",
+  followUp: true,
+  decided: false,
+};
 
 function assembly(partial: Partial<RequestAssemblyWorkTransport> & Pick<RequestAssemblyWorkTransport, "assemblyId">): RequestAssemblyWorkTransport {
   return {
@@ -294,8 +315,7 @@ describe("request commercial branches", () => {
       productCode: index % 2 === 0 ? "SAME" : `P-${index}`,
       productLabel: index === 3 ? "Semnalistică interioară pentru recepția clădirii administrative cu nume foarte lung" : `Produs ${index + 1}`,
       createdAt: `2026-10-${String(index + 1).padStart(2, "0")}T00:00:00.000Z`,
-      needsAttention: index === 2 || index === 6,
-      attentionLabel: index === 2 || index === 6 ? "Urmează acceptarea" : null,
+      ...(index === 2 || index === 6 ? acceptedStatus : {}),
     }));
     const model = presentCommercialBranches({ offers, assemblies: [], jobs: [], ...ready });
     expect(model.branches).toHaveLength(8);
@@ -349,23 +369,86 @@ describe("request commercial branches", () => {
   it("keeps each offer's own commercial state; one ordered branch does not complete the others (D07)", () => {
     const model = presentCommercialBranches({
       offers: [
-        offer({ quoteSnapshotId: "q-1", productCode: "P", stage: "ORDER_CREATED", stageLabel: "Cu comandă", orderSnapshotId: "order-1", createdAt: "2026-10-01T00:00:00.000Z" }),
-        offer({ quoteSnapshotId: "q-2", productCode: "P", stage: "QUOTE_ACCEPTED", stageLabel: "Acceptată", needsAttention: true, attentionLabel: "Urmează comanda", createdAt: "2026-10-02T00:00:00.000Z" }),
-        offer({ quoteSnapshotId: "q-3", productCode: "P", stage: "QUOTE_CREATED", stageLabel: "Creată", needsAttention: true, attentionLabel: "Urmează acceptarea", createdAt: "2026-10-03T00:00:00.000Z" }),
+        offer({ quoteSnapshotId: "q-1", productCode: "P", stage: "ORDER_CREATED", stageLabel: "Cu comandă", orderSnapshotId: "order-1", createdAt: "2026-10-01T00:00:00.000Z", ...orderedStatus }),
+        offer({ quoteSnapshotId: "q-2", productCode: "P", stage: "QUOTE_ACCEPTED", stageLabel: "Acceptată", createdAt: "2026-10-02T00:00:00.000Z", ...acceptedStatus }),
+        offer({ quoteSnapshotId: "q-3", productCode: "P", stage: "QUOTE_CREATED", stageLabel: "Creată", createdAt: "2026-10-03T00:00:00.000Z" }),
       ],
       assemblies: [],
       jobs: [job({ jobId: "job-1", orderSnapshotId: "order-1", stage: "ORDER_CREATED", stageLabel: "Netrimisă în producție" })],
       ...ready,
     });
-    expect(model.branches.map((branch) => branch.state)).toEqual(["ordered", "accepted", "quoted"]);
-    expect(model.branches.map((branch) => branch.stateLabel)).toEqual(["Cu comandă", "Urmează comanda", "Urmează acceptarea"]);
-    expect(model.branches.map((branch) => branch.needsAction)).toEqual([false, true, true]);
+    expect(model.branches.map((branch) => branch.state)).toEqual(["ordered", "accepted", "awaiting"]);
+    expect(model.branches.map((branch) => branch.stateLabel)).toEqual(["Cu comandă", "Acceptată · fără comandă", "Urmează acceptarea"]);
+    expect(model.branches.map((branch) => branch.obligation)).toEqual(["NONE", "ACTIONABLE", "WAITING"]);
+    expect(model.branches.map((branch) => branch.needsAction)).toEqual([false, true, false]);
+    expect(model.branches.map((branch) => branch.step?.label)).toEqual(["Fișa lucrării", "Confirmarea comenzii", "Deschide oferta"]);
+    expect(model.branches[0]?.step?.href).toBe("/lucrari/order-1");
+    expect(model.branches[1]?.chain[1]?.detail).toBe("Urmează confirmarea comenzii");
     expect(filterBranches(model.branches, "ordered").map((branch) => branch.key)).toEqual(["quote:q-1"]);
+  });
+
+  it("mutes decided and superseded offers and never reads them as an action", () => {
+    const model = presentCommercialBranches({
+      offers: [
+        offer({ quoteSnapshotId: "q-1", productCode: "P", commercialStatus: "DECLINED_BY_CUSTOMER", commercialStatusLabel: "Refuzată de client", obligationKind: "NONE", followUp: false, decided: true }),
+        offer({ quoteSnapshotId: "q-2", productCode: "P", commercialStatus: "SUPERSEDED", commercialStatusLabel: "Înlocuită de o versiune mai nouă", obligationKind: "NONE", followUp: false }),
+      ],
+      assemblies: [],
+      jobs: [],
+      ...ready,
+    });
+    expect(model.branches.map((branch) => [branch.state, branch.step?.label, branch.step?.tone, branch.needsAction])).toEqual([
+      ["decided", "Vezi decizia", "muted", false],
+      ["superseded", "Vezi versiunea", "muted", false],
+    ]);
+  });
+
+  it("fails closed to an unclear state when the server sent no commercial status", () => {
+    const model = presentCommercialBranches({
+      offers: [offer({ quoteSnapshotId: "q-1", productCode: "P", stage: "QUOTE_ACCEPTED", commercialStatus: null, commercialStatusLabel: null, obligationKind: null })],
+      assemblies: [],
+      jobs: [],
+      ...ready,
+    });
+    expect(model.branches[0]?.state).toBe("unclear");
+    expect(model.branches[0]?.needsAction).toBe(false);
+  });
+
+  it("lets the request journey alone say which branch acts or waits", () => {
+    const item = { kind: "ACCEPTED_WITHOUT_ORDER", key: "quote:q-2", quoteSnapshotId: "q-2", quoteKind: "PRODUCT", productCode: "P", assemblyId: null, title: "OF-2", detail: "", hint: null, actionLabel: "Confirmă comanda", href: "/quotes/q-2", action: "OPEN_QUOTE" } as const;
+    const model = presentCommercialBranches({
+      offers: [
+        offer({ quoteSnapshotId: "q-1", productCode: "P", createdAt: "2026-10-01T00:00:00.000Z" }),
+        offer({ quoteSnapshotId: "q-2", productCode: "P", createdAt: "2026-10-02T00:00:00.000Z" }),
+      ],
+      assemblies: [],
+      jobs: [],
+      journey: {
+        offerSummary: { count: 2, awaitingCustomer: 1, acceptedWithoutOrder: 1, ordered: 0, declined: 0, notPursued: 0, superseded: 0, undecided: 0, summaryLabel: "2 oferte" },
+        actionable: [item],
+        waiting: [],
+        actionableCount: 1,
+        waitingCount: 0,
+        orderCount: 0,
+        nextAction: "OPEN_QUOTE",
+        nextActionLabel: "Confirmă comanda",
+        nextActionHref: "/quotes/q-2",
+        needsAttention: true,
+        attentionLabel: null,
+        phase: "OPEN",
+        phaseLabel: "Deschisă",
+        phaseAt: null,
+        administrativeNote: null,
+      },
+      ...ready,
+    });
+    expect(model.branches.map((branch) => branch.obligation)).toEqual(["NONE", "ACTIONABLE"]);
+    expect(filterBranches(model.branches, "action").map((branch) => branch.key)).toEqual(["quote:q-2"]);
   });
 
   it("names the job destination truthfully (D08)", () => {
     const model = presentCommercialBranches({
-      offers: [offer({ quoteSnapshotId: "q-1", productCode: "P", stage: "ORDER_CREATED", orderSnapshotId: "order-1" })],
+      offers: [offer({ quoteSnapshotId: "q-1", productCode: "P", stage: "ORDER_CREATED", orderSnapshotId: "order-1", ...orderedStatus })],
       assemblies: [],
       jobs: [job({ jobId: "job-1", orderSnapshotId: "order-1", stage: "ORDER_CREATED", stageLabel: "Netrimisă în producție" })],
       ...ready,

@@ -23,6 +23,8 @@ import { QuotesRegister } from "./quotes/QuotesRegister";
 import { QuotesSignalBoard } from "./quotes/QuotesSignalBoard";
 import { useQuotesLayout } from "./quotes/useQuotesLayout";
 import "../styles/surfaces/offers-desk.css";
+import "../styles/surfaces/offers-journey.css";
+import "../styles/surfaces/commercial-state.css";
 
 const MODULE_INDEX = String(globalNavItems().findIndex((item) => item.href === "/oferte") + 1).padStart(2, "0");
 

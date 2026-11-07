@@ -1,8 +1,9 @@
 import { useRef, type KeyboardEvent } from "react";
 import type { RequestListItemTransport, RequestOverviewSummaryTransport } from "../../api/types";
+import { formatShortDay } from "../../presentation/format";
 import { formatCount } from "../desk/deskKeys";
 import type { DeskLayout } from "../desk/useDeskLayout";
-import { commercialLabel, commercialSteps, PROGRESS_SEGMENTS, TRAYS } from "./requestRegistryModel";
+import { TRAYS } from "./requestRegistryModel";
 
 /**
  * Preparation trays: one filter per request status, counted by the server summary.
@@ -36,7 +37,7 @@ export function RequestTrays({
     <div className="rtray" data-layout={layout}>
       <p className="rtray__caption" aria-hidden="true">
         <span>Pregătire</span>
-        <small>stare cerere</small>
+        <small>stare administrativă</small>
       </p>
       <div ref={rootRef} className="rtray__trays" role="group" aria-label="Tăvi de pregătire: filtru pe starea cererii" onKeyDown={onKeyDown}>
         {TRAYS.map((tray) => {
@@ -63,31 +64,36 @@ export function RequestTrays({
   );
 }
 
-/** Three segments for the commercial progress code; the label is the server's. */
-export function CommercialProgress({ item }: { item: Pick<RequestListItemTransport, "commercialProgress" | "contextLabel"> }) {
-  const steps = commercialSteps(item);
+/** The server's offer summary of the request: "4 oferte · 1 cu comandă · 1 refuzată". */
+export function OffersSummary({ item }: { item: Pick<RequestListItemTransport, "journey"> }) {
+  const label = item.journey?.offerSummary.summaryLabel || "—";
   return (
-    <span className="rtray-progress">
-      <span className="rtray-progress__segments" aria-hidden="true">
-        {PROGRESS_SEGMENTS.map((segment, index) => (
-          <span key={segment} data-on={steps !== null && index < steps ? (index === steps - 1 ? "last" : "done") : undefined} />
-        ))}
+    <span className="rtray-offers" data-empty={!item.journey || item.journey.offerSummary.count === 0 || undefined}>
+      {label}
+    </span>
+  );
+}
+
+/** Commercial phase of the request, with the administrative note only when it adds something. */
+export function CommercialPhase({ item }: { item: Pick<RequestListItemTransport, "journey"> }) {
+  const journey = item.journey;
+  if (!journey) return <span className="rdesk-state">—</span>;
+  const day = journey.phase === "CLOSED" || journey.phase === "REOPENED" ? formatShortDay(journey.phaseAt) : null;
+  return (
+    <span className="rdesk-state-stack">
+      <span className="rtray-phase" data-phase={journey.phase}>
+        {day ? `${journey.phaseLabel} · ${day}` : journey.phaseLabel}
       </span>
-      <span className="rtray-progress__label" data-empty={!item.commercialProgress || undefined}>{commercialLabel(item)}</span>
+      {journey.administrativeNote ? <span className="rdesk-commercial-closed">{journey.administrativeNote}</span> : null}
     </span>
   );
 }
 
 export function RequestState({ item }: { item: RequestListItemTransport }) {
   return (
-    <span className="rdesk-state-stack">
-      <span className="rdesk-state">
-        <span className="rdesk-lamp" aria-hidden="true" />
-        {item.statusLabel || "—"}
-      </span>
-      {item.commercialState === "CLOSED" ? (
-        <span className="rdesk-commercial-closed">{item.commercialStateLabel}</span>
-      ) : null}
+    <span className="rdesk-state">
+      <span className="rdesk-lamp" aria-hidden="true" />
+      {item.statusLabel || "—"}
     </span>
   );
 }

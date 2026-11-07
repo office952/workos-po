@@ -164,11 +164,6 @@ export function RequestSummary({ progress }: { progress: RequestCommercialProgre
           </li>
         ))}
       </ul>
-      {progress.furthest && progress.offered > 1 ? (
-        <p className="branch-detail__others">
-          „{progress.furthest.label}” din antet este pasul cel mai avansat atins de cel puțin o ofertă. Nu înseamnă că cererea este închisă.
-        </p>
-      ) : null}
       <p className="request-summary__hint">
         <strong>Nicio ramură selectată</strong>
         <span>Alege un rând pentru lanțul ofertă → comandă → fișa lucrării. Selecția rămâne în adresă și la revenire.</span>

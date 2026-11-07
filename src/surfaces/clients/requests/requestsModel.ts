@@ -3,8 +3,8 @@ import { countLabel } from "../dossier/historyModel";
 
 /**
  * N-020 · Cereri și oferte (Figma 640:11188 / 640:11601 / 640:12261 / 640:11942). Everything here is
- * grouping, filtering and counting of the workspace the server sent: "În așteptare" is the server's
- * `needsAttention` on an offer (GO 17 corrections, documentation 659:14083), the job of an offer is
+ * grouping, filtering and counting of the workspace the server sent: "De urmărit" is the server's
+ * `followUp` on an offer (customer answer or order confirmation still open), the job of an offer is
  * the job with the offer's order, the site of a request is its site assignment in the dossier. No
  * state is computed and no commercial rule is added.
  */
@@ -33,19 +33,19 @@ export type RequestGroup = {
 export type FilterChoice = { value: string; label: string; count: number };
 
 export type RequestsView = {
-  totals: { requests: number; offers: number; waiting: number };
+  totals: { requests: number; offers: number; followUp: number };
   /** Pe cereri: the requests the filters let through, each whole (all its offers). */
   groups: RequestGroup[];
   /** Pe cereri: offers without a known request, after the same filters. */
   loose: OfferItem[];
   /** Toate ofertele: every offer the filters let through, in server order. */
   offers: OfferItem[];
-  /** Pe cereri + În așteptare: requests left out only because none of their offers waits. */
-  withoutWaiting: RequestListItemTransport[];
+  /** Pe cereri + De urmărit: requests left out only because none of their offers is followed up. */
+  withoutFollowUp: RequestListItemTransport[];
   /** Pe cereri + an: offers without a request, which have no request year (they are in Toate ofertele). */
   looseWithoutYear: number;
-  /** Offers waiting among what is shown (Pe cereri) — "2 oferte în așteptare, în 1 din 3 cereri". */
-  waitingShown: number;
+  /** Offers to follow up among what is shown (Pe cereri). */
+  followUpShown: number;
   sites: FilterChoice[];
   /** The mode's years — of the requests, or of every offer — counted alike; an active year stays, even at 0. */
   years: FilterChoice[];
@@ -81,16 +81,16 @@ export function buildRequestsView(
     offers: items.filter((offer) => offer.request?.requestId === request.requestId),
     jobs: workspace.jobs.filter((job) => job.requestId === request.requestId),
   }));
-  // Every filter but the attention one: what "În așteptare" then narrows (and names what it hides).
+  // Every filter but the follow-up one: what "De urmărit" then narrows (and names what it hides).
   const passesBase = (group: RequestGroup) =>
     siteOk(group.site) && (!filters.year || yearOf(group.request.createdAt) === filters.year) && (requestText(group.request) || group.offers.some(offerText));
-  const waits = (group: RequestGroup) => group.offers.some((offer) => offer.quote.needsAttention);
+  const follows = (group: RequestGroup) => group.offers.some((offer) => offer.quote.followUp);
   const base = groupsAll.filter(passesBase);
-  const groups = filters.attention ? base.filter(waits) : base;
-  const withoutWaiting = filters.attention ? base.filter((group) => !waits(group)).map((group) => group.request) : [];
+  const groups = filters.attention ? base.filter(follows) : base;
+  const withoutFollowUp = filters.attention ? base.filter((group) => !follows(group)).map((group) => group.request) : [];
 
   const offerBase = (offer: OfferItem) =>
-    siteOk(offer.site) && (offerText(offer) || (offer.request ? requestText(offer.request) : false)) && (!filters.attention || offer.quote.needsAttention);
+    siteOk(offer.site) && (offerText(offer) || (offer.request ? requestText(offer.request) : false)) && (!filters.attention || offer.quote.followUp);
   const offers = items.filter((offer) => offerBase(offer) && (!filters.year || yearOf(offer.quote.createdAt) === filters.year));
   // Pe cereri reads the request's year: an offer without a request has none, so a year leaves it out (named).
   const looseBase = items.filter((offer) => !offer.request && offerBase(offer));
@@ -110,36 +110,26 @@ export function buildRequestsView(
   }
   if (filters.year && !yearMap.has(filters.year)) yearMap.set(filters.year, 0);
   return {
-    totals: { requests: workspace.requests.length, offers: workspace.quotes.length, waiting: workspace.quotes.filter((quote) => quote.needsAttention).length },
+    totals: { requests: workspace.requests.length, offers: workspace.quotes.length, followUp: workspace.quotes.filter((quote) => quote.followUp).length },
     groups,
     loose,
     offers,
-    withoutWaiting,
+    withoutFollowUp,
     looseWithoutYear: filters.year && filters.mode === "cereri" ? looseBase.length : 0,
-    waitingShown: groups.reduce((sum, group) => sum + group.offers.filter((offer) => offer.quote.needsAttention).length, 0),
+    followUpShown: groups.reduce((sum, group) => sum + group.offers.filter((offer) => offer.quote.followUp).length, 0),
     sites: [...siteMap.values()],
     years: [...yearMap].sort(([left], [right]) => right.localeCompare(left)).map(([year, count]) => ({ value: year, label: year, count })),
   };
 }
 
 /**
- * "Progres comercial" of a request (640:11188, 608:9487): its offers counted by what the server
- * says of each — waiting, ordered, superseded — and its works by their own stage. Never the
- * request's state, which the card shows apart, as the server sends it.
+ * "Progres comercial" of a request: the server journey's offer summary, then its works by their
+ * own stage. Without a journey only the offer count is said, never a status rebuilt here.
  */
-export function commercialProgress(group: Pick<RequestGroup, "offers" | "jobs">): string {
-  const offers = group.offers.map((offer) => offer.quote);
-  if (!offers.length && !group.jobs.length) return "Fără ofertă încă";
-  const parts: string[] = [];
-  const waiting = offers.filter((quote) => quote.needsAttention).length;
-  const ordered = offers.filter((quote) => quote.orderSnapshotId).length;
-  const superseded = offers.filter((quote) => quote.superseded && !quote.orderSnapshotId && !quote.needsAttention).length;
-  const rest = offers.length - waiting - ordered - superseded;
-  if (waiting) parts.push(`${countLabel(waiting, "ofertă", "oferte")} în așteptare`);
-  if (ordered) parts.push(`${countLabel(ordered, "ofertă", "oferte")} cu comandă`);
-  if (superseded) parts.push(countLabel(superseded, "înlocuită", "înlocuite"));
-  if (rest > 0) parts.push(countLabel(rest, "altă ofertă", "alte oferte"));
-  if (!offers.length) parts.push("fără ofertă");
+export function commercialProgress(group: Pick<RequestGroup, "request" | "offers" | "jobs">): string {
+  if (!group.offers.length && !group.jobs.length) return "Fără ofertă încă";
+  const summary = group.request.journey?.offerSummary.summaryLabel;
+  const parts: string[] = [summary || (group.offers.length ? countLabel(group.offers.length, "ofertă", "oferte") : "fără ofertă")];
   if (group.jobs.length === 0) parts.push("fără lucrare");
   else if (group.jobs.length === 1) parts.push(`lucrarea e ${group.jobs[0]!.stageLabel.toLocaleLowerCase("ro")}`);
   else parts.push(countLabel(group.jobs.length, "lucrare", "lucrări"));

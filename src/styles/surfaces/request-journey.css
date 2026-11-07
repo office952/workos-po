@@ -1,0 +1,202 @@
+/* CJ1 · request journey: phase chip, "Mai multe" and the obligations panel (WorkOS-N Section 16). */
+
+.request-phase {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--shell-edge-strong);
+  border-radius: 2px;
+  color: var(--color-text-primary);
+  font: 500 12px/1.4 var(--font-sans);
+}
+
+.request-phase__mark {
+  box-sizing: border-box;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--shell-signal);
+  border-radius: 50%;
+}
+
+.request-phase[data-phase="CLOSED"] {
+  color: var(--color-text-secondary);
+}
+
+.request-phase[data-phase="CLOSED"] .request-phase__mark {
+  border-color: var(--color-text-secondary);
+  background: var(--color-text-secondary);
+}
+
+.request-phase[data-phase="NEW"] .request-phase__mark {
+  border-style: dashed;
+  border-color: var(--color-border-strong);
+}
+
+.request-phase__note {
+  color: var(--color-text-secondary);
+  font: 400 12px/1.4 var(--font-sans);
+}
+
+.request-more {
+  position: relative;
+}
+
+.request-more__button {
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--shell-signal-deep);
+  font: 500 14px/1.4 var(--font-sans);
+  cursor: pointer;
+}
+
+.request-more__menu {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  right: 0;
+  min-width: 17rem;
+  margin: 4px 0 0;
+  padding: 4px 0;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--color-surface);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
+  list-style: none;
+}
+
+.request-more__item {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: 400 14px/1.4 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+
+.request-more__item:hover,
+.request-more__item:focus-visible {
+  background: var(--shell-chassis);
+}
+
+.request-more__item:focus-visible,
+.request-more__button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.obligations {
+  margin: 0 0 16px;
+  border: 1px solid var(--color-border);
+  background: var(--wos-paper);
+}
+
+.obligations[data-tone="attention"] {
+  border-color: var(--shell-warning);
+}
+
+.obligations__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0;
+  padding: 12px 16px;
+  font: 400 12px/1.4 var(--font-sans);
+}
+
+.obligations__title {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.obligations[data-tone="attention"] .obligations__title {
+  color: var(--wos-warning-text);
+}
+
+.obligations__summary {
+  color: var(--shell-muted);
+}
+
+.obligations__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.obligations__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.obligations__mark {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--shell-brass);
+  border-radius: 50%;
+}
+
+.obligations__item[data-kind="actionable"] .obligations__mark {
+  border-color: var(--shell-warning);
+  background: var(--shell-warning);
+}
+
+.obligations__text {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 2px;
+  min-width: 0;
+  font: 400 12px/1.4 var(--font-sans);
+}
+
+.obligations__text strong {
+  color: var(--color-text-primary);
+  font: 600 14px/1.4 var(--font-sans);
+}
+
+.obligations__detail {
+  color: var(--color-text-secondary);
+}
+
+.obligations__hint {
+  color: var(--shell-muted);
+}
+
+.obligations__action {
+  flex: 0 0 auto;
+}
+
+.obligations__link {
+  flex: 0 0 auto;
+  font: 500 13px/1.4 var(--font-sans);
+}
+
+@media (max-width: 767px) {
+  .obligations__item {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .obligations__mark {
+    margin-top: 6px;
+  }
+
+  .obligations__text {
+    flex-basis: calc(100% - 20px);
+  }
+
+  .obligations__action,
+  .obligations__link {
+    margin-left: 20px;
+  }
+}

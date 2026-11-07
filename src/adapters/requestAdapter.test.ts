@@ -287,11 +287,11 @@ describe("presentRequestOverview", () => {
   it("keeps the server summary beside the requests and never invents one", () => {
     const withSummary = presentRequestOverview({
       overview: {
-        summary: { total: 3, needsAttention: 1, newCount: 2, inReview: 0, waitingCustomer: 1, readyForQuote: 0, blocked: 0 },
+        summary: { total: 3, needsAttention: 1, noOffer: 1, commerciallyOpen: 2, commerciallyClosed: 1, newCount: 2, inReview: 0, waitingCustomer: 1, readyForQuote: 0, blocked: 0, cancelled: 0 },
         requests: [{ requestId: "r1", title: "Litere" }],
       },
     });
-    expect(withSummary.summary).toEqual({ total: 3, needsAttention: 1, newCount: 2, inReview: 0, waitingCustomer: 1, readyForQuote: 0, blocked: 0 });
+    expect(withSummary.summary).toEqual({ total: 3, needsAttention: 1, noOffer: 1, commerciallyOpen: 2, commerciallyClosed: 1, newCount: 2, inReview: 0, waitingCustomer: 1, readyForQuote: 0, blocked: 0, cancelled: 0 });
     expect(withSummary.requests).toHaveLength(1);
     const partial = presentRequestOverview({ overview: { summary: { total: 1 }, requests: [] } });
     expect(partial.summary?.newCount).toBeNull();

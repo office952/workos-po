@@ -168,37 +168,22 @@
   font: 400 11px var(--font-mono);
 }
 
-.rtray-progress {
-  display: grid;
-  gap: 5px;
+.rtray-offers {
+  color: var(--color-text-secondary);
+  font: 400 12px/1.4 var(--font-sans);
 }
 
-.rtray-progress__segments {
-  display: flex;
-  gap: 3px;
-}
-
-.rtray-progress__segments > span {
-  width: 36px;
-  height: 5px;
-  background: var(--color-border);
-}
-
-.rtray-progress__segments > span[data-on="done"] {
-  background: color-mix(in srgb, var(--shell-signal) 55%, transparent);
-}
-
-.rtray-progress__segments > span[data-on="last"] {
-  background: var(--shell-signal);
-}
-
-.rtray-progress__label {
-  color: var(--color-text-primary);
-  font: 400 12px/1.3 var(--font-sans);
-}
-
-.rtray-progress__label[data-empty] {
+.rtray-offers[data-empty] {
   color: var(--shell-muted);
+}
+
+.rtray-phase {
+  color: var(--color-text-primary);
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+.rtray-phase[data-phase="CLOSED"] {
+  color: var(--color-text-secondary);
 }
 
 /* Cards */

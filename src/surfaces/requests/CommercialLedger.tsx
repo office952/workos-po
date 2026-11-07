@@ -111,10 +111,10 @@ export function CommercialLedger({
           <button
             type="button"
             aria-pressed={filter === "action"}
-            title="Oferte ale acestei cereri care urmează acceptarea sau comanda"
+            title="Ramuri care cer o acțiune a ta; ofertele care așteaptă clientul nu intră aici"
             onClick={() => onFilter("action")}
           >
-            Necesită acțiune · {action}
+            De rezolvat · {action}
           </button>
           <button type="button" aria-pressed={filter === "ordered"} onClick={() => onFilter("ordered")}>
             Cu comandă · {ordered}
@@ -132,12 +132,12 @@ export function CommercialLedger({
         <span>Înscripție · produs</span>
         <span>Ofertă</span>
         <span>Stare comercială</span>
-        <span>Lucrare</span>
+        <span>Următorul pas</span>
         <span>Valoare cu TVA</span>
       </div>
       {visible.length === 0 ? (
         <p className="ledger__empty">
-          {filter === "action" ? "Nicio ofertă a acestei cereri nu necesită acțiune." : "Nicio ofertă a acestei cereri nu are comandă."}
+          {filter === "action" ? "Nimic de rezolvat în ramurile acestei cereri." : "Nicio ofertă a acestei cereri nu are comandă."}
         </p>
       ) : (
         <ul ref={listRef} className="ledger__rows" aria-label="Ramuri comerciale">
@@ -201,12 +201,11 @@ export function CommercialLedger({
                 <span className="ledger__state">
                   <span className="commercial-dot" data-state={branch.state} aria-hidden="true" />
                   <span>{branch.stateLabel}</span>
-                  {branch.jobCell.href ? <span className="ledger__state-job"> · Fișa lucrării</span> : null}
                 </span>
-                <span className="ledger__job" data-tone={branch.jobCell.tone}>
-                  {branch.jobCell.href ? (
-                    <a className="text-link" href={branch.jobCell.href}>
-                      {branch.jobCell.label} <span aria-hidden="true">→</span>
+                <span className="ledger__job" data-tone={branch.step?.tone ?? branch.jobCell.tone}>
+                  {branch.step ? (
+                    <a className="text-link" href={branch.step.href}>
+                      {branch.step.label} <span aria-hidden="true">→</span>
                     </a>
                   ) : (
                     branch.jobCell.label

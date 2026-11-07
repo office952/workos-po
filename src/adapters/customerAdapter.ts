@@ -165,7 +165,10 @@ export function presentCustomerWorkspace(payload: unknown): CustomerWorkspaceTra
         asNumber(summary?.requestNeedsAction) ?? requests.filter((item) => item.needsAttention).length,
       quoteCount: asNumber(summary?.quoteCount) ?? quotes.length,
       quoteNeedsAction:
-        asNumber(summary?.quoteNeedsAction) ?? quotes.filter((item) => item.needsAttention).length,
+        asNumber(summary?.quoteNeedsAction) ??
+        quotes.filter((item) => item.requestId === null && item.needsAttention).length,
+      commercialActionableCount: asNumber(summary?.commercialActionableCount) ?? 0,
+      commercialWaitingCount: asNumber(summary?.commercialWaitingCount) ?? 0,
       jobCount: asNumber(summary?.jobCount) ?? jobs.length,
       jobNeedsAction:
         asNumber(summary?.jobNeedsAction) ?? jobs.filter((item) => item.needsAttention).length,

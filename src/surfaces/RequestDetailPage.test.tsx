@@ -55,6 +55,50 @@ function requestDetail(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function journey(partial: Record<string, unknown> = {}) {
+  return {
+    offerSummary: { count: 0, awaitingCustomer: 0, acceptedWithoutOrder: 0, ordered: 0, declined: 0, notPursued: 0, superseded: 0, undecided: 0, summaryLabel: "Fără ofertă" },
+    actionable: [],
+    waiting: [],
+    actionableCount: 0,
+    waitingCount: 0,
+    orderCount: 0,
+    nextAction: "OPEN_REQUEST",
+    nextActionLabel: "Deschide cererea",
+    nextActionHref: "/requests/req-1",
+    needsAttention: false,
+    attentionLabel: null,
+    phase: "OPEN",
+    phaseLabel: "Deschisă",
+    phaseAt: null,
+    administrativeNote: null,
+    ...partial,
+  };
+}
+
+function journeyItem(partial: Record<string, unknown> = {}) {
+  return {
+    kind: "CONFIRM_ORDER",
+    key: "offer:q-1",
+    quoteSnapshotId: "q-1",
+    quoteKind: "PRODUCT",
+    productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    assemblyId: null,
+    title: "Confirmarea comenzii",
+    detail: "Litere · OF-1",
+    hint: null,
+    actionLabel: "Confirmă comanda",
+    href: "/quotes/q-1",
+    action: "OPEN_QUOTE",
+    ...partial,
+  };
+}
+
+async function chooseMore(label: string): Promise<void> {
+  await userEvent.click(await screen.findByRole("button", { name: /Mai multe/ }));
+  await userEvent.click(screen.getByRole("button", { name: label }));
+}
+
 function RoutedRequest({ requestId = "req-1" }: { requestId?: string }) {
   const [search, setSearch] = useState(window.location.search);
   useEffect(() => {
@@ -109,7 +153,7 @@ describe("RequestDetailPage", () => {
   });
 
   it("keeps request identity in the header and product continuation inside the request", async () => {
-    stubDetail(requestDetail());
+    stubDetail(requestDetail({ journey: journey({ phase: "NEW", phaseLabel: "Nouă", nextAction: "CHOOSE_PRODUCT", nextActionLabel: "Alege produsul" }) }));
 
     render(<RoutedRequest />);
     expect(await screen.findByRole("heading", { name: "Litere vitrină" })).toBeInTheDocument();
@@ -119,12 +163,14 @@ describe("RequestDetailPage", () => {
       "/clienti/cus-1",
     );
     expect(screen.getByText(/Înregistrată/)).toBeInTheDocument();
-    const next = screen.getByTestId("request-next-step");
-    expect(within(next).getByRole("link", { name: /Alege produs/ })).toHaveAttribute(
+    expect(screen.getByTestId("request-commercial-status")).toHaveTextContent("Nouă");
+    expect(screen.getByTestId("request-obligations")).toHaveTextContent("Nimic de rezolvat acum");
+    const empty = screen.getByTestId("request-branches-empty");
+    expect(empty).toHaveTextContent("Cererea nu are încă oferte");
+    expect(within(empty).getByRole("link", { name: /Alege produsul/ })).toHaveAttribute(
       "href",
       "/cereri/req-1?alege-produs=1#alege-produs",
     );
-    expect(screen.getByTestId("request-branches-empty")).toHaveTextContent("Cererea nu are încă oferte");
     expect(screen.getByRole("heading", { name: "Ce dorește clientul" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Continuare" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Cerere", level: 2 })).not.toBeInTheDocument();
@@ -136,6 +182,7 @@ describe("RequestDetailPage", () => {
     const detail = requestDetail({
       request: { ...requestDetail().request, requestId: "req-new", status: "NEW" },
       statusLabel: "Nouă",
+      journey: journey({ phase: "REOPENED", phaseLabel: "Redeschisă", nextAction: "CHOOSE_PRODUCT", nextActionLabel: "Alege produsul" }),
     });
     stubDetail(detail, (url) => {
       if (url.endsWith("/product-catalog")) {
@@ -147,7 +194,7 @@ describe("RequestDetailPage", () => {
       return null;
     });
     render(<RequestDetailPage requestId="req-new" />);
-    for (const link of await screen.findAllByRole("link", { name: /Alege produs/ })) {
+    for (const link of await screen.findAllByRole("link", { name: /Alege produsul/ })) {
       expect(link).toHaveAttribute("href", "/cereri/req-new?alege-produs=1#alege-produs");
     }
     expect(screen.queryByText("Nicio acțiune disponibilă")).not.toBeInTheDocument();
@@ -160,30 +207,41 @@ describe("RequestDetailPage", () => {
     expect(vi.mocked(fetch).mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
   });
 
-  it("does not show catalog when OPEN_QUOTE is the primary action", async () => {
+  it("lists the server's obligations apart from the customer's waiting, each opening its own offer", async () => {
     stubDetail(
       requestDetail({
         nextAction: "OPEN_QUOTE",
-        nextActionLabel: "Deschide oferta",
-        commercialProgressLabel: "Ofertă creată",
-        linkedQuoteSnapshotId: "q-1",
-        linkedQuoteProductCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
         linkedOffers: [
-          {
-            quoteSnapshotId: "q-1",
-            productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
-            reference: "OF-1",
-          },
+          { quoteSnapshotId: "q-1", productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06", reference: "OF-1", commercialStatus: "ACCEPTED_WITHOUT_ORDER", commercialStatusLabel: "Acceptată · fără comandă", obligationKind: "ACTIONABLE", followUp: true },
+          { quoteSnapshotId: "q-2", productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06", reference: "OF-2", commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Urmează acceptarea", obligationKind: "WAITING", followUp: true },
         ],
+        journey: journey({
+          nextAction: "OPEN_QUOTE",
+          nextActionLabel: "Confirmă comanda",
+          nextActionHref: "/quotes/q-1",
+          needsAttention: true,
+          actionable: [journeyItem()],
+          waiting: [journeyItem({ kind: "AWAIT_CUSTOMER", key: "offer:q-2", quoteSnapshotId: "q-2", title: "Răspunsul clientului", detail: "Litere · OF-2", actionLabel: "Deschide oferta", href: "/quotes/q-2" })],
+          actionableCount: 1,
+          waitingCount: 1,
+        }),
       }),
     );
 
     render(<RoutedRequest />);
-    const next = await screen.findByTestId("request-next-step");
-    expect(within(next).getByRole("link", { name: /Deschide oferta · 01 .* · OF-1/ })).toHaveAttribute(
+    const panel = await screen.findByTestId("request-obligations");
+    expect(panel).toHaveTextContent("De rezolvat · 1");
+    expect(panel).toHaveTextContent("o acțiune a ta · una în așteptarea clientului");
+    expect(within(screen.getByTestId("obligation-CONFIRM_ORDER")).getByRole("link", { name: /Confirmă comanda/ })).toHaveAttribute(
       "href",
       "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
     );
+    expect(within(screen.getByTestId("obligation-AWAIT_CUSTOMER")).getByRole("link", { name: /Deschide oferta/ })).toHaveAttribute(
+      "href",
+      "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-2",
+    );
+    const list = screen.getByRole("list", { name: "Ramuri comerciale" });
+    expect(within(list).getByRole("link", { name: /Confirmarea comenzii/ })).toHaveAttribute("href", "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1");
     expect(screen.queryByRole("link", { name: /Alege produs/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /catalog/i })).not.toBeInTheDocument();
   });
@@ -216,17 +274,12 @@ describe("RequestDetailPage", () => {
         commercialProgressLabel: "Ofertă creată",
         linkedAssemblyId: "asm:1",
         assemblies: [assemblyWork()],
+        journey: journey({ nextAction: "OPEN_ASSEMBLY", nextActionLabel: "Deschide ansamblul", nextActionHref: "/assemblies/asm%3A1" }),
       }),
     );
 
     render(<RoutedRequest />);
-    const next = await screen.findByTestId("request-next-step");
-    expect(within(next).getByRole("link", { name: /Deschide ansamblul · 01 Panou ACM \+ litere volumetrice/ })).toHaveAttribute(
-      "href",
-      "/ansamblu?assembly=asm%3A1",
-    );
-    expect(screen.getByText("766,34 EUR")).toBeInTheDocument();
-    expect(screen.getByTestId("request-furthest-step")).toHaveTextContent("Ofertă creată");
+    expect(await screen.findByText("766,34 EUR")).toBeInTheDocument();
     const panel = await selectBranch(/Panou ACM/);
     expect(within(panel).getByRole("link", { name: /Deschide oferta comună/ })).toHaveAttribute("href", "/oferte/ansamblu/asmq%3A1");
     for (const link of within(panel).getAllByRole("link", { name: /ansamblul/i })) {
@@ -257,13 +310,13 @@ describe("RequestDetailPage", () => {
             membersEditable: false,
           }),
         ],
+        journey: journey({ administrativeNote: "Administrativ: nouă", orderCount: 1 }),
       }),
     );
 
     render(<RoutedRequest />);
-    expect(await screen.findByTestId("request-administrative-status")).toHaveTextContent("Starea cererii: Nouă");
-    expect(screen.getByTestId("request-commercial-progress")).toHaveTextContent("Progres comercial");
-    expect(screen.getByTestId("request-furthest-step")).toHaveTextContent("Comandă creată");
+    expect(await screen.findByTestId("request-administrative-status")).toHaveTextContent("Administrativ: nouă");
+    expect(screen.getByTestId("request-commercial-status")).toHaveTextContent("Deschisă");
     const panel = await selectBranch(/Panou ACM/);
     expect(within(panel).getByRole("link", { name: /Deschide fișa lucrării/ })).toHaveAttribute("href", "/lucrari/asmo%3A1");
     expect(within(panel).getByRole("link", { name: "Deschide în Atelier" })).toHaveAttribute("href", expect.stringContaining("plan%3A1"));
@@ -360,17 +413,15 @@ describe("RequestDetailPage", () => {
     expect(screen.getByText("Cerere · CRQ-104")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Oferte legate" })).not.toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "Ramuri comerciale" })).not.toBeInTheDocument();
-    expect(screen.getByTestId("request-commercial-progress")).toHaveTextContent("Nicio ofertă încă");
+    expect(screen.getByTestId("request-branches-empty")).toHaveTextContent("Cererea nu are încă oferte");
   });
 
-  it("does not invent OPEN_QUOTE or CHOOSE_PRODUCT when nextAction is absent", async () => {
+  it("does not invent an obligation, a phase or a product choice when the server sent no journey", async () => {
     stubDetail(
       requestDetail({
-        nextAction: undefined,
-        nextActionLabel: undefined,
+        nextAction: "CHOOSE_PRODUCT",
         status: "READY_FOR_QUOTE",
         statusLabel: "Gata de ofertă",
-        commercialProgressLabel: "Ofertă creată",
         linkedOffers: [
           {
             quoteSnapshotId: "q-1",
@@ -383,28 +434,20 @@ describe("RequestDetailPage", () => {
 
     render(<RoutedRequest />);
     expect(await screen.findByRole("heading", { name: "Litere vitrină" })).toBeInTheDocument();
-    expect(within(screen.getByTestId("request-next-step")).queryByRole("link")).toBeNull();
+    expect(screen.queryByTestId("request-obligations")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("request-commercial-status")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Alege produs/ })).not.toBeInTheDocument();
-    expect(screen.getByText("Nicio acțiune disponibilă")).toBeInTheDocument();
     const panel = await selectBranch(/OF-1/);
     expect(within(panel).getByRole("link", { name: /Deschide oferta OF-1/ })).toBeInTheDocument();
   });
 
-  it("works without a nextAction primary CTA", async () => {
-    stubDetail(
-      requestDetail({
-        nextAction: undefined,
-        nextActionLabel: undefined,
-        linkedOffers: [],
-      }),
-    );
+  it("offers no product choice on an empty request unless the journey names it", async () => {
+    stubDetail(requestDetail({ linkedOffers: [], journey: journey() }));
 
     render(<RoutedRequest />);
     expect(await screen.findByRole("heading", { name: "Litere vitrină" })).toBeInTheDocument();
-    expect(screen.getByText("Cerere · CRQ-104")).toBeInTheDocument();
-    expect(screen.getByText("Gata de ofertă")).toBeInTheDocument();
+    expect(screen.getByTestId("request-branches-empty")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Alege produs/ })).not.toBeInTheDocument();
-    expect(screen.getByText("Nicio acțiune disponibilă")).toBeInTheDocument();
   });
 
   it("shows the empty attachments state and hides upload when forbidden", async () => {
@@ -1170,6 +1213,13 @@ describe("N-030 · ramuri comerciale", () => {
 describe("W2 · registru comercial compact", () => {
   const inscriptions = ["SYN-L01", "SYN-L02", "SYN-L03", "SYN-L04", "SYN-A01", "SYN-A02", "SYN-A03", "SYN-A04"];
   const ordered = new Set([1, 4]);
+  const accepted = new Set([0, 2]);
+  const statusOf = (index: number) =>
+    ordered.has(index)
+      ? { commercialStatus: "ORDERED", commercialStatusLabel: "Cu comandă", obligationKind: "NONE", followUp: false }
+      : accepted.has(index)
+        ? { commercialStatus: "ACCEPTED_WITHOUT_ORDER", commercialStatusLabel: "Acceptată · fără comandă", obligationKind: "ACTIONABLE", followUp: true }
+        : { commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Urmează acceptarea", obligationKind: "WAITING", followUp: true };
   const offers = inscriptions.map((inscription, index) => ({
     quoteSnapshotId: `q-${index + 1}`,
     kind: "PRODUCT",
@@ -1187,15 +1237,28 @@ describe("W2 · registru comercial compact", () => {
     currency: "EUR",
     superseded: false,
     orderSnapshotId: ordered.has(index) ? `ord-${index + 1}` : null,
+    ...statusOf(index),
   }));
-  const eightBranches = () => requestDetail({
+  const confirm = (index: number) => journeyItem({
+    key: `offer:q-${index}`,
+    quoteSnapshotId: `q-${index}`,
+    productCode: "PRD-SYN-LETTERS",
+    detail: `Litere sintetice · OF-${index}`,
+    href: `/quotes/q-${index}`,
+  });
+  const eightBranches = (journeyPartial: Record<string, unknown> = {}) => requestDetail({
     nextAction: "OPEN_QUOTE",
-    nextActionLabel: "Deschide oferta",
-    commercialProgress: "ORDER_CREATED",
-    commercialProgressLabel: "Comandă creată",
-    linkedQuoteSnapshotId: "q-5",
-    linkedQuoteProductCode: "PRD-SYN-ACM",
     linkedOffers: offers,
+    journey: journey({
+      nextAction: "OPEN_QUOTE",
+      nextActionLabel: "Confirmă comanda",
+      nextActionHref: "/quotes/q-1",
+      needsAttention: true,
+      actionable: [confirm(1), confirm(3)],
+      actionableCount: 2,
+      orderCount: 2,
+      ...journeyPartial,
+    }),
   });
 
   function Harness() {
@@ -1225,22 +1288,25 @@ describe("W2 · registru comercial compact", () => {
     expect(rows().map((row) => row.querySelector(".ledger__title")?.textContent)).toEqual(inscriptions);
     expect(rows()[0]).toHaveTextContent("Litere sintetice");
     expect(rows()[0]).toHaveTextContent("OF-1");
-    expect(screen.getByTestId("request-commercial-progress")).toHaveTextContent("2 din 8 oferte au comandă · 6 urmează acceptarea");
-    expect(screen.getByTestId("request-furthest-step")).toHaveTextContent("Comandă creată · pe 2 ramuri");
-    expect(`${screen.getByTestId("request-progress-band").textContent} ${screen.getByRole("list", { name: "Ramuri comerciale" }).textContent}`).not.toMatch(/câștigat|închis/i);
+    expect(rows()[0]).toHaveTextContent("Acceptată · fără comandă");
+    expect(rows()[1]).toHaveTextContent("Cu comandă");
+    expect(rows()[3]).toHaveTextContent("Urmează acceptarea");
+    expect(screen.getByRole("list", { name: "Ramuri comerciale" }).textContent).not.toMatch(/câștigat|închis/i);
     expect(within(rows()[1]!).getByRole("link", { name: /Fișa lucrării/ })).toHaveAttribute("href", "/lucrari/ord-2");
+    expect(within(rows()[0]!).getByRole("link", { name: /Confirmarea comenzii/ })).toHaveAttribute("href", "/quotes/PRD-SYN-LETTERS/q-1");
     expect(rows().filter((row) => row.hasAttribute("data-selected"))).toHaveLength(0);
   });
 
-  it("keeps the request next step on the server target, whatever branch is selected (D04)", async () => {
+  it("keeps the request obligations on the server targets, whatever branch is selected (D04)", async () => {
     stubDetail(eightBranches());
     window.history.replaceState({}, "", "/cereri/req-1");
     render(<Harness />);
-    const next = await screen.findByTestId("request-next-step");
-    const link = within(next).getByRole("link", { name: /Deschide oferta · 05 SYN-A01 · OF-5/ });
-    expect(link).toHaveAttribute("href", "/quotes/PRD-SYN-ACM/q-5");
+    const obligations = await screen.findByTestId("request-obligations");
+    expect(obligations).toHaveTextContent("De rezolvat · 2");
+    const targets = () => within(screen.getByTestId("request-obligations")).getAllByRole("link").map((link) => link.getAttribute("href"));
+    expect(targets()).toEqual(["/quotes/PRD-SYN-LETTERS/q-1", "/quotes/PRD-SYN-LETTERS/q-3"]);
     const panel = await selectBranch(/03 SYN-L03/);
-    expect(within(screen.getByTestId("request-next-step")).getByRole("link")).toHaveAttribute("href", "/quotes/PRD-SYN-ACM/q-5");
+    expect(targets()).toEqual(["/quotes/PRD-SYN-LETTERS/q-1", "/quotes/PRD-SYN-LETTERS/q-3"]);
     expect(within(panel).getByRole("link", { name: /Deschide oferta OF-3/ })).toHaveAttribute("href", "/quotes/PRD-SYN-LETTERS/q-3");
     expect(panel).toHaveTextContent("Celelalte 7 oferte rămân în starea lor");
     expect(panel).not.toHaveTextContent("Pasul următor");
@@ -1327,22 +1393,21 @@ describe("W2 · registru comercial compact", () => {
     stubDetail(eightBranches());
     window.history.replaceState({}, "", "/cereri/req-1");
     render(<Harness />);
-    await userEvent.click(await screen.findByRole("button", { name: "Necesită acțiune · 6" }));
+    await userEvent.click(await screen.findByRole("button", { name: "De rezolvat · 2" }));
     expect(new URLSearchParams(window.location.search).get("filtru")).toBe("actiune");
-    expect(rows().map((row) => row.querySelector(".ledger__index")?.textContent)).toEqual(["01", "03", "04", "06", "07", "08"]);
-    expect(screen.getByText("6 din 8 · ordinea înregistrării păstrată")).toBeInTheDocument();
-    expect(screen.getByText("Ascunse de filtru: 02 SYN-L02, 05 SYN-A01")).toBeInTheDocument();
+    expect(rows().map((row) => row.querySelector(".ledger__index")?.textContent)).toEqual(["01", "03"]);
+    expect(screen.getByText("2 din 8 · ordinea înregistrării păstrată")).toBeInTheDocument();
+    expect(screen.getByText(/Ascunse de filtru: 02 SYN-L02/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Cu comandă · 2" }));
     expect(rows()).toHaveLength(2);
   });
 
-  it("shows a stale server target as missing instead of choosing another offer", async () => {
-    stubDetail({ ...eightBranches(), linkedQuoteSnapshotId: "q-gone" });
+  it("marks for action only the branches the server journey names", async () => {
+    stubDetail(eightBranches({ actionable: [confirm(3)], actionableCount: 1 }));
     window.history.replaceState({}, "", "/cereri/req-1");
     render(<Harness />);
-    const next = await screen.findByTestId("request-next-step");
-    expect(next).toHaveTextContent("ținta indicată de server nu este în această cerere");
-    expect(within(next).queryByRole("link")).toBeNull();
+    await userEvent.click(await screen.findByRole("button", { name: "De rezolvat · 1" }));
+    expect(rows().map((row) => row.querySelector(".ledger__index")?.textContent)).toEqual(["03"]);
   });
 });
 
@@ -1374,7 +1439,7 @@ describe("W3-D06 · încheiere comercială", () => {
 
   it("closes an offerless request with a mandatory reason and keeps the administrative status apart", async () => {
     const posts: Array<{ url: string; body: unknown }> = [];
-    stubDetail(requestDetail({ commercial: commercial() }), (url, init) => {
+    stubDetail(requestDetail({ commercial: commercial(), journey: journey({ administrativeNote: "Administrativ: gata de ofertă" }) }), (url, init) => {
       if (init?.method === "POST") {
         posts.push({ url, body: JSON.parse(String(init.body ?? "{}")) });
         return new Response(
@@ -1398,8 +1463,8 @@ describe("W3-D06 · încheiere comercială", () => {
       return null;
     });
     render(<RoutedRequest />);
-    expect(await screen.findByTestId("request-administrative-status")).toHaveTextContent("Gata de ofertă");
-    await userEvent.click(await screen.findByRole("button", { name: "Încheie urmărirea comercială" }));
+    expect(await screen.findByTestId("request-administrative-status")).toHaveTextContent("Administrativ: gata de ofertă");
+    await chooseMore("Încheie urmărirea comercială");
     const dialog = await screen.findByRole("dialog", { name: "Închei urmărirea comercială?" });
     expect(within(dialog).getByText(/starea administrativă a cererii rămâne neschimbată/i)).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Încheie urmărirea comercială" })).toBeDisabled();
@@ -1418,7 +1483,7 @@ describe("W3-D06 · încheiere comercială", () => {
   it("keeps the close-confirmation sentences readable and dismisses the dialog from the keyboard", async () => {
     stubDetail(requestDetail({ commercial: commercial() }));
     render(<RoutedRequest />);
-    await userEvent.click(await screen.findByRole("button", { name: "Încheie urmărirea comercială" }));
+    await chooseMore("Încheie urmărirea comercială");
     const dialog = await screen.findByRole("dialog", { name: "Închei urmărirea comercială?" });
     expect(dialog).toHaveAttribute("data-frame");
     expect(within(dialog).getByText(/Cererea nu are oferte/)).toBeInTheDocument();
@@ -1445,7 +1510,7 @@ describe("W3-D06 · încheiere comercială", () => {
       return null;
     });
     render(<RoutedRequest />);
-    await userEvent.click(await screen.findByRole("button", { name: "Încheie urmărirea comercială" }));
+    await chooseMore("Încheie urmărirea comercială");
     const dialog = await screen.findByRole("dialog", { name: "Închei urmărirea comercială?" });
     await userEvent.type(within(dialog).getByLabelText("Motivul încheierii"), "Se închide.");
     await userEvent.click(within(dialog).getByRole("button", { name: "Încheie urmărirea comercială" }));
@@ -1487,7 +1552,7 @@ describe("W3-D06 · încheiere comercială", () => {
       },
     );
     render(<RoutedRequest />);
-    await userEvent.click(await screen.findByRole("button", { name: "Încheie urmărirea comercială" }));
+    await chooseMore("Încheie urmărirea comercială");
     const workspace = document.querySelector(".request-workspace");
     expect(workspace).toHaveAttribute("data-deciding", "true");
     const panel = await screen.findByTestId("commercial-decision-panel");
@@ -1522,13 +1587,16 @@ describe("W3-D06 · încheiere comercială", () => {
           availableActions: ["REOPEN"],
           outstandingAcceptedWithoutOrder: [{ quoteSnapshotId: "q-9", label: "Ofertă acceptată, fără comandă" }],
         }),
+        journey: journey({ phase: "CLOSED", phaseLabel: "Încheiată comercial", phaseAt: "2026-10-04T10:00:00.000Z", administrativeNote: "Administrativ: gata de ofertă" }),
       }),
     );
     render(<RoutedRequest />);
-    expect(await screen.findByTestId("request-administrative-status")).toHaveTextContent("Gata de ofertă");
-    expect(screen.getByTestId("request-commercial-status")).toHaveTextContent("Urmărire comercială încheiată");
+    expect(await screen.findByTestId("request-administrative-status")).toHaveTextContent("Administrativ: gata de ofertă");
+    expect(screen.getByTestId("request-commercial-status")).toHaveTextContent("Încheiată comercial");
+    expect(screen.getByTestId("request-commercial-status")).toHaveAttribute("data-phase", "CLOSED");
     expect(screen.getByTestId("commercial-closed-banner")).toHaveTextContent("Comenzile, lucrările și producția existente nu se anulează");
     expect(screen.getByTestId("commercial-closed-banner")).toHaveTextContent("O ofertă acceptată așteaptă comanda");
+    await userEvent.click(screen.getByRole("button", { name: /Mai multe/ }));
     expect(screen.getByRole("button", { name: "Redeschide urmărirea comercială" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Încheie urmărirea comercială" })).not.toBeInTheDocument();
   });

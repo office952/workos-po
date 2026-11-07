@@ -21,34 +21,6 @@
   font-weight: 600;
 }
 
-/* Progress band: the whole request, never the selected branch. */
-
-.request-band {
-  display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.4fr);
-  gap: 0;
-  margin: 0 0 16px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-}
-
-.request-band > div {
-  display: grid;
-  align-content: start;
-  gap: 6px;
-  min-width: 0;
-  padding: 14px 16px;
-}
-
-.request-band > div + div {
-  border-left: 1px solid var(--color-border-subtle);
-}
-
-.request-band p {
-  margin: 0;
-}
-
-.request-band__kicker,
 .ledger__columns,
 .branch-detail__kicker,
 .branch-chain__name {
@@ -56,78 +28,6 @@
   font: 600 10px/1.3 var(--font-mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-}
-
-.request-band__headline {
-  font: 600 15px/1.35 var(--font-sans);
-}
-
-.request-band__bar {
-  display: flex;
-  gap: 3px;
-  margin: 2px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.request-band__bar li {
-  flex: 1 1 0;
-  height: 8px;
-  border: 1px solid var(--color-border);
-  background: transparent;
-}
-
-.request-band__bar li[data-state="ordered"] {
-  border-color: var(--shell-signal);
-  background: var(--shell-signal);
-}
-
-.request-band__bar li[data-state="accepted"] {
-  border-color: var(--shell-signal);
-  background: repeating-linear-gradient(135deg, var(--shell-signal) 0 3px, transparent 3px 6px);
-}
-
-.request-band__bar li[data-state="quoted"] {
-  border-color: var(--shell-brass);
-}
-
-.request-band__bar li[data-state="dispositioned"] {
-  border-color: var(--color-text-secondary);
-  background: var(--color-text-secondary);
-}
-
-.request-band__bar li[data-state="unclear"] {
-  border-color: var(--color-danger);
-  border-style: dashed;
-}
-
-.request-band__furthest p:last-child,
-.request-band__none {
-  font: 400 14px/1.4 var(--font-sans);
-}
-
-.request-band__none {
-  color: var(--color-text-secondary);
-}
-
-.request-band__action {
-  display: inline-block;
-  min-height: 24px;
-  color: var(--color-text-primary);
-  font: 400 14px/1.45 var(--font-sans);
-  text-decoration: none;
-}
-
-.request-band__action strong {
-  color: var(--shell-signal-deep);
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.request-band__action:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 3px;
 }
 
 /* Workspace: register beside the contextual panel. */
@@ -342,8 +242,20 @@
   color: var(--color-text-secondary);
 }
 
-.ledger__job[data-tone="attention"] {
+.ledger__job[data-tone="attention"],
+.ledger__job[data-tone="attention"] .text-link {
   color: var(--wos-warning-text);
+}
+
+.ledger__job[data-tone="muted"] .text-link {
+  color: var(--color-text-secondary);
+}
+
+.ledger__row[data-state="decided"] .ledger__title,
+.ledger__row[data-state="superseded"] .ledger__title,
+.ledger__row[data-state="decided"] .ledger__value,
+.ledger__row[data-state="superseded"] .ledger__value {
+  color: var(--color-text-secondary);
 }
 
 .ledger__foot {
@@ -686,19 +598,6 @@
 
 /* Tablet: the register takes the width; a selected branch opens as a bottom sheet. */
 @media (max-width: 1023px) {
-  .request-band {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-
-  .request-band__progress {
-    grid-column: 1 / -1;
-    border-bottom: 1px solid var(--color-border-subtle);
-  }
-
-  .request-band > .request-band__furthest {
-    border-left: 0;
-  }
-
   .request-workspace,
   .request-workspace[data-deciding] {
     grid-template-columns: minmax(0, 1fr);
@@ -779,24 +678,7 @@
 
 /* Phone: one list, then one branch screen. */
 @media (max-width: 767px) {
-  .request-band {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .request-band > div + div {
-    border-left: 0;
-    border-top: 1px solid var(--color-border-subtle);
-  }
-
-  .request-band__furthest {
-    display: none !important;
-  }
-
-  .request-band__same {
-    display: none;
-  }
-
-  [data-surface="cereri-detail"]:has(.request-workspace[data-branch-open]) .request-band,
+  [data-surface="cereri-detail"]:has(.request-workspace[data-branch-open]) .obligations,
   .request-workspace[data-branch-open] .ledger {
     display: none;
   }

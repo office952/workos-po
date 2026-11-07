@@ -1,6 +1,6 @@
 import type { QuoteKindTransport, QuoteListItemTransport } from "../../api/types";
 import { formatTimestamp } from "../../presentation/format";
-import { matchesSearch, uniqueLabels } from "../../presentation/listFilter";
+import { matchesSearch } from "../../presentation/listFilter";
 import { jobHref, registryQuoteHref } from "../../routing/appRoute";
 
 /** Registry filters stay presentation state: every label and flag comes from the server list. */
@@ -8,14 +8,40 @@ export const ALL = "all";
 
 export type KindFilter = typeof ALL | QuoteKindTransport;
 
+/** Commercial filters of Oferte; each reads one server flag of the offer. */
+export const COMMERCIAL_FILTERS = [
+  { id: "ALL", label: "Toate", hint: "toate ofertele, inclusiv versiunile înlocuite" },
+  { id: "FOLLOW_UP", label: "De urmărit", hint: "așteaptă răspunsul clientului sau confirmarea comenzii" },
+  { id: "ORDERED", label: "Cu comandă", hint: "lucrul continuă în fișa lucrării" },
+  { id: "DECIDED", label: "Decise", hint: "refuzate de client sau scoase din urmărire" },
+] as const;
+
+export type QuoteCommercialFilter = (typeof COMMERCIAL_FILTERS)[number]["id"];
+
+export function matchesQuoteCommercial(item: QuoteListItemTransport, filter: QuoteCommercialFilter): boolean {
+  switch (filter) {
+    case "ALL":
+      return true;
+    case "FOLLOW_UP":
+      return item.followUp;
+    case "ORDERED":
+      return item.commercialStatus === "ORDERED";
+    case "DECIDED":
+      return item.decided;
+    default: {
+      const exhaustive: never = filter;
+      return exhaustive;
+    }
+  }
+}
+
 export type RegistryFilters = {
   query: string;
   kind: KindFilter;
-  stage: string;
-  attention: boolean;
+  commercial: QuoteCommercialFilter;
 };
 
-export const EMPTY_FILTERS: RegistryFilters = { query: "", kind: ALL, stage: ALL, attention: false };
+export const EMPTY_FILTERS: RegistryFilters = { query: "", kind: ALL, commercial: "ALL" };
 
 export const KIND_OPTIONS: readonly { id: KindFilter; label: string }[] = [
   { id: ALL, label: "Toate" },
@@ -27,8 +53,7 @@ export function hasActiveFilter(filters: RegistryFilters): boolean {
   return (
     filters.query.trim().length > 0 ||
     filters.kind !== ALL ||
-    filters.stage !== ALL ||
-    filters.attention
+    filters.commercial !== "ALL"
   );
 }
 
@@ -43,19 +68,15 @@ export function filterQuotes(
   const kindApplies = showsKindFilter(items);
   return items.filter(
     (item) =>
-      (!filters.attention || item.needsAttention) &&
+      matchesQuoteCommercial(item, filters.commercial) &&
       (filters.kind === ALL || !kindApplies || item.kind === filters.kind) &&
-      (filters.stage === ALL || item.stageLabel === filters.stage) &&
       matchesSearch(filters.query, [
         item.reference,
         item.inscription,
         item.productLabel,
         item.customerDisplayName,
-        item.stageLabel,
-        item.nextActionLabel,
+        item.commercialStatusLabel,
         item.requestReference,
-        item.attentionLabel,
-        item.dispositionLabel,
         item.kindLabel,
       ]),
   );
@@ -72,46 +93,23 @@ export type SignalTile = {
   apply: (filters: RegistryFilters) => RegistryFilters;
 };
 
-/** Counters double as filters. Counts are loaded records, never a business total. */
+/** Counters double as filters. Counts are loaded records read by server flags, never a business total. */
 export function presentSignalTiles(
   items: readonly QuoteListItemTransport[],
   filters: RegistryFilters,
 ): SignalTile[] {
-  const stages = uniqueLabels(items.map((item) => item.stageLabel));
-  const tiles: SignalTile[] = [
-    {
-      id: "all",
-      label: "Toate",
-      count: items.length,
-      tone: "neutral",
-      scope: null,
-      pressed: !filters.attention && filters.stage === ALL,
-      apply: (current) => ({ ...current, attention: false, stage: ALL }),
-    },
-    {
-      id: "attention",
-      label: "Necesită acțiune",
-      count: items.filter((item) => item.needsAttention).length,
-      tone: "attention",
-      scope: "oferte din tot registrul care urmează acceptarea sau comanda",
-      pressed: filters.attention,
-      apply: (current) => ({ ...current, attention: !current.attention }),
-    },
-  ];
-  if (stages.length > 1) {
-    for (const stage of stages) {
-      tiles.push({
-        id: `stage:${stage}`,
-        label: stage,
-        count: items.filter((item) => item.stageLabel === stage).length,
-        tone: "neutral",
-        scope: null,
-        pressed: filters.stage === stage,
-        apply: (current) => ({ ...current, stage: current.stage === stage ? ALL : stage }),
-      });
-    }
-  }
-  return tiles;
+  return COMMERCIAL_FILTERS.map((filter) => ({
+    id: filter.id,
+    label: filter.label,
+    count: items.filter((item) => matchesQuoteCommercial(item, filter.id)).length,
+    tone: "neutral",
+    scope: filter.hint,
+    pressed: filters.commercial === filter.id,
+    apply: (current: RegistryFilters) => ({
+      ...current,
+      commercial: filter.id === "ALL" || current.commercial === filter.id ? "ALL" : filter.id,
+    }),
+  }));
 }
 
 export function formatCount(value: number): string {
@@ -129,9 +127,9 @@ export function identityOf(item: QuoteListItemTransport): { title: string; subti
   return { title: item.productLabel || item.kindLabel || "Ofertă", subtitle: null };
 }
 
-/** Commercial state of this one offer: what follows it if anything, otherwise its stage. */
+/** Commercial status of this one offer, exactly as the server names it. */
 export function commercialState(item: QuoteListItemTransport): string {
-  return item.dispositionLabel?.trim() || item.attentionLabel?.trim() || item.stageLabel || "—";
+  return item.commercialStatusLabel?.trim() || "—";
 }
 
 export type ListValue = { amount: string; currency: string | null };
@@ -176,13 +174,11 @@ export function isTypingTarget(target: EventTarget | null): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
 }
 
-export const ACCEPTANCE_ACTIONS = new Set(["ACCEPT_QUOTE", "CREATE_ORDER"]);
-
 /** Where a dossier link lands, said in operator words. */
 export function destinationOf(href: string, item: QuoteListItemTransport): string {
   if (item.orderSnapshotId && href === jobHref(item.orderSnapshotId)) return "fișa lucrării, în Lucrări";
   if (href === registryQuoteHref(item)) {
-    return ACCEPTANCE_ACTIONS.has(item.nextAction) ? "pagina ofertei, unde se confirmă comanda" : "pagina ofertei";
+    return item.commercialStatus === "ACCEPTED_WITHOUT_ORDER" ? "pagina ofertei, unde se confirmă comanda" : "pagina ofertei";
   }
   if (href.startsWith("/ansamblu")) return "pagina ansamblului";
   return "pagina asociată";

@@ -352,6 +352,13 @@
   font: 400 14px/1.4 var(--font-sans);
 }
 
+.dreqcard__admin {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-text-secondary);
+  font: 400 12px/1.4 var(--font-sans);
+}
+
 .dreqcard__actions {
   display: flex;
   flex-wrap: wrap;

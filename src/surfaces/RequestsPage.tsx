@@ -19,6 +19,7 @@ import { RequestsRegister } from "./requests/RequestsRegister";
 import {
   EMPTY_REQUEST_FILTERS,
   filterRequests,
+  isCommercialFilter,
   readRequestsMemory,
   requestSignals,
   pageOfIndex,
@@ -95,7 +96,11 @@ export function RequestsPage({ search = "" }: { search?: string }) {
   }
 
   function onSignal(id: string): void {
-    changeFilters(id === "attention" ? { ...filters, attention: !filters.attention } : { ...EMPTY_REQUEST_FILTERS, query: filters.query });
+    if (!isCommercialFilter(id) || id === "ALL") {
+      changeFilters({ ...EMPTY_REQUEST_FILTERS, query: filters.query });
+      return;
+    }
+    changeFilters({ ...filters, commercial: filters.commercial === id ? "ALL" : id });
   }
 
   function resetFilters(): void {
@@ -120,7 +125,7 @@ export function RequestsPage({ search = "" }: { search?: string }) {
         ? { title: "Cererea nu este în registru", body: "Cererea cerută nu există sau nu este accesibilă în această organizație." }
         : {
             title: "Nicio cerere selectată",
-            body: "Alege o intrare din registru. Bonul arată starea cererii, progresul comercial și ofertele legate, separat.",
+            body: "Alege o intrare din registru. Bonul arată starea comercială, ofertele legate și următoarea acțiune.",
             hint: "↑ ↓ selectează · Enter deschide cererea",
           };
 
@@ -147,7 +152,7 @@ export function RequestsPage({ search = "" }: { search?: string }) {
             <p className="rdesk__eyebrow"><span aria-hidden="true" />{MODULE_INDEX} · Registru comercial</p>
             <h1>Cereri</h1>
           </div>
-          <DeskSignalBoard label="Filtre registru cereri" signals={requestSignals(summary, items, filters)} ready={listReady} onPress={onSignal} />
+          <DeskSignalBoard label="Filtre registru cereri" signals={requestSignals(summary, filters)} ready={listReady} onPress={onSignal} />
         </header>
         <div className="rdesk__instrument">
           <RequestTrays summary={summary} ready={listReady} status={filters.status} layout={layout} onStatus={(status) => changeFilters({ ...filters, status })} />
