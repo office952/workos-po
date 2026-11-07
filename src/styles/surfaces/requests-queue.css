@@ -71,7 +71,21 @@
 }
 
 .rtray-table__action {
-  width: 200px;
+  width: 232px;
+}
+
+/* The next action names a whole step ("Confirmarea comenzii"); it wraps rather than truncating. */
+.rtray-table .rdesk-next {
+  white-space: normal;
+  line-height: 1.25;
+  padding-block: 6px;
+}
+
+.rtray-table .rdesk-next > span:first-child {
+  min-width: 0;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
 }
 
 .rtray-table td.rtray-table__time {
@@ -301,7 +315,7 @@
   }
 
   .rtray-table__action {
-    width: 188px;
+    width: 220px;
   }
 }
 

@@ -10,7 +10,7 @@ afterEach(() => { vi.unstubAllGlobals(); resetResourceCache(); window.history.re
 it("selects a product in the request context", async () => {
   vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => read(input))); render(<RequestProductSelection customerId="cus-A" requestId="req-A" />);
   expect(await screen.findByRole("heading", { name: "Produs compus" })).toBeInTheDocument();
-  await userEvent.click(await screen.findByRole("button", { name: /Litere.*Alege/ }));
+  await userEvent.click(await screen.findByRole("button", { name: /Litere.*Configurează/ }));
   expect(window.location.pathname).toBe("/configurator");
   expect(new URLSearchParams(window.location.search).get("request")).toBe("req-A");
   expect(new URLSearchParams(window.location.search).get("customer")).toBe("cus-A");

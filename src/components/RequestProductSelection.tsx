@@ -79,7 +79,7 @@ export function RequestProductSelection({ customerId, requestId, mode = "first",
       : "Pentru o singură piesă (litere, panou ACM sau logo), alege produsul de mai jos."}</p>
     {!catalog.data && catalog.status !== "error" && <LoadingFloor variant="registry" label="Se citesc produsele disponibile" />}
     {catalog.status === "error" && <InlineAlert tone="error" title="Produsele nu au putut fi citite"><Button variant="secondary" onClick={() => invalidateResources(resourceKeys.catalog())}>Reîncearcă</Button></InlineAlert>}
-    {catalog.data && <ProductPicker products={catalog.data} disabled={pending} onChoose={p => navigate(configuratorHref({ customerId, requestId, productCode: p.code }))} />}
+    {catalog.data && <ProductPicker products={catalog.data} actionLabel="Configurează" disabled={pending} onChoose={p => navigate(configuratorHref({ customerId, requestId, productCode: p.code }))} />}
     {assemblies.status === "error" && <InlineAlert tone="error" title="Produsele compuse nu au putut fi citite"><Button variant="secondary" onClick={() => invalidateResources("assembly-offerings")}>Reîncearcă produsele compuse</Button></InlineAlert>}
     {error && <InlineAlert tone={existingAssemblyId ? "blocked" : "error"} title={existingAssemblyId ? "Există deja lucru comercial" : "Crearea a eșuat"}>{error}{existingAssemblyId && <> <a className="text-link" href={assemblyHref(existingAssemblyId)}>Deschide ansamblul existent</a></>}</InlineAlert>}
   </>;

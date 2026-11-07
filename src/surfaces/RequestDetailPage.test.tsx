@@ -198,6 +198,8 @@ describe("RequestDetailPage", () => {
       expect(link).toHaveAttribute("href", "/cereri/req-new?alege-produs=1#alege-produs");
     }
     expect(screen.queryByText("Nicio acțiune disponibilă")).not.toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Litere test.*Configurează/ })).toBeInTheDocument();
+    expect(screen.queryAllByRole("button", { name: /Alege produsul/ })).toHaveLength(0);
     await userEvent.click(await screen.findByRole("button", { name: /Litere test/ }));
     expect(window.location.pathname).toBe("/configurator");
     const params = new URLSearchParams(window.location.search);
