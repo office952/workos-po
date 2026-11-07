@@ -215,7 +215,7 @@ describe("RequestDetailPage", () => {
         nextAction: "OPEN_QUOTE",
         linkedOffers: [
           { quoteSnapshotId: "q-1", productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06", reference: "OF-1", commercialStatus: "ACCEPTED_WITHOUT_ORDER", commercialStatusLabel: "Acceptată · fără comandă", obligationKind: "ACTIONABLE", followUp: true },
-          { quoteSnapshotId: "q-2", productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06", reference: "OF-2", commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Urmează acceptarea", obligationKind: "WAITING", followUp: true },
+          { quoteSnapshotId: "q-2", productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06", reference: "OF-2", commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Fără decizie", obligationKind: "WAITING", followUp: true },
         ],
         journey: journey({
           nextAction: "OPEN_QUOTE",
@@ -223,7 +223,7 @@ describe("RequestDetailPage", () => {
           nextActionHref: "/quotes/q-1",
           needsAttention: true,
           actionable: [journeyItem()],
-          waiting: [journeyItem({ kind: "AWAIT_CUSTOMER", key: "offer:q-2", quoteSnapshotId: "q-2", title: "Răspunsul clientului", detail: "Litere · OF-2", actionLabel: "Deschide oferta", href: "/quotes/q-2" })],
+          waiting: [journeyItem({ kind: "AWAIT_CUSTOMER", key: "offer:q-2", quoteSnapshotId: "q-2", title: "Ofertă nedecisă", detail: "Litere · OF-2", actionLabel: "Deschide oferta", href: "/quotes/q-2" })],
           actionableCount: 1,
           waitingCount: 1,
         }),
@@ -233,7 +233,8 @@ describe("RequestDetailPage", () => {
     render(<RoutedRequest />);
     const panel = await screen.findByTestId("request-obligations");
     expect(panel).toHaveTextContent("De rezolvat · 1");
-    expect(panel).toHaveTextContent("o acțiune a ta · una în așteptarea clientului");
+    expect(panel).toHaveTextContent("1 acțiune de rezolvat · 1 ofertă nedecisă");
+    expect(panel).not.toHaveTextContent(/acțiune a ta|acțiuni ale tale|așteptarea clientului/);
     expect(within(screen.getByTestId("obligation-CONFIRM_ORDER")).getByRole("link", { name: /Confirmă comanda/ })).toHaveAttribute(
       "href",
       "/oferte/produs/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
@@ -1222,7 +1223,7 @@ describe("W2 · registru comercial compact", () => {
       ? { commercialStatus: "ORDERED", commercialStatusLabel: "Cu comandă", obligationKind: "NONE", followUp: false }
       : accepted.has(index)
         ? { commercialStatus: "ACCEPTED_WITHOUT_ORDER", commercialStatusLabel: "Acceptată · fără comandă", obligationKind: "ACTIONABLE", followUp: true }
-        : { commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Urmează acceptarea", obligationKind: "WAITING", followUp: true };
+        : { commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Fără decizie", obligationKind: "WAITING", followUp: true };
   const offers = inscriptions.map((inscription, index) => ({
     quoteSnapshotId: `q-${index + 1}`,
     kind: "PRODUCT",
@@ -1293,7 +1294,7 @@ describe("W2 · registru comercial compact", () => {
     expect(rows()[0]).toHaveTextContent("OF-1");
     expect(rows()[0]).toHaveTextContent("Acceptată · fără comandă");
     expect(rows()[1]).toHaveTextContent("Cu comandă");
-    expect(rows()[3]).toHaveTextContent("Urmează acceptarea");
+    expect(rows()[3]).toHaveTextContent("Fără decizie");
     expect(screen.getByRole("list", { name: "Ramuri comerciale" }).textContent).not.toMatch(/câștigat|închis/i);
     expect(within(rows()[1]!).getByRole("link", { name: /Fișa lucrării/ })).toHaveAttribute("href", "/lucrari/ord-2");
     expect(within(rows()[0]!).getByRole("link", { name: /Confirmarea comenzii/ })).toHaveAttribute("href", "/oferte/produs/PRD-SYN-LETTERS/q-1");

@@ -3,6 +3,10 @@ import type { CommercialOfferDisposition, CommercialState } from "../closure/typ
 /**
  * One operator-facing commercial status per offer. It never replaces the historical
  * stage or the recorded disposition; it only says what the offer means today.
+ *
+ * WorkOS does not record that an offer was sent, delivered or shown to the customer.
+ * `AWAITING_CUSTOMER` is the existing transport code for an open offer with no
+ * recorded decision; operator copy must not claim a customer reply is outstanding.
  */
 export const OFFER_COMMERCIAL_STATUSES = [
   "AWAITING_CUSTOMER",
@@ -16,7 +20,10 @@ export const OFFER_COMMERCIAL_STATUSES = [
 export type OfferCommercialStatus = (typeof OFFER_COMMERCIAL_STATUSES)[number];
 
 /**
- * ACTIONABLE = someone in the organization must act; WAITING = the customer must answer.
+ * ACTIONABLE = a recorded next mutation for the organization.
+ * WAITING = an open offer with no recorded commercial decision. This is not proof the
+ * customer received the offer.
+ * NONE = a recorded terminal outcome.
  * An undecided offer on a closed request is legacy data that closure now refuses; it stays
  * actionable so it is never hidden.
  */
@@ -66,7 +73,7 @@ export function deriveOfferCommercialStatus(
 export function offerCommercialStatusLabel(status: OfferCommercialStatus): string {
   switch (status) {
     case "AWAITING_CUSTOMER":
-      return "Urmează acceptarea";
+      return "Fără decizie";
     case "ACCEPTED_WITHOUT_ORDER":
       return "Acceptată · fără comandă";
     case "ORDERED":

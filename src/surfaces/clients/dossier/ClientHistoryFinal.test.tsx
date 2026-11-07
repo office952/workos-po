@@ -29,7 +29,7 @@ const workspace = (customerId: string) => ({
     canCreateRequest: true,
     summary: { requestCount: 1, openRequestCount: 1, quoteCount: 2, jobCount: 1, historicalWorkCount: 0, workCount: 1 },
     requests: [{ requestId: "r1", title: "Casetă", reference: "CER-1", customerId, status: "OPEN", statusLabel: "Nouă", needsAttention: false, attentionLabel: null }],
-    quotes: [quote("q1", { stageLabel: "Cu comandă", orderSnapshotId: "o1" }), quote("q2", { commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Urmează acceptarea", obligationKind: "WAITING", followUp: true, decided: false })],
+    quotes: [quote("q1", { stageLabel: "Cu comandă", orderSnapshotId: "o1" }), quote("q2", { commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Fără decizie", obligationKind: "WAITING", followUp: true, decided: false })],
     jobs: [],
   },
 });
@@ -162,7 +162,7 @@ describe("Istoric · design final, stage 1", () => {
     expect(within(branches[1]!).getByRole("link", { name: "Deschide oferta OF-q2" })).toBeInTheDocument();
     expect(within(branches[1]!).getByText("Fără lucrare · oferta nu are comandă")).toBeInTheDocument();
     // The server's commercial status, in its words; warm only when we owe the next step.
-    expect(within(branches[1]!).getByText("Urmează acceptarea")).toBeInTheDocument();
+    expect(within(branches[1]!).getByText("Fără decizie")).toBeInTheDocument();
     expect(branches[1]).not.toHaveAttribute("data-attention");
     expect(within(branches[1]!).queryByRole("link", { name: /^Lucrare · / })).toBeNull();
     // Restrânge keeps the search and the filters, and the focus goes back to Extinde.

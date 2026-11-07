@@ -62,7 +62,7 @@ function journeyItem(partial: Partial<CommercialJourneyItemTransport> = {}): Com
 
 const awaiting = {
   commercialStatus: "AWAITING_CUSTOMER",
-  commercialStatusLabel: "Urmează acceptarea",
+  commercialStatusLabel: "Fără decizie",
   obligationKind: "WAITING",
   followUp: true,
   decided: false,

@@ -76,7 +76,7 @@ function Obligation({
 }
 
 function summary(actionable: number, waiting: number): string {
-  const own = actionable === 0 ? null : actionable === 1 ? "o acțiune a ta" : `${actionable} acțiuni ale tale`;
-  const customer = waiting === 0 ? null : waiting === 1 ? "una în așteptarea clientului" : `${waiting} în așteptarea clientului`;
-  return [own, customer].filter(Boolean).join(" · ");
+  const own = actionable === 0 ? null : actionable === 1 ? "1 acțiune de rezolvat" : `${actionable} acțiuni de rezolvat`;
+  const open = waiting === 0 ? null : waiting === 1 ? "1 ofertă nedecisă" : `${waiting} oferte nedecise`;
+  return [own, open].filter(Boolean).join(" · ");
 }

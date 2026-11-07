@@ -113,7 +113,7 @@ const standalone = {
   needsAttention: false,
   attentionLabel: null,
   commercialStatus: "AWAITING_CUSTOMER",
-  commercialStatusLabel: "Urmează acceptarea",
+  commercialStatusLabel: "Fără decizie",
   obligationKind: "WAITING",
   followUp: true,
   decided: false,
@@ -257,7 +257,7 @@ describe("QuotesPage", () => {
     await screen.findByRole("link", { name: "OF-FLAG" });
     const followUp = board().getByRole("button", { name: /De urmărit/ });
     expect(followUp.querySelector(".offers-filter__count")).toHaveTextContent(/^1$/);
-    expect(followUp).toHaveAttribute("title", "De urmărit: așteaptă răspunsul clientului sau confirmarea comenzii");
+    expect(followUp).toHaveAttribute("title", "De urmărit: oferte nedecise sau comenzi de confirmat");
     expect(board().getByRole("button", { name: /Toate/ }).querySelector(".offers-filter__count")).toHaveTextContent(/^2$/);
     await userEvent.click(followUp);
     expect(followUp).toHaveAttribute("aria-pressed", "true");
@@ -272,7 +272,7 @@ describe("QuotesPage", () => {
   it("counts actionable and waiting offers under De urmărit but marks only the actionable one (CJ1-R1)", async () => {
     stubApi([
       { quoteSnapshotId: "q-act", productCode, reference: "OF-ACT", followUp: true, commercialStatus: "ACCEPTED_WITHOUT_ORDER", commercialStatusLabel: "Acceptată · fără comandă", obligationKind: "ACTIONABLE" },
-      { quoteSnapshotId: "q-wait", productCode, reference: "OF-WAIT", followUp: true, commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Urmează acceptarea", obligationKind: "WAITING" },
+      { quoteSnapshotId: "q-wait", productCode, reference: "OF-WAIT", followUp: true, commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Fără decizie", obligationKind: "WAITING" },
     ]);
     render(<Routed />);
     await screen.findByRole("link", { name: "OF-ACT" });
@@ -350,7 +350,7 @@ describe("QuotesPage", () => {
     expect(table().getAllByText(/CRQ-104/).length).toBeGreaterThan(0);
     expect(screen.queryByText("Marchează acceptată")).not.toBeInTheDocument();
     await userEvent.click(table().getByText("NORD"));
-    expect(await dossier().findByTestId("offer-commercial-status")).toHaveTextContent("Urmează acceptarea");
+    expect(await dossier().findByTestId("offer-commercial-status")).toHaveTextContent("Fără decizie");
     expect(dossier().queryByText("Confirmarea comenzii se face în pagina ofertei, lângă total.")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Confirmă comanda/ })).not.toBeInTheDocument();
     expect(dossier().getByRole("tab", { name: /Comandă · lucrare/ })).toHaveAttribute("aria-disabled", "true");
@@ -386,7 +386,7 @@ describe("QuotesPage", () => {
     const row = (await screen.findByRole("link", { name: "OF-3" })).closest("tr")!;
     expect(within(row).getByText("SYN-3")).toBeInTheDocument();
     expect(within(row).getByText("03 / 3")).toBeInTheDocument();
-    expect(within(row).getByText("Urmează acceptarea")).toBeInTheDocument();
+    expect(within(row).getByText("Fără decizie")).toBeInTheDocument();
     const ordered = table().getByRole("link", { name: "OF-2" }).closest("tr")!;
     expect(within(ordered).getByRole("link", { name: /Fișa lucrării/ })).toHaveAttribute("href", "/lucrari/ord-2");
 

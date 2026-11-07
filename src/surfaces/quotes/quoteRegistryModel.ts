@@ -11,7 +11,7 @@ export type KindFilter = typeof ALL | QuoteKindTransport;
 /** Commercial filters of Oferte; each reads one server flag of the offer. */
 export const COMMERCIAL_FILTERS = [
   { id: "ALL", label: "Toate", hint: "toate ofertele, inclusiv versiunile înlocuite" },
-  { id: "FOLLOW_UP", label: "De urmărit", hint: "așteaptă răspunsul clientului sau confirmarea comenzii" },
+  { id: "FOLLOW_UP", label: "De urmărit", hint: "oferte nedecise sau comenzi de confirmat" },
   { id: "ORDERED", label: "Cu comandă", hint: "lucrul continuă în fișa lucrării" },
   { id: "DECIDED", label: "Decise", hint: "refuzate de client sau scoase din urmărire" },
 ] as const;

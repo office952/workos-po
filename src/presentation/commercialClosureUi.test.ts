@@ -20,7 +20,7 @@ function offer(partial: Partial<RequestLinkedOfferTransport> & { quoteSnapshotId
     attentionLabel: null,
     orderSnapshotId: null,
     commercialStatus: "AWAITING_CUSTOMER",
-    commercialStatusLabel: "Urmează acceptarea",
+    commercialStatusLabel: "Fără decizie",
     obligationKind: "WAITING",
     followUp: true,
     decided: false,

@@ -266,7 +266,7 @@ export function RequestsRegister(props: Props) {
             <EmptyState
               title="Nicio cerere nu corespunde filtrului."
               description={filters.commercial === "ACTIONABLE" && !filters.query.trim() && filters.status === null
-                ? "Nimic de rezolvat acum. Ofertele care așteaptă clientul nu intră aici."
+                ? "Nimic de rezolvat acum. Ofertele nedecise nu intră aici."
                 : "Schimbă căutarea sau starea administrativă ori resetează filtrele pentru a reveni la registru."}
               action={<button type="button" className="rdesk-reset" onClick={onReset}>Afișează toate cererile</button>}
             />

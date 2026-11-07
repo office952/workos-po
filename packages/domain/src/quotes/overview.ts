@@ -83,7 +83,7 @@ export type QuoteOverviewSummary = {
   total: number;
   /** Offers that need the organization to act (never passive customer waiting). */
   needsAttention: number;
-  /** "De urmărit": waiting for the customer or for the order confirmation. */
+  /** "De urmărit": open undecided offers or accepted offers still missing an order. */
   followUp: number;
   waitingCustomer: number;
   accepted: number;
@@ -166,7 +166,7 @@ export function quoteOverviewFilterHint(filter: QuoteOverviewFilter): string {
     case "ALL":
       return "toate ofertele, inclusiv versiunile înlocuite";
     case "FOLLOW_UP":
-      return "așteaptă răspunsul clientului sau confirmarea comenzii";
+      return "oferte nedecise sau comenzi de confirmat";
     case "ORDERED":
       return "lucrul continuă în fișa lucrării";
     case "DECIDED":
@@ -226,7 +226,7 @@ export function quoteConfiguratorHref(item: {
 
 /**
  * Attaches the shared commercial status. Attention means the organization must act;
- * an offer waiting for the customer is followed up but never flagged.
+ * an open offer without a recorded decision is followed up but never flagged.
  */
 export function quoteOverviewCommercialFields(input: {
   stage: QuoteOverviewStage;

@@ -115,7 +115,7 @@ describe("quote overview API", () => {
       stageLabel: "Creată",
       nextActionLabel: "Marchează acceptată",
       commercialStatus: "AWAITING_CUSTOMER",
-      commercialStatusLabel: "Urmează acceptarea",
+      commercialStatusLabel: "Fără decizie",
       followUp: true,
       needsAttention: false,
       customerDisplayName: "Client QTA",

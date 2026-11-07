@@ -26,7 +26,7 @@ const quote = (id: string, requestId: string, extra: Record<string, unknown> = {
   stageLabel: "Creată", createdAt: "2026-10-24T03:36:16.699Z", nextAction: "ACCEPT_QUOTE", nextActionLabel: "", needsAttention: false, attentionLabel: null,
   requestId, requestReference: `CER-${requestId}`, orderSnapshotId: null, ...extra,
 });
-const waiting = { commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Urmează acceptarea", obligationKind: "WAITING", followUp: true, decided: false };
+const waiting = { commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Fără decizie", obligationKind: "WAITING", followUp: true, decided: false };
 
 const workspaces: Record<string, unknown> = {
   "cus-1": {

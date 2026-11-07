@@ -214,10 +214,10 @@ describe("commercial request API", () => {
         .filter((offer) => offer.stage === "QUOTE_CREATED")
         .map((offer) => [offer.commercialStatusLabel, offer.needsAttention]),
     ).toEqual([
-      ["Urmează acceptarea", false],
-      ["Urmează acceptarea", false],
+      ["Fără decizie", false],
+      ["Fără decizie", false],
     ]);
-    // Two offers wait for the customer and one has an order: the request itself is the target.
+    // Two undecided offers and one order: the request itself is the target.
     expect(detail.nextAction).toBe("OPEN_REQUEST");
   });
 

@@ -111,7 +111,7 @@ export function CommercialLedger({
           <button
             type="button"
             aria-pressed={filter === "action"}
-            title="Ramuri care cer o acțiune a ta; ofertele care așteaptă clientul nu intră aici"
+            title="Ramuri care cer o acțiune de rezolvat; ofertele nedecise nu intră aici"
             onClick={() => onFilter("action")}
           >
             De rezolvat · {action}

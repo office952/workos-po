@@ -33,6 +33,6 @@ describe("request commercial progress (CJ1)", () => {
   it("does not count a branch without an offer as offered", () => {
     const view = presentRequestCommercialProgress({ branches: states("no-offer", "awaiting") });
     expect(view.offered).toBe(1);
-    expect(view.groups.map((group) => group.label)).toEqual(["Urmează acceptarea", "Fără ofertă"]);
+    expect(view.groups.map((group) => group.label)).toEqual(["Fără decizie", "Fără ofertă"]);
   });
 });

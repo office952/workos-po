@@ -17,7 +17,7 @@ const quote = (id: string, requestId: string | null, overrides: Partial<QuoteLis
 const job = (id: string, requestId: string, orderSnapshotId: string, stageLabel = "În lucru"): JobListItemTransport =>
   ({ jobId: id, requestId, orderSnapshotId, stageLabel, progressLabel: "0 / 12 finalizate" }) as unknown as JobListItemTransport;
 
-const waiting = { commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Urmează acceptarea", obligationKind: "WAITING", followUp: true };
+const waiting = { commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Fără decizie", obligationKind: "WAITING", followUp: true };
 const ordered = { commercialStatus: "ORDERED", commercialStatusLabel: "Cu comandă" };
 // The Alpha Clima shape (8899): one request with two offers waiting, two with an ordered offer each.
 const workspace = {
@@ -132,10 +132,10 @@ describe("Cereri și oferte · the view of the workspace (N-020, 640:11188)", ()
 
 describe("Progres comercial · the server journey's offer summary", () => {
   it("says the server's offer summary and names the work by its own stage", () => {
-    const summary = { count: 2, awaitingCustomer: 2, acceptedWithoutOrder: 0, ordered: 0, declined: 0, notPursued: 0, superseded: 0, undecided: 0, summaryLabel: "2 oferte · 2 așteaptă clientul" };
+    const summary = { count: 2, awaitingCustomer: 2, acceptedWithoutOrder: 0, ordered: 0, declined: 0, notPursued: 0, superseded: 0, undecided: 0, summaryLabel: "2 oferte · 2 nedecise" };
     const withJourney = { ...workspace, requests: [request("a", { journey: { offerSummary: summary } as RequestListItemTransport["journey"] })] };
     const view = buildRequestsView(withJourney, siteOf, none);
-    expect(commercialProgress(view.groups[0]!)).toBe("2 oferte · 2 așteaptă clientul · fără lucrare");
+    expect(commercialProgress(view.groups[0]!)).toBe("2 oferte · 2 nedecise · fără lucrare");
   });
 
   it("only counts the offers without a journey, and says when there is no offer", () => {

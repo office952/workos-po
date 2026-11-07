@@ -160,6 +160,24 @@ function project(
 }
 
 describe("offer commercial status", () => {
+  it("does not claim customer contact for an open offer with no recorded decision", () => {
+    const view = projectOfferCommercialStatus({
+      ordered: false,
+      accepted: false,
+      superseded: false,
+      disposition: null,
+      commercialState: "OPEN",
+    });
+    expect(view).toMatchObject({
+      commercialStatus: "AWAITING_CUSTOMER",
+      commercialStatusLabel: "Fără decizie",
+      obligationKind: "WAITING",
+      followUp: true,
+      decided: false,
+    });
+    expect(view.commercialStatusLabel).not.toMatch(/așteapt|client/i);
+  });
+
   it("never presents refused, not pursued or superseded offers as awaiting acceptance", () => {
     const facts = { ordered: false, accepted: false, superseded: false, commercialState: "OPEN" as const };
     expect(projectOfferCommercialStatus({ ...facts, disposition: "DECLINED_BY_CUSTOMER" })).toMatchObject({
@@ -208,7 +226,7 @@ describe("request commercial journey", () => {
     expect(journey.offerSummary.summaryLabel).toBe("Fără ofertă");
   });
 
-  it("2 · one offer waiting for the customer is a navigation link, not attention", () => {
+  it("2 · one undecided offer is a navigation link, not attention or a claimed customer wait", () => {
     const journey = project([offer({ id: "a", stage: "QUOTE_CREATED", minute: 1 })]);
     expect(journey).toMatchObject({
       nextAction: "OPEN_QUOTE",
@@ -219,9 +237,11 @@ describe("request commercial journey", () => {
       attentionLabel: null,
     });
     expect(journey.waiting[0]).toMatchObject({
-      title: "Așteaptă răspunsul clientului",
+      title: "Ofertă nedecisă",
+      hint: "Nu există încă o decizie comercială înregistrată.",
       actionLabel: "Deschide oferta",
     });
+    expect(JSON.stringify(journey.waiting)).not.toMatch(/așteaptă răspunsul|Nimic de făcut/i);
   });
 
   it("3 · an accepted offer without an order is the one actionable target", () => {
@@ -268,7 +288,7 @@ describe("request commercial journey", () => {
       declined: 1,
     });
     expect(journey.offerSummary.summaryLabel).toBe(
-      "4 oferte · 1 cu comandă · 1 acceptată fără comandă · 1 așteaptă clientul · 1 refuzată",
+      "4 oferte · 1 cu comandă · 1 acceptată fără comandă · 1 nedecisă · 1 refuzată",
     );
     expect(journey.actionable.map((item) => item.quoteSnapshotId)).toEqual(["accepted"]);
     expect(journey.waiting.map((item) => item.quoteSnapshotId)).toEqual(["waiting"]);

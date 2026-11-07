@@ -27,7 +27,7 @@ const baseQuote = {
 const request = (requestId: string, title: string, extra: Record<string, unknown> = {}) => ({ ...baseRequest, requestId, title, reference: `CER-${requestId}`, ...extra });
 const quote = (id: string, extra: Record<string, unknown> = {}) => ({ ...baseQuote, quoteSnapshotId: id, reference: `OF-${id}`, ...extra });
 const waiting = {
-  commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Urmează acceptarea", obligationKind: "WAITING", followUp: true, decided: false,
+  commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Fără decizie", obligationKind: "WAITING", followUp: true, decided: false,
   needsAttention: false, attentionLabel: null,
 };
 const toOrder = {
@@ -141,17 +141,17 @@ describe("De urmărit · one control, opened on purpose (649:14128)", () => {
     await waitFor(() => expect(watch()).not.toBeNull());
     const control = watchButton();
     expect(control).toHaveAttribute("aria-expanded", "false");
-    // Waiting for the customer is followed, not an alarm.
+    // An open offer without a recorded decision is followed, not an alarm.
     expect(watch()).toHaveAttribute("data-tone", "neutral");
     // R1: concrete, in the server words — not a vague count.
-    expect(control).toHaveTextContent("2 oferte urmează acceptarea");
+    expect(control).toHaveTextContent("2 oferte fără decizie");
     expect(within(watch() as HTMLElement).queryByRole("link")).toBeNull();
     // Typing a search never hides it.
     await userEvent.type(screen.getByRole("searchbox", { name: "Caută în istoric" }), "x");
     expect(watch()).not.toBeNull();
     await userEvent.click(control);
     expect(control).toHaveAttribute("aria-expanded", "true");
-    expect(within(watch() as HTMLElement).getByText("2 oferte pentru Casetă: urmează acceptarea")).toBeInTheDocument();
+    expect(within(watch() as HTMLElement).getByText("2 oferte pentru Casetă: fără decizie")).toBeInTheDocument();
     expect(within(watch() as HTMLElement).getByText("OF-q1 · 605,00 EUR · OF-q2 · 605,00 EUR")).toBeInTheDocument();
     await userEvent.click(within(watch() as HTMLElement).getByRole("link", { name: /Vezi ofertele în Cereri și oferte/ }));
     // 659:14083: De urmărit opens Pe cereri + De urmărit, the request whole, with the way back.

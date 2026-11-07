@@ -352,7 +352,7 @@ describe("ClientDetailPage", () => {
       needsAttention: false,
       attentionLabel: null,
       commercialStatus: "AWAITING_CUSTOMER",
-      commercialStatusLabel: "Urmează acceptarea",
+      commercialStatusLabel: "Fără decizie",
       obligationKind: "WAITING",
       followUp: true,
       decided: false,
@@ -469,7 +469,7 @@ describe("ClientDetailPage", () => {
       grossDisplay: null, currency: null, productCode: "P", productLabel: "Litere volumetrice", reference: "OF-1", inscription: "",
       customerDisplayName: "Atelier Nord", stage: "QUOTE_CREATED", stageLabel: "Creată", createdAt: null,
       nextAction: "ACCEPT_QUOTE", nextActionLabel: "Marchează acceptată", needsAttention: false, attentionLabel: null,
-      commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Urmează acceptarea", obligationKind: "WAITING", followUp: true, decided: false,
+      commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Fără decizie", obligationKind: "WAITING", followUp: true, decided: false,
       requestId: "req-1", requestReference: "CRQ-104", orderSnapshotId: null,
     };
 
@@ -505,7 +505,7 @@ describe("ClientDetailPage", () => {
       // The offer: the server's commercial status (waiting for the customer is not warm), no work yet, its two ways in.
       const offer = within(card).getByRole("link", { name: "Deschide oferta OF-1" }).closest("li")!;
       expect(offer).not.toHaveAttribute("data-attention");
-      expect(within(offer).getByText("Urmează acceptarea")).toBeInTheDocument();
+      expect(within(offer).getByText("Fără decizie")).toBeInTheDocument();
       expect(within(offer).getByText("Fără lucrare · oferta nu are comandă")).toBeInTheDocument();
       expect(within(offer).getByRole("button", { name: "Previzualizează oferta OF-1" })).toBeInTheDocument();
       // Reached directly (not from Istoric), there is no way back to name.

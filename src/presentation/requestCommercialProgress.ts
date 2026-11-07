@@ -20,7 +20,7 @@ export type RequestCommercialProgressView = {
 const GROUP_ORDER: readonly { state: BranchCommercialState; label: string }[] = [
   { state: "accepted", label: "Acceptate · fără comandă" },
   { state: "undecided", label: "Fără decizie comercială" },
-  { state: "awaiting", label: "Urmează acceptarea" },
+  { state: "awaiting", label: "Fără decizie" },
   { state: "ordered", label: "Cu comandă" },
   { state: "decided", label: "Decise" },
   { state: "superseded", label: "Înlocuite" },

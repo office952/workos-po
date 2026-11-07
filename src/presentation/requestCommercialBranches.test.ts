@@ -21,7 +21,7 @@ function offer(partial: Partial<RequestLinkedOfferTransport> & Pick<RequestLinke
     attentionLabel: null,
     orderSnapshotId: null,
     commercialStatus: "AWAITING_CUSTOMER",
-    commercialStatusLabel: "Urmează acceptarea",
+    commercialStatusLabel: "Fără decizie",
     obligationKind: "WAITING",
     followUp: true,
     decided: false,
@@ -378,7 +378,7 @@ describe("request commercial branches", () => {
       ...ready,
     });
     expect(model.branches.map((branch) => branch.state)).toEqual(["ordered", "accepted", "awaiting"]);
-    expect(model.branches.map((branch) => branch.stateLabel)).toEqual(["Cu comandă", "Acceptată · fără comandă", "Urmează acceptarea"]);
+    expect(model.branches.map((branch) => branch.stateLabel)).toEqual(["Cu comandă", "Acceptată · fără comandă", "Fără decizie"]);
     expect(model.branches.map((branch) => branch.obligation)).toEqual(["NONE", "ACTIONABLE", "WAITING"]);
     expect(model.branches.map((branch) => branch.needsAction)).toEqual([false, true, false]);
     expect(model.branches.map((branch) => branch.step?.label)).toEqual(["Fișa lucrării", "Confirmarea comenzii", "Deschide oferta"]);

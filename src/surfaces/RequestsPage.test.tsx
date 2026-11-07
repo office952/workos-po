@@ -246,7 +246,7 @@ describe("RequestsPage", () => {
           phase: "OPEN",
           phaseLabel: "Deschisă",
           administrativeNote: "Administrativ: așteaptă clientul",
-          offerSummary: { count: 1, awaitingCustomer: 1, acceptedWithoutOrder: 0, ordered: 0, declined: 0, notPursued: 0, superseded: 0, undecided: 0, summaryLabel: "1 ofertă · 1 așteaptă clientul" },
+          offerSummary: { count: 1, awaitingCustomer: 1, acceptedWithoutOrder: 0, ordered: 0, declined: 0, notPursued: 0, superseded: 0, undecided: 0, summaryLabel: "1 ofertă · 1 nedecisă" },
         }),
       },
       {
@@ -258,7 +258,7 @@ describe("RequestsPage", () => {
     const row = (await screen.findByRole("link", { name: "Caseta" })).closest("tr")!;
     expect(within(row).getByText("Deschisă")).toHaveAttribute("data-phase", "OPEN");
     expect(within(row).getByText("Administrativ: așteaptă clientul")).toBeInTheDocument();
-    expect(within(row).getByText("1 ofertă · 1 așteaptă clientul")).toBeInTheDocument();
+    expect(within(row).getByText("1 ofertă · 1 nedecisă")).toBeInTheDocument();
     const other = screen.getByRole("link", { name: "Încheiată" }).closest("tr")!;
     expect(within(other).getByText("Încheiată comercial · 04.10")).toBeInTheDocument();
     expect(within(other).getByText("Fără ofertă")).toBeInTheDocument();

@@ -158,7 +158,7 @@ export function requestJourneyOfferSummaryLabel(
     parts.push(plural(summary.acceptedWithoutOrder, "acceptată fără comandă", "acceptate fără comandă"));
   }
   if (summary.awaitingCustomer > 0) {
-    parts.push(`${summary.awaitingCustomer} așteaptă clientul`);
+    parts.push(plural(summary.awaitingCustomer, "nedecisă", "nedecise"));
   }
   if (summary.declined > 0) {
     parts.push(plural(summary.declined, "refuzată", "refuzate"));
@@ -235,9 +235,9 @@ function offerItem(offer: JourneyOffer): RequestJourneyItem | null {
       return {
         kind: "AWAITING_CUSTOMER",
         ...target,
-        title: "Așteaptă răspunsul clientului",
+        title: "Ofertă nedecisă",
         detail: identity,
-        hint: "Nimic de făcut acum. Răspunsul clientului se înregistrează în ofertă.",
+        hint: "Nu există încă o decizie comercială înregistrată.",
         actionLabel: "Deschide oferta",
         href: offer.href,
         action: "OPEN_QUOTE",

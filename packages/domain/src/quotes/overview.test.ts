@@ -9,6 +9,7 @@ import {
   filterQuoteOverview,
   projectQuoteOverview,
   projectQuoteOverviewItem,
+  quoteOverviewFilterHint,
   quoteOverviewHref,
 } from "./overview.js";
 
@@ -144,7 +145,7 @@ describe("quote overview projection", () => {
       currency: "EUR",
       needsAttention: false,
       attentionLabel: null,
-      commercialStatusLabel: "Urmează acceptarea",
+      commercialStatusLabel: "Fără decizie",
       obligationKind: "WAITING",
     });
     expect(created.href).toBe("/quotes/qts%3AWORKOS");
@@ -209,7 +210,7 @@ describe("quote overview projection", () => {
       overview.quotes.find((item) => item.inscription === inscription);
     expect(byInscription("A")).toMatchObject({
       commercialStatus: "AWAITING_CUSTOMER",
-      commercialStatusLabel: "Urmează acceptarea",
+      commercialStatusLabel: "Fără decizie",
       obligationKind: "WAITING",
       needsAttention: false,
     });
@@ -219,6 +220,8 @@ describe("quote overview projection", () => {
       needsAttention: true,
       attentionLabel: "Urmează comanda",
     });
+    expect(quoteOverviewFilterHint("FOLLOW_UP")).toBe("oferte nedecise sau comenzi de confirmat");
+    expect(quoteOverviewFilterHint("FOLLOW_UP")).not.toMatch(/client/i);
     expect(filterQuoteOverview(overview, "FOLLOW_UP").map((item) => item.inscription).sort()).toEqual(["A", "B"]);
     expect(filterQuoteOverview(overview, "DECIDED")).toHaveLength(0);
     expect(filterQuoteOverview(overview, "ORDERED")[0]?.inscription).toBe("C");

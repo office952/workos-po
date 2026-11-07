@@ -17,7 +17,7 @@ export type WatchSituation = {
 export type WatchModel = {
   tone: WatchTone;
   summary: string;
-  /** What the server flags, in its words ("2 oferte urmează acceptarea · Lit: comanda așteaptă…"). */
+  /** What the server flags, in its words ("2 oferte fără decizie · Lit: urmează comanda…"). */
   attentionSummary: string | null;
   /** Normal activity ("1 lucrare în execuție"): said, never presented as a problem. */
   ongoingSummary: string | null;
@@ -57,7 +57,7 @@ function amount(quote: QuoteListItemTransport): string {
 /**
  * N-020 · „De urmărit” (Figma 604:8132 / 649:14128 / 604:8728): what is open for this client, said
  * from the server rows only. Offers we must act on, requests and works the server marks as needing
- * attention are warm; offers waiting for the customer, works in execution and works not finished
+ * attention are warm; open offers without a recorded decision, works in execution and works not finished
  * yet are neutral (their existence is not an alarm). A work counts as "în curs" only in its execution stage: "nefinalizată" never means
  * started. Nothing → null, and the control is not shown at all.
  */
@@ -66,7 +66,7 @@ export function watchModel(customerId: string, workspace: Pick<CustomerWorkspace
   const situations: WatchSituation[] = [];
 
   // Offers the server still follows up, grouped by their request (one situation per request); only
-  // an obligation of the organization is warm, an offer waiting for the customer is not an alarm.
+  // an obligation of the organization is warm; an open offer without a recorded decision is not an alarm.
   const followed = workspace.quotes.filter((quote) => quote.followUp && !quote.superseded);
   const ownOffers = followed.filter(actionable);
   const customerOffers = followed.filter((quote) => !actionable(quote));
