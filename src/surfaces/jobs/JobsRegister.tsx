@@ -10,7 +10,16 @@ import { clickedControl, moveRowFocus } from "../desk/deskKeys";
 import { DeskCaption, DeskDensity, DeskOptions, DeskSearch, DeskSkeleton, type Density } from "../desk/DeskToolbar";
 import type { DeskLayout } from "../desk/useDeskLayout";
 import { Deadline, MiniRoute, ProgressBar, StageLamp } from "./JobParts";
-import { FOCUS_OPTIONS, hasJobFilter, jobContext, jobName, type JobFilters, type JobSort } from "./jobRegistryModel";
+import {
+  FOCUS_OPTIONS,
+  hasJobFilter,
+  issueAttentionIsPrimary,
+  jobContext,
+  jobName,
+  presentActiveIssueMark,
+  type JobFilters,
+  type JobSort,
+} from "./jobRegistryModel";
 
 type Props = {
   layout: DeskLayout;
@@ -41,9 +50,29 @@ function NextStep({ job, actionLabel }: { job: JobListItemTransport; actionLabel
 function Attention({ job }: { job: JobListItemTransport }) {
   if (!job.attentionLabel) return null;
   return (
-    <span className="rdesk-attention" data-issue={job.attentionLabel.startsWith("Problemă") || undefined}>
+    <span className="rdesk-attention" data-issue={issueAttentionIsPrimary(job.attentionLabel) || undefined}>
       {job.attentionLabel}
     </span>
+  );
+}
+
+function IssueMark({ job }: { job: JobListItemTransport }) {
+  const mark = presentActiveIssueMark(job);
+  if (!mark) return null;
+  return (
+    <span className="rdesk-issue-mark" aria-label={mark.accessible}>
+      <span aria-hidden="true">{mark.text}</span>
+    </span>
+  );
+}
+
+function Signals({ job }: { job: JobListItemTransport }) {
+  if (!job.attentionLabel && presentActiveIssueMark(job) == null) return null;
+  return (
+    <div className="rdesk-signals">
+      <Attention job={job} />
+      <IssueMark job={job} />
+    </div>
   );
 }
 
@@ -92,7 +121,7 @@ function Table({ items, selectedId, onSelect }: Props) {
                 <a className="rdesk-title jline-title" href={jobHref(job.jobId)} title={jobName(job)}>{jobName(job)}</a>
                 <span className="rdesk-sub" title={jobContext(job)}>{jobContext(job)}</span>
                 <Deadline job={job} />
-                <Attention job={job} />
+                <Signals job={job} />
               </td>
               <td className="jline-table__route">
                 <StageLamp job={job} />
@@ -151,7 +180,7 @@ function Cards({ items, selectedId, onOpen }: Props) {
               <ProgressBar job={job} />
               <NextStep job={job} actionLabel={action.actionLabel} />
               <Deadline job={job} />
-              <Attention job={job} />
+              <Signals job={job} />
             </button>
             <div className="rdesk-card__doors">
               <a className="rdesk-door" data-next href={action.actionHref}>

@@ -679,6 +679,38 @@ a.rdesk-title:focus-visible {
   border-bottom: 7px solid var(--shell-warning);
 }
 
+.rdesk-signals {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-top: 4px;
+}
+
+.rdesk-signals .rdesk-attention,
+.rdesk-signals .rdesk-issue-mark,
+.rdesk-signals .rdesk-sheet__note {
+  margin-top: 0;
+}
+
+.rdesk-issue-mark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--wos-warning-text);
+  font: 500 12px/1.35 var(--font-sans);
+}
+
+.rdesk-issue-mark::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 7px solid var(--shell-warning);
+}
+
 .rdesk-next {
   display: inline-flex;
   align-items: center;

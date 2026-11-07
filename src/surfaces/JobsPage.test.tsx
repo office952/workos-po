@@ -217,3 +217,137 @@ describe("JobsPage", () => {
     expect(await screen.findByText("Lucrarea nu este în registru")).toBeInTheDocument();
   });
 });
+
+describe("JobsPage active issue visibility", () => {
+  const providerIssue = {
+    ...ALPHA,
+    jobId: "prov-1",
+    inscription: "PROVIDER",
+    needsAttention: true,
+    attentionLabel: "Lipsă utilaj dedicat",
+    activeIssueCount: 1,
+  };
+  const overdueIssue = {
+    ...ALPHA,
+    jobId: "over-1",
+    inscription: "OVERDUE",
+    overdue: true,
+    needsAttention: true,
+    attentionLabel: "Termen depășit",
+    activeIssueCount: 1,
+    targetDate: "2026-09-01",
+    targetDateLabel: "1 sept. 2026",
+  };
+  const onlyIssue = {
+    ...NORD,
+    jobId: "only-1",
+    inscription: "ONLYISSUE",
+    needsAttention: true,
+    attentionLabel: "Problemă semnalată",
+    activeIssueCount: 1,
+  };
+  const manyIssues = {
+    ...NORD,
+    jobId: "many-1",
+    inscription: "MANY",
+    needsAttention: true,
+    attentionLabel: "Probleme semnalate",
+    activeIssueCount: 3,
+  };
+  const resolved = {
+    ...NORD,
+    jobId: "res-1",
+    inscription: "RESOLVED",
+    needsAttention: false,
+    attentionLabel: null,
+    activeIssueCount: 0,
+  };
+  const completedIssue = {
+    ...NOVA,
+    jobId: "done-1",
+    inscription: "DONEISSUE",
+    needsAttention: true,
+    attentionLabel: "Problemă semnalată",
+    activeIssueCount: 1,
+  };
+  const none = {
+    ...NORD,
+    jobId: "none-1",
+    inscription: "CLEAN",
+    needsAttention: false,
+    attentionLabel: null,
+    activeIssueCount: 0,
+  };
+  const jobs = [providerIssue, overdueIssue, onlyIssue, manyIssues, resolved, completedIssue, none];
+
+  it("keeps the provider reason and still names the active issue", async () => {
+    serve(jobs);
+    render(<JobsPage />);
+    await screen.findByRole("link", { name: "PROVIDER" });
+    const row = rowOf("PROVIDER");
+    expect(within(row).getByText("Lipsă utilaj dedicat")).toBeInTheDocument();
+    expect(within(row).getByLabelText("1 problemă semnalată")).toHaveTextContent("1 problemă");
+  });
+
+  it("keeps overdue attention and still names the active issue", async () => {
+    serve(jobs);
+    render(<JobsPage />);
+    await screen.findByRole("link", { name: "OVERDUE" });
+    const row = rowOf("OVERDUE");
+    expect(within(row).getByText("Termen depășit", { selector: ".rdesk-attention" })).toBeInTheDocument();
+    expect(within(row).getByLabelText("1 problemă semnalată")).toBeInTheDocument();
+  });
+
+  it("does not repeat a single-issue primary label", async () => {
+    serve(jobs);
+    render(<JobsPage />);
+    await screen.findByRole("link", { name: "ONLYISSUE" });
+    const row = rowOf("ONLYISSUE");
+    expect(within(row).getByText("Problemă semnalată")).toBeInTheDocument();
+    expect(within(row).queryByLabelText("1 problemă semnalată")).not.toBeInTheDocument();
+  });
+
+  it("shows how many issues remain when several are active", async () => {
+    serve(jobs);
+    render(<JobsPage />);
+    await screen.findByRole("link", { name: "MANY" });
+    const row = rowOf("MANY");
+    expect(within(row).getByText("Probleme semnalate")).toBeInTheDocument();
+    expect(within(row).getByLabelText("3 probleme semnalate")).toBeInTheDocument();
+    expect(within(row).queryByText("3 probleme")).not.toBeInTheDocument();
+  });
+
+  it("hides the issue mark when every report is resolved or there are no issues", async () => {
+    serve(jobs);
+    render(<JobsPage />);
+    await screen.findByRole("link", { name: "RESOLVED" });
+    expect(within(rowOf("RESOLVED")).queryByLabelText(/problem[ăe] semnalat/)).not.toBeInTheDocument();
+    expect(within(rowOf("CLEAN")).queryByLabelText(/problem[ăe] semnalat/)).not.toBeInTheDocument();
+    expect(within(rowOf("RESOLVED")).queryByText("Problemă semnalată")).not.toBeInTheDocument();
+  });
+
+  it("keeps a finished job with an active issue in Necesită acțiune without hiding the others", async () => {
+    serve(jobs, { total: 7, active: 6, inExecution: 5, needsAttention: 5, completed: 1 });
+    render(<JobsPage />);
+    await screen.findByRole("link", { name: "DONEISSUE" });
+    await userEvent.click(screen.getByRole("button", { name: /Necesită acțiune/ }));
+    expect(screen.getByRole("link", { name: "PROVIDER" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "OVERDUE" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "ONLYISSUE" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "MANY" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "DONEISSUE" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "RESOLVED" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "CLEAN" })).not.toBeInTheDocument();
+    expect(within(rowOf("DONEISSUE")).getByText("Problemă semnalată")).toBeInTheDocument();
+  });
+
+  it("names the active issue in the selected-job traveler when another reason is primary", async () => {
+    window.history.replaceState({}, "", "/lucrari?lucrare=prov-1");
+    serve(jobs);
+    render(<JobsPage search="?lucrare=prov-1" />);
+    const traveler = await screen.findByRole("article", { name: "Fișa de traseu: PROVIDER" });
+    expect(within(traveler).getByText("Lipsă utilaj dedicat")).toBeInTheDocument();
+    expect(within(traveler).getByLabelText("1 problemă semnalată")).toBeInTheDocument();
+  });
+});
+
