@@ -167,10 +167,8 @@ describe("RequestDetailPage", () => {
     expect(screen.getByTestId("request-obligations")).toHaveTextContent("Nimic de rezolvat acum");
     const empty = screen.getByTestId("request-branches-empty");
     expect(empty).toHaveTextContent("Cererea nu are încă oferte");
-    expect(within(empty).getByRole("link", { name: /Alege produsul/ })).toHaveAttribute(
-      "href",
-      "/cereri/req-1?alege-produs=1#alege-produs",
-    );
+    expect(within(empty).queryByRole("link", { name: /Alege produsul/ })).not.toBeInTheDocument();
+    expect(document.getElementById("branch-detail")).toBeNull();
     expect(screen.getByRole("heading", { name: "Ce dorește clientul" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Continuare" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Cerere", level: 2 })).not.toBeInTheDocument();
@@ -194,7 +192,9 @@ describe("RequestDetailPage", () => {
       return null;
     });
     render(<RequestDetailPage requestId="req-new" />);
-    for (const link of await screen.findAllByRole("link", { name: /Alege produsul/ })) {
+    await screen.findByRole("heading", { name: "Alege produsul pentru această cerere" });
+    expect(screen.queryAllByRole("link", { name: /Alege produsul/ }).length).toBeLessThanOrEqual(1);
+    for (const link of screen.queryAllByRole("link", { name: /Alege produsul/ })) {
       expect(link).toHaveAttribute("href", "/cereri/req-new?alege-produs=1#alege-produs");
     }
     expect(screen.queryByText("Nicio acțiune disponibilă")).not.toBeInTheDocument();
@@ -234,14 +234,14 @@ describe("RequestDetailPage", () => {
     expect(panel).toHaveTextContent("o acțiune a ta · una în așteptarea clientului");
     expect(within(screen.getByTestId("obligation-CONFIRM_ORDER")).getByRole("link", { name: /Confirmă comanda/ })).toHaveAttribute(
       "href",
-      "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
+      "/oferte/produs/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
     );
     expect(within(screen.getByTestId("obligation-AWAIT_CUSTOMER")).getByRole("link", { name: /Deschide oferta/ })).toHaveAttribute(
       "href",
-      "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-2",
+      "/oferte/produs/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-2",
     );
     const list = screen.getByRole("list", { name: "Ramuri comerciale" });
-    expect(within(list).getByRole("link", { name: /Confirmarea comenzii/ })).toHaveAttribute("href", "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1");
+    expect(within(list).getByRole("link", { name: /Confirmarea comenzii/ })).toHaveAttribute("href", "/oferte/produs/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1");
     expect(screen.queryByRole("link", { name: /Alege produs/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /catalog/i })).not.toBeInTheDocument();
   });
@@ -400,9 +400,9 @@ describe("RequestDetailPage", () => {
     const productPanel = await selectBranch(/Litere volumetrice/);
     expect(within(productPanel).getByRole("link", { name: /Deschide oferta OF-1/ })).toHaveAttribute(
       "href",
-      "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
+      "/oferte/produs/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
     );
-    expect(document.querySelectorAll('a[href^="/quotes/SIGN_ASSEMBLY"]')).toHaveLength(0);
+    expect(document.querySelectorAll('a[href^="/oferte/produs/SIGN_ASSEMBLY"]')).toHaveLength(0);
     expect(document.body.textContent).not.toContain("asmq:");
   });
 
@@ -1177,11 +1177,12 @@ describe("N-030 · ramuri comerciale", () => {
       const rows = [...list.querySelectorAll<HTMLElement>(":scope > li")];
       expect(rows).toHaveLength(2);
       expect(rows.some((row) => row.hasAttribute("data-selected"))).toBe(false);
-      expect(screen.getByTestId("request-summary")).toHaveTextContent("Nicio ramură selectată");
+      expect(document.getElementById("branch-detail")).toBeNull();
+      expect(screen.queryByText("Nicio ramură selectată")).not.toBeInTheDocument();
       expect(screen.getByRole("heading", { name: "Ce dorește clientul" })).toBeInTheDocument();
-      const panel = await selectBranch(/02 .*OF-2/);
+      const panel = await selectBranch(/OF-2/);
       expect(rows[1]).toHaveAttribute("data-selected", "true");
-      expect(within(panel).getByRole("link", { name: /Deschide oferta OF-2/ })).toHaveAttribute("href", "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-2");
+      expect(within(panel).getByRole("link", { name: /Deschide oferta OF-2/ })).toHaveAttribute("href", "/oferte/produs/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-2");
     });
 
     it("keeps the product choice when the server asks for it", async () => {
@@ -1204,7 +1205,7 @@ describe("N-030 · ramuri comerciale", () => {
       render(<RoutedRequest />);
       expect(await screen.findByText("Litere volumetrice")).toBeInTheDocument();
       const panel = await selectBranch(/Litere volumetrice/);
-      expect(within(panel).getByRole("link", { name: /Deschide oferta OF-9/ })).toHaveAttribute("href", "/quotes/PRD-LETTERS/q-9");
+      expect(within(panel).getByRole("link", { name: /Deschide oferta OF-9/ })).toHaveAttribute("href", "/oferte/produs/PRD-LETTERS/q-9");
       expect(screen.getByRole("heading", { name: "Produs separat" })).toBeInTheDocument();
       expect(screen.queryByText(/Nu există încă un produs/)).toBeNull();
     });
@@ -1293,8 +1294,12 @@ describe("W2 · registru comercial compact", () => {
     expect(rows()[3]).toHaveTextContent("Urmează acceptarea");
     expect(screen.getByRole("list", { name: "Ramuri comerciale" }).textContent).not.toMatch(/câștigat|închis/i);
     expect(within(rows()[1]!).getByRole("link", { name: /Fișa lucrării/ })).toHaveAttribute("href", "/lucrari/ord-2");
-    expect(within(rows()[0]!).getByRole("link", { name: /Confirmarea comenzii/ })).toHaveAttribute("href", "/quotes/PRD-SYN-LETTERS/q-1");
+    expect(within(rows()[0]!).getByRole("link", { name: /Confirmarea comenzii/ })).toHaveAttribute("href", "/oferte/produs/PRD-SYN-LETTERS/q-1");
     expect(rows().filter((row) => row.hasAttribute("data-selected"))).toHaveLength(0);
+    expect(document.querySelector(".ledger__columns")?.textContent).not.toContain("#");
+    expect(document.querySelector(".ledger__index")).toBeNull();
+    expect(document.getElementById("branch-detail")).toBeNull();
+    expect(screen.queryByText("Rezumatul cererii")).not.toBeInTheDocument();
   });
 
   it("keeps the request obligations on the server targets, whatever branch is selected (D04)", async () => {
@@ -1304,10 +1309,10 @@ describe("W2 · registru comercial compact", () => {
     const obligations = await screen.findByTestId("request-obligations");
     expect(obligations).toHaveTextContent("De rezolvat · 2");
     const targets = () => within(screen.getByTestId("request-obligations")).getAllByRole("link").map((link) => link.getAttribute("href"));
-    expect(targets()).toEqual(["/quotes/PRD-SYN-LETTERS/q-1", "/quotes/PRD-SYN-LETTERS/q-3"]);
-    const panel = await selectBranch(/03 SYN-L03/);
-    expect(targets()).toEqual(["/quotes/PRD-SYN-LETTERS/q-1", "/quotes/PRD-SYN-LETTERS/q-3"]);
-    expect(within(panel).getByRole("link", { name: /Deschide oferta OF-3/ })).toHaveAttribute("href", "/quotes/PRD-SYN-LETTERS/q-3");
+    expect(targets()).toEqual(["/oferte/produs/PRD-SYN-LETTERS/q-1", "/oferte/produs/PRD-SYN-LETTERS/q-3"]);
+    const panel = await selectBranch(/SYN-L03/);
+    expect(targets()).toEqual(["/oferte/produs/PRD-SYN-LETTERS/q-1", "/oferte/produs/PRD-SYN-LETTERS/q-3"]);
+    expect(within(panel).getByRole("link", { name: /Deschide oferta OF-3/ })).toHaveAttribute("href", "/oferte/produs/PRD-SYN-LETTERS/q-3");
     expect(panel).toHaveTextContent("Celelalte 7 oferte rămân în starea lor");
     expect(panel).not.toHaveTextContent("Pasul următor");
   });
@@ -1316,9 +1321,9 @@ describe("W2 · registru comercial compact", () => {
     stubDetail(eightBranches());
     window.history.replaceState({}, "", "/cereri/req-1");
     render(<Harness />);
-    const panel = await selectBranch(/02 SYN-L02/);
+    const panel = await selectBranch(/SYN-L02/);
     expect(within(panel).getByRole("link", { name: /Deschide fișa lucrării/ })).toHaveAttribute("href", "/lucrari/ord-2");
-    expect(within(panel).getByRole("link", { name: "Deschide oferta OF-2" })).toHaveAttribute("href", "/quotes/PRD-SYN-LETTERS/q-2");
+    expect(within(panel).getByRole("link", { name: "Deschide oferta OF-2" })).toHaveAttribute("href", "/oferte/produs/PRD-SYN-LETTERS/q-2");
     expect(panel).toHaveTextContent("Comanda acestei ramuri nu schimbă celelalte 7 oferte");
     expect(document.body.textContent).not.toContain("Deschide comanda");
   });
@@ -1337,7 +1342,7 @@ describe("W2 · registru comercial compact", () => {
     expect(window.history.length).toBe(depth + 1);
     window.history.back();
     await waitFor(() => expect(window.location.search).toBe(""));
-    await waitFor(() => expect(screen.getByTestId("request-summary")).toBeInTheDocument());
+    await waitFor(() => expect(document.getElementById("branch-detail")).toBeNull());
     window.history.forward();
     await waitFor(() => expect(screen.getByTestId("branch-detail")).toHaveTextContent("SYN-A02"));
   });
@@ -1367,7 +1372,7 @@ describe("W2 · registru comercial compact", () => {
     window.history.replaceState({}, "", "/cereri/req-1?ramura=quote%3Agone");
     render(<Harness />);
     expect(await screen.findByText("Ramura din adresă nu mai este în această cerere")).toBeInTheDocument();
-    expect(screen.getByTestId("request-summary")).toBeInTheDocument();
+    expect(document.getElementById("branch-detail")).toBeNull();
   });
 
   it("moves with arrow keys, opens the branch action with Enter and returns with Escape", async () => {
@@ -1395,9 +1400,9 @@ describe("W2 · registru comercial compact", () => {
     render(<Harness />);
     await userEvent.click(await screen.findByRole("button", { name: "De rezolvat · 2" }));
     expect(new URLSearchParams(window.location.search).get("filtru")).toBe("actiune");
-    expect(rows().map((row) => row.querySelector(".ledger__index")?.textContent)).toEqual(["01", "03"]);
+    expect(rows().map((row) => row.querySelector(".ledger__title")?.textContent)).toEqual(["SYN-L01", "SYN-L03"]);
     expect(screen.getByText("2 din 8 · ordinea înregistrării păstrată")).toBeInTheDocument();
-    expect(screen.getByText(/Ascunse de filtru: 02 SYN-L02/)).toBeInTheDocument();
+    expect(screen.getByText(/Ascunse de filtru: SYN-L02/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Cu comandă · 2" }));
     expect(rows()).toHaveLength(2);
   });
@@ -1407,7 +1412,7 @@ describe("W2 · registru comercial compact", () => {
     window.history.replaceState({}, "", "/cereri/req-1");
     render(<Harness />);
     await userEvent.click(await screen.findByRole("button", { name: "De rezolvat · 1" }));
-    expect(rows().map((row) => row.querySelector(".ledger__index")?.textContent)).toEqual(["03"]);
+    expect(rows().map((row) => row.querySelector(".ledger__title")?.textContent)).toEqual(["SYN-L03"]);
   });
 });
 
@@ -1478,6 +1483,44 @@ describe("W3-D06 · încheiere comercială", () => {
       closeReason: "Nu se mai urmărește",
       expectedRevision: 0,
     });
+  });
+
+  it("notes a reopened request only from the server's reopening facts", async () => {
+    stubDetail(requestDetail({
+      commercial: commercial({
+        reopenedAt: "2026-11-05T09:30:00.000Z",
+        reopenedBy: { displayName: "Ana Sintetic", role: "OWNER", roleLabel: "Proprietar", accountId: null },
+        reopenReason: "Clientul revine cu o variantă nouă.",
+      }),
+      journey: journey({ phase: "REOPENED", phaseLabel: "Redeschisă", phaseAt: "2026-11-05T09:30:00.000Z" }),
+    }));
+    render(<RoutedRequest />);
+    const banner = await screen.findByTestId("commercial-reopened-banner");
+    expect(banner).toHaveTextContent("Notă · Redeschisă");
+    expect(banner).toHaveTextContent("Ana Sintetic");
+    expect(banner).toHaveTextContent("Clientul revine cu o variantă nouă.");
+    expect(screen.queryByTestId("commercial-closed-banner")).not.toBeInTheDocument();
+  });
+
+  it("invents no reopening note when the server has none", async () => {
+    stubDetail(requestDetail({ commercial: commercial() }));
+    render(<RoutedRequest />);
+    await screen.findByRole("button", { name: /Mai multe/ });
+    expect(screen.queryByTestId("commercial-reopened-banner")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Redeschisă/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the rare commercial actions in one 'Mai multe' menu that closes with Escape", async () => {
+    stubDetail(requestDetail({ commercial: commercial() }));
+    render(<RoutedRequest />);
+    const more = await screen.findByRole("button", { name: /Mai multe/ });
+    expect(screen.getAllByRole("button", { name: /Mai multe/ })).toHaveLength(1);
+    await userEvent.click(more);
+    expect(more).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "Încheie urmărirea comercială" })).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    expect(more).toHaveFocus();
   });
 
   it("keeps the close-confirmation sentences readable and dismisses the dialog from the keyboard", async () => {

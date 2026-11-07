@@ -22,8 +22,7 @@ import {
   type BranchFilter,
   type CommercialBranch,
 } from "../presentation/requestCommercialBranches";
-import { presentRequestCommercialProgress } from "../presentation/requestCommercialProgress";
-import { clientHref, requestHref, requestProductHref } from "../routing/appRoute";
+import { clientHref, requestHref } from "../routing/appRoute";
 import { hrefPath, originBack } from "../routing/originBack";
 import {
   readConfiguratorSession,
@@ -33,7 +32,7 @@ import { RequestOfferPreview } from "./requests/RequestOfferPreview";
 import { ObligationsPanel } from "./requests/ObligationsPanel";
 import { RequestMoreMenu, type RequestMenuAction } from "./requests/RequestMoreMenu";
 import { CommercialLedger } from "./requests/CommercialLedger";
-import { BranchDetail, RequestSummary } from "./requests/BranchDetail";
+import { BranchDetail } from "./requests/BranchDetail";
 import { CommercialCloseDialog } from "./requests/closure/CommercialCloseDialog";
 import { CommercialDecisionPanel } from "./requests/closure/CommercialDecisionPanel";
 import { CommercialReopenDialog } from "./requests/closure/CommercialReopenDialog";
@@ -116,10 +115,10 @@ export function RequestDetailPage({ requestId, search = window.location.search }
   const visible = filterBranches(all, filter);
   const selected = requestedKey ? (visible.find((branch) => branch.key === requestedKey) ?? null) : null;
   const staleSelection = Boolean(detail && requestedKey && !all.some((branch) => branch.key === requestedKey));
-  const progress = presentRequestCommercialProgress({ branches: all });
   const journey = detail?.journey ?? null;
   const commercial = detail?.commercial ?? null;
   const [deciding, setDeciding] = useState(false);
+  const rail = all.length > 0 && ((deciding && commercial !== null) || selected !== null);
   const [draft, setDraft] = useState<CommercialDecisionDraft>(EMPTY_COMMERCIAL_DECISION_DRAFT);
   const [closeOpen, setCloseOpen] = useState(false);
   const [reopenOpen, setReopenOpen] = useState(false);
@@ -317,7 +316,12 @@ export function RequestDetailPage({ requestId, search = window.location.search }
               Registrul arată ofertele actuale ale cererii; alege din nou ramura.
             </InlineAlert>
           ) : null}
-          <div className="request-workspace" data-branch-open={selected && !deciding ? "true" : undefined} data-deciding={deciding || undefined}>
+          <div
+            className="request-workspace"
+            data-branch-open={selected && !deciding ? "true" : undefined}
+            data-deciding={deciding || undefined}
+            data-rail={rail || undefined}
+          >
             {all.length === 0 ? (
               <section className="ledger ledger--empty" data-testid="request-branches-empty">
                 <p className="branch-detail__kicker">Ramuri comerciale · 0</p>
@@ -325,15 +329,6 @@ export function RequestDetailPage({ requestId, search = window.location.search }
                 <p>
                   Fiecare ofertă apare aici pe un rând, recunoscută după înscripția ei, cu produsul, starea comercială și fișa lucrării.
                 </p>
-                {journey?.nextAction === "CHOOSE_PRODUCT" ? (
-                  <p className="ledger__empty-action">
-                    <a className="hit" href={requestProductHref(requestId)}>
-                      <span className="button button--primary">
-                        {journey.nextActionLabel} <span aria-hidden="true">→</span>
-                      </span>
-                    </a>
-                  </p>
-                ) : null}
               </section>
             ) : (
               <CommercialLedger
@@ -352,11 +347,11 @@ export function RequestDetailPage({ requestId, search = window.location.search }
                 onToggleQuote={toggleQuote}
               />
             )}
-            {all.length > 0 ? (
+            {rail ? (
               <aside
                 id="branch-detail"
                 className="request-rail"
-                aria-label={selected ? `Ramura ${selected.indexLabel} ${selected.title}` : "Rezumatul cererii"}
+                aria-label={selected && !deciding ? `Ramura ${selected.indexLabel} ${selected.title}` : "Decizii comerciale"}
                 data-open={selected ? "true" : undefined}
                 onKeyDown={onRailKeyDown}
               >
@@ -389,9 +384,7 @@ export function RequestDetailPage({ requestId, search = window.location.search }
                         : undefined
                     }
                   />
-                ) : (
-                  <RequestSummary progress={progress} />
-                )}
+                ) : null}
               </aside>
             ) : null}
           </div>
@@ -529,7 +522,18 @@ function CommercialStatusBanner({
   administrativeLabel: string;
 }) {
   if (commercial.state !== "CLOSED") {
-    return null;
+    if (!commercial.reopenedAt) return null;
+    const when = formatTimestamp(commercial.reopenedAt);
+    return (
+      <section className="cclose-banner" data-tone="reopened" data-testid="commercial-reopened-banner">
+        <p>
+          <strong>Notă · Redeschisă</strong>
+          {when ? ` · ${when}` : null}
+          {commercial.reopenedBy?.displayName ? ` · ${commercial.reopenedBy.displayName}` : null}
+        </p>
+        {commercial.reopenReason ? <p>{commercial.reopenReason}</p> : null}
+      </section>
+    );
   }
   return (
     <section className="cclose-banner" data-testid="commercial-closed-banner">

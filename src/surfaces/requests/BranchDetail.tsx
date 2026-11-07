@@ -1,6 +1,4 @@
 import type { CommercialBranch } from "../../presentation/requestCommercialBranches";
-import type { RequestCommercialProgressView } from "../../presentation/requestCommercialProgress";
-
 /**
  * W2 · panel of the selected branch (WorkOS-N 1162:16456 · 1164:648 · 1166:506 · 1165:720):
  * offer → order → job sheet, the branch's own action and a plain reminder that the other
@@ -144,36 +142,4 @@ export function BranchDetail({
       <p className="branch-detail__keys" aria-hidden="true">↑ ↓ schimbă ramura · Enter deschide acțiunea ramurii · Esc revine la registru</p>
     </div>
   );
-}
-
-/** Without an explicit selection the panel summarizes the request; no branch is chosen for the reader. */
-export function RequestSummary({ progress }: { progress: RequestCommercialProgressView }) {
-  return (
-    <div className="request-summary" data-testid="request-summary">
-      <p className="branch-detail__kicker">Rezumatul cererii</p>
-      <h2 className="branch-detail__title">{summaryTitle(progress)}</h2>
-      <ul className="request-summary__groups">
-        {progress.groups.map((group) => (
-          <li key={group.state} data-state={group.state}>
-            <span className="commercial-dot" data-state={group.state} aria-hidden="true" />
-            <span className="request-summary__label">{group.label}</span>
-            <span className="request-summary__count">{group.branches.length}</span>
-            <span className="request-summary__members">
-              {group.branches.length ? group.branches.map((branch) => `${branch.indexLabel} ${branch.title}`).join(" · ") : "—"}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <p className="request-summary__hint">
-        <strong>Nicio ramură selectată</strong>
-        <span>Alege un rând pentru lanțul ofertă → comandă → fișa lucrării. Selecția rămâne în adresă și la revenire.</span>
-      </p>
-    </div>
-  );
-}
-
-function summaryTitle(progress: RequestCommercialProgressView): string {
-  if (progress.offered === 0) return "Nicio ofertă încă";
-  if (progress.offered === 1) return "1 ofertă";
-  return `${progress.offered} oferte, fiecare cu starea ei`;
 }

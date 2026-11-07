@@ -128,7 +128,6 @@ export function CommercialLedger({
       </div>
       <div className="ledger__columns" aria-hidden="true">
         {selecting ? <span>Decizie</span> : null}
-        <span>#</span>
         <span>Înscripție · produs</span>
         <span>Ofertă</span>
         <span>Stare comercială</span>
@@ -163,7 +162,7 @@ export function CommercialLedger({
                   data-branch-key={branch.key}
                   aria-pressed={selected}
                   aria-controls="branch-detail"
-                  aria-label={[`${branch.indexLabel} ${branch.title}`, branch.subtitle, branch.offerReference, branch.stateLabel, branch.priceLabel]
+                  aria-label={[branch.title, branch.subtitle, branch.offerReference, branch.stateLabel, branch.priceLabel]
                     .filter(Boolean)
                     .join(", ")}
                   tabIndex={branch.key === rovingKey ? 0 : -1}
@@ -191,7 +190,6 @@ export function CommercialLedger({
                     )}
                   </span>
                 ) : null}
-                <span className="ledger__index">{branch.indexLabel}</span>
                 <span className="ledger__identity">
                   <span className="ledger__title" title={branch.title}>{branch.title}</span>
                   {branch.subtitle ? <span className="ledger__subtitle" title={branch.subtitle}>{branch.subtitle}</span> : null}
@@ -221,7 +219,7 @@ export function CommercialLedger({
       <div className="ledger__foot">
         <p>
           {hidden.length > 0 && filter !== "all"
-            ? `Ascunse de filtru: ${hidden.map((branch) => `${branch.indexLabel} ${branch.title}`).join(", ")}`
+            ? `Ascunse de filtru: ${hidden.map((branch) => branch.title).join(", ")}`
             : `${offerCount(products, "de produs")} · ${assemblies === 0 ? "nicio ofertă de ansamblu" : offerCount(assemblies, "de ansamblu")}`}
         </p>
         <p>Valorile nu se însumează: ofertele sunt independente</p>
