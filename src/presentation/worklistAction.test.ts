@@ -166,7 +166,7 @@ describe("presentRequestWorklistAction · the server journey's next action", () 
           actionable: [journeyItem()],
         }),
       }),
-    ).toEqual({ actionLabel: "Confirmă comanda", actionHref: "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1" });
+    ).toEqual({ actionLabel: "Confirmă comanda", actionHref: "/oferte/produs/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1" });
   });
 
   it("never sends an assembly offer to the product quote route", () => {
@@ -227,7 +227,7 @@ describe("presentQuoteWorklistAction", () => {
   it("opens an offer awaiting the customer", () => {
     expect(presentQuoteWorklistAction(quote())).toEqual({
       actionLabel: "Deschide oferta",
-      actionHref: "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
+      actionHref: "/oferte/produs/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
     });
   });
 
@@ -236,7 +236,7 @@ describe("presentQuoteWorklistAction", () => {
       presentQuoteWorklistAction(
         quote({ commercialStatus: "ACCEPTED_WITHOUT_ORDER", commercialStatusLabel: "Acceptată · fără comandă", obligationKind: "ACTIONABLE" }),
       ),
-    ).toEqual({ actionLabel: "Confirmarea comenzii", actionHref: "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1" });
+    ).toEqual({ actionLabel: "Confirmarea comenzii", actionHref: "/oferte/produs/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1" });
   });
 
   it("routes an ordered offer to the job sheet and names that destination (D08)", () => {

@@ -249,7 +249,7 @@ describe("Cereri și oferte · previzualizarea ofertei (668:15454)", () => {
     expect(within(dialog).queryByText(/marj/i)).toBeNull();
     expect(within(dialog).getByText("pentru CER-a · Casetă depozit · ⌖ Depozit Ghimbav")).toBeInTheDocument();
     expect(within(dialog).getByText("Încă nu: oferta nu are comandă.")).toBeInTheDocument();
-    expect(within(dialog).getByRole("link", { name: "Deschide oferta completă →" })).toHaveAttribute("href", "/quotes/P/q1");
+    expect(within(dialog).getByRole("link", { name: "Deschide oferta completă →" })).toHaveAttribute("href", "/oferte/produs/P/q1");
     expect(within(dialog).getByRole("link", { name: "Deschide cererea →" })).toHaveAttribute("href", "/cereri/a");
   });
 

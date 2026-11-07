@@ -420,7 +420,7 @@ describe("ClientDetailPage", () => {
     const table = await screen.findByRole("region", { name: "Cereri și oferte" });
     expect(within(table).getByRole("link", { name: "Deschide oferta OF-1" })).toHaveAttribute(
       "href",
-      "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/qts%3A1",
+      "/oferte/produs/PRD-LETTERS-FRONTLIT-PLEXI-AL06/qts%3A1",
     );
     expect(within(table).getByRole("link", { name: "Deschide oferta OF-NOU" })).toHaveAttribute("href", "/oferte/ansamblu/asmq%3Anew");
     expect(within(table).getByRole("link", { name: "Deschide oferta OF-VECHI" })).toHaveAttribute("href", "/oferte/ansamblu/asmq%3Aold");
@@ -435,7 +435,7 @@ describe("ClientDetailPage", () => {
     // An order whose job is not in the list keeps the server's way in.
     expect(screen.getByRole("link", { name: /Fișa lucrării/ })).toHaveAttribute("href", "/lucrari/asmo%3A1");
     expect(document.body.textContent).not.toContain("Deschide comanda");
-    expect(table.querySelectorAll('a[href^="/quotes/SIGN_ASSEMBLY"]')).toHaveLength(0);
+    expect(table.querySelectorAll('a[href^="/oferte/produs/SIGN_ASSEMBLY"]')).toHaveLength(0);
   });
 
   it("retries a failed hub load", async () => {

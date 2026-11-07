@@ -83,7 +83,7 @@ Reference Slice V1 adds the first real surfaces on the Foundation shell:
 
 - `/admin/resources` Cost Evidence editor
 - `/` LETTERS configurator, confirm, calculation presentation, quote freeze
-- `/quotes/:productCode/:quoteSnapshotId` frozen quote re-read
+- `/oferte/produs/:productCode/:quoteSnapshotId` frozen quote re-read (the earlier `/quotes/:productCode/:quoteSnapshotId` links are rewritten to it)
 
 Golden Spine Completion V1 extends the same shell with the minimum route set for one complete job:
 
