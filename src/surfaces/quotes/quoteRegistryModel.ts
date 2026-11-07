@@ -112,10 +112,6 @@ export function presentSignalTiles(
   }));
 }
 
-export function formatCount(value: number): string {
-  return String(value).padStart(2, "0");
-}
-
 export function kindDetail(item: QuoteListItemTransport): string {
   return item.kind === "ASSEMBLY" ? `${item.kindLabel} · ${item.sectionCount} secțiuni` : item.kindLabel;
 }

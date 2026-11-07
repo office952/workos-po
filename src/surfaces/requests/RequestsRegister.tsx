@@ -1,4 +1,4 @@
-import type { KeyboardEvent, Ref } from "react";
+import type { KeyboardEvent, ReactNode, Ref } from "react";
 import type { RequestListItemTransport } from "../../api/types";
 import type { CollectionViewState } from "../../components/collectionViewState";
 import { EmptyState } from "../../components/EmptyState";
@@ -7,7 +7,7 @@ import { InlineAlert } from "../../components/InlineAlert";
 import { presentRequestWorklistAction } from "../../presentation/worklistAction";
 import { newRequestHref, requestHref } from "../../routing/appRoute";
 import { clickedControl, moveRowFocus } from "../desk/deskKeys";
-import { DeskCaption, DeskDensity, DeskSearch, DeskSkeleton, PlusIcon, type Density } from "../desk/DeskToolbar";
+import { DeskCaption, DeskDensity, DeskSearch, DeskSkeleton, type Density } from "../desk/DeskToolbar";
 import type { DeskLayout } from "../desk/useDeskLayout";
 import { CommercialPhase, OffersSummary } from "./RequestParts";
 import {
@@ -34,6 +34,8 @@ type Props = {
   paging: Paging;
   selectedId: string | null;
   searchRef: Ref<HTMLInputElement>;
+  /** Commercial filters (primary) and the administrative status (secondary), beside the search. */
+  filterControls: ReactNode;
   onFilters: (next: RequestFilters) => void;
   onSort: (next: RequestSort) => void;
   onDensity: (next: Density) => void;
@@ -209,9 +211,9 @@ function Pagination({ paging, onPage, onPageSize }: Pick<Props, "paging" | "onPa
   );
 }
 
-/** The intake register: search, density, new request, then the entries grouped by day. */
+/** The intake register: search with its filters, density, then the entries grouped by day. */
 export function RequestsRegister(props: Props) {
-  const { layout, view, refreshFailed, filters, sort, density, searchRef, onFilters, onSort, onDensity, onReset, onRetry, visibleCount, total, paging } = props;
+  const { layout, view, refreshFailed, filters, sort, density, searchRef, filterControls, onFilters, onSort, onDensity, onReset, onRetry, visibleCount, total, paging } = props;
   const ready = view !== "loading" && view !== "error";
   return (
     <section className="rdesk-register" aria-label="Registru cereri" data-register data-scroll-memory="registru">
@@ -224,8 +226,8 @@ export function RequestsRegister(props: Props) {
           inputRef={searchRef}
           onChange={(query) => onFilters({ ...filters, query })}
         />
+        {filterControls}
         {layout === "docked" ? <DeskDensity value={density} onChange={onDensity} /> : null}
-        <a className="rdesk-create" href={newRequestHref()}><PlusIcon />Cerere nouă</a>
       </div>
       {refreshFailed && total > 0 ? (
         <InlineAlert tone="error" title="Lista nu a putut fi actualizată">
@@ -265,7 +267,7 @@ export function RequestsRegister(props: Props) {
               title="Nicio cerere nu corespunde filtrului."
               description={filters.commercial === "ACTIONABLE" && !filters.query.trim() && filters.status === null
                 ? "Nimic de rezolvat acum. Ofertele care așteaptă clientul nu intră aici."
-                : "Schimbă căutarea sau tava ori resetează filtrele pentru a reveni la registru."}
+                : "Schimbă căutarea sau starea administrativă ori resetează filtrele pentru a reveni la registru."}
               action={<button type="button" className="rdesk-reset" onClick={onReset}>Afișează toate cererile</button>}
             />
           </div>

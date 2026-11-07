@@ -121,21 +121,35 @@ describe("RequestsPage", () => {
     const user = userEvent.setup();
     render(<RequestsPage />);
     await screen.findByRole("link", { name: "La client" });
-    const trays = screen.getByRole("group", { name: "Tăvi de pregătire: filtru pe starea cererii" });
-    expect(within(trays).getByRole("button", { name: "Noi: 1" })).toBeInTheDocument();
-    expect(within(trays).getByRole("button", { name: "Blocate: 0" })).toBeInTheDocument();
-    await user.click(within(trays).getByRole("button", { name: "Așteaptă clientul: 1" }));
+    const status = screen.getByRole("combobox", { name: "Stare administrativă" });
+    expect(within(status).getByRole("option", { name: "Noi · 1" })).toBeInTheDocument();
+    expect(within(status).getByRole("option", { name: "Blocate · 0" })).toBeInTheDocument();
+    await user.selectOptions(status, "WAITING_CUSTOMER");
     expect(titles()).toEqual(["La client"]);
-    await user.click(within(trays).getByRole("button", { name: "Așteaptă clientul: 1" }));
+    await user.selectOptions(status, "");
     expect(titles()).toHaveLength(2);
   });
 
-  it("does not count the trays from the list when the server sends no summary", async () => {
+  it("does not count the administrative states from the list when the server sends no summary", async () => {
     stubRequests(manyRequests(3));
     render(<RequestsPage />);
     await screen.findByRole("link", { name: "Cerere 01" });
-    const trays = screen.getByRole("group", { name: "Tăvi de pregătire: filtru pe starea cererii" });
-    expect(within(trays).getByRole("button", { name: "Noi: —" })).toBeInTheDocument();
+    const status = screen.getByRole("combobox", { name: "Stare administrativă" });
+    expect(within(status).getByRole("option", { name: "Noi · —" })).toBeInTheDocument();
+  });
+
+  it("keeps one filter row beside the search: commercial chips first, the administrative state second", async () => {
+    stubRequests(manyRequests(3));
+    render(<RequestsPage />);
+    await screen.findByRole("link", { name: "Cerere 01" });
+    const search = screen.getByRole("searchbox", { name: "Caută" });
+    const chips = screen.getByRole("group", { name: "Filtre registru cereri" });
+    const status = screen.getByRole("combobox", { name: "Stare administrativă" });
+    expect(search.compareDocumentPosition(chips) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(chips.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole("group", { name: /Tăvi de pregătire/ })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /Cerere nouă/ })).toHaveLength(1);
+    expect(screen.queryByText("Nicio cerere selectată")).not.toBeInTheDocument();
   });
 
   it("searches beyond the current page and applies sort and attention before pagination", async () => {
@@ -311,7 +325,7 @@ describe("RequestsPage", () => {
     render(<RequestsPage />);
     expect(await screen.findByRole("link", { name: "Litere vitrină" })).toHaveAttribute("href", "/cereri/req-1");
     expect(screen.getByText("Atelier Nord · CRQ-104")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Confirmă comanda/ })).toHaveAttribute("href", "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1");
+    expect(screen.getByRole("link", { name: /Confirmă comanda/ })).toHaveAttribute("href", "/oferte/produs/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1");
   });
 
   it("preserves customer and request context for CHOOSE_PRODUCT", async () => {

@@ -1,66 +1,37 @@
-import { useRef, type KeyboardEvent } from "react";
 import type { RequestListItemTransport, RequestOverviewSummaryTransport } from "../../api/types";
 import { formatShortDay } from "../../presentation/format";
-import { formatCount } from "../desk/deskKeys";
-import type { DeskLayout } from "../desk/useDeskLayout";
 import { TRAYS } from "./requestRegistryModel";
 
 /**
- * Preparation trays: one filter per request status, counted by the server summary.
- * Without a summary the trays show "—" instead of counting a list.
+ * Administrative status: a secondary filter beside the commercial ones, counted by the server
+ * summary. Without a summary the options show "—" instead of counting a list.
  */
-export function RequestTrays({
+export function RequestStatusFilter({
   summary,
   ready,
   status,
-  layout,
   onStatus,
 }: {
   summary: RequestOverviewSummaryTransport | null;
   ready: boolean;
   status: string | null;
-  layout: DeskLayout;
   onStatus: (status: string | null) => void;
 }) {
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
-    const buttons = Array.from(rootRef.current?.querySelectorAll<HTMLButtonElement>("button") ?? []);
-    const index = buttons.findIndex((button) => button === document.activeElement);
-    if (index < 0) return;
-    event.preventDefault();
-    buttons[(index + (event.key === "ArrowRight" ? 1 : -1) + buttons.length) % buttons.length]?.focus();
-  }
-
   return (
-    <div className="rtray" data-layout={layout}>
-      <p className="rtray__caption" aria-hidden="true">
-        <span>Pregătire</span>
-        <small>stare administrativă</small>
-      </p>
-      <div ref={rootRef} className="rtray__trays" role="group" aria-label="Tăvi de pregătire: filtru pe starea cererii" onKeyDown={onKeyDown}>
+    <label className="rtray-status" data-active={status !== null || undefined}>
+      <span>Stare administrativă</span>
+      <select value={status ?? ""} onChange={(event) => onStatus(event.target.value || null)}>
+        <option value="">Toate</option>
         {TRAYS.map((tray) => {
           const count = ready ? (summary?.[tray.summary] ?? null) : null;
           return (
-            <button
-              key={tray.status}
-              type="button"
-              className="rtray__tray"
-              data-filled={(count ?? 0) > 0 || undefined}
-              data-apart={tray.status === "BLOCKED" || undefined}
-              aria-pressed={status === tray.status}
-              aria-label={`${tray.label}: ${count ?? "—"}`}
-              onClick={() => onStatus(status === tray.status ? null : tray.status)}
-            >
-              <span className="rtray__lip" aria-hidden="true" />
-              <span className="rtray__count">{formatCount(count)}</span>
-              <span className="rtray__label">{tray.label}</span>
-            </button>
+            <option key={tray.status} value={tray.status}>
+              {`${tray.label} · ${count ?? "—"}`}
+            </option>
           );
         })}
-      </div>
-    </div>
+      </select>
+    </label>
   );
 }
 

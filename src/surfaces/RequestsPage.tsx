@@ -6,14 +6,14 @@ import { loadRequestList } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { globalNavItems } from "../layout/globalNav";
 import { PageRegion } from "../layout/PageRegion";
-import { parseRequestsSelection, requestsHref } from "../routing/appRoute";
-import { rowSelector } from "./desk/deskKeys";
+import { newRequestHref, parseRequestsSelection, requestsHref } from "../routing/appRoute";
+import { focusRow, rowSelector } from "./desk/deskKeys";
 import { DeskDialog, DeskDossier, type DeskVacancy } from "./desk/DeskDossier";
 import { DeskSignalBoard } from "./desk/DeskSignalBoard";
-import type { Density } from "./desk/DeskToolbar";
+import { PlusIcon, type Density } from "./desk/DeskToolbar";
 import { useDeskLayout } from "./desk/useDeskLayout";
 import { useDeskSelection } from "./desk/useDeskSelection";
-import { RequestTrays } from "./requests/RequestParts";
+import { RequestStatusFilter } from "./requests/RequestParts";
 import { RequestSlip } from "./requests/RequestSlip";
 import { RequestsRegister } from "./requests/RequestsRegister";
 import {
@@ -34,8 +34,9 @@ import "../styles/surfaces/commercial-closure.css";
 const MODULE_INDEX = String(globalNavItems().findIndex((item) => item.href === "/cereri") + 1).padStart(2, "0");
 
 /**
- * Cereri: the intake queue. Preparation trays (request status) over a register grouped by day,
- * and the intake slip in the dossier. The selected request lives in the URL (?cerere=…).
+ * Cereri: the intake queue. One filter row beside the search (commercial filters first, the
+ * administrative status second), a register grouped by day, and the intake slip in the dossier.
+ * The selected request lives in the URL (?cerere=…); docked, the dossier opens only for it.
  */
 export function RequestsPage({ search = "" }: { search?: string }) {
   const requests = useResource(resourceKeys.requests(), loadRequestList);
@@ -103,6 +104,12 @@ export function RequestsPage({ search = "" }: { search?: string }) {
     changeFilters({ ...filters, commercial: filters.commercial === id ? "ALL" : id });
   }
 
+  function closeDocked(): void {
+    const id = selectedId;
+    selection.clear();
+    if (id) window.requestAnimationFrame(() => focusRow(id));
+  }
+
   function resetFilters(): void {
     changeFilters(EMPTY_REQUEST_FILTERS);
     searchRef.current?.focus();
@@ -121,13 +128,7 @@ export function RequestsPage({ search = "" }: { search?: string }) {
       ? requests.status === "error"
         ? { title: "Dosarul nu este disponibil", body: "Lista de cereri nu a putut fi citită." }
         : { title: "Se citește registrul", body: "Bonul se deschide după citirea listei de cereri." }
-      : selectedId
-        ? { title: "Cererea nu este în registru", body: "Cererea cerută nu există sau nu este accesibilă în această organizație." }
-        : {
-            title: "Nicio cerere selectată",
-            body: "Alege o intrare din registru. Bonul arată starea comercială, ofertele legate și următoarea acțiune.",
-            hint: "↑ ↓ selectează · Enter deschide cererea",
-          };
+      : { title: "Cererea nu este în registru", body: "Cererea cerută nu există sau nu este accesibilă în această organizație." };
 
   const dossier = (
     <DeskDossier
@@ -138,11 +139,12 @@ export function RequestsPage({ search = "" }: { search?: string }) {
       position={selected ? { index: selection.index, count: visible.length } : null}
       vacancy={vacancy}
       onMove={selection.move}
-      onClose={layout === "docked" ? undefined : selection.close}
+      onClose={layout === "docked" ? closeDocked : selection.close}
     >
       {selected ? <RequestSlip key={selected.requestId} item={selected} /> : null}
     </DeskDossier>
   );
+  const docked = layout === "docked" && selectedId !== null;
 
   return (
     <PageRegion>
@@ -152,13 +154,16 @@ export function RequestsPage({ search = "" }: { search?: string }) {
             <p className="rdesk__eyebrow"><span aria-hidden="true" />{MODULE_INDEX} · Registru comercial</p>
             <h1>Cereri</h1>
           </div>
-          <DeskSignalBoard label="Filtre registru cereri" signals={requestSignals(summary, filters)} ready={listReady} onPress={onSignal} />
+          <a className="rdesk-create" href={newRequestHref()}><PlusIcon />Cerere nouă</a>
         </header>
-        <div className="rdesk__instrument">
-          <RequestTrays summary={summary} ready={listReady} status={filters.status} layout={layout} onStatus={(status) => changeFilters({ ...filters, status })} />
-        </div>
-        <div className="rdesk__work">
+        <div className="rdesk__work" data-dossier={docked ? "open" : "closed"}>
           <RequestsRegister
+            filterControls={
+              <>
+                <DeskSignalBoard variant="chips" label="Filtre registru cereri" signals={requestSignals(summary, filters)} ready={listReady} onPress={onSignal} />
+                <RequestStatusFilter summary={summary} ready={listReady} status={filters.status} onStatus={(status) => changeFilters({ ...filters, status })} />
+              </>
+            }
             layout={layout}
             view={view}
             refreshFailed={requests.status === "error"}
@@ -181,7 +186,7 @@ export function RequestsPage({ search = "" }: { search?: string }) {
             onSelect={layout === "docked" ? selection.select : selection.open}
             onOpen={selection.open}
           />
-          {layout === "docked" ? dossier : null}
+          {docked ? dossier : null}
         </div>
         {selection.dialogOpen ? <DeskDialog layout={layout} label="Bonul de intrare al cererii" onClose={selection.close}>{dossier}</DeskDialog> : null}
         <span className="u-visually-hidden" aria-live="polite" aria-atomic="true">

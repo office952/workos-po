@@ -1,4 +1,4 @@
-import type { KeyboardEvent, MouseEvent, Ref } from "react";
+import type { KeyboardEvent, MouseEvent, ReactNode, Ref } from "react";
 import type { QuoteListItemTransport } from "../../api/types";
 import type { CollectionViewState } from "../../components/collectionViewState";
 import { EmptyState } from "../../components/EmptyState";
@@ -35,6 +35,8 @@ type Props = {
   grouped: boolean;
   onGrouped: (grouped: boolean) => void;
   searchRef: Ref<HTMLInputElement>;
+  /** The commercial filters, primary, beside the search. */
+  filterControls: ReactNode;
   onFilters: (next: RegistryFilters) => void;
   onReset: () => void;
   onRetry: () => void;
@@ -116,6 +118,7 @@ function Toolbar(props: Props) {
           <kbd className="offers-search__key" aria-hidden="true">/</kbd>
         ) : null}
       </div>
+      {props.filterControls}
       {showKind ? <KindFilter layout={layout} filters={filters} onFilters={onFilters} /> : null}
       <button
         type="button"

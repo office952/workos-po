@@ -1,10 +1,96 @@
 /* CJ1 · Oferte commercial filters: "Ce înseamnă?" and the per-offer status (WorkOS-N 1226:19654). */
 
-.offers-board-wrap {
+/* Without a selection the register takes the whole width; the dossier opens beside a chosen row. */
+.offers-desk__work[data-dossier="closed"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.offers-desk__work[data-dossier="closed"] .offers-v2__register {
+  padding-right: var(--desk-gutter);
+}
+
+.offers-filter-wrap {
   display: flex;
+  flex: 0 1 auto;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 16px;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
+.offers-filter {
+  display: flex;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+}
+
+.offers-filter__option {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: 500 13px var(--font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.offers-filter__option + .offers-filter__option {
+  border-left: 1px solid var(--color-border);
+}
+
+.offers-filter__option:hover {
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+}
+
+.offers-filter__option[aria-pressed="true"] {
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+  box-shadow: inset 0 -2px 0 var(--shell-signal);
+  font-weight: 600;
+}
+
+.offers-filter__option:focus-visible {
+  position: relative;
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.offers-filter__count {
+  color: var(--shell-muted);
+  font: 500 12px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.offers-filter__option[aria-pressed="true"] .offers-filter__count {
+  color: var(--color-text-primary);
+}
+
+/* The row action and the amount keep their own columns: the action wraps, it never covers the value. */
+.offers-v2__table .offers-v2__col-action { width: 232px; }
+.offers-v2__table .offers-v2__col-value { width: 128px; }
+
+.offers-v2__table .offers-v2__next {
+  padding-block: 6px;
+  line-height: 1.25;
+  white-space: normal;
+}
+
+.offers-v2__table .offers-v2__next > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* One commercial status per offer, in sentence case as the server writes it. */
+.offers-v2__state {
+  font: 500 13px/1.35 var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .offers-explain {
@@ -77,8 +163,18 @@
 }
 
 @media (max-width: 767px) {
-  .offers-board-wrap {
-    display: grid;
+  .offers-filter-wrap {
+    flex: 1 1 100%;
+  }
+
+  .offers-filter {
+    flex: 1 1 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .offers-filter::-webkit-scrollbar {
+    display: none;
   }
 
   .offers-explain__panel {

@@ -49,7 +49,7 @@ export function QuotesPage({ search = "" }: { search?: string }) {
   const openerRef = useRef<string | null>(null);
   const previousSelection = useRef(selection.quoteId);
 
-  const [grouped, setGrouped] = useState(false);
+  const [grouped, setGrouped] = useState(true);
   const positions = useMemo(() => presentQuoteBranchPositions(items), [items]);
   const groups = useMemo(() => presentQuoteRequestGroups(items), [items]);
   const visible = useMemo(() => filterQuotes(items, filters), [items, filters]);
@@ -75,9 +75,9 @@ export function QuotesPage({ search = "" }: { search?: string }) {
     previousSelection.current = selection.quoteId;
     if (selection.quoteId) return;
     pushedRef.current = false;
-    if (before && layout !== "docked") {
-      // Closing the dialog (button, Esc or browser Back) returns focus to what opened it.
-      focusQuote(openerRef.current ?? before);
+    if (before) {
+      // Closing the dossier (button, Esc or browser Back) returns focus to what opened it.
+      focusQuote(layout === "docked" ? before : (openerRef.current ?? before));
     }
   }, [selection.quoteId, layout]);
 
@@ -150,9 +150,10 @@ export function QuotesPage({ search = "" }: { search?: string }) {
       position={{ index, count: visible.length }}
       onSheet={setSheet}
       onMove={move}
-      onClose={layout === "docked" ? undefined : close}
+      onClose={close}
     />
   );
+  const docked = layout === "docked" && selection.quoteId !== null;
 
   return (
     <PageRegion>
@@ -165,10 +166,10 @@ export function QuotesPage({ search = "" }: { search?: string }) {
             </p>
             <h1>Oferte</h1>
           </div>
-          <QuotesSignalBoard tiles={tiles} ready={listReady} filters={filters} onChange={changeFilters} />
         </header>
-        <div className="offers-desk__work">
+        <div className="offers-desk__work" data-dossier={docked ? "open" : "closed"}>
           <QuotesRegister
+            filterControls={<QuotesSignalBoard tiles={tiles} ready={listReady} filters={filters} onChange={changeFilters} />}
             layout={layout}
             view={view}
             refreshFailed={quotes.status === "error"}
@@ -188,7 +189,7 @@ export function QuotesPage({ search = "" }: { search?: string }) {
             onSelect={layout === "docked" ? select : open}
             onOpen={open}
           />
-          {layout === "docked" ? dossier : null}
+          {docked ? dossier : null}
         </div>
         {dialogOpen ? <DossierDialog layout={layout} onClose={close}>{dossier}</DossierDialog> : null}
         <span className="u-visually-hidden" aria-live="polite" aria-atomic="true">
