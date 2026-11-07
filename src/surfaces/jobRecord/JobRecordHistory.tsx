@@ -2,6 +2,14 @@ import { moment } from './format';
 import type { JobRecord } from '../../api/jobRecord';
 import { Heading, RecordIcon } from './presentation';
 
+function timelineIcon(kind: string): Parameters<typeof RecordIcon>[0]['kind'] {
+  if (kind === 'TASK_COMPLETED' || kind === 'QUALITY_PASS') return 'check';
+  if (kind.includes('MACHINE')) return 'machine';
+  if (kind.includes('ARTIFACT')) return 'file';
+  if (kind.startsWith('ISSUE_')) return 'warning';
+  return 'history';
+}
+
 function eventTime(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
@@ -28,7 +36,7 @@ export function JobRecordHistory({ events, operationHref }: { events: JobRecord[
     {groups.length ? groups.map((group, i) => <div className="job-record__day" key={`${group.key}-${i}`}>
       <h3>{group.label}</h3>
       <ol className="job-record__timeline">{group.events.map(e => <li key={e.eventId}>
-        <RecordIcon kind={e.kind === 'TASK_COMPLETED' || e.kind === 'QUALITY_PASS' ? 'check' : e.kind.includes('MACHINE') ? 'machine' : e.kind.includes('ARTIFACT') ? 'file' : 'history'}/>
+        <RecordIcon kind={timelineIcon(e.kind)}/>
         <time dateTime={e.occurredAt} title={moment(e.occurredAt) ?? undefined}>{eventTime(e.occurredAt)}</time>
         <div><div className="job-record__event-line"><strong>{e.label}</strong><span>{e.actorLabel ?? 'Autor neînregistrat'}</span>{e.taskId ? <a href={operationHref(e.taskId)}>{e.taskLabel}</a> : null}</div>{e.detail ? <p>{e.detail}</p> : null}</div>
       </li>)}</ol>

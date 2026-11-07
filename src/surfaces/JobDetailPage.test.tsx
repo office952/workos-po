@@ -7,14 +7,34 @@ import { JobDetailPage } from './JobDetailPage';
 const cloud = vi.hoisted(() => ({ ready: true, unavailable: false, mode: 'single_plane' as string, user: null as { email?: string } | null, organization: null as { organizationId?: string; membershipRole?: string } | null }));
 vi.mock('../session/CloudSessionContext', () => ({ useCloudSession: () => cloud }));
 afterEach(() => { vi.unstubAllGlobals(); resetResourceCache(); cloud.mode = 'single_plane'; cloud.organization = null; cloud.ready = true; cloud.unavailable = false; });
-function fixture(options: { finished?: boolean; planned?: boolean; invalidRecord?: boolean; operator?: boolean; unreleased?: boolean; releasedWithoutPlan?: boolean } = {}) {
+const openIssue = {
+  entryId: 'iss-1',
+  taskId: 'task-1',
+  taskLabel: '01 · Lipire · Litere',
+  body: 'Vibrație anormală CNC. Am oprit lucrul.',
+  reasonCode: 'MACHINE',
+  reasonLabel: 'Utilaj',
+  status: 'OPEN',
+  statusLabel: 'Deschisă',
+  authorLabel: 'Florin CNC',
+  createdAt: '2026-11-07T09:00:00.000Z',
+  acknowledgedAt: null,
+  acknowledgedByLabel: null,
+  resolvedAt: null,
+  resolvedByLabel: null,
+  canAcknowledge: true,
+  canResolve: true,
+  history: [{ kind: 'ISSUE_REPORTED', label: 'Problemă semnalată', actorLabel: 'Florin CNC', occurredAt: '2026-11-07T09:00:00.000Z' }],
+};
+
+function fixture(options: { finished?: boolean; planned?: boolean; invalidRecord?: boolean; operator?: boolean; unreleased?: boolean; releasedWithoutPlan?: boolean; issue?: boolean } = {}) {
   const fetch = vi.fn((input: RequestInfo, init?: RequestInit) => {
     const url = String(input);
     let body: unknown = {};
     const unreleased = options.unreleased === true;
     const missingPlan = unreleased || options.releasedWithoutPlan === true;
-    if (url.endsWith('/jobs/job-1/record')) body = options.invalidRecord ? {} : { record: jobRecordFixture };
-    else if (url.endsWith('/jobs/job-1')) body = { job: { jobId: 'job-1', kind: options.unreleased ? 'PRODUCT' : 'ASSEMBLY', productCode: options.unreleased ? 'PRD-LETTERS' : 'assembly', productLabel: options.unreleased ? 'Litere volumetrice' : 'Panou și litere', inscription: 'NORD', customerDisplayName: 'Client sintetic', stage: options.finished ? 'EXECUTION_COMPLETED' : unreleased ? 'ORDER_CREATED' : options.releasedWithoutPlan ? 'RELEASED' : 'IN_EXECUTION', stageLabel: unreleased ? 'Comandă creată' : options.releasedWithoutPlan ? 'Eliberată pentru producție' : 'În lucru', progressLabel: options.finished ? '2 / 2' : '0 / 2', nextAction: unreleased ? 'RELEASE_TO_PRODUCTION' : options.releasedWithoutPlan ? 'CREATE_EXECUTION_PLAN' : 'CONTINUE_EXECUTION', nextActionLabel: unreleased || options.releasedWithoutPlan ? 'Trimite în producție' : 'Urmărește producția', needsAttention: missingPlan, attentionLabel: unreleased ? 'Comanda așteaptă trimiterea în producție' : options.releasedWithoutPlan ? 'Pregătirea producției este incompletă' : null, orderSnapshotId: 'order', releaseSnapshotId: unreleased ? null : 'release', planId: missingPlan ? null : 'plan-1' }, execution: { planId: missingPlan || options.planned === false ? null : 'plan-1' } };
+    if (url.endsWith('/jobs/job-1/record')) body = options.invalidRecord ? {} : { record: { ...jobRecordFixture, issues: options.issue ? [openIssue] : [] } };
+    else if (url.endsWith('/jobs/job-1')) body = { job: { jobId: 'job-1', kind: options.unreleased ? 'PRODUCT' : 'ASSEMBLY', productCode: options.unreleased ? 'PRD-LETTERS' : 'assembly', productLabel: options.unreleased ? 'Litere volumetrice' : 'Panou și litere', inscription: 'NORD', customerDisplayName: 'Client sintetic', stage: options.finished ? 'EXECUTION_COMPLETED' : unreleased ? 'ORDER_CREATED' : options.releasedWithoutPlan ? 'RELEASED' : 'IN_EXECUTION', stageLabel: unreleased ? 'Comandă creată' : options.releasedWithoutPlan ? 'Eliberată pentru producție' : 'În lucru', progressLabel: options.finished ? '2 / 2' : '0 / 2', nextAction: unreleased ? 'RELEASE_TO_PRODUCTION' : options.releasedWithoutPlan ? 'CREATE_EXECUTION_PLAN' : 'CONTINUE_EXECUTION', nextActionLabel: unreleased || options.releasedWithoutPlan ? 'Trimite în producție' : 'Urmărește producția', needsAttention: missingPlan || Boolean(options.issue), attentionLabel: options.issue ? 'Problemă semnalată' : unreleased ? 'Comanda așteaptă trimiterea în producție' : options.releasedWithoutPlan ? 'Pregătirea producției este incompletă' : null, orderSnapshotId: 'order', releaseSnapshotId: unreleased ? null : 'release', planId: missingPlan ? null : 'plan-1' }, execution: { planId: missingPlan || options.planned === false ? null : 'plan-1' } };
     else if (url.includes('/execution-plans/plan-1')) body = { executionPlan: { plan: { planId: 'plan-1', productLabel: 'Panou și litere', inscription: 'NORD' }, progress: { completed: 0, total: 2 }, tasks: jobRecordFixture.hours!.tasks.map(t => ({ ...t, waitingFor: [], eligibleProviders: [] })) } };
     else if (url.includes('/operator-session') && options.operator) body = { operator: { personId: 'ion', displayName: 'Ion' } };
     else if (url.includes('material-preparation')) body = { preparation: { jobId: 'job-1', planId: null, lines: [] } };
@@ -49,6 +69,15 @@ describe('job record page', () => {
     expect(screen.getByRole('list', { name: 'Parcursul lucrării' })).toBeVisible();
     expect(screen.queryByText(/Nicio operație începută/)).toBeNull();
     expect(screen.queryByRole('region', { name: 'Rezultatele lucrării' })).toBeNull();
+  });
+  it('keeps an unresolved issue visible after production completion', async () => {
+    fixture({ finished: true, issue: true });
+    render(<JobDetailPage jobId="job-1"/>);
+    expect(await screen.findByText(/De rezolvat: Problemă semnalată/)).toBeVisible();
+    expect(await screen.findByRole('region', { name: 'Probleme semnalate' })).toBeVisible();
+    expect(screen.getByText('Vibrație anormală CNC. Am oprit lucrul.')).toBeVisible();
+    expect(screen.getByText('Deschisă')).toBeVisible();
+    expect(screen.getByText(/Producția este finalizată. Livrarea și montajul/)).toBeVisible();
   });
   it('never replaces an invalid explicit task with another operation', async () => {
     fixture(); render(<JobDetailPage jobId="job-1" taskId="missing"/>);

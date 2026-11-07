@@ -1,15 +1,23 @@
 import { randomUUID } from "node:crypto";
 import {
+  applyIssueTransition,
   classifyTaskArtifact,
   filePurposeLabel,
   formatAttachmentSize,
+  issueEventLabel,
+  issueManagementActions,
   issueReasonLabel,
+  issueStatusLabel,
+  issueTransitionEventKind,
   parseDossierText,
   parseIssueReason,
   parseOptionalFileNote,
   parseOptionalFilePurpose,
+  resolveIssueStatus,
   safeAttachmentDownloadAsciiName,
   taskArtifactDownloadHref,
+  type IssueStatus,
+  type IssueTransitionAction,
   type IssueReasonCode,
   type TaskDossierError,
 } from "@workos-final/domain";
@@ -38,6 +46,21 @@ type EntryRow = {
   author_account_id: string;
   author_operator_id: string | null;
   created_at: string;
+  issue_status: string | null;
+  acknowledged_at: string | null;
+  acknowledged_by_operator_id: string | null;
+  resolved_at: string | null;
+  resolved_by_operator_id: string | null;
+};
+
+type LifecycleRow = {
+  status: string | null;
+  acknowledged_at: string | null;
+  acknowledged_by_account_id: string | null;
+  acknowledged_by_operator_id: string | null;
+  resolved_at: string | null;
+  resolved_by_account_id: string | null;
+  resolved_by_operator_id: string | null;
 };
 
 type ArtifactRow = {
@@ -100,9 +123,14 @@ export function readTaskDossier(db: SqliteDatabase, taskId: string) {
   const entries = db
     .prepare(
       `
-      SELECT * FROM execution_task_dossier_entries
-      WHERE task_id = ?
-      ORDER BY created_at ASC, entry_id ASC
+      SELECT entry.*, lifecycle.status AS issue_status,
+             lifecycle.acknowledged_at, lifecycle.acknowledged_by_operator_id,
+             lifecycle.resolved_at, lifecycle.resolved_by_operator_id
+      FROM execution_task_dossier_entries AS entry
+      LEFT JOIN execution_task_issue_lifecycle AS lifecycle
+        ON lifecycle.entry_id = entry.entry_id
+      WHERE entry.task_id = ?
+      ORDER BY entry.created_at ASC, entry.entry_id ASC
     `,
     )
     .all(taskId) as EntryRow[];
@@ -148,6 +176,28 @@ export function readTaskDossier(db: SqliteDatabase, taskId: string) {
     authorLabel: personLabel(db, row.author_operator_id),
     createdAt: row.created_at,
   });
+  const issueEvents = (entryId: string) =>
+    events
+      .filter((row) => row.entry_id === entryId)
+      .map((row) => ({
+        kind: row.event_kind,
+        label: issueEventLabel(row.event_kind) ?? "Înregistrare problemă",
+        actorLabel: personLabel(db, row.actor_operator_id),
+        occurredAt: row.occurred_at,
+      }));
+  const presentIssue = (row: EntryRow) => {
+    const status = resolveIssueStatus(row.issue_status);
+    return {
+      ...presentEntry(row),
+      status,
+      statusLabel: issueStatusLabel(status),
+      acknowledgedAt: row.acknowledged_at,
+      acknowledgedByLabel: personLabel(db, row.acknowledged_by_operator_id),
+      resolvedAt: row.resolved_at,
+      resolvedByLabel: personLabel(db, row.resolved_by_operator_id),
+      history: issueEvents(row.entry_id),
+    };
+  };
   return {
     taskId,
     planId: located.planId,
@@ -155,7 +205,7 @@ export function readTaskDossier(db: SqliteDatabase, taskId: string) {
     taskStatus: located.status,
     instructions: entries.filter((row) => row.kind === "INSTRUCTION").map(presentEntry),
     observations: entries.filter((row) => row.kind === "OBSERVATION").map(presentEntry),
-    issues: entries.filter((row) => row.kind === "ISSUE_REPORT").map(presentEntry),
+    issues: entries.filter((row) => row.kind === "ISSUE_REPORT").map(presentIssue),
     files: linked.map((row) => presentArtifact(row, taskId, true, row.link_used_at)),
     planFiles: planFiles.map((row) =>
       presentArtifact(
@@ -225,6 +275,9 @@ export function addTaskDossierEntry(
       actor.operatorId,
       createdAt,
     );
+    if (kind === "ISSUE_REPORT") {
+      insertIssueLifecycle(db, entryId, "OPEN", createdAt, null, null);
+    }
     recordDossierEvent(db, {
       planId: located.planId,
       taskId,
@@ -251,6 +304,179 @@ export function addTaskDossierEntry(
     return { ok: false, error: "not_found" };
   }
   return { ok: true, dossier };
+}
+
+export function presentDossierForViewer(
+  dossier: NonNullable<ReturnType<typeof readTaskDossier>>,
+  canManageIssues: boolean,
+) {
+  return {
+    ...dossier,
+    issues: dossier.issues.map((issue) => ({
+      ...issue,
+      ...issueManagementActions(issue.status, canManageIssues),
+    })),
+  };
+}
+
+export function transitionTaskIssue(
+  db: SqliteDatabase,
+  taskId: string,
+  entryId: string,
+  action: IssueTransitionAction,
+  actor: DossierActor,
+  occurredAt: string,
+): TaskDossierResult<NonNullable<ReturnType<typeof readTaskDossier>>> & { alreadyApplied?: boolean } {
+  const located = locateTask(db, taskId);
+  if (!located) {
+    return { ok: false, error: "not_found" };
+  }
+  const entry = db
+    .prepare(
+      `
+      SELECT entry.entry_id, entry.kind, lifecycle.status AS issue_status,
+             lifecycle.acknowledged_at, lifecycle.acknowledged_by_account_id,
+             lifecycle.acknowledged_by_operator_id, lifecycle.resolved_at,
+             lifecycle.resolved_by_account_id, lifecycle.resolved_by_operator_id
+      FROM execution_task_dossier_entries AS entry
+      LEFT JOIN execution_task_issue_lifecycle AS lifecycle
+        ON lifecycle.entry_id = entry.entry_id
+      WHERE entry.entry_id = ? AND entry.task_id = ?
+    `,
+    )
+    .get(entryId, taskId) as (Pick<EntryRow, "entry_id" | "kind" | "issue_status"> & LifecycleRow) | undefined;
+  if (!entry || entry.kind !== "ISSUE_REPORT") {
+    return { ok: false, error: "not_found" };
+  }
+  const current = resolveIssueStatus(entry.issue_status);
+  const transition = applyIssueTransition({ current, action });
+  if (!transition.ok) {
+    return transition;
+  }
+  if (!transition.alreadyApplied) {
+    const run = db.transaction(() => {
+      upsertIssueLifecycle(db, {
+        entryId,
+        next: transition.next,
+        current,
+        actor,
+        occurredAt,
+        existing: entry,
+      });
+      recordDossierEvent(db, {
+        planId: located.planId,
+        taskId,
+        jobId: located.jobId,
+        eventKind: issueTransitionEventKind(action),
+        actorAccountId: actor.accountId,
+        actorOperatorId: actor.operatorId,
+        occurredAt,
+        entryId,
+        detail: {
+          kind: "ISSUE_REPORT",
+          status: transition.next,
+        },
+      });
+    });
+    run();
+  }
+  const dossier = readTaskDossier(db, taskId);
+  if (!dossier) {
+    return { ok: false, error: "not_found" };
+  }
+  return { ok: true, dossier, alreadyApplied: transition.alreadyApplied };
+}
+
+export function readActiveIssueCountByJobId(db: SqliteDatabase): Map<string, number> {
+  const rows = db
+    .prepare(
+      `
+      SELECT entry.job_id AS job_id, COUNT(*) AS n
+      FROM execution_task_dossier_entries AS entry
+      LEFT JOIN execution_task_issue_lifecycle AS lifecycle
+        ON lifecycle.entry_id = entry.entry_id
+      WHERE entry.kind = 'ISSUE_REPORT'
+        AND entry.job_id IS NOT NULL
+        AND (lifecycle.status IS NULL OR lifecycle.status IN ('OPEN', 'ACKNOWLEDGED'))
+      GROUP BY entry.job_id
+    `,
+    )
+    .all() as Array<{ job_id: string; n: number }>;
+  return new Map(rows.map((row) => [row.job_id, row.n]));
+}
+
+export function readJobIssueReports(
+  db: SqliteDatabase,
+  jobId: string,
+  plan: { tasks: readonly { taskId: string; seqLabel: string; processLabel: string; scopeLabel: string }[] } | null,
+) {
+  const entries = db
+    .prepare(
+      `
+      SELECT entry.*, lifecycle.status AS issue_status,
+             lifecycle.acknowledged_at, lifecycle.acknowledged_by_operator_id,
+             lifecycle.resolved_at, lifecycle.resolved_by_operator_id
+      FROM execution_task_dossier_entries AS entry
+      LEFT JOIN execution_task_issue_lifecycle AS lifecycle
+        ON lifecycle.entry_id = entry.entry_id
+      WHERE entry.job_id = ? AND entry.kind = 'ISSUE_REPORT'
+      ORDER BY entry.created_at ASC, entry.entry_id ASC
+    `,
+    )
+    .all(jobId) as EntryRow[];
+  const events = db
+    .prepare(
+      `
+      SELECT event_id, event_kind, actor_account_id, actor_operator_id, occurred_at,
+             entry_id, artifact_id, detail_json
+      FROM execution_task_dossier_events
+      WHERE job_id = ? AND event_kind IN ('ISSUE_REPORTED', 'ISSUE_ACKNOWLEDGED', 'ISSUE_RESOLVED')
+      ORDER BY occurred_at ASC, event_id ASC
+    `,
+    )
+    .all(jobId) as EventRow[];
+  const taskLabel = (taskId: string) => {
+    const task = plan?.tasks.find((item) => item.taskId === taskId);
+    return task ? `${task.seqLabel} · ${task.processLabel} · ${task.scopeLabel}` : null;
+  };
+  return entries.map((row) => {
+    const status = resolveIssueStatus(row.issue_status);
+    return {
+      entryId: row.entry_id,
+      taskId: row.task_id,
+      taskLabel: taskLabel(row.task_id),
+      jobId: row.job_id,
+      body: row.body,
+      reasonCode: row.reason_code,
+      reasonLabel: isIssueReason(row.reason_code) ? issueReasonLabel(row.reason_code) : null,
+      status,
+      statusLabel: issueStatusLabel(status),
+      authorLabel: personLabel(db, row.author_operator_id),
+      createdAt: row.created_at,
+      acknowledgedAt: row.acknowledged_at,
+      acknowledgedByLabel: personLabel(db, row.acknowledged_by_operator_id),
+      resolvedAt: row.resolved_at,
+      resolvedByLabel: personLabel(db, row.resolved_by_operator_id),
+      history: events
+        .filter((event) => event.entry_id === row.entry_id)
+        .map((event) => ({
+          kind: event.event_kind,
+          label: issueEventLabel(event.event_kind) ?? "Înregistrare problemă",
+          actorLabel: personLabel(db, event.actor_operator_id),
+          occurredAt: event.occurred_at,
+        })),
+    };
+  });
+}
+
+export function presentJobIssuesForViewer(
+  issues: ReturnType<typeof readJobIssueReports>,
+  canManageIssues: boolean,
+) {
+  return issues.map((issue) => ({
+    ...issue,
+    ...issueManagementActions(issue.status, canManageIssues),
+  }));
 }
 
 export function addTaskArtifact(
@@ -908,4 +1134,100 @@ function parseDetail(raw: string): Record<string, string | null> {
 
 function isIssueReason(value: string | null): value is IssueReasonCode {
   return value === "MATERIAL" || value === "MACHINE" || value === "DRAWING" || value === "QUALITY" || value === "OTHER";
+}
+
+function insertIssueLifecycle(
+  db: SqliteDatabase,
+  entryId: string,
+  status: IssueStatus,
+  updatedAt: string,
+  acknowledged: { at: string; accountId: string; operatorId: string | null } | null,
+  resolved: { at: string; accountId: string; operatorId: string | null } | null,
+): void {
+  db.prepare(
+    `
+    INSERT INTO execution_task_issue_lifecycle (
+      entry_id, status, acknowledged_at, acknowledged_by_account_id, acknowledged_by_operator_id,
+      resolved_at, resolved_by_account_id, resolved_by_operator_id, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `,
+  ).run(
+    entryId,
+    status,
+    acknowledged?.at ?? null,
+    acknowledged?.accountId ?? null,
+    acknowledged?.operatorId ?? null,
+    resolved?.at ?? null,
+    resolved?.accountId ?? null,
+    resolved?.operatorId ?? null,
+    updatedAt,
+  );
+}
+
+function upsertIssueLifecycle(
+  db: SqliteDatabase,
+  input: {
+    entryId: string;
+    next: IssueStatus;
+    current: IssueStatus;
+    actor: DossierActor;
+    occurredAt: string;
+    existing: LifecycleRow;
+  },
+): void {
+  const acknowledged =
+    input.next === "ACKNOWLEDGED" || (input.next === "RESOLVED" && input.current === "ACKNOWLEDGED")
+      ? {
+          at: input.existing.acknowledged_at ?? (input.next === "ACKNOWLEDGED" ? input.occurredAt : null),
+          accountId:
+            input.existing.acknowledged_by_account_id ??
+            (input.next === "ACKNOWLEDGED" ? input.actor.accountId : null),
+          operatorId:
+            input.existing.acknowledged_by_operator_id ??
+            (input.next === "ACKNOWLEDGED" ? input.actor.operatorId : null),
+        }
+      : {
+          at: input.existing.acknowledged_at,
+          accountId: input.existing.acknowledged_by_account_id,
+          operatorId: input.existing.acknowledged_by_operator_id,
+        };
+  const resolved =
+    input.next === "RESOLVED"
+      ? {
+          at: input.existing.resolved_at ?? input.occurredAt,
+          accountId: input.existing.resolved_by_account_id ?? input.actor.accountId,
+          operatorId: input.existing.resolved_by_operator_id ?? input.actor.operatorId,
+        }
+      : {
+          at: input.existing.resolved_at,
+          accountId: input.existing.resolved_by_account_id,
+          operatorId: input.existing.resolved_by_operator_id,
+        };
+  db.prepare(
+    `
+    INSERT INTO execution_task_issue_lifecycle (
+      entry_id, status, acknowledged_at, acknowledged_by_account_id, acknowledged_by_operator_id,
+      resolved_at, resolved_by_account_id, resolved_by_operator_id, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(entry_id) DO UPDATE SET
+      status = excluded.status,
+      acknowledged_at = excluded.acknowledged_at,
+      acknowledged_by_account_id = excluded.acknowledged_by_account_id,
+      acknowledged_by_operator_id = excluded.acknowledged_by_operator_id,
+      resolved_at = excluded.resolved_at,
+      resolved_by_account_id = excluded.resolved_by_account_id,
+      resolved_by_operator_id = excluded.resolved_by_operator_id,
+      updated_at = excluded.updated_at
+  `,
+  ).run(
+    input.entryId,
+    input.next,
+    acknowledged.at,
+    acknowledged.accountId,
+    acknowledged.operatorId,
+    resolved.at,
+    resolved.accountId,
+    resolved.operatorId,
+    input.occurredAt,
+  );
 }

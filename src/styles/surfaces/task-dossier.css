@@ -49,6 +49,57 @@
   border-left: 3px solid var(--color-warning);
 }
 
+.task-dossier__issue-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.task-dossier__status {
+  display: inline-flex;
+  padding: 2px 8px;
+  font: 600 12px/1.4 var(--font-sans);
+  border-radius: var(--radius-badge);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.task-dossier__status[data-status="ACKNOWLEDGED"] {
+  background: var(--color-info-soft);
+  color: var(--color-info);
+}
+
+.task-dossier__status[data-status="RESOLVED"] {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.task-dossier__reason {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.task-dossier__issue-history {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.task-dossier__issue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.task-dossier__note[data-issue-status="RESOLVED"] {
+  border-left-color: var(--color-success);
+  opacity: 0.92;
+}
+
 .task-dossier__actions .button,
 .task-dossier__composer .button {
   font-size: 14px;

@@ -2,7 +2,7 @@ import { render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
-import type { JobRecord, WorkHoursTask } from "../../api/jobRecord";
+import type { JobIssue, JobRecord, WorkHoursTask } from "../../api/jobRecord";
 import type { JobSheetSection } from "../../routing/appRoute";
 import { jobRecordFixture } from "../../test/jobRecordFixture";
 import { JobRecordView } from "../JobRecordView";
@@ -200,6 +200,45 @@ describe("N-010 job sheet UX correction", () => {
     await waitFor(() => expect(returned).toHaveFocus());
     expect(returned).toHaveAttribute("aria-expanded", "false");
     expect(operationNames()).toEqual(["01 · Debitare", "02 · Frezare", "03 · Vopsire", "04 · Lipire", "05 · Control"]);
+  });
+
+  it("lists reported issues on the job situation with the affected operation", () => {
+    const issue: JobIssue = {
+      entryId: "iss-1",
+      taskId: "t4",
+      taskLabel: "04 · Lipire · Ansamblu",
+      body: "Vibrație anormală CNC. Am oprit lucrul.",
+      reasonCode: "MACHINE",
+      reasonLabel: "Utilaj",
+      status: "OPEN",
+      statusLabel: "Deschisă",
+      authorLabel: "Florin CNC",
+      createdAt: "2026-11-07T09:00:00.000Z",
+      acknowledgedAt: null,
+      acknowledgedByLabel: null,
+      resolvedAt: null,
+      resolvedByLabel: null,
+      canAcknowledge: true,
+      canResolve: true,
+      history: [
+        {
+          kind: "ISSUE_REPORTED",
+          label: "Problemă semnalată",
+          actorLabel: "Florin CNC",
+          occurredAt: "2026-11-07T09:00:00.000Z",
+        },
+      ],
+    };
+    render(<View record={{ ...plan, issues: [issue] }} section="situatie" />);
+    const issues = screen.getByRole("region", { name: "Probleme semnalate" });
+    expect(within(issues).getByText("Deschisă")).toBeVisible();
+    expect(within(issues).getByText("Vibrație anormală CNC. Am oprit lucrul.")).toBeVisible();
+    expect(within(issues).getByRole("link", { name: "04 · Lipire · Ansamblu" })).toHaveAttribute(
+      "href",
+      "/lucrari/job-1?task=t4&sectiune=operatii",
+    );
+    expect(within(issues).getByRole("button", { name: "Preia problema" })).toBeVisible();
+    expect(within(issues).getByRole("button", { name: "Marchează rezolvată" })).toBeVisible();
   });
 
   it("lists a job that has no plan without turning the absence into a blockage", () => {

@@ -745,6 +745,8 @@ export type JobListItemTransport = {
   overdue: boolean;
   needsAttention: boolean;
   attentionLabel: string | null;
+  /** Open plus acknowledged reports on this job; absent or 0 when the server sends none. */
+  activeIssueCount?: number;
   progressLabel: string | null;
   /** Operation counts of the execution plan, when the server sends them; never derived from text. */
   completedCount?: number | null;

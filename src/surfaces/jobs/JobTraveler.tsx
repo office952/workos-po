@@ -3,7 +3,16 @@ import { formatTimestamp } from "../../presentation/format";
 import { presentJobWorklistAction } from "../../presentation/worklistAction";
 import { jobHref } from "../../routing/appRoute";
 import { DeskActions, DeskSheet } from "../desk/DeskDossier";
-import { jobName, operationProgress, progressText, ROUTE_MARK_LABEL, routeMarks, STATIONS } from "./jobRegistryModel";
+import {
+  issueAttentionIsPrimary,
+  jobName,
+  operationProgress,
+  presentActiveIssueMark,
+  progressText,
+  ROUTE_MARK_LABEL,
+  routeMarks,
+  STATIONS,
+} from "./jobRegistryModel";
 
 /** Where a presented action lands, said in words; derived from the href the presenter built. */
 function destination(href: string, job: JobListItemTransport): string {
@@ -20,6 +29,7 @@ export function JobTraveler({ job }: { job: JobListItemTransport }) {
   const progress = operationProgress(job);
   const operationsHref = jobHref(job.jobId, { section: "operatii" });
   const created = formatTimestamp(job.createdAt);
+  const issueMark = presentActiveIssueMark(job);
   const destinations = [{ action: action.actionLabel, target: destination(action.actionHref, job) }];
   if (action.actionHref !== sheetHref) destinations.push({ action: "Fișa lucrării", target: "fișa completă a lucrării" });
 
@@ -54,7 +64,20 @@ export function JobTraveler({ job }: { job: JobListItemTransport }) {
         <div><dt>Prioritate</dt><dd>{job.priorityLabel}</dd></div>
         <div><dt>Termen</dt><dd data-missing={!job.targetDate || undefined}>{job.targetDateLabel}</dd></div>
       </dl>
-      {job.attentionLabel ? <p className="rdesk-sheet__note" data-tone="attention">{job.attentionLabel}</p> : null}
+      {job.attentionLabel || issueMark ? (
+        <div className="rdesk-signals">
+          {job.attentionLabel ? (
+            <p className="rdesk-sheet__note" data-tone="attention" data-issue={issueAttentionIsPrimary(job.attentionLabel) || undefined}>
+              {job.attentionLabel}
+            </p>
+          ) : null}
+          {issueMark ? (
+            <p className="rdesk-sheet__note" data-tone="attention" data-issue aria-label={issueMark.accessible}>
+              <span aria-hidden="true">{issueMark.text}</span>
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <hr className="rdesk-sheet__perforation" />
       {/* N-018 · the list item carries only how many operations are in progress; their names and
           components are not in this contract, so the dossier sends to the Operații section. */}

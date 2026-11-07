@@ -70,6 +70,37 @@ export function progressText(job: JobListItemTransport): string {
   return job.progressLabel ?? "Fără plan de execuție";
 }
 
+/** Server labels that already name the active issues as the primary attention reason. */
+const ISSUE_PRIMARY_LABELS = new Set(["Problemă semnalată", "Probleme semnalate"]);
+
+export function issueAttentionIsPrimary(label: string | null | undefined): boolean {
+  return label != null && ISSUE_PRIMARY_LABELS.has(label);
+}
+
+export type ActiveIssueMark = {
+  text: string;
+  accessible: string;
+};
+
+/**
+ * Compact mark from the server's activeIssueCount. The count is always shown when
+ * another attention reason takes precedence. A single-issue primary label is left
+ * alone; a plural primary label keeps the number without repeating the phrase.
+ */
+export function presentActiveIssueMark(
+  job: Pick<JobListItemTransport, "activeIssueCount" | "attentionLabel">,
+): ActiveIssueMark | null {
+  const count = job.activeIssueCount ?? 0;
+  if (count <= 0) return null;
+  const accessible = count === 1 ? "1 problemă semnalată" : `${count} probleme semnalate`;
+  if (issueAttentionIsPrimary(job.attentionLabel) && count === 1) return null;
+  if (issueAttentionIsPrimary(job.attentionLabel)) return { text: String(count), accessible };
+  return {
+    text: count === 1 ? "1 problemă" : `${count} probleme`,
+    accessible,
+  };
+}
+
 export type JobFocus = "all" | "urgent" | "overdue";
 export type JobSort = "newest" | "oldest";
 
@@ -88,9 +119,9 @@ export const FOCUS_OPTIONS: readonly { id: JobFocus; label: string }[] = [
   { id: "overdue", label: "Termen depășit" },
 ];
 
-/** Attention on a finished job is consultation, not work: it stays out of "Necesită acțiune". */
+/** The server owns attention, including unresolved issues on a finished job. */
 function needsAction(job: JobListItemTransport): boolean {
-  return job.needsAttention && job.stage !== "EXECUTION_COMPLETED";
+  return job.needsAttention;
 }
 
 function dateValue(value: string | null): number | null {

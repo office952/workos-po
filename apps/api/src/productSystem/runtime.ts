@@ -109,6 +109,7 @@ import {
   type QualityControlProjectionInput,
   type TaskCompletionInput,
   type TaskMutationResult,
+  type IssueTransitionAction,
   type ProviderBindingStamp,
   projectResourcesAdministration,
   siteInstallationEvidenceFromRows,
@@ -171,9 +172,11 @@ import {
   addJobArtifact as storeAddJobArtifact,
   linkTaskArtifact as storeLinkTaskArtifact,
   markTaskArtifactUsed as storeMarkTaskArtifactUsed,
+  readActiveIssueCountByJobId,
   readJobFileArchive as storeReadJobFileArchive,
   readTaskArtifactDownload as storeReadTaskArtifactDownload,
   readTaskDossier as storeReadTaskDossier,
+  transitionTaskIssue as storeTransitionTaskIssue,
 } from "../execution/taskDossierStore.js";
 import {
   persistQualityCorrectionClose,
@@ -483,6 +486,13 @@ export type ProductSystemRuntime = {
     createdAt: string,
     reasonCode?: unknown,
   ): ReturnType<typeof storeAddTaskDossierEntry>;
+  transitionTaskIssue(
+    taskId: string,
+    entryId: string,
+    action: IssueTransitionAction,
+    actor: { accountId: string; operatorId: string | null },
+    occurredAt: string,
+  ): ReturnType<typeof storeTransitionTaskIssue>;
   addTaskArtifact(
     taskId: string,
     input: {
@@ -1132,6 +1142,9 @@ export function createProductSystemRuntimeFromOpenDb(
     },
     addTaskDossierEntry(taskId, kind, body, actor, createdAt, reasonCode) {
       return storeAddTaskDossierEntry(db, taskId, kind, body, actor, createdAt, reasonCode);
+    },
+    transitionTaskIssue(taskId, entryId, action, actor, occurredAt) {
+      return storeTransitionTaskIssue(db, taskId, entryId, action, actor, occurredAt);
     },
     addTaskArtifact(taskId, input, actor, uploadedAt) {
       return storeAddTaskArtifact(db, taskId, input, actor, uploadedAt, documentsRoot);
@@ -1932,6 +1945,7 @@ function jobOverviewItems(
 ) {
   const people = listPeople(db);
   const external = externalProductionProjection(db);
+  const activeIssueCountByJob = readActiveIssueCountByJobId(db);
   const productJobs = listOrderSnapshots(db).map((order) => {
     const release = getAcceptedProductionSnapshotByOrder(db, order.orderSnapshotId);
     const record = release
@@ -1945,6 +1959,7 @@ function jobOverviewItems(
       organizationId,
       requestId: requestLink?.requestId ?? null,
       planning,
+      activeIssueCount: activeIssueCountByJob.get(order.orderSnapshotId) ?? 0,
       planView: record
         ? projectExecutionPlanView(
             record,
@@ -1980,6 +1995,7 @@ function jobOverviewItems(
       orderSnapshotId: order.orderSnapshotId,
       organizationId,
       requestId: order.requestId,
+      activeIssueCount: activeIssueCountByJob.get(order.orderSnapshotId) ?? 0,
       label: order.label,
       createdAt: order.createdAt,
       members: order.members.map((member) => ({

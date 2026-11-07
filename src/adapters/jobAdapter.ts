@@ -65,6 +65,7 @@ export function presentJobItem(value: unknown): JobListItemTransport | null {
     overdue: asBoolean(row.overdue) ?? false,
     needsAttention: asBoolean(row.needsAttention) ?? false,
     attentionLabel: asString(row.attentionLabel),
+    activeIssueCount: asNumber(row.activeIssueCount) ?? 0,
     progressLabel: asString(row.progressLabel),
     completedCount: asNumber(row.completedCount),
     taskCount: asNumber(row.taskCount),

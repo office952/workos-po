@@ -42,7 +42,9 @@ export function registerJobRoutes(app: Hono<ApiEnv>): void {
     const located = locateJob(runtime, jobId);
     if (!located) return c.json({ error: "not_found" }, 404);
     const plan = located.job.planId ? runtime.readExecutionPlan(located.job.planId) : null;
-    return c.json({ record: readJobRecord(runtime.assemblyPlane().db, jobId, plan, new Date().toISOString()) });
+    return c.json({
+      record: readJobRecord(runtime.assemblyPlane().db, jobId, plan, new Date().toISOString(), isOwner(c)),
+    });
   });
 
   app.patch("/api/jobs/:jobId/planning", requireOwnerRole(), async (c) => {

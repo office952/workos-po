@@ -15,7 +15,28 @@ export type JobRecordFile = { artifactId: string; originalFileName: string; mime
   purpose: string | null; purposeLabel: string | null; note: string | null; preview: string; supersedesArtifactId: string | null;
   authorLabel: string | null; uploadedAt: string; downloadHref: string;
   usages: { taskId: string; taskLabel: string; linkedAt: string; usedAt: string | null; usedByLabel: string | null }[] };
+export type JobIssue = {
+  entryId: string;
+  taskId: string;
+  taskLabel: string | null;
+  body: string;
+  reasonCode: string | null;
+  reasonLabel: string | null;
+  status: string;
+  statusLabel: string;
+  authorLabel: string | null;
+  createdAt: string;
+  acknowledgedAt: string | null;
+  acknowledgedByLabel: string | null;
+  resolvedAt: string | null;
+  resolvedByLabel: string | null;
+  canAcknowledge: boolean;
+  canResolve: boolean;
+  history: { kind: string; label: string; actorLabel: string | null; occurredAt: string }[];
+};
+
 export type JobRecord = { jobId: string; files: JobRecordFile[];
+  issues?: JobIssue[];
   hours: { asOf: string; totalLabel: string; complete: boolean; completeTasks: number; applicableTasks: number;
     coverageLabel: string; startedAt: string | null; completedAt: string | null; elapsedLabel: string;
     activeTimeLabel: string; machineTimeLabel: string; machineActive: boolean; people: WorkPerson[]; tasks: WorkHoursTask[];

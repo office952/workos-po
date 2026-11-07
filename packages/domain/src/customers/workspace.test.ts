@@ -139,6 +139,7 @@ function jobItem(
     href: "/products/PRD-LETTERS-FRONTLIT-PLEXI-AL06?order=ord%3Aalpha",
     needsAttention: true,
     attentionLabel: "Urmează eliberarea",
+    activeIssueCount: 0,
     completedCount: null,
     taskCount: null,
     inProgressCount: null,

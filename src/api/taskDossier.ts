@@ -10,6 +10,25 @@ export type DossierEntry = {
   createdAt: string;
 };
 
+export type DossierIssueHistory = {
+  kind: string;
+  label: string;
+  actorLabel: string | null;
+  occurredAt: string;
+};
+
+export type DossierIssue = DossierEntry & {
+  status: string;
+  statusLabel: string;
+  acknowledgedAt: string | null;
+  acknowledgedByLabel: string | null;
+  resolvedAt: string | null;
+  resolvedByLabel: string | null;
+  canAcknowledge: boolean;
+  canResolve: boolean;
+  history: DossierIssueHistory[];
+};
+
 export type DossierFile = {
   artifactId: string;
   originalFileName: string;
@@ -40,7 +59,9 @@ export type TaskDossier = {
   taskId: string;
   instructions: DossierEntry[];
   observations: DossierEntry[];
-  issues: DossierEntry[];
+  issues: DossierIssue[];
+  planId?: string;
+  jobId?: string | null;
   files: DossierFile[];
   planFiles: DossierFile[];
   history: DossierHistoryEvent[];
@@ -76,6 +97,22 @@ export async function reportTaskIssue(
     reason,
     text,
   })) as { dossier: TaskDossier };
+  return body.dossier;
+}
+
+export async function acknowledgeTaskIssue(taskId: string, entryId: string): Promise<TaskDossier> {
+  const body = (await postJson(
+    `/api/execution-tasks/${encodeURIComponent(taskId)}/issues/${encodeURIComponent(entryId)}/acknowledge`,
+    {},
+  )) as { dossier: TaskDossier };
+  return body.dossier;
+}
+
+export async function resolveTaskIssue(taskId: string, entryId: string): Promise<TaskDossier> {
+  const body = (await postJson(
+    `/api/execution-tasks/${encodeURIComponent(taskId)}/issues/${encodeURIComponent(entryId)}/resolve`,
+    {},
+  )) as { dossier: TaskDossier };
   return body.dossier;
 }
 
