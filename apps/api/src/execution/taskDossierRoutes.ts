@@ -1,4 +1,4 @@
-import { TASK_ARTIFACT_HTTP_BODY_BYTES, type TaskDossierError } from "@workos-final/domain";
+import { TASK_ARTIFACT_HTTP_BODY_BYTES, type IssueTransitionAction, type TaskDossierError } from "@workos-final/domain";
 import type { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { getCookie } from "hono/cookie";
@@ -7,6 +7,7 @@ import { requireOwnerRole } from "../cloud/middleware.js";
 import { httpPathIdentity } from "../httpPathIdentity.js";
 import { actorUserId } from "../product.js";
 import { OPERATOR_SESSION_COOKIE } from "../operator/store.js";
+import { presentDossierForViewer } from "./taskDossierStore.js";
 
 export function registerTaskDossierRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/execution-tasks/:taskId/dossier", (c) => {
@@ -16,7 +17,7 @@ export function registerTaskDossierRoutes(app: Hono<ApiEnv>): void {
     if (!dossier) {
       return c.json({ error: "not_found" }, 404);
     }
-    return c.json({ dossier });
+    return c.json({ dossier: presentDossierForViewer(dossier, isOwner(c)) });
   });
 
   app.post("/api/execution-tasks/:taskId/observations", async (c) => {
@@ -73,6 +74,14 @@ export function registerTaskDossierRoutes(app: Hono<ApiEnv>): void {
       record?.reason,
     );
     return dossierResult(c, result);
+  });
+
+  app.post("/api/execution-tasks/:taskId/issues/:entryId/acknowledge", requireOwnerRole(), (c) => {
+    return issueTransitionResult(c, "ACKNOWLEDGE");
+  });
+
+  app.post("/api/execution-tasks/:taskId/issues/:entryId/resolve", requireOwnerRole(), (c) => {
+    return issueTransitionResult(c, "RESOLVE");
   });
 
   app.post(
@@ -281,14 +290,54 @@ function archiveResult(
   return c.json({ archive: result.archive });
 }
 
+function issueTransitionResult(c: ApiContext, action: IssueTransitionAction) {
+  const actor = writerActor(c);
+  if (!actor) {
+    return c.json({ error: "invalid_session" }, 403);
+  }
+  const suffix = action === "ACKNOWLEDGE" ? "/acknowledge" : "/resolve";
+  const target = issueTransitionTarget(c.req.path, suffix);
+  if (!target) {
+    return c.json({ error: "not_found" }, 404);
+  }
+  const result = getProductSystem(c).transitionTaskIssue(
+    target.taskId,
+    target.entryId,
+    action,
+    actor,
+    new Date().toISOString(),
+  );
+  return dossierResult(c, result);
+}
+
+function issueTransitionTarget(path: string, suffix: "/acknowledge" | "/resolve") {
+  const rest = httpPathIdentity(path, "/api/execution-tasks/", suffix);
+  const marker = "/issues/";
+  const index = rest.indexOf(marker);
+  if (index <= 0) {
+    return null;
+  }
+  const taskId = rest.slice(0, index);
+  const entryId = rest.slice(index + marker.length);
+  if (!taskId || !entryId || entryId.includes("/")) {
+    return null;
+  }
+  return { taskId, entryId };
+}
+
 function dossierResult(
   c: ApiContext,
-  result: { ok: true; dossier: unknown; alreadyApplied?: boolean } | { ok: false; error: TaskDossierError },
+  result:
+    | { ok: true; dossier: Parameters<typeof presentDossierForViewer>[0]; alreadyApplied?: boolean }
+    | { ok: false; error: TaskDossierError },
 ) {
   if (!result.ok) {
     return c.json({ error: result.error }, dossierStatus(result.error));
   }
-  return c.json({ dossier: result.dossier, alreadyApplied: result.alreadyApplied === true });
+  return c.json({
+    dossier: presentDossierForViewer(result.dossier, isOwner(c)),
+    alreadyApplied: result.alreadyApplied === true,
+  });
 }
 
 function dossierStatus(error: TaskDossierError): 400 | 403 | 404 | 409 | 413 | 422 {
@@ -306,6 +355,7 @@ function dossierStatus(error: TaskDossierError): 400 | 403 | 404 | 409 | 413 | 4
     case "invalid_reason":
     case "invalid_file":
     case "invalid_purpose":
+    case "invalid_issue_status":
     case "file_corrupt":
       return 422;
     case "storage_unavailable":

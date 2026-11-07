@@ -1,11 +1,12 @@
 import { readQualityControlForPlan } from '../execution/qualityControlStore.js';
-import { projectExecutionPlanView, projectWorkHours, type ExecutionPlanRecord } from '@workos-final/domain';
+import { issueEventLabel, projectExecutionPlanView, projectWorkHours, type ExecutionPlanRecord } from '@workos-final/domain';
 import type { SqliteDatabase } from '../persistence/sqlite.js';
-import { readJobFileArchive } from '../execution/taskDossierStore.js';
+import { presentJobIssuesForViewer, readJobFileArchive, readJobIssueReports } from '../execution/taskDossierStore.js';
 
 const EVENT_LABELS: Record<string, string> = {
   INSTRUCTION_ADDED: 'Instrucțiune adăugată', OBSERVATION_ADDED: 'Observație adăugată',
-  ISSUE_REPORTED: 'Problemă semnalată', ARTIFACT_UPLOADED: 'Fișier încărcat',
+  ISSUE_REPORTED: 'Problemă semnalată', ISSUE_ACKNOWLEDGED: 'Problemă preluată',
+  ISSUE_RESOLVED: 'Problemă rezolvată', ARTIFACT_UPLOADED: 'Fișier încărcat',
   ARTIFACT_LINKED: 'Fișier asociat', ARTIFACT_MARKED_USED: 'Fișier declarat folosit',
   PROVIDER_AUTO_BOUND: 'Utilaj asociat automat',
 };
@@ -13,7 +14,13 @@ type TimelineItem = { eventId: string; kind: string; label: string; actorLabel: 
   occurredAt: string; taskId: string | null; taskLabel: string | null; detail: string | null };
 
 /** Only reads the already located job's organization DB and canonical plan. No N-per-task HTTP fan-out. */
-export function readJobRecord(db: SqliteDatabase, jobId: string, plan: ExecutionPlanRecord | null, asOf: string) {
+export function readJobRecord(
+  db: SqliteDatabase,
+  jobId: string,
+  plan: ExecutionPlanRecord | null,
+  asOf: string,
+  canManageIssues = false,
+) {
   const archive = readJobFileArchive(db, jobId, plan?.plan.planId ?? null);
   const taskLabel = (id: string | null) => {
     const t = plan?.tasks.find(t => t.taskId === id);
@@ -71,7 +78,7 @@ export function readJobRecord(db: SqliteDatabase, jobId: string, plan: Execution
       detail_json: string; body: string | null }>;
     for (const e of events) {
       const detail = JSON.parse(e.detail_json) as Record<string, string | null>;
-      timeline.push({ eventId: e.event_id, kind: e.event_kind, label: EVENT_LABELS[e.event_kind] ?? 'Înregistrare în dosar',
+      timeline.push({ eventId: e.event_id, kind: e.event_kind, label: issueEventLabel(e.event_kind) ?? EVENT_LABELS[e.event_kind] ?? 'Înregistrare în dosar',
         actorLabel: personLabel(e.actor_operator_id), occurredAt: e.occurred_at, taskId: e.task_id,
         taskLabel: taskLabel(e.task_id), detail: e.body ?? detail.fileName ?? detail.providerLabel ?? null });
     }
@@ -99,5 +106,11 @@ export function readJobRecord(db: SqliteDatabase, jobId: string, plan: Execution
       externalProviderLabel: fact.externalProviderLabel ?? null,
       actualConsumption: fact.actualConsumption.map(a => ({ resourceLabel: a.resourceLabel, actualQuantity: a.actualQuantity, unit: a.unit })) };
   }) } : null;
-  return { jobId, hours: withResults, files, timeline };
+  return {
+    jobId,
+    hours: withResults,
+    files,
+    timeline,
+    issues: presentJobIssuesForViewer(readJobIssueReports(db, jobId, plan), canManageIssues),
+  };
 }

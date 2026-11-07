@@ -29,6 +29,7 @@ const LATER_MIGRATIONS = [
   "049_customer_logo.sql",
   "050_organization_product_preset_revisions.sql",
   "051_commercial_closure_ledger.sql",
+  "052_execution_issue_lifecycle.sql",
 ] as const;
 
 const LATER_TABLES = [
@@ -39,6 +40,7 @@ const LATER_TABLES = [
   "commercial_ledger_operations",
   "commercial_ledger_events",
   "commercial_offer_dispositions",
+  "execution_task_issue_lifecycle",
 ] as const;
 
 afterEach(() => {
@@ -133,7 +135,7 @@ function sessionCounts(controlPath: string, planePath: string): { platform: numb
   }
 }
 
-describe("N-019 compatibility with migrations 048-051", () => {
+describe("N-019 compatibility with migrations 048-052", () => {
   it("upgrades a schema-047 synthetic copy once, keeps existing rows and the ledger, and does not duplicate on resume", async () => {
     const { root, organizationId, password, email } = await provisionedDemoRoot();
     const ledgerBefore = readFileSync(join(root, DEMO_ATELIER_LEDGER));
