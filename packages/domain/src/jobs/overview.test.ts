@@ -520,6 +520,125 @@ describe("job overview projection", () => {
     ).toBe("Lipsă utilaj dedicat");
   });
 
+  it("raises job attention for open issues without replacing provider attention", () => {
+    const idle = projectJobOverviewItem({
+      order: order(),
+      release: release(),
+      planView: planView("IN_PROGRESS", {
+        tasks: [
+          taskStub({
+            status: "IN_PROGRESS",
+            requiresProvider: true,
+            assignedProvider: { id: "wc:cnc", kind: "WORKCENTER", label: "CNC 4020" },
+          }),
+        ],
+      }),
+    });
+    const reported = projectJobOverviewItem({
+      order: order(),
+      release: release(),
+      planView: planView("IN_PROGRESS", {
+        tasks: [
+          taskStub({
+            status: "IN_PROGRESS",
+            requiresProvider: true,
+            assignedProvider: { id: "wc:cnc", kind: "WORKCENTER", label: "CNC 4020" },
+          }),
+        ],
+      }),
+      activeIssueCount: 1,
+    });
+    const many = projectJobOverviewItem({
+      order: order(),
+      release: release(),
+      planView: planView("IN_PROGRESS", {
+        tasks: [
+          taskStub({
+            status: "IN_PROGRESS",
+            requiresProvider: true,
+            assignedProvider: { id: "wc:cnc", kind: "WORKCENTER", label: "CNC 4020" },
+          }),
+        ],
+      }),
+      activeIssueCount: 2,
+    });
+    const providerAndIssue = projectJobOverviewItem({
+      order: order(),
+      release: release(),
+      planView: planView("PLANNED", {
+        tasks: [taskStub({ status: "PLANNED", requiresProvider: true, assignedProvider: null })],
+      }),
+      activeIssueCount: 1,
+    });
+    const resolved = projectJobOverviewItem({
+      order: order(),
+      release: release(),
+      planView: planView("IN_PROGRESS", {
+        tasks: [
+          taskStub({
+            status: "IN_PROGRESS",
+            requiresProvider: true,
+            assignedProvider: { id: "wc:cnc", kind: "WORKCENTER", label: "CNC 4020" },
+          }),
+        ],
+      }),
+      activeIssueCount: 0,
+    });
+    expect(idle.needsAttention).toBe(false);
+    expect(reported.needsAttention).toBe(true);
+    expect(reported.attentionLabel).toBe("Problemă semnalată");
+    expect(reported.activeIssueCount).toBe(1);
+    expect(many.attentionLabel).toBe("Probleme semnalate");
+    expect(filterJobOverview(projectJobOverview([many]), "NEEDS_ACTION")).toHaveLength(1);
+    expect(providerAndIssue.attentionLabel).toBe("Lipsă utilaj dedicat");
+    expect(providerAndIssue.needsAttention).toBe(true);
+    expect(providerAndIssue.activeIssueCount).toBe(1);
+    expect(resolved.needsAttention).toBe(false);
+    expect(resolved.attentionLabel).toBeNull();
+  });
+
+  it("raises issue attention on an assembly job already in execution", () => {
+    const assembly = projectAssemblyJobOverviewItem({
+      orderSnapshotId: "asmo:running",
+      organizationId: "org:workshop",
+      requestId: "crq:1",
+      label: "Panou ACM + litere volumetrice",
+      createdAt: "2026-09-20T08:00:00.000Z",
+      members: [
+        { role: "SUPPORT_PANEL", inscription: "PANOU" },
+        { role: "SIGNAGE_LETTERS", inscription: "LITERE" },
+      ],
+      customer: { customerId: "cus:1", displayName: "Client Ansamblu" },
+      releaseSnapshotId: "rel:1",
+      planView: planView("IN_PROGRESS", {
+        tasks: [
+          taskStub({
+            status: "IN_PROGRESS",
+            requiresProvider: true,
+            assignedProvider: { id: "wc:cnc", kind: "WORKCENTER", label: "CNC 4020" },
+          }),
+        ],
+      }),
+      activeIssueCount: 1,
+    });
+    expect(assembly.kind).toBe("ASSEMBLY");
+    expect(assembly.needsAttention).toBe(true);
+    expect(assembly.attentionLabel).toBe("Problemă semnalată");
+  });
+
+  it("keeps unresolved issues on a completed job in the needs-action filter", () => {
+    const completedOpen = projectJobOverviewItem({
+      order: order("DONE-ISSUE"),
+      release: release(),
+      planView: planView("COMPLETED"),
+      activeIssueCount: 1,
+    });
+    expect(completedOpen.stage).toBe("EXECUTION_COMPLETED");
+    expect(completedOpen.needsAttention).toBe(true);
+    expect(completedOpen.attentionLabel).toBe("Problemă semnalată");
+    expect(filterJobOverview(projectJobOverview([completedOpen]), "NEEDS_ACTION")).toHaveLength(1);
+  });
+
   it("excludes completed jobs from the needs-action filter", () => {
     const overview = projectJobOverview([
       projectJobOverviewItem({ order: order("A"), release: null, planView: null }),

@@ -4,6 +4,18 @@ export type DossierEntryKind = (typeof DOSSIER_ENTRY_KINDS)[number];
 export const ISSUE_REASON_CODES = ["MATERIAL", "MACHINE", "DRAWING", "QUALITY", "OTHER"] as const;
 export type IssueReasonCode = (typeof ISSUE_REASON_CODES)[number];
 
+export const ISSUE_STATUSES = ["OPEN", "ACKNOWLEDGED", "RESOLVED"] as const;
+export type IssueStatus = (typeof ISSUE_STATUSES)[number];
+
+export const ISSUE_TRANSITION_ACTIONS = ["ACKNOWLEDGE", "RESOLVE"] as const;
+export type IssueTransitionAction = (typeof ISSUE_TRANSITION_ACTIONS)[number];
+
+export const ACTIVE_ISSUE_STATUSES = ["OPEN", "ACKNOWLEDGED"] as const;
+export type ActiveIssueStatus = (typeof ACTIVE_ISSUE_STATUSES)[number];
+
+export const ISSUE_ATTENTION_LABEL = "Problemă semnalată";
+export const ISSUE_ATTENTION_LABEL_PLURAL = "Probleme semnalate";
+
 export const DOSSIER_TEXT_MAX_LENGTH = 2000;
 export const TASK_ARTIFACT_MAX_BYTES = 50 * 1024 * 1024;
 export const TASK_ARTIFACT_MULTIPART_ENVELOPE_BYTES = 256 * 1024;
@@ -22,6 +34,7 @@ export const TASK_DOSSIER_ERRORS = [
   "forbidden",
   "artifact_scope",
   "invalid_purpose",
+  "invalid_issue_status",
 ] as const;
 export type TaskDossierError = (typeof TASK_DOSSIER_ERRORS)[number];
 
@@ -114,6 +127,118 @@ export function issueReasonLabel(code: IssueReasonCode): string {
       return "Altceva";
     default: {
       const exhaustive: never = code;
+      return exhaustive;
+    }
+  }
+}
+
+export function issueStatusLabel(status: IssueStatus): string {
+  switch (status) {
+    case "OPEN":
+      return "Deschisă";
+    case "ACKNOWLEDGED":
+      return "Preluată";
+    case "RESOLVED":
+      return "Rezolvată";
+    default: {
+      const exhaustive: never = status;
+      return exhaustive;
+    }
+  }
+}
+
+export function issueTransitionEventKind(action: IssueTransitionAction): "ISSUE_ACKNOWLEDGED" | "ISSUE_RESOLVED" {
+  switch (action) {
+    case "ACKNOWLEDGE":
+      return "ISSUE_ACKNOWLEDGED";
+    case "RESOLVE":
+      return "ISSUE_RESOLVED";
+    default: {
+      const exhaustive: never = action;
+      return exhaustive;
+    }
+  }
+}
+
+export function issueEventLabel(kind: string): string | null {
+  switch (kind) {
+    case "ISSUE_REPORTED":
+      return "Problemă semnalată";
+    case "ISSUE_ACKNOWLEDGED":
+      return "Problemă preluată";
+    case "ISSUE_RESOLVED":
+      return "Problemă rezolvată";
+    default:
+      return null;
+  }
+}
+
+export function isIssueStatus(value: unknown): value is IssueStatus {
+  return value === "OPEN" || value === "ACKNOWLEDGED" || value === "RESOLVED";
+}
+
+export function isActiveIssueStatus(status: IssueStatus): status is ActiveIssueStatus {
+  return status === "OPEN" || status === "ACKNOWLEDGED";
+}
+
+export function resolveIssueStatus(value: unknown): IssueStatus {
+  return isIssueStatus(value) ? value : "OPEN";
+}
+
+export function presentIssueAttention(activeIssueCount: number): string | null {
+  if (activeIssueCount <= 0) {
+    return null;
+  }
+  return activeIssueCount === 1 ? ISSUE_ATTENTION_LABEL : ISSUE_ATTENTION_LABEL_PLURAL;
+}
+
+export function issueManagementActions(
+  status: IssueStatus,
+  canManage: boolean,
+): { canAcknowledge: boolean; canResolve: boolean } {
+  if (!canManage) {
+    return { canAcknowledge: false, canResolve: false };
+  }
+  return {
+    canAcknowledge: status === "OPEN",
+    canResolve: status === "OPEN" || status === "ACKNOWLEDGED",
+  };
+}
+
+export function applyIssueTransition(input: {
+  current: IssueStatus;
+  action: IssueTransitionAction;
+}):
+  | { ok: true; next: IssueStatus; alreadyApplied: boolean }
+  | { ok: false; error: "invalid_issue_status" } {
+  switch (input.action) {
+    case "ACKNOWLEDGE":
+      switch (input.current) {
+        case "OPEN":
+          return { ok: true, next: "ACKNOWLEDGED", alreadyApplied: false };
+        case "ACKNOWLEDGED":
+          return { ok: true, next: "ACKNOWLEDGED", alreadyApplied: true };
+        case "RESOLVED":
+          return { ok: false, error: "invalid_issue_status" };
+        default: {
+          const exhaustive: never = input.current;
+          return exhaustive;
+        }
+      }
+    case "RESOLVE":
+      switch (input.current) {
+        case "OPEN":
+        case "ACKNOWLEDGED":
+          return { ok: true, next: "RESOLVED", alreadyApplied: false };
+        case "RESOLVED":
+          return { ok: true, next: "RESOLVED", alreadyApplied: true };
+        default: {
+          const exhaustive: never = input.current;
+          return exhaustive;
+        }
+      }
+    default: {
+      const exhaustive: never = input.action;
       return exhaustive;
     }
   }

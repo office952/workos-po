@@ -9,6 +9,7 @@ import {
 } from "../execution/plan.js";
 import type { AcceptedProductionSnapshot } from "../production/snapshot.js";
 import { matchesSearchFields } from "../searchNormalize.js";
+import { presentIssueAttention } from "../execution/taskDossier.js";
 import {
   DEFAULT_OPERATIONAL_PRIORITY,
   OVERDUE_ATTENTION_LABEL,
@@ -75,6 +76,7 @@ export type JobOverviewItem = {
   overdue: boolean;
   needsAttention: boolean;
   attentionLabel: string | null;
+  activeIssueCount: number;
   completedCount: number | null;
   taskCount: number | null;
   inProgressCount: number | null;
@@ -232,12 +234,14 @@ export function deriveJobAttention(input: {
   tasks: readonly ExecutionTaskView[];
   targetDate?: string | null;
   today?: string;
+  activeIssueCount?: number;
 }): { needsAttention: boolean; attentionLabel: string | null; overdue: boolean } {
   const overdue = isOperationallyOverdue({
     targetDate: input.targetDate ?? null,
     stage: input.stage,
     today: input.today ?? utcToday(),
   });
+  const issueAttention = presentIssueAttention(input.activeIssueCount ?? 0);
   if (input.stage === "ORDER_CREATED") {
     return {
       needsAttention: true,
@@ -265,6 +269,9 @@ export function deriveJobAttention(input: {
   }
   if (overdue) {
     return { needsAttention: true, attentionLabel: OVERDUE_ATTENTION_LABEL, overdue: true };
+  }
+  if (issueAttention) {
+    return { needsAttention: true, attentionLabel: issueAttention, overdue };
   }
   return { needsAttention: false, attentionLabel: null, overdue: false };
 }
@@ -346,6 +353,7 @@ export function projectJobOverviewItem(input: {
   requestId?: string | null;
   planning?: OperationalJobPlanning | null;
   today?: string;
+  activeIssueCount?: number;
 }): JobOverviewItem {
   return projectOperationalJob({
     jobId: input.order.orderSnapshotId,
@@ -363,6 +371,7 @@ export function projectJobOverviewItem(input: {
     planView: input.planView,
     planning: input.planning ?? null,
     today: input.today,
+    activeIssueCount: input.activeIssueCount ?? 0,
   });
 }
 
@@ -378,6 +387,7 @@ export function projectAssemblyJobOverviewItem(input: {
   planView: ExecutionPlanView | null;
   planning?: OperationalJobPlanning | null;
   today?: string;
+  activeIssueCount?: number;
 }): JobOverviewItem {
   return projectOperationalJob({
     jobId: input.orderSnapshotId,
@@ -397,6 +407,7 @@ export function projectAssemblyJobOverviewItem(input: {
     planView: input.planView,
     planning: input.planning ?? null,
     today: input.today,
+    activeIssueCount: input.activeIssueCount ?? 0,
   });
 }
 
@@ -416,6 +427,7 @@ function projectOperationalJob(input: {
   planView: ExecutionPlanView | null;
   planning: OperationalJobPlanning | null;
   today?: string;
+  activeIssueCount: number;
 }): JobOverviewItem {
   const progress = input.planView?.progress ?? null;
   const stage = deriveJobStage({
@@ -432,6 +444,7 @@ function projectOperationalJob(input: {
     tasks: input.planView?.tasks ?? [],
     targetDate,
     today,
+    activeIssueCount: input.activeIssueCount,
   });
   const planId = input.planView?.plan.planId ?? null;
   return {
@@ -465,6 +478,7 @@ function projectOperationalJob(input: {
     overdue: attention.overdue,
     needsAttention: attention.needsAttention,
     attentionLabel: attention.attentionLabel,
+    activeIssueCount: input.activeIssueCount,
     completedCount: progress?.completed ?? null,
     taskCount: progress?.total ?? null,
     inProgressCount: progress?.inProgress ?? null,
@@ -518,9 +532,7 @@ export function filterJobOverview(
       case "ALL":
         return overview.jobs;
       case "NEEDS_ACTION":
-        return overview.jobs.filter(
-          (job) => job.needsAttention && job.stage !== "EXECUTION_COMPLETED",
-        );
+        return overview.jobs.filter((job) => job.needsAttention);
       case "URGENT":
         return overview.jobs.filter((job) => job.priority === "URGENT");
       case "OVERDUE":
