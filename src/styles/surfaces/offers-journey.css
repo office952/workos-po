@@ -169,12 +169,24 @@
 
   .offers-filter {
     flex: 1 1 100%;
-    overflow-x: auto;
-    scrollbar-width: none;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .offers-filter::-webkit-scrollbar {
-    display: none;
+  .offers-filter__option {
+    justify-content: space-between;
+  }
+
+  .offers-filter__option + .offers-filter__option {
+    border-left: 0;
+  }
+
+  .offers-filter__option:nth-child(even) {
+    border-left: 1px solid var(--color-border);
+  }
+
+  .offers-filter__option:nth-child(n + 3) {
+    border-top: 1px solid var(--color-border);
   }
 
   .offers-explain__panel {

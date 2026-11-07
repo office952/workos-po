@@ -1669,14 +1669,19 @@ a.offer-card__door:focus-visible {
 }
 
 .offers-cards__group {
-  display: grid;
-  gap: 4px;
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 2px;
   list-style: none;
 }
 
 .offers-cards__group .offers-group__open {
   float: none;
   min-height: 32px;
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
 }
