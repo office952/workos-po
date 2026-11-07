@@ -8,7 +8,7 @@ import { ClientDetailPage } from "../../ClientDetailPage";
 
 /**
  * N-020 · etapa 3 · Cereri și oferte (Corecții GO 17, 640:11188 – 640:11942; previzualizare
- * 668:15454): the mode and "În așteptare" apart, a reset that stays a reset, no context crossing
+ * 668:15454): the mode and "De urmărit" apart, a reset that stays a reset, no context crossing
  * clients, and an offer preview that shows only what the server gives.
  */
 function json(status: number, body: unknown) {
@@ -26,7 +26,7 @@ const quote = (id: string, requestId: string, extra: Record<string, unknown> = {
   stageLabel: "Creată", createdAt: "2026-10-24T03:36:16.699Z", nextAction: "ACCEPT_QUOTE", nextActionLabel: "", needsAttention: false, attentionLabel: null,
   requestId, requestReference: `CER-${requestId}`, orderSnapshotId: null, ...extra,
 });
-const waiting = { needsAttention: true, attentionLabel: "Urmează acceptarea" };
+const waiting = { commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Fără decizie", obligationKind: "WAITING", followUp: true, decided: false };
 
 const workspaces: Record<string, unknown> = {
   "cus-1": {
@@ -124,23 +124,23 @@ afterEach(() => {
   window.history.replaceState({}, "", "/");
 });
 
-describe("Cereri și oferte · Afișare and În așteptare apart (659:14083)", () => {
+describe("Cereri și oferte · Afișare and De urmărit apart (659:14083)", () => {
   it("keeps the filter across modes and the mode when the filter goes; a reset stays a reset", async () => {
     window.history.replaceState({}, "", "/clienti/cus-1?sectiune=cereri&atentie=1");
     const view = render(<Harness />);
     const page = await screen.findByRole("region", { name: "Cereri și oferte" });
-    expect(within(page).getByRole("button", { name: "În așteptare · 2" })).toHaveAttribute("aria-pressed", "true");
-    expect(within(page).getByText("1 din 2 cereri · 2 oferte în așteptare")).toBeInTheDocument();
-    expect(within(page).getByText("Filtru: În așteptare")).toBeInTheDocument();
-    expect(within(page).getByText("1 cerere nu are oferte în așteptare: CER-b.")).toBeInTheDocument();
+    expect(within(page).getByRole("button", { name: "De urmărit · 2" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(page).getByText("1 din 2 cereri · 2 oferte de urmărit")).toBeInTheDocument();
+    expect(within(page).getByText("Filtru: De urmărit")).toBeInTheDocument();
+    expect(within(page).getByText("1 cerere nu are oferte de urmărit: CER-b.")).toBeInTheDocument();
     // Toate ofertele: the filter stays (640:11942).
     await userEvent.click(within(page).getByRole("button", { name: "Toate ofertele · 3 oferte" }));
     await waitFor(() => expect(search().get("selectie")).toBe("oferte"));
     expect(search().get("atentie")).toBe("1");
     expect(within(page).getByText("2 din 3 oferte")).toBeInTheDocument();
-    expect(within(page).getByText("Filtru: În așteptare")).toBeInTheDocument();
+    expect(within(page).getByText("Filtru: De urmărit")).toBeInTheDocument();
     // ✕: the filter goes, the mode stays; the bar says the whole list again.
-    await userEvent.click(within(page).getByRole("button", { name: "Elimină filtrul În așteptare" }));
+    await userEvent.click(within(page).getByRole("button", { name: "Elimină filtrul De urmărit" }));
     await waitFor(() => expect(search().get("atentie")).toBeNull());
     expect(search().get("selectie")).toBe("oferte");
     expect(within(page).getAllByText("Toate cele 3 oferte").length).toBeGreaterThan(0);
@@ -150,7 +150,7 @@ describe("Cereri și oferte · Afișare and În așteptare apart (659:14083)", (
     resetResourceCache();
     render(<Harness />);
     expect(await screen.findByRole("button", { name: "Toate ofertele · 3 oferte" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "În așteptare · 2" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "De urmărit · 2" })).toHaveAttribute("aria-pressed", "false");
     await userEvent.click(tab(/^Istoric/));
     await userEvent.click(tab(/^Cereri și oferte/));
     await waitFor(() => expect(search().get("selectie")).toBe("oferte"));
@@ -226,7 +226,7 @@ describe("Cereri și oferte · Afișare and În așteptare apart (659:14083)", (
     const page = await screen.findByRole("region", { name: "Cereri și oferte" });
     await waitFor(() => expect(within(page).getByRole("heading", { level: 3, name: "Autocolant Beta" })).toBeInTheDocument());
     expect(within(page).getByRole("button", { name: "Pe cereri · 1 cerere" })).toHaveAttribute("aria-pressed", "true");
-    expect(within(page).getByRole("button", { name: "În așteptare · 0" })).toHaveAttribute("aria-pressed", "false");
+    expect(within(page).getByRole("button", { name: "De urmărit · 0" })).toHaveAttribute("aria-pressed", "false");
     expect(within(page).queryByText(/Casetă depozit/)).toBeNull();
   });
 });
@@ -249,7 +249,7 @@ describe("Cereri și oferte · previzualizarea ofertei (668:15454)", () => {
     expect(within(dialog).queryByText(/marj/i)).toBeNull();
     expect(within(dialog).getByText("pentru CER-a · Casetă depozit · ⌖ Depozit Ghimbav")).toBeInTheDocument();
     expect(within(dialog).getByText("Încă nu: oferta nu are comandă.")).toBeInTheDocument();
-    expect(within(dialog).getByRole("link", { name: "Deschide oferta completă →" })).toHaveAttribute("href", "/quotes/P/q1");
+    expect(within(dialog).getByRole("link", { name: "Deschide oferta completă →" })).toHaveAttribute("href", "/oferte/produs/P/q1");
     expect(within(dialog).getByRole("link", { name: "Deschide cererea →" })).toHaveAttribute("href", "/cereri/a");
   });
 

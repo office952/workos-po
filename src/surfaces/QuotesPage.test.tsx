@@ -110,8 +110,21 @@ const standalone = {
   currency: "EUR",
   createdAt: "2026-09-01T10:00:00.000Z",
   nextAction: "ACCEPT_QUOTE",
-  needsAttention: true,
-  attentionLabel: "Așteaptă acceptarea clientului",
+  needsAttention: false,
+  attentionLabel: null,
+  commercialStatus: "AWAITING_CUSTOMER",
+  commercialStatusLabel: "Fără decizie",
+  obligationKind: "WAITING",
+  followUp: true,
+  decided: false,
+};
+
+const orderedStatus = {
+  commercialStatus: "ORDERED",
+  commercialStatusLabel: "Cu comandă",
+  obligationKind: "NONE",
+  followUp: false,
+  decided: false,
 };
 
 const assembly = {
@@ -134,6 +147,7 @@ const assembly = {
   nextAction: "OPEN_ORDER",
   nextActionLabel: "Deschide comanda",
   orderSnapshotId: "asmo:1",
+  ...orderedStatus,
 };
 
 const productDetail: SyncRoute = (url) =>
@@ -200,6 +214,10 @@ function dossier() {
   return within(screen.getByRole("complementary", { name: "Dosarul ofertei" }));
 }
 
+function noDossier(): boolean {
+  return screen.queryByRole("complementary", { name: "Dosarul ofertei" }) === null;
+}
+
 function board() {
   return within(screen.getByRole("group", { name: "Filtre registru oferte" }));
 }
@@ -230,22 +248,84 @@ describe("QuotesPage acceptance stamp", () => {
 });
 
 describe("QuotesPage", () => {
-  it("counts server attention flags instead of explanatory labels and filters by them", async () => {
+  it("counts the server's follow-up flags, not explanatory labels, and filters by them", async () => {
     stubApi([
-      { quoteSnapshotId: "q-flag", productCode, reference: "OF-FLAG", needsAttention: true },
-      { quoteSnapshotId: "q-copy", productCode, reference: "OF-COPY", needsAttention: false, attentionLabel: "Text explicativ" },
+      { quoteSnapshotId: "q-flag", productCode, reference: "OF-FLAG", followUp: true, commercialStatus: "ACCEPTED_WITHOUT_ORDER", commercialStatusLabel: "Acceptată · fără comandă", obligationKind: "ACTIONABLE" },
+      { quoteSnapshotId: "q-copy", productCode, reference: "OF-COPY", followUp: false, needsAttention: true, attentionLabel: "Text explicativ" },
     ]);
     render(<Routed />);
     await screen.findByRole("link", { name: "OF-FLAG" });
-    const attention = board().getByRole("button", { name: /Necesită acțiune/ });
-    expect(attention).toHaveTextContent("01");
-    expect(attention).toHaveTextContent("oferte din tot registrul care urmează acceptarea sau comanda");
-    expect(board().getByRole("button", { name: /Toate/ })).toHaveTextContent("02");
-    await userEvent.click(attention);
-    expect(attention).toHaveAttribute("aria-pressed", "true");
+    const followUp = board().getByRole("button", { name: /De urmărit/ });
+    expect(followUp.querySelector(".offers-filter__count")).toHaveTextContent(/^1$/);
+    expect(followUp).toHaveAttribute("title", "De urmărit: oferte nedecise sau comenzi de confirmat");
+    expect(board().getByRole("button", { name: /Toate/ }).querySelector(".offers-filter__count")).toHaveTextContent(/^2$/);
+    await userEvent.click(followUp);
+    expect(followUp).toHaveAttribute("aria-pressed", "true");
     expect(table().getByRole("link", { name: "OF-FLAG" })).toBeInTheDocument();
     expect(table().queryByRole("link", { name: "OF-COPY" })).not.toBeInTheDocument();
     expect(screen.getByText("1 din 2")).toBeInTheDocument();
+    const row = table().getByRole("link", { name: "OF-FLAG" }).closest("tr")!;
+    expect(row).toHaveAttribute("data-attention", "true");
+    expect(within(row).getByRole("link", { name: /Confirmarea comenzii/ })).toHaveAttribute("href", `/oferte/produs/${productCode}/q-flag`);
+  });
+
+  it("counts actionable and waiting offers under De urmărit but marks only the actionable one (CJ1-R1)", async () => {
+    stubApi([
+      { quoteSnapshotId: "q-act", productCode, reference: "OF-ACT", followUp: true, commercialStatus: "ACCEPTED_WITHOUT_ORDER", commercialStatusLabel: "Acceptată · fără comandă", obligationKind: "ACTIONABLE" },
+      { quoteSnapshotId: "q-wait", productCode, reference: "OF-WAIT", followUp: true, commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Fără decizie", obligationKind: "WAITING" },
+    ]);
+    render(<Routed />);
+    await screen.findByRole("link", { name: "OF-ACT" });
+    const followUp = board().getByRole("button", { name: /De urmărit/ });
+    expect(followUp.querySelector(".offers-filter__count")).toHaveTextContent(/^2$/);
+    expect(board().queryByRole("button", { name: /De rezolvat/ })).not.toBeInTheDocument();
+    expect(table().getByRole("link", { name: "OF-ACT" }).closest("tr")).toHaveAttribute("data-attention", "true");
+    expect(table().getByRole("link", { name: "OF-WAIT" }).closest("tr")).not.toHaveAttribute("data-attention");
+  });
+
+  it("groups by request by default and keeps one filter row: search, commercial filters, then kind (CJ1-R1)", async () => {
+    stubApi([standalone, assembly]);
+    render(<Routed />);
+    await screen.findByRole("link", { name: "OF-ASM" });
+    expect(screen.getByRole("button", { name: "Grupează după cerere" })).toHaveAttribute("aria-pressed", "true");
+    const search = screen.getByRole("searchbox", { name: "Caută" });
+    const filters = screen.getByRole("group", { name: "Filtre registru oferte" });
+    const kind = screen.getByRole("group", { name: "Tip" });
+    expect(search.compareDocumentPosition(filters) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(filters.compareDocumentPosition(kind) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(filters).getAllByRole("button").map((button) => button.querySelector(".offers-filter__label")?.textContent)).toEqual([
+      "Toate",
+      "De urmărit",
+      "Cu comandă",
+      "Decise",
+    ]);
+    expect(noDossier()).toBe(true);
+    expect(screen.queryByText("Nicio ofertă selectată")).not.toBeInTheDocument();
+  });
+
+  it("explains each commercial filter on demand and closes the explanation with Escape", async () => {
+    stubApi([standalone]);
+    render(<Routed />);
+    await screen.findByRole("link", { name: "OF-SOLO" });
+    const explain = screen.getByRole("button", { name: /Ce înseamnă/ });
+    expect(explain).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(explain);
+    expect(explain).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("refuzate de client sau scoase din urmărire")).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    expect(explain).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("mutes a decided offer and only lets it show the decision", async () => {
+    stubApi([{ ...standalone, commercialStatus: "DECLINED_BY_CUSTOMER", commercialStatusLabel: "Refuzată de client", obligationKind: "NONE", followUp: false, decided: true }]);
+    render(<Routed />);
+    const row = (await screen.findByRole("link", { name: "OF-SOLO" })).closest("tr")!;
+    expect(row).toHaveAttribute("data-commercial", "decided");
+    expect(row).not.toHaveAttribute("data-attention");
+    expect(within(row).getByText("Refuzată de client")).toBeInTheDocument();
+    expect(within(row).getByRole("link", { name: /Vezi decizia/ })).toBeInTheDocument();
+    await userEvent.click(board().getByRole("button", { name: /Decise/ }));
+    expect(table().getByRole("link", { name: "OF-SOLO" })).toBeInTheDocument();
   });
 
   it("explains a failed refresh of cached offers and retries", async () => {
@@ -265,13 +345,13 @@ describe("QuotesPage", () => {
   it("keeps created quotes honest and offers no acceptance in the register or dossier", async () => {
     stubApi([{ ...standalone, nextActionLabel: "Marchează acceptată", requestId: "req-1", requestReference: "CRQ-104" }], [productDetail]);
     render(<Routed />);
-    expect(await screen.findByRole("link", { name: "OF-SOLO" })).toHaveAttribute("href", `/quotes/${productCode}/q-solo`);
-    expect(table().getByRole("link", { name: "Oferta" })).toHaveAttribute("href", `/quotes/${productCode}/q-solo`);
-    expect(table().getByText(/CRQ-104/)).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "OF-SOLO" })).toHaveAttribute("href", `/oferte/produs/${productCode}/q-solo`);
+    expect(table().getByRole("link", { name: /Deschide oferta/ })).toHaveAttribute("href", `/oferte/produs/${productCode}/q-solo`);
+    expect(table().getAllByText(/CRQ-104/).length).toBeGreaterThan(0);
     expect(screen.queryByText("Marchează acceptată")).not.toBeInTheDocument();
     await userEvent.click(table().getByText("NORD"));
-    expect(await dossier().findByText("Așteaptă acceptarea clientului")).toBeInTheDocument();
-    expect(dossier().getByText("Confirmarea comenzii se face în pagina ofertei, lângă total.")).toBeInTheDocument();
+    expect(await dossier().findByTestId("offer-commercial-status")).toHaveTextContent("Fără decizie");
+    expect(dossier().queryByText("Confirmarea comenzii se face în pagina ofertei, lângă total.")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Confirmă comanda/ })).not.toBeInTheDocument();
     expect(dossier().getByRole("tab", { name: /Comandă · lucrare/ })).toHaveAttribute("aria-disabled", "true");
   });
@@ -298,7 +378,7 @@ describe("QuotesPage", () => {
     });
     stubApi([
       branchOf(1),
-      branchOf(2, { stage: "ORDER_CREATED", stageLabel: "Cu comandă", needsAttention: false, attentionLabel: null, nextAction: "OPEN_ORDER", orderSnapshotId: "ord-2" }),
+      branchOf(2, { stage: "ORDER_CREATED", stageLabel: "Cu comandă", nextAction: "OPEN_ORDER", orderSnapshotId: "ord-2", ...orderedStatus }),
       branchOf(3),
       { ...standalone, requestId: "req-other", requestReference: "CRQ-9" },
     ]);
@@ -306,14 +386,13 @@ describe("QuotesPage", () => {
     const row = (await screen.findByRole("link", { name: "OF-3" })).closest("tr")!;
     expect(within(row).getByText("SYN-3")).toBeInTheDocument();
     expect(within(row).getByText("03 / 3")).toBeInTheDocument();
-    expect(within(row).getByText("Așteaptă acceptarea clientului")).toBeInTheDocument();
+    expect(within(row).getByText("Fără decizie")).toBeInTheDocument();
     const ordered = table().getByRole("link", { name: "OF-2" }).closest("tr")!;
-    expect(within(ordered).getByRole("link", { name: "Fișa lucrării" })).toHaveAttribute("href", "/lucrari/ord-2");
+    expect(within(ordered).getByRole("link", { name: /Fișa lucrării/ })).toHaveAttribute("href", "/lucrari/ord-2");
 
-    await userEvent.click(screen.getByRole("button", { name: "Grupează după cerere" }));
+    expect(screen.getByRole("button", { name: "Grupează după cerere" })).toHaveAttribute("aria-pressed", "true");
     const heading = table().getByRole("rowheader", { name: /CRQ-8/ });
     expect(heading).toHaveTextContent("3 oferte");
-    expect(heading).toHaveTextContent("1 din 3 oferte are comandă · 2 urmează acceptarea");
     expect(within(heading).getByRole("link", { name: /Deschide cererea/ })).toHaveAttribute("href", "/cereri/req-8");
     expect(table().getByRole("rowheader", { name: /CRQ-9/ })).toHaveTextContent("1 ofertă");
 
@@ -335,7 +414,8 @@ describe("QuotesPage", () => {
     expect(within(assemblyRow).getByText("743,48")).toBeInTheDocument();
     expect(within(assemblyRow).getByText(/CRQ-7/)).toBeInTheDocument();
     const soloRow = table().getByRole("link", { name: "OF-SOLO" }).closest("tr")!;
-    expect(soloRow).toHaveAttribute("data-attention", "true");
+    expect(soloRow).not.toHaveAttribute("data-attention");
+    expect(soloRow).toHaveAttribute("data-commercial", "awaiting");
     expect(within(soloRow).getByText("NORD")).toBeInTheDocument();
 
     const kind = screen.getByRole("group", { name: "Tip" });
@@ -343,9 +423,9 @@ describe("QuotesPage", () => {
     expect(table().getByRole("link", { name: "OF-ASM" })).toBeInTheDocument();
     expect(table().queryByRole("link", { name: "OF-SOLO" })).not.toBeInTheDocument();
 
-    await userEvent.click(board().getByRole("button", { name: /Creată/ }));
+    await userEvent.click(board().getByRole("button", { name: /De urmărit/ }));
     expect(screen.getByText("Nicio ofertă nu corespunde filtrului.")).toBeInTheDocument();
-    expect(dossier().getByText("Nicio ofertă în filtrul curent")).toBeInTheDocument();
+    expect(noDossier()).toBe(true);
     await userEvent.click(screen.getByRole("button", { name: /Resetează filtrele/ }));
     expect(table().getByRole("link", { name: "OF-SOLO" })).toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "Caută" })).toHaveFocus();
@@ -360,7 +440,7 @@ describe("QuotesPage", () => {
     const fetchMock = stubApi([standalone, assembly], [(url) => (url.endsWith("/api/quotes/asmq%3A1") ? detail.promise : undefined), jobDetail]);
     render(<Routed />);
     await screen.findByRole("link", { name: "OF-ASM" });
-    expect(dossier().getByText("Nicio ofertă selectată")).toBeInTheDocument();
+    expect(noDossier()).toBe(true);
     const before = window.history.length;
 
     await userEvent.click(screen.getByRole("row", { name: "Previzualizează oferta OF-ASM" }));
@@ -436,7 +516,7 @@ describe("QuotesPage", () => {
     await screen.findByRole("link", { name: "OF-ASM" });
     await userEvent.type(screen.getByRole("searchbox", { name: "Caută" }), "Simplu");
     expect(window.location.search).toBe("");
-    expect(dossier().getByText("Nicio ofertă selectată")).toBeInTheDocument();
+    expect(noDossier()).toBe(true);
   });
 
   it("moves through the register with arrows on rows, but never while typing", async () => {

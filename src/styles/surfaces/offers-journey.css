@@ -1,0 +1,196 @@
+/* CJ1 · Oferte commercial filters: "Ce înseamnă?" and the per-offer status (WorkOS-N 1226:19654). */
+
+/* Without a selection the register takes the whole width; the dossier opens beside a chosen row. */
+.offers-desk__work[data-dossier="closed"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.offers-desk__work[data-dossier="closed"] .offers-v2__register {
+  padding-right: var(--desk-gutter);
+}
+
+.offers-filter-wrap {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
+.offers-filter {
+  display: flex;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+}
+
+.offers-filter__option {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: 500 13px var(--font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.offers-filter__option + .offers-filter__option {
+  border-left: 1px solid var(--color-border);
+}
+
+.offers-filter__option:hover {
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+}
+
+.offers-filter__option[aria-pressed="true"] {
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+  box-shadow: inset 0 -2px 0 var(--shell-signal);
+  font-weight: 600;
+}
+
+.offers-filter__option:focus-visible {
+  position: relative;
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.offers-filter__count {
+  color: var(--shell-muted);
+  font: 500 12px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.offers-filter__option[aria-pressed="true"] .offers-filter__count {
+  color: var(--color-text-primary);
+}
+
+/* The row action and the amount keep their own columns: the action wraps, it never covers the value. */
+.offers-v2__table .offers-v2__col-action { width: 232px; }
+.offers-v2__table .offers-v2__col-value { width: 128px; }
+
+.offers-v2__table .offers-v2__next {
+  padding-block: 6px;
+  line-height: 1.25;
+  white-space: normal;
+}
+
+.offers-v2__table .offers-v2__next > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* One commercial status per offer, in sentence case as the server writes it. */
+.offers-v2__state {
+  font: 500 13px/1.35 var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.offers-explain {
+  position: relative;
+}
+
+.offers-explain__button {
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--shell-signal-deep);
+  font: 500 13px/1.4 var(--font-sans);
+  cursor: pointer;
+}
+
+.offers-explain__button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.offers-explain__panel {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  right: 0;
+  display: grid;
+  gap: 10px;
+  width: min(22rem, 90vw);
+  margin: 4px 0 0;
+  padding: 14px 16px;
+  border: 1px solid var(--shell-edge-strong);
+  background: var(--color-surface);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
+}
+
+.offers-explain__panel div {
+  display: grid;
+  gap: 2px;
+}
+
+.offers-explain__panel dt {
+  color: var(--color-text-primary);
+  font: 600 13px/1.4 var(--font-sans);
+}
+
+.offers-explain__panel dd {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 12px/1.4 var(--font-sans);
+}
+
+.offers-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.offers-sheet-v2__status {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 500 13px/1.4 var(--font-sans);
+}
+
+.offers-v2__table tr[data-commercial="decided"] .offers-v2__client,
+.offers-v2__table tr[data-commercial="superseded"] .offers-v2__client,
+.offers-v2__table tr[data-commercial="decided"] .offers-v2__value,
+.offers-v2__table tr[data-commercial="superseded"] .offers-v2__value {
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 767px) {
+  .offers-filter-wrap {
+    flex: 1 1 100%;
+  }
+
+  .offers-filter {
+    flex: 1 1 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .offers-filter__option {
+    justify-content: space-between;
+  }
+
+  .offers-filter__option + .offers-filter__option {
+    border-left: 0;
+  }
+
+  .offers-filter__option:nth-child(even) {
+    border-left: 1px solid var(--color-border);
+  }
+
+  .offers-filter__option:nth-child(n + 3) {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .offers-explain__panel {
+    left: 0;
+    right: auto;
+  }
+}

@@ -1,4 +1,4 @@
-import type { KeyboardEvent, Ref } from "react";
+import type { KeyboardEvent, ReactNode, Ref } from "react";
 import type { RequestListItemTransport } from "../../api/types";
 import type { CollectionViewState } from "../../components/collectionViewState";
 import { EmptyState } from "../../components/EmptyState";
@@ -7,10 +7,17 @@ import { InlineAlert } from "../../components/InlineAlert";
 import { presentRequestWorklistAction } from "../../presentation/worklistAction";
 import { newRequestHref, requestHref } from "../../routing/appRoute";
 import { clickedControl, moveRowFocus } from "../desk/deskKeys";
-import { DeskCaption, DeskDensity, DeskSearch, DeskSkeleton, PlusIcon, type Density } from "../desk/DeskToolbar";
+import { DeskCaption, DeskDensity, DeskSearch, DeskSkeleton, type Density } from "../desk/DeskToolbar";
 import type { DeskLayout } from "../desk/useDeskLayout";
-import { CommercialProgress, RequestState } from "./RequestParts";
-import { entryTime, groupByDay, hasRequestFilter, type RequestFilters, type RequestSort } from "./requestRegistryModel";
+import { CommercialPhase, OffersSummary } from "./RequestParts";
+import {
+  commercialFilterLabel,
+  entryTime,
+  groupByDay,
+  hasRequestFilter,
+  type RequestFilters,
+  type RequestSort,
+} from "./requestRegistryModel";
 
 export type Paging = { page: number; pageCount: number; pageSize: number; offset: number; shown: number; total: number };
 
@@ -27,6 +34,8 @@ type Props = {
   paging: Paging;
   selectedId: string | null;
   searchRef: Ref<HTMLInputElement>;
+  /** Commercial filters (primary) and the administrative status (secondary), beside the search. */
+  filterControls: ReactNode;
   onFilters: (next: RequestFilters) => void;
   onSort: (next: RequestSort) => void;
   onDensity: (next: Density) => void;
@@ -46,10 +55,6 @@ function context(item: RequestListItemTransport): string {
   return [item.customerDisplayName ?? "Fără client", item.reference && item.reference !== item.title ? item.reference : null].filter(Boolean).join("  ·  ");
 }
 
-function Attention({ item }: { item: RequestListItemTransport }) {
-  return item.attentionLabel ? <span className="rdesk-attention">{item.attentionLabel}</span> : null;
-}
-
 function Table({ rows, selectedId, onSelect }: Props) {
   return (
     <table className="rdesk-table rtray-table">
@@ -58,9 +63,9 @@ function Table({ rows, selectedId, onSelect }: Props) {
         <tr>
           <th scope="col" className="rtray-table__time">Ora</th>
           <th scope="col">Cerere · client</th>
-          <th scope="col" className="rtray-table__state">Stare cerere</th>
-          <th scope="col" className="rtray-table__progress">Progres comercial</th>
-          <th scope="col" className="rtray-table__action" data-align="end">Acțiune</th>
+          <th scope="col" className="rtray-table__progress">Oferte</th>
+          <th scope="col" className="rtray-table__state">Stare comercială</th>
+          <th scope="col" className="rtray-table__action" data-align="end">Următoarea acțiune</th>
         </tr>
       </thead>
       {groupByDay(rows).map((day) => (
@@ -80,7 +85,7 @@ function Table({ rows, selectedId, onSelect }: Props) {
                 data-row
                 data-row-id={item.requestId}
                 data-selected={selected || undefined}
-                data-attention={item.needsAttention || undefined}
+                data-attention={item.journey?.needsAttention || undefined}
                 tabIndex={0}
                 aria-selected={selected}
                 aria-label={`Previzualizează cererea ${title(item)}`}
@@ -108,13 +113,10 @@ function Table({ rows, selectedId, onSelect }: Props) {
                   <a className="rdesk-title" href={requestHref(item.requestId)} title={title(item)}>{title(item)}</a>
                   <span className="rdesk-sub" title={context(item)}>{context(item)}</span>
                 </td>
-                <td className="rtray-table__state">
-                  <RequestState item={item} />
-                  <Attention item={item} />
-                </td>
-                <td className="rtray-table__progress"><CommercialProgress item={item} /></td>
+                <td className="rtray-table__progress"><OffersSummary item={item} /></td>
+                <td className="rtray-table__state"><CommercialPhase item={item} /></td>
                 <td className="rtray-table__action" data-align="end">
-                  <a className="rdesk-next" data-priority={item.needsAttention || undefined} href={action.actionHref}>
+                  <a className="rdesk-next" data-priority={item.journey?.needsAttention || undefined} href={action.actionHref}>
                     <span>{action.actionLabel}</span>
                     <span aria-hidden="true">→</span>
                   </a>
@@ -142,7 +144,7 @@ function Cards({ rows, selectedId, onOpen }: Props) {
               const action = presentRequestWorklistAction(item);
               const detailHref = requestHref(item.requestId);
               return (
-                <li key={item.requestId} className="rdesk-card" data-attention={item.needsAttention || undefined} data-selected={item.requestId === selectedId || undefined}>
+                <li key={item.requestId} className="rdesk-card" data-attention={item.journey?.needsAttention || undefined} data-selected={item.requestId === selectedId || undefined}>
                   <button
                     type="button"
                     className="rdesk-card__open"
@@ -155,10 +157,9 @@ function Cards({ rows, selectedId, onOpen }: Props) {
                     <span className="rtray-card__title">{title(item)}</span>
                     <span className="rdesk-sub">{context(item)}</span>
                     <span className="rtray-card__state">
-                      <RequestState item={item} />
-                      <CommercialProgress item={item} />
+                      <CommercialPhase item={item} />
+                      <OffersSummary item={item} />
                     </span>
-                    <Attention item={item} />
                   </button>
                   <div className="rdesk-card__doors">
                     <a className="rdesk-door" href={detailHref}>
@@ -168,7 +169,7 @@ function Cards({ rows, selectedId, onOpen }: Props) {
                     {action.actionHref !== detailHref ? (
                       <a className="rdesk-door" data-next href={action.actionHref}>
                         <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M5 2.75h6.5l3.5 3.5v11H5zM11.5 2.75v3.5H15M7.5 10h5M7.5 13h5" /></svg>
-                        <span><strong>{action.actionLabel}</strong><small>{item.nextAction === "CHOOSE_PRODUCT" ? "Configuratorul cererii" : "Pasul următor"}</small></span>
+                        <span><strong>{action.actionLabel}</strong><small>{item.journey?.nextAction === "CHOOSE_PRODUCT" ? "Configuratorul cererii" : "Următoarea acțiune"}</small></span>
                       </a>
                     ) : null}
                   </div>
@@ -210,9 +211,9 @@ function Pagination({ paging, onPage, onPageSize }: Pick<Props, "paging" | "onPa
   );
 }
 
-/** The intake register: search, density, new request, then the entries grouped by day. */
+/** The intake register: search with its filters, density, then the entries grouped by day. */
 export function RequestsRegister(props: Props) {
-  const { layout, view, refreshFailed, filters, sort, density, searchRef, onFilters, onSort, onDensity, onReset, onRetry, visibleCount, total, paging } = props;
+  const { layout, view, refreshFailed, filters, sort, density, searchRef, filterControls, onFilters, onSort, onDensity, onReset, onRetry, visibleCount, total, paging } = props;
   const ready = view !== "loading" && view !== "error";
   return (
     <section className="rdesk-register" aria-label="Registru cereri" data-register data-scroll-memory="registru">
@@ -225,8 +226,8 @@ export function RequestsRegister(props: Props) {
           inputRef={searchRef}
           onChange={(query) => onFilters({ ...filters, query })}
         />
+        {filterControls}
         {layout === "docked" ? <DeskDensity value={density} onChange={onDensity} /> : null}
-        <a className="rdesk-create" href={newRequestHref()}><PlusIcon />Cerere nouă</a>
       </div>
       {refreshFailed && total > 0 ? (
         <InlineAlert tone="error" title="Lista nu a putut fi actualizată">
@@ -235,7 +236,7 @@ export function RequestsRegister(props: Props) {
         </InlineAlert>
       ) : null}
       <DeskCaption
-        title={filters.attention ? "Necesită acțiune" : "Intrări"}
+        title={filters.commercial === "ALL" ? "Intrări" : commercialFilterLabel(filters.commercial)}
         count={ready ? `${visibleCount} din ${total}` : "Se citesc cererile"}
         showReset={hasRequestFilter(filters)}
         onReset={onReset}
@@ -264,9 +265,9 @@ export function RequestsRegister(props: Props) {
           <div className="rdesk-empty">
             <EmptyState
               title="Nicio cerere nu corespunde filtrului."
-              description={filters.attention && !filters.query.trim() && filters.status === null
-                ? "Nu sunt cereri care necesită acțiune în registrul curent."
-                : "Schimbă căutarea sau tava ori resetează filtrele pentru a reveni la registru."}
+              description={filters.commercial === "ACTIONABLE" && !filters.query.trim() && filters.status === null
+                ? "Nimic de rezolvat acum. Ofertele nedecise nu intră aici."
+                : "Schimbă căutarea sau starea administrativă ori resetează filtrele pentru a reveni la registru."}
               action={<button type="button" className="rdesk-reset" onClick={onReset}>Afișează toate cererile</button>}
             />
           </div>

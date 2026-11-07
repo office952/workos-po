@@ -37,6 +37,7 @@ type AssemblyWork = {
 };
 type Detail = {
   nextAction: string;
+  nextActionHref: string;
   commercialProgress: string | null;
   linkedAssemblyId: string | null;
   canStartAdditionalWork: boolean;
@@ -108,8 +109,10 @@ describe("request commercial continuity for assemblies", () => {
 
     const { assemblyId } = await quotedAssembly(app, requestId);
     const afterQuote = await detail(app, requestId);
+    const assemblyQuoteId = afterQuote.assemblies[0]?.quoteSnapshotId ?? "";
     expect(afterQuote).toMatchObject({
-      nextAction: "OPEN_ASSEMBLY",
+      nextAction: "OPEN_QUOTE",
+      nextActionHref: `/quotes/${encodeURIComponent(assemblyQuoteId)}`,
       commercialProgress: "QUOTE_CREATED",
       linkedAssemblyId: assemblyId,
       canStartAdditionalWork: true,
@@ -123,9 +126,9 @@ describe("request commercial continuity for assemblies", () => {
       requests: Array<{ requestId: string; nextAction: string; nextActionHref: string; linkedAssemblyId: string | null }>;
     };
     expect(overview.requests.find((item) => item.requestId === requestId)).toMatchObject({
-      nextAction: "OPEN_ASSEMBLY",
+      nextAction: "OPEN_QUOTE",
       linkedAssemblyId: assemblyId,
-      nextActionHref: `/assemblies/${encodeURIComponent(assemblyId)}`,
+      nextActionHref: `/quotes/${encodeURIComponent(assemblyQuoteId)}`,
     });
 
     expect((await acceptCurrentAssemblyQuote(app, assemblyId)).status).toBe(200);
@@ -136,7 +139,10 @@ describe("request commercial continuity for assemblies", () => {
 
     expect((await post(app, `/api/assemblies/${assemblyId}/production`)).status).toBe(200);
     const afterProduction = await detail(app, requestId);
-    expect(afterProduction.nextAction).toBe("OPEN_ASSEMBLY");
+    expect(afterProduction.nextAction).toBe("OPEN_ORDER");
+    expect(afterProduction.nextActionHref).toBe(
+      `/jobs/${encodeURIComponent(afterProduction.assemblies[0]?.orderSnapshotId ?? "")}`,
+    );
     expect(afterProduction.assemblies[0]?.stage).toBe("PRODUCTION_RELEASED");
     expect(afterProduction.request.status).toBe(initial.request.status);
 

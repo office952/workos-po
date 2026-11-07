@@ -4,7 +4,8 @@ import { presentJobSheetSecondary, presentJobSheetStage, presentJobSheetTitle, j
 import { presentQuoteWorklistAction } from "../../presentation/worklistAction";
 import { jobHref, registryQuoteHref, requestHref } from "../../routing/appRoute";
 import type { QuoteLine } from "../quoteDetail";
-import { ACCEPTANCE_ACTIONS, createdLabel, destinationOf, kindDetail, listValue, listValueLabel } from "./quoteRegistryModel";
+import { presentOfferStatus } from "../../presentation/offerCommercialStatus";
+import { createdLabel, destinationOf, kindDetail, listValue, listValueLabel } from "./quoteRegistryModel";
 import type { DossierJob, DossierOffer } from "./useQuoteDossier";
 
 function Skeleton({ widths }: { widths: readonly number[] }) {
@@ -72,6 +73,7 @@ export function OfferSheet({ item, offer }: { item: QuoteListItemTransport; offe
   const total = offer.status === "ready" ? offer.total : null;
   const gross = total?.grossPrice ?? null;
   const created = createdLabel(item);
+  const status = presentOfferStatus(item);
   return (
     <div className="offers-sheet-v2" aria-busy={offer.status === "loading" || undefined}>
       <p className="offers-sheet-v2__head">
@@ -152,14 +154,19 @@ export function OfferSheet({ item, offer }: { item: QuoteListItemTransport; offe
           Referința, clientul, totalul și starea sunt din registru. Netul, TVA-ul și conținutul apar după o citire reușită.
         </PartError>
       )}
-      {item.needsAttention && item.attentionLabel ? (
-        <div className="offers-sheet-v2__attention">
-          <p className="offers-sheet-v2__attention-title">{item.attentionLabel}</p>
-          {ACCEPTANCE_ACTIONS.has(item.nextAction) ? (
+      {status.obligation === "ACTIONABLE" ? (
+        <div className="offers-sheet-v2__attention" data-testid="offer-commercial-status">
+          <p className="offers-sheet-v2__attention-title">{status.label}</p>
+          {item.commercialStatus === "ACCEPTED_WITHOUT_ORDER" ? (
             <p>Confirmarea comenzii se face în pagina ofertei, lângă total.</p>
           ) : null}
         </div>
-      ) : null}
+      ) : (
+        <p className="offers-sheet-v2__status offers-status" data-testid="offer-commercial-status">
+          <span className="commercial-dot" data-state={status.dot} aria-hidden="true" />
+          {status.label}
+        </p>
+      )}
       {offer.status === "ready" && offer.note ? <p className="offers-sheet-v2__note">{offer.note}</p> : null}
     </div>
   );

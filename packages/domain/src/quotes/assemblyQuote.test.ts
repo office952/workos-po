@@ -203,7 +203,9 @@ describe("assembly quote registry projection", () => {
       stage: "QUOTE_CREATED",
       nextAction: "OPEN_ASSEMBLY",
       nextActionLabel: "Deschide ansamblul",
-      needsAttention: true,
+      commercialStatus: "AWAITING_CUSTOMER",
+      obligationKind: "WAITING",
+      needsAttention: false,
       orderSnapshotId: null,
       href: "/quotes/asmq%3Atruth-1",
     });
@@ -248,7 +250,9 @@ describe("assembly quote registry projection", () => {
     expect(item).toMatchObject({
       superseded: true,
       needsAttention: false,
-      attentionLabel: "Înlocuită de o versiune mai nouă",
+      followUp: false,
+      commercialStatus: "SUPERSEDED",
+      commercialStatusLabel: "Înlocuită de o versiune mai nouă",
     });
   });
 

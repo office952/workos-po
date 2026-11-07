@@ -176,7 +176,7 @@ describe("Cereri și oferte · one view, the selection in the URL", () => {
     render(<Harness />);
     const page = await screen.findByRole("region", { name: "Cereri și oferte" });
     const first = within(page).getByRole("heading", { level: 3, name: "Casetă depozit" }).closest("li")!;
-    expect(within(first).getByText("1 ofertă cu comandă · lucrarea e în execuție")).toBeInTheDocument();
+    expect(within(first).getByText("1 ofertă · lucrarea e în execuție")).toBeInTheDocument();
     // A request without an offer stays visible in Pe cereri (608:9487), with its way in.
     const second = within(page).getByRole("heading", { level: 3, name: "Totem parcare" }).closest("li")!;
     expect(within(second).getByText("Fără ofertă încă")).toBeInTheDocument();

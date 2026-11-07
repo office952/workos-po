@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { JobOverviewItem } from "../jobs/overview.js";
-import type { QuoteOverviewItem } from "../quotes/overview.js";
+import type { RequestCommercialJourney } from "../commercial/journey/requestJourney.js";
+import { quoteOverviewCommercialFields, type QuoteOverviewItem } from "../quotes/overview.js";
 import type { RequestOverviewItem } from "../requests/overview.js";
 import { createCustomer, renameCustomer, retireCustomer } from "./identity.js";
 import {
@@ -14,11 +15,43 @@ import {
   requestsForCustomer,
 } from "./workspace.js";
 
+function journey(actionableCount: number, waitingCount = 0): RequestCommercialJourney {
+  return {
+    offerSummary: {
+      count: 0,
+      awaitingCustomer: waitingCount,
+      acceptedWithoutOrder: 0,
+      ordered: 0,
+      declined: 0,
+      notPursued: 0,
+      superseded: 0,
+      undecided: 0,
+      summaryLabel: "Fără ofertă",
+    },
+    actionable: [],
+    waiting: [],
+    actionableCount,
+    waitingCount,
+    orderCount: 0,
+    nextAction: "OPEN_REQUEST",
+    nextActionLabel: "Deschide cererea",
+    nextActionHref: "/requests/crq:alpha",
+    needsAttention: actionableCount > 0,
+    attentionLabel: actionableCount > 0 ? "Urmează oferta" : null,
+    phase: "OPEN",
+    phaseLabel: "Deschisă",
+    phaseAt: null,
+    administrativeNote: null,
+  };
+}
+
 function requestItem(
   customerId: string,
   overrides: Partial<RequestOverviewItem> = {},
 ): RequestOverviewItem {
+  const needsAttention = overrides.needsAttention ?? true;
   return {
+    journey: journey(needsAttention ? 1 : 0),
     requestId: "crq:alpha",
     reference: "CER-AAAAAAAA",
     customerId,
@@ -71,8 +104,12 @@ function quoteItem(
     nextAction: "ACCEPT_QUOTE",
     nextActionLabel: "Marchează acceptată",
     href: "/products/PRD-LETTERS-FRONTLIT-PLEXI-AL06?quote=qts%3Aalpha",
-    needsAttention: true,
-    attentionLabel: "Urmează acceptarea",
+    ...quoteOverviewCommercialFields({
+      stage: overrides.stage ?? "QUOTE_CREATED",
+      superseded: false,
+      disposition: null,
+      commercialState: null,
+    }),
     acceptanceId: null,
     orderSnapshotId: null,
     requestId: null,
@@ -238,6 +275,48 @@ describe("customer workspace projection", () => {
     expect(registryItem.openRequestCount).toBe(1);
     expect(registryItem.needsAttention).toBe(false);
     expect(registryItem.attentionLabel).toBeNull();
+  });
+
+  it("counts a request obligation once and never flags passive customer waiting", () => {
+    const created = createCustomer("Client Alpha", { customerId: "cus:alpha" });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    const closedWithObligation = requestItem("cus:alpha", {
+      needsAttention: true,
+      journey: journey(1, 1),
+    });
+    const linkedAccepted = quoteItem("cus:alpha", {
+      quoteSnapshotId: "qts:accepted",
+      stage: "QUOTE_ACCEPTED",
+      requestId: "crq:alpha",
+    });
+    const linkedWaiting = quoteItem("cus:alpha", {
+      quoteSnapshotId: "qts:waiting",
+      requestId: "crq:alpha",
+    });
+    const workspace = projectCustomerWorkspace({
+      customer: created.customer,
+      requests: [closedWithObligation],
+      quotes: [linkedAccepted, linkedWaiting],
+      jobs: [],
+    });
+    expect(linkedAccepted.needsAttention).toBe(true);
+    expect(linkedWaiting.needsAttention).toBe(false);
+    expect(workspace.summary.requestNeedsAction).toBe(1);
+    expect(workspace.summary.quoteNeedsAction).toBe(0);
+    expect(workspace.summary.commercialActionableCount).toBe(1);
+    expect(workspace.summary.commercialWaitingCount).toBe(1);
+    expect(workspace.nextActions).toHaveLength(1);
+
+    const waitingOnly = projectCustomerRegistryItem({
+      customer: created.customer,
+      requests: [requestItem("cus:alpha", { needsAttention: false, journey: journey(0, 2) })],
+      quotes: [quoteItem("cus:alpha")],
+      jobs: [],
+    });
+    expect(waitingOnly.needsAttention).toBe(false);
   });
 
   it("keeps a retired customer readable and blocks new requests", () => {

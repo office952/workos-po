@@ -6,7 +6,7 @@ import { useResource } from "../../data/useResource";
 import { presentRequestWorklistAction } from "../../presentation/worklistAction";
 import { clientsHref, quotesHref, requestHref } from "../../routing/appRoute";
 import { DeskActions, DeskLoading, DeskReadError, DeskSheet, DeskStale } from "../desk/DeskDossier";
-import { CommercialProgress, RequestState } from "./RequestParts";
+import { CommercialPhase, OffersSummary, RequestState } from "./RequestParts";
 import { entryDay, entryTime } from "./requestRegistryModel";
 
 /** Linked offers come from the request detail, read for this request only. */
@@ -43,7 +43,7 @@ function LinkedOffers({ requestId }: { requestId: string }) {
             {offers.map((offer) => (
               <li key={offer.quoteSnapshotId}>
                 <a className="rdesk-sheet__item-title" href={quotesHref({ quoteId: offer.quoteSnapshotId })}>{offer.reference ?? offer.kindLabel}</a>
-                <span className="rdesk-sheet__item-value">{offer.superseded ? "Înlocuită" : offer.stageLabel ?? "—"}</span>
+                <span className="rdesk-sheet__item-value">{offer.commercialStatusLabel ?? "—"}</span>
                 <span className="rdesk-sheet__item-detail">{[offer.kindLabel, offer.productLabel].filter(Boolean).join("  ·  ")}</span>
               </li>
             ))}
@@ -95,11 +95,13 @@ export function RequestSlip({ item }: { item: RequestListItemTransport }) {
       </div>
       <hr className="rdesk-sheet__perforation" />
       <dl className="rdesk-sheet__facts rtray-sheet__facts">
-        <div><dt>Stare cerere</dt><dd><RequestState item={item} /></dd></div>
-        <div><dt>Progres comercial</dt><dd><CommercialProgress item={item} /></dd></div>
+        <div><dt>Stare comercială</dt><dd><CommercialPhase item={item} /></dd></div>
+        <div><dt>Oferte</dt><dd><OffersSummary item={item} /></dd></div>
+        <div><dt>Stare administrativă</dt><dd><RequestState item={item} /></dd></div>
       </dl>
-      {item.nextActionLabel ? <p className="rdesk-sheet__note">{`Pas următor: ${item.nextActionLabel}`}</p> : null}
-      {item.attentionLabel ? <p className="rdesk-sheet__note" data-tone="attention">{item.attentionLabel}</p> : null}
+      {item.journey && item.journey.actionableCount > 0 ? (
+        <p className="rdesk-sheet__note" data-tone="attention">{`De rezolvat · ${item.journey.actionableCount}`}</p>
+      ) : null}
       <LinkedOffers requestId={item.requestId} />
     </DeskSheet>
   );

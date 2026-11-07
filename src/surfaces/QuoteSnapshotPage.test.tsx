@@ -55,7 +55,7 @@ describe("QuoteSnapshotPage", () => {
     expect(product.getByText("61,26 EUR")).toBeInTheDocument();
     expect(screen.queryByTestId("customer-price")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Confirmă comanda" })).toBeEnabled();
-    expect(screen.getByText("Neacceptată")).toBeInTheDocument();
+    expect(screen.getByText("Stare comercială")).toBeInTheDocument();
     expect(screen.queryByText("Înghețată")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Descarcă oferta PDF" })).toBeEnabled();
     expect(document.querySelector(".lifecycle")).toBeNull();
@@ -444,7 +444,7 @@ describe("QuoteSnapshotPage", () => {
 
     releaseEnvelope();
     expect(await screen.findByRole("button", { name: "Confirmă comanda" })).toBeEnabled();
-    expect(screen.getByText("Neacceptată")).toBeInTheDocument();
+    expect(screen.getByText("Stare comercială")).toBeInTheDocument();
   });
 
   it("surfaces a blocked server document response without inventing a PDF", async () => {

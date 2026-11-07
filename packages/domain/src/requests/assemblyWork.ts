@@ -182,6 +182,28 @@ function deriveStage(
   }
 }
 
+export function requestAssemblyHref(assemblyId: string): string {
+  return `/assemblies/${encodeURIComponent(assemblyId)}`;
+}
+
+/** Assembly work that still needs the organization before a current quote can exist. */
+export function requestAssemblyNeedsPreparation(work: RequestAssemblyWork): boolean {
+  switch (work.stage) {
+    case "IN_CONFIGURATION":
+    case "NEEDS_REVIEW":
+    case "READY_FOR_QUOTE":
+      return work.orderSnapshotId === null;
+    case "QUOTE_CREATED":
+    case "ORDER_CREATED":
+    case "PRODUCTION_RELEASED":
+      return false;
+    default: {
+      const _exhaustive: never = work.stage;
+      return _exhaustive;
+    }
+  }
+}
+
 /** Commercial weight used to pick the furthest work on a request: 0 none, 1 quote, 3 order. */
 export function requestAssemblyCommercialRank(work: RequestAssemblyWork): number {
   if (work.orderSnapshotId) {

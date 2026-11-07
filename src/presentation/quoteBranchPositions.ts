@@ -1,6 +1,5 @@
 import type { QuoteListItemTransport, RequestLinkedOfferTransport } from "../api/types";
 import { presentCommercialBranches, type CommercialBranch } from "./requestCommercialBranches";
-import { presentRequestCommercialProgress } from "./requestCommercialProgress";
 
 /**
  * Where a quote of the Oferte register sits on its request: the same branch key and the same
@@ -21,8 +20,8 @@ export type QuoteRequestGroup = {
   requestId: string | null;
   requestReference: string | null;
   customerDisplayName: string | null;
+  /** Offer versions of the request in the register; a count, never a money total. */
   total: number;
-  headline: string;
 };
 
 function asLinkedOffer(item: QuoteListItemTransport): RequestLinkedOfferTransport {
@@ -45,6 +44,13 @@ function asLinkedOffer(item: QuoteListItemTransport): RequestLinkedOfferTranspor
     grossDisplay: item.grossDisplay,
     currency: item.currency,
     orderSnapshotId: item.orderSnapshotId,
+    disposition: item.disposition ?? null,
+    dispositionLabel: item.dispositionLabel ?? null,
+    commercialStatus: item.commercialStatus,
+    commercialStatusLabel: item.commercialStatusLabel,
+    obligationKind: item.obligationKind,
+    followUp: item.followUp,
+    decided: item.decided,
   };
 }
 
@@ -89,17 +95,17 @@ export function presentQuoteBranchPositions(items: readonly QuoteListItemTranspo
   return positions;
 }
 
-/** One header per request in the grouped register: the request's own aggregate, never a total across requests. */
+/** One header per request in the grouped register: the request's own offer count, never a total across requests. */
 export function presentQuoteRequestGroups(items: readonly QuoteListItemTransport[]): Map<string, QuoteRequestGroup> {
   const groups = new Map<string, QuoteRequestGroup>();
-  for (const [requestId, { rows, branches }] of branchesByRequest(items)) {
-    const first = rows[0];
-    groups.set(requestId, {
-      requestId,
-      requestReference: first?.requestReference ?? null,
-      customerDisplayName: first?.customerDisplayName ?? null,
-      total: branches.length,
-      headline: presentRequestCommercialProgress({ branches, commercialProgress: null, commercialProgressLabel: null }).headline,
+  for (const item of items) {
+    if (!item.requestId) continue;
+    const current = groups.get(item.requestId);
+    groups.set(item.requestId, {
+      requestId: item.requestId,
+      requestReference: current?.requestReference ?? item.requestReference,
+      customerDisplayName: current?.customerDisplayName ?? item.customerDisplayName,
+      total: (current?.total ?? 0) + 1,
     });
   }
   return groups;

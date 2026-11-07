@@ -5,26 +5,28 @@ import { buildRequestsView, commercialProgress } from "./requestsModel";
 const request = (id: string, overrides: Partial<RequestListItemTransport> = {}): RequestListItemTransport => ({
   requestId: id, title: `Cerere ${id}`, reference: `CER-${id}`, customerId: "cus-1", customerDisplayName: "Alpha", status: "NEW", statusLabel: "Nouă",
   contextLabel: null, commercialProgress: null, createdAt: "2026-10-23T10:00:00.000Z", nextAction: "OPEN_REQUEST", nextActionLabel: "", nextActionHref: null,
-  needsAttention: false, attentionLabel: null, linkedQuoteSnapshotId: null, linkedQuoteProductCode: null, linkedAssemblyId: null, ...overrides,
+  needsAttention: false, attentionLabel: null, linkedQuoteSnapshotId: null, linkedQuoteProductCode: null, linkedAssemblyId: null, journey: null, ...overrides,
 });
 const quote = (id: string, requestId: string | null, overrides: Partial<QuoteListItemTransport> = {}): QuoteListItemTransport => ({
   quoteSnapshotId: id, kind: "PRODUCT", kindLabel: "Produs", assemblyId: null, sectionCount: 1, superseded: false, grossDisplay: "605,00", currency: "EUR",
   productCode: "P", productLabel: "Panou", reference: `OF-${id}`, inscription: "ALPHA", customerDisplayName: "Alpha", stage: "QUOTE_CREATED", stageLabel: "Creată",
   createdAt: "2026-10-23T10:00:00.000Z", nextAction: "ACCEPT_QUOTE", nextActionLabel: "", needsAttention: false, attentionLabel: null, requestId,
-  requestReference: requestId ? `CER-${requestId}` : null, orderSnapshotId: null, ...overrides,
+  requestReference: requestId ? `CER-${requestId}` : null, orderSnapshotId: null,
+  commercialStatus: null, commercialStatusLabel: null, obligationKind: null, followUp: false, decided: false, ...overrides,
 });
 const job = (id: string, requestId: string, orderSnapshotId: string, stageLabel = "În lucru"): JobListItemTransport =>
   ({ jobId: id, requestId, orderSnapshotId, stageLabel, progressLabel: "0 / 12 finalizate" }) as unknown as JobListItemTransport;
 
-const waiting = { needsAttention: true, attentionLabel: "Urmează acceptarea" };
+const waiting = { commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Fără decizie", obligationKind: "WAITING", followUp: true };
+const ordered = { commercialStatus: "ORDERED", commercialStatusLabel: "Cu comandă" };
 // The Alpha Clima shape (8899): one request with two offers waiting, two with an ordered offer each.
 const workspace = {
   requests: [request("a"), request("b", { createdAt: "2026-10-23T09:00:00.000Z" }), request("c", { title: "Showroom", createdAt: "2025-10-01T07:00:00.000Z" })],
   quotes: [
     quote("q1", "a", waiting),
     quote("q2", "a", waiting),
-    quote("q3", "b", { stage: "ORDER_CREATED", stageLabel: "Cu comandă", orderSnapshotId: "o3" }),
-    quote("q4", "c", { stage: "ORDER_CREATED", stageLabel: "Cu comandă", orderSnapshotId: "o4", createdAt: "2025-10-01T12:00:00.000Z" }),
+    quote("q3", "b", { stage: "ORDER_CREATED", stageLabel: "Cu comandă", orderSnapshotId: "o3", ...ordered }),
+    quote("q4", "c", { stage: "ORDER_CREATED", stageLabel: "Cu comandă", orderSnapshotId: "o4", ...ordered, createdAt: "2025-10-01T12:00:00.000Z" }),
   ],
   jobs: [job("j3", "b", "o3"), job("j4", "c", "o4", "Finalizată")],
 };
@@ -36,16 +38,16 @@ describe("Cereri și oferte · the view of the workspace (N-020, 640:11188)", ()
   it("counts fixed totals and the offers the server marks as waiting, whatever is shown", () => {
     const all = buildRequestsView(workspace, siteOf, none);
     const filtered = buildRequestsView(workspace, siteOf, { ...none, attention: true, q: "showroom" });
-    expect(all.totals).toEqual({ requests: 3, offers: 4, waiting: 2 });
+    expect(all.totals).toEqual({ requests: 3, offers: 4, followUp: 2 });
     expect(filtered.totals).toEqual(all.totals);
   });
 
-  it("În așteptare keeps a waiting request whole and names the requests it leaves out (640:11601)", () => {
+  it("De urmărit keeps a followed-up request whole and names the requests it leaves out (640:11601)", () => {
     const view = buildRequestsView(workspace, siteOf, { ...none, attention: true });
     expect(view.groups.map((group) => group.request.requestId)).toEqual(["a"]);
     expect(view.groups[0]!.offers.map((offer) => offer.quote.reference)).toEqual(["OF-q1", "OF-q2"]);
-    expect(view.waitingShown).toBe(2);
-    expect(view.withoutWaiting.map((item) => item.reference)).toEqual(["CER-b", "CER-c"]);
+    expect(view.followUpShown).toBe(2);
+    expect(view.withoutFollowUp.map((item) => item.reference)).toEqual(["CER-b", "CER-c"]);
     // Toate ofertele + În așteptare (640:11942): the waiting offers only, each once.
     expect(view.offers.map((offer) => offer.quote.reference)).toEqual(["OF-q1", "OF-q2"]);
   });
@@ -128,20 +130,17 @@ describe("Cereri și oferte · the view of the workspace (N-020, 640:11188)", ()
   });
 });
 
-describe("Progres comercial (640:11188, 608:9487)", () => {
-  const view = buildRequestsView(workspace, siteOf, none);
-  it("counts the offers by what the server says of each and names the work by its own stage", () => {
-    expect(commercialProgress(view.groups[0]!)).toBe("2 oferte în așteptare · fără lucrare");
-    expect(commercialProgress(view.groups[1]!)).toBe("1 ofertă cu comandă · lucrarea e în lucru");
+describe("Progres comercial · the server journey's offer summary", () => {
+  it("says the server's offer summary and names the work by its own stage", () => {
+    const summary = { count: 2, awaitingCustomer: 2, acceptedWithoutOrder: 0, ordered: 0, declined: 0, notPursued: 0, superseded: 0, undecided: 0, summaryLabel: "2 oferte · 2 nedecise" };
+    const withJourney = { ...workspace, requests: [request("a", { journey: { offerSummary: summary } as RequestListItemTransport["journey"] })] };
+    const view = buildRequestsView(withJourney, siteOf, none);
+    expect(commercialProgress(view.groups[0]!)).toBe("2 oferte · 2 nedecise · fără lucrare");
   });
 
-  it("never reads a superseded version as waiting or current, and says when there is no offer", () => {
-    const versions = buildRequestsView(
-      { requests: [request("v")], quotes: [quote("v2", "v", waiting), quote("v1", "v", { superseded: true, attentionLabel: "Înlocuită de o versiune mai nouă" })], jobs: [] },
-      siteOf,
-      none,
-    );
-    expect(commercialProgress(versions.groups[0]!)).toBe("1 ofertă în așteptare · 1 înlocuită · fără lucrare");
-    expect(commercialProgress({ offers: [], jobs: [] })).toBe("Fără ofertă încă");
+  it("only counts the offers without a journey, and says when there is no offer", () => {
+    const view = buildRequestsView(workspace, siteOf, none);
+    expect(commercialProgress(view.groups[1]!)).toBe("1 ofertă · lucrarea e în lucru");
+    expect(commercialProgress({ request: request("x"), offers: [], jobs: [] })).toBe("Fără ofertă încă");
   });
 });

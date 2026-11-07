@@ -1,13 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { createCustomer } from "../customers/identity.js";
 import { projectCustomerWorkspace } from "../customers/workspace.js";
-import type { QuoteOverviewItem } from "../quotes/overview.js";
+import { quoteOverviewCommercialFields, type QuoteOverviewItem } from "../quotes/overview.js";
 import type { RequestAssemblyWork } from "./assemblyWork.js";
 import { COMMERCIAL_REQUEST_STATUSES, type CommercialRequest } from "./commercialRequest.js";
 import {
   deriveRequestCommercialProgress,
-  deriveRequestOverviewAttention,
-  deriveRequestOverviewNextAction,
   filterRequestOverview,
   projectRequestDetail,
   projectRequestOverview,
@@ -56,12 +54,13 @@ function quote(stage: QuoteOverviewItem["stage"], inscription = "HUB"): QuoteOve
           ? "CREATE_ORDER"
           : "ACCEPT_QUOTE",
     nextActionLabel: "Deschide",
-    href:
-      stage === "ORDER_CREATED"
-        ? "/products/PRD-LETTERS-FRONTLIT-PLEXI-AL06?order=ord:1"
-        : "/products/PRD-LETTERS-FRONTLIT-PLEXI-AL06?quote=qts:1",
-    needsAttention: stage !== "ORDER_CREATED",
-    attentionLabel: null,
+    href: `/quotes/${encodeURIComponent(`qts:${inscription}`)}`,
+    ...quoteOverviewCommercialFields({
+      stage,
+      superseded: false,
+      disposition: null,
+      commercialState: null,
+    }),
     acceptanceId: stage === "QUOTE_CREATED" ? null : "qad:1",
     orderSnapshotId: stage === "ORDER_CREATED" ? "ord:1" : null,
     requestId: null,
@@ -86,9 +85,18 @@ describe("request overview projection", () => {
     expect(source.status).toBe(status);
   });
 
-  it.each(COMMERCIAL_REQUEST_STATUSES)("preserves linked-offer continuation for status %s", (status) => {
-    expect(deriveRequestOverviewNextAction({ status, quotes: [quote("QUOTE_CREATED")] })).toBe("OPEN_QUOTE");
-  });
+  it.each(["NEW", "IN_REVIEW", "WAITING_CUSTOMER", "READY_FOR_QUOTE", "CANCELLED"] as const)(
+    "preserves linked-offer continuation for status %s",
+    (status) => {
+      const item = projectRequestOverviewItem({
+        request: request({ status }),
+        customerDisplayName: "Client",
+        quotes: [quote("QUOTE_CREATED")],
+      });
+      expect(item.nextAction).toBe("OPEN_QUOTE");
+      expect(item.needsAttention).toBe(false);
+    },
+  );
 
   it("keeps request status separate from derived offer progress", () => {
     const item = projectRequestOverviewItem({
@@ -101,7 +109,8 @@ describe("request overview projection", () => {
     expect(item.commercialProgress).toBe("QUOTE_ACCEPTED");
     expect(item.commercialProgressLabel).toBe("Ofertă acceptată");
     expect(item.nextAction).toBe("OPEN_QUOTE");
-    expect(item.nextActionLabel).toBe("Deschide oferta");
+    expect(item.nextActionLabel).toBe("Confirmarea comenzii");
+    expect(item.needsAttention).toBe(true);
     expect(item.linkedQuoteSnapshotId).toBe("qts:HUB");
     expect(item.linkedQuoteProductCode).toBe("PRD-LETTERS-FRONTLIT-PLEXI-AL06");
     expect(item.href).toBe("/requests/crq%3A11111111-2222-3333-4444-555555555555");
@@ -122,40 +131,28 @@ describe("request overview projection", () => {
   });
 
   it("applies the accepted request attention law", () => {
-    expect(deriveRequestOverviewAttention({ status: "NEW", hasLinkedQuotes: false })).toEqual({
-      needsAttention: false,
-      attentionLabel: null,
-    });
-    expect(deriveRequestOverviewAttention({ status: "IN_REVIEW", hasLinkedQuotes: false })).toEqual({
-      needsAttention: false,
-      attentionLabel: null,
-    });
-    expect(
-      deriveRequestOverviewAttention({ status: "WAITING_CUSTOMER", hasLinkedQuotes: false }),
-    ).toEqual({
-      needsAttention: false,
-      attentionLabel: null,
-    });
-    expect(
-      deriveRequestOverviewAttention({ status: "READY_FOR_QUOTE", hasLinkedQuotes: false }),
-    ).toEqual({
+    const attention = (status: CommercialRequest["status"], quotes: QuoteOverviewItem[] = []) => {
+      const item = projectRequestOverviewItem({
+        request: request({ status }),
+        customerDisplayName: "Client",
+        quotes,
+      });
+      return { needsAttention: item.needsAttention, attentionLabel: item.attentionLabel };
+    };
+    const none = { needsAttention: false, attentionLabel: null };
+    expect(attention("NEW")).toEqual(none);
+    expect(attention("IN_REVIEW")).toEqual(none);
+    expect(attention("WAITING_CUSTOMER")).toEqual(none);
+    expect(attention("READY_FOR_QUOTE")).toEqual({
       needsAttention: true,
       attentionLabel: "Urmează oferta",
     });
-    expect(
-      deriveRequestOverviewAttention({ status: "READY_FOR_QUOTE", hasLinkedQuotes: true }),
-    ).toEqual({
-      needsAttention: false,
-      attentionLabel: null,
-    });
-    expect(deriveRequestOverviewAttention({ status: "BLOCKED", hasLinkedQuotes: true })).toEqual({
+    expect(attention("READY_FOR_QUOTE", [quote("QUOTE_CREATED")])).toEqual(none);
+    expect(attention("BLOCKED", [quote("QUOTE_CREATED")])).toEqual({
       needsAttention: true,
-      attentionLabel: "Blocat",
+      attentionLabel: "Cerere blocată",
     });
-    expect(deriveRequestOverviewAttention({ status: "CANCELLED", hasLinkedQuotes: false })).toEqual({
-      needsAttention: false,
-      attentionLabel: null,
-    });
+    expect(attention("CANCELLED")).toEqual(none);
   });
 
   it("orders by createdAt descending and does not promote attention", () => {
@@ -267,19 +264,34 @@ describe("request overview projection", () => {
       expect(detail.nextActionHref).toBe("/quotes/qts%3ASFC-1");
     });
 
-    it("targets the newest of eight unaccepted quotes, as the overview does", () => {
-      expect(expectSameTarget(eight()).linkedQuoteSnapshotId).toBe("qts:SFC-8");
+    it("opens the request when eight offers all wait for the customer", () => {
+      const detail = expectSameTarget(eight());
+      expect(detail.nextAction).toBe("OPEN_REQUEST");
+      expect(detail.journey.waitingCount).toBe(8);
+      expect(detail.journey.actionableCount).toBe(0);
     });
 
-    it("targets the newest ordered quote when two of eight have orders", () => {
-      expect(expectSameTarget(eight({ 1: "ORDER_CREATED", 4: "ORDER_CREATED" })).linkedQuoteSnapshotId).toBe("qts:SFC-5");
+    it("still waits on the customer when two of eight offers have orders", () => {
+      const detail = expectSameTarget(eight({ 1: "ORDER_CREATED", 4: "ORDER_CREATED" }));
+      expect(detail.nextAction).toBe("OPEN_REQUEST");
+      expect(detail.journey.orderCount).toBe(2);
+      expect(detail.journey.waitingCount).toBe(6);
     });
 
-    it("prefers an accepted quote over newer unaccepted ones", () => {
-      expect(expectSameTarget(eight({ 0: "QUOTE_ACCEPTED", 2: "QUOTE_ACCEPTED" })).linkedQuoteSnapshotId).toBe("qts:SFC-3");
+    it("targets the only accepted offer without an order, not the newer ordered one", () => {
+      const detail = expectSameTarget(eight({ 2: "QUOTE_ACCEPTED", 5: "ORDER_CREATED" }));
+      expect(detail.nextAction).toBe("OPEN_QUOTE");
+      expect(detail.nextActionHref).toBe("/quotes/qts%3ASFC-3");
+      expect(detail.nextActionLabel).toBe("Confirmarea comenzii");
     });
 
-    it("targets the assembly when it is at least as advanced as any product quote", () => {
+    it("summarizes two accepted offers without orders instead of choosing one", () => {
+      const detail = expectSameTarget(eight({ 0: "QUOTE_ACCEPTED", 2: "QUOTE_ACCEPTED" }));
+      expect(detail.nextAction).toBe("OPEN_REQUEST");
+      expect(detail.nextActionLabel).toBe("2 de rezolvat");
+    });
+
+    it("opens the job sheet of an ordered assembly when nothing else waits", () => {
       const assembly: RequestAssemblyWork = {
         assemblyId: "asm:1",
         label: "Fațadă",
@@ -296,9 +308,40 @@ describe("request overview projection", () => {
         memberProductCodes: [],
         updatedAt: "2026-11-04T11:00:00.000Z",
       };
-      const detail = expectSameTarget(eight({ 0: "ORDER_CREATED" }), [assembly]);
+      const assemblyOffer: QuoteOverviewItem = {
+        ...branch("ORDER_CREATED", "ASM", 9),
+        quoteSnapshotId: "aqs:1",
+        kind: "ASSEMBLY",
+        assemblyId: "asm:1",
+        orderSnapshotId: "ord:asm",
+      };
+      const detail = expectSameTarget([assemblyOffer], [assembly]);
+      expect(detail.nextAction).toBe("OPEN_ORDER");
+      expect(detail.nextActionHref).toBe("/jobs/ord%3Aasm");
+      expect(detail.nextActionLabel).toBe("Fișa lucrării");
+    });
+
+    it("continues an assembly still in configuration", () => {
+      const assembly: RequestAssemblyWork = {
+        assemblyId: "asm:draft",
+        label: "Fațadă",
+        stage: "IN_CONFIGURATION",
+        stageLabel: "În configurare",
+        quoteSnapshotId: null,
+        quoteGrossPrice: null,
+        currency: null,
+        orderSnapshotId: null,
+        productionSnapshotId: null,
+        executionPlanId: null,
+        revisionPending: false,
+        membersEditable: true,
+        memberProductCodes: [],
+        updatedAt: "2026-11-04T11:00:00.000Z",
+      };
+      const detail = expectSameTarget([], [assembly]);
       expect(detail.nextAction).toBe("OPEN_ASSEMBLY");
-      expect(detail.nextActionHref).toBe("/assemblies/asm%3A1");
+      expect(detail.nextActionHref).toBe("/assemblies/asm%3Adraft");
+      expect(detail.nextActionLabel).toBe("Continuă ansamblul");
     });
   });
 

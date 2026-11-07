@@ -26,13 +26,14 @@ import "../../../styles/surfaces/client-requests.css";
 
 
 /**
- * The offer's own tag: a superseded version says so in the server's words (608:9487), the server's
- * attention reason is warm, otherwise the offer's stage.
+ * The offer's own tag, in the server's commercial status: a superseded or decided offer is past,
+ * an obligation of the organization is warm, otherwise the status as it comes.
  */
 function tagOf(quote: QuoteListItemTransport): OfferTag {
-  if (quote.superseded && !quote.orderSnapshotId) return { tone: "past", label: quote.attentionLabel ?? "Înlocuită de o versiune nouă" };
-  if (quote.needsAttention && quote.attentionLabel) return { tone: "offer", label: quote.attentionLabel };
-  return { tone: quote.orderSnapshotId ? "done" : "neutral", label: presentQuoteHistoryState(quote) };
+  const label = quote.commercialStatusLabel?.trim() || presentQuoteHistoryState(quote);
+  if (quote.commercialStatus === "SUPERSEDED" || quote.decided) return { tone: "past", label };
+  if (quote.obligationKind === "ACTIONABLE") return { tone: "offer", label };
+  return { tone: quote.commercialStatus === "ORDERED" ? "done" : "neutral", label };
 }
 
 /** The work of an offer: its job (by order); an order whose job the list lacks keeps the server's way in. */
@@ -90,12 +91,12 @@ function RequestCard({ customerId, group, onPreview, arrival }: { customerId: st
         </div>
         <dl className="dreqcard__facts">
           <div>
-            <dt>Starea cererii</dt>
-            {/* The server's state of the request, as it comes; the commercial progress is apart. */}
+            <dt>Stare comercială</dt>
             <dd>
-              <span className="dstate" data-tone="neutral">
-                <span>{request.statusLabel}</span>
+              <span className="dstate" data-tone={request.journey?.needsAttention ? "offer" : "neutral"}>
+                <span>{request.journey?.phaseLabel ?? request.statusLabel}</span>
               </span>
+              {request.journey?.administrativeNote ? <span className="dreqcard__admin">{request.journey.administrativeNote}</span> : null}
             </dd>
           </div>
           <div>
@@ -214,14 +215,14 @@ export function ClientRequestsSection({ customerId, workspace, search }: { custo
   // R1 · Bara de rezultat (845:31815): the mode is not a filter; "În așteptare", the site and the
   // year are, each a chip of its own. The count follows the mode: requests or offers.
   const chips: ResultChip[] = [
-    attention ? { key: "attention", label: "Filtru", value: "În așteptare", onRemove: () => apply({ attention: "" }) } : null,
+    attention ? { key: "attention", label: "Filtru", value: "De urmărit", onRemove: () => apply({ attention: "" }) } : null,
     filterChip("site", "Sediu", data.sites, context.site, () => apply({ site: "" }), siteName ?? "sediu indisponibil"),
     filterChip("year", yearTitle, data.years, context.year, () => apply({ year: "" }), context.year),
   ].filter((chip): chip is ResultChip => chip !== null);
   const totalsLine = [
     countLabel(data.totals.requests, "cerere", "cereri"),
     countLabel(data.totals.offers, "ofertă", "oferte"),
-    data.totals.waiting ? `${countLabel(data.totals.waiting, "ofertă", "oferte")} în așteptare` : null,
+    data.totals.followUp ? `${countLabel(data.totals.followUp, "ofertă", "oferte")} de urmărit` : null,
   ].filter(Boolean).join(" · ");
   // Pe cereri + an: offers without a request have no request year — said, never silently dropped.
   const looseNote = data.looseWithoutYear ? (
@@ -263,10 +264,10 @@ export function ClientRequestsSection({ customerId, workspace, search }: { custo
           <span className="dreqs__chip" data-active={attention || undefined}>
             <button type="button" className="dreqs__chip-toggle" aria-pressed={attention} onClick={() => apply({ attention: attention ? "" : "1" })}>
               <span className="dreqs__chip-dot" aria-hidden="true" />
-              {`În așteptare · ${data.totals.waiting}`}
+              {`De urmărit · ${data.totals.followUp}`}
             </button>
             {attention ? (
-              <button type="button" className="dreqs__chip-clear" aria-label="Elimină filtrul În așteptare" onClick={() => apply({ attention: "" })}>
+              <button type="button" className="dreqs__chip-clear" aria-label="Elimină filtrul De urmărit" onClick={() => apply({ attention: "" })}>
                 <DossierIcon name="close" size={13} />
               </button>
             ) : null}
@@ -307,7 +308,7 @@ export function ClientRequestsSection({ customerId, workspace, search }: { custo
           shown={view === "oferte" ? shownOffers : shownRequests}
           total={view === "oferte" ? data.totals.offers : data.totals.requests}
           unit={view === "oferte" ? ["ofertă", "oferte"] : ["cerere", "cereri"]}
-          detail={view === "cereri" ? (context.q || chips.length ? (attention ? `${countLabel(data.waitingShown, "ofertă", "oferte")} în așteptare` : null) : countLabel(data.totals.offers, "ofertă", "oferte")) : null}
+          detail={view === "cereri" ? (context.q || chips.length ? (attention ? `${countLabel(data.followUpShown, "ofertă", "oferte")} de urmărit` : null) : countLabel(data.totals.offers, "ofertă", "oferte")) : null}
           query={context.q}
           onClearQuery={() => { setText(""); apply({ q: "" }); }}
           chips={chips}
@@ -343,9 +344,9 @@ export function ClientRequestsSection({ customerId, workspace, search }: { custo
             </section>
           ) : null}
           {looseNote}
-          {data.withoutWaiting.length ? (
+          {data.withoutFollowUp.length ? (
             <p className="dreqs__hidden">
-              {`${countLabel(data.withoutWaiting.length, "cerere nu are", "cereri nu au")} oferte în așteptare: ${data.withoutWaiting.map((request) => request.reference ?? request.title).join(", ")}.`}
+              {`${countLabel(data.withoutFollowUp.length, "cerere nu are", "cereri nu au")} oferte de urmărit: ${data.withoutFollowUp.map((request) => request.reference ?? request.title).join(", ")}.`}
             </p>
           ) : null}
         </>

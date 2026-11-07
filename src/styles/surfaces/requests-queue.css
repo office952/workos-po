@@ -1,102 +1,60 @@
-/* Cereri · intake queue: preparation trays by request status, the time axis of entries
-   grouped by day, commercial progress segments and the intake slip. */
+/* Cereri · intake queue: one filter row beside the search, the time axis of entries
+   grouped by day, commercial progress and the intake slip. */
 
-/* ─── Preparation trays (page instrument) ─── */
-.rtray {
-  display: flex;
-  align-items: flex-end;
-  gap: 14px;
-  min-width: 0;
+/* ─── Page bar and filter row (CJ1-R1 · WorkOS-N 1226:19418) ─── */
+.rtray-desk .rdesk__bar {
+  align-items: center;
+  flex-wrap: nowrap;
+  border-bottom: 1px solid var(--color-border);
 }
 
-.rtray__caption {
-  display: grid;
-  gap: 2px;
-  margin: 0;
-  padding-bottom: 8px;
-}
-
-.rtray__caption span {
-  color: var(--wos-brass-text);
-  font: 600 11px/1 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.rtray__caption small {
-  color: var(--shell-muted);
-  font: 500 9px/1.2 var(--font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.rtray__trays {
-  display: flex;
-  gap: 8px;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-
-.rtray__tray {
-  display: grid;
+.rtray-desk .rdesk__bar .rdesk-create {
   flex: 0 0 auto;
-  align-content: start;
-  justify-items: start;
-  gap: 2px;
-  min-width: 112px;
-  min-height: 44px;
-  padding: 0 14px 10px;
+}
+
+/* Without a selection the register takes the whole width; the dossier opens beside a chosen row. */
+.rtray-desk .rdesk__work[data-dossier="closed"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.rtray-desk .rdesk-register {
+  padding-right: var(--desk-gutter);
+}
+
+.rtray-desk .rdesk__work[data-dossier="open"] .rdesk-register {
+  padding-right: 24px;
+}
+
+.rtray-desk .rdesk-filterchips {
+  flex: 0 1 auto;
+}
+
+.rtray-status {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font: 500 12px/1.3 var(--font-sans);
+}
+
+.rtray-status select {
+  min-height: 40px;
+  padding: 0 10px;
   border: 1px solid var(--color-border);
-  border-top: 0;
-  background: var(--color-surface-raised);
-  color: var(--color-text-primary);
-  text-align: left;
-  cursor: pointer;
-}
-
-.rtray__tray[data-apart] {
-  margin-left: 14px;
-}
-
-.rtray__tray:hover {
+  border-radius: 2px;
   background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: 500 13px var(--font-sans);
 }
 
-.rtray__tray:focus-visible {
+.rtray-status[data-active] select {
+  border: 2px solid var(--shell-signal);
+}
+
+.rtray-status select:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
-}
-
-.rtray__tray[aria-pressed="true"] {
-  background: var(--wos-lightbox);
-  box-shadow: inset 0 -2px 0 var(--shell-brass);
-}
-
-.rtray__lip {
-  width: calc(100% + 28px);
-  height: 4px;
-  margin: 0 -14px 6px;
-  background: var(--color-border-strong);
-}
-
-.rtray__tray[data-filled] .rtray__lip {
-  background: var(--shell-brass);
-}
-
-.rtray__count {
-  font: 600 28px/1.05 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.rtray__tray:not([data-filled]) .rtray__count {
-  color: var(--shell-muted);
-}
-
-.rtray__label {
-  color: var(--color-text-secondary);
-  font: 500 13px/1.25 var(--font-sans);
-  white-space: nowrap;
 }
 
 /* ─── Register: time axis and day groups ─── */
@@ -113,7 +71,21 @@
 }
 
 .rtray-table__action {
-  width: 200px;
+  width: 232px;
+}
+
+/* The next action names a whole step ("Confirmarea comenzii"); it wraps rather than truncating. */
+.rtray-table .rdesk-next {
+  white-space: normal;
+  line-height: 1.25;
+  padding-block: 6px;
+}
+
+.rtray-table .rdesk-next > span:first-child {
+  min-width: 0;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
 }
 
 .rtray-table td.rtray-table__time {
@@ -168,37 +140,22 @@
   font: 400 11px var(--font-mono);
 }
 
-.rtray-progress {
-  display: grid;
-  gap: 5px;
+.rtray-offers {
+  color: var(--color-text-secondary);
+  font: 400 12px/1.4 var(--font-sans);
 }
 
-.rtray-progress__segments {
-  display: flex;
-  gap: 3px;
-}
-
-.rtray-progress__segments > span {
-  width: 36px;
-  height: 5px;
-  background: var(--color-border);
-}
-
-.rtray-progress__segments > span[data-on="done"] {
-  background: color-mix(in srgb, var(--shell-signal) 55%, transparent);
-}
-
-.rtray-progress__segments > span[data-on="last"] {
-  background: var(--shell-signal);
-}
-
-.rtray-progress__label {
-  color: var(--color-text-primary);
-  font: 400 12px/1.3 var(--font-sans);
-}
-
-.rtray-progress__label[data-empty] {
+.rtray-offers[data-empty] {
   color: var(--shell-muted);
+}
+
+.rtray-phase {
+  color: var(--color-text-primary);
+  font: 400 13px/1.4 var(--font-sans);
+}
+
+.rtray-phase[data-phase="CLOSED"] {
+  color: var(--color-text-secondary);
 }
 
 /* Cards */
@@ -358,28 +315,37 @@
   }
 
   .rtray-table__action {
-    width: 188px;
+    width: 220px;
   }
 }
 
 @media (max-width: 767px) {
-  .rtray {
-    display: grid;
-    gap: 8px;
-  }
-
-  .rtray__caption {
+  .rtray-desk .rdesk__bar {
     display: flex;
-    gap: 8px;
-    padding: 0;
+    justify-content: space-between;
   }
 
-  .rtray__tray {
-    min-width: 104px;
+  .rtray-desk .rdesk__bar .rdesk-create {
+    flex: 0 0 auto;
+    min-height: 44px;
   }
 
-  .rtray__count {
-    font-size: 22px;
+  .rtray-desk .rdesk-toolbar {
+    gap: 10px;
+    padding: 12px 0;
+  }
+
+  .rtray-desk .rdesk-filterchips {
+    flex: 1 1 100%;
+  }
+
+  .rtray-status {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+
+  .rtray-status select {
+    min-height: 44px;
   }
 
   .rtray-pages__steps {

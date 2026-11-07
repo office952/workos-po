@@ -13,7 +13,7 @@ import type { FrozenProductionOperation } from "../production/snapshot.js";
 import { costCompletenessLabel } from "../resources/eic.js";
 import { recipeForProcess, recipeQuantityBasisLabel } from "../resources/recipes.js";
 import {
-  deriveQuoteOverviewAttention,
+  quoteOverviewCommercialFields,
   quoteOverviewHref,
   quoteOverviewKindLabel,
   quoteOverviewNextActionLabel,
@@ -22,8 +22,6 @@ import {
   type QuoteOverviewNextAction,
   type QuoteOverviewStage,
 } from "./overview.js";
-
-const SUPERSEDED_LABEL = "Înlocuită de o versiune mai nouă";
 
 /** Assembly acceptance creates the order in one step, so there is no separate accepted stage. */
 export function deriveAssemblyQuoteStage(order: AssemblyOrderSnapshot | null): QuoteOverviewStage {
@@ -39,10 +37,12 @@ export function projectAssemblyQuoteOverviewItem(input: {
 }): QuoteOverviewItem {
   const stage = deriveAssemblyQuoteStage(input.order);
   const nextAction: QuoteOverviewNextAction = input.order ? "OPEN_ORDER" : "OPEN_ASSEMBLY";
-  const attention =
-    input.superseded && !input.order
-      ? { needsAttention: false, attentionLabel: SUPERSEDED_LABEL }
-      : deriveQuoteOverviewAttention(stage);
+  const commercial = quoteOverviewCommercialFields({
+    stage,
+    superseded: input.superseded,
+    disposition: null,
+    commercialState: null,
+  });
   return {
     quoteSnapshotId: input.quote.quoteSnapshotId,
     kind: "ASSEMBLY",
@@ -67,8 +67,7 @@ export function projectAssemblyQuoteOverviewItem(input: {
     nextAction,
     nextActionLabel: quoteOverviewNextActionLabel(nextAction),
     href: quoteOverviewHref({ quoteSnapshotId: input.quote.quoteSnapshotId }),
-    needsAttention: attention.needsAttention,
-    attentionLabel: attention.attentionLabel,
+    ...commercial,
     acceptanceId: null,
     orderSnapshotId: input.order?.orderSnapshotId ?? null,
     requestId: input.quote.requestId,

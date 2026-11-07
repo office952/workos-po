@@ -1,4 +1,5 @@
 import type { QuoteListItemTransport } from "../api/types";
+import { presentOfferCommercialStatus } from "./commercialJourneyAdapter";
 import { asBoolean, asRecord, asString } from "./record";
 
 export function presentQuoteList(payload: unknown): QuoteListItemTransport[] {
@@ -50,6 +51,7 @@ export function presentQuoteListItem(value: unknown): QuoteListItemTransport | n
     orderSnapshotId: asString(row.orderSnapshotId),
     disposition: asString(row.disposition),
     dispositionLabel: asString(row.dispositionLabel),
+    ...presentOfferCommercialStatus(row),
   };
 }
 
@@ -82,18 +84,6 @@ export function presentQuotePreviewDetail(payload: unknown): QuotePreviewDetail 
     return [{ label, value: row.value, unit }];
   });
   return { measurements, acceptedAt: asString(asRecord(record.acceptance)?.acceptedAt) };
-}
-
-export function presentQuoteAcceptanceFact(stage: string | null): string {
-  switch (stage) {
-    case "QUOTE_ACCEPTED":
-    case "ORDER_CREATED":
-      return "Acceptată";
-    case "QUOTE_CREATED":
-      return "Neacceptată";
-    default:
-      return "—";
-  }
 }
 
 export function presentAcceptanceId(payload: unknown): string | null {

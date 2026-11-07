@@ -10,7 +10,8 @@ import {
   requestStandaloneQuoteRefusal,
   type RequestAssemblyWork,
 } from "./assemblyWork.js";
-import { deriveRequestCommercialProgress, deriveRequestOverviewNextAction } from "./overview.js";
+import { deriveRequestCommercialProgress } from "./overview.js";
+import { requestAssemblyNeedsPreparation } from "./assemblyWork.js";
 
 function work(overrides: Partial<RequestAssemblyWork> = {}): RequestAssemblyWork {
   return {
@@ -45,13 +46,15 @@ describe("request assembly work", () => {
     expect(furthestRequestAssembly([])).toBeNull();
   });
 
-  it("drives request progress and next action from assembly snapshots", () => {
+  it("drives request progress from assembly snapshots and flags only unfinished preparation", () => {
     expect(deriveRequestCommercialProgress([], [work()])).toBe("QUOTE_CREATED");
     expect(deriveRequestCommercialProgress([], [work({ orderSnapshotId: "asmo:1" })])).toBe("ORDER_CREATED");
-    expect(deriveRequestOverviewNextAction({ status: "NEW", quotes: [], assemblies: [work({ quoteSnapshotId: null })] })).toBe("OPEN_ASSEMBLY");
-    expect(deriveRequestOverviewNextAction({ status: "NEW", quotes: [quote("QUOTE_ACCEPTED")], assemblies: [work()] })).toBe("OPEN_QUOTE");
-    expect(deriveRequestOverviewNextAction({ status: "NEW", quotes: [quote("QUOTE_CREATED")], assemblies: [work({ orderSnapshotId: "asmo:1" })] })).toBe("OPEN_ASSEMBLY");
-    expect(deriveRequestOverviewNextAction({ status: "NEW", quotes: [], assemblies: [] })).toBe("CHOOSE_PRODUCT");
+    expect(deriveRequestCommercialProgress([quote("QUOTE_ACCEPTED")], [work()])).toBe("QUOTE_ACCEPTED");
+    expect(requestAssemblyNeedsPreparation(work({ stage: "IN_CONFIGURATION", quoteSnapshotId: null }))).toBe(true);
+    expect(requestAssemblyNeedsPreparation(work({ stage: "NEEDS_REVIEW" }))).toBe(true);
+    expect(requestAssemblyNeedsPreparation(work({ stage: "READY_FOR_QUOTE", revisionPending: true }))).toBe(true);
+    expect(requestAssemblyNeedsPreparation(work({ stage: "QUOTE_CREATED" }))).toBe(false);
+    expect(requestAssemblyNeedsPreparation(work({ stage: "ORDER_CREATED", orderSnapshotId: "asmo:1" }))).toBe(false);
   });
 
   it("refuses an accidental second assembly but allows an explicit commercial alternative", () => {

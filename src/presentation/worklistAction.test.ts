@@ -1,62 +1,72 @@
 import { describe, expect, it } from "vitest";
 import type {
+  CommercialJourneyItemTransport,
+  CommercialJourneyTransport,
   JobListItemTransport,
   QuoteListItemTransport,
-  RequestDetailTransport,
-  RequestLinkedOfferTransport,
-  RequestListItemTransport,
 } from "../api/types";
 import {
   presentJobWorklistAction,
   presentQuoteWorklistAction,
-  presentRequestNextStep,
   presentRequestWorklistAction,
 } from "./worklistAction";
 
-function linkedOffer(
-  partial: Partial<RequestLinkedOfferTransport> = {},
-): RequestLinkedOfferTransport {
+function journey(partial: Partial<CommercialJourneyTransport> = {}): CommercialJourneyTransport {
   return {
-    quoteSnapshotId: "q-1",
-    kind: "PRODUCT",
-    kindLabel: "Produs",
-    productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
-    productLabel: "Litere volumetrice",
-    inscription: null,
-    reference: "OF-1",
-    stageLabel: "Creată",
-    superseded: false,
-    attentionLabel: "Urmează acceptarea",
-    orderSnapshotId: null,
+    offerSummary: {
+      count: 0,
+      awaitingCustomer: 0,
+      acceptedWithoutOrder: 0,
+      ordered: 0,
+      declined: 0,
+      notPursued: 0,
+      superseded: 0,
+      undecided: 0,
+      summaryLabel: "Fără ofertă",
+    },
+    actionable: [],
+    waiting: [],
+    actionableCount: 0,
+    waitingCount: 0,
+    orderCount: 0,
+    nextAction: "OPEN_REQUEST",
+    nextActionLabel: "Deschide cererea",
+    nextActionHref: "/requests/req-1",
+    needsAttention: false,
+    attentionLabel: null,
+    phase: "OPEN",
+    phaseLabel: "Deschisă",
+    phaseAt: null,
+    administrativeNote: null,
     ...partial,
   };
 }
 
-function request(
-  partial: Partial<RequestListItemTransport> = {},
-): RequestListItemTransport {
+function journeyItem(partial: Partial<CommercialJourneyItemTransport> = {}): CommercialJourneyItemTransport {
   return {
-    requestId: "req-1",
-    title: "Litere",
-    reference: "CRQ-104",
-    customerId: "cus-1",
-    customerDisplayName: "Atelier Nord",
-    status: "NEW",
-    statusLabel: "Nouă",
-    contextLabel: null,
-    commercialProgress: null,
-    createdAt: "2026-09-01T10:00:00.000Z",
-    nextAction: "OPEN_REQUEST",
-    nextActionLabel: "Deschide",
-    nextActionHref: null,
-    needsAttention: false,
-    attentionLabel: null,
-    linkedQuoteSnapshotId: null,
-    linkedQuoteProductCode: null,
-    linkedAssemblyId: null,
+    kind: "ACCEPTED_WITHOUT_ORDER",
+    key: "quote:q-1",
+    quoteSnapshotId: "q-1",
+    quoteKind: "PRODUCT",
+    productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    assemblyId: null,
+    title: "OF-1",
+    detail: "Acceptată · fără comandă",
+    hint: null,
+    actionLabel: "Confirmă comanda",
+    href: "/quotes/q-1",
+    action: "OPEN_QUOTE",
     ...partial,
   };
 }
+
+const awaiting = {
+  commercialStatus: "AWAITING_CUSTOMER",
+  commercialStatusLabel: "Fără decizie",
+  obligationKind: "WAITING",
+  followUp: true,
+  decided: false,
+};
 
 function quote(partial: Partial<QuoteListItemTransport> = {}): QuoteListItemTransport {
   return {
@@ -83,6 +93,7 @@ function quote(partial: Partial<QuoteListItemTransport> = {}): QuoteListItemTran
     requestId: "req-1",
     requestReference: "CRQ-104",
     orderSnapshotId: null,
+    ...awaiting,
     ...partial,
   };
 }
@@ -120,235 +131,80 @@ function job(partial: Partial<JobListItemTransport> = {}): JobListItemTransport 
   };
 }
 
-describe("presentRequestWorklistAction", () => {
-  it("keeps OPEN_REQUEST honest to request detail", () => {
-    expect(presentRequestWorklistAction(request())).toEqual({
-      actionLabel: "Deschide",
+describe("presentRequestWorklistAction · the server journey's next action", () => {
+  it("only opens the request when the server sent no journey", () => {
+    expect(presentRequestWorklistAction({ requestId: "req-1", journey: null })).toEqual({
+      actionLabel: "Deschide cererea",
       actionHref: "/cereri/req-1",
     });
   });
 
-  it("preserves customer and request context for CHOOSE_PRODUCT", () => {
-    expect(
-      presentRequestWorklistAction(
-        request({
-          nextAction: "CHOOSE_PRODUCT",
-          nextActionLabel: "Alege produs",
-          status: "READY_FOR_QUOTE",
-        }),
-      ),
-    ).toEqual({
-      actionLabel: "Alege produs",
-      actionHref: "/cereri/req-1?alege-produs=1#alege-produs",
+  it("keeps OPEN_REQUEST on the request page", () => {
+    expect(presentRequestWorklistAction({ requestId: "req-1", journey: journey() })).toEqual({
+      actionLabel: "Deschide cererea",
+      actionHref: "/cereri/req-1",
     });
   });
 
-  it("opens the linked quote for OPEN_QUOTE", () => {
+  it("sends CHOOSE_PRODUCT to the product choice of this request", () => {
     expect(
-      presentRequestWorklistAction(
-        request({
+      presentRequestWorklistAction({
+        requestId: "req-1",
+        journey: journey({ nextAction: "CHOOSE_PRODUCT", nextActionLabel: "Alege produsul" }),
+      }),
+    ).toEqual({ actionLabel: "Alege produsul", actionHref: "/cereri/req-1?alege-produs=1#alege-produs" });
+  });
+
+  it("opens the product offer the server named, with its product route", () => {
+    expect(
+      presentRequestWorklistAction({
+        requestId: "req-1",
+        journey: journey({
           nextAction: "OPEN_QUOTE",
-          nextActionLabel: "Deschide oferta",
-          linkedQuoteSnapshotId: "q-1",
-          linkedQuoteProductCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+          nextActionLabel: "Confirmă comanda",
+          nextActionHref: "/quotes/q-1",
+          actionable: [journeyItem()],
         }),
-      ),
-    ).toEqual({
-      actionLabel: "Deschide oferta",
-      actionHref: "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
-    });
-  });
-
-  it("maps current-main nextActionHref when linked quote fields are absent", () => {
-    expect(
-      presentRequestWorklistAction(
-        request({
-          nextAction: "OPEN_QUOTE",
-          nextActionLabel: "Deschide oferta",
-          nextActionHref:
-            "/quotes/qts%3APRD-ACM-CASSETTE-NONE%3Aabffbb338a5a65fc2f9c69d41798d58f4fb73d27e4941df6a05052bddb2ca6d4",
-        }),
-      ),
-    ).toEqual({
-      actionLabel: "Deschide oferta",
-      actionHref:
-        "/quotes/PRD-ACM-CASSETTE-NONE/qts%3APRD-ACM-CASSETTE-NONE%3Aabffbb338a5a65fc2f9c69d41798d58f4fb73d27e4941df6a05052bddb2ca6d4",
-    });
-  });
-
-  it("opens the request assembly for OPEN_ASSEMBLY instead of offering a product choice", () => {
-    expect(
-      presentRequestWorklistAction(
-        request({
-          nextAction: "OPEN_ASSEMBLY",
-          nextActionLabel: "Deschide ansamblul",
-          linkedAssemblyId: "asm:1",
-        }),
-      ),
-    ).toEqual({ actionLabel: "Deschide ansamblul", actionHref: "/ansamblu?assembly=asm%3A1" });
-  });
-
-  it("falls back to request detail when OPEN_ASSEMBLY has no assembly identity", () => {
-    expect(
-      presentRequestWorklistAction(request({ nextAction: "OPEN_ASSEMBLY", nextActionLabel: "Deschide ansamblul" })),
-    ).toEqual({ actionLabel: "Deschide", actionHref: "/cereri/req-1" });
-  });
-});
-
-describe("presentRequestNextStep (W2 · D04)", () => {
-  const detail: RequestDetailTransport = {
-    requestId: "req-1",
-    title: "Litere",
-    reference: "CRQ-104",
-    description: "Față plexi",
-    customerId: "cus-1",
-    customerDisplayName: "Atelier Nord",
-    status: "READY_FOR_QUOTE",
-    statusLabel: "Gata de ofertă",
-    commercialProgress: null,
-    commercialProgressLabel: null,
-    createdAt: "2026-09-01T10:00:00.000Z",
-    nextAction: "CHOOSE_PRODUCT",
-    nextActionLabel: "Alege produs",
-    nextActionHref: null,
-    linkedQuoteSnapshotId: null,
-    linkedQuoteProductCode: null,
-    canUploadAttachments: true,
-    linkedOffers: [],
-    linkedQuoteIds: [],
-    linkedQuoteProductCodes: [],
-    assemblies: [],
-    linkedAssemblyId: null,
-    canStartAdditionalWork: false,
-    attachments: [],
-    installationOffer: {
-      capabilityId: "SITE_INSTALLATION",
-      selected: false,
-      label: "Montaj la locație",
-      mode: null,
-      orgConfigured: false,
-      orgOfferMode: null,
-      canSelectNew: false,
-      canChangeSelection: false,
-      canChangeMode: false,
-      selectionLocked: false,
-      showModeControl: false,
-      availableModes: [],
-      persistedSelectionPreserved: false,
-      persistedModeIncompatible: false,
-    },
-    installationScope: null,
-    installationFacts: null,
-    canWriteInstallationFacts: false,
-    canWriteInstallationPrice: false,
-  };
-
-  const eight = Array.from({ length: 8 }, (_, index) =>
-    linkedOffer({ quoteSnapshotId: `q-${index + 1}`, reference: `OF-${index + 1}`, inscription: `SFC-${index + 1}` }),
-  );
-  const openQuote = (target: string | null, linkedOffers: RequestLinkedOfferTransport[], nextActionHref: string | null = null) => ({
-    ...detail,
-    nextAction: "OPEN_QUOTE",
-    nextActionLabel: "Deschide oferta",
-    nextActionHref,
-    linkedQuoteSnapshotId: target,
-    linkedQuoteProductCode: target ? "PRD-LETTERS-FRONTLIT-PLEXI-AL06" : null,
-    linkedOffers,
-  });
-
-  it("offers product choice when the request has no quote", () => {
-    expect(presentRequestNextStep(detail)).toEqual({
-      status: "ready",
-      label: "Alege produs",
-      href: "/cereri/req-1?alege-produs=1#alege-produs",
-      targetQuoteSnapshotId: null,
-      targetAssemblyId: null,
-    });
-  });
-
-  it("opens the only quote when the server names it", () => {
-    expect(presentRequestNextStep(openQuote("q-1", [linkedOffer()]))).toMatchObject({
-      status: "ready",
-      href: "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
-      targetQuoteSnapshotId: "q-1",
-    });
-  });
-
-  it("follows the server target among eight unaccepted quotes instead of the first or newest row", () => {
-    expect(presentRequestNextStep(openQuote("q-3", eight))).toMatchObject({ status: "ready", targetQuoteSnapshotId: "q-3" });
-  });
-
-  it("follows the server target when two of eight quotes are ordered", () => {
-    const mixed = eight.map((offer, index) =>
-      index === 1 || index === 4 ? { ...offer, stage: "ORDER_CREATED", stageLabel: "Cu comandă", orderSnapshotId: `ord-${index + 1}` } : offer,
-    );
-    expect(presentRequestNextStep(openQuote("q-5", mixed))).toMatchObject({
-      status: "ready",
-      href: "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-5",
-      targetQuoteSnapshotId: "q-5",
-    });
+      }),
+    ).toEqual({ actionLabel: "Confirmă comanda", actionHref: "/oferte/produs/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1" });
   });
 
   it("never sends an assembly offer to the product quote route", () => {
-    const assemblyOffer = linkedOffer({ quoteSnapshotId: "asmq:1", kind: "ASSEMBLY", productCode: "SIGN_ASSEMBLY_ACM_LETTERS_V1" });
-    const step = presentRequestNextStep(openQuote("asmq:1", [assemblyOffer, linkedOffer()]));
-    expect(step).toMatchObject({ status: "ready", href: "/oferte/ansamblu/asmq%3A1" });
-  });
-
-  it("opens the server-chosen assembly", () => {
     expect(
-      presentRequestNextStep({
-        ...detail,
-        nextAction: "OPEN_ASSEMBLY",
-        nextActionLabel: "Deschide ansamblul",
-        linkedAssemblyId: "asm:quoted",
-        assemblies: [{
-          assemblyId: "asm:quoted",
-          label: "Panou",
-          stage: "QUOTE_CREATED",
-          stageLabel: "Ofertă creată",
-          quoteGrossPrice: null,
-          currency: null,
-          quoteSnapshotId: null,
-          orderSnapshotId: null,
-          hasProduction: false,
-          executionPlanId: null,
-          revisionPending: false,
-          membersEditable: true,
-        }],
+      presentRequestWorklistAction({
+        requestId: "req-1",
+        journey: journey({
+          nextAction: "OPEN_QUOTE",
+          nextActionLabel: "Urmărește oferta",
+          nextActionHref: "/quotes/asmq%3A1",
+          waiting: [journeyItem({ key: "quote:asmq:1", quoteSnapshotId: "asmq:1", quoteKind: "ASSEMBLY", productCode: "SIGN_ASSEMBLY" })],
+        }),
       }),
-    ).toEqual({
-      status: "ready",
-      label: "Deschide ansamblul",
-      href: "/ansamblu?assembly=asm%3Aquoted",
-      targetQuoteSnapshotId: null,
-      targetAssemblyId: "asm:quoted",
-    });
+    ).toEqual({ actionLabel: "Urmărește oferta", actionHref: "/oferte/ansamblu/asmq%3A1" });
   });
 
-  it("says the target is missing instead of choosing another quote when the server target is stale", () => {
-    expect(presentRequestNextStep(openQuote("q-gone", eight, "/quotes/qts%3Agone"))).toEqual({
-      status: "target-missing",
-      label: "Deschide oferta",
-    });
-  });
-
-  it("says the assembly target is missing when it is not in this request", () => {
+  it("stays on the request when the named offer is not among the journey items", () => {
     expect(
-      presentRequestNextStep({ ...detail, nextAction: "OPEN_ASSEMBLY", nextActionLabel: "Deschide ansamblul", linkedAssemblyId: "asm:gone" }),
-    ).toEqual({ status: "target-missing", label: "Deschide ansamblul" });
+      presentRequestWorklistAction({
+        requestId: "req-1",
+        journey: journey({ nextAction: "OPEN_QUOTE", nextActionLabel: "Deschide oferta", nextActionHref: "/quotes/q-gone" }),
+      }),
+    ).toEqual({ actionLabel: "Deschide oferta", actionHref: "/cereri/req-1" });
   });
 
-  it("falls back to the server href only when no target id was sent", () => {
+  it("opens the server's assembly and the job of the order", () => {
     expect(
-      presentRequestNextStep(openQuote(null, eight, "/quotes/qts%3APRD-ACM-CASSETTE-NONE%3Aabc")),
-    ).toMatchObject({ status: "ready", href: "/quotes/PRD-ACM-CASSETTE-NONE/qts%3APRD-ACM-CASSETTE-NONE%3Aabc" });
-    expect(presentRequestNextStep(openQuote(null, eight))).toEqual({ status: "target-missing", label: "Deschide oferta" });
-  });
-
-  it("shows no next step for OPEN_REQUEST or a missing next action (e.g. without permission)", () => {
-    expect(presentRequestNextStep({ ...detail, nextAction: "OPEN_REQUEST", nextActionLabel: "Deschide" })).toEqual({ status: "none" });
-    expect(presentRequestNextStep({ ...detail, nextAction: "", nextActionLabel: "", linkedOffers: [linkedOffer()] })).toEqual({ status: "none" });
+      presentRequestWorklistAction({
+        requestId: "req-1",
+        journey: journey({ nextAction: "OPEN_ASSEMBLY", nextActionLabel: "Deschide ansamblul", nextActionHref: "/assemblies/asm%3A1" }),
+      }),
+    ).toEqual({ actionLabel: "Deschide ansamblul", actionHref: "/ansamblu?assembly=asm%3A1" });
+    expect(
+      presentRequestWorklistAction({
+        requestId: "req-1",
+        journey: journey({ nextAction: "OPEN_ORDER", nextActionLabel: "Fișa lucrării", nextActionHref: "/jobs/ord-1" }),
+      }),
+    ).toEqual({ actionLabel: "Fișa lucrării", actionHref: "/lucrari/ord-1" });
   });
 });
 
@@ -368,14 +224,22 @@ describe("presentQuoteWorklistAction", () => {
     ).toEqual({ actionLabel: "Deschide ansamblul", actionHref: "/ansamblu?assembly=asm%3A1" });
   });
 
-  it("does not label ACCEPT_QUOTE as a command that only opens detail", () => {
+  it("opens an offer awaiting the customer", () => {
     expect(presentQuoteWorklistAction(quote())).toEqual({
       actionLabel: "Deschide oferta",
-      actionHref: "/quotes/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
+      actionHref: "/oferte/produs/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1",
     });
   });
 
-  it("routes OPEN_ORDER to the job sheet and names that destination (D08)", () => {
+  it("asks to confirm the order for an accepted offer without one", () => {
+    expect(
+      presentQuoteWorklistAction(
+        quote({ commercialStatus: "ACCEPTED_WITHOUT_ORDER", commercialStatusLabel: "Acceptată · fără comandă", obligationKind: "ACTIONABLE" }),
+      ),
+    ).toEqual({ actionLabel: "Confirmarea comenzii", actionHref: "/oferte/produs/PRD-LETTERS-FRONTLIT-PLEXI-AL06/q-1" });
+  });
+
+  it("routes an ordered offer to the job sheet and names that destination (D08)", () => {
     expect(
       presentQuoteWorklistAction(
         quote({
@@ -384,12 +248,21 @@ describe("presentQuoteWorklistAction", () => {
           nextAction: "OPEN_ORDER",
           nextActionLabel: "Deschide comanda",
           orderSnapshotId: "ord-1",
+          commercialStatus: "ORDERED",
+          commercialStatusLabel: "Cu comandă",
+          obligationKind: "NONE",
+          followUp: false,
         }),
       ),
-    ).toEqual({
-      actionLabel: "Fișa lucrării",
-      actionHref: "/lucrari/ord-1",
-    });
+    ).toEqual({ actionLabel: "Fișa lucrării", actionHref: "/lucrari/ord-1" });
+  });
+
+  it("only shows the decision of a declined offer", () => {
+    expect(
+      presentQuoteWorklistAction(
+        quote({ commercialStatus: "DECLINED_BY_CUSTOMER", commercialStatusLabel: "Refuzată de client", obligationKind: "NONE", followUp: false, decided: true }),
+      ).actionLabel,
+    ).toBe("Vezi decizia");
   });
 });
 

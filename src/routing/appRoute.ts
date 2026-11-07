@@ -40,6 +40,8 @@ export type SpineContext = {
   productCode: string | null;
 };
 
+const LEGACY_PRODUCT_QUOTE_PATH = /^\/quotes\/([^/]+)\/([^/]+)$/;
+
 export function parseAppRoute(pathname: string): AppRoute {
   if (pathname === "/") {
     return { name: "home" };
@@ -152,7 +154,8 @@ export function parseAppRoute(pathname: string): AppRoute {
   if (pathname === "/foundation") {
     return { name: "foundation" };
   }
-  const quote = pathname.match(/^\/quotes\/([^/]+)\/([^/]+)$/);
+  // `/quotes/:code/:id` is the earlier address of the same page; canonicalLocation rewrites it.
+  const quote = pathname.match(/^\/oferte\/produs\/([^/]+)\/([^/]+)$/) ?? pathname.match(LEGACY_PRODUCT_QUOTE_PATH);
   if (quote) {
     return {
       name: "quote",
@@ -164,7 +167,7 @@ export function parseAppRoute(pathname: string): AppRoute {
 }
 
 export function quoteHref(productCode: string, quoteSnapshotId: string): string {
-  return `/quotes/${encodeURIComponent(productCode)}/${encodeURIComponent(quoteSnapshotId)}`;
+  return `/oferte/produs/${encodeURIComponent(productCode)}/${encodeURIComponent(quoteSnapshotId)}`;
 }
 
 export function assemblyQuoteHref(quoteSnapshotId: string): string {
@@ -488,6 +491,8 @@ export function canonicalLocation(pathname: string, search: string): string | nu
   if (legacyExecution) return executionHref(decodeURIComponent(legacyExecution[1]), {
     taskId: readSearchParam(search, "task"), jobId: readSearchParam(search, "job"),
   });
+  const legacyQuote = pathname.match(LEGACY_PRODUCT_QUOTE_PATH);
+  if (legacyQuote) return `${quoteHref(decodeURIComponent(legacyQuote[1]), decodeURIComponent(legacyQuote[2]))}${search}`;
   const job = pathname.match(/^\/lucrari\/([^/]+)$/);
   const section = readSearchParam(search, "sectiune");
   if (job && section && (LEGACY_JOB_SECTIONS as readonly string[]).includes(section)) {

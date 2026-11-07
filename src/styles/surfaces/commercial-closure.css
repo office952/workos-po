@@ -26,6 +26,10 @@
   margin: 0;
 }
 
+.cclose-banner[data-tone="reopened"] {
+  border-left: 3px solid var(--shell-signal);
+}
+
 .cclose-banner p + p {
   margin-top: 6px;
   color: var(--color-text-secondary);
@@ -145,7 +149,22 @@
 
 .ledger[data-selecting] .ledger__columns,
 .ledger[data-selecting] .ledger__row {
-  grid-template-columns: 2.5rem 2.5rem minmax(0, 2.3fr) minmax(0, 1.25fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 2.5rem minmax(0, 2.3fr) minmax(0, 1.25fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+
+@media (max-width: 1023px) {
+  .ledger[data-selecting] .ledger__columns,
+  .ledger[data-selecting] .ledger__row {
+    grid-template-columns: 2.5rem minmax(0, 2fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 0.9fr);
+  }
+
+  .ledger[data-selecting] .ledger__columns span:nth-child(3) {
+    display: none;
+  }
+
+  .ledger[data-selecting] .ledger__columns span:nth-child(2) {
+    display: inline;
+  }
 }
 
 /* Beat `.ledger__row > span { pointer-events: none }` so the overlay row button does not swallow the checkbox. */
@@ -196,10 +215,10 @@
   }
 
   .ledger[data-selecting] .ledger__row {
-    grid-template-columns: 2rem 1.75rem minmax(0, 1fr) auto 12px;
+    grid-template-columns: 2rem minmax(0, 1fr) auto 12px;
     grid-template-areas:
-      "pick index identity value chevron"
-      "pick . state state chevron";
+      "pick identity value chevron"
+      "pick state state chevron";
   }
 
   .ledger[data-selecting] .ledger__pick {

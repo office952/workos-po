@@ -5,7 +5,7 @@ import { REQUESTS_MEMORY_KEY } from "../../session/registryMemoryKeys";
 import type { DeskSignal } from "../desk/DeskSignalBoard";
 import type { Density } from "../desk/DeskToolbar";
 
-/** Preparation trays: one per request status, counted by the server summary. */
+/** Preparation trays: one per request status, counted by the server summary. Secondary to the commercial filters. */
 export const TRAYS = [
   { status: "NEW", label: "Noi", summary: "newCount" },
   { status: "IN_REVIEW", label: "În analiză", summary: "inReview" },
@@ -14,24 +14,47 @@ export const TRAYS = [
   { status: "BLOCKED", label: "Blocate", summary: "blocked" },
 ] as const satisfies readonly { status: string; label: string; summary: keyof RequestOverviewSummaryTransport }[];
 
-/** Commercial progress, by server code. Independent of the request status. */
-const PROGRESS_STEPS: Record<string, number> = { QUOTE_CREATED: 1, QUOTE_ACCEPTED: 2, ORDER_CREATED: 3 };
-export const PROGRESS_SEGMENTS = ["Ofertă", "Acceptare", "Comandă"] as const;
+/** Commercial filters (primary), counted by the server summary; the same names as the request overview. */
+export const COMMERCIAL_FILTERS = [
+  { id: "ALL", label: "Toate", summary: "total" },
+  { id: "ACTIONABLE", label: "De rezolvat", summary: "needsAttention" },
+  { id: "NO_OFFER", label: "Fără ofertă", summary: "noOffer" },
+  { id: "COMMERCIAL_OPEN", label: "Deschise", summary: "commerciallyOpen" },
+  { id: "COMMERCIAL_CLOSED", label: "Încheiate", summary: "commerciallyClosed" },
+] as const satisfies readonly { id: string; label: string; summary: keyof RequestOverviewSummaryTransport }[];
 
-export function commercialSteps(item: Pick<RequestListItemTransport, "commercialProgress">): number | null {
-  if (!item.commercialProgress) return 0;
-  return PROGRESS_STEPS[item.commercialProgress] ?? null;
+export type CommercialFilter = (typeof COMMERCIAL_FILTERS)[number]["id"];
+
+export function isCommercialFilter(value: unknown): value is CommercialFilter {
+  return COMMERCIAL_FILTERS.some((filter) => filter.id === value);
 }
 
-export function commercialLabel(item: Pick<RequestListItemTransport, "commercialProgress" | "contextLabel">): string {
-  return item.contextLabel?.trim() || (item.commercialProgress ? "—" : "Fără ofertă");
+/** Reads only server journey fields; a row without a journey matches "Toate" alone. */
+function matchesCommercial(item: RequestListItemTransport, filter: CommercialFilter): boolean {
+  if (filter === "ALL") return true;
+  const journey = item.journey;
+  if (!journey) return false;
+  switch (filter) {
+    case "ACTIONABLE":
+      return journey.needsAttention;
+    case "NO_OFFER":
+      return journey.offerSummary.count === 0;
+    case "COMMERCIAL_OPEN":
+      return journey.phase !== "CLOSED";
+    case "COMMERCIAL_CLOSED":
+      return journey.phase === "CLOSED";
+    default: {
+      const exhaustive: never = filter;
+      return exhaustive;
+    }
+  }
 }
 
 export type RequestSort = "newest" | "oldest";
 
-export type RequestFilters = { query: string; attention: boolean; status: string | null };
+export type RequestFilters = { query: string; commercial: CommercialFilter; status: string | null };
 
-export const EMPTY_REQUEST_FILTERS: RequestFilters = { query: "", attention: false, status: null };
+export const EMPTY_REQUEST_FILTERS: RequestFilters = { query: "", commercial: "ALL", status: null };
 
 function timestamp(value: string | null): number | null {
   if (!value) return null;
@@ -43,10 +66,11 @@ export function filterRequests(items: readonly RequestListItemTransport[], filte
   return items
     .filter(
       (item) =>
-        (!filters.attention || item.needsAttention) &&
+        matchesCommercial(item, filters.commercial) &&
         (filters.status === null || item.status === filters.status) &&
         matchesSearch(filters.query, [
-          item.title, item.reference, item.customerDisplayName, item.contextLabel, item.statusLabel, item.nextActionLabel, item.attentionLabel,
+          item.title, item.reference, item.customerDisplayName, item.statusLabel,
+          item.journey?.nextActionLabel, item.journey?.offerSummary.summaryLabel, item.journey?.phaseLabel,
         ]),
     )
     .sort((a, b) => {
@@ -60,7 +84,11 @@ export function filterRequests(items: readonly RequestListItemTransport[], filte
 }
 
 export function hasRequestFilter(filters: RequestFilters): boolean {
-  return filters.query.trim() !== "" || filters.attention || filters.status !== null;
+  return filters.query.trim() !== "" || filters.commercial !== "ALL" || filters.status !== null;
+}
+
+export function commercialFilterLabel(filter: CommercialFilter): string {
+  return COMMERCIAL_FILTERS.find((item) => item.id === filter)?.label ?? "Toate";
 }
 
 const DAY = new Intl.DateTimeFormat("ro-RO", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
@@ -94,17 +122,15 @@ export function groupByDay(items: readonly RequestListItemTransport[]): RequestD
   return days;
 }
 
-export function requestSignals(summary: RequestOverviewSummaryTransport | null, items: readonly RequestListItemTransport[], filters: RequestFilters): DeskSignal[] {
-  return [
-    { id: "all", label: "Toate", count: summary?.total ?? items.length, tone: "neutral", pressed: !filters.attention && filters.status === null },
-    {
-      id: "attention",
-      label: "Necesită acțiune",
-      count: summary?.needsAttention ?? items.filter((item) => item.needsAttention).length,
-      tone: "attention",
-      pressed: filters.attention,
-    },
-  ];
+/** Counts come only from the server summary; without one they show "—". */
+export function requestSignals(summary: RequestOverviewSummaryTransport | null, filters: RequestFilters): DeskSignal[] {
+  return COMMERCIAL_FILTERS.map((filter) => ({
+    id: filter.id,
+    label: filter.label,
+    count: summary?.[filter.summary] ?? null,
+    tone: filter.id === "ACTIONABLE" ? "attention" : "neutral",
+    pressed: filter.id === "ALL" ? filters.commercial === "ALL" && filters.status === null : filters.commercial === filter.id,
+  }));
 }
 
 /** The page is part of the register context: restored on return, clamped once the list is read. */
@@ -123,7 +149,7 @@ export function readRequestsMemory(): RequestsMemory {
     return {
       filters: {
         query: typeof filters.query === "string" ? filters.query : "",
-        attention: filters.attention === true,
+        commercial: isCommercialFilter(filters.commercial) ? filters.commercial : filters.attention === true ? "ACTIONABLE" : "ALL",
         status: TRAYS.some((tray) => tray.status === filters.status) ? (filters.status as string) : null,
       },
       sort: value.sort === "oldest" ? "oldest" : "newest",

@@ -29,7 +29,7 @@ const workspace = (customerId: string) => ({
     canCreateRequest: true,
     summary: { requestCount: 1, openRequestCount: 1, quoteCount: 2, jobCount: 1, historicalWorkCount: 0, workCount: 1 },
     requests: [{ requestId: "r1", title: "Casetă", reference: "CER-1", customerId, status: "OPEN", statusLabel: "Nouă", needsAttention: false, attentionLabel: null }],
-    quotes: [quote("q1", { stageLabel: "Cu comandă", orderSnapshotId: "o1" }), quote("q2", { needsAttention: true, attentionLabel: "Urmează acceptarea" })],
+    quotes: [quote("q1", { stageLabel: "Cu comandă", orderSnapshotId: "o1" }), quote("q2", { commercialStatus: "AWAITING_CUSTOMER", commercialStatusLabel: "Fără decizie", obligationKind: "WAITING", followUp: true, decided: false })],
     jobs: [],
   },
 });
@@ -148,8 +148,8 @@ describe("Istoric · design final, stage 1", () => {
     expect(within(card).getByText("Ramuri în stări diferite")).toBeInTheDocument();
     expect(within(card).getByText("Execuție în curs")).toBeInTheDocument();
     expect(within(card).getByText("Ofertare")).toBeInTheDocument();
-    // The server marks one of its offers: the card has the warm edge.
-    expect(card).toHaveAttribute("data-attention", "true");
+    // An offer waiting for the customer is followed, not an alarm: no warm edge.
+    expect(card).not.toHaveAttribute("data-attention");
     await userEvent.click(within(card).getByRole("button", { name: /Extinde/ }));
     const expanded = (await screen.findByRole("button", { name: /Restrânge/ })).closest("article") as HTMLElement;
     const branches = within(within(expanded).getByRole("region", { name: "Oferte și lucrările lor" })).getAllByRole("listitem");
@@ -161,9 +161,9 @@ describe("Istoric · design final, stage 1", () => {
     expect(branches[0]).not.toHaveAttribute("data-attention");
     expect(within(branches[1]!).getByRole("link", { name: "Deschide oferta OF-q2" })).toBeInTheDocument();
     expect(within(branches[1]!).getByText("Fără lucrare · oferta nu are comandă")).toBeInTheDocument();
-    // Warm only where the server asks for attention, with the server's words.
-    expect(within(branches[1]!).getByText("Urmează acceptarea")).toBeInTheDocument();
-    expect(branches[1]).toHaveAttribute("data-attention", "true");
+    // The server's commercial status, in its words; warm only when we owe the next step.
+    expect(within(branches[1]!).getByText("Fără decizie")).toBeInTheDocument();
+    expect(branches[1]).not.toHaveAttribute("data-attention");
     expect(within(branches[1]!).queryByRole("link", { name: /^Lucrare · / })).toBeNull();
     // Restrânge keeps the search and the filters, and the focus goes back to Extinde.
     await userEvent.click(within(expanded).getByRole("button", { name: /Restrânge/ }));

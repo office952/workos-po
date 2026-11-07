@@ -243,7 +243,6 @@ export {
   commercialActorRoleLabel,
   commercialDecisionsFingerprint,
   commercialMutationErrorLabel,
-  commercialNextActionWhenClosed,
   commercialOfferDispositionLabel,
   commercialReopenFingerprint,
   commercialResumeFingerprint,
@@ -278,3 +277,4 @@ export {
   type CommercialState,
   type RecordedCommercialOperation,
 } from "./closure/index.js";
+export * from "./journey/index.js";

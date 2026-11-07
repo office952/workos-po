@@ -19,6 +19,11 @@ function offer(partial: Partial<RequestLinkedOfferTransport> & { quoteSnapshotId
     superseded: false,
     attentionLabel: null,
     orderSnapshotId: null,
+    commercialStatus: "AWAITING_CUSTOMER",
+    commercialStatusLabel: "Fără decizie",
+    obligationKind: "WAITING",
+    followUp: true,
+    decided: false,
     ...partial,
   };
 }

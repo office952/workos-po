@@ -150,6 +150,25 @@ describe("parseAppRoute", () => {
   });
 });
 
+describe("CJ1-R1 · one Romanian address for every offer", () => {
+  it("emits the product offer under /oferte, next to the assembly offer", () => {
+    expect(quoteHref("PRD-X", "qts:1")).toBe("/oferte/produs/PRD-X/qts%3A1");
+    expect(assemblyQuoteHref("asmq:1")).toBe("/oferte/ansamblu/asmq%3A1");
+    expect(parseAppRoute("/oferte/produs/PRD-X/qts%3A1")).toEqual({ name: "quote", productCode: "PRD-X", quoteSnapshotId: "qts:1" });
+    expect(parseAppRoute("/oferte/ansamblu/asmq%3A1")).toEqual({ name: "assembly-quote", quoteSnapshotId: "asmq:1" });
+    expect(navItemCurrent("/oferte/produs/PRD-X/q-1", "/oferte")).toBe(true);
+    expect(navItemCurrent("/oferte/produs/PRD-X/q-1", "/cereri")).toBe(false);
+  });
+
+  it("keeps earlier /quotes deep links working and rewrites them to the canonical address", () => {
+    expect(parseAppRoute("/quotes/PRD-X/qts%3A1")).toEqual({ name: "quote", productCode: "PRD-X", quoteSnapshotId: "qts:1" });
+    expect(canonicalLocation("/quotes/PRD-X/qts%3A1", "")).toBe("/oferte/produs/PRD-X/qts%3A1");
+    expect(canonicalLocation("/quotes/PRD-X/q-1", "?from=x")).toBe("/oferte/produs/PRD-X/q-1?from=x");
+    expect(canonicalLocation("/oferte/produs/PRD-X/q-1", "")).toBeNull();
+    expect(canonicalLocation("/quotes/q-1", "")).toBeNull();
+  });
+});
+
 it("redirects historical commercial Catalog URLs to request intake/selection", () => {
   expect(canonicalLocation("/catalog", "?request=req%3A1&customer=cus%3A1")).toBe("/cereri/req%3A1?alege-produs=1#alege-produs");
   expect(canonicalLocation("/catalog", "?customer=cus%3A1")).toBe("/cereri/noua?customer=cus%3A1");

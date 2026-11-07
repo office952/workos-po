@@ -18,8 +18,8 @@ function workDocuments(entry: HistoryEntry, jobId: string): DossierDocument[] {
 }
 
 /**
- * The offer's own tag (Stare 557:3559 in Rând ofertă 605:8715): the reason the server gives when it
- * marks the offer for attention (warm), otherwise its stage — "Cu comandă" once ordered.
+ * The offer's own tag (Stare 557:3559 in Rând ofertă 605:8715): the server's commercial status, warm
+ * only when the organization owes the next step; waiting for the customer is not an alarm.
  */
 function offerTag(branch: HistoryBranch, quote: QuoteListItemTransport | null): { tone: "offer" | "done" | "neutral"; label: string } | null {
   if (!branch.quote) return null;
@@ -29,7 +29,10 @@ function offerTag(branch: HistoryBranch, quote: QuoteListItemTransport | null): 
   if (branch.dispositionLabel) {
     return { tone: "neutral", label: branch.dispositionLabel };
   }
-  if (quote?.needsAttention && !quote.superseded && quote.attentionLabel) return { tone: "offer", label: quote.attentionLabel };
+  if (quote?.commercialStatusLabel && !branch.quote.superseded) {
+    if (quote.obligationKind === "ACTIONABLE") return { tone: "offer", label: quote.attentionLabel ?? quote.commercialStatusLabel };
+    return { tone: quote.commercialStatus === "ORDERED" ? "done" : "neutral", label: quote.commercialStatusLabel };
+  }
   const label = [quote?.dispositionLabel, branch.quote.stageLabel, branch.quote.superseded ? "înlocuită" : null].filter(Boolean).join(" · ");
   return { tone: branch.orderSnapshotId ? "done" : "neutral", label };
 }

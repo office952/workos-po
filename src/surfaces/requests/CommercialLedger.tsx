@@ -111,10 +111,10 @@ export function CommercialLedger({
           <button
             type="button"
             aria-pressed={filter === "action"}
-            title="Oferte ale acestei cereri care urmează acceptarea sau comanda"
+            title="Ramuri care cer o acțiune de rezolvat; ofertele nedecise nu intră aici"
             onClick={() => onFilter("action")}
           >
-            Necesită acțiune · {action}
+            De rezolvat · {action}
           </button>
           <button type="button" aria-pressed={filter === "ordered"} onClick={() => onFilter("ordered")}>
             Cu comandă · {ordered}
@@ -128,16 +128,15 @@ export function CommercialLedger({
       </div>
       <div className="ledger__columns" aria-hidden="true">
         {selecting ? <span>Decizie</span> : null}
-        <span>#</span>
         <span>Înscripție · produs</span>
         <span>Ofertă</span>
         <span>Stare comercială</span>
-        <span>Lucrare</span>
+        <span>Următorul pas</span>
         <span>Valoare cu TVA</span>
       </div>
       {visible.length === 0 ? (
         <p className="ledger__empty">
-          {filter === "action" ? "Nicio ofertă a acestei cereri nu necesită acțiune." : "Nicio ofertă a acestei cereri nu are comandă."}
+          {filter === "action" ? "Nimic de rezolvat în ramurile acestei cereri." : "Nicio ofertă a acestei cereri nu are comandă."}
         </p>
       ) : (
         <ul ref={listRef} className="ledger__rows" aria-label="Ramuri comerciale">
@@ -163,7 +162,7 @@ export function CommercialLedger({
                   data-branch-key={branch.key}
                   aria-pressed={selected}
                   aria-controls="branch-detail"
-                  aria-label={[`${branch.indexLabel} ${branch.title}`, branch.subtitle, branch.offerReference, branch.stateLabel, branch.priceLabel]
+                  aria-label={[branch.title, branch.subtitle, branch.offerReference, branch.stateLabel, branch.priceLabel]
                     .filter(Boolean)
                     .join(", ")}
                   tabIndex={branch.key === rovingKey ? 0 : -1}
@@ -191,7 +190,6 @@ export function CommercialLedger({
                     )}
                   </span>
                 ) : null}
-                <span className="ledger__index">{branch.indexLabel}</span>
                 <span className="ledger__identity">
                   <span className="ledger__title" title={branch.title}>{branch.title}</span>
                   {branch.subtitle ? <span className="ledger__subtitle" title={branch.subtitle}>{branch.subtitle}</span> : null}
@@ -201,12 +199,11 @@ export function CommercialLedger({
                 <span className="ledger__state">
                   <span className="commercial-dot" data-state={branch.state} aria-hidden="true" />
                   <span>{branch.stateLabel}</span>
-                  {branch.jobCell.href ? <span className="ledger__state-job"> · Fișa lucrării</span> : null}
                 </span>
-                <span className="ledger__job" data-tone={branch.jobCell.tone}>
-                  {branch.jobCell.href ? (
-                    <a className="text-link" href={branch.jobCell.href}>
-                      {branch.jobCell.label} <span aria-hidden="true">→</span>
+                <span className="ledger__job" data-tone={branch.step?.tone ?? branch.jobCell.tone}>
+                  {branch.step ? (
+                    <a className="text-link" href={branch.step.href}>
+                      {branch.step.label} <span aria-hidden="true">→</span>
                     </a>
                   ) : (
                     branch.jobCell.label
@@ -222,7 +219,7 @@ export function CommercialLedger({
       <div className="ledger__foot">
         <p>
           {hidden.length > 0 && filter !== "all"
-            ? `Ascunse de filtru: ${hidden.map((branch) => `${branch.indexLabel} ${branch.title}`).join(", ")}`
+            ? `Ascunse de filtru: ${hidden.map((branch) => branch.title).join(", ")}`
             : `${offerCount(products, "de produs")} · ${assemblies === 0 ? "nicio ofertă de ansamblu" : offerCount(assemblies, "de ansamblu")}`}
         </p>
         <p>Valorile nu se însumează: ofertele sunt independente</p>

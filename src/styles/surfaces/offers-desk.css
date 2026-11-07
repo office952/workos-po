@@ -47,114 +47,6 @@
   letter-spacing: -0.055em;
 }
 
-/* ─── Signal board: counters that filter ─── */
-.offers-board {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.offers-board__tile {
-  position: relative;
-  display: grid;
-  grid-template-columns: auto auto;
-  grid-template-areas: "lamp count" "lamp label";
-  align-items: center;
-  justify-content: start;
-  column-gap: 12px;
-  min-height: 60px;
-  padding: 8px 16px 8px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 2px;
-  background: transparent;
-  color: var(--color-text-primary);
-  text-align: left;
-  cursor: pointer;
-  transition: background-color var(--motion-edit) var(--ease-work), border-color var(--motion-edit) var(--ease-work);
-}
-
-.offers-board__tile[data-group-start] {
-  margin-left: 18px;
-}
-
-.offers-board__tile[data-group-start]::before {
-  content: "";
-  position: absolute;
-  left: -13px;
-  top: calc(50% - 2px);
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--shell-brass) 70%, transparent);
-}
-
-.offers-board__tile:hover {
-  background: var(--color-surface-raised);
-}
-
-.offers-board__tile:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
-}
-
-.offers-board__tile[aria-pressed="true"] {
-  border-color: var(--shell-edge-strong);
-  background: var(--color-surface);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%), inset 0 -2px 0 var(--color-text-primary);
-}
-
-.offers-board__tile[data-tone="attention"][aria-pressed="true"] {
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%), inset 0 -2px 0 var(--shell-warning);
-}
-
-:root[data-resolved-theme="dark"] .offers-board__tile[aria-pressed="true"] {
-  box-shadow: inset 0 -2px 0 var(--color-text-primary);
-}
-
-:root[data-resolved-theme="dark"] .offers-board__tile[data-tone="attention"][aria-pressed="true"] {
-  box-shadow: inset 0 -2px 0 var(--shell-warning);
-}
-
-.offers-board__lamp {
-  grid-area: lamp;
-  width: 8px;
-  height: 8px;
-  border: 1px solid var(--shell-edge-strong);
-}
-
-.offers-board__tile[data-lit] .offers-board__lamp {
-  border-color: transparent;
-  background: var(--shell-signal);
-  box-shadow: 0 0 8px var(--shell-live-shadow);
-}
-
-.offers-board__tile[data-tone="attention"][data-lit] .offers-board__lamp {
-  background: var(--shell-warning);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--shell-warning) 55%, transparent);
-}
-
-.offers-board__count {
-  grid-area: count;
-  font: 600 26px/1.05 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.offers-board__label {
-  grid-area: label;
-  color: var(--color-text-secondary);
-  font: 500 13px/1.3 var(--font-sans);
-}
-
-.offers-board__tile[aria-pressed="true"] .offers-board__label {
-  color: var(--color-text-primary);
-}
-
-.offers-board__tile[data-tone="attention"] .offers-board__count,
-.offers-board__tile[data-tone="attention"] .offers-board__label {
-  color: var(--wos-warning-text);
-}
-
 /* ─── Work area ───
    Docked, the desk fills the viewport under the header: register and dossier scroll
    independently, so the dossier and its actions stay in view while the list moves. */
@@ -1659,23 +1551,6 @@ a.offer-card__door:focus-visible {
     font-size: 34px;
   }
 
-  .offers-board {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .offers-board__tile {
-    min-width: 0;
-  }
-
-  .offers-board__tile[data-group-start] {
-    margin-left: 0;
-  }
-
-  .offers-board__tile[data-group-start]::before {
-    display: none;
-  }
-
   .offers-v2__register {
     padding: 0 var(--desk-gutter) 40px;
   }
@@ -1740,13 +1615,6 @@ a.offer-card__door:focus-visible {
   color: var(--wos-warning-text);
 }
 
-.offers-board__scope {
-  grid-column: 2;
-  max-width: 17rem;
-  color: var(--color-text-secondary);
-  font: 400 11px/1.3 var(--font-sans);
-}
-
 .offers-group-toggle {
   min-height: 36px;
   padding: 0 12px;
@@ -1801,14 +1669,19 @@ a.offer-card__door:focus-visible {
 }
 
 .offers-cards__group {
-  display: grid;
-  gap: 4px;
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 2px;
   list-style: none;
 }
 
 .offers-cards__group .offers-group__open {
   float: none;
   min-height: 32px;
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
 }
