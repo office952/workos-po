@@ -670,6 +670,15 @@ a.rdesk-title:focus-visible {
   background: var(--shell-warning);
 }
 
+.rdesk-attention[data-issue]::before {
+  width: 0;
+  height: 0;
+  background: transparent;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 7px solid var(--shell-warning);
+}
+
 .rdesk-next {
   display: inline-flex;
   align-items: center;
@@ -1379,6 +1388,15 @@ a.rdesk-sheet__item-title:hover {
   width: 6px;
   height: 6px;
   background: var(--shell-warning);
+}
+
+.rdesk-sheet__note[data-issue]::before {
+  width: 0;
+  height: 0;
+  background: transparent;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 7px solid var(--shell-warning);
 }
 
 /* ─── Dialog (overlay / full) ─── */

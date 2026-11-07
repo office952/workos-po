@@ -101,6 +101,12 @@ export function invalidateAfterCreateExecutionPlan(jobId: string): void {
   invalidateCustomerProjections();
 }
 
+export function invalidateAfterIssueChange(): void {
+  invalidateResources(resourceKeys.jobs(), resourceKeys.operatorInbox());
+  invalidateResourcePrefix("job-record:");
+  invalidateResourcePrefix(resourceKeys.jobPrefix());
+}
+
 export function invalidateAfterExecutionTaskChange(planId: string): void {
   invalidateResources(
     resourceKeys.executionPlan(planId),

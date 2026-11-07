@@ -2,15 +2,19 @@ import { invalidateResourcePrefix } from "../data/resourceCache";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { TransportError, readTransportErrorCode } from "../api/http";
 import {
+  acknowledgeTaskIssue,
   addTaskInstruction,
   addTaskObservation,
   linkTaskArtifact,
   loadTaskDossier,
   markTaskArtifactUsed,
   reportTaskIssue,
+  resolveTaskIssue,
   uploadTaskArtifact,
+  type DossierIssue,
   type TaskDossier,
 } from "../api/taskDossier";
+import { invalidateAfterIssueChange } from "../data/invalidation";
 import { Button } from "../components/Button";
 import { InlineAlert } from "../components/InlineAlert";
 import { SelectField } from "../components/SelectField";
@@ -147,7 +151,7 @@ export function TaskDossierPanel({
       .then((next) => {
         if (!cancelled && next.taskId === taskId) {
           setDossier(next);
-        invalidateResourcePrefix("job-record:");
+          invalidateResourcePrefix("job-record:");
           setLoadError("none");
         }
       })
@@ -192,6 +196,7 @@ export function TaskDossierPanel({
       if (accepted && taskIdRef.current === started && scopeRef.current === startedScope) {
         setDossier(next);
         invalidateResourcePrefix("job-record:");
+        invalidateAfterIssueChange();
         setNotices((existing) => ({ ...existing, [started]: success }));
         setComposer(null);
       }
@@ -522,7 +527,23 @@ export function TaskDossierPanel({
           </DossierSection>
           <DossierSection title="Probleme semnalate" empty={null} part="brief">
             {current.issues.map((entry) => (
-              <DossierNote key={entry.entryId} entry={entry} problem />
+              <DossierIssueCard
+                key={entry.entryId}
+                issue={entry}
+                pending={pending}
+                onAcknowledge={() =>
+                  void run(
+                    () => acknowledgeTaskIssue(taskId, entry.entryId),
+                    "Problema a fost preluată.",
+                  )
+                }
+                onResolve={() =>
+                  void run(
+                    () => resolveTaskIssue(taskId, entry.entryId),
+                    "Problema a fost rezolvată.",
+                  )
+                }
+              />
             ))}
           </DossierSection>
           <section className="task-dossier__archive" aria-label="Istoricul operației" data-op-part="history">
@@ -596,18 +617,73 @@ function DossierSection({
 
 function DossierNote({
   entry,
-  problem = false,
 }: {
   entry: { body: string; authorLabel: string | null; createdAt: string; reasonLabel: string | null };
-  problem?: boolean;
 }) {
   return (
-    <article className={problem ? "task-dossier__note task-dossier__note--problem" : "task-dossier__note"}>
-      {problem && entry.reasonLabel ? <p className="task-dossier__reason">{entry.reasonLabel}</p> : null}
+    <article className="task-dossier__note">
       <p>{entry.body}</p>
       <p className="task-dossier__meta">
         {entry.authorLabel ?? "Cont organizație"} · {formatTimestamp(entry.createdAt)}
       </p>
+    </article>
+  );
+}
+
+function DossierIssueCard({
+  issue,
+  pending,
+  onAcknowledge,
+  onResolve,
+}: {
+  issue: DossierIssue;
+  pending: boolean;
+  onAcknowledge: () => void;
+  onResolve: () => void;
+}) {
+  return (
+    <article className="task-dossier__note task-dossier__note--problem" data-issue-status={issue.status}>
+      <p className="task-dossier__issue-head">
+        <span className="task-dossier__status" data-status={issue.status}>{issue.statusLabel}</span>
+        {issue.reasonLabel ? <span className="task-dossier__reason">{issue.reasonLabel}</span> : null}
+      </p>
+      <p>{issue.body}</p>
+      <p className="task-dossier__meta">
+        {issue.authorLabel ?? "Cont organizație"} · {formatTimestamp(issue.createdAt)}
+      </p>
+      {issue.acknowledgedAt ? (
+        <p className="task-dossier__meta">
+          Preluată de {issue.acknowledgedByLabel ?? "Cont organizație"} · {formatTimestamp(issue.acknowledgedAt)}
+        </p>
+      ) : null}
+      {issue.resolvedAt ? (
+        <p className="task-dossier__meta">
+          Rezolvată de {issue.resolvedByLabel ?? "Cont organizație"} · {formatTimestamp(issue.resolvedAt)}
+        </p>
+      ) : null}
+      {issue.history.length > 1 ? (
+        <ol className="task-dossier__issue-history">
+          {issue.history.map((event, index) => (
+            <li key={`${event.kind}-${event.occurredAt}-${index}`}>
+              {event.label} · {event.actorLabel ?? "Cont organizație"} · {formatTimestamp(event.occurredAt)}
+            </li>
+          ))}
+        </ol>
+      ) : null}
+      {issue.canAcknowledge || issue.canResolve ? (
+        <div className="task-dossier__issue-actions">
+          {issue.canAcknowledge ? (
+            <Button variant="secondary" disabled={pending} onClick={onAcknowledge}>
+              Preia problema
+            </Button>
+          ) : null}
+          {issue.canResolve ? (
+            <Button variant="secondary" disabled={pending} onClick={onResolve}>
+              Marchează rezolvată
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -689,6 +765,10 @@ function historyLabel(kind: string): string {
       return "Observație";
     case "ISSUE_REPORTED":
       return "Problemă semnalată";
+    case "ISSUE_ACKNOWLEDGED":
+      return "Problemă preluată";
+    case "ISSUE_RESOLVED":
+      return "Problemă rezolvată";
     case "ARTIFACT_UPLOADED":
       return "Fișier încărcat";
     case "ARTIFACT_LINKED":
@@ -715,6 +795,8 @@ function presentDossierError(error: unknown): string {
       return "Textul este gol sau prea lung.";
     case "forbidden":
       return "Nu ai dreptul pentru această acțiune. Ultima citire rămâne afișată.";
+    case "invalid_issue_status":
+      return "Starea problemei nu permite această acțiune. Ultima citire rămâne afișată.";
     default:
       return "Actualizarea a eșuat. Ultima citire rămâne afișată, iar textul introdus a rămas aici.";
   }

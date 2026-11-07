@@ -214,7 +214,7 @@ export function JobDetailPage({ jobId, taskId = null, section, fileId = null }: 
         section={active}
         record={report.data ?? null}
         productionFinished={finished}
-        summaryContext={job ? { statusLabel: presentJobSheetStage(job), progressLabel: job.progressLabel, attentionLabel: finished ? null : job.attentionLabel } : undefined}
+        summaryContext={job ? { statusLabel: presentJobSheetStage(job), progressLabel: job.progressLabel, attentionLabel: job.attentionLabel } : undefined}
         canWriteFiles={owner || Boolean(session.data)}
         operationHref={operationHref}
         selectedTaskId={selectedTask?.taskId ?? null}

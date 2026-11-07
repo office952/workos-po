@@ -54,7 +54,11 @@ export function JobTraveler({ job }: { job: JobListItemTransport }) {
         <div><dt>Prioritate</dt><dd>{job.priorityLabel}</dd></div>
         <div><dt>Termen</dt><dd data-missing={!job.targetDate || undefined}>{job.targetDateLabel}</dd></div>
       </dl>
-      {job.attentionLabel ? <p className="rdesk-sheet__note" data-tone="attention">{job.attentionLabel}</p> : null}
+      {job.attentionLabel ? (
+        <p className="rdesk-sheet__note" data-tone="attention" data-issue={job.attentionLabel.startsWith("Problemă") || undefined}>
+          {job.attentionLabel}
+        </p>
+      ) : null}
       <hr className="rdesk-sheet__perforation" />
       {/* N-018 · the list item carries only how many operations are in progress; their names and
           components are not in this contract, so the dossier sends to the Operații section. */}

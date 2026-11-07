@@ -70,6 +70,19 @@
 .job-record__progress { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; padding-bottom: 16px; margin-bottom: 20px; border-bottom: 1px solid var(--color-border); }
 .job-record__attention { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; background: var(--color-warning-soft); border-left: 3px solid var(--color-warning); padding: 8px 12px; margin-bottom: 20px; }
 .job-record__attention a { display: inline-flex; min-height: 44px; align-items: center; }
+.job-record__issues { margin-top: 0; }
+.job-record__issue-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.job-record__issue { display: grid; gap: 6px; padding: 16px; border: 1px solid var(--color-border); border-left: 3px solid var(--color-warning); background: var(--color-surface); border-radius: var(--radius-panel); }
+.job-record__issue[data-issue-status="ACKNOWLEDGED"] { border-left-color: var(--color-info); }
+.job-record__issue[data-issue-status="RESOLVED"] { border-left-color: var(--color-success); }
+.job-record__issue > header { display: flex; gap: 12px; align-items: start; margin: 0 0 8px; }
+.job-record__issue-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0; }
+.job-record__issue-reason { color: var(--color-text-secondary); font-size: 13px; }
+.job-record__issue-history { margin: 4px 0 0; padding-left: 18px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.5; }
+.job-record__issue-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.job-record__status[data-status="OPEN"] { color: var(--color-warning); background: var(--color-warning-soft); }
+.job-record__status[data-status="ACKNOWLEDGED"] { color: var(--color-info); background: var(--color-info-soft); }
+.job-record__status[data-status="RESOLVED"] { color: var(--color-success); background: var(--color-success-soft); }
 .job-record__activity { margin: 0 0 20px; padding-bottom: 16px; border-bottom: 1px solid var(--color-border); }
 .job-record__activity h3 { margin: 0 0 12px; font-size: 16px; }
 .job-record__activity-cards { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }

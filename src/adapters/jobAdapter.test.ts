@@ -17,6 +17,19 @@ describe("presentJobOverview", () => {
     expect(overview.jobs[1]).toMatchObject({ completedCount: null, taskCount: null, inProgressCount: null, progressLabel: "3 / 9" });
   });
 
+  it("reads active issue counts from the server and defaults missing counts to zero", () => {
+    const overview = presentJobOverview({
+      overview: {
+        jobs: [
+          { ...row, activeIssueCount: 2, needsAttention: true, attentionLabel: "Probleme semnalate" },
+          { ...row, jobId: "job-2" },
+        ],
+      },
+    });
+    expect(overview.jobs[0]?.activeIssueCount).toBe(2);
+    expect(overview.jobs[1]?.activeIssueCount).toBe(0);
+  });
+
   it("keeps the summary null when the payload has none and the list helper unchanged", () => {
     const payload = { overview: { jobs: [row] } };
     expect(presentJobOverview(payload).summary).toBeNull();

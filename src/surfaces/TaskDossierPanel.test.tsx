@@ -318,4 +318,107 @@ describe("TaskDossierPanel", () => {
     await user.click(screen.getByRole("button", { name: "Adaugă observație" }));
     expect(screen.getByLabelText("Observație")).toHaveValue("");
   });
+
+  it("shows an open issue with acknowledge and resolve for an authorized viewer", async () => {
+    const openIssue = {
+      entryId: "iss-1",
+      kind: "ISSUE_REPORT",
+      body: "Vibrație anormală CNC. Am oprit lucrul.",
+      reasonCode: "MACHINE",
+      reasonLabel: "Utilaj",
+      authorLabel: "Florin CNC",
+      createdAt: "2026-11-07T09:00:00.000Z",
+      status: "OPEN",
+      statusLabel: "Deschisă",
+      acknowledgedAt: null,
+      acknowledgedByLabel: null,
+      resolvedAt: null,
+      resolvedByLabel: null,
+      canAcknowledge: true,
+      canResolve: true,
+      history: [
+        {
+          kind: "ISSUE_REPORTED",
+          label: "Problemă semnalată",
+          actorLabel: "Florin CNC",
+          occurredAt: "2026-11-07T09:00:00.000Z",
+        },
+      ],
+    };
+    const fetch = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      if (String(input).endsWith("/acknowledge") && init?.method === "POST") {
+        return jsonResponse({
+          dossier: {
+            ...emptyDossier.dossier,
+            issues: [
+              {
+                ...openIssue,
+                status: "ACKNOWLEDGED",
+                statusLabel: "Preluată",
+                canAcknowledge: false,
+                acknowledgedAt: "2026-11-07T09:10:00.000Z",
+                acknowledgedByLabel: "Coordonator",
+                history: [
+                  ...openIssue.history,
+                  {
+                    kind: "ISSUE_ACKNOWLEDGED",
+                    label: "Problemă preluată",
+                    actorLabel: "Coordonator",
+                    occurredAt: "2026-11-07T09:10:00.000Z",
+                  },
+                ],
+              },
+            ],
+          },
+        });
+      }
+      return jsonResponse({ dossier: { ...emptyDossier.dossier, issues: [openIssue] } });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const user = userEvent.setup();
+    render(<TaskDossierPanel taskId="task-1" canInstruct />);
+    expect(await screen.findByText("Deschisă")).toBeVisible();
+    expect(screen.getByText("Vibrație anormală CNC. Am oprit lucrul.")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Preia problema" }));
+    expect(await screen.findByText("Preluată")).toBeVisible();
+    expect(fetch.mock.calls.some(([url, init]) => String(url).endsWith("/issues/iss-1/acknowledge") && init?.method === "POST")).toBe(true);
+  });
+
+  it("hides issue actions when the viewer cannot manage them", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        jsonResponse({
+          dossier: {
+            ...emptyDossier.dossier,
+            issues: [
+              {
+                entryId: "iss-2",
+                kind: "ISSUE_REPORT",
+                body: "Raport vechi",
+                reasonCode: "OTHER",
+                reasonLabel: "Altceva",
+                authorLabel: "Florin CNC",
+                createdAt: "2026-11-06T09:00:00.000Z",
+                status: "OPEN",
+                statusLabel: "Deschisă",
+                acknowledgedAt: null,
+                acknowledgedByLabel: null,
+                resolvedAt: null,
+                resolvedByLabel: null,
+                canAcknowledge: false,
+                canResolve: false,
+                history: [],
+              },
+            ],
+          },
+        }),
+      ),
+    );
+    render(<TaskDossierPanel taskId="task-1" canInstruct={false} />);
+    expect(await screen.findByText("Deschisă")).toBeVisible();
+    expect(screen.getByText("Raport vechi")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Preia problema" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Marchează rezolvată" })).toBeNull();
+  });
 });

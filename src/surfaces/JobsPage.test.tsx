@@ -193,6 +193,24 @@ describe("JobsPage", () => {
     expect(window.location.search).toBe("?lucrare=alpha-2");
   });
 
+  it("keeps a finished job with an unresolved issue in Necesită acțiune", async () => {
+    const vibration = {
+      ...NOVA,
+      jobId: "vib-5",
+      inscription: "VIBRAȚIE",
+      needsAttention: true,
+      attentionLabel: "Problemă semnalată",
+      activeIssueCount: 1,
+    };
+    serve([NOVA, vibration], { total: 2, active: 0, inExecution: 0, needsAttention: 1, completed: 2 });
+    render(<JobsPage />);
+    await screen.findByRole("link", { name: "VIBRAȚIE" });
+    await userEvent.click(screen.getByRole("button", { name: /Necesită acțiune/ }));
+    expect(screen.getByRole("link", { name: "VIBRAȚIE" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "NOVA" })).not.toBeInTheDocument();
+    expect(within(rowOf("VIBRAȚIE")).getByText("Problemă semnalată")).toBeInTheDocument();
+  });
+
   it("says so when a linked job is not in the register", async () => {
     serve([NORD]);
     render(<JobsPage search="?lucrare=missing" />);

@@ -88,9 +88,9 @@ export const FOCUS_OPTIONS: readonly { id: JobFocus; label: string }[] = [
   { id: "overdue", label: "Termen depășit" },
 ];
 
-/** Attention on a finished job is consultation, not work: it stays out of "Necesită acțiune". */
+/** The server owns attention, including unresolved issues on a finished job. */
 function needsAction(job: JobListItemTransport): boolean {
-  return job.needsAttention && job.stage !== "EXECUTION_COMPLETED";
+  return job.needsAttention;
 }
 
 function dateValue(value: string | null): number | null {

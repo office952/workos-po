@@ -39,7 +39,12 @@ function NextStep({ job, actionLabel }: { job: JobListItemTransport; actionLabel
 }
 
 function Attention({ job }: { job: JobListItemTransport }) {
-  return job.attentionLabel ? <span className="rdesk-attention">{job.attentionLabel}</span> : null;
+  if (!job.attentionLabel) return null;
+  return (
+    <span className="rdesk-attention" data-issue={job.attentionLabel.startsWith("Problemă") || undefined}>
+      {job.attentionLabel}
+    </span>
+  );
 }
 
 function Table({ items, selectedId, onSelect }: Props) {

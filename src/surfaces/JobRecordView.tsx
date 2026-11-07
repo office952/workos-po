@@ -3,8 +3,9 @@ import type { JobRecord } from "../api/jobRecord";
 import type { JobSheetSection } from "../routing/appRoute";
 import { JobRecordFiles } from "./jobRecord/JobRecordFiles";
 import { JobRecordHistory } from "./jobRecord/JobRecordHistory";
-import { JobRecordPeople } from "./jobRecord/JobRecordPeople";
+import { JobRecordIssues } from "./jobRecord/JobRecordIssues";
 import { JobRecordOperations } from "./jobRecord/JobRecordOperations";
+import { JobRecordPeople } from "./jobRecord/JobRecordPeople";
 import { JobRecordSummary, type JobSummaryContext } from "./jobRecord/JobRecordSummary";
 import "../styles/surfaces/job-record.css";
 
@@ -61,6 +62,7 @@ export function JobRecordView({
             <p>Evidența orelor, a duratei calendaristice și a timpului de utilaj nu este disponibilă.</p>
           </section>
         ) : null}
+        {record ? <JobRecordIssues record={record} operationHref={operationHref} /> : null}
       </Section>
       <Section active={section} section="operatii">
         <JobRecordOperations
