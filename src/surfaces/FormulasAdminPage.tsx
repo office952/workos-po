@@ -21,6 +21,7 @@ import { writeResource } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadFormulasAdmin } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
+import { catalogReturnFromSearch } from "../features/catalog/catalogSelection";
 import { administrationRailItems } from "../layout/administrationNav";
 import { SlicePage } from "../layout/SlicePage";
 import { presentAdminEditMeta } from "../presentation/adminEditMeta";
@@ -31,6 +32,7 @@ type SaveState = "idle" | "pending" | "success" | "alreadyApplied" | "error";
 
 export function FormulasAdminPage() {
   const componentId = new URLSearchParams(window.location.search).get("component");
+  const catalogReturnHref = catalogReturnFromSearch(window.location.search);
   const admin = useResource(resourceKeys.formulasAdmin(), loadFormulasAdmin);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -148,7 +150,7 @@ export function FormulasAdminPage() {
               />
             }
           >
-            {componentId && <><a className="text-link" href="/catalog">Înapoi la definițiile produselor</a>{!model.formulas.some(item => item.typeId === componentId) && <p>Această componentă nu are formule editabile în versiunea curentă.</p>}</>}
+            {componentId && <><a className="text-link" href={catalogReturnHref}>Înapoi la definițiile produselor</a>{!model.formulas.some(item => item.typeId === componentId) && <p>Această componentă nu are formule editabile în versiunea curentă.</p>}</>}
             {model.guidance ? (
               <InlineAlert
                 tone={model.resolutionOk ? "pending" : "blocked"}

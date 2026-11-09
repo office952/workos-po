@@ -13,6 +13,7 @@ function jsonResponse(body: unknown, status = 200) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  window.history.replaceState({}, "", "/");
 });
 
 const quantityExpression = {
@@ -154,6 +155,34 @@ describe("FormulasAdminPage", () => {
     expect(screen.getByRole("link", { name: "Setări tehnice" })).toHaveAttribute(
       "href",
       "/admin/technical",
+    );
+  });
+
+  it("returns to the catalog selection and ignores an external return", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/admin/formulas?component=LIGHTING_FRONT_LED&return=%2Fcatalog%3Fproduct%3DPRD-TEST%26component%3DLIGHTING%26tab%3Dconstructie",
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => defaultAdmin,
+      }),
+    );
+    const { unmount } = render(<FormulasAdminPage />);
+    expect(await screen.findByRole("link", { name: "Înapoi la definițiile produselor" })).toHaveAttribute(
+      "href",
+      "/catalog?product=PRD-TEST&component=LIGHTING",
+    );
+    unmount();
+    window.history.replaceState({}, "", "/admin/formulas?component=LIGHTING_FRONT_LED&return=//example.test/catalog");
+    render(<FormulasAdminPage />);
+    expect(await screen.findByRole("link", { name: "Înapoi la definițiile produselor" })).toHaveAttribute(
+      "href",
+      "/catalog",
     );
   });
 

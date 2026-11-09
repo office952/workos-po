@@ -29,6 +29,48 @@ const definitions = {
     resourceReferences: [{ id: "res-face", label: "Placă plexiglas" }],
     processReferences: [{ id: "cut", label: "Decupare" }],
     gaps: [],
+  }, {
+    typeId: "LIGHTING_FRONT_LED",
+    label: "Iluminare frontală cu module LED",
+    description: "Pasul LED, puterea pe modul și rezerva sursei sunt setări tehnice de sistem.",
+    measurement: "",
+    quantity: "",
+    configurations: [],
+    calculationInputs: [],
+    calculationResults: [],
+    resourceReferences: [
+      { id: "MAT-LED-MODULE", label: "Modul LED 12V" },
+      { id: "MAT-LED-PSU-12V-60W", label: "Sursă LED 12V 60W" },
+    ],
+    processReferences: [],
+    gaps: [],
+  }, {
+    typeId: "ALUMINIUM_VOLUME",
+    label: "Volum aluminiu",
+    description: "Cantul literei.",
+    measurement: "Perimetru",
+    quantity: "Profil",
+    configurations: [],
+    calculationInputs: [],
+    calculationResults: [],
+    resourceReferences: [
+      { id: "aluminium_return_profile", label: "Profil retur aluminiu" },
+      { id: "return_cant_forming", label: "Formare profil aluminiu" },
+    ],
+    processReferences: [],
+    gaps: [],
+  }, {
+    typeId: "STEEL_INTERNAL_FRAME",
+    label: "Cadru intern din oțel",
+    description: "Cadru intern pentru caseta ACM.",
+    measurement: "",
+    quantity: "",
+    configurations: [],
+    calculationInputs: [],
+    calculationResults: [],
+    resourceReferences: [{ id: "steel_frame_profile", label: "Profil cadru oțel" }],
+    processReferences: [],
+    gaps: [],
   }],
 };
 
@@ -78,6 +120,7 @@ function capabilities(overrides: {
       components: overrides.components ?? [
         { id: "FACE", role: "FACE", typeId: "PLEXIGLAS_FACE", label: "Față", required: true, inputMapping: null },
         { id: "BACK", role: "BACK", typeId: "FOREX_BACK", label: "Spate", required: true, inputMapping: { confirmedAreaMm2FromComponentId: "FACE" } },
+        { id: "LIGHTING", role: "LIGHTING", typeId: "LIGHTING_FRONT_LED", label: "Electrică / iluminare", required: true, inputMapping: null },
       ],
       componentsWithoutRequestSection: overrides.withoutRequest ?? [],
       enablement: {
@@ -108,6 +151,33 @@ function capabilities(overrides: {
         componentTypeId: null,
         canonicalWriter: null,
         readPath: null,
+      }, {
+        id: `${code}:setting:ledPitchMm`,
+        classification: "ORGANIZATION_SETTING",
+        label: "Pas module LED",
+        settingId: "ledPitchMm",
+        unit: "mm",
+        appliesToTemplateCodes: [code],
+        organization: { resolved: true, version: 1, source: "PLATFORM_STARTER", sourceLabel: "Valoare de pornire", organizationConfirmed: false, error: null, value: 100 },
+        provenance: { source: "TECHNICAL_SETTING_DEFINITION", ref: "ledPitchMm" },
+        support: "ORGANIZATION_VERSIONED",
+        componentId: "LIGHTING",
+        componentTypeId: "LIGHTING_FRONT_LED",
+        canonicalWriter: { method: "POST", path: "/api/admin/technical-settings", permission: "owner" },
+        readPath: "/api/admin/technical-settings",
+      }, {
+        id: `${code}:formula:LIGHTING_FRONT_LED.ledModuleQuantity`,
+        classification: "ORGANIZATION_FORMULA",
+        label: "Cantitate module LED",
+        formulaId: "LIGHTING_FRONT_LED.ledModuleQuantity",
+        appliesToTemplateCodes: [code],
+        organization: { resolved: true, version: 1, source: "PLATFORM_STARTER", sourceLabel: "Valoare de pornire", organizationConfirmed: false, error: null },
+        provenance: { source: "FORMULA_DEFINITION", ref: "LIGHTING_FRONT_LED.ledModuleQuantity" },
+        support: "ORGANIZATION_VERSIONED",
+        componentId: "LIGHTING",
+        componentTypeId: "LIGHTING_FRONT_LED",
+        canonicalWriter: { method: "POST", path: "/api/admin/formulas", permission: "owner" },
+        readPath: "/api/admin/formulas",
       }],
     }],
   };
@@ -233,7 +303,15 @@ describe("Catalog workspace", () => {
     expect(screen.getByText("Plexiglas opal")).toBeInTheDocument();
     expect(screen.getByText("Confirmată în lucrare")).toBeInTheDocument();
     expect(screen.getByText("Spate preia suprafața confirmată din această componentă.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Formulele acestei componente" })).toHaveAttribute("href", "/admin/formulas?component=PLEXIGLAS_FACE");
+    expect(screen.getByRole("tab", { name: "Componente", selected: true })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Setări" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Formule" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Această componentă nu are setări tehnice ale organizației.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Această componentă nu are formule suportate.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Formulele acestei componente" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Materiale și resurse" })).toBeInTheDocument();
+    expect(screen.getByText("Placă plexiglas")).toBeInTheDocument();
+    expect(screen.queryByText(/EUR/)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Disponibilitatea produselor" })).toHaveAttribute("href", "/admin/products");
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(expect.arrayContaining(["/api/catalog/capabilities", "/api/product-system-admin"]));
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/api/customers") || String(url).includes("/api/requests"))).toBe(false);
@@ -305,7 +383,7 @@ describe("Catalog workspace", () => {
     expect(await screen.findByRole("button", { name: "Spate", pressed: true })).toBeInTheDocument();
     window.history.replaceState({}, "", "/catalog");
     window.dispatchEvent(new PopStateEvent("popstate"));
-    expect(await screen.findByText("Selectează un produs pentru construcție și proprietăți.")).toBeInTheDocument();
+    expect(await screen.findAllByText("Selectează un produs din bibliotecă.")).not.toHaveLength(0);
   });
 
   it("keeps product and component selection stable, including an unknown deep link", async () => {
@@ -352,6 +430,20 @@ describe("Catalog workspace", () => {
         componentTypeId: null,
         canonicalWriter: null,
         readPath: null,
+      }, {
+        id: "PRD-ACM:setting:STEEL_INTERNAL_FRAME.frameClearanceMm",
+        classification: "ORGANIZATION_SETTING",
+        label: "Joc de montaj cadru",
+        settingId: "frameClearanceMm",
+        unit: "mm",
+        appliesToTemplateCodes: ["PRD-ACM"],
+        organization: { resolved: true, version: 1, source: "PLATFORM_STARTER", sourceLabel: "Valoare de pornire", organizationConfirmed: false, error: null, value: 2 },
+        provenance: { source: "TECHNICAL_SETTING_DEFINITION", ref: "STEEL_INTERNAL_FRAME.frameClearanceMm" },
+        support: "ORGANIZATION_VERSIONED",
+        componentId: "BACK",
+        componentTypeId: "STEEL_INTERNAL_FRAME",
+        canonicalWriter: { method: "POST", path: "/api/admin/technical-settings", permission: "owner" },
+        readPath: "/api/admin/technical-settings",
       }],
     });
     vi.stubGlobal("fetch", routeFetch(acm, { ...definitions, products: [] }));
@@ -359,6 +451,10 @@ describe("Catalog workspace", () => {
     await userEvent.click(await screen.findByRole("button", { name: /Panou ACM casetat/ }));
     await userEvent.click(screen.getByRole("button", { name: "Cadru intern" }));
     expect(screen.getByText("Fără iluminare")).toBeInTheDocument();
+    expect(screen.getByText("Joc de montaj cadru")).toBeInTheDocument();
+    expect(screen.getByText("2 mm")).toBeInTheDocument();
+    expect(screen.getByText("Profil cadru oțel")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Formule" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /iluminare/i })).not.toBeInTheDocument();
     expect(screen.queryByText("Prelucrare spate")).not.toBeInTheDocument();
     expect(screen.getByText("Nu are câmpuri de completat pe lucrare.")).toBeInTheDocument();
@@ -406,6 +502,7 @@ describe("Catalog workspace", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<CatalogPage />);
     await userEvent.click(await screen.findByRole("button", { name: /Litere test/ }));
+    await userEvent.click(screen.getByRole("tab", { name: "Variante" }));
     expect(screen.getByText("Cu canal: Spatele cu canal nu are încă o rețetă de prelucrare.")).toBeInTheDocument();
     await userEvent.type(await screen.findByLabelText("Numele variantei"), "Cant 80 vopsit");
     await userEvent.selectOptions(screen.getByLabelText("Adâncime volum (mm)"), "80");
@@ -429,6 +526,7 @@ describe("Catalog workspace", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<CatalogPage />);
     await userEvent.click(await screen.findByRole("button", { name: /Litere test/ }));
+    await userEvent.click(screen.getByRole("tab", { name: "Proces tehnologic" }));
     expect(await screen.findByRole("heading", { name: "Traseu tehnologic" })).toBeInTheDocument();
     expect(screen.getByText("Scenariu ilustrativ. Nu este un deviz.")).toBeInTheDocument();
     expect(screen.getByText(/Săgeata intră în operația care urmează/)).toBeInTheDocument();
@@ -455,7 +553,141 @@ describe("Catalog workspace", () => {
     expect(css).toContain("@media (max-width: 1279px)");
     expect(css).toContain("@media (max-width: 767px)");
     expect(css).toContain("focus-visible");
-    expect(css).toContain("overflow-wrap: anywhere");
+    expect(css).toContain("overflow-wrap: break-word");
+    expect(css).toContain("role=\"tab\"");
+    expect(css).toContain("--catalog-paper");
+    expect(css).toContain(".catalog-workspace__records");
+    expect(css).toContain(".catalog-workspace__products");
+    expect(css).toContain(".catalog-workspace__component-meta { display: none; }");
+    expect(css).toContain(".catalog-workspace__product-switch { display: grid; }");
+    expect(css).toContain(".catalog-workspace__identity-meta { display: none; }");
+    expect(css).toContain("content: \"Valoare\"");
+    expect(css).toContain("content: \"Proveniență\"");
     expect(ui).not.toContain("catalog-workspace");
+    expect(ui).not.toContain("--catalog-paper");
+  });
+
+  it("keeps the selected product title next to a compact product switch", async () => {
+    vi.stubGlobal("fetch", routeFetch());
+    render(<CatalogPage />);
+    await userEvent.click(await screen.findByRole("button", { name: /Litere test/ }));
+    expect(screen.getByRole("heading", { level: 2, name: "Litere test" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Schimbă produsul")).toHaveValue("PRD-TEST");
+    expect(screen.getByRole("searchbox", { name: "Caută în bibliotecă" })).toBeInTheDocument();
+  });
+
+  it("keeps lighting settings and formula links inside a catalog return", async () => {
+    vi.stubGlobal("fetch", routeFetch());
+    render(<CatalogPage />);
+    await userEvent.click(await screen.findByRole("button", { name: /Litere test/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Electrică / iluminare", pressed: false }));
+    expect(screen.getByRole("heading", { name: "Setări" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Formule" })).toBeInTheDocument();
+    expect(screen.getByText("Pas module LED")).toBeInTheDocument();
+    expect(screen.getByText("100 mm")).toBeInTheDocument();
+    expect(screen.getByText("Cantitate module LED")).toBeInTheDocument();
+    expect(screen.getByText("Modul LED 12V")).toBeInTheDocument();
+    expect(screen.getByText("Sursă LED 12V 60W")).toBeInTheDocument();
+    expect(screen.getByText("1 setare · 1 formulă · 2 resurse")).toBeInTheDocument();
+    expect(screen.queryByText(/EUR/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Salvează" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Editează" })).not.toBeInTheDocument();
+    const settings = screen.getByRole("link", { name: "Setările acestei componente" });
+    const formulas = screen.getByRole("link", { name: "Formulele acestei componente" });
+    expect(new URL(settings.getAttribute("href") ?? "", "https://workos.local").searchParams.get("return")).toBe(
+      "/catalog?product=PRD-TEST&component=LIGHTING",
+    );
+    expect(new URL(formulas.getAttribute("href") ?? "", "https://workos.local").searchParams.get("component")).toBe(
+      "LIGHTING_FRONT_LED",
+    );
+    expect(screen.queryByText("Această componentă nu are setări tehnice ale organizației.")).not.toBeInTheDocument();
+  });
+
+  it("restores the workspace tab from the URL and keeps selection", async () => {
+    window.history.replaceState({}, "", "/catalog?product=PRD-TEST&component=BACK&tab=variante");
+    vi.stubGlobal("fetch", routeFetch());
+    render(<CatalogPage />);
+    expect(await screen.findByRole("tab", { name: "Variante", selected: true })).toBeInTheDocument();
+    expect(screen.getByText("Acest produs nu are variante reutilizabile definite.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("tab", { name: "Componente" }));
+    expect(screen.getByRole("button", { name: "Spate", pressed: true })).toBeInTheDocument();
+    expect(window.location.search).toContain("component=BACK");
+    expect(window.location.search).not.toContain("tab=");
+  });
+
+  it("moves tab focus with the keyboard", async () => {
+    vi.stubGlobal("fetch", routeFetch());
+    render(<CatalogPage />);
+    await userEvent.click(await screen.findByRole("button", { name: /Litere test/ }));
+    const construction = screen.getByRole("tab", { name: "Componente" });
+    construction.focus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: "Proces tehnologic", selected: true })).toHaveFocus();
+    expect(window.location.search).toContain("tab=proces");
+    await userEvent.keyboard("{End}");
+    expect(screen.getByRole("tab", { name: "Variante", selected: true })).toHaveFocus();
+    await userEvent.keyboard("{Home}");
+    expect(screen.getByRole("tab", { name: "Componente", selected: true })).toHaveFocus();
+    expect(window.location.search).not.toContain("tab=");
+  });
+
+  it("removes inactive tabpanels from the accessibility tree and restores a tab deep link", async () => {
+    window.history.replaceState({}, "", "/catalog?product=PRD-TEST&component=BACK");
+    vi.stubGlobal("fetch", routeFetch());
+    render(<CatalogPage />);
+    expect(await screen.findByRole("tabpanel")).toHaveAttribute("id", "catalog-panel-constructie");
+    expect(screen.getByRole("tabpanel")).toHaveAccessibleName("Componente");
+    expect(screen.queryByRole("heading", { name: "Traseu tehnologic" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Variantele organizației" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tabpanel", { name: "Proces tehnologic" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tabpanel", { name: "Variante" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("tab", { name: "Proces tehnologic" }));
+    expect(await screen.findByRole("heading", { name: "Traseu tehnologic" })).toBeInTheDocument();
+    expect(screen.queryByRole("searchbox", { name: "Caută în bibliotecă" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
+    window.history.replaceState({}, "", "/catalog?product=PRD-TEST&component=BACK&tab=variante");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    expect(await screen.findByRole("tab", { name: "Variante", selected: true })).toBeInTheDocument();
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("id", "catalog-panel-variante");
+    expect(screen.getByRole("heading", { name: "Variantele organizației" })).toBeInTheDocument();
+    expect(screen.queryByRole("searchbox", { name: "Caută în bibliotecă" })).not.toBeInTheDocument();
+    expect(window.location.search).toContain("tab=variante");
+    expect(window.location.search).toContain("component=BACK");
+  });
+
+  it("keeps tab=constructie as the Componente view and does not invent volume settings", async () => {
+    const body = capabilities({
+      components: [
+        { id: "FACE", role: "FACE", typeId: "PLEXIGLAS_FACE", label: "Față", required: true, inputMapping: null },
+        { id: "VOLUME", role: "VOLUME", typeId: "ALUMINIUM_VOLUME", label: "Volum", required: true, inputMapping: null },
+        { id: "BACK", role: "BACK", typeId: "FOREX_BACK", label: "Spate", required: true, inputMapping: { confirmedAreaMm2FromComponentId: "FACE" } },
+        { id: "LIGHTING", role: "LIGHTING", typeId: "LIGHTING_FRONT_LED", label: "Electrică / iluminare", required: true, inputMapping: null },
+      ],
+    });
+    window.history.replaceState({}, "", "/catalog?product=PRD-TEST&component=VOLUME&tab=constructie");
+    vi.stubGlobal("fetch", routeFetch(body));
+    render(<CatalogPage />);
+    expect(await screen.findByRole("tab", { name: "Componente", selected: true })).toBeInTheDocument();
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("id", "catalog-panel-constructie");
+    expect(screen.getByRole("button", { name: "Volum", pressed: true })).toBeInTheDocument();
+    expect(screen.getByText("fără setări · 2 resurse")).toBeInTheDocument();
+    expect(screen.getByText("Profil retur aluminiu")).toBeInTheDocument();
+    expect(screen.getByText("Formare profil aluminiu")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Setări" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Formule" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/3,20/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/EUR/)).not.toBeInTheDocument();
+  });
+
+  it("keeps member catalog read-only and without financial amounts", async () => {
+    vi.stubGlobal("fetch", routeFetch(capabilities({ canEdit: false })));
+    render(<CatalogPage />);
+    await userEvent.click(await screen.findByRole("button", { name: /Litere test/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Electrică / iluminare", pressed: false }));
+    expect(screen.queryByRole("button", { name: "Editează denumirea" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Salvează" })).not.toBeInTheDocument();
+    expect(screen.getByText("Doar proprietarul poate modifica setările tehnice.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Setările acestei componente" })).toBeInTheDocument();
+    expect(screen.queryByText(/EUR/)).not.toBeInTheDocument();
   });
 });

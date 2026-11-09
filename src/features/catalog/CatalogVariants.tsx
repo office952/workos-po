@@ -57,7 +57,14 @@ export function CatalogVariants({ productCode, preset }: CatalogVariantsProps) {
   const [editing, setEditing] = useState<CatalogPresetRecord | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  if (!productCode) return null;
+  if (!productCode) {
+    return (
+      <section className="catalog-workspace__variants" aria-labelledby="catalog-variants-heading">
+        <h2 id="catalog-variants-heading">Variantele organizației</h2>
+        <p>Selectează un produs pentru a vedea variantele.</p>
+      </section>
+    );
+  }
 
   async function save(lifecycle: CatalogPresetRecord["lifecycle"], target = editing) {
     if (!preset || !productCode || pending || !list.data?.canEdit) return;
@@ -88,7 +95,7 @@ export function CatalogVariants({ productCode, preset }: CatalogVariantsProps) {
   return (
     <section className="catalog-workspace__variants" aria-labelledby="catalog-variants-heading">
       <h2 id="catalog-variants-heading">Variantele organizației</h2>
-      {!preset ? <p>Contractul de variante nu este disponibil în această citire.</p> : null}
+      {!preset ? <p>Acest produs nu are variante reutilizabile definite.</p> : null}
       {preset && preset.fields.length === 0 ? <p>Acest produs nu are opțiuni reutilizabile. Dimensiunile, textul și culorile rămân pe lucrare.</p> : null}
       {list.status === "error" ? <p>Variantele nu au putut fi citite.</p> : null}
       {preset && preset.fields.length > 0 && list.data ? (

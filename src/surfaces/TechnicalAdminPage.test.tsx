@@ -13,6 +13,7 @@ function jsonResponse(body: unknown, status = 200) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  window.history.replaceState({}, "", "/");
 });
 
 const defaultAdmin = {
@@ -121,6 +122,69 @@ describe("TechnicalAdminPage", () => {
     expect(screen.getByRole("link", { name: "Valori comerciale" })).toHaveAttribute(
       "href",
       "/admin/commercial",
+    );
+  });
+
+  it("returns to the catalog product and component when the return path is valid", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/admin/technical?component=LIGHTING_FRONT_LED&return=%2Fcatalog%3Fproduct%3DPRD-TEST%26component%3DLIGHTING",
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => defaultAdmin,
+      }),
+    );
+    render(<TechnicalAdminPage />);
+    expect(await screen.findByRole("link", { name: "Înapoi la definițiile produselor" })).toHaveAttribute(
+      "href",
+      "/catalog?product=PRD-TEST&component=LIGHTING",
+    );
+  });
+
+  it("rejects an encoded protocol-relative catalog return", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/admin/technical?component=LIGHTING_FRONT_LED&return=%2F%2Fexample.test%2Fcatalog",
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => defaultAdmin,
+      }),
+    );
+    render(<TechnicalAdminPage />);
+    expect(await screen.findByRole("link", { name: "Înapoi la definițiile produselor" })).toHaveAttribute(
+      "href",
+      "/catalog",
+    );
+  });
+
+  it("ignores a malformed catalog return", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/admin/technical?component=LIGHTING_FRONT_LED&return=https://example.test/catalog",
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => defaultAdmin,
+      }),
+    );
+    render(<TechnicalAdminPage />);
+    expect(await screen.findByRole("link", { name: "Înapoi la definițiile produselor" })).toHaveAttribute(
+      "href",
+      "/catalog",
     );
   });
 
