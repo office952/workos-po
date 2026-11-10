@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import {
   fetchCatalogPresets,
   saveCatalogPreset,
@@ -91,6 +91,7 @@ export function CatalogVariants({ productCode, preset }: CatalogVariantsProps) {
   const [retiring, setRetiring] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState<SaveFailure | null>(null);
+  const nameRef = useRef<HTMLInputElement | null>(null);
 
   if (!productCode) return null;
 
@@ -109,6 +110,11 @@ export function CatalogVariants({ productCode, preset }: CatalogVariantsProps) {
     setFailure(null);
   }
 
+  /** The form sits under the list on narrow screens; focusing its first field brings it into view. */
+  function focusForm() {
+    requestAnimationFrame(() => nameRef.current?.focus());
+  }
+
   function startEditing(item: CatalogPresetRecord) {
     setEditing(item);
     setFormOpen(true);
@@ -117,6 +123,7 @@ export function CatalogVariants({ productCode, preset }: CatalogVariantsProps) {
     setDescription(item.description);
     setChoices(Object.fromEntries(item.selections.map((selection) => [selection.fieldId, selection.value])));
     setFailure(null);
+    focusForm();
   }
 
   function reload() {
@@ -183,7 +190,7 @@ export function CatalogVariants({ productCode, preset }: CatalogVariantsProps) {
             <div className="catv2-block__head">
               <h3 className="catv2-h3">Variante salvate <span className="catv2-count">{presets.length}</span></h3>
               {canEdit && !showForm ? (
-                <button type="button" className="catv2-button catv2-button--secondary" onClick={() => setFormOpen(true)}>Variantă nouă</button>
+                <button type="button" className="catv2-button catv2-button--secondary" onClick={() => { setFormOpen(true); focusForm(); }}>Variantă nouă</button>
               ) : null}
             </div>
             {presets.length === 0 ? (
@@ -205,12 +212,12 @@ export function CatalogVariants({ productCode, preset }: CatalogVariantsProps) {
                   {presets.map((item) => (
                     <Fragment key={item.presetId}>
                     <tr data-selected={editing?.presetId === item.presetId ? "true" : undefined} data-confirming={retiring === item.presetId ? "true" : undefined}>
-                      <th scope="row">
+                      <th scope="row" className="catv2-variants__name">
                         {item.name}
                         {item.description ? <small>{item.description}</small> : null}
                       </th>
-                      <td data-label="Opțiuni" className="catv2-secondary">{selectionLabels(fields, item.selections)}</td>
-                      <td data-label="Stare">
+                      <td data-label="Opțiuni" className="catv2-secondary catv2-variants__options">{selectionLabels(fields, item.selections)}</td>
+                      <td data-label="Stare" className="catv2-variants__state">
                         <span className="catv2-version">
                           <span data-lifecycle={item.lifecycle}>{lifecycleLabel(item.lifecycle)}</span>
                           <small>revizia {item.revision}</small>
@@ -237,7 +244,9 @@ export function CatalogVariants({ productCode, preset }: CatalogVariantsProps) {
                           <div className="catv2-variants__confirm" role="group" aria-label={`Retragerea variantei ${item.name}`}>
                             <p>Retragi varianta? O variantă retrasă nu se redeschide și nu mai poate fi aleasă în Configurator.</p>
                             <button type="button" className="catv2-button catv2-button--secondary" disabled={pending} onClick={() => void save("RETIRED", item)}>Retrage varianta</button>
-                            <button type="button" className="catv2-button catv2-button--quiet" disabled={pending} onClick={() => setRetiring(null)}>Renunță</button>
+                            <button type="button" className="catv2-button catv2-button--quiet" disabled={pending} onClick={() => { setRetiring(null); setFailure(null); }}>Renunță</button>
+                            {/* A refusal is shown where the retire was asked, not under the whole list. */}
+                            {failure ? <FailureMessage failure={failure} onReload={reload} /> : null}
                           </div>
                         </td>
                       </tr>
@@ -249,7 +258,7 @@ export function CatalogVariants({ productCode, preset }: CatalogVariantsProps) {
             )}
             {canEdit && presets.length > 0 ? <p className="catv2-footnote">O variantă retrasă nu se redeschide. Ciornele se văd doar de proprietar.</p> : null}
             {!canEdit ? <p className="catv2-footnote">Poți consulta variantele publicate. Doar proprietarul le poate schimba.</p> : null}
-            {failure && !showForm ? <FailureMessage failure={failure} onReload={reload} /> : null}
+            {failure && !showForm && retiring === null ? <FailureMessage failure={failure} onReload={reload} /> : null}
           </div>
         ) : null}
       </div>
@@ -267,7 +276,7 @@ export function CatalogVariants({ productCode, preset }: CatalogVariantsProps) {
           ) : null}
           <label className="catv2-field" htmlFor="preset-name">
             <span className="catv2-field__label">Denumirea variantei</span>
-            <input id="preset-name" className="catv2-field__control" value={name} maxLength={80} disabled={pending} onChange={(event) => setName(event.target.value)} />
+            <input ref={nameRef} id="preset-name" className="catv2-field__control" value={name} maxLength={80} disabled={pending} onChange={(event) => setName(event.target.value)} />
           </label>
           <label className="catv2-field" htmlFor="preset-description">
             <span className="catv2-field__label">Descriere · opțional</span>
@@ -312,7 +321,7 @@ export function CatalogVariants({ productCode, preset }: CatalogVariantsProps) {
           {editing?.lifecycle === "PUBLISHED" ? (
             <p className="catv2-warning">Salvată ca ciornă, varianta nu mai poate fi aleasă în Configurator până când o publici din nou.</p>
           ) : null}
-          {failure ? <FailureMessage failure={failure} onReload={reload} /> : null}
+          {failure && retiring === null ? <FailureMessage failure={failure} onReload={reload} /> : null}
           <div className="catv2-actions">
             <button type="button" className="catv2-button catv2-button--primary" disabled={pending || !name.trim()} onClick={() => void save("PUBLISHED")}>Publică</button>
             <button type="button" className="catv2-button catv2-button--secondary" disabled={pending || !name.trim()} onClick={() => void save("DRAFT")}>Salvează ciorna</button>

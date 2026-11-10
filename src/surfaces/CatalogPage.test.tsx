@@ -867,6 +867,9 @@ describe("Catalog · file, proces și variante", () => {
     const retire = fetchMock.mock.calls.filter(([, init]) => init?.method === "POST").pop();
     expect(JSON.parse(String(retire?.[1]?.body))).toMatchObject({ presetId: "pst.1", expectedRevision: 2, lifecycle: "RETIRED", name: "Cant 80", selections: [{ fieldId: "volume.depthMm", value: "80" }] });
     expect(await screen.findByRole("alert")).toHaveTextContent("Varianta nu a fost retrasă. Revizia variantei s-a schimbat între timp.");
+    // The refusal stays with the variant it concerns, inside its confirmation.
+    expect(within(screen.getByRole("group", { name: "Retragerea variantei Cant 80" })).getByRole("alert")).toBeInTheDocument();
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
     await userEvent.click(screen.getByRole("button", { name: "Reîncarcă lista" }));
     refuse = null;
 
@@ -947,6 +950,63 @@ describe("Catalog · stiluri și stări responsive", () => {
     expect(phone).toContain(".catv2-rail { display: none; }");
     expect(phone).toContain(".catv2-sheet__back { display: inline-flex;");
     expect(phone).toContain("min-height: 44px");
+  });
+
+  function stubPhone() {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query === "(max-width: 767px)",
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }));
+  }
+
+  it("orders the phone bar as library, product switch, then the name with its rename", async () => {
+    stubPhone();
+    window.history.replaceState({}, "", "/catalog?product=PRD-TEST");
+    vi.stubGlobal("fetch", routeFetch());
+    render(<CatalogPage />);
+    const title = await screen.findByRole("heading", { level: 1, name: "Litere test" });
+    const back = screen.getByRole("link", { name: "Bibliotecă de produse" });
+    const change = screen.getByRole("button", { name: "Schimbă produsul" });
+    const edit = screen.getByRole("button", { name: "Editează denumirea" });
+    const follows = (first: Element, second: Element) => Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(follows(back, change)).toBe(true);
+    expect(follows(change, title)).toBe(true);
+    expect(follows(title, edit)).toBe(true);
+    expect(back).toHaveAttribute("href", "/catalog");
+
+    await userEvent.click(edit);
+    expect(screen.getByLabelText("Denumirea produsului")).toHaveValue("Litere test");
+    expect(screen.queryByRole("button", { name: "Editează denumirea" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Schimbă produsul" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Renunță" }));
+    expect(screen.getByRole("heading", { level: 1, name: "Litere test" })).toBeInTheDocument();
+    expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method && init.method !== "GET")).toBe(false);
+  });
+
+  it("shows no rename on the phone bar without the right, and keeps the switch and the way back", async () => {
+    stubPhone();
+    window.history.replaceState({}, "", "/catalog?product=PRD-TEST");
+    vi.stubGlobal("fetch", routeFetch(capabilities({ canEdit: false })));
+    render(<CatalogPage />);
+    expect(await screen.findByText("Doar consultare")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Editează denumirea" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Schimbă produsul" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Bibliotecă de produse" })).toBeInTheDocument();
+  });
+
+  it("lays a variant out as one record on a phone and keeps the table above", () => {
+    const css = read("catalog-v2-variants.css");
+    const wide = css.slice(0, css.indexOf("@media (max-width: 767px)"));
+    const phone = css.slice(css.indexOf("@media (max-width: 767px)"));
+    expect(wide).not.toContain("grid-template-areas");
+    expect(phone).toContain("grid-template-areas: \"name state\" \"options options\" \"actions actions\";");
+    expect(phone).toContain(".catv2-variants__actions:empty { display: none; }");
+    expect(phone).toContain("min-height: 44px");
+    const frame = read("catalog-v2.css");
+    expect(frame).toContain(".catv2-bar__edit {");
+    expect(frame).not.toContain("position: absolute;\n    top: 3px;");
   });
 
   it("replaces the graph with the step list below 1024 and keeps the library one list", () => {
