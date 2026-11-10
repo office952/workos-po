@@ -2,8 +2,6 @@ import { useState } from "react";
 import { presentCatalogProcessGraph, type ProcessGraphView } from "../../../adapters/catalogProcessGraphAdapter";
 import { fetchCatalogProcessGraph } from "../../../api/catalogProcessGraph";
 import { TransportError } from "../../../api/http";
-import { Button } from "../../../components/Button";
-import { InlineAlert } from "../../../components/InlineAlert";
 import { invalidateResources } from "../../../data/resourceCache";
 import { resourceKeys } from "../../../data/resourceKeys";
 import { useResource } from "../../../data/useResource";
@@ -29,26 +27,13 @@ export function CatalogProcessSection({ productCode }: CatalogProcessSectionProp
   return (
     <section className="process-graph" aria-labelledby="process-graph-heading">
       <header className="process-graph__header">
-        <h2 id="process-graph-heading">Traseu tehnologic</h2>
-        <p>Consultare. Traseul nu se salvează și nu pornește o lucrare.</p>
-        <p>Relațiile și capabilitățile vin din definiția produsului. Starea de execuție descrie definiția, nu o lucrare pornită.</p>
-      </header>
-      {graph.status === "error" ? (
-        <InlineAlert tone="error" title={errorTitle(graph.error)}>
-          {errorDetail(graph.error)}
-          <Button variant="secondary" onClick={() => invalidateResources(resourceKeys.catalogProcessGraph(productCode, activeScenario))}>
-            Reîncearcă traseul
-          </Button>
-        </InlineAlert>
-      ) : null}
-      {!view && graph.status !== "error" ? <p>Se citește traseul.</p> : null}
-      {view?.status === "NO_REFERENCE_SCENARIO" ? (
-        <p>Nu există un scenariu de referință pentru acest produs. Nu se afișează un traseu inventat.</p>
-      ) : null}
-      {view?.status === "READY" && view.scenario ? (
-        <>
+        <div className="catv2-section-head">
+          <h2 id="process-graph-heading" className="catv2-h2">Proces tehnologic</h2>
+          <p className="catv2-lead">Consultare. Traseul vine din definiția produsului; nu se salvează și nu pornește o lucrare.</p>
+        </div>
+        {view?.status === "READY" && view.scenario ? (
           <label className="process-graph__scenario">
-            Scenariu ilustrativ
+            <span>Scenariu ilustrativ</span>
             <select
               value={knownScenario ?? view.scenario.id}
               onChange={(event) => setScenarioId(event.target.value)}
@@ -58,13 +43,35 @@ export function CatalogProcessSection({ productCode }: CatalogProcessSectionProp
               ))}
             </select>
           </label>
-          <p>{view.scenario.summary}</p>
-          <p className="ui-note">{view.scenario.note}</p>
-          <p>
-            Proces tehnologic: {view.technologicalProcessCompletenessLabel}. Execuție: {view.executionReadinessLabel}. Dovezi de cost: {view.costCompletenessLabel}. Iluminare: {view.lightingCalculationReadinessLabel}.
-          </p>
-          {view.completenessReasons.map((reason) => <p key={reason} className="ui-note">{reason}</p>)}
-          {view.nodes.length === 0 ? <p>Traseul nu conține operații.</p> : <ProductProcessGraph key={view.scenario.id} view={view} />}
+        ) : null}
+      </header>
+      {graph.status === "error" ? (
+        <div className="catv2-failure" role="alert">
+          <p><strong>{errorTitle(graph.error)}.</strong> {errorDetail(graph.error)}</p>
+          <button type="button" className="catv2-button catv2-button--secondary" onClick={() => invalidateResources(resourceKeys.catalogProcessGraph(productCode, activeScenario))}>
+            Reîncearcă traseul
+          </button>
+        </div>
+      ) : null}
+      {!view && graph.status !== "error" ? <p className="catv2-footnote" role="status">Se citește traseul.</p> : null}
+      {view?.status === "NO_REFERENCE_SCENARIO" ? (
+        <p className="catv2-empty">Nu există un scenariu de referință pentru acest produs. Nu se afișează un traseu inventat.</p>
+      ) : null}
+      {view?.status === "READY" && view.scenario ? (
+        <>
+          <p className="process-graph__scenario-note">{view.scenario.summary} <span>{view.scenario.note}</span></p>
+          <dl className="process-graph__state">
+            <div><dt>Proces tehnologic</dt><dd>{view.technologicalProcessCompletenessLabel}</dd></div>
+            <div><dt>Execuție</dt><dd>{view.executionReadinessLabel}</dd></div>
+            <div><dt>Dovezi de cost</dt><dd>{view.costCompletenessLabel}</dd></div>
+            <div><dt>Iluminare</dt><dd>{view.lightingCalculationReadinessLabel}</dd></div>
+          </dl>
+          {view.completenessReasons.length > 0 ? (
+            <ul className="process-graph__reasons">
+              {view.completenessReasons.map((reason) => <li key={reason}>{reason}</li>)}
+            </ul>
+          ) : null}
+          {view.nodes.length === 0 ? <p className="catv2-empty">Traseul nu conține operații.</p> : <ProductProcessGraph key={view.scenario.id} view={view} />}
         </>
       ) : null}
     </section>

@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { CATALOG_TABS, type CatalogTab } from "./catalogSelection";
 
 const TAB_LABELS: Record<CatalogTab, string> = {
-  constructie: "Componente",
+  constructie: "Structură",
   proces: "Proces tehnologic",
   variante: "Variante",
 };
@@ -17,7 +17,7 @@ export function CatalogTabs({ selected, onSelect, disabled = false }: CatalogTab
   const controls = useRef<(HTMLButtonElement | null)[]>([]);
 
   return (
-    <div className="catalog-workspace__tabs" role="tablist" aria-label="Zonele catalogului">
+    <div className="catv2-tabs" role="tablist" aria-label="Zonele produsului">
       {CATALOG_TABS.map((tab, index) => (
         <button
           key={tab}
@@ -26,6 +26,7 @@ export function CatalogTabs({ selected, onSelect, disabled = false }: CatalogTab
           id={`catalog-tab-${tab}`}
           aria-controls={`catalog-panel-${tab}`}
           aria-selected={selected === tab}
+          aria-label={TAB_LABELS[tab]}
           tabIndex={selected === tab ? 0 : -1}
           disabled={disabled}
           ref={(node) => {
@@ -55,7 +56,12 @@ export function CatalogTabs({ selected, onSelect, disabled = false }: CatalogTab
             controls.current[next]?.focus();
           }}
         >
-          {TAB_LABELS[tab]}
+          {tab === "proces" ? (
+            <>
+              <span className="catv2-tabs__wide">{TAB_LABELS[tab]}</span>
+              <span className="catv2-tabs__phone" aria-hidden="true">Proces</span>
+            </>
+          ) : TAB_LABELS[tab]}
         </button>
       ))}
     </div>
