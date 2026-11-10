@@ -1390,8 +1390,19 @@ describe("W2 · registru comercial compact", () => {
     expect(new URLSearchParams(window.location.search).get("ramura")).toBe("quote:q-8");
     await userEvent.keyboard("{Home}");
     expect(new URLSearchParams(window.location.search).get("ramura")).toBe("quote:q-1");
-    await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(new URLSearchParams(window.location.search).get("ramura")).toBeNull());
+    // Escape hands focus back to the row it left on the next animation frame. Hold that frame and
+    // run it here, so it cannot land between the click and Enter below and move focus off the row.
+    const frames: FrameRequestCallback[] = [];
+    const frame = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => frames.push(callback));
+    try {
+      await userEvent.keyboard("{Escape}");
+      await waitFor(() => expect(new URLSearchParams(window.location.search).get("ramura")).toBeNull());
+      expect(frames.length).toBeGreaterThan(0);
+      frames.splice(0).forEach((callback) => callback(performance.now()));
+    } finally {
+      frame.mockRestore();
+    }
+    expect(rowButton(0)).toHaveFocus();
     await userEvent.click(rowButton(1));
     await userEvent.keyboard("{Enter}");
     expect(window.location.pathname).toBe("/lucrari/ord-2");
