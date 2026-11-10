@@ -22,6 +22,28 @@ export type CatalogPropertyOptionView = {
   note: string | null;
 };
 
+export type CatalogSettingDetail = {
+  amount: string | null;
+  unit: string;
+  version: number | null;
+  sourceLabel: string | null;
+};
+
+export type CatalogFormulaDetail = {
+  uses: string[];
+  workInputCount: number;
+  version: number | null;
+  sourceLabel: string | null;
+  available: boolean;
+};
+
+export type CatalogRequestDetail = {
+  kind: "select" | "text" | "number" | "other";
+  conditions: string[];
+  /** False when the form schema marks the field as optional on the work. */
+  required: boolean;
+};
+
 export type CatalogPropertyView = {
   id: string;
   group: CatalogPropertyGroup;
@@ -29,6 +51,21 @@ export type CatalogPropertyView = {
   value: string | null;
   notes: string[];
   options: CatalogPropertyOptionView[];
+  /** Reference of the definition field, as the server names it. Presentation joins only. */
+  ref: string | null;
+  /** For platform properties: a single fixed value, or the server-written identity line. */
+  origin: "fixed" | "identity" | null;
+  setting: CatalogSettingDetail | null;
+  formula: CatalogFormulaDetail | null;
+  request: CatalogRequestDetail | null;
+};
+
+export type CatalogComponentLink = {
+  direction: "gives" | "receives";
+  componentId: string;
+  componentLabel: string;
+  componentIndex: number;
+  subject: string;
 };
 
 export type CatalogComponentView = {
@@ -38,6 +75,9 @@ export type CatalogComponentView = {
   required: boolean;
   requestGap: string | null;
   relationships: string[];
+  links: CatalogComponentLink[];
+  /** Server-written identity line of the component in this product, when the manifest has one. */
+  identity: string | null;
   properties: CatalogPropertyView[];
 };
 
@@ -56,6 +96,7 @@ export type CatalogPresetContractView = {
 export type CatalogWorkspaceProduct = {
   code: string;
   label: string;
+  templateVersion: string | null;
   displayRevision: number;
   enablementLabel: string;
   enablementTone: CatalogEnablementTone;
@@ -110,11 +151,20 @@ type ParsedElement = {
   conditions: ParsedCondition[];
   required: boolean | null;
   sharedTemplateCodes: string[];
+  ref: string | null;
+  origin: "fixed" | "identity" | null;
+  settingId: string | null;
+  formulaId: string | null;
+  setting: CatalogSettingDetail | null;
+  formulaRefs: { settingIds: string[]; formulaIds: string[]; workInputCount: number } | null;
+  formulaState: { version: number | null; sourceLabel: string | null; available: boolean } | null;
+  fieldKind: CatalogRequestDetail["kind"] | null;
 };
 
 type ParsedProduct = {
   code: string;
   label: string;
+  templateVersion: string | null;
   displayRevision: number;
   enablementLabel: string;
   enablementTone: CatalogEnablementTone;
@@ -276,6 +326,56 @@ function organizationNotes(row: Record<string, unknown>, valueNote: boolean): { 
   return { notes, numeric };
 }
 
+const NO_DETAIL = {
+  ref: null,
+  origin: null,
+  settingId: null,
+  formulaId: null,
+  setting: null,
+  formulaRefs: null,
+  formulaState: null,
+  fieldKind: null,
+} as const;
+
+function unitLabel(unit: string): string {
+  return unit === "percent" ? "%" : unit;
+}
+
+function stringList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item !== "") : [];
+}
+
+function organizationState(row: Record<string, unknown>): { version: number | null; sourceLabel: string | null; available: boolean } {
+  const organization = asRecord(row.organization);
+  return {
+    version: organization ? asNumber(organization.version) : null,
+    sourceLabel: organization ? asString(organization.sourceLabel) : null,
+    available: organization?.resolved === true,
+  };
+}
+
+function fieldKind(value: unknown): CatalogRequestDetail["kind"] {
+  switch (value) {
+    case "select":
+      return "select";
+    case "text":
+      return "text";
+    case "number":
+      return "number";
+    default:
+      return "other";
+  }
+}
+
+function formulaState(row: Record<string, unknown>): { version: number | null; sourceLabel: string | null; available: boolean } {
+  const state = organizationState(row);
+  return {
+    version: state.available ? state.version : null,
+    sourceLabel: state.available ? state.sourceLabel : null,
+    available: state.available,
+  };
+}
+
 function parseElement(row: Record<string, unknown>): ParsedElement | null {
   const id = asString(row.id);
   const label = asString(row.label);
@@ -290,6 +390,7 @@ function parseElement(row: Record<string, unknown>): ParsedElement | null {
       const nesting = row.nesting === false ? false : row.nesting === null || row.nesting === undefined ? null : undefined;
       if (value === undefined || nesting === undefined) return null;
       const formatted = formatFixedValue(value, ref, nesting);
+      const source = asString(asRecord(row.provenance)?.source);
       return {
         id,
         classification: "platform",
@@ -301,6 +402,9 @@ function parseElement(row: Record<string, unknown>): ParsedElement | null {
         conditions: [],
         required: null,
         sharedTemplateCodes: [],
+        ...NO_DETAIL,
+        ref: ref || null,
+        origin: source === "IDENTITY_FACT" ? "identity" : "fixed",
       };
     }
     case "REQUEST_FACT": {
@@ -318,6 +422,9 @@ function parseElement(row: Record<string, unknown>): ParsedElement | null {
         conditions,
         required: row.required,
         sharedTemplateCodes: [],
+        ...NO_DETAIL,
+        ref: asString(asRecord(row.provenance)?.ref),
+        fieldKind: fieldKind(row.fieldType),
       };
     }
     case "ORGANIZATION_SETTING": {
@@ -338,6 +445,14 @@ function parseElement(row: Record<string, unknown>): ParsedElement | null {
         conditions: [],
         required: null,
         sharedTemplateCodes: shared,
+        ...NO_DETAIL,
+        settingId: asString(row.settingId),
+        setting: {
+          amount: organization.numeric === null ? null : formatRoNumber(organization.numeric),
+          unit: unitLabel(unit),
+          version: organization.numeric === null ? null : organizationState(row).version,
+          sourceLabel: organization.numeric === null ? null : organizationState(row).sourceLabel,
+        },
       };
     }
     case "ORGANIZATION_FORMULA": {
@@ -357,6 +472,14 @@ function parseElement(row: Record<string, unknown>): ParsedElement | null {
         conditions: [],
         required: null,
         sharedTemplateCodes: shared,
+        ...NO_DETAIL,
+        formulaId: asString(row.formulaId),
+        formulaRefs: {
+          settingIds: stringList(asRecord(row.allowedReferences)?.configSettingIds),
+          formulaIds: stringList(asRecord(row.allowedReferences)?.formulaIds),
+          workInputCount: stringList(asRecord(row.allowedReferences)?.jobInputIds).length,
+        },
+        formulaState: formulaState(row),
       };
     }
     case "UNSUPPORTED_OR_FUTURE": {
@@ -373,6 +496,7 @@ function parseElement(row: Record<string, unknown>): ParsedElement | null {
         conditions: [],
         required: null,
         sharedTemplateCodes: [],
+        ...NO_DETAIL,
       };
     }
     default:
@@ -448,6 +572,7 @@ function parseProduct(row: Record<string, unknown>): ParsedProduct | null {
   return {
     code,
     label,
+    templateVersion: asString(row.templateVersion),
     displayRevision,
     enablementLabel: enablement.label,
     enablementTone: enablement.tone,
@@ -517,6 +642,35 @@ function relationshipTexts(component: ParsedComponent, components: readonly Pars
   return texts;
 }
 
+const AREA_LINK_SUBJECT = "suprafața confirmată";
+
+function componentLinks(component: ParsedComponent, components: readonly ParsedComponent[]): CatalogComponentLink[] {
+  const links: CatalogComponentLink[] = [];
+  components.forEach((other, index) => {
+    if (other.areaFromComponentId === component.id) {
+      links.push({ direction: "gives", componentId: other.id, componentLabel: other.label, componentIndex: index + 1, subject: AREA_LINK_SUBJECT });
+    }
+    if (component.areaFromComponentId === other.id) {
+      links.push({ direction: "receives", componentId: other.id, componentLabel: other.label, componentIndex: index + 1, subject: AREA_LINK_SUBJECT });
+    }
+  });
+  return links;
+}
+
+function formulaUses(element: ParsedElement, product: ParsedProduct): string[] {
+  if (!element.formulaRefs) return [];
+  const labels: string[] = [];
+  for (const settingId of element.formulaRefs.settingIds) {
+    const setting = product.elements.find((item) => item.classification === "setting" && item.settingId === settingId);
+    if (setting) labels.push(setting.label);
+  }
+  for (const formulaId of element.formulaRefs.formulaIds) {
+    const formula = product.elements.find((item) => item.classification === "formula" && item.formulaId === formulaId);
+    if (formula) labels.push(formula.label);
+  }
+  return labels;
+}
+
 function sharedNote(codes: readonly string[], products: readonly ParsedProduct[], currentCode: string): string | null {
   const labels = codes
     .filter((code) => code !== currentCode)
@@ -528,9 +682,13 @@ function sharedNote(codes: readonly string[], products: readonly ParsedProduct[]
 
 function toView(element: ParsedElement, product: ParsedProduct, products: readonly ParsedProduct[]): CatalogPropertyView {
   const notes = [...element.notes];
+  const conditionNotes: string[] = [];
   for (const condition of element.conditions) {
     const note = conditionNote(condition, product);
-    if (note) notes.push(note);
+    if (note) {
+      notes.push(note);
+      conditionNotes.push(note);
+    }
   }
   const shared = sharedNote(element.sharedTemplateCodes, products, product.code);
   if (shared) notes.push(shared);
@@ -541,6 +699,19 @@ function toView(element: ParsedElement, product: ParsedProduct, products: readon
     value: element.value,
     notes,
     options: element.options.map((option) => ({ label: option.label, note: option.note })),
+    ref: element.ref,
+    origin: element.origin,
+    setting: element.setting,
+    formula: element.formulaRefs && element.formulaState
+      ? {
+          uses: formulaUses(element, product),
+          workInputCount: element.formulaRefs.workInputCount,
+          version: element.formulaState.version,
+          sourceLabel: element.formulaState.sourceLabel,
+          available: element.formulaState.available,
+        }
+      : null,
+    request: element.fieldKind ? { kind: element.fieldKind, conditions: conditionNotes, required: element.required !== false } : null,
   };
 }
 
@@ -549,6 +720,7 @@ function presentProduct(product: ParsedProduct, products: readonly ParsedProduct
   return {
     code: product.code,
     label: product.label,
+    templateVersion: product.templateVersion,
     displayRevision: product.displayRevision,
     enablementLabel: product.enablementLabel,
     enablementTone: product.enablementTone,
@@ -562,6 +734,8 @@ function presentProduct(product: ParsedProduct, products: readonly ParsedProduct
       required: component.required,
       requestGap: product.withoutRequestSection.includes(component.id) ? "Nu are câmpuri de completat pe lucrare." : null,
       relationships: relationshipTexts(component, product.components),
+      links: componentLinks(component, product.components),
+      identity: views.find((item) => item.element.componentId === component.id && item.element.origin === "identity")?.view.value ?? null,
       properties: views
         .filter((item) => item.element.componentId === component.id)
         .map((item) => item.view),
@@ -596,6 +770,7 @@ function emptyProduct(): ParsedProduct {
   return {
     code: "",
     label: "",
+    templateVersion: null,
     displayRevision: 0,
     enablementLabel: "",
     enablementTone: "unknown",

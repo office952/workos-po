@@ -22,6 +22,7 @@ import { resourceKeys } from "../data/resourceKeys";
 import { loadTechnicalSettingsAdmin } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { administrationRailItems } from "../layout/administrationNav";
+import { catalogReturnFromSearch } from "../features/catalog/catalogSelection";
 import { SlicePage } from "../layout/SlicePage";
 import { presentAdminEditMeta } from "../presentation/adminEditMeta";
 import { formatTimestamp } from "../presentation/format";
@@ -39,6 +40,7 @@ function settingDrafts(model: TechnicalSettingsAdminTransport): Record<string, s
 
 export function TechnicalAdminPage() {
   const componentId = new URLSearchParams(window.location.search).get("component");
+  const catalogReturnHref = catalogReturnFromSearch(window.location.search);
   const admin = useResource(resourceKeys.technicalAdmin(), loadTechnicalSettingsAdmin);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -166,7 +168,7 @@ export function TechnicalAdminPage() {
               />
             }
           >
-            {componentId && <><a className="text-link" href="/catalog">Înapoi la definițiile produselor</a>{!model.settings.some(item => item.typeId === componentId) && <p>Această componentă nu are setări editabile în versiunea curentă.</p>}</>}
+            {componentId && <><a className="text-link" href={catalogReturnHref}>Înapoi la definițiile produselor</a>{!model.settings.some(item => item.typeId === componentId) && <p>Această componentă nu are setări editabile în versiunea curentă.</p>}</>}
             {model.guidance ? (
               <InlineAlert
                 tone={model.resolutionOk ? "pending" : "blocked"}

@@ -2,6 +2,7 @@ import { fetchCatalogPresets, type CatalogPresetRecord } from "../../api/catalog
 import { resourceKeys } from "../../data/resourceKeys";
 import { useResource } from "../../data/useResource";
 import { applyPresetSelections } from "./applyPresetSelections";
+import "../../styles/surfaces/catalog-workspace.css";
 
 type ConfiguratorPresetBarProps = {
   productCode: string;

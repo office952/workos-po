@@ -1,0 +1,176 @@
+/* Catalog V2 · Structura produsului (C02, C03) and the component sheet (C04, C05, C06).
+   Rail ≥1024 · strip 768–1023 · list and detail pages <768. */
+.catv2-body--structure { display: grid; grid-template-columns: 264px minmax(0, 1fr); padding: 0; }
+.catv2-body__main { min-width: 0; padding: 28px var(--cat-gutter) 56px; }
+
+/* ─── Rail ─── */
+.catv2-rail { display: grid; align-content: start; gap: 2px; padding: 20px 12px; border-right: 1px solid var(--cat-line-mid); }
+.catv2-rail__label { padding: 18px 12px 8px; color: var(--cat-ink-2); font-size: 12px; font-weight: 500; }
+.catv2-rail__list { display: grid; gap: 2px; }
+.catv2-rail__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 56px;
+  padding: 9px 12px;
+  border-left: 3px solid transparent;
+  border-radius: 2px;
+  color: inherit;
+  text-decoration: none;
+}
+.catv2-rail__item:hover { background: var(--cat-field); }
+.catv2-rail__item[aria-current="page"] { border-left-color: var(--cat-accent); background: var(--cat-selected); }
+.catv2-rail__mark { width: 9px; height: 9px; flex: none; margin-top: 6px; background: var(--cat-ink-2); }
+.catv2-rail__item[aria-current="page"] .catv2-rail__mark { background: var(--cat-accent); }
+.catv2-rail__index { flex: none; width: 15px; margin-top: 2px; color: var(--cat-ink-2); font: 500 12px/1.5 var(--font-mono); }
+.catv2-rail__copy { display: grid; gap: 2px; min-width: 0; }
+.catv2-rail__copy strong { font-size: 14px; font-weight: 500; }
+.catv2-rail__item[aria-current="page"] strong { font-weight: 600; }
+.catv2-rail__copy small { color: var(--cat-ink-2); font-size: 12px; }
+
+/* ─── Overview ─── */
+.catv2-structure { display: grid; gap: 28px; }
+.catv2-matrix__index { width: 52px; color: var(--cat-accent); font-size: 16px; font-weight: 500; }
+.catv2-matrix thead th:not(:nth-child(2)):not(.catv2-matrix__links) { width: 84px; }
+.catv2-matrix thead th.catv2-matrix__index { width: 52px; }
+.catv2-matrix thead th:last-child { width: 16px; }
+.catv2-matrix tbody :is(th, td) { padding-top: 16px; padding-bottom: 16px; }
+.catv2-matrix__name .catv2-rowlink__target { display: block; font-size: 16px; line-height: 1.4; }
+.catv2-matrix__identity { display: block; margin-top: 2px; color: var(--cat-ink-2); font-size: 13px; font-weight: 400; }
+.catv2-matrix__links { width: 300px; padding-left: 24px !important; }
+.catv2-matrix__legend { font-weight: 400; }
+.catv2-matrix__narrow, .catv2-matrix__phone, .catv2-matrix__inline-links { display: none; }
+.catv2-links { display: grid; gap: 6px; color: var(--cat-ink-2); font-size: 13px; font-weight: 400; }
+.catv2-links li { display: grid; grid-template-columns: 16px minmax(0, 1fr); line-height: 1.5; }
+.catv2-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--cat-line-strong); }
+.catv2-facts > div { display: grid; align-content: start; gap: 3px; padding: 16px 32px 18px 0; border-bottom: 1px solid var(--cat-line); }
+.catv2-facts dt { color: var(--cat-ink-2); font-size: 12px; }
+.catv2-facts dd { display: grid; justify-items: start; gap: 4px; font-size: 14.5px; }
+.catv2-facts small { color: var(--cat-muted); font-size: 12px; }
+
+/* ─── Component sheet ─── */
+.catv2-sheet { display: grid; gap: 22px; }
+.catv2-sheet__back { display: none; }
+.catv2-sheet__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px 24px; }
+.catv2-sheet__head > div { display: grid; gap: 4px; min-width: 0; }
+.catv2-sheet__position { color: var(--cat-ink-2); font-size: 12px; }
+.catv2-sheet__title { font-size: 26px; font-weight: 600; line-height: 1.25; }
+.catv2-sheet__pager { display: flex; gap: 20px; flex: none; white-space: nowrap; }
+.catv2-sheet__body { display: grid; grid-template-columns: minmax(0, 1fr) 256px; gap: 48px; align-items: start; }
+.catv2-sheet__main { display: grid; gap: 32px; min-width: 0; }
+.catv2-sheet__aside { display: grid; align-content: start; gap: 22px; padding-left: 32px; border-left: 1px solid var(--cat-line-mid); font-size: 14px; }
+.catv2-aside-block { display: grid; justify-items: start; gap: 6px; }
+.catv2-aside-block h3 { color: var(--cat-ink-2); font-size: 12px; font-weight: 500; }
+.catv2-aside-list { display: grid; gap: 6px; }
+.catv2-sheet__settings th[scope="row"] { width: 52%; }
+.catv2-sheet__settings td.catv2-figure { width: 96px; font-family: var(--font-mono); }
+.catv2-sheet__settings td.catv2-unit { width: 84px; }
+.catv2-sheet__formulas th[scope="row"], .catv2-sheet__triple th[scope="row"] { width: 34%; }
+.catv2-sheet__formulas td:last-child, .catv2-sheet__triple td:last-child { width: 32%; }
+.catv2-sheet__filter { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; color: var(--cat-ink-2); font-size: 13px; }
+.catv2-sheet__filter .catv2-search { flex: 0 1 320px; }
+
+@media (max-width: 1279px) {
+  .catv2-sheet__body { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .catv2-sheet__aside {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+    padding: 20px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--cat-line-mid);
+  }
+  .catv2-matrix__links { width: 250px; }
+}
+@media (max-width: 1023px) {
+  .catv2-body--structure { grid-template-columns: minmax(0, 1fr); }
+  .catv2-rail {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px var(--cat-gutter);
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--cat-line-mid);
+  }
+  .catv2-rail__label { display: none; }
+  .catv2-rail__list { display: flex; gap: 8px; }
+  .catv2-rail__item {
+    align-items: center;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--cat-line-mid);
+    white-space: nowrap;
+  }
+  .catv2-rail__item[aria-current="page"] { border-color: var(--cat-accent); }
+  .catv2-rail__mark, .catv2-rail__index { margin-top: 0; }
+  .catv2-rail__copy small { display: none; }
+  .catv2-matrix :is(th, td).catv2-matrix__links { display: none; }
+  .catv2-matrix__inline-links { display: block; margin-top: 4px; }
+  .catv2-matrix__wide { display: none; }
+  .catv2-matrix__narrow { display: inline; }
+  .catv2-matrix thead th:not(:nth-child(2)):not(.catv2-matrix__links) { width: 68px; }
+  .catv2-matrix thead th.catv2-matrix__index { width: 42px; }
+  .catv2-matrix thead th:last-child, .catv2-matrix td.catv2-chevron { width: 28px; }
+  .catv2-matrix__index { width: 42px; }
+  .catv2-matrix tbody :is(th, td) { vertical-align: middle; }
+  .catv2-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .catv2-rail { display: none; }
+  .catv2-body__main { padding: 20px var(--cat-gutter) 32px; }
+  .catv2-structure { gap: 24px; }
+  .catv2-structure > .catv2-section-head { display: none; }
+  .catv2-matrix thead { display: none; }
+  .catv2-matrix, .catv2-matrix tbody { display: block; }
+  .catv2-matrix tbody { border-top: 1px solid var(--cat-line-strong); }
+  .catv2-matrix tr {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr) 16px;
+    align-items: center;
+    gap: 0 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--cat-line);
+  }
+  .catv2-matrix tbody :is(th, td) { display: none; padding: 0; border: 0; }
+  .catv2-matrix tbody :is(td.catv2-matrix__index, th.catv2-matrix__name, td.catv2-chevron) { display: block; }
+  .catv2-matrix__index { width: auto; }
+  .catv2-matrix__phone { display: block; margin-top: 2px; color: var(--cat-ink-2); font-size: 13px; font-weight: 400; }
+  .catv2-facts { grid-template-columns: minmax(0, 1fr); }
+  .catv2-facts > div { padding: 12px 0 14px; }
+  .catv2-sheet { gap: 16px; }
+  .catv2-sheet__back { display: inline-flex; align-items: center; min-height: 44px; margin: -12px 0 -8px; font-size: 14px; }
+  .catv2-sheet__head { flex-direction: column; align-items: stretch; gap: 8px; }
+  .catv2-sheet__title { font-size: 22px; }
+  .catv2-sheet__pager { justify-content: space-between; }
+  .catv2-sheet__pager .catv2-link { display: inline-flex; align-items: center; min-height: 44px; }
+  .catv2-sheet__main { gap: 26px; }
+  .catv2-sheet__aside { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .catv2-sheet .catv2-table thead { display: none; }
+  .catv2-sheet .catv2-table, .catv2-sheet .catv2-table tbody { display: block; }
+  .catv2-sheet .catv2-table tbody { border-top: 1px solid var(--cat-line-strong); }
+  .catv2-sheet .catv2-table tr { display: grid; gap: 3px; padding: 12px 0; border-bottom: 1px solid var(--cat-line); }
+  .catv2-sheet .catv2-table tbody :is(th, td) { display: block; width: auto !important; padding: 0; border: 0; text-align: left; }
+  .catv2-sheet .catv2-table td[data-label]::before { content: attr(data-label) ": "; color: var(--cat-muted); font: 400 12px/1.5 var(--font-sans); }
+  .catv2-sheet__settings tr { grid-template-columns: minmax(0, 1fr) auto auto; align-items: baseline; gap: 2px 6px !important; }
+  .catv2-sheet__settings th[scope="row"] { grid-column: 1; }
+  .catv2-sheet__settings td.catv2-figure { grid-column: 2; }
+  .catv2-sheet__settings td.catv2-unit { grid-column: 3; }
+  .catv2-sheet__settings td:last-child { grid-column: 1 / -1; }
+  .catv2-sheet__settings td::before { content: none !important; }
+  .catv2-sheet .catv2-version { display: inline-flex; align-items: baseline; gap: 6px; color: var(--cat-muted); font-size: 12px; }
+  .catv2-sheet td[data-label="Versiune"]::before { content: none !important; }
+  .catv2-sheet .catv2-block__head .catv2-link { display: inline-flex; align-items: center; min-height: 44px; }
+}
+
+/* Calculation basis of a component type, as the definition words it. Closed by default. */
+.catv2-calc { border-top: 1px solid var(--cat-line-mid); border-bottom: 1px solid var(--cat-line-mid); }
+.catv2-calc summary { display: flex; align-items: baseline; gap: 8px; min-height: 44px; padding: 11px 0; color: var(--cat-ink); font-size: 14px; font-weight: 500; cursor: pointer; }
+.catv2-calc summary:focus-visible { outline: 2px solid var(--cat-accent); outline-offset: 2px; }
+.catv2-calc dl { display: grid; margin: 0; padding-bottom: 8px; }
+.catv2-calc dl > div { display: grid; grid-template-columns: minmax(0, 15rem) minmax(0, 1fr); gap: 4px 24px; padding: 9px 0; border-top: 1px solid var(--cat-line); font-size: 13.5px; }
+.catv2-calc dt { color: var(--cat-ink-2); }
+.catv2-calc dd { margin: 0; overflow-wrap: anywhere; }
+.catv2-optional { display: block; margin-top: 2px; color: var(--cat-muted); font-size: 12px; font-weight: 400; }
+@media (max-width: 767px) {
+  .catv2-calc dl > div { grid-template-columns: minmax(0, 1fr); }
+}

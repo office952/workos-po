@@ -1,4 +1,5 @@
 import type { CatalogCapabilitiesPermissions, CatalogComponentView, CatalogPropertyGroup, CatalogPropertyView, CatalogWorkspaceProduct } from "../../adapters/catalogCapabilitiesAdapter";
+import { catalogAdminHref, type CatalogSelection } from "./catalogSelection";
 
 type CatalogPropertiesProps = {
   product: CatalogWorkspaceProduct | null;
@@ -6,6 +7,7 @@ type CatalogPropertiesProps = {
   platformLimits: readonly CatalogPropertyView[];
   permissions: CatalogCapabilitiesPermissions | null;
   unknownProduct: boolean;
+  catalogSelection: CatalogSelection;
 };
 
 const GROUP_ORDER: readonly CatalogPropertyGroup[] = ["platform", "setting", "formula", "request", "unsupported"];
@@ -70,12 +72,15 @@ function GroupedProperties({ items }: { items: readonly CatalogPropertyView[] })
   );
 }
 
-export function CatalogProperties({ product, component, platformLimits, permissions, unknownProduct }: CatalogPropertiesProps) {
+export function CatalogProperties({ product, component, platformLimits, permissions, unknownProduct, catalogSelection }: CatalogPropertiesProps) {
   const readOnly = permissions !== null && !permissions.canEditEnablement && !permissions.canEditTechnicalSettings && !permissions.canEditFormulas && !permissions.canEditDisplayLabels;
+  const settings = component?.properties.filter((item) => item.group === "setting") ?? [];
+  const formulas = component?.properties.filter((item) => item.group === "formula") ?? [];
+  const shared = component?.properties.some((item) => item.notes.some((note) => note.startsWith("Valoare comună"))) ?? false;
 
   return (
-    <section className="catalog-workspace__region" aria-labelledby="catalog-properties-heading">
-      <h2 id="catalog-properties-heading">Proprietăți și configurare</h2>
+    <section className="catalog-workspace__region catalog-workspace__inspector" aria-labelledby="catalog-properties-heading">
+      <h2 id="catalog-properties-heading">Inspector componentă</h2>
       {unknownProduct ? <p>Proprietățile apar după alegerea unui produs din bibliotecă.</p> : null}
       {!product && !unknownProduct ? <p>Selectează un produs din bibliotecă.</p> : null}
       {product ? (
@@ -90,14 +95,26 @@ export function CatalogProperties({ product, component, platformLimits, permissi
           {component ? (
             <>
               <h3>{component.label}</h3>
+              <p className="ui-note">{component.required ? "Componentă obligatorie." : "Componentă opțională."}</p>
+              {shared ? <p className="ui-note">Unele valori sunt comune tipului de componentă și se folosesc și la alte produse.</p> : null}
               <GroupedProperties items={component.properties} />
               {component.requestGap ? <p>{component.requestGap}</p> : null}
-              <p className="catalog-workspace__links">
-                <a className="text-link" href={`/admin/technical?component=${encodeURIComponent(component.typeId)}`}>Setările acestei componente</a>
-                <a className="text-link" href={`/admin/formulas?component=${encodeURIComponent(component.typeId)}`}>Formulele acestei componente</a>
-              </p>
-              {!permissions?.canEditTechnicalSettings ? <p className="ui-note">Doar proprietarul poate modifica setările tehnice.</p> : null}
-              {!permissions?.canEditFormulas ? <p className="ui-note">Doar proprietarul poate modifica formulele.</p> : null}
+              {settings.length > 0 ? (
+                <p className="catalog-workspace__links">
+                  <a className="text-link" href={catalogAdminHref("/admin/technical", component.typeId, catalogSelection)}>Setările acestei componente</a>
+                </p>
+              ) : (
+                <p>Această componentă nu are setări tehnice ale organizației.</p>
+              )}
+              {formulas.length > 0 ? (
+                <p className="catalog-workspace__links">
+                  <a className="text-link" href={catalogAdminHref("/admin/formulas", component.typeId, catalogSelection)}>Formulele acestei componente</a>
+                </p>
+              ) : (
+                <p>Această componentă nu are formule suportate.</p>
+              )}
+              {settings.length > 0 && !permissions?.canEditTechnicalSettings ? <p className="ui-note">Doar proprietarul poate modifica setările tehnice.</p> : null}
+              {formulas.length > 0 && !permissions?.canEditFormulas ? <p className="ui-note">Doar proprietarul poate modifica formulele.</p> : null}
             </>
           ) : null}
           {product.workFacts.length > 0 ? (

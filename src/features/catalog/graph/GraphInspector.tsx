@@ -9,33 +9,44 @@ export function GraphInspector({ node }: GraphInspectorProps) {
     return <p className="process-graph__inspector-empty">Selectează o operație ca să vezi relațiile și dovada de cost.</p>;
   }
   return (
-    <div className="process-graph__inspector">
-      <h3>{node.processLabel}</h3>
-      <p>{node.scopeLabel}{node.typeLabel ? ` · ${node.typeLabel}` : ""}</p>
-      <p>{node.reason}</p>
-      <h4>Depinde de</h4>
-      <p>{node.dependsOnLabels.length > 0 ? node.dependsOnLabels.join(", ") : "Nicio operație anterioară."}</p>
-      <h4>Urmează după această operație</h4>
-      <p>{node.successorLabels.length > 0 ? node.successorLabels.join(", ") : "Nicio operație ulterioară."}</p>
-      <h4>Capabilitate cerută</h4>
-      <p>{node.capabilityLabel ?? "Capabilitatea nu este înregistrată pentru această operație."}</p>
-      <p>Nu se atribuie oameni sau utilaje din acest ecran.</p>
-      <h4>Condiție</h4>
-      <p>{node.conditionLabel ?? "Operație mereu inclusă în acest scenariu."}</p>
-      <h4>Blocaje confirmate</h4>
-      {node.blockers.length > 0 ? (
-        <ul>{node.blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}</ul>
-      ) : (
-        <p>{node.nodeReadinessLabel}</p>
-      )}
-      <h4>Rețetă și dovadă</h4>
-      {node.recipe ? <RecipeDetails recipe={node.recipe} /> : <p>Nu există o rețetă legată de această operație, pe acest rol.</p>}
-      <p className="process-graph__links">
-        {node.technicalHref ? <a className="text-link" href={node.technicalHref}>Setările componentei</a> : null}
-        {node.formulaHref ? <a className="text-link" href={node.formulaHref}>Formulele componentei</a> : null}
-        {node.recipe ? <a className="text-link" href={node.recipe.resourcesHref}>Dovezile de cost</a> : null}
-        <a className="text-link" href="/admin/products">Disponibilitatea produsului</a>
-      </p>
+    <div className="process-graph__inspector" aria-live="polite">
+      <div className="process-graph__inspector-main">
+        <p className="process-graph__inspector-label">Operație selectată</p>
+        <h3>{node.processLabel}</h3>
+        <p className="process-graph__inspector-meta">{node.scopeLabel}{node.typeLabel ? ` · ${node.typeLabel}` : ""} · {node.nodeReadinessLabel}</p>
+        <p>{node.reason}</p>
+        <h4>Condiție</h4>
+        <p>{node.conditionLabel ?? "Operație mereu inclusă în acest scenariu."}</p>
+        <h4>Blocaje confirmate</h4>
+        {node.blockers.length > 0 ? (
+          <ul>{node.blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}</ul>
+        ) : (
+          <p>{node.nodeReadinessLabel}</p>
+        )}
+      </div>
+      <div className="process-graph__inspector-relations">
+        <h4>Depinde de</h4>
+        {node.dependsOnLabels.length > 0 ? (
+          <ul>{node.dependsOnLabels.map((label) => <li key={label}>{label}</li>)}</ul>
+        ) : <p>Nicio operație anterioară.</p>}
+        <h4>Urmează după această operație</h4>
+        {node.successorLabels.length > 0 ? (
+          <ul>{node.successorLabels.map((label) => <li key={label}>{label}</li>)}</ul>
+        ) : <p>Nicio operație ulterioară.</p>}
+      </div>
+      <div className="process-graph__inspector-evidence">
+        <h4>Capabilitate cerută</h4>
+        <p>{node.capabilityLabel ?? "Capabilitatea nu este înregistrată pentru această operație."}</p>
+        <p className="process-graph__inspector-meta">Nu se atribuie oameni sau utilaje din acest ecran.</p>
+        <h4>Rețetă și dovadă</h4>
+        {node.recipe ? <RecipeDetails recipe={node.recipe} /> : <p>Nu există o rețetă legată de această operație, pe acest rol.</p>}
+        <p className="process-graph__links">
+          {node.technicalHref ? <a className="catv2-link" href={node.technicalHref}>Setările componentei</a> : null}
+          {node.formulaHref ? <a className="catv2-link" href={node.formulaHref}>Formulele componentei</a> : null}
+          {node.recipe ? <a className="catv2-link" href={node.recipe.resourcesHref}>Dovezile de cost</a> : null}
+          <a className="catv2-link" href="/admin/products">Disponibilitatea produsului</a>
+        </p>
+      </div>
     </div>
   );
 }
