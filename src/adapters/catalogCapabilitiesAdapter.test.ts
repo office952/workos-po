@@ -258,6 +258,114 @@ describe("catalog capabilities presentation", () => {
     expect(view?.products[0]?.components.find((item) => item.id === "BACK")?.relationships).toEqual([]);
   });
 
+  it("labels allowed formula references without treating them as the active expression", () => {
+    const withFormula = product({
+      elements: [
+        ...product().elements,
+        {
+          id: "PRD-LETTERS:formula:LIGHTING_FRONT_LED.ledModuleQuantity",
+          classification: "ORGANIZATION_FORMULA",
+          label: "Cantitate module LED",
+          formulaId: "LIGHTING_FRONT_LED.ledModuleQuantity",
+          appliesToTemplateCodes: ["PRD-LETTERS"],
+          allowedReferences: {
+            configSettingIds: ["ledPitchMm"],
+            jobInputIds: ["confirmedPerimeterMm"],
+            formulaIds: [],
+          },
+          organization: {
+            resolved: true,
+            version: 1,
+            source: "PLATFORM_STARTER",
+            sourceLabel: "Valoare de pornire",
+            organizationConfirmed: false,
+            error: null,
+          },
+          provenance: { source: "FORMULA_DEFINITION", ref: "LIGHTING_FRONT_LED.ledModuleQuantity" },
+          support: "ORGANIZATION_VERSIONED",
+          componentId: "LIGHTING",
+          componentTypeId: "LIGHTING_FRONT_LED",
+          canonicalWriter: { method: "POST", path: "/api/admin/formulas", permission: "owner" },
+          readPath: "/api/admin/formulas",
+        },
+      ],
+    });
+    const lighting = presentCatalogCapabilities(manifest([withFormula]))?.products[0]?.components.find((item) => item.id === "LIGHTING");
+    const formula = lighting?.properties.find((item) => item.label === "Cantitate module LED");
+    expect(formula?.formula?.formulaId).toBe("LIGHTING_FRONT_LED.ledModuleQuantity");
+    expect(formula?.formula?.uses).toEqual(["Pas module LED"]);
+    expect(formula?.formula?.workInputCount).toBe(1);
+    expect(JSON.stringify(formula)).not.toContain("confirmedPerimeterMm");
+    expect(JSON.stringify(formula)).not.toContain("Folosește");
+  });
+
+  it("does not present an unresolved request condition as unconditional", () => {
+    const withSupport = product({
+      elements: [
+        ...product().elements,
+        {
+          id: "PRD-LETTERS:request:back.supportKind",
+          classification: "REQUEST_FACT",
+          label: "Suport constructiv",
+          fieldType: "select",
+          required: true,
+          conditions: [{ kind: "fieldEquals", fieldId: "constructive.mountingContext", value: "letters_on_acm_panel" }],
+          options: [{ value: "PANEL", label: "Panou", support: "SCHEMA_SELECTABLE", technologicalCondition: null }],
+          provenance: { source: "FORM_SCHEMA", ref: "back.supportKind" },
+          support: "SCHEMA_SELECTABLE",
+          componentId: "BACK",
+          componentTypeId: "FOREX_BACK",
+          canonicalWriter: null,
+          readPath: null,
+        },
+        {
+          id: "PRD-LETTERS:request:face.confirmedAreaMm2",
+          classification: "REQUEST_FACT",
+          label: "Suprafață confirmată (mm²)",
+          fieldType: "number",
+          required: true,
+          conditions: [],
+          options: [],
+          provenance: { source: "FORM_SCHEMA", ref: "face.confirmedAreaMm2" },
+          support: "SCHEMA_SELECTABLE",
+          componentId: "FACE",
+          componentTypeId: "PLEXIGLAS_FACE",
+          canonicalWriter: null,
+          readPath: null,
+        },
+      ],
+    });
+    const view = presentCatalogCapabilities(manifest([withSupport]));
+    const back = view?.products[0]?.components.find((item) => item.id === "BACK");
+    const face = view?.products[0]?.components.find((item) => item.id === "FACE");
+    const support = back?.properties.find((item) => item.label === "Suport constructiv");
+    const finish = face?.properties.find((item) => item.label === "Finisaj față");
+    const area = face?.properties.find((item) => item.label === "Suprafață confirmată (mm²)");
+    const profile = back?.properties.find((item) => item.label === "Prelucrare spate");
+    expect(support?.request?.conditionState).toBe("unresolved");
+    expect(support?.request?.conditions).toEqual([]);
+    expect(support?.notes).toContain("Are o condiție care nu poate fi descrisă aici");
+    expect(profile?.request?.conditionState).toBe("none");
+    expect(finish?.request?.conditionState).toBe("none");
+    expect(finish?.dependents).toEqual([
+      {
+        id: "PRD-LETTERS:request:face.color",
+        label: "Culoare față",
+        note: "Se cere doar când Finisaj față este Colantat.",
+        componentId: "FACE",
+      },
+    ]);
+    expect(area?.areaHandoffs).toEqual([
+      {
+        direction: "gives",
+        componentId: "BACK",
+        componentLabel: "Spate",
+        componentIndex: 2,
+        subject: "suprafața confirmată",
+      },
+    ]);
+  });
+
   it("reports unknown enablement without a boolean guess", () => {
     const inactive = product({
       enablement: { ...product().enablement, enabledForNewWork: null, support: "NOT_PREPARED", error: "PRODUCT_ENABLEMENT_INACTIVE" },

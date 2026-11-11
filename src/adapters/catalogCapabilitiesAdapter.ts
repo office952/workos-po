@@ -30,6 +30,8 @@ export type CatalogSettingDetail = {
 };
 
 export type CatalogFormulaDetail = {
+  formulaId: string;
+  /** Labels of allowedReferences. Not an analysis of the active formula. */
   uses: string[];
   workInputCount: number;
   version: number | null;
@@ -37,11 +39,21 @@ export type CatalogFormulaDetail = {
   available: boolean;
 };
 
+export type CatalogConditionState = "none" | "known" | "unresolved";
+
 export type CatalogRequestDetail = {
   kind: "select" | "text" | "number" | "other";
   conditions: string[];
+  conditionState: CatalogConditionState;
   /** False when the form schema marks the field as optional on the work. */
   required: boolean;
+};
+
+export type CatalogPropertyDependent = {
+  id: string;
+  label: string;
+  note: string;
+  componentId: string | null;
 };
 
 export type CatalogPropertyView = {
@@ -58,6 +70,10 @@ export type CatalogPropertyView = {
   setting: CatalogSettingDetail | null;
   formula: CatalogFormulaDetail | null;
   request: CatalogRequestDetail | null;
+  /** Request fields whose known conditions point at this field. Presentation join only. */
+  dependents: CatalogPropertyDependent[];
+  /** Confirmed area hand-offs, only when this field is the mapped area input. */
+  areaHandoffs: CatalogComponentLink[];
 };
 
 export type CatalogComponentLink = {
@@ -680,9 +696,43 @@ function sharedNote(codes: readonly string[], products: readonly ParsedProduct[]
   return `Valoare comună, folosită și pentru ${labels.join(", ")}.`;
 }
 
+export const UNRESOLVED_CONDITION_LABEL = "Are o condiție care nu poate fi descrisă aici";
+
+function conditionStateOf(element: ParsedElement, product: ParsedProduct): CatalogConditionState {
+  if (element.conditions.length === 0) return "none";
+  const unresolved = element.conditions.some((condition) => conditionNote(condition, product) === null);
+  return unresolved ? "unresolved" : "known";
+}
+
+function isConfirmedAreaRef(ref: string | null): boolean {
+  return Boolean(ref && ref.endsWith("confirmedAreaMm2"));
+}
+
+function requestDependents(element: ParsedElement, product: ParsedProduct): CatalogPropertyDependent[] {
+  if (element.classification !== "request" || !element.ref) return [];
+  const dependents: CatalogPropertyDependent[] = [];
+  for (const other of product.elements) {
+    if (other.id === element.id || other.classification !== "request") continue;
+    const relevant = other.conditions.filter(
+      (condition) => (condition.kind === "fieldEquals" || condition.kind === "fieldIn") && condition.fieldId === element.ref,
+    );
+    if (relevant.length === 0) continue;
+    const note = conditionNote(relevant[0], product);
+    if (!note) continue;
+    dependents.push({
+      id: other.id,
+      label: other.label,
+      note: note.replace(/^Apare când/, "Se cere doar când"),
+      componentId: other.componentId,
+    });
+  }
+  return dependents;
+}
+
 function toView(element: ParsedElement, product: ParsedProduct, products: readonly ParsedProduct[]): CatalogPropertyView {
   const notes = [...element.notes];
   const conditionNotes: string[] = [];
+  const state = conditionStateOf(element, product);
   for (const condition of element.conditions) {
     const note = conditionNote(condition, product);
     if (note) {
@@ -690,8 +740,10 @@ function toView(element: ParsedElement, product: ParsedProduct, products: readon
       conditionNotes.push(note);
     }
   }
+  if (state === "unresolved") notes.push(UNRESOLVED_CONDITION_LABEL);
   const shared = sharedNote(element.sharedTemplateCodes, products, product.code);
   if (shared) notes.push(shared);
+  const formulaId = element.formulaId;
   return {
     id: element.id,
     group: element.classification,
@@ -702,8 +754,9 @@ function toView(element: ParsedElement, product: ParsedProduct, products: readon
     ref: element.ref,
     origin: element.origin,
     setting: element.setting,
-    formula: element.formulaRefs && element.formulaState
+    formula: element.formulaRefs && element.formulaState && formulaId
       ? {
+          formulaId,
           uses: formulaUses(element, product),
           workInputCount: element.formulaRefs.workInputCount,
           version: element.formulaState.version,
@@ -711,7 +764,16 @@ function toView(element: ParsedElement, product: ParsedProduct, products: readon
           available: element.formulaState.available,
         }
       : null,
-    request: element.fieldKind ? { kind: element.fieldKind, conditions: conditionNotes, required: element.required !== false } : null,
+    request: element.fieldKind
+      ? {
+          kind: element.fieldKind,
+          conditions: conditionNotes,
+          conditionState: state,
+          required: element.required !== false,
+        }
+      : null,
+    dependents: [],
+    areaHandoffs: [],
   };
 }
 
@@ -738,7 +800,13 @@ function presentProduct(product: ParsedProduct, products: readonly ParsedProduct
       identity: views.find((item) => item.element.componentId === component.id && item.element.origin === "identity")?.view.value ?? null,
       properties: views
         .filter((item) => item.element.componentId === component.id)
-        .map((item) => item.view),
+        .map((item) => ({
+          ...item.view,
+          dependents: requestDependents(item.element, product),
+          areaHandoffs: isConfirmedAreaRef(item.element.ref)
+            ? componentLinks(component, product.components).filter((link) => link.direction === "gives")
+            : [],
+        })),
     })),
   };
 }

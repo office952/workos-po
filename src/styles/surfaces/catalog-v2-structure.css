@@ -160,6 +160,7 @@
   .catv2-sheet .catv2-version { display: inline-flex; align-items: baseline; gap: 6px; color: var(--cat-muted); font-size: 12px; }
   .catv2-sheet td[data-label="Versiune"]::before { content: none !important; }
   .catv2-sheet .catv2-block__head .catv2-link { display: inline-flex; align-items: center; min-height: 44px; }
+  .catv2-sheet__rowbtn { min-height: 44px; }
 }
 
 /* Calculation basis of a component type, as the definition words it. Closed by default. */
