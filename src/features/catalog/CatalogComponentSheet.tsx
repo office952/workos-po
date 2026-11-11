@@ -124,7 +124,6 @@ export function CatalogComponentSheet({
   const limits = component.properties.filter((item) => item.group === "unsupported");
   const resources = systemType?.resourceReferences ?? [];
   const attributes = systemType?.configurations.find((config) => config.productCode === product.code)?.attributes ?? [];
-  const processes = systemType?.processReferences ?? [];
   const previous = rows.find((item) => item.index === row.index - 1) ?? null;
   const next = rows.find((item) => item.index === row.index + 1) ?? null;
   const [settingQuery, setSettingQuery] = useState("");
@@ -158,7 +157,7 @@ export function CatalogComponentSheet({
     : null;
 
   useEffect(() => {
-    if (!inspectorOpen || layout === "full") return;
+    if (!inspectorOpen || layout !== "docked") return;
     function onEscape(event: globalThis.KeyboardEvent) {
       if (event.key !== "Escape") return;
       event.preventDefault();
@@ -247,18 +246,6 @@ export function CatalogComponentSheet({
       onNavigate={onNavigate}
     />
   );
-  const processOnly = processes.length > 0 ? (
-    <div className="catv2-aside-block">
-      <h3>Operații în proces · {processes.length}</h3>
-      <ul className="catv2-aside-list">
-        {processes.map((item) => <li key={item.id}>{item.label}</li>)}
-      </ul>
-      <CatalogLink className="catv2-link" selection={{ productCode: product.code, componentId: null, tab: "proces" }} onNavigate={onNavigate}>
-        Vezi procesul tehnologic
-      </CatalogLink>
-    </div>
-  ) : null;
-
   const inspectorNode = model && inspectorOpen ? (
     <CatalogInspectorPanel
       model={model}
@@ -268,17 +255,13 @@ export function CatalogComponentSheet({
       onAction={onAction}
       onRetryFormula={formulaRead.status === "error" ? () => invalidateResources(resourceKeys.formulasAdmin()) : undefined}
     >
-      {layout === "overlay" ? processOnly : (
+      {layout === "docked" ? (
         <>
-          {layout === "docked" ? (
-            <>
-              <hr className="catv2-inspector__rule" />
-              <p className="catv2-inspector__component">Componenta {component.label}</p>
-            </>
-          ) : null}
+          <hr className="catv2-inspector__rule" />
+          <p className="catv2-inspector__component">Componenta {component.label}</p>
           {inProduct}
         </>
-      )}
+      ) : null}
     </CatalogInspectorPanel>
   ) : null;
 

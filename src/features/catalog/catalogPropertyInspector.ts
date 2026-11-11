@@ -46,8 +46,7 @@ export type CatalogInspectorModel = {
 };
 
 const FOOTNOTE = "Sunt afișate doar legăturile declarate în definiția produsului.";
-const UNAVAILABLE_FIXED = "WorkOS nu ține evidența calculelor și a resurselor care folosesc această valoare.";
-const UNAVAILABLE_FORMULA = "WorkOS nu ține evidența formulelor care o folosesc.";
+const INFORMATION_UNAVAILABLE = "Informația nu este disponibilă aici.";
 const FORMULA_ELEMENTS_CLOSED = "Elementele formulei nu pot fi deschise de aici.";
 
 export function requestAvailabilityLabel(item: CatalogPropertyView): string {
@@ -259,10 +258,7 @@ function dependsSection(
   return {
     id: "depends",
     title: "Ce depinde de ea",
-    lines: [
-      { text: "Indisponibil." },
-      { text: item.group === "formula" ? UNAVAILABLE_FORMULA : UNAVAILABLE_FIXED },
-    ],
+    lines: [{ text: INFORMATION_UNAVAILABLE }],
   };
 }
 

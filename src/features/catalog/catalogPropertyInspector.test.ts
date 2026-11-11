@@ -93,6 +93,19 @@ function manifest() {
           canonicalWriter: null,
           readPath: null,
         },
+        {
+          id: "PRD-LETTERS:fixed:face.thicknessMm",
+          classification: "PLATFORM_FIXED",
+          label: "Grosime",
+          value: 3,
+          nesting: null,
+          provenance: { source: "FIXED_VALUE", ref: "face.thicknessMm" },
+          support: "DECLARED",
+          componentId: "FACE",
+          componentTypeId: "PLEXIGLAS_FACE",
+          canonicalWriter: null,
+          readPath: null,
+        },
       ],
     }],
   };
@@ -132,5 +145,27 @@ describe("catalog property inspector presentation", () => {
       label: "Arată Culoare față",
     });
     expect(model.sections.find((section) => section.id === "when")).toBeUndefined();
+  });
+
+  it("keeps no declared relationship, unavailable information and a confirmed link distinct", () => {
+    const view = presentCatalogCapabilities(manifest());
+    const product = view!.products[0];
+    const face = product.components.find((item) => item.id === "FACE")!;
+    const args = {
+      component: face,
+      product,
+      rows: product.components.map((component, index) => ({ id: component.id, index: index + 1 })),
+      selection: { productCode: product.code, componentId: face.id, tab: "constructie" as const },
+      permissions: view!.permissions,
+      ownershipLabel: null,
+      formula: { status: "idle" as const },
+    };
+    const depends = (label: string) => buildCatalogInspectorModel({
+      ...args,
+      item: face.properties.find((item) => item.label === label)!,
+    }).sections.find((section) => section.id === "depends")?.lines.map((line) => line.text);
+    expect(depends("Finisaj față")?.[0]).toMatch(/^Culoare față\./);
+    expect(depends("Culoare față")).toEqual(["Nicio legătură declarată."]);
+    expect(depends("Grosime")).toEqual(["Informația nu este disponibilă aici."]);
   });
 });

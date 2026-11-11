@@ -23,37 +23,31 @@ export function CatalogInspectorPanel({
 }: CatalogInspectorPanelProps) {
   const headingId = useId();
   const closeRef = useRef<HTMLButtonElement | null>(null);
-  const rootRef = useRef<HTMLElement | null>(null);
+  const dialogRef = useRef<HTMLDialogElement | null>(null);
 
   useEffect(() => {
-    if (layout === "overlay" || layout === "full") {
+    if (layout === "full") {
       closeRef.current?.focus();
     }
   }, [layout, model.title]);
 
   useEffect(() => {
     if (layout !== "overlay") return;
-    function trap(event: globalThis.KeyboardEvent) {
-      const panel = rootRef.current;
-      if (event.key !== "Tab" || !panel) return;
-      const focusable = panel.querySelectorAll<HTMLElement>("a[href], button:not([disabled])");
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (typeof dialog.showModal === "function") {
+      if (!dialog.open) dialog.showModal();
+    } else {
+      dialog.setAttribute("open", "");
     }
-    document.addEventListener("keydown", trap);
-    return () => document.removeEventListener("keydown", trap);
-  }, [layout]);
+    closeRef.current?.focus();
+    return () => {
+      if (dialog.open && typeof dialog.close === "function") dialog.close();
+    };
+  }, [layout, model.title]);
 
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
-    if (event.key === "Escape" && layout !== "full") {
+    if (event.key === "Escape" && layout === "docked") {
       event.stopPropagation();
       onClose();
     }
@@ -61,7 +55,6 @@ export function CatalogInspectorPanel({
 
   const region = (
     <section
-      ref={rootRef}
       className="catv2-inspector"
       data-layout={layout}
       aria-labelledby={headingId}
@@ -109,12 +102,21 @@ export function CatalogInspectorPanel({
 
   if (layout === "overlay") {
     return (
-      <div className="catv2-inspector-layer">
-        <button type="button" className="catv2-inspector-layer__backdrop" aria-label="Închide inspectorul" onClick={onClose} />
-        <div className="catv2-inspector-layer__panel" role="dialog" aria-modal="true" aria-labelledby={headingId}>
+      <dialog
+        ref={dialogRef}
+        className="catv2-inspector-layer"
+        aria-labelledby={headingId}
+        aria-modal="true"
+        onCancel={(event) => {
+          event.preventDefault();
+          onClose();
+        }}
+      >
+        <div className="catv2-inspector-layer__backdrop" onClick={onClose} />
+        <div className="catv2-inspector-layer__panel">
           {region}
         </div>
-      </div>
+      </dialog>
     );
   }
   return region;

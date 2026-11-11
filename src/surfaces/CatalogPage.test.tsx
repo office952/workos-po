@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetResourceCache } from "../data/resourceCache";
 import { readConfiguratorSession, writeConfiguratorSession } from "../session/configuratorSession";
 import { CatalogPage } from "./CatalogPage";
@@ -749,7 +749,42 @@ function formulasAdminPayload() {
   };
 }
 
+function stubPhoneLayout() {
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: query === "(max-width: 767px)",
+    media: query,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  }));
+}
+
+function stubTabletLayout() {
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: query === "(max-width: 1023px)",
+    media: query,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  }));
+}
+
 describe("Catalog · inspector de proprietate", () => {
+  const showModal = HTMLDialogElement.prototype.showModal;
+  const closeDialog = HTMLDialogElement.prototype.close;
+
+  beforeEach(() => {
+    HTMLDialogElement.prototype.showModal = function showModal() {
+      this.setAttribute("open", "");
+    };
+    HTMLDialogElement.prototype.close = function close() {
+      this.removeAttribute("open");
+    };
+  });
+
+  afterEach(() => {
+    HTMLDialogElement.prototype.showModal = showModal;
+    HTMLDialogElement.prototype.close = closeDialog;
+  });
+
   it("keeps the existing sheet when nothing is selected", async () => {
     window.history.replaceState({}, "", "/catalog?product=PRD-TEST&component=FACE");
     vi.stubGlobal("fetch", routeFetch(inspectorLetters()));
@@ -766,7 +801,9 @@ describe("Catalog · inspector de proprietate", () => {
     await userEvent.click(await screen.findByRole("button", { name: /Grosime/ }));
     const inspector = screen.getByRole("region", { name: "Grosime" });
     expect(within(inspector).getByText("Definiția produsului.")).toBeInTheDocument();
-    expect(within(inspector).getByText("Indisponibil.")).toBeInTheDocument();
+    expect(within(inspector).getByText("Informația nu este disponibilă aici.")).toBeInTheDocument();
+    expect(within(inspector).queryByText("Indisponibil.")).not.toBeInTheDocument();
+    expect(within(inspector).queryByText(/nu ține evidența/)).not.toBeInTheDocument();
     expect(screen.getByRole("complementary", { name: "În produs" })).toBeInTheDocument();
   });
 
@@ -790,6 +827,7 @@ describe("Catalog · inspector de proprietate", () => {
     render(<CatalogPage />);
     await userEvent.click(await screen.findByRole("button", { name: /Culoare față/ }));
     expect(screen.getByText("Doar când Finisaj față este Colantat.")).toBeInTheDocument();
+    expect(screen.getByText("Nicio legătură declarată.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Arată Finisaj față" }));
     expect(screen.getByRole("heading", { name: "Finisaj față" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Arată Culoare față" })).toBeInTheDocument();
@@ -813,6 +851,7 @@ describe("Catalog · inspector de proprietate", () => {
     await userEvent.click(await screen.findByRole("button", { name: /Cantitate module LED/ }));
     expect(await screen.findByText("rotunjire în sus (Perimetru confirmat ÷ Pas module LED)")).toBeInTheDocument();
     expect(screen.getByText("Elementele formulei nu pot fi deschise de aici.")).toBeInTheDocument();
+    expect(screen.getByText("Informația nu este disponibilă aici.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Perimetru confirmat/ })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Deschide în Formule ↗" })).toBeInTheDocument();
   });
@@ -831,8 +870,64 @@ describe("Catalog · inspector de proprietate", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Alcătuirea formulei nu a putut fi citită");
     expect(screen.getByRole("heading", { level: 2, name: "Electrică / iluminare" })).toBeInTheDocument();
     fail = false;
+    const beforeRetry = fetchMock.mock.calls.filter(([url]) => String(url).includes("/api/admin/formulas")).length;
     await userEvent.click(screen.getByRole("button", { name: "Reîncearcă" }));
     expect(await screen.findByText("rotunjire în sus (Perimetru confirmat ÷ Pas module LED)")).toBeInTheDocument();
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes("/api/admin/formulas")).length).toBeGreaterThan(beforeRetry);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Cantitate module LED/ })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("keeps the phone inspector on the property and operations on the sheet", async () => {
+    stubPhoneLayout();
+    window.history.replaceState({}, "", "/catalog?product=PRD-TEST&component=FACE");
+    vi.stubGlobal("fetch", routeFetch(inspectorLetters()));
+    render(<CatalogPage />);
+    await userEvent.click(await screen.findByRole("button", { name: /Grosime/ }));
+    const inspector = screen.getByRole("region", { name: "Grosime" });
+    expect(screen.getByRole("button", { name: "‹ Față" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 2, name: "Față" })).not.toBeInTheDocument();
+    expect(within(inspector).queryByRole("heading", { name: /Operații în proces/ })).not.toBeInTheDocument();
+    expect(within(inspector).queryByRole("heading", { name: "Legături" })).not.toBeInTheDocument();
+    expect(within(inspector).queryByRole("heading", { name: "Măsurare" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "‹ Față" }));
+    expect(screen.getByRole("heading", { level: 2, name: "Față" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Grosime/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("heading", { name: "Operații în proces · 1" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Măsurare" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: /Grosime/ })).toHaveFocus());
+  });
+
+  it("keeps tablet keyboard focus inside the inspector dialog", async () => {
+    stubTabletLayout();
+    window.history.replaceState({}, "", "/catalog?product=PRD-TEST&component=FACE");
+    vi.stubGlobal("fetch", routeFetch(inspectorLetters()));
+    render(<CatalogPage />);
+    const trigger = await screen.findByRole("button", { name: /Grosime/ });
+    await userEvent.click(trigger);
+    const dialog = screen.getByRole("dialog", { name: "Grosime" });
+    expect(dialog.tagName).toBe("DIALOG");
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(screen.getByRole("button", { name: "Închide ×" })).toHaveFocus();
+    expect(within(dialog).queryByRole("heading", { name: /Operații în proces/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Față" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Operații în proces · 1" })).toBeInTheDocument();
+    fireEvent(dialog, new Event("cancel", { bubbles: false, cancelable: true }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: /Grosime/ })).toHaveFocus());
+  });
+
+  it("closes the tablet inspector from the backdrop and restores the row", async () => {
+    stubTabletLayout();
+    window.history.replaceState({}, "", "/catalog?product=PRD-TEST&component=FACE");
+    vi.stubGlobal("fetch", routeFetch(inspectorLetters()));
+    render(<CatalogPage />);
+    await userEvent.click(await screen.findByRole("button", { name: /Grosime/ }));
+    const dialog = screen.getByRole("dialog", { name: "Grosime" });
+    await userEvent.click(dialog.querySelector(".catv2-inspector-layer__backdrop")!);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Grosime/ })).toHaveAttribute("aria-pressed", "true");
+    await waitFor(() => expect(screen.getByRole("button", { name: /Grosime/ })).toHaveFocus());
   });
 
   it("still opens the inspector when the operator may only consult", async () => {
@@ -1144,12 +1239,7 @@ describe("Catalog · stiluri și stări responsive", () => {
   });
 
   function stubPhone() {
-    vi.stubGlobal("matchMedia", (query: string) => ({
-      matches: query === "(max-width: 767px)",
-      media: query,
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-    }));
+    stubPhoneLayout();
   }
 
   it("orders the phone bar as library, product switch, then the name with its rename", async () => {
