@@ -94,6 +94,7 @@ describe("WorkcentersAdminPage", () => {
 
     render(<WorkcentersAdminPage />);
     expect(await screen.findByText("Nu există zone de lucru")).toBeInTheDocument();
+    expect(screen.getByText(/clienții și ofertele nu sunt blocate/)).toBeInTheDocument();
     expect(screen.getAllByText("Zone și utilaje").length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: "Oameni" })).toHaveAttribute("href", "/admin/people");
     expect(screen.getByRole("button", { name: "Adaugă zona" })).toBeDisabled();

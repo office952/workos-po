@@ -4,6 +4,8 @@ import { SlicePage } from "../layout/SlicePage";
 import { GLOBAL_NAV } from "../layout/globalNav";
 import { presentRouteChrome } from "../layout/routeChrome";
 import { useCloudSession } from "../session/CloudSessionContext";
+import { OrganizationOperatingPanel } from "./OrganizationOperatingPanel";
+import { useOrganizationOperatingPicture } from "./useOrganizationOperatingPicture";
 
 export function LaunchpadPage() {
   const chrome = presentRouteChrome({ name: "home" });
@@ -11,7 +13,13 @@ export function LaunchpadPage() {
   const organizationName = cloud.organization?.displayName ?? null;
   const roleLabel = membershipRoleLabel(cloud.organization?.membershipRole);
   const owner = cloud.organization?.membershipRole === "owner";
+  const role = owner ? "owner" : cloud.organization?.membershipRole === "member" ? "member" : "unknown";
+  const { picture, pending } = useOrganizationOperatingPicture({
+    role,
+    organizationName,
+  });
   const identity = [organizationName, roleLabel].filter((part): part is string => Boolean(part)).join(" · ");
+  const showStatus = !pending || picture.statusLabel !== "Cont conectat";
 
   return (
     <SlicePage
@@ -21,9 +29,10 @@ export function LaunchpadPage() {
       title={chrome.title}
       lead={chrome.lead}
       meta={identity || undefined}
-      status={<StatusBadge label="Pregătit" tone="ready" />}
+      status={showStatus ? <StatusBadge label={picture.statusLabel} tone={picture.statusTone} /> : undefined}
     >
       <div className="launchpad">
+        <OrganizationOperatingPanel picture={picture} pending={pending} />
         <section className="launchpad__attention" aria-label="Continuă munca">
           <h2 className="launchpad__heading">Continuă</h2>
           <ul className="launchpad__list launchpad__list--attention">
@@ -47,13 +56,6 @@ export function LaunchpadPage() {
               {group.label}
             </h2>
             <p className="launchpad__summary">{group.summary}</p>
-            {group.id === "administration" ? (
-              <p className="launchpad__summary">
-                {owner
-                  ? "Poți modifica setările pentru lucrările noi."
-                  : "Modificările sunt rezervate proprietarului organizației."}
-              </p>
-            ) : null}
             <ul className="launchpad__list">
               {group.items.map((item) => (
                 <li key={item.id}>

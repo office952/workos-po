@@ -331,7 +331,7 @@ export function PeopleAdminPage({ personId = null }: PeopleAdminPageProps) {
             {model.people.length === 0 ? (
               <EmptyState
                 title="Nu există oameni operaționali"
-                description="Adaugă prima persoană care poate lucra în producție. Atelierul nu creează persoane."
+                description="Adaugă prima persoană care poate lucra în producție. Nu este obligatoriu pentru clienți și oferte. Atelierul nu creează persoane."
               />
             ) : (
               <Worklist variant="compact" label="Oameni operaționali">

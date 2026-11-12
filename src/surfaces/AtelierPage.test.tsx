@@ -31,6 +31,7 @@ describe("AtelierPage", () => {
 
     render(<AtelierPage />);
     expect(await screen.findByText("Nu există operatori configurați")).toBeInTheDocument();
+    expect(screen.getByText(/Poți lucra comercial fără Atelier/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Adaugă operator" })).not.toBeInTheDocument();
     expect(
       fetchMock.mock.calls.some(([url]) => String(url).includes("/api/people")),

@@ -79,6 +79,7 @@ describe("PeopleAdminPage", () => {
 
     render(<PeopleAdminPage />);
     expect(await screen.findByText("Nu există oameni operaționali")).toBeInTheDocument();
+    expect(screen.getByText(/Nu este obligatoriu pentru clienți și oferte/)).toBeInTheDocument();
     expect(screen.getAllByText("Oameni").length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: "Produse oferite" })).toHaveAttribute(
       "href",

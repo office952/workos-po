@@ -461,7 +461,7 @@ export function WorkcentersAdminPage({
             {model.workcenters.length === 0 ? (
               <EmptyState
                 title="Nu există zone de lucru"
-                description="Adaugă prima zonă din browser. Organizația nouă pornește fără zone și fără utilaje."
+                description="Adaugă prima zonă din browser dacă producția internă are nevoie. Organizația nouă pornește fără zone și fără utilaje; clienții și ofertele nu sunt blocate."
               />
             ) : (
               <Worklist variant="compact" label="Zone de lucru">
