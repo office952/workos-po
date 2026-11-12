@@ -271,7 +271,10 @@
   .configuration-state-bar__steps { gap: 4px 8px; }
   .configuration-state-bar__steps strong { font-size: 11px; }
   .configuration-state-bar__actions { width: 100%; justify-content: space-between; margin-left: 0; }
-  .configuration-state-bar__actions > .hit:last-child { flex: 1; justify-content: flex-end; }
+  .configuration-state-bar__actions > .hit { max-width: 100%; }
+  /* Own row: leftover flex:1 shrinks the hit below the button, which then overflows the previous label. */
+  .configuration-state-bar__actions > .hit:last-child { flex: 1 0 100%; justify-content: flex-end; }
+  .configuration-state-bar__actions > .hit > .button { max-width: 100%; }
   .configuration-action-tray__buttons { flex-direction: column; }
   .configuration-action-tray__buttons > .hit { width: 100%; }
 }
