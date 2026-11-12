@@ -146,6 +146,59 @@ describe("TechnicalAdminPage", () => {
     );
   });
 
+  it("returns to the originating Configurator, including an assembly member", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => defaultAdmin,
+      }),
+    );
+    window.history.replaceState(
+      {},
+      "",
+      "/admin/technical?component=LIGHTING_FRONT_LED&return=%2Fconfigurator%3Fcustomer%3Dcus-1%26request%3Dreq-1%26product%3DPRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    );
+    const { unmount } = render(<TechnicalAdminPage />);
+    expect(await screen.findByRole("link", { name: "Înapoi la configurare" })).toHaveAttribute(
+      "href",
+      "/configurator?customer=cus-1&request=req-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    );
+    unmount();
+    window.history.replaceState(
+      {},
+      "",
+      "/admin/technical?component=LIGHTING_FRONT_LED&return=%2Fconfigurator%3Fcustomer%3Dcus-1%26request%3Dreq-1%26product%3DPRD-LETTERS-FRONTLIT-PLEXI-AL06%26assembly%3Dasm%3A1%26role%3DSIGNAGE_LETTERS",
+    );
+    render(<TechnicalAdminPage />);
+    expect(await screen.findByRole("link", { name: "Înapoi la configurare" })).toHaveAttribute(
+      "href",
+      "/configurator?customer=cus-1&request=req-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06&assembly=asm%3A1&role=SIGNAGE_LETTERS",
+    );
+  });
+
+  it("falls back to Catalog when a Configurator return is invalid", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/admin/technical?component=LIGHTING_FRONT_LED&return=%2Fconfigurator%3Fproduct%3DPRD-TEST%26assembly%3Dasm%3A1",
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => defaultAdmin,
+      }),
+    );
+    render(<TechnicalAdminPage />);
+    expect(await screen.findByRole("link", { name: "Înapoi la definițiile produselor" })).toHaveAttribute(
+      "href",
+      "/catalog",
+    );
+  });
+
   it("rejects an encoded protocol-relative catalog return", async () => {
     window.history.replaceState(
       {},

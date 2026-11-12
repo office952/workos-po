@@ -3,10 +3,20 @@ import type { ConfigurationComponentDetails } from "../api/types";
 export type TechnicalDetailsState = "current" | "pending" | "unavailable";
 const kindLabels = { MEASURED: "Măsurătoare confirmată", TECHNICAL_SETTING: "Setare tehnică", CALCULATED: "Calculat" };
 
-export function ConfigurationTechnicalDetails({ details, state = "current", onEditField }: {
+function adminHref(path: "/admin/technical" | "/admin/formulas", typeId: string, returnHref?: string): string {
+  const params = new URLSearchParams();
+  params.set("component", typeId);
+  if (returnHref) {
+    params.set("return", returnHref);
+  }
+  return `${path}?${params.toString()}`;
+}
+
+export function ConfigurationTechnicalDetails({ details, state = "current", onEditField, returnHref }: {
   details: ConfigurationComponentDetails;
   state?: TechnicalDetailsState;
   onEditField?: (fieldId: string) => void;
+  returnHref?: string;
 }) {
   const current = state === "current";
   return <section className="configuration-technical" aria-label={`Detalii tehnice: ${details.label}`}>
@@ -23,8 +33,8 @@ export function ConfigurationTechnicalDetails({ details, state = "current", onEd
     </div> : null}
     {current && details.unavailable.length > 0 ? <div className="configuration-technical__issues"><span className="section-label">Calcul de completat</span><ul>{details.unavailable.map((reason) => <li key={reason}>{reason}</li>)}</ul></div> : null}
     {details.hasTechnicalSettings || details.hasFormulas ? <nav className="configuration-technical__links" aria-label={`Administrare: ${details.label}`}>
-      {details.hasTechnicalSettings ? <a className="text-link" href={`/admin/technical?component=${encodeURIComponent(details.typeId)}`}>Setări tehnice</a> : null}
-      {details.hasFormulas ? <a className="text-link" href={`/admin/formulas?component=${encodeURIComponent(details.typeId)}`}>Formule de calcul</a> : null}
+      {details.hasTechnicalSettings ? <a className="text-link" href={adminHref("/admin/technical", details.typeId, returnHref)}>Setări tehnice</a> : null}
+      {details.hasFormulas ? <a className="text-link" href={adminHref("/admin/formulas", details.typeId, returnHref)}>Formule de calcul</a> : null}
       <p>Setările și formulele se administrează pentru organizație. Aici se configurează lucrarea.</p>
     </nav> : null}
   </section>;

@@ -58,6 +58,7 @@ type ConfigurationSectionsProps = {
   initialNavigation?: WorkbenchNavigationState | null;
   onNavigationChange?: (navigation: WorkbenchNavigationState) => void;
   footnote?: ReactNode;
+  adminReturnHref?: string;
 };
 
 function editorSummary(section: WorkbenchSection, missingCount: number): string {
@@ -79,6 +80,7 @@ export function ConfigurationSections({
   initialNavigation = null,
   onNavigationChange,
   footnote = null,
+  adminReturnHref,
 }: ConfigurationSectionsProps) {
   const compact = useCompactWorkbenchOrder();
   const sections = buildWorkbenchSections(preview);
@@ -331,6 +333,7 @@ export function ConfigurationSections({
                         details={detail}
                         state={technicalState}
                         onEditField={openField}
+                        returnHref={adminReturnHref}
                       />
                     ))
                 : null}
