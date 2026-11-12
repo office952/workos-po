@@ -178,6 +178,17 @@ describe("FormulasAdminPage", () => {
       "/catalog?product=PRD-TEST&component=LIGHTING",
     );
     unmount();
+    window.history.replaceState(
+      {},
+      "",
+      "/admin/formulas?component=LIGHTING_FRONT_LED&return=%2Fconfigurator%3Fcustomer%3Dcus-1%26request%3Dreq-1%26product%3DPRD-LETTERS-FRONTLIT-PLEXI-AL06%26assembly%3Dasm%3A1%26role%3DSIGNAGE_LOGO",
+    );
+    const again = render(<FormulasAdminPage />);
+    expect(await screen.findByRole("link", { name: "Înapoi la configurare" })).toHaveAttribute(
+      "href",
+      "/configurator?customer=cus-1&request=req-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06&assembly=asm%3A1&role=SIGNAGE_LOGO",
+    );
+    again.unmount();
     window.history.replaceState({}, "", "/admin/formulas?component=LIGHTING_FRONT_LED&return=//example.test/catalog");
     render(<FormulasAdminPage />);
     expect(await screen.findByRole("link", { name: "Înapoi la definițiile produselor" })).toHaveAttribute(

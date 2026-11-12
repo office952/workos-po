@@ -22,8 +22,26 @@ describe("ConfigurationTechnicalDetails", () => {
     expect(screen.getByText("Setare organizație · versiunea 2")).toBeVisible();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Setări tehnice" })).toHaveAttribute("href", "/admin/technical?component=LIGHTING_FRONT_LED");
+    expect(screen.getByRole("link", { name: "Formule de calcul" })).toHaveAttribute("href", "/admin/formulas?component=LIGHTING_FRONT_LED");
     await userEvent.click(screen.getByRole("button", { name: "Modifică Perimetru confirmat" }));
     expect(edit).toHaveBeenCalledWith("opaque-input-id");
+  });
+
+  it("carries an explicit Configurator return on organization administration links", () => {
+    render(
+      <ConfigurationTechnicalDetails
+        details={details}
+        returnHref="/configurator?customer=cus-1&request=req-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06"
+      />,
+    );
+    const settings = screen.getByRole("link", { name: "Setări tehnice" });
+    const formulas = screen.getByRole("link", { name: "Formule de calcul" });
+    expect(new URL(settings.getAttribute("href") ?? "", "https://workos.local").searchParams.get("return")).toBe(
+      "/configurator?customer=cus-1&request=req-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    );
+    expect(new URL(formulas.getAttribute("href") ?? "", "https://workos.local").searchParams.get("return")).toBe(
+      "/configurator?customer=cus-1&request=req-1&product=PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+    );
   });
 
   it("hides stale calculations and input values while refreshing or after an error", () => {

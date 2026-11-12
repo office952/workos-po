@@ -2,11 +2,12 @@ import type { PreviewTransport } from "../api/types";
 import { InfoRow } from "./InfoRow";
 import { ConfigurationTechnicalDetails, type TechnicalDetailsState } from "./ConfigurationTechnicalDetails";
 
-export function ConfigurationReview({ preview, drafts, onEdit, technicalState = "current" }: {
+export function ConfigurationReview({ preview, drafts, onEdit, technicalState = "current", adminReturnHref }: {
   preview: PreviewTransport;
   drafts: Record<string, string>;
   onEdit: (fieldId: string) => void;
   technicalState?: TechnicalDetailsState;
+  adminReturnHref?: string;
 }) {
   return <section className="configuration-summary" aria-label="Rezumat tehnic">
     <div className="configuration-summary__heading">
@@ -32,7 +33,7 @@ export function ConfigurationReview({ preview, drafts, onEdit, technicalState = 
         <dl>{preview.product.identityFacts.map((fact) => <InfoRow key={fact.id} label={fact.label} value={fact.value} />)}</dl>
       </section> : null}
       {preview.componentDetails?.map((detail) => <section key={detail.componentId} aria-label={`Calcul tehnic: ${detail.label}`}>
-        <h3>{detail.label}</h3><ConfigurationTechnicalDetails details={detail} state={technicalState} onEditField={onEdit} />
+        <h3>{detail.label}</h3><ConfigurationTechnicalDetails details={detail} state={technicalState} onEditField={onEdit} returnHref={adminReturnHref} />
       </section>)}
     </div>
   </section>;
