@@ -63,6 +63,7 @@ describe("catalogSelection", () => {
     expect(sanitizeCatalogReturn("https://example.test/catalog")).toBeNull();
     expect(sanitizeCatalogReturn("//example.test/catalog")).toBeNull();
     expect(sanitizeCatalogReturn("/admin/technical")).toBeNull();
+    expect(sanitizeCatalogReturn("/configurator?customer=cus-1&request=req-1&product=PRD-TEST")).toBeNull();
     expect(sanitizeCatalogReturn("catalog?product=PRD-TEST")).toBeNull();
     expect(sanitizeCatalogReturn("/catalog?product=PRD-TEST#https://example.test")).toBeNull();
     expect(sanitizeCatalogReturn("/catalog?product=PRD-TEST&redirect=https://example.test")).toBeNull();
