@@ -8,6 +8,7 @@ import { invalidateResourcePrefix, invalidateResources } from "../data/resourceC
 import { resourceKeys } from "../data/resourceKeys";
 import { useResource } from "../data/useResource";
 import { CatalogComponentSheet } from "../features/catalog/CatalogComponentSheet";
+import type { CatalogInspectorSession } from "../features/catalog/catalogPropertyInspector";
 import { CatalogLibraryView, type CatalogLibraryProduct } from "../features/catalog/CatalogLibraryView";
 import { CatalogProductBar, type CatalogRenameState } from "../features/catalog/CatalogProductBar";
 import { CatalogProductSwitcher } from "../features/catalog/CatalogProductSwitcher";
@@ -23,6 +24,7 @@ import { PageRegion } from "../layout/PageRegion";
 import "../styles/surfaces/catalog-v2.css";
 import "../styles/surfaces/catalog-v2-library.css";
 import "../styles/surfaces/catalog-v2-structure.css";
+import "../styles/surfaces/catalog-v2-inspector.css";
 
 async function loadCapabilities() {
   const model = presentCatalogCapabilities(await fetchCatalogCapabilities());
@@ -46,6 +48,7 @@ export function CatalogPage() {
   const [selection, setSelection] = useState<CatalogSelection>(() => readCatalogSelection(window.location.search));
   const [rename, setRename] = useState<CatalogRenameState | null>(null);
   const [libraryFilters, setLibraryFilters] = useState<CatalogLibraryFilters>(EMPTY_LIBRARY_FILTERS);
+  const [inspector, setInspector] = useState<CatalogInspectorSession>({ selectedId: null, open: false, returnTo: null });
 
   useEffect(() => {
     function syncFromLocation() {
@@ -95,6 +98,11 @@ export function CatalogPage() {
   function go(next: CatalogSelection) {
     setSelection(next);
     setRename(null);
+    if (next.productCode !== selection.productCode) {
+      setInspector({ selectedId: null, open: false, returnTo: null });
+    } else if (next.componentId !== selection.componentId && next.tab !== "constructie") {
+      setInspector((current) => ({ ...current, open: false }));
+    }
     writeCatalogSelection(next);
   }
 
@@ -173,6 +181,8 @@ export function CatalogPage() {
                       row={row}
                       systemType={systemType}
                       permissions={manifest.permissions}
+                      inspector={inspector}
+                      onInspectorChange={setInspector}
                       onNavigate={go}
                     />
                   ) : (
