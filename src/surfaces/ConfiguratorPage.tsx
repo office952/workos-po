@@ -5,7 +5,7 @@ import {
   SEPARATE_QUOTE_INTENT,
   type ConfirmedAssemblyMember,
 } from "../api/assemblies";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { presentConfirm, rateAcknowledgementSatisfied } from "../adapters/confirmAdapter";
 import {
   valuesBeforeSchema,
@@ -59,6 +59,7 @@ import { presentCostLine, selectLineByResource } from "../presentation/costLine"
 import { RateAcknowledgementNotice } from "../presentation/rateAcknowledgement";
 import { ALUMINIUM_RETURN_PROFILE_RESOURCE_ID } from "../reference/lettersProduct";
 import { assemblyHref, requestProductHref, requestHref, quoteHref } from "../routing/appRoute";
+import { configuratorReturnHref } from "../routing/configuratorReturn";
 import {
   labelsMatchingContext,
   lastQuoteOwnedByContext,
@@ -630,6 +631,39 @@ export function ConfiguratorPage({
     window.requestAnimationFrame(() => sectionsHandle.current?.focusField(first.fieldId));
   }
 
+  function retryPreview(): void {
+    setPreviewState("pending");
+    setPreviewAttempt((attempt) => attempt + 1);
+  }
+
+  const adminReturnHref = configuratorReturnHref({
+    customerId,
+    requestId,
+    productCode,
+    assemblyId,
+    memberRole,
+  });
+  function previewRecoveryAlert(): ReactNode {
+    if (!previewError) {
+      return null;
+    }
+    return (
+      <InlineAlert
+        tone="error"
+        title={
+          previewError.includes("nu este oferit")
+            ? "Produsul nu este oferit"
+            : "Previzualizare indisponibilă"
+        }
+      >
+        {previewError}
+        <Button variant="secondary" onClick={retryPreview}>
+          Reîncearcă previzualizarea
+        </Button>
+      </InlineAlert>
+    );
+  }
+
   return (
     <SlicePage
       contextLabel="Configurator"
@@ -702,24 +736,7 @@ export function ConfiguratorPage({
         {previewState === "pending" && !preview ? (
           <LoadingFloor variant="form" label="Se citește formularul produsului" />
         ) : null}
-        {previewError ? (
-          <InlineAlert
-            tone="error"
-            title={
-              previewError.includes("nu este oferit")
-                ? "Produsul nu este oferit"
-                : "Previzualizare indisponibilă"
-            }
-          >
-            {previewError}
-            <Button variant="secondary" onClick={() => {
-              setPreviewState("pending");
-              setPreviewAttempt((attempt) => attempt + 1);
-            }}>
-              Reîncearcă previzualizarea
-            </Button>
-          </InlineAlert>
-        ) : null}
+        {workArea === "configuration" ? previewRecoveryAlert() : null}
         {preview ? (
           <>
             {productCode ? (
@@ -748,6 +765,7 @@ export function ConfiguratorPage({
                 [configuratorContextKey(context)]: navigation,
               }));
             }}
+            adminReturnHref={adminReturnHref}
             footnote={
               <p className="configuration-persistence" data-testid="configuration-persistence">
                 {assemblyId
@@ -762,9 +780,10 @@ export function ConfiguratorPage({
       </div>
       </section>
       <section id="configuration-area-review" role="tabpanel" aria-labelledby="configuration-tab-review" hidden={workArea !== "review"}>
-        {preview ? <ConfigurationReview preview={preview} drafts={drafts} technicalState={previewState === "ready" ? "current" : previewState === "pending" ? "pending" : "unavailable"} onEdit={(fieldId) => {
+        {workArea === "review" ? previewRecoveryAlert() : null}
+        {preview ? <ConfigurationReview preview={preview} drafts={drafts} technicalState={previewState === "ready" ? "current" : previewState === "pending" ? "pending" : "unavailable"} adminReturnHref={adminReturnHref} onEdit={(fieldId) => {
           setWorkArea("configuration");
-          sectionsHandle.current?.focusField(fieldId);
+          window.requestAnimationFrame(() => sectionsHandle.current?.focusField(fieldId));
         }} /> : <p>Rezumatul apare după citirea configurației produsului.</p>}
       <div className="stack configuration-review">
         <SurfacePanel variant="quiet" title="Stare și acțiune" label="Stare">

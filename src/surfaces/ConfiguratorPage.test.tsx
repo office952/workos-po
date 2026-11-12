@@ -351,7 +351,7 @@ describe("ConfiguratorPage", () => {
     expect(screen.getByRole("region", { name: "Rezumat tehnic" })).toHaveTextContent("NORD");
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Modifică Textul literelor" }));
-    expect(screen.getByLabelText("Textul literelor")).toHaveFocus();
+    await waitFor(() => expect(screen.getByLabelText("Textul literelor")).toHaveFocus());
     expect(screen.getByLabelText("Textul literelor")).toHaveValue("NORD");
     await userEvent.click(screen.getByRole("tab", { name: "Pregătire ofertă" }));
     expect(screen.getByRole("button", { name: "Verifică și confirmă configurația" })).toBeInTheDocument();
@@ -407,6 +407,94 @@ describe("ConfiguratorPage", () => {
     await userEvent.click(screen.getByRole("tab", { name: /Verificare/ }));
     expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeDisabled();
     expect(screen.queryByText("Gata de confirmare")).not.toBeInTheDocument();
+  });
+
+  it("sends organization administration back to the originating Configurator", async () => {
+    const lighting = {
+      ...previewBody,
+      selectedComponents: [{ id: "LIGHTING", label: "Electrică / iluminare" }],
+      componentDetails: [{
+        componentId: "LIGHTING",
+        label: "Electrică / iluminare",
+        typeId: "LIGHTING_FRONT_LED",
+        calculationLabel: "Calculat",
+        facts: [],
+        inputFields: [],
+        unavailable: [],
+        hasTechnicalSettings: true,
+        hasFormulas: true,
+      }],
+    };
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => {
+      if (String(input).endsWith("/preview")) return jsonResponse(lighting);
+      return jsonResponse({ configured: true });
+    }));
+    renderConfigurator();
+    await userEvent.click(await screen.findByRole("tab", { name: /Verificare/ }));
+    const settings = await screen.findByRole("link", { name: "Setări tehnice" });
+    const formulas = screen.getByRole("link", { name: "Formule de calcul" });
+    expect(new URL(settings.getAttribute("href") ?? "", "https://workos.local").searchParams.get("return")).toBe(
+      `/configurator?customer=cus-1&request=req-1&product=${LETTERS_PRODUCT}`,
+    );
+    expect(new URL(formulas.getAttribute("href") ?? "", "https://workos.local").searchParams.get("return")).toBe(
+      `/configurator?customer=cus-1&request=req-1&product=${LETTERS_PRODUCT}`,
+    );
+  });
+
+  it("keeps assembly and role on the administration return from a member configuration", async () => {
+    const lighting = {
+      ...previewBody,
+      selectedComponents: [{ id: "LIGHTING", label: "Electrică / iluminare" }],
+      componentDetails: [{
+        componentId: "LIGHTING",
+        label: "Electrică / iluminare",
+        typeId: "LIGHTING_FRONT_LED",
+        calculationLabel: "Calculat",
+        facts: [],
+        inputFields: [],
+        unavailable: [],
+        hasTechnicalSettings: true,
+        hasFormulas: false,
+      }],
+    };
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => {
+      if (String(input).includes("/members/SIGNAGE_LETTERS")) {
+        return jsonResponse({ customerId: "cus-1", requestId: "req-1", productCode: LETTERS_PRODUCT, values: null });
+      }
+      if (String(input).endsWith("/preview")) return jsonResponse(lighting);
+      return jsonResponse({ configured: true });
+    }));
+    renderConfigurator({ assemblyId: "asm:1", memberRole: "SIGNAGE_LETTERS" });
+    await userEvent.click(await screen.findByRole("tab", { name: /Verificare/ }));
+    const settings = await screen.findByRole("link", { name: "Setări tehnice" });
+    expect(new URL(settings.getAttribute("href") ?? "", "https://workos.local").searchParams.get("return")).toBe(
+      `/configurator?customer=cus-1&request=req-1&product=${LETTERS_PRODUCT}&assembly=asm%3A1&role=SIGNAGE_LETTERS`,
+    );
+  });
+
+  it("retries a failed preview from Verificare without leaving the work area or the draft", async () => {
+    const fetchMock = installFetch({ rate: 3, cost: 37.5 });
+    const original = fetchMock.getMockImplementation()!;
+    let attempts = 0;
+    fetchMock.mockImplementation((input, init) => {
+      if (String(input).endsWith("/preview") && ++attempts === 1) {
+        return jsonResponse({ reasons: ["Verificarea temporar indisponibilă"] }, 503);
+      }
+      return original(input, init);
+    });
+    seedOwnedDrafts({ "root.inscription": "NORD" });
+    renderConfigurator();
+    await screen.findByRole("button", { name: "Reîncearcă previzualizarea" });
+    await userEvent.click(screen.getByRole("tab", { name: /Verificare/ }));
+    expect(screen.getByRole("tab", { name: /Verificare/ })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeDisabled();
+    expect(screen.getByText("Verificarea temporar indisponibilă")).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Reîncearcă previzualizarea" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled());
+    expect(screen.getByRole("tab", { name: /Verificare/ })).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("button", { name: "Reîncearcă previzualizarea" })).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Rezumat tehnic" })).toHaveTextContent("NORD");
+    expect(attempts).toBe(2);
   });
 
   it("retries a failed preview with the same owned draft", async () => {
