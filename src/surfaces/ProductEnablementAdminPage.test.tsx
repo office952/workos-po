@@ -59,7 +59,7 @@ describe("ProductEnablementAdminPage", () => {
     expect(screen.getByLabelText("Litere volumetrice față plexi")).toBeChecked();
     expect(screen.getByLabelText("Panou ACM casetat")).toBeChecked();
     expect(screen.queryByText("PRD-LETTERS-FRONTLIT-PLEXI-AL06")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Salvează produsele oferite" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Salvează produsele oferite" })).toBeDisabled();
     expect(screen.getByRole("link", { name: "Valori comerciale" })).toHaveAttribute(
       "href",
       "/admin/commercial",
@@ -104,11 +104,85 @@ describe("ProductEnablementAdminPage", () => {
     render(<ProductEnablementAdminPage />);
     await screen.findByLabelText("Panou ACM casetat");
     await user.click(screen.getByLabelText("Panou ACM casetat"));
+    expect(
+      screen.getByText("Selectat ca neoferit pentru lucrări noi. Nu este salvat."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Modificările nu sunt salvate")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Salvează produsele oferite" }));
 
     expect(await screen.findByText("Selecția a fost salvată")).toBeInTheDocument();
     expect(screen.getByLabelText("Panou ACM casetat")).not.toBeChecked();
+    expect(
+      screen.getByText("Nu este oferit pentru lucrări noi. Ofertele existente rămân deschise."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Versiunea 1")).toBeInTheDocument();
+  });
+
+  it("keeps unsaved selection distinct from the applied catalog", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => defaultAdmin,
+      }),
+    );
+
+    const user = userEvent.setup();
+    render(<ProductEnablementAdminPage />);
+    await screen.findByLabelText("Panou ACM casetat");
+    await user.click(screen.getByLabelText("Panou ACM casetat"));
+
+    expect(screen.getByLabelText("Panou ACM casetat")).not.toBeChecked();
+    expect(
+      screen.getByText("Selectat ca neoferit pentru lucrări noi. Nu este salvat."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Nu este oferit pentru lucrări noi. Ofertele existente rămân deschise."),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Lucrările noi rămân pe selecția actuală până apeși Salvează."),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Renunță la modificări" }));
+
+    expect(screen.getByLabelText("Panou ACM casetat")).toBeChecked();
+    expect(
+      screen.getAllByText("Oferit pentru lucrări noi. Ofertele existente rămân deschise."),
+    ).toHaveLength(2);
+    expect(screen.queryByText("Modificările nu sunt salvate")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvează produsele oferite" })).toBeDisabled();
+  });
+
+  it("describes a disabled product as not offered for new work", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ...defaultAdmin,
+          canEdit: false,
+          products: [
+            ...defaultAdmin.products,
+            {
+              templateCode: "PRD-LOGO-FRONTLIT-PLEXI-AL06",
+              label: "Logo volumetric luminos",
+              enabled: false,
+            },
+          ],
+        }),
+      }),
+    );
+
+    render(<ProductEnablementAdminPage />);
+    expect(await screen.findByLabelText("Logo volumetric luminos")).not.toBeChecked();
+    expect(
+      screen.getAllByText("Oferit pentru lucrări noi. Ofertele existente rămân deschise."),
+    ).toHaveLength(2);
+    expect(
+      screen.getByText("Nu este oferit pentru lucrări noi. Ofertele existente rămân deschise."),
+    ).toBeInTheDocument();
   });
 
   it("blocks member edits", async () => {

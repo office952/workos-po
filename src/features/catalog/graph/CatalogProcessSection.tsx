@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { presentCatalogProcessGraph, type ProcessGraphView } from "../../../adapters/catalogProcessGraphAdapter";
+import {
+  PROCESS_GRAPH_WRITE_STATE_LABEL,
+  presentCatalogProcessGraph,
+  type ProcessGraphView,
+} from "../../../adapters/catalogProcessGraphAdapter";
 import { fetchCatalogProcessGraph } from "../../../api/catalogProcessGraph";
 import { TransportError } from "../../../api/http";
 import { invalidateResources } from "../../../data/resourceCache";
@@ -29,7 +33,10 @@ export function CatalogProcessSection({ productCode }: CatalogProcessSectionProp
       <header className="process-graph__header">
         <div className="catv2-section-head">
           <h2 id="process-graph-heading" className="catv2-h2">Proces tehnologic</h2>
-          <p className="catv2-lead">Consultare. Traseul vine din definiția produsului; nu se salvează și nu pornește o lucrare.</p>
+          <p className="catv2-lead">
+            Consultare. Traseul vine din definiția produsului și nu pornește o lucrare.{" "}
+            <span className="catv2-tag catv2-tag--quiet">{view?.writeStateLabel ?? PROCESS_GRAPH_WRITE_STATE_LABEL}</span>
+          </p>
         </div>
         {view?.status === "READY" && view.scenario ? (
           <label className="process-graph__scenario">

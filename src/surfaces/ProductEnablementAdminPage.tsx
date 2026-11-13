@@ -28,6 +28,31 @@ import { formatTimestamp } from "../presentation/format";
 
 type SaveState = "idle" | "pending" | "success" | "error";
 
+const OFFERED_FOR_NEW_WORK_HINT =
+  "Oferit pentru lucrări noi. Ofertele existente rămân deschise.";
+const NOT_OFFERED_FOR_NEW_WORK_HINT =
+  "Nu este oferit pentru lucrări noi. Ofertele existente rămân deschise.";
+const DRAFT_OFFERED_HINT =
+  "Selectat ca oferit pentru lucrări noi. Nu este salvat.";
+const DRAFT_NOT_OFFERED_HINT =
+  "Selectat ca neoferit pentru lucrări noi. Nu este salvat.";
+
+function productOfferHint(enabled: boolean, dirty: boolean): string {
+  if (dirty) {
+    return enabled ? DRAFT_OFFERED_HINT : DRAFT_NOT_OFFERED_HINT;
+  }
+  return enabled ? OFFERED_FOR_NEW_WORK_HINT : NOT_OFFERED_FOR_NEW_WORK_HINT;
+}
+
+function selectionIsDirty(
+  products: ProductEnablementAdminTransport["products"],
+  enabledByCode: Record<string, boolean>,
+): boolean {
+  return products.some(
+    (product) => (enabledByCode[product.templateCode] === true) !== product.enabled,
+  );
+}
+
 export function ProductEnablementAdminPage() {
   const admin = useResource(
     resourceKeys.productEnablementAdmin(),
@@ -98,6 +123,7 @@ export function ProductEnablementAdminPage() {
 
   const pending = saveState === "pending";
   const editEnabled = Boolean(model?.canEdit) && !pending;
+  const dirty = Boolean(model && selectionIsDirty(model.products, enabledByCode));
 
   return (
     <SlicePage
@@ -160,7 +186,12 @@ export function ProductEnablementAdminPage() {
                 {model.guidance}
               </InlineAlert>
             ) : null}
-            {saveState === "success" ? (
+            {dirty ? (
+              <InlineAlert tone="pending" title="Modificările nu sunt salvate">
+                Lucrările noi rămân pe selecția actuală până apeși Salvează.
+              </InlineAlert>
+            ) : null}
+            {saveState === "success" && !dirty ? (
               <InlineAlert tone="success" title="Selecția a fost salvată">
                 Versiunea activă este {model.activeVersion ?? "1"}. Ofertele și lucrările
                 vechi rămân deschise.
@@ -178,23 +209,22 @@ export function ProductEnablementAdminPage() {
             ) : null}
             {model.products.map((product) => {
               const fieldId = `enable-${product.templateCode}`;
+              const offered = enabledByCode[product.templateCode] === true;
+              const hint = productOfferHint(offered, offered !== product.enabled);
               return (
                 <FieldFrame
                   key={product.templateCode}
                   id={fieldId}
                   label={product.label}
-                  hint="Oferit pentru lucrări noi. Ofertele existente rămân deschise."
+                  hint={hint}
                 >
                   <input
                     id={fieldId}
                     className="field__control"
                     type="checkbox"
-                    checked={enabledByCode[product.templateCode] === true}
+                    checked={offered}
                     disabled={!editEnabled}
-                    aria-describedby={fieldDescribedBy(
-                      fieldId,
-                      "Oferit pentru lucrări noi. Ofertele existente rămân deschise.",
-                    )}
+                    aria-describedby={fieldDescribedBy(fieldId, hint)}
                     onChange={(event) => {
                       const enabled = event.target.checked;
                       setEnabledByCode((current) => ({
@@ -207,14 +237,28 @@ export function ProductEnablementAdminPage() {
               );
             })}
             {model.canEdit ? (
-              <Button
-                disabled={pending}
-                onClick={() => {
-                  void save();
-                }}
-              >
-                Salvează produsele oferite
-              </Button>
+              <>
+                <Button
+                  disabled={pending || !dirty}
+                  onClick={() => {
+                    void save();
+                  }}
+                >
+                  Salvează produsele oferite
+                </Button>
+                {dirty ? (
+                  <Button
+                    variant="ghost"
+                    disabled={pending}
+                    onClick={() => {
+                      applyAdmin(model);
+                      setSaveState("idle");
+                    }}
+                  >
+                    Renunță la modificări
+                  </Button>
+                ) : null}
+              </>
             ) : null}
             {pending ? <LoadingIndicator label="Se salvează produsele oferite" /> : null}
           </SurfacePanel>

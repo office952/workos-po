@@ -1,8 +1,11 @@
 import { membershipRoleLabel } from "../adapters/cloudSessionAdapter";
+import { StatusBadge } from "../components/StatusBadge";
 import { administrationGroups } from "../layout/administrationNav";
 import { SlicePage } from "../layout/SlicePage";
 import { presentRouteChrome } from "../layout/routeChrome";
 import { useCloudSession } from "../session/CloudSessionContext";
+import { OrganizationOperatingPanel } from "./OrganizationOperatingPanel";
+import { useOrganizationOperatingPicture } from "./useOrganizationOperatingPicture";
 
 export function AdminHomePage() {
   const chrome = presentRouteChrome({ name: "admin" });
@@ -10,6 +13,8 @@ export function AdminHomePage() {
   const organizationName = cloud.organization?.displayName ?? null;
   const roleLabel = membershipRoleLabel(cloud.organization?.membershipRole);
   const owner = cloud.organization?.membershipRole === "owner";
+  const role = owner ? "owner" : cloud.organization?.membershipRole === "member" ? "member" : "unknown";
+  const { picture, retry } = useOrganizationOperatingPicture({ role });
   const meta = [organizationName, roleLabel].filter((part): part is string => Boolean(part)).join(" · ");
 
   return (
@@ -18,14 +23,14 @@ export function AdminHomePage() {
       currentHref={chrome.currentHref}
       workspace="admin"
       title={chrome.title}
-      lead={
-        owner
-          ? "Alege domeniul de setări. Poți modifica setările pentru lucrările noi."
-          : "Alege domeniul de setări. Modificările sunt rezervate proprietarului organizației."
-      }
+      lead={chrome.lead}
       meta={meta || undefined}
+      status={
+        picture.statusLabel ? <StatusBadge label={picture.statusLabel} tone={picture.statusTone} /> : undefined
+      }
     >
       <div className="admin-home">
+        <OrganizationOperatingPanel picture={picture} variant="admin" onRetry={retry} />
         {administrationGroups().map((group) => (
           <section key={group.id} className="admin-home__group" aria-labelledby={`admin-${group.id}`}>
             <h2 id={`admin-${group.id}`} className="admin-home__heading">

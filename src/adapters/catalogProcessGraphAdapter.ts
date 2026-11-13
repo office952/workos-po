@@ -48,10 +48,13 @@ export type ProcessGraphScenarioView = {
   summary: string;
 };
 
+export const PROCESS_GRAPH_WRITE_STATE_LABEL = "Nu se salvează";
+
 export type ProcessGraphView = {
   status: "READY" | "NO_REFERENCE_SCENARIO";
   productLabel: string;
   canViewFinancialAmounts: boolean;
+  writeStateLabel: typeof PROCESS_GRAPH_WRITE_STATE_LABEL;
   scenario: (ProcessGraphScenarioView & { note: string }) | null;
   scenarios: ProcessGraphScenarioView[];
   hiddenEdgeCount: number;
@@ -90,6 +93,7 @@ export function presentCatalogProcessGraph(payload: unknown): ProcessGraphView |
     status: "READY",
     productLabel,
     canViewFinancialAmounts: canView,
+    writeStateLabel: PROCESS_GRAPH_WRITE_STATE_LABEL,
     scenario,
     scenarios,
     ...presented,
@@ -105,6 +109,7 @@ function emptyView(
     status: "NO_REFERENCE_SCENARIO",
     productLabel,
     canViewFinancialAmounts,
+    writeStateLabel: PROCESS_GRAPH_WRITE_STATE_LABEL,
     scenario: null,
     scenarios,
     hiddenEdgeCount: 0,
@@ -151,7 +156,7 @@ function scenarioOf(value: unknown, withNote: boolean): (ProcessGraphScenarioVie
 
 function graphOf(graph: Record<string, unknown>, canView: boolean): Omit<
   ProcessGraphView,
-  "status" | "productLabel" | "canViewFinancialAmounts" | "scenario" | "scenarios"
+  "status" | "productLabel" | "canViewFinancialAmounts" | "writeStateLabel" | "scenario" | "scenarios"
 > | null {
   const directEdgeIds = asStringList(graph.directEdgeIds);
   const simplifiedEdgeIds = asStringList(graph.simplifiedEdgeIds);

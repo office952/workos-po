@@ -78,6 +78,9 @@ describe("job sheet identity", () => {
       nextAction: "",
       nextActionLabel: "",
     });
-    expect(presentJobSheetLead(done)).toBe("Producția este finalizată. Compară planificat cu realizat.");
+    expect(presentJobSheetLead(done)).toBe(
+      "Producția este finalizată. Compară planificat cu realizat. Livrarea și montajul nu sunt confirmate de această stare.",
+    );
+    expect(presentJobSheetLead(done)).not.toMatch(/livrată|închisă|JOB_CLOSED/i);
   });
 });

@@ -92,7 +92,7 @@ export function CatalogLibraryView({ products, notice, filters, onFiltersChange,
         <div>
           <p className="catv2-eyebrow">06 · Catalog</p>
           <h1 id="catalog-library-heading">Bibliotecă de produse</h1>
-          <p className="catv2-lead">Alege un produs ca să îi vezi structura, componentele, procesul tehnologic și variantele.</p>
+          <p className="catv2-lead">Catalogul arată definițiile. Un produs neoferit rămâne vizibil pentru consultare. Oferirea pentru lucrări noi se alege la disponibilitate.</p>
         </div>
         <a className="catv2-link" href="/admin/products">Disponibilitatea produselor <span aria-hidden="true">↗</span></a>
       </header>

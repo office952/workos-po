@@ -200,7 +200,6 @@ export function JobDetailPage({ jobId, taskId = null, section, fileId = null }: 
       {job ? <p className="job-sheet__lead">{presentJobSheetLead(journeyJob ?? job)}</p> : null}
       {job?.needsAttention && job.attentionLabel ? <p className="job-sheet__hold">De rezolvat: {job.attentionLabel}</p> : null}
       {releaseHold ? <p className="job-sheet__hold">{releaseHold}</p> : null}
-      {finished ? <p className="job-sheet__completion-note">Producția este finalizată. Livrarea și montajul nu sunt confirmate de această stare.</p> : null}
       {journeyJob ? <LifecycleList steps={presentJobLifecycle(journeyJob)} label="Parcursul lucrării" /> : null}
       {error ? <InlineAlert tone="error" title="Acțiunea nu a fost finalizată">{error}</InlineAlert> : null}
     </header>

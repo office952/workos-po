@@ -11,7 +11,7 @@ export const STATIONS = [
   { stage: "RELEASED", label: "Eliberată", short: "Eliber.", milestone: "Eliberare în producție" },
   { stage: "EXECUTION_PLANNED", label: "Plan", short: "Plan", milestone: "Plan de execuție" },
   { stage: "EXECUTION_IN_PROGRESS", label: "În execuție", short: "Execuție", milestone: "Atelier / execuție" },
-  { stage: "EXECUTION_COMPLETED", label: "Finalizată", short: "Final", milestone: "Lucrare finalizată" },
+  { stage: "EXECUTION_COMPLETED", label: "Producție", short: "Producție", milestone: "Producție finalizată" },
 ] as const;
 
 export type RouteMark = "done" | "current" | "future" | "unknown";

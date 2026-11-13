@@ -59,7 +59,7 @@ export function presentJobWorklistAction(item: JobListItemTransport): PresentedW
       return { actionLabel: "Deschide lucrarea", actionHref: detailHref };
     case "VIEW_COMPLETED":
       return {
-        actionLabel: item.nextActionLabel || "Lucrare finalizată",
+        actionLabel: item.nextActionLabel || "Consultă fișa",
         actionHref: detailHref,
       };
     default:

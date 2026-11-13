@@ -360,6 +360,19 @@ describe("Catalog · bibliotecă", () => {
     expect(readConfiguratorSession()).toEqual(before);
     expect(screen.queryByText(/creează cererea/i)).not.toBeInTheDocument();
     expect(screen.queryByText("PRD-TEST")).not.toBeInTheDocument();
+    expect(screen.getByText(/Un produs neoferit rămâne vizibil pentru consultare/)).toBeInTheDocument();
+  });
+
+  it("keeps a product that is not offered listed as consultative Product Truth", async () => {
+    const { body, system } = threeProducts();
+    vi.stubGlobal("fetch", routeFetch(body, system));
+    render(<CatalogPage />);
+    expect(await screen.findByRole("link", { name: "Logo volumetric" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Panou ACM casetat" })).toBeInTheDocument();
+    expect(screen.getAllByText("Nu este oferit pentru lucrări noi").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Neoferite · 1" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Disponibilitatea produselor" })).toHaveAttribute("href", "/admin/products");
+    expect(screen.queryByRole("button", { name: /^Salvează/ })).not.toBeInTheDocument();
   });
 
   it("searches without diacritics or case, adds the filters, and clears them", async () => {
@@ -1056,6 +1069,8 @@ describe("Catalog · file, proces și variante", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<CatalogPage />);
     expect(await screen.findByRole("heading", { level: 2, name: "Proces tehnologic" })).toBeInTheDocument();
+    expect(screen.getByText("Nu se salvează")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Salvează/ })).not.toBeInTheDocument();
     expect(await screen.findByText("Scenariu ilustrativ. Nu este un deviz.")).toBeInTheDocument();
     expect(screen.getByText(/Săgeata intră în operația care urmează/)).toBeInTheDocument();
     expect(screen.getByText("2 operații · 2 pași")).toBeInTheDocument();
@@ -1077,6 +1092,20 @@ describe("Catalog · file, proces și variante", () => {
     expect(screen.queryByText("cut")).not.toBeInTheDocument();
     await userEvent.selectOptions(screen.getByLabelText("Scenariu ilustrativ"), "letters-finish-vinyl");
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("scenario=letters-finish-vinyl"))).toBe(true);
+  });
+
+  it("does not invent a process editor when writeState is not consultative", async () => {
+    window.history.replaceState({}, "", "/catalog?product=PRD-TEST&tab=proces");
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/api/catalog/process-graph")) return json({ ...graphPayload(), writeState: "READY" });
+      return routeFetch()(input, init);
+    }));
+    render(<CatalogPage />);
+    expect(await screen.findByText("Datele primite nu respectă contractul de consultare.")).toBeInTheDocument();
+    expect(screen.getByText("Nu se salvează")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Salvează/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reîncearcă traseul" })).toBeInTheDocument();
   });
 
   it("publishes a variant through the catalog preset endpoint and blocks an unprepared option", async () => {

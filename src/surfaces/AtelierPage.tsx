@@ -198,7 +198,7 @@ export function AtelierPage({ jobId = null, returnTo = null, planId = null, task
           {people.length === 0 ? (
             <EmptyState
               title="Nu există operatori configurați"
-              description="Calificările se setează explicit în organizație. Atelierul nu creează persoane și nu atribuie meserii."
+              description="Calificările se setează explicit în organizație. Atelierul nu creează persoane și nu atribuie meserii. Poți lucra comercial fără Atelier."
             />
           ) : (
             <div className="atelier-identify">
