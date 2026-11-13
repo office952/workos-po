@@ -28,6 +28,15 @@ import { formatTimestamp } from "../presentation/format";
 
 type SaveState = "idle" | "pending" | "success" | "error";
 
+const OFFERED_FOR_NEW_WORK_HINT =
+  "Oferit pentru lucrări noi. Ofertele existente rămân deschise.";
+const NOT_OFFERED_FOR_NEW_WORK_HINT =
+  "Nu este oferit pentru lucrări noi. Ofertele existente rămân deschise.";
+
+function productOfferHint(enabled: boolean): string {
+  return enabled ? OFFERED_FOR_NEW_WORK_HINT : NOT_OFFERED_FOR_NEW_WORK_HINT;
+}
+
 export function ProductEnablementAdminPage() {
   const admin = useResource(
     resourceKeys.productEnablementAdmin(),
@@ -178,23 +187,22 @@ export function ProductEnablementAdminPage() {
             ) : null}
             {model.products.map((product) => {
               const fieldId = `enable-${product.templateCode}`;
+              const offered = enabledByCode[product.templateCode] === true;
+              const hint = productOfferHint(offered);
               return (
                 <FieldFrame
                   key={product.templateCode}
                   id={fieldId}
                   label={product.label}
-                  hint="Oferit pentru lucrări noi. Ofertele existente rămân deschise."
+                  hint={hint}
                 >
                   <input
                     id={fieldId}
                     className="field__control"
                     type="checkbox"
-                    checked={enabledByCode[product.templateCode] === true}
+                    checked={offered}
                     disabled={!editEnabled}
-                    aria-describedby={fieldDescribedBy(
-                      fieldId,
-                      "Oferit pentru lucrări noi. Ofertele existente rămân deschise.",
-                    )}
+                    aria-describedby={fieldDescribedBy(fieldId, hint)}
                     onChange={(event) => {
                       const enabled = event.target.checked;
                       setEnabledByCode((current) => ({

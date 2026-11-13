@@ -108,7 +108,41 @@ describe("ProductEnablementAdminPage", () => {
 
     expect(await screen.findByText("Selecția a fost salvată")).toBeInTheDocument();
     expect(screen.getByLabelText("Panou ACM casetat")).not.toBeChecked();
+    expect(
+      screen.getByText("Nu este oferit pentru lucrări noi. Ofertele existente rămân deschise."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Versiunea 1")).toBeInTheDocument();
+  });
+
+  it("describes a disabled product as not offered for new work", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ...defaultAdmin,
+          canEdit: false,
+          products: [
+            ...defaultAdmin.products,
+            {
+              templateCode: "PRD-LOGO-FRONTLIT-PLEXI-AL06",
+              label: "Logo volumetric luminos",
+              enabled: false,
+            },
+          ],
+        }),
+      }),
+    );
+
+    render(<ProductEnablementAdminPage />);
+    expect(await screen.findByLabelText("Logo volumetric luminos")).not.toBeChecked();
+    expect(
+      screen.getAllByText("Oferit pentru lucrări noi. Ofertele existente rămân deschise."),
+    ).toHaveLength(2);
+    expect(
+      screen.getByText("Nu este oferit pentru lucrări noi. Ofertele existente rămân deschise."),
+    ).toBeInTheDocument();
   });
 
   it("blocks member edits", async () => {
