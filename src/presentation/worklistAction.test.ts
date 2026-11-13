@@ -289,4 +289,19 @@ describe("presentJobWorklistAction", () => {
       actionHref: "/lucrari/job-1?sectiune=operatii",
     });
   });
+
+  it("opens a completed job as consultation, not as a closed delivery", () => {
+    expect(
+      presentJobWorklistAction(
+        job({
+          stage: "EXECUTION_COMPLETED",
+          nextAction: "VIEW_COMPLETED",
+          nextActionLabel: "",
+        }),
+      ),
+    ).toEqual({
+      actionLabel: "Consultă fișa",
+      actionHref: "/lucrari/job-1",
+    });
+  });
 });

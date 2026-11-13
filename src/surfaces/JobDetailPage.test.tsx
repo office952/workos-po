@@ -57,7 +57,7 @@ describe('job record page', () => {
   });
   it('preserves the finished record and separates production completion from delivery', async () => {
     fixture({ finished: true }); render(<JobDetailPage jobId="job-1" section="operatii"/>);
-    expect(await screen.findByText(/Producția este finalizată. Livrarea și montajul/)).toBeVisible();
+    expect(await screen.findByText(/Livrarea și montajul nu sunt confirmate de această stare/)).toBeVisible();
     expect(within(await screen.findByRole('table', { name: 'Registrul operațiilor' })).getByText('Durată declarată: 42 min')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Exportă orele CSV' })).toBeEnabled();
     expect(screen.queryByRole('link', { name: 'Deschide în Atelier' })).toBeNull();
@@ -65,7 +65,7 @@ describe('job record page', () => {
     expect(screen.queryByRole('button', { name: 'Trimite în producție' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Semnalează necesar de aprovizionare' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Tipărește fișa' })).toBeEnabled();
-    expect(screen.getByText('Producția este finalizată. Compară planificat cu realizat.')).toBeVisible();
+    expect(screen.getByText('Producția este finalizată. Compară planificat cu realizat. Livrarea și montajul nu sunt confirmate de această stare.')).toBeVisible();
     expect(screen.getByRole('list', { name: 'Parcursul lucrării' })).toBeVisible();
     expect(screen.queryByText(/Nicio operație începută/)).toBeNull();
     expect(screen.queryByRole('region', { name: 'Rezultatele lucrării' })).toBeNull();
@@ -77,7 +77,7 @@ describe('job record page', () => {
     expect(await screen.findByRole('region', { name: 'Probleme semnalate' })).toBeVisible();
     expect(screen.getByText('Vibrație anormală CNC. Am oprit lucrul.')).toBeVisible();
     expect(screen.getByText('Deschisă')).toBeVisible();
-    expect(screen.getByText(/Producția este finalizată. Livrarea și montajul/)).toBeVisible();
+    expect(screen.getByText(/Livrarea și montajul nu sunt confirmate de această stare/)).toBeVisible();
   });
   it('never replaces an invalid explicit task with another operation', async () => {
     fixture(); render(<JobDetailPage jobId="job-1" taskId="missing"/>);
