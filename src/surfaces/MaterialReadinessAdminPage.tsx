@@ -63,7 +63,7 @@ export function MaterialReadinessAdminPage() {
       workspace="admin"
       eyebrow="Administrare"
       title="Materiale pentru execuție"
-      lead="Organizația alege dacă pornirea unei sarcini cere confirmarea materialelor planificate. Nu este stoc și nu este un serviciu comercial."
+      lead="Organizația alege dacă pornirea unei sarcini cere confirmarea materialelor planificate. Nu este costul de achiziție al materialelor și nu este stoc."
     >
       <CollectionRail label="Administrare" items={administrationRailItems("materials")} />
       {resource.status === "error" && !model ? (

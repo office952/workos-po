@@ -1385,7 +1385,7 @@ describe("ConfiguratorPage", () => {
     );
     expect(screen.getByText("Plexiglas 3 mm opal")).toBeInTheDocument();
     expect(screen.getByText("Tarif lipsă pentru Plexiglas 3 mm opal")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Deschide Dovezi de cost" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Deschide costurile de producție" })).toHaveAttribute(
       "href",
       "/admin/resources",
     );

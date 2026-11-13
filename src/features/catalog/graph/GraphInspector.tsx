@@ -43,7 +43,7 @@ export function GraphInspector({ node }: GraphInspectorProps) {
         <p className="process-graph__links">
           {node.technicalHref ? <a className="catv2-link" href={node.technicalHref}>Setările componentei</a> : null}
           {node.formulaHref ? <a className="catv2-link" href={node.formulaHref}>Formulele componentei</a> : null}
-          {node.recipe ? <a className="catv2-link" href={node.recipe.resourcesHref}>Dovezile de cost</a> : null}
+          {node.recipe ? <a className="catv2-link" href={node.recipe.resourcesHref}>Costuri de producție</a> : null}
           <a className="catv2-link" href="/admin/products">Disponibilitatea produsului</a>
         </p>
       </div>

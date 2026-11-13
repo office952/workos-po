@@ -4,6 +4,7 @@ import type {
   UnconfirmedRateTransport,
 } from "../api/types";
 import { InlineAlert } from "../components/InlineAlert";
+import { COST_PRODUCTION_OPEN_LABEL } from "./costUsability";
 import { formatMoney, formatTimestamp } from "./format";
 
 type RateAcknowledgementNoticeProps = {
@@ -115,7 +116,7 @@ export function RateAcknowledgementNotice({
         {requirement.canAcknowledge ? (
           <p>
             <a className="text-link" href="/admin/resources">
-              Deschide Dovezi de cost
+              {COST_PRODUCTION_OPEN_LABEL}
             </a>
           </p>
         ) : null}

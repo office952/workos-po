@@ -4,7 +4,10 @@ import type {
   ResourcesAdminTransport,
   ResourcesWriteState,
 } from "../api/types";
-import { presentOperatorFacingCopyOrNull } from "../presentation/operatorFacingCopy";
+import {
+  presentOperatorFacingCopy,
+  presentOperatorFacingCopyOrNull,
+} from "../presentation/operatorFacingCopy";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object"
@@ -66,7 +69,65 @@ function presentRow(value: unknown): CostEvidenceRowTransport | null {
         : null,
     lastChangedAt:
       typeof record.lastChangedAt === "string" ? record.lastChangedAt : null,
+    kindLabel: typeof record.kindLabel === "string" ? record.kindLabel : null,
+    classificationLabel:
+      typeof record.classificationLabel === "string"
+        ? presentOperatorFacingCopy(record.classificationLabel)
+        : null,
+    sourceLabel:
+      typeof record.sourceLabel === "string"
+        ? presentOperatorFacingCopy(record.sourceLabel)
+        : null,
   };
+}
+
+function presentCatalogGap(
+  value: unknown,
+  existingResourceIds: ReadonlySet<string>,
+): CostEvidenceRowTransport | null {
+  const record = asRecord(value);
+  if (!record || typeof record.id !== "string" || typeof record.label !== "string") {
+    return null;
+  }
+  if (existingResourceIds.has(record.id)) {
+    return null;
+  }
+  if (!Object.prototype.hasOwnProperty.call(record, "cost") || record.cost !== null) {
+    return null;
+  }
+  return {
+    evidenceRowId: null,
+    resourceId: record.id,
+    resourceLabel: record.label,
+    qualifierIdentity: null,
+    qualifierLabel: null,
+    qualifier: null,
+    amount: null,
+    currency: null,
+    unitLabel: typeof record.unitLabel === "string" ? record.unitLabel : null,
+    amountDisplay: null,
+    note: null,
+    lastChangedAt: null,
+    kindLabel: typeof record.kindLabel === "string" ? record.kindLabel : null,
+    classificationLabel: null,
+    sourceLabel: null,
+  };
+}
+
+function presentCatalogGaps(
+  record: Record<string, unknown>,
+  existingResourceIds: ReadonlySet<string>,
+): CostEvidenceRowTransport[] {
+  return (["materials", "labor", "services"] as const).flatMap((key) => {
+    const list = record[key];
+    if (!Array.isArray(list)) {
+      return [];
+    }
+    return list.flatMap((item) => {
+      const gap = presentCatalogGap(item, existingResourceIds);
+      return gap ? [gap] : [];
+    });
+  });
 }
 
 export function presentResourcesAdmin(
@@ -77,12 +138,19 @@ export function presentResourcesAdmin(
     return null;
   }
   const writeState = presentWriteState(record.writeState);
-  const rows = Array.isArray(record.costEvidence)
+  const evidenceRows = Array.isArray(record.costEvidence)
     ? record.costEvidence.flatMap((item) => {
         const row = presentRow(item);
         return row ? [row] : [];
       })
     : [];
+  const rows = [
+    ...evidenceRows,
+    ...presentCatalogGaps(
+      record,
+      new Set(evidenceRows.map((row) => row.resourceId)),
+    ),
+  ];
   const canEdit =
     writeState === "READY" &&
     rows.some((row) => row.evidenceRowId !== null && row.amount !== null);

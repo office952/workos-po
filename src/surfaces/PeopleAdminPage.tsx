@@ -292,7 +292,7 @@ export function PeopleAdminPage({ personId = null }: PeopleAdminPageProps) {
       workspace="admin"
       eyebrow="Administrare"
       title="Oameni"
-      lead="Configurează persoanele care pot lucra în producție. Contul de autentificare rămâne separat."
+      lead="Configurează persoanele care pot lucra în producție. Contul de autentificare rămâne separat. Tarifele de manoperă se setează la Costuri de producție."
       meta={presentAdminEditMeta({
         settled: loadState === "ready" && model !== null,
         canEdit: Boolean(model?.canEdit),

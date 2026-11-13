@@ -455,7 +455,7 @@ export function CatalogComponentSheet({
                   id="resources"
                   title="Resurse"
                   count={resources.length}
-                  action={<a className="catv2-link" href="/admin/resources">Vezi în Resurse <span aria-hidden="true">↗</span></a>}
+                  action={<a className="catv2-link" href="/admin/resources">Vezi costurile de producție <span aria-hidden="true">↗</span></a>}
                 >
                   <p className="catv2-block__note">Referințe din definiție, fără tarife.</p>
                   <ul className="catv2-list">

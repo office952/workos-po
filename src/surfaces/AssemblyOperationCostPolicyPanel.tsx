@@ -150,7 +150,7 @@ export function AssemblyOperationCostPolicyPanel() {
 
   if (!admin) {
     return (
-      <SurfacePanel title="Cost intern ansamblare" label="Politică ansamblare" busy={loaded.status !== "error"}>
+      <SurfacePanel title="Manoperă atelier" label="Politică manoperă atelier" busy={loaded.status !== "error"}>
         {loaded.status === "error" ? (
           <InlineAlert tone="error" title="Politica nu este disponibilă">
             Politica de cost pentru ansamblare nu a putut fi citită.
@@ -166,8 +166,11 @@ export function AssemblyOperationCostPolicyPanel() {
   const policyChanged = inspection !== admin.finalInspectionMode || packaging !== admin.finalPackagingMode;
 
   return (
-    <SurfacePanel title="Cost intern ansamblare" label="Politică ansamblare">
+    <SurfacePanel title="Manoperă atelier" label="Politică manoperă atelier">
       <div className="operation-cost">
+        <p className="ui-note">
+          Tariful orar de atelier. Tarifele pe operație sunt în lista de deasupra.
+        </p>
         <dl>
           <InfoRow
             label="Politica organizației"

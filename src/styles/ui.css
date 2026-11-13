@@ -1242,6 +1242,19 @@ a.hit {
   min-width: 0;
 }
 
+.cost-registry-filters .filter-bar {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.cost-registry-filters .filter-bar__search {
+  max-width: none;
+  justify-self: stretch;
+}
+
+.cost-registry-filters .filter-bar__meta {
+  justify-self: start;
+}
+
 .filter-bar__meta {
   margin: 0;
   color: var(--color-text-secondary);

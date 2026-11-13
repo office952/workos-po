@@ -65,7 +65,7 @@ export function CatalogConstruction({ product, component, systemType, unknownPro
                   <h3>Materiale și resurse</h3>
                   <p className="ui-note">Referințe din definiție. Catalogul nu le modifică.</p>
                   <ul>{systemType.resourceReferences.map((item) => <li key={item.id}>{item.label}</li>)}</ul>
-                  <a className="text-link" href="/admin/resources">Tarifele resurselor</a>
+                  <a className="text-link" href="/admin/resources">Costuri de producție</a>
                 </>
               ) : null}
               {systemType.processReferences.length > 0 ? (

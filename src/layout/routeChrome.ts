@@ -193,8 +193,8 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         currentHref: "/admin/resources",
         workspace: "admin",
         eyebrow: "Administrare",
-        title: "Dovezi de cost",
-        lead: "Tarif confirmat pe resursă și calificator. Valoarea salvată este folosită doar la calcule noi.",
+        title: "Costuri de producție",
+        lead: "Setezi costurile interne pentru calculele de producție noi. Prețul de vânzare al unei oferte noi se introduce separat. Ofertele deja confirmate nu se schimbă.",
       };
     case "admin-services":
       return {
@@ -212,7 +212,7 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         workspace: "admin",
         eyebrow: "Administrare",
         title: "Materiale pentru execuție",
-        lead: "Organizația alege dacă pornirea unei sarcini cere confirmarea materialelor planificate.",
+        lead: "Organizația alege dacă pornirea unei sarcini cere confirmarea materialelor planificate. Nu este costul de achiziție al materialelor.",
       };
     case "admin-external-production":
       return {
@@ -230,7 +230,7 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         workspace: "admin",
         eyebrow: "Administrare",
         title: "Valori comerciale implicite",
-        lead: "Aceste valori sunt folosite ca punct de pornire pentru ofertele noi. Pot fi modificate individual pe fiecare ofertă.",
+        lead: "Aceste valori sunt folosite ca punct de pornire pentru ofertele noi. Pot fi modificate individual pe fiecare ofertă. Prețul de vânzare nu se calculează automat din costul intern.",
       };
     case "admin-technical":
       return {
@@ -239,7 +239,7 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         workspace: "admin",
         eyebrow: "Administrare",
         title: "Setări tehnice",
-        lead: "Aceste valori sunt folosite la calculul tehnic al lucrărilor noi. Lucrările înghețate rămân neschimbate.",
+        lead: "Aceste valori sunt folosite la calculul tehnic al lucrărilor noi. Nu înlocuiesc costul de achiziție al materialelor. Lucrările înghețate rămân neschimbate.",
       };
     case "admin-formulas":
       return {
@@ -248,7 +248,7 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         workspace: "admin",
         eyebrow: "Administrare",
         title: "Formule de calcul",
-        lead: "Aceste formule sunt folosite la calculul tehnic al lucrărilor noi. Lucrările înghețate rămân neschimbate.",
+        lead: "Aceste formule sunt folosite la calculul tehnic al lucrărilor noi. Nu înlocuiesc costul de achiziție al materialelor. Lucrările înghețate rămân neschimbate.",
       };
     case "admin-products":
       return {
@@ -275,7 +275,7 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         workspace: "admin",
         eyebrow: "Administrare",
         title: "Oameni",
-        lead: "Configurează persoanele care pot lucra în producție. Contul de autentificare rămâne separat.",
+        lead: "Configurează persoanele care pot lucra în producție. Contul de autentificare rămâne separat. Tarifele de manoperă se setează la Costuri de producție.",
       };
     case "admin-person":
       return {
@@ -284,7 +284,7 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         workspace: "admin",
         eyebrow: "Administrare",
         title: "Oameni",
-        lead: "Configurează persoanele care pot lucra în producție. Contul de autentificare rămâne separat.",
+        lead: "Configurează persoanele care pot lucra în producție. Contul de autentificare rămâne separat. Tarifele de manoperă se setează la Costuri de producție.",
       };
     case "admin-workcenters":
       return {
@@ -293,7 +293,7 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         workspace: "admin",
         eyebrow: "Administrare",
         title: "Zone și utilaje",
-        lead: "Configurează zonele de lucru și utilajele. Atelierul citește același registru.",
+        lead: "Configurează zonele de lucru și utilajele. Atelierul citește același registru. Tariful CNC și al altor operații se setează la Costuri de producție, nu ca preț pe oră de mașină.",
       };
     case "admin-workcenter":
       return {
@@ -302,7 +302,7 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         workspace: "admin",
         eyebrow: "Administrare",
         title: "Zone și utilaje",
-        lead: "Configurează zonele de lucru și utilajele. Atelierul citește același registru.",
+        lead: "Configurează zonele de lucru și utilajele. Atelierul citește același registru. Tariful CNC și al altor operații se setează la Costuri de producție, nu ca preț pe oră de mașină.",
       };
     case "admin-machine":
       return {
@@ -311,7 +311,7 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         workspace: "admin",
         eyebrow: "Administrare",
         title: "Zone și utilaje",
-        lead: "Configurează zonele de lucru și utilajele. Atelierul citește același registru.",
+        lead: "Configurează zonele de lucru și utilajele. Atelierul citește același registru. Tariful CNC și al altor operații se setează la Costuri de producție, nu ca preț pe oră de mașină.",
       };
     case "foundation":
       return {
