@@ -124,7 +124,7 @@ describe("RateAcknowledgementNotice", () => {
     expect(screen.queryByRole("checkbox")).toBeNull();
     expect(screen.getByText(/doar de un utilizator cu acces financiar/)).toBeInTheDocument();
     expect(screen.queryByText(/EUR|€/)).toBeNull();
-    expect(screen.queryByRole("link", { name: "Deschide Dovezi de cost" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Deschide costurile de producție" })).toBeNull();
   });
 
   it("only discloses rates under a manual price", () => {

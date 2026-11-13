@@ -70,7 +70,7 @@ export function CatalogProcessSection({ productCode }: CatalogProcessSectionProp
           <dl className="process-graph__state">
             <div><dt>Proces tehnologic</dt><dd>{view.technologicalProcessCompletenessLabel}</dd></div>
             <div><dt>Execuție</dt><dd>{view.executionReadinessLabel}</dd></div>
-            <div><dt>Dovezi de cost</dt><dd>{view.costCompletenessLabel}</dd></div>
+            <div><dt>Cost intern</dt><dd>{view.costCompletenessLabel}</dd></div>
             <div><dt>Iluminare</dt><dd>{view.lightingCalculationReadinessLabel}</dd></div>
           </dl>
           {view.completenessReasons.length > 0 ? (

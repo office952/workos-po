@@ -1066,6 +1066,9 @@ export type CostEvidenceRowTransport = {
   amountDisplay: string | null;
   note: string | null;
   lastChangedAt: string | null;
+  kindLabel: string | null;
+  classificationLabel: string | null;
+  sourceLabel: string | null;
 };
 
 export type OperationalServiceCapabilityTransport = {

@@ -417,7 +417,7 @@ export function WorkcentersAdminPage({
       workspace="admin"
       eyebrow="Administrare"
       title="Zone și utilaje"
-      lead="Configurează zonele de lucru și utilajele. Atelierul citește același registru."
+      lead="Configurează zonele de lucru și utilajele. Atelierul citește același registru. Tariful CNC și al altor operații se setează la Costuri de producție, nu ca preț pe oră de mașină."
       meta={presentAdminEditMeta({
         settled: loadState === "ready" && model !== null,
         canEdit: Boolean(model?.canEdit),

@@ -1,5 +1,6 @@
 import type { CostCompletenessIssueTransport } from "../api/types";
 import { SectionLabel } from "../components/SectionLabel";
+import { COST_PRODUCTION_OPEN_LABEL } from "./costUsability";
 import { formatMoney } from "./format";
 
 type CostCompletenessIssuesProps = {
@@ -12,7 +13,7 @@ function issueAction(
   switch (issue.type) {
     case "MISSING_COST_EVIDENCE":
     case "PROVISIONAL_COST_EVIDENCE":
-      return { href: "/admin/resources", label: "Deschide Dovezi de cost" };
+      return { href: "/admin/resources", label: COST_PRODUCTION_OPEN_LABEL };
     case "MISSING_TECHNICAL_INPUT":
     case "UNCALCULATED_COMPONENT":
       return { href: "#configuratie", label: "Completează configurația" };

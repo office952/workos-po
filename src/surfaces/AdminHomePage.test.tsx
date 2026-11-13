@@ -114,7 +114,7 @@ describe("AdminHomePage", () => {
     expect(
       screen.getAllByRole("link", { name: /Acces/ }).every((link) => link.getAttribute("href") === "/admin/access"),
     ).toBe(true);
-    expect(screen.getByRole("link", { name: /Dovezi de cost/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /^Costuri de producție/ })).toHaveAttribute(
       "href",
       "/admin/resources",
     );

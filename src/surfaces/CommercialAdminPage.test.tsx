@@ -56,7 +56,7 @@ describe("CommercialAdminPage", () => {
     expect(screen.getByRole("button", { name: "Salvează politica" })).toBeEnabled();
     expect(screen.getByRole("group", { name: "Administrare" })).toBeInTheDocument();
     expect(screen.getByText("Valori comerciale")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Dovezi de cost" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Costuri de producție" })).toHaveAttribute(
       "href",
       "/admin/resources",
     );

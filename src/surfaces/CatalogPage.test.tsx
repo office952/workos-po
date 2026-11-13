@@ -621,7 +621,7 @@ describe("Catalog · fișa componentei", () => {
     const formulas = screen.getByRole("link", { name: "Deschide în Formule" });
     expect(new URL(settings.getAttribute("href") ?? "", "https://workos.local").searchParams.get("return")).toBe("/catalog?product=PRD-TEST&component=LIGHTING");
     expect(new URL(formulas.getAttribute("href") ?? "", "https://workos.local").searchParams.get("component")).toBe("LIGHTING_FRONT_LED");
-    expect(screen.getByRole("link", { name: "Vezi în Resurse" })).toHaveAttribute("href", "/admin/resources");
+    expect(screen.getByRole("link", { name: "Vezi costurile de producție" })).toHaveAttribute("href", "/admin/resources");
     expect(screen.getByRole("link", { name: "Componenta anterioară: Spate" })).toHaveAttribute("href", "/catalog?product=PRD-TEST&component=BACK");
   });
 
@@ -1083,7 +1083,7 @@ describe("Catalog · file, proces și variante", () => {
     expect(screen.getByText("Tarif lipsă. Absența nu este zero.")).toBeInTheDocument();
     expect(screen.getByText("Debitare CNC")).toBeInTheDocument();
     expect(screen.getByText("Nicio altă operație din acest scenariu nu folosește aceeași dovadă. Impactul asupra altor produse nu este calculat aici.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Dovezile de cost" })).toHaveAttribute("href", "/admin/resources");
+    expect(screen.getByRole("link", { name: "Costuri de producție" })).toHaveAttribute("href", "/admin/resources");
     expect(screen.getByRole("link", { name: "Disponibilitatea produsului" })).toHaveAttribute("href", "/admin/products");
     expect(screen.getByRole("link", { name: "Setările componentei" })).toHaveAttribute("href", "/admin/technical?component=PLEXIGLAS_FACE");
     await userEvent.click(screen.getByRole("button", { name: "Toate relațiile" }));

@@ -109,7 +109,7 @@ export function FormulasAdminPage() {
       workspace="admin"
       eyebrow="Administrare"
       title="Formule de calcul"
-      lead="Aceste formule sunt folosite la calculul tehnic al lucrărilor noi. Lucrările înghețate rămân neschimbate."
+      lead="Aceste formule sunt folosite la calculul tehnic al lucrărilor noi. Nu înlocuiesc costul de achiziție al materialelor. Lucrările înghețate rămân neschimbate."
       meta={presentAdminEditMeta({
         settled: loadState === "ready" && model !== null,
         canEdit: Boolean(model?.canEdit),

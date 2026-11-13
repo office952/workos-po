@@ -122,7 +122,7 @@ export function CommercialAdminPage() {
       workspace="admin"
       eyebrow="Administrare"
       title="Valori comerciale implicite"
-      lead="Aceste valori sunt folosite ca punct de pornire pentru ofertele noi. Pot fi modificate individual pe fiecare ofertă. Salvarea creează o versiune nouă. Ofertele înghețate rămân neschimbate."
+      lead="Aceste valori sunt folosite ca punct de pornire pentru ofertele noi. Pot fi modificate individual pe fiecare ofertă. Prețul de vânzare nu se calculează automat din costul intern. Salvarea creează o versiune nouă. Ofertele înghețate rămân neschimbate."
       meta={presentAdminEditMeta({
         settled: loadState === "ready" && model !== null,
         canEdit: Boolean(model?.canEdit),

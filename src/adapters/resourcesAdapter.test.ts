@@ -22,6 +22,9 @@ const ownerPayload = {
       amountDisplay: "3,00 EUR / m · Adâncime volum: 60 mm",
       note: "Valoare implicită de platformă. Trebuie confirmată de owner.",
       lastChangedAt: "2026-09-01T00:00:00.000Z",
+      kindLabel: "Material",
+      classificationLabel: "Default de dezvoltare",
+      sourceLabel: "Valoare implicită de platformă",
     },
     {
       resourceId: "aluminium_return_profile",
@@ -50,6 +53,8 @@ describe("presentResourcesAdmin", () => {
     expect(presented?.rows[0]?.note).toBe(
       "Valoare implicită de platformă. Trebuie confirmată de proprietar.",
     );
+    expect(presented?.rows[0]?.kindLabel).toBe("Material");
+    expect(presented?.rows[0]?.classificationLabel).toBe("Default de dezvoltare");
     expect(
       findCostEvidenceRow(
         presented?.rows ?? [],
@@ -79,5 +84,58 @@ describe("presentResourcesAdmin", () => {
     });
     expect(presented?.canEdit).toBe(false);
     expect(presented?.rows[0]?.amount).toBeNull();
+  });
+
+  it("presents catalog resources without cost as missing rows, not as zero", () => {
+    const presented = presentResourcesAdmin({
+      writeState: "READY",
+      costEvidence: [ownerPayload.costEvidence[0]],
+      materials: [
+        {
+          id: "plexiglas_3mm_opal",
+          label: "Plexiglas 3 mm opal",
+          kindLabel: "Material",
+          unitLabel: "m²",
+          cost: null,
+        },
+        {
+          id: "aluminium_return_profile",
+          label: "Profil aluminiu 0,6 mm",
+          kindLabel: "Material",
+          unitLabel: "m",
+          cost: { amount: 3 },
+        },
+      ],
+    });
+    expect(presented?.rows.map((row) => row.resourceId)).toEqual([
+      "aluminium_return_profile",
+      "plexiglas_3mm_opal",
+    ]);
+    expect(presented?.rows[1]?.amount).toBeNull();
+    expect(presented?.rows[1]?.evidenceRowId).toBeNull();
+  });
+
+  it("does not invent missing costs when member payloads omit the cost object", () => {
+    const presented = presentResourcesAdmin({
+      writeState: "READY",
+      costEvidence: [
+        {
+          resourceId: "plexiglas_3mm_opal",
+          resourceLabel: "Plexiglas 3 mm opal",
+          evidenceRowId: "row-plexi",
+          kindLabel: "Material",
+          classificationLabel: "Confirmat de owner",
+        },
+      ],
+      materials: [
+        {
+          id: "forex_10mm",
+          label: "Forex 10 mm",
+          kindLabel: "Material",
+          unitLabel: "m²",
+        },
+      ],
+    });
+    expect(presented?.rows.map((row) => row.resourceId)).toEqual(["plexiglas_3mm_opal"]);
   });
 });
