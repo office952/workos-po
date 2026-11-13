@@ -32,9 +32,25 @@ const OFFERED_FOR_NEW_WORK_HINT =
   "Oferit pentru lucrări noi. Ofertele existente rămân deschise.";
 const NOT_OFFERED_FOR_NEW_WORK_HINT =
   "Nu este oferit pentru lucrări noi. Ofertele existente rămân deschise.";
+const DRAFT_OFFERED_HINT =
+  "Selectat ca oferit pentru lucrări noi. Nu este salvat.";
+const DRAFT_NOT_OFFERED_HINT =
+  "Selectat ca neoferit pentru lucrări noi. Nu este salvat.";
 
-function productOfferHint(enabled: boolean): string {
+function productOfferHint(enabled: boolean, dirty: boolean): string {
+  if (dirty) {
+    return enabled ? DRAFT_OFFERED_HINT : DRAFT_NOT_OFFERED_HINT;
+  }
   return enabled ? OFFERED_FOR_NEW_WORK_HINT : NOT_OFFERED_FOR_NEW_WORK_HINT;
+}
+
+function selectionIsDirty(
+  products: ProductEnablementAdminTransport["products"],
+  enabledByCode: Record<string, boolean>,
+): boolean {
+  return products.some(
+    (product) => (enabledByCode[product.templateCode] === true) !== product.enabled,
+  );
 }
 
 export function ProductEnablementAdminPage() {
@@ -107,6 +123,7 @@ export function ProductEnablementAdminPage() {
 
   const pending = saveState === "pending";
   const editEnabled = Boolean(model?.canEdit) && !pending;
+  const dirty = Boolean(model && selectionIsDirty(model.products, enabledByCode));
 
   return (
     <SlicePage
@@ -169,7 +186,12 @@ export function ProductEnablementAdminPage() {
                 {model.guidance}
               </InlineAlert>
             ) : null}
-            {saveState === "success" ? (
+            {dirty ? (
+              <InlineAlert tone="pending" title="Modificările nu sunt salvate">
+                Lucrările noi rămân pe selecția actuală până apeși Salvează.
+              </InlineAlert>
+            ) : null}
+            {saveState === "success" && !dirty ? (
               <InlineAlert tone="success" title="Selecția a fost salvată">
                 Versiunea activă este {model.activeVersion ?? "1"}. Ofertele și lucrările
                 vechi rămân deschise.
@@ -188,7 +210,7 @@ export function ProductEnablementAdminPage() {
             {model.products.map((product) => {
               const fieldId = `enable-${product.templateCode}`;
               const offered = enabledByCode[product.templateCode] === true;
-              const hint = productOfferHint(offered);
+              const hint = productOfferHint(offered, offered !== product.enabled);
               return (
                 <FieldFrame
                   key={product.templateCode}
@@ -215,14 +237,28 @@ export function ProductEnablementAdminPage() {
               );
             })}
             {model.canEdit ? (
-              <Button
-                disabled={pending}
-                onClick={() => {
-                  void save();
-                }}
-              >
-                Salvează produsele oferite
-              </Button>
+              <>
+                <Button
+                  disabled={pending || !dirty}
+                  onClick={() => {
+                    void save();
+                  }}
+                >
+                  Salvează produsele oferite
+                </Button>
+                {dirty ? (
+                  <Button
+                    variant="ghost"
+                    disabled={pending}
+                    onClick={() => {
+                      applyAdmin(model);
+                      setSaveState("idle");
+                    }}
+                  >
+                    Renunță la modificări
+                  </Button>
+                ) : null}
+              </>
             ) : null}
             {pending ? <LoadingIndicator label="Se salvează produsele oferite" /> : null}
           </SurfacePanel>
