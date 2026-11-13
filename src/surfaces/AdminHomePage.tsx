@@ -14,12 +14,8 @@ export function AdminHomePage() {
   const roleLabel = membershipRoleLabel(cloud.organization?.membershipRole);
   const owner = cloud.organization?.membershipRole === "owner";
   const role = owner ? "owner" : cloud.organization?.membershipRole === "member" ? "member" : "unknown";
-  const { picture, pending } = useOrganizationOperatingPicture({
-    role,
-    organizationName,
-  });
+  const { picture, retry } = useOrganizationOperatingPicture({ role });
   const meta = [organizationName, roleLabel].filter((part): part is string => Boolean(part)).join(" · ");
-  const showStatus = !pending || picture.statusLabel !== "Cont conectat";
 
   return (
     <SlicePage
@@ -29,10 +25,12 @@ export function AdminHomePage() {
       title={chrome.title}
       lead={chrome.lead}
       meta={meta || undefined}
-      status={showStatus ? <StatusBadge label={picture.statusLabel} tone={picture.statusTone} /> : undefined}
+      status={
+        picture.statusLabel ? <StatusBadge label={picture.statusLabel} tone={picture.statusTone} /> : undefined
+      }
     >
       <div className="admin-home">
-        <OrganizationOperatingPanel picture={picture} pending={pending} />
+        <OrganizationOperatingPanel picture={picture} variant="admin" onRetry={retry} />
         {administrationGroups().map((group) => (
           <section key={group.id} className="admin-home__group" aria-labelledby={`admin-${group.id}`}>
             <h2 id={`admin-${group.id}`} className="admin-home__heading">

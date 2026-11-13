@@ -1,10 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { resetResourceCache } from "../data/resourceCache";
 import { CloudSessionProvider } from "../session/CloudSessionContext";
 import { AdminHomePage } from "./AdminHomePage";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  resetResourceCache();
 });
 
 function jsonResponse(body: unknown) {
@@ -15,7 +17,7 @@ function jsonResponse(body: unknown) {
   });
 }
 
-function stubOperatingFetch() {
+function stubOperatingFetch(offerMode: string | null = "SERVICE_DISABLED") {
   return vi.fn((input: RequestInfo) => {
     const url = String(input);
     if (url.includes("/api/cloud/session")) {
@@ -58,7 +60,7 @@ function stubOperatingFetch() {
               label: "Montaj la locație",
               selectable: true,
               reserved: false,
-              offerMode: "SERVICE_DISABLED",
+              offerMode,
             },
           ],
         },
@@ -82,7 +84,7 @@ function stubOperatingFetch() {
 }
 
 describe("AdminHomePage", () => {
-  it("groups settings and does not treat cost evidence as the only admin destination", async () => {
+  it("keeps the capability board for owners and does not call an empty Atelier a new organization", async () => {
     vi.stubGlobal("fetch", stubOperatingFetch());
 
     render(
@@ -93,8 +95,11 @@ describe("AdminHomePage", () => {
 
     expect(await screen.findByRole("heading", { name: "Organizație" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Ce poți folosi acum" })).toBeInTheDocument();
-    expect(await screen.findByText("Organizație nouă")).toBeInTheDocument();
+    expect(await screen.findByText("Comercial disponibil")).toBeInTheDocument();
+    expect(screen.queryByText("Organizație nouă")).not.toBeInTheDocument();
     expect(screen.queryByText("Pregătit")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Dezactivat explicit").length).toBeGreaterThanOrEqual(3);
+    expect(screen.getByText("Adaugă persoane și PIN pentru Atelier, dacă execuția e internă.")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Comercial și calcul" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Execuție" })).toBeInTheDocument();
     expect(
@@ -115,5 +120,20 @@ describe("AdminHomePage", () => {
     );
     expect(document.querySelector("[data-floorplan='admin-settings']")).not.toBeNull();
     expect(screen.queryByText("org:a")).not.toBeInTheDocument();
+  });
+
+  it("labels an unset installation as unknown configuration, not as disabled", async () => {
+    vi.stubGlobal("fetch", stubOperatingFetch(null));
+
+    render(
+      <CloudSessionProvider>
+        <AdminHomePage />
+      </CloudSessionProvider>,
+    );
+
+    expect(await screen.findByText("Nu este setat")).toBeInTheDocument();
+    expect(screen.getByText("Neconfigurat.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Montaj la locație/ })).toHaveTextContent("Nu este setat");
+    expect(screen.getByRole("link", { name: /Montaj la locație/ })).not.toHaveTextContent("Dezactivat explicit");
   });
 });

@@ -76,3 +76,23 @@
   color: var(--color-text-secondary);
   font-size: var(--text-label);
 }
+
+.org-picture__settings {
+  color: var(--color-azure-a1);
+  font-weight: 600;
+  text-decoration: none;
+  min-height: var(--target-min);
+  display: inline-flex;
+  align-items: center;
+}
+
+.org-picture__settings:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 3px;
+}
+
+.org-picture .alert {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}

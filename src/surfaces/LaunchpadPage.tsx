@@ -14,12 +14,8 @@ export function LaunchpadPage() {
   const roleLabel = membershipRoleLabel(cloud.organization?.membershipRole);
   const owner = cloud.organization?.membershipRole === "owner";
   const role = owner ? "owner" : cloud.organization?.membershipRole === "member" ? "member" : "unknown";
-  const { picture, pending } = useOrganizationOperatingPicture({
-    role,
-    organizationName,
-  });
+  const { picture, retry } = useOrganizationOperatingPicture({ role });
   const identity = [organizationName, roleLabel].filter((part): part is string => Boolean(part)).join(" · ");
-  const showStatus = !pending || picture.statusLabel !== "Cont conectat";
 
   return (
     <SlicePage
@@ -29,10 +25,12 @@ export function LaunchpadPage() {
       title={chrome.title}
       lead={chrome.lead}
       meta={identity || undefined}
-      status={showStatus ? <StatusBadge label={picture.statusLabel} tone={picture.statusTone} /> : undefined}
+      status={
+        picture.statusLabel ? <StatusBadge label={picture.statusLabel} tone={picture.statusTone} /> : undefined
+      }
     >
       <div className="launchpad">
-        <OrganizationOperatingPanel picture={picture} pending={pending} />
+        <OrganizationOperatingPanel picture={picture} variant="home" onRetry={retry} />
         <section className="launchpad__attention" aria-label="Continuă munca">
           <h2 className="launchpad__heading">Continuă</h2>
           <ul className="launchpad__list launchpad__list--attention">
