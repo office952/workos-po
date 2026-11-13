@@ -134,6 +134,20 @@ export function costRelationshipCopy(category: CostCategoryId): string | null {
     : null;
 }
 
+export function parseCostAmountDraft(
+  raw: string,
+): { ok: true; amount: number } | { ok: false } {
+  const trimmed = raw.trim().replace(",", ".");
+  if (trimmed === "") {
+    return { ok: false };
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed)) {
+    return { ok: false };
+  }
+  return { ok: true, amount: parsed };
+}
+
 export function costRowSearchText(row: CostEvidenceRowTransport): string {
   return [row.resourceLabel, row.qualifierLabel, row.kindLabel, row.unitLabel]
     .filter((part): part is string => Boolean(part))
@@ -176,12 +190,20 @@ export function filterCostRegistryRows(
   });
 }
 
-export function costRowDetail(row: CostEvidenceRowTransport): string {
+export function costRowDetail(
+  row: CostEvidenceRowTransport,
+  canSeeAmounts = true,
+): string {
   const category = costCategoryLabel(costCategoryFromKindLabel(row.kindLabel));
-  const verification = costVerificationLabel(presentCostVerification(row));
-  return row.qualifierLabel
-    ? `${category} · ${row.qualifierLabel} · ${verification}`
-    : `${category} · ${verification}`;
+  const verification = presentCostVerification(row);
+  const parts = [category];
+  if (row.qualifierLabel) {
+    parts.push(row.qualifierLabel);
+  }
+  if (verification !== "missing" && canSeeAmounts) {
+    parts.push(costVerificationLabel(verification));
+  }
+  return parts.join(" · ");
 }
 
 export function costRowAmountContext(

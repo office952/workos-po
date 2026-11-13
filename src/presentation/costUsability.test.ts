@@ -5,9 +5,11 @@ import {
   costCategoryFromKindLabel,
   costRelationshipCopy,
   costRowAmountContext,
+  costRowDetail,
   costVerificationLabel,
   filterCostRegistryRows,
   matchesCostSearch,
+  parseCostAmountDraft,
   presentCostVerification,
 } from "./costUsability";
 
@@ -68,6 +70,15 @@ describe("cost usability presentation", () => {
     expect(costVerificationLabel("missing")).toBe("Cost lipsa");
     expect(costRowAmountContext(missing, true)).toBe("Cost lipsa");
     expect(costRowAmountContext(missing, true)).not.toContain("0");
+    expect(costRowDetail(missing)).toBe("Material");
+    expect(costRowDetail(missing)).not.toContain("Cost lipsa");
+    expect(costRowDetail(row({}), false)).toBe("Material");
+    expect(costRowDetail(row({}), false)).not.toContain("Confirmat");
+    expect(parseCostAmountDraft("")).toEqual({ ok: false });
+    expect(parseCostAmountDraft("  ")).toEqual({ ok: false });
+    expect(parseCostAmountDraft("abc")).toEqual({ ok: false });
+    expect(parseCostAmountDraft("15")).toEqual({ ok: true, amount: 15 });
+    expect(parseCostAmountDraft("15,5")).toEqual({ ok: true, amount: 15.5 });
   });
 
   it("does not treat an omitted member amount as missing when classification remains", () => {

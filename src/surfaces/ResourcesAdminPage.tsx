@@ -36,6 +36,7 @@ import {
   costVerificationLabel,
   costVerificationTone,
   filterCostRegistryRows,
+  parseCostAmountDraft,
   presentCostVerification,
   sameCostRegistryRow,
   type CostRegistryFilterId,
@@ -148,8 +149,8 @@ export function ResourcesAdminPage() {
   }
 
   async function save(row: CostEvidenceRowTransport): Promise<void> {
-    const parsed = Number(amount.replace(",", "."));
-    if (!Number.isFinite(parsed)) {
+    const parsed = parseCostAmountDraft(amount);
+    if (!parsed.ok) {
       setSaveState("error");
       setErrorMessage("Costul trebuie să fie un număr.");
       return;
@@ -158,7 +159,9 @@ export function ResourcesAdminPage() {
     setErrorMessage(null);
     const trimmedNote = note.trim();
     const body =
-      trimmedNote === "" ? { amount: parsed } : { amount: parsed, note: trimmedNote };
+      trimmedNote === ""
+        ? { amount: parsed.amount }
+        : { amount: parsed.amount, note: trimmedNote };
     const when = qualifierWhen(row);
     const result = row.evidenceRowId
       ? await patchCostEvidence(row.evidenceRowId, body)
@@ -250,18 +253,19 @@ export function ResourcesAdminPage() {
               ) : null
             }
           >
-            <FilterBar
-              variant="toolbar"
-              searchId="cost-registry-search"
-              searchLabel="Caută după nume"
-              searchPlaceholder="Plexiglas, CNC, manoperă…"
-              searchValue={query}
-              onSearchChange={setQuery}
-              chips={[...COST_REGISTRY_FILTERS]}
-              selectedChip={filter}
-              onChipChange={(id) => setFilter(id as CostRegistryFilterId)}
-              meta={`${visibleRows.length} din ${rows.length}`}
-            />
+            <div className="cost-registry-filters">
+              <FilterBar
+                searchId="cost-registry-search"
+                searchLabel="Caută după nume"
+                searchPlaceholder="Plexiglas, CNC, manoperă…"
+                searchValue={query}
+                onSearchChange={setQuery}
+                chips={[...COST_REGISTRY_FILTERS]}
+                selectedChip={filter}
+                onChipChange={(id) => setFilter(id as CostRegistryFilterId)}
+                meta={`${visibleRows.length} din ${rows.length}`}
+              />
+            </div>
             {visibleRows.length === 0 ? (
               <EmptyState title="Nicio resursă nu corespunde filtrului." />
             ) : (
@@ -277,7 +281,7 @@ export function ResourcesAdminPage() {
                       selected={current}
                       onSelect={() => selectRow(row, index === -1 ? visibleIndex : index)}
                       identity={row.resourceLabel}
-                      identityDetail={costRowDetail(row)}
+                      identityDetail={costRowDetail(row, canEdit)}
                       context={costRowAmountContext(row, canEdit)}
                     />
                   );

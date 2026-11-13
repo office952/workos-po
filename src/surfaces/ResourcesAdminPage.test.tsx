@@ -181,6 +181,38 @@ describe("ResourcesAdminPage", () => {
     expect(screen.queryByRole("button", { name: /ACM 3 mm fără cost/ })).not.toBeInTheDocument();
   });
 
+  it("does not invent a zero cost from an empty amount", async () => {
+    const fetchMock = vi.fn((input: RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/api/admin/assembly-operation-cost")) {
+        return jsonResponse({
+          canEdit: true,
+          version: 1,
+          updatedAt: null,
+          finalInspectionMode: "INCLUDED",
+          finalPackagingMode: "INCLUDED",
+          inspectionOptions: [{ value: "INCLUDED", label: "Inclusă" }],
+          packagingOptions: [{ value: "INCLUDED", label: "Inclusă" }],
+          history: [],
+          rates: [],
+          futureOnlyNotice: "Politica se aplică doar lucrărilor noi.",
+        });
+      }
+      return jsonResponse(ownerPayload);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const user = userEvent.setup();
+    render(<ResourcesAdminPage />);
+    await user.click(await screen.findByRole("button", { name: /ACM 3 mm fără cost/ }));
+    await user.click(screen.getByRole("button", { name: "Salvează" }));
+
+    expect(screen.getByText("Costul trebuie să fie un număr.")).toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some((call) => String(call[0]).includes("/cost-evidence")),
+    ).toBe(false);
+  });
+
   it("shows missing cost as Cost lipsa, never as zero", async () => {
     stubAdmin();
     const user = userEvent.setup();
