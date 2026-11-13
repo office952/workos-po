@@ -11,10 +11,10 @@ import {
   presentCostVerification,
 } from "./costUsability";
 
-function row(
-  over: Partial<CostEvidenceRowTransport> & Pick<CostEvidenceRowTransport, "resourceId" | "resourceLabel">,
-): CostEvidenceRowTransport {
+function row(over: Partial<CostEvidenceRowTransport> = {}): CostEvidenceRowTransport {
   return {
+    resourceId: "plexiglas_3mm_opal",
+    resourceLabel: "Plexiglas 3 mm opal",
     evidenceRowId: "row-1",
     qualifierIdentity: null,
     qualifierLabel: null,
