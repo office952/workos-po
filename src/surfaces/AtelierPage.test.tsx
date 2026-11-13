@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -379,5 +380,32 @@ describe("AtelierPage", () => {
     expect(screen.getAllByText("Deschide operația").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Pornește" })).not.toBeInTheDocument();
     expect(screen.getByText(/nu reprezintă programare sau prioritate/)).toBeInTheDocument();
+  });
+
+  it("keeps the person field focusable and the compact header actions visible at 768", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/operator-candidates")) {
+          return jsonResponse({
+            candidates: [{ personId: "per:1", displayName: "Andrei", pinConfigured: true }],
+          });
+        }
+        if (url.includes("/operator-session")) {
+          return jsonResponse({ operator: null });
+        }
+        return jsonResponse({});
+      }),
+    );
+    render(<AtelierPage />);
+    const person = await screen.findByLabelText("Persoană");
+    person.focus();
+    expect(person).toHaveFocus();
+    const header = readFileSync("src/styles/surfaces/production-workspace.css", "utf8");
+    const atelier = readFileSync("src/styles/surfaces/atelier.css", "utf8");
+    expect(header).toContain("[data-surface=\"atelier\"] > .page-header.page-header--pilot-compact .page-header__aside");
+    expect(header).toMatch(/@media \(max-width: 767px\)[\s\S]*display: flex;/);
+    expect(atelier).toContain(".atelier-identify .field__control:focus-visible");
   });
 });

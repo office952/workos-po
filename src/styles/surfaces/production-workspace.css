@@ -26,6 +26,12 @@
 :is([data-surface="planning"], [data-surface="atelier"], [data-surface="execution"], .job-sheet) :is(a, button, summary, select, input, textarea):focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 3px; }
 @media (max-width: 767px) {
   :is([data-surface="planning"], [data-surface="atelier"], [data-surface="execution"]) > .page-header.page-header--pilot-compact { grid-template-rows: auto; min-height: 0; padding-block: 20px 16px; }
+  [data-surface="atelier"] > .page-header.page-header--pilot-compact .page-header__aside {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: flex-start;
+  }
 }
 
 [data-surface="atelier"] > .page-header.page-header--pilot-compact { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "copy aside"; gap: 24px; }
