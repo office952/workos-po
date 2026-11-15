@@ -458,17 +458,38 @@ describe("ResourcesAdminPage", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("keeps the administration rail for everyday cost navigation", async () => {
+  it("keeps everyday cost navigation in the administration bar and selector", async () => {
     stubAdmin();
+    const user = userEvent.setup();
     render(<ResourcesAdminPage />);
-    const rail = await screen.findByRole("group", { name: "Administrare" });
-    expect(within(rail).getByRole("link", { name: "Costuri de producție" })).toHaveAttribute(
-      "href",
-      "/admin/resources",
-    );
-    expect(within(rail).getByRole("link", { name: "Materiale execuție" })).toHaveAttribute(
+    const bar = await screen.findByRole("navigation", { name: "Administrare" });
+    expect(within(bar).getByRole("link", { name: "Costuri de producție" })).toHaveAttribute("aria-current", "page");
+    await user.click(within(bar).getByRole("button", { name: /Domeniu: Cum calculezi/ }));
+    const panel = screen.getByRole("dialog", { name: "Secțiunile administrării" });
+    expect(within(panel).getByRole("link", { name: "Materiale execuție" })).toHaveAttribute(
       "href",
       "/admin/material-readiness",
     );
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Secțiunile administrării" })).not.toBeInTheDocument();
+    expect(within(bar).getByRole("button", { name: /Domeniu: Cum calculezi/ })).toHaveFocus();
+  });
+
+  it("asks before another cost replaces a draft (R1 · F3)", async () => {
+    stubAdmin();
+    const user = userEvent.setup();
+    render(<ResourcesAdminPage />);
+    await user.click(await screen.findByRole("button", { name: /Plexiglas 3 mm opal/ }));
+    await user.clear(screen.getByLabelText("Cost achiziție (EUR/m²)"));
+    await user.type(screen.getByLabelText("Cost achiziție (EUR/m²)"), "22");
+    await user.click(screen.getByRole("button", { name: /CNC față/ }));
+    const ask = screen.getByRole("dialog", { name: "Ai modificări nesalvate la Plexiglas 3 mm opal" });
+    expect(within(ask).getByRole("button", { name: "Rămâi aici" })).toHaveFocus();
+    await user.click(within(ask).getByRole("button", { name: "Rămâi aici" }));
+    expect(screen.getByLabelText("Cost achiziție (EUR/m²)")).toHaveValue("22");
+    await user.click(screen.getByRole("button", { name: /CNC față/ }));
+    await user.click(screen.getByRole("button", { name: "Renunță și deschide" }));
+    expect(screen.getByRole("heading", { level: 2, name: /CNC față/ })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Modificări nesalvate" })).not.toBeInTheDocument();
   });
 });

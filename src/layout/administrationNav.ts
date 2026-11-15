@@ -1,3 +1,11 @@
+/**
+ * R3 · Administration navigation, variant B (WorkOS-N „13 · Administrare”).
+ *
+ * One taxonomy, named by goal: five domains, each owning existing destinations. Routes and the
+ * owner of every configuration stay as they were; only the grouping and the labels shown to the
+ * operator live here. The hub, the domain selector, the tabs and the phone sheet all read this list,
+ * so there is no second menu to keep in sync.
+ */
 export type AdministrationRailId =
   | "catalog"
   | "commercial"
@@ -12,33 +20,47 @@ export type AdministrationRailId =
   | "workcenters"
   | "external-production";
 
+export type AdministrationDomainId = "offer" | "calculation" | "workshop" | "execution" | "access";
+
 export type AdministrationNavItem = {
   id: AdministrationRailId;
   label: string;
   href: string;
   purpose: string;
+  /** Catalog is a separate workspace: shown with an outward mark, never as an admin tab. */
+  external: boolean;
   selected: boolean;
   current: boolean;
   group: string;
 };
 
-type AdministrationGroup = {
-  id: string;
+export type AdministrationDomain = {
+  id: AdministrationDomainId;
+  index: string;
   label: string;
+  description: string;
+  items: AdministrationNavItem[];
+};
+
+type DomainDefinition = {
+  id: AdministrationDomainId;
+  label: string;
+  description: string;
   items: readonly {
     id: AdministrationRailId;
     label: string;
     href: string;
     purpose: string;
+    external?: boolean;
   }[];
 };
 
-const ADMINISTRATION_GROUPS: readonly AdministrationGroup[] = [
+const ADMINISTRATION_DOMAINS: readonly DomainDefinition[] = [
   {
-    id: "organization",
-    label: "Organizație",
+    id: "offer",
+    label: "Ce oferi",
+    description: "Ce poate fi ales pentru lucrările noi.",
     items: [
-      { id: "catalog", label: "Catalog", href: "/catalog", purpose: "Administrează construcția, componentele și regulile produselor." },
       {
         id: "products",
         label: "Produse oferite",
@@ -46,46 +68,30 @@ const ADMINISTRATION_GROUPS: readonly AdministrationGroup[] = [
         purpose: "Alege produsele care apar pentru lucrări noi.",
       },
       {
-        id: "access",
-        label: "Acces",
-        href: "/admin/access",
-        purpose: "Gestionează cine se poate autentifica în organizație.",
+        id: "services",
+        label: "Servicii operaționale",
+        href: "/admin/services",
+        purpose: "Alege cum este oferit montajul la locație.",
       },
       {
-        id: "people",
-        label: "Oameni",
-        href: "/admin/people",
-        purpose: "Persoanele din producție. Nu este registrul de tarife de manoperă.",
-      },
-      {
-        id: "workcenters",
-        label: "Zone și utilaje",
-        href: "/admin/workcenters",
-        purpose: "Zone și utilaje. Tariful CNC nu se setează aici.",
+        id: "catalog",
+        label: "Catalog",
+        href: "/catalog",
+        purpose: "Construcția, componentele și regulile produselor. Spațiu de lucru separat.",
+        external: true,
       },
     ],
   },
   {
-    id: "commercial-calculation",
-    label: "Comercial și calcul",
+    id: "calculation",
+    label: "Cum calculezi",
+    description: "Valorile de pornire pentru oferte și costurile interne.",
     items: [
       {
         id: "commercial",
         label: "Valori comerciale",
         href: "/admin/commercial",
-        purpose: "Stabilește valorile de pornire pentru ofertele noi.",
-      },
-      {
-        id: "technical",
-        label: "Setări tehnice",
-        href: "/admin/technical",
-        purpose: "Valori tehnice pentru lucrări noi, nu costul de achiziție.",
-      },
-      {
-        id: "formulas",
-        label: "Formule de calcul",
-        href: "/admin/formulas",
-        purpose: "Formule tehnice pentru lucrări noi, nu costul de achiziție.",
+        purpose: "Valorile de pornire pentru ofertele noi.",
       },
       {
         id: "resources",
@@ -93,50 +99,107 @@ const ADMINISTRATION_GROUPS: readonly AdministrationGroup[] = [
         href: "/admin/resources",
         purpose: "Costul materialelor, manopera și tarifele operațiilor.",
       },
+      {
+        id: "technical",
+        label: "Setări tehnice",
+        href: "/admin/technical",
+        purpose: "Valori tehnice pentru lucrări noi.",
+      },
+      {
+        id: "formulas",
+        label: "Formule de calcul",
+        href: "/admin/formulas",
+        purpose: "Formule tehnice pentru lucrări noi.",
+      },
+    ],
+  },
+  {
+    id: "workshop",
+    label: "Echipa și atelierul",
+    description: "Cine lucrează și pe ce zone și utilaje.",
+    items: [
+      {
+        id: "people",
+        label: "Oameni",
+        href: "/admin/people",
+        purpose: "Persoanele care pot lucra în producție.",
+      },
+      {
+        id: "workcenters",
+        label: "Zone și utilaje",
+        href: "/admin/workcenters",
+        purpose: "Zonele de lucru și utilajele atelierului.",
+      },
     ],
   },
   {
     id: "execution",
-    label: "Execuție",
+    label: "Execuția",
+    description: "Ce se confirmă la pornire și ce se predă în afară.",
     items: [
-      {
-        id: "services",
-        label: "Servicii",
-        href: "/admin/services",
-        purpose: "Alege cum este oferit montajul la locație.",
-      },
       {
         id: "materials",
         label: "Materiale execuție",
         href: "/admin/material-readiness",
-        purpose: "Confirmarea materialelor la pornirea sarcinilor, nu prețul de achiziție.",
+        purpose: "Confirmarea materialelor la pornirea sarcinilor.",
       },
       {
         id: "external-production",
         label: "Execuție externă",
         href: "/admin/external-production",
-        purpose: "Alege dacă o sarcină poate fi predată în afara atelierului.",
+        purpose: "Predarea sarcinilor către furnizori din afara atelierului.",
+      },
+    ],
+  },
+  {
+    id: "access",
+    label: "Accesul",
+    description: "Cine se poate autentifica în organizație.",
+    items: [
+      {
+        id: "access",
+        label: "Acces organizație",
+        href: "/admin/access",
+        purpose: "Utilizatorii care se pot autentifica în organizație.",
       },
     ],
   },
 ];
 
-export function administrationGroups(current: AdministrationRailId | null = null) {
-  return ADMINISTRATION_GROUPS.map((group) => ({
-    id: group.id,
-    label: group.label,
-    items: group.items.map((item) => ({
+export function administrationDomains(current: AdministrationRailId | null = null): AdministrationDomain[] {
+  return ADMINISTRATION_DOMAINS.map((domain, index) => ({
+    id: domain.id,
+    index: String(index + 1).padStart(2, "0"),
+    label: domain.label,
+    description: domain.description,
+    items: domain.items.map((item) => ({
       id: item.id,
       label: item.label,
       href: item.href,
       purpose: item.purpose,
+      external: item.external === true,
       selected: item.id === current,
       current: item.id === current,
-      group: group.label,
+      group: domain.label,
     })),
   }));
 }
 
+/** The domain that owns a destination. */
+export function administrationDomainOf(id: AdministrationRailId): AdministrationDomain {
+  const domains = administrationDomains(id);
+  const found = domains.find((domain) => domain.items.some((item) => item.id === id));
+  if (!found) {
+    throw new Error(`Unknown administration destination: ${id}`);
+  }
+  return found;
+}
+
+/** Kept for callers that only need the flat list (legacy name). */
+export function administrationGroups(current: AdministrationRailId | null = null) {
+  return administrationDomains(current);
+}
+
 export function administrationRailItems(current: AdministrationRailId): AdministrationNavItem[] {
-  return administrationGroups(current).flatMap((group) => group.items);
+  return administrationDomains(current).flatMap((domain) => domain.items);
 }

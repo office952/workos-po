@@ -1,21 +1,25 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { AdminLayout } from "../admin/AdminLayout";
+import {
+  AdminChangeBar,
+  AdminConfirmDialog,
+  AdminPolicyOptions,
+  AdminReadOnlyNote,
+  AdminSection,
+} from "../admin/adminParts";
+import { adminFailureContent, describeAdminException } from "../admin/serverMessages";
 import {
   MATERIAL_READINESS_MODE_OPTIONS,
   presentMaterialReadiness,
 } from "../adapters/materialReadinessAdapter";
 import { saveMaterialReadiness } from "../api/materialReadiness";
-import { Button } from "../components/Button";
-import { CollectionRail } from "../components/CollectionRail";
-import { InfoRow } from "../components/InfoRow";
 import { InlineAlert } from "../components/InlineAlert";
-import { SelectField } from "../components/SelectField";
-import { SurfacePanel } from "../components/SurfacePanel";
+import { LoadingFloor } from "../components/LoadingFloor";
 import { writeResource } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadMaterialReadinessAdmin } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
-import { administrationRailItems } from "../layout/administrationNav";
-import { SlicePage } from "../layout/SlicePage";
+import { useAdminLeaveGuard } from "../admin/useAdminLeaveGuard";
 
 const EFFECT: Record<"DISABLED" | "REQUIRED", string> = {
   DISABLED:
@@ -31,113 +35,149 @@ export function MaterialReadinessAdminPage() {
   const model = resource.data;
   const [draftMode, setDraftMode] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
-  const [saveState, setSaveState] = useState<"idle" | "pending" | "error">("idle");
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<"idle" | "pending" | "success" | "error">("idle");
+  const [saveError, setSaveError] = useState<ReactNode>(null);
   const selectedMode = draftMode ?? model?.mode ?? "DISABLED";
   const nextMode = selectedMode === "REQUIRED" ? "REQUIRED" : "DISABLED";
+  const pending = saveState === "pending";
+  const dirty = Boolean(model?.canWrite) && draftMode !== null && nextMode !== model?.mode;
+  const nextLabel = nextMode === "REQUIRED" ? "Obligatoriu" : "Oprit";
 
-  async function save(): Promise<void> {
+  function discard(): void {
+    setDraftMode(null);
+    setConfirming(false);
+    setSaveState("idle");
+    setSaveError(null);
+  }
+
+  async function save(): Promise<boolean> {
     setSaveState("pending");
     setSaveError(null);
     try {
       const presented = presentMaterialReadiness(await saveMaterialReadiness(nextMode));
       if (!presented) {
         setSaveState("error");
-        setSaveError("Modul de materiale nu a putut fi citit după salvare.");
-        return;
+        setSaveError("Modul de materiale nu a putut fi citit după salvare. Reîncarcă pagina.");
+        return false;
       }
       writeResource(resourceKeys.materialReadinessAdmin(), presented);
       setDraftMode(null);
       setConfirming(false);
-      setSaveState("idle");
-    } catch {
+      setSaveState("success");
+      return true;
+    } catch (error) {
       setSaveState("error");
-      setSaveError("Modul de materiale nu a putut fi salvat.");
+      setSaveError(adminFailureContent(describeAdminException(error, {}, "Modul de materiale nu a putut fi salvat.")));
+      return false;
     }
   }
 
+  /** The one way to save: the change bar and the leave question both open the same confirmation. */
+  function openConfirm(): void {
+    setSaveError(null);
+    setConfirming(true);
+  }
+
+  const guard = useAdminLeaveGuard({
+    dirty,
+    subject: "Modul de materiale",
+    requestSave: openConfirm,
+    saveFlowOpen: confirming || saveState === "pending",
+    onDiscard: discard,
+  });
+
   return (
-    <SlicePage
-      contextLabel="Administrare"
-      currentHref="/admin/material-readiness"
-      workspace="admin"
-      eyebrow="Administrare"
+    <AdminLayout
+      current="materials"
       title="Materiale pentru execuție"
       lead="Organizația alege dacă pornirea unei sarcini cere confirmarea materialelor planificate. Nu este costul de achiziție al materialelor și nu este stoc."
+      meta={
+        model
+          ? model.canWrite
+            ? "Doar proprietarul poate schimba modul."
+            : "Editarea nu este disponibilă pentru acest rol."
+          : undefined
+      }
+      changeBar={
+        dirty && model ? (
+          <AdminChangeBar
+            title="Modificare nesalvată · Confirmare înainte de pornire"
+            detail={`Mod: ${model.modeLabel} → ${nextLabel}`}
+            pending={pending}
+            onDiscard={discard}
+            onSave={openConfirm}
+          />
+        ) : null
+      }
     >
-      <CollectionRail label="Administrare" items={administrationRailItems("materials")} />
+      {!model && resource.status !== "error" ? (
+        <LoadingFloor variant="admin" label="Se încarcă modul de materiale" />
+      ) : null}
       {resource.status === "error" && !model ? (
         <InlineAlert tone="error" title="Modul nu a putut fi citit">
-          Politica de materiale nu este disponibilă.
+          Politica de materiale nu este disponibilă. Reîncarcă pagina; nimic nu a fost schimbat.
         </InlineAlert>
       ) : null}
-      <SurfacePanel
-        title="Confirmare înainte de pornire"
-        label="Confirmare înainte de pornire"
-        busy={!model && resource.status !== "error"}
-      >
-        {model ? (
-          <div className="stack">
-            <dl className="fact-grid">
-              <InfoRow label="Mod curent" value={model.modeLabel} />
-              <InfoRow label="Efect" value={EFFECT[model.mode]} />
-            </dl>
+      {model ? (
+        <>
+          {saveState === "success" ? (
+            <InlineAlert tone="success" title="Modul a fost salvat">
+              Modul de materiale este acum {model.modeLabel}.
+            </InlineAlert>
+          ) : null}
+          {saveError && !confirming ? (
+            <InlineAlert tone="error" title="Salvarea a eșuat">
+              {saveError}
+            </InlineAlert>
+          ) : null}
+          <AdminSection
+            title="Confirmare înainte de pornire"
+            description={`Mod curent: ${model.modeLabel}. ${EFFECT[model.mode]}`}
+          >
             {model.canWrite ? (
-              <>
-                <SelectField
-                  id="material-readiness-mode"
-                  label="Mod"
-                  value={selectedMode}
-                  options={MATERIAL_READINESS_MODE_OPTIONS.map((item) => ({
-                    value: item.value,
-                    label: item.label,
-                  }))}
-                  onChange={(value) => {
-                    setDraftMode(value);
-                    setConfirming(false);
-                  }}
-                />
-                <p className="ui-note">{EFFECT[nextMode]}</p>
-                {confirming ? (
-                  <InlineAlert tone="pending" title="Confirmă schimbarea">
-                    Salvarea aplică modul „{nextMode === "REQUIRED" ? "Obligatoriu" : "Oprit"}” pentru
-                    lucrările acestei organizații. Confirmările deja înregistrate rămân.
-                  </InlineAlert>
-                ) : null}
-                <div className="cluster">
-                  {confirming ? (
-                    <>
-                      <Button disabled={saveState === "pending"} onClick={() => void save()}>
-                        Confirmă
-                      </Button>
-                      <Button
-                        disabled={saveState === "pending"}
-                        onClick={() => setConfirming(false)}
-                      >
-                        Renunță
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      disabled={saveState === "pending" || nextMode === model.mode}
-                      onClick={() => setConfirming(true)}
-                    >
-                      Salvează
-                    </Button>
-                  )}
-                </div>
-              </>
+              <AdminPolicyOptions
+                name="material-readiness-mode"
+                legend="Mod"
+                value={nextMode}
+                activeValue={model.mode}
+                disabled={pending}
+                options={MATERIAL_READINESS_MODE_OPTIONS.map((item) => ({
+                  value: item.value,
+                  label: item.label,
+                  description: EFFECT[item.value === "REQUIRED" ? "REQUIRED" : "DISABLED"],
+                }))}
+                onChange={(value) => {
+                  setSaveState("idle");
+                  setDraftMode(value);
+                }}
+              />
             ) : (
-              <p className="ui-note">Doar proprietarul organizației poate schimba modul.</p>
+              <AdminReadOnlyNote>Doar proprietarul organizației poate schimba modul.</AdminReadOnlyNote>
             )}
-            {saveError ? (
-              <InlineAlert tone="error" title="Salvarea a eșuat">
-                {saveError}
-              </InlineAlert>
-            ) : null}
-          </div>
-        ) : null}
-      </SurfacePanel>
-    </SlicePage>
+          </AdminSection>
+        </>
+      ) : null}
+      {confirming && model ? (
+        <AdminConfirmDialog
+          title={nextMode === "REQUIRED" ? "Ceri confirmarea materialelor?" : "Oprești confirmarea materialelor?"}
+          subtitle={`${model.modeLabel} → ${nextLabel}`}
+          confirmLabel="Confirmă"
+          busy={pending}
+          error={saveState === "error" ? saveError : null}
+          onConfirm={() => {
+            void save();
+          }}
+          onCancel={() => {
+            setConfirming(false);
+            setSaveState("idle");
+            setSaveError(null);
+          }}
+        >
+          <p>{EFFECT[nextMode]}</p>
+          <p>Se aplică lucrărilor acestei organizații. Confirmările deja înregistrate rămân.</p>
+        </AdminConfirmDialog>
+      ) : null}
+      {guard}
+    </AdminLayout>
   );
 }

@@ -50,6 +50,10 @@ describe("Date comerciale · model", () => {
   it("names another section of the client page by its tab when leaving with changes", () => {
     expect(describeDestination("/clienti/cus-1?sectiune=lucrari&lucrare=job:j1")).toBe("memoria lucrării");
     expect(describeDestination("/clienti/cus-1?sectiune=sedii", "/clienti/cus-1")).toBe("Sedii");
+    expect(describeDestination("/admin")).toBe("Administrare");
+    expect(describeDestination("/admin/commercial")).toBe("Valori comerciale");
+    expect(describeDestination("/admin/workcenters/wc:1/machines/m:1")).toBe("Zone și utilaje");
+    expect(describeDestination("/admin/material-readiness")).toBe("Materiale execuție");
     expect(describeDestination("/clienti/cus-1", "/clienti/cus-1")).toBe("Istoric");
     // From another page (the way back from a request), the client page keeps its own name.
     expect(describeDestination("/clienti/cus-1?sectiune=cereri", "/cereri/r-1")).toBe("fișa clientului");

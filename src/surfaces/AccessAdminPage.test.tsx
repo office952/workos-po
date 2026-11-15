@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AccessAdminPage } from "./AccessAdminPage";
@@ -53,10 +53,7 @@ describe("AccessAdminPage", () => {
     expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Parolă inițială")).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Revocă" })).toHaveLength(2);
-    expect(screen.getByRole("link", { name: "Produse oferite" })).toHaveAttribute(
-      "href",
-      "/admin/products",
-    );
+    expect(screen.getByRole("link", { name: "Administrare" })).toHaveAttribute("href", "/admin");
     expect(screen.queryByText("mem:owner")).not.toBeInTheDocument();
   });
 
@@ -108,8 +105,15 @@ describe("AccessAdminPage", () => {
     await screen.findByText("membru@firma.test");
     const revokeButtons = screen.getAllByRole("button", { name: "Revocă" });
     await userEvent.click(revokeButtons[1]!);
+    // R1 · F7: nothing is sent before the owner confirms.
+    const ask = screen.getByRole("dialog", { name: "Revoci accesul pentru membru@firma.test?" });
+    expect(within(ask).getByText("Nu se va mai putea autentifica în organizație.")).toBeInTheDocument();
+    expect(within(ask).getByRole("button", { name: "Anulează" })).toHaveFocus();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await userEvent.click(within(ask).getByRole("button", { name: "Revocă accesul" }));
 
     expect(await screen.findByText("Acces actualizat")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     const createCall = fetchMock.mock.calls.find((call) =>
       String(call[0]).includes("/api/admin/access/users"),
     );
@@ -124,5 +128,24 @@ describe("AccessAdminPage", () => {
     );
     expect(revokeCall).toBeTruthy();
     expect(String(revokeCall![0])).toContain(encodeURIComponent("mem:member"));
+  });
+
+  it("keeps the last-owner refusal inside the confirmation and cancels without a call", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => defaultAdmin })
+      .mockResolvedValueOnce({ ok: false, status: 409, json: async () => ({ error: "last_owner_removal" }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<AccessAdminPage />);
+    await screen.findByText("owner@firma.test");
+    await user.click(screen.getAllByRole("button", { name: "Revocă" })[0]!);
+    await user.click(screen.getByRole("button", { name: "Anulează" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await user.click(screen.getAllByRole("button", { name: "Revocă" })[0]!);
+    const ask = screen.getByRole("dialog", { name: "Revoci accesul pentru owner@firma.test?" });
+    await user.click(within(ask).getByRole("button", { name: "Revocă accesul" }));
+    expect(await within(ask).findByText(/ultimul proprietar/)).toBeInTheDocument();
   });
 });

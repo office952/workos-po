@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetResourceCache } from "../data/resourceCache";
 import { CloudSessionProvider } from "../session/CloudSessionContext";
@@ -84,7 +84,7 @@ function stubOperatingFetch(offerMode: string | null = "SERVICE_DISABLED") {
 }
 
 describe("AdminHomePage", () => {
-  it("keeps the capability board for owners and does not call an empty Atelier a new organization", async () => {
+  it("maps the five domains with the read state under each page, without calling an empty Atelier a new organization", async () => {
     vi.stubGlobal("fetch", stubOperatingFetch());
 
     render(
@@ -93,30 +93,26 @@ describe("AdminHomePage", () => {
       </CloudSessionProvider>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Organizație" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Ce poți folosi acum" })).toBeInTheDocument();
-    expect(await screen.findByText("Comercial disponibil")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Administrare" })).toBeInTheDocument();
+    const map = screen.getByRole("navigation", { name: "Domeniile administrării" });
+    for (const domain of ["Ce oferi", "Cum calculezi", "Echipa și atelierul", "Execuția", "Accesul"]) {
+      expect(within(map).getByRole("heading", { name: domain })).toBeInTheDocument();
+    }
+    expect(within(map).getAllByRole("link")).toHaveLength(12);
+    expect(await within(map).findAllByText("Dezactivat explicit")).not.toHaveLength(0);
     expect(screen.queryByText("Organizație nouă")).not.toBeInTheDocument();
     expect(screen.queryByText("Pregătit")).not.toBeInTheDocument();
-    expect(screen.getAllByText("Dezactivat explicit").length).toBeGreaterThanOrEqual(3);
-    expect(screen.getByText("Adaugă persoane și PIN pentru Atelier, dacă execuția e internă.")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Comercial și calcul" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Execuție" })).toBeInTheDocument();
-    expect(
-      screen.getAllByRole("link", { name: /Produse oferite/ }).every((link) => link.getAttribute("href") === "/admin/products"),
-    ).toBe(true);
-    expect(
-      screen.getAllByRole("link", { name: /Oameni/ }).every((link) => link.getAttribute("href") === "/admin/people"),
-    ).toBe(true);
-    expect(
-      screen.getAllByRole("link", { name: /Zone și utilaje/ }).every((link) => link.getAttribute("href") === "/admin/workcenters"),
-    ).toBe(true);
-    expect(
-      screen.getAllByRole("link", { name: /Acces/ }).every((link) => link.getAttribute("href") === "/admin/access"),
-    ).toBe(true);
-    expect(screen.getByRole("link", { name: /^Costuri de producție/ })).toHaveAttribute(
+    // One product is offered and every read succeeded: nothing asks for attention.
+    expect(screen.queryByText(/Niciun produs nu este oferit/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/nu s-au putut citi/)).not.toBeInTheDocument();
+    expect(within(map).getByRole("link", { name: /^Produse oferite/ })).toHaveAttribute("href", "/admin/products");
+    expect(within(map).getByRole("link", { name: /^Oameni/ })).toHaveAttribute("href", "/admin/people");
+    expect(within(map).getByRole("link", { name: /^Zone și utilaje/ })).toHaveAttribute("href", "/admin/workcenters");
+    expect(within(map).getByRole("link", { name: /^Acces organizație/ })).toHaveAttribute("href", "/admin/access");
+    expect(within(map).getByRole("link", { name: /^Costuri de producție/ })).toHaveAttribute("href", "/admin/resources");
+    expect(within(map).getByRole("link", { name: /^Materiale execuție/ })).toHaveAttribute(
       "href",
-      "/admin/resources",
+      "/admin/material-readiness",
     );
     expect(document.querySelector("[data-floorplan='admin-settings']")).not.toBeNull();
     expect(screen.queryByText("org:a")).not.toBeInTheDocument();
@@ -131,9 +127,8 @@ describe("AdminHomePage", () => {
       </CloudSessionProvider>,
     );
 
-    expect(await screen.findByText("Nu este setat")).toBeInTheDocument();
-    expect(screen.getByText("Neconfigurat.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Montaj la locație/ })).toHaveTextContent("Nu este setat");
-    expect(screen.getByRole("link", { name: /Montaj la locație/ })).not.toHaveTextContent("Dezactivat explicit");
+    const services = await screen.findByRole("link", { name: /^Servicii operaționale/ });
+    expect(await within(services).findByText("Nu este setat")).toBeInTheDocument();
+    expect(services).not.toHaveTextContent("Dezactivat explicit");
   });
 });
