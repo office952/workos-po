@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PeopleAdminPage } from "./PeopleAdminPage";
@@ -81,10 +81,8 @@ describe("PeopleAdminPage", () => {
     expect(await screen.findByText("Nu există oameni operaționali")).toBeInTheDocument();
     expect(screen.getByText(/Nu este obligatoriu pentru clienți și oferte/)).toBeInTheDocument();
     expect(screen.getAllByText("Oameni").length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: "Produse oferite" })).toHaveAttribute(
-      "href",
-      "/admin/products",
-    );
+    expect(screen.getByRole("link", { name: "Zone și utilaje" })).toHaveAttribute("href", "/admin/workcenters");
+    await userEvent.click(screen.getByRole("button", { name: "Persoană nouă" }));
     expect(screen.getByRole("button", { name: "Adaugă persoana" })).toBeDisabled();
     expect(screen.queryByText(/per:/)).not.toBeInTheDocument();
   });
@@ -157,11 +155,15 @@ describe("PeopleAdminPage", () => {
     const user = userEvent.setup();
     render(<PeopleAdminPage />);
     await screen.findByText("Nu există oameni operaționali");
-    await user.type(screen.getByLabelText("Nume"), "Operator Test");
-    await user.type(screen.getByLabelText("Rol"), "Operator");
-    await user.click(screen.getByRole("button", { name: "Adaugă persoana" }));
+    await user.click(screen.getByRole("button", { name: "Persoană nouă" }));
+    const dialog = screen.getByRole("dialog", { name: "Persoană nouă" });
+    await user.type(within(dialog).getByLabelText("Nume"), "Operator Test");
+    await user.type(within(dialog).getByLabelText(/^Rol/), "Operator");
+    await user.click(within(dialog).getByRole("button", { name: "Adaugă persoana" }));
     expect(await screen.findAllByText("Operator Test")).not.toHaveLength(0);
-    expect(screen.getByText("Fără calificări · PIN neconfigurat")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Persoană nouă" })).not.toBeInTheDocument();
+    expect(screen.getByText("Operator · Fără calificări")).toBeInTheDocument();
+    expect(screen.getByText("Disponibil · PIN neconfigurat")).toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText("Calificare"), cncSkill.skillId);
     await user.click(screen.getByRole("button", { name: "Atribuie calificarea" }));
@@ -208,13 +210,48 @@ describe("PeopleAdminPage", () => {
     await user.selectOptions(screen.getByLabelText("Disponibilitate"), "TEMPORARILY_UNAVAILABLE");
     await user.type(screen.getByLabelText("Motiv"), "Concediu");
     await user.click(screen.getByRole("button", { name: "Salvează persoana" }));
-    expect(await screen.findByText("Indisponibil temporar")).toBeInTheDocument();
+    expect((await screen.findAllByText("Indisponibil temporar")).length).toBeGreaterThan(0);
 
+    // Retiring always asks first; the server's refusal stays visible in the question.
     await user.click(screen.getByRole("button", { name: "Retrage persoana" }));
+    const ask = screen.getByRole("dialog", { name: "Retragi pe Operator Test din producție?" });
+    expect(within(ask).getByRole("button", { name: "Anulează" })).toHaveFocus();
     expect(
-      await screen.findByText("Persoana are o sarcină în lucru și nu poate fi retrasă."),
+      fetchMock.mock.calls.some(([, init]) => String((init as RequestInit | undefined)?.body ?? "").includes("RETIRED")),
+    ).toBe(false);
+    await user.click(within(ask).getByRole("button", { name: "Retrage persoana" }));
+    expect(
+      await within(ask).findByText("Persoana are o sarcină în lucru și nu poate fi retrasă."),
     ).toBeInTheDocument();
     expect(screen.queryByText(retired.person.displayName + " missing")).not.toBeInTheDocument();
+  });
+
+  it("asks before another person replaces an unsaved profile (R1 · F1)", async () => {
+    const second = personRow({ personId: "per:second", displayName: "Ana Pop", skills: [] });
+    const base = adminPayload();
+    const payload = {
+      ...base,
+      people: [personRow(), second],
+      registry: { ...base.registry, people: [personRow(), second] },
+    };
+    vi.stubGlobal("fetch", vi.fn(() => jsonResponse(payload)));
+    const user = userEvent.setup();
+    render(<PeopleAdminPage />);
+    const name = await screen.findByLabelText("Nume");
+    await user.clear(name);
+    await user.type(name, "Operator Redenumit");
+    expect(screen.getByRole("region", { name: "Modificări nesalvate" })).toHaveTextContent(
+      "Nume: Operator Test → Operator Redenumit",
+    );
+    await user.click(screen.getByRole("button", { name: /Ana Pop/ }));
+    const ask = screen.getByRole("dialog", { name: "Ai modificări nesalvate la Operator Test" });
+    expect(within(ask).getByRole("button", { name: "Salvează și deschide" })).toBeInTheDocument();
+    await user.click(within(ask).getByRole("button", { name: "Rămâi aici" }));
+    expect(screen.getByLabelText("Nume")).toHaveValue("Operator Redenumit");
+    await user.click(screen.getByRole("button", { name: /Ana Pop/ }));
+    await user.click(screen.getByRole("button", { name: "Renunță și deschide" }));
+    expect(screen.getByLabelText("Nume")).toHaveValue("Ana Pop");
+    expect(screen.queryByRole("region", { name: "Modificări nesalvate" })).not.toBeInTheDocument();
   });
 
   it("retires a skill assignment and does not list it twice after a second assign", async () => {
@@ -241,7 +278,7 @@ describe("PeopleAdminPage", () => {
     const user = userEvent.setup();
     render(<PeopleAdminPage />);
     expect(await screen.findByText("CNC")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Retrage calificarea" }));
+    await user.click(screen.getByRole("button", { name: /Retrage calificarea/ }));
     expect(await screen.findByText("Nu are calificări atribuite.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Atribuie calificarea" }));
     expect(await screen.findAllByText("CNC")).toHaveLength(1);

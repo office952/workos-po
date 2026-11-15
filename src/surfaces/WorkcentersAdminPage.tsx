@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   presentWorkcentersAdmin,
   type WorkcenterAdminMachine,
@@ -12,8 +12,18 @@ import {
   updateMachine,
   updateWorkcenter,
 } from "../api/workcenters";
+import { AdminLayout } from "../admin/AdminLayout";
+import { adminFailureContent, describeAdminFailure } from "../admin/serverMessages";
+import {
+  AdminChangeBar,
+  AdminConfirmDialog,
+  AdminRegistry,
+  AdminRegistryRow,
+  AdminSection,
+  AdminSwitchDialog,
+} from "../admin/adminParts";
 import { Button } from "../components/Button";
-import { CollectionRail } from "../components/CollectionRail";
+import { CreationDialog } from "../components/CreationDialog";
 import { EmptyState } from "../components/EmptyState";
 import { InlineAlert } from "../components/InlineAlert";
 import { LoadingFloor } from "../components/LoadingFloor";
@@ -29,14 +39,23 @@ import { writeResource } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadWorkcentersAdmin } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
-import { administrationRailItems } from "../layout/administrationNav";
-import { SlicePage } from "../layout/SlicePage";
 import { presentAdminEditMeta } from "../presentation/adminEditMeta";
 import { statusTone } from "../presentation/statusTone";
 import { adminMachineHref, adminWorkcenterHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
+import { useUnsavedChangesGuard } from "../routing/useUnsavedChangesGuard";
 
 type SaveState = "idle" | "pending" | "success" | "protected" | "error";
+
+/**
+ * Which drafts a server answer may replace. A zone and its machine are separate objects with separate
+ * saves: saving one never overwrites the other one's unsaved values (R3 safety fix · P1-01).
+ */
+type KeepDrafts = { workcenter: boolean; machine: boolean };
+const KEEP_BOTH: KeepDrafts = { workcenter: true, machine: true };
+const RESET_BOTH: KeepDrafts = { workcenter: false, machine: false };
+const SAVED_WORKCENTER: KeepDrafts = { workcenter: false, machine: true };
+const SAVED_MACHINE: KeepDrafts = { workcenter: true, machine: false };
 
 type WorkcentersAdminPageProps = {
   workcenterId?: string | null;
@@ -91,7 +110,7 @@ export function WorkcentersAdminPage({
 }: WorkcentersAdminPageProps) {
   const admin = useResource(resourceKeys.workcentersAdmin(), loadWorkcentersAdmin);
   const [saveState, setSaveState] = useState<SaveState>("idle");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<ReactNode>(null);
   const [source, setSource] = useState<unknown>(null);
   const [model, setModel] = useState<WorkcentersAdminTransport | null>(null);
   const [selectedWorkcenterId, setSelectedWorkcenterId] = useState(workcenterId ?? "");
@@ -108,6 +127,13 @@ export function WorkcentersAdminPage({
   const [workcenterCapabilityId, setWorkcenterCapabilityId] = useState("");
   const [machineCapabilityId, setMachineCapabilityId] = useState("");
 
+  const [pendingSwitch, setPendingSwitch] = useState<{ workcenterId: string; machineId: string; label: string } | null>(
+    null,
+  );
+  const [creating, setCreating] = useState<"workcenter" | "machine" | null>(null);
+  const [partialSave, setPartialSave] = useState<string | null>(null);
+  const [confirmRetire, setConfirmRetire] = useState<"workcenter" | "machine" | null>(null);
+
   const loadState =
     admin.status === "error" && !admin.data
       ? "error"
@@ -115,11 +141,27 @@ export function WorkcentersAdminPage({
         ? "ready"
         : "loading";
 
+  const currentWorkcenter = model?.workcenters.find((item) => item.id === selectedWorkcenterId) ?? null;
+  const currentMachine = model?.machines.find((item) => item.id === selectedMachineId) ?? null;
+  const workcenterDirty =
+    currentWorkcenter !== null &&
+    (workcenterName !== currentWorkcenter.label || workcenterDescription !== (currentWorkcenter.description ?? ""));
+  const machineDirty =
+    currentMachine !== null &&
+    (machineName !== currentMachine.label ||
+      machineDescription !== (currentMachine.description ?? "") ||
+      machineWorkcenterId !== currentMachine.workcenterId);
+  const draftDirty = workcenterDirty || machineDirty;
+
   function applyAdmin(
     next: WorkcentersAdminTransport,
     preferredWorkcenterId = selectedWorkcenterId,
     preferredMachineId = selectedMachineId,
+    keep: KeepDrafts = RESET_BOTH,
   ): void {
+    // A refresh, another mutation or the other object's save keeps the values being edited (R1 · F2, P1-01).
+    const keepWorkcenter = keep.workcenter && workcenterDirty && preferredWorkcenterId === selectedWorkcenterId;
+    const keepMachine = keep.machine && machineDirty && preferredMachineId === selectedMachineId;
     setModel(next);
     const preferredWorkcenter =
       next.workcenters.find((item) => item.id === preferredWorkcenterId) ??
@@ -134,11 +176,15 @@ export function WorkcentersAdminPage({
       null;
     setSelectedWorkcenterId(preferredWorkcenter?.id ?? "");
     setSelectedMachineId(preferredMachine?.id ?? "");
-    setWorkcenterName(preferredWorkcenter?.label ?? "");
-    setWorkcenterDescription(preferredWorkcenter?.description ?? "");
-    setMachineName(preferredMachine?.label ?? "");
-    setMachineDescription(preferredMachine?.description ?? "");
-    setMachineWorkcenterId(preferredMachine?.workcenterId ?? preferredWorkcenter?.id ?? "");
+    if (!keepWorkcenter) {
+      setWorkcenterName(preferredWorkcenter?.label ?? "");
+      setWorkcenterDescription(preferredWorkcenter?.description ?? "");
+    }
+    if (!keepMachine) {
+      setMachineName(preferredMachine?.label ?? "");
+      setMachineDescription(preferredMachine?.description ?? "");
+      setMachineWorkcenterId(preferredMachine?.workcenterId ?? preferredWorkcenter?.id ?? "");
+    }
     const nextWorkcenterCapability =
       next.capabilities.find(
         (item) => !preferredWorkcenter?.capabilityIds.includes(item.id),
@@ -152,27 +198,78 @@ export function WorkcentersAdminPage({
 
   if (admin.data && admin.data !== source) {
     setSource(admin.data);
-    applyAdmin(admin.data, workcenterId ?? selectedWorkcenterId, machineId ?? selectedMachineId);
+    applyAdmin(admin.data, workcenterId ?? selectedWorkcenterId, machineId ?? selectedMachineId, KEEP_BOTH);
     setErrorMessage(null);
   } else if (admin.status === "error" && !admin.data && source !== "error") {
     setSource("error");
     setErrorMessage("Zonele și utilajele nu sunt disponibile.");
   }
 
-  function selectWorkcenter(nextId: string): void {
-    if (!model) {
-      return;
-    }
-    applyAdmin(model, nextId, "");
-    navigate(adminWorkcenterHref(nextId));
-  }
-
-  function selectMachine(nextWorkcenterId: string, nextMachineId: string): void {
+  /** Opens a zone (machineId "") or a machine; the owner already answered for any draft. */
+  function open(nextWorkcenterId: string, nextMachineId: string): void {
     if (!model) {
       return;
     }
     applyAdmin(model, nextWorkcenterId, nextMachineId);
-    navigate(adminMachineHref(nextWorkcenterId, nextMachineId));
+    setPartialSave(null);
+    setSaveState("idle");
+    setErrorMessage(null);
+    navigate(
+      nextMachineId ? adminMachineHref(nextWorkcenterId, nextMachineId) : adminWorkcenterHref(nextWorkcenterId),
+      "push",
+      { bypassGuard: true },
+    );
+  }
+
+  /** Every selection change goes through here: with a draft it asks first (R1 · F2). */
+  function requestOpen(nextWorkcenterId: string, nextMachineId: string, label: string): void {
+    if (!model) return;
+    if (nextWorkcenterId === selectedWorkcenterId && (nextMachineId === "" || nextMachineId === selectedMachineId)) {
+      return;
+    }
+    if (draftDirty) {
+      setPendingSwitch({ workcenterId: nextWorkcenterId, machineId: nextMachineId, label });
+      return;
+    }
+    open(nextWorkcenterId, nextMachineId);
+  }
+
+  function selectWorkcenter(nextId: string): void {
+    const label = model?.workcenters.find((item) => item.id === nextId)?.label ?? "zona aleasă";
+    requestOpen(nextId, "", label);
+  }
+
+  function selectMachine(nextWorkcenterId: string, nextMachineId: string): void {
+    const label = model?.machines.find((item) => item.id === nextMachineId)?.label ?? "utilajul ales";
+    requestOpen(nextWorkcenterId, nextMachineId, label);
+  }
+
+  function discardDraft(): void {
+    setPartialSave(null);
+    setWorkcenterName(currentWorkcenter?.label ?? "");
+    setWorkcenterDescription(currentWorkcenter?.description ?? "");
+    setMachineName(currentMachine?.label ?? "");
+    setMachineDescription(currentMachine?.description ?? "");
+    setMachineWorkcenterId(currentMachine?.workcenterId ?? currentWorkcenter?.id ?? "");
+    setSaveState("idle");
+    setErrorMessage(null);
+  }
+
+  /** Saves what is being edited: the zone, the machine, or both in order. */
+  async function saveDraft(): Promise<boolean> {
+    setPartialSave(null);
+    const both = workcenterDirty && machineDirty;
+    if (workcenterDirty && !(await saveWorkcenter())) return false;
+    if (machineDirty && !(await saveMachine())) {
+      // The zone stays saved (no artificial rollback); only the refused machine values remain a draft.
+      if (both) {
+        setPartialSave(
+          "Zona a fost salvată. Modificările utilajului nu au fost salvate și au rămas în formular: corectează-le și salvează din nou, sau renunță la ele.",
+        );
+      }
+      return false;
+    }
+    return true;
   }
 
   async function applyResult(
@@ -180,16 +277,18 @@ export function WorkcentersAdminPage({
     fallback: string,
     preferredWorkcenterId?: string,
     preferredMachineId?: string,
+    keep: KeepDrafts = KEEP_BOTH,
   ): Promise<boolean> {
     if (result.ok) {
       const presented = presentWorkcentersAdmin(result.body);
       if (!presented) {
         setSaveState("error");
-        setErrorMessage("Salvarea a reușit, dar răspunsul nu poate fi prezentat.");
+        setErrorMessage("Serverul a confirmat salvarea, dar răspunsul nu poate fi afișat. Reîncarcă pagina pentru a vedea valorile active.");
         return false;
       }
+      setSource(presented);
       writeResource(resourceKeys.workcentersAdmin(), presented);
-      applyAdmin(presented, preferredWorkcenterId, preferredMachineId);
+      applyAdmin(presented, preferredWorkcenterId, preferredMachineId, keep);
       invalidateAfterWorkcentersAdminChange();
       setSaveState("success");
       setErrorMessage(null);
@@ -197,7 +296,10 @@ export function WorkcentersAdminPage({
     }
     const code = readTransportErrorCode(result.body);
     setSaveState(code === "provider_referenced" ? "protected" : "error");
-    setErrorMessage(mutationMessage(code, fallback));
+    const known = mutationMessage(code, "");
+    setErrorMessage(
+      adminFailureContent(known ? { text: known, diagnostic: null } : describeAdminFailure(result.status, result.body, {}, fallback)),
+    );
     return false;
   }
 
@@ -213,20 +315,21 @@ export function WorkcentersAdminPage({
     const createdId = readCreatedWorkcenterId(result.body);
     const ok = await applyResult(result, "Zona nu a putut fi adăugată.", createdId, "");
     if (ok) {
+      setCreating(null);
       setCreateWorkcenterName("");
       setCreateWorkcenterDescription("");
       if (createdId) {
-        navigate(adminWorkcenterHref(createdId));
+        navigate(adminWorkcenterHref(createdId), "push", { bypassGuard: true });
       }
     }
   }
 
-  async function saveWorkcenter(): Promise<void> {
+  async function saveWorkcenter(): Promise<boolean> {
     if (!selectedWorkcenterId) {
-      return;
+      return false;
     }
     setSaveState("pending");
-    await applyResult(
+    return applyResult(
       await updateWorkcenter(selectedWorkcenterId, {
         label: workcenterName.trim(),
         description: workcenterDescription.trim(),
@@ -234,6 +337,7 @@ export function WorkcentersAdminPage({
       "Zona nu a putut fi salvată.",
       selectedWorkcenterId,
       selectedMachineId,
+      SAVED_WORKCENTER,
     );
   }
 
@@ -250,12 +354,12 @@ export function WorkcentersAdminPage({
     );
   }
 
-  async function retireSelectedWorkcenter(): Promise<void> {
+  async function retireSelectedWorkcenter(): Promise<boolean> {
     if (!selectedWorkcenterId) {
-      return;
+      return false;
     }
     setSaveState("pending");
-    await applyResult(
+    return applyResult(
       await updateWorkcenter(selectedWorkcenterId, { status: "RETIRED" }),
       "Zona nu a putut fi retrasă.",
       selectedWorkcenterId,
@@ -311,20 +415,21 @@ export function WorkcentersAdminPage({
       createdId,
     );
     if (ok) {
+      setCreating(null);
       setCreateMachineName("");
       setCreateMachineDescription("");
       if (createdId) {
-        navigate(adminMachineHref(selectedWorkcenterId, createdId));
+        navigate(adminMachineHref(selectedWorkcenterId, createdId), "push", { bypassGuard: true });
       }
     }
   }
 
-  async function saveMachine(): Promise<void> {
+  async function saveMachine(): Promise<boolean> {
     if (!selectedMachineId) {
-      return;
+      return false;
     }
     setSaveState("pending");
-    await applyResult(
+    return applyResult(
       await updateMachine(selectedMachineId, {
         label: machineName.trim(),
         description: machineDescription.trim(),
@@ -333,6 +438,7 @@ export function WorkcentersAdminPage({
       "Utilajul nu a putut fi salvat.",
       selectedWorkcenterId,
       selectedMachineId,
+      SAVED_MACHINE,
     );
   }
 
@@ -349,12 +455,12 @@ export function WorkcentersAdminPage({
     );
   }
 
-  async function retireSelectedMachine(): Promise<void> {
+  async function retireSelectedMachine(): Promise<boolean> {
     if (!selectedMachineId) {
-      return;
+      return false;
     }
     setSaveState("pending");
-    await applyResult(
+    return applyResult(
       await updateMachine(selectedMachineId, { status: "RETIRED" }),
       "Utilajul nu a putut fi retras.",
       selectedWorkcenterId,
@@ -410,30 +516,71 @@ export function WorkcentersAdminPage({
   const movableWorkcenters =
     model?.workcenters.filter((item) => item.lifecycle !== "RETIRED") ?? [];
 
+  const draftSubject = machineDirty && currentMachine ? currentMachine.label : currentWorkcenter?.label ?? "zonă";
+  const guard = useUnsavedChangesGuard({
+    dirty: Boolean(model?.canEdit) && draftDirty,
+    subject: machineDirty && currentMachine ? `Datele utilajului ${currentMachine.label}` : `Datele zonei ${draftSubject}`,
+    save: saveDraft,
+    onDiscard: discardDraft,
+  });
+  const dialogError = saveState === "error" || saveState === "protected" ? errorMessage : null;
+
   return (
-    <SlicePage
-      contextLabel="Administrare"
-      currentHref="/admin/workcenters"
-      workspace="admin"
-      eyebrow="Administrare"
+    <AdminLayout
+      current="workcenters"
       title="Zone și utilaje"
-      lead="Configurează zonele de lucru și utilajele. Atelierul citește același registru. Tariful CNC și al altor operații se setează la Costuri de producție, nu ca preț pe oră de mașină."
+      lead="Zonele de lucru și utilajele pe care le citește și atelierul. Tariful CNC și al altor operații se setează la Costuri de producție, nu ca preț pe oră de mașină."
       meta={presentAdminEditMeta({
         settled: loadState === "ready" && model !== null,
         canEdit: Boolean(model?.canEdit),
-        whenEditable:
-          "Doar proprietarul poate adăuga, modifica sau retrage zonele și utilajele.",
+        whenEditable: "Doar proprietarul poate adăuga, modifica sau retrage zonele și utilajele.",
         whenReadOnly: "Editarea nu este disponibilă pentru acest rol.",
       })}
+      action={
+        model?.canEdit && loadState === "ready" ? (
+          <>
+            <Button variant="secondary" disabled={pending} onClick={() => setCreating("workcenter")}>
+              Zonă nouă
+            </Button>
+            {selectedWorkcenter && selectedWorkcenter.lifecycle !== "RETIRED" ? (
+              <Button variant="secondary" disabled={pending} onClick={() => setCreating("machine")}>
+                Utilaj nou
+              </Button>
+            ) : null}
+          </>
+        ) : null
+      }
+      changeBar={
+        draftDirty && model?.canEdit ? (
+          <AdminChangeBar
+            title={`Modificări nesalvate · ${draftSubject}`}
+            detail={[
+              workcenterDirty && currentWorkcenter && workcenterName !== currentWorkcenter.label
+                ? `Zona: ${currentWorkcenter.label} → ${workcenterName}`
+                : workcenterDirty
+                  ? "Descrierea zonei"
+                  : null,
+              machineDirty && currentMachine && machineName !== currentMachine.label
+                ? `Utilajul: ${currentMachine.label} → ${machineName}`
+                : machineDirty
+                  ? "Datele utilajului"
+                  : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            saveLabel={
+              workcenterDirty && machineDirty ? "Salvează zona și utilajul" : machineDirty ? "Salvează utilajul" : "Salvează zona"
+            }
+            pending={pending}
+            onDiscard={discardDraft}
+            onSave={() => {
+              void saveDraft();
+            }}
+          />
+        ) : null
+      }
     >
-      {loadState === "loading" ? (
-        <>
-          <CollectionRail label="Administrare" items={administrationRailItems("workcenters")} />
-          <SurfacePanel title="Zone și utilaje" label="Zone" busy>
-            <LoadingFloor variant="admin" label="Se încarcă zonele și utilajele" />
-          </SurfacePanel>
-        </>
-      ) : null}
+      {loadState === "loading" ? <LoadingFloor variant="admin" label="Se încarcă zonele și utilajele" /> : null}
       {loadState === "error" && errorMessage ? (
         <InlineAlert tone="error" title="Încărcarea a eșuat">
           {errorMessage}
@@ -441,189 +588,334 @@ export function WorkcentersAdminPage({
       ) : null}
       {loadState === "ready" && model ? (
         <>
-          <CollectionRail label="Administrare" items={administrationRailItems("workcenters")} />
-          {saveState === "success" ? (
+          {saveState === "success" && !draftDirty && creating === null ? (
             <InlineAlert tone="success" title="Modificarea a fost salvată">
               Atelierul citește același registru de zone și utilaje.
             </InlineAlert>
           ) : null}
-          {saveState === "protected" && errorMessage ? (
+          {partialSave ? (
+            <InlineAlert tone="pending" title="Salvare parțială">
+              {partialSave}
+            </InlineAlert>
+          ) : null}
+          {saveState === "protected" && errorMessage && !confirmRetire && !pendingSwitch ? (
             <InlineAlert tone="blocked" title="Protejat de istoricul de execuție">
               {errorMessage}
             </InlineAlert>
           ) : null}
-          {saveState === "error" && errorMessage ? (
+          {saveState === "error" && errorMessage && !confirmRetire && !pendingSwitch && creating === null ? (
             <InlineAlert tone="error" title="Modificarea a eșuat">
               {errorMessage}
             </InlineAlert>
           ) : null}
-          <SurfacePanel title="Zone de lucru" label="Listă">
-            {model.workcenters.length === 0 ? (
-              <EmptyState
-                title="Nu există zone de lucru"
-                description="Adaugă prima zonă din browser dacă producția internă are nevoie. Lipsa zonelor sau a utilajelor nu blochează clienții și ofertele."
-              />
+          {model.workcenters.length === 0 ? (
+            <EmptyState
+              title="Nu există zone de lucru"
+              description="Adaugă prima zonă din browser dacă producția internă are nevoie. Lipsa zonelor sau a utilajelor nu blochează clienții și ofertele."
+            />
+          ) : (
+            <AdminRegistry
+              label="Zone de lucru"
+              list={
+                <ul className="adm-registry__items" aria-label="Zone de lucru">
+                  {model.workcenters.map((workcenter) => (
+                    <li key={workcenter.id}>
+                      <AdminRegistryRow
+                        title={workcenter.label}
+                        detail={`${workcenter.lifecycleLabel} · ${capabilitySummary(workcenter.capabilityLabels)}`}
+                        status={
+                          workcenter.machineLabels.length === 0
+                            ? "Fără utilaje"
+                            : workcenter.machineLabels.length === 1
+                              ? "1 utilaj"
+                              : `${workcenter.machineLabels.length} utilaje`
+                        }
+                        muted={workcenter.lifecycle === "RETIRED"}
+                        selected={workcenter.id === selectedWorkcenterId}
+                        dirty={workcenter.id === selectedWorkcenterId && workcenterDirty}
+                        onSelect={() => selectWorkcenter(workcenter.id)}
+                      />
+                      {model.machines.some((machine) => machine.workcenterId === workcenter.id) ? (
+                        <ul className="adm-registry__items" aria-label={`Utilaje în ${workcenter.label}`}>
+                          {model.machines
+                            .filter((machine) => machine.workcenterId === workcenter.id)
+                            .map((machine) => (
+                              <li key={machine.id}>
+                                <AdminRegistryRow
+                                  indent
+                                  title={machine.label}
+                                  detail={capabilitySummary(machine.capabilityLabels)}
+                                  status={machine.lifecycleLabel}
+                                  muted={machine.lifecycle === "RETIRED"}
+                                  selected={machine.id === selectedMachineId}
+                                  dirty={machine.id === selectedMachineId && machineDirty}
+                                  onSelect={() => selectMachine(workcenter.id, machine.id)}
+                                />
+                              </li>
+                            ))}
+                        </ul>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              }
+              detail={
+                <>
+                  {selectedWorkcenter ? (
+                    <WorkcenterDetail
+                      workcenter={selectedWorkcenter}
+                      machines={workcenterMachines}
+                      selectedMachineId={selectedMachineId}
+                      editEnabled={editEnabled}
+                      canEdit={model.canEdit}
+                      name={workcenterName}
+                      description={workcenterDescription}
+                      capabilityId={workcenterCapabilityId}
+                      assignable={workcenterAssignable}
+                      catalog={model.capabilities}
+                      pending={pending}
+                      onNameChange={setWorkcenterName}
+                      onDescriptionChange={setWorkcenterDescription}
+                      onCapabilityChange={setWorkcenterCapabilityId}
+                      onSelectMachine={(id) => selectMachine(selectedWorkcenter.id, id)}
+                      onActivate={() => {
+                        void activateWorkcenter();
+                      }}
+                      onRetire={() => {
+                        setSaveState("idle");
+                        setErrorMessage(null);
+                        setConfirmRetire("workcenter");
+                      }}
+                      onAssignCapability={() => {
+                        void assignWorkcenterCapability();
+                      }}
+                      onRemoveCapability={(id) => {
+                        void removeWorkcenterCapability(id);
+                      }}
+                    />
+                  ) : null}
+                  {selectedMachine ? (
+                    <MachineDetail
+                      machine={selectedMachine}
+                      workcenters={movableWorkcenters}
+                      editEnabled={editEnabled}
+                      canEdit={model.canEdit}
+                      name={machineName}
+                      description={machineDescription}
+                      workcenterId={machineWorkcenterId}
+                      capabilityId={machineCapabilityId}
+                      assignable={machineAssignable}
+                      catalog={model.capabilities}
+                      pending={pending}
+                      onNameChange={setMachineName}
+                      onDescriptionChange={setMachineDescription}
+                      onWorkcenterChange={setMachineWorkcenterId}
+                      onCapabilityChange={setMachineCapabilityId}
+                      onActivate={() => {
+                        void activateMachine();
+                      }}
+                      onRetire={() => {
+                        setSaveState("idle");
+                        setErrorMessage(null);
+                        setConfirmRetire("machine");
+                      }}
+                      onAssignCapability={() => {
+                        void assignMachineCapability();
+                      }}
+                      onRemoveCapability={(id) => {
+                        void removeMachineCapability(id);
+                      }}
+                    />
+                  ) : null}
+                </>
+              }
+            />
+          )}
+          <AdminSection title="Acoperire curentă" description="Ce capabilități au deja o zonă sau un utilaj activ.">
+            {model.coverage.filter((item) => item.coverage !== "NO_PROVIDER").length === 0 ? (
+              <p>Nicio capabilitate nu este acoperită încă.</p>
             ) : (
-              <Worklist variant="compact" label="Zone de lucru">
-                {model.workcenters.map((workcenter) => (
-                  <WorklistRow
-                    key={workcenter.id}
-                    variant="compact"
-                    selected={workcenter.id === selectedWorkcenterId}
-                    onSelect={() => selectWorkcenter(workcenter.id)}
-                    identity={workcenter.label}
-                    identityDetail={`${workcenter.lifecycleLabel} · ${capabilitySummary(workcenter.capabilityLabels)}`}
-                    context={
-                      workcenter.machineLabels.length === 0
-                        ? "Fără utilaje"
-                        : workcenter.machineLabels.join(", ")
-                    }
-                  />
-                ))}
-              </Worklist>
+              <ul className="adm-bullets">
+                {model.coverage
+                  .filter((item) => item.coverage !== "NO_PROVIDER")
+                  .map((item) => (
+                    <li key={item.label}>
+                      {item.label}: {item.coverageLabel}
+                      {item.providerLabels.length > 0 ? ` · ${item.providerLabels.join(", ")}` : ""}
+                    </li>
+                  ))}
+              </ul>
             )}
-          </SurfacePanel>
-          {model.canEdit ? (
-            <SurfacePanel title="Zonă nouă" label="Adăugare">
-              <TextField
-                id="workcenter-create-name"
-                label="Nume"
-                value={createWorkcenterName}
-                disabled={!editEnabled}
-                onChange={setCreateWorkcenterName}
-              />
-              <TextField
-                id="workcenter-create-description"
-                label="Descriere"
-                value={createWorkcenterDescription}
-                hint="Opțional."
-                disabled={!editEnabled}
-                onChange={setCreateWorkcenterDescription}
-              />
+          </AdminSection>
+        </>
+      ) : null}
+      {creating === "workcenter" ? (
+        <CreationDialog title="Zonă nouă" busy={pending} onDismiss={() => setCreating(null)}>
+          <div className="adm-dialog">
+            <TextField
+              id="workcenter-create-name"
+              label="Nume"
+              value={createWorkcenterName}
+              disabled={pending}
+              onChange={setCreateWorkcenterName}
+            />
+            <TextField
+              id="workcenter-create-description"
+              label="Descriere"
+              value={createWorkcenterDescription}
+              hint="Opțional."
+              disabled={pending}
+              onChange={setCreateWorkcenterDescription}
+            />
+            {saveState === "error" && errorMessage ? (
+              <InlineAlert tone="error" title="Modificarea a eșuat">
+                {errorMessage}
+              </InlineAlert>
+            ) : null}
+            <div className="adm-dialog__actions">
+              <Button variant="secondary" disabled={pending} onClick={() => setCreating(null)}>
+                Anulează
+              </Button>
               <Button
-                disabled={!editEnabled || createWorkcenterName.trim() === ""}
+                disabled={pending || createWorkcenterName.trim() === ""}
                 onClick={() => {
                   void addWorkcenter();
                 }}
               >
                 Adaugă zona
               </Button>
-            </SurfacePanel>
-          ) : null}
-          {selectedWorkcenter ? (
-            <WorkcenterDetail
-              workcenter={selectedWorkcenter}
-              machines={workcenterMachines}
-              selectedMachineId={selectedMachineId}
-              editEnabled={editEnabled}
-              canEdit={model.canEdit}
-              name={workcenterName}
-              description={workcenterDescription}
-              capabilityId={workcenterCapabilityId}
-              assignable={workcenterAssignable}
-              catalog={model.capabilities}
-              pending={pending}
-              onNameChange={setWorkcenterName}
-              onDescriptionChange={setWorkcenterDescription}
-              onCapabilityChange={setWorkcenterCapabilityId}
-              onSelectMachine={(id) => selectMachine(selectedWorkcenter.id, id)}
-              onSave={() => {
-                void saveWorkcenter();
-              }}
-              onActivate={() => {
-                void activateWorkcenter();
-              }}
-              onRetire={() => {
-                void retireSelectedWorkcenter();
-              }}
-              onAssignCapability={() => {
-                void assignWorkcenterCapability();
-              }}
-              onRemoveCapability={(id) => {
-                void removeWorkcenterCapability(id);
-              }}
+            </div>
+          </div>
+        </CreationDialog>
+      ) : null}
+      {creating === "machine" && selectedWorkcenter ? (
+        <CreationDialog
+          title="Utilaj nou"
+          subtitle={`În zona ${selectedWorkcenter.label}`}
+          busy={pending}
+          onDismiss={() => setCreating(null)}
+        >
+          <div className="adm-dialog">
+            <TextField
+              id="machine-create-name"
+              label="Nume utilaj"
+              value={createMachineName}
+              disabled={pending}
+              onChange={setCreateMachineName}
             />
-          ) : null}
-          {model.canEdit && selectedWorkcenter && selectedWorkcenter.lifecycle !== "RETIRED" ? (
-            <SurfacePanel title="Utilaj nou" label="Adăugare">
-              <TextField
-                id="machine-create-name"
-                label="Nume utilaj"
-                value={createMachineName}
-                disabled={!editEnabled}
-                onChange={setCreateMachineName}
-              />
-              <TextField
-                id="machine-create-description"
-                label="Descriere utilaj"
-                value={createMachineDescription}
-                hint="Opțional."
-                disabled={!editEnabled}
-                onChange={setCreateMachineDescription}
-              />
+            <TextField
+              id="machine-create-description"
+              label="Descriere utilaj"
+              value={createMachineDescription}
+              hint="Opțional."
+              disabled={pending}
+              onChange={setCreateMachineDescription}
+            />
+            {saveState === "error" && errorMessage ? (
+              <InlineAlert tone="error" title="Modificarea a eșuat">
+                {errorMessage}
+              </InlineAlert>
+            ) : null}
+            <div className="adm-dialog__actions">
+              <Button variant="secondary" disabled={pending} onClick={() => setCreating(null)}>
+                Anulează
+              </Button>
               <Button
-                disabled={!editEnabled || createMachineName.trim() === ""}
+                disabled={pending || createMachineName.trim() === ""}
                 onClick={() => {
                   void addMachine();
                 }}
               >
                 Adaugă utilajul
               </Button>
-            </SurfacePanel>
-          ) : null}
-          {selectedMachine ? (
-            <MachineDetail
-              machine={selectedMachine}
-              workcenters={movableWorkcenters}
-              editEnabled={editEnabled}
-              canEdit={model.canEdit}
-              name={machineName}
-              description={machineDescription}
-              workcenterId={machineWorkcenterId}
-              capabilityId={machineCapabilityId}
-              assignable={machineAssignable}
-              catalog={model.capabilities}
-              pending={pending}
-              onNameChange={setMachineName}
-              onDescriptionChange={setMachineDescription}
-              onWorkcenterChange={setMachineWorkcenterId}
-              onCapabilityChange={setMachineCapabilityId}
-              onSave={() => {
-                void saveMachine();
-              }}
-              onActivate={() => {
-                void activateMachine();
-              }}
-              onRetire={() => {
-                void retireSelectedMachine();
-              }}
-              onAssignCapability={() => {
-                void assignMachineCapability();
-              }}
-              onRemoveCapability={(id) => {
-                void removeMachineCapability(id);
-              }}
-            />
-          ) : null}
-          <SurfacePanel title="Acoperire curentă" label="Registru">
-            {model.coverage.filter((item) => item.coverage !== "NO_PROVIDER").length === 0 ? (
-              <p>Nicio capabilitate nu este acoperită încă.</p>
-            ) : (
-              model.coverage
-                .filter((item) => item.coverage !== "NO_PROVIDER")
-                .map((item) => (
-                  <p key={item.label}>
-                    {item.label}: {item.coverageLabel}
-                    {item.providerLabels.length > 0 ? ` · ${item.providerLabels.join(", ")}` : ""}
-                  </p>
-                ))
-            )}
-          </SurfacePanel>
-        </>
+            </div>
+          </div>
+        </CreationDialog>
       ) : null}
-    </SlicePage>
+      {pendingSwitch ? (
+        <AdminSwitchDialog
+          subject={draftSubject}
+          target={pendingSwitch.label}
+          busy={pending}
+          error={
+            partialSave && dialogError ? (
+              <>
+                {partialSave} {dialogError}
+              </>
+            ) : (
+              dialogError
+            )
+          }
+          onSave={() => {
+            const target = pendingSwitch;
+            void saveDraft().then((ok) => {
+              if (ok) {
+                setPendingSwitch(null);
+                open(target.workcenterId, target.machineId);
+              }
+            });
+          }}
+          onDiscard={() => {
+            const target = pendingSwitch;
+            setPendingSwitch(null);
+            open(target.workcenterId, target.machineId);
+          }}
+          onStay={() => {
+            setPendingSwitch(null);
+            setSaveState("idle");
+            setErrorMessage(null);
+          }}
+        />
+      ) : null}
+      {confirmRetire === "workcenter" && selectedWorkcenter ? (
+        <AdminConfirmDialog
+          title={`Retragi zona ${selectedWorkcenter.label}?`}
+          confirmLabel="Retrage zona"
+          danger
+          busy={pending}
+          error={dialogError}
+          onConfirm={() => {
+            void retireSelectedWorkcenter().then((ok) => {
+              if (ok) setConfirmRetire(null);
+            });
+          }}
+          onCancel={() => {
+            setConfirmRetire(null);
+            setSaveState("idle");
+            setErrorMessage(null);
+          }}
+        >
+          <p>Zona nu mai primește lucrări noi. Istoricul lucrărilor la care a fost folosită rămâne neschimbat.</p>
+          <p>Dacă zona mai are utilaje active sau sarcini deschise, retragerea este refuzată și vezi motivul aici.</p>
+        </AdminConfirmDialog>
+      ) : null}
+      {confirmRetire === "machine" && selectedMachine ? (
+        <AdminConfirmDialog
+          title={`Retragi utilajul ${selectedMachine.label}?`}
+          confirmLabel="Retrage utilajul"
+          danger
+          busy={pending}
+          error={dialogError}
+          onConfirm={() => {
+            void retireSelectedMachine().then((ok) => {
+              if (ok) setConfirmRetire(null);
+            });
+          }}
+          onCancel={() => {
+            setConfirmRetire(null);
+            setSaveState("idle");
+            setErrorMessage(null);
+          }}
+        >
+          <p>Utilajul nu mai primește lucrări noi. Istoricul lucrărilor la care a fost folosit rămâne neschimbat.</p>
+          <p>Dacă utilajul are o sarcină deschisă, retragerea este refuzată și vezi motivul aici.</p>
+        </AdminConfirmDialog>
+      ) : null}
+      {guard}
+    </AdminLayout>
   );
 }
+
 
 function WorkcenterDetail({
   workcenter,
@@ -641,7 +933,6 @@ function WorkcenterDetail({
   onDescriptionChange,
   onCapabilityChange,
   onSelectMachine,
-  onSave,
   onActivate,
   onRetire,
   onAssignCapability,
@@ -662,7 +953,6 @@ function WorkcenterDetail({
   onDescriptionChange: (value: string) => void;
   onCapabilityChange: (value: string) => void;
   onSelectMachine: (machineId: string) => void;
-  onSave: () => void;
   onActivate: () => void;
   onRetire: () => void;
   onAssignCapability: () => void;
@@ -702,9 +992,6 @@ function WorkcenterDetail({
       />
       {canEdit && active ? (
         <>
-          <Button disabled={!editEnabled} onClick={onSave}>
-            Salvează zona
-          </Button>
           {workcenter.lifecycle === "PLANNED" ? (
             <Button variant="secondary" disabled={!editEnabled} onClick={onActivate}>
               Activează zona
@@ -794,7 +1081,6 @@ function MachineDetail({
   onDescriptionChange,
   onWorkcenterChange,
   onCapabilityChange,
-  onSave,
   onActivate,
   onRetire,
   onAssignCapability,
@@ -815,7 +1101,6 @@ function MachineDetail({
   onDescriptionChange: (value: string) => void;
   onWorkcenterChange: (value: string) => void;
   onCapabilityChange: (value: string) => void;
-  onSave: () => void;
   onActivate: () => void;
   onRetire: () => void;
   onAssignCapability: () => void;
@@ -863,9 +1148,6 @@ function MachineDetail({
       />
       {canEdit && active ? (
         <>
-          <Button disabled={!editEnabled} onClick={onSave}>
-            Salvează utilajul
-          </Button>
           {machine.lifecycle === "PLANNED" ? (
             <Button variant="secondary" disabled={!editEnabled} onClick={onActivate}>
               Activează utilajul

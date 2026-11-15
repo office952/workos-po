@@ -1,96 +1,84 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   presentProductEnablementAdmin,
   type ProductEnablementAdminTransport,
 } from "../adapters/productEnablementAdapter";
-import { readTransportErrorCode, readTransportReasons } from "../api/http";
+import { AdminLayout } from "../admin/AdminLayout";
+import { adminFailureContent, describeAdminFailure } from "../admin/serverMessages";
+import { changeCountLabel } from "../admin/adminText";
+import {
+  AdminBullets,
+  AdminChangeBar,
+  AdminColumns,
+  AdminContextBlock,
+  AdminReviewDialog,
+  AdminSection,
+  AdminVersionList,
+} from "../admin/adminParts";
 import { postProductEnablement } from "../api/productEnablement";
-import { Button } from "../components/Button";
-import { CollectionRail } from "../components/CollectionRail";
-import { FieldFrame, fieldDescribedBy } from "../components/FieldFrame";
-import { InfoRow } from "../components/InfoRow";
 import { InlineAlert } from "../components/InlineAlert";
 import { LoadingFloor } from "../components/LoadingFloor";
-import { LoadingIndicator } from "../components/LoadingIndicator";
-import { StatusBadge } from "../components/StatusBadge";
-import { SurfacePanel } from "../components/SurfacePanel";
-import { Worklist } from "../components/Worklist";
-import { WorklistRow } from "../components/WorklistRow";
 import { invalidateAfterProductEnablementChange } from "../data/invalidation";
 import { writeResource } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadProductEnablementAdmin } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
-import { administrationRailItems } from "../layout/administrationNav";
-import { SlicePage } from "../layout/SlicePage";
 import { presentAdminEditMeta } from "../presentation/adminEditMeta";
 import { formatTimestamp } from "../presentation/format";
+import { useAdminLeaveGuard } from "../admin/useAdminLeaveGuard";
 
 type SaveState = "idle" | "pending" | "success" | "error";
 
-const OFFERED_FOR_NEW_WORK_HINT =
-  "Oferit pentru lucrări noi. Ofertele existente rămân deschise.";
-const NOT_OFFERED_FOR_NEW_WORK_HINT =
-  "Nu este oferit pentru lucrări noi. Ofertele existente rămân deschise.";
-const DRAFT_OFFERED_HINT =
-  "Selectat ca oferit pentru lucrări noi. Nu este salvat.";
-const DRAFT_NOT_OFFERED_HINT =
-  "Selectat ca neoferit pentru lucrări noi. Nu este salvat.";
+const OFFERED_FOR_NEW_WORK_HINT = "Oferit pentru lucrări noi. Ofertele existente rămân deschise.";
+const NOT_OFFERED_FOR_NEW_WORK_HINT = "Nu este oferit pentru lucrări noi. Ofertele existente rămân deschise.";
+const DRAFT_OFFERED_HINT = "Selectat ca oferit pentru lucrări noi. Nu este salvat.";
+const DRAFT_NOT_OFFERED_HINT = "Selectat ca neoferit pentru lucrări noi. Nu este salvat.";
 
 function productOfferHint(enabled: boolean, dirty: boolean): string {
-  if (dirty) {
-    return enabled ? DRAFT_OFFERED_HINT : DRAFT_NOT_OFFERED_HINT;
-  }
+  if (dirty) return enabled ? DRAFT_OFFERED_HINT : DRAFT_NOT_OFFERED_HINT;
   return enabled ? OFFERED_FOR_NEW_WORK_HINT : NOT_OFFERED_FOR_NEW_WORK_HINT;
 }
 
-function selectionIsDirty(
-  products: ProductEnablementAdminTransport["products"],
-  enabledByCode: Record<string, boolean>,
-): boolean {
-  return products.some(
-    (product) => (enabledByCode[product.templateCode] === true) !== product.enabled,
-  );
+function initialSelection(model: ProductEnablementAdminTransport): Record<string, boolean> {
+  return Object.fromEntries(model.products.map((item) => [item.templateCode, item.enabled]));
 }
 
 export function ProductEnablementAdminPage() {
-  const admin = useResource(
-    resourceKeys.productEnablementAdmin(),
-    loadProductEnablementAdmin,
-  );
+  const admin = useResource(resourceKeys.productEnablementAdmin(), loadProductEnablementAdmin);
   const [saveState, setSaveState] = useState<SaveState>("idle");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<ReactNode>(null);
   const [source, setSource] = useState<unknown>(null);
   const [model, setModel] = useState<ProductEnablementAdminTransport | null>(null);
   const [enabledByCode, setEnabledByCode] = useState<Record<string, boolean>>({});
+  const [reviewing, setReviewing] = useState(false);
 
   const loadState =
-    admin.status === "error" && !admin.data
-      ? "error"
-      : admin.data
-        ? "ready"
-        : "loading";
+    admin.status === "error" && !admin.data ? "error" : admin.data ? "ready" : "loading";
 
-  function applyAdmin(next: ProductEnablementAdminTransport): void {
-    setModel(next);
-    setEnabledByCode(
-      Object.fromEntries(next.products.map((item) => [item.templateCode, item.enabled])),
-    );
-  }
+  const changed =
+    model?.products.filter((product) => (enabledByCode[product.templateCode] === true) !== product.enabled) ?? [];
+  const dirty = changed.length > 0;
 
   if (admin.data && admin.data !== source) {
     setSource(admin.data);
-    applyAdmin(admin.data);
+    setModel(admin.data);
+    // A refresh does not overwrite a selection still being edited.
+    if (!dirty) setEnabledByCode(initialSelection(admin.data));
     setErrorMessage(null);
   } else if (admin.status === "error" && !admin.data && source !== "error") {
     setSource("error");
     setErrorMessage("Selecția de produse nu este disponibilă.");
   }
 
-  async function save(): Promise<void> {
-    if (!model) {
-      return;
-    }
+  function discard(): void {
+    if (model) setEnabledByCode(initialSelection(model));
+    setSaveState("idle");
+    setErrorMessage(null);
+    setReviewing(false);
+  }
+
+  async function save(): Promise<boolean> {
+    if (!model) return false;
     setSaveState("pending");
     setErrorMessage(null);
     const result = await postProductEnablement({
@@ -103,187 +91,218 @@ export function ProductEnablementAdminPage() {
       const presented = presentProductEnablementAdmin(result.body);
       if (!presented) {
         setSaveState("error");
-        setErrorMessage("Salvarea a reușit, dar răspunsul nu poate fi prezentat.");
-        return;
+        setErrorMessage("Serverul a confirmat salvarea, dar răspunsul nu poate fi afișat. Reîncarcă pagina pentru a vedea valorile active.");
+        return false;
       }
       writeResource(resourceKeys.productEnablementAdmin(), presented);
-      applyAdmin(presented);
+      setSource(presented);
+      setModel(presented);
+      setEnabledByCode(initialSelection(presented));
       invalidateAfterProductEnablementChange();
       setSaveState("success");
-      return;
+      setReviewing(false);
+      return true;
     }
     setSaveState("error");
     setErrorMessage(
-      readTransportReasons(result.body)[0] ??
-        (readTransportErrorCode(result.body) === "forbidden"
-          ? "Nu ai dreptul să modifici produsele oferite."
-          : "Selecția de produse nu a putut fi salvată."),
+      adminFailureContent(describeAdminFailure(result.status, result.body, { forbidden: "Nu ai dreptul să modifici produsele oferite." }, "Selecția de produse nu a putut fi salvată.")),
     );
+    return false;
   }
 
+  /** The one way to save: the change bar and the leave question both open the same review. */
+  function openReview(): void {
+    setSaveState("idle");
+    setErrorMessage(null);
+    setReviewing(true);
+  }
+
+  const guard = useAdminLeaveGuard({
+    dirty,
+    subject: "Selecția de produse",
+    requestSave: openReview,
+    saveFlowOpen: reviewing || saveState === "pending",
+    onDiscard: discard,
+  });
+
   const pending = saveState === "pending";
-  const editEnabled = Boolean(model?.canEdit) && !pending;
-  const dirty = Boolean(model && selectionIsDirty(model.products, enabledByCode));
+  const canEdit = Boolean(model?.canEdit);
+  const nextVersion = (model?.activeVersion ?? 0) + 1;
+  const offeredLabel = (enabled: boolean) => (enabled ? "Oferit" : "Neoferit");
+  const effects = [
+    `Se creează versiunea ${nextVersion} a selecției.`,
+    ...changed.map((product) =>
+      enabledByCode[product.templateCode] === true
+        ? `${product.label} apare pentru lucrări noi.`
+        : `${product.label} nu mai apare pentru lucrări noi.`,
+    ),
+    "Ofertele și lucrările existente rămân deschise.",
+  ];
 
   return (
-    <SlicePage
-      contextLabel="Administrare"
-      currentHref="/admin/products"
-      workspace="admin"
-      eyebrow="Administrare"
+    <AdminLayout
+      current="products"
       title="Produse oferite"
-      lead="Alege ce produse apar în catalogul pentru lucrări noi. Ofertele și lucrările vechi rămân deschise."
-      meta={presentAdminEditMeta({
-        settled: loadState === "ready" && model !== null,
-        canEdit: Boolean(model?.canEdit),
-        whenEditable: "Doar proprietarul poate confirma produsele oferite de firmă.",
-        whenReadOnly: "Editarea nu este disponibilă pentru acest rol.",
-      })}
-    >
-      {loadState === "loading" ? (
-        <>
-          <CollectionRail
-            label="Administrare"
-            items={administrationRailItems("products")}
+      lead="Alege ce produse apar în catalog pentru lucrările noi. Ofertele și lucrările vechi rămân deschise."
+      meta={
+        loadState === "ready" && model ? (
+          <>
+            {/* The guidance notice already names a system selection; the meta does not repeat it. */}
+            {model.guidance && model.source === "CODE_DEFAULT" ? null : (
+              <span>
+                {model.sourceLabel ?? "Selecție de sistem"}
+                {model.activeVersion !== null ? ` · versiunea ${model.activeVersion} activă` : ""}
+              </span>
+            )}
+            <span>
+              {presentAdminEditMeta({
+                settled: true,
+                canEdit,
+                whenEditable: "Doar proprietarul poate confirma produsele oferite de firmă.",
+                whenReadOnly: "Editarea nu este disponibilă pentru acest rol.",
+              })}
+            </span>
+          </>
+        ) : undefined
+      }
+      changeBar={
+        dirty && canEdit ? (
+          <AdminChangeBar
+            title={changeCountLabel(changed.length)}
+            detail={changed
+              .map(
+                (product) =>
+                  `${product.label}: ${offeredLabel(product.enabled)} → ${offeredLabel(enabledByCode[product.templateCode] === true)}`,
+              )
+              .join(" · ")}
+            pending={pending}
+            onDiscard={discard}
+            onSave={openReview}
           />
-          <SurfacePanel title="Produse partajate" label="Produse" busy>
-            <LoadingFloor variant="admin" label="Se încarcă produsele oferite" />
-          </SurfacePanel>
-        </>
-      ) : null}
+        ) : null
+      }
+    >
+      {loadState === "loading" ? <LoadingFloor variant="admin" label="Se încarcă produsele oferite" /> : null}
       {loadState === "error" && errorMessage ? (
         <InlineAlert tone="error" title="Încărcarea a eșuat">
           {errorMessage}
         </InlineAlert>
       ) : null}
       {loadState === "ready" && model ? (
-        <>
-          <CollectionRail
-            label="Administrare"
-            items={administrationRailItems("products")}
-          />
-          <SurfacePanel
-            title="Produse partajate"
-            label="Produse"
-            status={
-              <StatusBadge
-                label={model.sourceLabel ?? "Selecție de sistem"}
-                tone={model.source === "ORGANIZATION" ? "ready" : "pending"}
+        <AdminColumns
+          main={
+            <>
+              {model.guidance ? (
+                <InlineAlert
+                  tone={model.resolutionOk ? "pending" : "blocked"}
+                  title={
+                    !model.resolutionOk
+                      ? "Selecția trebuie configurată"
+                      : model.source === "CODE_DEFAULT"
+                        ? "Selecție de sistem"
+                        : "Catalog pentru lucrări noi"
+                  }
+                >
+                  {model.guidance}
+                </InlineAlert>
+              ) : null}
+              {saveState === "success" && !dirty ? (
+                <InlineAlert tone="success" title="Selecția a fost salvată">
+                  Versiunea activă este {model.activeVersion ?? "1"}. Ofertele și lucrările vechi rămân deschise.
+                </InlineAlert>
+              ) : null}
+              {saveState === "error" && errorMessage && !reviewing ? (
+                <InlineAlert tone="error" title="Salvarea a eșuat">
+                  {errorMessage} Modificările tale sunt păstrate.
+                </InlineAlert>
+              ) : null}
+              <AdminSection title="Produse partajate">
+                {model.products.map((product) => {
+                  const offered = enabledByCode[product.templateCode] === true;
+                  const productDirty = offered !== product.enabled;
+                  const hintId = `offer-${product.templateCode}-hint`;
+                  return (
+                    <fieldset
+                      key={product.templateCode}
+                      className="adm-offer"
+                      data-state={productDirty ? "modified" : undefined}
+                      aria-describedby={hintId}
+                      disabled={!canEdit || pending}
+                    >
+                      <legend className="adm-offer__label">
+                        {productDirty ? <span className="adm-dot" aria-hidden="true" /> : null}
+                        {product.label}
+                      </legend>
+                      <p className="adm-offer__hint" id={hintId}>
+                        {productOfferHint(offered, productDirty)}
+                      </p>
+                      <div className="adm-segment">
+                        {[true, false].map((value) => (
+                          <label key={String(value)} className="adm-segment__option" data-selected={offered === value ? "true" : undefined}>
+                            <input
+                              type="radio"
+                              name={`offer-${product.templateCode}`}
+                              checked={offered === value}
+                              onChange={() =>
+                                setEnabledByCode((current) => ({ ...current, [product.templateCode]: value }))
+                              }
+                            />
+                            <span>{offeredLabel(value)}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                  );
+                })}
+              </AdminSection>
+            </>
+          }
+          aside={
+            <>
+              <AdminContextBlock title={dirty ? "La salvare" : "Cum se folosesc"}>
+                <AdminBullets
+                  items={
+                    dirty
+                      ? effects
+                      : ["Salvarea creează o versiune nouă a selecției.", "Ofertele și lucrările existente rămân deschise."]
+                  }
+                />
+              </AdminContextBlock>
+              <AdminVersionList
+                rows={[...model.history].reverse().map((row) => ({
+                  key: String(row.version),
+                  version: `v${row.version}`,
+                  active: row.version === model.activeVersion,
+                  when: formatTimestamp(row.effectiveFrom ?? row.createdAt) ?? row.sourceLabel,
+                  detail: row.offeredCount !== null ? `${row.offeredCount} oferite` : null,
+                }))}
+                highlightActive={saveState === "success" && !dirty}
+                emptyText="Nu există încă o selecție confirmată de organizație."
               />
-            }
-          >
-            {model.guidance ? (
-              <InlineAlert
-                tone={model.resolutionOk ? "pending" : "blocked"}
-                title={
-                  !model.resolutionOk
-                    ? "Selecția trebuie configurată"
-                    : model.source === "CODE_DEFAULT"
-                      ? "Selecție de sistem"
-                      : "Catalog pentru lucrări noi"
-                }
-              >
-                {model.guidance}
-              </InlineAlert>
-            ) : null}
-            {dirty ? (
-              <InlineAlert tone="pending" title="Modificările nu sunt salvate">
-                Lucrările noi rămân pe selecția actuală până apeși Salvează.
-              </InlineAlert>
-            ) : null}
-            {saveState === "success" && !dirty ? (
-              <InlineAlert tone="success" title="Selecția a fost salvată">
-                Versiunea activă este {model.activeVersion ?? "1"}. Ofertele și lucrările
-                vechi rămân deschise.
-              </InlineAlert>
-            ) : null}
-            {saveState === "error" && errorMessage ? (
-              <InlineAlert tone="error" title="Salvarea a eșuat">
-                {errorMessage}
-              </InlineAlert>
-            ) : null}
-            {model.activeVersion !== null ? (
-              <dl>
-                <InfoRow label="Versiune activă" value={String(model.activeVersion)} />
-              </dl>
-            ) : null}
-            {model.products.map((product) => {
-              const fieldId = `enable-${product.templateCode}`;
-              const offered = enabledByCode[product.templateCode] === true;
-              const hint = productOfferHint(offered, offered !== product.enabled);
-              return (
-                <FieldFrame
-                  key={product.templateCode}
-                  id={fieldId}
-                  label={product.label}
-                  hint={hint}
-                >
-                  <input
-                    id={fieldId}
-                    className="field__control"
-                    type="checkbox"
-                    checked={offered}
-                    disabled={!editEnabled}
-                    aria-describedby={fieldDescribedBy(fieldId, hint)}
-                    onChange={(event) => {
-                      const enabled = event.target.checked;
-                      setEnabledByCode((current) => ({
-                        ...current,
-                        [product.templateCode]: enabled,
-                      }));
-                    }}
-                  />
-                </FieldFrame>
-              );
-            })}
-            {model.canEdit ? (
-              <>
-                <Button
-                  disabled={pending || !dirty}
-                  onClick={() => {
-                    void save();
-                  }}
-                >
-                  Salvează produsele oferite
-                </Button>
-                {dirty ? (
-                  <Button
-                    variant="ghost"
-                    disabled={pending}
-                    onClick={() => {
-                      applyAdmin(model);
-                      setSaveState("idle");
-                    }}
-                  >
-                    Renunță la modificări
-                  </Button>
-                ) : null}
-              </>
-            ) : null}
-            {pending ? <LoadingIndicator label="Se salvează produsele oferite" /> : null}
-          </SurfacePanel>
-          <SurfacePanel title="Istoric versiuni" label="Istoric">
-            {model.history.length === 0 ? (
-              <p>Nu există încă o selecție confirmată de organizație.</p>
-            ) : (
-              <Worklist variant="compact" label="Versiuni produse oferite">
-                {[...model.history].reverse().map((row) => (
-                  <WorklistRow
-                    key={row.version}
-                    variant="compact"
-                    identity={`Versiunea ${row.version}`}
-                    identityDetail={row.status}
-                    context={
-                      formatTimestamp(row.effectiveFrom ?? row.createdAt) ??
-                      row.sourceLabel
-                    }
-                  />
-                ))}
-              </Worklist>
-            )}
-          </SurfacePanel>
-        </>
+            </>
+          }
+        />
       ) : null}
-    </SlicePage>
+      {reviewing && model ? (
+        <AdminReviewDialog
+          subtitle={`Produse oferite · se va crea versiunea ${nextVersion}`}
+          rows={changed.map((product) => ({
+            label: product.label,
+            from: offeredLabel(product.enabled),
+            to: offeredLabel(enabledByCode[product.templateCode] === true),
+          }))}
+          unchanged={model.products.length > changed.length ? "Celelalte produse rămân cum sunt." : null}
+          effects={effects.slice(1)}
+          confirmLabel={`Salvează versiunea ${nextVersion}`}
+          busy={pending}
+          error={saveState === "error" ? errorMessage : null}
+          onConfirm={() => {
+            void save();
+          }}
+          onCancel={() => setReviewing(false)}
+        />
+      ) : null}
+      {guard}
+    </AdminLayout>
   );
 }

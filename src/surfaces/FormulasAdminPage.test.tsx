@@ -145,13 +145,15 @@ describe("FormulasAdminPage", () => {
 
     render(<FormulasAdminPage />);
 
-    expect(await screen.findByText("Cantitate module LED")).toBeInTheDocument();
+    expect((await screen.findAllByText("Cantitate module LED")).length).toBeGreaterThan(0);
     expect(screen.getByText("Sarcină LED totală")).toBeInTheDocument();
     expect(screen.getByText("Capacitate minimă sursă")).toBeInTheDocument();
-    expect(screen.getAllByText("LIGHTING_FRONT_LED.ledModuleQuantity").length).toBeGreaterThan(0);
+    // The internal id is support detail, not the reading line.
+    expect(screen.getByText("Identificator: LIGHTING_FRONT_LED.ledModuleQuantity")).toBeInTheDocument();
+    expect(screen.getByText("Detalii pentru suport")).toBeInTheDocument();
     expect(screen.getAllByLabelText("Tip expresie").length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("button", { name: "Salvează formula" })[0]).toBeEnabled();
-    expect(screen.getByText(/versiunea 1/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Salvează formula" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Versiunea 1/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Setări tehnice" })).toHaveAttribute(
       "href",
       "/admin/technical",
@@ -276,14 +278,47 @@ describe("FormulasAdminPage", () => {
     render(<FormulasAdminPage />);
     const kind = await screen.findAllByLabelText("Tip expresie");
     await userEvent.selectOptions(kind[0]!, "JOB_REF");
-    await userEvent.click(screen.getAllByRole("button", { name: "Salvează formula" })[0]!);
-    expect(await screen.findByText("Referința nu este permisă pentru această formulă.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Salvează formula" }));
+    expect(await screen.findByText(/Referința nu este permisă pentru această formulă\./)).toBeInTheDocument();
 
     await userEvent.selectOptions(screen.getAllByLabelText("Tip expresie")[0]!, "DIVIDE");
-    await userEvent.click(screen.getAllByRole("button", { name: "Salvează formula" })[0]!);
+    await userEvent.click(screen.getByRole("button", { name: "Salvează formula" }));
     expect(await screen.findByText("Formula a fost salvată")).toBeInTheDocument();
-    expect(screen.getByText(/versiunea 2/)).toBeInTheDocument();
-    await userEvent.click(screen.getAllByRole("button", { name: "Salvează formula" })[0]!);
+    expect(screen.getByText(/Versiunea 2/)).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getAllByLabelText("Tip expresie")[0]!, "DIVIDE");
+    await userEvent.click(screen.getByRole("button", { name: "Salvează formula" }));
     expect(await screen.findByText("Formula este deja salvată")).toBeInTheDocument();
+  });
+
+  it("keeps the second formula's draft when the first one is saved (R1 · F4)", async () => {
+    let posted: string | null = null;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo, init?: RequestInit) => {
+        if (String(input).endsWith("/api/admin/formulas") && String(init?.method ?? "GET") === "POST") {
+          posted = (JSON.parse(String(init?.body ?? "{}")) as { formulaId: string }).formulaId;
+          return jsonResponse(defaultAdmin);
+        }
+        return jsonResponse(defaultAdmin);
+      }),
+    );
+    render(<FormulasAdminPage />);
+    // Draft on the first formula.
+    await userEvent.selectOptions((await screen.findAllByLabelText("Tip expresie"))[0]!, "DIVIDE");
+    // Open the second formula: no question, the first keeps its draft and is marked.
+    await userEvent.click(screen.getByRole("button", { name: /Sarcină LED totală/ }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Cantitate module LED/ })).toHaveTextContent("nesalvat");
+    await userEvent.selectOptions(screen.getAllByLabelText("Tip expresie")[0]!, "CONFIG_REF");
+    expect(screen.getByRole("region", { name: "Modificări nesalvate" })).toHaveTextContent("2 formule modificate");
+    // Save the open (second) formula.
+    await userEvent.click(screen.getByRole("button", { name: "Salvează formula" }));
+    expect(await screen.findByText("Formula a fost salvată")).toBeInTheDocument();
+    expect(posted).toBe("LIGHTING_FRONT_LED.totalLedLoadW");
+    // The first formula's draft survived the save.
+    expect(screen.getByRole("button", { name: /Cantitate module LED/ })).toHaveTextContent("nesalvat");
+    expect(screen.getByRole("region", { name: "Modificări nesalvate" })).toHaveTextContent("1 formulă modificată");
+    await userEvent.click(screen.getByRole("button", { name: /Cantitate module LED/ }));
+    expect(screen.getAllByLabelText("Tip expresie")[0]).toHaveValue("DIVIDE");
   });
 });

@@ -1,3 +1,4 @@
+import { administrationDomains } from "../layout/administrationNav";
 import { CLIENT_HUB_SECTION_LABEL } from "../presentation/clientHub";
 import { jobSheetSectionLabel } from "../presentation/jobSheetSections";
 import { parseClientHubSection, parseJobSheetSection } from "./appRoute";
@@ -23,6 +24,13 @@ export function describeDestination(href: string, fromPath?: string): string {
   if (path === "/cereri") return "Cereri";
   if (path.startsWith("/oferte/") || path.startsWith("/quotes/")) return "ofertă";
   if (path === "/oferte") return "Oferte";
+  if (path === "/admin") return "Administrare";
+  if (path.startsWith("/admin/") || path === "/catalog") {
+    const page = administrationDomains()
+      .flatMap((domain) => domain.items)
+      .find((item) => path === item.href || path.startsWith(`${item.href}/`));
+    if (page) return page.label;
+  }
   if (path === "/") return "pagina de start";
   return "pagina cerută";
 }

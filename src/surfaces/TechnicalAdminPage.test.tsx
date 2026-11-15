@@ -1,6 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { presentTechnicalSettingsAdmin } from "../adapters/technicalSettingsAdapter";
+import { resetResourceCache, writeResource } from "../data/resourceCache";
+import { resourceKeys } from "../data/resourceKeys";
 import { TechnicalAdminPage } from "./TechnicalAdminPage";
 
 function jsonResponse(body: unknown, status = 200) {
@@ -13,6 +16,7 @@ function jsonResponse(body: unknown, status = 200) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  resetResourceCache();
   window.history.replaceState({}, "", "/");
 });
 
@@ -113,12 +117,14 @@ describe("TechnicalAdminPage", () => {
 
     render(<TechnicalAdminPage />);
 
-    expect(await screen.findByLabelText("Pas module LED (mm)")).toHaveValue("100");
-    expect(screen.getByLabelText("Putere modul LED (W)")).toHaveValue("0.75");
-    expect(screen.getByLabelText("Rezervă sursă de alimentare (percent)")).toHaveValue("25");
-    expect(screen.getByLabelText("Joc de montaj cadru (mm)")).toHaveValue("2");
-    expect(screen.getAllByText("Valoare de pornire").length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: "Salvează setările" })).toBeEnabled();
+    expect(await screen.findByLabelText("Pas module LED")).toHaveValue("100");
+    expect(screen.getByLabelText("Putere modul LED")).toHaveValue("0.75");
+    expect(screen.getByLabelText("Rezervă sursă de alimentare")).toHaveValue("25");
+    expect(screen.getByLabelText("Joc de montaj cadru")).toHaveValue("2");
+    expect(screen.getAllByText(/Valoare de pornire/).length).toBeGreaterThan(0);
+    // Internal ids stay for support, folded away from the reading line.
+    expect(screen.getByText("Detalii pentru suport")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Modificări nesalvate" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Valori comerciale" })).toHaveAttribute(
       "href",
       "/admin/commercial",
@@ -261,7 +267,8 @@ describe("TechnicalAdminPage", () => {
     );
     render(<TechnicalAdminPage />);
     expect(await screen.findByText("Editarea nu este disponibilă pentru acest rol.")).toBeInTheDocument();
-    expect(screen.getByLabelText("Pas module LED (mm)")).toBeDisabled();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getAllByText("100").length).toBeGreaterThan(0);
   });
 
   it("saves an organization version and reports alreadyApplied", async () => {
@@ -323,18 +330,67 @@ describe("TechnicalAdminPage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<TechnicalAdminPage />);
-    const pitch = await screen.findByLabelText("Pas module LED (mm)");
+    const pitch = await screen.findByLabelText("Pas module LED");
     await userEvent.clear(pitch);
     await userEvent.type(pitch, "0");
-    await userEvent.click(screen.getByRole("button", { name: "Salvează setările" }));
+    await userEvent.click(screen.getByRole("button", { name: "Revizuiește și salvează" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Salvează setările" }));
     expect(await screen.findByText("Pasul modulelor LED trebuie să fie mai mare decât 0 mm.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Înapoi la editare" }));
 
-    await userEvent.clear(pitch);
-    await userEvent.type(pitch, "80");
-    await userEvent.click(screen.getByRole("button", { name: "Salvează setările" }));
+    await userEvent.clear(screen.getByLabelText("Pas module LED"));
+    await userEvent.type(screen.getByLabelText("Pas module LED"), "80");
+    await userEvent.click(screen.getByRole("button", { name: "Revizuiește și salvează" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Salvează setările" }));
     expect(await screen.findByText("Setările au fost salvate")).toBeInTheDocument();
-    expect(screen.getByLabelText("Pas module LED (mm)")).toHaveValue("80");
-    await userEvent.click(screen.getByRole("button", { name: "Salvează setările" }));
+    expect(screen.getByLabelText("Pas module LED")).toHaveValue("80");
+    await userEvent.clear(screen.getByLabelText("Pas module LED"));
+    await userEvent.type(screen.getByLabelText("Pas module LED"), "81");
+    await userEvent.click(screen.getByRole("button", { name: "Revizuiește și salvează" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Salvează setările" }));
     expect(await screen.findByText("Valorile sunt deja salvate")).toBeInTheDocument();
+  });
+
+  it("keeps a draft when the settings are refreshed from the server (R1 · F5)", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => jsonResponse(defaultAdmin)));
+    render(<TechnicalAdminPage />);
+    const pitch = await screen.findByLabelText("Pas module LED");
+    await userEvent.clear(pitch);
+    await userEvent.type(pitch, "90");
+    const refreshed = presentTechnicalSettingsAdmin({
+      ...defaultAdmin,
+      settings: defaultAdmin.settings.map((item) =>
+        item.settingId === "frameClearanceMm" ? { ...item, value: 3 } : item,
+      ),
+    });
+    expect(refreshed).not.toBeNull();
+    act(() => writeResource(resourceKeys.technicalAdmin(), refreshed!));
+    expect(screen.getByLabelText("Pas module LED")).toHaveValue("90");
+    expect(screen.getByLabelText("Joc de montaj cadru")).toHaveValue("3");
+    expect(screen.getByRole("region", { name: "Modificări nesalvate" })).toHaveTextContent("Pas module LED 100 → 90 mm");
+  });
+});
+
+describe("TechnicalAdminPage · leave question uses the normal review", () => {
+  it("opens the review before any save and continues only after it is confirmed", async () => {
+    window.history.replaceState(null, "", "/admin/technical");
+    const fetchMock = vi.fn<(input: RequestInfo, init?: RequestInit) => ReturnType<typeof jsonResponse>>(() =>
+      jsonResponse(defaultAdmin),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const { navigate } = await import("../routing/navigate");
+    render(<TechnicalAdminPage />);
+    const pitch = await screen.findByLabelText("Pas module LED");
+    await userEvent.clear(pitch);
+    await userEvent.type(pitch, "90");
+    act(() => navigate("/admin/formulas"));
+    const ask = await screen.findByRole("dialog", { name: "Ai modificări nesalvate" });
+    await userEvent.click(within(ask).getByRole("button", { name: "Revizuiește și salvează" }));
+    const review = await screen.findByRole("dialog", { name: "Revizuiește modificările" });
+    expect(fetchMock.mock.calls.filter(([, init]) => String(((init) as RequestInit | undefined)?.method ?? "GET") === "POST")).toHaveLength(0);
+    expect(window.location.pathname).toBe("/admin/technical");
+    await userEvent.click(within(review).getByRole("button", { name: "Salvează setările" }));
+    await waitFor(() => expect(window.location.pathname).toBe("/admin/formulas"));
+    expect(fetchMock.mock.calls.filter(([, init]) => String(((init) as RequestInit | undefined)?.method ?? "GET") === "POST")).toHaveLength(1);
   });
 });
