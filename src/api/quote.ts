@@ -45,6 +45,10 @@ export async function fetchAssemblyQuoteDocument(quoteSnapshotId: string): Promi
   return fetchDownload(assemblyQuoteDocumentPath(quoteSnapshotId));
 }
 
-export async function confirmQuoteOrder(productCode: string, quoteSnapshotId: string): Promise<unknown> {
-  return postJson(`${quoteSnapshotPath(productCode, quoteSnapshotId)}/confirm-order`);
+export async function confirmQuoteOrder(
+  productCode: string,
+  quoteSnapshotId: string,
+  body?: { incompleteCostAcceptance: { confirm: true; reason: string } },
+): Promise<unknown> {
+  return postJson(`${quoteSnapshotPath(productCode, quoteSnapshotId)}/confirm-order`, body);
 }

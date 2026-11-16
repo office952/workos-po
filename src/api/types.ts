@@ -1,3 +1,4 @@
+import type { OfferingView } from "../adapters/commercialFinancialAdapter";
 export type JsonObject = Record<string, unknown>;
 
 export type HealthTransport = {
@@ -196,6 +197,8 @@ export type ConfirmTransport = {
   manualProductPriceAuthorized: boolean;
   quoteBlocker: string | null;
   rateAcknowledgement: RateAcknowledgementTransport | null;
+  /** Commercial & Financial V1: offering policy outcome for the current actor (no thresholds). */
+  offering: OfferingView | null;
 };
 
 export type UnconfirmedRateTransport = {

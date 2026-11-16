@@ -44,6 +44,8 @@ export function routeCapability(route: AppRoute): string | null {
     case "admin-formulas":
     case "admin-products":
     case "admin-commercial":
+    case "admin-offering":
+    case "admin-company":
       return "org.settings.read";
     case "admin-resources":
     case "admin-people":

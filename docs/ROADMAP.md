@@ -12,10 +12,10 @@ NO PARALLEL PRODUCT TRUTH
 
 ## Current status (2026-11-16)
 
-Last verified `main`: `bc5c7787565f019b9f1bb3060927659c6c2b9f2a` (PR #134 merge, 2026-11-16). This block supersedes the current-state lines of the 2026-10-14 PILOT-0 block below, which stays as that date's record. Integration is not Owner acceptance; acceptance is recorded per PR.
+Last verified `main`: `68a2ef9fbcff61946d4d0ce2187773b7262cbe45` (PR #135 merge, 2026-11-16). This block supersedes the current-state lines of the 2026-10-14 PILOT-0 block below, which stays as that date's record. Integration is not Owner acceptance; acceptance is recorded per PR.
 
 ```text
-MAIN = bc5c7787565f019b9f1bb3060927659c6c2b9f2a
+MAIN = 68a2ef9fbcff61946d4d0ce2187773b7262cbe45
 ORGANIZATION_ACCESS_V1 = INTEGRATED_ON_MAIN (PR #134) / OFF_BY_DEFAULT (WORKOS_ORG_ROLES_V1 != on)
 ORGANIZATION_ACCESS_V1_REAL_ENABLEMENT = HOLD / OWNER_GO_REQUIRED
 V4_ASSEMBLY_PRODUCTION_EIC = INTEGRATED_ON_MAIN (PR #76, bdf6904, 2026-10-14)
@@ -23,7 +23,9 @@ ASSEMBLY_QUOTE_PDF = INTEGRATED_ON_MAIN (PR #71)
 SCHEMA_CONTROL_PLANE_LAST = 003_organization_access_v1
 SCHEMA_ORGANIZATION_PLANE_LAST = 052_execution_issue_lifecycle (52 migrations)
 MIGRATIONS_041_052_AND_CONTROL_003_REAL_APPLICATION = HOLD / SEPARATE_APPROVED_PROCEDURE_REQUIRED
-PILOT_READINESS_E2E_V1 = IMPLEMENTED_LOCAL_IN_REVIEW + RUNTIME_VERIFIED (synthetic N-029) / OWNER_ACCEPTANCE_PENDING / NOT_INTEGRATED
+PILOT_READINESS_E2E_V1 = INTEGRATED_ON_MAIN (PR #135, 68a2ef9) / OWNER_ACCEPTANCE_NOT_RECORDED
+COMMERCIAL_FINANCIAL_CONTROL_V1 = IMPLEMENTED_LOCAL_IN_REVIEW (feat/commercial-financial-control-v1, migration 053) / OWNER_VISUAL_ACCEPTANCE_PENDING / NOT_INTEGRATED
+SCHEMA_ORGANIZATION_PLANE_CANDIDATE = 053_commercial_financial_control (branch only; real application HOLD)
 PILOT_GATE_A = HOLD
 PILOT_GATE_B = HOLD
 DEPLOY_PRODUCTION = HOLD / NOT_AUTHORIZED
@@ -55,8 +57,21 @@ Integrated on `main` since R-005 (first-parent merges):
 | #132 | Product configuration cost usability V1 | `98b8616` |
 | #133 | Administration variant B and safe draft flows | `0b8a511` |
 | #134 | Organization Access V1 (roles, invitations, account security; control migration 003) | `bc5c778` |
+| #135 | Pilot Readiness E2E V1 (synthetic N-029, browser journey, CI job) | `68a2ef9` |
 
-### Pilot Readiness E2E V1 — IMPLEMENTED_LOCAL_IN_REVIEW (2026-11-16)
+### Commercial & Financial Control V1 — IMPLEMENTED_LOCAL_IN_REVIEW (2026-11-16)
+
+Owner GO for one consolidated wave on `feat/commercial-financial-control-v1` from `68a2ef9`:
+- organization offering policy (Owner-only by default, autonomous Comercial, or approval rules entered by the Owner);
+- price exception approvals bound to the exact configuration and price;
+- the Comercial decides the request outcome;
+- AUD-PRICING-002 acceptance with an explicit Owner exception;
+- versioned, validated company identity, with the real identifiers removed from code;
+- Owner-only planned vs operational view on the job sheet.
+
+One additive organization-plane migration, 053 (synthetic only). No formula change. Contract: [Commercial & Financial Control V1](architecture/COMMERCIAL_FINANCIAL_CONTROL_V1.md). Design dependency: WorkOS-N frames not yet drawn; Owner visual acceptance pending. Not authorized: merge, deploy, real data, real migration.
+
+### Pilot Readiness E2E V1 — INTEGRATED_ON_MAIN (PR #135, 2026-11-16)
 
 Owner GO for one synthetic implementation wave on branch `feat/pilot-readiness-e2e-v1` from `bc5c778`. Persistent synthetic environment N-029 (`%LOCALAPPDATA%\WorkOS\N-029_PILOT_READINESS_E2E`, outside Git), launcher with location/ownership guards, a browser journey from a new company to a finished job with the four roles, a multi-organization user, isolation, sessions, modularity, restart and backup/restore into a separate root, and a CI job running the same chain on a fresh temporary root. No business formula, pricing, permission or schema change. Details: [gate](PILOT_READINESS_GATE_V1.md#pilot-readiness-e2e-v1-synthetic-2026-11-16), [runbook](PILOT_SYNTHETIC_RUNBOOK_V1.md). Not authorized: merge, deploy, real data. Owner acceptance: PENDING.
 

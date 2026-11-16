@@ -402,9 +402,19 @@ async function plannedVsActual(ctx) {
     await ui.shot("FIN_OWNER_job-finished-situation", { step: "FIN-1/PVA-4", role: "Proprietar", state: "lucrare finalizată: ore, durată, progres" }, { full: true });
     await ui.go(`/lucrari/${encodeURIComponent(jobId)}?sectiune=operatii`);
     await ui.shot("FIN_OWNER_job-finished-operations", { step: "PVA-4", role: "Proprietar", state: "operații finalizate: planificat vs realizat pe operație" }, { full: true });
-    const costShown = await ui.has(/Cost intern real|cost real/i);
-    ctx.state.presentationLimits = [...new Set([...(ctx.state.presentationLimits ?? []), costShown ? null : "PVA_COST_NOT_IN_UI: the engine's actual internal cost (owner API) has no job-level view"].filter(Boolean))];
-    return { actualCostStatus: actual?.status ?? null, costShownInUi: costShown };
+    await ui.go(`/lucrari/${encodeURIComponent(jobId)}`);
+    await ui.waitText(/Planificat vs realizat/, 20000).catch(() => {});
+    const costShown = await ui.has(/Cost operațional calculat din execuție/);
+    ctx.check("PVA-5 owner sees Planificat vs realizat: estimated, operational, difference, margins (UI)", costShown && (await ui.has(/Marjă estimată/)) && (await ui.has(/Cost efectiv confirmat contabil/)));
+    await ui.shot("CFC_OWNER_job-planned-vs-actual", { step: "PVA-5", role: "Proprietar", state: "planificat vs realizat, lucrare finalizată" }, { full: true });
+    const economics = await ui.api(`/api/jobs/${encodeURIComponent(jobId)}/economics`);
+    ctx.check("PVA-6 economics API: no confirmed accounting cost claimed, unknown never zero", economics.status === 200 && economics.body?.economics?.confirmedCost?.status === "NOT_MODELLED", economics.body?.economics?.operationalCost?.completeness);
+    const prodEconomics = await prod.api(`/api/jobs/${encodeURIComponent(jobId)}/economics`);
+    ctx.check("PVA-7 Producție is refused the economics (403) and sees no cost panel", prodEconomics.status === 403, prodEconomics.status);
+    await prod.go(`/lucrari/${encodeURIComponent(jobId)}`);
+    await prod.settle(1500);
+    ctx.check("PVA-7b Producție job sheet has no Planificat vs realizat panel (UI)", !(await prod.has(/Cost operațional calculat/)));
+    return { actualCostStatus: actual?.status ?? null, costShownInUi: costShown, operational: economics.body?.economics?.operationalCost?.completeness ?? null };
   } catch (e) { await ui.dump("pva"); throw e; } finally { ui.close(); prod.close(); }
 }
 
@@ -733,18 +743,49 @@ async function request(ctx) {
   } catch (e) { await ui.dump("request"); throw e; } finally { ui.close(); }
 }
 
-/** Owner — issuer (seller) legal name, through the configurator's supported panel (owner only). */
+export const SELLER = {
+  legalName: "WORKOS PILOT DEMO SRL",
+  fiscalId: "DEMO-CIF-PILOT",
+  tradeRegister: "DEMO-REG-PILOT",
+  address: "Strada Exemplu nr. 1",
+  locality: "Localitate Demo",
+  iban: "RO34DEMO0000000000000001",
+  bank: "BANCA DEMONSTRATIVĂ",
+};
+
+/** Owner — company identity in Administrare › Date firmă (validated, versioned; all existing fields). */
 async function seller(ctx) {
   const ui = await asOwner(ctx, "owner-seller");
   try {
-    await ui.go(ctx.state.ids.configuratorUrl);
-    await ui.click("Pregătire ofertă");
-    if (await ui.has(/Datele firmei emitente lipsesc/)) {
-      await ui.fill("Denumire firmă", "WORKOS PILOT DEMO SRL");
-      await ui.click("Salvează datele firmei");
+    const before = await ui.api("/api/seller");
+    if (!before.body?.configured) {
+      await ui.go("/admin/company");
+      await ui.waitText(/Date firmă/);
+      await ui.shot("CFC_OWNER_company-unconfigured", { step: "ORG-7", role: "Proprietar", state: "date firmă neconfigurate" }, { full: true });
+      // Invalid IBAN first: the server refuses it and the draft is kept.
+      await ui.fill("Denumire legală", SELLER.legalName);
+      await ui.fill("Identificator fiscal (CIF)", SELLER.fiscalId);
+      await ui.fill("IBAN", "RO00 GRESIT");
+      await ui.click("Revizuiește și salvează");
+      await ui.click(/^Salvează versiunea/);
+      await ui.waitText(/IBAN invalid/, 15000);
+      ctx.check("ORG-7a invalid IBAN refused by the server, draft kept (UI)", await ui.has(/IBAN invalid/));
+      await ui.shot("CFC_OWNER_company-invalid-iban", { step: "ORG-7a", role: "Proprietar", state: "date fiscale invalide: IBAN refuzat" }, { full: true });
+      for (const [label, value] of [["Nr. Registrul Comerțului", SELLER.tradeRegister], ["Adresă", SELLER.address], ["Localitate", SELLER.locality], ["IBAN", SELLER.iban], ["Bancă", SELLER.bank]]) {
+        await ui.fill(label, value);
+      }
+      await ui.click("Revizuiește și salvează");
+      await ui.click(/^Salvează versiunea/);
+      await ui.waitText(/Datele firmei au fost salvate/, 15000);
+      await ui.shot("CFC_OWNER_company-saved", { step: "ORG-7", role: "Proprietar", state: "date firmă salvate, versiunea 1, istoric" }, { full: true });
     }
     const s = await ui.api("/api/seller");
-    ctx.check("ORG-7 issuer legal name configured by the owner (UI); fiscal/bank fields have no UI (ADMIN_TOOLING_DEBT)", s.status === 200 && /WORKOS PILOT DEMO SRL/.test(JSON.stringify(s.body)), s.status);
+    const seller = s.body?.seller ?? {};
+    ctx.check(
+      "ORG-7 company identity configured in Administrare › Date firmă (UI): legal, fiscal, address and bank fields",
+      s.status === 200 && seller.legalName === SELLER.legalName && seller.fiscalId === SELLER.fiscalId && seller.iban === SELLER.iban && seller.bank === SELLER.bank && s.body?.version >= 1,
+      { status: s.status, version: s.body?.version },
+    );
   } catch (e) { await ui.dump("seller"); throw e; } finally { ui.close(); }
 }
 
@@ -815,6 +856,180 @@ async function freeze(ctx) {
   } catch (e) { await ui.dump("freeze"); throw e; } finally { ui.close(); }
 }
 
+/** Commercial & Financial V1 · offering policy, Comercial request, Owner approval, freeze. */
+async function offering(ctx) {
+  const owner = await asOwner(ctx, "owner-offering");
+  const commercial = await asAccount(ctx, "commercialA", "commercial-offering");
+  try {
+    if (!ctx.state.ids.offeringPolicySet) {
+      await owner.go("/admin/offering");
+      await owner.waitText(/Reguli de ofertare/);
+      await owner.shot("CFC_OWNER_offering-default", { step: "CFC-1", role: "Proprietar", state: "fără politică salvată: doar Proprietarul" }, { full: true });
+      await owner.click(/excepțiile cer aprobarea/);
+      await owner.settle(400);
+      ctx.check("CFC-1 approval mode without a rule cannot be saved (fail-closed, UI)", await owner.has(/Nicio regulă activă/));
+      await owner.fill("Valoare netă maximă fără aprobare", "1000");
+      await owner.click("Revizuiește și salvează");
+      await owner.click(/^Salvează versiunea/);
+      await owner.waitText(/Regulile au fost salvate/, 15000);
+      await owner.shot("CFC_OWNER_offering-saved", { step: "CFC-1", role: "Proprietar", state: "mod cu aprobare, prag valoare netă" }, { full: true });
+      ctx.state.ids.offeringPolicySet = true; ctx.saveState?.();
+    }
+    const policy = (await owner.api("/api/admin/offering-policy")).body?.policy;
+    ctx.check("CFC-1 policy stored and versioned by the server", policy?.mode === "COMMERCIAL_APPROVAL_POLICY" && policy?.rules?.maximumNetValue === 1000 && policy?.version >= 1, policy?.version);
+    const commercialPolicy = await commercial.api("/api/offering-policy");
+    ctx.check("CFC-2 Comercial reads the mode, never the threshold", commercialPolicy.status === 200 && !JSON.stringify(commercialPolicy.body).includes("1000"), commercialPolicy.body?.policy?.mode);
+    ctx.check("CFC-2b Comercial cannot read or change the policy administration", (await commercial.api("/api/admin/offering-policy")).status === 403 && (await commercial.api("/api/admin/price-approvals")).status === 403);
+
+    if (!ctx.state.ids.approvalRequestId) {
+      const customer = await commercial.api("/api/customers", { method: "POST", body: JSON.stringify({ displayName: "Client Aprobare SRL" }) });
+      const customerId = customer.body?.customer?.customerId;
+      const req = await commercial.api("/api/requests", { method: "POST", body: JSON.stringify({ customerId, title: "Ofertă peste prag — pilot", description: "Cerere sintetică pentru aprobarea Proprietarului." }) });
+      const requestId = req.body?.request?.requestId ?? req.body?.detail?.request?.requestId;
+      ctx.state.ids.approvalCustomerId = customerId;
+      ctx.state.ids.approvalRequestId = requestId;
+      ctx.saveState?.();
+    }
+    const { customerId: baseCustomer, requestId: baseRequest, configuratorUrl } = ctx.state.ids;
+    commercial.configuratorUrl = configuratorUrl
+      .split(encodeURIComponent(baseRequest)).join(encodeURIComponent(ctx.state.ids.approvalRequestId))
+      .split(baseRequest).join(ctx.state.ids.approvalRequestId)
+      .split(encodeURIComponent(baseCustomer)).join(encodeURIComponent(ctx.state.ids.approvalCustomerId))
+      .split(baseCustomer).join(ctx.state.ids.approvalCustomerId);
+    await fillAndConfirm(commercial);
+    await commercial.fill("Preț net al produsului, fără TVA", "1450");
+    await commercial.click("Confirmă prețul");
+    await commercial.settle(1500);
+    ctx.check("CFC-3 Comercial sets the price; the server asks for the Owner's approval (UI)", await commercial.has(/Necesită aprobarea Proprietarului/));
+    ctx.check("CFC-3b freeze is not available before approval (UI)", !(await commercial.canClick("Îngheață oferta")));
+    await commercial.shot("CFC_COMMERCIAL_approval-required", { step: "CFC-3", role: "Comercial", state: "ofertă peste regulile firmei: aprobare necesară" }, { full: true });
+    if (await commercial.canClick("Trimite spre aprobare")) {
+      await commercial.fill("Notă pentru Proprietar (opțional)", "Client cu volum mare");
+      await commercial.click("Trimite spre aprobare");
+      await commercial.waitText(/Așteaptă aprobarea Proprietarului/, 15000);
+    }
+    await commercial.shot("CFC_COMMERCIAL_approval-pending", { step: "CFC-4", role: "Comercial", state: "solicitare trimisă, în așteptare" }, { full: true });
+    const pageText = await commercial.text();
+    ctx.check("CFC-4 Comercial view shows no internal cost, margin or threshold", !/Cost intern|marj|1\.000,00/i.test(pageText.split("Pregătire ofertă").pop() ?? ""));
+
+    await owner.go("/admin/offering");
+    await owner.waitText(/Client Aprobare SRL/, 20000);
+    await owner.shot("CFC_OWNER_approval-request", { step: "CFC-5", role: "Proprietar", state: "solicitare de aprobare: regula declanșată, preț net" }, { full: true });
+    const pending = (await owner.api("/api/admin/price-approvals?status=REQUESTED")).body?.approvals ?? [];
+    const approval = pending.find((item) => item.requestId === ctx.state.ids.approvalRequestId);
+    if (approval) {
+      await owner.click("Aprobă această variantă");
+      await owner.settle(1500);
+    }
+    const decided = (await owner.api("/api/admin/price-approvals?status=APPROVED")).body?.approvals ?? [];
+    const approved = decided.find((item) => item.requestId === ctx.state.ids.approvalRequestId);
+    ctx.check("CFC-5 Owner approves the exact variant (UI), journaled by the server", Boolean(approved), approved?.status);
+    if (approved) ctx.state.ids.approvalId = approved.approvalId;
+
+    await fillAndConfirm(commercial);
+    await commercial.fill("Preț net al produsului, fără TVA", "1450");
+    await commercial.click("Confirmă prețul");
+    await commercial.settle(1500);
+    ctx.check("CFC-6 Comercial sees the approval for the same variant (UI)", await commercial.has(/Aprobată de Proprietar/));
+    await commercial.shot("CFC_COMMERCIAL_approval-granted", { step: "CFC-6", role: "Comercial", state: "aprobare acordată, înghețare permisă" }, { full: true });
+    await commercial.click("Îngheață oferta", { exact: true });
+    await commercial.waitText(/Deschide oferta înghețată/, 20000);
+    await commercial.click("Deschide oferta înghețată");
+    await commercial.page.waitFor(`/oferte\\//.test(location.pathname)`, 20000);
+    const approvedQuoteUrl = await commercial.page.eval("location.pathname");
+    const quote = (await owner.api(quoteApi(approvedQuoteUrl))).body;
+    const frozenOffering = (quote?.quoteSnapshot ?? quote)?.offering;
+    ctx.check("CFC-7 quote frozen by the Comercial with the approval in the snapshot", frozenOffering?.outcome === "APPROVED_EXCEPTION" && frozenOffering?.pricedByRole === "member", frozenOffering?.outcome);
+    ctx.state.ids.approvedQuoteUrl = approvedQuoteUrl; ctx.saveState?.();
+    await commercial.shot("CFC_COMMERCIAL_quote-frozen-approved", { step: "CFC-7", role: "Comercial", state: "ofertă înghețată cu aprobare" }, { full: true });
+    ctx.check("CFC-8 Comercial still cannot accept the order", (await commercial.api(`${quoteApi(approvedQuoteUrl)}/confirm-order`, { method: "POST", body: "{}" })).status === 403);
+
+    // Isolation and scoped roles on the new routes.
+    const ownerB = await ctx.suite.actor("owner-b-offering");
+    try {
+      const b = ctx.secrets.accounts.ownerB;
+      if ((await ownerB.login(b.email, b.password)) !== 200) throw new Error("owner B login");
+      const approvalsB = JSON.stringify((await ownerB.api("/api/admin/price-approvals")).body ?? {});
+      ctx.check("CFC-ISO organization B sees none of A's approvals and keeps its own default policy", !approvalsB.includes(ctx.state.ids.approvalRequestId) && (await ownerB.api("/api/offering-policy")).body?.policy?.mode === "OWNER_ONLY");
+      if (ctx.state.ids.approvalId) {
+        ctx.check("CFC-ISO B cannot decide A's approval (404)", (await ownerB.api(`/api/admin/price-approvals/${encodeURIComponent(ctx.state.ids.approvalId)}/decision`, { method: "POST", body: JSON.stringify({ decision: "APPROVED" }) })).status === 404);
+      }
+    } finally { ownerB.close(); }
+    for (const key of ["productionA", "workshopA"]) {
+      const scoped = await asAccount(ctx, key, `cfc-${key}`);
+      try {
+        const statuses = [
+          (await scoped.api("/api/offering-policy")).status,
+          (await scoped.api("/api/admin/price-approvals")).status,
+          (await scoped.api("/api/seller/versions")).status,
+          (await scoped.api(`/api/jobs/${encodeURIComponent(ctx.state.ids.jobId)}/economics`)).status,
+        ];
+        ctx.check(`CFC-ROLE ${key} refused on policy, approvals, company history and economics`, statuses.every((s) => s === 403), statuses);
+      } finally { scoped.close(); }
+    }
+    return { approvedQuoteUrl };
+  } catch (e) { await commercial.dump("offering"); await owner.dump("offering-owner"); throw e; } finally { owner.close(); commercial.close(); }
+}
+
+/** Commercial & Financial V1 · company identity versions, concurrency, frozen quotes unchanged. */
+async function companyIdentity(ctx) {
+  const owner = await asOwner(ctx, "owner-company");
+  const commercial = await asAccount(ctx, "commercialA", "commercial-company");
+  try {
+    const before = (await owner.api("/api/seller")).body;
+    if (before?.seller?.bank === SELLER.bank) {
+      await owner.go("/admin/company");
+      await owner.waitText(/Date firmă/);
+      await owner.fill("Bancă", "BANCA DEMONSTRATIVĂ PILOT");
+      await owner.click("Revizuiește și salvează");
+      await owner.click(/^Salvează versiunea/);
+      await owner.waitText(/Datele firmei au fost salvate/, 15000);
+    }
+    await owner.shot("CFC_OWNER_company-history", { step: "CFC-9", role: "Proprietar", state: "date firmă: versiune nouă și istoric" }, { full: true });
+    const versions = (await owner.api("/api/seller/versions")).body;
+    ctx.check("CFC-9 a second company version is recorded with author and changed fields", (versions?.versions ?? []).length >= 2 && versions.versions[0].changedFields.some((f) => f.field === "bank"), versions?.currentVersion);
+    const quote = (await owner.api(quoteApi(ctx.state.ids.quoteUrl))).body;
+    const frozenSeller = (quote?.quoteSnapshot ?? quote)?.seller ?? {};
+    ctx.check("CFC-10 the frozen quote keeps the identity of its issue time", frozenSeller.bank !== "BANCA DEMONSTRATIVĂ PILOT", frozenSeller.bank ?? null);
+    const stale = await owner.api("/api/seller", { method: "PATCH", body: JSON.stringify({ ...SELLER, expectedVersion: 0 }) });
+    ctx.check("CFC-11 a concurrent (stale) company edit is refused (409)", stale.status === 409, stale.status);
+    const commercialView = (await commercial.api("/api/seller")).body;
+    ctx.check("CFC-12 Comercial reads the identity, cannot edit it", commercialView?.canEdit === false && (await commercial.api("/api/seller", { method: "PATCH", body: JSON.stringify(SELLER) })).status === 403);
+    await commercial.go("/admin/company");
+    await commercial.waitText(/Date firmă/, 15000);
+    await commercial.shot("CFC_COMMERCIAL_company-readonly", { step: "CFC-12", role: "Comercial", state: "date firmă: doar citire" }, { full: true });
+  } finally { owner.close(); commercial.close(); }
+}
+
+/** Commercial & Financial V1 · the new screens at 1440/768/390 px, Light and Dark. */
+async function commercialFinancialVisual(ctx) {
+  const screens = [
+    ["ownerA", "/admin/offering", "VIS_CFC_OWNER_offering", "Reguli de ofertare"],
+    ["ownerA", "/admin/company", "VIS_CFC_OWNER_company", "Date firmă"],
+    ["ownerA", `/lucrari/${encodeURIComponent(ctx.state.ids.jobId)}`, "VIS_CFC_OWNER_job-pva", "Planificat vs realizat"],
+    ["commercialA", "/admin/company", "VIS_CFC_COMMERCIAL_company", "Date firmă, doar citire"],
+  ];
+  for (const [key, path, name, label] of screens) {
+    const ui = await asAccount(ctx, key, `cfc-visual-${key}`);
+    try {
+      for (const [w, hgt, theme] of [[1440, 900, "light"], [1440, 900, "dark"], [768, 1024, "light"], [390, 844, "light"], [390, 844, "dark"]]) {
+        await ui.view(w, hgt, theme);
+        await ui.go(path);
+        await ui.settle(900);
+        const overflow = await ui.page.eval("document.documentElement.scrollWidth > innerWidth + 1");
+        ctx.check(`VIS ${name} ${w}px ${theme}: no horizontal overflow`, !overflow);
+        await ui.shot(name, { step: "VIS-CFC", role: key, state: label }, { full: true });
+      }
+      // Keyboard: the first focusable control in the main content receives a visible focus ring.
+      await ui.view(1440, 900, "light");
+      await ui.go(path);
+      await ui.settle(600);
+      const focus = await ui.page.eval(`(() => { const el = document.querySelector('main a, main button, main input'); if (!el) return 'none'; el.focus(); const s = getComputedStyle(el); return document.activeElement === el ? (s.outlineStyle !== 'none' || s.boxShadow !== 'none' ? 'ring' : 'focus') : 'no-focus'; })()`);
+      ctx.check(`VIS ${name}: keyboard focus reaches the content`, focus === "ring" || focus === "focus", focus);
+    } finally { ui.close(); }
+  }
+}
+
 export const STEPS = [
   { id: "products", title: "Owner selects the products offered", run: products },
   { id: "commercial", title: "Owner confirms the commercial policy", run: commercialPolicy },
@@ -823,7 +1038,7 @@ export const STEPS = [
   { id: "people", title: "Owner adds people, skills and PINs", run: people },
   { id: "invitations", title: "Owner invites the team; members accept", run: invitations },
   { id: "request", title: "Comercial creates client and request", run: request },
-  { id: "seller", title: "Owner sets the issuer legal name", run: seller },
+  { id: "seller", title: "Owner configures the company identity (Administrare › Date firmă)", run: seller },
   { id: "configure", title: "Comercial configures and confirms the product", run: configure },
   { id: "freeze", title: "Owner sets the price and freezes the quote", run: freeze },
   { id: "accept", title: "Owner downloads the PDF, accepts; order and job", run: accept },
@@ -832,6 +1047,9 @@ export const STEPS = [
   { id: "atelier", title: "Atelier executes every operation by PIN, with QC", run: atelier },
   { id: "supervise", title: "Producție resolves the reported issue", run: supervise },
   { id: "pva", title: "Finalization and Planned vs Actual", run: plannedVsActual },
+  { id: "offering", title: "Offering policy: Comercial request, Owner approval, freeze", run: offering },
+  { id: "company", title: "Company identity versions, concurrency, frozen quote unchanged", run: companyIdentity },
+  { id: "cfcvisual", title: "Commercial & Financial screens at 1440/768/390 px Light/Dark", run: commercialFinancialVisual },
   { id: "roles", title: "Four-role contract: navigation and server", run: roles },
   { id: "sessions", title: "Invalid invitation, expired session, revoked user", run: sessions },
   { id: "multiorg", title: "Two organizations: choice, switch, operator reset, isolation", run: multiOrg },

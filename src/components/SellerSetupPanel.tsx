@@ -1,68 +1,19 @@
-import { useState } from "react";
-import { TransportError } from "../api/http";
-import { updateSeller } from "../api/seller";
-import { invalidateAfterSellerChange } from "../data/invalidation";
-import { writeResource } from "../data/resourceCache";
-import { resourceKeys } from "../data/resourceKeys";
-import { Button } from "./Button";
 import { InlineAlert } from "./InlineAlert";
-import { TextField } from "./TextField";
 
-type SellerSetupPanelProps = {
-  onSaved?: () => void;
-};
-
-export function SellerSetupPanel({ onSaved }: SellerSetupPanelProps) {
-  const [legalName, setLegalName] = useState("");
-  const [saveState, setSaveState] = useState<"idle" | "pending" | "error">("idle");
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  async function save(): Promise<void> {
-    if (legalName.trim() === "") {
-      return;
-    }
-    setSaveState("pending");
-    setSaveError(null);
-    try {
-      await updateSeller({ legalName: legalName.trim() });
-      writeResource(resourceKeys.seller(), true);
-      invalidateAfterSellerChange();
-      setSaveState("idle");
-      onSaved?.();
-    } catch (error) {
-      setSaveState("error");
-      setSaveError(
-        error instanceof TransportError && error.status === 403
-          ? "Doar proprietarul organizației poate configura datele firmei."
-          : "Datele firmei nu au putut fi salvate.",
-      );
-    }
-  }
-
+/**
+ * Commercial & Financial V1: the company identity is configured in one place, Administrare ›
+ * Date firmă (validated and versioned). The configurator only explains what is missing and where
+ * it is completed; the page itself is read-only for roles that cannot edit it.
+ */
+export function SellerSetupPanel() {
   return (
     <InlineAlert tone="blocked" title="Datele firmei emitente lipsesc">
-      Organizația curentă nu are încă datele minime de emitere (denumire legală). Completează denumirea
-      aici pentru acest workspace sau deschide setările comerciale ale organizației pentru politici și
-      termeni.{" "}
-      <a className="text-link" href="/admin/commercial">
-        Setări comerciale organizație
+      Oferta nu poate fi înghețată până când firma nu are cel puțin denumirea legală și identificatorul
+      fiscal. Datele firmei se completează de Proprietar în{" "}
+      <a className="text-link" href="/admin/company">
+        Administrare › Date firmă
       </a>
-      <TextField
-        id="seller-legal-name"
-        label="Denumire firmă"
-        value={legalName}
-        onChange={setLegalName}
-      />
-      <Button
-        variant="secondary"
-        disabled={legalName.trim() === "" || saveState === "pending"}
-        onClick={() => {
-          void save();
-        }}
-      >
-        Salvează datele firmei
-      </Button>
-      {saveError ? <p>{saveError}</p> : null}
+      .
     </InlineAlert>
   );
 }

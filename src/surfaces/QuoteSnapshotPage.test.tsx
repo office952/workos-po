@@ -328,7 +328,7 @@ describe("QuoteSnapshotPage", () => {
     expect(acceptancePosts(fetchMock)).toHaveLength(1);
   });
 
-  it("keeps partial internal cost visible and still confirms before the existing acceptance request", async () => {
+  it("asks the Owner for an explicit, reasoned exception before accepting a quote with incomplete internal cost", async () => {
     const fetchMock = stubQuotePage({
       envelope: { ...createdEnvelope(), reference: "OF-PARTIAL" },
       snapshot: {
@@ -341,11 +341,20 @@ describe("QuoteSnapshotPage", () => {
     expect(await screen.findByTestId("internal-cost")).toHaveTextContent("Incomplet");
     await user.click(screen.getByRole("button", { name: "Confirmă comanda" }));
     expect(acceptancePosts(fetchMock)).toEqual([]);
-    await user.click(screen.getByRole("button", { name: "Da, confirm comanda" }));
+    // AUD-PRICING-002: the Owner confirms the exception with a reason before the request is sent.
+    const accept = screen.getByRole("button", { name: "Acceptă cu cost incomplet" });
+    expect(accept).toBeDisabled();
+    await user.type(screen.getByLabelText("Motivul acceptării cu cost incomplet"), "Cost confirmat ulterior");
+    expect(accept).toBeDisabled();
+    await user.click(screen.getByRole("checkbox", { name: "Confirm acceptarea cu cost intern incomplet" }));
+    await user.click(accept);
     expect(acceptancePosts(fetchMock)).toEqual([
       expect.stringContaining("/confirm-order"),
     ]);
-    expect(acceptancePosts(fetchMock)[0]).toMatch(/\/confirm-order$/);
+    const body = fetchMock.mock.calls.find((call) => String(call[0]).endsWith("/confirm-order"))?.[1]?.body;
+    expect(JSON.parse(String(body))).toEqual({
+      incompleteCostAcceptance: { confirm: true, reason: "Cost confirmat ulterior" },
+    });
   });
 
   it("creates an order from the envelope and links its job from the acceptance result", async () => {

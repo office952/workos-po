@@ -7,6 +7,9 @@ import {
 } from "../api/assemblies";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { presentConfirm, rateAcknowledgementSatisfied } from "../adapters/confirmAdapter";
+import { presentOfferingView } from "../adapters/commercialFinancialAdapter";
+import { requestPriceApproval } from "../api/commercialFinancial";
+import "../styles/surfaces/commercial-financial.css";
 import {
   valuesBeforeSchema,
   valuesForTransport,
@@ -257,6 +260,9 @@ export function ConfiguratorPage({
   const [acknowledgedRateBinding, setAcknowledgedRateBinding] = useState<string | null>(null);
   const [overlapAssemblyId, setOverlapAssemblyId] = useState<string | null>(null);
   const [manualNetDraft, setManualNetDraft] = useState("");
+  const [approvalNote, setApprovalNote] = useState("");
+  const [approvalState, setApprovalState] = useState<"idle" | "pending" | "error">("idle");
+  const [approvalError, setApprovalError] = useState<string | null>(null);
   const [frozenResultKey, setFrozenResultKey] = useState<string | null>(null);
   const seller = useResource(resourceKeys.seller(), loadSellerConfigured);
   const sellerConfigured = seller.status === "success" ? seller.data : null;
@@ -491,6 +497,34 @@ export function ConfiguratorPage({
     }
   }
 
+  /** Commercial & Financial V1: ask the Owner to approve this exact configuration and price. */
+  async function requestApproval(): Promise<void> {
+    if (!preview?.reviewId || !confirmation || !activeProduct || !requestId || !customerId) {
+      return;
+    }
+    setApprovalState("pending");
+    setApprovalError(null);
+    const result = await requestPriceApproval(activeProduct, {
+      values: currentTransportValues(),
+      reviewId: preview.reviewId,
+      customerId,
+      requestId,
+      ...commercialPayload(),
+      ...(approvalNote.trim() ? { approvalNote: approvalNote.trim() } : {}),
+    });
+    const offering = presentOfferingView((result.body as { offering?: unknown } | null)?.offering);
+    if (offering) {
+      setConfirmation((current) => (current ? { ...current, offering } : current));
+    }
+    if (result.ok) {
+      setApprovalState("idle");
+      setApprovalNote("");
+      return;
+    }
+    setApprovalState("error");
+    setApprovalError(readTransportReasons(result.body).join(" ") || "Solicitarea de aprobare nu a putut fi trimisă.");
+  }
+
   async function freeze(options: { separateQuote?: boolean } = {}): Promise<void> {
     if (!preview?.reviewId || !confirmation || !activeProduct) {
       return;
@@ -594,12 +628,18 @@ export function ConfiguratorPage({
   const validCustomerPrice = Boolean(serverCustomerPriceReady && priceIsCurrent);
   const rateRequirement = confirmation?.rateAcknowledgement ?? null;
   const ratesAcknowledged = rateAcknowledgementSatisfied(rateRequirement, acknowledgedRateBinding);
+  const offering = confirmation?.offering ?? null;
+  // Commercial & Financial V1: an exception waits for the Owner; the server re-checks on freeze.
+  const approvalPending =
+    offering?.outcome === "APPROVAL_REQUIRED" && offering.approvalStatus !== "APPROVED";
   const freezeBlocked =
     sellerConfigured !== true ||
     customerId === null ||
     confirmPending ||
     !validCustomerPrice ||
-    !ratesAcknowledged;
+    !ratesAcknowledged ||
+    approvalPending ||
+    offering?.outcome === "NOT_PERMITTED";
   const priceNotReady = Boolean(confirmation && !validCustomerPrice);
   const sections = preview ? buildWorkbenchSections(preview) : [];
   const missingEntries = preview ? workbenchMissingEntries(sections, preview.missing) : [];
@@ -841,11 +881,7 @@ export function ConfiguratorPage({
             </InlineAlert>
           ) : null}
           {sellerConfigured === false ? (
-            <SellerSetupPanel
-              onSaved={() => {
-                setFreezeError(null);
-              }}
-            />
+            <SellerSetupPanel />
           ) : null}
 
         <div className="configuration-commercial__heading">
@@ -887,7 +923,7 @@ export function ConfiguratorPage({
                 </div>
               ) : (
                 <InlineAlert tone="blocked" title="Prețul manual nu poate fi setat">
-                  Doar utilizatorul autorizat poate confirma prețul acestei oferte.
+                  {confirmation.offering?.blockedReason ?? "Doar utilizatorul autorizat poate confirma prețul acestei oferte."}
                 </InlineAlert>
               )}
               {confirmation.completeness !== "COMPLETE" && confirmation.financialVisible ? (
@@ -946,6 +982,19 @@ export function ConfiguratorPage({
               disabled={freezePending}
               onAcknowledgedChange={(acknowledged) => {
                 setAcknowledgedRateBinding(acknowledged ? rateRequirement.bindingHash : null);
+              }}
+            />
+          ) : null}
+          {offering && validCustomerPrice && !assemblyId && offering.outcome ? (
+            <OfferingDecision
+              offering={offering}
+              note={approvalNote}
+              pending={approvalState === "pending"}
+              error={approvalState === "error" ? approvalError : null}
+              canRequest={offering.canRequestApproval && Boolean(requestId)}
+              onNoteChange={setApprovalNote}
+              onRequest={() => {
+                void requestApproval();
               }}
             />
           ) : null}
@@ -1073,5 +1122,68 @@ export function ConfiguratorPage({
       {!assemblyId && customerId && requestId && activeProduct && <ExtendRequestProduct key={`${requestId}:${activeProduct}`} customerId={customerId} requestId={requestId} productCode={activeProduct} reviewId={preview?.reviewId ?? null} values={preview?.formSchema ? valuesForTransport(drafts, preview.formSchema) : valuesBeforeSchema(drafts)} drafts={drafts} confirmed={Boolean(confirmation && priceIsCurrent && !confirmPending && !freezePending && previewState !== "pending")} commercial={commercialPayload()} onPending={setExtensionPending} />}
       </div>
     </SlicePage>
+  );
+}
+
+/** Commercial & Financial V1 · the offering policy outcome and approval, as the server reports it. */
+function OfferingDecision({
+  offering,
+  note,
+  pending,
+  error,
+  canRequest,
+  onNoteChange,
+  onRequest,
+}: {
+  offering: NonNullable<ConfirmTransport["offering"]>;
+  note: string;
+  pending: boolean;
+  error: string | null;
+  canRequest: boolean;
+  onNoteChange: (value: string) => void;
+  onRequest: () => void;
+}) {
+  // Within the policy there is nothing to decide: the freeze button is the next action.
+  if (offering.outcome !== "APPROVAL_REQUIRED") {
+    return null;
+  }
+  const status = offering.approvalStatus;
+  return (
+    <div className="cfc-offering" data-testid="offering-approval">
+      {status === "APPROVED" ? (
+        <InlineAlert tone="success" title="Aprobată de Proprietar">
+          Varianta aceasta de configurație și preț a fost aprobată
+          {offering.approvalDecidedByLabel ? ` de ${offering.approvalDecidedByLabel}` : ""}. Poți îngheța oferta.
+        </InlineAlert>
+      ) : status === "REQUESTED" ? (
+        <InlineAlert tone="pending" title="Așteaptă aprobarea Proprietarului">
+          Proprietarul a primit solicitarea. Oferta poate fi înghețată după aprobare; dacă modifici prețul sau configurația, ceri din nou.
+        </InlineAlert>
+      ) : status === "REJECTED" ? (
+        <InlineAlert tone="blocked" title="Respinsă de Proprietar">
+          {offering.approvalDecisionReason ? `Motiv: ${offering.approvalDecisionReason}. ` : ""}Modifică prețul sau configurația și cere din nou aprobarea.
+        </InlineAlert>
+      ) : (
+        <InlineAlert tone="blocked" title="Necesită aprobarea Proprietarului">
+          {status === "STALE"
+            ? "Oferta s-a schimbat după solicitarea anterioară. Cere din nou aprobarea pentru varianta curentă."
+            : offering.outcomeMessage ?? "Oferta necesită aprobarea Proprietarului înainte de înghețare."}
+        </InlineAlert>
+      )}
+      {status !== "APPROVED" && status !== "REQUESTED" && canRequest ? (
+        <div className="cfc-offering__note">
+          <label htmlFor="approval-note">Notă pentru Proprietar (opțional)</label>
+          <textarea id="approval-note" rows={2} maxLength={500} value={note} disabled={pending} onChange={(event) => onNoteChange(event.target.value)} />
+          <Button variant="secondary" disabled={pending} onClick={onRequest}>
+            {pending ? "Se trimite…" : "Trimite spre aprobare"}
+          </Button>
+        </div>
+      ) : null}
+      {error ? (
+        <InlineAlert tone="error" title="Solicitarea nu a fost trimisă">
+          {error}
+        </InlineAlert>
+      ) : null}
+    </div>
   );
 }
