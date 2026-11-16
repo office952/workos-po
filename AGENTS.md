@@ -150,7 +150,7 @@ Before login: reverify local root, organization, process lease, actual API, fron
 
 Forbidden under this standing exception: product/business data changes; adding clients, jobs, tasks or files; schema migration 050 or any migration; seed/restore/copy as a default; account/permission changes; organization switching; automatic logout or session revocation; modification of any N-019/N-020/Hyperreview/backup original; real Cloud; code/Figma writes or merge. Any of these needs its own scoped Owner GO.
 
-For frontend-only changes, first reuse the running N-028 API via the existing `WORKOS_API_PROXY_TARGET` where compatible; do not launch a newer API against N-028 and accidentally auto-migrate it. R-005 PR #112 is integrated on `main` at `094ad65405c24738b223925c741ed6a91bcb7721`. The published UX-FINAL commit is `afff315fb4fda98c8f7d062e3538fb31fd3b3970`, and WorkOS Verify passed on it. N-028 browser E2E is `E2E_PARTIAL`, not `NOT_YET_RUN`. Parallel revisions have no compatible browser fixture, and organization isolation was not demonstrated E2E. Production deployment stays unauthorized. Earlier review history remains in the [existing R-005 checkpoint](https://app.notion.com/p/40a8ea98e40f81d7ad0bedadc3d744e7); reverify the current task before proceeding.
+For frontend-only changes, first reuse the running N-028 API via the existing `WORKOS_API_PROXY_TARGET` where compatible; do not launch a newer API against N-028 and accidentally auto-migrate it. R-005 PR #112 is integrated on `main` at `094ad65405c24738b223925c741ed6a91bcb7721`. The published UX-FINAL commit is `afff315fb4fda98c8f7d062e3538fb31fd3b3970`, and WorkOS Verify passed on it. N-028 browser E2E is `E2E_PARTIAL`, not `NOT_YET_RUN`. Parallel revisions have no compatible browser fixture, and organization isolation was not demonstrated E2E on N-028. Current `main` is newer than N-028 (see the `docs/ROADMAP.md` current status block); organization isolation, roles and the full pilot chain are exercised on the separate synthetic environment N-029 (`docs/PILOT_SYNTHETIC_RUNBOOK_V1.md`), never on N-028. Production deployment stays unauthorized. Earlier review history remains in the [existing R-005 checkpoint](https://app.notion.com/p/40a8ea98e40f81d7ad0bedadc3d744e7); reverify the current task before proceeding.
 
 ## Owner-controlled pause when changing Cursor folders
 
@@ -216,7 +216,8 @@ For frontend-only features, check whether the new frontend can reuse the existin
 ## Current flow and status
 
 - Active responsibilities: `docs/architecture/REQUEST_CATALOG_CONFIGURATION_CANON.md`.
-- Living implementation status and accepted history: `docs/ROADMAP.md`.
+- Living implementation status and accepted history: `docs/ROADMAP.md` (start with its "Current status" block; last verified main, Gate A/B and HOLDs).
+- Pilot readiness: `docs/PILOT_READINESS_GATE_V1.md` (Gate A/B HOLD), `docs/PILOT_ORGANIZATION_SETUP_V1.md`, synthetic runbook `docs/PILOT_SYNTHETIC_RUNBOOK_V1.md` (N-029).
 - Configuration-First architecture: `docs/architecture/WORKOS_CONFIGURATION_FIRST_CANON.md`.
 - Catalog administers reusable product definitions; it does not require or create a customer/request.
 - New request owns client/CUI intake, an enabled-product choice or `Momentan indecis`.

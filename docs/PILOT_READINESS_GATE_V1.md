@@ -4,7 +4,8 @@ Status: **preparation only; not a production or real-data authorization**.
 
 Tracking: [Controlled pilot roadmap](https://github.com/office952/workos-po/issues/55).
 Original baseline: `main` after PR #54, merge commit `af15729064dbe8ae2bb1f433b28460457b651173`.
-Current reconciled baseline (PILOT-0): `main` after PR #69, merge commit `eb3f3c4915e6c18cad91ac613af55fdde934459c`; WorkOS Verify succeeded on that push.
+PILOT-0 reconciled baseline: `main` after PR #69, merge commit `eb3f3c4915e6c18cad91ac613af55fdde934459c`; WorkOS Verify succeeded on that push.
+Current baseline (Pilot Readiness E2E V1, 2026-11-16): `main` `bc5c7787565f019b9f1bb3060927659c6c2b9f2a` (PR #134 merge). Gate A and Gate B remain **HOLD**; see [Pilot Readiness E2E V1](#pilot-readiness-e2e-v1-synthetic-2026-11-16) below.
 
 ## Evidence classification
 
@@ -17,6 +18,7 @@ Current reconciled baseline (PILOT-0): `main` after PR #69, merge commit `eb3f3c
 | Real-environment `pnpm pilot:preflight` | **NOT RUN** |
 | Backup/restore | Automated synthetic tests pass. Operator drill executed once on new synthetic roots at `eb3f3c4` (PILOT-0): PASS, Owner acceptance pending — [evidence](PILOT_0_SYNTHETIC_RECOVERY_DRILL_EVIDENCE_V1.md). No real operating-environment drill |
 | Deploy / rollback / incident STOP procedure | Template only — [runbook](PILOT_DEPLOY_ROLLBACK_INCIDENT_RUNBOOK_V1.md); not executed, not accepted |
+| Pilot Readiness E2E V1 (N-029 + CI job) | Synthetic browser chain from a new company to a finished job, 4 roles + multi-organization user, isolation, restart, backup/restore into a separate root — [runbook](PILOT_SYNTHETIC_RUNBOOK_V1.md). Synthetic only; not real-environment acceptance |
 | First real customer or production order | **NOT AUTHORIZED** |
 
 Do not relabel a synthetic test, a green CI run, or a merged PR as real-environment acceptance. Reconfirm current `main` and required checks before making decisions.
@@ -78,9 +80,11 @@ Do not relabel a synthetic test, a green CI run, or a merged PR as real-environm
 
 ### Assembly scope
 
-Assemblies (ACM panel with mounted letters/logo) are **excluded from cost-complete pilot claims** while assembly production EIC is `PARTIAL`. Their selling price is unaffected; their internal cost and margin are incomplete. Assembly quotes also have no PDF document yet.
+Assemblies (ACM panel with mounted letters/logo) are **excluded from cost-complete pilot claims** unless every assembly-level operation is costed. Their selling price is unaffected.
 
-Missing evidence, not implemented in PILOT-0 (no rates, formulas or quantity bases invented):
+Later status (2026-11-16): the assembly quote PDF is integrated (PR #71). V4 Assembly Production EIC is integrated (PR #76, `bdf6904`, migration 041): assembly-level operations are costed from the organization's assembly operation cost policy and the workshop labor rate frozen into the quote; any gap stays `PARTIAL`, never zero. The table below is the PILOT-0 record of what was missing then; the remaining requirement is an Owner-confirmed policy and labor rate per organization. The Pilot Readiness E2E V1 journey uses the letters product, not an assembly.
+
+PILOT-0 record of missing evidence (no rates, formulas or quantity bases invented):
 
 | Operation | Missing |
 | --- | --- |
@@ -88,7 +92,25 @@ Missing evidence, not implemented in PILOT-0 (no rates, formulas or quantity bas
 | `INSPECT_FINISHED_ASSEMBLY` | Owner decision whether it is costed at all (standalone product inspection is not costed); if costed, recipe, basis and rate |
 | `PACK_PRODUCT` at assembly level | Owner decision which area basis applies to an assembly and whether the existing per-m² packing rate applies; organization-confirmed rate |
 
-Independently of those decisions, `reconcileAssemblyEic` (`packages/domain/src/assembly/eic.ts`) currently treats every assembly-level production operation as unpriced (site installation stays on its frozen service line), so configuration alone cannot make an assembly COMPLETE; a later domain change is required.
+PILOT-0 note, superseded by V4: `reconcileAssemblyEic` (`packages/domain/src/assembly/eic.ts`) then treated every assembly-level production operation as unpriced. Since V4 it prices them from the operation evidence frozen in the order and leaves them unpriced (`PARTIAL`) only when that evidence is missing.
+
+## Pilot Readiness E2E V1 (synthetic, 2026-11-16)
+
+Scope: one coherent synthetic wave on `main` `bc5c778`. No real Cloud, real database, deployment, cutover or Figma write. N-019, N-020, N-028 and the V1 demo were not touched.
+
+| Area | Result | Surface |
+| --- | --- | --- |
+| Persistent environment N-029 | New root outside Git, control plane + 2 organization planes, schema 003 / 052 matching the repository, guards tested | `scripts/pilot-e2e.mjs`, `scripts/pilot-e2e.test.mjs` |
+| Browser chain | AUTH → organization setup → client → request → configurator → quote → acceptance → job → release → plan → atelier → execution → QC → finalization → planned vs actual | `e2e/pilot/` |
+| Roles | Proprietar, Comercial, Producție, Atelier; navigation and endpoint checks; user in two organizations with different roles | UI + API checks |
+| Security | Invalid invitation, revoked user, closed sessions (401), organization isolation (404) | UI + API checks |
+| Modularity | Simple company B without people or machines reaches an accepted job; Materials activated later without changing job history; external production DISABLED | UI + API checks |
+| Restart, backup, restore | Facts identical after restart; quiesced backup; restore into a separate new root; restored copy usable; original unchanged | launcher + journey |
+| CI | Job "Pilot Readiness E2E (synthetic)" runs the same chain on a fresh temporary root | `.github/workflows/workos-verify.yml` |
+
+Findings recorded without changing business rules: Comercial cannot set a manual price or freeze a quote (`prices.manual.set` owner-only); seller fiscal id, brand and locality only through the API and bank details not modelled (`ADMIN_TOOLING_DEBT`); actual internal cost is computed but not displayed (`PVA_COST_NOT_IN_UI`); skill label "Ansamblare".
+
+This is synthetic readiness evidence. It does not change Gate A or Gate B.
 
 ## Controlled pilot vs public SaaS launch
 
