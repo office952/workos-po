@@ -34,7 +34,8 @@ import "../styles/surfaces/commercial-financial.css";
 const FIELD_HELP: Record<string, string> = {
   legalName: "Obligatoriu. Apare pe oferte ca emitent.",
   brand: "Opțional. Apare pe ofertă doar dacă diferă de denumirea legală.",
-  fiscalId: "Obligatoriu. Pentru o firmă din România se verifică cifra de control; formatul nu dovedește existența firmei.",
+  fiscalId:
+    "Obligatoriu. Scrie CIF-ul românesc cu prefixul RO pentru a fi verificată cifra de control. Fără prefix, țara nu este cunoscută și se verifică doar formatul. Nicio verificare nu dovedește existența firmei.",
   tradeRegister: "Opțional. Apare pe ofertă dacă este completat.",
   address: "Opțional. Apare pe ofertă dacă este completat.",
   locality: "Opțional.",
@@ -219,9 +220,12 @@ export function CompanyAdminPage() {
                   Doar Proprietarul poate modifica datele firmei.
                 </InlineAlert>
               ) : null}
-              {model.fiscalIdCheck ? <p className="adm-context__text">{model.fiscalIdCheck}</p> : null}
               {GROUPS.map((group) => (
-                <AdminSection key={group.title} title={group.title}>
+                <AdminSection
+                  key={group.title}
+                  title={group.title}
+                  description={group.fields.includes("fiscalId") && model.fiscalIdCheck ? model.fiscalIdCheck : undefined}
+                >
                   {group.fields
                     .filter((field) => model.fields.some((item) => item.field === field))
                     .map((field) => (
@@ -234,6 +238,7 @@ export function CompanyAdminPage() {
                         baseline={model.values[field] ?? ""}
                         readOnly={!canEdit}
                         disabled={pending}
+                        variant="text"
                         error={issues.find((issue) => issue.field === field)?.reason ?? null}
                         onChange={(value) => setDraft({ ...draft, [field]: value })}
                       />

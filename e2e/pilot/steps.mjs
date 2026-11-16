@@ -1040,6 +1040,43 @@ async function commercialFinancialVisual(ctx) {
   }
 }
 
+/** PR #136 closure · Date firmă form composition at 1440/390 px, Light/Dark (explicit step). */
+async function companyForm(ctx) {
+  const ui = await asOwner(ctx, "owner-company-form");
+  try {
+    const long = {
+      "Denumire legală": "WORKOS PILOT DEMO SOCIETATE CU RĂSPUNDERE LIMITATĂ — DIVIZIA PANOURI ȘI LITERE",
+      "Adresă": "Strada Exemplu Foarte Lungă nr. 1234, Bloc A12, Scara 3, Etaj 7, Apartament 89, Sector 6",
+    };
+    for (const [w, hgt, theme] of [[1440, 900, "light"], [1440, 900, "dark"], [390, 844, "light"], [390, 844, "dark"]]) {
+      await ui.view(w, hgt, theme);
+      await ui.go("/admin/company");
+      await ui.waitText(/Identificator fiscal/, 15000);
+      for (const [label, value] of Object.entries(long)) await ui.fill(label, value);
+      await ui.settle(400);
+      const m = await ui.page.eval(`(() => {
+        const rows = [...document.querySelectorAll('.adm-field[data-variant="text"]')];
+        const inputs = rows.map((r) => r.querySelector('input')).filter(Boolean);
+        const main = document.querySelector('.adm-section');
+        const minRatio = Math.min(...inputs.map((i) => i.getBoundingClientRect().width / (main ? main.getBoundingClientRect().width : innerWidth)));
+        const clipped = inputs.filter((i) => i.getBoundingClientRect().right > innerWidth + 1).length;
+        return { rows: rows.length, minRatio, clipped, overflow: document.documentElement.scrollWidth > innerWidth + 1 };
+      })()`);
+      ctx.check(`FORM Date firmă ${w}px ${theme}: 8 text fields, no clipping or page overflow`, m.rows === 8 && m.clipped === 0 && !m.overflow, m);
+      ctx.check(`FORM Date firmă ${w}px ${theme}: inputs use the wide value column`, m.minRatio >= (w >= 1000 ? 0.45 : 0.85), Math.round(m.minRatio * 100) / 100);
+      await ui.shot("FORM_OWNER_company-long-values", { step: "FORM", role: "Proprietar", state: "Date firmă: valori lungi, nesalvate" }, { full: true });
+      if (w === 1440 && theme === "light") {
+        await ui.fill("IBAN", "RO00 GRESIT");
+        await ui.click("Revizuiește și salvează");
+        await ui.click(/^Salvează versiunea/);
+        await ui.waitText(/IBAN invalid/, 15000);
+        ctx.check("FORM validation message visible next to the field (1440 light)", await ui.has(/IBAN invalid/));
+        await ui.shot("FORM_OWNER_company-validation", { step: "FORM", role: "Proprietar", state: "Date firmă: IBAN invalid, ciorna păstrată" }, { full: true });
+      }
+    }
+  } finally { ui.close(); }
+}
+
 export const STEPS = [
   { id: "products", title: "Owner selects the products offered", run: products },
   { id: "commercial", title: "Owner confirms the commercial policy", run: commercialPolicy },
@@ -1068,5 +1105,6 @@ export const STEPS = [
   { id: "snapshot", title: "Record facts before restart", run: snapshot },
   // Run explicitly with --steps after a restart / on a restored copy (never part of the default chain).
   { id: "persistence", title: "Facts identical after restart", run: persistence, explicitOnly: true },
+  { id: "companyform", title: "Date firmă form composition at 1440/390 px Light/Dark", run: companyForm, explicitOnly: true },
   { id: "restored", title: "Restored copy: data, audit and a representative flow", run: restored, explicitOnly: true },
 ];

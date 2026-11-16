@@ -574,6 +574,42 @@
   text-align: right;
 }
 
+/* Long free-text fields (company identity): label column + a wide, left-aligned value column. */
+.adm-field[data-variant="text"] {
+  grid-template-columns: minmax(12rem, 2fr) minmax(0, 3fr);
+  align-items: start;
+}
+
+.adm-field[data-variant="text"] .adm-field__value {
+  align-items: stretch;
+  min-width: 0;
+}
+
+.adm-field[data-variant="text"] .adm-field__control {
+  width: 100%;
+  min-width: 0;
+}
+
+.adm-input--text {
+  width: 100%;
+  min-width: 0;
+  font-weight: 500;
+  text-align: left;
+  text-overflow: ellipsis;
+}
+
+.adm-field[data-variant="text"] .adm-field__readonly {
+  font-family: inherit;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.adm-field[data-variant="text"] .adm-field__note {
+  padding-right: 0;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
 .adm-field[data-state="modified"] .adm-input {
   border: 1.5px solid var(--adm-signal);
 }
@@ -1242,6 +1278,11 @@
 }
 
 @media (max-width: 900px) {
+  .adm-field[data-variant="text"] {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
   .adm {
     --adm-gutter: 24px;
   }

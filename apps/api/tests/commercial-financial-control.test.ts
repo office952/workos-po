@@ -399,6 +399,9 @@ describe("company identity", () => {
     });
     expect(conflict.status).toBe(409);
     expect((await call(fixture, a.member, "PATCH", "/api/seller", { ...SYNTHETIC_DEMO_SELLER, expectedVersion: 1 })).status).toBe(403);
+    // Legacy clients without expectedVersion never bypass the permission and never bypass validation.
+    expect((await call(fixture, a.member, "PATCH", "/api/seller", { ...SYNTHETIC_DEMO_SELLER })).status).toBe(403);
+    expect((await call(fixture, a.owner, "PATCH", "/api/seller", { legalName: "Fără CIF" })).status).toBe(400);
     expect((await call(fixture, a.member, "GET", "/api/seller/versions")).status).toBe(403);
 
     const confirmed = await confirm(fixture, a.owner, { requestId: a.requestId, manualProductNetPrice: 400 });
@@ -419,6 +422,17 @@ describe("company identity", () => {
     expect(renamed.status).toBe(200);
     const versions = await call(fixture, a.owner, "GET", "/api/seller/versions");
     expect(versions.json?.currentVersion).toBe(2);
+    // Documented limit: a legacy client that omits expectedVersion is last-write-wins (no
+    // concurrency check), but the write is still validated, authorized and recorded as a version.
+    const legacy = await call(fixture, a.owner, "PATCH", "/api/seller", {
+      ...SYNTHETIC_DEMO_SELLER,
+      legalName: "Firma Identitate Redenumită SRL",
+      bank: "Banca prin client vechi",
+    });
+    expect(legacy.status).toBe(200);
+    expect(legacy.json?.version).toBe(3);
+    const afterLegacy = await call(fixture, a.owner, "GET", "/api/seller/versions");
+    expect((afterLegacy.json?.versions as Json[]).map((row) => row.version)).toEqual([3, 2, 1]);
     expect(((versions.json?.versions as Json[])[0]!.changedFields as Json[]).map((field) => field.field)).toEqual([
       "legalName",
       "bank",

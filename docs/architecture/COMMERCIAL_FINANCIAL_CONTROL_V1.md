@@ -78,11 +78,11 @@ Separate discount and adjustment operations would change the pricing formula. Th
 
 - Fields: legal name, brand, fiscal id, trade register, address, locality, IBAN, bank (`seller_profile`).
 - History lives in `seller_profile_versions`: immutable, with author, time and changed fields.
-- The UI sends `expectedVersion`. A stale version is refused with 409. Legacy clients that do not send it keep last-write-wins and are still validated and versioned.
+- Concurrency: the Date firmă page always sends `expectedVersion`; a stale version is refused with 409. Exact limit: a client that omits `expectedVersion` (pre-V1 scripts, the synthetic owner-review seed, direct API calls) is **last-write-wins**. Such a write still needs `org.settings.manage`, is validated, and is recorded as a new version with its author, so it is recoverable from the history; it is not protected against a concurrent edit. No first-party UI writes without the version (the old `updateSeller` client was removed).
 - Validation:
   - legal name and fiscal id are required on save;
-  - a digits-only fiscal id with an optional "RO" prefix is checked with the published Romanian control digit (key 753217532). A failure is a **warning**, because the model has no country field;
-  - other identifiers get a structural check only, reported as "nevalidat";
+  - jurisdiction is never inferred: the Romanian rule (published control digit, key 753217532) applies only when the identifier declares the country with the `RO` prefix. A control-digit mismatch is a **warning** (compatibility with existing profiles), never a refusal;
+  - any other value, including digits without a prefix, gets a structural check only and is reported explicitly as "Țara nu este cunoscută: identificatorul este verificat doar ca format", with no country-specific claim;
   - an IBAN, when given, must pass ISO 13616 (mod 97).
 - Empty fields are omitted from documents.
 - Frozen quotes and orders keep the identity copied at issue time.

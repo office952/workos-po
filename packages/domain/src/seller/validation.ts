@@ -8,11 +8,12 @@ import {
 /**
  * Commercial & Financial V1 · company identity validation, completeness and versions.
  *
- * The seller profile has the eight existing fields only. There is no country field in the model,
- * so jurisdiction is never assumed: a fiscal id that has the shape of a Romanian CUI (digits,
- * optional "RO" prefix) is checked with the published Romanian control-digit algorithm; any other
- * value gets a structural check only and is reported as not verified. A structurally valid id does
- * not prove that the company exists.
+ * The seller profile has the eight existing fields only and no country field, so the jurisdiction
+ * is never inferred from an ambiguous value. The Romanian rule (published control digit, key
+ * 753217532) applies only when the identifier itself declares the country with the "RO" prefix.
+ * Any other value (including digits only) gets a structural check and is explicitly reported as
+ * "țara nu este cunoscută" — no country-specific fiscal check is claimed. A valid control digit
+ * never proves that the company exists.
  */
 export const SELLER_FIELDS = [
   "legalName",
@@ -30,12 +31,13 @@ export type SellerFieldIssue = { field: SellerField; reason: string };
 
 export type FiscalIdCheck =
   | { kind: "EMPTY" }
-  | { kind: "RO_CUI_VALID"; normalized: string }
-  | { kind: "RO_CUI_INVALID" }
-  | { kind: "STRUCTURAL_ONLY" }
+  | { kind: "RO_PREFIX_VALID"; normalized: string }
+  | { kind: "RO_PREFIX_CONTROL_MISMATCH"; normalized: string }
+  | { kind: "JURISDICTION_UNKNOWN" }
   | { kind: "INVALID_FORMAT" };
 
-const RO_CUI_SHAPE = /^(RO)?\s*(\d{2,10})$/i;
+/** Only an explicit country prefix selects the Romanian rule (EU VAT notation). */
+const RO_PREFIXED_CUI = /^RO\s*(\d{2,10})$/i;
 const GENERIC_FISCAL_ID = /^[A-Z0-9][A-Z0-9 ./-]{1,29}$/i;
 const RO_CUI_KEY = [7, 5, 3, 2, 1, 7, 5, 3, 2];
 
@@ -56,26 +58,26 @@ export function isValidRomanianCui(digits: string): boolean {
 export function checkFiscalId(value: string): FiscalIdCheck {
   const trimmed = value.trim();
   if (trimmed === "") return { kind: "EMPTY" };
-  const ro = RO_CUI_SHAPE.exec(trimmed);
+  const ro = RO_PREFIXED_CUI.exec(trimmed);
   if (ro) {
-    const digits = ro[2]!;
-    return isValidRomanianCui(digits)
-      ? { kind: "RO_CUI_VALID", normalized: `${ro[1] ? "RO" : ""}${digits}` }
-      : { kind: "RO_CUI_INVALID" };
+    const normalized = `RO${ro[1]!}`;
+    return isValidRomanianCui(ro[1]!)
+      ? { kind: "RO_PREFIX_VALID", normalized }
+      : { kind: "RO_PREFIX_CONTROL_MISMATCH", normalized };
   }
-  return GENERIC_FISCAL_ID.test(trimmed) ? { kind: "STRUCTURAL_ONLY" } : { kind: "INVALID_FORMAT" };
+  return GENERIC_FISCAL_ID.test(trimmed) ? { kind: "JURISDICTION_UNKNOWN" } : { kind: "INVALID_FORMAT" };
 }
 
 export function fiscalIdCheckLabel(check: FiscalIdCheck): string {
   switch (check.kind) {
     case "EMPTY":
       return "Necompletat";
-    case "RO_CUI_VALID":
-      return "Format CIF românesc valid (cifra de control corectă). Nu confirmă existența firmei.";
-    case "RO_CUI_INVALID":
-      return "CIF românesc cu cifra de control greșită.";
-    case "STRUCTURAL_ONLY":
-      return "Identificator fiscal nevalidat: format acceptat, fără verificare pentru această țară.";
+    case "RO_PREFIX_VALID":
+      return "Prefix RO: cifra de control a CIF-ului românesc este corectă. Nu confirmă existența firmei.";
+    case "RO_PREFIX_CONTROL_MISMATCH":
+      return "Prefix RO: cifra de control a CIF-ului românesc nu corespunde.";
+    case "JURISDICTION_UNKNOWN":
+      return "Țara nu este cunoscută: identificatorul este verificat doar ca format, fără o validare fiscală specifică unei țări. Pentru verificarea CIF-ului românesc, scrie-l cu prefixul RO.";
     case "INVALID_FORMAT":
       return "Identificatorul fiscal conține caractere nepermise.";
     default: {
@@ -108,8 +110,9 @@ export function normalizeIban(value: string): string {
  * Validates an Owner edit. Legal name and fiscal id are required on save; the other fields are
  * optional and omitted from documents when empty. Returns the normalized input when valid.
  *
- * Without a country in the model, a digits-only id that fails the Romanian control digit is a
- * warning, not a refusal: it may be a foreign identifier. An IBAN, when given, must pass ISO 13616.
+ * Compatibility: a Romanian control-digit mismatch (explicit "RO" prefix) is a warning, not a
+ * refusal, so organizations whose stored value predates V1 can still save; an unknown jurisdiction
+ * is reported, never refused. An IBAN, when given, must pass ISO 13616.
  */
 export function validateSellerProfileInput(
   input: SellerProfileInput,
@@ -133,11 +136,13 @@ export function validateSellerProfileInput(
     issues.push({ field: "fiscalId", reason: "Identificatorul fiscal (CIF) este obligatoriu." });
   } else if (fiscal.kind === "INVALID_FORMAT") {
     issues.push({ field: "fiscalId", reason: fiscalIdCheckLabel(fiscal) });
-  } else if (fiscal.kind === "RO_CUI_INVALID") {
+  } else if (fiscal.kind === "RO_PREFIX_CONTROL_MISMATCH") {
     warnings.push({
       field: "fiscalId",
-      reason: "Pentru un CIF românesc, cifra de control nu corespunde. Verifică valoarea; dacă este un identificator din altă țară, poți păstra valoarea.",
+      reason: "Prefix RO: cifra de control a CIF-ului românesc nu corespunde. Verifică valoarea.",
     });
+  } else if (fiscal.kind === "JURISDICTION_UNKNOWN") {
+    warnings.push({ field: "fiscalId", reason: fiscalIdCheckLabel(fiscal) });
   }
   const iban = normalizeIban(text("iban"));
   if (iban !== "" && !isValidIban(iban)) {
@@ -151,7 +156,10 @@ export function validateSellerProfileInput(
     input: {
       legalName: text("legalName"),
       brand: text("brand"),
-      fiscalId: fiscal.kind === "RO_CUI_VALID" ? fiscal.normalized : text("fiscalId"),
+      fiscalId:
+        fiscal.kind === "RO_PREFIX_VALID" || fiscal.kind === "RO_PREFIX_CONTROL_MISMATCH"
+          ? fiscal.normalized
+          : text("fiscalId"),
       tradeRegister: text("tradeRegister"),
       address: text("address"),
       locality: text("locality"),

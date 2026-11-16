@@ -160,6 +160,12 @@ describe("CompanyAdminPage", () => {
     render(<CompanyAdminPage />);
     expect(await screen.findByRole("heading", { level: 1, name: "Date firmă" })).toBeInTheDocument();
     expect(await screen.findByText("Modificat: Denumire legală")).toBeInTheDocument();
+    // Long free-text fields use the wide, left-aligned text layout (not the short numeric one).
+    for (const label of ["Denumire legală", "Identificator fiscal (CIF)", "Adresă", "IBAN"]) {
+      const input = screen.getByLabelText(label, { selector: "input" });
+      expect(input).toHaveClass("adm-input--text");
+      expect(input.closest(".adm-field")).toHaveAttribute("data-variant", "text");
+    }
     await user.type(screen.getByLabelText("IBAN"), "RO00 GRESIT");
     await user.click(screen.getByRole("button", { name: "Revizuiește și salvează" }));
     await user.click(await screen.findByRole("button", { name: "Salvează versiunea 4" }));
