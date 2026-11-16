@@ -573,8 +573,16 @@ async function modularity(ctx) {
     await ownerB.click("Creează cererea și configurează");
     await ownerB.page.waitFor(`/configurator/.test(location.pathname)`, 20000);
     ownerB.configuratorUrl = await ownerB.page.eval("location.pathname + location.search");
-    await ownerB.click("Pregătire ofertă");
-    if (await ownerB.has(/Datele firmei emitente lipsesc/)) { await ownerB.fill("Denumire firmă", "WORKOS PILOT B SRL"); await ownerB.click("Salvează datele firmei"); }
+    // Commercial & Financial V1: B completes its own identity in Administrare › Date firmă.
+    if (!(await ownerB.api("/api/seller")).body?.configured) {
+      await ownerB.go("/admin/company");
+      await ownerB.waitText(/Date firmă/);
+      await ownerB.fill("Denumire legală", "WORKOS PILOT B SRL");
+      await ownerB.fill("Identificator fiscal (CIF)", "DEMO-CIF-PILOT-B");
+      await ownerB.click("Revizuiește și salvează");
+      await ownerB.click(/^Salvează versiunea/);
+      await ownerB.waitText(/Datele firmei au fost salvate/, 15000);
+    }
     await fillAndConfirm(ownerB);
     await ownerB.fill("Preț net al produsului, fără TVA", "900");
     await ownerB.click("Confirmă prețul");
@@ -910,7 +918,9 @@ async function offering(ctx) {
     }
     await commercial.shot("CFC_COMMERCIAL_approval-pending", { step: "CFC-4", role: "Comercial", state: "solicitare trimisă, în așteptare" }, { full: true });
     const pageText = await commercial.text();
-    ctx.check("CFC-4 Comercial view shows no internal cost, margin or threshold", !/Cost intern|marj|1\.000,00/i.test(pageText.split("Pregătire ofertă").pop() ?? ""));
+    // The pre-V1 "Cost intern" panel title is shown to the Comercial without values; only values,
+    // margins and the Owner's thresholds would be a leak.
+    ctx.check("CFC-4 Comercial view shows no margin, rule or threshold (UI)", !/marj|1\.000,00|Valoarea netă depășește/i.test(pageText));
 
     await owner.go("/admin/offering");
     await owner.waitText(/Client Aprobare SRL/, 20000);
