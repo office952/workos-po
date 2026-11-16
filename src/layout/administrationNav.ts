@@ -9,6 +9,8 @@
 export type AdministrationRailId =
   | "catalog"
   | "commercial"
+  | "offering"
+  | "company"
   | "resources"
   | "services"
   | "materials"
@@ -20,7 +22,7 @@ export type AdministrationRailId =
   | "workcenters"
   | "external-production";
 
-export type AdministrationDomainId = "offer" | "calculation" | "workshop" | "execution" | "access";
+export type AdministrationDomainId = "company" | "offer" | "calculation" | "workshop" | "execution" | "access";
 
 export type AdministrationNavItem = {
   id: AdministrationRailId;
@@ -57,6 +59,19 @@ type DomainDefinition = {
 
 const ADMINISTRATION_DOMAINS: readonly DomainDefinition[] = [
   {
+    id: "company",
+    label: "Firma",
+    description: "Identitatea legală, fiscală și bancară de pe documente.",
+    items: [
+      {
+        id: "company",
+        label: "Date firmă",
+        href: "/admin/company",
+        purpose: "Denumire, CIF, registru, adresă și date bancare pentru oferte.",
+      },
+    ],
+  },
+  {
     id: "offer",
     label: "Ce oferi",
     description: "Ce poate fi ales pentru lucrările noi.",
@@ -92,6 +107,12 @@ const ADMINISTRATION_DOMAINS: readonly DomainDefinition[] = [
         label: "Valori comerciale",
         href: "/admin/commercial",
         purpose: "Valorile de pornire pentru ofertele noi.",
+      },
+      {
+        id: "offering",
+        label: "Reguli de ofertare",
+        href: "/admin/offering",
+        purpose: "Cine stabilește prețul și când este nevoie de aprobarea ta.",
       },
       {
         id: "resources",

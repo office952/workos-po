@@ -471,7 +471,7 @@ describe("commercial closure API", () => {
     expect((await readBody(assembly)).error).toBe("commercial_request_closed");
   });
 
-  it("14 and 18 block member mutations and cross-tenant access", async () => {
+  it("14 and 18 let the Comercial role decide the outcome and block cross-tenant access", async () => {
     const fixture = createCloudFixture();
     try {
       const alpha = await addOrganization(fixture, "Alpha Closure");
@@ -538,21 +538,18 @@ describe("commercial closure API", () => {
         {
           groups: [],
           close: true,
-          closeReason: "Membrul nu poate închide.",
+          closeReason: "Comercialul închide cererea fără ofertă.",
           expectedRevision: 0,
           operationId: operationId("member"),
         },
         memberHeaders,
       );
-      expect(memberPost.status).toBe(403);
+      // Commercial & Financial V1 (Owner decision 2): the Comercial role decides the request outcome.
+      expect(memberPost.status).toBe(200);
       const memberRead = await commercialOf(fixture.app, requestId, {
         cookie: memberA.cookie ?? "",
       });
-      expect(memberRead.state).toBe("OPEN");
-      expect(memberRead.canClose).toBe(false);
-      expect(memberRead.availableActions).not.toEqual(
-        expect.arrayContaining(["CLOSE_OFFERLESS", "SAVE_DECISIONS"]),
-      );
+      expect(memberRead.state).toBe("CLOSED");
 
       const foreign = await postDecisions(
         fixture.app,

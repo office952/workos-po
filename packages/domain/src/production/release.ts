@@ -3,6 +3,7 @@ import {
   ORDER_SNAPSHOT_SCHEMA_VERSION_V2,
   type OrderSnapshot,
 } from "../commercial/orderSnapshot.js";
+import { isIncompleteCostAcceptanceFor } from "../commercial/quoteAcceptance.js";
 import { projectSiteInstallationOperationalView } from "../installation/hostContext.js";
 import { appendInstallAtSiteOperation } from "./installAtSite.js";
 import {
@@ -45,7 +46,14 @@ export function freezeProductionReleaseFromOrder(
     order.status !== "FROZEN" ||
     order.orderSnapshotId.trim() === "" ||
     order.contentHash.trim() === "" ||
-    order.eic.completeness !== "COMPLETE"
+    (order.eic.completeness !== "COMPLETE" &&
+      !(
+        order.schemaVersion === ORDER_SNAPSHOT_SCHEMA_VERSION &&
+        isIncompleteCostAcceptanceFor(order.incompleteCostAcceptance, {
+          quoteSnapshotId: order.sourceQuoteSnapshotId,
+          contentHash: order.sourceQuoteContentHash,
+        })
+      ))
   ) {
     return {
       ok: false,

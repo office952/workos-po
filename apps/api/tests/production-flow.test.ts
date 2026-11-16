@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CANONICAL_PRODUCT_CODE, OWNER_CONFIRMED_SELLER } from "@workos-final/domain";
+import { CANONICAL_PRODUCT_CODE, SYNTHETIC_DEMO_SELLER } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
 import { createProductSystemRuntime } from "../src/productSystem/runtime.js";
 import { freezeAcknowledgingRates } from "./fixtures/rateAcknowledgement.js";
@@ -101,7 +101,7 @@ describe("coordinated production flow", () => {
       const owner = client(fixture.app, (await loginCloud(fixture.app, "flow-owner@example.test", OWNER_PASSWORD, org.organization.organizationId)).cookie ?? "");
       const member = client(fixture.app, (await loginCloud(fixture.app, "flow-member@example.test", MEMBER_PASSWORD, org.organization.organizationId)).cookie ?? "");
       const outsider = client(fixture.app, (await loginCloud(fixture.app, "flow-other@example.test", OWNER_PASSWORD, other.organization.organizationId)).cookie ?? "");
-      const { legalName, brand, fiscalId, tradeRegister, address, locality, iban, bank } = OWNER_CONFIRMED_SELLER;
+      const { legalName, brand, fiscalId, tradeRegister, address, locality, iban, bank } = SYNTHETIC_DEMO_SELLER;
       const ownerCookie = (await loginCloud(fixture.app, "flow-owner@example.test", OWNER_PASSWORD, org.organization.organizationId)).cookie ?? "";
       expect((await fixture.app.request("/api/seller", { method: "PATCH", headers: { cookie: ownerCookie, "content-type": "application/json" }, body: JSON.stringify({ legalName, brand, fiscalId, tradeRegister, address, locality, iban, bank }) })).status).toBe(200);
       const quote = await readyQuote(owner);

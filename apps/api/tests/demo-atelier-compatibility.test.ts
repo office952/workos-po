@@ -30,6 +30,7 @@ const LATER_MIGRATIONS = [
   "050_organization_product_preset_revisions.sql",
   "051_commercial_closure_ledger.sql",
   "052_execution_issue_lifecycle.sql",
+  "053_commercial_financial_control.sql",
 ] as const;
 
 const LATER_TABLES = [
@@ -41,6 +42,11 @@ const LATER_TABLES = [
   "commercial_ledger_events",
   "commercial_offer_dispositions",
   "execution_task_issue_lifecycle",
+  "commercial_price_approval_events",
+  "commercial_price_approvals",
+  "organization_offering_policy_versions",
+  "quote_incomplete_cost_acceptances",
+  "seller_profile_versions",
 ] as const;
 
 afterEach(() => {

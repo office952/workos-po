@@ -4,7 +4,7 @@ import {
   CANONICAL_PRODUCT_CODE,
   costEvidence,
   MCH_CNC_4020_ID,
-  OWNER_CONFIRMED_SELLER,
+  SYNTHETIC_DEMO_SELLER,
   PLEXIGLAS_3MM_OPAL_ID,
 } from "@workos-final/domain";
 import { PLATFORM_DEFAULT_COST_NOTE } from "../src/resources/store.js";
@@ -276,7 +276,7 @@ describe("Cloud bootstrap policy", () => {
       method: "PATCH",
       headers: { ...headers, "content-type": "application/json" },
       body: JSON.stringify({
-        ...OWNER_CONFIRMED_SELLER,
+        ...SYNTHETIC_DEMO_SELLER,
         legalName: "Atelier Nou SRL",
         brand: "Atelier Nou",
         fiscalId: "RO11111111",
@@ -285,7 +285,7 @@ describe("Cloud bootstrap policy", () => {
     expect(sellerWrite.status).toBe(200);
     const savedSeller = (await sellerWrite.json()) as { seller: { legalName: string } };
     expect(savedSeller.seller.legalName).toBe("Atelier Nou SRL");
-    expect(savedSeller.seller.legalName).not.toBe(OWNER_CONFIRMED_SELLER.legalName);
+    expect(savedSeller.seller.legalName).not.toBe(SYNTHETIC_DEMO_SELLER.legalName);
 
     const reopened = (await (
       await fixture.app.request("/api/seller", { headers })

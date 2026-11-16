@@ -5,7 +5,8 @@ import { administrationDomains } from "./administrationNav";
 /**
  * R3 route inventory, reconciled with the router:
  * - Hub: /admin
- * - 11 Administration destinations, each a route the router names `admin-*`;
+ * - 13 Administration destinations, each a route the router names `admin-*`
+ *   (Commercial & Financial V1 adds „Firma › Date firmă” and „Reguli de ofertare”);
  * - 3 detail routes that open inside two of them (person; zone; machine);
  * - Catalog: a separate workspace, listed once as an external link, never an admin route.
  */
@@ -14,15 +15,16 @@ describe("administration route inventory", () => {
   const internal = items.filter((item) => !item.external);
   const external = items.filter((item) => item.external);
 
-  it("has five domains, eleven admin destinations and one Catalog link", () => {
+  it("has six domains, thirteen admin destinations and one Catalog link", () => {
     expect(administrationDomains().map((domain) => domain.label)).toEqual([
+      "Firma",
       "Ce oferi",
       "Cum calculezi",
       "Echipa și atelierul",
       "Execuția",
       "Accesul",
     ]);
-    expect(internal).toHaveLength(11);
+    expect(internal).toHaveLength(13);
     expect(external.map((item) => item.href)).toEqual(["/catalog"]);
     expect(new Set(items.map((item) => item.href)).size).toBe(items.length);
   });

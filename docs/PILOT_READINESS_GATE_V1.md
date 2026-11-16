@@ -110,6 +110,8 @@ Scope: one coherent synthetic wave on `main` `bc5c778`. No real Cloud, real data
 
 Findings recorded without changing business rules: Comercial cannot set a manual price or freeze a quote (`prices.manual.set` owner-only); seller fiscal id, brand and locality only through the API and bank details not modelled (`ADMIN_TOOLING_DEBT`); actual internal cost is computed but not displayed (`PVA_COST_NOT_IN_UI`); skill label "Ansamblare".
 
+Later (Commercial & Financial V1, in review): the Comercial pricing, the company identity UI and the internal cost view are addressed by [Commercial & Financial Control V1](architecture/COMMERCIAL_FINANCIAL_CONTROL_V1.md). Correction: seller bank details (IBAN, bank) and trade register were already modelled and printed on the quote PDF; the statement above that bank details were not modelled was wrong. Gate A and Gate B remain HOLD.
+
 This is synthetic readiness evidence. It does not change Gate A or Gate B.
 
 ## Controlled pilot vs public SaaS launch

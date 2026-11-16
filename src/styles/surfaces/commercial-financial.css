@@ -1,0 +1,230 @@
+/*
+ * Commercial & Financial V1 · offering approvals, incomplete-cost acceptance, company identity
+ * history and planned vs operational results. Modular stylesheet (not ui.css); WorkOS tokens only.
+ */
+
+/* Acceptance with incomplete internal cost (quote page) */
+.offers-confirm__exception {
+  display: grid;
+  gap: var(--space-12);
+  margin-top: var(--space-12);
+}
+
+.offers-confirm__field {
+  display: grid;
+  gap: 6px;
+  color: var(--color-text-primary);
+  font: 600 14px/1.4 var(--font-sans);
+}
+
+.offers-confirm__field textarea {
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: 400 14px/1.45 var(--font-sans);
+  resize: vertical;
+}
+
+.offers-confirm__check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  color: var(--color-text-primary);
+  font: 400 14px/1.45 var(--font-sans);
+}
+
+.offers-confirm__field textarea:focus-visible,
+.offers-confirm__check input:focus-visible,
+.cfc-approval textarea:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Offering outcome and approval in the configurator */
+.cfc-offering {
+  display: grid;
+  gap: var(--space-12);
+}
+
+.cfc-offering__note {
+  display: grid;
+  gap: 6px;
+}
+
+.cfc-offering__note label {
+  color: var(--color-text-primary);
+  font: 600 14px/1.4 var(--font-sans);
+}
+
+.cfc-offering__note textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: 400 14px/1.45 var(--font-sans);
+}
+
+/* Owner approval list (Administrare · Reguli de ofertare) */
+.cfc-approvals {
+  display: grid;
+  gap: var(--space-12);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cfc-approval {
+  display: grid;
+  gap: 8px;
+  padding: var(--space-12) var(--space-16);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+}
+
+.cfc-approval__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  align-items: baseline;
+  justify-content: space-between;
+  color: var(--color-text-primary);
+  font: 600 14px/1.4 var(--font-sans);
+}
+
+.cfc-approval__meta,
+.cfc-approval__rules {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.45 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.cfc-approval textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: 400 14px/1.45 var(--font-sans);
+}
+
+.cfc-approval__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Planned vs operational (job sheet, Owner only) */
+.cfc-pva {
+  display: grid;
+  gap: var(--space-16);
+}
+
+.cfc-pva__figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-12);
+  margin: 0;
+}
+
+.cfc-pva__figure {
+  display: grid;
+  gap: 4px;
+  padding: var(--space-12);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-alt);
+}
+
+.cfc-pva__figure dt {
+  color: var(--color-text-secondary);
+  font: 400 13px/1.35 var(--font-sans);
+}
+
+.cfc-pva__figure dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 16px/1.3 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+.cfc-pva__figure small {
+  color: var(--color-text-muted);
+  font: 400 12px/1.35 var(--font-sans);
+}
+
+.cfc-pva__table-wrap {
+  overflow-x: auto;
+}
+
+.cfc-pva__table {
+  width: 100%;
+  min-width: 36rem;
+  border-collapse: collapse;
+  font: 400 13px/1.4 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+.cfc-pva__table th,
+.cfc-pva__table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-text-primary);
+  text-align: right;
+  vertical-align: top;
+}
+
+.cfc-pva__table th:first-child,
+.cfc-pva__table td:first-child {
+  text-align: left;
+}
+
+.cfc-pva__table th {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.cfc-pva__notes {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.5 var(--font-sans);
+}
+
+/* Company identity history (Administrare · Date firmă) */
+.cfc-history {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cfc-history li {
+  display: grid;
+  gap: 2px;
+  color: var(--color-text-secondary);
+  font: 400 13px/1.45 var(--font-sans);
+}
+
+.cfc-history strong {
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 767px) {
+  .cfc-approval__actions {
+    flex-direction: column;
+  }
+
+  .cfc-pva__figures {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

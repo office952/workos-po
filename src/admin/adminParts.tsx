@@ -61,6 +61,11 @@ type AdminFieldProps = {
   inputMode?: "decimal" | "numeric" | "text";
   /** Accessible name when the visible label is not enough. */
   ariaLabel?: string;
+  /**
+   * "value" (default): short numeric value aligned right, as on every existing page.
+   * "text": long free text (names, addresses, identifiers) taking the full value column.
+   */
+  variant?: "value" | "text";
 };
 
 export function AdminField({
@@ -76,6 +81,7 @@ export function AdminField({
   disabled = false,
   inputMode = "text",
   ariaLabel,
+  variant = "value",
 }: AdminFieldProps) {
   const modified = !readOnly && baseline !== undefined && value !== baseline;
   const helpId = help ? `${id}-help` : undefined;
@@ -84,6 +90,7 @@ export function AdminField({
     <div
       className="adm-field"
       data-state={error ? "error" : modified ? "modified" : readOnly ? "read-only" : "normal"}
+      data-variant={variant === "text" ? "text" : undefined}
     >
       <div className="adm-field__copy">
         {readOnly ? (
@@ -111,11 +118,12 @@ export function AdminField({
           ) : (
             <input
               id={id}
-              className="adm-input adm-input--value"
+              className={variant === "text" ? "adm-input adm-input--text" : "adm-input adm-input--value"}
               value={value}
               inputMode={inputMode}
               disabled={disabled}
               aria-label={ariaLabel}
+              title={variant === "text" && value ? value : undefined}
               aria-invalid={error ? true : undefined}
               aria-describedby={[helpId, noteId].filter(Boolean).join(" ") || undefined}
               onChange={(event) => onChange?.(event.target.value)}

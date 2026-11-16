@@ -28,6 +28,7 @@ import { AcceptanceResult } from "./quotes/AcceptanceResult";
 import { QuoteDecisionNote } from "./quotes/QuoteDecisionNote";
 import { quoteDecisionMode } from "./quotes/quoteDecisionMode";
 import "../styles/surfaces/quote-decision.css";
+import "../styles/surfaces/commercial-financial.css";
 import { presentProductQuoteLines, presentProductQuoteTotal } from "./quoteDocumentModel";
 import "../styles/surfaces/offers.css";
 
@@ -101,7 +102,7 @@ export function QuoteSnapshotPage({
     setConfirming(false);
   }
 
-  async function accept(): Promise<void> {
+  async function accept(incompleteCostReason?: string): Promise<void> {
     if (acceptingRef.current) {
       return;
     }
@@ -109,7 +110,15 @@ export function QuoteSnapshotPage({
     setActionState("pending");
     setActionError(null);
     try {
-      const orderId = presentOrderSnapshotId(await confirmQuoteOrder(productCode, quoteSnapshotId));
+      const orderId = presentOrderSnapshotId(
+        await confirmQuoteOrder(
+          productCode,
+          quoteSnapshotId,
+          incompleteCostReason !== undefined
+            ? { incompleteCostAcceptance: { confirm: true, reason: incompleteCostReason } }
+            : undefined,
+        ),
+      );
       if (!orderId) throw new Error("missing_order");
       invalidateAfterCreateOrder(quoteSnapshotId, snapshot.data?.requestId);
       // N-018 · the offer stays open with the acceptance result; the job opens from there.
@@ -236,7 +245,10 @@ export function QuoteSnapshotPage({
                   }
                   total={total}
                   pending={actionState === "pending"}
-                  onConfirm={() => void accept()}
+                  incompleteCost={
+                    presentedSnapshot?.financialVisible === true && presentedSnapshot.completeness === "PARTIAL"
+                  }
+                  onConfirm={(reason) => void accept(reason)}
                   onCancel={cancelAcceptance}
                 />
               ) : null}
@@ -311,6 +323,7 @@ function QuoteAcceptanceConfirmation({
   requestReference,
   total,
   pending,
+  incompleteCost,
   onConfirm,
   onCancel,
 }: {
@@ -321,9 +334,15 @@ function QuoteAcceptanceConfirmation({
   requestReference: string | null;
   total: QuoteTotal | null;
   pending: boolean;
-  onConfirm: () => void;
+  /** AUD-PRICING-002: the Owner sees the frozen internal cost is incomplete and must confirm it. */
+  incompleteCost: boolean;
+  onConfirm: (incompleteCostReason?: string) => void;
   onCancel: () => void;
 }): ReactNode {
+  const [reason, setReason] = useState("");
+  const [acknowledged, setAcknowledged] = useState(false);
+  const reasonId = useId();
+  const exceptionReady = !incompleteCost || (acknowledged && reason.trim().length > 0);
   const customer = customerName?.trim() ?? "";
   const request = requestReference?.trim() ?? "";
   const commercial =
@@ -357,9 +376,40 @@ function QuoteAcceptanceConfirmation({
         {request ? ` Cerere: ${request}.` : ""}
         {commercial ? ` ${commercial}.` : ""}
       </p>
+      {incompleteCost ? (
+        <div className="offers-confirm__exception" data-testid="incomplete-cost-exception">
+          <InlineAlert tone="pending" title="Costul intern al ofertei nu este complet">
+            Acceptarea este posibilă doar ca excepție confirmată de tine. Costul rămâne marcat incomplet
+            în comandă și în analiza lucrării; oferta înghețată nu se modifică.
+          </InlineAlert>
+          <label className="offers-confirm__field" htmlFor={reasonId}>
+            Motivul acceptării cu cost incomplet
+            <textarea
+              id={reasonId}
+              value={reason}
+              maxLength={500}
+              rows={2}
+              disabled={pending}
+              onChange={(event) => setReason(event.target.value)}
+            />
+          </label>
+          <label className="offers-confirm__check">
+            <input
+              type="checkbox"
+              checked={acknowledged}
+              disabled={pending}
+              onChange={(event) => setAcknowledged(event.target.checked)}
+            />
+            Confirm acceptarea cu cost intern incomplet
+          </label>
+        </div>
+      ) : null}
       <div className="offers-confirm__actions">
-        <Button disabled={pending} onClick={onConfirm}>
-          {pending ? "Se creează comanda…" : "Da, confirm comanda"}
+        <Button
+          disabled={pending || !exceptionReady}
+          onClick={() => onConfirm(incompleteCost ? reason.trim() : undefined)}
+        >
+          {pending ? "Se creează comanda…" : incompleteCost ? "Acceptă cu cost incomplet" : "Da, confirm comanda"}
         </Button>
         <Button variant="secondary" disabled={pending} onClick={onCancel}>
           Renunță

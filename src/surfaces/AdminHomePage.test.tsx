@@ -95,10 +95,10 @@ describe("AdminHomePage", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Administrare" })).toBeInTheDocument();
     const map = screen.getByRole("navigation", { name: "Domeniile administrării" });
-    for (const domain of ["Ce oferi", "Cum calculezi", "Echipa și atelierul", "Execuția", "Accesul"]) {
+    for (const domain of ["Firma", "Ce oferi", "Cum calculezi", "Echipa și atelierul", "Execuția", "Accesul"]) {
       expect(within(map).getByRole("heading", { name: domain })).toBeInTheDocument();
     }
-    expect(within(map).getAllByRole("link")).toHaveLength(12);
+    expect(within(map).getAllByRole("link")).toHaveLength(14);
     expect(await within(map).findAllByText("Dezactivat explicit")).not.toHaveLength(0);
     expect(screen.queryByText("Organizație nouă")).not.toBeInTheDocument();
     expect(screen.queryByText("Pregătit")).not.toBeInTheDocument();

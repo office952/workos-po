@@ -88,6 +88,7 @@ describe("presentConfirm", () => {
       pricingMethod: null,
       calculatedPriceAvailable: false,
       manualProductPriceAuthorized: false,
+      offering: null,
       quoteBlocker: null,
       rateAcknowledgement: null,
     });

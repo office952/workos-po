@@ -30,6 +30,7 @@ export function JobRecordView({
   viewerExpanded = false,
   files,
   dates,
+  economics = null,
   summaryContext,
   productionFinished = false,
 }: {
@@ -50,6 +51,8 @@ export function JobRecordView({
   /** The Fișiere section, built by the page (its file detail lives in the URL). */
   files?: ReactNode;
   dates: ReactNode;
+  /** Commercial & Financial V1: planned vs operational result (Owner only, built by the page). */
+  economics?: ReactNode;
   summaryContext?: JobSummaryContext;
   productionFinished?: boolean;
 }) {
@@ -63,6 +66,7 @@ export function JobRecordView({
           </section>
         ) : null}
         {record ? <JobRecordIssues record={record} operationHref={operationHref} /> : null}
+        {economics}
       </Section>
       <Section active={section} section="operatii">
         <JobRecordOperations

@@ -65,7 +65,7 @@ Migrations: the API applies the repository migrations to the **new** N-029 datab
 | 6 | Work centers, machines, capabilities | Proprietar | UI `/admin/workcenters` | — |
 | 7 | People, skills and operator PIN | Proprietar | UI `/admin/people` | PIN generated locally, kept in the secrets file |
 | 8 | Invite Comercial, Producție, Atelier | Proprietar → invitee | UI `/admin/access` (one-time link) → invitee sets own password | Requires `WORKOS_ORG_ROLES_V1=on`; off by default on main |
-| 9 | Seller legal name on offers | Proprietar | UI configurator → "Pregătire ofertă" | Fiscal id, brand, locality: **API** only (`ADMIN_TOOLING_DEBT`); bank details not modelled |
+| 9 | Company identity (legal name, fiscal id, trade register, address, locality, IBAN, bank) | Proprietar | UI `/admin/company` (Administrare › Firma › Date firmă) | Validated and versioned (Commercial & Financial V1). Correction: bank details were already modelled before V1; the earlier "bank details not modelled" statement was wrong |
 | 10 | Revoke a member, close other sessions | Proprietar / user | UI `/admin/access`, account security | — |
 | 11 | Second organization (B) and a user in both | Platform operator (B bootstrap) + owner B in UI | **CLI** for B's first owner; UI invitation for the shared user | One person, two roles in two organizations |
 | 12 | Optional capabilities (Materials, external production) | Proprietar | UI `/admin/material-readiness`, `/admin/external-production` | Default DISABLED; the journey activates Materials later and proves job history unchanged; external production is only checked as DISABLED |
@@ -76,14 +76,14 @@ Migrations: the API applies the repository migrations to the **new** N-029 datab
 | --- | --- | --- |
 | Client and request | Comercial | `/cereri/noua` ("Adaugă client rapid", product choice) |
 | Configuration | Comercial | configurator inside the request (server schema) |
-| Manual price and frozen quote | **Proprietar** | configurator → "Confirmă prețul" → "Îngheață oferta" (Comercial cannot: `prices.manual.set` is owner-only, pre-V1 rule) |
+| Manual price and frozen quote | Proprietar, or Comercial when the organization offering policy allows it | configurator → "Confirmă prețul" → "Îngheață oferta" (approval mode: "Trimite spre aprobare", Proprietar approves in `/admin/offering`) | Default policy OWNER_ONLY keeps the pre-V1 rule |
 | Quote PDF | Proprietar / Comercial | quote page (document route) |
 | Customer acceptance → job | Proprietar | quote → "Confirmă comanda" |
 | Production release and plan | Producție | job sheet → "Trimite în producție" |
 | Execution (operator identified by PIN) | Atelier | `/atelier` → operation → start/finish, observations, issue |
 | QC | Atelier | QC operation → note → "Acceptă" |
 | Issue handling | Producție | "Preia problema" → "Marchează rezolvată" |
-| Finalization, planned vs actual | Proprietar / Producție | job sheet; actual internal cost is computed by the engine (owner scope) but **not shown in the UI** (`PVA_COST_NOT_IN_UI`) |
+| Finalization, planned vs actual | Proprietar / Producție | job sheet; the Owner sees "Planificat vs realizat" (estimated, operational cost, margins; unknown values shown as unknown). Producție sees no cost |
 
 ## 4. Restart, backup and restore (N-029 only)
 
@@ -107,10 +107,10 @@ node e2e/pilot/pilot-journey.mjs --base http://127.0.0.1:8895 --root <root> --ev
 
 | Item | Classification |
 | --- | --- |
-| Seller fiscal id, brand, locality only through **API** `PATCH /api/seller` (UI: legal name only); bank details not modelled | `ADMIN_TOOLING_DEBT` (bank: product decision) |
+| Company identity | Resolved in Commercial & Financial V1 (`/admin/company`); a country field remains a schema decision |
 | First owner of a new organization only through CLI | Controlled pilot by design (no public signup) |
-| Comercial cannot set a manual price or freeze a quote | Existing permission rule; changing it needs an Owner decision |
-| Actual internal cost not presented in the UI | Presentation gap; engine value exists (PARTIAL when evidence is incomplete) |
+| Comercial pricing | Resolved by the organization offering policy (Commercial & Financial V1); default OWNER_ONLY |
+| Actual internal cost in the UI | Resolved: "Planificat vs realizat" on the job sheet (Owner only); confirmed accounting cost is not modelled |
 | Skill label "Ansamblare" | Minor UX text |
 | Online backup under writes | Not supported (quiesced only) |
 | Assembly products (ACM + letters) | Not part of this journey; letters product only |

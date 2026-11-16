@@ -1,3 +1,4 @@
+import { presentOfferingView } from "./commercialFinancialAdapter";
 import type {
   ConfirmTransport,
   CostCompletenessIssueTransport,
@@ -188,6 +189,7 @@ export function presentConfirm(
       manualProductPriceAuthorized: record.manualProductPriceAuthorized === true,
       quoteBlocker: presentQuoteBlocker(record.commercialExperience),
       rateAcknowledgement: presentRateAcknowledgement(record.rateAcknowledgement),
+      offering: presentOfferingView(record.offering),
     };
   }
   return {
@@ -215,5 +217,6 @@ export function presentConfirm(
     manualProductPriceAuthorized: record.manualProductPriceAuthorized === true,
     quoteBlocker: presentQuoteBlocker(record.commercialExperience),
     rateAcknowledgement: presentRateAcknowledgement(record.rateAcknowledgement),
+    offering: presentOfferingView(record.offering),
   };
 }

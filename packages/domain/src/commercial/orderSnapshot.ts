@@ -9,6 +9,8 @@ import {
 import {
   QUOTE_ACCEPTANCE_SCHEMA_VERSION,
   type QuoteAcceptanceDecision,
+  isIncompleteCostAcceptanceFor,
+  type IncompleteCostAcceptance,
 } from "./quoteAcceptance.js";
 import { copyFrozenCustomerIdentity } from "../customers/identity.js";
 import { copyFrozenSellerIdentity } from "../seller/identity.js";
@@ -62,6 +64,8 @@ export type OrderSnapshot = {
   productionInput: FrozenProductionInput;
   customer?: QuoteSnapshot["customer"];
   seller?: QuoteSnapshot["seller"];
+  /** Owner exception (AUD-PRICING-002): internal cost was not COMPLETE at acceptance. */
+  incompleteCostAcceptance?: IncompleteCostAcceptance;
   lines?: readonly FrozenQuoteLine[];
   jobCommercial?: FrozenJobCommercial;
 };
@@ -93,6 +97,7 @@ type CopiedOrderCore = {
   productionInput: FrozenProductionInput;
   customer?: QuoteSnapshot["customer"];
   seller?: QuoteSnapshot["seller"];
+  incompleteCostAcceptance?: IncompleteCostAcceptance;
 };
 
 export function freezeOrderSnapshot(
@@ -135,7 +140,7 @@ function freezeOrderSnapshotV1(
   if (
     quote.schemaVersion !== QUOTE_SNAPSHOT_SCHEMA_VERSION ||
     !isSupportedQuoteSnapshot(quote) ||
-    !hasCompleteProductOrderSource(quote)
+    !hasCompleteProductOrderSource(quote, acceptance)
   ) {
     return {
       ok: false,
@@ -158,7 +163,7 @@ function freezeOrderSnapshotV2(
   if (
     quote.schemaVersion !== QUOTE_SNAPSHOT_SCHEMA_VERSION_V2 ||
     !isTrustedFrozenQuoteV2ForOrder(quote) ||
-    !hasCompleteProductOrderSource(quote) ||
+    !hasCompleteProductOrderSource(quote, acceptance) ||
     !quote.lines ||
     !quote.jobCommercial
   ) {
@@ -202,12 +207,19 @@ function assertAcceptedQuote(
   return null;
 }
 
-function hasCompleteProductOrderSource(quote: QuoteSnapshot): boolean {
+function hasCompleteProductOrderSource(
+  quote: QuoteSnapshot,
+  acceptance: QuoteAcceptanceDecision,
+): boolean {
+  const costAccepted =
+    quote.eic.completeness === "COMPLETE" ||
+    (quote.schemaVersion === QUOTE_SNAPSHOT_SCHEMA_VERSION &&
+      isIncompleteCostAcceptanceFor(acceptance.incompleteCost, quote));
   return (
     quote.status === "FROZEN" &&
     quote.quoteSnapshotId.trim() !== "" &&
     quote.contentHash.trim() !== "" &&
-    quote.eic.completeness === "COMPLETE" &&
+    costAccepted &&
     quote.commercial.completeness === "COMPLETE" &&
     quote.productionInput.schemaVersion === FROZEN_PRODUCTION_INPUT_SCHEMA_VERSION &&
     quote.productionInput.contentHash.trim() !== "" &&
@@ -251,6 +263,9 @@ function copyOrderCore(
       ? { customer: copyFrozenCustomerIdentity(quote.customer) }
       : {}),
     ...(seller ? { seller } : {}),
+    ...(quote.eic.completeness !== "COMPLETE" && acceptance.incompleteCost
+      ? { incompleteCostAcceptance: { ...acceptance.incompleteCost } }
+      : {}),
   };
 }
 

@@ -232,6 +232,24 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         title: "Valori comerciale implicite",
         lead: "Aceste valori sunt folosite ca punct de pornire pentru ofertele noi. Pot fi modificate individual pe fiecare ofertă. Prețul de vânzare nu se calculează automat din costul intern.",
       };
+    case "admin-offering":
+      return {
+        contextLabel: "Administrare",
+        currentHref: "/admin/offering",
+        workspace: "admin",
+        eyebrow: "Administrare",
+        title: "Reguli de ofertare",
+        lead: "Cine stabilește prețul clientului și îngheață oferta, și când este nevoie de aprobarea Proprietarului.",
+      };
+    case "admin-company":
+      return {
+        contextLabel: "Administrare",
+        currentHref: "/admin/company",
+        workspace: "admin",
+        eyebrow: "Administrare",
+        title: "Date firmă",
+        lead: "Identitatea legală, fiscală și bancară folosită pe ofertele firmei.",
+      };
     case "admin-technical":
       return {
         contextLabel: "Administrare",

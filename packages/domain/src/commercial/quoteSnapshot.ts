@@ -69,6 +69,7 @@ import {
   rateAcknowledgementHashedContent,
   type FrozenRateAcknowledgement,
 } from "./rateAcknowledgement.js";
+import { isFrozenOfferingRecord, type FrozenOfferingRecord } from "./offeringPolicy.js";
 
 export const QUOTE_SNAPSHOT_SCHEMA_VERSION = 1 as const;
 export const QUOTE_SNAPSHOT_SCHEMA_VERSION_V2 = 2 as const;
@@ -226,6 +227,8 @@ export type QuoteSnapshot = {
   lines?: readonly FrozenQuoteLine[];
   jobCommercial?: FrozenJobCommercial;
   rateAcknowledgement?: FrozenRateAcknowledgement;
+  /** Commercial & Financial V1: who priced the quote under which offering policy (additive). */
+  offering?: FrozenOfferingRecord;
 };
 
 export type QuoteSnapshotResult =
@@ -253,6 +256,7 @@ export function freezeQuoteSnapshot(
     formulas?: FrozenProductionInput["usedFormulas"];
     installation?: QuoteInstallationFreezeInput;
     rateAcknowledgement?: FrozenRateAcknowledgement;
+    offering?: FrozenOfferingRecord;
   },
 ): QuoteSnapshotResult {
   const productStrategy =
@@ -354,6 +358,15 @@ export function freezeQuoteSnapshot(
     };
   }
 
+  const offering = options?.offering;
+  if (offering && !isFrozenOfferingRecord(offering)) {
+    return {
+      ok: false,
+      error: "unavailable_offer",
+      reasons: [UNAVAILABLE_REASON],
+    };
+  }
+
   const frozenProductCommercial = freezeCommercialOffer(commercial, productStrategy);
   const frozenProductEic = freezeEic(eic);
   const v2Fields = installation
@@ -398,6 +411,7 @@ export function freezeQuoteSnapshot(
       : {}),
     ...(customer ? { customer } : {}),
     ...(seller ? { seller } : {}),
+    ...(offering ? { offering: copyFrozenOfferingRecord(offering) } : {}),
   };
   const contentHash = sha256Hex(
     stableStringify({
@@ -518,6 +532,10 @@ export function copyFrozenJobCommercial(
   return { ...jobCommercial };
 }
 
+function copyFrozenOfferingRecord(record: FrozenOfferingRecord): FrozenOfferingRecord {
+  return { ...record, approval: record.approval ? { ...record.approval } : null };
+}
+
 export function quoteSnapshotHashedPayload(snapshot: QuoteSnapshot): Record<string, unknown> {
   return {
     schemaVersion: snapshot.schemaVersion,
@@ -538,6 +556,7 @@ export function quoteSnapshotHashedPayload(snapshot: QuoteSnapshot): Record<stri
       : {}),
     ...(snapshot.customer ? { customer: snapshot.customer } : {}),
     ...(snapshot.seller ? { seller: snapshot.seller } : {}),
+    ...(snapshot.offering ? { offering: snapshot.offering } : {}),
     ...(snapshot.rateAcknowledgement
       ? {
           rateAcknowledgement: rateAcknowledgementHashedContent(
@@ -585,6 +604,9 @@ export function isSupportedQuoteSnapshot(snapshot: QuoteSnapshot): boolean {
     snapshot.rateAcknowledgement !== undefined &&
     !isFrozenRateAcknowledgement(snapshot.rateAcknowledgement)
   ) {
+    return false;
+  }
+  if (snapshot.offering !== undefined && !isFrozenOfferingRecord(snapshot.offering)) {
     return false;
   }
   if (snapshot.schemaVersion === QUOTE_SNAPSHOT_SCHEMA_VERSION) {

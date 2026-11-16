@@ -101,8 +101,8 @@ describe("quote document PDF", () => {
     expect(text).toContain("60 mm");
     expect(text).toContain("Client");
     expect(text).toContain("Client Demo LETTERS");
-    expect(text).toContain("HUB MEDIA PRODUCTION S.R.L.");
-    expect(text).toContain("RO54481582");
+    expect(text).toContain("FIRMA DEMONSTRATIVĂ S.R.L.");
+    expect(text).toContain("DEMO-CIF-0001");
     expect(text).not.toMatch(/382,50|EIC|AI_DECISION|markup|qts:/);
     expect(response.headers.get("content-disposition")).toContain(model.filename);
   });
@@ -233,7 +233,7 @@ describe("quote document PDF", () => {
   it("prints every assembly section between the product and the price", () => {
     const text = quoteDocumentDrawLines({
       title: "Ofertă",
-      issuerName: "HUB MEDIA PRODUCTION S.R.L.",
+      issuerName: "FIRMA DEMONSTRATIVĂ S.R.L.",
       reference: "OF-47542FBC",
       issuedOn: "02.09.2026",
       status: "Ofertă",

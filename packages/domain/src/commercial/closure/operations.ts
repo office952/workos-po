@@ -37,7 +37,7 @@ function requireOwner(
   actor: CommercialActor,
   revision: number,
 ): CommercialMutationRefusal | null {
-  if (actor.role !== "owner") {
+  if (actor.role !== "owner" && actor.mayDecideOutcome !== true) {
     return refusal("forbidden", revision);
   }
   return null;

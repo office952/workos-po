@@ -20,6 +20,14 @@ import {
   type SellerMutationResult,
   type SellerProfile,
   type SellerProfileInput,
+  type SellerProfileVersion,
+  initializeSellerProfile,
+  updateSellerProfile,
+  type OfferingPolicy,
+  type OfferingPolicyMode,
+  type OfferingPolicyRules,
+  type PriceApprovalRecord,
+  type PriceApprovalStatus,
   diagnoseEligibility,
   type PeopleEligibilityContext,
   type PeopleRegistryProjection,
@@ -198,7 +206,32 @@ import {
   persistRetiredCustomer,
   persistUpdatedCustomer,
 } from "../customers/store.js";
-import { getSellerProfile, persistUpdatedSeller, readSellerProfile } from "../seller/store.js";
+import {
+  getSellerProfile,
+  listSellerProfileVersions,
+  persistSellerProfile,
+  readSellerProfile,
+  readSellerProfileVersionNumber,
+  saveSellerProfile,
+  type SellerSaveResult,
+} from "../seller/store.js";
+import {
+  decidePriceApproval,
+  listOfferingPolicyVersions,
+  listPriceApprovalEvents,
+  listPriceApprovals,
+  persistIncompleteCostAcceptance,
+  readEffectiveOfferingPolicy,
+  readIncompleteCostAcceptance,
+  readLatestPriceApproval,
+  readPriceApproval,
+  requestPriceApproval,
+  saveOfferingPolicy,
+  type ApprovalDecisionResult,
+  type ApprovalEvent,
+  type ApprovalRequestResult,
+  type OfferingPolicySaveResult,
+} from "../commercial/offeringStore.js";
 import {
   ensureTrustedWorkforce,
   getPerson,
@@ -713,7 +746,39 @@ export type ProductSystemRuntime = {
   bootstrapPolicy: BootstrapPolicy | null;
   providerRegistry: WorkcenterRegistry;
   providerRegistryKind: ProviderRegistryKind;
+  /** Fixture/platform write without history (tests, synthetic seeds). Operators use saveSellerProfile. */
   updateSellerProfile(input: SellerProfileInput): SellerMutationResult;
+  saveSellerProfile(
+    input: SellerProfileInput,
+    actor: { userId: string; label: string },
+    expectedVersion: number | null,
+  ): SellerSaveResult;
+  readSellerProfileVersion(): number;
+  listSellerProfileVersions(): SellerProfileVersion[];
+  readOfferingPolicy(): OfferingPolicy;
+  listOfferingPolicyVersions(): OfferingPolicy[];
+  saveOfferingPolicy(
+    input: { mode: OfferingPolicyMode; rules: OfferingPolicyRules },
+    actor: { userId: string; label: string },
+    expectedVersion: number,
+  ): OfferingPolicySaveResult;
+  readLatestPriceApproval(requestId: string, productCode: string): PriceApprovalRecord | null;
+  readPriceApproval(approvalId: string): PriceApprovalRecord | null;
+  listPriceApprovals(options?: { status?: PriceApprovalStatus; limit?: number }): PriceApprovalRecord[];
+  listPriceApprovalEvents(approvalId: string): ApprovalEvent[];
+  requestPriceApproval(
+    input: Omit<Parameters<typeof requestPriceApproval>[1], "subject"> & {
+      requestId: string;
+      productCode: string;
+    },
+    actor: { userId: string; label: string },
+  ): ApprovalRequestResult;
+  decidePriceApproval(
+    approvalId: string,
+    decision: "APPROVED" | "REJECTED",
+    reason: string | null,
+    actor: { userId: string; label: string },
+  ): ApprovalDecisionResult;
   readOperationalServicesAdmin(): OperationalServicesAdminProjection;
   updateOrganizationServiceOffer(
     capabilityId: string,
@@ -1065,10 +1130,20 @@ export function createProductSystemRuntimeFromOpenDb(
       return getQuoteSnapshot(db, quoteSnapshotId);
     },
     persistQuoteAcceptance(decision) {
-      return insertQuoteAcceptance(db, decision);
+      return db.transaction(() => {
+        const stored = insertQuoteAcceptance(db, decision);
+        if (stored.created && decision.incompleteCost) {
+          persistIncompleteCostAcceptance(db, decision.acceptanceId, decision.incompleteCost);
+        }
+        const incompleteCost = readIncompleteCostAcceptance(db, stored.decision.quoteSnapshotId);
+        return incompleteCost ? { ...stored, decision: { ...stored.decision, incompleteCost } } : stored;
+      })();
     },
     readQuoteAcceptance(quoteSnapshotId) {
-      return getQuoteAcceptanceBySnapshotId(db, quoteSnapshotId);
+      const decision = getQuoteAcceptanceBySnapshotId(db, quoteSnapshotId);
+      if (!decision) return decision;
+      const incompleteCost = readIncompleteCostAcceptance(db, quoteSnapshotId);
+      return incompleteCost ? { ...decision, incompleteCost } : decision;
     },
     persistOrderSnapshot(snapshot) {
       return insertOrderSnapshot(db, snapshot);
@@ -1369,12 +1444,54 @@ export function createProductSystemRuntimeFromOpenDb(
       return getCustomer(db, customerId);
     },
     getSellerProfile() {
-      return bootstrapPolicy
-        ? readSellerProfile(db)
-        : getSellerProfile(db, { lazyHubSeed: true });
+      return getSellerProfile(db, { syntheticLocalSeed: bootstrapPolicy === null });
     },
     updateSellerProfile(input) {
-      return persistUpdatedSeller(db, input);
+      const current = readSellerProfile(db);
+      const updated = current ? updateSellerProfile(current, input) : initializeSellerProfile(input);
+      if (updated.ok && !updated.alreadyApplied) persistSellerProfile(db, updated.profile);
+      return updated;
+    },
+    saveSellerProfile(input, actor, expectedVersion) {
+      return saveSellerProfile(db, input, actor, expectedVersion);
+    },
+    readSellerProfileVersion() {
+      return readSellerProfileVersionNumber(db);
+    },
+    listSellerProfileVersions() {
+      return listSellerProfileVersions(db);
+    },
+    readOfferingPolicy() {
+      return readEffectiveOfferingPolicy(db);
+    },
+    listOfferingPolicyVersions() {
+      return listOfferingPolicyVersions(db);
+    },
+    saveOfferingPolicy(input, actor, expectedVersion) {
+      return saveOfferingPolicy(db, input, actor, expectedVersion);
+    },
+    readLatestPriceApproval(requestId, productCode) {
+      return readLatestPriceApproval(db, currentOrganizationId(), requestId, productCode);
+    },
+    readPriceApproval(approvalId) {
+      return readPriceApproval(db, currentOrganizationId(), approvalId);
+    },
+    listPriceApprovals(options) {
+      return listPriceApprovals(db, currentOrganizationId(), options);
+    },
+    listPriceApprovalEvents(approvalId) {
+      return listPriceApprovalEvents(db, approvalId);
+    },
+    requestPriceApproval(input, actor) {
+      const { requestId, productCode, ...rest } = input;
+      return requestPriceApproval(
+        db,
+        { ...rest, subject: { kind: "PRODUCT_QUOTE", organizationId: currentOrganizationId(), requestId, productCode } },
+        actor,
+      );
+    },
+    decidePriceApproval(approvalId, decision, reason, actor) {
+      return decidePriceApproval(db, currentOrganizationId(), approvalId, decision, reason, actor);
     },
     readOperationalServicesAdmin() {
       return readOperationalServicesAdmin(db);

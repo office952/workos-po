@@ -262,6 +262,10 @@ export function scopeQuoteSnapshot(
   if (rateAcknowledgement) {
     scoped.rateAcknowledgement = rateAcknowledgement;
   }
+  // Commercial & Financial V1: who priced the quote and under which policy (no internal values).
+  if (snapshot.offering && access !== "workshop") {
+    scoped.offering = snapshot.offering;
+  }
   return omitForbiddenFinancialFields(scoped, access) as Record<string, unknown>;
 }
 
@@ -283,6 +287,10 @@ export function scopeOrderSnapshot(
     schemaVersion: snapshot.schemaVersion,
     status: snapshot.status,
     createdAt: snapshot.createdAt,
+    // AUD-PRICING-002: the Owner exception is internal-cost information (Owner scope only).
+    ...(access === "owner" && snapshot.incompleteCostAcceptance
+      ? { incompleteCostAcceptance: snapshot.incompleteCostAcceptance }
+      : {}),
     sourceQuoteSnapshotId: snapshot.sourceQuoteSnapshotId,
     sourceQuoteContentHash: snapshot.sourceQuoteContentHash,
     sourceAcceptanceId: snapshot.sourceAcceptanceId,

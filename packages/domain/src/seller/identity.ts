@@ -2,15 +2,20 @@ export const SELLER_PROFILE_ID = "seller:current" as const;
 export const SELLER_TEXT_MAX_LENGTH = 160;
 export const SELLER_IBAN_MAX_LENGTH = 34;
 
-export const OWNER_CONFIRMED_SELLER = {
-  legalName: "HUB MEDIA PRODUCTION S.R.L.",
-  brand: "HUB MEDIA PRODUCTION",
-  fiscalId: "RO54481582",
-  tradeRegister: "J2026024600006",
-  address: "Șos. Sălaj, Nr. 351-353, Bl. 5, Et. 2, Ap. 22, Sector 5",
-  locality: "București",
-  iban: "RO81RZBR0000060030657337",
-  bank: "RAIFFEISEN BANK",
+/**
+ * Commercial & Financial V1: synthetic seller used only by tests and demonstration fixtures.
+ * Every identifier is visibly fictitious (no real company, fiscal id or bank account). It is never
+ * copied into an organization automatically: a new organization starts with no seller profile.
+ */
+export const SYNTHETIC_DEMO_SELLER = {
+  legalName: "FIRMA DEMONSTRATIVĂ S.R.L.",
+  brand: "ATELIER DEMONSTRATIV",
+  fiscalId: "DEMO-CIF-0001",
+  tradeRegister: "DEMO-REG-0001",
+  address: "Strada Exemplu nr. 1",
+  locality: "Localitate Demo",
+  iban: "RO34DEMO0000000000000001",
+  bank: "BANCA DEMONSTRATIVĂ",
 } as const;
 
 export const SELLER_MUTATION_ERRORS = ["invalid_profile", "not_found"] as const;
@@ -55,10 +60,10 @@ export type FrozenSellerIdentity = {
   bank?: string;
 };
 
-export function ownerConfirmedSellerProfile(updatedAt = "2026-08-17T00:00:00.000Z"): SellerProfile {
+export function syntheticDemoSellerProfile(updatedAt = "2026-08-17T00:00:00.000Z"): SellerProfile {
   return {
     profileId: SELLER_PROFILE_ID,
-    ...OWNER_CONFIRMED_SELLER,
+    ...SYNTHETIC_DEMO_SELLER,
     updatedAt,
   };
 }

@@ -270,7 +270,7 @@ describe("operational issue visibility", () => {
         await fixture.app.request("/api/seller", {
           method: "PATCH",
           headers: headers(ownerCookie),
-          body: JSON.stringify({ legalName: "Atelier Alpha SRL" }),
+          body: JSON.stringify({ legalName: "Atelier Alpha SRL", fiscalId: "DEMO-CIF-ALPHA" }),
         })
       ).status,
     ).toBe(200);

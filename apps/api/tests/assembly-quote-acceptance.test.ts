@@ -3,7 +3,7 @@ import {
   ACM_CASSETTE_NONE_PRODUCT_CODE,
   CANONICAL_PRODUCT_CODE,
   LOGO_PRODUCT_CODE,
-  OWNER_CONFIRMED_SELLER,
+  SYNTHETIC_DEMO_SELLER,
   SIGN_ASSEMBLY_ACM_SIGNAGE_V2,
 } from "@workos-final/domain";
 import { createProductSystemRuntime } from "../src/productSystem/runtime.js";
@@ -72,7 +72,7 @@ function client(app: Requester, cookie = "") {
 }
 
 function sellerPatch() {
-  const { legalName, brand, fiscalId, tradeRegister, address, locality, iban, bank } = OWNER_CONFIRMED_SELLER;
+  const { legalName, brand, fiscalId, tradeRegister, address, locality, iban, bank } = SYNTHETIC_DEMO_SELLER;
   return { legalName, brand, fiscalId, tradeRegister, address, locality, iban, bank };
 }
 
