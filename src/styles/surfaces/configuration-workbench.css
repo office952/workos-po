@@ -278,3 +278,12 @@
   .configuration-action-tray__buttons { flex-direction: column; }
   .configuration-action-tray__buttons > .hit { width: 100%; }
 }
+
+/* Commercial Role Clarity V1 · continuation when the Proprietar prices the offer. */
+.owner-pricing-handoff__steps {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.5rem;
+  overflow-wrap: anywhere;
+}

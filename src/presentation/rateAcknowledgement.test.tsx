@@ -127,6 +127,33 @@ describe("RateAcknowledgementNotice", () => {
     expect(screen.queryByRole("link", { name: "Deschide costurile de producție" })).toBeNull();
   });
 
+  it("gives a commercial user the status and next step only, without any rate list (Role Clarity V1)", () => {
+    render(
+      <RateAcknowledgementNotice
+        requirement={required({ canAcknowledge: false, bindingHash: null, rates: [] })}
+        acknowledged={false}
+        disabled={false}
+        onAcknowledgedChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Proprietarul verifică prețul înainte de înghețare")).toBeInTheDocument();
+    expect(screen.queryByText(/Vezi cele/)).toBeNull();
+    expect(screen.queryByText("Folie vinil")).toBeNull();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+
+  it("renders nothing for an internal-cost-only disclosure without rates", () => {
+    const { container } = render(
+      <RateAcknowledgementNotice
+        requirement={required({ status: "DISCLOSURE_ONLY", canAcknowledge: false, bindingHash: null, rates: [] })}
+        acknowledged={false}
+        disabled={false}
+        onAcknowledgedChange={vi.fn()}
+      />,
+    );
+    expect(container.textContent).toBe("");
+  });
+
   it("only discloses rates under a manual price", () => {
     render(
       <RateAcknowledgementNotice

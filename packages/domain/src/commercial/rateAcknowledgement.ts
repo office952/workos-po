@@ -368,13 +368,26 @@ function unconfirmedRateContext(rate: UnconfirmedRateEvidence): string | null {
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
-/** Only a user who may acknowledge receives the binding; the server re-checks both anyway. */
+/**
+ * Only a user who may acknowledge receives the binding; the server re-checks both anyway.
+ *
+ * Commercial Role Clarity V1: the list of unconfirmed rates (resources, context, provenance) is
+ * internal-cost information and is sent only to the owner scope. A commercial user receives:
+ * - nothing when the rates affect only the internal cost (`DISCLOSURE_ONLY`): the client price is
+ *   manual and the Comercial cannot act on it;
+ * - the status only when the rates drive the selling price (`REQUIRED`), so the UI can say that
+ *   the Proprietar must check the offer before it is frozen. `rates` stays an empty list.
+ * The engine evaluates the unscoped requirement; this is a projection only.
+ */
 export function scopeRateAcknowledgementRequirement(
   requirement: RateAcknowledgementRequirement,
   access: FinancialAccessScope,
   canAcknowledge: boolean,
 ): Record<string, unknown> | null {
   if (access === "workshop") {
+    return null;
+  }
+  if (access !== "owner" && requirement.status === "DISCLOSURE_ONLY") {
     return null;
   }
   const acknowledgeable = canAcknowledge && requirement.status === "REQUIRED";
@@ -384,15 +397,16 @@ export function scopeRateAcknowledgementRequirement(
     impact: requirement.impact,
     bindingHash: acknowledgeable ? requirement.bindingHash : null,
     canAcknowledge: acknowledgeable,
-    rates: requirement.rates.map((rate) => scopeUnconfirmedRate(rate, access)),
+    rates: access === "owner" ? requirement.rates.map((rate) => scopeUnconfirmedRate(rate, access)) : [],
   };
 }
 
+/** The frozen acknowledgement (who accepted which unconfirmed rates) is owner-scope only. */
 export function scopeFrozenRateAcknowledgement(
   acknowledgement: FrozenRateAcknowledgement,
   access: FinancialAccessScope,
 ): Record<string, unknown> | null {
-  if (access === "workshop") {
+  if (access !== "owner") {
     return null;
   }
   return {

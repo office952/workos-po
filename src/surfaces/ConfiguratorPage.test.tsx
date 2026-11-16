@@ -1281,11 +1281,18 @@ describe("ConfiguratorPage", () => {
       expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
     });
     await user.click(screen.getByRole("button", { name: "Confirmă configurația" }));
-    expect(await screen.findByText("Prețul manual nu poate fi setat")).toBeInTheDocument();
+    // Commercial Role Clarity V1: an explicit continuation instead of an unavailable action.
+    const handoff = await screen.findByTestId("owner-pricing-handoff");
+    expect(handoff).toHaveTextContent("Configurația este gata. Prețul îl stabilește Proprietarul");
+    expect(handoff).toHaveTextContent("Proprietarul:");
+    expect(handoff).toHaveTextContent("După înghețare:");
+    expect(handoff).toHaveTextContent("nu sunt transmise automat Proprietarului");
+    expect(screen.getByTestId("owner-pricing-pending")).toBeInTheDocument();
     expect(screen.queryByLabelText("Preț net al produsului, fără TVA")).toBeNull();
     expect(screen.queryByRole("button", { name: "Confirmă prețul" })).toBeNull();
     expect(screen.queryByText("Prețul nu este gata")).toBeNull();
-    expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Îngheață oferta" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Trimite Proprietarului/ })).toBeNull();
   });
 
   it("shows the missing cost-evidence resource and a cost-evidence action", async () => {
@@ -1484,7 +1491,10 @@ describe("ConfiguratorPage", () => {
       expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
     });
     await user.click(screen.getByRole("button", { name: "Confirmă configurația" }));
-    expect(await screen.findByText("Cost intern indisponibil")).toBeInTheDocument();
+    expect(await screen.findByTestId("internal-cost-owner-only")).toHaveTextContent(
+      "Costul intern este vizibil doar Proprietarului.",
+    );
+    expect(screen.queryByText("Cost intern indisponibil")).toBeNull();
     expect(screen.queryByTestId("cost-completeness-issues")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Preț net al produsului, fără TVA")).toBeEnabled();
   });

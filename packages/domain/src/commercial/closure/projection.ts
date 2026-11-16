@@ -283,9 +283,28 @@ const OWNER_ONLY_ACTIONS = new Set<CommercialAvailableAction>([
   "ADMINISTRATIVE_CANCEL",
 ]);
 
+/**
+ * Request-outcome actions a non-owner may perform when the server grants it
+ * `requests.outcome.manage` (Commercial & Financial V1). Acceptance, order and administrative
+ * cancellation stay with the owner.
+ */
+const OUTCOME_ACTIONS = new Set<CommercialAvailableAction>([
+  "SAVE_DECISIONS",
+  "SAVE_AND_CLOSE",
+  "CLOSE_OFFERLESS",
+  "REOPEN",
+  "RESUME_OFFER",
+]);
+
 export function scopeCommercialRequestView(
   view: CommercialRequestView,
   revealOwnerMutations: boolean,
+  /**
+   * Commercial Role Clarity V1: the same right the decision routes check. When true, the outcome
+   * actions and their flags are kept so the Comercial can find them on the request; the server
+   * still re-checks every mutation. Account identifiers stay hidden.
+   */
+  mayDecideOutcome = false,
 ): CommercialRequestView {
   if (revealOwnerMutations) {
     return view;
@@ -296,10 +315,12 @@ export function scopeCommercialRequestView(
     actor ? { ...actor, accountId: null } : null;
   return {
     ...view,
-    availableActions: view.availableActions.filter((action) => !OWNER_ONLY_ACTIONS.has(action)),
-    canClose: false,
-    canReopen: false,
-    canSaveDecisions: false,
+    availableActions: view.availableActions.filter(
+      (action) => !OWNER_ONLY_ACTIONS.has(action) || (mayDecideOutcome && OUTCOME_ACTIONS.has(action)),
+    ),
+    canClose: mayDecideOutcome && view.canClose,
+    canReopen: mayDecideOutcome && view.canReopen,
+    canSaveDecisions: mayDecideOutcome && view.canSaveDecisions,
     closedBy: hideAccount(view.closedBy),
     reopenedBy: hideAccount(view.reopenedBy),
     timeline: view.timeline.map((event) => ({

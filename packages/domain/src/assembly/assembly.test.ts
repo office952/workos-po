@@ -322,9 +322,12 @@ describe("assembly unconfirmed rate acknowledgement", () => {
     expect(assessed.requirement.rates[0]?.evidenceBasis).toBe(CURRENT_RATE_REEVALUATION);
     expect(historical.requirement.rates[0]).not.toHaveProperty("evidenceBasis");
     expect(assessed.requirement.bindingHash).not.toBe(historical.requirement.bindingHash);
+    // Commercial Role Clarity V1: the rate context is internal; only the owner scope receives it.
+    const ownerScoped = scopeRateAcknowledgementRequirement(assessed.requirement, "owner", true);
+    expect((ownerScoped?.rates as { context: string }[])[0]?.context).toContain("Reevaluat la tarifele curente");
     const scoped = scopeRateAcknowledgementRequirement(assessed.requirement, "commercial", false);
-    expect((scoped?.rates as { context: string }[])[0]?.context).toContain("Reevaluat la tarifele curente");
-    expect(JSON.stringify(scoped)).not.toMatch(/"amount"|"quantity"/);
+    expect(scoped).toMatchObject({ status: "REQUIRED", rates: [] });
+    expect(JSON.stringify(scoped)).not.toMatch(/"amount"|"quantity"|Reevaluat/);
     expect(scoped?.bindingHash).toBeNull();
 
     const aiRate = { ...UNCONFIRMED_VINYL, source: "AI_DECISION" as const, classification: "AI_DECISION" as const };

@@ -647,10 +647,9 @@ describe("unconfirmed rate acknowledgement — SaaS organizations", () => {
     const memberConfirm = await confirm(alpha.member, readyValues);
     expect(memberConfirm.body.manualProductPriceAuthorized).toBe(false);
     expect((memberConfirm.body.commercialPrice as JsonObject).netPrice).toBeNull();
-    expect(memberConfirm.disclosure).toMatchObject(disclosureOnly);
-    const memberRates = scopedRates(memberConfirm.disclosure);
-    expect(memberRates.length).toBe(platformRates.length);
-    expect(memberRates.some((rate) => "amount" in rate || "quantity" in rate)).toBe(false);
+    // Commercial Role Clarity V1: an internal-cost-only disclosure is owner-scope only.
+    expect(memberConfirm.disclosure ?? null).toBeNull();
+    expect(JSON.stringify(memberConfirm.body)).not.toMatch(/neconfirmat/);
 
     const memberRefused = await freeze(
       alpha.member,
@@ -699,10 +698,9 @@ describe("unconfirmed rate acknowledgement — SaaS organizations", () => {
     expect(ownerView).toMatchObject(disclosureOnly);
 
     const memberAssembly = await assemblyView(alpha.member, assemblyId);
-    const memberView = memberAssembly.rateAcknowledgement as JsonObject;
-    expect(memberView).toMatchObject(disclosureOnly);
-    expect(scopedRates(memberView)).toHaveLength(scopedRates(ownerView).length);
-    expect(JSON.stringify(memberView)).not.toMatch(/"amount"|"quantity"/);
+    // Commercial Role Clarity V1: the Comercial receives no internal-cost disclosure at all.
+    expect(memberAssembly.rateAcknowledgement ?? null).toBeNull();
+    expect(scopedRates(ownerView).length).toBeGreaterThan(0);
     expect((await quoteAssembly(alpha.member, assemblyId)).status).toBe(403);
 
     expect((await beta.owner.get(`/api/assemblies/${assemblyId}`)).status).toBe(404);
@@ -826,8 +824,7 @@ describe("unconfirmed rate acknowledgement — SaaS organizations", () => {
     ).toBe(true);
 
     const memberAssembly = await assemblyView(alpha.member, assemblyId);
-    expect((memberAssembly.rateAcknowledgement as JsonObject).bindingHash).toBeNull();
-    expect(JSON.stringify(memberAssembly.rateAcknowledgement)).not.toMatch(/"amount"|"quantity"/);
+    expect(memberAssembly.rateAcknowledgement ?? null).toBeNull();
     expect((await quoteAssembly(alpha.member, assemblyId)).status).toBe(403);
     expect((await beta.owner.get(`/api/assemblies/${assemblyId}`)).status).toBe(404);
     expect(await quoteCount(beta.owner)).toBe(0);

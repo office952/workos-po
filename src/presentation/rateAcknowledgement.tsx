@@ -94,6 +94,23 @@ export function RateAcknowledgementNotice({
   disabled,
   onAcknowledgedChange,
 }: RateAcknowledgementNoticeProps) {
+  // Commercial Role Clarity V1: a non-owner receives no rate list (server projection). Internal-cost
+  // disclosures are not sent at all; a price-driving requirement arrives with its status only.
+  if (requirement.rates.length === 0) {
+    if (requirement.status === "DISCLOSURE_ONLY") {
+      return null;
+    }
+    return (
+      <div data-testid="rate-acknowledgement">
+        <InlineAlert tone="blocked" title="Proprietarul verifică prețul înainte de înghețare">
+          <p>
+            Prețul acestei oferte depinde de valori pe care firma nu le-a confirmat încă. Oferta
+            poate fi înghețată după ce Proprietarul le verifică pentru această ofertă.
+          </p>
+        </InlineAlert>
+      </div>
+    );
+  }
   if (requirement.status === "DISCLOSURE_ONLY") {
     return (
       <InlineAlert tone="pending" title="Tarife neconfirmate în costul intern">

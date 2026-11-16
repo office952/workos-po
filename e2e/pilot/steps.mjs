@@ -834,9 +834,10 @@ async function configure(ctx) {
   try {
     await fillAndConfirm(ui);
     ctx.check("COM-2 Comercial: configuration complete and confirmed by the server", await ui.has(/5 din 5 părți complete/));
-    // Price setting is reserved to prices.manual.set (Proprietar); the UI says so — recorded, not bypassed.
-    const blocked = await ui.has(/Prețul manual nu poate fi setat/);
-    ctx.check("COM-3 Comercial cannot set the manual price / freeze (prices.manual.set is owner-only, pre-V1 rule kept)", blocked);
+    // Price setting is reserved to the Proprietar under OWNER_ONLY; the UI states the continuation
+    // (Commercial Role Clarity V1) instead of an unavailable freeze action.
+    const blocked = (await ui.has(/Configurația este gata\. Prețul îl stabilește Proprietarul/)) && !(await ui.canClick("Îngheață oferta"));
+    ctx.check("COM-3 Comercial cannot set the manual price / freeze; the continuation is explicit (OWNER_ONLY)", blocked);
     await ui.shot("COM_COMMERCIAL_configuration-confirmed-price-owner-only", { step: "COM-2/3", role: "Comercial", state: "configurație confirmată; prețul manual îl stabilește Proprietarul" }, { full: true });
   } catch (e) { await ui.dump("configure"); throw e; } finally { ui.close(); }
 }
@@ -1040,6 +1041,192 @@ async function commercialFinancialVisual(ctx) {
   }
 }
 
+/**
+ * Commercial Role Clarity V1 · the three offering modes, approval rejection and staleness, request
+ * decisions, the role payload of unconfirmed rates and the difference display. Policy switches are
+ * made by the Owner through the API (the policy screen itself is covered by CFC-1); every Comercial
+ * action is made in the UI. The approval-mode policy of the `offering` step is restored at the end.
+ */
+async function roleClarity(ctx) {
+  const owner = await asOwner(ctx, "owner-rc");
+  const commercial = await asAccount(ctx, "commercialA", "commercial-rc");
+  const setPolicy = async (mode, rules = {}) => {
+    const current = (await owner.api("/api/admin/offering-policy")).body?.policy;
+    const saved = await owner.api("/api/admin/offering-policy", { method: "POST", body: JSON.stringify({ mode, rules, expectedVersion: current?.version ?? 0 }) });
+    if (saved.status !== 200) throw new Error(`policy ${mode}: ${saved.status}`);
+  };
+  const newRequest = async (key, client) => {
+    if (!ctx.state.ids[`${key}RequestId`]) {
+      const customer = await commercial.api("/api/customers", { method: "POST", body: JSON.stringify({ displayName: client }) });
+      const customerId = customer.body?.customer?.customerId;
+      const req = await commercial.api("/api/requests", { method: "POST", body: JSON.stringify({ customerId, title: `Role Clarity — ${client}`, description: "Cerere sintetică Commercial Role Clarity V1." }) });
+      ctx.state.ids[`${key}CustomerId`] = customerId;
+      ctx.state.ids[`${key}RequestId`] = req.body?.request?.requestId ?? req.body?.detail?.request?.requestId;
+      ctx.saveState?.();
+    }
+    const { customerId: baseCustomer, requestId: baseRequest, configuratorUrl } = ctx.state.ids;
+    const requestId = ctx.state.ids[`${key}RequestId`];
+    const customerId = ctx.state.ids[`${key}CustomerId`];
+    return {
+      requestId,
+      url: configuratorUrl
+        .split(encodeURIComponent(baseRequest)).join(encodeURIComponent(requestId)).split(baseRequest).join(requestId)
+        .split(encodeURIComponent(baseCustomer)).join(encodeURIComponent(customerId)).split(baseCustomer).join(customerId),
+    };
+  };
+  const price = async (ui, value) => {
+    await ui.fill("Preț net al produsului, fără TVA", String(value));
+    await ui.click(/^(Confirmă|Actualizează) prețul$/);
+    await ui.settle(1500);
+  };
+  const views = [[1440, 900, "light"], [1280, 800, "dark"], [768, 1024, "light"], [390, 844, "dark"]];
+  const responsive = async (ui, name, state, check) => {
+    for (const [w, hgt, theme] of views) {
+      await ui.view(w, hgt, theme);
+      await ui.settle(700);
+      const overflow = await ui.page.eval("document.documentElement.scrollWidth > innerWidth + 1");
+      ctx.check(`RC-VIS ${name} ${w}px ${theme}: no horizontal overflow${check ? ", state visible" : ""}`, !overflow && (!check || (await check())));
+      await ui.shot(name, { step: "RC-VIS", role: name.split("_")[1], state }, { full: true });
+    }
+    await ui.view(1440, 900, "light");
+  };
+  try {
+    // A/D · OWNER_ONLY: the Comercial configures and sees who prices, what next, where to go back.
+    await setPolicy("OWNER_ONLY");
+    const ownerOnly = await newRequest("rcOwnerOnly", "Client Proprietar Prețuiește SRL");
+    commercial.configuratorUrl = ownerOnly.url;
+    await fillAndConfirm(commercial);
+    await commercial.click("Pregătire ofertă");
+    const handoff = await commercial.text();
+    ctx.check(
+      "RC-1 OWNER_ONLY: Comercial sees the configuration is ready, who prices, next step and way back (UI)",
+      /Configurația este gata\. Prețul îl stabilește Proprietarul/.test(handoff) && /După înghețare/.test(handoff) && /Înapoi la cerere/.test(handoff),
+    );
+    ctx.check("RC-1b OWNER_ONLY: no unavailable freeze action and no false hand-over button (UI)", !(await commercial.canClick("Îngheață oferta")) && !/Trimite Proprietarului/.test(handoff));
+    ctx.check("RC-6 Comercial sees no unconfirmed-rate list and no error-toned cost notice (UI)", !/Tarife neconfirmate|Vezi cele \d+ tarife|Cost intern indisponibil/.test(handoff) && /vizibil doar Proprietarului/.test(handoff));
+    await responsive(commercial, "RC_COMMERCIAL_owner-only-handoff", "OWNER_ONLY: configurație gata, prețul îl stabilește Proprietarul", () => commercial.has(/Prețul îl stabilește Proprietarul/));
+    // Focus and keyboard: the way back is a reachable link.
+    const focus = await commercial.page.eval(`(() => { const a = [...document.querySelectorAll('[data-testid="owner-pricing-handoff"] a')][0]; if (!a) return 'none'; a.focus(); return document.activeElement === a ? 'focus' : 'no-focus'; })()`);
+    ctx.check("RC-1c the way back to the request receives keyboard focus", focus === "focus", focus);
+    // The Owner finds the request in Cereri and keeps the full internal information.
+    await owner.go("/cereri");
+    await owner.waitText(/Client Proprietar Prețuiește SRL|Role Clarity/, 20000).catch(() => {});
+    ctx.check("RC-1d Owner discovers the request in Cereri (UI)", await owner.has(/Client Proprietar Prețuiește SRL|Role Clarity — Client Proprietar/));
+    await owner.shot("RC_OWNER_requests-list", { step: "RC-1d", role: "Proprietar", state: "Cereri: cererea pregătită de Comercial" }, { full: true });
+    owner.configuratorUrl = ownerOnly.url;
+    await fillAndConfirm(owner);
+    await owner.click("Pregătire ofertă");
+    ctx.check("RC-1e the Owner can set the price in OWNER_ONLY (UI)", await owner.has(/Preț net al produsului, fără TVA/));
+    // The disclosure is shown next to a valid client price.
+    await price(owner, 1300);
+    ctx.check("RC-6b the Owner still receives the unconfirmed-rate disclosure with its list (UI)", (await owner.has(/Tarife neconfirmate în costul intern/)) && (await owner.has(/tarife neconfirmate|Valoare implicită/i)));
+    await owner.shot("RC_OWNER_owner-only-pricing", { step: "RC-1e", role: "Proprietar", state: "OWNER_ONLY: Proprietarul stabilește prețul; tarife neconfirmate vizibile" }, { full: true });
+
+    // B/D · COMMERCIAL_AUTONOMOUS: the same organization activates autonomy later.
+    await setPolicy("COMMERCIAL_AUTONOMOUS");
+    const autonomous = await newRequest("rcAutonomous", "Client Autonomie SRL");
+    commercial.configuratorUrl = autonomous.url;
+    await fillAndConfirm(commercial);
+    await commercial.click("Pregătire ofertă");
+    await price(commercial, 1200);
+    ctx.check("RC-2 AUTONOMOUS: Comercial prices and may freeze, without internal cost (UI)", (await commercial.canClick("Îngheață oferta")) && !(await commercial.has(/Tarife neconfirmate|marj/i)));
+    await commercial.click("Îngheață oferta", { exact: true });
+    await commercial.waitText(/Deschide oferta înghețată/, 20000);
+    await commercial.click("Deschide oferta înghețată");
+    await commercial.page.waitFor(`/oferte\\//.test(location.pathname)`, 20000);
+    const autonomousQuoteUrl = await commercial.page.eval("location.pathname");
+    const autonomousQuote = (await owner.api(quoteApi(autonomousQuoteUrl))).body;
+    const autonomousOffering = (autonomousQuote?.quoteSnapshot ?? autonomousQuote)?.offering;
+    ctx.check("RC-2b frozen by the Comercial within policy (server snapshot)", autonomousOffering?.policyMode === "COMMERCIAL_AUTONOMOUS" && autonomousOffering?.outcome === "WITHIN_POLICY", autonomousOffering?.outcome);
+    const commercialQuote = await commercial.api(quoteApi(autonomousQuoteUrl));
+    ctx.check("RC-6c frozen quote payload for the Comercial carries no rate list or acknowledgement", commercialQuote.status === 200 && !/"rateAcknowledgement"|neconfirmat/.test(JSON.stringify(commercialQuote.body)));
+    ctx.check("RC-2c acceptance and order stay with the Proprietar (403)", (await commercial.api(`${quoteApi(autonomousQuoteUrl)}/confirm-order`, { method: "POST", body: "{}" })).status === 403);
+    await commercial.shot("RC_COMMERCIAL_autonomous-frozen", { step: "RC-2", role: "Comercial", state: "AUTONOMOUS: ofertă înghețată de Comercial" }, { full: true });
+
+    // C/E · COMMERCIAL_APPROVAL_POLICY: rejection with reason and recovery; stale approval.
+    await setPolicy("COMMERCIAL_APPROVAL_POLICY", { maximumNetValue: 1000 });
+    const reread = (await owner.api(quoteApi(autonomousQuoteUrl))).body;
+    ctx.check("RC-E a policy change does not rewrite the quote issued before it", ((reread?.quoteSnapshot ?? reread)?.contentHash) === ((autonomousQuote?.quoteSnapshot ?? autonomousQuote)?.contentHash));
+    const strict = await newRequest("rcStrict", "Client Respingere SRL");
+    commercial.configuratorUrl = strict.url;
+    await fillAndConfirm(commercial);
+    await commercial.click("Pregătire ofertă");
+    await price(commercial, 1450);
+    ctx.check("RC-3 APPROVAL: over the rule, approval required, no freeze (UI)", (await commercial.has(/Necesită aprobarea Proprietarului/)) && !(await commercial.canClick("Îngheață oferta")));
+    await commercial.fill("Notă pentru Proprietar (opțional)", "Client strategic");
+    await commercial.click("Trimite spre aprobare");
+    await commercial.waitText(/Așteaptă aprobarea Proprietarului/, 15000);
+    await owner.go("/admin/offering");
+    await owner.waitText(/Client Respingere SRL/, 20000);
+    await owner.fill("Motivul deciziei", "Preț prea mare pentru acest client");
+    await owner.click("Respinge", { exact: true });
+    await owner.settle(1500);
+    const rejected = ((await owner.api("/api/admin/price-approvals?status=REJECTED")).body?.approvals ?? []).find((item) => item.requestId === strict.requestId);
+    ctx.check("RC-3b Owner rejects with a reason (UI), recorded by the server", Boolean(rejected), rejected?.status);
+    await commercial.go(commercial.configuratorUrl);
+    await fillAndConfirm(commercial);
+    await commercial.click("Pregătire ofertă");
+    await price(commercial, 1450);
+    ctx.check("RC-3c Comercial sees the rejection and its reason (UI)", (await commercial.has(/Respins/)) && (await commercial.has(/Preț prea mare pentru acest client/)));
+    await responsive(commercial, "RC_COMMERCIAL_approval-rejected", "APPROVAL: solicitare respinsă cu motiv", () => commercial.has(/Preț prea mare pentru acest client/));
+    await price(commercial, 950);
+    ctx.check("RC-3d recovery: a price within the rules can be frozen (UI)", await commercial.canClick("Îngheață oferta"));
+    await price(commercial, 1400);
+    await commercial.click("Trimite spre aprobare");
+    await commercial.waitText(/Așteaptă aprobarea Proprietarului/, 15000);
+    const pendingApproval = ((await owner.api("/api/admin/price-approvals?status=REQUESTED")).body?.approvals ?? []).find((item) => item.requestId === strict.requestId);
+    await owner.go("/admin/offering");
+    await owner.waitText(/Client Respingere SRL/, 20000);
+    await owner.click("Aprobă această variantă");
+    await owner.settle(1500);
+    const approved = ((await owner.api("/api/admin/price-approvals?status=APPROVED")).body?.approvals ?? []).find((item) => item.approvalId === pendingApproval?.approvalId);
+    ctx.check("RC-4 Owner approves the exact 1400 variant (UI)", Boolean(approved), approved?.status);
+    await commercial.go(commercial.configuratorUrl);
+    await fillAndConfirm(commercial);
+    await commercial.click("Pregătire ofertă");
+    await price(commercial, 1400);
+    ctx.check("RC-4b the approval covers the same variant (UI)", (await commercial.has(/Aprobată de Proprietar/)) && (await commercial.canClick("Îngheață oferta")));
+    await price(commercial, 1401);
+    ctx.check("RC-4c a changed price is not covered by the earlier approval (UI)", (await commercial.has(/Necesită aprobarea Proprietarului/)) && !(await commercial.canClick("Îngheață oferta")));
+    await commercial.shot("RC_COMMERCIAL_approval-stale", { step: "RC-4", role: "Comercial", state: "preț schimbat după aprobare: aprobarea nu mai acoperă oferta" }, { full: true });
+
+    // Request decisions: close and reopen the OWNER_ONLY request from its own page (Mai multe).
+    await commercial.go(`/cereri/${encodeURIComponent(ownerOnly.requestId)}`);
+    await commercial.waitText(/Mai multe/, 20000);
+    await commercial.click("Mai multe");
+    await commercial.click("Încheie urmărirea comercială");
+    await commercial.fill("Motivul încheierii", "Clientul a amânat proiectul");
+    await commercial.click("Încheie urmărirea comercială", { scope: commercial.dialog });
+    await commercial.settle(1500);
+    const closed = (await commercial.api(`/api/requests/${encodeURIComponent(ownerOnly.requestId)}`)).body;
+    const closedState = JSON.stringify(closed).match(/"state":"(OPEN|CLOSED)"/)?.[1];
+    ctx.check("RC-5 Comercial closes the commercial follow-up of the request (UI, server state)", closedState === "CLOSED", closedState);
+    await commercial.shot("RC_COMMERCIAL_request-closed", { step: "RC-5", role: "Comercial", state: "cerere: urmărire comercială încheiată" }, { full: true });
+    await commercial.click("Mai multe");
+    await commercial.click("Redeschide urmărirea comercială");
+    await commercial.fill("Motivul redeschiderii", "Clientul a revenit");
+    await commercial.click("Redeschide urmărirea", { scope: commercial.dialog });
+    await commercial.settle(1500);
+    const reopened = (await commercial.api(`/api/requests/${encodeURIComponent(ownerOnly.requestId)}`)).body;
+    const reopenedState = JSON.stringify(reopened).match(/"state":"(OPEN|CLOSED)"/)?.[1];
+    ctx.check("RC-5b Comercial reopens it (UI, server state)", reopenedState === "OPEN", reopenedState);
+
+    // Planificat vs realizat: sign and meaning of the differences, partial cost stated.
+    await owner.go(`/lucrari/${encodeURIComponent(ctx.state.ids.jobId)}`);
+    await owner.waitText(/Planificat vs realizat/, 20000);
+    const pva = await owner.text();
+    ctx.check(
+      "RC-7 differences carry their sign and meaning; a partial operational cost is not a final total (UI)",
+      /peste estimare|sub estimare|egal cu estimarea/.test(pva) && (/nu este total final/.test(pva) || !/Parțial/.test(pva)),
+    );
+    await responsive(owner, "RC_OWNER_job-pva", "Planificat vs realizat: diferențe cu semn și sens", () => owner.has(/peste estimare|sub estimare|egal cu estimarea/));
+    return { autonomousQuoteUrl };
+  } catch (e) { await commercial.dump("roleclarity"); await owner.dump("roleclarity-owner"); throw e; } finally {
+    await setPolicy("COMMERCIAL_APPROVAL_POLICY", { maximumNetValue: 1000 }).catch(() => {});
+    owner.close(); commercial.close();
+  }
+}
+
 /** PR #136 closure · Date firmă form composition at 1440/390 px, Light/Dark (explicit step). */
 async function companyForm(ctx) {
   const ui = await asOwner(ctx, "owner-company-form");
@@ -1095,6 +1282,7 @@ export const STEPS = [
   { id: "supervise", title: "Producție resolves the reported issue", run: supervise },
   { id: "pva", title: "Finalization and Planned vs Actual", run: plannedVsActual },
   { id: "offering", title: "Offering policy: Comercial request, Owner approval, freeze", run: offering },
+  { id: "roleclarity", title: "Commercial Role Clarity V1: modes, rejection, stale approval, request decisions", run: roleClarity },
   { id: "company", title: "Company identity versions, concurrency, frozen quote unchanged", run: companyIdentity },
   { id: "cfcvisual", title: "Commercial & Financial screens at 1440/768/390 px Light/Dark", run: commercialFinancialVisual },
   { id: "roles", title: "Four-role contract: navigation and server", run: roles },

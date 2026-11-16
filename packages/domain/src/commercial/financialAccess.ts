@@ -380,10 +380,12 @@ export function scopeSiteInstallationOperatorView(
 export function scopeRequestDetailProjection(
   detail: RequestDetailProjection,
   access: FinancialAccessScope,
+  /** Commercial Role Clarity V1: the actor holds `requests.outcome.manage`. */
+  mayDecideOutcome = false,
 ): RequestDetailProjection {
   const commercial =
     detail.commercial && access !== "owner"
-      ? scopeCommercialRequestView(detail.commercial, false)
+      ? scopeCommercialRequestView(detail.commercial, false, mayDecideOutcome)
       : detail.commercial;
   if (!detail.installationScope) {
     return commercial === detail.commercial ? detail : { ...detail, commercial };

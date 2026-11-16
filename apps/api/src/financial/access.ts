@@ -21,9 +21,11 @@ export function financialAccess(
 export function scopedRequestDetail(
   detail: RequestDetailProjection | null,
   access: FinancialAccessScope,
+  /** The actor holds `requests.outcome.manage` (same check as the decision routes). */
+  mayDecideOutcome = false,
 ): RequestDetailProjection | null {
   if (!detail) {
     return null;
   }
-  return scopeRequestDetailProjection(detail, access);
+  return scopeRequestDetailProjection(detail, access, mayDecideOutcome);
 }

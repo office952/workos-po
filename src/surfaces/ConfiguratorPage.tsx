@@ -49,6 +49,7 @@ import type {
 import { Button } from "../components/Button";
 import { InfoRow } from "../components/InfoRow";
 import { InlineAlert } from "../components/InlineAlert";
+import { OwnerPricingHandoff } from "../components/OwnerPricingHandoff";
 import { LoadingIndicator } from "../components/LoadingIndicator";
 import { SectionLabel } from "../components/SectionLabel";
 import { SurfacePanel } from "../components/SurfacePanel";
@@ -922,9 +923,11 @@ export function ConfiguratorPage({
                   />
                 </div>
               ) : (
-                <InlineAlert tone="blocked" title="Prețul manual nu poate fi setat">
-                  {confirmation.offering?.blockedReason ?? "Doar utilizatorul autorizat poate confirma prețul acestei oferte."}
-                </InlineAlert>
+                <OwnerPricingHandoff
+                  reason={confirmation.offering?.blockedReason ?? null}
+                  backHref={assemblyId ? null : backHref}
+                  backLabel={backLabel}
+                />
               )}
               {confirmation.completeness !== "COMPLETE" && confirmation.financialVisible ? (
                 <InlineAlert tone="pending" title="Cost intern incomplet">
@@ -998,7 +1001,12 @@ export function ConfiguratorPage({
               }}
             />
           ) : null}
-          {confirmation && !assemblyId ? (
+          {confirmation && !confirmation.manualProductPriceAuthorized && !assemblyId ? (
+            <p className="ui-note" data-testid="owner-pricing-pending">
+              Prețul clientului apare aici după ce Proprietarul îl stabilește și îngheață oferta.
+            </p>
+          ) : null}
+          {confirmation && !assemblyId && confirmation.manualProductPriceAuthorized ? (
             <Button
               disabled={freezePending || freezeBlocked}
               onClick={() => {
@@ -1065,9 +1073,9 @@ export function ConfiguratorPage({
             <p>Confirmă configurația pentru a citi costul intern cunoscut.</p>
           ) : null}
           {confirmation && !confirmation.financialVisible ? (
-            <InlineAlert tone="blocked" title="Cost intern indisponibil">
-              Contextul financiar nu este vizibil pentru acest rol.
-            </InlineAlert>
+            <p className="ui-note" data-testid="internal-cost-owner-only">
+              Costul intern este vizibil doar Proprietarului. Prețul clientului nu depinde de el.
+            </p>
           ) : null}
           {confirmation ? (
             <CommercialPricePanel

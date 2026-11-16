@@ -146,6 +146,7 @@ function respondCommercialMutation(
   const detail = scopedRequestDetail(
     runtime.readRequestDetail(requestId),
     financialAccess(c, "commercial"),
+    can(c, "requests.outcome.manage"),
   );
   return c.json({
     alreadyApplied: result.idempotent,
