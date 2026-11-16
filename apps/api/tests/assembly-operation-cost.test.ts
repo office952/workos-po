@@ -3,7 +3,7 @@ import {
   ACM_CASSETTE_NONE_PRODUCT_CODE,
   CANONICAL_PRODUCT_CODE,
   LAB_WORKSHOP_LABOR_ID,
-  OWNER_CONFIRMED_SELLER,
+  SYNTHETIC_DEMO_SELLER,
 } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
 import { resetCloudLoginAttemptGuard } from "../src/cloud/controlPlane.js";
@@ -349,7 +349,7 @@ describe("assembly operation cost permissions and organization isolation", () =>
     const owner = client(fixture.app, ownerCookie);
     const member = client(fixture.app, (await loginCloud(fixture.app, "member-cost@example.test", MEMBER_PASSWORD, organizationId)).cookie ?? "");
     const stranger = client(fixture.app, (await loginCloud(fixture.app, "owner-vecin@example.test", OWNER_PASSWORD, otherId)).cookie ?? "");
-    const { legalName, brand, fiscalId, tradeRegister, address, locality, iban, bank } = OWNER_CONFIRMED_SELLER;
+    const { legalName, brand, fiscalId, tradeRegister, address, locality, iban, bank } = SYNTHETIC_DEMO_SELLER;
     expect((await owner.patch("/api/seller", { legalName, brand, fiscalId, tradeRegister, address, locality, iban, bank })).status).toBe(200);
 
     expect((await setPolicy(owner, null, "INCLUDED_IN_OTHER_OPERATIONS", "PANEL_FACE_AREA")).status).toBe(200);

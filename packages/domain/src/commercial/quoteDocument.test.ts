@@ -175,7 +175,7 @@ describe("assembly quote document projection", () => {
       quote: {
         ...quote,
         customer: { customerId: "cus:nord", displayName: "Nord Market Demo SRL" },
-        seller: { legalName: "HUB MEDIA PRODUCTION S.R.L.", fiscalId: "RO54481582" },
+        seller: { legalName: "FIRMA DEMONSTRATIVĂ S.R.L.", fiscalId: "DEMO-CIF-0001" },
       },
       memberTruths,
     });
@@ -184,7 +184,7 @@ describe("assembly quote document projection", () => {
     expect(document.issuedOn).toBe("02.09.2026");
     expect(document.productName).toBe("Panou ACM + litere volumetrice");
     expect(document.customerDisplayName).toBe("Nord Market Demo SRL");
-    expect(document.issuerName).toBe("HUB MEDIA PRODUCTION S.R.L.");
+    expect(document.issuerName).toBe("FIRMA DEMONSTRATIVĂ S.R.L.");
     expect(document.configuration).toEqual([]);
     expect(document.sections?.map((section) => section.title)).toEqual(["Litere", "Panou ACM"]);
     const [letters, acm] = document.sections ?? [];
@@ -215,13 +215,13 @@ describe("assembly quote document projection", () => {
       quote: {
         ...quote,
         customer: { customerId: "cus:nord", displayName: "Nord Market Demo SRL" },
-        seller: { legalName: "HUB MEDIA PRODUCTION S.R.L." },
+        seller: { legalName: "FIRMA DEMONSTRATIVĂ S.R.L." },
       },
       memberTruths,
       currentIdentity: { customerDisplayName: "Client Redenumit SRL", seller: { legalName: "Firma Nouă SRL" } },
     });
     expect(document.customerDisplayName).toBe("Nord Market Demo SRL");
-    expect(document.issuerName).toBe("HUB MEDIA PRODUCTION S.R.L.");
+    expect(document.issuerName).toBe("FIRMA DEMONSTRATIVĂ S.R.L.");
     expect(JSON.stringify(document)).not.toMatch(/Client Redenumit|Firma Nouă/);
   });
 
@@ -328,19 +328,19 @@ describe("quote document projection", () => {
     const withSeller: QuoteSnapshot = {
       ...snapshot,
       seller: {
-        legalName: "HUB MEDIA PRODUCTION S.R.L.",
-        brand: "HUB MEDIA PRODUCTION",
-        fiscalId: "RO54481582",
-        address: "Șos. Sălaj, Nr. 351-353, Bl. 5, Et. 2, Ap. 22, Sector 5",
+        legalName: "FIRMA DEMONSTRATIVĂ S.R.L.",
+        brand: "ATELIER DEMONSTRATIV",
+        fiscalId: "DEMO-CIF-0001",
+        address: "Strada Exemplu nr. 1",
         locality: "București",
-        iban: "RO81RZBR0000060030657337",
-        bank: "RAIFFEISEN BANK",
+        iban: "RO34DEMO0000000000000001",
+        bank: "BANCA DEMONSTRATIVĂ",
       },
     };
     const document = projectQuoteDocument(withSeller);
-    expect(document.issuerName).toBe("HUB MEDIA PRODUCTION S.R.L.");
-    expect(document.seller?.fiscalId).toBe("RO54481582");
-    expect(document.seller?.iban).toBe("RO81RZBR0000060030657337");
+    expect(document.issuerName).toBe("FIRMA DEMONSTRATIVĂ S.R.L.");
+    expect(document.seller?.fiscalId).toBe("DEMO-CIF-0001");
+    expect(document.seller?.iban).toBe("RO34DEMO0000000000000001");
     expect(projectQuoteDocument(snapshot).seller).toBeUndefined();
     expect(projectQuoteDocument(snapshot).issuerName).toBe("WorkOS Final");
   });

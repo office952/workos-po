@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import Database from "better-sqlite3";
-import { MCH_CNC_4020_ID, OWNER_CONFIRMED_SELLER } from "@workos-final/domain";
+import { MCH_CNC_4020_ID, SYNTHETIC_DEMO_SELLER } from "@workos-final/domain";
 import {
   adoptOperationalPlane,
   fingerprintSqlite,
@@ -30,7 +30,7 @@ function buildSyntheticSource() {
   mkdirSync(documentsRoot, { recursive: true });
   const runtime = createProductSystemRuntime(sqlitePath, { documentsRoot });
   const seller = runtime.updateSellerProfile({
-    ...OWNER_CONFIRMED_SELLER,
+    ...SYNTHETIC_DEMO_SELLER,
     legalName: "Atelier Sursa SRL",
     brand: "Sursa",
   });

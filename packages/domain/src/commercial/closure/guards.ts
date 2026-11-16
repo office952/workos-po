@@ -53,12 +53,12 @@ export function administrativeCancellationRefusal(input: {
 export function ownerOnlyCommercialMutationRefusal(
   actor: CommercialActor,
 ): CommercialGuardRefusal | null {
-  if (actor.role === "owner") {
+  if (actor.role === "owner" || actor.mayDecideOutcome === true) {
     return null;
   }
   return {
     error: "forbidden",
-    reasons: ["Doar proprietarul poate încheia, redeschide sau decide ofertele."],
+    reasons: ["Rolul tău nu poate încheia, redeschide sau decide ofertele."],
   };
 }
 

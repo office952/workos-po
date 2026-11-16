@@ -212,8 +212,14 @@ export {
   QUOTE_ACCEPTANCE_ERRORS,
   QUOTE_ACCEPTANCE_SCHEMA_VERSION,
   SERVICE_QUOTE_NOT_ACCEPTABLE_REASON,
+  INCOMPLETE_COST_ACCEPTANCE_POLICY,
+  INCOMPLETE_COST_ACCEPTANCE_REQUIRED_REASON,
+  INCOMPLETE_COST_REASON_MAX_LENGTH,
+  isIncompleteCostAcceptanceFor,
+  readIncompleteCostReason,
   quoteAcceptanceErrorLabel,
   recordQuoteAcceptance,
+  type IncompleteCostAcceptance,
   type QuoteAcceptanceDecision,
   type QuoteAcceptanceError,
   type QuoteAcceptanceResult,
@@ -278,3 +284,4 @@ export {
   type RecordedCommercialOperation,
 } from "./closure/index.js";
 export * from "./journey/index.js";
+export * from "./offeringPolicy.js";

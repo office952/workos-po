@@ -246,7 +246,7 @@ describe("assembly quote frozen commercial identity", () => {
     expect(reread).not.toHaveProperty("seller");
     expect(assemblyQuoteContentHashMatches(reread)).toBe(true);
 
-    expect((await send(app, "PATCH", "/api/seller", { legalName: "Emitent Curent SRL" })).status).toBe(200);
+    expect((await send(app, "PATCH", "/api/seller", { legalName: "Emitent Curent SRL", fiscalId: "DEMO-CIF-CURENT" })).status).toBe(200);
     const text = await documentText(app, legacy.quoteSnapshotId);
     expect(text).toContain("Emitent Curent SRL");
     expect(text).toContain("Client Istoric SRL");
@@ -304,8 +304,8 @@ async function crossOrganizationScenario(fixture: ReturnType<typeof createCloudF
   });
   const headersA = await headersFor("a@identity.test", orgA.organization.organizationId);
   const headersB = await headersFor("b@identity.test", orgB.organization.organizationId);
-  await send(fixture.app, "PATCH", "/api/seller", { legalName: "Emitent A SRL" }, headersA);
-  await send(fixture.app, "PATCH", "/api/seller", { legalName: "Emitent B SRL" }, headersB);
+  await send(fixture.app, "PATCH", "/api/seller", { legalName: "Emitent A SRL", fiscalId: "DEMO-CIF-A" }, headersA);
+  await send(fixture.app, "PATCH", "/api/seller", { legalName: "Emitent B SRL", fiscalId: "DEMO-CIF-B" }, headersB);
 
   const quoteA = await issueAssemblyQuote(fixture.app, "Client A SRL", headersA);
   const textA = await documentText(fixture.app, quoteA.quoteSnapshotId, headersA);

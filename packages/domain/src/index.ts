@@ -672,7 +672,7 @@ export {
   searchTextIncludes,
 } from "./searchNormalize.js";
 export {
-  OWNER_CONFIRMED_SELLER,
+  SYNTHETIC_DEMO_SELLER,
   SELLER_IBAN_MAX_LENGTH,
   SELLER_MUTATION_ERRORS,
   SELLER_PROFILE_ID,
@@ -680,7 +680,7 @@ export {
   copyFrozenSellerIdentity,
   freezeSellerIdentity,
   initializeSellerProfile,
-  ownerConfirmedSellerProfile,
+  syntheticDemoSellerProfile,
   sellerFromRow,
   updateSellerProfile,
   type FrozenSellerIdentity,
@@ -1415,3 +1415,14 @@ export {
 export * from "./execution/workSessions.js";
 export * from "./execution/workParticipation.js";
 export * from "./customerDossier/index.js";
+export * from "./commercial/offeringPolicy.js";
+export {
+  INCOMPLETE_COST_ACCEPTANCE_POLICY,
+  INCOMPLETE_COST_ACCEPTANCE_REQUIRED_REASON,
+  INCOMPLETE_COST_REASON_MAX_LENGTH,
+  isIncompleteCostAcceptanceFor,
+  readIncompleteCostReason,
+  type IncompleteCostAcceptance,
+} from "./commercial/quoteAcceptance.js";
+export * from "./seller/validation.js";
+export * from "./execution/economicResult.js";

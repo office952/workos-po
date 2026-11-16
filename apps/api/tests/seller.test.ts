@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CANONICAL_PRODUCT_CODE, OWNER_CONFIRMED_SELLER } from "@workos-final/domain";
+import { CANONICAL_PRODUCT_CODE, SYNTHETIC_DEMO_SELLER } from "@workos-final/domain";
 import { createApp } from "../src/app.js";
 
 type JsonObject = Record<string, unknown>;
@@ -14,11 +14,11 @@ describe("seller API", () => {
     const response = await app.request("/api/seller");
     expect(response.status).toBe(200);
     const seller = (await readBody(response)).seller as JsonObject;
-    expect(seller.legalName).toBe(OWNER_CONFIRMED_SELLER.legalName);
-    expect(seller.fiscalId).toBe(OWNER_CONFIRMED_SELLER.fiscalId);
-    expect(seller.iban).toBe(OWNER_CONFIRMED_SELLER.iban);
-    expect(seller.address).toBe(OWNER_CONFIRMED_SELLER.address);
-    expect(seller.locality).toBe("București");
+    expect(seller.legalName).toBe(SYNTHETIC_DEMO_SELLER.legalName);
+    expect(seller.fiscalId).toBe(SYNTHETIC_DEMO_SELLER.fiscalId);
+    expect(seller.iban).toBe(SYNTHETIC_DEMO_SELLER.iban);
+    expect(seller.address).toBe(SYNTHETIC_DEMO_SELLER.address);
+    expect(seller.locality).toBe(SYNTHETIC_DEMO_SELLER.locality);
     expect(JSON.stringify(seller)).not.toMatch(/phone|email|website|AI_DECISION/i);
   });
 
@@ -63,13 +63,13 @@ describe("seller API", () => {
       }),
     });
     const first = (await readBody(firstQuote)).quoteSnapshot as JsonObject;
-    expect((first.seller as JsonObject).legalName).toBe(OWNER_CONFIRMED_SELLER.legalName);
+    expect((first.seller as JsonObject).legalName).toBe(SYNTHETIC_DEMO_SELLER.legalName);
 
     const renamed = await app.request("/api/seller", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        ...OWNER_CONFIRMED_SELLER,
+        ...SYNTHETIC_DEMO_SELLER,
         legalName: "P-Media B",
         brand: "P-Media B",
       }),
@@ -80,7 +80,7 @@ describe("seller API", () => {
       `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots/${first.quoteSnapshotId}`,
     );
     const stored = (await readBody(reread)).quoteSnapshot as JsonObject;
-    expect((stored.seller as JsonObject).legalName).toBe(OWNER_CONFIRMED_SELLER.legalName);
+    expect((stored.seller as JsonObject).legalName).toBe(SYNTHETIC_DEMO_SELLER.legalName);
 
     const secondQuote = await app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`, {
       method: "POST",

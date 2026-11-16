@@ -59,7 +59,7 @@ describe("task dossier cloud tenancy", () => {
         const seller = await fixture.app.request("/api/seller", {
           method: "PATCH",
           headers: { "content-type": "application/json", cookie },
-          body: JSON.stringify({ legalName }),
+          body: JSON.stringify({ legalName, fiscalId: "DEMO-CIF-TEST" }),
         });
         expect(seller.status).toBe(200);
       }
@@ -153,7 +153,7 @@ describe("task dossier cloud tenancy", () => {
       const seller = await fixture.app.request("/api/seller", {
         method: "PATCH",
         headers: { "content-type": "application/json", cookie: cookieA },
-        body: JSON.stringify({ legalName: "Atelier Arhiva Alpha SRL" }),
+        body: JSON.stringify({ legalName: "Atelier Arhiva Alpha SRL", fiscalId: "DEMO-CIF-ARHIVA" }),
       });
       expect(seller.status).toBe(200);
       const jobId = await releaseJob(fixture.app, cookieA);

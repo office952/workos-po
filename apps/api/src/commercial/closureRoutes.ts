@@ -8,7 +8,7 @@ import {
   type CommercialMutationErrorCode,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
-import { getProductSystem, type ApiContext, type ApiEnv, can } from "../cloud/context.js";
+import { getProductSystem, organizationRole, type ApiContext, type ApiEnv, can } from "../cloud/context.js";
 import { requireCapability } from "../cloud/middleware.js";
 import { financialAccess, scopedRequestDetail } from "../financial/access.js";
 import {
@@ -20,15 +20,17 @@ export function commercialActorFrom(c: ApiContext): CommercialActor {
   const user = c.get("cloudUser");
   return {
     accountId: c.get("cloudUser")?.userId ?? "local",
-    role: can(c, "requests.decide") ? "owner" : "member",
+    // Commercial & Financial V1: the ledger records the real role; the outcome right is separate.
+    role: organizationRole(c) === "owner" ? "owner" : "member",
     displayName: user?.email ?? "Proprietar local",
+    mayDecideOutcome: can(c, "requests.outcome.manage"),
   };
 }
 
 export function registerCommercialClosureRoutes(app: Hono<ApiEnv>): void {
   app.post(
     "/api/requests/:requestId/commercial/decisions",
-    requireCapability("requests.decide"),
+    requireCapability("requests.outcome.manage"),
     async (c) => {
       const body = await c.req.json().catch(() => null);
       const record = asRecord(body);
@@ -56,7 +58,7 @@ export function registerCommercialClosureRoutes(app: Hono<ApiEnv>): void {
 
   app.post(
     "/api/requests/:requestId/commercial/reopen",
-    requireCapability("requests.decide"),
+    requireCapability("requests.outcome.manage"),
     async (c) => {
       const record = asRecord(await c.req.json().catch(() => null));
       const operationId = readString(record, "operationId");
@@ -79,7 +81,7 @@ export function registerCommercialClosureRoutes(app: Hono<ApiEnv>): void {
 
   app.post(
     "/api/requests/:requestId/quotes/:quoteSnapshotId/resume",
-    requireCapability("requests.decide"),
+    requireCapability("requests.outcome.manage"),
     async (c) => {
       const record = asRecord(await c.req.json().catch(() => null));
       const operationId = readString(record, "operationId");
@@ -134,7 +136,7 @@ function respondCommercialMutation(
           plane.db,
           plane.organizationId,
           requestId,
-          can(c, "requests.decide"),
+          can(c, "requests.outcome.manage"),
           can(c, "org.access.manage"),
         ),
       },
@@ -151,7 +153,7 @@ function respondCommercialMutation(
       plane.db,
       plane.organizationId,
       requestId,
-      can(c, "requests.decide"),
+      can(c, "requests.outcome.manage"),
       can(c, "org.access.manage"),
     ),
     detail,

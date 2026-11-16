@@ -1,7 +1,7 @@
 import { mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CANONICAL_PRODUCT_CODE, OWNER_CONFIRMED_SELLER } from "@workos-final/domain";
+import { CANONICAL_PRODUCT_CODE, SYNTHETIC_DEMO_SELLER } from "@workos-final/domain";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resetAccessRateLimits } from "../src/cloud/accessLifecycle.js";
 import { parseTrustedProxies, resolveClientAddress, UNKNOWN_CLIENT_ADDRESS } from "../src/cloud/clientAddress.js";
@@ -180,7 +180,7 @@ describe("A (final wave) · production release follows production.release and th
     const workshop = await accept("atelier@a.test", "workshop");
 
     // A confirmed, not yet released order (owner path, existing commercial rules; synthetic seller).
-    const { legalName, brand, fiscalId, tradeRegister, address, locality, iban, bank } = OWNER_CONFIRMED_SELLER;
+    const { legalName, brand, fiscalId, tradeRegister, address, locality, iban, bank } = SYNTHETIC_DEMO_SELLER;
     expect((await call(fixture, ownerCookie, "PATCH", "/api/seller", { legalName, brand, fiscalId, tradeRegister, address, locality, iban, bank })).status).toBe(200);
     const values = { "root.inscription": "ELIBERARE", "face.finish": "none", "face.confirmedAreaMm2": 250000, "volume.depthMm": "60", "volume.finish": "none", "volume.confirmedPerimeterMm": 12500 };
     const reviewed = await call(fixture, ownerCookie, "POST", `/api/products/${CANONICAL_PRODUCT_CODE}/preview`, { values });

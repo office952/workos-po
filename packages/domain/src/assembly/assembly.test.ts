@@ -649,7 +649,7 @@ describe("product assembly v1", () => {
     const issued = freezeAssemblyQuote({
       ...base,
       customer: { customerId: " cus:nord ", displayName: " Nord Market Demo SRL " },
-      seller: { legalName: "HUB MEDIA PRODUCTION S.R.L.", fiscalId: "RO54481582", brand: "" },
+      seller: { legalName: "FIRMA DEMONSTRATIVĂ S.R.L.", fiscalId: "DEMO-CIF-0001", brand: "" },
     });
     if (!legacy.ok || !issued.ok) {
       throw new Error("expected frozen quotes");
@@ -660,7 +660,7 @@ describe("product assembly v1", () => {
     expect(assemblyQuoteContentHashMatches(legacy.quote)).toBe(true);
 
     expect(issued.quote.customer).toEqual({ customerId: "cus:nord", displayName: "Nord Market Demo SRL" });
-    expect(issued.quote.seller).toEqual({ legalName: "HUB MEDIA PRODUCTION S.R.L.", fiscalId: "RO54481582" });
+    expect(issued.quote.seller).toEqual({ legalName: "FIRMA DEMONSTRATIVĂ S.R.L.", fiscalId: "DEMO-CIF-0001" });
     expect(issued.quote.contentHash).not.toBe(legacy.quote.contentHash);
     expect(issued.quote.totals).toEqual(legacy.quote.totals);
     expect(issued.quote.members).toEqual(legacy.quote.members);

@@ -165,8 +165,8 @@ describe("order snapshot freeze", () => {
     const quoted: QuoteSnapshot = {
       ...quote,
       seller: {
-        legalName: "HUB MEDIA PRODUCTION S.R.L.",
-        fiscalId: "RO54481582",
+        legalName: "FIRMA DEMONSTRATIVĂ S.R.L.",
+        fiscalId: "DEMO-CIF-0001",
       },
     };
     const frozen = freezeOrderSnapshot(quoted, acceptance);
@@ -175,14 +175,14 @@ describe("order snapshot freeze", () => {
       return;
     }
     expect(frozen.snapshot.seller).toEqual({
-      legalName: "HUB MEDIA PRODUCTION S.R.L.",
-      fiscalId: "RO54481582",
+      legalName: "FIRMA DEMONSTRATIVĂ S.R.L.",
+      fiscalId: "DEMO-CIF-0001",
     });
     const laterQuote: QuoteSnapshot = {
       ...quoted,
-      seller: { legalName: "P-Media B", fiscalId: "RO54481582" },
+      seller: { legalName: "P-Media B", fiscalId: "DEMO-CIF-0001" },
     };
-    expect(frozen.snapshot.seller?.legalName).toBe("HUB MEDIA PRODUCTION S.R.L.");
+    expect(frozen.snapshot.seller?.legalName).toBe("FIRMA DEMONSTRATIVĂ S.R.L.");
     expect(laterQuote.seller?.legalName).toBe("P-Media B");
   });
 

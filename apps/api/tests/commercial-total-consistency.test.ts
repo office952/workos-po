@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   CANONICAL_PRODUCT_CODE,
   LAB_SITE_INSTALL_ID,
-  OWNER_CONFIRMED_SELLER,
+  SYNTHETIC_DEMO_SELLER,
   SITE_INSTALLATION_SCOPE_ID,
   projectQuoteDocument,
   type QuoteSnapshot,
@@ -123,7 +123,7 @@ describe("commercial total consistency for standalone quotes with site installat
     const betaOwner = client(fixture.app, betaLogin.cookie ?? "");
 
     const { legalName, brand, fiscalId, tradeRegister, address, locality, iban, bank } =
-      OWNER_CONFIRMED_SELLER;
+      SYNTHETIC_DEMO_SELLER;
     expect(
       (await owner.send("PATCH", "/api/seller", {
         legalName,

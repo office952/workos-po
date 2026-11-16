@@ -125,6 +125,12 @@ describe("quote acceptance decision", () => {
         ...snapshot,
         eic: { ...snapshot.eic, completeness: "PARTIAL" },
       }),
+    ).toMatchObject({ ok: false, error: "incomplete_cost_requires_owner_acceptance" });
+    expect(
+      recordQuoteAcceptance({
+        ...snapshot,
+        commercial: { ...snapshot.commercial, completeness: "PARTIAL" as "COMPLETE" },
+      }),
     ).toMatchObject({ ok: false, error: "quote_not_acceptable" });
     expect(
       recordQuoteAcceptance({
@@ -138,5 +144,33 @@ describe("quote acceptance decision", () => {
         contentHash: "",
       }),
     ).toMatchObject({ ok: false, error: "incompatible_quote" });
+  });
+
+  it("accepts an incomplete internal cost only with an explicit Owner exception and reason", () => {
+    const snapshot = frozenGoldenQuote();
+    const partial = { ...snapshot, eic: { ...snapshot.eic, completeness: "PARTIAL" as const } };
+    expect(
+      recordQuoteAcceptance(partial, { incompleteCost: { acceptedByUserId: "owner-1", reason: "   " } }),
+    ).toMatchObject({ ok: false, error: "incomplete_cost_requires_owner_acceptance" });
+    const accepted = recordQuoteAcceptance(partial, {
+      acceptedAt: "2026-11-16T10:00:00.000Z",
+      incompleteCost: { acceptedByUserId: "owner-1", reason: "Cost de vopsire confirmat ulterior" },
+    });
+    expect(accepted.ok).toBe(true);
+    if (!accepted.ok) return;
+    expect(accepted.decision.incompleteCost).toEqual({
+      policy: "INCOMPLETE_COST_ACCEPTANCE_V1",
+      quoteSnapshotId: snapshot.quoteSnapshotId,
+      quoteContentHash: snapshot.contentHash,
+      costCompleteness: "PARTIAL",
+      acceptedByUserId: "owner-1",
+      acceptedAt: "2026-11-16T10:00:00.000Z",
+      reason: "Cost de vopsire confirmat ulterior",
+    });
+    // A COMPLETE quote never carries the exception, even if one is offered.
+    const complete = recordQuoteAcceptance(snapshot, {
+      incompleteCost: { acceptedByUserId: "owner-1", reason: "x" },
+    });
+    expect(complete.ok && complete.decision.incompleteCost).toBe(undefined);
   });
 });

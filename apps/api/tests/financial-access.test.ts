@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   CANONICAL_PRODUCT_CODE,
-  OWNER_CONFIRMED_SELLER,
+  SYNTHETIC_DEMO_SELLER,
   collectFinancialKeys,
   type QuoteSnapshot,
 } from "@workos-final/domain";
@@ -98,14 +98,14 @@ describe("ALT_B_SCOPED financial access", () => {
       method: "PATCH",
       headers: ownerHeaders,
       body: JSON.stringify({
-        legalName: OWNER_CONFIRMED_SELLER.legalName,
-        brand: OWNER_CONFIRMED_SELLER.brand,
-        fiscalId: OWNER_CONFIRMED_SELLER.fiscalId,
-        tradeRegister: OWNER_CONFIRMED_SELLER.tradeRegister,
-        address: OWNER_CONFIRMED_SELLER.address,
-        locality: OWNER_CONFIRMED_SELLER.locality,
-        iban: OWNER_CONFIRMED_SELLER.iban,
-        bank: OWNER_CONFIRMED_SELLER.bank,
+        legalName: SYNTHETIC_DEMO_SELLER.legalName,
+        brand: SYNTHETIC_DEMO_SELLER.brand,
+        fiscalId: SYNTHETIC_DEMO_SELLER.fiscalId,
+        tradeRegister: SYNTHETIC_DEMO_SELLER.tradeRegister,
+        address: SYNTHETIC_DEMO_SELLER.address,
+        locality: SYNTHETIC_DEMO_SELLER.locality,
+        iban: SYNTHETIC_DEMO_SELLER.iban,
+        bank: SYNTHETIC_DEMO_SELLER.bank,
       }),
     });
     expect(seller.status).toBe(200);

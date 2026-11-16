@@ -95,6 +95,21 @@ import { httpPathIdentity } from "./httpPathIdentity.js";
 import { getCommercialRequestQuoteLinkByQuote } from "./requests/store.js";
 import { OPERATOR_SESSION_COOKIE } from "./operator/store.js";
 import { renderQuoteDocumentPdf } from "./quoteDocument/renderQuoteDocumentPdf.js";
+import {
+  actorIdentity,
+  effectiveOfferingPriceRight,
+  evaluateOfferingForActor,
+  presentPolicyForCommercial,
+} from "./commercial/offeringAccess.js";
+import {
+  approvalViewFor,
+  commercialOfferingView,
+  decideOfferingFreeze,
+  frozenOfferingRecordFor,
+  priceApprovalBindingHash,
+  readIncompleteCostReason,
+  type OfferingEvaluation,
+} from "@workos-final/domain";
 
 
 class RequestLinkedQuoteRollback extends Error {
@@ -393,6 +408,84 @@ export function resolveProductCommercialForRequest(
   };
 }
 
+type OfferingAssessment = {
+  policy: ReturnType<typeof effectiveOfferingPriceRight>["policy"];
+  right: ReturnType<typeof effectiveOfferingPriceRight>["right"];
+  evaluation: OfferingEvaluation | null;
+  bindingHash: string | null;
+  latest: ReturnType<ProductSystemRuntime["readLatestPriceApproval"]>;
+  internalCostComplete: boolean | null;
+};
+
+/**
+ * Commercial & Financial V1 · evaluates the organization offering policy for the current actor on
+ * the exact confirmed configuration and client price. The Comercial view carries the outcome only.
+ */
+function assessOffering(
+  c: ApiContext,
+  runtime: ProductSystemRuntime,
+  input: {
+    truth: Parameters<typeof priceApprovalBindingHash>[0]["truth"];
+    productCode: string;
+    requestId: string | null;
+    commercialPrice: { completeness: string; netPrice: number | null };
+    eic: { total: number; completeness: string };
+    installation: {
+      commercial: { completeness: string; netPrice: number | null };
+      eic: { total: number; completeness: string };
+    } | null;
+  },
+): OfferingAssessment {
+  const { policy, right } = effectiveOfferingPriceRight(c, runtime);
+  const priceReady =
+    input.commercialPrice.completeness === "COMPLETE" &&
+    input.commercialPrice.netPrice !== null &&
+    (!input.installation ||
+      (input.installation.commercial.completeness === "COMPLETE" && input.installation.commercial.netPrice !== null));
+  if (!priceReady) {
+    return { policy, right, evaluation: null, bindingHash: null, latest: null, internalCostComplete: null };
+  }
+  const installationNet = input.installation?.commercial.netPrice ?? null;
+  const netPrice = roundMoneyValue((input.commercialPrice.netPrice as number) + (installationNet ?? 0));
+  const internalCostComplete =
+    input.eic.completeness === "COMPLETE" &&
+    (!input.installation || input.installation.eic.completeness === "COMPLETE");
+  const internalCost = roundMoneyValue(input.eic.total + (input.installation?.eic.total ?? 0));
+  const evaluation = evaluateOfferingForActor(c, policy, { netPrice, internalCost, internalCostComplete });
+  const bindingHash = input.requestId
+    ? priceApprovalBindingHash({
+        subject: {
+          kind: "PRODUCT_QUOTE",
+          organizationId: runtime.organizationId ?? "single-plane",
+          requestId: input.requestId,
+          productCode: input.productCode,
+        },
+        truth: input.truth,
+        netPrice: input.commercialPrice.netPrice as number,
+        installationNetPrice: installationNet,
+        policyVersion: policy.version,
+      })
+    : null;
+  const latest = input.requestId ? runtime.readLatestPriceApproval(input.requestId, input.productCode) : null;
+  return { policy, right, evaluation, bindingHash, latest, internalCostComplete };
+}
+
+function presentOffering(assessed: OfferingAssessment, requestId: string | null) {
+  return {
+    policy: presentPolicyForCommercial(assessed.policy, assessed.right),
+    outcome: assessed.evaluation ? commercialOfferingView(assessed.evaluation) : null,
+    approval:
+      assessed.evaluation?.outcome === "APPROVAL_REQUIRED" || assessed.latest
+        ? approvalViewFor(assessed.latest, assessed.bindingHash)
+        : null,
+    canRequestApproval: assessed.evaluation?.outcome === "APPROVAL_REQUIRED" && requestId !== null,
+  };
+}
+
+function roundMoneyValue(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
 function presentResolvedCommercialPolicy(
   resolution: Extract<
     ReturnType<ProductSystemRuntime["resolveCommercialPolicy"]>,
@@ -642,7 +735,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       runtime,
       compiled.eic,
       body,
-      can(c, "prices.manual.set"),
+      effectiveOfferingPriceRight(c, runtime).right.canSetPrice,
     );
     if (!priced.ok) {
       if ("error" in priced) {
@@ -728,6 +821,19 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         ? siteInstallationIsPrequoteReady(installationScope)
         : null,
       jobCommercial: access === "workshop" ? null : jobCommercial,
+      offering: presentOffering(
+        assessOffering(c, runtime, {
+          truth: compiled.truth,
+          productCode: compiled.truth.templateCode,
+          requestId: readRequestId(body),
+          commercialPrice,
+          eic: compiled.eic,
+          installation: installationProjection
+            ? { commercial: installationProjection.commercial, eic: installationProjection.eic }
+            : null,
+        }),
+        readRequestId(body),
+      ),
       executionPlanPreview: scopeExecutionPlanPreview(
         projectExecutionPlanPreview(
           compiled.truth,
@@ -739,6 +845,99 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       ),
     });
   });
+
+  /**
+   * Commercial & Financial V1 · the Comercial role asks the Owner to approve the exact confirmed
+   * configuration and client price when the organization policy requires it.
+   */
+  app.post(
+    "/api/products/:productCode/price-approval-requests",
+    requireCapability("offering.policy.use"),
+    async (c) => {
+      const runtime = getProductSystem(c);
+      const body = await c.req.json().catch(() => null);
+      const requestId = readRequestId(body);
+      if (!requestId || !runtime.readCommercialRequest(requestId)) {
+        return c.json(
+          { error: "request_unavailable", reasons: ["Aprobarea se cere pentru o cerere de ofertă existentă."] },
+          422,
+        );
+      }
+      const compiled = compileAcceptedProduct(runtime, c.req.param("productCode"), body);
+      if (!compiled.ok) {
+        return c.json(compiled.body, compiled.status);
+      }
+      const { right } = effectiveOfferingPriceRight(c, runtime);
+      const priced = resolveProductCommercialForRequest(runtime, compiled.eic, body, right.canSetPrice);
+      if (!priced.ok) {
+        return c.json({ error: "price_unavailable", reasons: ["Prețul ofertei nu este valid."] }, 422);
+      }
+      const installationProjection = readInstallationProjection(runtime, body, priced.resolution.policy);
+      const assessed = assessOffering(c, runtime, {
+        truth: compiled.truth,
+        productCode: compiled.truth.templateCode,
+        requestId,
+        commercialPrice: priced.commercialPrice,
+        eic: compiled.eic,
+        installation: installationProjection
+          ? { commercial: installationProjection.commercial, eic: installationProjection.eic }
+          : null,
+      });
+      if (!assessed.evaluation || !assessed.bindingHash) {
+        return c.json(
+          { error: "price_unavailable", reasons: ["Introdu și confirmă prețul înainte de a cere aprobarea."] },
+          422,
+        );
+      }
+      if (assessed.evaluation.outcome !== "APPROVAL_REQUIRED") {
+        return c.json(
+          {
+            error: "approval_not_required",
+            reasons: [commercialOfferingView(assessed.evaluation).message],
+            offering: presentOffering(assessed, requestId),
+          },
+          409,
+        );
+      }
+      const note = readApprovalNote(body);
+      if (note === false) {
+        return c.json({ error: "invalid_note", reasons: ["Nota trebuie să aibă cel mult 500 de caractere."] }, 400);
+      }
+      const actor = actorIdentity(c);
+      const stored = runtime.requestPriceApproval(
+        {
+          requestId,
+          productCode: compiled.truth.templateCode,
+          bindingHash: assessed.bindingHash,
+          policyVersion: assessed.evaluation.policyVersion,
+          policyMode: assessed.evaluation.policyMode,
+          netPrice: priced.commercialPrice.netPrice as number,
+          installationNetPrice: installationProjection?.commercial.netPrice ?? null,
+          internalCostComplete: Boolean(assessed.internalCostComplete),
+          triggeredRules: assessed.evaluation.triggeredRules,
+          note,
+        },
+        actor,
+      );
+      if (!stored.ok) {
+        return c.json(
+          {
+            error: stored.error,
+            reasons: ["Proprietarul a decis deja această variantă. Modifică oferta pentru o solicitare nouă."],
+            offering: presentOffering({ ...assessed, latest: stored.approval }, requestId),
+          },
+          409,
+        );
+      }
+      return c.json(
+        {
+          created: !stored.alreadyRequested,
+          offering: presentOffering({ ...assessed, latest: stored.approval }, requestId),
+        },
+        stored.alreadyRequested ? 200 : 201,
+      );
+    },
+  );
 
   app.post("/api/products/:productCode/accepted-production-snapshot", async (c) => {
     const runtime = getProductSystem(c);
@@ -855,11 +1054,18 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         return c.json(overlap, 409);
       }
     }
+    const offeringRight = effectiveOfferingPriceRight(c, runtime);
+    if (!offeringRight.right.canSetPrice) {
+      return c.json(
+        { error: "offering_not_permitted", reasons: [offeringRight.right.blockedReason ?? "Rolul tău nu poate îngheța oferta."] },
+        403,
+      );
+    }
     const priced = resolveProductCommercialForRequest(
       runtime,
       compiled.eic,
       body,
-      can(c, "prices.manual.set"),
+      offeringRight.right.canSetPrice,
     );
     if (!priced.ok) {
       if ("error" in priced) {
@@ -926,6 +1132,44 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       );
     }
     const frozenAt = new Date().toISOString();
+    const assessed = assessOffering(c, runtime, {
+      truth: compiled.truth,
+      productCode: compiled.truth.templateCode,
+      requestId,
+      commercialPrice,
+      eic: compiled.eic,
+      installation: installationForFreeze
+        ? { commercial: installationForFreeze.commercial, eic: installationForFreeze.eic }
+        : null,
+    });
+    let offeringRecord: ReturnType<typeof frozenOfferingRecordFor> | null = null;
+    if (assessed.evaluation) {
+      const offeringDecision = decideOfferingFreeze({
+        evaluation: assessed.evaluation,
+        bindingHash: assessed.bindingHash ?? "",
+        latestApproval: assessed.bindingHash ? assessed.latest : null,
+      });
+      if (!offeringDecision.ok) {
+        return c.json(
+          {
+            error: offeringDecision.error,
+            reasons: offeringDecision.reasons,
+            offering: presentOffering(assessed, requestId),
+          },
+          offeringDecision.error === "offering_not_permitted" ? 403 : 409,
+        );
+      }
+      const actor = actorIdentity(c);
+      // Pre-V1 behaviour is kept byte-for-byte for the Owner under the platform default policy.
+      if (actor.role !== "owner" || assessed.policy.source === "ORGANIZATION") {
+        offeringRecord = frozenOfferingRecordFor({
+          evaluation: assessed.evaluation,
+          pricedByUserId: actor.userId,
+          pricedByRole: actor.role,
+          approval: offeringDecision.approval,
+        });
+      }
+    }
     let rateAcknowledgement: FrozenRateAcknowledgement | null = null;
     if (commercialPrice.completeness === "COMPLETE") {
       const requirement = assessProductRateAcknowledgement(
@@ -965,6 +1209,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       {
         createdAt: frozenAt,
         ...(rateAcknowledgement ? { rateAcknowledgement } : {}),
+        ...(offeringRecord ? { offering: offeringRecord } : {}),
         customer: {
           customerId: customer.customerId,
           displayName: customer.displayName,
@@ -1118,14 +1363,18 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
   app.post(
     "/api/products/:productCode/quote-snapshots/:quoteSnapshotId/confirm-order",
     requireCapability("quotes.accept"),
-    (c) => {
+    async (c) => {
       const runtime = getProductSystem(c);
       const snapshot = runtime.readQuoteSnapshot(c.req.param("quoteSnapshotId"));
       if (!snapshot || snapshot.productCode !== c.req.param("productCode")) {
         return c.json({ error: "not_found" }, 404);
       }
+      const exception = await readIncompleteCostException(c);
+      if (exception === "forbidden") {
+        return c.json({ error: "forbidden", reasons: ["Doar Proprietarul poate accepta o ofertă cu cost intern incomplet."] }, 403);
+      }
       // Validate both frozen contracts before storing either record.
-      const recorded = recordQuoteAcceptance(snapshot);
+      const recorded = recordQuoteAcceptance(snapshot, { incompleteCost: exception });
       if (!recorded.ok) return c.json({ error: recorded.error, reasons: recorded.reasons }, 422);
       const acceptance = runtime.readQuoteAcceptance(snapshot.quoteSnapshotId) ?? recorded.decision;
       const frozen = freezeOrderSnapshot(snapshot, acceptance);
@@ -1156,13 +1405,17 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
   app.post(
     "/api/products/:productCode/quote-snapshots/:quoteSnapshotId/acceptance",
     requireCapability("quotes.accept"),
-    (c) => {
+    async (c) => {
       const runtime = getProductSystem(c);
       const snapshot = runtime.readQuoteSnapshot(c.req.param("quoteSnapshotId"));
       if (!snapshot || snapshot.productCode !== c.req.param("productCode")) {
         return c.json({ error: "not_found" }, 404);
       }
-      const recorded = recordQuoteAcceptance(snapshot);
+      const exception = await readIncompleteCostException(c);
+      if (exception === "forbidden") {
+        return c.json({ error: "forbidden", reasons: ["Doar Proprietarul poate accepta o ofertă cu cost intern incomplet."] }, 403);
+      }
+      const recorded = recordQuoteAcceptance(snapshot, { incompleteCost: exception });
       if (!recorded.ok) {
         return c.json(
           { error: recorded.error, reasons: recorded.reasons },
@@ -1998,6 +2251,30 @@ function mutationHttpStatus(error: TaskMutationError): 404 | 409 | 422 {
       return _exhaustive;
     }
   }
+}
+
+/**
+ * AUD-PRICING-002: `incompleteCostAcceptance: { confirm: true, reason }` in the body. The actor
+ * comes from the authenticated session; the capability is separate from price-exception approval.
+ */
+function readApprovalNote(body: unknown): string | null | false {
+  const value = body && typeof body === "object" ? (body as Record<string, unknown>).approvalNote : undefined;
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "string") return false;
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+  return trimmed.length > 500 ? false : trimmed;
+}
+
+async function readIncompleteCostException(
+  c: ApiContext,
+): Promise<{ acceptedByUserId: string; reason: string } | null | "forbidden"> {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const raw = body && typeof body === "object" ? (body.incompleteCostAcceptance as Record<string, unknown> | undefined) : undefined;
+  if (!raw || typeof raw !== "object" || raw.confirm !== true) return null;
+  if (!can(c, "quotes.accept.incomplete_cost")) return "forbidden";
+  const reason = readIncompleteCostReason(raw.reason);
+  return reason ? { acceptedByUserId: actorUserId(c), reason } : { acceptedByUserId: actorUserId(c), reason: "" };
 }
 
 export function actorUserId(c: ApiContext): string {

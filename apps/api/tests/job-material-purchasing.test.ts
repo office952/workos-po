@@ -221,7 +221,7 @@ describe("job material requests across organizations", () => {
         const seller = await fixture.app.request("/api/seller", {
           method: "PATCH",
           headers: { "content-type": "application/json", cookie },
-          body: JSON.stringify({ legalName }),
+          body: JSON.stringify({ legalName, fiscalId: "DEMO-CIF-TEST" }),
         });
         expect(seller.status).toBe(200);
       }

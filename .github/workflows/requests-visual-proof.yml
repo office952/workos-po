@@ -188,7 +188,7 @@ jobs:
               const url = route.request().url();
               if (url.endsWith("/api/cloud/session")) {
                 const body = stress ? { ...session, organization: { ...session.organization,
-                  displayName: "HUB MEDIA PRODUCTION SI SERVICII PUBLICITARE S.R.L." } } : session;
+                  displayName: "FIRMA DEMONSTRATIVĂ S.R.L." } } : session;
                 await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
                 return;
               }

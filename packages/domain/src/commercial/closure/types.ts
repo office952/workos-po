@@ -69,6 +69,11 @@ export type CommercialActor = {
   accountId: string;
   role: CommercialActorRole;
   displayName: string;
+  /**
+   * Commercial & Financial V1: the server grants the request-outcome right
+   * (`requests.outcome.manage`) to the Comercial role. Owner always may decide.
+   */
+  mayDecideOutcome?: boolean;
 };
 
 export type CommercialOfferFacts = {
@@ -246,7 +251,7 @@ export function commercialMutationErrorLabel(error: CommercialMutationErrorCode)
     case "not_found":
       return "Cererea nu a fost găsită.";
     case "forbidden":
-      return "Doar proprietarul poate încheia, redeschide sau decide ofertele.";
+      return "Rolul tău nu poate încheia, redeschide sau decide ofertele.";
     case "invalid_payload":
       return "Datele operației comerciale nu sunt valide.";
     case "commercial_revision_mismatch":

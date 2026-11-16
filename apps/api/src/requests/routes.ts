@@ -13,10 +13,11 @@ import {
 } from "@workos-final/domain";
 import type { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { getProductSystem, type ApiContext, type ApiEnv, can } from "../cloud/context.js";
+import { getProductSystem, type ApiContext, type ApiEnv } from "../cloud/context.js";
 import { requireCapability } from "../cloud/middleware.js";
 import { financialAccess, scopedRequestDetail } from "../financial/access.js";
 import { httpPathIdentity } from "../httpPathIdentity.js";
+import { effectiveOfferingPriceRight } from "../commercial/offeringAccess.js";
 
 function requestDetailFor(c: ApiContext, requestId: string) {
   const detail = scopedRequestDetail(
@@ -28,7 +29,8 @@ function requestDetailFor(c: ApiContext, requestId: string) {
   }
   return {
     ...detail,
-    canWriteInstallationPrice: can(c, "requests.decide") && detail.canWriteInstallationFacts,
+    canWriteInstallationPrice:
+      effectiveOfferingPriceRight(c, getProductSystem(c)).right.canSetPrice && detail.canWriteInstallationFacts,
   };
 }
 
@@ -106,9 +108,14 @@ export function registerRequestRoutes(app: Hono<ApiEnv>): void {
 
   app.patch(
     "/api/requests/:requestId/installation-price",
-    requireCapability("requests.decide"),
+    requireCapability("offering.policy.use"),
     async (c) => {
       const runtime = getProductSystem(c);
+      // Commercial & Financial V1: the client installation price follows the offering policy.
+      const priceRight = effectiveOfferingPriceRight(c, runtime).right;
+      if (!priceRight.canSetPrice) {
+        return c.json({ error: "forbidden", reasons: [priceRight.blockedReason] }, 403);
+      }
       const body = await c.req.json().catch(() => null);
       const netPrice = readManualNetPrice(body);
       if (netPrice === false) {
@@ -117,7 +124,7 @@ export function registerRequestRoutes(app: Hono<ApiEnv>): void {
       const result = runtime.updateInstallationManualPrice(
         c.req.param("requestId"),
         netPrice,
-        can(c, "requests.decide"),
+        priceRight.canSetPrice,
       );
       if (!result.ok) {
         return c.json({ error: result.error }, priceMutationStatus(result.error));

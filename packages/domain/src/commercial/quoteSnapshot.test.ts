@@ -325,16 +325,16 @@ describe("quote snapshot freeze", () => {
     const withoutSeller = freezeQuoteSnapshot(truth, aggregate, composition, eic, commercial);
     const withSeller = freezeQuoteSnapshot(truth, aggregate, composition, eic, commercial, {
       seller: {
-        legalName: "HUB MEDIA PRODUCTION S.R.L.",
-        brand: "HUB MEDIA PRODUCTION",
-        fiscalId: "RO54481582",
+        legalName: "FIRMA DEMONSTRATIVĂ S.R.L.",
+        brand: "ATELIER DEMONSTRATIV",
+        fiscalId: "DEMO-CIF-0001",
       },
     });
     const renamedLive = freezeQuoteSnapshot(truth, aggregate, composition, eic, commercial, {
       seller: {
         legalName: "P-Media B",
         brand: "P-Media B",
-        fiscalId: "RO54481582",
+        fiscalId: "DEMO-CIF-0001",
       },
     });
     expect(withoutSeller.ok && withSeller.ok && renamedLive.ok).toBe(true);
@@ -342,7 +342,7 @@ describe("quote snapshot freeze", () => {
       return;
     }
     expect(withoutSeller.snapshot.seller).toBeUndefined();
-    expect(withSeller.snapshot.seller?.legalName).toBe("HUB MEDIA PRODUCTION S.R.L.");
+    expect(withSeller.snapshot.seller?.legalName).toBe("FIRMA DEMONSTRATIVĂ S.R.L.");
     expect(withSeller.snapshot.contentHash).not.toBe(withoutSeller.snapshot.contentHash);
     expect(renamedLive.snapshot.contentHash).not.toBe(withSeller.snapshot.contentHash);
     expect(withSeller.snapshot.commercial.grossPrice).toBe(624.82);

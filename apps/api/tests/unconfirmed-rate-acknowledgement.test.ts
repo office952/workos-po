@@ -4,7 +4,7 @@ import {
   ACM_CASSETTE_NONE_PRODUCT_CODE,
   CANONICAL_PRODUCT_CODE,
   LAB_SITE_INSTALL_ID,
-  OWNER_CONFIRMED_SELLER,
+  SYNTHETIC_DEMO_SELLER,
   PLEXIGLAS_3MM_OPAL_ID,
   SITE_INSTALLATION_SCOPE_ID,
 } from "@workos-final/domain";
@@ -130,7 +130,7 @@ async function quoteCount(client: Api): Promise<number> {
 
 async function configureSeller(client: Api) {
   const { legalName, brand, fiscalId, tradeRegister, address, locality, iban, bank } =
-    OWNER_CONFIRMED_SELLER;
+    SYNTHETIC_DEMO_SELLER;
   const response = await client.send("PATCH", "/api/seller", {
     legalName,
     brand,
@@ -659,8 +659,10 @@ describe("unconfirmed rate acknowledgement — SaaS organizations", () => {
       alpha.customerId,
       { rateAcknowledgement: spoofedAcknowledgement },
     );
-    expect(memberRefused.status).toBe(422);
-    expect((await readBody(memberRefused)).error).toBe("incomplete_offer");
+    // Commercial & Financial V1: under the default OWNER_ONLY policy the Comercial role is refused
+    // before pricing (it cannot set the client price), not after an incomplete freeze.
+    expect(memberRefused.status).toBe(403);
+    expect((await readBody(memberRefused)).error).toBe("offering_not_permitted");
     expect(await quoteCount(alpha.owner)).toBe(0);
 
     const frozen = await freeze(
@@ -880,7 +882,7 @@ describe("unconfirmed rate acknowledgement — SaaS organizations", () => {
       memberConfirm.reviewId,
       alpha.customerId,
     );
-    expect(memberFreeze.status).toBe(422);
+    expect(memberFreeze.status).toBe(403);
     const ownerConfirm = await confirm(alpha.owner, readyValues);
     expect(ownerConfirm.disclosure?.status).toBe("NOT_REQUIRED");
     const frozen = await freeze(alpha.owner, readyValues, ownerConfirm.reviewId, alpha.customerId);
