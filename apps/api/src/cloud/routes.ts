@@ -1,5 +1,12 @@
 import type { Context, Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import {
+  ORGANIZATION_ROLE_PRESENTATION,
+  capabilitiesForRole,
+  isOrganizationRole,
+  isScopedOrganizationRole,
+} from "@workos-final/domain";
+import { organizationRolesV1Enabled } from "./rolesFlag.js";
 import { cookieSecure } from "../ops/origin.js";
 import { OPERATOR_SESSION_COOKIE } from "../operator/store.js";
 import {
@@ -34,7 +41,11 @@ export function registerCloudRoutes(app: Hono<ApiEnv>): void {
       resolved.user.userId,
       resolved.session.activeOrganizationId,
     );
-    if (!organization || organization.status !== "ACTIVE" || !membership) {
+    const scopedDisabled =
+      membership !== null &&
+      isScopedOrganizationRole(membership.role) &&
+      !organizationRolesV1Enabled(c.get("env") ?? process.env);
+    if (!organization || organization.status !== "ACTIVE" || !membership || scopedDisabled) {
       controlPlane.revokeSession(cookie);
       return c.json({ mode: "cloud", user: null, organization: null, memberships: [] });
     }
@@ -47,6 +58,7 @@ export function registerCloudRoutes(app: Hono<ApiEnv>): void {
         displayName: organization.displayName,
         slug: organization.slug,
         role: membership.role,
+        ...roleCapabilityPresentation(membership.role),
       },
       memberships,
     });
@@ -75,9 +87,12 @@ export function registerCloudRoutes(app: Hono<ApiEnv>): void {
       const status = verified.error === "rate_limited" ? 429 : verified.error === "disabled" ? 403 : 401;
       return c.json({ error: verified.error }, status);
     }
+    const rolesEnabled = organizationRolesV1Enabled(c.get("env") ?? process.env);
     const memberships = controlPlane
       .listMembershipsForUser(verified.user.userId)
-      .filter((item) => item.status === "ACTIVE");
+      .filter((item) => item.status === "ACTIVE")
+      // V1 forward recovery: scoped roles are inactive while WORKOS_ORG_ROLES_V1 is off.
+      .filter((item) => rolesEnabled || !isScopedOrganizationRole(item.role));
     if (memberships.length === 0) {
       return c.json({ error: "no_membership" }, 403);
     }
@@ -124,6 +139,7 @@ export function registerCloudRoutes(app: Hono<ApiEnv>): void {
             displayName: organization.displayName,
             slug: organization.slug,
             role: membership?.role ?? null,
+            ...roleCapabilityPresentation(membership?.role ?? null),
           }
         : null,
       memberships,
@@ -211,10 +227,21 @@ export function registerCloudRoutes(app: Hono<ApiEnv>): void {
         displayName: organization.displayName,
         slug: organization.slug,
         role: membership.role,
+        ...roleCapabilityPresentation(membership.role),
       },
       memberships,
     });
   });
+}
+
+/**
+ * V1 Organization Access: the client reflects server-owned capabilities; it never derives them.
+ */
+export function roleCapabilityPresentation(role: string | null): { roleLabel: string | null; capabilities: string[] } {
+  return {
+    roleLabel: isOrganizationRole(role) ? ORGANIZATION_ROLE_PRESENTATION[role].label : null,
+    capabilities: capabilitiesForRole(role),
+  };
 }
 
 export const CLOUD_SESSION_COOKIE_CONTRACT = {
@@ -223,7 +250,7 @@ export const CLOUD_SESSION_COOKIE_CONTRACT = {
   sameSite: "Lax",
 } as const;
 
-function setCloudSessionCookie(c: Context<ApiEnv>, rawToken: string): void {
+export function setCloudSessionCookie(c: Context<ApiEnv>, rawToken: string): void {
   const env = c.get("env") ?? process.env;
   setCookie(c, CLOUD_SESSION_COOKIE, rawToken, {
     httpOnly: CLOUD_SESSION_COOKIE_CONTRACT.httpOnly,

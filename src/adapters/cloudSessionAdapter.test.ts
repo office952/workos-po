@@ -59,6 +59,7 @@ describe("presentCloudSession", () => {
         organizationId: "org:a",
         displayName: "Atelier Alpha",
         membershipRole: "owner",
+        capabilities: null,
       },
       memberships: [{ organizationId: "org:a", displayName: "Atelier Alpha" }],
     });

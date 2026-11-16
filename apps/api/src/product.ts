@@ -80,13 +80,13 @@ import {
 import type { Hono } from "hono";
 import { getCookie } from "hono/cookie";
 import type { ProductSystemRuntime } from "./productSystem/runtime.js";
-import { getProductSystem, isOwner, type ApiContext, type ApiEnv } from "./cloud/context.js";
+import { getProductSystem, type ApiContext, type ApiEnv, can } from "./cloud/context.js";
 import {
   presentExecutionPlanForViewer,
   viewerCanAssignProvider,
 } from "./execution/presentExecutionPlan.js";
 import { financialAccess } from "./financial/access.js";
-import { requireOwnerRole } from "./cloud/middleware.js";
+import { requireCapability } from "./cloud/middleware.js";
 import {
   refuseAcceptIfDispositioned,
   refuseNewQuoteIfClosed,
@@ -642,7 +642,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       runtime,
       compiled.eic,
       body,
-      isOwner(c),
+      can(c, "prices.manual.set"),
     );
     if (!priced.ok) {
       if ("error" in priced) {
@@ -705,7 +705,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
           readRequestId(body),
         ),
         access,
-        isOwner(c),
+        can(c, "costs.internal.manage"),
       ),
       commercialPolicy: presentResolvedCommercialPolicy(priced.resolution),
       ...(access === "owner"
@@ -859,7 +859,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       runtime,
       compiled.eic,
       body,
-      isOwner(c),
+      can(c, "prices.manual.set"),
     );
     if (!priced.ok) {
       if ("error" in priced) {
@@ -935,7 +935,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         requestId,
       );
       const decision = decideRateAcknowledgement(requirement, {
-        authorized: isOwner(c),
+        authorized: can(c, "costs.internal.manage"),
         submittedBindingHash: readRateAcknowledgementBindingHash(body),
         actorUserId: actorUserId(c),
         acknowledgedAt: frozenAt,
@@ -948,7 +948,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
             rateAcknowledgement: scopeRateAcknowledgementRequirement(
               requirement,
               financialAccess(c, "commercial"),
-              isOwner(c),
+              can(c, "costs.internal.manage"),
             ),
           },
           rateAcknowledgementHttpStatus(decision.error),
@@ -1117,7 +1117,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
 
   app.post(
     "/api/products/:productCode/quote-snapshots/:quoteSnapshotId/confirm-order",
-    requireOwnerRole(),
+    requireCapability("quotes.accept"),
     (c) => {
       const runtime = getProductSystem(c);
       const snapshot = runtime.readQuoteSnapshot(c.req.param("quoteSnapshotId"));
@@ -1155,7 +1155,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
 
   app.post(
     "/api/products/:productCode/quote-snapshots/:quoteSnapshotId/acceptance",
-    requireOwnerRole(),
+    requireCapability("quotes.accept"),
     (c) => {
       const runtime = getProductSystem(c);
       const snapshot = runtime.readQuoteSnapshot(c.req.param("quoteSnapshotId"));
@@ -1215,7 +1215,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
 
   app.post(
     "/api/products/:productCode/quote-snapshots/:quoteSnapshotId/order",
-    requireOwnerRole(),
+    requireCapability("quotes.accept"),
     (c) => {
       const runtime = getProductSystem(c);
       const snapshot = runtime.readQuoteSnapshot(c.req.param("quoteSnapshotId"));
@@ -1282,7 +1282,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
 
   app.post(
     "/api/products/:productCode/orders/:orderSnapshotId/production-release",
-    requireOwnerRole(),
+    requireCapability("production.release"),
     (c) => {
       const runtime = getProductSystem(c);
       const orderSnapshot = runtime.readOrderSnapshot(c.req.param("orderSnapshotId"));
@@ -1342,7 +1342,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
 
   app.post(
     "/api/products/:productCode/accepted-production-snapshots/:snapshotId/execution-plan",
-    requireOwnerRole(),
+    requireCapability("production.release"),
     (c) => {
       const runtime = getProductSystem(c);
       const snapshot = runtime.readProductionSnapshot(c.req.param("snapshotId"));
@@ -1409,14 +1409,14 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       ? runtime.listJobOverview().jobs.find((item) => item.jobId === jobId) ?? null
       : null;
     return c.json({
-      canConfirmMaterial: isOwner(c),
+      canConfirmMaterial: can(c, "execution.supervise"),
       executionPlan: presentScopedExecutionPlan(
         c,
         projectPlanView(
           runtime,
           record,
           session.ok ? session.person.personId : null,
-          isOwner(c),
+          can(c, "planning.manage"),
         ),
       ),
       job: jobId
@@ -1433,7 +1433,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
     });
   });
 
-  app.post("/api/execution-tasks/:taskId/provider", requireOwnerRole(), async (c) => {
+  app.post("/api/execution-tasks/:taskId/provider", requireCapability("planning.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const providerId = readProviderId(await c.req.json());
     if (!providerId) {
@@ -1461,7 +1461,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
   app.post("/api/execution-tasks/:taskId/bind-unique-provider", (c) => {
     const runtime = getProductSystem(c);
     const session = runtime.resolveOperatorSession(getCookie(c, OPERATOR_SESSION_COOKIE));
-    if (!session.ok && !isOwner(c)) {
+    if (!session.ok && !can(c, "planning.manage")) {
       return c.json({ error: "invalid_session" }, 403);
     }
     const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/bind-unique-provider");
@@ -1478,7 +1478,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
     );
   });
 
-  app.post("/api/execution-tasks/:taskId/planned-effort", requireOwnerRole(), async (c) => {
+  app.post("/api/execution-tasks/:taskId/planned-effort", requireCapability("planning.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const plannedEffortMinutes = readPlannedEffortMinutes(await c.req.json().catch(() => null));
     if (plannedEffortMinutes === undefined) {
@@ -1497,7 +1497,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
     );
   });
 
-  app.post("/api/execution-tasks/:taskId/executor", requireOwnerRole(), async (c) => {
+  app.post("/api/execution-tasks/:taskId/executor", requireCapability("planning.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const personId = readPersonId(await c.req.json().catch(() => null));
     if (!personId) {
@@ -1584,7 +1584,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
     );
   });
 
-  app.post("/api/execution-tasks/:taskId/rework-close", requireOwnerRole(), async (c) => {
+  app.post("/api/execution-tasks/:taskId/rework-close", requireCapability("execution.supervise"), async (c) => {
     const runtime = getProductSystem(c);
     const note = readOptionalNote(await c.req.json().catch(() => ({})));
     if (note === false) {
@@ -1618,7 +1618,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
     );
   });
 
-  app.post("/api/execution-tasks/:taskId/external", requireOwnerRole(), (c) => {
+  app.post("/api/execution-tasks/:taskId/external", requireCapability("planning.manage"), (c) => {
     const runtime = getProductSystem(c);
     const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/external");
     return respondTaskMutation(
@@ -1629,7 +1629,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
     );
   });
 
-  app.post("/api/execution-tasks/:taskId/external-provider", requireOwnerRole(), async (c) => {
+  app.post("/api/execution-tasks/:taskId/external-provider", requireCapability("planning.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const providerId = readProviderId(await c.req.json().catch(() => null));
     if (!providerId) {
@@ -1644,7 +1644,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
     );
   });
 
-  app.post("/api/execution-tasks/:taskId/hand-off", requireOwnerRole(), (c) => {
+  app.post("/api/execution-tasks/:taskId/hand-off", requireCapability("planning.manage"), (c) => {
     const runtime = getProductSystem(c);
     const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/hand-off");
     return respondTaskMutation(
@@ -1655,7 +1655,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
     );
   });
 
-  app.post("/api/execution-tasks/:taskId/external-return", requireOwnerRole(), (c) => {
+  app.post("/api/execution-tasks/:taskId/external-return", requireCapability("planning.manage"), (c) => {
     const runtime = getProductSystem(c);
     const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/external-return");
     return respondTaskMutation(
@@ -2070,7 +2070,7 @@ function respondTaskMutation(
     alreadyApplied: result.alreadyApplied,
     executionPlan: presentScopedExecutionPlan(
       c,
-      projectPlanView(runtime, result.record, operatorId, isOwner(c)),
+      projectPlanView(runtime, result.record, operatorId, can(c, "planning.manage")),
     ),
   });
 }

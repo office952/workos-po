@@ -30,7 +30,7 @@ const defaultAdmin = {
 };
 
 describe("AccessAdminPage", () => {
-  it("renders Owner access admin without create form or internal membership ids", async () => {
+  it("renders Owner access admin with invitations only: no direct user creation, no password, no internal ids (D1)", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -44,17 +44,66 @@ describe("AccessAdminPage", () => {
 
     expect(await screen.findByText("owner@firma.test")).toBeInTheDocument();
     expect(screen.getByText("membru@firma.test")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        /Utilizatorii noi sunt adăugați prin administrarea controlată WorkOS în această versiune/i,
-      ),
-    ).toBeInTheDocument();
+    // D3: member is labelled Comercial.
+    expect(screen.getByText(/Comercial · de la/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Invită utilizator" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Adaugă utilizator" })).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Parolă inițială")).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Revocă" })).toHaveLength(2);
     expect(screen.getByRole("link", { name: "Administrare" })).toHaveAttribute("href", "/admin");
     expect(screen.queryByText("mem:owner")).not.toBeInTheDocument();
+  });
+
+  it("invites by email and role and shows the link once when there is no email delivery", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ...defaultAdmin, canManage: true, roles: [
+        { role: "owner", label: "Proprietar", summary: "Administrează firma.", cannot: "—", assignable: true },
+        { role: "member", label: "Comercial", summary: "Clienți și oferte.", cannot: "Nu vede costuri interne.", assignable: true },
+      ] }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        json: async () => ({
+          ...defaultAdmin,
+          canManage: true,
+          invitation: { invitationId: "inv:1", email: "nou@firma.test", role: "member", roleLabel: "Comercial", deliveryChannel: "LINK", deliveryStatus: "NOT_SENT", createdAt: "2026-01-03T00:00:00.000Z", expiresAt: "2026-01-10T00:00:00.000Z" },
+          inviteUrl: "http://localhost/invitatie#t=abc",
+        }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<AccessAdminPage />);
+    await user.click(await screen.findByRole("button", { name: "Invită utilizator" }));
+    const dialog = screen.getByRole("dialog", { name: "Invită utilizator" });
+    await user.type(within(dialog).getByLabelText("Email"), "nou@firma.test");
+    await user.click(within(dialog).getByLabelText(/Comercial/));
+    await user.click(within(dialog).getByRole("button", { name: "Trimite invitația" }));
+    expect(await screen.findByText(/Linkul de invitație pentru nou@firma.test/)).toBeInTheDocument();
+    expect(screen.getByText(/Linkul nu va mai fi afișat/)).toBeInTheDocument();
+    const invite = fetchMock.mock.calls[1];
+    expect(String(invite[0])).toContain("/api/admin/access/invitations");
+    expect(JSON.parse(String((invite[1] as { body: string }).body))).toEqual({ email: "nou@firma.test", role: "member" });
+  });
+
+  it("shows the last active owner without revoke or role actions", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({
+      ...defaultAdmin,
+      members: [{ ...defaultAdmin.members[0], lastActiveOwner: true, active: true, roleLabel: "Proprietar" }, defaultAdmin.members[1]],
+    }) }));
+    render(<AccessAdminPage />);
+    expect(await screen.findByText(/Ultimul proprietar activ/)).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Revocă" })).toHaveLength(1);
+  });
+
+  it("presents production and workshop users with the server label", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({
+      ...defaultAdmin,
+      members: [...defaultAdmin.members, { membershipId: "mem:w", email: "atelier@firma.test", role: "workshop", roleLabel: "Atelier", status: "ACTIVE_SCOPED", active: true, userStatus: "ACTIVE", createdAt: "2026-01-03T00:00:00.000Z" }],
+    }) }));
+    render(<AccessAdminPage />);
+    expect(await screen.findByText("atelier@firma.test")).toBeInTheDocument();
+    expect(screen.getByText(/Atelier · de la/)).toBeInTheDocument();
   });
 
   it("hides revoke controls for members", async () => {
@@ -70,9 +119,9 @@ describe("AccessAdminPage", () => {
     render(<AccessAdminPage />);
 
     expect(await screen.findByText("owner@firma.test")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Adaugă utilizator" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Invită utilizator" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Revocă" })).not.toBeInTheDocument();
-    expect(screen.getByText(/doar proprietarul poate revoca/i)).toBeInTheDocument();
+    expect(screen.getByText(/doar proprietarul poate administra accesul/i)).toBeInTheDocument();
   });
 
   it("revokes an eligible membership without calling create users", async () => {
@@ -107,7 +156,7 @@ describe("AccessAdminPage", () => {
     await userEvent.click(revokeButtons[1]!);
     // R1 · F7: nothing is sent before the owner confirms.
     const ask = screen.getByRole("dialog", { name: "Revoci accesul pentru membru@firma.test?" });
-    expect(within(ask).getByText("Nu se va mai putea autentifica în organizație.")).toBeInTheDocument();
+    expect(within(ask).getByText(/Nu se va mai putea autentifica în organizație/)).toBeInTheDocument();
     expect(within(ask).getByRole("button", { name: "Anulează" })).toHaveFocus();
     expect(fetchMock).toHaveBeenCalledTimes(1);
     await userEvent.click(within(ask).getByRole("button", { name: "Revocă accesul" }));

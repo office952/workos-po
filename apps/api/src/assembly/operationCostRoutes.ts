@@ -11,8 +11,8 @@ import {
   type FinalPackagingMode,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
-import { getProductSystem, isOwner, type ApiEnv } from "../cloud/context.js";
-import { requireOwnerRole } from "../cloud/middleware.js";
+import { getProductSystem, type ApiEnv, can } from "../cloud/context.js";
+import { requireCapability } from "../cloud/middleware.js";
 import { actorUserId } from "../product.js";
 import {
   listAssemblyOperationCostPolicyVersions,
@@ -34,10 +34,10 @@ const PACKAGING_LABELS: Record<FinalPackagingMode, string> = {
 export function registerAssemblyOperationCostRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/admin/assembly-operation-cost", (c) => {
     const runtime = getProductSystem(c);
-    return c.json(presentAssemblyOperationCostAdmin(runtime, isOwner(c)));
+    return c.json(presentAssemblyOperationCostAdmin(runtime, can(c, "costs.internal.manage")));
   });
 
-  app.post("/api/admin/assembly-operation-cost-policy", requireOwnerRole(), async (c) => {
+  app.post("/api/admin/assembly-operation-cost-policy", requireCapability("costs.internal.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
     const expectedVersion = body?.expectedVersion;

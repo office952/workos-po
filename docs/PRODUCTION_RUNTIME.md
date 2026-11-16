@@ -64,6 +64,7 @@ Safe examples only. Never commit secrets or real Cloud paths.
 | `WORKOS_PUBLIC_ORIGIN` | Required production Cloud public origin. Must be a normalized `https://` origin with no path, query, hash, or userinfo. |
 | `WORKOS_TRUSTED_ORIGINS` | Optional extra allowed mutating origins. In production Cloud each entry must be a normalized `https://` origin. |
 | `WORKOS_STATIC_ROOT` | Built frontend directory served by the API |
+| `WORKOS_TRUSTED_PROXIES` | Optional. Comma-separated exact proxy IPs (`loopback` = `127.0.0.1` and `::1`) whose `X-Forwarded-For` is honoured for the account rate limits (password reset, invitations). Unset: `X-Forwarded-For` is ignored and the TCP peer address is used (behind a proxy all clients then share the proxy's limit — stricter, never looser). With the API bound to `127.0.0.1` behind the reverse proxy, set `loopback`; the proxy must append the real client address. |
 
 `WORKOS_CLOUD_ROOT` remains external persistent storage. Real business data must not live in Git.
 

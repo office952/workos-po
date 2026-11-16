@@ -89,6 +89,27 @@ export const GLOBAL_NAV: readonly GlobalNavGroup[] = [
   },
 ];
 
+/** V1 Organization Access: the server capability each module needs before it is offered. */
+export const NAV_CAPABILITY: Readonly<Record<string, string>> = {
+  clients: "customers.read",
+  requests: "requests.read",
+  quotes: "quotes.read",
+  jobs: "jobs.read",
+  atelier: "execution.operate",
+  catalog: "org.settings.read",
+  administration: "org.settings.read",
+};
+
+/** `null` capabilities (single-plane runtime, legacy server) keep every module, as before V1. */
+export function visibleNavGroups(capabilities: readonly string[] | null): readonly GlobalNavGroup[] {
+  if (!capabilities) return GLOBAL_NAV;
+  const held = new Set(capabilities);
+  return GLOBAL_NAV.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !NAV_CAPABILITY[item.id] || held.has(NAV_CAPABILITY[item.id])),
+  })).filter((group) => group.items.length > 0);
+}
+
 export function globalNavItems(): readonly GlobalNavItem[] {
   return GLOBAL_NAV.flatMap((group) => group.items);
 }

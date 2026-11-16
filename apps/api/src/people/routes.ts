@@ -5,9 +5,9 @@ import {
   type SkillMutationError,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
-import { getProductSystem, isOwner, type ApiEnv } from "../cloud/context.js";
+import { getProductSystem, type ApiEnv, can } from "../cloud/context.js";
 import type { ProductSystemRuntime } from "../productSystem/runtime.js";
-import { requireOwnerRole } from "../cloud/middleware.js";
+import { requireCapability } from "../cloud/middleware.js";
 
 function peopleAdminPayload(runtime: ProductSystemRuntime, canEdit: boolean) {
   const registry = runtime.listPeopleRegistry();
@@ -28,7 +28,7 @@ function peopleAdminPayload(runtime: ProductSystemRuntime, canEdit: boolean) {
 export function registerPeopleRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/people", (c) => {
     const runtime = getProductSystem(c);
-    return c.json(peopleAdminPayload(runtime, isOwner(c)));
+    return c.json(peopleAdminPayload(runtime, can(c, "resources.manage")));
   });
 
   app.get("/api/people/skills", (c) => {
@@ -45,7 +45,7 @@ export function registerPeopleRoutes(app: Hono<ApiEnv>): void {
     return c.json(runtime.readEligibility(capabilityId));
   });
 
-  app.post("/api/people/skills", requireOwnerRole(), async (c) => {
+  app.post("/api/people/skills", requireCapability("resources.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const body = await c.req.json().catch(() => null);
     if (typeof body !== "object" || body === null || Array.isArray(body)) {
@@ -70,7 +70,7 @@ export function registerPeopleRoutes(app: Hono<ApiEnv>): void {
     return c.json({ skill: result.skill, skills: runtime.listSkills() }, 201);
   });
 
-  app.patch("/api/people/skills/:skillId", requireOwnerRole(), async (c) => {
+  app.patch("/api/people/skills/:skillId", requireCapability("resources.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const body = await c.req.json().catch(() => null);
     if (typeof body !== "object" || body === null || Array.isArray(body)) {
@@ -109,7 +109,7 @@ export function registerPeopleRoutes(app: Hono<ApiEnv>): void {
     });
   });
 
-  app.post("/api/people", requireOwnerRole(), async (c) => {
+  app.post("/api/people", requireCapability("resources.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const body = await c.req.json().catch(() => null);
     const displayName = readDisplayName(body);
@@ -123,12 +123,12 @@ export function registerPeopleRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: result.error }, personHttpStatus(result.error));
     }
     return c.json(
-      { person: result.person, ...peopleAdminPayload(runtime, isOwner(c)) },
+      { person: result.person, ...peopleAdminPayload(runtime, can(c, "resources.manage")) },
       201,
     );
   });
 
-  app.patch("/api/people/:personId", requireOwnerRole(), async (c) => {
+  app.patch("/api/people/:personId", requireCapability("resources.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const body = await c.req.json().catch(() => null);
     if (typeof body !== "object" || body === null || Array.isArray(body)) {
@@ -150,7 +150,7 @@ export function registerPeopleRoutes(app: Hono<ApiEnv>): void {
       return c.json({
         alreadyApplied: result.alreadyApplied,
         person: result.person,
-        ...peopleAdminPayload(runtime, isOwner(c)),
+        ...peopleAdminPayload(runtime, can(c, "resources.manage")),
       });
     }
     const result = runtime.updatePerson(c.req.param("personId"), {
@@ -178,11 +178,11 @@ export function registerPeopleRoutes(app: Hono<ApiEnv>): void {
     return c.json({
       alreadyApplied: result.alreadyApplied,
       person: result.person,
-      ...peopleAdminPayload(runtime, isOwner(c)),
+      ...peopleAdminPayload(runtime, can(c, "resources.manage")),
     });
   });
 
-  app.post("/api/people/:personId/skills", requireOwnerRole(), async (c) => {
+  app.post("/api/people/:personId/skills", requireCapability("resources.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const body = await c.req.json().catch(() => null);
     const skillId = readOptionalString(body, "skillId");
@@ -195,11 +195,11 @@ export function registerPeopleRoutes(app: Hono<ApiEnv>): void {
     }
     return c.json({
       assignment: result.assignment,
-      ...peopleAdminPayload(runtime, isOwner(c)),
+      ...peopleAdminPayload(runtime, can(c, "resources.manage")),
     });
   });
 
-  app.patch("/api/people/:personId/skills/:skillId", requireOwnerRole(), async (c) => {
+  app.patch("/api/people/:personId/skills/:skillId", requireCapability("resources.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const body = await c.req.json().catch(() => null);
     if (
@@ -218,7 +218,7 @@ export function registerPeopleRoutes(app: Hono<ApiEnv>): void {
     }
     return c.json({
       assignment: result.assignment,
-      ...peopleAdminPayload(runtime, isOwner(c)),
+      ...peopleAdminPayload(runtime, can(c, "resources.manage")),
     });
   });
 }

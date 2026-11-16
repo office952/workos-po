@@ -68,7 +68,7 @@ describe("QuoteSnapshotPage", () => {
     render(<QuoteSnapshotPage productCode={productCode} quoteSnapshotId="q-a" />);
     expect(await screen.findByRole("button", { name: "Descarcă oferta PDF" })).toBeEnabled();
     expect(screen.queryByRole("button", { name: "Confirmă comanda" })).not.toBeInTheDocument();
-    expect(screen.getByText(/Rolul tău: Membru/)).toBeInTheDocument();
+    expect(screen.getByText(/Rolul tău: Comercial/)).toBeInTheDocument();
   });
 
   it("shows the frozen job total of a product with site installation, as the quote document does", async () => {

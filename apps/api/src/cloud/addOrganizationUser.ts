@@ -9,6 +9,7 @@ import {
   type UserStatus,
 } from "./controlPlane.js";
 import { assertCloudPassword, hashCloudPassword } from "./password.js";
+import { organizationRolesV1Enabled } from "./rolesFlag.js";
 import {
   openControlPlaneDatabase,
   resolveControlPlaneSqlitePath,
@@ -91,15 +92,27 @@ function assertUserCanBeAttached(status: UserStatus): void {
   }
 }
 
-export function parseOrganizationUserRole(role: string): MembershipRole {
+export function parseOrganizationUserRole(
+  role: string,
+  env: NodeJS.ProcessEnv = process.env,
+): MembershipRole {
   switch (role) {
     case "owner":
     case "member":
+      return role;
+    case "production":
+    case "workshop":
+      // V1 Organization Access: the scoped roles stay off until the rollback drill passed (phase B).
+      if (!organizationRolesV1Enabled(env)) {
+        throw new AddOrganizationUserError("invalid_role");
+      }
       return role;
     default:
       throw new AddOrganizationUserError("invalid_role");
   }
 }
+
+export { organizationRolesV1Enabled };
 
 function requireAdministrableOrganization(
   controlPlane: ControlPlane,
@@ -121,7 +134,7 @@ function isUniqueConstraint(error: unknown): boolean {
   );
 }
 
-function mutateMembership(
+export function mutateMembership(
   controlPlane: ControlPlane,
   input: {
     user: CloudUser;
@@ -152,6 +165,7 @@ function mutateMembership(
   }
   switch (membership.status) {
     case "ACTIVE":
+    case "ACTIVE_SCOPED":
       return { kind: "already", role: membership.role };
     case "REVOKED": {
       input.hooks?.beforeMembership?.();

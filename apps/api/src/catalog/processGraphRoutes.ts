@@ -4,7 +4,7 @@ import {
   type ComponentTypeId,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
-import { getProductSystem, isOwner, type ApiEnv } from "../cloud/context.js";
+import { getProductSystem, type ApiEnv, can } from "../cloud/context.js";
 import { projectCatalogProcessGraphHttp } from "./processGraphProjection.js";
 
 const ALLOWED_QUERY = new Set(["product", "scenario"]);
@@ -31,7 +31,7 @@ export function registerCatalogProcessGraphRoutes(app: Hono<ApiEnv>): void {
       scenarioId: query.get("scenario"),
       evidenceRows: runtime.listActiveCostEvidence(),
       labels: runtime.labels(),
-      canViewFinancialAmounts: isOwner(c),
+      canViewFinancialAmounts: can(c, "costs.internal.read"),
       composition: {
         formulaVersionsForType: (typeId: ComponentTypeId) => formulasForTypeFromResolved(typeId, formulas.formulas),
         technicalSettingsForType: technicalSettingsLookupFromResolved(technical.settings),

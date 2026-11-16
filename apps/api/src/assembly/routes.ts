@@ -51,7 +51,7 @@ import {
   type RateAcknowledgementRequirement,
 } from "@workos-final/domain";
 import type { Context, Hono } from "hono";
-import { getProductSystem, isOwner, type ApiEnv } from "../cloud/context.js";
+import { getProductSystem, type ApiEnv, can } from "../cloud/context.js";
 import { financialAccess } from "../financial/access.js";
 import {
   actorUserId,
@@ -97,7 +97,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     const v1 = assemblyAvailableForNewWork(resolution);
     const v2 = assemblyV2AvailableForNewWork(resolution);
     return c.json({
-      canCreate: isOwner(c),
+      canCreate: can(c, "assemblies.manage"),
       available: v1,
       label: "Panou ACM + litere volumetrice",
       summary: "Panou ACM și litere volumetrice, confirmate separat și montate împreună.",
@@ -121,7 +121,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
   });
 
   app.post("/api/assemblies", async (c) => {
-    if (!isOwner(c)) {
+    if (!can(c, "assemblies.manage")) {
       return c.json({ error: "forbidden" }, 403);
     }
     const runtime = getProductSystem(c);
@@ -191,13 +191,13 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       requestId: definition.requestId,
       productCode: productCodeForRole(role),
       values: child?.truth.values ?? null,
-      confirmed: child ? presentConfirmedAssemblyMember(child, isOwner(c)) : null,
+      confirmed: child ? presentConfirmedAssemblyMember(child, can(c, "costs.internal.read")) : null,
       membersEditable: !bundle?.order,
     });
   });
 
   app.post("/api/assemblies/:assemblyId/members", async (c) => {
-    if (!isOwner(c)) {
+    if (!can(c, "assemblies.manage")) {
       return c.json({ error: "forbidden" }, 403);
     }
     const runtime = getProductSystem(c);
@@ -267,7 +267,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       runtime,
       compiled.eic,
       body,
-      isOwner(c),
+      can(c, "prices.manual.set"),
     );
     if (
       !priced.ok &&
@@ -327,14 +327,14 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     return c.json({
       assembly: presentCurrent(runtime, saved.definition.assemblyId, c),
       role,
-      confirmed: presentConfirmedAssemblyMember(saved.child, isOwner(c)),
+      confirmed: presentConfirmedAssemblyMember(saved.child, can(c, "costs.internal.read")),
       productLabel: saved.child.productLabel,
       inscription: saved.child.inscription,
     });
   });
 
   app.post("/api/assemblies/:assemblyId/review", (c) => {
-    if (!isOwner(c)) {
+    if (!can(c, "assemblies.manage")) {
       return c.json({ error: "forbidden" }, 403);
     }
     const runtime = getProductSystem(c);
@@ -352,7 +352,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
   });
 
   app.post("/api/assemblies/:assemblyId/confirm", (c) => {
-    if (!isOwner(c)) {
+    if (!can(c, "assemblies.manage")) {
       return c.json({ error: "forbidden" }, 403);
     }
     const runtime = getProductSystem(c);
@@ -380,7 +380,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
   });
 
   app.put("/api/assemblies/:assemblyId/operation-estimates", async (c) => {
-    if (!isOwner(c)) {
+    if (!can(c, "assemblies.manage")) {
       return c.json({ error: "forbidden" }, 403);
     }
     const edits = readEstimateEdits(await c.req.json().catch(() => null));
@@ -423,7 +423,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
   });
 
   app.post("/api/assemblies/:assemblyId/quote", async (c) => {
-    if (!isOwner(c)) {
+    if (!can(c, "assemblies.manage")) {
       return c.json({ error: "forbidden" }, 403);
     }
     const body = await c.req.json().catch(() => null);
@@ -439,7 +439,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     }
     const createdAt = new Date().toISOString();
     const decision = decideRateAcknowledgement(prepared.requirement, {
-      authorized: isOwner(c),
+      authorized: can(c, "costs.internal.manage"),
       submittedBindingHash: readRateAcknowledgementBindingHash(body),
       actorUserId: actorUserId(c),
       acknowledgedAt: createdAt,
@@ -452,7 +452,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
           rateAcknowledgement: scopeRateAcknowledgementRequirement(
             prepared.requirement,
             financialAccess(c, "commercial"),
-            isOwner(c),
+            can(c, "costs.internal.manage"),
           ),
         },
         rateAcknowledgementHttpStatus(decision.error),
@@ -491,7 +491,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
   });
 
   app.post("/api/assemblies/:assemblyId/accept", async (c) => {
-    if (!isOwner(c)) {
+    if (!can(c, "quotes.accept")) {
       return c.json({ error: "forbidden" }, 403);
     }
     const body = await c.req.json().catch(() => null);
@@ -519,7 +519,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
   });
 
   app.post("/api/assemblies/:assemblyId/production", (c) => {
-    if (!isOwner(c)) {
+    if (!can(c, "production.release")) {
       return c.json({ error: "forbidden" }, 403);
     }
     const runtime = getProductSystem(c);
@@ -539,7 +539,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
   });
 
   app.post("/api/assemblies/:assemblyId/execution-plan", (c) => {
-    if (!isOwner(c)) {
+    if (!can(c, "production.release")) {
       return c.json({ error: "forbidden" }, 403);
     }
     const runtime = getProductSystem(c);
@@ -567,6 +567,27 @@ function presentCurrent(
       ? prepareAssemblyQuote(runtime, bundle.truth, bundle.definition)
       : null;
   const access = financialAccess(c, "commercial");
+  const review = presentAssemblyReview({
+    definition: bundle.definition,
+    truth: bundle.truth,
+    quote: bundle.quote,
+    order: bundle.order,
+    production: bundle.production,
+    executionPlanId: bundle.executionPlanId,
+    financialVisible: can(c, "costs.internal.read"),
+    lettersSelectable:
+      resolution.ok &&
+      isTemplateEnabledForNewWork(productCodeForRole("SIGNAGE_LETTERS"), resolution),
+  });
+  // V1: roles without the client-price capability (production) keep the technical outline of the
+  // quote (labels, inscriptions) but never its amounts.
+  const quote =
+    review.quote && !can(c, "prices.client.read")
+      ? {
+          label: review.quote.label,
+          sections: review.quote.sections.map(({ title, inscription }) => ({ title, inscription })),
+        }
+      : review.quote;
   return {
     quoteSnapshotId: bundle.quote?.quoteSnapshotId ?? null,
     quoteFreezable:
@@ -574,25 +595,15 @@ function presentCurrent(
       bundle.truth !== null &&
       bundle.order === null &&
       bundle.quote?.assemblyTruthId !== bundle.truth.assemblyTruthId,
-    ...presentAssemblyReview({
-      definition: bundle.definition,
-      truth: bundle.truth,
-      quote: bundle.quote,
-      order: bundle.order,
-      production: bundle.production,
-      executionPlanId: bundle.executionPlanId,
-      financialVisible: isOwner(c),
-      lettersSelectable:
-        resolution.ok &&
-        isTemplateEnabledForNewWork(productCodeForRole("SIGNAGE_LETTERS"), resolution),
-    }),
+    ...review,
+    quote,
     rateAcknowledgement: pending?.ok
-      ? scopeRateAcknowledgementRequirement(pending.requirement, access, isOwner(c))
+      ? scopeRateAcknowledgementRequirement(pending.requirement, access, can(c, "costs.internal.manage"))
       : null,
     frozenRateAcknowledgement: bundle.quote?.rateAcknowledgement
       ? scopeFrozenRateAcknowledgement(bundle.quote.rateAcknowledgement, access)
       : null,
-    operationCost: isOwner(c)
+    operationCost: can(c, "costs.internal.read")
       ? presentOperationCost(runtime, bundle, pending?.ok ? pending.input.operationCost : undefined)
       : null,
   };

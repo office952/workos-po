@@ -322,6 +322,15 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
         title: "Fundație",
         lead: "Se încarcă verificarea.",
       };
+    case "account-security":
+      return {
+        contextLabel: "Contul meu",
+        currentHref: "/cont/securitate",
+        workspace: "stack",
+        eyebrow: "Contul meu",
+        title: "Securitate",
+        lead: "Parola, sesiunile și organizațiile contului tău.",
+      };
     case "unknown":
       return {
         contextLabel: "Operator",

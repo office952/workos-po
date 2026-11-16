@@ -3,15 +3,15 @@ import {
   type MaterialConfirmationError,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
-import { getProductSystem, isOwner, type ApiContext, type ApiEnv } from "../cloud/context.js";
-import { requireOwnerRole } from "../cloud/middleware.js";
+import { getProductSystem, type ApiContext, type ApiEnv, can } from "../cloud/context.js";
+import { requireCapability } from "../cloud/middleware.js";
 
 export function registerMaterialReadinessRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/admin/material-readiness", (c) => {
     const runtime = getProductSystem(c);
     const record = runtime.readMaterialReadiness();
     return c.json({
-      canWrite: isOwner(c),
+      canWrite: can(c, "org.settings.manage"),
       mode: record.mode,
       modeLabel: materialReadinessModeLabel(record.mode),
       source: record.source,
@@ -19,7 +19,7 @@ export function registerMaterialReadinessRoutes(app: Hono<ApiEnv>): void {
     });
   });
 
-  app.post("/api/admin/material-readiness", requireOwnerRole(), async (c) => {
+  app.post("/api/admin/material-readiness", requireCapability("org.settings.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const mode = readMode(await c.req.json().catch(() => null));
     if (!mode) {
@@ -43,7 +43,7 @@ export function registerMaterialReadinessRoutes(app: Hono<ApiEnv>): void {
     });
   });
 
-  app.post("/api/execution-tasks/:taskId/material-readiness", requireOwnerRole(), async (c) => {
+  app.post("/api/execution-tasks/:taskId/material-readiness", requireCapability("execution.supervise"), async (c) => {
     const runtime = getProductSystem(c);
     const body = readConfirmation(await c.req.json().catch(() => null));
     if (!body) {

@@ -13,8 +13,8 @@ import {
 } from "@workos-final/domain";
 import type { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { getProductSystem, isOwner, type ApiContext, type ApiEnv } from "../cloud/context.js";
-import { requireOwnerRole } from "../cloud/middleware.js";
+import { getProductSystem, type ApiContext, type ApiEnv, can } from "../cloud/context.js";
+import { requireCapability } from "../cloud/middleware.js";
 import { financialAccess, scopedRequestDetail } from "../financial/access.js";
 import { httpPathIdentity } from "../httpPathIdentity.js";
 
@@ -28,7 +28,7 @@ function requestDetailFor(c: ApiContext, requestId: string) {
   }
   return {
     ...detail,
-    canWriteInstallationPrice: isOwner(c) && detail.canWriteInstallationFacts,
+    canWriteInstallationPrice: can(c, "requests.decide") && detail.canWriteInstallationFacts,
   };
 }
 
@@ -106,7 +106,7 @@ export function registerRequestRoutes(app: Hono<ApiEnv>): void {
 
   app.patch(
     "/api/requests/:requestId/installation-price",
-    requireOwnerRole(),
+    requireCapability("requests.decide"),
     async (c) => {
       const runtime = getProductSystem(c);
       const body = await c.req.json().catch(() => null);
@@ -117,7 +117,7 @@ export function registerRequestRoutes(app: Hono<ApiEnv>): void {
       const result = runtime.updateInstallationManualPrice(
         c.req.param("requestId"),
         netPrice,
-        isOwner(c),
+        can(c, "requests.decide"),
       );
       if (!result.ok) {
         return c.json({ error: result.error }, priceMutationStatus(result.error));

@@ -10,18 +10,18 @@ import {
   type TechnicalSettingDraftValue,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
-import { getProductSystem, isOwner, type ApiEnv } from "../cloud/context.js";
-import { requireOwnerRole } from "../cloud/middleware.js";
+import { getProductSystem, type ApiEnv, can } from "../cloud/context.js";
+import { requireCapability } from "../cloud/middleware.js";
 
 const SINGLE_PLANE_OWNER_ACTOR = "single-plane:owner";
 
 export function registerTechnicalSettingRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/admin/technical-settings", (c) => {
     const runtime = getProductSystem(c);
-    return c.json(presentTechnicalSettingsAdmin(runtime, isOwner(c)));
+    return c.json(presentTechnicalSettingsAdmin(runtime, can(c, "org.settings.manage")));
   });
 
-  app.post("/api/admin/technical-settings", requireOwnerRole(), async (c) => {
+  app.post("/api/admin/technical-settings", requireCapability("org.settings.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const drafts = readDrafts(await c.req.json().catch(() => null));
     if (!drafts) {

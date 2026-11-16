@@ -23,6 +23,7 @@ import { currentEntryKey } from '../routing/navigationMemory';
 import { originBack } from '../routing/originBack';
 import { useUnsavedChangesGuard } from '../routing/useUnsavedChangesGuard';
 import { useCloudSession } from '../session/CloudSessionContext';
+import { capabilityAllows, sessionCapabilities } from '../presentation/capabilityAccess';
 import { readCloudBoundaryVersion } from '../session/sessionExpiryBridge';
 import { JobRecordDates } from './jobRecord/JobRecordDates';
 import { JobDeadlineField } from './jobRecord/JobDeadlineField';
@@ -44,6 +45,7 @@ function activeSection(section: JobSheetSectionInput | undefined, taskId: string
 
 export function JobDetailPage({ jobId, taskId = null, section, fileId = null }: Props) {
   const cloud = useCloudSession();
+  const capabilities = sessionCapabilities(cloud);
   const owner = canPublishInstructions(cloud);
   const session = useResource(resourceKeys.operatorSession(), loadOperatorSession);
   const jobResource = useResource(resourceKeys.job(jobId), () => loadJobDetail(jobId));
@@ -68,7 +70,9 @@ export function JobDetailPage({ jobId, taskId = null, section, fileId = null }: 
   if (draftScope !== jobId) { setDraftScope(jobId); setPriorityDraft(null); setTargetDraft(null); setTargetIncomplete(false); setError(null); setNotice(null); setPlanningError(null); }
   const priority = priorityDraft ?? job?.priority ?? 'STANDARD';
   const targetDate = targetDraft ?? job?.targetDate ?? '';
-  const sourceHref = job?.kind === 'ASSEMBLY' ? jobResource.data?.quoteHref : jobResource.data?.quoteSnapshotId
+  // V1: no active link to the source offer for a role that cannot open offers (Atelier).
+  const canOpenOffer = capabilityAllows(capabilities, 'quotes.read');
+  const sourceHref = !canOpenOffer ? null : job?.kind === 'ASSEMBLY' ? jobResource.data?.quoteHref : jobResource.data?.quoteSnapshotId
     ? quoteHref(job?.productCode ?? '', jobResource.data.quoteSnapshotId) : null;
   const secondary = job ? presentJobSheetSecondary(job) : null;
   const finished = job?.stage === 'EXECUTION_COMPLETED';
@@ -192,7 +196,7 @@ export function JobDetailPage({ jobId, taskId = null, section, fileId = null }: 
   // N-018 · Atelier offers the way back to this sheet, on the same section and operation.
   const sheetReturn = jobHref(jobId, { section: active, taskId: selectedTask?.taskId });
   return <PageRegion><div className="job-sheet" data-surface="job-detail" data-section={active}>
-    <header className="job-sheet__header" ref={headerRef}><div className="job-sheet__context"><a className="job-sheet__back" href={back.href} onClick={back.onClick}>{back.text}</a>{job ? <JobContextTrail job={job} requestId={jobResource.data?.requestId ?? job.requestId ?? null} quoteSnapshotId={jobResource.data?.quoteSnapshotId ?? null} sourceHref={sourceHref ?? null} operationLabel={operationOpen && selectedTask ? `Operația ${selectedTask.seqLabel}` : null} /> : null}</div>
+    <header className="job-sheet__header" ref={headerRef}><div className="job-sheet__context"><a className="job-sheet__back" href={back.href} onClick={back.onClick}>{back.text}</a>{job ? <JobContextTrail job={job} capabilities={capabilities} requestId={jobResource.data?.requestId ?? job.requestId ?? null} quoteSnapshotId={jobResource.data?.quoteSnapshotId ?? null} sourceHref={sourceHref ?? null} operationLabel={operationOpen && selectedTask ? `Operația ${selectedTask.seqLabel}` : null} /> : null}</div>
       <div className="job-sheet__identity-row"><div className="job-sheet__identity"><p className="job-sheet__eyebrow">Fișa lucrării</p><h1>{job ? presentJobSheetTitle(job) : 'Lucrare'}</h1><p>{job?.customerDisplayName ?? 'Se citește lucrarea.'}{secondary ? ' · ' + secondary : ''}</p></div>
         <div className="job-sheet__header-action">{job && !planId && owner && !finished ? <Button disabled={pending} onClick={() => void sendToProduction()}>{pending ? 'Se pregătește producția…' : 'Trimite în producție'}</Button> : null}{planId && !finished && !operationOpen ? <a className="job-sheet__link-button job-sheet__link-button--primary" href={atelierHref({ jobId, planId, returnTo: sheetReturn })}>Deschide lucrarea în Atelier</a> : null}<Button variant="secondary" onClick={() => window.print()}>Tipărește fișa</Button></div></div>
       {job ? <div className="job-sheet__planning"><strong className="job-sheet__state">{presentJobSheetStage(job)}</strong><span>Prioritate: {job.priorityLabel}</span><span>Termen: {job.targetDateLabel}</span><span>{job.progressLabel}</span>

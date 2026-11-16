@@ -11,8 +11,8 @@ import {
   scopeExecutionPlanView,
   scopeOrderSnapshot,
 } from "@workos-final/domain";
-import { getProductSystem, isOwner, type ApiContext, type ApiEnv } from "../cloud/context.js";
-import { requireOwnerRole } from "../cloud/middleware.js";
+import { getProductSystem, type ApiContext, type ApiEnv, can } from "../cloud/context.js";
+import { requireCapability } from "../cloud/middleware.js";
 import {
   presentExecutionPlanForViewer,
   viewerCanAssignProvider,
@@ -20,17 +20,31 @@ import {
 import { financialAccess } from "../financial/access.js";
 import { httpPathIdentity } from "../httpPathIdentity.js";
 
+/** V1: roles that read requests see every job; the workshop sees released work only. */
+function seesAllJobs(c: ApiContext): boolean {
+  return can(c, "requests.read");
+}
+
+function jobVisible(c: ApiContext, job: { planId?: string | null }): boolean {
+  return seesAllJobs(c) || Boolean(job.planId);
+}
+
 export function registerJobRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/jobs", (c) => {
     const runtime = getProductSystem(c);
-    return c.json({ overview: runtime.listJobOverview() });
+    const overview = runtime.listJobOverview();
+    if (seesAllJobs(c)) {
+      return c.json({ overview });
+    }
+    // V1 · Atelier: only work released to the workshop (with an execution plan).
+    return c.json({ overview: { ...overview, jobs: overview.jobs.filter((job) => Boolean(job.planId)) } });
   });
 
   app.get("/api/jobs/:jobId", (c) => {
     const runtime = getProductSystem(c);
     const jobId = httpPathIdentity(c.req.path, "/api/jobs/");
     const located = locateJob(runtime, jobId);
-    if (!located) {
+    if (!located || !jobVisible(c, located.job)) {
       return c.json({ error: "not_found" }, 404);
     }
     return c.json(presentJobDetail(c, runtime, located));
@@ -40,14 +54,14 @@ export function registerJobRoutes(app: Hono<ApiEnv>): void {
     const runtime = getProductSystem(c);
     const jobId = httpPathIdentity(c.req.path, "/api/jobs/", "/record");
     const located = locateJob(runtime, jobId);
-    if (!located) return c.json({ error: "not_found" }, 404);
+    if (!located || !jobVisible(c, located.job)) return c.json({ error: "not_found" }, 404);
     const plan = located.job.planId ? runtime.readExecutionPlan(located.job.planId) : null;
     return c.json({
-      record: readJobRecord(runtime.assemblyPlane().db, jobId, plan, new Date().toISOString(), isOwner(c)),
+      record: readJobRecord(runtime.assemblyPlane().db, jobId, plan, new Date().toISOString(), can(c, "execution.supervise")),
     });
   });
 
-  app.patch("/api/jobs/:jobId/planning", requireOwnerRole(), async (c) => {
+  app.patch("/api/jobs/:jobId/planning", requireCapability("planning.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const jobId = httpPathIdentity(c.req.path, "/api/jobs/", "/planning");
     const body = await c.req.json().catch(() => null);
@@ -77,7 +91,7 @@ export function registerJobRoutes(app: Hono<ApiEnv>): void {
   });
 
   // One synchronous transaction owns release + plan. Retrying returns the same identities.
-  app.post("/api/jobs/:jobId/production", requireOwnerRole(), (c) => {
+  app.post("/api/jobs/:jobId/production", requireCapability("production.release"), (c) => {
     const runtime = getProductSystem(c);
     const jobId = httpPathIdentity(c.req.path, "/api/jobs/", "/production");
     const result = runtime.assemblyPlane().db.transaction(() => {
@@ -113,7 +127,7 @@ export function registerJobRoutes(app: Hono<ApiEnv>): void {
       executionPlan: { plan: { planId: result.planId } } });
   });
 
-  app.post("/api/jobs/:jobId/production-release", requireOwnerRole(), (c) => {
+  app.post("/api/jobs/:jobId/production-release", requireCapability("production.release"), (c) => {
     const runtime = getProductSystem(c);
     const jobId = httpPathIdentity(c.req.path, "/api/jobs/", "/production-release");
     const product = runtime.readOrderSnapshot(jobId);
@@ -125,7 +139,7 @@ export function registerJobRoutes(app: Hono<ApiEnv>): void {
       const stored = runtime.acceptProductionSnapshot(frozen.snapshot);
       return c.json({ created: stored.created, releaseSnapshotId: stored.snapshot.snapshotId });
     }
-    if (!isOwner(c)) {
+    if (!can(c, "production.release")) {
       return c.json({ error: "forbidden" }, 403);
     }
     const assembly = runtime.readAssemblyOrder(jobId);
@@ -147,7 +161,7 @@ export function registerJobRoutes(app: Hono<ApiEnv>): void {
     return c.json({ created: true, releaseSnapshotId: projected.snapshot.snapshotId });
   });
 
-  app.post("/api/jobs/:jobId/execution-plan", requireOwnerRole(), (c) => {
+  app.post("/api/jobs/:jobId/execution-plan", requireCapability("production.release"), (c) => {
     const runtime = getProductSystem(c);
     const jobId = httpPathIdentity(c.req.path, "/api/jobs/", "/execution-plan");
     const product = runtime.readOrderSnapshot(jobId);
@@ -162,7 +176,7 @@ export function registerJobRoutes(app: Hono<ApiEnv>): void {
         executionPlan: { plan: { planId: stored.record.plan.planId } },
       });
     }
-    if (!isOwner(c)) {
+    if (!can(c, "production.release")) {
       return c.json({ error: "forbidden" }, 403);
     }
     const assembly = runtime.readAssemblyOrder(jobId);
@@ -220,7 +234,7 @@ function presentJobDetail(
         runtime.providerRegistry,
         runtime.materialReadinessContext(),
         runtime.externalProductionContext(),
-        runtime.qualityControlProjection(record.plan.planId, isOwner(c)),
+        runtime.qualityControlProjection(record.plan.planId, can(c, "execution.supervise")),
       )
     : null;
   const executionAccess = access === "owner" ? "owner" : "workshop";

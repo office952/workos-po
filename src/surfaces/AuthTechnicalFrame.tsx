@@ -494,6 +494,10 @@ function AuthAccessForm(input: {
         >
           {input.busy ? "Se autentifică…" : "Autentificare"}
         </Button>
+        {/* V1 Organization Access: self-service recovery entry (the page explains the pilot path). */}
+        <a className="text-link auth-tech__forgot" href="/resetare-parola">
+          Am uitat parola
+        </a>
       </div>
 
       <div className="auth-tech__roles" aria-label="Tipuri de acces WorkOS">

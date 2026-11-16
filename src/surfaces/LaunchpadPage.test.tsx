@@ -149,7 +149,7 @@ describe("LaunchpadPage", () => {
       </CloudSessionProvider>,
     );
 
-    expect(await screen.findByText("Atelier Alpha · Membru")).toBeInTheDocument();
+    expect(await screen.findByText("Atelier Alpha · Comercial")).toBeInTheDocument();
     expect(
       screen.getByText(/Doar proprietarul schimbă oferta, oamenii, utilajele și politicile de execuție/),
     ).toBeInTheDocument();

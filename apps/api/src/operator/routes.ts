@@ -2,7 +2,7 @@ import { omitForbiddenFinancialFields } from "@workos-final/domain";
 import type { Context, Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { getProductSystem, type ApiEnv } from "../cloud/context.js";
-import { requireOwnerRole } from "../cloud/middleware.js";
+import { requireCapability } from "../cloud/middleware.js";
 import { isDevOperatorModeEnabled } from "./devMode.js";
 import { OPERATOR_SESSION_COOKIE } from "./store.js";
 
@@ -123,7 +123,7 @@ export function registerOperatorRoutes(app: Hono<ApiEnv>): void {
     });
   });
 
-  app.put("/api/people/:personId/operator-pin", requireOwnerRole(), async (c) => {
+  app.put("/api/people/:personId/operator-pin", requireCapability("resources.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const body = await c.req.json().catch(() => null);
     if (typeof body !== "object" || body === null) {

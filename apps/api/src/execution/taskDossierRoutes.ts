@@ -2,8 +2,8 @@ import { TASK_ARTIFACT_HTTP_BODY_BYTES, type IssueTransitionAction, type TaskDos
 import type { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { getCookie } from "hono/cookie";
-import { getProductSystem, isOwner, type ApiContext, type ApiEnv } from "../cloud/context.js";
-import { requireOwnerRole } from "../cloud/middleware.js";
+import { getProductSystem, type ApiContext, type ApiEnv, can } from "../cloud/context.js";
+import { requireCapability } from "../cloud/middleware.js";
 import { httpPathIdentity } from "../httpPathIdentity.js";
 import { actorUserId } from "../product.js";
 import { OPERATOR_SESSION_COOKIE } from "../operator/store.js";
@@ -17,7 +17,7 @@ export function registerTaskDossierRoutes(app: Hono<ApiEnv>): void {
     if (!dossier) {
       return c.json({ error: "not_found" }, 404);
     }
-    return c.json({ dossier: presentDossierForViewer(dossier, isOwner(c)) });
+    return c.json({ dossier: presentDossierForViewer(dossier, can(c, "execution.supervise")) });
   });
 
   app.post("/api/execution-tasks/:taskId/observations", async (c) => {
@@ -38,7 +38,7 @@ export function registerTaskDossierRoutes(app: Hono<ApiEnv>): void {
     return dossierResult(c, result);
   });
 
-  app.post("/api/execution-tasks/:taskId/instructions", requireOwnerRole(), async (c) => {
+  app.post("/api/execution-tasks/:taskId/instructions", requireCapability("execution.supervise"), async (c) => {
     const body = await c.req.json().catch(() => null);
     const text = typeof body === "object" && body !== null ? (body as { text?: unknown }).text : null;
     const runtime = getProductSystem(c);
@@ -76,11 +76,11 @@ export function registerTaskDossierRoutes(app: Hono<ApiEnv>): void {
     return dossierResult(c, result);
   });
 
-  app.post("/api/execution-tasks/:taskId/issues/:entryId/acknowledge", requireOwnerRole(), (c) => {
+  app.post("/api/execution-tasks/:taskId/issues/:entryId/acknowledge", requireCapability("execution.supervise"), (c) => {
     return issueTransitionResult(c, "ACKNOWLEDGE");
   });
 
-  app.post("/api/execution-tasks/:taskId/issues/:entryId/resolve", requireOwnerRole(), (c) => {
+  app.post("/api/execution-tasks/:taskId/issues/:entryId/resolve", requireCapability("execution.supervise"), (c) => {
     return issueTransitionResult(c, "RESOLVE");
   });
 
@@ -274,7 +274,7 @@ function writerActor(c: ApiContext) {
   if (operator) {
     return operator;
   }
-  if (!isOwner(c)) {
+  if (!can(c, "execution.supervise")) {
     return null;
   }
   return { accountId: actorUserId(c), operatorId: null };
@@ -335,7 +335,7 @@ function dossierResult(
     return c.json({ error: result.error }, dossierStatus(result.error));
   }
   return c.json({
-    dossier: presentDossierForViewer(result.dossier, isOwner(c)),
+    dossier: presentDossierForViewer(result.dossier, can(c, "execution.supervise")),
     alreadyApplied: result.alreadyApplied === true,
   });
 }

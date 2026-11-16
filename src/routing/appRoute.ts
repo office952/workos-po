@@ -32,7 +32,24 @@ export type AppRoute =
   | { name: "admin-workcenter"; workcenterId: string }
   | { name: "admin-machine"; workcenterId: string; machineId: string }
   | { name: "foundation" }
+  | { name: "account-security" }
   | { name: "unknown"; path: string };
+
+/** V1 Organization Access: public single-use token pages (no session required). */
+export type PublicAccountRoute = "invitation" | "password-reset" | "email-verification";
+
+export function parsePublicAccountRoute(pathname: string): PublicAccountRoute | null {
+  switch (pathname) {
+    case "/invitatie":
+      return "invitation";
+    case "/resetare-parola":
+      return "password-reset";
+    case "/verificare-email":
+      return "email-verification";
+    default:
+      return null;
+  }
+}
 
 export type SpineContext = {
   customerId: string | null;
@@ -153,6 +170,9 @@ export function parseAppRoute(pathname: string): AppRoute {
   }
   if (pathname === "/foundation") {
     return { name: "foundation" };
+  }
+  if (pathname === "/cont/securitate") {
+    return { name: "account-security" };
   }
   // `/quotes/:code/:id` is the earlier address of the same page; canonicalLocation rewrites it.
   const quote = pathname.match(/^\/oferte\/produs\/([^/]+)\/([^/]+)$/) ?? pathname.match(LEGACY_PRODUCT_QUOTE_PATH);

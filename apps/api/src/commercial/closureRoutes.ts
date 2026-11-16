@@ -8,8 +8,8 @@ import {
   type CommercialMutationErrorCode,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
-import { getProductSystem, isOwner, type ApiContext, type ApiEnv } from "../cloud/context.js";
-import { requireOwnerRole } from "../cloud/middleware.js";
+import { getProductSystem, type ApiContext, type ApiEnv, can } from "../cloud/context.js";
+import { requireCapability } from "../cloud/middleware.js";
 import { financialAccess, scopedRequestDetail } from "../financial/access.js";
 import {
   applyCommercialMutation,
@@ -20,7 +20,7 @@ export function commercialActorFrom(c: ApiContext): CommercialActor {
   const user = c.get("cloudUser");
   return {
     accountId: c.get("cloudUser")?.userId ?? "local",
-    role: isOwner(c) ? "owner" : "member",
+    role: can(c, "requests.decide") ? "owner" : "member",
     displayName: user?.email ?? "Proprietar local",
   };
 }
@@ -28,7 +28,7 @@ export function commercialActorFrom(c: ApiContext): CommercialActor {
 export function registerCommercialClosureRoutes(app: Hono<ApiEnv>): void {
   app.post(
     "/api/requests/:requestId/commercial/decisions",
-    requireOwnerRole(),
+    requireCapability("requests.decide"),
     async (c) => {
       const body = await c.req.json().catch(() => null);
       const record = asRecord(body);
@@ -56,7 +56,7 @@ export function registerCommercialClosureRoutes(app: Hono<ApiEnv>): void {
 
   app.post(
     "/api/requests/:requestId/commercial/reopen",
-    requireOwnerRole(),
+    requireCapability("requests.decide"),
     async (c) => {
       const record = asRecord(await c.req.json().catch(() => null));
       const operationId = readString(record, "operationId");
@@ -79,7 +79,7 @@ export function registerCommercialClosureRoutes(app: Hono<ApiEnv>): void {
 
   app.post(
     "/api/requests/:requestId/quotes/:quoteSnapshotId/resume",
-    requireOwnerRole(),
+    requireCapability("requests.decide"),
     async (c) => {
       const record = asRecord(await c.req.json().catch(() => null));
       const operationId = readString(record, "operationId");
@@ -134,8 +134,8 @@ function respondCommercialMutation(
           plane.db,
           plane.organizationId,
           requestId,
-          isOwner(c),
-          isOwner(c),
+          can(c, "requests.decide"),
+          can(c, "org.access.manage"),
         ),
       },
       commercialHttpStatus(result.error),
@@ -151,8 +151,8 @@ function respondCommercialMutation(
       plane.db,
       plane.organizationId,
       requestId,
-      isOwner(c),
-      isOwner(c),
+      can(c, "requests.decide"),
+      can(c, "org.access.manage"),
     ),
     detail,
   });

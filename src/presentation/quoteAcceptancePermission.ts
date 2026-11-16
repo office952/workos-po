@@ -1,7 +1,7 @@
 export function presentQuoteAcceptancePermission(input: {
   serverAllows: boolean;
   mode: "cloud" | "single_plane";
-  role: "owner" | "member" | null;
+  role: "owner" | "member" | "production" | "workshop" | null;
   roleReady: boolean;
   unavailable: boolean;
 }): { allowed: boolean; message: string } {
@@ -22,7 +22,10 @@ export function presentQuoteAcceptancePermission(input: {
         case "owner":
           return { allowed: true, message: "Acceptarea: numai proprietarul. Rolul tău: Proprietar." };
         case "member":
-          return { allowed: false, message: "Acceptarea este disponibilă numai proprietarului. Rolul tău: Membru." };
+          return { allowed: false, message: "Acceptarea este disponibilă numai proprietarului. Rolul tău: Comercial." };
+        case "production":
+        case "workshop":
+          return { allowed: false, message: "Acceptarea este disponibilă numai proprietarului." };
         case null:
           return { allowed: false, message: "Dreptul de acceptare nu a putut fi citit." };
         default: {

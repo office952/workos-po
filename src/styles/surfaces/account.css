@@ -1,0 +1,172 @@
+/*
+ * V1 Organization Access · Contul meu › Securitate and the public token pages (invitation,
+ * password reset, email verification). Existing tokens only. data-visual-review="required":
+ * VISUAL_OWNER_REVIEW_REQUIRED — no Owner-accepted WorkOS-N frame for these states yet.
+ */
+
+.acct-public {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: var(--color-canvas);
+  color: var(--color-text-primary);
+}
+
+.acct-public__brand {
+  display: flex;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.acct-public__main {
+  display: grid;
+  place-items: start center;
+  padding: 48px 16px;
+}
+
+.acct-card {
+  display: grid;
+  gap: 16px;
+  width: min(100%, 30rem);
+  padding: 24px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+
+.acct-card__title {
+  margin: 0;
+  font-size: var(--text-section);
+}
+
+.acct-card__lead,
+.acct-card__hint {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.acct-card__block,
+.acct-card__form,
+.acct-form {
+  display: grid;
+  gap: 12px;
+}
+
+.acct-choice {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.acct-choice legend {
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.acct-choice label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.acct-page {
+  display: grid;
+  gap: 24px;
+  width: 100%;
+  max-width: calc(48rem + 96px);
+  padding: 40px 48px 64px;
+}
+
+.acct-page__eyebrow {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  text-transform: uppercase;
+}
+
+.acct-page__title {
+  margin: 4px 0;
+}
+
+.acct-page__lead,
+.acct-hint {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.acct-section {
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.acct-section h2 {
+  margin: 0;
+  font-size: var(--text-section);
+}
+
+.acct-facts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.acct-facts > div {
+  display: grid;
+  grid-template-columns: minmax(9rem, 12rem) minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.acct-facts dt {
+  color: var(--color-text-muted);
+}
+
+.acct-facts dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.acct-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.acct-list li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.acct-list li > span:last-child {
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 767px) {
+  .acct-page {
+    padding: 24px 16px 48px;
+  }
+
+  .acct-facts > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .acct-card {
+    padding: 16px;
+  }
+}

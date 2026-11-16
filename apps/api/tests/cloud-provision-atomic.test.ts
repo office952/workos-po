@@ -920,6 +920,7 @@ describe("Control Plane provisioning migration", () => {
       expect(migrations.map((item) => item.id)).toEqual([
         "001_organizations_users_sessions.sql",
         "002_organization_provisioning_state.sql",
+        "003_organization_access_v1.sql",
       ]);
     } finally {
       upgraded.close();
@@ -931,7 +932,7 @@ describe("Control Plane provisioning migration", () => {
       const again = reopened
         .prepare(`SELECT count(*) AS n FROM schema_migrations`)
         .get() as { n: number };
-      expect(again.n).toBe(2);
+      expect(again.n).toBe(3);
     } finally {
       reopened.close();
     }

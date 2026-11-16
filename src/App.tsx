@@ -20,8 +20,12 @@ import {
   parseSpineContext,
   parseFileContext,
   parseTaskContext,
+  parsePublicAccountRoute,
   type AppRoute,
 } from "./routing/appRoute";
+import { routeCapability } from "./routing/routeCapability";
+import { AccountSecurityPage } from "./surfaces/AccountSecurityPage";
+import { PublicAccountPage } from "./surfaces/PublicAccountPage";
 import {
   activeNavigationGuard,
   navigate,
@@ -187,6 +191,8 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
       );
     case "foundation":
       return <FoundationProofPage />;
+    case "account-security":
+      return <AccountSecurityPage />;
     case "unknown":
       return (
         <PageRegion>
@@ -203,6 +209,31 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
       return exhaustive;
     }
   }
+}
+
+/**
+ * V1 Organization Access: a route the active role cannot use shows a calm "no access" state.
+ * This only reflects the server capabilities; the API enforces them independently.
+ */
+function renderGuardedRoute(route: AppRoute, search: string, capabilities: readonly string[] | null): ReactNode {
+  const needed = routeCapability(route);
+  if (capabilities && needed && !capabilities.includes(needed)) {
+    // The workshop lands on its own start page instead of the launchpad.
+    if (route.name === "home" && capabilities.includes("execution.operate")) {
+      return <AtelierPage jobId={null} returnTo={null} planId={null} taskId={null} />;
+    }
+    return (
+      <PageRegion>
+        <StateNotice
+          kind="empty"
+          title="Nu ai acces la această secțiune"
+          reason="Rolul tău în organizație nu include această parte a aplicației. Dacă ai nevoie de ea, cere proprietarului organizației."
+          action={<a className="text-link" href="/">Înapoi la pagina principală</a>}
+        />
+      </PageRegion>
+    );
+  }
+  return renderRoute(route, search);
 }
 
 function presentAccount(cloud: ReturnType<typeof useCloudSession>): AccountAreaProps | null {
@@ -313,9 +344,10 @@ function AppRuntime() {
   }, []);
 
   const gate = resolveCloudAuthGate(cloud);
+  const publicAccountRoute = parsePublicAccountRoute(location.pathname);
 
   useEffect(() => {
-    if (gate !== "authenticated") {
+    if (gate !== "authenticated" || publicAccountRoute) {
       return;
     }
     const landing = resolvePostAuthenticationPath(location.pathname, location.search);
@@ -323,7 +355,17 @@ function AppRuntime() {
     if (landing !== current) {
       navigate(landing, "replace");
     }
-  }, [gate, location.pathname, location.search]);
+  }, [gate, location.pathname, location.search, publicAccountRoute]);
+
+  // V1: invitation, password reset and email verification work with or without a session.
+  if (publicAccountRoute) {
+    return (
+      <PublicAccountPage
+        kind={publicAccountRoute}
+        signedInEmail={gate === "authenticated" ? cloud.user?.email ?? null : null}
+      />
+    );
+  }
 
   if (gate !== "authenticated") {
     return (
@@ -347,15 +389,24 @@ function AppRuntime() {
     );
   }
 
-  return <AuthenticatedApp key={cloudSessionScope(cloud)} location={location} account={presentAccount(cloud)} />;
+  return (
+    <AuthenticatedApp
+      key={cloudSessionScope(cloud)}
+      location={location}
+      account={presentAccount(cloud)}
+      capabilities={cloud.mode === "cloud" ? cloud.organization?.capabilities ?? null : null}
+    />
+  );
 }
 
 function AuthenticatedApp({
   location,
   account,
+  capabilities,
 }: {
   location: AppLocation;
   account: AccountAreaProps | null;
+  capabilities: readonly string[] | null;
 }) {
   const [health, setHealth] = useState<HealthPresentation | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready">("loading");
@@ -386,13 +437,14 @@ function AuthenticatedApp({
       mode="slice"
       currentHref={location.pathname}
       account={account}
+      capabilities={capabilities}
     >
       {loadState === "loading" ? (
         <RouteLoadingPage route={route} />
       ) : incompatible ? (
         <FailClosedPage />
       ) : (
-        renderRoute(route, location.search)
+        renderGuardedRoute(route, location.search, capabilities)
       )}
     </AppShell>
   );
