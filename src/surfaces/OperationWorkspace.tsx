@@ -35,6 +35,7 @@ import { Worklist } from "../components/Worklist";
 import { WorklistRow } from "../components/WorklistRow";
 import { invalidateAfterExecutionTaskChange } from "../data/invalidation";
 import { canPublishInstructions } from "../presentation/dossierAccess";
+import { sessionHasCapability } from "../presentation/capabilityAccess";
 import { formatTimestamp } from "../presentation/format";
 import { resourceKeys } from "../data/resourceKeys";
 import {
@@ -1150,6 +1151,7 @@ export function OperationWorkspace({
                 jobId={resolvedJobId}
                 onlyResourceIds={currentTask.plannedResources.map((resource) => resource.resourceId)}
                 returnTo={executionHref(planId, { taskId: currentTask.taskId, jobId: resolvedJobId })}
+                canDecide={sessionHasCapability(cloud, "materials.decide")}
               />
             ) : null}
             </div>

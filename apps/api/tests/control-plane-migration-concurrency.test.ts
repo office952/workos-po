@@ -100,6 +100,7 @@ describe("Control Plane migration concurrency", () => {
     expect(first.migrations).toEqual([
       "001_organizations_users_sessions.sql",
       "002_organization_provisioning_state.sql",
+      "003_organization_access_v1.sql",
     ]);
     expect(first.organizationColumns).toContain("organization_id");
     expect(first.organizationColumns).toContain("provision_owner_email");
@@ -113,10 +114,11 @@ describe("Control Plane migration concurrency", () => {
       expect(ledger).toEqual([
         "001_organizations_users_sessions.sql",
         "002_organization_provisioning_state.sql",
+        "003_organization_access_v1.sql",
       ]);
       expect(
         db.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get() as { count: number },
-      ).toEqual({ count: 2 });
+      ).toEqual({ count: 3 });
     } finally {
       db.close();
     }
@@ -136,6 +138,7 @@ describe("Control Plane migration concurrency", () => {
       expect(ledger).toEqual([
         "001_organizations_users_sessions.sql",
         "002_organization_provisioning_state.sql",
+        "003_organization_access_v1.sql",
       ]);
     } finally {
       second.close();

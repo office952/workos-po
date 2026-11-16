@@ -89,6 +89,33 @@ export const GLOBAL_NAV: readonly GlobalNavGroup[] = [
   },
 ];
 
+/** V1 Organization Access: the server capability each module needs before it is offered. */
+export const NAV_CAPABILITY: Readonly<Record<string, string>> = {
+  clients: "customers.read",
+  requests: "requests.read",
+  quotes: "quotes.read",
+  jobs: "jobs.read",
+  atelier: "execution.operate",
+  catalog: "org.settings.read",
+  administration: "org.settings.read",
+};
+
+/** `null` capabilities (single-plane runtime, legacy server) keep every module, as before V1. */
+export function visibleNavGroups(capabilities: readonly string[] | null): readonly GlobalNavGroup[] {
+  if (!capabilities) return GLOBAL_NAV;
+  const held = new Set(capabilities);
+  return GLOBAL_NAV.map((group) => {
+    const items = group.items.filter((item) => !NAV_CAPABILITY[item.id] || held.has(NAV_CAPABILITY[item.id]));
+    // A narrowed group describes only what remains (e.g. Producție: "Clienți și Cereri."), never the hidden modules.
+    return items.length === group.items.length ? group : { ...group, items, summary: `${joinLabels(items.map((item) => item.label))}.` };
+  }).filter((group) => group.items.length > 0);
+}
+
+function joinLabels(labels: readonly string[]): string {
+  if (labels.length <= 1) return labels.join("");
+  return `${labels.slice(0, -1).join(", ")} și ${labels[labels.length - 1]}`;
+}
+
 export function globalNavItems(): readonly GlobalNavItem[] {
   return GLOBAL_NAV.flatMap((group) => group.items);
 }

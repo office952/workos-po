@@ -1,7 +1,7 @@
 import type { OrganizationPresetLifecycle, OrganizationPresetSelection } from "@workos-final/domain";
 import type { Hono } from "hono";
-import { getProductSystem, isOwner, type ApiEnv } from "../cloud/context.js";
-import { requireOwnerRole } from "../cloud/middleware.js";
+import { getProductSystem, type ApiEnv, can } from "../cloud/context.js";
+import { requireCapability } from "../cloud/middleware.js";
 
 const SINGLE_PLANE_OWNER_ACTOR = "single-plane:owner";
 
@@ -9,7 +9,7 @@ export function registerCatalogPresetRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/catalog/presets", (c) => {
     const templateCode = c.req.query("templateCode") ?? null;
     const runtime = getProductSystem(c);
-    const role = isOwner(c) ? "owner" : "member";
+    const role = can(c, "org.settings.manage") ? "owner" : "member";
     return c.json({
       canEdit: role === "owner",
       templateCode,
@@ -19,13 +19,13 @@ export function registerCatalogPresetRoutes(app: Hono<ApiEnv>): void {
 
   app.get("/api/catalog/presets/:presetId", (c) => {
     const runtime = getProductSystem(c);
-    const role = isOwner(c) ? "owner" : "member";
+    const role = can(c, "org.settings.manage") ? "owner" : "member";
     const history = runtime.readOrganizationPresetHistory(c.req.param("presetId"), role);
     if (history.length === 0) return c.json({ error: "not_found" }, 404);
     return c.json({ canEdit: role === "owner", history: history.map(presentPreset) });
   });
 
-  app.post("/api/catalog/presets", requireOwnerRole(), async (c) => {
+  app.post("/api/catalog/presets", requireCapability("org.settings.manage"), async (c) => {
     const body = readSave(await c.req.json().catch(() => null));
     if (!body) return c.json({ error: "invalid_payload" }, 400);
     const runtime = getProductSystem(c);

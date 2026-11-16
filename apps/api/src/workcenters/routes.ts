@@ -6,8 +6,8 @@ import {
   type ProviderMutationError,
 } from "@workos-final/domain";
 import type { Context, Hono } from "hono";
-import { getProductSystem, isOwner, type ApiEnv } from "../cloud/context.js";
-import { requireOwnerRole } from "../cloud/middleware.js";
+import { getProductSystem, type ApiEnv, can } from "../cloud/context.js";
+import { requireCapability } from "../cloud/middleware.js";
 import type { ProductSystemRuntime } from "../productSystem/runtime.js";
 import { OrganizationProviderPersistError } from "./organizationProviderStore.js";
 
@@ -26,7 +26,7 @@ export function workcentersAdminPayload(runtime: ProductSystemRuntime, canEdit: 
 }
 
 export function registerWorkcenterRoutes(app: Hono<ApiEnv>): void {
-  app.post("/api/workcenters", requireOwnerRole(), async (c) => {
+  app.post("/api/workcenters", requireCapability("resources.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const parsed = readCreateBody(await c.req.json().catch(() => null));
     if (!parsed) {
@@ -41,7 +41,7 @@ export function registerWorkcenterRoutes(app: Hono<ApiEnv>): void {
         {
           workcenter: result.value,
           alreadyApplied: result.alreadyApplied,
-          ...workcentersAdminPayload(runtime, isOwner(c)),
+          ...workcentersAdminPayload(runtime, can(c, "resources.manage")),
         },
         201,
       );
@@ -50,7 +50,7 @@ export function registerWorkcenterRoutes(app: Hono<ApiEnv>): void {
     }
   });
 
-  app.patch("/api/workcenters/:workcenterId", requireOwnerRole(), async (c) => {
+  app.patch("/api/workcenters/:workcenterId", requireCapability("resources.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const parsed = readWorkcenterPatch(await c.req.json().catch(() => null));
     if (!parsed) {
@@ -64,14 +64,14 @@ export function registerWorkcenterRoutes(app: Hono<ApiEnv>): void {
       return c.json({
         workcenter: result.value,
         alreadyApplied: result.alreadyApplied,
-        ...workcentersAdminPayload(runtime, isOwner(c)),
+        ...workcentersAdminPayload(runtime, can(c, "resources.manage")),
       });
     } catch (error) {
       return providerPersistFailure(c, error);
     }
   });
 
-  app.post("/api/machines", requireOwnerRole(), async (c) => {
+  app.post("/api/machines", requireCapability("resources.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const parsed = readMachineCreateBody(await c.req.json().catch(() => null));
     if (!parsed) {
@@ -86,7 +86,7 @@ export function registerWorkcenterRoutes(app: Hono<ApiEnv>): void {
         {
           machine: result.value,
           alreadyApplied: result.alreadyApplied,
-          ...workcentersAdminPayload(runtime, isOwner(c)),
+          ...workcentersAdminPayload(runtime, can(c, "resources.manage")),
         },
         201,
       );
@@ -95,7 +95,7 @@ export function registerWorkcenterRoutes(app: Hono<ApiEnv>): void {
     }
   });
 
-  app.patch("/api/machines/:machineId", requireOwnerRole(), async (c) => {
+  app.patch("/api/machines/:machineId", requireCapability("resources.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const parsed = readMachinePatch(await c.req.json().catch(() => null));
     if (!parsed) {
@@ -109,7 +109,7 @@ export function registerWorkcenterRoutes(app: Hono<ApiEnv>): void {
       return c.json({
         machine: result.value,
         alreadyApplied: result.alreadyApplied,
-        ...workcentersAdminPayload(runtime, isOwner(c)),
+        ...workcentersAdminPayload(runtime, can(c, "resources.manage")),
       });
     } catch (error) {
       return providerPersistFailure(c, error);

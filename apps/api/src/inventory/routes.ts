@@ -4,7 +4,7 @@ import {
 } from "@workos-final/domain";
 import type { Hono } from "hono";
 import { getProductSystem, type ApiEnv } from "../cloud/context.js";
-import { requireOwnerRole } from "../cloud/middleware.js";
+import { requireCapability } from "../cloud/middleware.js";
 
 export function registerInventoryRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/inventory", (c) => {
@@ -24,7 +24,7 @@ export function registerInventoryRoutes(app: Hono<ApiEnv>): void {
     return c.json({ item: detail.item, movements: detail.movements });
   });
 
-  app.post("/api/inventory/:resourceId/adjustments", requireOwnerRole(), async (c) => {
+  app.post("/api/inventory/:resourceId/adjustments", requireCapability("inventory.adjust"), async (c) => {
     const runtime = getProductSystem(c);
     const input = readAdjustmentInput(await c.req.json().catch(() => null));
     if (!input) {

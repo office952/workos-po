@@ -1,0 +1,114 @@
+/*
+ * V1 Organization Access · Administrare › Acces organizație. Small additions on top of the R3
+ * administration tokens (admin.css). Elements marked data-visual-review="required" have no
+ * Owner-accepted WorkOS-N frame yet (VISUAL_OWNER_REVIEW_REQUIRED).
+ */
+
+.acc-note {
+  color: var(--adm-brass-text);
+  font-size: var(--text-label);
+}
+
+.acc-once {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 24px;
+  padding: 16px;
+  border: 1px solid var(--adm-signal);
+  border-radius: 8px;
+  background: var(--adm-paper);
+}
+
+.acc-once__title {
+  margin: 0;
+  font-size: var(--text-section);
+}
+
+.acc-once__warning {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.acc-once__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.acc-once__row .adm-input {
+  flex: 1 1 22rem;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+}
+
+.acc-roles {
+  display: grid;
+  margin: 0;
+}
+
+.acc-roles__row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr);
+  gap: 4px 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--adm-line);
+}
+
+.acc-roles__row dt {
+  font-weight: 600;
+}
+
+.acc-roles__row dd {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+.acc-roles__cannot,
+.acc-roles__off {
+  color: var(--color-text-muted);
+  font-size: var(--text-label);
+}
+
+.acc-form {
+  display: grid;
+  gap: 8px;
+}
+
+.acc-events {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.acc-events li {
+  display: grid;
+  gap: 2px;
+}
+
+.acc-events li > span:last-child,
+.acc-help {
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 767px) {
+  .acc-roles__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Registry rows on this page: identity (with its state as text) + actions. Rows without actions
+   (last owner, read-only views) keep the same identity column, so nothing shifts sideways. */
+.adm-member.acc-member {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+@media (max-width: 600px) {
+  .adm-member.acc-member {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -4,8 +4,8 @@ import {
   projectSystemGovernance,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
-import { getProductSystem, isOwner, type ApiEnv } from "./cloud/context.js";
-import { requireOwnerRole } from "./cloud/middleware.js";
+import { getProductSystem, type ApiEnv, can } from "./cloud/context.js";
+import { requireCapability } from "./cloud/middleware.js";
 import { workcentersAdminPayload } from "./workcenters/routes.js";
 
 export function registerSystemProjectionRoutes(app: Hono<ApiEnv>): void {
@@ -16,13 +16,13 @@ export function registerSystemProjectionRoutes(app: Hono<ApiEnv>): void {
 
   app.get("/api/product-system-admin", (c) => {
     const runtime = getProductSystem(c);
-    return c.json({ ...runtime.present().admin, canEdit: isOwner(c) });
+    return c.json({ ...runtime.present().admin, canEdit: can(c, "org.settings.manage") });
   });
 
   app.get("/api/resources-admin", (c) => {
     const runtime = getProductSystem(c);
     const projection = runtime.resourcesAdministration();
-    if (isOwner(c)) {
+    if (can(c, "costs.internal.read")) {
       return c.json(projection);
     }
     return c.json(omitResourceCostAmounts(projection));
@@ -30,7 +30,7 @@ export function registerSystemProjectionRoutes(app: Hono<ApiEnv>): void {
 
   app.patch(
     "/api/resources-admin/cost-evidence/:evidenceRowId",
-    requireOwnerRole(),
+    requireCapability("costs.internal.manage"),
     async (c) => {
       const runtime = getProductSystem(c);
       const body = (await c.req.json().catch(() => null)) as {
@@ -76,7 +76,7 @@ export function registerSystemProjectionRoutes(app: Hono<ApiEnv>): void {
 
   app.post(
     "/api/resources-admin/cost-evidence",
-    requireOwnerRole(),
+    requireCapability("costs.internal.manage"),
     async (c) => {
       const runtime = getProductSystem(c);
       const body = (await c.req.json().catch(() => null)) as {
@@ -133,7 +133,7 @@ export function registerSystemProjectionRoutes(app: Hono<ApiEnv>): void {
       runtime.listActiveCostEvidence(),
       runtime.providerRegistry,
     );
-    if (isOwner(c)) {
+    if (can(c, "costs.internal.read")) {
       return c.json(projection);
     }
     return c.json(omitForbiddenFinancialFields(projection, "commercial"));
@@ -141,7 +141,7 @@ export function registerSystemProjectionRoutes(app: Hono<ApiEnv>): void {
 
   app.get("/api/workcenters", (c) => {
     const runtime = getProductSystem(c);
-    return c.json(workcentersAdminPayload(runtime, isOwner(c)));
+    return c.json(workcentersAdminPayload(runtime, can(c, "resources.manage")));
   });
 
   app.get("/api/governance", (c) => {

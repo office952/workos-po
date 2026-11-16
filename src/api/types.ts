@@ -1093,7 +1093,8 @@ export type ResourcesAdminTransport = {
 
 export type CloudAccessMode = "cloud" | "single_plane";
 
-export type CloudMembershipRole = "owner" | "member";
+/** V1 Organization Access: the four fixed roles (labels and capabilities come from the server). */
+export type CloudMembershipRole = "owner" | "member" | "production" | "workshop";
 
 export type CloudSessionUserTransport = {
   userId: string;

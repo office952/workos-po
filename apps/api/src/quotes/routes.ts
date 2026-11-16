@@ -9,7 +9,7 @@ import {
   scopeQuoteSnapshot,
 } from "@workos-final/domain";
 import { planAssemblyAcceptance } from "../assembly/acceptance.js";
-import { getProductSystem, isOwner, type ApiContext, type ApiEnv } from "../cloud/context.js";
+import { getProductSystem, type ApiContext, type ApiEnv, can } from "../cloud/context.js";
 import { financialAccess } from "../financial/access.js";
 import { httpPathIdentity } from "../httpPathIdentity.js";
 import type { AssemblyQuoteRecord } from "../productSystem/runtime.js";
@@ -174,7 +174,7 @@ function presentAssemblyQuoteAcceptance(
       reason: "Versiune înlocuită. Doar oferta curentă a ansamblului poate fi acceptată.",
     };
   }
-  if (!isOwner(c)) {
+  if (!can(c, "quotes.accept")) {
     return { canAccept: false, reason: "Doar proprietarul poate accepta oferta și crea comanda." };
   }
   const planned = planAssemblyAcceptance(getProductSystem(c), {

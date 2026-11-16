@@ -9,7 +9,7 @@ import {
   type WorkloadPlanSource,
   type WorkloadTaskItem,
 } from "@workos-final/domain";
-import { isOwner, type ApiContext } from "../cloud/context.js";
+import { type ApiContext, can } from "../cloud/context.js";
 import type { ProductSystemRuntime } from "../productSystem/runtime.js";
 
 export type PlanningWorkloadTaskTransport = {
@@ -59,7 +59,7 @@ export function presentPlanningWorkload(
   runtime: ProductSystemRuntime,
   c: ApiContext,
 ): PlanningWorkloadTransport {
-  const owner = isOwner(c);
+  const owner = can(c, "planning.manage");
   const jobs = runtime.listJobOverview().jobs;
   const jobByPlan = new Map(
     jobs.flatMap((job) => (job.planId ? [[job.planId, job] as const] : [])),

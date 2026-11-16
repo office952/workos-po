@@ -1,8 +1,8 @@
 import { providerKindLabel, type ProviderKind } from "@workos-final/domain";
-import { isOwner, type ApiContext } from "../cloud/context.js";
+import { type ApiContext, can } from "../cloud/context.js";
 
 export function viewerCanAssignProvider(c: ApiContext): boolean {
-  return isOwner(c);
+  return can(c, "planning.manage");
 }
 
 export function presentExecutionPlanForViewer(

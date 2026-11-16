@@ -12,6 +12,8 @@ import {
   requireCloudSession,
 } from "./cloud/middleware.js";
 import { registerOrganizationAccessRoutes } from "./cloud/organizationAccessRoutes.js";
+import { enforceScopedRolePolicy } from "./cloud/routePolicy.js";
+import { registerAccountRoutes } from "./cloud/accountRoutes.js";
 import {
   createRuntimeRegistry,
   type RuntimeRegistry,
@@ -104,6 +106,15 @@ export function createApp(options: CreateAppOptions = {}): Hono<ApiEnv> {
     }
   });
 
+  // V1 Organization Access: no shared or browser cache for API answers (role- and
+  // organization-dependent). Downloads that already declare their own Cache-Control keep it.
+  app.use("/api/*", async (c, next) => {
+    await next();
+    if (!c.res.headers.has("Cache-Control")) {
+      c.res.headers.set("Cache-Control", "no-store");
+    }
+  });
+
   app.use("/api/*", async (c, next) => {
     if (
       !mutatingOriginAllowed(env, c.req.method, c.req.header("origin"), {
@@ -133,6 +144,8 @@ export function createApp(options: CreateAppOptions = {}): Hono<ApiEnv> {
     const registry = options.cloud.registry ?? createRuntimeRegistry();
     app.use("/api/*", attachCloudHost(options.cloud.controlPlane, registry, env));
     app.use("/api/*", requireCloudSession());
+    // V1 Organization Access: deny-by-default route policy for the scoped roles.
+    app.use("/api/*", enforceScopedRolePolicy());
   } else if (singlePlaneRuntime) {
     app.use("/api/*", attachSinglePlaneRuntime(singlePlaneRuntime, env));
   }
@@ -158,6 +171,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<ApiEnv> {
 
   registerCloudRoutes(app);
   registerOrganizationAccessRoutes(app);
+  registerAccountRoutes(app);
   registerProductRoutes(app);
   registerCommercialPolicyRoutes(app);
   registerTechnicalSettingRoutes(app);

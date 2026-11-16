@@ -9,7 +9,7 @@ import {
 import { BrandMark } from "../components/BrandMark";
 import { navItemCurrent } from "../routing/appRoute";
 import { AccountArea, type AccountAreaProps } from "./AccountArea";
-import { GLOBAL_NAV, HOME_HREF, globalNavItems, type GlobalNavItem } from "./globalNav";
+import { HOME_HREF, globalNavItems, visibleNavGroups, type GlobalNavGroup, type GlobalNavItem } from "./globalNav";
 import { SkipLink } from "./SkipLink";
 import "../styles/themes/workos-machine.css";
 import "../styles/layout/app-shell-v2.css";
@@ -21,6 +21,8 @@ type AppShellProps = {
   currentHref?: string;
   mode?: "proof" | "slice";
   account?: AccountAreaProps | null;
+  /** V1 Organization Access: capabilities of the active role; null = show every module. */
+  capabilities?: readonly string[] | null;
 };
 
 const PROOF_NAV = [
@@ -106,10 +108,10 @@ function ModuleLink({
 }
 
 /** Desktop: every module as a numbered plate; groups are separated by a brass rivet. */
-function ModuleRail({ path }: { path: string }) {
+function ModuleRail({ path, groups }: { path: string; groups: readonly GlobalNavGroup[] }) {
   return (
     <nav className="app-shell__modules" aria-label="Navigare principală">
-      {GLOBAL_NAV.map((group, groupIndex) => (
+      {groups.map((group, groupIndex) => (
         <div key={group.id} className="app-shell__module-group" data-first={groupIndex === 0 || undefined}>
           {group.items.map((item) => (
             <ModuleLink key={item.id} item={item} path={path} className="app-shell__module" />
@@ -121,7 +123,7 @@ function ModuleRail({ path }: { path: string }) {
 }
 
 /** Tablet and phone: the current module opens a sheet with every module, grouped. */
-function ModuleSwitcher({ path }: { path: string }) {
+function ModuleSwitcher({ path, groups }: { path: string; groups: readonly GlobalNavGroup[] }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -189,7 +191,7 @@ function ModuleSwitcher({ path }: { path: string }) {
       </button>
       {open ? (
         <nav id={sheetId} className="app-shell__switcher-sheet" aria-label="Navigare principală">
-          {GLOBAL_NAV.map((group) => (
+          {groups.map((group) => (
             <div key={group.id} className="app-shell__switcher-group">
               <p className="app-shell__switcher-heading">{group.label}</p>
               {group.items.map((item) => (
@@ -254,12 +256,14 @@ function ProofShell({ contextLabel, children, account }: AppShellProps) {
 }
 
 export function AppShell(props: AppShellProps) {
-  const { contextLabel, children, currentHref, mode = "proof", account = null } = props;
+  const { contextLabel, children, currentHref, mode = "proof", account = null, capabilities = null } = props;
   const navMode = useResponsiveNavMode();
   if (mode !== "slice") {
     return <ProofShell {...props} account={account} />;
   }
   const path = currentHref ?? "/";
+  // V1: the navigation reflects server-owned capabilities; it does not grant anything.
+  const groups = visibleNavGroups(capabilities);
   const homeCurrent = path === "/" || path === "";
 
   return (
@@ -281,7 +285,7 @@ export function AppShell(props: AppShellProps) {
               <span className="app-shell__brand-system">Control producție</span>
             </span>
           </a>
-          {navMode === "desktop" ? <ModuleRail path={path} /> : <ModuleSwitcher path={path} />}
+          {navMode === "desktop" ? <ModuleRail path={path} groups={groups} /> : <ModuleSwitcher path={path} groups={groups} />}
           <span className="app-shell__spacer" />
           <div className="app-shell__plate">
             <p className="app-shell__channel" title={`Canal activ: ${contextLabel}`}>

@@ -139,3 +139,21 @@ describe("presentOrganizationOperatingPicture", () => {
     expect(capability(owner, "Acces în aplicație").next).toBeNull();
   });
 });
+
+describe("V1 · Producție start page (final wave D)", () => {
+  it("describes the production role, never the commercial badge or offers", () => {
+    const picture = presentOrganizationOperatingPicture({ ...readyEmptyAtelier, actorRole: "production" });
+    expect(picture.statusLabel).toBeNull();
+    expect(picture.lead).toMatch(/trimiți în producție/);
+    expect(`${picture.lead} ${picture.nextAction.description}`).not.toMatch(/oferte|ofertă cu produsele/i);
+    expect(picture.roleNote).toMatch(/fără prețuri, costuri sau oferte/);
+    expect(picture.nextAction.href).toBe("/lucrari");
+    expect(picture.whoCanConfigure).toBe(false);
+  });
+
+  it("keeps the owner and member pictures unchanged", () => {
+    expect(presentOrganizationOperatingPicture(readyEmptyAtelier).statusLabel).toBe("Comercial disponibil");
+    const member = presentOrganizationOperatingPicture({ ...readyEmptyAtelier, actorRole: "member" });
+    expect(member.lead).toMatch(/^Poți deschide clienți și oferte/);
+  });
+});

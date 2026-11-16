@@ -1,3 +1,9 @@
+import {
+  ORGANIZATION_ROLE_PRESENTATION,
+  isActiveMembershipPair,
+  isOrganizationRole,
+} from "@workos-final/domain";
+import { recordMembershipRevocation, userEmailVerified } from "./accessLifecycle.js";
 import type {
   CloudMembership,
   CloudUser,
@@ -9,16 +15,21 @@ export type OrganizationAccessMember = {
   membershipId: string;
   email: string;
   role: MembershipRole;
+  /** V1: server-owned Romanian label; the client never derives it. */
+  roleLabel: string;
   status: CloudMembership["status"];
+  /** V1: true for an active (role, status) pair. */
+  active: boolean;
   userStatus: CloudUser["status"];
   createdAt: string;
+  /** V1: the last owner cannot be revoked or demoted (shown without those actions). */
+  lastActiveOwner: boolean;
+  emailVerified: boolean;
 };
 
 /**
- * Owner /admin/access V1 errors.
- * Owner browser create of global users stays disabled.
- * Additional Cloud users are added only by controlled platform-operator tooling.
- * First Owner remains via controlled organization provisioning.
+ * Owner /admin/access errors. Global identities are never created or probed from the browser:
+ * V1 adds invitations, where only the recipient creates or proves the identity.
  */
 export type OrganizationAccessError = "last_owner_removal" | "membership_missing";
 
@@ -27,24 +38,30 @@ export function listOrganizationAccessMembers(
   organizationId: string,
 ): OrganizationAccessMember[] {
   const memberships = controlPlane.listMembershipsForOrganization(organizationId);
+  const activeOwners = controlPlane.countOwnerMemberships(organizationId);
   const rows: OrganizationAccessMember[] = [];
   for (const membership of memberships) {
     const user = controlPlane.getUser(membership.userId);
     if (!user) {
       continue;
     }
+    const active = isActiveMembershipPair(membership.role, membership.status);
     rows.push({
       membershipId: membership.membershipId,
       email: user.email,
       role: membership.role,
+      roleLabel: isOrganizationRole(membership.role) ? ORGANIZATION_ROLE_PRESENTATION[membership.role].label : "Rol necunoscut",
       status: membership.status,
+      active,
       userStatus: user.status,
       createdAt: membership.createdAt,
+      lastActiveOwner: active && membership.role === "owner" && activeOwners <= 1,
+      emailVerified: userEmailVerified(controlPlane, user.userId),
     });
   }
   return rows.sort((left, right) => {
-    if (left.status !== right.status) {
-      return left.status === "ACTIVE" ? -1 : 1;
+    if (left.active !== right.active) {
+      return left.active ? -1 : 1;
     }
     return left.email.localeCompare(right.email, "en");
   });
@@ -52,30 +69,32 @@ export function listOrganizationAccessMembers(
 
 export function revokeOrganizationAccessMember(
   controlPlane: ControlPlane,
-  input: { organizationId: string; membershipId: string },
+  input: { organizationId: string; membershipId: string; actorUserId?: string },
 ):
   | { ok: true; member: OrganizationAccessMember }
   | { ok: false; error: OrganizationAccessError } {
-  const revoked = controlPlane.revokeMembership({
-    membershipId: input.membershipId,
-    organizationId: input.organizationId,
+  // V1: one IMMEDIATE transaction so two concurrent revocations cannot remove the last owner.
+  return controlPlane.runImmediateTransaction(() => {
+    const revoked = controlPlane.revokeMembership({
+      membershipId: input.membershipId,
+      organizationId: input.organizationId,
+    });
+    if (!revoked.ok) {
+      return { ok: false as const, error: revoked.error };
+    }
+    if (input.actorUserId) {
+      recordMembershipRevocation(controlPlane, {
+        organizationId: input.organizationId,
+        membershipId: input.membershipId,
+        actorUserId: input.actorUserId,
+      });
+    }
+    const member = listOrganizationAccessMembers(controlPlane, input.organizationId).find(
+      (item) => item.membershipId === revoked.membership.membershipId,
+    );
+    if (!member) {
+      return { ok: false as const, error: "membership_missing" as const };
+    }
+    return { ok: true as const, member };
   });
-  if (!revoked.ok) {
-    return { ok: false, error: revoked.error };
-  }
-  const user = controlPlane.getUser(revoked.membership.userId);
-  if (!user) {
-    return { ok: false, error: "membership_missing" };
-  }
-  return {
-    ok: true,
-    member: {
-      membershipId: revoked.membership.membershipId,
-      email: user.email,
-      role: revoked.membership.role,
-      status: revoked.membership.status,
-      userStatus: user.status,
-      createdAt: revoked.membership.createdAt,
-    },
-  };
 }

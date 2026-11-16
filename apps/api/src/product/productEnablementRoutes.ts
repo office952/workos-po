@@ -5,18 +5,18 @@ import {
   type ProductEnablementDraft,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
-import { getProductSystem, isOwner, type ApiEnv } from "../cloud/context.js";
-import { requireOwnerRole } from "../cloud/middleware.js";
+import { getProductSystem, type ApiEnv, can } from "../cloud/context.js";
+import { requireCapability } from "../cloud/middleware.js";
 
 const SINGLE_PLANE_OWNER_ACTOR = "single-plane:owner";
 
 export function registerProductEnablementRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/admin/product-enablement", (c) => {
     const runtime = getProductSystem(c);
-    return c.json(presentProductEnablementAdmin(runtime, isOwner(c)));
+    return c.json(presentProductEnablementAdmin(runtime, can(c, "org.settings.manage")));
   });
 
-  app.post("/api/admin/product-enablement", requireOwnerRole(), async (c) => {
+  app.post("/api/admin/product-enablement", requireCapability("org.settings.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const drafts = readDrafts(await c.req.json().catch(() => null));
     if (!drafts) {

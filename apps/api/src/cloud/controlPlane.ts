@@ -1,4 +1,10 @@
 import { randomBytes, randomUUID } from "node:crypto";
+import {
+  ORGANIZATION_ROLES,
+  activeStatusForRole,
+  isActiveMembershipPair,
+  type OrganizationRole,
+} from "@workos-final/domain";
 import type { SqliteDatabase } from "../persistence/sqlite.js";
 import {
   createSessionToken,
@@ -43,8 +49,11 @@ export const BOOTSTRAP_POLICIES = [
 ] as const;
 export type BootstrapPolicy = (typeof BOOTSTRAP_POLICIES)[number];
 
-export const MEMBERSHIP_ROLES = ["owner", "member"] as const;
-export type MembershipRole = (typeof MEMBERSHIP_ROLES)[number];
+/** V1 Organization Access: the fixed role catalogue lives in the domain. */
+export const MEMBERSHIP_ROLES = ORGANIZATION_ROLES;
+export type MembershipRole = OrganizationRole;
+/** SQL list of the statuses that can be active; the (role, status) pair is checked in code. */
+const ACTIVE_STATUSES_SQL = "('ACTIVE','ACTIVE_SCOPED')";
 
 export const ORGANIZATION_STATUSES = [
   "PROVISIONING",
@@ -55,7 +64,7 @@ export const ORGANIZATION_STATUSES = [
 export type OrganizationStatus = (typeof ORGANIZATION_STATUSES)[number];
 export const ORGANIZATION_LOGIN_STATUSES = ["ACTIVE"] as const;
 export type UserStatus = "ACTIVE" | "DISABLED";
-export type MembershipStatus = "ACTIVE" | "REVOKED";
+export type MembershipStatus = "ACTIVE" | "ACTIVE_SCOPED" | "REVOKED";
 export type PlaneStatus = "ACTIVE" | "RETIRED";
 
 export type CloudOrganization = {
@@ -374,10 +383,10 @@ export function createControlPlane(db: SqliteDatabase, cloudRoot: string): Contr
     countActiveMemberships(organizationId) {
       const row = db
         .prepare(
-          `SELECT count(*) AS n FROM organization_memberships WHERE organization_id = ? AND status = 'ACTIVE'`,
+          `SELECT role, status FROM organization_memberships WHERE organization_id = ? AND status IN ${ACTIVE_STATUSES_SQL}`,
         )
-        .get(organizationId) as { n: number };
-      return row.n;
+        .all(organizationId) as Array<{ role: string; status: string }>;
+      return row.filter((item) => isActiveMembershipPair(item.role, item.status)).length;
     },
     countPlanes(organizationId) {
       const row = db
@@ -483,7 +492,7 @@ export function createControlPlane(db: SqliteDatabase, cloudRoot: string): Contr
         userId: input.userId,
         organizationId: input.organizationId,
         role: input.role,
-        status: "ACTIVE",
+        status: activeStatusForRole(input.role),
         createdAt: now,
       };
       const existing = db
@@ -496,13 +505,13 @@ export function createControlPlane(db: SqliteDatabase, cloudRoot: string): Contr
       if (existing) {
         db.prepare(
           `UPDATE organization_memberships
-           SET role = ?, status = 'ACTIVE'
+           SET role = ?, status = ?
            WHERE membership_id = ?`,
-        ).run(input.role, existing.membership_id);
+        ).run(input.role, activeStatusForRole(input.role), existing.membership_id);
         return mapMembership({
           ...existing,
           role: input.role,
-          status: "ACTIVE",
+          status: activeStatusForRole(input.role),
         });
       }
       db.prepare(
@@ -552,7 +561,7 @@ export function createControlPlane(db: SqliteDatabase, cloudRoot: string): Contr
       db.prepare(
         `UPDATE organization_memberships
          SET status = 'REVOKED'
-         WHERE membership_id = ? AND organization_id = ? AND status = 'ACTIVE'`,
+         WHERE membership_id = ? AND organization_id = ? AND status IN ${ACTIVE_STATUSES_SQL}`,
       ).run(input.membershipId, input.organizationId);
       const now = new Date().toISOString();
       db.prepare(
@@ -575,13 +584,17 @@ export function createControlPlane(db: SqliteDatabase, cloudRoot: string): Contr
     listMembershipsForUser(userId) {
       return db
         .prepare(
-          `SELECT m.organization_id, o.display_name, o.slug, m.role, o.status
+          `SELECT m.organization_id, o.display_name, o.slug, m.role, m.status AS membership_status, o.status
            FROM organization_memberships m
            JOIN organizations o ON o.organization_id = m.organization_id
-           WHERE m.user_id = ? AND m.status = 'ACTIVE'
+           WHERE m.user_id = ? AND m.status IN ${ACTIVE_STATUSES_SQL}
            ORDER BY o.display_name COLLATE NOCASE`,
         )
         .all(userId)
+        .filter((row) => {
+          const record = row as { role: string; membership_status: string };
+          return isActiveMembershipPair(record.role, record.membership_status);
+        })
         .map((row) => {
           const record = row as {
             organization_id: string;
@@ -604,10 +617,11 @@ export function createControlPlane(db: SqliteDatabase, cloudRoot: string): Contr
         .prepare(
           `SELECT membership_id, user_id, organization_id, role, status, created_at
            FROM organization_memberships
-           WHERE user_id = ? AND organization_id = ? AND status = 'ACTIVE'`,
+           WHERE user_id = ? AND organization_id = ? AND status IN ${ACTIVE_STATUSES_SQL}`,
         )
         .get(userId, organizationId) as MembershipRow | undefined;
-      return row ? mapMembership(row) : null;
+      // Fail-closed: an unknown role or a (role, status) pair outside the invariant is inactive.
+      return row && isActiveMembershipPair(row.role, row.status) ? mapMembership(row) : null;
     },
     getMembershipForUserInOrganization(userId, organizationId) {
       const row = db
@@ -623,10 +637,10 @@ export function createControlPlane(db: SqliteDatabase, cloudRoot: string): Contr
       const result = db
         .prepare(
           `UPDATE organization_memberships
-           SET role = ?, status = 'ACTIVE'
+           SET role = ?, status = ?
            WHERE membership_id = ? AND organization_id = ? AND status = 'REVOKED'`,
         )
-        .run(input.role, input.membershipId, input.organizationId);
+        .run(input.role, activeStatusForRole(input.role), input.membershipId, input.organizationId);
       if (result.changes !== 1) {
         return null;
       }
@@ -1062,12 +1076,12 @@ function assertUsableMembership(
   }
   const membership = db
     .prepare(
-      `SELECT membership_id
+      `SELECT membership_id, role, status
        FROM organization_memberships
-       WHERE user_id = ? AND organization_id = ? AND status = 'ACTIVE'`,
+       WHERE user_id = ? AND organization_id = ? AND status IN ${ACTIVE_STATUSES_SQL}`,
     )
-    .get(userId, organizationId) as { membership_id: string } | undefined;
-  if (!membership) {
+    .get(userId, organizationId) as { membership_id: string; role: string; status: string } | undefined;
+  if (!membership || !isActiveMembershipPair(membership.role, membership.status)) {
     throw new ControlPlaneInvariantError("no_membership");
   }
 }

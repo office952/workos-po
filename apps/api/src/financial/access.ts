@@ -5,7 +5,7 @@ import {
   type FinancialEndpointFamily,
   type RequestDetailProjection,
 } from "@workos-final/domain";
-import { isOwner, type ApiContext } from "../cloud/context.js";
+import { isOwner, type ApiContext, organizationRole } from "../cloud/context.js";
 
 export function financialAccess(
   c: ApiContext,
@@ -14,6 +14,7 @@ export function financialAccess(
   return resolveFinancialAccess({
     family,
     isOwner: isOwner(c),
+    role: organizationRole(c),
   });
 }
 

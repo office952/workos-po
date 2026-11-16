@@ -9,13 +9,14 @@ import {
   membershipRoleLabel,
   type CloudMembershipPresentation,
 } from "../adapters/cloudSessionAdapter";
+import type { CloudMembershipRole } from "../api/types";
 import { Button } from "../components/Button";
 import { ThemeControl } from "../theme/ThemeControl";
 
 export type AccountAreaProps = {
   organizationName: string;
   userLabel: string;
-  membershipRole?: "owner" | "member" | null;
+  membershipRole?: CloudMembershipRole | null;
   memberships: readonly CloudMembershipPresentation[];
   currentOrganizationId: string;
   onSwitchOrganization?: (organizationId: string) => Promise<unknown>;
@@ -167,6 +168,17 @@ export function AccountArea({
           ) : null}
           <div className="account-area__theme" role="none">
             <ThemeControl />
+          </div>
+          <div role="none">
+            {/* V1 Organization Access: own password, sessions and recovery. */}
+            <a
+              className="text-link account-area__security"
+              role="menuitem"
+              href="/cont/securitate"
+              onClick={() => setOpen(false)}
+            >
+              Contul meu · Securitate
+            </a>
           </div>
           {switchError ? (
             <p className="account-area__error" role="alert">

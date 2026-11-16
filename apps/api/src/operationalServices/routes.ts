@@ -2,21 +2,21 @@ import type {
   OrganizationServiceOfferMutationError,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
-import { getProductSystem, isOwner, type ApiEnv } from "../cloud/context.js";
-import { requireOwnerRole } from "../cloud/middleware.js";
+import { getProductSystem, type ApiEnv, can } from "../cloud/context.js";
+import { requireCapability } from "../cloud/middleware.js";
 
 export function registerOperationalServiceRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/operational-services", (c) => {
     const runtime = getProductSystem(c);
     return c.json({
-      canWrite: isOwner(c),
+      canWrite: can(c, "resources.manage"),
       services: runtime.readOperationalServicesAdmin(),
     });
   });
 
   app.patch(
     "/api/operational-services/:capabilityId",
-    requireOwnerRole(),
+    requireCapability("resources.manage"),
     async (c) => {
       const runtime = getProductSystem(c);
       const body = await c.req.json().catch(() => null);

@@ -3,15 +3,15 @@ import {
   type ExternalProviderMutationError,
 } from "@workos-final/domain";
 import type { Hono } from "hono";
-import { getProductSystem, isOwner, type ApiContext, type ApiEnv } from "../cloud/context.js";
-import { requireOwnerRole } from "../cloud/middleware.js";
+import { getProductSystem, type ApiContext, type ApiEnv, can } from "../cloud/context.js";
+import { requireCapability } from "../cloud/middleware.js";
 
 export function registerExternalProductionRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/admin/external-production", (c) => {
     const runtime = getProductSystem(c);
     const mode = runtime.readExternalProductionHandoff();
     return c.json({
-      canWrite: isOwner(c),
+      canWrite: can(c, "org.settings.manage"),
       mode: mode.mode,
       modeLabel: externalProductionHandoffModeLabel(mode.mode),
       source: mode.source,
@@ -20,7 +20,7 @@ export function registerExternalProductionRoutes(app: Hono<ApiEnv>): void {
     });
   });
 
-  app.post("/api/admin/external-production", requireOwnerRole(), async (c) => {
+  app.post("/api/admin/external-production", requireCapability("org.settings.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const mode = readMode(await c.req.json().catch(() => null));
     if (!mode) {
@@ -45,7 +45,7 @@ export function registerExternalProductionRoutes(app: Hono<ApiEnv>): void {
     });
   });
 
-  app.post("/api/admin/external-production/providers", requireOwnerRole(), async (c) => {
+  app.post("/api/admin/external-production/providers", requireCapability("org.settings.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const name = readName(await c.req.json().catch(() => null));
     if (!name) {
@@ -64,7 +64,7 @@ export function registerExternalProductionRoutes(app: Hono<ApiEnv>): void {
 
   app.post(
     "/api/admin/external-production/providers/:providerId",
-    requireOwnerRole(),
+    requireCapability("org.settings.manage"),
     async (c) => {
       const runtime = getProductSystem(c);
       const patch = readProviderPatch(await c.req.json().catch(() => null));

@@ -23,6 +23,7 @@ import { currentEntryKey } from '../routing/navigationMemory';
 import { originBack } from '../routing/originBack';
 import { useUnsavedChangesGuard } from '../routing/useUnsavedChangesGuard';
 import { useCloudSession } from '../session/CloudSessionContext';
+import { capabilityAllows, sessionCapabilities, sessionHasCapability } from '../presentation/capabilityAccess';
 import { readCloudBoundaryVersion } from '../session/sessionExpiryBridge';
 import { JobRecordDates } from './jobRecord/JobRecordDates';
 import { JobDeadlineField } from './jobRecord/JobDeadlineField';
@@ -44,7 +45,12 @@ function activeSection(section: JobSheetSectionInput | undefined, taskId: string
 
 export function JobDetailPage({ jobId, taskId = null, section, fileId = null }: Props) {
   const cloud = useCloudSession();
+  const capabilities = sessionCapabilities(cloud);
   const owner = canPublishInstructions(cloud);
+  // V1: actions follow the same server capabilities (D4): release = production.release,
+  // priority/deadline = planning.manage. The stage still decides whether planning is editable.
+  const canRelease = sessionHasCapability(cloud, 'production.release');
+  const canPlan = sessionHasCapability(cloud, 'planning.manage');
   const session = useResource(resourceKeys.operatorSession(), loadOperatorSession);
   const jobResource = useResource(resourceKeys.job(jobId), () => loadJobDetail(jobId));
   const job = jobResource.data?.job ?? null;
@@ -68,13 +74,15 @@ export function JobDetailPage({ jobId, taskId = null, section, fileId = null }: 
   if (draftScope !== jobId) { setDraftScope(jobId); setPriorityDraft(null); setTargetDraft(null); setTargetIncomplete(false); setError(null); setNotice(null); setPlanningError(null); }
   const priority = priorityDraft ?? job?.priority ?? 'STANDARD';
   const targetDate = targetDraft ?? job?.targetDate ?? '';
-  const sourceHref = job?.kind === 'ASSEMBLY' ? jobResource.data?.quoteHref : jobResource.data?.quoteSnapshotId
+  // V1: no active link to the source offer for a role that cannot open offers (Atelier).
+  const canOpenOffer = capabilityAllows(capabilities, 'quotes.read');
+  const sourceHref = !canOpenOffer ? null : job?.kind === 'ASSEMBLY' ? jobResource.data?.quoteHref : jobResource.data?.quoteSnapshotId
     ? quoteHref(job?.productCode ?? '', jobResource.data.quoteSnapshotId) : null;
   const secondary = job ? presentJobSheetSecondary(job) : null;
   const finished = job?.stage === 'EXECUTION_COMPLETED';
   const journeyJob = job ? { ...job, planId: planId ?? job.planId } : null;
   const releaseKnown = cloud.ready && !cloud.unavailable;
-  const releaseHold = presentReleaseHold({ canRelease: owner, sessionKnown: releaseKnown, finished: Boolean(finished), planId });
+  const releaseHold = presentReleaseHold({ canRelease, sessionKnown: releaseKnown, finished: Boolean(finished), planId });
   const active = activeSection(section, taskId);
   const sessionScope = [planId, cloud.user?.email, cloud.organization?.organizationId, readCloudBoundaryVersion(), session.data?.personId].join('|');
   const dossier: ReactNode = pinned ? <TaskDossierPanel key={sessionScope} taskId={pinned.taskId} taskLabel={`${pinned.seqLabel} ${pinned.processLabel}`} canInstruct={owner} operatorIdentified={Boolean(session.data)} canWriteFiles={owner || Boolean(session.data)} sessionScope={sessionScope} recordMode openFileId={fileId} onOpenFile={openFile} /> : null;
@@ -88,7 +96,7 @@ export function JobDetailPage({ jobId, taskId = null, section, fileId = null }: 
     finally { setPending(false); }
   }
   async function savePlanning(): Promise<boolean> {
-    if (!job?.planningEditable || pending || finished || targetIncomplete) return false;
+    if (!job?.planningEditable || !canPlan || pending || finished || targetIncomplete) return false;
     setPending(true); setPlanningError(null); setNotice(null);
     try {
       await patchJobPlanning(jobId, { priority, targetDate: targetDate.trim() || null });
@@ -98,7 +106,7 @@ export function JobDetailPage({ jobId, taskId = null, section, fileId = null }: 
     finally { setPending(false); }
   }
   // N-018 · drafts that differ from the saved planning hold navigation behind one question.
-  const planningDirty = Boolean(job?.planningEditable && !finished && ((priorityDraft !== null && priorityDraft !== job.priority) || (targetDraft !== null && targetDraft.trim() !== (job.targetDate ?? '')) || targetIncomplete));
+  const planningDirty = Boolean(job?.planningEditable && canPlan && !finished && ((priorityDraft !== null && priorityDraft !== job.priority) || (targetDraft !== null && targetDraft.trim() !== (job.targetDate ?? '')) || targetIncomplete));
   function discardPlanning() { setPriorityDraft(null); setTargetDraft(null); setTargetIncomplete(false); setPlanningError(null); }
   const unsavedGuard = useUnsavedChangesGuard({ dirty: planningDirty, subject: 'Prioritatea și termenul', save: savePlanning, onDiscard: discardPlanning });
   // N-018 · an operation opened from the register pushes one entry; switching replaces it and
@@ -174,7 +182,7 @@ export function JobDetailPage({ jobId, taskId = null, section, fileId = null }: 
     onToggleExpand={() => setViewerExpanded((value) => !value)}
     onClose={closeFile}
   /> : null;
-  const planningPanel = job?.planningEditable && !finished ? <section className="job-planning" data-dirty={planningDirty || undefined} aria-labelledby="job-planning-title">
+  const planningPanel = job?.planningEditable && canPlan && !finished ? <section className="job-planning" data-dirty={planningDirty || undefined} aria-labelledby="job-planning-title">
     <header><h3 id="job-planning-title">Prioritatea și termenul</h3>{planningDirty ? <span className="job-planning__dirty">Modificări nesalvate</span> : null}</header>
     <form onSubmit={event => { event.preventDefault(); void savePlanning(); }}>
       <SelectField id="job-priority" label="Prioritate" value={priority} options={[{ value: 'STANDARD', label: 'Standard' }, { value: 'HIGH', label: 'Ridicată' }, { value: 'URGENT', label: 'Urgentă' }]} onChange={setPriorityDraft}/>
@@ -192,11 +200,11 @@ export function JobDetailPage({ jobId, taskId = null, section, fileId = null }: 
   // N-018 · Atelier offers the way back to this sheet, on the same section and operation.
   const sheetReturn = jobHref(jobId, { section: active, taskId: selectedTask?.taskId });
   return <PageRegion><div className="job-sheet" data-surface="job-detail" data-section={active}>
-    <header className="job-sheet__header" ref={headerRef}><div className="job-sheet__context"><a className="job-sheet__back" href={back.href} onClick={back.onClick}>{back.text}</a>{job ? <JobContextTrail job={job} requestId={jobResource.data?.requestId ?? job.requestId ?? null} quoteSnapshotId={jobResource.data?.quoteSnapshotId ?? null} sourceHref={sourceHref ?? null} operationLabel={operationOpen && selectedTask ? `Operația ${selectedTask.seqLabel}` : null} /> : null}</div>
+    <header className="job-sheet__header" ref={headerRef}><div className="job-sheet__context"><a className="job-sheet__back" href={back.href} onClick={back.onClick}>{back.text}</a>{job ? <JobContextTrail job={job} capabilities={capabilities} requestId={jobResource.data?.requestId ?? job.requestId ?? null} quoteSnapshotId={jobResource.data?.quoteSnapshotId ?? null} sourceHref={sourceHref ?? null} operationLabel={operationOpen && selectedTask ? `Operația ${selectedTask.seqLabel}` : null} /> : null}</div>
       <div className="job-sheet__identity-row"><div className="job-sheet__identity"><p className="job-sheet__eyebrow">Fișa lucrării</p><h1>{job ? presentJobSheetTitle(job) : 'Lucrare'}</h1><p>{job?.customerDisplayName ?? 'Se citește lucrarea.'}{secondary ? ' · ' + secondary : ''}</p></div>
-        <div className="job-sheet__header-action">{job && !planId && owner && !finished ? <Button disabled={pending} onClick={() => void sendToProduction()}>{pending ? 'Se pregătește producția…' : 'Trimite în producție'}</Button> : null}{planId && !finished && !operationOpen ? <a className="job-sheet__link-button job-sheet__link-button--primary" href={atelierHref({ jobId, planId, returnTo: sheetReturn })}>Deschide lucrarea în Atelier</a> : null}<Button variant="secondary" onClick={() => window.print()}>Tipărește fișa</Button></div></div>
+        <div className="job-sheet__header-action">{job && !planId && canRelease && !finished ? <Button disabled={pending} onClick={() => void sendToProduction()}>{pending ? 'Se pregătește producția…' : 'Trimite în producție'}</Button> : null}{planId && !finished && !operationOpen ? <a className="job-sheet__link-button job-sheet__link-button--primary" href={atelierHref({ jobId, planId, returnTo: sheetReturn })}>Deschide lucrarea în Atelier</a> : null}<Button variant="secondary" onClick={() => window.print()}>Tipărește fișa</Button></div></div>
       {job ? <div className="job-sheet__planning"><strong className="job-sheet__state">{presentJobSheetStage(job)}</strong><span>Prioritate: {job.priorityLabel}</span><span>Termen: {job.targetDateLabel}</span><span>{job.progressLabel}</span>
-        {job.planningEditable && !finished && active !== 'date' ? <a className="job-sheet__planning-link" href={jobHref(jobId, { section: 'date' })}>Modifică în Date lucrare</a> : null}</div> : null}
+        {job.planningEditable && canPlan && !finished && active !== 'date' ? <a className="job-sheet__planning-link" href={jobHref(jobId, { section: 'date' })}>Modifică în Date lucrare</a> : null}</div> : null}
       {job ? <p className="job-sheet__lead">{presentJobSheetLead(journeyJob ?? job)}</p> : null}
       {job?.needsAttention && job.attentionLabel ? <p className="job-sheet__hold">De rezolvat: {job.attentionLabel}</p> : null}
       {releaseHold ? <p className="job-sheet__hold">{releaseHold}</p> : null}
@@ -227,7 +235,7 @@ export function JobDetailPage({ jobId, taskId = null, section, fileId = null }: 
         viewer={viewer}
         viewerExpanded={viewerExpanded}
         files={report.data ? <JobRecordFiles record={report.data} canWriteFiles={owner || Boolean(session.data)} operationHref={operationHref} openFileId={active === 'fisiere' ? fileId : null} onOpenFile={openFile} onCloseFile={closeFile} /> : null}
-        dates={job ? <JobRecordDates planning={planningPanel} jobId={jobId} returnTo={jobHref(jobId, { section: 'date', taskId })} consultation={finished} site={jobResource.data?.siteInstallation ?? null} sourceHref={sourceHref ?? null} sourceLabel={job.kind === 'ASSEMBLY' ? 'Deschide ansamblul sursă' : 'Deschide oferta sursă'} /> : null}
+        dates={job ? <JobRecordDates planning={planningPanel} jobId={jobId} returnTo={jobHref(jobId, { section: 'date', taskId })} consultation={finished} site={jobResource.data?.siteInstallation ?? null} sourceHref={sourceHref ?? null} sourceLabel={job.kind === 'ASSEMBLY' ? 'Deschide ansamblul sursă' : 'Deschide oferta sursă'} showCommercialSource={canOpenOffer} canDecideMaterials={sessionHasCapability(cloud, 'materials.decide')} /> : null}
       />
     </div>
   </div>{unsavedGuard}</PageRegion>;

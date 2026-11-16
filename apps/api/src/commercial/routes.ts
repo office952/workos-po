@@ -6,15 +6,15 @@ import {
 } from "@workos-final/domain";
 import type { Hono } from "hono";
 import { getProductSystem, type ApiEnv } from "../cloud/context.js";
-import { requireOwnerRole } from "../cloud/middleware.js";
+import { requireCapability } from "../cloud/middleware.js";
 
 export function registerCommercialPolicyRoutes(app: Hono<ApiEnv>): void {
-  app.get("/api/admin/commercial-policy", requireOwnerRole(), (c) => {
+  app.get("/api/admin/commercial-policy", requireCapability("org.settings.manage"), (c) => {
     const runtime = getProductSystem(c);
     return c.json(presentCommercialPolicyAdmin(runtime, true));
   });
 
-  app.post("/api/admin/commercial-policy", requireOwnerRole(), async (c) => {
+  app.post("/api/admin/commercial-policy", requireCapability("org.settings.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const values = readDraftValues(await c.req.json().catch(() => null));
     if (!values) {

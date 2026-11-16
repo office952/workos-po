@@ -1,3 +1,4 @@
+import { narrowFinancialScope } from "../governance/organizationRoles.js";
 import type { CommercialPriceProjection } from "./price.js";
 import type {
   FrozenCommercialOffer,
@@ -84,11 +85,17 @@ export type ScopedOwnerCommercial = ScopedClientCommercial & {
 export function resolveFinancialAccess(input: {
   family: FinancialEndpointFamily;
   isOwner: boolean;
+  /**
+   * V1 Organization Access: when the organization role is known, the effective scope never
+   * exceeds the role's scope (production/workshop → workshop; unknown role → workshop).
+   */
+  role?: unknown;
 }): FinancialAccessScope {
   if (input.family === "workshop") {
     return "workshop";
   }
-  return input.isOwner ? "owner" : "commercial";
+  const familyScope: FinancialAccessScope = input.isOwner ? "owner" : "commercial";
+  return input.role === undefined ? familyScope : narrowFinancialScope(familyScope, input.role);
 }
 
 export function scopeCommercialPrice(
@@ -228,7 +235,8 @@ export function scopeQuoteSnapshot(
     quantities: snapshot.quantities,
     productionInput: snapshot.productionInput,
     customer: snapshot.customer,
-    seller: snapshot.seller,
+    // V1: the seller block carries bank and fiscal details; not for the workshop scope.
+    ...(access === "workshop" ? {} : { seller: snapshot.seller }),
   };
   if (commercial) {
     scoped.commercial = commercial;
@@ -288,7 +296,8 @@ export function scopeOrderSnapshot(
     quantities: snapshot.quantities,
     productionInput: snapshot.productionInput,
     customer: snapshot.customer,
-    seller: snapshot.seller,
+    // V1: the seller block carries bank and fiscal details; not for the workshop scope.
+    ...(access === "workshop" ? {} : { seller: snapshot.seller }),
   };
   if (commercial) {
     scoped.commercial = commercial;

@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import { roleCan, type OrganizationCapability } from "@workos-final/domain";
 import type { ProductSystemRuntime } from "../productSystem/runtime.js";
 import type {
   CloudMembership,
@@ -57,4 +58,21 @@ export function isOwner(c: ApiContext): boolean {
     return true;
   }
   return getCloudRole(c) === "owner";
+}
+
+/**
+ * V1 Organization Access: the single server-side authorization question. Single-plane (local,
+ * non-Cloud) runtime keeps its historical owner semantics. In Cloud, an unknown role has no
+ * capability (fail-closed; never treated as member).
+ */
+export function can(c: ApiContext, capability: OrganizationCapability): boolean {
+  if (!isCloudMode(c)) {
+    return true;
+  }
+  return roleCan(getCloudRole(c), capability);
+}
+
+/** The organization role of the request, or null outside Cloud (single-plane = owner). */
+export function organizationRole(c: ApiContext): string | null {
+  return isCloudMode(c) ? getCloudRole(c) : "owner";
 }

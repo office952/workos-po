@@ -43,7 +43,32 @@ export function isPublicCloudSessionPath(path: string): boolean {
   return PUBLIC_SESSION_PATHS.has(pathname);
 }
 
+/**
+ * V1 Organization Access: a 403 may mean the role changed or access was withdrawn while the user
+ * was working. The session is re-read (throttled); the server stays the authority.
+ */
+let cloudForbiddenHandler: UnauthorizedHandler | null = null;
+let lastForbiddenRefresh = 0;
+const FORBIDDEN_REFRESH_MS = 5_000;
+
+export function setCloudForbiddenHandler(handler: UnauthorizedHandler | null): void {
+  cloudForbiddenHandler = handler;
+}
+
+export function notifyCloudForbidden(path: string, status: number): void {
+  if (status !== 403 || isPublicCloudSessionPath(path)) {
+    return;
+  }
+  const now = Date.now();
+  if (now - lastForbiddenRefresh < FORBIDDEN_REFRESH_MS) {
+    return;
+  }
+  lastForbiddenRefresh = now;
+  cloudForbiddenHandler?.();
+}
+
 export function notifyCloudUnauthorizedUnlessPublic(path: string, status: number): void {
+  notifyCloudForbidden(path, status);
   if (status !== 401) {
     return;
   }

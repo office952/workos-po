@@ -1,7 +1,7 @@
 import type { SellerMutationError, SellerProfileInput } from "@workos-final/domain";
 import type { Hono } from "hono";
 import { getProductSystem, type ApiEnv } from "../cloud/context.js";
-import { requireOwnerRole } from "../cloud/middleware.js";
+import { requireCapability } from "../cloud/middleware.js";
 
 export function registerSellerRoutes(app: Hono<ApiEnv>): void {
   app.get("/api/seller", (c) => {
@@ -10,7 +10,7 @@ export function registerSellerRoutes(app: Hono<ApiEnv>): void {
     return c.json({ seller, configured: seller !== null });
   });
 
-  app.patch("/api/seller", requireOwnerRole(), async (c) => {
+  app.patch("/api/seller", requireCapability("org.settings.manage"), async (c) => {
     const runtime = getProductSystem(c);
     const input = readSellerInput(await c.req.json().catch(() => null));
     if (!input) {

@@ -9,12 +9,19 @@ export type CloudUserPresentation = {
 export type CloudOrganizationPresentation = {
   organizationId: string;
   displayName: string;
-  membershipRole: "owner" | "member" | null;
+  membershipRole: CloudMembershipRole | null;
+  /**
+   * V1 Organization Access: server-owned capabilities of the active role. `null` when the server
+   * does not send them (single-plane runtime): the UI then shows every module, as before.
+   */
+  capabilities?: readonly string[] | null;
 };
 
 export type CloudMembershipPresentation = {
   organizationId: string;
   displayName: string;
+  /** Romanian role label in that organization (shown in the login organization choice). */
+  roleLabel?: string | null;
 };
 
 export type CloudSessionPresentation = {
@@ -30,7 +37,13 @@ export type CloudLoginPresentation =
   | { ok: false; error: string; memberships: CloudMembershipPresentation[] };
 
 function presentRole(value: unknown): CloudMembershipRole | null {
-  return value === "owner" || value === "member" ? value : null;
+  return value === "owner" || value === "member" || value === "production" || value === "workshop"
+    ? value
+    : null;
+}
+
+function presentCapabilities(value: unknown): readonly string[] | null {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : null;
 }
 
 function presentUser(value: unknown): CloudUserPresentation | null {
@@ -53,6 +66,7 @@ function presentOrganization(value: unknown): CloudOrganizationPresentation | nu
     organizationId,
     displayName,
     membershipRole: presentRole(record?.role),
+    capabilities: presentCapabilities(record?.capabilities),
   };
 }
 
@@ -63,7 +77,11 @@ export function membershipRoleLabel(
     case "owner":
       return "Proprietar";
     case "member":
-      return "Membru";
+      return "Comercial";
+    case "production":
+      return "Producție";
+    case "workshop":
+      return "Atelier";
     case null:
     case undefined:
       return null;
@@ -89,7 +107,7 @@ export function presentCloudMemberships(value: unknown): CloudMembershipPresenta
     if (!organizationId || !displayName || !role || record.status !== "ACTIVE") {
       return [];
     }
-    return [{ organizationId, displayName }];
+    return [{ organizationId, displayName, roleLabel: membershipRoleLabel(role) }];
   });
 }
 

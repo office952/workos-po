@@ -1,6 +1,9 @@
 import type { MiddlewareHandler } from "hono";
 import { getCookie } from "hono/cookie";
+import { isScopedOrganizationRole, roleCan, type OrganizationCapability } from "@workos-final/domain";
+import { organizationRolesV1Enabled } from "./rolesFlag.js";
 import { opsLog } from "../ops/log.js";
+import { PUBLIC_ACCOUNT_PATHS } from "./publicPaths.js";
 import type { ProductSystemRuntime } from "../productSystem/runtime.js";
 import { PlaneIdentityError } from "./planeIdentity.js";
 import {
@@ -16,6 +19,8 @@ const PUBLIC_PATHS = new Set([
   "/api/cloud/login",
   "/api/cloud/session",
   "/api/cloud/logout",
+  // V1 Organization Access: single-use token flows (they authenticate with their own token).
+  ...PUBLIC_ACCOUNT_PATHS,
 ]);
 
 export function attachSinglePlaneRuntime(
@@ -78,6 +83,10 @@ export function requireCloudSession(): MiddlewareHandler<ApiEnv> {
     if (!membership) {
       return c.json({ error: "forbidden" }, 403);
     }
+    // V1 forward recovery: with WORKOS_ORG_ROLES_V1 off, the scoped roles are inactive by code.
+    if (isScopedOrganizationRole(membership.role) && !organizationRolesV1Enabled(c.get("env") ?? process.env)) {
+      return c.json({ error: "forbidden", reason: "roles_not_enabled" }, 403);
+    }
     const descriptor = controlPlane.getPlaneByOrganization(organization.organizationId);
     const registry = c.get("runtimeRegistry");
     if (!descriptor || !registry) {
@@ -116,6 +125,23 @@ export function requireOwnerRole(): MiddlewareHandler<ApiEnv> {
       return;
     }
     if (c.get("membership")?.role !== "owner") {
+      return c.json({ error: "forbidden" }, 403);
+    }
+    await next();
+  };
+}
+
+/**
+ * V1 Organization Access: route gate on an explicit capability. Outside Cloud (single-plane) it is
+ * a no-op, exactly like requireOwnerRole(). An unknown role holds no capability.
+ */
+export function requireCapability(capability: OrganizationCapability): MiddlewareHandler<ApiEnv> {
+  return async (c, next) => {
+    if (c.get("accessMode") !== "cloud") {
+      await next();
+      return;
+    }
+    if (!roleCan(c.get("membership")?.role, capability)) {
       return c.json({ error: "forbidden" }, 403);
     }
     await next();

@@ -1,0 +1,1 @@
+["GET /api/products/:productCode/quote-snapshots/:quoteSnapshotId/document|owner|body","GET /api/products/:productCode/quote-snapshots/:quoteSnapshotId/document|member|body"]

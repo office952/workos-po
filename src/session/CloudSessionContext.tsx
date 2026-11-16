@@ -32,6 +32,7 @@ import { cloudSessionScope, readRememberedCloudScope, rememberCloudScope } from 
 import {
   advanceCloudBoundaryVersion,
   restoreCloudUnauthorizedExpiry,
+  setCloudForbiddenHandler,
   setCloudUnauthorizedHandler,
   suppressCloudUnauthorizedExpiry,
 } from "./sessionExpiryBridge";
@@ -156,6 +157,16 @@ export function CloudSessionProvider({ children }: { children: ReactNode }) {
       setCloudUnauthorizedHandler(null);
     };
   }, [markSessionExpired]);
+
+  useEffect(() => {
+    // V1: a role change or a withdrawn capability shows up as 403; re-read the session.
+    setCloudForbiddenHandler(() => {
+      void refresh().catch(() => undefined);
+    });
+    return () => {
+      setCloudForbiddenHandler(null);
+    };
+  }, [refresh]);
 
   const login = useCallback(
     async (email: string, password: string, organizationId?: string) => {

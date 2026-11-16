@@ -1,6 +1,6 @@
 import type { PresentationTone } from "./foundationProof";
 
-export type OrganizationOperatingRole = "owner" | "member" | "unknown";
+export type OrganizationOperatingRole = "owner" | "member" | "production" | "unknown";
 
 export type FactLoad<T> =
   | { status: "pending" }
@@ -90,6 +90,7 @@ export function presentOrganizationOperatingPicture(
   facts: OrganizationOperatingFacts,
 ): OrganizationOperatingPicture {
   const whoCanConfigure = facts.actorRole === "owner";
+  if (facts.actorRole === "production") return presentProductionPicture(facts, hasStatus(facts, "pending"), hasStatus(facts, "error"));
   const loading = hasStatus(facts, "pending");
   const loadFailed = hasStatus(facts, "error");
   const products = facts.products.status === "ready" ? facts.products.value : null;
@@ -126,6 +127,28 @@ export function presentOrganizationOperatingPicture(
       presentAccess(),
     ],
     whoCanConfigure,
+    historyNote: HISTORY_NOTE,
+    loading,
+    loadFailed,
+    retryLabel: ORGANIZATION_RETRY_LABEL,
+  };
+}
+
+/**
+ * V1 · Producție: the start page describes what this role does (D4) — work, release, planning and
+ * supervision — never offers, prices or the commercial badge.
+ */
+function presentProductionPicture(facts: OrganizationOperatingFacts, loading: boolean, loadFailed: boolean): OrganizationOperatingPicture {
+  return {
+    actorRole: facts.actorRole,
+    heading: "Ce poți folosi acum",
+    lead: "Urmărești lucrările, trimiți în producție comenzile confirmate, stabilești prioritatea și termenul și supraveghezi execuția din Atelier.",
+    statusLabel: null,
+    statusTone: "pending",
+    roleNote: "Rol Producție: fără prețuri, costuri sau oferte. Oamenii, PIN-urile, stocul și politicile de execuție le administrează proprietarul.",
+    nextAction: { href: "/lucrari", label: "Lucrări", description: "Deschide lucrările confirmate și eliberate." },
+    capabilities: [],
+    whoCanConfigure: false,
     historyNote: HISTORY_NOTE,
     loading,
     loadFailed,
