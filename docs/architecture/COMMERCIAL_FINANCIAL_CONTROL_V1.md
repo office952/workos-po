@@ -1,6 +1,6 @@
 # Commercial & Financial Control V1
 
-Status: **implemented in review** on `feat/commercial-financial-control-v1`. Not Owner-accepted, not integrated on `main`. Synthetic data only.
+Status: integrated on `main` through PR #136 (`346c007`). Synthetic data only. Commercial Role Clarity V1 (§9) is in review on `feat/commercial-role-clarity-v1`.
 
 Owner GO: "WORKOS — COMMERCIAL AUTONOMY & FINANCIAL CONTROL V1 · OWNER GO — ONE CONSOLIDATED IMPLEMENTATION WAVE" (2026-11-16). It accepts five principles:
 1. organization offering policy;
@@ -102,7 +102,7 @@ Separate discount and adjustment operations would change the pricing formula. Th
 | Operational cost | recorded actual consumption × rate frozen at acceptance (`projectActualInternalCost`) |
 | Confirmed accounting cost | **not modelled**; always reported as such |
 | Unknown value | `null`, shown as "Necunoscut", never 0 |
-| Difference | only over resources with both a plan and recorded consumption |
+| Difference | operational − estimated, only over resources with both a plan and recorded consumption; shown with its sign and meaning ("+… peste estimare", "−… sub estimare") |
 | Estimated margin | order net price − estimated cost, only when the estimate is COMPLETE |
 | Operational margin | order net price − operational cost, only when the operational cost is COMPLETE; an operational indicator, not net profit |
 
@@ -132,3 +132,38 @@ Scope and limits:
 - Costing of recorded duration.
 - Assembly approvals and economics.
 - Invoicing.
+
+## 9. Commercial Role Clarity V1
+
+Owner GO: "WORKOS — COMMERCIAL ROLE CLARITY V1 · OWNER GO — ONE CONSOLIDATED IMPLEMENTATION WAVE" (2026-11-16). It closes the findings of the Owner & Commercial usability validation. Rights, modes, formulas and snapshots are unchanged.
+
+**Unconfirmed internal rates.** The projection is server-side, in `scopeRateAcknowledgementRequirement` and `scopeFrozenRateAcknowledgement`. Amounts were already owner-only. The rate list itself (resources, context, provenance) is now owner-only as well. The engine still evaluates the unscoped requirement.
+
+| Payload | Proprietar | Comercial | Producție / Atelier |
+| --- | --- | --- | --- |
+| Configurator, rates affect only the internal cost (`DISCLOSURE_ONLY`) | full list with amounts | `null` | `null` |
+| Configurator, rates drive the selling price (`REQUIRED`) | full list, binding | status only, `rates: []`, no binding | `null` |
+| Frozen quote acknowledgement | full record | omitted | omitted (quote refused) |
+
+**OWNER_ONLY continuation.** A user without the pricing right sees an explicit state on Configurator › Pregătire ofertă:
+- the configuration is ready, and the Proprietar sets the price;
+- who does what next, and what happens after freezing;
+- a link back to the request.
+
+The inactive "Îngheață oferta" button is no longer shown to that user. There is no hand-over action, notification or saved draft: an unfrozen configuration stays in the browser tab until a quote is frozen, and the screen says so. A server-side configuration draft per request would need its own contract (not in this wave).
+
+**Internal cost notice.** For a role without financial access, the notice is neutral ("Costul intern este vizibil doar Proprietarului") instead of an error tone.
+
+**Request decisions.** Fixes a demonstrated defect. The decision routes already let the Comercial close, reopen, resume or record a request's outcome (`requests.outcome.manage`), but the request detail projection hid those actions from every non-owner. `scopeRequestDetailProjection` now keeps the outcome actions (`SAVE_DECISIONS`, `SAVE_AND_CLOSE`, `CLOSE_OFFERLESS`, `REOPEN`, `RESUME_OFFER`) for an actor that holds that right, so they appear in "Mai multe" on the request. The following stay owner-only:
+- acceptance;
+- order creation;
+- administrative cancellation;
+- account identifiers.
+
+Producție and Atelier see none of these actions and are refused by the server.
+
+**Planificat vs realizat.**
+- Differences carry a sign and a meaning.
+- A partial operational cost is marked "nu este total final".
+- The number of resources without an operational cost is stated.
+- Formulas are unchanged, and the operational margin stays unknown while the cost is partial.

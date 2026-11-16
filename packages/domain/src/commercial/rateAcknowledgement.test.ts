@@ -135,7 +135,7 @@ describe("unconfirmed rate acknowledgement policy", () => {
     expect(eic.verificationStatus).toBe(assess(readyValues).eic.verificationStatus);
     expect(requirement.status).toBe("REQUIRED");
     expect(requirement.rates.map((rate) => rate.resourceId)).toEqual([PLEXIGLAS_3MM_OPAL_ID]);
-    const scoped = scopeRateAcknowledgementRequirement(requirement, "commercial", false);
+    const scoped = scopeRateAcknowledgementRequirement(requirement, "owner", true);
     expect((scoped?.rates as Record<string, unknown>[])[0]?.reason).toBe(
       "Valoare generată automat (AI), neconfirmată de owner",
     );
@@ -219,12 +219,41 @@ describe("unconfirmed rate acknowledgement policy", () => {
       bindingHash: requirement.bindingHash,
     });
     expect((owner?.rates as Record<string, unknown>[])[0]).toHaveProperty("amount");
-    expect(commercial).toMatchObject({ status: "REQUIRED", canAcknowledge: false, bindingHash: null });
+    expect(commercial).toMatchObject({
+      status: "REQUIRED",
+      canAcknowledge: false,
+      bindingHash: null,
+      rates: [],
+    });
     expect(JSON.stringify(commercial)).not.toContain(String(requirement.bindingHash));
-    for (const rate of commercial?.rates as Record<string, unknown>[]) {
-      expect(rate).not.toHaveProperty("amount");
-      expect(rate).not.toHaveProperty("quantity");
+    for (const rate of requirement.rates) {
+      expect(JSON.stringify(commercial)).not.toContain(rate.resourceId);
+      expect(JSON.stringify(commercial)).not.toContain(rate.label);
     }
+    expect(scopeRateAcknowledgementRequirement(requirement, "workshop", false)).toBeNull();
+  });
+
+  it("sends a commercial user nothing when the rates affect only the internal cost", () => {
+    const built = spine(vinylValues);
+    const manual = projectManualFixedProductPrice({
+      netPrice: 900,
+      internalCost: built.eic.total,
+      internalCostCompleteness: built.eic.completeness,
+    });
+    const requirement = assessRateAcknowledgement({
+      organizationId: "org-alpha",
+      requestId: null,
+      truth: built.truth,
+      aggregate: built.aggregate,
+      composition: built.composition,
+      costEvidenceRows: built.evidenceRows,
+      commercial: manual,
+    });
+    expect(requirement.status).toBe("DISCLOSURE_ONLY");
+    const owner = scopeRateAcknowledgementRequirement(requirement, "owner", true);
+    expect(owner).toMatchObject({ status: "DISCLOSURE_ONLY" });
+    expect((owner?.rates as unknown[]).length).toBe(requirement.rates.length);
+    expect(scopeRateAcknowledgementRequirement(requirement, "commercial", false)).toBeNull();
     expect(scopeRateAcknowledgementRequirement(requirement, "workshop", false)).toBeNull();
   });
 });
@@ -300,7 +329,7 @@ describe("acknowledged quote snapshot", () => {
     expect(refused.ok).toBe(false);
   });
 
-  it("projects the acknowledgement to commercial users without amounts", () => {
+  it("projects the frozen acknowledgement to the owner only (Commercial Role Clarity V1)", () => {
     const { truth, aggregate, composition, eic, commercial, requirement } = assess(vinylValues);
     const decision = acknowledge(requirement);
     if (!decision.ok || !decision.acknowledgement) {
@@ -313,12 +342,14 @@ describe("acknowledged quote snapshot", () => {
     if (!frozen.ok) {
       throw new Error("expected frozen snapshot");
     }
+    const owner = scopeQuoteSnapshot(frozen.snapshot, "owner") as Record<string, unknown>;
+    const ownerAck = owner.rateAcknowledgement as Record<string, unknown>;
+    expect(ownerAck).toMatchObject({ acknowledgedByUserId: "user-owner" });
+    expect(ownerAck).not.toHaveProperty("bindingHash");
+    expect((ownerAck.rates as Record<string, unknown>[])[0]).toHaveProperty("amount");
     const scoped = scopeQuoteSnapshot(frozen.snapshot, "commercial") as Record<string, unknown>;
-    const ack = scoped.rateAcknowledgement as Record<string, unknown>;
-    expect(ack).toMatchObject({ acknowledgedByUserId: "user-owner" });
-    expect(ack).not.toHaveProperty("bindingHash");
-    for (const rate of ack.rates as Record<string, unknown>[]) {
-      expect(rate).not.toHaveProperty("amount");
-    }
+    expect(scoped).not.toHaveProperty("rateAcknowledgement");
+    expect(JSON.stringify(scoped)).not.toContain("user-owner");
+    expect(scopeQuoteSnapshot(frozen.snapshot, "workshop")).not.toHaveProperty("rateAcknowledgement");
   });
 });

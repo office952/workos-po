@@ -13,7 +13,7 @@ import {
 } from "@workos-final/domain";
 import type { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { getProductSystem, type ApiContext, type ApiEnv } from "../cloud/context.js";
+import { can, getProductSystem, type ApiContext, type ApiEnv } from "../cloud/context.js";
 import { requireCapability } from "../cloud/middleware.js";
 import { financialAccess, scopedRequestDetail } from "../financial/access.js";
 import { httpPathIdentity } from "../httpPathIdentity.js";
@@ -23,6 +23,7 @@ function requestDetailFor(c: ApiContext, requestId: string) {
   const detail = scopedRequestDetail(
     getProductSystem(c).readRequestDetail(requestId),
     financialAccess(c, "commercial"),
+    can(c, "requests.outcome.manage"),
   );
   if (!detail) {
     return null;

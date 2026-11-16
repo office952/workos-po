@@ -35,6 +35,33 @@ function money(value: number | null, currency: string): string {
   return value === null ? "Necunoscut" : formatMoney(value, currency);
 }
 
+/**
+ * Commercial Role Clarity V1 · the server difference is operational − estimated, per resource with
+ * both a plan and recorded consumption. The sign and its meaning are written out, never implied.
+ */
+export function differenceView(value: number | null, currency: string): { amount: string; meaning: string | null } {
+  if (value === null) {
+    return { amount: "Necunoscut", meaning: null };
+  }
+  if (value > 0) {
+    return { amount: `+${formatMoney(value, currency)}`, meaning: "peste estimare" };
+  }
+  if (value < 0) {
+    return { amount: `−${formatMoney(Math.abs(value), currency)}`, meaning: "sub estimare" };
+  }
+  return { amount: formatMoney(0, currency), meaning: "egal cu estimarea" };
+}
+
+function LineDifference({ value, currency }: { value: number | null; currency: string }) {
+  const view = differenceView(value, currency);
+  return (
+    <>
+      {view.amount}
+      {view.meaning && value !== 0 ? <><br /><small>{view.meaning}</small></> : null}
+    </>
+  );
+}
+
 function quantity(value: number | null, unit: string): string {
   return value === null ? "—" : `${value.toLocaleString("ro-RO")} ${unit}`;
 }
@@ -44,6 +71,9 @@ function EconomicsBody({ model }: { model: JobEconomicsModel }) {
     return <p className="adm-context__text">{model.reason}</p>;
   }
   const currency = model.currency;
+  const totalDifference = differenceView(model.differenceFromEstimate, currency);
+  const operationalPartial = model.operationalTotal !== null && model.operationalCompleteness !== "COMPLETE";
+  const missingLines = model.lines.filter((line) => line.operationalCost === null).length;
   return (
     <div className="cfc-pva" data-testid="job-economics">
       <p className="adm-context__text">
@@ -73,12 +103,14 @@ function EconomicsBody({ model }: { model: JobEconomicsModel }) {
             {model.calculableCount + model.unavailableCount > 0
               ? ` · ${model.calculableCount} din ${model.calculableCount + model.unavailableCount} resurse cu consum`
               : ""}
+            {operationalPartial ? " · nu este total final" : ""}
           </small>
         </div>
         <div className="cfc-pva__figure">
           <dt>Diferență față de estimare (resurse comparabile)</dt>
-          <dd>{money(model.differenceFromEstimate, currency)}</dd>
+          <dd>{totalDifference.amount}</dd>
           <small>
+            {totalDifference.meaning ? `Cost operațional ${totalDifference.meaning} · ` : ""}
             {model.plannedComparableTotal !== null ? `Estimat comparabil: ${formatMoney(model.plannedComparableTotal, currency)}` : "Fără resurse comparabile încă"}
           </small>
         </div>
@@ -98,6 +130,15 @@ function EconomicsBody({ model }: { model: JobEconomicsModel }) {
           <small>{model.confirmedCostLabel}</small>
         </div>
       </dl>
+      {missingLines > 0 ? (
+        <p className="adm-context__text" data-testid="job-economics-incomplete">
+          {missingLines === 1
+            ? "O resursă nu are încă un cost operațional"
+            : `${missingLines} resurse nu au încă un cost operațional`}{" "}
+          (marcate „Necunoscut” în tabel). Costul operațional și marja operațională devin complete
+          când toate resursele au consum înregistrat.
+        </p>
+      ) : null}
       {model.lines.length > 0 ? (
         <div className="cfc-pva__table-wrap" role="region" aria-label="Resurse planificate și consumate" tabIndex={0}>
           <table className="cfc-pva__table">
@@ -122,7 +163,9 @@ function EconomicsBody({ model }: { model: JobEconomicsModel }) {
                   <td>{quantity(line.actualQuantity, line.unit)}</td>
                   <td>{money(line.plannedCost, currency)}</td>
                   <td>{money(line.operationalCost, currency)}</td>
-                  <td>{money(line.difference, currency)}</td>
+                  <td>
+                    <LineDifference value={line.difference} currency={currency} />
+                  </td>
                 </tr>
               ))}
             </tbody>

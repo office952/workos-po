@@ -250,6 +250,55 @@ describe("JobEconomicsPanel", () => {
     expect(screen.queryByText(/^0,00/)).not.toBeInTheDocument();
   });
 
+  it("writes the sign and meaning of every difference and marks a partial operational cost", async () => {
+    const line = (resourceId: string, plannedCost: number, operationalCost: number | null, difference: number | null) => ({
+      resourceId,
+      label: resourceId,
+      unit: "buc",
+      plannedQuantity: 1,
+      actualQuantity: operationalCost === null ? null : 1,
+      plannedCost,
+      operationalCost,
+      difference,
+      statusLabel: "",
+      unknownReason: operationalCost === null ? "Fără consum înregistrat" : null,
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        jsonResponse({
+          available: true,
+          economics: {
+            currency: "EUR",
+            scopeLabel: "Litere",
+            excludedScopeLabel: null,
+            revenue: { netPrice: 1000, label: "Preț net din comanda acceptată (fără TVA)" },
+            estimatedCost: { total: 30, completeness: "COMPLETE", completenessLabel: "Complet", acceptedIncomplete: false },
+            operationalCost: { calculableTotal: 25, plannedComparableTotal: 20, differenceFromEstimate: 5, completeness: "PARTIAL", completenessLabel: "Parțial", calculableCount: 2, unavailableCount: 1 },
+            confirmedCost: { status: "NOT_MODELLED", label: "Nu este înregistrat." },
+            estimatedMargin: { value: 970, unavailableReason: null },
+            operationalMargin: { value: null, unavailableReason: "Costul operațional este parțial." },
+            executionLabel: "Execuție finalizată",
+            lines: [line("Peste", 10, 18, 8), line("Sub", 10, 7, -3), line("Lipsă", 10, null, null)],
+            notes: [],
+          },
+        }),
+      ),
+    );
+    render(<JobEconomicsPanel jobId="ord:3" />);
+    expect(await screen.findByTestId("job-economics")).toBeInTheDocument();
+    expect(screen.getByText(/^\+5,00/)).toBeInTheDocument();
+    expect(screen.getByText(/Cost operațional peste estimare/)).toBeInTheDocument();
+    expect(screen.getByText(/nu este total final/)).toBeInTheDocument();
+    expect(screen.getByText(/^\+8,00/)).toBeInTheDocument();
+    expect(screen.getByText("peste estimare")).toBeInTheDocument();
+    expect(screen.getByText(/^−3,00/)).toBeInTheDocument();
+    expect(screen.getByText("sub estimare")).toBeInTheDocument();
+    expect(screen.getByTestId("job-economics-incomplete")).toHaveTextContent("O resursă nu are încă un cost operațional");
+    // The operational margin stays unknown while the operational cost is partial.
+    expect(screen.getByText("Costul operațional este parțial.")).toBeInTheDocument();
+  });
+
   it("renders nothing for a role without the internal cost right", async () => {
     vi.stubGlobal("fetch", vi.fn(() => jsonResponse({ error: "forbidden" }, 403)));
     const { container } = render(<JobEconomicsPanel jobId="ord:2" />);
