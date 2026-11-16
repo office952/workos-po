@@ -104,10 +104,16 @@ export const NAV_CAPABILITY: Readonly<Record<string, string>> = {
 export function visibleNavGroups(capabilities: readonly string[] | null): readonly GlobalNavGroup[] {
   if (!capabilities) return GLOBAL_NAV;
   const held = new Set(capabilities);
-  return GLOBAL_NAV.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => !NAV_CAPABILITY[item.id] || held.has(NAV_CAPABILITY[item.id])),
-  })).filter((group) => group.items.length > 0);
+  return GLOBAL_NAV.map((group) => {
+    const items = group.items.filter((item) => !NAV_CAPABILITY[item.id] || held.has(NAV_CAPABILITY[item.id]));
+    // A narrowed group describes only what remains (e.g. Producție: "Clienți și Cereri."), never the hidden modules.
+    return items.length === group.items.length ? group : { ...group, items, summary: `${joinLabels(items.map((item) => item.label))}.` };
+  }).filter((group) => group.items.length > 0);
+}
+
+function joinLabels(labels: readonly string[]): string {
+  if (labels.length <= 1) return labels.join("");
+  return `${labels.slice(0, -1).join(", ")} și ${labels[labels.length - 1]}`;
 }
 
 export function globalNavItems(): readonly GlobalNavItem[] {

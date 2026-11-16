@@ -21,6 +21,14 @@ describe("V1 navigation reflects server capabilities", () => {
     expect(ids(production)).toContain("jobs");
   });
 
+  it("a narrowed group describes only what remains (no hidden module in the summary)", () => {
+    const production = ["org.settings.read", "customers.read", "requests.read", "jobs.read", "execution.operate"];
+    const commercial = visibleNavGroups(production).find((group) => group.items.some((item) => item.id === "clients"));
+    expect(commercial?.summary).toBe("Clienți și Cereri.");
+    // Full groups (owner/member, or no capabilities) keep their original summary.
+    expect(visibleNavGroups(null).find((group) => group.items.some((item) => item.id === "clients"))?.summary).toBe("Clienți, cereri și oferte.");
+  });
+
   it("maps routes to the capability the page needs", () => {
     expect(routeCapability(parseAppRoute("/oferte"))).toBe("quotes.read");
     expect(routeCapability(parseAppRoute("/admin/access"))).toBe("org.access.read");

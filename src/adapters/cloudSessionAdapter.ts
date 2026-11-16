@@ -20,6 +20,8 @@ export type CloudOrganizationPresentation = {
 export type CloudMembershipPresentation = {
   organizationId: string;
   displayName: string;
+  /** Romanian role label in that organization (shown in the login organization choice). */
+  roleLabel?: string | null;
 };
 
 export type CloudSessionPresentation = {
@@ -105,7 +107,7 @@ export function presentCloudMemberships(value: unknown): CloudMembershipPresenta
     if (!organizationId || !displayName || !role || record.status !== "ACTIVE") {
       return [];
     }
-    return [{ organizationId, displayName }];
+    return [{ organizationId, displayName, roleLabel: membershipRoleLabel(role) }];
   });
 }
 

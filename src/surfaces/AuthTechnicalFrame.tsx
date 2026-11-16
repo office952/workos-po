@@ -467,16 +467,21 @@ function AuthAccessForm(input: {
       </FieldFrame>
 
       {input.choices ? (
-        <SelectField
-          id="cloud-organization"
-          label="Organizație"
-          value={input.organizationId}
-          options={input.choices.map((item) => ({
-            value: item.organizationId,
-            label: item.displayName,
-          }))}
-          onChange={input.onOrganization}
-        />
+        <div className="auth-tech__form-head" role="group" aria-labelledby="cloud-organization-step">
+          <p id="cloud-organization-step" className="auth-gate__lead" role="status">
+            Contul tău are acces la {input.choices.length} organizații. Alege în care lucrezi acum; o poți schimba oricând din meniul Cont.
+          </p>
+          <SelectField
+            id="cloud-organization"
+            label="Organizație"
+            value={input.organizationId}
+            options={input.choices.map((item) => ({
+              value: item.organizationId,
+              label: item.roleLabel ? `${item.displayName} · ${item.roleLabel}` : item.displayName,
+            }))}
+            onChange={input.onOrganization}
+          />
+        </div>
       ) : null}
 
       {input.error ? (
@@ -492,7 +497,7 @@ function AuthAccessForm(input: {
           disabled={input.busy}
           aria-busy={input.busy || undefined}
         >
-          {input.busy ? "Se autentifică…" : "Autentificare"}
+          {input.busy ? "Se autentifică…" : input.choices ? "Continuă" : "Autentificare"}
         </Button>
         {/* V1 Organization Access: self-service recovery entry (the page explains the pilot path). */}
         <a className="text-link auth-tech__forgot" href="/resetare-parola">

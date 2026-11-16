@@ -100,3 +100,15 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Registry rows on this page: identity (with its state as text) + actions. Rows without actions
+   (last owner, read-only views) keep the same identity column, so nothing shifts sideways. */
+.adm-member.acc-member {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+@media (max-width: 600px) {
+  .adm-member.acc-member {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

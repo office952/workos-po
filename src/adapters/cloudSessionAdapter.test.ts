@@ -61,7 +61,7 @@ describe("presentCloudSession", () => {
         membershipRole: "owner",
         capabilities: null,
       },
-      memberships: [{ organizationId: "org:a", displayName: "Atelier Alpha" }],
+      memberships: [{ organizationId: "org:a", displayName: "Atelier Alpha", roleLabel: "Proprietar" }],
     });
     expect(JSON.stringify(presented)).not.toContain("sess:secret");
     expect(JSON.stringify(presented)).not.toContain("usr:1");
@@ -92,7 +92,7 @@ describe("presentCloudSession", () => {
       ],
     });
     expect(presented.memberships).toEqual([
-      { organizationId: "org:a", displayName: "Atelier Alpha" },
+      { organizationId: "org:a", displayName: "Atelier Alpha", roleLabel: "Proprietar" },
     ]);
   });
 });
@@ -124,8 +124,8 @@ describe("presentCloudLoginResult", () => {
       ok: false,
       error: "organization_selection_required",
       memberships: [
-        { organizationId: "org:a", displayName: "Atelier Alpha" },
-        { organizationId: "org:b", displayName: "Atelier Beta" },
+        { organizationId: "org:a", displayName: "Atelier Alpha", roleLabel: "Proprietar" },
+        { organizationId: "org:b", displayName: "Atelier Beta", roleLabel: "Proprietar" },
       ],
     });
   });

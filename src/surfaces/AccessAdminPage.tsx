@@ -140,18 +140,19 @@ export function AccessAdminPage() {
 
   function memberRow(member: OrganizationAccessMember) {
     return (
-      <li key={member.membershipId} className="adm-member" data-muted={!member.active || undefined}>
+      <li key={member.membershipId} className="adm-member acc-member" data-muted={!member.active || undefined}>
         <span className="adm-member__identity">
           <strong>{member.email}</strong>
+          {/* A state is plain text in the detail line (not a pill that reads like a button). "Activ" is implied by the list. */}
           <span>
             {member.roleLabel} · de la {formatTimestamp(member.createdAt)}
             {member.active && !member.emailVerified ? " · email neverificat" : ""}
+            {member.statusLabel !== "Activ" ? ` · ${member.statusLabel}` : ""}
           </span>
           {member.lastActiveOwner ? (
             <span className="acc-note">Ultimul proprietar activ: nu poate fi revocat sau retrogradat.</span>
           ) : null}
         </span>
-        <span className="adm-chip">{member.statusLabel}</span>
         {canManage && member.active && !member.lastActiveOwner ? (
           <span className="adm-member__actions">
             <Button
@@ -182,16 +183,15 @@ export function AccessAdminPage() {
 
   function invitationRow(invitation: OrganizationAccessInvitation) {
     return (
-      <li key={invitation.invitationId} className="adm-member">
+      <li key={invitation.invitationId} className="adm-member acc-member">
         <span className="adm-member__identity">
           <strong>{invitation.email}</strong>
           <span>
             {invitation.roleLabel} · expiră {formatTimestamp(invitation.expiresAt)}
             {invitation.createdByEmail ? ` · trimisă de ${invitation.createdByEmail}` : ""}
+            {invitation.deliveryStatus === "FAILED" ? "" : ` · ${invitation.deliveryLabel.toLowerCase()}`}
           </span>
-        </span>
-        <span className="adm-chip" data-tone={invitation.deliveryStatus === "FAILED" ? "warning" : undefined}>
-          {invitation.deliveryLabel}
+          {invitation.deliveryStatus === "FAILED" ? <span className="acc-note">{invitation.deliveryLabel}.</span> : null}
         </span>
         <span className="adm-member__actions">
           <Button

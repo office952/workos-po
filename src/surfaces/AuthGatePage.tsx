@@ -132,7 +132,7 @@ export function AuthGatePage({ kind, returnPath = "/" }: AuthGatePageProps) {
       if (result.error === "organization_selection_required" && result.memberships.length > 0) {
         setChoices(result.memberships);
         setOrganizationId(result.memberships[0]?.organizationId ?? "");
-        setError("Alege organizația pentru acest cont.");
+        // V1: choosing the organization is an expected step (explained in the form), not an error.
         return;
       }
       setError(loginErrorLabel(result.error));

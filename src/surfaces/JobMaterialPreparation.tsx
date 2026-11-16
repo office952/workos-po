@@ -23,6 +23,8 @@ type Props = {
   returnTo?: string;
   /** Finished-job consultation: keep recorded checks and requests, without production next-step prompts. */
   consultation?: boolean;
+  /** V1: the server allows material decisions only with `materials.decide` (not Atelier). */
+  canDecide?: boolean;
 };
 
 function displayQuantity(value: number): string {
@@ -50,7 +52,7 @@ function estimatedLabel(line: JobMaterialLineTransport, jobTotal: boolean): stri
     : "Necesar estimat: " + quantity;
 }
 
-export function JobMaterialPreparation({ jobId, onlyResourceIds, returnTo, consultation = false }: Props) {
+export function JobMaterialPreparation({ jobId, onlyResourceIds, returnTo, consultation = false, canDecide = true }: Props) {
   const key = resourceKeys.jobMaterialPreparation(jobId);
   const resource = useResource(key, () => fetchJobMaterialPreparation(jobId));
   const session = useResource(resourceKeys.operatorSession(), loadOperatorSession);
@@ -163,7 +165,7 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds, returnTo, consu
                         displayWhen(line.openRequest.requestedAt) + ". Nu este o comandă."}
                   </p>
                 ) : null}
-                {!consultation && line.canCheck && personName ? (
+                {!consultation && canDecide && line.canCheck && personName ? (
                   <div className="job-materials__actions">
                     <Button
                       variant="secondary"
@@ -186,7 +188,7 @@ export function JobMaterialPreparation({ jobId, onlyResourceIds, returnTo, consu
               </article>
             );
           })}
-          {consultation ? null : !personName ? (
+          {consultation || !canDecide ? null : !personName ? (
             <p className="ui-note">
               Verificarea și solicitarea necesită identificarea personală a operatorului.{" "}
               <a className="text-link" href={atelierHref({ jobId, returnTo })}>

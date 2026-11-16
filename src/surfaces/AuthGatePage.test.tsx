@@ -162,8 +162,12 @@ describe("AuthGatePage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Autentificare" }));
 
     expect(await screen.findByLabelText("Organizație")).toBeInTheDocument();
-    expect(screen.getByText("Alege organizația pentru acest cont.")).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Atelier Alpha" })).toBeInTheDocument();
+    // V1 · E: an expected step, explained — not an error alert.
+    expect(screen.getByText(/Contul tău are acces la 2 organizații/)).toBeInTheDocument();
+    expect(screen.queryByText("Autentificarea nu a reușit")).toBeNull();
+    expect(screen.getByRole("option", { name: "Atelier Alpha · Proprietar" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Atelier Beta · Comercial" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continuă" })).toBeEnabled();
   });
 
   it("keeps missing Cloud config distinct from invalid credentials", () => {

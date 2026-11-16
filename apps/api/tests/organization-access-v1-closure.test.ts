@@ -1,7 +1,7 @@
 import { mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CANONICAL_PRODUCT_CODE } from "@workos-final/domain";
+import { CANONICAL_PRODUCT_CODE, OWNER_CONFIRMED_SELLER } from "@workos-final/domain";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resetAccessRateLimits } from "../src/cloud/accessLifecycle.js";
 import { parseTrustedProxies, resolveClientAddress, UNKNOWN_CLIENT_ADDRESS } from "../src/cloud/clientAddress.js";
@@ -17,6 +17,7 @@ import {
   OWNER_PASSWORD,
   type CloudFixture,
 } from "./cloud-harness.js";
+import { freezeAcknowledgingRates } from "./fixtures/rateAcknowledgement.js";
 
 /**
  * V1 Organization Access — acceptance closure (Owner GO, points C, D, F).
@@ -156,6 +157,60 @@ describe("F · neutral password-recovery answers", () => {
     const median = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)];
     // Single local measurement, recorded for the report; no statistical guarantee is asserted.
     console.log(`F_TIMING_MEDIAN_MS ${JSON.stringify(Object.fromEntries(cases.map((email, i) => [email.split("@")[0], Number(median(answers[i].ms).toFixed(1))])))}`);
+    fixture.close();
+  });
+});
+
+describe("A (final wave) · production release follows production.release and the existing eligibility", () => {
+  it("Producție releases an eligible confirmed order; Comercial and Atelier are refused; unknown or repeated is handled", async () => {
+    const fixture = createCloudFixture({ env: { NODE_ENV: "test", WORKOS_ORG_ROLES_V1: "on" } });
+    const { organization } = await addOrganization(fixture, "Firma A");
+    await addUser(fixture, { email: "owner@a.test", password: OWNER_PASSWORD, organizationId: organization.organizationId, role: "owner" });
+    await addUser(fixture, { email: "member@a.test", password: MEMBER_PASSWORD, organizationId: organization.organizationId, role: "member" });
+    const ownerCookie = (await loginCloud(fixture.app, "owner@a.test", OWNER_PASSWORD)).cookie as string;
+    const memberCookie = (await loginCloud(fixture.app, "member@a.test", MEMBER_PASSWORD)).cookie as string;
+    const accept = async (email: string, role: string) => {
+      const invited = await call(fixture, ownerCookie, "POST", "/api/admin/access/invitations", { email, role });
+      const token = decodeURIComponent(String(invited.json?.inviteUrl).split("#t=")[1]);
+      const accepted = await call(fixture, null, "POST", "/api/cloud/invitations/accept", { token, mode: "new", password: "ParolaNoua123" });
+      expect(accepted.status).toBe(200);
+      return cloudCookie(accepted.response) as string;
+    };
+    const production = await accept("productie@a.test", "production");
+    const workshop = await accept("atelier@a.test", "workshop");
+
+    // A confirmed, not yet released order (owner path, existing commercial rules; synthetic seller).
+    const { legalName, brand, fiscalId, tradeRegister, address, locality, iban, bank } = OWNER_CONFIRMED_SELLER;
+    expect((await call(fixture, ownerCookie, "PATCH", "/api/seller", { legalName, brand, fiscalId, tradeRegister, address, locality, iban, bank })).status).toBe(200);
+    const values = { "root.inscription": "ELIBERARE", "face.finish": "none", "face.confirmedAreaMm2": 250000, "volume.depthMm": "60", "volume.finish": "none", "volume.confirmedPerimeterMm": 12500 };
+    const reviewed = await call(fixture, ownerCookie, "POST", `/api/products/${CANONICAL_PRODUCT_CODE}/preview`, { values });
+    const customer = await call(fixture, ownerCookie, "POST", "/api/customers", { displayName: "Client eliberare" });
+    const frozen = await freezeAcknowledgingRates(
+      (body) => fixture.app.request(`/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots`, { method: "POST", headers: { origin: ORIGIN, cookie: ownerCookie, "content-type": "application/json" }, body: JSON.stringify(body) }),
+      { values, reviewId: reviewed.json?.reviewId, manualProductNetPrice: 400, customerId: (customer.json?.customer as Json).customerId },
+    );
+    expect(frozen.status, JSON.stringify(await frozen.clone().json())).toBe(200);
+    const quoteId = String(((await frozen.json()) as { quoteSnapshot: Json }).quoteSnapshot.quoteSnapshotId);
+    const order = await call(fixture, ownerCookie, "POST", `/api/products/${CANONICAL_PRODUCT_CODE}/quote-snapshots/${encodeURIComponent(quoteId)}/confirm-order`);
+    const jobId = String((order.json?.orderSnapshot as Json).orderSnapshotId);
+    const release = (cookie: string, id = jobId) => call(fixture, cookie, "POST", `/api/jobs/${encodeURIComponent(id)}/production`);
+
+    // Refused: roles without production.release (the stage is eligible, the role is not).
+    expect((await release(memberCookie)).status).toBe(403);
+    expect((await release(workshop)).status).toBe(403);
+    // The job sheet data a Producție user reads before releasing: confirmed order, no plan yet.
+    const before = await call(fixture, production, "GET", `/api/jobs/${encodeURIComponent(jobId)}`);
+    expect(before.status).toBe(200);
+    expect((before.json?.execution as Json | null)?.planId ?? null).toBeNull();
+    // Permitted: Producție releases through the same route and rules as the owner.
+    const released = await release(production);
+    expect(released.status).toBe(200);
+    expect(released.json?.created).toBe(true);
+    // Repeated release is idempotent (no second plan); an unknown order is not eligible.
+    const again = await release(production);
+    expect(again.status).toBe(200);
+    expect(again.json?.created).toBe(false);
+    expect((await release(production, "ord:missing")).status).toBe(404);
     fixture.close();
   });
 });

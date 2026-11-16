@@ -11,3 +11,24 @@ export function capabilityAllows(capabilities: readonly string[] | null | undefi
 export function sessionCapabilities(cloud: { mode: string; organization?: { capabilities?: readonly string[] | null } | null }): readonly string[] | null {
   return cloud.mode === "cloud" ? cloud.organization?.capabilities ?? null : null;
 }
+
+type CapabilitySession = {
+  ready: boolean;
+  unavailable: boolean;
+  mode: string;
+  organization?: { membershipRole?: string | null; capabilities?: readonly string[] | null } | null;
+};
+
+/**
+ * Whether the signed-in session may perform an action guarded by `capability` on the server.
+ * Single-plane keeps its full local access; a Cloud session uses the server capability list; a
+ * server that sends no capabilities (pre-V1) keeps the previous owner-only rule. This only decides
+ * what the UI offers — the API checks the same capability on every call.
+ */
+export function sessionHasCapability(session: CapabilitySession, capability: string): boolean {
+  if (!session.ready || session.unavailable) return false;
+  if (session.mode === "single_plane") return true;
+  const capabilities = session.organization?.capabilities;
+  if (Array.isArray(capabilities)) return capabilities.includes(capability);
+  return session.organization?.membershipRole === "owner";
+}

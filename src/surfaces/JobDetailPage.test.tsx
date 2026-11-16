@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { resetResourceCache } from '../data/resourceCache';
 import { jobRecordFixture } from '../test/jobRecordFixture';
 import { JobDetailPage } from './JobDetailPage';
-const cloud = vi.hoisted(() => ({ ready: true, unavailable: false, mode: 'single_plane' as string, user: null as { email?: string } | null, organization: null as { organizationId?: string; membershipRole?: string } | null }));
+const cloud = vi.hoisted(() => ({ ready: true, unavailable: false, mode: 'single_plane' as string, user: null as { email?: string } | null, organization: null as { organizationId?: string; membershipRole?: string; capabilities?: string[] | null } | null }));
 vi.mock('../session/CloudSessionContext', () => ({ useCloudSession: () => cloud }));
 afterEach(() => { vi.unstubAllGlobals(); resetResourceCache(); cloud.mode = 'single_plane'; cloud.organization = null; cloud.ready = true; cloud.unavailable = false; });
 const openIssue = {
@@ -135,7 +135,41 @@ describe('job record page', () => {
     cloud.organization = { organizationId: 'org-1', membershipRole: 'member' };
     rerender(<JobDetailPage jobId="job-1"/>);
     expect(screen.queryByRole('button', { name: 'Trimite în producție' })).toBeNull();
-    expect(screen.getByText(/proprietarul organizației/)).toBeVisible();
+    expect(screen.getByText(/Trimiterea în producție o face Proprietarul sau Producția/)).toBeVisible();
+  });
+  // V1 final wave · A/C: actions follow the server capabilities of the active role.
+  const PRODUCTION_CAPS = ['org.settings.read', 'resources.read', 'customers.read', 'requests.read', 'planning.read', 'planning.manage', 'production.release', 'jobs.read', 'jobs.files.write', 'execution.operate', 'execution.supervise', 'materials.decide', 'inventory.read'];
+  const WORKSHOP_CAPS = ['jobs.read', 'execution.operate'];
+  const MEMBER_CAPS = ['org.access.read', 'org.settings.read', 'resources.read', 'customers.read', 'customers.write', 'customers.financials.read', 'customers.terms.read', 'requests.read', 'requests.write', 'configurator.use', 'assemblies.read', 'prices.client.read', 'quotes.read', 'quotes.create', 'planning.read', 'jobs.read', 'jobs.files.write', 'execution.operate', 'materials.decide', 'inventory.read'];
+  it('lets Producție release an eligible order and edit planning, without the owner-only hold text', async () => {
+    fixture({ unreleased: true });
+    cloud.mode = 'cloud';
+    cloud.organization = { organizationId: 'org-1', membershipRole: 'production', capabilities: PRODUCTION_CAPS };
+    render(<JobDetailPage jobId="job-1"/>);
+    expect(await screen.findByRole('button', { name: 'Trimite în producție' })).toBeEnabled();
+    expect(screen.queryByText(/Trimiterea în producție o face/)).toBeNull();
+    expect(screen.getByRole('link', { name: 'Modifică în Date lucrare' })).toBeVisible();
+  });
+  it('offers Atelier no release, no planning edit, no material decision and no commercial source', async () => {
+    fixture({ unreleased: true });
+    cloud.mode = 'cloud';
+    cloud.organization = { organizationId: 'org-1', membershipRole: 'workshop', capabilities: WORKSHOP_CAPS };
+    render(<JobDetailPage jobId="job-1" section="date"/>);
+    expect(await screen.findByRole('heading', { name: 'Datele lucrării' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Trimite în producție' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Modifică în Date lucrare' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Prioritatea și termenul' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Sursă comercială acceptată' })).toBeNull();
+    expect(screen.getByText(/Trimiterea în producție o face Proprietarul sau Producția/)).toBeVisible();
+  });
+  it('no longer offers Comercial a planning editor the server refuses (planning.manage)', async () => {
+    fixture();
+    cloud.mode = 'cloud';
+    cloud.organization = { organizationId: 'org-1', membershipRole: 'member', capabilities: MEMBER_CAPS };
+    render(<JobDetailPage jobId="job-1" section="date"/>);
+    expect(await screen.findByRole('heading', { name: 'Datele lucrării' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Prioritatea și termenul' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Sursă comercială acceptată' })).toBeVisible();
   });
   it('shows an incomplete plan as recoverable, without claiming the workshop has started', async () => {
     fixture({ releasedWithoutPlan: true });

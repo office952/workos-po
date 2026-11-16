@@ -184,15 +184,19 @@ export function AccountSecurityPage() {
         <section className="acct-section" aria-labelledby="acct-sessions">
           <h2 id="acct-sessions">Sesiuni active</h2>
           <ul className="acct-list">
-            {data.sessions.map((session) => (
-              <li key={`${session.createdAt}-${session.current}`}>
-                <span>{session.current ? "Această sesiune" : "Altă sesiune"}</span>
-                <span>
-                  începută {formatTimestamp(session.createdAt)} · expiră după 12 ore
-                </span>
-              </li>
-            ))}
+            {/* Current session first; the others are numbered and show their last activity so they can be told apart. */}
+            {[...data.sessions]
+              .sort((a, b) => Number(b.current) - Number(a.current) || b.lastSeenAt.localeCompare(a.lastSeenAt))
+              .map((session, index) => (
+                <li key={`${session.createdAt}-${session.current}-${index}`}>
+                  <span>{session.current ? "Această sesiune (dispozitivul curent)" : `Altă sesiune ${index}`}</span>
+                  <span>
+                    începută {formatTimestamp(session.createdAt)} · ultima activitate {formatTimestamp(session.lastSeenAt)}
+                  </span>
+                </li>
+              ))}
           </ul>
+          <p className="acct-hint">Fiecare sesiune expiră după 12 ore. Dispozitivul nu este înregistrat; închide celelalte sesiuni dacă nu le recunoști.</p>
           {others > 0 ? (
             <Button
               variant="secondary"
@@ -205,7 +209,7 @@ export function AccountSecurityPage() {
                 });
               }}
             >
-              Închide celelalte sesiuni
+              {others === 1 ? "Închide cealaltă sesiune" : `Închide celelalte ${others} sesiuni`}
             </Button>
           ) : null}
         </section>

@@ -63,5 +63,5 @@ export function presentReleaseHold(input: {
   if (!input.sessionKnown || input.canRelease || input.finished || input.planId) {
     return null;
   }
-  return "Trimiterea în producție o face proprietarul organizației. Poți consulta fișa; lucrarea ajunge în Atelier după această pregătire.";
+  return "Trimiterea în producție o face Proprietarul sau Producția. Poți consulta fișa; lucrarea ajunge în Atelier după această pregătire.";
 }

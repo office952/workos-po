@@ -270,13 +270,29 @@ function PasswordResetPage() {
   );
 }
 
+/**
+ * The verification token is single-use on the server. A component may run its effect more than once
+ * (React StrictMode in development, a remount): every run for the same token shares ONE request, so
+ * a genuine success is never followed by a contradictory "link expired". A new page load sends a
+ * new request and the server stays the authority (a used token answers 410).
+ */
+const emailVerificationAttempts = new Map<string, Promise<boolean>>();
+function verifyEmailTokenOnce(token: string): Promise<boolean> {
+  let attempt = emailVerificationAttempts.get(token);
+  if (!attempt) {
+    attempt = completeEmailVerification(token).then((result) => result.ok, () => false);
+    emailVerificationAttempts.set(token, attempt);
+  }
+  return attempt;
+}
+
 function EmailVerificationPage() {
   const token = readToken();
   const [state, setState] = useState<"pending" | "done" | "unavailable">("pending");
   useEffect(() => {
     let cancelled = false;
-    void completeEmailVerification(token).then((result) => {
-      if (!cancelled) setState(result.ok ? "done" : "unavailable");
+    void verifyEmailTokenOnce(token).then((ok) => {
+      if (!cancelled) setState(ok ? "done" : "unavailable");
     });
     return () => {
       cancelled = true;
