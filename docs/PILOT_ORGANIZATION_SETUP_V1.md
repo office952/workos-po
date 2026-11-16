@@ -15,7 +15,7 @@ A controlled pilot may use documented **platform-operator** CLI actions to creat
 | 1. Approve pilot target and security boundary | Owner + platform operator | Separately approved operations plan | Deployment target, authorized operator, change window, rollback owner; no paths/secrets stored in repo |
 | 2. Inspect preflight readiness | Authorized platform operator | `pnpm pilot:preflight` (read-only) | Sanitized exit code/status on intended root; **not authorized to run on real environment yet** |
 | 3. Provision organization | Authorized platform operator | `pnpm cloud:provision-organization` | Org created with correct ownership and isolated plane; only after explicit real-write GO |
-| 4. Add initial Cloud users | Authorized platform operator | `pnpm cloud:add-organization-user` | Role/membership checks; never record credentials in PR |
+| 4. Add initial Cloud users | Authorized platform operator, or the organization owner in the browser when Organization Access V1 is enabled | `pnpm cloud:add-organization-user`; with `WORKOS_ORG_ROLES_V1=on`: `/admin/access` invitations (one-time link, invitee sets own password), roles Proprietar / Comercial / Producție / Atelier, revocation | Role/membership checks; never record credentials or invitation links in PR. V1 is integrated on `main` (PR #134) but **off by default**; enabling it in a real environment needs its own Owner GO |
 | 5. Configure staff | Organization admin in browser | `/admin/people`, `/admin/people/:id` | Operator identity and PIN session usable without CLI |
 | 6. Configure execution resources | Organization admin in browser | `/admin/workcenters`, machines | Relevant work centers/machines are available to execution; no invented capacities |
 | 7. Enable product offering | Organization admin in browser | `/admin/products` | Correct enabled templates/assemblies, disabled state respected |
@@ -23,7 +23,7 @@ A controlled pilot may use documented **platform-operator** CLI actions to creat
 | 9. Validate customer/request journey | Owner + commercial | `/clienti`, `/cereri/noua`, `/configurator`, `/ansamblu`, `/oferte` | Correct customer selected by CUI/ID, confirmed product, quote freeze and stable snapshot |
 | 10. Validate operations | Owner + workshop lead | `/lucrari`, `/atelier`, `/executie/:planId` | Release, machine/person assignment, actuals, QC, packing, completed customer history |
 
-The routes above describe existing interfaces, not evidence that they have been accepted in an intended real environment.
+The routes above describe existing interfaces, not evidence that they have been accepted in an intended real environment. The whole sequence (stages 3–10) was exercised on the synthetic environment N-029; the per-step surface (UI, API or CLI) and the `ADMIN_TOOLING_DEBT` items are in the [synthetic pilot runbook](PILOT_SYNTHETIC_RUNBOOK_V1.md).
 
 ## Preflight checklist before first real record
 

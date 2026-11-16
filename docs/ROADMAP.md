@@ -10,7 +10,57 @@ NO PARTIAL PRODUCTION CUTOVER
 NO PARALLEL PRODUCT TRUTH
 ```
 
-## Current: PILOT-0 truth and readiness
+## Current status (2026-11-16)
+
+Last verified `main`: `bc5c7787565f019b9f1bb3060927659c6c2b9f2a` (PR #134 merge, 2026-11-16). This block supersedes the current-state lines of the 2026-10-14 PILOT-0 block below, which stays as that date's record. Integration is not Owner acceptance; acceptance is recorded per PR.
+
+```text
+MAIN = bc5c7787565f019b9f1bb3060927659c6c2b9f2a
+ORGANIZATION_ACCESS_V1 = INTEGRATED_ON_MAIN (PR #134) / OFF_BY_DEFAULT (WORKOS_ORG_ROLES_V1 != on)
+ORGANIZATION_ACCESS_V1_REAL_ENABLEMENT = HOLD / OWNER_GO_REQUIRED
+V4_ASSEMBLY_PRODUCTION_EIC = INTEGRATED_ON_MAIN (PR #76, bdf6904, 2026-10-14)
+ASSEMBLY_QUOTE_PDF = INTEGRATED_ON_MAIN (PR #71)
+SCHEMA_CONTROL_PLANE_LAST = 003_organization_access_v1
+SCHEMA_ORGANIZATION_PLANE_LAST = 052_execution_issue_lifecycle (52 migrations)
+MIGRATIONS_041_052_AND_CONTROL_003_REAL_APPLICATION = HOLD / SEPARATE_APPROVED_PROCEDURE_REQUIRED
+PILOT_READINESS_E2E_V1 = IMPLEMENTED_LOCAL_IN_REVIEW + RUNTIME_VERIFIED (synthetic N-029) / OWNER_ACCEPTANCE_PENDING / NOT_INTEGRATED
+PILOT_GATE_A = HOLD
+PILOT_GATE_B = HOLD
+DEPLOY_PRODUCTION = HOLD / NOT_AUTHORIZED
+CUTOVER = HOLD
+REAL_CLOUD_WRITE = HOLD
+REAL_DB_WRITE = HOLD
+FIRST_REAL_BUSINESS_OPERATION = HOLD / NOT_AUTHORIZED
+```
+
+Integrated on `main` since R-005 (first-parent merges):
+
+| PR | Scope | Merge commit |
+| --- | --- | --- |
+| #113 | WorkOS-N UI/UX governance alignment | `5466191` |
+| #114 | N-010 job sheet UX correction | `5ccb7d7` |
+| #97 | N-019 synthetic demo atelier recovery | `bb44f3c` |
+| #115 | GitHub-primary traceability, Notion optional | `f3db23f` |
+| #116 | WorkOS Verify actions pinned to commit SHAs | `49ad98f` |
+| #117 | Unified accepted-offer production journey | `3e1ad1f` |
+| #123 | W3 commercial closure E2E (migration 051) | `d00447d` |
+| #124 | Commercial journey clarity V1 | `f484c99` |
+| #125 | Operational Issue Visibility V1 (migration 052) | `84fe236` |
+| #126 | Catalog V2 unified dossier | `bbf139c` |
+| #127 | Requests focus restoration test sync | `4a1ea3a` |
+| #128 | Catalog V2 concept C inspector | `ee33746` |
+| #129 | Configurator continuity V1 | `54ca652` |
+| #130 | Configurator mobile action bar fix | `01d1a78` |
+| #131 | SaaS completion | `6fbadee` |
+| #132 | Product configuration cost usability V1 | `98b8616` |
+| #133 | Administration variant B and safe draft flows | `0b8a511` |
+| #134 | Organization Access V1 (roles, invitations, account security; control migration 003) | `bc5c778` |
+
+### Pilot Readiness E2E V1 — IMPLEMENTED_LOCAL_IN_REVIEW (2026-11-16)
+
+Owner GO for one synthetic implementation wave on branch `feat/pilot-readiness-e2e-v1` from `bc5c778`. Persistent synthetic environment N-029 (`%LOCALAPPDATA%\WorkOS\N-029_PILOT_READINESS_E2E`, outside Git), launcher with location/ownership guards, a browser journey from a new company to a finished job with the four roles, a multi-organization user, isolation, sessions, modularity, restart and backup/restore into a separate root, and a CI job running the same chain on a fresh temporary root. No business formula, pricing, permission or schema change. Details: [gate](PILOT_READINESS_GATE_V1.md#pilot-readiness-e2e-v1-synthetic-2026-11-16), [runbook](PILOT_SYNTHETIC_RUNBOOK_V1.md). Not authorized: merge, deploy, real data. Owner acceptance: PENDING.
+
+## PILOT-0 truth and readiness (2026-10-14 record)
 
 Living status as of 2026-10-14. Verified `main` on that date is `162e98a5470211dc62cce6198e8cc58593fae158` (PR #75 merge); WorkOS Verify succeeded on that push. Later sections are historical records unless they say otherwise. Merge alone is never Owner acceptance. Current `main` after the R-005 integration is the 2026-11-01 note below.
 
@@ -1140,7 +1190,7 @@ The customer registry, customer workspace and request detail read the same compo
 ## V4 Assembly Production EIC
 
 ```text
-V4_ASSEMBLY_PRODUCTION_EIC = CANDIDATE / NOT_MERGED / OWNER_ACCEPTANCE_NOT_RECORDED
+V4_ASSEMBLY_PRODUCTION_EIC = INTEGRATED_ON_MAIN (PR #76, bdf6904) / OWNER_ACCEPTANCE_NOT_RECORDED
 BRANCH = feat/v4-assembly-production-eic-041
 BASE = 162e98a5470211dc62cce6198e8cc58593fae158
 SCHEMA_MIGRATION = 041_assembly_operation_cost_policy (organization plane, append-only)

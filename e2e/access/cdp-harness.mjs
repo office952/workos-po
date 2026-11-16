@@ -43,7 +43,7 @@ export function createHarness({ base, evidence, chrome, profiles }) {
   }
 
   async function launch(port, profile) {
-    const proc = spawn(chrome, ["--headless=new", `--remote-debugging-port=${port}`, `--user-data-dir=${profiles}/${profile}`, "--no-first-run", "--no-default-browser-check", "--disable-gpu", "--hide-scrollbars", "about:blank"], { stdio: "ignore" });
+    const proc = spawn(chrome, ["--headless=new", `--remote-debugging-port=${port}`, `--user-data-dir=${profiles}/${profile}`, "--no-first-run", "--no-default-browser-check", "--disable-gpu", "--hide-scrollbars", ...(process.env.WORKOS_E2E_CHROME_ARGS ?? "").split(" ").filter(Boolean), "about:blank"], { stdio: "ignore" });
     for (let i = 0; i < 60; i++) {
       try {
         const list = await fetch(`http://127.0.0.1:${port}/json/list`).then((r) => r.json());
