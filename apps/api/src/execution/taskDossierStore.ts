@@ -405,6 +405,31 @@ export function readActiveIssueCountByJobId(db: SqliteDatabase): Map<string, num
   return new Map(rows.map((row) => [row.job_id, row.n]));
 }
 
+/** Active issue reports per job, split by whether a supervisor has taken them over. */
+export function readActiveIssueStatesByJobId(
+  db: SqliteDatabase,
+): Map<string, { open: number; acknowledged: number }> {
+  const rows = db
+    .prepare(
+      `
+      SELECT entry.job_id AS job_id,
+             SUM(CASE WHEN lifecycle.status = 'ACKNOWLEDGED' THEN 1 ELSE 0 END) AS acknowledged,
+             COUNT(*) AS n
+      FROM execution_task_dossier_entries AS entry
+      LEFT JOIN execution_task_issue_lifecycle AS lifecycle
+        ON lifecycle.entry_id = entry.entry_id
+      WHERE entry.kind = 'ISSUE_REPORT'
+        AND entry.job_id IS NOT NULL
+        AND (lifecycle.status IS NULL OR lifecycle.status IN ('OPEN', 'ACKNOWLEDGED'))
+      GROUP BY entry.job_id
+    `,
+    )
+    .all() as Array<{ job_id: string; acknowledged: number; n: number }>;
+  return new Map(
+    rows.map((row) => [row.job_id, { open: row.n - row.acknowledged, acknowledged: row.acknowledged }]),
+  );
+}
+
 export function readJobIssueReports(
   db: SqliteDatabase,
   jobId: string,

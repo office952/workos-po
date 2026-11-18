@@ -35,6 +35,7 @@ export {
   SCOPED_ORGANIZATION_ROLES,
   activeStatusForRole,
   capabilitiesForRole,
+  capabilityExclusiveRole,
   isActiveMembershipPair,
   isOrganizationRole,
   isScopedOrganizationRole,
@@ -1426,3 +1427,4 @@ export {
 } from "./commercial/quoteAcceptance.js";
 export * from "./seller/validation.js";
 export * from "./execution/economicResult.js";
+export * from "./start/overview.js";

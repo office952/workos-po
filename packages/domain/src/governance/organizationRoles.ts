@@ -131,6 +131,15 @@ export function roleCan(role: unknown, capability: OrganizationCapability): bool
   return isOrganizationRole(role) && ROLE_CAPABILITIES[role].has(capability);
 }
 
+/**
+ * The single role that holds a capability, or null when several roles (or none) hold it.
+ * Start uses it to say "only your role can take this step" from the matrix itself.
+ */
+export function capabilityExclusiveRole(capability: OrganizationCapability): OrganizationRole | null {
+  const holders = ORGANIZATION_ROLES.filter((role) => ROLE_CAPABILITIES[role].has(capability));
+  return holders.length === 1 ? (holders[0] ?? null) : null;
+}
+
 export function capabilitiesForRole(role: unknown): OrganizationCapability[] {
   if (!isOrganizationRole(role)) return [];
   return ORGANIZATION_CAPABILITIES.filter((capability) => ROLE_CAPABILITIES[role].has(capability));

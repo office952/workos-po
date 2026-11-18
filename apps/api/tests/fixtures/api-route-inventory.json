@@ -84,6 +84,7 @@
   "GET /api/resources-admin",
   "GET /api/seller",
   "GET /api/seller/versions",
+  "GET /api/start",
   "GET /api/workcenters",
   "PATCH /api/admin/product-system/entities/:entityKind/:entityId/display-label",
   "PATCH /api/customers/:customerId",

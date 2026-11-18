@@ -1,6 +1,7 @@
 export const resourceKeys = {
   productSystem: () => "product-system",
   health: () => "health",
+  start: () => "start",
   seller: () => "seller",
   customers: () => "customers",
   customerIntake: () => "customers:intake",

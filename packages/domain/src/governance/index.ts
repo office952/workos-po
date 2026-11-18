@@ -21,6 +21,7 @@ export {
   SCOPED_ORGANIZATION_ROLES,
   activeStatusForRole,
   capabilitiesForRole,
+  capabilityExclusiveRole,
   isActiveMembershipPair,
   isOrganizationRole,
   isScopedOrganizationRole,
