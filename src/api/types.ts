@@ -722,7 +722,14 @@ export type AssemblyQuoteTransport = {
   /** Present only for owners; null when the evidence cannot be traced. */
   internalCost: AssemblyQuoteCostTransport | null | undefined;
   /** Server dry run of accepting this exact snapshot; absent or malformed means not acceptable. */
-  acceptance: { canAccept: boolean; reason: string | null };
+  acceptance: {
+    canAccept: boolean;
+    reason: string | null;
+    /** AUD-PRICING-002 · told by the server only to a role that may read internal cost. */
+    incompleteCostExceptionRequired: boolean;
+  };
+  /** Recorded Owner exception of an accepted quote; Owner scope only. */
+  incompleteCostAcceptance: { reason: string; acceptedAt: string | null } | null;
 };
 
 export type JobListItemTransport = {
@@ -919,6 +926,8 @@ export type ExecutionTaskTransport = {
   activeMachineRunLabel: string | null;
   activeMachineRunStartedLabel: string | null;
   materialBlockLabel?: string | null;
+  /** Roles that can confirm the material when the operation is blocked (from the server). */
+  materialBlockResolverLabel?: string | null;
   materialLines?: MaterialLineTransport[];
   executionMode?: string;
   externalProviderLabel?: string | null;

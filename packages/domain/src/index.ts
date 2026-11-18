@@ -1349,10 +1349,13 @@ export {
   SIGN_ASSEMBLY_ACM_LETTERS_V1,
   SIGN_ASSEMBLY_ACM_SIGNAGE_V2,
   acceptAssemblyQuote,
+  assemblyQuoteCostCompleteness,
+  assemblyQuoteFreezeBlockers,
   acknowledgeAssemblyReview,
   assemblyAvailableForNewWork,
   assemblyV2AvailableForNewWork,
   attachConfirmedChild,
+  reconfirmAfterCommercialOnlyChange,
   confirmAssembly,
   createAssemblyDefinition,
   freezeAssemblyQuote,
@@ -1423,8 +1426,11 @@ export {
   INCOMPLETE_COST_REASON_MAX_LENGTH,
   isIncompleteCostAcceptanceFor,
   readIncompleteCostReason,
+  resolveIncompleteCostAcceptance,
   type IncompleteCostAcceptance,
 } from "./commercial/quoteAcceptance.js";
+export * from "./execution/assemblyEconomics.js";
+export type { AssemblyFreezeBlocker } from "./assembly/commercial.js";
 export * from "./seller/validation.js";
 export * from "./execution/economicResult.js";
 export * from "./start/overview.js";

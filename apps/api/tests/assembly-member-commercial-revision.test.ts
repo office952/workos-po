@@ -68,7 +68,7 @@ describe("assembly member commercial revisions", () => {
     expect(JSON.stringify(readAssemblyQuote(api.plane.db, old.organizationId, first.quoteSnapshotId))).toBe(frozen);
     const latest = (await api.get(`/api/assemblies/${id}`)).assembly as { quoteSnapshotId: string };
     expect(latest.quoteSnapshotId).not.toBe(first.quoteSnapshotId);
-    const accepted = await api.post(`/api/assemblies/${id}/accept`, { quoteSnapshotId: latest.quoteSnapshotId });
+    const accepted = await api.post(`/api/assemblies/${id}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId: latest.quoteSnapshotId });
     expect(accepted.status).toBe(200);
     const order = await accepted.json() as { order: { orderSnapshotId: string } };
     expect((await api.post(`/api/jobs/${order.order.orderSnapshotId}/production`)).status).toBe(200);

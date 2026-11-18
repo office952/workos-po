@@ -28,7 +28,18 @@ export type AssemblyAcceptanceRefusal = {
  */
 export function planAssemblyAcceptance(
   runtime: ProductSystem,
-  input: { assemblyId: string; quoteSnapshotId: string | null; createdAt: string },
+  input: {
+    assemblyId: string;
+    quoteSnapshotId: string | null;
+    createdAt: string;
+    /** AUD-PRICING-002 · Owner exception from the authenticated session; needed for incomplete cost. */
+    incompleteCost?: { acceptedByUserId: string; reason: string } | null;
+    /**
+     * Read-only dry run: answers whether the quote can be accepted at all. The exception is a
+     * step of the acceptance itself, so its absence is not a refusal here. Nothing is persisted.
+     */
+    probe?: boolean;
+  },
 ): { ok: true; order: AssemblyOrderSnapshot } | AssemblyAcceptanceRefusal {
   const plane = runtime.assemblyPlane();
   const definition = readAssemblyDefinition(plane.db, plane.organizationId, input.assemblyId);
@@ -104,7 +115,7 @@ export function planAssemblyAcceptance(
     definition.confirmedTruthHash !== current.assemblyTruthHash
   ) {
     return staleConfiguration(
-      "Ansamblul a fost reconfirmat cu altă configurație după înghețarea acestei oferte. Îngheață o ofertă nouă înainte de acceptare.",
+      "Configurația sau prețul unei părți s-a schimbat după înghețarea acestei oferte. Îngheață o ofertă nouă înainte de acceptare.",
     );
   }
   const children = definition.members.flatMap((member) => {
@@ -116,6 +127,9 @@ export function planAssemblyAcceptance(
     quote: current,
     children,
     createdAt: input.createdAt,
+    incompleteCost: input.probe
+      ? { acceptedByUserId: "probe", reason: "probe" }
+      : (input.incompleteCost ?? null),
   });
   if (!accepted.ok) {
     return { ok: false, status: 422, body: { error: accepted.error, reasons: [...accepted.reasons] } };

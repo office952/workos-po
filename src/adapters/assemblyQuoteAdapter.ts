@@ -116,6 +116,12 @@ export function presentAssemblyQuoteEnvelope(payload: unknown): AssemblyQuoteTra
     acceptance: {
       canAccept: acceptance?.canAccept === true,
       reason: asString(acceptance?.reason),
+      incompleteCostExceptionRequired: acceptance?.incompleteCostExceptionRequired === true,
     },
+    incompleteCostAcceptance: (() => {
+      const recorded = asRecord(record.incompleteCostAcceptance);
+      const reason = asString(recorded?.reason);
+      return reason ? { reason, acceptedAt: asString(recorded?.acceptedAt) } : null;
+    })(),
   };
 }

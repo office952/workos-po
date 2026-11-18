@@ -1,0 +1,171 @@
+/* Job sheet · Operații · production supervision panel and assembly freeze guidance.
+   Modular surface stylesheet (WORKOS_UI_STYLE_ARCHITECTURE_V1): tokens only, no new palette. */
+
+.job-supervision {
+  display: grid;
+  gap: var(--space-16);
+  margin-block-end: var(--space-24);
+  padding: var(--space-24);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+}
+
+.job-supervision__head h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.job-supervision__who,
+.job-supervision__scope {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+}
+
+.job-supervision__label {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.job-supervision__needs ul {
+  display: grid;
+  gap: 0;
+  margin: var(--space-8) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.job-supervision__needs li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-12);
+  align-items: center;
+  min-height: 44px;
+  padding: var(--space-8) var(--space-12);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.job-supervision__needs li[data-current="true"] {
+  background: var(--wos-selected);
+}
+
+.job-supervision__reason {
+  color: var(--wos-warning-text);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.job-supervision__task {
+  display: grid;
+  gap: var(--space-12);
+  padding-top: var(--space-16);
+  border-top: 1px solid var(--color-border);
+}
+
+.job-supervision__task h3 {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.job-supervision__block {
+  display: grid;
+  gap: var(--space-12);
+  justify-items: start;
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.job-supervision__block > p {
+  margin: 0;
+}
+
+.job-supervision__material {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.job-supervision__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-16) var(--space-32);
+  margin: 0;
+}
+
+.job-supervision__facts dt {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.job-supervision__facts dd {
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Assembly page: freeze explained instead of offered. */
+.assembly-freeze-blocked {
+  display: grid;
+  gap: var(--space-12);
+  justify-items: start;
+}
+
+.assembly-freeze-blocked__list {
+  display: grid;
+  gap: 4px;
+  margin: var(--space-8) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Atelier: who resolves a material block. */
+.execution-block-owner {
+  display: grid;
+  gap: var(--space-8);
+  justify-items: start;
+}
+
+.execution-block-owner__label {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Planned vs actual: one group per assembly part. */
+.cfc-pva__group th {
+  padding-block: var(--space-8);
+  background: var(--color-surface-alt);
+  font-weight: 600;
+  text-align: start;
+}
+
+@media (max-width: 767px) {
+  .job-supervision {
+    padding: var(--space-16);
+  }
+
+  .job-supervision__needs li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding-block: var(--space-12);
+  }
+
+  .job-supervision__block .button,
+  .assembly-freeze-blocked .button {
+    width: 100%;
+  }
+
+  .job-supervision__material .cluster {
+    width: 100%;
+  }
+}

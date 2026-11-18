@@ -65,7 +65,7 @@ describe('job record page', () => {
     expect(screen.queryByRole('button', { name: 'Trimite în producție' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Semnalează necesar de aprovizionare' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Tipărește fișa' })).toBeEnabled();
-    expect(screen.getByText('Producția este finalizată. Compară planificat cu realizat. Livrarea și montajul nu sunt confirmate de această stare.')).toBeVisible();
+    expect(screen.getByText('Producția este finalizată. Livrarea și montajul nu sunt confirmate de această stare.')).toBeVisible();
     expect(screen.getByRole('list', { name: 'Parcursul lucrării' })).toBeVisible();
     expect(screen.queryByText(/Nicio operație începută/)).toBeNull();
     expect(screen.queryByRole('region', { name: 'Rezultatele lucrării' })).toBeNull();

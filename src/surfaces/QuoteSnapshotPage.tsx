@@ -25,6 +25,8 @@ import { QuoteLines, QuoteRelations, QuoteSummary, type QuoteRelation, type Quot
 import { presentQuoteAcceptancePermission } from "../presentation/quoteAcceptancePermission";
 import { useCloudSession } from "../session/CloudSessionContext";
 import { AcceptanceResult } from "./quotes/AcceptanceResult";
+import { IncompleteCostException } from "./quotes/IncompleteCostException";
+import { incompleteCostExceptionReady } from "./quotes/incompleteCostExceptionReady";
 import { QuoteDecisionNote } from "./quotes/QuoteDecisionNote";
 import { quoteDecisionMode } from "./quotes/quoteDecisionMode";
 import "../styles/surfaces/quote-decision.css";
@@ -341,8 +343,7 @@ function QuoteAcceptanceConfirmation({
 }): ReactNode {
   const [reason, setReason] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
-  const reasonId = useId();
-  const exceptionReady = !incompleteCost || (acknowledged && reason.trim().length > 0);
+  const exceptionReady = incompleteCostExceptionReady(incompleteCost, acknowledged, reason);
   const customer = customerName?.trim() ?? "";
   const request = requestReference?.trim() ?? "";
   const commercial =
@@ -377,32 +378,13 @@ function QuoteAcceptanceConfirmation({
         {commercial ? ` ${commercial}.` : ""}
       </p>
       {incompleteCost ? (
-        <div className="offers-confirm__exception" data-testid="incomplete-cost-exception">
-          <InlineAlert tone="pending" title="Costul intern al ofertei nu este complet">
-            Acceptarea este posibilă doar ca excepție confirmată de tine. Costul rămâne marcat incomplet
-            în comandă și în analiza lucrării; oferta înghețată nu se modifică.
-          </InlineAlert>
-          <label className="offers-confirm__field" htmlFor={reasonId}>
-            Motivul acceptării cu cost incomplet
-            <textarea
-              id={reasonId}
-              value={reason}
-              maxLength={500}
-              rows={2}
-              disabled={pending}
-              onChange={(event) => setReason(event.target.value)}
-            />
-          </label>
-          <label className="offers-confirm__check">
-            <input
-              type="checkbox"
-              checked={acknowledged}
-              disabled={pending}
-              onChange={(event) => setAcknowledged(event.target.checked)}
-            />
-            Confirm acceptarea cu cost intern incomplet
-          </label>
-        </div>
+        <IncompleteCostException
+          reason={reason}
+          acknowledged={acknowledged}
+          pending={pending}
+          onReasonChange={setReason}
+          onAcknowledgedChange={setAcknowledged}
+        />
       ) : null}
       <div className="offers-confirm__actions">
         <Button

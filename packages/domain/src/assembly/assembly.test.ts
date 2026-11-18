@@ -432,6 +432,7 @@ describe("assembly unconfirmed rate acknowledgement", () => {
       quote: first.quote,
       children: input.children,
       createdAt: "2026-09-23T12:00:00.000Z",
+      incompleteCost: { acceptedByUserId: "user:owner", reason: "Cost incomplet acceptat explicit" },
     });
     if (!order.ok) {
       throw new Error(order.error);
@@ -686,6 +687,7 @@ describe("product assembly v1", () => {
       quote: issued.quote,
       children: [ready.acm, ready.letters],
       createdAt: "2026-09-23T11:20:00.000Z",
+      incompleteCost: { acceptedByUserId: "user:owner", reason: "Cost incomplet acceptat explicit" },
     });
     if (!order.ok) {
       throw new Error(order.error);
@@ -753,6 +755,7 @@ describe("product assembly v1", () => {
       quote: quote.quote,
       children: [ready.acm, ready.letters],
       createdAt: "2026-09-23T11:20:00.000Z",
+      incompleteCost: { acceptedByUserId: "user:owner", reason: "Cost incomplet acceptat explicit" },
     });
     if (!order.ok) {
       throw new Error(order.error);
@@ -1018,6 +1021,7 @@ describe("product assembly v1", () => {
       quote: quote.quote,
       children: [ready.acm, ready.letters],
       createdAt: "2026-09-23T11:20:00.000Z",
+      incompleteCost: { acceptedByUserId: "user:owner", reason: "Cost incomplet acceptat explicit" },
     });
     if (!order.ok) {
       throw new Error(order.error);
@@ -1135,6 +1139,7 @@ function produceAssembly(
     quote: quote.quote,
     children: [acm, letters],
     createdAt: "2026-09-23T11:20:00.000Z",
+    incompleteCost: { acceptedByUserId: "user:owner", reason: "Cost incomplet acceptat explicit" },
   });
   if (!order.ok) {
     throw new Error(order.error);

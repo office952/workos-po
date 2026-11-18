@@ -57,10 +57,20 @@ export type AssemblyQuoteAcceptanceResult =
   | { ok: false; kind: "refused"; reason: string };
 
 /** Accepts exactly the reviewed frozen snapshot; the server refuses any other identity before creating an order. */
-export async function acceptAssemblyQuote(assemblyId: string, quoteSnapshotId: string): Promise<AssemblyQuoteAcceptanceResult> {
+export async function acceptAssemblyQuote(
+  assemblyId: string,
+  quoteSnapshotId: string,
+  /** AUD-PRICING-002 · sent only when the Owner confirmed the incomplete internal cost, with a reason. */
+  incompleteCostReason?: string,
+): Promise<AssemblyQuoteAcceptanceResult> {
   let result: Awaited<ReturnType<typeof sendJson>>;
   try {
-    result = await sendJson("POST", `/api/assemblies/${encodeURIComponent(assemblyId)}/accept`, { quoteSnapshotId });
+    result = await sendJson("POST", `/api/assemblies/${encodeURIComponent(assemblyId)}/accept`, {
+      quoteSnapshotId,
+      ...(incompleteCostReason !== undefined
+        ? { incompleteCostAcceptance: { confirm: true, reason: incompleteCostReason } }
+        : {}),
+    });
   } catch {
     return { ok: false, kind: "refused", reason: "Serverul nu a putut fi contactat. Reîncarcă oferta și verifică starea ei înainte de a reîncerca." };
   }

@@ -31,6 +31,7 @@ export function JobRecordView({
   files,
   dates,
   economics = null,
+  supervision = null,
   summaryContext,
   productionFinished = false,
 }: {
@@ -53,6 +54,8 @@ export function JobRecordView({
   dates: ReactNode;
   /** Commercial & Financial V1: planned vs operational result (Owner only, built by the page). */
   economics?: ReactNode;
+  /** Production supervision for the Operații section (built by the page from server flags). */
+  supervision?: ReactNode;
   summaryContext?: JobSummaryContext;
   productionFinished?: boolean;
 }) {
@@ -69,6 +72,7 @@ export function JobRecordView({
         {economics}
       </Section>
       <Section active={section} section="operatii">
+        {supervision}
         <JobRecordOperations
           record={record}
           selectedTaskId={selectedTaskId}

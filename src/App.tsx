@@ -124,6 +124,7 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
           productCode={context.productCode}
           assemblyId={assemblyId}
           memberRole={readAssemblyMemberRole(memberRole)}
+          openPriceStep={new URLSearchParams(search).get("pas") === "pret"}
         />
       );
     }

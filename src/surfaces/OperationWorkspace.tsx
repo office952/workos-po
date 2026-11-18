@@ -1,16 +1,11 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { TransportError } from "../api/http";
+import { reportTaskIssue } from "../api/taskDossier";
 import {
   assignTaskProvider,
   completeExecutionTask,
-  confirmTaskMaterial,
-  handOffExternalTask,
-  markTaskExternal,
-  assignExternalProvider,
-  recordExternalReturn,
   recordQualityFail,
   recordQualityPass,
-  closeReworkEpisode,
   startExecutionTask,
   leaveExecutionTask,
   startMachineRun,
@@ -48,6 +43,7 @@ import { useResource } from "../data/useResource";
 import { useCloudSession } from "../session/CloudSessionContext";
 import { readCloudBoundaryVersion } from "../session/sessionExpiryBridge";
 import "../styles/surfaces/execution-flow.css";
+import "../styles/surfaces/job-supervision.css";
 import "../styles/surfaces/task-dossier.css";
 import { parseCompletedQuantity } from "../presentation/completedQuantity";
 import {
@@ -323,7 +319,10 @@ export function OperationWorkspace({
     Record<string, string>
   >({});
   const [qualityNotes, setQualityNotes] = useState<Record<string, string>>({});
-  const [correctionNotes, setCorrectionNotes] = useState<Record<string, string>>({});
+  const [materialEscalated, setMaterialEscalated] = useState<Record<string, boolean>>({});
+  // F-03/F-04 · what this account may decide comes from the server capabilities of the session.
+  const canDecideMaterial = sessionHasCapability(cloud, "materials.decide");
+  const canSupervise = sessionHasCapability(cloud, "execution.supervise");
 
   const scope = [cloud.user?.email ?? "", cloud.organization?.organizationId ?? "", String(readCloudBoundaryVersion()), session.data?.personId ?? ""].join("|");
   const [draftScope, setDraftScope] = useState(scope);
@@ -334,7 +333,7 @@ export function OperationWorkspace({
     setResourceActualDrafts({});
     setSelectedProviderByTask({});
     setQualityNotes({});
-    setCorrectionNotes({});
+    setMaterialEscalated({});
     setActionError(null);
     setFieldError(null);
   }
@@ -436,26 +435,6 @@ export function OperationWorkspace({
     }
   }
 
-  async function closeCorrection(task: ExecutionTaskTransport): Promise<void> {
-    const note = (correctionNotes[task.taskId] ?? "").trim();
-    if (note.length === 0) {
-      setActionErrorKind("action");
-      setActionError("Închiderea corecției cere o notă.");
-      return;
-    }
-    setActionState("pending");
-    setActionError(null);
-    try {
-      await closeReworkEpisode(task.taskId, note);
-      setActionState("idle");
-      invalidateAfterExecutionTaskChange(planId);
-    } catch (error) {
-      setActionState("error");
-      setActionErrorKind("action");
-      setActionError(presentQualityError(error));
-    }
-  }
-
   async function startRun(task: ExecutionTaskTransport): Promise<void> {
     setActionState("pending");
     setActionError(null);
@@ -492,21 +471,23 @@ export function OperationWorkspace({
     }
   }
 
-  async function confirmMaterial(
-    task: ExecutionTaskTransport,
-    resourceId: string,
-    status: "AVAILABLE" | "NOT_AVAILABLE",
-  ): Promise<void> {
+  /** F-04 · the operator's escalation reuses the existing issue report; nothing else is sent. */
+  async function announceMaterialBlock(task: ExecutionTaskTransport): Promise<void> {
     setActionState("pending");
     setActionError(null);
     try {
-      await confirmTaskMaterial(task.taskId, resourceId, status);
+      await reportTaskIssue(
+        task.taskId,
+        "MATERIAL",
+        `${task.materialBlockLabel ?? "Materialul nu este confirmat disponibil."} Operația nu poate fi pornită.`,
+      );
+      setMaterialEscalated((current) => ({ ...current, [task.taskId]: true }));
       setActionState("idle");
       invalidateAfterExecutionTaskChange(planId);
     } catch {
       setActionState("error");
       setActionErrorKind("action");
-      setActionError("Confirmarea materialului nu a putut fi salvată.");
+      setActionError("Problema nu a putut fi semnalată. Reîncearcă sau folosește „Semnalează problemă”.");
     }
   }
 
@@ -583,6 +564,11 @@ export function OperationWorkspace({
   }
 
   const resolvedJobId = jobId ?? plan?.jobId ?? null;
+  /** Supervisory decisions live on the job sheet (Operații); offered only to an account that holds one. */
+  const supervisionHref =
+    resolvedJobId && taskId && (canSupervise || sessionHasCapability(cloud, "planning.manage"))
+      ? jobHref(resolvedJobId, { section: "operatii", taskId })
+      : null;
   const jobResource = useResource(
     resolvedJobId ? resourceKeys.job(resolvedJobId) : null,
     () => loadJobDetail(resolvedJobId!),
@@ -754,19 +740,6 @@ export function OperationWorkspace({
               {currentTask.activeParticipantsLabel ? <p>Lucrează acum: {currentTask.activeParticipantsLabel}</p> : null}
               <p className="execution-next__reason">{currentActionReason}</p>
               {currentTask.completionParticipationBlock && currentTask.completionParticipationBlock !== currentActionReason ? <p>{currentTask.completionParticipationBlock}</p> : null}
-            {currentTask.canExternalize ? (
-              <Button
-                disabled={actionState === "pending"}
-                onClick={() =>
-                  void runExternal(
-                    () => markTaskExternal(currentTask.taskId),
-                    "Sarcina nu poate fi marcată pentru execuție externă.",
-                  )
-                }
-              >
-                Marchează pentru execuție externă
-              </Button>
-            ) : null}
             {currentTask.executionMode === "EXTERNAL" ? (
               <div className="stack" data-testid="external-production">
                 <InfoRow
@@ -786,71 +759,20 @@ export function OperationWorkspace({
                   />
                 ) : null}
                 {currentTask.externalBlockLabel ? <p>{currentTask.externalBlockLabel}</p> : null}
-                {currentTask.canAssignExternalProvider ? (
-                  <SelectField
-                    id={`external-provider-${currentTask.taskId}`}
-                    label="Furnizor extern"
-                    value={selectedProviderByTask[currentTask.taskId] ?? ""}
-                    disabled={actionState === "pending"}
-                    options={(plan?.externalProviderChoices ?? []).map((provider) => ({
-                      value: provider.providerId,
-                      label: provider.name,
-                    }))}
-                    onChange={(value) => {
-                      setSelectedProviderByTask((current) => ({
-                        ...current,
-                        [currentTask.taskId]: value,
-                      }));
-                    }}
-                  />
-                ) : null}
-                {currentTask.canAssignExternalProvider ? (
-                  <Button
-                    variant="secondary"
-                    disabled={
-                      actionState === "pending" || !selectedProviderByTask[currentTask.taskId]
-                    }
-                    onClick={() =>
-                      void runExternal(
-                        () =>
-                          assignExternalProvider(
-                            currentTask.taskId,
-                            selectedProviderByTask[currentTask.taskId] ?? "",
-                          ),
-                        "Furnizorul extern nu poate fi alocat.",
-                      )
-                    }
-                  >
-                    Alocă furnizorul
-                  </Button>
-                ) : null}
-                {currentTask.canHandOffExternal ? (
-                  <Button
-                    disabled={actionState === "pending"}
-                    onClick={() =>
-                      void runExternal(
-                        () => handOffExternalTask(currentTask.taskId),
-                        "Predarea nu este permisă încă.",
-                      )
-                    }
-                  >
-                    Predă către furnizor
-                  </Button>
-                ) : null}
-                {currentTask.canRecordExternalReturn ? (
-                  <Button
-                    disabled={actionState === "pending"}
-                    onClick={() =>
-                      void runExternal(
-                        () => recordExternalReturn(currentTask.taskId),
-                        "Revenirea nu poate fi înregistrată.",
-                      )
-                    }
-                  >
-                    Înregistrează revenirea
-                  </Button>
-                ) : null}
               </div>
+            ) : null}
+            {supervisionHref &&
+            (currentTask.canExternalize ||
+              currentTask.canAssignExternalProvider ||
+              currentTask.canHandOffExternal ||
+              currentTask.canRecordExternalReturn ||
+              currentTask.canCloseReworkEpisode) ? (
+              <p className="ui-note" data-testid="supervision-pointer">
+                Deciziile de supervizare pentru această operație se iau în fișa lucrării.{" "}
+                <a className="text-link" href={supervisionHref}>
+                  Deschide supervizarea
+                </a>
+              </p>
             ) : null}
             {missingProviderGuidance ? (
               <InlineAlert tone="blocked" title={missingProviderGuidance.title}>
@@ -993,19 +915,11 @@ export function OperationWorkspace({
                 task={currentTask}
                 pending={actionState === "pending"}
                 note={qualityNotes[currentTask.taskId] ?? ""}
-                correctionNote={correctionNotes[currentTask.taskId] ?? ""}
                 onNote={(value) => {
                   setQualityNotes((current) => ({ ...current, [currentTask.taskId]: value }));
                 }}
-                onCorrectionNote={(value) => {
-                  setCorrectionNotes((current) => ({
-                    ...current,
-                    [currentTask.taskId]: value,
-                  }));
-                }}
                 onPass={() => void recordQuality(currentTask, "PASS")}
                 onFail={() => void recordQuality(currentTask, "FAIL")}
-                onCloseCorrection={() => void closeCorrection(currentTask)}
               />
             ) : null}
             {actionError ? (
@@ -1110,9 +1024,50 @@ export function OperationWorkspace({
               <p>Alt operator trebuie să preia această sarcină.</p>
             ) : null}
             {currentTask.materialBlockLabel ? (
-              <InlineAlert tone="error" title="Material">
-                {currentTask.materialBlockLabel}
-              </InlineAlert>
+              <div className="execution-block-owner" data-testid="material-block-owner">
+                <InlineAlert tone="error" title="Material">
+                  {currentTask.materialBlockLabel}
+                </InlineAlert>
+                <p className="execution-block-owner__label">Cine rezolvă</p>
+                {canDecideMaterial ? (
+                  <p>
+                    {resolvedJobId
+                      ? "Poți confirma materialul mai jos, la „Materiale pentru operație”."
+                      : "Poți confirma materialul din fișa lucrării › Operații."}
+                  </p>
+                ) : (
+                  <>
+                    <p>
+                      Materialul îl confirmă {currentTask.materialBlockResolverLabel ?? "Producția"}, din fișa
+                      lucrării › Operații. Tu nu ai nimic de completat aici.
+                    </p>
+                    {materialEscalated[currentTask.taskId] ? (
+                      <p role="status" data-testid="material-escalated">
+                        Problema a fost semnalată și este vizibilă pentru Producție în fișa lucrării și pe Start.
+                        Nu s-a trimis o notificare separată.
+                      </p>
+                    ) : (
+                      <>
+                        <Button
+                          variant="secondary"
+                          disabled={actionState === "pending" || identified !== true}
+                          onClick={() => void announceMaterialBlock(currentTask)}
+                        >
+                          Anunță Producția
+                        </Button>
+                        <p className="ui-note">
+                          Semnalează o problemă pe această operație (motiv: Material), fără cantitate.
+                        </p>
+                      </>
+                    )}
+                  </>
+                )}
+                {supervisionHref && canSupervise ? (
+                  <a className="text-link" href={supervisionHref}>
+                    Deschide supervizarea în fișa lucrării
+                  </a>
+                ) : null}
+              </div>
             ) : null}
             {!resolvedJobId && currentTask.materialLines && currentTask.materialLines.length > 0 ? (
               <div className="stack" data-testid="material-readiness">
@@ -1121,29 +1076,8 @@ export function OperationWorkspace({
                     <span>
                       {line.label} — {line.statusLabel}
                     </span>
-                    {plan?.canConfirmMaterial && currentTask.status === "PLANNED" ? (
-                      <>
-                        <Button
-                          disabled={actionState === "pending" || line.status === "AVAILABLE"}
-                          onClick={() => void confirmMaterial(currentTask, line.resourceId, "AVAILABLE")}
-                        >
-                          Disponibil
-                        </Button>
-                        <Button
-                          disabled={actionState === "pending" || line.status === "NOT_AVAILABLE"}
-                          onClick={() =>
-                            void confirmMaterial(currentTask, line.resourceId, "NOT_AVAILABLE")
-                          }
-                        >
-                          Indisponibil
-                        </Button>
-                      </>
-                    ) : null}
                   </div>
                 ))}
-                <p className="ui-note">
-                  Confirmarea este o decizie de execuție. Soldul de stoc nu pornește sarcina.
-                </p>
               </div>
             ) : null}
             {resolvedJobId && currentTask.plannedResources.length > 0 ? (

@@ -1,6 +1,7 @@
 import type { Hono } from "hono";
 import {
   assemblyQuoteContentHashMatches,
+  assemblyQuoteCostCompleteness,
   assemblyQuoteHasFrozenIdentity,
   freezeSellerIdentity,
   presentAssemblyQuoteDetail,
@@ -140,6 +141,14 @@ function assemblyQuoteEnvelope(c: ApiContext, quoteSnapshotId: string) {
     }),
     ...(internalCost === undefined ? {} : { internalCost }),
     acceptance: presentAssemblyQuoteAcceptance(c, record),
+    ...(record.order?.incompleteCostAcceptance && can(c, "costs.internal.read")
+      ? {
+          incompleteCostAcceptance: {
+            reason: record.order.incompleteCostAcceptance.reason,
+            acceptedAt: record.order.incompleteCostAcceptance.acceptedAt,
+          },
+        }
+      : {}),
     order: record.order
       ? {
           orderSnapshotId: record.order.orderSnapshotId,
@@ -164,7 +173,7 @@ function assemblyQuoteEnvelope(c: ApiContext, quoteSnapshotId: string) {
 function presentAssemblyQuoteAcceptance(
   c: ApiContext,
   record: AssemblyQuoteRecord,
-): { canAccept: boolean; reason: string | null } {
+): { canAccept: boolean; reason: string | null; incompleteCostExceptionRequired?: boolean } {
   if (record.order) {
     return { canAccept: false, reason: null };
   }
@@ -181,8 +190,25 @@ function presentAssemblyQuoteAcceptance(
     assemblyId: record.quote.assemblyId,
     quoteSnapshotId: record.quote.quoteSnapshotId,
     createdAt: new Date().toISOString(),
+    probe: true,
   });
-  return planned.ok
-    ? { canAccept: true, reason: null }
-    : { canAccept: false, reason: planned.body.reasons[0] ?? "Oferta nu poate fi acceptată acum." };
+  if (!planned.ok) {
+    return { canAccept: false, reason: planned.body.reasons[0] ?? "Oferta nu poate fi acceptată acum." };
+  }
+  // AUD-PRICING-002 · told only to a role that may read internal cost; same evidence the acceptance uses.
+  const children = record.quote.members.flatMap((member) => {
+    const child = record.confirmedChildren.find((item) => item.truthId === member.confirmedTruthId);
+    return child ? [child] : [];
+  });
+  return {
+    canAccept: true,
+    reason: null,
+    ...(can(c, "costs.internal.read")
+      ? {
+          incompleteCostExceptionRequired:
+            children.length !== record.quote.members.length ||
+            assemblyQuoteCostCompleteness(record.quote, children) !== "COMPLETE",
+        }
+      : {}),
+  };
 }

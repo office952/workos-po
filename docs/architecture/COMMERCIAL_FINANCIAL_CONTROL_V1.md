@@ -109,7 +109,7 @@ Separate discount and adjustment operations would change the pricing formula. Th
 Scope and limits:
 - Scope is the product line of the order. An installation service is excluded from both sides and reported.
 - Recorded work time and machine time are not converted to cost: no rule is configured for it.
-- Assemblies return "not included in this version".
+- Assemblies: see section 10.
 
 ## 7. Screens
 
@@ -130,7 +130,7 @@ Scope and limits:
 - Contact fields, logo or footer on documents.
 - Confirmed accounting costs and an accounting margin.
 - Costing of recorded duration.
-- Assembly approvals and economics.
+- Assembly price-exception approvals.
 - Invoicing.
 
 ## 9. Commercial Role Clarity V1
@@ -167,3 +167,31 @@ Producție and Atelier see none of these actions and are refused by the server.
 - A partial operational cost is marked "nu este total final".
 - The number of resources without an operational cost is stated.
 - Formulas are unchanged, and the operational margin stays unknown while the cost is partial.
+
+## 10. Assembly & Production Supervision Coherence V1
+
+One rule set for products and assemblies; no schema migration (all additions are optional fields of existing JSON snapshots).
+
+**Incomplete cost at assembly acceptance.**
+- `resolveIncompleteCostAcceptance` (domain) is the single decision used by `recordQuoteAcceptance` and `acceptAssemblyQuote`.
+- An assembly quote is cost-complete only when every part is `COMPLETE` and the frozen assembly operation cost is `COMPLETE`. A quote frozen without operation-cost evidence is never assumed complete.
+- `POST /api/assemblies/:assemblyId/accept` takes the same `incompleteCostAcceptance: { confirm: true, reason }` and the same capability. Refusals: 422 `incomplete_cost_requires_owner_acceptance`, 403 for a role without the capability.
+- The exception (actor, reason, time, quote id and hash) is stored inside the hashed assembly order snapshot. Orders accepted earlier are unchanged and stay valid.
+- `GET /api/quotes/:id` reports `acceptance.incompleteCostExceptionRequired` only to a role that reads internal cost.
+
+**Freeze eligibility and price-only changes.**
+- `GET /api/assemblies/:id` returns `freezeBlockers` (member, code `PRICE_MISSING`) and `memberPrices`; `quoteFreezable` is false while a blocker exists. The freeze route keeps its own check.
+- Saving a member with the same technical facts and another price keeps the assembly `CONFIRMED`: the assembly truth is issued again (`reconfirmAfterCommercialOnlyChange`), so a quote frozen before the change is no longer current and is refused at acceptance. Frozen quotes are never rewritten.
+- A member re-evaluated on current rates is not a price-only change: review and confirmation stay explicit.
+
+**Planned vs operational for an assembly job.**
+- New assembly orders keep each part's frozen cost lines (`children[].eicLines`).
+- `GET /api/jobs/:jobId/economics` returns `grouping: "PART"`: each part is compared with the consumption recorded on its own operations (`projectAssemblyActualInternalCost`); the same resource in two parts stays two lines.
+- Assembly operations keep their frozen estimate; their operational cost is unknown (`null`), never zero, because recorded time is not converted to cost.
+- An assembly order accepted before cost lines were retained returns `available: false` with the reason; nothing is recalculated from current rates.
+
+**Supervision.**
+- Supervisory decisions (material confirmation, external provider, hand-off, return, closing a correction) are taken on the job sheet › Operații from the signed-in account; the server routes and capabilities are unchanged (`execution.supervise`, `planning.manage`).
+- The operator workspace (PIN) keeps start, participation, completion and quality control. It shows external facts read-only and, at a material block, who resolves it (`materialBlockResolverLabel`, from the role matrix) with an issue report of reason `MATERIAL`. The report is visible to Producție; no separate notification is sent.
+
+**Design:** WorkOS-N page 07, section 34 (`1550:32579`).

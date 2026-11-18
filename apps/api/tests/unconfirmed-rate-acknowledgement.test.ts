@@ -587,6 +587,7 @@ describe("unconfirmed rate acknowledgement — standalone product (single plane)
     expect(pdf.status).toBe(200);
     expect(pdf.headers.get("content-type")).toContain("application/pdf");
     const accepted = await unconfirmed.send("POST", `/api/assemblies/${disclosed.assemblyId}/accept`, {
+      incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" },
       quoteSnapshotId: (await assemblyView(unconfirmed, disclosed.assemblyId)).quoteSnapshotId,
     });
     expect(accepted.status).toBe(200);
@@ -860,6 +861,7 @@ describe("unconfirmed rate acknowledgement — SaaS organizations", () => {
       expect(pdf.headers.get("content-type")).toContain("application/pdf");
     }
     const accepted = await alpha.owner.send("POST", `/api/assemblies/${assemblyId}/accept`, {
+      incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" },
       quoteSnapshotId: (await assemblyView(alpha.owner, assemblyId)).quoteSnapshotId,
     });
     expect(accepted.status).toBe(200);

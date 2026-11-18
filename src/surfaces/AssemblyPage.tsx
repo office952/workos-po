@@ -29,6 +29,7 @@ import {
 import { assemblyQuoteHref, configuratorHref, jobHref, requestHref } from "../routing/appRoute";
 import { AssemblyOperationCostPanel } from "./AssemblyOperationCostPanel";
 import { useAssemblyQuoteDocument } from "./useAssemblyQuoteDocument";
+import "../styles/surfaces/job-supervision.css";
 
 type AssemblyScope = {
   id: "acm" | "logo" | "letters" | "relation" | "summary";
@@ -62,6 +63,10 @@ type AssemblyView = {
   quoteSnapshotId?: string | null;
   /** The confirmed composition has no frozen quote yet (first freeze or after reconfirmation). */
   quoteFreezable?: boolean;
+  /** Server-owned freeze eligibility: members that still prevent freezing the common quote. */
+  freezeBlockers?: { role: string; roleLabel: string; code: string; reason: string }[];
+  /** Price state of each member; the amount is present only for roles that may read client prices. */
+  memberPrices?: { role: string; roleLabel: string; priced: boolean; netPrice: number | null; currency: string }[];
   orderId: string | null;
   productionId: string | null;
   executionPlanId: string | null;
@@ -82,6 +87,12 @@ type AssemblyView = {
 /** Lowercases only the first letter so acronyms such as ACM keep their case in running text. */
 function inSentence(title: string): string {
   return title.charAt(0).toLocaleLowerCase("ro") + title.slice(1);
+}
+
+function memberSummary(price: { priced: boolean; netPrice: number | null; currency: string } | undefined): string {
+  if (!price) return "Complet";
+  if (!price.priced) return "Complet · fără preț";
+  return price.netPrice === null ? "Complet · preț stabilit" : `Complet · ${formatMoney(price.netPrice, price.currency)} net`;
 }
 
 export function assemblyLead(hasLogo: boolean, lettersPresent: boolean): string {
@@ -186,6 +197,11 @@ export function AssemblyPage() {
   const incompleteMemberHref =
     assembly && incompleteMember ? memberConfiguratorHref(assembly, incompleteMember) : null;
   const membersEditable = assembly?.membersEditable !== false;
+  const freezeBlockers = assembly?.freezeBlockers ?? [];
+  // Confirmed, not ordered, and the server names members without a price: freezing is explained, not offered.
+  const freezeBlocked =
+    assembly?.status === "CONFIRMED" && !assembly.orderId && freezeBlockers.length > 0;
+  const memberPriceByRole = new Map((assembly?.memberPrices ?? []).map((item) => [item.role, item]));
   const rateRequirement = presentRateAcknowledgement(assembly?.rateAcknowledgement);
   const frozenRateAcknowledgement = presentFrozenRateAcknowledgement(
     assembly?.frozenRateAcknowledgement,
@@ -289,7 +305,7 @@ export function AssemblyPage() {
                   <InfoRow
                     key={item.id}
                     label={item.title}
-                    value={item.complete ? "Complet" : "Necesită configurare"}
+                    value={item.complete ? memberSummary(memberPriceByRole.get(item.role ?? "")) : "Necesită configurare"}
                   />
                 ))}
             </dl>
@@ -310,6 +326,34 @@ export function AssemblyPage() {
               <InlineAlert tone="pending" title="Următorul pas: îngheață oferta">
                 Ansamblul este confirmat. Îngheață oferta comună pentru a fixa prețurile și a continua comercial.
               </InlineAlert>
+            ) : null}
+            {freezeBlocked && assembly ? (
+              <div className="assembly-freeze-blocked" data-testid="assembly-freeze-blockers">
+                <InlineAlert tone="pending" title="Oferta comună nu poate fi înghețată încă">
+                  <p>Lipsește prețul net pentru: {freezeBlockers.map((item) => item.roleLabel).join(", ")}.</p>
+                  <ul className="assembly-freeze-blocked__list">
+                    {freezeBlockers.map((blocker) => {
+                      const target = assembly.scopes.find((item) => item.role === blocker.role);
+                      const memberHref = target ? memberConfiguratorHref(assembly, target) : null;
+                      const href = memberHref ? `${memberHref}&pas=pret` : null;
+                      return (
+                        <li key={blocker.role}>
+                          {href ? (
+                            <a className="text-link" href={href}>Stabilește prețul · {blocker.roleLabel}</a>
+                          ) : (
+                            blocker.reason
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </InlineAlert>
+                <Button disabled aria-describedby="assembly-freeze-blocked-note">Îngheață oferta</Button>
+                <p className="ui-note" id="assembly-freeze-blocked-note">
+                  Butonul se activează când fiecare parte are preț. Serverul face aceeași verificare la înghețare.
+                  Stabilirea prețului nu cere reconfirmarea configurației.
+                </p>
+              </div>
             ) : null}
             {assembly.stale ? (
               <Button disabled={pending} onClick={() => void run(`/api/assemblies/${assembly.assemblyId}/review`)}>

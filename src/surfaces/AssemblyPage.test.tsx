@@ -537,3 +537,44 @@ describe("AssemblyPage commercial lifecycle", () => {
     expect(screen.queryByRole("link", { name: "Deschide oferta comercială" })).not.toBeInTheDocument();
   });
 });
+
+describe("AssemblyPage freeze eligibility (Assembly & Supervision Coherence V1 · F-05)", () => {
+  it("names the part without a price, links to its price step and never offers an active freeze", async () => {
+    window.history.replaceState(null, "", "/ansamblu?assembly=asm:blocked");
+    const fetchMock = serve({
+      ...confirmedAssembly("asm:blocked"),
+      quoteFreezable: false,
+      scopes: [
+        { id: "acm", role: "SUPPORT_PANEL", title: "Panou ACM", complete: true, summary: "Panou" },
+        { id: "letters", role: "SIGNAGE_LETTERS", productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06", title: "Litere", complete: true, summary: "Litere" },
+        { id: "relation", title: "Ansamblare", complete: true, summary: "Relații" },
+        { id: "summary", title: "Rezumat ansamblu", complete: true, summary: "Gata" },
+      ],
+      freezeBlockers: [
+        { role: "SIGNAGE_LETTERS", roleLabel: "Litere", code: "PRICE_MISSING", reason: "Lipsește prețul net pentru Litere." },
+      ],
+      memberPrices: [
+        { role: "SUPPORT_PANEL", roleLabel: "Panou ACM", priced: true, netPrice: 300, currency: "EUR" },
+        { role: "SIGNAGE_LETTERS", roleLabel: "Litere", priced: false, netPrice: null, currency: "EUR" },
+      ],
+    });
+    render(<AssemblyPage />);
+    const block = await screen.findByTestId("assembly-freeze-blockers");
+    expect(block).toHaveTextContent("Oferta comună nu poate fi înghețată încă");
+    expect(block).toHaveTextContent("Lipsește prețul net pentru: Litere.");
+    // The link opens the member directly on its price step.
+    expect(screen.getByRole("link", { name: "Stabilește prețul · Litere" }).getAttribute("href")).toMatch(/role=SIGNAGE_LETTERS&pas=pret$/);
+    expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeDisabled();
+    expect(screen.queryByText("Următorul pas: îngheață oferta")).not.toBeInTheDocument();
+    // Nothing was sent: the page only reads what the server reports.
+    expect(fetchMock.mock.calls.every(([, init]) => String(init?.method ?? "GET") === "GET")).toBe(true);
+  });
+
+  it("shows no blocker block when the server reports none", async () => {
+    window.history.replaceState(null, "", "/ansamblu?assembly=asm:ready");
+    serve({ ...confirmedAssembly("asm:ready"), freezeBlockers: [], memberPrices: [] });
+    render(<AssemblyPage />);
+    expect(await screen.findByRole("button", { name: "Îngheață oferta" })).not.toBeDisabled();
+    expect(screen.queryByTestId("assembly-freeze-blockers")).not.toBeInTheDocument();
+  });
+});

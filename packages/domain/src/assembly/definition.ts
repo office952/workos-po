@@ -229,6 +229,55 @@ export function attachConfirmedChild(
   return { ok: true, definition: applyStaleAgainstConfirmedTruth(next) };
 }
 
+/**
+ * A confirmed assembly whose member was saved again with the same product facts (same truth hash
+ * and aggregate hash for every role, same relations) and only another commercial record keeps its
+ * technical confirmation: the truth is issued again for the new child records, without a review.
+ * The new truth has another identity, so a quote frozen for the previous one is no longer the
+ * current quote and cannot be accepted; a new freeze is required. Returns null when any product
+ * fact changed, when the assembly was not confirmed, or when the combination is no longer valid.
+ */
+export function reconfirmAfterCommercialOnlyChange(
+  before: AssemblyDefinition,
+  after: AssemblyDefinition,
+  children: readonly ConfirmedChildProduct[],
+  previousTruths: readonly AssemblyTruth[],
+  confirmedAt: string,
+): { definition: AssemblyDefinition; truth: AssemblyTruth } | null {
+  if (before.status !== "CONFIRMED" || after.status !== "STALE") return null;
+  if (before.members.length !== after.members.length) return null;
+  const sameFacts = after.members.every((member) => {
+    const previous = before.members.find((item) => item.role === member.role);
+    return (
+      previous !== undefined &&
+      previous.productCode === member.productCode &&
+      previous.templateVersion === member.templateVersion &&
+      previous.confirmedTruthHash === member.confirmedTruthHash &&
+      previous.confirmedAggregateHash === member.confirmedAggregateHash
+    );
+  });
+  if (!sameFacts) return null;
+  // A member re-evaluated on current rates changes the cost basis the Owner acknowledged: that
+  // stays an explicit review and confirmation, it is not a price-only change.
+  const reevaluated = after.members.some((member) => {
+    const previous = before.members.find((item) => item.role === member.role);
+    if (previous?.confirmedTruthId === member.confirmedTruthId) return false;
+    const child = children.find((item) => item.truthId === member.confirmedTruthId);
+    return child?.rateEvidenceBasis?.kind === "CURRENT_RATE_REEVALUATION";
+  });
+  if (reevaluated) return null;
+  if (contentHash(before.relations.map(copyRelation)) !== contentHash(after.relations.map(copyRelation))) {
+    return null;
+  }
+  const confirmed = confirmAssembly(
+    { ...after, status: "DRAFT", staleReason: null },
+    children,
+    previousTruths,
+    confirmedAt,
+  );
+  return confirmed.ok ? { definition: confirmed.definition, truth: confirmed.truth } : null;
+}
+
 export function acknowledgeAssemblyReview(
   definition: AssemblyDefinition,
   updatedAt: string,

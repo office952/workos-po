@@ -10,6 +10,12 @@
   margin-top: var(--space-12);
 }
 
+/* The explanation stays first: the quote summary reorders its own alerts, not this one. */
+.offers-detail > .offers-summary .offers-confirm__exception > .alert,
+.offers-confirm__exception > .alert {
+  order: 0;
+}
+
 .offers-confirm__field {
   display: grid;
   gap: 6px;

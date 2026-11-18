@@ -81,6 +81,7 @@ import type { Hono } from "hono";
 import { getCookie } from "hono/cookie";
 import type { ProductSystemRuntime } from "./productSystem/runtime.js";
 import { getProductSystem, type ApiContext, type ApiEnv, can } from "./cloud/context.js";
+import { incompleteCostExceptionFromBody } from "./commercial/incompleteCostException.js";
 import {
   presentExecutionPlanForViewer,
   viewerCanAssignProvider,
@@ -107,7 +108,6 @@ import {
   decideOfferingFreeze,
   frozenOfferingRecordFor,
   priceApprovalBindingHash,
-  readIncompleteCostReason,
   type OfferingEvaluation,
 } from "@workos-final/domain";
 
@@ -2269,12 +2269,7 @@ function readApprovalNote(body: unknown): string | null | false {
 async function readIncompleteCostException(
   c: ApiContext,
 ): Promise<{ acceptedByUserId: string; reason: string } | null | "forbidden"> {
-  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
-  const raw = body && typeof body === "object" ? (body.incompleteCostAcceptance as Record<string, unknown> | undefined) : undefined;
-  if (!raw || typeof raw !== "object" || raw.confirm !== true) return null;
-  if (!can(c, "quotes.accept.incomplete_cost")) return "forbidden";
-  const reason = readIncompleteCostReason(raw.reason);
-  return reason ? { acceptedByUserId: actorUserId(c), reason } : { acceptedByUserId: actorUserId(c), reason: "" };
+  return incompleteCostExceptionFromBody(c, await c.req.json().catch(() => null));
 }
 
 export function actorUserId(c: ApiContext): string {

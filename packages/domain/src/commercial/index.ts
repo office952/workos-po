@@ -217,6 +217,7 @@ export {
   INCOMPLETE_COST_REASON_MAX_LENGTH,
   isIncompleteCostAcceptanceFor,
   readIncompleteCostReason,
+  resolveIncompleteCostAcceptance,
   quoteAcceptanceErrorLabel,
   recordQuoteAcceptance,
   type IncompleteCostAcceptance,

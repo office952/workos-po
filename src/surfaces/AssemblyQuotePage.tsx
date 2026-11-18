@@ -17,6 +17,8 @@ import { formatMoney } from "../presentation/format";
 import { assemblyHref, assemblyQuoteHref, jobHref, requestHref } from "../routing/appRoute";
 import { QuoteLines, QuoteRelations, QuoteSummary, type QuoteRelation } from "./quoteDetail";
 import { AcceptanceResult } from "./quotes/AcceptanceResult";
+import { IncompleteCostException } from "./quotes/IncompleteCostException";
+import { incompleteCostExceptionReady } from "./quotes/incompleteCostExceptionReady";
 import { QuoteDecisionNote } from "./quotes/QuoteDecisionNote";
 import { quoteDecisionMode } from "./quotes/quoteDecisionMode";
 import "../styles/surfaces/quote-decision.css";
@@ -69,6 +71,8 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
   const [accepting, setAccepting] = useState(false);
   const [acceptedOrderId, setAcceptedOrderId] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<AcceptanceRefusal | null>(null);
+  const [exceptionReason, setExceptionReason] = useState("");
+  const [exceptionAcknowledged, setExceptionAcknowledged] = useState(false);
   const acceptingRef = useRef(false);
   const returnFocusRef = useRef(false);
   const confirmRef = useRef<HTMLElement>(null);
@@ -110,7 +114,11 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
     acceptingRef.current = true;
     setAccepting(true);
     setRefusal(null);
-    const result = await acceptAssemblyQuote(quote.assemblyId, quoteSnapshotId);
+    const result = await acceptAssemblyQuote(
+      quote.assemblyId,
+      quoteSnapshotId,
+      quote.acceptance.incompleteCostExceptionRequired ? exceptionReason.trim() : undefined,
+    );
     acceptingRef.current = false;
     setAccepting(false);
     setConfirming(false);
@@ -242,9 +250,32 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
                     stadiul „Cu comandă” și nu mai poate fi acceptată din nou; o modificare ulterioară cere o
                     ofertă nouă.
                   </p>
+                  {quote.acceptance.incompleteCostExceptionRequired ? (
+                    <IncompleteCostException
+                      reason={exceptionReason}
+                      acknowledged={exceptionAcknowledged}
+                      pending={accepting}
+                      onReasonChange={setExceptionReason}
+                      onAcknowledgedChange={setExceptionAcknowledged}
+                    />
+                  ) : null}
                   <div className="offers-confirm__actions">
-                    <Button disabled={accepting} onClick={() => void accept()}>
-                      {accepting ? "Se creează comanda…" : "Da, confirm comanda"}
+                    <Button
+                      disabled={
+                        accepting ||
+                        !incompleteCostExceptionReady(
+                          quote.acceptance.incompleteCostExceptionRequired,
+                          exceptionAcknowledged,
+                          exceptionReason,
+                        )
+                      }
+                      onClick={() => void accept()}
+                    >
+                      {accepting
+                        ? "Se creează comanda…"
+                        : quote.acceptance.incompleteCostExceptionRequired
+                          ? "Acceptă cu cost incomplet"
+                          : "Da, confirm comanda"}
                     </Button>
                     <Button variant="secondary" disabled={accepting} onClick={cancelConfirmation}>
                       Renunță
@@ -259,6 +290,11 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
               ) : null}
             </QuoteSummary>
             <QuoteLines caption="Secțiuni ofertă" lines={presentAssemblyQuoteLines(quote)} total={presentAssemblyQuoteTotal(quote)} lineTax />
+            {quote.incompleteCostAcceptance ? (
+              <p className="ui-note" data-testid="incomplete-cost-acceptance-record">
+                Acceptată de Proprietar cu cost intern incomplet. Motiv: {quote.incompleteCostAcceptance.reason}
+              </p>
+            ) : null}
             {quote.internalCost ? <InternalCostPanel cost={quote.internalCost} /> : null}
             {quote.internalCost === null ? (
               <p className="ui-note">Costul intern nu poate fi urmărit pentru această ofertă.</p>

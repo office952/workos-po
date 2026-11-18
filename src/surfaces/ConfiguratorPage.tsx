@@ -166,6 +166,8 @@ export function withAssemblyLettersMountingDrafts(
 export type ConfiguratorPageProps = ConfiguratorContext & {
   assemblyId?: string | null;
   memberRole?: AssemblyMemberRole | null;
+  /** Assembly member opened from „Stabilește prețul”: start on the price step, not on the values. */
+  openPriceStep?: boolean;
 };
 
 export const INITIAL_PREVIEW_DEBOUNCE_MS = 0;
@@ -228,6 +230,7 @@ export function ConfiguratorPage({
   productCode,
   assemblyId = null,
   memberRole = null,
+  openPriceStep = false,
 }: ConfiguratorPageProps) {
   const context: ConfiguratorContext = { customerId, requestId, productCode, ...(assemblyId ? { assemblyId } : {}) };
   const stored = readConfiguratorSession();
@@ -242,7 +245,9 @@ export function ConfiguratorPage({
     }
     return owned;
   });
-  const [workArea, setWorkArea] = useState<ConfigurationWorkArea>("configuration");
+  const [workArea, setWorkArea] = useState<ConfigurationWorkArea>(
+    openPriceStep && assemblyId && memberRole ? "commercial" : "configuration",
+  );
   const workAreaRef = useRef<ConfigurationWorkArea>(workArea);
   useEffect(() => { workAreaRef.current = workArea; }, [workArea]);
   const sectionsHandle = useRef<ConfigurationSectionsHandle>(null);
@@ -896,10 +901,25 @@ export function ConfiguratorPage({
             <div className="stack">
               <p>Prețul acestei părți este cel din ultima confirmare acceptată în ansamblu. Consultarea nu modifică ansamblul.</p>
               {!memberConsultOnly ? (
-                <>
-                  <p>Pentru alt preț sau alte valori, verifică și reconfirmă configurația; ansamblul va cere apoi revizuire.</p>
-                  <Button variant="secondary" onClick={() => setWorkArea("review")}>Verifică și reconfirmă configurația</Button>
-                </>
+                <div className="stack" data-testid="member-price-only">
+                  <p>
+                    Poți stabili sau schimba doar prețul: configurația confirmată rămâne neschimbată și ansamblul
+                    rămâne confirmat. O ofertă înghețată înainte își pierde valabilitatea și trebuie înghețată din nou.
+                  </p>
+                  <div className="cluster">
+                    <Button
+                      disabled={confirmState === "pending" || !preview?.reviewId}
+                      onClick={() => void confirm()}
+                    >
+                      {confirmState === "pending" ? "Se pregătește prețul…" : "Stabilește prețul"}
+                    </Button>
+                    <Button variant="secondary" onClick={() => setWorkArea("configuration")}>Modifică configurația</Button>
+                  </div>
+                  <p className="ui-note">
+                    „Modifică configurația” redeschide valorile produsului. Doar o valoare schimbată cere
+                    revizuirea și reconfirmarea ansamblului.
+                  </p>
+                </div>
               ) : null}
             </div>
           ) : !confirmation ? (

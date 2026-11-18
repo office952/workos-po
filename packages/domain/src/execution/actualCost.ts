@@ -58,10 +58,19 @@ export function projectActualInternalCost(
   record: ExecutionPlanRecord,
   snapshot: AcceptedProductionSnapshot | null,
 ): ActualInternalCostProjection {
-  const plannedByResource = new Map(
-    (snapshot?.eic.lines ?? []).map((line) => [line.resourceId, line]),
-  );
-  const actualByResource = collectActualQuantities(record.tasks);
+  return projectActualInternalCostForLines(record.tasks, snapshot?.eic.lines ?? []);
+}
+
+/**
+ * The same comparison for an explicit set of operations and frozen cost lines. An assembly job
+ * uses it once per part, so a resource shared by two parts is never merged.
+ */
+export function projectActualInternalCostForLines(
+  tasks: readonly ExecutionTask[],
+  plannedLines: readonly FrozenEicLine[],
+): ActualInternalCostProjection {
+  const plannedByResource = new Map(plannedLines.map((line) => [line.resourceId, line]));
+  const actualByResource = collectActualQuantities(tasks);
   const resourceIds = uniqueIds([
     ...plannedByResource.keys(),
     ...actualByResource.keys(),
@@ -75,10 +84,10 @@ export function projectActualInternalCost(
   );
   const calculable = lines.filter((line) => line.status === "CALCULABLE");
   const unavailable = lines.filter((line) => line.status === "UNAVAILABLE");
-  const plannedContributorCount = snapshot?.eic.lines.length ?? 0;
+  const plannedContributorCount = plannedLines.length;
   const allPlannedPriced =
     plannedContributorCount > 0 &&
-    (snapshot?.eic.lines ?? []).every((line) =>
+    plannedLines.every((line) =>
       calculable.some((item) => item.resourceId === line.resourceId),
     );
   const status = actualCostStatus(calculable.length, allPlannedPriced, unavailable.length);
