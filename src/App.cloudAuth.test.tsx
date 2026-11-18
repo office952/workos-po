@@ -60,6 +60,20 @@ const authenticatedSession = {
   ],
 };
 
+/** Start reads one projection; an organization with records and nothing waiting. */
+const quietStart = {
+  start: {
+    readAt: "2026-11-17T06:42:00.000Z",
+    sources: [{ id: "REQUESTS", label: "Cererile", status: "READY" }],
+    attention: { entries: [], counts: { ACTION: 0, ATTENTION: 0, WATCH: 0 }, incompleteLevels: [] },
+    continueWork: { status: "READY", total: 0, items: [] },
+    flow: [],
+    activity: "PRESENT",
+    setup: null,
+    canCreateRequest: true,
+  },
+};
+
 function installFetch(
   handler: (url: string, method: string, body: unknown) => Promise<unknown> | unknown,
 ) {
@@ -262,7 +276,7 @@ describe("App Cloud auth integration", () => {
     expect(screen.queryByText("OwnerPass12")).not.toBeInTheDocument();
   });
 
-  it("lands on Launchpad after login from /login instead of Pagină inexistentă", async () => {
+  it("lands on Start after login from /login instead of Pagină inexistentă", async () => {
     let session: unknown = { mode: "cloud", user: null, organization: null, memberships: [] };
     installFetch((url, method) => {
       if (url.endsWith("/api/cloud/login") && method === "POST") {
@@ -275,6 +289,9 @@ describe("App Cloud auth integration", () => {
       if (url.endsWith("/api/health")) {
         return health;
       }
+      if (url.endsWith("/api/start")) {
+        return quietStart;
+      }
       return { customers: [] };
     });
     window.history.replaceState({}, "", "/login");
@@ -285,10 +302,8 @@ describe("App Cloud auth integration", () => {
     await userEvent.type(screen.getByLabelText("Adresă email"), "owner@example.test");
     await userEvent.type(screen.getByLabelText("Parolă"), "OwnerPass12");
     await userEvent.click(screen.getByRole("button", { name: "Autentificare" }));
-    expect(await screen.findByRole("heading", { name: "WorkOS" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Comercial" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Operațiuni" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Administrare" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Nu ai intervenții în așteptare" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /De continuat/ })).toBeInTheDocument();
     expect(screen.queryByText("Pagină inexistentă")).not.toBeInTheDocument();
     expect(window.location.pathname).toBe("/");
   });
@@ -301,6 +316,9 @@ describe("App Cloud auth integration", () => {
       if (url.endsWith("/api/health")) {
         return health;
       }
+      if (url.endsWith("/api/start")) {
+        return quietStart;
+      }
       return { customers: [] };
     });
     window.history.replaceState({}, "", "/login");
@@ -309,7 +327,7 @@ describe("App Cloud auth integration", () => {
     await waitFor(() => {
       expect(window.location.pathname).toBe("/");
     });
-    expect(await screen.findByRole("heading", { name: "Comercial" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Nu ai intervenții în așteptare" })).toBeInTheDocument();
     expect(screen.queryByText("Pagină inexistentă")).not.toBeInTheDocument();
   });
 

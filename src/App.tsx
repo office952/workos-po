@@ -79,7 +79,7 @@ import { WorkcentersAdminPage } from "./surfaces/WorkcentersAdminPage";
 import { ProductEnablementAdminPage } from "./surfaces/ProductEnablementAdminPage";
 import { AccessAdminPage } from "./surfaces/AccessAdminPage";
 import { AdminHomePage } from "./surfaces/AdminHomePage";
-import { LaunchpadPage } from "./surfaces/LaunchpadPage";
+import { StartPage } from "./surfaces/StartPage";
 import { ThemeSync } from "./theme/ThemeControl";
 
 function syncCanonicalLocation(): AppLocation {
@@ -97,7 +97,7 @@ function operatorContext(route: AppRoute): string {
 function renderRoute(route: AppRoute, search: string): ReactNode {
   switch (route.name) {
     case "home":
-      return <LaunchpadPage />;
+      return <StartPage />;
     case "clients":
       return <ClientsPage search={search} />;
     case "client":

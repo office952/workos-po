@@ -24,12 +24,12 @@ export function presentRouteChrome(route: AppRoute): RouteChrome {
   switch (route.name) {
     case "home":
       return {
-        contextLabel: "WorkOS",
+        contextLabel: "Start",
         currentHref: "/",
         workspace: "launchpad",
         eyebrow: "WorkOS",
-        title: "WorkOS",
-        lead: "Punctul de pornire. De aici intri în comercial, operațiuni sau administrare.",
+        title: "Start",
+        lead: "Ce cere acțiunea ta, ce necesită atenție și unde continui.",
       };
     case "admin":
       return {

@@ -31,6 +31,9 @@ export const ROUTE_POLICY: Readonly<Record<string, RoutePolicyCapability>> = {
   "POST /api/account/sessions/revoke-others": "session",
   "POST /api/account/email-verification": "session",
 
+  // Start: read-only orientation; each source is authorized again inside the projection.
+  "GET /api/start": "org.settings.read",
+
   // Organization access
   "GET /api/admin/access": "org.access.read",
   "GET /api/admin/access/events": "org.access.manage",
