@@ -207,6 +207,7 @@ describe("product assembly v2", () => {
       quote: quote.quote,
       children: [panel, mark],
       createdAt: "2026-09-24T01:20:00.000Z",
+      incompleteCost: { acceptedByUserId: "user:owner", reason: "Cost incomplet acceptat explicit" },
     });
     expect(order.ok).toBe(true);
     if (!order.ok) {
@@ -295,6 +296,7 @@ describe("product assembly v2", () => {
       quote: quote.quote,
       children: [panel, mark, text],
       createdAt: "2026-09-24T02:20:00.000Z",
+      incompleteCost: { acceptedByUserId: "user:owner", reason: "Cost incomplet acceptat explicit" },
     });
     if (!order.ok) {
       throw new Error(order.error);
@@ -674,6 +676,7 @@ function quotedAssembly(
     quote: quote.quote,
     children,
     createdAt: "2026-09-24T06:30:00.000Z",
+    incompleteCost: { acceptedByUserId: "user:owner", reason: "Cost incomplet acceptat explicit" },
   });
   if (!order.ok) {
     throw new Error(order.error);

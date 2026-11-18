@@ -514,7 +514,12 @@ export async function ensureAssemblyScenarioA(
   const accept = await client.request(
     "POST",
     `/api/assemblies/${encodeURIComponent(assemblyId)}/accept`,
-    { quoteSnapshotId },
+    // Synthetic dataset: the assembly operation cost is not configured, so the Owner accepts the
+    // incomplete cost explicitly, exactly as in the product (AUD-PRICING-002).
+    {
+      quoteSnapshotId,
+      incompleteCostAcceptance: { confirm: true, reason: "Set sintetic: costul de ansamblare nu este configurat" },
+    },
   );
   if (!accept.ok && accept.status !== 409) {
     throw new Error(`assembly_accept:${accept.body?.error ?? accept.status}`);

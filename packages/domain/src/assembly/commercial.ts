@@ -6,6 +6,7 @@ import type {
   FrozenSiteInstallationQuoteLineV2,
 } from "../commercial/quoteSnapshot.js";
 import { copyFrozenQuoteLine } from "../commercial/quoteSnapshot.js";
+import { resolveIncompleteCostAcceptance } from "../commercial/quoteAcceptance.js";
 import {
   rateAcknowledgementHashedContent,
   type FrozenRateAcknowledgement,
@@ -24,6 +25,54 @@ import {
 } from "./operationCostEvidence.js";
 import type { AssemblyOrderSnapshot, AssemblyQuoteSnapshot } from "./snapshots.js";
 import type { AssemblyRuleFailure, AssemblyTruth, ConfirmedChildProduct } from "./model.js";
+
+/** One member of a confirmed assembly that still prevents freezing the common quote. */
+export type AssemblyFreezeBlocker = {
+  role: AssemblyTruth["members"][number]["role"];
+  roleLabel: string;
+  code: "PRICE_MISSING";
+  reason: string;
+};
+
+function childHasFrozenPrice(child: ConfirmedChildProduct): boolean {
+  return Boolean(
+    child.commercial &&
+      child.commercial.completeness === "COMPLETE" &&
+      child.childQuoteSnapshotId &&
+      child.childQuoteContentHash,
+  );
+}
+
+/**
+ * Members of the confirmed truth without a complete customer price. `freezeAssemblyQuote` refuses
+ * exactly these, so a view can state the same eligibility the freeze will apply.
+ */
+export function assemblyQuoteFreezeBlockers(
+  assembly: { members: readonly Pick<AssemblyTruth["members"][number], "role" | "confirmedTruthId">[] },
+  children: readonly ConfirmedChildProduct[],
+): AssemblyFreezeBlocker[] {
+  return assembly.members.flatMap((member) => {
+    const child = children.find((item) => item.truthId === member.confirmedTruthId);
+    if (!child || childHasFrozenPrice(child)) return [];
+    const roleLabel = assemblyRoleLabel(member.role);
+    return [{ role: member.role, roleLabel, code: "PRICE_MISSING" as const, reason: `Lipsește prețul net pentru ${roleLabel}.` }];
+  });
+}
+
+/**
+ * Internal cost completeness of an assembly quote, from frozen evidence only: every part and the
+ * frozen assembly operation cost. A quote frozen before operation costing carries no operation
+ * evidence; its completeness is not assumed and counts as PARTIAL.
+ */
+export function assemblyQuoteCostCompleteness(
+  quote: Pick<AssemblyQuoteSnapshot, "operationCost">,
+  children: readonly Pick<ConfirmedChildProduct, "eicCompleteness">[],
+): "COMPLETE" | "PARTIAL" {
+  return children.every((child) => child.eicCompleteness === "COMPLETE") &&
+    quote.operationCost?.completeness === "COMPLETE"
+    ? "COMPLETE"
+    : "PARTIAL";
+}
 
 export function freezeAssemblyQuote(input: {
   quoteSnapshotId: string;
@@ -65,8 +114,8 @@ export function freezeAssemblyQuote(input: {
       return null;
     }
     if (
+      !childHasFrozenPrice(child) ||
       !child.commercial ||
-      child.commercial.completeness !== "COMPLETE" ||
       !child.childQuoteSnapshotId ||
       !child.childQuoteContentHash
     ) {
@@ -183,6 +232,8 @@ export function acceptAssemblyQuote(input: {
   quote: AssemblyQuoteSnapshot;
   children: readonly ConfirmedChildProduct[];
   createdAt: string;
+  /** AUD-PRICING-002 · Owner exception (server actor), required when the cost is not complete. */
+  incompleteCost?: { acceptedByUserId: string; reason: string } | null;
 }): { ok: true; order: AssemblyOrderSnapshot } | AssemblyRuleFailure {
   const childrenByTruth = new Map(input.children.map((child) => [child.truthId, child]));
   const frozenChildren = [];
@@ -237,7 +288,17 @@ export function acceptAssemblyQuote(input: {
       eicTotal: child.eicTotal,
       eicCurrency: child.eicCurrency,
       eicCompleteness: child.eicCompleteness,
+      ...(child.eicLines ? { eicLines: child.eicLines.map((line) => ({ ...line })) } : {}),
     });
+  }
+  const exception = resolveIncompleteCostAcceptance({
+    costComplete: assemblyQuoteCostCompleteness(input.quote, frozenChildren) === "COMPLETE",
+    quote: input.quote,
+    exception: input.incompleteCost,
+    acceptedAt: input.createdAt,
+  });
+  if (!exception.ok) {
+    return { ok: false, error: exception.error, reasons: exception.reasons };
   }
   const serviceLine =
     input.quote.schemaVersion === 2 && input.quote.serviceLine
@@ -263,6 +324,7 @@ export function acceptAssemblyQuote(input: {
     ...(input.quote.operationCost
       ? { operationCost: copyFrozenAssemblyOperationCost(input.quote.operationCost) }
       : {}),
+    ...(exception.acceptance ? { incompleteCostAcceptance: { ...exception.acceptance } } : {}),
   };
   return {
     ok: true,

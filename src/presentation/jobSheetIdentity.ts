@@ -27,7 +27,7 @@ export function presentJobSheetStage(job: JobListItemTransport): string {
 }
 
 export const JOB_PRODUCTION_COMPLETED_LEAD =
-  "Producția este finalizată. Compară planificat cu realizat. Livrarea și montajul nu sunt confirmate de această stare.";
+  "Producția este finalizată. Livrarea și montajul nu sunt confirmate de această stare.";
 
 export function presentJobSheetLead(job: JobListItemTransport): string {
   if (job.stage === "EXECUTION_COMPLETED") {

@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { presentJobEconomics, type JobEconomicsModel } from "../../adapters/commercialFinancialAdapter";
 import { fetchJobEconomics } from "../../api/commercialFinancial";
 import { TransportError } from "../../api/http";
@@ -8,6 +9,7 @@ import { resourceKeys } from "../../data/resourceKeys";
 import { useResource } from "../../data/useResource";
 import { formatMoney } from "../../presentation/format";
 import "../../styles/surfaces/commercial-financial.css";
+import "../../styles/surfaces/job-supervision.css";
 
 /**
  * Commercial & Financial V1 · planned vs operational result of a job, for the Owner only.
@@ -153,8 +155,14 @@ function EconomicsBody({ model }: { model: JobEconomicsModel }) {
               </tr>
             </thead>
             <tbody>
-              {model.lines.map((line) => (
-                <tr key={line.resourceId}>
+              {model.lines.map((line, index) => (
+                <Fragment key={line.resourceId}>
+                {model.groupedByPart && line.groupLabel && line.groupLabel !== model.lines[index - 1]?.groupLabel ? (
+                  <tr className="cfc-pva__group">
+                    <th scope="colgroup" colSpan={6}>{line.groupLabel}</th>
+                  </tr>
+                ) : null}
+                <tr>
                   <td>
                     {line.label}
                     {line.unknownReason ? <><br /><small>{line.unknownReason}</small></> : null}
@@ -167,6 +175,7 @@ function EconomicsBody({ model }: { model: JobEconomicsModel }) {
                     <LineDifference value={line.difference} currency={currency} />
                   </td>
                 </tr>
+                </Fragment>
               ))}
             </tbody>
           </table>

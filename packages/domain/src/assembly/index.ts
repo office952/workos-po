@@ -40,6 +40,7 @@ export {
   assemblyKindAvailableForNewWork,
   assemblyV2AvailableForNewWork,
   attachConfirmedChild,
+  reconfirmAfterCommercialOnlyChange,
   confirmAssembly,
   createAssemblyDefinition,
   hashProductAggregate,
@@ -48,6 +49,8 @@ export {
 } from "./definition.js";
 export {
   acceptAssemblyQuote,
+  assemblyQuoteCostCompleteness,
+  assemblyQuoteFreezeBlockers,
   assemblyQuoteContentHashMatches,
   freezeAssemblyQuote,
 } from "./commercial.js";

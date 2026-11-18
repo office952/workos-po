@@ -34,6 +34,8 @@ import { associatedVersion, fileVersions } from './jobRecord/fileVersions';
 import { JobSheetNav } from './jobRecord/JobSheetNav';
 import { JobEconomicsPanel } from './jobRecord/JobEconomicsPanel';
 import { JobRecordView } from './JobRecordView';
+import { JobSupervisionPanel } from './jobs/JobSupervisionPanel';
+import { membershipRoleLabel } from '../adapters/cloudSessionAdapter';
 import { TaskDossierPanel } from './TaskDossierPanel';
 import '../styles/surfaces/job-sheet.css';
 
@@ -236,7 +238,8 @@ export function JobDetailPage({ jobId, taskId = null, section, fileId = null }: 
         viewer={viewer}
         viewerExpanded={viewerExpanded}
         files={report.data ? <JobRecordFiles record={report.data} canWriteFiles={owner || Boolean(session.data)} operationHref={operationHref} openFileId={active === 'fisiere' ? fileId : null} onOpenFile={openFile} onCloseFile={closeFile} /> : null}
-        economics={active === 'situatie' && job && job.kind !== 'ASSEMBLY' && sessionHasCapability(cloud, 'costs.internal.read') ? <JobEconomicsPanel jobId={jobId} /> : null}
+        economics={active === 'situatie' && job && sessionHasCapability(cloud, 'costs.internal.read') ? <JobEconomicsPanel jobId={jobId} /> : null}
+        supervision={active === 'operatii' && planId && planResource.data && !finished ? <JobSupervisionPanel jobId={jobId} planId={planId} plan={planResource.data} selectedTask={selectedTask} roleLabel={cloud.organization?.membershipRole ? membershipRoleLabel(cloud.organization.membershipRole) : null} operationHref={operationHref} /> : null}
         dates={job ? <JobRecordDates planning={planningPanel} jobId={jobId} returnTo={jobHref(jobId, { section: 'date', taskId })} consultation={finished} site={jobResource.data?.siteInstallation ?? null} sourceHref={sourceHref ?? null} sourceLabel={job.kind === 'ASSEMBLY' ? 'Deschide ansamblul sursă' : 'Deschide oferta sursă'} showCommercialSource={canOpenOffer} canDecideMaterials={sessionHasCapability(cloud, 'materials.decide')} /> : null}
       />
     </div>

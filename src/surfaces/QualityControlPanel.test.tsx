@@ -83,12 +83,9 @@ describe("QualityControlPanel history", () => {
         })}
         pending={false}
         note=""
-        correctionNote=""
         onNote={() => undefined}
-        onCorrectionNote={() => undefined}
         onPass={() => undefined}
         onFail={() => undefined}
-        onCloseCorrection={() => undefined}
       />,
     );
 

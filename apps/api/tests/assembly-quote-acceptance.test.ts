@@ -23,7 +23,7 @@ import { freezeAcknowledgingRates } from "./fixtures/rateAcknowledgement.js";
 type Json = Record<string, unknown>;
 type Requester = { request: (path: string, init?: RequestInit) => Response | Promise<Response> };
 type Client = ReturnType<typeof client>;
-type Acceptance = { canAccept: boolean; reason: string | null };
+type Acceptance = { canAccept: boolean; reason: string | null; incompleteCostExceptionRequired?: boolean };
 
 const lettersValues = {
   "root.inscription": "WORKOS",
@@ -158,7 +158,7 @@ describe("assembly quote acceptance bound to the reviewed snapshot", () => {
     try {
       const api = client(createApp({ productSystem: runtime }));
       const { assemblyId, quoteSnapshotId } = await quotedAssembly(api, "Flux ansamblu sintetic");
-      const accepted = await json(await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId }));
+      const accepted = await json(await api.post(`/api/assemblies/${assemblyId}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId }));
       const id = (accepted.order as Json).orderSnapshotId as string;
       vi.spyOn(runtime, "persistExecutionPlan").mockImplementationOnce(() => { throw new Error("synthetic assembly plan failure"); });
       expect((await api.post(`/api/jobs/${id}/production`)).status).toBe(500);
@@ -175,9 +175,9 @@ describe("assembly quote acceptance bound to the reviewed snapshot", () => {
     const api = client(createApp());
     const { assemblyId, quoteSnapshotId } = await quotedAssembly(api, "Client Exact");
     expect(quoteSnapshotId).toMatch(/^asmq:/);
-    expect((await quoteEnvelope(api, quoteSnapshotId)).acceptance).toEqual<Acceptance>({ canAccept: true, reason: null });
+    expect((await quoteEnvelope(api, quoteSnapshotId)).acceptance).toEqual<Acceptance>({ canAccept: true, reason: null, incompleteCostExceptionRequired: true });
 
-    const accepted = await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId });
+    const accepted = await api.post(`/api/assemblies/${assemblyId}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId });
     expect(accepted.status).toBe(200);
     const body = await json(accepted);
     const order = body.order as { orderSnapshotId: string; sourceQuoteSnapshotId: string };
@@ -189,7 +189,7 @@ describe("assembly quote acceptance bound to the reviewed snapshot", () => {
     expect(after.acceptance).toEqual<Acceptance>({ canAccept: false, reason: null });
     expect((after.order as { orderSnapshotId: string }).orderSnapshotId).toBe(order.orderSnapshotId);
 
-    const repeated = await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId });
+    const repeated = await api.post(`/api/assemblies/${assemblyId}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId });
     expect(repeated.status).toBe(409);
     expect(await json(repeated)).toMatchObject({
       error: "assembly_quote_already_accepted",
@@ -220,10 +220,10 @@ describe("assembly quote acceptance bound to the reviewed snapshot", () => {
     expect((historical.assemblyQuote as { superseded: boolean }).superseded).toBe(true);
     expect((historical.acceptance as Acceptance).canAccept).toBe(false);
     expect((historical.acceptance as Acceptance).reason).toMatch(/Versiune înlocuită/);
-    expect((await quoteEnvelope(api, secondId)).acceptance).toEqual<Acceptance>({ canAccept: true, reason: null });
+    expect((await quoteEnvelope(api, secondId)).acceptance).toEqual<Acceptance>({ canAccept: true, reason: null, incompleteCostExceptionRequired: true });
 
     for (const stale of [firstId, "asmq:unknown"]) {
-      const refused = await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId: stale });
+      const refused = await api.post(`/api/assemblies/${assemblyId}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId: stale });
       expect(refused.status).toBe(409);
       expect(await json(refused)).toMatchObject({
         error: "assembly_quote_superseded",
@@ -231,13 +231,13 @@ describe("assembly quote acceptance bound to the reviewed snapshot", () => {
       });
     }
     const other = await quotedAssembly(api, "Alt Ansamblu");
-    const crossed = await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId: other.quoteSnapshotId });
+    const crossed = await api.post(`/api/assemblies/${assemblyId}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId: other.quoteSnapshotId });
     expect(crossed.status).toBe(409);
     expect(await assemblyOrders(api)).toBe(0);
     expect((await quoteEnvelope(api, secondId)).order).toBeNull();
     expect((await quoteEnvelope(api, other.quoteSnapshotId)).order).toBeNull();
 
-    expect((await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId: secondId })).status).toBe(200);
+    expect((await api.post(`/api/assemblies/${assemblyId}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId: secondId })).status).toBe(200);
     expect(await assemblyOrders(api)).toBe(1);
     expect((await quoteEnvelope(api, firstId)).order).toBeNull();
     expect((await quoteEnvelope(api, firstId)).acceptance).toMatchObject({ canAccept: false });
@@ -251,7 +251,7 @@ describe("assembly quote acceptance bound to the reviewed snapshot", () => {
     const stale = await assemblyView(api, assemblyId);
     expect(stale.status).toBe("STALE");
     expect(stale.quoteSnapshotId).toBe(quoteA);
-    const whileStale = await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId: quoteA });
+    const whileStale = await api.post(`/api/assemblies/${assemblyId}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId: quoteA });
     expect(whileStale.status).toBe(409);
     const staleRefusal = await json(whileStale);
     expect(staleRefusal.error).toBe("assembly_quote_stale_configuration");
@@ -264,7 +264,7 @@ describe("assembly quote acceptance bound to the reviewed snapshot", () => {
     expect(reconfirmed.status).toBe("CONFIRMED");
     expect(reconfirmed.quoteSnapshotId).toBe(quoteA);
     expect(reconfirmed.quoteFreezable).toBe(true);
-    const afterReconfirm = await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId: quoteA });
+    const afterReconfirm = await api.post(`/api/assemblies/${assemblyId}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId: quoteA });
     expect(afterReconfirm.status).toBe(409);
     const refusal = await json(afterReconfirm);
     expect(refusal.error).toBe("assembly_quote_stale_configuration");
@@ -280,18 +280,18 @@ describe("assembly quote acceptance bound to the reviewed snapshot", () => {
     const quoteB = (await assemblyView(api, assemblyId)).quoteSnapshotId as string;
     expect(quoteB).not.toBe(quoteA);
     expect((await quoteEnvelope(api, quoteA)).acceptance).toMatchObject({ canAccept: false });
-    expect((await quoteEnvelope(api, quoteB)).acceptance).toEqual<Acceptance>({ canAccept: true, reason: null });
-    const replayA = await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId: quoteA });
+    expect((await quoteEnvelope(api, quoteB)).acceptance).toEqual<Acceptance>({ canAccept: true, reason: null, incompleteCostExceptionRequired: true });
+    const replayA = await api.post(`/api/assemblies/${assemblyId}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId: quoteA });
     expect(replayA.status).toBe(409);
     expect(await json(replayA)).toMatchObject({ error: "assembly_quote_superseded", currentQuoteSnapshotId: quoteB });
 
-    const accepted = await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId: quoteB });
+    const accepted = await api.post(`/api/assemblies/${assemblyId}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId: quoteB });
     expect(accepted.status).toBe(200);
     const order = (await json(accepted)).order as { orderSnapshotId: string; sourceQuoteSnapshotId: string };
     expect(order.sourceQuoteSnapshotId).toBe(quoteB);
     expect(await assemblyOrders(api)).toBe(1);
     expect((await quoteEnvelope(api, quoteA)).order).toBeNull();
-    const repeated = await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId: quoteB });
+    const repeated = await api.post(`/api/assemblies/${assemblyId}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId: quoteB });
     expect(repeated.status).toBe(409);
     expect(await json(repeated)).toMatchObject({ error: "assembly_quote_already_accepted", orderSnapshotId: order.orderSnapshotId });
     expect(await assemblyOrders(api)).toBe(1);
@@ -326,7 +326,7 @@ describe("assembly quote acceptance bound to the reviewed snapshot", () => {
 
     await attach("SIGNAGE_LETTERS", CANONICAL_PRODUCT_CODE, lettersValues);
     expect((await assemblyView(api, assemblyId)).status).toBe("STALE");
-    const whileStale = await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId: quoteA });
+    const whileStale = await api.post(`/api/assemblies/${assemblyId}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId: quoteA });
     expect(whileStale.status).toBe(409);
     expect((await json(whileStale)).error).toBe("assembly_quote_stale_configuration");
     expect(await assemblyOrders(api)).toBe(0);
@@ -337,7 +337,7 @@ describe("assembly quote acceptance bound to the reviewed snapshot", () => {
     expect(reconfirmed.quoteSnapshotId).toBe(quoteA);
     expect(reconfirmed.quoteFreezable).toBe(true);
 
-    const refused = await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId: quoteA });
+    const refused = await api.post(`/api/assemblies/${assemblyId}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId: quoteA });
     expect(refused.status).toBe(409);
     expect((await json(refused)).error).toBe("assembly_quote_stale_configuration");
     expect((await quoteEnvelope(api, quoteA)).acceptance).toMatchObject({ canAccept: false });
@@ -353,8 +353,8 @@ describe("assembly quote acceptance bound to the reviewed snapshot", () => {
     expect(after.status).toBe("CONFIRMED");
     expect(after.quoteSnapshotId).toBe(quoteSnapshotId);
     expect(after.quoteFreezable).toBe(false);
-    expect((await quoteEnvelope(api, quoteSnapshotId)).acceptance).toEqual<Acceptance>({ canAccept: true, reason: null });
-    expect((await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId })).status).toBe(200);
+    expect((await quoteEnvelope(api, quoteSnapshotId)).acceptance).toEqual<Acceptance>({ canAccept: true, reason: null, incompleteCostExceptionRequired: true });
+    expect((await api.post(`/api/assemblies/${assemblyId}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId })).status).toBe(200);
     expect(await assemblyOrders(api)).toBe(1);
   });
 
@@ -390,12 +390,12 @@ describe("assembly quote acceptance bound to the reviewed snapshot", () => {
     expect((memberView.acceptance as Acceptance).canAccept).toBe(false);
     expect((memberView.acceptance as Acceptance).reason).toMatch(/Doar proprietarul/);
     expect((await member.get(`/api/assembly-quotes/${encodeURIComponent(quoteSnapshotId)}/document`)).status).toBe(200);
-    expect((await member.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId })).status).toBe(403);
-    expect((await stranger.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId })).status).toBe(404);
+    expect((await member.post(`/api/assemblies/${assemblyId}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId })).status).toBe(403);
+    expect((await stranger.post(`/api/assemblies/${assemblyId}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId })).status).toBe(404);
     expect(await assemblyOrders(owner)).toBe(0);
 
-    expect((await quoteEnvelope(owner, quoteSnapshotId)).acceptance).toEqual<Acceptance>({ canAccept: true, reason: null });
-    expect((await owner.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId })).status).toBe(200);
+    expect((await quoteEnvelope(owner, quoteSnapshotId)).acceptance).toEqual<Acceptance>({ canAccept: true, reason: null, incompleteCostExceptionRequired: true });
+    expect((await owner.post(`/api/assemblies/${assemblyId}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId })).status).toBe(200);
     expect(await assemblyOrders(owner)).toBe(1);
     fixture.close();
   });

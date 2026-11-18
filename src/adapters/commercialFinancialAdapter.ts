@@ -247,6 +247,8 @@ export function presentFieldIssues(value: unknown, key: "issues" | "warnings"): 
 export type EconomicLine = {
   resourceId: string;
   label: string;
+  /** Part of the assembly the line belongs to; null on a product job. */
+  groupLabel: string | null;
   unit: string;
   plannedQuantity: number | null;
   actualQuantity: number | null;
@@ -282,6 +284,8 @@ export type JobEconomicsModel =
       operationalMargin: number | null;
       operationalMarginReason: string | null;
       executionLabel: string;
+      /** Assembly job: lines carry the part they belong to and are shown grouped. */
+      groupedByPart: boolean;
       lines: EconomicLine[];
       notes: string[];
     };
@@ -322,6 +326,7 @@ export function presentJobEconomics(value: unknown): JobEconomicsModel | null {
     operationalMargin: num(operationalMargin.value),
     operationalMarginReason: text(operationalMargin.unavailableReason),
     executionLabel: text(economics.executionLabel) ?? "",
+    groupedByPart: body.grouping === "PART",
     lines: list(economics.lines).flatMap((row) => {
       const line = record(row);
       if (!line || typeof line.resourceId !== "string") return [];
@@ -329,6 +334,7 @@ export function presentJobEconomics(value: unknown): JobEconomicsModel | null {
         {
           resourceId: line.resourceId,
           label: text(line.label) ?? line.resourceId,
+          groupLabel: text(line.groupLabel),
           unit: text(line.unit) ?? "",
           plannedQuantity: num(line.plannedQuantity),
           actualQuantity: num(line.actualQuantity),

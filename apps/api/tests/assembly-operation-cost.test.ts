@@ -152,7 +152,7 @@ function freeze(api: Client, assemblyId: string) {
 
 async function release(api: Client, assemblyId: string) {
   const quoteSnapshotId = (await assemblyView(api, assemblyId)).quoteSnapshotId as string;
-  expect((await api.post(`/api/assemblies/${assemblyId}/accept`, { quoteSnapshotId })).status).toBe(200);
+  expect((await api.post(`/api/assemblies/${assemblyId}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId })).status).toBe(200);
   expect((await api.post(`/api/assemblies/${assemblyId}/production`)).status).toBe(200);
   return (await assemblyView(api, assemblyId)).productionCost as {
     total: number;

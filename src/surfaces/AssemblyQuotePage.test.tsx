@@ -338,3 +338,80 @@ describe("AssemblyQuotePage", () => {
     expect(await screen.findByText("Versiune înlocuită")).toBeInTheDocument();
   });
 });
+
+describe("AssemblyQuotePage incomplete-cost exception (Assembly & Supervision Coherence V1 · F-01)", () => {
+  function exceptionServer() {
+    const fetchMock = vi.fn((_path: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({ order: { orderSnapshotId: "asmo:9", sourceQuoteSnapshotId: "asmq:1" } }),
+        });
+      }
+      if (_path.startsWith("/api/jobs/")) {
+        return Promise.resolve({ ok: true, status: 200, json: async () => ({ job: {
+          jobId: "asmo:9", kind: "ASSEMBLY", productCode: "SIGN_ASSEMBLY", productLabel: "Panou ACM + litere", inscription: "NORD",
+          stage: "ORDER_CREATED", stageLabel: "Comandă creată", nextAction: "RELEASE_TO_PRODUCTION", nextActionLabel: "Trimite în producție",
+          orderSnapshotId: "asmo:9", releaseSnapshotId: null,
+        }, execution: { planId: null } }) });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ...unacceptedEnvelope,
+          acceptance: { canAccept: true, reason: null, incompleteCostExceptionRequired: true },
+        }),
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  it("asks for the reason and the confirmation the server requires, then sends both with the exact quote", async () => {
+    const fetchMock = exceptionServer();
+    const user = userEvent.setup();
+    render(<AssemblyQuotePage quoteSnapshotId="asmq:1" />);
+    await user.click(await screen.findByRole("button", { name: "Confirmă comanda" }));
+    const block = screen.getByTestId("incomplete-cost-exception");
+    expect(block).toHaveTextContent("Costul intern al ofertei nu este complet");
+    const accept = screen.getByRole("button", { name: "Acceptă cu cost incomplet" });
+    expect(accept).toBeDisabled();
+    await user.type(within(block).getByRole("textbox", { name: "Motivul acceptării cu cost incomplet" }), "Cost confirmat ulterior");
+    expect(accept).toBeDisabled();
+    await user.click(within(block).getByRole("checkbox", { name: "Confirm acceptarea cu cost intern incomplet" }));
+    expect(accept).not.toBeDisabled();
+    await user.click(accept);
+    await waitFor(() => expect(posts(fetchMock as ReturnType<typeof acceptanceServer>)).toHaveLength(1));
+    expect(posts(fetchMock as ReturnType<typeof acceptanceServer>)[0]).toEqual([
+      "/api/assemblies/asm%3A1/accept",
+      { quoteSnapshotId: "asmq:1", incompleteCostAcceptance: { confirm: true, reason: "Cost confirmat ulterior" } },
+    ]);
+  });
+
+  it("keeps the plain confirmation when the server does not require the exception", async () => {
+    const fetchMock = acceptanceServer({
+      ok: true,
+      status: 200,
+      json: async () => ({ order: { orderSnapshotId: "asmo:9", sourceQuoteSnapshotId: "asmq:1" } }),
+    });
+    const user = userEvent.setup();
+    render(<AssemblyQuotePage quoteSnapshotId="asmq:1" />);
+    await user.click(await screen.findByRole("button", { name: "Confirmă comanda" }));
+    expect(screen.queryByTestId("incomplete-cost-exception")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Da, confirm comanda" }));
+    await waitFor(() => expect(posts(fetchMock)).toHaveLength(1));
+    expect(posts(fetchMock)[0]?.[1]).toEqual({ quoteSnapshotId: "asmq:1" });
+  });
+
+  it("shows the recorded exception on an accepted quote", async () => {
+    stub({
+      quote: item,
+      assemblyQuote,
+      incompleteCostAcceptance: { reason: "Cost confirmat ulterior", acceptedAt: "2026-11-18T10:00:00.000Z" },
+    });
+    render(<AssemblyQuotePage quoteSnapshotId="asmq:1" />);
+    expect(await screen.findByTestId("incomplete-cost-acceptance-record")).toHaveTextContent("Motiv: Cost confirmat ulterior");
+  });
+});

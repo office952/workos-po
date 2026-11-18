@@ -9,24 +9,18 @@ type QualityControlPanelProps = {
   task: ExecutionTaskTransport;
   pending: boolean;
   note: string;
-  correctionNote: string;
   onNote: (value: string) => void;
-  onCorrectionNote: (value: string) => void;
   onPass: () => void;
   onFail: () => void;
-  onCloseCorrection: () => void;
 };
 
 export function QualityControlPanel({
   task,
   pending,
   note,
-  correctionNote,
   onNote,
-  onCorrectionNote,
   onPass,
   onFail,
-  onCloseCorrection,
 }: QualityControlPanelProps) {
   if (!task.qualityControl) {
     return null;
@@ -68,21 +62,11 @@ export function QualityControlPanel({
           </Button>
         ) : null}
       </div>
-      {task.canCloseReworkEpisode ? (
-        <>
-          <TextField
-            id={`correction-note-${task.taskId}`}
-            label="Notă de corecție"
-            value={correctionNote}
-            disabled={pending}
-            onChange={onCorrectionNote}
-          />
-          <div className="cluster">
-            <Button disabled={pending || correctionNote.trim().length === 0} onClick={onCloseCorrection}>
-              Închide corecția
-            </Button>
-          </div>
-        </>
+      {open ? (
+        <p className="ui-note" data-testid="quality-correction-owner">
+          Corecția o închide Producția, din fișa lucrării › Operații. După închidere, controlul îți este
+          oferit din nou aici.
+        </p>
       ) : null}
       {history.length > 0 ? (
         <div className="stack" data-testid="quality-history">

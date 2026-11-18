@@ -80,6 +80,43 @@ export function isIncompleteCostAcceptanceFor(
   );
 }
 
+/**
+ * AUD-PRICING-002 · the single decision used by every acceptance path (product quote and assembly
+ * quote). A quote whose internal cost is not known to be COMPLETE can be accepted only with an
+ * explicit exception from the server actor, with a reason. A complete cost needs none and records
+ * none. The quote itself is never changed.
+ */
+export function resolveIncompleteCostAcceptance(input: {
+  costComplete: boolean;
+  quote: { quoteSnapshotId: string; contentHash: string };
+  exception: { acceptedByUserId: string; reason: string } | null | undefined;
+  acceptedAt: string;
+}):
+  | { ok: true; acceptance: IncompleteCostAcceptance | undefined }
+  | { ok: false; error: "incomplete_cost_requires_owner_acceptance"; reasons: readonly string[] } {
+  if (input.costComplete) return { ok: true, acceptance: undefined };
+  const reason = input.exception ? readIncompleteCostReason(input.exception.reason) : null;
+  if (!input.exception || input.exception.acceptedByUserId.trim() === "" || reason === null) {
+    return {
+      ok: false,
+      error: "incomplete_cost_requires_owner_acceptance",
+      reasons: [INCOMPLETE_COST_ACCEPTANCE_REQUIRED_REASON],
+    };
+  }
+  return {
+    ok: true,
+    acceptance: {
+      policy: INCOMPLETE_COST_ACCEPTANCE_POLICY,
+      quoteSnapshotId: input.quote.quoteSnapshotId,
+      quoteContentHash: input.quote.contentHash,
+      costCompleteness: "PARTIAL",
+      acceptedByUserId: input.exception.acceptedByUserId,
+      acceptedAt: input.acceptedAt,
+      reason,
+    },
+  };
+}
+
 export function recordQuoteAcceptance(
   snapshot: QuoteSnapshot,
   options?: {
@@ -119,32 +156,21 @@ export function recordQuoteAcceptance(
     };
   }
   const acceptedAt = options?.acceptedAt ?? new Date().toISOString();
-  let incompleteCost: IncompleteCostAcceptance | undefined;
-  if (snapshot.eic.completeness !== "COMPLETE") {
-    const exception = options?.incompleteCost;
-    const reason = exception ? readIncompleteCostReason(exception.reason) : null;
-    if (
-      snapshot.schemaVersion !== QUOTE_SNAPSHOT_SCHEMA_VERSION ||
-      !exception ||
-      exception.acceptedByUserId.trim() === "" ||
-      reason === null
-    ) {
-      return {
-        ok: false,
-        error: "incomplete_cost_requires_owner_acceptance",
-        reasons: [INCOMPLETE_COST_ACCEPTANCE_REQUIRED_REASON],
-      };
-    }
-    incompleteCost = {
-      policy: INCOMPLETE_COST_ACCEPTANCE_POLICY,
-      quoteSnapshotId: snapshot.quoteSnapshotId,
-      quoteContentHash: snapshot.contentHash,
-      costCompleteness: "PARTIAL",
-      acceptedByUserId: exception.acceptedByUserId,
-      acceptedAt,
-      reason,
-    };
+  const costComplete = snapshot.eic.completeness === "COMPLETE";
+  // A quote with a service line (schema V2) cannot carry the exception; it stays refused as before.
+  const resolved = resolveIncompleteCostAcceptance({
+    costComplete,
+    quote: snapshot,
+    exception:
+      costComplete || snapshot.schemaVersion === QUOTE_SNAPSHOT_SCHEMA_VERSION
+        ? options?.incompleteCost
+        : null,
+    acceptedAt,
+  });
+  if (!resolved.ok) {
+    return { ok: false, error: resolved.error, reasons: resolved.reasons };
   }
+  const incompleteCost = resolved.acceptance;
 
   return {
     ok: true,

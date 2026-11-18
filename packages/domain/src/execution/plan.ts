@@ -35,6 +35,7 @@ import type { ActualConsumptionEntry } from "./consumption.js";
 import {
   DISABLED_MATERIAL_READINESS,
   materialBlockLabel,
+  materialBlockResolverLabel,
   materialDemandLines,
   materialParticipation,
   type MaterialDemandLine,
@@ -290,6 +291,8 @@ export type ExecutionTaskView = ExecutionTask & {
   completionBlockedByActiveMachineRun: boolean;
   materialParticipation: MaterialParticipation;
   materialBlockLabel: string | null;
+  /** Roles that can confirm the material when the operation is blocked; null when not blocked. */
+  materialBlockResolverLabel: string | null;
   materialLines: readonly MaterialDemandLine[];
   executionMode: ExternalExecutionMode;
   externalProviderLabel: string | null;
@@ -619,6 +622,7 @@ export function projectExecutionPlanView(
       completionBlockedByActiveMachineRun: mode === "INTERNAL" && ownedByCurrent && running !== null,
       materialParticipation: participation,
       materialBlockLabel: materialBlocked ? materialBlockLabel(participation, lines) : null,
+      materialBlockResolverLabel: materialBlocked ? materialBlockResolverLabel() : null,
       materialLines: participation === "NOT_ADOPTED" ? [] : lines,
       canExternalize,
       canAssignExternalProvider,

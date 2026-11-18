@@ -360,7 +360,7 @@ export async function seedPeopleEtalon(input: { cloudRoot: string; anchor: strin
       await call("POST", `${a}/confirm`);
       const pending = ((await call("GET", a)).assembly as Json).rateAcknowledgement as Json | null;
       await call("POST", `${a}/quote`, pending?.status === "REQUIRED" ? { rateAcknowledgement: { bindingHash: pending.bindingHash } } : {});
-      await call("POST", `${a}/accept`, { quoteSnapshotId: ((await call("GET", a)).assembly as Json).quoteSnapshotId });
+      await call("POST", `${a}/accept`, { incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" }, quoteSnapshotId: ((await call("GET", a)).assembly as Json).quoteSnapshotId });
       await call("POST", `${a}/production`);
       await call("POST", `${a}/execution-plan`);
       const planId = ((await call("GET", a)).assembly as Json).executionPlanId as string;

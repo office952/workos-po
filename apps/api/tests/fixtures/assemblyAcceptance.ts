@@ -13,6 +13,11 @@ export async function acceptCurrentAssemblyQuote(
   return app.request(`/api/assemblies/${assemblyId}/accept`, {
     method: "POST",
     headers: { "content-type": "application/json", ...headers },
-    body: JSON.stringify({ quoteSnapshotId: body.assembly?.quoteSnapshotId ?? null }),
+    // The synthetic organization has no assembly operation cost policy: the cost is PARTIAL and the
+    // Owner accepts it explicitly (AUD-PRICING-002).
+    body: JSON.stringify({
+      quoteSnapshotId: body.assembly?.quoteSnapshotId ?? null,
+      incompleteCostAcceptance: { confirm: true, reason: "Cost de ansamblare neconfigurat, acceptat explicit" },
+    }),
   });
 }

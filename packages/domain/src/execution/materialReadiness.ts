@@ -1,4 +1,10 @@
 import { getResource } from "../resources/catalog.js";
+import {
+  ORGANIZATION_ROLES,
+  ORGANIZATION_ROLE_PRESENTATION,
+  roleCan,
+  type OrganizationCapability,
+} from "../governance/organizationRoles.js";
 
 export const MATERIAL_READINESS_MODES = ["DISABLED", "REQUIRED"] as const;
 export type MaterialReadinessMode = (typeof MATERIAL_READINESS_MODES)[number];
@@ -215,6 +221,21 @@ export function materialBlocksStart(
   lines: readonly MaterialDemandLine[],
 ): boolean {
   return materialParticipation(mode, lines) === "BLOCKED";
+}
+
+/** The capability that confirms material readiness for an operation (supervisory decision). */
+export const MATERIAL_READINESS_CONFIRM_CAPABILITY: OrganizationCapability = "execution.supervise";
+
+/**
+ * Who can resolve a material block, read from the role matrix: „Proprietar sau Producție”.
+ * An operator who cannot confirm is told whom to ask instead of being offered the action.
+ */
+export function materialBlockResolverLabel(): string {
+  const labels = ORGANIZATION_ROLES.filter((role) => roleCan(role, MATERIAL_READINESS_CONFIRM_CAPABILITY)).map(
+    (role) => ORGANIZATION_ROLE_PRESENTATION[role].label,
+  );
+  if (labels.length <= 1) return labels[0] ?? "";
+  return `${labels.slice(0, -1).join(", ")} sau ${labels[labels.length - 1]}`;
 }
 
 export function materialBlockLabel(

@@ -1,6 +1,6 @@
 import type { FrozenCommercialOffer } from "../commercial/quoteSnapshot.js";
 import type { UnconfirmedRateEvidence } from "../commercial/rateAcknowledgement.js";
-import type { FrozenProductionInput } from "../production/snapshot.js";
+import type { FrozenEicLine, FrozenProductionInput } from "../production/snapshot.js";
 import type { ProductTruth } from "../product/types.js";
 import type {
   AssemblyContractVersion,
@@ -101,6 +101,11 @@ export type ConfirmedChildProduct = {
   eicTotal: number;
   eicCurrency: "EUR";
   eicCompleteness: "COMPLETE" | "PARTIAL";
+  /**
+   * Frozen internal cost lines of this part (resource, quantity, rate, cost), from the same
+   * calculation as `eicTotal`. Absent on children confirmed before lines were retained.
+   */
+  eicLines?: readonly FrozenEicLine[];
   truth: ProductTruth;
   /**
    * Unconfirmed rates frozen with the child commercial price. Absent on children confirmed before
@@ -134,6 +139,7 @@ export const ASSEMBLY_RULE_ERRORS = [
   "incomplete_commercial",
   "invalid_customer",
   "invalid_seller",
+  "incomplete_cost_requires_owner_acceptance",
 ] as const;
 export type AssemblyRuleError = (typeof ASSEMBLY_RULE_ERRORS)[number];
 

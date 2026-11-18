@@ -7,7 +7,12 @@ import type {
 } from "../commercial/quoteSnapshot.js";
 import type { FrozenRateAcknowledgement } from "../commercial/rateAcknowledgement.js";
 import type { SiteInstallationOperationalView } from "../installation/hostContext.js";
-import type { FrozenProductionInput, FrozenProductionOperation } from "../production/snapshot.js";
+import type { IncompleteCostAcceptance } from "../commercial/quoteAcceptance.js";
+import type {
+  FrozenEicLine,
+  FrozenProductionInput,
+  FrozenProductionOperation,
+} from "../production/snapshot.js";
 import type { AssemblyKind, AssemblyMemberRole } from "./contract.js";
 import type { FrozenAssemblyOperationCost } from "./operationCostEvidence.js";
 
@@ -70,6 +75,8 @@ export type AssemblyOrderChild = {
   eicTotal: number;
   eicCurrency: "EUR";
   eicCompleteness: "COMPLETE" | "PARTIAL";
+  /** Frozen cost lines of this part, copied from the confirmed child. Absent on earlier orders. */
+  eicLines?: readonly FrozenEicLine[];
 };
 
 export type AssemblyOrderSnapshot = {
@@ -94,6 +101,12 @@ export type AssemblyOrderSnapshot = {
   serviceLine?: FrozenSiteInstallationQuoteLineV2;
   /** Copied unchanged from the accepted quote; absent when that quote carried none. */
   operationCost?: FrozenAssemblyOperationCost;
+  /**
+   * AUD-PRICING-002 · Owner exception recorded when the order was accepted with an internal cost
+   * that was not known to be complete. Part of the hashed body, so it cannot change afterwards.
+   * Absent when the cost was complete and on orders accepted before the rule covered assemblies.
+   */
+  incompleteCostAcceptance?: IncompleteCostAcceptance;
 };
 
 /** What production reconciled from the order's frozen operation evidence. */

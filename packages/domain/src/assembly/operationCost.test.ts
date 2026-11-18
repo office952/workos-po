@@ -365,6 +365,7 @@ function flow(kind: AssemblyKind, members: Members, scenario: Scenario = {}) {
     quote: quote.quote,
     children,
     createdAt: "2026-10-10T08:40:00.000Z",
+    incompleteCost: { acceptedByUserId: "user:owner", reason: "Cost incomplet acceptat explicit" },
   });
   if (!order.ok) {
     throw new Error(order.error);

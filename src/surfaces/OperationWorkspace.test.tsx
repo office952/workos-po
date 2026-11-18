@@ -2406,7 +2406,7 @@ describe("OperationWorkspace", () => {
     expect(fetchMock.mock.calls.some((call) => String(call[0]).includes("/requests/"))).toBe(false);
   });
 
-  it("shows owner external actions from server flags and hides internal start", async () => {
+  it("shows external production facts read-only; supervisory actions are not offered in the operator workspace", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn((input: RequestInfo) => {
@@ -2472,7 +2472,9 @@ describe("OperationWorkspace", () => {
     expect(screen.queryByText("În lucru")).not.toBeInTheDocument();
     expect(screen.queryByText("În curs 1")).not.toBeInTheDocument();
     expect(screen.getAllByText("Atelier Extern").length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: "Înregistrează revenirea" })).toBeInTheDocument();
+    // F-03 · the return is recorded from the job sheet (Operații), by the account that holds the right.
+    expect(screen.queryByRole("button", { name: "Înregistrează revenirea" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Predă către furnizor" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Pornește operația" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Finalizează operația" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Pornește utilajul" })).not.toBeInTheDocument();

@@ -130,6 +130,7 @@ export function presentExecutionTask(value: unknown): ExecutionTaskTransport | n
     plannedResources: presentPlannedResources(row.resourceDemands ?? row.plannedResources),
     actualConsumption: presentActualConsumption(row.actualConsumption),
     materialBlockLabel: asString(row.materialBlockLabel),
+    materialBlockResolverLabel: asString(row.materialBlockResolverLabel),
     materialLines: presentMaterialLines(row.materialLines),
     executionMode: asString(row.executionMode) ?? "INTERNAL",
     externalProviderLabel: asString(row.externalProviderLabel),

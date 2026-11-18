@@ -37,6 +37,8 @@ import {
   collectUnconfirmedRates,
   decideRateAcknowledgement,
   resolveConfirmedChildRecord,
+  reconfirmAfterCommercialOnlyChange,
+  assemblyQuoteFreezeBlockers,
   scopeFrozenRateAcknowledgement,
   scopeRateAcknowledgementRequirement,
   type AssemblyDefinition,
@@ -79,6 +81,10 @@ import {
 import { refuseNewQuoteIfClosed } from "../commercial/closureStore.js";
 import { persistAssemblyQuoteRequestLock } from "../requests/store.js";
 import { planAssemblyAcceptance } from "./acceptance.js";
+import {
+  INCOMPLETE_COST_EXCEPTION_FORBIDDEN_REASON,
+  incompleteCostExceptionFromBody,
+} from "../commercial/incompleteCostException.js";
 import { readCurrentAssemblyOperationCostPolicy } from "./operationCostPolicyStore.js";
 
 export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
@@ -256,6 +262,15 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       eicTotal: compiled.eic.total,
       eicCurrency: "EUR",
       eicCompleteness: compiled.eic.completeness,
+      eicLines: compiled.eic.lines.map((line) => ({
+        resourceId: line.resourceId,
+        label: line.label,
+        quantity: line.quantity,
+        unit: line.unit,
+        rate: line.rate,
+        currency: line.currency,
+        cost: line.cost,
+      })),
       truth: compiled.truth,
       unconfirmedRates: collectUnconfirmedRates(
         compiled.aggregate,
@@ -320,6 +335,26 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       const attached = attachConfirmedChild(latest, child, role, new Date().toISOString());
       if (!attached.ok) return { ok: false as const, status: 422 as const, body: { error: attached.error, reasons: attached.reasons } };
       saveConfirmedChild(plane.db, child);
+      // A price-only save keeps the technical confirmation: the truth is issued again for the new
+      // child record, so the previous frozen quote is no longer current and cannot be accepted.
+      const reconfirmed = reconfirmAfterCommercialOnlyChange(
+        latest,
+        attached.definition,
+        attached.definition.members.flatMap((member) => {
+          const stored =
+            member.confirmedTruthId === child.truthId
+              ? child
+              : readConfirmedChild(plane.db, plane.organizationId, member.confirmedTruthId);
+          return stored ? [stored] : [];
+        }),
+        listAssemblyTruths(plane.db, plane.organizationId, latest.assemblyId),
+        new Date().toISOString(),
+      );
+      if (reconfirmed) {
+        saveAssemblyTruth(plane.db, reconfirmed.truth);
+        saveAssemblyDefinition(plane.db, reconfirmed.definition);
+        return { ok: true as const, child, definition: reconfirmed.definition };
+      }
       saveAssemblyDefinition(plane.db, attached.definition);
       return { ok: true as const, child, definition: attached.definition };
     }).immediate();
@@ -495,6 +530,10 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: "forbidden" }, 403);
     }
     const body = await c.req.json().catch(() => null);
+    const exception = incompleteCostExceptionFromBody(c, body);
+    if (exception === "forbidden") {
+      return c.json({ error: "forbidden", reasons: [INCOMPLETE_COST_EXCEPTION_FORBIDDEN_REASON] }, 403);
+    }
     const runtime = getProductSystem(c);
     const assemblyId = c.req.param("assemblyId");
     const planned = runtime.assemblyPlane().db.transaction(() => {
@@ -502,6 +541,7 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
         assemblyId,
         quoteSnapshotId: readString(body, "quoteSnapshotId"),
         createdAt: new Date().toISOString(),
+        incompleteCost: exception,
       });
       if (result.ok) saveAssemblyOrder(runtime.assemblyPlane().db, result.order);
       return result;
@@ -588,13 +628,37 @@ function presentCurrent(
           sections: review.quote.sections.map(({ title, inscription }) => ({ title, inscription })),
         }
       : review.quote;
+  // Freeze eligibility from the same member check the freeze applies; prices only for roles that
+  // may read the client price.
+  const plane = runtime.assemblyPlane();
+  const priceVisible = can(c, "prices.client.read");
+  const memberChildren = bundle.definition.members.flatMap((member) => {
+    const child = readConfirmedChild(plane.db, plane.organizationId, member.confirmedTruthId);
+    return child ? [child] : [];
+  });
+  const freezeBlockers = bundle.order ? [] : assemblyQuoteFreezeBlockers(bundle.definition, memberChildren);
+  const memberPrices = bundle.definition.members.map((member) => {
+    const child = memberChildren.find((item) => item.truthId === member.confirmedTruthId);
+    const priced = !freezeBlockers.some((blocker) => blocker.role === member.role) && Boolean(child?.commercial);
+    return {
+      role: member.role,
+      roleLabel: assemblyRoleLabel(member.role),
+      inscription: child?.inscription ?? null,
+      priced,
+      netPrice: priced && priceVisible ? (child?.commercial?.netPrice ?? null) : null,
+      currency: "EUR" as const,
+    };
+  });
   return {
     quoteSnapshotId: bundle.quote?.quoteSnapshotId ?? null,
     quoteFreezable:
       bundle.definition.status === "CONFIRMED" &&
       bundle.truth !== null &&
       bundle.order === null &&
-      bundle.quote?.assemblyTruthId !== bundle.truth.assemblyTruthId,
+      bundle.quote?.assemblyTruthId !== bundle.truth.assemblyTruthId &&
+      freezeBlockers.length === 0,
+    freezeBlockers,
+    memberPrices,
     ...review,
     quote,
     rateAcknowledgement: pending?.ok
