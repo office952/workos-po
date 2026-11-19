@@ -1,10 +1,11 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AccessAdminPage } from "./AccessAdminPage";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 const defaultAdmin = {
@@ -198,3 +199,106 @@ describe("AccessAdminPage", () => {
     expect(await within(ask).findByText(/ultimul proprietar/)).toBeInTheDocument();
   });
 });
+
+const inviteAdmin = {
+  ...defaultAdmin,
+  canManage: true,
+  roles: [
+    { role: "owner", label: "Proprietar", summary: "Administrează firma.", cannot: "—", assignable: true },
+    { role: "member", label: "Comercial", summary: "Clienți și oferte.", cannot: "Nu vede costuri interne.", assignable: true },
+  ],
+};
+
+async function openInviteDialog() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => inviteAdmin,
+    }),
+  );
+  const user = userEvent.setup();
+  render(<AccessAdminPage />);
+  const opener = await screen.findByRole("button", { name: "Invită utilizator" });
+  await user.click(opener);
+  return { user, opener };
+}
+
+describe("AccessAdminPage clipboard and invite focus", () => {
+  async function showOnceLink() {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => inviteAdmin })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        json: async () => ({
+          ...inviteAdmin,
+          invitation: {
+            invitationId: "inv:1",
+            email: "nou@firma.test",
+            role: "member",
+            roleLabel: "Comercial",
+            deliveryChannel: "LINK",
+            deliveryStatus: "NOT_SENT",
+            createdAt: "2026-01-03T00:00:00.000Z",
+            expiresAt: "2026-01-10T00:00:00.000Z",
+          },
+          inviteUrl: "http://localhost/invitatie#t=abc",
+        }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<AccessAdminPage />);
+    await user.click(await screen.findByRole("button", { name: "Invită utilizator" }));
+    const dialog = screen.getByRole("dialog", { name: "Invită utilizator" });
+    await user.type(within(dialog).getByLabelText("Email"), "nou@firma.test");
+    await user.click(within(dialog).getByLabelText(/Comercial/));
+    await user.click(within(dialog).getByRole("button", { name: "Trimite invitația" }));
+    expect(await screen.findByText(/Linkul de invitație pentru nou@firma.test/)).toBeInTheDocument();
+    return user;
+  }
+
+  it("shows an explicit error and keeps the link when clipboard write is denied", async () => {
+    const user = await showOnceLink();
+    const writeText = vi.fn().mockRejectedValue(new DOMException("Permission denied", "NotAllowedError"));
+    vi.spyOn(navigator, "clipboard", "get").mockReturnValue({ writeText } as unknown as Clipboard);
+    await user.click(screen.getByRole("button", { name: "Copiază linkul" }));
+    expect(await screen.findByText("Linkul nu a fost copiat")).toBeInTheDocument();
+    expect(screen.getByText(/Browserul a refuzat copierea/)).toBeInTheDocument();
+    expect(screen.queryByText("Linkul a fost copiat.")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Link de invitație")).toBeInTheDocument();
+    expect(writeText).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows an explicit error when the Clipboard API is missing", async () => {
+    const user = await showOnceLink();
+    vi.spyOn(navigator, "clipboard", "get").mockReturnValue(undefined as unknown as Clipboard);
+    await user.click(screen.getByRole("button", { name: "Copiază linkul" }));
+    expect(await screen.findByText("Linkul nu a fost copiat")).toBeInTheDocument();
+    expect(screen.getByText(/nu este disponibilă/)).toBeInTheDocument();
+    expect(screen.queryByText("Linkul a fost copiat.")).not.toBeInTheDocument();
+  });
+
+  it("keeps the success copy notice when writeText resolves", async () => {
+    const user = await showOnceLink();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.spyOn(navigator, "clipboard", "get").mockReturnValue({ writeText } as unknown as Clipboard);
+    await user.click(screen.getByRole("button", { name: "Copiază linkul" }));
+    expect(await screen.findByText("Linkul a fost copiat.")).toBeInTheDocument();
+    expect(screen.queryByText("Linkul nu a fost copiat")).not.toBeInTheDocument();
+    expect(writeText).toHaveBeenCalledTimes(1);
+  });
+
+  it("focuses Anulează on open and restores the exact Invită utilizator button after Escape", async () => {
+    const { opener } = await openInviteDialog();
+    const cancel = screen.getByRole("button", { name: "Anulează" });
+    await waitFor(() => expect(document.activeElement).toBe(cancel));
+    expect(cancel).toHaveAttribute("data-dialog-focus", "true");
+    fireEvent(screen.getByRole("dialog", { name: "Invită utilizator" }), new Event("cancel", { bubbles: false, cancelable: true }));
+    expect(screen.queryByRole("dialog", { name: "Invită utilizator" })).not.toBeInTheDocument();
+    await waitFor(() => expect(document.activeElement).toBe(opener));
+  });
+});
+

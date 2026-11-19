@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
 import { useState } from "react";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { CreationDialog } from "./CreationDialog";
@@ -20,7 +21,7 @@ describe("CreationDialog", () => {
     const trigger = screen.getByRole("button", { name: "Client nou" });
     await userEvent.click(trigger);
     expect(screen.getByRole("dialog", { name: "Client nou" })).toHaveAttribute("aria-modal", "true");
-    expect(screen.getByLabelText("Denumire")).toHaveFocus();
+    await waitFor(() => expect(screen.getByLabelText("Denumire")).toHaveFocus());
     await userEvent.click(screen.getByRole("button", { name: "Închide formularul" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
@@ -32,7 +33,30 @@ describe("CreationDialog", () => {
     await userEvent.click(trigger);
     fireEvent(screen.getByRole("dialog"), new Event("cancel", { bubbles: false, cancelable: true }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(trigger).toHaveFocus();
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
+  it("keeps Tab inside the dialog", async () => {
+    render(<Harness />);
+    await userEvent.click(screen.getByRole("button", { name: "Client nou" }));
+    const dialog = screen.getByRole("dialog", { name: "Client nou" });
+    const close = within(dialog).getByRole("button", { name: "Închide formularul" });
+    const input = screen.getByLabelText("Denumire");
+    input.focus();
+    expect(input).toHaveFocus();
+    await userEvent.tab();
+    expect(close).toHaveFocus();
+    await userEvent.tab();
+    expect(input).toHaveFocus();
+    await userEvent.tab({ shift: true });
+    expect(close).toHaveFocus();
+  });
+
+  it("declares a visible :focus ring for programmatic focus inside the dialog", () => {
+    const css = readFileSync("src/styles/layout/creation-dialog.css", "utf8");
+    expect(css).toMatch(/\.creation-dialog :is\([^)]+\):focus/);
+    expect(css).toMatch(/\[data-dialog-focus\]/);
+    expect(css).toMatch(/box-shadow:/);
   });
 
   it("keeps its composition unless it is framed", async () => {

@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { Button } from "../components/Button";
-import { CreationDialog } from "../components/CreationDialog";
+import { CreationDialog, markDialogFocus } from "../components/CreationDialog";
 import { InlineAlert } from "../components/InlineAlert";
 
 /**
@@ -375,7 +375,7 @@ export function AdminConfirmDialog({
 }) {
   const cancelRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    cancelRef.current?.focus();
+    markDialogFocus(cancelRef.current);
   }, []);
   return (
     <CreationDialog title={title} subtitle={subtitle} busy={busy} onDismiss={onCancel}>

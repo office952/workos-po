@@ -84,6 +84,7 @@ export function AccessAdminPage() {
   const [notice, setNotice] = useState<string | null>(null);
   // VISUAL_OWNER_REVIEW_REQUIRED (V1): the one-time link panel has no accepted WorkOS-N frame yet.
   const [onceLink, setOnceLink] = useState<{ email: string; url: string; expiresAt: string } | null>(null);
+  const [copyNotice, setCopyNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("");
   const [roleChoice, setRoleChoice] = useState("");
@@ -111,7 +112,32 @@ export function AccessAdminPage() {
     setSaveState("idle");
     setErrorMessage(null);
     setNotice(null);
+    setCopyNotice(null);
     setDialog(next);
+  }
+
+  async function copyInviteLink(): Promise<void> {
+    if (!onceLink) return;
+    const clipboard = navigator.clipboard;
+    if (!clipboard?.writeText) {
+      setNotice(null);
+      setCopyNotice({
+        tone: "error",
+        text: "Copierea automată nu este disponibilă pe acest dispozitiv. Selectează linkul din câmp și copiază-l manual.",
+      });
+      return;
+    }
+    try {
+      await clipboard.writeText(onceLink.url);
+      setCopyNotice(null);
+      setNotice("Linkul a fost copiat.");
+    } catch {
+      setNotice(null);
+      setCopyNotice({
+        tone: "error",
+        text: "Browserul a refuzat copierea. Selectează linkul din câmp și copiază-l manual.",
+      });
+    }
   }
 
   /** One response path for every access action: apply the fresh list or keep the refusal in the dialog. */
@@ -235,7 +261,8 @@ export function AccessAdminPage() {
         canManage ? (
           <Button
             disabled={pending}
-            onClick={() => {
+            onClick={(event) => {
+              event.currentTarget.focus();
               setInviteEmail("");
               setInviteRole("");
               openDialog({ kind: "invite" });
@@ -270,6 +297,11 @@ export function AccessAdminPage() {
                 Linkul nu va mai fi afișat. Trimite-l doar persoanei invitate, pe un canal de încredere. Expiră la{" "}
                 {formatTimestamp(onceLink.expiresAt)}.
               </p>
+              {copyNotice ? (
+                <InlineAlert tone={copyNotice.tone} title="Linkul nu a fost copiat">
+                  {copyNotice.text}
+                </InlineAlert>
+              ) : null}
               <div className="acc-once__row">
                 <label className="adm-visually-hidden" htmlFor="acc-once-link">
                   Link de invitație
@@ -278,12 +310,18 @@ export function AccessAdminPage() {
                 <Button
                   variant="secondary"
                   onClick={() => {
-                    void navigator.clipboard?.writeText(onceLink.url).then(() => setNotice("Linkul a fost copiat."));
+                    void copyInviteLink();
                   }}
                 >
                   Copiază linkul
                 </Button>
-                <Button variant="ghost" onClick={() => setOnceLink(null)}>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setOnceLink(null);
+                    setCopyNotice(null);
+                  }}
+                >
                   Am trimis linkul
                 </Button>
               </div>
@@ -406,6 +444,7 @@ export function AccessAdminPage() {
             void run(() => inviteOrganizationUser(email, inviteRole), "Invitația nu a putut fi creată.", (body) => {
               const url = typeof body.inviteUrl === "string" ? body.inviteUrl : null;
               const expiresAt = String((body.invitation as Record<string, unknown>)?.expiresAt ?? "");
+              setCopyNotice(null);
               if (url) setOnceLink({ email, url, expiresAt });
               else setNotice(`Invitația a fost trimisă pe email către ${email}.`);
             });
