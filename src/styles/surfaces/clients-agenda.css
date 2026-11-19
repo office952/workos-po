@@ -271,13 +271,24 @@
   display: grid;
   gap: 8px;
   margin-bottom: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .cagenda-compact__row {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 6px;
   min-width: 0;
+  max-width: 100%;
+}
+
+.cagenda-compact .rdesk-filterchips {
+  flex: 1 1 12rem;
+  flex-wrap: wrap;
+  overflow-x: visible;
+  max-width: 100%;
 }
 
 .cagenda-compact__toggle {
@@ -341,6 +352,11 @@
 .cagenda-desk[data-layout="full"] .rdesk__bar .rdesk-create {
   flex: 0 0 auto;
   min-height: 44px;
+}
+
+.cagenda-desk[data-layout="full"] .rdesk__work {
+  min-width: 0;
+  max-width: 100%;
 }
 
 @media (max-width: 767px) {

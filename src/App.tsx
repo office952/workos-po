@@ -9,6 +9,7 @@ import { PageRegion } from "./layout/PageRegion";
 import { StateNotice } from "./components/StateNotice";
 import { RouteLoadingPage } from "./layout/RouteLoadingPage";
 import { presentRouteChrome } from "./layout/routeChrome";
+import { safeHrefAfterOrganizationSwitch } from "./routing/organizationSwitchLocation";
 import {
   canonicalLocation,
   parseAppRoute,
@@ -253,7 +254,14 @@ function presentAccount(cloud: ReturnType<typeof useCloudSession>): AccountAreaP
     membershipRole: cloud.organization.membershipRole,
     memberships: cloud.memberships,
     currentOrganizationId: cloud.organization.organizationId,
-    onSwitchOrganization: (organizationId) => cloud.switchOrganization(organizationId),
+    onSwitchOrganization: async (organizationId) => {
+      const result = await cloud.switchOrganization(organizationId);
+      if (result.ok) {
+        const next = safeHrefAfterOrganizationSwitch(window.location.pathname, window.location.search);
+        if (next) navigate(next, "replace", { bypassGuard: true });
+      }
+      return result;
+    },
     onLogout: () => cloud.logout(),
   };
 }

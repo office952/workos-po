@@ -50,6 +50,7 @@ export function AccountSecurityPage() {
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
+  const [revoking, setRevoking] = useState(false);
   const [message, setMessage] = useState<{ tone: "success" | "error"; title: string; text: string } | null>(null);
 
   function load(): void {
@@ -103,6 +104,33 @@ export function AccountSecurityPage() {
   }
 
   const others = data.sessions.filter((session) => !session.current).length;
+
+  async function closeOtherSessions(): Promise<void> {
+    if (revoking || others === 0) return;
+    setRevoking(true);
+    setMessage(null);
+    try {
+      const result = await revokeOtherSessions();
+      if (result.ok) {
+        setMessage({ tone: "success", title: "Sesiuni închise", text: "Celelalte sesiuni ale contului au fost închise." });
+        load();
+        return;
+      }
+      setMessage({
+        tone: "error",
+        title: "Sesiunile nu au fost închise",
+        text: readTransportReasons(result.body)[0] ?? "Celelalte sesiuni sunt încă active. Reîncearcă.",
+      });
+    } catch {
+      setMessage({
+        tone: "error",
+        title: "Sesiunile nu au fost închise",
+        text: "Conexiunea s-a întrerupt. Celelalte sesiuni sunt încă active. Reîncearcă.",
+      });
+    } finally {
+      setRevoking(false);
+    }
+  }
 
   return (
     <PageRegion>
@@ -200,16 +228,17 @@ export function AccountSecurityPage() {
           {others > 0 ? (
             <Button
               variant="secondary"
+              disabled={revoking}
+              aria-busy={revoking || undefined}
               onClick={() => {
-                void revokeOtherSessions().then((result) => {
-                  if (result.ok) {
-                    setMessage({ tone: "success", title: "Sesiuni închise", text: "Celelalte sesiuni ale contului au fost închise." });
-                    load();
-                  }
-                });
+                void closeOtherSessions();
               }}
             >
-              {others === 1 ? "Închide cealaltă sesiune" : `Închide celelalte ${others} sesiuni`}
+              {revoking
+                ? "Se închid sesiunile…"
+                : others === 1
+                  ? "Închide cealaltă sesiune"
+                  : `Închide celelalte ${others} sesiuni`}
             </Button>
           ) : null}
         </section>

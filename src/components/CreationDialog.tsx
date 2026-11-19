@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
 import "../styles/layout/creation-dialog.css";
 import "../styles/layout/creation-dialog-frame.css";
 
@@ -19,22 +19,83 @@ type CreationDialogProps = {
   children: ReactNode;
 };
 
+const FOCUSABLE =
+  "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
+
+function dialogFocusables(root: HTMLElement): HTMLElement[] {
+  return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)];
+}
+
+/** Programmatic dialog focus is not always :focus-visible; this keeps a visible ring until blur. */
+export function markDialogFocus(node: HTMLElement | null): void {
+  if (!node) return;
+  node.focus();
+  node.setAttribute("data-dialog-focus", "true");
+  const clear = () => {
+    node.removeAttribute("data-dialog-focus");
+    node.removeEventListener("blur", clear);
+  };
+  node.addEventListener("blur", clear);
+}
+
+function restoreFocus(opener: HTMLElement | null): void {
+  if (
+    opener?.isConnected
+    && opener !== document.body
+    && opener !== document.documentElement
+  ) {
+    opener.focus();
+    return;
+  }
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && active !== document.body && active !== document.documentElement) {
+    return;
+  }
+  const fallback = document.querySelector<HTMLElement>("main, [data-app-main], #continut-principal, a[href='#continut-principal']");
+  fallback?.focus();
+}
+
 /** Native modal focus containment; the caller owns drafts and access. */
 export function CreationDialog({ title, subtitle, notice, framed = false, busy = false, onDismiss, children }: CreationDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const dialog = dialogRef.current;
-    const opener = document.activeElement;
     if (!dialog) return;
+    const active = document.activeElement;
+    const opener =
+      active instanceof HTMLElement
+      && !dialog.contains(active)
+      && active !== document.body
+      && active !== document.documentElement
+        ? active
+        : null;
     if (typeof dialog.showModal === "function") dialog.showModal();
     else dialog.setAttribute("open", "");
-    dialog.querySelector<HTMLInputElement>("input:not(:disabled)")?.focus();
     return () => {
       if (dialog.open && typeof dialog.close === "function") dialog.close();
-      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
+      restoreFocus(opener);
+      queueMicrotask(() => restoreFocus(opener));
     };
+  }, []);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    queueMicrotask(() => {
+      if (!dialog.isConnected) return;
+      const active = document.activeElement;
+      if (
+        active instanceof HTMLElement
+        && dialog.contains(active)
+        && active !== dialog
+        && !active.classList.contains("creation-dialog__close")
+      ) {
+        return;
+      }
+      markDialogFocus(dialog.querySelector<HTMLInputElement>("input:not(:disabled)"));
+    });
   }, []);
 
   // The fixed header and bar take room from the scrolling body: their heights become its scroll
@@ -64,6 +125,23 @@ export function CreationDialog({ title, subtitle, notice, framed = false, busy =
     };
   }, [framed]);
 
+  function onKeyDown(event: KeyboardEvent<HTMLDialogElement>): void {
+    if (event.key !== "Tab") return;
+    const nodes = dialogFocusables(event.currentTarget);
+    if (nodes.length === 0) return;
+    const first = nodes[0]!;
+    const last = nodes[nodes.length - 1]!;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+      return;
+    }
+    if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
   return (
     <dialog
       ref={dialogRef}
@@ -72,6 +150,7 @@ export function CreationDialog({ title, subtitle, notice, framed = false, busy =
       aria-labelledby={titleId}
       aria-modal="true"
       aria-busy={busy}
+      onKeyDown={onKeyDown}
       onCancel={(event) => {
         event.preventDefault();
         if (!busy) onDismiss();

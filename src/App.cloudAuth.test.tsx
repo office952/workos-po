@@ -432,6 +432,47 @@ describe("App Cloud auth integration", () => {
     expect(await screen.findByLabelText("Organizație activă")).toHaveValue("org:b");
   });
 
+  it("leaves a previous-org job URL for the jobs list of the new organization", async () => {
+    const switchMock = vi.fn();
+    installFetch((url, method, body) => {
+      if (url.endsWith("/api/cloud/session")) {
+        return {
+          ...authenticatedSession,
+          memberships: [
+            authenticatedSession.memberships[0],
+            { organizationId: "org:b", displayName: "Atelier Beta", slug: "beta", role: "member", status: "ACTIVE" },
+          ],
+        };
+      }
+      if (url.endsWith("/api/cloud/active-organization") && method === "POST") {
+        switchMock(body);
+        return {
+          ...authenticatedSession,
+          organization: { ...authenticatedSession.organization, organizationId: "org:b", displayName: "Atelier Beta" },
+          memberships: [
+            authenticatedSession.memberships[0],
+            { organizationId: "org:b", displayName: "Atelier Beta", slug: "beta", role: "member", status: "ACTIVE" },
+          ],
+        };
+      }
+      if (url.endsWith("/api/health")) return health;
+      if (url.includes("/api/jobs")) return { jobs: [] };
+      return quietStart;
+    });
+    window.history.replaceState({}, "", "/lucrari/job-1");
+    render(<App />);
+    expect(await screen.findByText("Atelier Alpha")).toBeInTheDocument();
+    await openAccountMenu();
+    await userEvent.selectOptions(screen.getByLabelText("Organizație activă"), "org:b");
+    await waitFor(() => {
+      expect(switchMock).toHaveBeenCalledWith({ organizationId: "org:b" });
+    });
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/lucrari");
+    });
+    expect(await screen.findByText("Atelier Beta")).toBeInTheDocument();
+  });
+
   it("logs out through the Cloud contract and returns to the login gate", async () => {
     let session: unknown = authenticatedSession;
     const fetchMock = installFetch((url) => {
