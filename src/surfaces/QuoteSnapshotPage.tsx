@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode, type Ref } from "react";
 import { presentOrderSnapshotId } from "../adapters/quoteListAdapter";
-import { TransportError, readTransportReasons } from "../api/http";
+import { TransportError, readTransportErrorCode, readTransportReasons } from "../api/http";
+import "../styles/surfaces/quote-variant.css";
 import { confirmQuoteOrder } from "../api/quote";
 import { fetchQuoteDocument } from "../api/quote";
 import type { QuoteListItemTransport, QuoteSnapshotTransport } from "../api/types";
@@ -28,7 +29,7 @@ import { AcceptanceResult } from "./quotes/AcceptanceResult";
 import { IncompleteCostException } from "./quotes/IncompleteCostException";
 import { incompleteCostExceptionReady } from "./quotes/incompleteCostExceptionReady";
 import { QuoteDecisionNote } from "./quotes/QuoteDecisionNote";
-import { quoteDecisionMode } from "./quotes/quoteDecisionMode";
+import { commercialLifecycleLabel, quoteDecisionMode } from "./quotes/quoteDecisionMode";
 import "../styles/surfaces/quote-decision.css";
 import "../styles/surfaces/commercial-financial.css";
 import { presentProductQuoteLines, presentProductQuoteTotal } from "./quoteDocumentModel";
@@ -96,6 +97,12 @@ export function QuoteSnapshotPage({
     }
   }, [confirming]);
 
+  const [installationBlocked, setInstallationBlocked] = useState(false);
+  const [installationReason, setInstallationReason] = useState("");
+  const [commonAvailable, setCommonAvailable] = useState(false);
+  const [alternativeBlocked, setAlternativeBlocked] = useState(false);
+  const lastIncompleteCostReason = useRef<string | undefined>(undefined);
+
   function cancelAcceptance(): void {
     if (acceptingRef.current) {
       return;
@@ -104,31 +111,59 @@ export function QuoteSnapshotPage({
     setConfirming(false);
   }
 
-  async function accept(incompleteCostReason?: string): Promise<void> {
+  /**
+   * `separateInstallation`: the Owner's recorded reason for a second, really separate
+   * installation, asked only after the server refused a second acceptance with installation.
+   */
+  async function accept(
+    incompleteCostReason?: string,
+    separateInstallation?: string,
+    commonInstallation?: boolean,
+    alternativeConfirmed?: boolean,
+  ): Promise<void> {
     if (acceptingRef.current) {
       return;
     }
     acceptingRef.current = true;
     setActionState("pending");
     setActionError(null);
+    lastIncompleteCostReason.current = incompleteCostReason;
     try {
+      const body = {
+        ...(incompleteCostReason !== undefined
+          ? { incompleteCostAcceptance: { confirm: true as const, reason: incompleteCostReason } }
+          : {}),
+        ...(separateInstallation !== undefined
+          ? { installationDecision: { mode: "SEPARATE" as const, reason: separateInstallation } }
+          : commonInstallation
+            ? { installationDecision: { mode: "COMMON" as const } }
+            : {}),
+        ...(alternativeConfirmed ? { alternativeAcceptanceConfirmed: true as const } : {}),
+      };
       const orderId = presentOrderSnapshotId(
-        await confirmQuoteOrder(
-          productCode,
-          quoteSnapshotId,
-          incompleteCostReason !== undefined
-            ? { incompleteCostAcceptance: { confirm: true, reason: incompleteCostReason } }
-            : undefined,
-        ),
+        // No exception and no decision: the request carries no body, exactly as before.
+        await confirmQuoteOrder(productCode, quoteSnapshotId, Object.keys(body).length > 0 ? body : undefined),
       );
       if (!orderId) throw new Error("missing_order");
       invalidateAfterCreateOrder(quoteSnapshotId, snapshot.data?.requestId);
       // N-018 · the offer stays open with the acceptance result; the job opens from there.
       setAcceptedOrderId(orderId);
       setConfirming(false);
+      setInstallationBlocked(false);
+      setInstallationReason("");
+      setCommonAvailable(false);
+      setAlternativeBlocked(false);
       setActionState("idle");
     } catch (error) {
       setActionState("error");
+      const code = error instanceof TransportError ? readTransportErrorCode(error.body) : null;
+      const decisions =
+        error instanceof TransportError && error.body && typeof error.body === "object"
+          ? (error.body as { availableDecisions?: unknown }).availableDecisions
+          : null;
+      setInstallationBlocked(code === "installation_decision_required" || code === "common_installation_started");
+      setCommonAvailable(Array.isArray(decisions) && decisions.includes("COMMON"));
+      setAlternativeBlocked(code === "alternative_of_ordered_offer");
       setActionError(
         error instanceof TransportError
           ? readTransportReasons(error.body).join(" ") || (error.status === 403 ? "Doar proprietarul organizației poate confirma comanda." : "Comanda nu a putut fi confirmată. Poți reîncerca în siguranță.")
@@ -170,6 +205,11 @@ export function QuoteSnapshotPage({
   const presented = profile ? presentCostLine(profile) : null;
   const orderSnapshotId = presentedEnvelope?.orderSnapshotId ?? acceptedOrderId;
   const total = presentedSnapshot ? presentProductQuoteTotal(presentedSnapshot) : null;
+  const lifecycleMode = quoteDecisionMode({
+    ordered: Boolean(orderSnapshotId),
+    status: presentedEnvelope,
+    nextAction: presentedEnvelope?.nextAction ?? null,
+  });
 
   return (
     <SlicePage
@@ -200,6 +240,7 @@ export function QuoteSnapshotPage({
               total={total}
               unavailableNote="Prețul pentru client nu este complet în această ofertă."
               facts={[
+                { label: "Etapă", value: commercialLifecycleLabel(lifecycleMode) },
                 { label: "Stare comercială", value: presentedEnvelope?.commercialStatusLabel?.trim() || stageLabel || "—" },
                 { label: "Tip", value: presentedEnvelope?.kindLabel || "Produs" },
               ]}
@@ -230,7 +271,7 @@ export function QuoteSnapshotPage({
             >
               {presentedEnvelope ? (
                 <QuoteDecisionNote
-                  mode={quoteDecisionMode({ ordered: Boolean(orderSnapshotId), status: presentedEnvelope, nextAction: presentedEnvelope.nextAction })}
+                  mode={lifecycleMode}
                   permission={acceptancePermission.message}
                 />
               ) : null}
@@ -267,9 +308,57 @@ export function QuoteSnapshotPage({
                 </InlineAlert>
               ) : null}
               {actionError ? (
-                <InlineAlert tone="error" title="Acțiunea a eșuat">
+                <InlineAlert
+                  tone={installationBlocked || alternativeBlocked ? "blocked" : "error"}
+                  title={
+                    alternativeBlocked
+                      ? "Alternativă a unei oferte comandate"
+                      : installationBlocked
+                        ? "Oferta nu a fost acceptată: montaj"
+                        : "Acțiunea a eșuat"
+                  }
+                >
                   {actionError}
                 </InlineAlert>
+              ) : null}
+              {alternativeBlocked ? (
+                <div className="variant-decision" data-testid="alternative-acceptance">
+                  <p>Această variantă este alternativa unei oferte deja comandate. Confirmarea creează o comandă distinctă, nu o înlocuiește pe cealaltă.</p>
+                  <Button disabled={actionState === "pending"} onClick={() => void accept(lastIncompleteCostReason.current, undefined, false, true)}>
+                    Confirmă alternativa ca ofertă distinctă
+                  </Button>
+                </div>
+              ) : null}
+              {installationBlocked ? (
+                <div className="variant-decision" data-testid="installation-decision">
+                  {commonAvailable ? (
+                    <div className="variant-conflict__actions">
+                      <Button disabled={actionState === "pending"} onClick={() => void accept(lastIncompleteCostReason.current, undefined, true)}>
+                        Montaj comun · o singură dată
+                      </Button>
+                    </div>
+                  ) : null}
+                  <label htmlFor="installation-separate-reason">
+                    Numai dacă sunt două montaje reale: motivul montajului separat
+                  </label>
+                  <textarea
+                    id="installation-separate-reason"
+                    rows={2}
+                    maxLength={500}
+                    value={installationReason}
+                    disabled={actionState === "pending"}
+                    onChange={(event) => setInstallationReason(event.target.value)}
+                  />
+                  <div className="variant-conflict__actions">
+                    <Button
+                      variant="secondary"
+                      disabled={actionState === "pending" || installationReason.trim().length === 0}
+                      onClick={() => void accept(lastIncompleteCostReason.current, installationReason.trim())}
+                    >
+                      Acceptă cu montaj separat
+                    </Button>
+                  </div>
+                </div>
               ) : null}
             </QuoteSummary>
             <QuoteLines

@@ -130,6 +130,40 @@ export function presentRequestDetail(payload: unknown): RequestDetailTransport |
     canWriteInstallationPrice: asBoolean(detail?.canWriteInstallationPrice) ?? false,
     commercial,
     journey: presentCommercialJourney(detail?.journey),
+    installationObligation: presentInstallationObligation(detail?.installationObligation),
+  };
+}
+
+function presentInstallationObligation(value: unknown): RequestDetailTransport["installationObligation"] {
+  const raw = asRecord(value);
+  if (!raw || raw.mode !== "COMMON") return null;
+  const documentSumNet = asNumber(raw.documentSumNet);
+  const consolidatedObligationNet = asNumber(raw.consolidatedObligationNet);
+  const sharedInstallationNet = asNumber(raw.sharedInstallationNet);
+  const duplicatedInstallationNet = asNumber(raw.duplicatedInstallationNet);
+  const holderOrderSnapshotId = asString(raw.holderOrderSnapshotId);
+  const decidedByLabel = asString(raw.decidedByLabel);
+  const decidedAt = asString(raw.decidedAt);
+  if (
+    documentSumNet === null ||
+    consolidatedObligationNet === null ||
+    sharedInstallationNet === null ||
+    duplicatedInstallationNet === null ||
+    !holderOrderSnapshotId ||
+    !decidedByLabel ||
+    !decidedAt
+  ) {
+    return null;
+  }
+  return {
+    mode: "COMMON",
+    holderOrderSnapshotId,
+    sharedInstallationNet,
+    documentSumNet,
+    duplicatedInstallationNet,
+    consolidatedObligationNet,
+    decidedByLabel,
+    decidedAt,
   };
 }
 

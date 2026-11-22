@@ -13,11 +13,44 @@ export function OwnerPricingHandoff({
   reason,
   backHref,
   backLabel,
+  saved = false,
 }: {
   reason: string | null;
   backHref: string | null;
   backLabel: string;
+  /** Commercial Continuity V2: the configuration is a saved quote variant on the request. */
+  saved?: boolean;
 }) {
+  if (saved) {
+    // The hand-over is a state of the request: the Owner finds the saved variant and continues it.
+    return (
+      <div className="stack" data-testid="owner-pricing-handoff">
+        <InlineAlert tone="pending" title="Configurația este salvată. Prețul îl stabilește Proprietarul">
+          <p>{reason ?? "Prețul și emiterea acestei oferte sunt stabilite de Proprietar."}</p>
+        </InlineAlert>
+        <ol className="owner-pricing-handoff__steps">
+          <li>
+            <strong>Tu:</strong> ai confirmat configurația. Este salvată pe cerere; poți închide pagina.
+          </li>
+          <li>
+            <strong>Proprietarul:</strong> deschide varianta de pe cerere, vede valorile tale, stabilește
+            prețul net și emite oferta. Nu reintroduce nimic.
+          </li>
+          <li>
+            <strong>După emitere:</strong> oferta apare pe cerere; o poți deschide și urmări
+            rezultatul comercial.
+          </li>
+        </ol>
+        {backHref ? (
+          <p>
+            <a className="text-link" href={backHref}>
+              {backLabel}
+            </a>
+          </p>
+        ) : null}
+      </div>
+    );
+  }
   return (
     <div className="stack" data-testid="owner-pricing-handoff">
       <InlineAlert tone="pending" title="Configurația este gata. Prețul îl stabilește Proprietarul">

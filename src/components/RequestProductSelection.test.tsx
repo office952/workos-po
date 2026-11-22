@@ -7,13 +7,32 @@ const json = (body: unknown, status = 200) => Promise.resolve({ ok: status < 400
 const read = (url: RequestInfo) => String(url).includes("product-catalog") ? json({ tree: [{ kind: "product", code: "PRD-LETTERS", label: "Litere" }] }) : json({ canCreate: true, offerings: [{ kind: "ASM-KIND", label: "Panou și litere", available: true, members: [] }] });
 const posts = (fetchMock: ReturnType<typeof vi.fn>) => fetchMock.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === "POST");
 afterEach(() => { vi.unstubAllGlobals(); resetResourceCache(); window.history.replaceState({}, "", "/"); });
-it("selects a product in the request context", async () => {
-  vi.stubGlobal("fetch", vi.fn((input: RequestInfo) => read(input))); render(<RequestProductSelection customerId="cus-A" requestId="req-A" />);
+const variant = { variantId: "var-A", requestId: "req-A", productCode: "PRD-LETTERS", indexLabel: "01", version: 1, state: "IN_PROGRESS", stateLabel: "În lucru", action: "CONTINUE", actionLabel: "Continuă" };
+it("creates the saved quote variant when a product is selected and opens the Configurator on it", async () => {
+  const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => init?.method === "POST" ? json({ variant }, 201) : read(input));
+  vi.stubGlobal("fetch", fetchMock); render(<RequestProductSelection customerId="cus-A" requestId="req-A" />);
   expect(await screen.findByRole("heading", { name: "Produs compus" })).toBeInTheDocument();
   await userEvent.click(await screen.findByRole("button", { name: /Litere.*Configurează/ }));
-  expect(window.location.pathname).toBe("/configurator");
-  expect(new URLSearchParams(window.location.search).get("request")).toBe("req-A");
-  expect(new URLSearchParams(window.location.search).get("customer")).toBe("cus-A");
+  await waitFor(() => expect(window.location.pathname).toBe("/configurator"));
+  const params = new URLSearchParams(window.location.search);
+  expect(params.get("request")).toBe("req-A");
+  expect(params.get("customer")).toBe("cus-A");
+  expect(params.get("varianta")).toBe("var-A");
+  expect(posts(fetchMock)).toHaveLength(1);
+  expect(String(posts(fetchMock)[0]?.[0])).toContain("/api/requests/req-A/variants");
+});
+it("keeps the earlier path on an environment without variants, and shows a refusal instead of navigating", async () => {
+  const unavailable = vi.fn((input: RequestInfo, init?: RequestInit) => init?.method === "POST" ? json({ error: "variants_unavailable", reasons: [] }, 409) : read(input));
+  vi.stubGlobal("fetch", unavailable); const first = render(<RequestProductSelection customerId="cus-A" requestId="req-A" />);
+  await userEvent.click(await screen.findByRole("button", { name: /Litere.*Configurează/ }));
+  await waitFor(() => expect(window.location.pathname).toBe("/configurator"));
+  expect(new URLSearchParams(window.location.search).get("varianta")).toBeNull();
+  first.unmount(); resetResourceCache(); window.history.replaceState({}, "", "/");
+  const refused = vi.fn((input: RequestInfo, init?: RequestInit) => init?.method === "POST" ? json({ error: "request_closed", reasons: ["Cererea este închisă comercial."] }, 409) : read(input));
+  vi.stubGlobal("fetch", refused); render(<RequestProductSelection customerId="cus-A" requestId="req-A" />);
+  await userEvent.click(await screen.findByRole("button", { name: /Litere.*Configurează/ }));
+  expect(await screen.findByText("Cererea este închisă comercial.")).toBeInTheDocument();
+  expect(window.location.pathname).toBe("/");
 });
 it("guards repeated assembly clicks, recovers after failure and ignores abandoned responses", async () => {
   let release!: (value: unknown) => void;

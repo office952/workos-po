@@ -17,21 +17,27 @@ import { can, getProductSystem, type ApiContext, type ApiEnv } from "../cloud/co
 import { requireCapability } from "../cloud/middleware.js";
 import { financialAccess, scopedRequestDetail } from "../financial/access.js";
 import { httpPathIdentity } from "../httpPathIdentity.js";
+import { presentInstallationObligation } from "../commercial/installationCommitmentStore.js";
 import { effectiveOfferingPriceRight } from "../commercial/offeringAccess.js";
 
 function requestDetailFor(c: ApiContext, requestId: string) {
+  const runtime = getProductSystem(c);
+  const access = financialAccess(c, "commercial");
   const detail = scopedRequestDetail(
-    getProductSystem(c).readRequestDetail(requestId),
-    financialAccess(c, "commercial"),
+    runtime.readRequestDetail(requestId),
+    access,
     can(c, "requests.outcome.manage"),
   );
   if (!detail) {
     return null;
   }
+  const plane = runtime.assemblyPlane();
   return {
     ...detail,
     canWriteInstallationPrice:
-      effectiveOfferingPriceRight(c, getProductSystem(c)).right.canSetPrice && detail.canWriteInstallationFacts,
+      effectiveOfferingPriceRight(c, runtime).right.canSetPrice && detail.canWriteInstallationFacts,
+    installationObligation:
+      access === "workshop" ? null : presentInstallationObligation(plane.db, plane.organizationId, requestId),
   };
 }
 

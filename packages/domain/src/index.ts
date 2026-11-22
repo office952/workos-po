@@ -1420,6 +1420,8 @@ export * from "./execution/workSessions.js";
 export * from "./execution/workParticipation.js";
 export * from "./customerDossier/index.js";
 export * from "./commercial/offeringPolicy.js";
+export * from "./commercial/installationCommitment.js";
+export * from "./requests/quoteVariant.js";
 export {
   INCOMPLETE_COST_ACCEPTANCE_POLICY,
   INCOMPLETE_COST_ACCEPTANCE_REQUIRED_REASON,

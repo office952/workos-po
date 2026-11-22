@@ -96,7 +96,8 @@ export function CommercialLedger({
   }
 
   const products = branches.filter((branch) => branch.kind === "product").length;
-  const assemblies = branches.filter((branch) => branch.kind !== "product").length;
+  const assemblies = branches.filter((branch) => branch.kind === "assembly" || branch.kind === "unlinked").length;
+  const variants = branches.filter((branch) => branch.kind === "variant").length;
 
   const offerById = new Map((offers ?? []).map((offer) => [offer.quoteSnapshotId, offer]));
 
@@ -162,7 +163,14 @@ export function CommercialLedger({
                   data-branch-key={branch.key}
                   aria-pressed={selected}
                   aria-controls="branch-detail"
-                  aria-label={[branch.title, branch.subtitle, branch.offerReference, branch.stateLabel, branch.priceLabel]
+                  aria-label={[
+                    branch.alternativeOfLabel ? branch.kindLabel : null,
+                    branch.title,
+                    branch.subtitle,
+                    branch.offerReference,
+                    branch.stateLabel,
+                    branch.priceLabel,
+                  ]
                     .filter(Boolean)
                     .join(", ")}
                   tabIndex={branch.key === rovingKey ? 0 : -1}
@@ -192,6 +200,7 @@ export function CommercialLedger({
                 ) : null}
                 <span className="ledger__identity">
                   <span className="ledger__title" title={branch.title}>{branch.title}</span>
+                  {branch.alternativeOfLabel ? <span className="ledger__subtitle">{branch.kindLabel}</span> : null}
                   {branch.subtitle ? <span className="ledger__subtitle" title={branch.subtitle}>{branch.subtitle}</span> : null}
                   <span className="ledger__ref ledger__ref--inline">{branch.offerReference ?? "—"}</span>
                 </span>
@@ -220,7 +229,7 @@ export function CommercialLedger({
         <p>
           {hidden.length > 0 && filter !== "all"
             ? `Ascunse de filtru: ${hidden.map((branch) => branch.title).join(", ")}`
-            : `${offerCount(products, "de produs")} · ${assemblies === 0 ? "nicio ofertă de ansamblu" : offerCount(assemblies, "de ansamblu")}`}
+            : `${offerCount(products, "de produs")} · ${assemblies === 0 ? "nicio ofertă de ansamblu" : offerCount(assemblies, "de ansamblu")}${variants > 0 ? ` · ${variants === 1 ? "1 variantă neemisă" : `${variants} variante neemise`}` : ""}`}
         </p>
         <p>Valorile nu se însumează: ofertele sunt independente</p>
       </div>

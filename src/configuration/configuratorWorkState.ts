@@ -32,7 +32,24 @@ export function resolveConfiguratorWorkState(input: {
 export function configuratorWorkStateLabel(
   state: ConfiguratorWorkState,
   assembly = false,
+  /** A saved quote variant: the values are kept on the request, not in the browser. */
+  saved = false,
 ): { label: string; note: string } {
+  if (saved) {
+    switch (state) {
+      case "LOCAL_DRAFT":
+      case "SERVER_CHECK":
+        return { label: "În lucru", note: "salvată pe cerere" };
+      case "CONFIRMED_CONFIGURATION":
+        return { label: "Confirmată", note: "nu este încă ofertă" };
+      case "FROZEN_QUOTE":
+        return { label: "Ofertă emisă", note: "nu se mai modifică" };
+      default: {
+        const _exhaustive: never = state;
+        return _exhaustive;
+      }
+    }
+  }
   switch (state) {
     case "LOCAL_DRAFT":
       return { label: "Modificări locale", note: "în această filă" };
@@ -70,6 +87,8 @@ export function resolveConfiguratorReadiness(input: {
   missingParts: readonly string[];
   confirmed: boolean;
   frozen?: boolean;
+  /** A saved quote variant: the values and the confirmation are kept on the request. */
+  saved?: boolean;
 }): ConfiguratorReadiness {
   if (!input.hasProduct) {
     return { tone: "blocked", title: "Produsul nu este ales", detail: "Alege produsul în cerere." };
@@ -79,6 +98,11 @@ export function resolveConfiguratorReadiness(input: {
   }
   if (input.previewState !== "ready" || input.readiness === null) {
     return { tone: "pending", title: "Se actualizează", detail: "Serverul evaluează valorile curente." };
+  }
+  if (input.saved && input.confirmed) {
+    return input.frozen
+      ? { tone: "verified", title: "Ofertă emisă", detail: "Oferta nu se mai modifică. Pentru o schimbare pornește o variantă nouă." }
+      : { tone: "verified", title: "Configurație confirmată", detail: "Salvată pe cerere. Oferta apare după preț și emitere." };
   }
   if (input.confirmed && input.frozen) {
     return {

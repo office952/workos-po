@@ -81,6 +81,9 @@
   "GET /api/requests/:requestId",
   "GET /api/requests/:requestId/attachments",
   "GET /api/requests/:requestId/attachments/:attachmentId/download",
+  "GET /api/requests/:requestId/journal",
+  "GET /api/requests/:requestId/variants",
+  "GET /api/requests/:requestId/variants/:variantId",
   "GET /api/resources-admin",
   "GET /api/seller",
   "GET /api/seller/versions",
@@ -100,6 +103,7 @@
   "PATCH /api/requests/:requestId",
   "PATCH /api/requests/:requestId/installation-facts",
   "PATCH /api/requests/:requestId/installation-price",
+  "PATCH /api/requests/:requestId/variants/:variantId",
   "PATCH /api/resources-admin/cost-evidence/:evidenceRowId",
   "PATCH /api/seller",
   "PATCH /api/workcenters/:workcenterId",
@@ -198,8 +202,11 @@
   "POST /api/requests/:requestId/attachments",
   "POST /api/requests/:requestId/commercial/decisions",
   "POST /api/requests/:requestId/commercial/reopen",
+  "POST /api/requests/:requestId/journal",
   "POST /api/requests/:requestId/quotes",
   "POST /api/requests/:requestId/quotes/:quoteSnapshotId/resume",
+  "POST /api/requests/:requestId/variants",
+  "POST /api/requests/:requestId/variants/:variantId/lifecycle",
   "POST /api/resources-admin/cost-evidence",
   "POST /api/workcenters",
   "PUT /api/assemblies/:assemblyId/operation-estimates",
@@ -207,5 +214,6 @@
   "PUT /api/customers/:customerId/logo",
   "PUT /api/customers/:customerId/site-assignments",
   "PUT /api/customers/:customerId/works/representative-photo",
-  "PUT /api/people/:personId/operator-pin"
+  "PUT /api/people/:personId/operator-pin",
+  "PUT /api/requests/:requestId/variants/:variantId/price"
 ]

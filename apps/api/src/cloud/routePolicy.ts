@@ -149,6 +149,15 @@ export const ROUTE_POLICY: Readonly<Record<string, RoutePolicyCapability>> = {
   "POST /api/requests/:requestId/commercial/reopen": "requests.outcome.manage",
   "POST /api/requests/:requestId/quotes": "quotes.create",
   "POST /api/requests/:requestId/quotes/:quoteSnapshotId/resume": "requests.outcome.manage",
+  // Commercial Continuity V2: quote variants and the commercial journal (never production/workshop).
+  "GET /api/requests/:requestId/variants": "quotes.create",
+  "POST /api/requests/:requestId/variants": "quotes.create",
+  "GET /api/requests/:requestId/variants/:variantId": "quotes.create",
+  "PATCH /api/requests/:requestId/variants/:variantId": "quotes.create",
+  "PUT /api/requests/:requestId/variants/:variantId/price": "offering.policy.use",
+  "POST /api/requests/:requestId/variants/:variantId/lifecycle": "quotes.create",
+  "GET /api/requests/:requestId/journal": "prices.client.read",
+  "POST /api/requests/:requestId/journal": "quotes.create",
 
   // Configurator and products
   "GET /api/product-catalog": "configurator.use",

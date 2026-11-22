@@ -7,6 +7,24 @@ import type { OfferCommercialStatusTransport } from "../../api/types";
  */
 export type QuoteDecisionMode = "accept" | "confirm-order" | "ordered" | "none";
 
+/** Operator-facing distinction: approved price lives in the configurator; the quote page names issued vs ordered. */
+export function commercialLifecycleLabel(mode: QuoteDecisionMode): string {
+  switch (mode) {
+    case "ordered":
+      return "Comandă acceptată a clientului";
+    case "confirm-order":
+      return "Ofertă acceptată, comandă neconfirmată";
+    case "accept":
+      return "Ofertă emisă, încă neacceptată";
+    case "none":
+      return "Fără decizie deschisă";
+    default: {
+      const _exhaustive: never = mode;
+      return _exhaustive;
+    }
+  }
+}
+
 export function quoteDecisionMode(input: {
   ordered: boolean;
   status: Pick<OfferCommercialStatusTransport, "commercialStatus"> | null;

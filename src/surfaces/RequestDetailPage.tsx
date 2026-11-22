@@ -2,6 +2,11 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import type { CommercialRequestTransport } from "../api/types";
 import { InlineAlert } from "../components/InlineAlert";
 import { RequestProductSelection } from "../components/RequestProductSelection";
+import { RequestJournal } from "./requests/RequestJournal";
+import { presentQuoteVariant } from "../adapters/quoteVariantAdapter";
+import { createRequestVariant, setRequestVariantLifecycle } from "../api/quoteVariants";
+import { variantHref } from "./requests/RequestVariants";
+import { requestVariantsKey, useRequestVariants } from "./requests/requestVariantsData";
 import { LoadingFloor } from "../components/LoadingFloor";
 import { SurfacePanel } from "../components/SurfacePanel";
 import { invalidateResources, writeResource } from "../data/resourceCache";
@@ -22,7 +27,7 @@ import {
   type BranchFilter,
   type CommercialBranch,
 } from "../presentation/requestCommercialBranches";
-import { clientHref, requestHref } from "../routing/appRoute";
+import { clientHref, configuratorVariantHref, requestHref } from "../routing/appRoute";
 import { hrefPath, originBack } from "../routing/originBack";
 import {
   readConfiguratorSession,
@@ -41,7 +46,7 @@ import { useCommercialClosure } from "./requests/closure/useCommercialClosure";
 import { usePreviewHistory } from "../routing/usePreviewHistory";
 import { navigate } from "../routing/navigate";
 import { RequestAttachmentsSection } from "./RequestAttachmentsSection";
-import { RequestInstallationSection } from "./RequestInstallationSection";
+import { InstallationObligationAlerts, RequestInstallationSection } from "./RequestInstallationSection";
 import "../styles/surfaces/commercial.css";
 import "../styles/surfaces/request-branches.css";
 import "../styles/surfaces/commercial-state.css";
@@ -98,6 +103,8 @@ export function RequestDetailPage({ requestId, search = window.location.search }
   const quotedProductLabel = detail?.linkedOffers.find((offer) => offer.kind === "PRODUCT" && !offer.superseded)?.productLabel
     ?? detail?.linkedOffers.find((offer) => offer.kind === "PRODUCT")?.productLabel
     ?? null;
+  const variants = useRequestVariants(requestId);
+  const variantRows = useMemo(() => variants.data ?? [], [variants.data]);
   const branches = useMemo(
     () => presentCommercialBranches({
       offers: detail?.linkedOffers ?? [],
@@ -108,8 +115,33 @@ export function RequestDetailPage({ requestId, search = window.location.search }
       requestId,
       customerId: detail?.customerId ?? null,
       journey: detail?.journey ?? null,
+      openVariants: detail
+        ? variantRows
+            .filter((variant) => variant.quoteSnapshotId === null)
+            .map((variant) => ({
+              variantId: variant.variantId,
+              requestId: variant.requestId,
+              customerId: detail.customerId,
+              productCode: variant.productCode,
+              indexLabel: variant.indexLabel,
+              title: variant.inscription ?? variant.productLabel,
+              subtitle: variant.inscription ? variant.productLabel : null,
+              stateLabel: variant.stateLabel,
+              needsAction: variant.needsAction,
+              actionLabel: variant.actionLabel,
+              href: variantHref(variant, detail.customerId),
+              priceLabel:
+                variant.priceVisible && variant.grossPrice !== null && variant.currency
+                  ? `${variant.grossPrice.toLocaleString("ro-RO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${variant.currency}`
+                  : null,
+              notes: variant.notes,
+              alternativeOfLabel: variant.alternativeOfIndexLabel,
+              lifecycle: variant.lifecycle,
+              registeredAt: variant.updatedAt,
+            }))
+        : [],
     }),
-    [detail, jobs.data, jobs.status, requestId],
+    [detail, jobs.data, jobs.status, requestId, variantRows],
   );
   const all = branches.branches;
   const visible = filterBranches(all, filter);
@@ -132,6 +164,30 @@ export function RequestDetailPage({ requestId, search = window.location.search }
     onDetail: (next) => writeResource(resourceKeys.request(requestId), next),
   });
   const canCreateQuote = commercial?.canCreateQuote !== false;
+  const openVariantCount = variantRows.filter((variant) => variant.quoteSnapshotId === null && variant.lifecycle === "ACTIVE").length;
+
+  async function addLedgerAlternative(variantId: string): Promise<void> {
+    if (!detail) return;
+    const source = variantRows.find((item) => item.variantId === variantId);
+    if (!source) return;
+    const result = await createRequestVariant(detail.requestId, { copyFromVariantId: source.variantId });
+    const created = result.ok ? presentQuoteVariant((result.body as { variant?: unknown } | null)?.variant) : null;
+    if (!created) return;
+    invalidateResources(requestVariantsKey(detail.requestId), resourceKeys.request(detail.requestId));
+    navigate(configuratorVariantHref({ customerId: detail.customerId, requestId: detail.requestId, productCode: created.productCode }, created.variantId));
+  }
+
+  async function setLedgerLifecycle(variantId: string, lifecycle: "ACTIVE" | "WITHDRAWN"): Promise<void> {
+    if (!detail) return;
+    const source = variantRows.find((item) => item.variantId === variantId);
+    if (!source) return;
+    await setRequestVariantLifecycle(detail.requestId, source.variantId, {
+      expectedVersion: source.version,
+      lifecycle,
+    });
+    invalidateResources(requestVariantsKey(detail.requestId), resourceKeys.request(detail.requestId));
+  }
+
   const menuActions: RequestMenuAction[] = [];
   if (commercial && !deciding) {
     if (commercial.state === "CLOSED" && commercial.canReopen) {
@@ -309,8 +365,17 @@ export function RequestDetailPage({ requestId, search = window.location.search }
       ) : null}
       {detail ? (
         <>
+          {detail.installationObligation ? (
+            <InstallationObligationAlerts obligation={detail.installationObligation} placement="page" />
+          ) : null}
           {commercial ? <CommercialStatusBanner commercial={commercial} administrativeLabel={detail.statusLabel} /> : null}
-          {journey && !deciding ? <ObligationsPanel journey={journey} requestId={requestId} /> : null}
+          {journey && !deciding ? (
+            <ObligationsPanel
+              journey={journey}
+              requestId={requestId}
+              variantStep={openVariantCount > 0 && detail.nextAction === "OPEN_REQUEST" ? detail.nextActionLabel : null}
+            />
+          ) : null}
           {staleSelection ? (
             <InlineAlert tone="pending" title="Ramura din adresă nu mai este în această cerere">
               Registrul arată ofertele actuale ale cererii; alege din nou ramura.
@@ -383,12 +448,22 @@ export function RequestDetailPage({ requestId, search = window.location.search }
                         ? (quoteSnapshotId, label) => setResumeTarget({ quoteSnapshotId, label })
                         : undefined
                     }
+                    canWork={canCreateQuote}
+                    sourceVariantId={
+                      selected.variantId ??
+                      variantRows.find((item) =>
+                        selected.quotes.some((quote) => quote.quoteSnapshotId === item.quoteSnapshotId),
+                      )?.variantId ??
+                      null
+                    }
+                    onAddAlternative={(variantId) => void addLedgerAlternative(variantId)}
+                    onSetLifecycle={(variantId, lifecycle) => void setLedgerLifecycle(variantId, lifecycle)}
                   />
                 ) : null}
               </aside>
             ) : null}
           </div>
-          {branches.local.length > 0 ? (
+          {branches.local.length > 0 && variantRows.length === 0 ? (
             <ul className="branch-local" aria-label="Configurări locale">
               {branches.local.map((item) => (
                 <li key={item.sessionKey}>
@@ -424,6 +499,9 @@ export function RequestDetailPage({ requestId, search = window.location.search }
             />
             <RequestInstallationSection detail={detail} />
           </div>
+          {variants.status === "success" ? (
+            <RequestJournal requestId={detail.requestId} canWrite={canCreateQuote} variants={variantRows} />
+          ) : null}
         </>
       ) : request.status !== "error" ? (
         <SurfacePanel title="Ce dorește clientul" label="Ce dorește clientul" busy>

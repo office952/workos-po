@@ -1,6 +1,8 @@
 import {
   commercialOfferingView,
   evaluateOfferingPolicy,
+  offeringControlMode,
+  offeringControlModeLabel,
   offeringPolicyModeLabel,
   resolveOfferingPriceRight,
   type OfferingActor,
@@ -51,9 +53,13 @@ export function evaluateOfferingForActor(
 
 /** Presentation of the policy that the Comercial role may see (no thresholds). */
 export function presentPolicyForCommercial(policy: OfferingPolicy, right: OfferingPriceRight) {
+  const controlMode = offeringControlMode(policy);
   return {
     mode: policy.mode,
     modeLabel: offeringPolicyModeLabel(policy.mode),
+    // The four modes an Owner chooses from (Control total is the approval mode + its rule).
+    controlMode,
+    controlModeLabel: offeringControlModeLabel(controlMode),
     version: policy.version,
     canSetPrice: right.canSetPrice,
     blockedReason: right.blockedReason,

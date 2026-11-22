@@ -78,6 +78,9 @@ import {
   saveAssemblyTruth,
   saveConfirmedChild,
 } from "./store.js";
+import { actorIdentity } from "../commercial/offeringAccess.js";
+import { skipSiteInstallationForOrder } from "../commercial/installationCommitmentStore.js";
+import { checkInstallationAcceptance, readInstallationDecision } from "../commercial/installationGuard.js";
 import { refuseNewQuoteIfClosed } from "../commercial/closureStore.js";
 import { persistAssemblyQuoteRequestLock } from "../requests/store.js";
 import { planAssemblyAcceptance } from "./acceptance.js";
@@ -536,14 +539,38 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     }
     const runtime = getProductSystem(c);
     const assemblyId = c.req.param("assemblyId");
-    const planned = runtime.assemblyPlane().db.transaction(() => {
+    const plane = runtime.assemblyPlane();
+    const current = readLatestAssemblyQuote(plane.db, plane.organizationId, assemblyId);
+    const existing = current ? readAssemblyOrderByQuote(plane.db, plane.organizationId, current.quoteSnapshotId) : null;
+    const installationCheck = current
+      ? checkInstallationAcceptance({
+          runtime,
+          db: plane.db,
+          organizationId: plane.organizationId,
+          requestId: current.requestId,
+          quoteSnapshotId: current.quoteSnapshotId,
+          quoteHasInstallation: Boolean(current.serviceLine),
+          quoteInstallationNet: current.serviceLine?.commercial?.netPrice ?? null,
+          alreadyAccepted: existing !== null,
+          decision: readInstallationDecision(body),
+          actor: actorIdentity(c),
+        })
+      : ({ ok: true, record: null, onOrderCreated: null } as const);
+    if (!installationCheck.ok) {
+      return c.json(installationCheck.body, installationCheck.status);
+    }
+    const planned = plane.db.transaction(() => {
       const result = planAssemblyAcceptance(runtime, {
         assemblyId,
         quoteSnapshotId: readString(body, "quoteSnapshotId"),
         createdAt: new Date().toISOString(),
         incompleteCost: exception,
       });
-      if (result.ok) saveAssemblyOrder(runtime.assemblyPlane().db, result.order);
+      if (result.ok) {
+        saveAssemblyOrder(plane.db, result.order);
+        installationCheck.record?.();
+        installationCheck.onOrderCreated?.(result.order.orderSnapshotId);
+      }
       return result;
     }).immediate();
     if (!planned.ok) {
@@ -570,6 +597,11 @@ export function registerAssemblyRoutes(app: Hono<ApiEnv>): void {
     const projected = projectAssemblyProduction(current.order, {
       snapshotId: `asmp:${current.order.contentHash.slice(0, 24)}`,
       createdAt: new Date().toISOString(),
+      skipSiteInstallationOperation: skipSiteInstallationForOrder(
+        runtime.assemblyPlane().db,
+        current.order.requestId,
+        current.order.orderSnapshotId,
+      ),
     });
     if (!projected.ok) {
       return c.json({ error: projected.error, reasons: projected.reasons }, 422);

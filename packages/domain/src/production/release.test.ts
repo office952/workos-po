@@ -192,6 +192,20 @@ describe("production release from order", () => {
     expect(record.tasks.every((task) => task.status === "PLANNED")).toBe(true);
   });
 
+  it("can skip appending the site-installation operation while still requiring the V2 line on the order", () => {
+    const { order } = goldenOrder();
+    const v1 = freezeProductionReleaseFromOrder(order, { createdAt: "2026-08-17T03:00:00.000Z" });
+    const skipped = freezeProductionReleaseFromOrder(order, {
+      createdAt: "2026-08-17T03:00:00.000Z",
+      skipSiteInstallationOperation: true,
+    });
+    expect(v1.ok).toBe(true);
+    expect(skipped.ok).toBe(true);
+    if (!v1.ok || !skipped.ok) return;
+    expect(skipped.snapshot.operations).toEqual(v1.snapshot.operations);
+    expect(skipped.snapshot.contentHash).toBe(v1.snapshot.contentHash);
+  });
+
   it("rejects an order that lost its production input", () => {
     const { order } = goldenOrder();
     const stripped = {

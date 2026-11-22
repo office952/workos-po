@@ -48,7 +48,12 @@ export async function fetchAssemblyQuoteDocument(quoteSnapshotId: string): Promi
 export async function confirmQuoteOrder(
   productCode: string,
   quoteSnapshotId: string,
-  body?: { incompleteCostAcceptance: { confirm: true; reason: string } },
+  body?: {
+    incompleteCostAcceptance?: { confirm: true; reason: string };
+    /** A second, really separate installation on the same request, with the Owner's reason. */
+    installationDecision?: { mode: "SEPARATE"; reason: string } | { mode: "COMMON" };
+    alternativeAcceptanceConfirmed?: true;
+  },
 ): Promise<unknown> {
   return postJson(`${quoteSnapshotPath(productCode, quoteSnapshotId)}/confirm-order`, body);
 }

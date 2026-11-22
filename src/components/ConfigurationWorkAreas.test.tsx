@@ -18,11 +18,11 @@ describe("ConfigurationWorkAreas", () => {
     expect(screen.getByRole("tab", { name: "Verificare" })).toHaveFocus();
     expect(screen.getByRole("tab", { name: "Verificare" })).toHaveAttribute("aria-selected", "true");
     await user.keyboard("{End}");
-    expect(screen.getByRole("tab", { name: "Pregătire ofertă" })).toHaveFocus();
+    expect(screen.getByRole("tab", { name: "Preț și ofertă" })).toHaveFocus();
     await user.keyboard("{ArrowRight}");
     expect(screen.getByRole("tab", { name: "Configurație" })).toHaveFocus();
     await user.keyboard("{ArrowLeft}");
-    expect(screen.getByRole("tab", { name: "Pregătire ofertă" })).toHaveFocus();
+    expect(screen.getByRole("tab", { name: "Preț și ofertă" })).toHaveFocus();
     await user.keyboard("{Home}");
     expect(screen.getByRole("tab", { name: "Configurație" })).toHaveFocus();
     expect(screen.getByRole("tab", { name: "Verificare" })).toHaveAttribute("tabindex", "-1");
@@ -30,8 +30,8 @@ describe("ConfigurationWorkAreas", () => {
 
   it("locks area changes during a protected operation", async () => {
     render(<Harness disabled />);
-    await userEvent.click(screen.getByRole("tab", { name: "Pregătire ofertă" }));
-    expect(screen.getByRole("tab", { name: "Pregătire ofertă" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("tab", { name: "Preț și ofertă" }));
+    expect(screen.getByRole("tab", { name: "Preț și ofertă" })).toBeDisabled();
     expect(screen.getByRole("tab", { name: "Configurație" })).toHaveAttribute("aria-selected", "true");
   });
 });

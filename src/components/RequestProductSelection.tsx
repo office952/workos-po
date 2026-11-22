@@ -4,7 +4,11 @@ import { invalidateResources } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { loadCatalogProducts } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
-import { assemblyHref, configuratorHref } from "../routing/appRoute";
+import { assemblyHref, configuratorHref, configuratorVariantHref } from "../routing/appRoute";
+import { presentQuoteVariant } from "../adapters/quoteVariantAdapter";
+import { readTransportErrorCode, readTransportReasons } from "../api/http";
+import { createRequestVariant } from "../api/quoteVariants";
+import { requestVariantsKey } from "../surfaces/requests/requestVariantsData";
 import { navigate } from "../routing/navigate";
 import { Button } from "./Button";
 import { InlineAlert } from "./InlineAlert";
@@ -46,6 +50,31 @@ export function RequestProductSelection({ customerId, requestId, mode = "first",
       }
     } finally { saving.current = false; if (scope === generation.current) { setPending(false); setConfirming(null); } }
   }
+  /**
+   * Commercial Continuity V2: choosing a product creates the quote variant on the request, so the
+   * work is kept from the first value. An environment without variants keeps the earlier path.
+   */
+  async function chooseProduct(productCode: string) {
+    if (saving.current) return;
+    saving.current = true; setPending(true); setError(null); setExistingAssemblyId(null);
+    const scope = generation.current;
+    try {
+      const result = await createRequestVariant(requestId, { productCode });
+      if (scope !== generation.current) return;
+      const created = result.ok ? presentQuoteVariant((result.body as { variant?: unknown } | null)?.variant) : null;
+      if (created) {
+        invalidateResources(resourceKeys.request(requestId));
+        invalidateResources(requestVariantsKey(requestId));
+        navigate(configuratorVariantHref({ customerId, requestId, productCode }, created.variantId));
+      } else if (!result.ok && readTransportErrorCode(result.body) === "variants_unavailable") {
+        navigate(configuratorHref({ customerId, requestId, productCode }));
+      } else {
+        setError(readTransportReasons(result.body)[0] ?? "Varianta nu a putut fi creată. Reîncearcă.");
+      }
+    } catch {
+      if (scope === generation.current) setError("Varianta nu a putut fi creată. Reîncearcă.");
+    } finally { saving.current = false; if (scope === generation.current) setPending(false); }
+  }
   const offerings = assemblies.data?.canCreate ? assemblies.data.offerings : [];
   const body = <>
     {offerings.length > 0 ? (
@@ -79,7 +108,7 @@ export function RequestProductSelection({ customerId, requestId, mode = "first",
       : "Pentru o singură piesă (litere, panou ACM sau logo), alege produsul de mai jos."}</p>
     {!catalog.data && catalog.status !== "error" && <LoadingFloor variant="registry" label="Se citesc produsele disponibile" />}
     {catalog.status === "error" && <InlineAlert tone="error" title="Produsele nu au putut fi citite"><Button variant="secondary" onClick={() => invalidateResources(resourceKeys.catalog())}>Reîncearcă</Button></InlineAlert>}
-    {catalog.data && <ProductPicker products={catalog.data} actionLabel="Configurează" disabled={pending} onChoose={p => navigate(configuratorHref({ customerId, requestId, productCode: p.code }))} />}
+    {catalog.data && <ProductPicker products={catalog.data} actionLabel="Configurează" disabled={pending} onChoose={p => void chooseProduct(p.code)} />}
     {assemblies.status === "error" && <InlineAlert tone="error" title="Produsele compuse nu au putut fi citite"><Button variant="secondary" onClick={() => invalidateResources("assembly-offerings")}>Reîncearcă produsele compuse</Button></InlineAlert>}
     {error && <InlineAlert tone={existingAssemblyId ? "blocked" : "error"} title={existingAssemblyId ? "Există deja lucru comercial" : "Crearea a eșuat"}>{error}{existingAssemblyId && <> <a className="text-link" href={assemblyHref(existingAssemblyId)}>Deschide ansamblul existent</a></>}</InlineAlert>}
   </>;

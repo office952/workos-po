@@ -1,6 +1,10 @@
 import {
+  OFFERING_CONTROL_MODES,
   OFFERING_POLICY_MODES,
   approvalViewFor,
+  offeringControlMode,
+  offeringControlModeLabel,
+  offeringControlModeSummary,
   offeringPolicyModeLabel,
   offeringRuleLabel,
   priceApprovalStatusLabel,
@@ -14,11 +18,16 @@ import type { Hono } from "hono";
 import { getProductSystem, type ApiEnv } from "../cloud/context.js";
 import { requireCapability } from "../cloud/middleware.js";
 import { actorIdentity, effectiveOfferingPriceRight, presentPolicyForCommercial } from "./offeringAccess.js";
+import { currentVariantBindingHash } from "../requests/variantRoutes.js";
+import { appendVariantEvent, listRequestVariants } from "../requests/variantStore.js";
 
 function presentOwnerPolicy(policy: OfferingPolicy) {
+  const controlMode = offeringControlMode(policy);
   return {
     mode: policy.mode,
     modeLabel: offeringPolicyModeLabel(policy.mode),
+    controlMode,
+    controlModeLabel: offeringControlModeLabel(controlMode),
     rules: policy.rules,
     version: policy.version,
     source: policy.source,
@@ -34,6 +43,8 @@ function presentOwnerApproval(
   return {
     approvalId: approval.approvalId,
     requestId: approval.subject.requestId,
+    // The saved variant the request is about; the Owner decides inside it (null before V2).
+    variantId: approval.subject.variantId ?? null,
     productCode: approval.subject.productCode,
     requestReference: request?.reference ?? null,
     customerLabel: request?.customerLabel ?? null,
@@ -57,6 +68,27 @@ function presentOwnerApproval(
 
 const APPROVAL_STATUS_FILTERS: readonly PriceApprovalStatus[] = ["REQUESTED", "APPROVED", "REJECTED", "WITHDRAWN"];
 
+/**
+ * Unissued variants whose approval is still open or granted. A policy change makes exactly these
+ * approvals stale, so the Owner is told the number before saving.
+ */
+function countPolicySensitiveVariants(runtime: ReturnType<typeof getProductSystem>): number {
+  const seen = new Set<string>();
+  const db = runtime.assemblyPlane().db;
+  for (const status of ["REQUESTED", "APPROVED"] as const) {
+    for (const approval of runtime.listPriceApprovals({ status, limit: 500 })) {
+      const variantId = approval.subject.variantId;
+      if (!variantId || seen.has(variantId)) continue;
+      const variant = listRequestVariants(db, approval.subject.requestId).find((item) => item.variantId === variantId);
+      if (!variant || variant.quoteSnapshotId || variant.lifecycle !== "ACTIVE") continue;
+      // Only the latest approval of a variant counts.
+      const latest = runtime.readLatestPriceApproval(approval.subject.requestId, approval.subject.productCode, variantId);
+      if (latest?.approvalId === approval.approvalId) seen.add(variantId);
+    }
+  }
+  return seen.size;
+}
+
 export function registerOfferingRoutes(app: Hono<ApiEnv>): void {
   // The organization's own view of its policy, for any role that may use it (no thresholds).
   app.get("/api/offering-policy", requireCapability("prices.client.read"), (c) => {
@@ -71,7 +103,16 @@ export function registerOfferingRoutes(app: Hono<ApiEnv>): void {
       policy: presentOwnerPolicy(runtime.readOfferingPolicy()),
       versions: runtime.listOfferingPolicyVersions().map(presentOwnerPolicy),
       modes: OFFERING_POLICY_MODES.map((mode) => ({ mode, label: offeringPolicyModeLabel(mode) })),
+      // The four choices the Owner sees. Control total is saved as the approval mode with the
+      // rule `everyOfferRequiresApproval`.
+      controlModes: OFFERING_CONTROL_MODES.map((controlMode) => ({
+        controlMode,
+        label: offeringControlModeLabel(controlMode),
+        summary: offeringControlModeSummary(controlMode),
+      })),
       openApprovals: runtime.listPriceApprovals({ status: "REQUESTED" }).length,
+      // How many saved, unissued variants carry a price or an approval that a change would touch.
+      affectedVariants: countPolicySensitiveVariants(runtime),
     });
   });
 
@@ -162,6 +203,22 @@ export function registerOfferingRoutes(app: Hono<ApiEnv>): void {
         );
       }
       const actor = actorIdentity(c);
+      // A request about a saved variant is decided only for the variant as it is stored now: an
+      // approval can never land on a version the Owner did not have in front of them.
+      const pending = runtime.readPriceApproval(c.req.param("approvalId"));
+      const pendingVariantId = pending?.subject.variantId ?? null;
+      const boundVariant = pendingVariantId ? currentVariantBindingHash(c, runtime, pendingVariantId) : null;
+      if (pending && pendingVariantId && pending.status === "REQUESTED" && decision === "APPROVED") {
+        if (!boundVariant || boundVariant.bindingHash !== pending.bindingHash) {
+          return c.json(
+            {
+              error: "approval_stale",
+              reasons: ["Solicitarea nu mai corespunde variantei: configurația, prețul sau regulile s-au schimbat de la trimitere."],
+            },
+            409,
+          );
+        }
+      }
       const decided = runtime.decidePriceApproval(c.req.param("approvalId"), decision, reason, {
         userId: actor.userId,
         label: actor.label,
@@ -170,6 +227,16 @@ export function registerOfferingRoutes(app: Hono<ApiEnv>): void {
         return decided.error === "not_found"
           ? c.json({ error: "not_found" }, 404)
           : c.json({ error: decided.error, reasons: ["Solicitarea nu mai este deschisă."] }, 409);
+      }
+      if (boundVariant && !boundVariant.variant.quoteSnapshotId) {
+        appendVariantEvent(
+          runtime.assemblyPlane().db,
+          boundVariant.variant,
+          decision === "APPROVED" ? "APPROVED" : "REJECTED",
+          { userId: actor.userId, label: actor.label },
+          decided.approval.decidedAt ?? new Date().toISOString(),
+          { netPrice: decided.approval.netPrice, detail: decided.approval.approvalId },
+        );
       }
       return c.json({
         approval: presentOwnerApproval(decided.approval, null),

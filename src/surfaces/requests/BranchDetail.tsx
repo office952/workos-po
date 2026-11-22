@@ -14,6 +14,10 @@ export function BranchDetail({
   onPreview,
   onRetryJobs,
   onResume,
+  onAddAlternative,
+  onSetLifecycle,
+  canWork = false,
+  sourceVariantId = null,
 }: {
   branch: CommercialBranch;
   total: number;
@@ -24,6 +28,10 @@ export function BranchDetail({
   onPreview: (quoteSnapshotId: string) => void;
   onRetryJobs: (() => void) | null;
   onResume?: (quoteSnapshotId: string, label: string) => void;
+  onAddAlternative?: (variantId: string) => void;
+  onSetLifecycle?: (variantId: string, lifecycle: "ACTIVE" | "WITHDRAWN") => void;
+  canWork?: boolean;
+  sourceVariantId?: string | null;
 }) {
   const others = total - 1;
   const current = branch.quotes.find((quote) => !quote.superseded) ?? branch.quotes[0] ?? null;
@@ -40,7 +48,7 @@ export function BranchDetail({
         </button>
       </div>
       <p className="branch-detail__kicker">
-        Ramura {branch.indexLabel} · din {total}
+        Ramura {branch.indexLabel} · {branch.kindLabel} · din {total}
       </p>
       <h2 className="branch-detail__title" id="branch-detail-title">{branch.title}</h2>
       {branch.subtitle ? <p className="branch-detail__subtitle">{branch.subtitle}</p> : null}
@@ -76,6 +84,22 @@ export function BranchDetail({
             onClick={() => onResume(current.quoteSnapshotId, current.reference ?? branch.title)}
           >
             Reia oferta
+          </button>
+        ) : null}
+        {canWork && sourceVariantId && onAddAlternative ? (
+          <button type="button" className="button button--secondary" onClick={() => onAddAlternative(sourceVariantId)}>
+            {branch.kind === "variant" ? "Adaugă o alternativă" : "Variantă nouă pornind de la aceasta"}
+          </button>
+        ) : null}
+        {canWork && branch.kind === "variant" && branch.variantId && onSetLifecycle ? (
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={() =>
+              onSetLifecycle(branch.variantId as string, branch.state === "decided" ? "ACTIVE" : "WITHDRAWN")
+            }
+          >
+            {branch.state === "decided" ? "Reia" : "Retrage"}
           </button>
         ) : null}
         <p className="branch-detail__links">

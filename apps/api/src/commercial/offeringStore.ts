@@ -21,6 +21,8 @@ type PolicyRow = {
   incomplete_cost_requires_approval: number;
   minimum_margin_percent: number | null;
   maximum_net_value: number | null;
+  /** Absent on a plane that has not applied migration 054 yet. */
+  every_offer_requires_approval?: number;
   created_at: string;
   created_by_user_id: string;
   created_by_label: string;
@@ -35,6 +37,10 @@ function policyFromRow(row: PolicyRow): OfferingPolicy | null {
       incompleteCostRequiresApproval: row.incomplete_cost_requires_approval === 1,
       minimumMarginPercent: row.minimum_margin_percent,
       maximumNetValue: row.maximum_net_value,
+      // Only the approval mode can carry Control total; any other stored combination reads as off.
+      ...(row.mode === "COMMERCIAL_APPROVAL_POLICY" && row.every_offer_requires_approval === 1
+        ? { everyOfferRequiresApproval: true }
+        : {}),
     },
     version: row.version,
     source: "ORGANIZATION",
@@ -84,7 +90,8 @@ export function saveOfferingPolicy(
       current.mode === input.mode &&
       current.rules.incompleteCostRequiresApproval === input.rules.incompleteCostRequiresApproval &&
       current.rules.minimumMarginPercent === input.rules.minimumMarginPercent &&
-      current.rules.maximumNetValue === input.rules.maximumNetValue
+      current.rules.maximumNetValue === input.rules.maximumNetValue &&
+      (current.rules.everyOfferRequiresApproval === true) === (input.rules.everyOfferRequiresApproval === true)
     ) {
       return { ok: true, policy: current, alreadyApplied: true };
     }
@@ -92,8 +99,8 @@ export function saveOfferingPolicy(
     db.prepare(
       `INSERT INTO organization_offering_policy_versions (
         version, policy_schema, mode, incomplete_cost_requires_approval, minimum_margin_percent,
-        maximum_net_value, created_at, created_by_user_id, created_by_label
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        maximum_net_value, every_offer_requires_approval, created_at, created_by_user_id, created_by_label
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       version,
       OFFERING_POLICY_SCHEMA,
@@ -101,6 +108,7 @@ export function saveOfferingPolicy(
       input.rules.incompleteCostRequiresApproval ? 1 : 0,
       input.rules.minimumMarginPercent,
       input.rules.maximumNetValue,
+      input.rules.everyOfferRequiresApproval === true ? 1 : 0,
       now,
       actor.userId,
       actor.label,
@@ -134,6 +142,7 @@ type ApprovalRow = {
   decided_by_label: string | null;
   decided_at: string | null;
   decision_reason: string | null;
+  variant_id?: string | null;
 };
 
 function approvalFromRow(row: ApprovalRow, organizationId: string): PriceApprovalRecord {
@@ -153,6 +162,7 @@ function approvalFromRow(row: ApprovalRow, organizationId: string): PriceApprova
       organizationId,
       requestId: row.request_id,
       productCode: row.product_code,
+      ...(row.variant_id ? { variantId: row.variant_id } : {}),
     },
     bindingHash: row.binding_hash,
     policyVersion: row.policy_version,
@@ -179,14 +189,28 @@ export function readLatestPriceApproval(
   organizationId: string,
   requestId: string,
   productCode: string,
+  variantId: string | null = null,
 ): PriceApprovalRecord | null {
-  const row = db
-    .prepare(
-      `SELECT * FROM commercial_price_approvals
-       WHERE request_id = ? AND product_code = ? AND subject_kind = 'PRODUCT_QUOTE'
-       ORDER BY requested_at DESC, rowid DESC LIMIT 1`,
-    )
-    .get(requestId, productCode) as ApprovalRow | undefined;
+  // A variant has its own approval thread. The request-and-product thread (no variant) is the
+  // pre-V2 behaviour and never sees a variant's approvals, and the other way round.
+  const row = (
+    variantId
+      ? db
+          .prepare(
+            `SELECT * FROM commercial_price_approvals
+             WHERE variant_id = ? AND request_id = ? AND subject_kind = 'PRODUCT_QUOTE'
+             ORDER BY requested_at DESC, rowid DESC LIMIT 1`,
+          )
+          .get(variantId, requestId)
+      : db
+          .prepare(
+            `SELECT * FROM commercial_price_approvals
+             WHERE request_id = ? AND product_code = ? AND subject_kind = 'PRODUCT_QUOTE'
+               AND variant_id IS NULL
+             ORDER BY requested_at DESC, rowid DESC LIMIT 1`,
+          )
+          .get(requestId, productCode)
+  ) as ApprovalRow | undefined;
   return row ? approvalFromRow(row, organizationId) : null;
 }
 
@@ -296,7 +320,14 @@ export function requestPriceApproval(
   now = new Date().toISOString(),
 ): ApprovalRequestResult {
   return db.transaction((): ApprovalRequestResult => {
-    const latest = readLatestPriceApproval(db, input.subject.organizationId, input.subject.requestId, input.subject.productCode);
+    const variantId = input.subject.variantId ?? null;
+    const latest = readLatestPriceApproval(
+      db,
+      input.subject.organizationId,
+      input.subject.requestId,
+      input.subject.productCode,
+      variantId,
+    );
     if (latest && latest.bindingHash === input.bindingHash) {
       if (latest.status === "REQUESTED") return { ok: true, approval: latest, alreadyRequested: true };
       if (latest.status === "APPROVED" || latest.status === "REJECTED") {
@@ -314,8 +345,8 @@ export function requestPriceApproval(
       `INSERT INTO commercial_price_approvals (
         approval_id, subject_kind, request_id, product_code, binding_hash, policy_version, policy_mode,
         net_price, installation_net_price, internal_cost_complete, triggered_rules, status,
-        requested_by_user_id, requested_by_label, requested_at, request_note
-      ) VALUES (?, 'PRODUCT_QUOTE', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'REQUESTED', ?, ?, ?, ?)`,
+        requested_by_user_id, requested_by_label, requested_at, request_note, variant_id
+      ) VALUES (?, 'PRODUCT_QUOTE', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'REQUESTED', ?, ?, ?, ?, ?)`,
     ).run(
       approvalId,
       input.subject.requestId,
@@ -331,6 +362,7 @@ export function requestPriceApproval(
       actor.label,
       now,
       input.note,
+      variantId,
     );
     appendApprovalEvent(db, approvalId, "REQUESTED", actor, now, input.note);
     return {

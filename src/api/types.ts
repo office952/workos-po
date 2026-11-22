@@ -28,6 +28,9 @@ export type ConfirmRequest = {
   quoteCommercialTerms?: QuoteCommercialTermsTransport;
   manualProductNetPrice?: number;
   preferManualProductPrice?: boolean;
+  /** Saved quote variant: the server confirms what it stores, not the values sent here. */
+  variantId?: string;
+  expectedVersion?: number;
 };
 
 export type QuoteFreezeRequest = {
@@ -41,6 +44,9 @@ export type QuoteFreezeRequest = {
   preferManualProductPrice?: boolean;
   commercialIntent?: string;
   rateAcknowledgement?: { bindingHash: string };
+  /** Saved quote variant: the server issues what it stores, not the values sent here. */
+  variantId?: string;
+  expectedVersion?: number;
 };
 
 export type ConfigurationReadiness = "ready" | "blocked";
@@ -582,6 +588,18 @@ export type RequestDetailTransport = {
   canWriteInstallationPrice: boolean;
   commercial?: CommercialRequestTransport | null;
   journey: CommercialJourneyTransport | null;
+  installationObligation: RequestInstallationObligationTransport | null;
+};
+
+export type RequestInstallationObligationTransport = {
+  mode: "COMMON";
+  holderOrderSnapshotId: string;
+  sharedInstallationNet: number;
+  documentSumNet: number;
+  duplicatedInstallationNet: number;
+  consolidatedObligationNet: number;
+  decidedByLabel: string;
+  decidedAt: string;
 };
 
 export type CommercialActorTransport = {

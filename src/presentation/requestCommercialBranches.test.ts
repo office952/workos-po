@@ -534,4 +534,40 @@ describe("request commercial branches", () => {
     });
     expect(model.branches[0]?.stages.work.detail).toBe("Starea lucrării nu a putut fi citită.");
   });
+
+  it("places unissued variants in the commercial register and keeps the action filter", () => {
+    const model = presentCommercialBranches({
+      offers: [offer({ quoteSnapshotId: "q-1", productCode: "P", reference: "OF-1", createdAt: "2026-10-01T00:00:00.000Z" })],
+      assemblies: [],
+      jobs: [],
+      ...ready,
+      openVariants: [
+        {
+          variantId: "var-open",
+          requestId: "req-1",
+          customerId: "cus-1",
+          productCode: "P",
+          indexLabel: "02",
+          title: "LITERE NOI",
+          subtitle: "Litere",
+          stateLabel: "De completat",
+          needsAction: true,
+          actionLabel: "Continuă configurarea",
+          href: "/configurator?varianta=var-open",
+          priceLabel: null,
+          notes: "Observație internă",
+          alternativeOfLabel: "01",
+          lifecycle: "ACTIVE",
+          registeredAt: "2026-10-03T00:00:00.000Z",
+        },
+      ],
+    });
+    expect(model.branches.map((branch) => branch.kind)).toEqual(["product", "variant"]);
+    const variant = model.branches.find((branch) => branch.kind === "variant");
+    expect(variant?.key).toBe("variant:var-open");
+    expect(variant?.needsAction).toBe(true);
+    expect(variant?.kindLabel).toContain("Alternativă");
+    expect(filterBranches(model.branches, "action").map((branch) => branch.key)).toEqual(["variant:var-open"]);
+    expect(filterBranches(model.branches, "ordered")).toEqual([]);
+  });
 });

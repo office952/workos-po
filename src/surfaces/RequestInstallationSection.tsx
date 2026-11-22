@@ -35,6 +35,29 @@ type RequestInstallationSectionProps = {
   detail: RequestDetailTransport;
 };
 
+export function InstallationObligationAlerts({
+  obligation,
+  placement,
+}: {
+  obligation: NonNullable<RequestDetailTransport["installationObligation"]>;
+  placement: "page" | "aside";
+}) {
+  return (
+    <div className={`stack request-installation-obligation request-installation-obligation--${placement}`} data-testid="installation-obligation">
+      <InlineAlert tone="pending" title="Sume pe documente (oferte și comenzi)">
+        Totalurile rămân {formatMoney(obligation.documentSumNet, "EUR")} net. Includ copiile liniei de montaj (
+        {formatMoney(obligation.duplicatedInstallationNet, "EUR")} net) pe fiecare document. Aceste sume nu se adună ca obligație
+        de încasat.
+      </InlineAlert>
+      <InlineAlert tone="success" title="Obligație consolidată a clientului">
+        {formatMoney(obligation.consolidatedObligationNet, "EUR")} net — montajul de{" "}
+        {formatMoney(obligation.sharedInstallationNet, "EUR")} se încasează o dată. Operația de montaj aparține lucrării
+        deținătoare. Această sumă nu înlocuiește totalurile de pe documente.
+      </InlineAlert>
+    </div>
+  );
+}
+
 type FactsDraft = {
   siteName: string;
   street: string;
@@ -223,8 +246,11 @@ function RequestInstallationOfferControls({
     saveState === "pending" ||
     Boolean(offer?.showModeControl && !draftMode);
 
+  const obligation = detail.installationObligation;
+
   return (
     <div className="stack">
+      {obligation ? <InstallationObligationAlerts obligation={obligation} placement="aside" /> : null}
       {selected ? null : (
         <p className="ui-note ui-note--plain">Montajul la locație nu este selectat pe această cerere.</p>
       )}

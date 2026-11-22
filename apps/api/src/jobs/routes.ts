@@ -17,8 +17,10 @@ import {
   presentExecutionPlanForViewer,
   viewerCanAssignProvider,
 } from "../execution/presentExecutionPlan.js";
+import { skipSiteInstallationForOrder } from "../commercial/installationCommitmentStore.js";
 import { financialAccess } from "../financial/access.js";
 import { httpPathIdentity } from "../httpPathIdentity.js";
+import { getCommercialRequestQuoteLinkByQuote } from "../requests/store.js";
 
 /** V1: roles that read requests see every job; the workshop sees released work only. */
 function seesAllJobs(c: ApiContext): boolean {
@@ -96,8 +98,12 @@ export function registerJobRoutes(app: Hono<ApiEnv>): void {
     const jobId = httpPathIdentity(c.req.path, "/api/jobs/", "/production");
     const result = runtime.assemblyPlane().db.transaction(() => {
       const product = runtime.readOrderSnapshot(jobId);
+      const db = runtime.assemblyPlane().db;
       if (product) {
-        const frozen = freezeProductionReleaseFromOrder(product);
+        const requestId = getCommercialRequestQuoteLinkByQuote(db, product.sourceQuoteSnapshotId)?.requestId;
+        const frozen = freezeProductionReleaseFromOrder(product, {
+          skipSiteInstallationOperation: skipSiteInstallationForOrder(db, requestId, product.orderSnapshotId),
+        });
         if (!frozen.ok) return { ok: false as const, error: frozen.error, reasons: frozen.reasons };
         const release = runtime.acceptProductionSnapshot(frozen.snapshot);
         const plan = runtime.persistExecutionPlan(materializeExecutionPlanFromSnapshot(release.snapshot));
@@ -112,6 +118,7 @@ export function registerJobRoutes(app: Hono<ApiEnv>): void {
         const projected = projectAssemblyProduction(order, {
           snapshotId: `asmp:${order.contentHash.slice(0, 24)}`,
           createdAt: new Date().toISOString(),
+          skipSiteInstallationOperation: skipSiteInstallationForOrder(db, order.requestId, order.orderSnapshotId),
         });
         if (!projected.ok) return { ok: false as const, error: projected.error, reasons: projected.reasons };
         release = projected.snapshot;
@@ -132,7 +139,11 @@ export function registerJobRoutes(app: Hono<ApiEnv>): void {
     const jobId = httpPathIdentity(c.req.path, "/api/jobs/", "/production-release");
     const product = runtime.readOrderSnapshot(jobId);
     if (product) {
-      const frozen = freezeProductionReleaseFromOrder(product);
+      const db = runtime.assemblyPlane().db;
+      const requestId = getCommercialRequestQuoteLinkByQuote(db, product.sourceQuoteSnapshotId)?.requestId;
+      const frozen = freezeProductionReleaseFromOrder(product, {
+        skipSiteInstallationOperation: skipSiteInstallationForOrder(db, requestId, product.orderSnapshotId),
+      });
       if (!frozen.ok) {
         return c.json({ error: frozen.error, reasons: frozen.reasons }, 422);
       }
@@ -153,6 +164,11 @@ export function registerJobRoutes(app: Hono<ApiEnv>): void {
     const projected = projectAssemblyProduction(assembly, {
       snapshotId: `asmp:${assembly.contentHash.slice(0, 24)}`,
       createdAt: new Date().toISOString(),
+      skipSiteInstallationOperation: skipSiteInstallationForOrder(
+        runtime.assemblyPlane().db,
+        assembly.requestId,
+        assembly.orderSnapshotId,
+      ),
     });
     if (!projected.ok) {
       return c.json({ error: projected.error, reasons: projected.reasons }, 422);
