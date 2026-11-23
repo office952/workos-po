@@ -209,6 +209,7 @@
 .configuration-commercial__grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 24px; align-items: start; }
 .configuration-commercial__grid > .ui-panel { min-width: 0; border-radius: 0; }
 .configuration-commercial .field { max-width: 34rem; }
+.configuration-commercial__issue { margin-top: 12px; }
 .configuration-commercial .rate-ack-rates summary { box-sizing: border-box; min-height: var(--target-min); padding-block: 12px; cursor: pointer; }
 .configuration-cost { margin-top: 24px; }
 .configuration-cost > .ui-panel { border-radius: 0; }
@@ -252,6 +253,15 @@
 }
 
 @media (max-width: 767px) {
+  [data-surface="configuration-workbench"] { padding-bottom: 96px; }
+  [data-surface="configuration-workbench"] .configuration-state-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; margin: 0;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--color-border);
+    background: var(--shell-chassis);
+    box-shadow: 0 -8px 24px color-mix(in srgb, var(--color-text-primary) 12%, transparent);
+    clip-path: none;
+  }
   [data-surface="configuration-workbench"] > .page-header { padding: 16px 0 12px; flex-wrap: wrap; gap: 12px; }
   [data-surface="configuration-workbench"] .page-header__title { font-size: 22px; }
   [data-surface="configuration-workbench"] .page-header__aside { width: 100%; align-items: stretch; }
@@ -271,6 +281,10 @@
   .configuration-state-bar__steps { gap: 4px 8px; }
   .configuration-state-bar__steps strong { font-size: 11px; }
   .configuration-state-bar__actions { width: 100%; justify-content: space-between; margin-left: 0; }
+  .configuration-commercial__issue {
+    position: sticky; bottom: 0; z-index: 5; margin: 12px 0 0; padding: 8px 0;
+    background: var(--shell-chassis); box-shadow: 0 0 0 100vmax var(--shell-chassis); clip-path: inset(0 -100vmax);
+  }
   .configuration-state-bar__actions > .hit { max-width: 100%; }
   /* Own row: leftover flex:1 shrinks the hit below the button, which then overflows the previous label. */
   .configuration-state-bar__actions > .hit:last-child { flex: 1 0 100%; justify-content: flex-end; }

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { QuoteDecisionNote } from "./QuoteDecisionNote";
-import { quoteDecisionMode } from "./quoteDecisionMode";
+import { commercialLifecycleLabel, quoteDecisionMode } from "./quoteDecisionMode";
 
 describe("CJ1-R1 · the offer explains only the decision still open", () => {
   it("follows the server's commercial status and next action", () => {
@@ -20,10 +20,18 @@ describe("CJ1-R1 · the offer explains only the decision still open", () => {
     expect(screen.queryByText(/Acceptarea creează comanda/)).not.toBeInTheDocument();
   });
 
-  it("before acceptance explains accepting once", () => {
+  it("before acceptance names the issued quote, not an approved price or an order", () => {
     render(<QuoteDecisionNote mode="accept" permission="Poți accepta oferta." />);
-    expect(screen.getByRole("heading", { name: "Ce se întâmplă când accepți" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Ofertă emisă, încă neacceptată" })).toBeInTheDocument();
+    expect(screen.getByText(/Prețul aprobat intern nu este o comandă/)).toBeInTheDocument();
     expect(screen.getByText("Poți accepta oferta.")).toBeInTheDocument();
+  });
+
+  it("after the customer order names the accepted command, not the issued quote", () => {
+    render(<QuoteDecisionNote mode="ordered" permission="—" />);
+    expect(screen.getByRole("heading", { name: "Comandă acceptată a clientului" })).toBeInTheDocument();
+    expect(commercialLifecycleLabel("ordered")).toBe("Comandă acceptată a clientului");
+    expect(commercialLifecycleLabel("accept")).toBe("Ofertă emisă, încă neacceptată");
   });
 
   it("gives a decided offer no instructions", () => {

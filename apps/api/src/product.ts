@@ -81,7 +81,10 @@ import type { Hono } from "hono";
 import { getCookie } from "hono/cookie";
 import type { ProductSystemRuntime } from "./productSystem/runtime.js";
 import { getProductSystem, type ApiContext, type ApiEnv, can } from "./cloud/context.js";
+import { checkAlternativeAcceptance, readAlternativeAcceptanceConfirmed } from "./commercial/alternativeAcceptance.js";
 import { incompleteCostExceptionFromBody } from "./commercial/incompleteCostException.js";
+import { completePendingCommonInstallation, holderInstallationStartBlocked, skipSiteInstallationForOrder } from "./commercial/installationCommitmentStore.js";
+import { checkInstallationAcceptance, readInstallationDecision } from "./commercial/installationGuard.js";
 import {
   presentExecutionPlanForViewer,
   viewerCanAssignProvider,
@@ -94,6 +97,8 @@ import {
 } from "./commercial/closureStore.js";
 import { httpPathIdentity } from "./httpPathIdentity.js";
 import { getCommercialRequestQuoteLinkByQuote } from "./requests/store.js";
+import { presentVariantConflict, resolveVariantRouteBody } from "./requests/variantContext.js";
+import { appendVariantEvent, confirmVariant, listRequestVariants, markVariantIssued } from "./requests/variantStore.js";
 import { OPERATOR_SESSION_COOKIE } from "./operator/store.js";
 import { renderQuoteDocumentPdf } from "./quoteDocument/renderQuoteDocumentPdf.js";
 import {
@@ -180,7 +185,7 @@ function presentRequestQuoteLinkFailure(
   }
 }
 
-function asDraftValues(value: unknown): DraftValues {
+export function asDraftValues(value: unknown): DraftValues {
   if (typeof value !== "object" || value === null) {
     return {};
   }
@@ -244,7 +249,7 @@ function installationReadinessForRequest(
   };
 }
 
-function readInstallationProjection(
+export function readInstallationProjection(
   runtime: ProductSystemRuntime,
   body: unknown,
   policy?: CommercialPolicy,
@@ -415,19 +420,23 @@ type OfferingAssessment = {
   bindingHash: string | null;
   latest: ReturnType<ProductSystemRuntime["readLatestPriceApproval"]>;
   internalCostComplete: boolean | null;
+  /** The figures the policy was evaluated on. Server-side only; never sent to a client. */
+  inputs: { netPrice: number; internalCost: number; internalCostComplete: boolean } | null;
 };
 
 /**
  * Commercial & Financial V1 · evaluates the organization offering policy for the current actor on
  * the exact confirmed configuration and client price. The Comercial view carries the outcome only.
  */
-function assessOffering(
+export function assessOffering(
   c: ApiContext,
   runtime: ProductSystemRuntime,
   input: {
     truth: Parameters<typeof priceApprovalBindingHash>[0]["truth"];
     productCode: string;
     requestId: string | null;
+    /** The saved quote variant, when the offer is one (Commercial Continuity V2). */
+    variantId?: string | null;
     commercialPrice: { completeness: string; netPrice: number | null };
     eic: { total: number; completeness: string };
     installation: {
@@ -442,8 +451,9 @@ function assessOffering(
     input.commercialPrice.netPrice !== null &&
     (!input.installation ||
       (input.installation.commercial.completeness === "COMPLETE" && input.installation.commercial.netPrice !== null));
+  const variantId = input.variantId ?? null;
   if (!priceReady) {
-    return { policy, right, evaluation: null, bindingHash: null, latest: null, internalCostComplete: null };
+    return { policy, right, evaluation: null, bindingHash: null, latest: null, internalCostComplete: null, inputs: null };
   }
   const installationNet = input.installation?.commercial.netPrice ?? null;
   const netPrice = roundMoneyValue((input.commercialPrice.netPrice as number) + (installationNet ?? 0));
@@ -459,6 +469,7 @@ function assessOffering(
           organizationId: runtime.organizationId ?? "single-plane",
           requestId: input.requestId,
           productCode: input.productCode,
+          ...(variantId ? { variantId } : {}),
         },
         truth: input.truth,
         netPrice: input.commercialPrice.netPrice as number,
@@ -466,11 +477,21 @@ function assessOffering(
         policyVersion: policy.version,
       })
     : null;
-  const latest = input.requestId ? runtime.readLatestPriceApproval(input.requestId, input.productCode) : null;
-  return { policy, right, evaluation, bindingHash, latest, internalCostComplete };
+  const latest = input.requestId
+    ? runtime.readLatestPriceApproval(input.requestId, input.productCode, variantId)
+    : null;
+  return {
+    policy,
+    right,
+    evaluation,
+    bindingHash,
+    latest,
+    internalCostComplete,
+    inputs: { netPrice, internalCost, internalCostComplete },
+  };
 }
 
-function presentOffering(assessed: OfferingAssessment, requestId: string | null) {
+export function presentOffering(assessed: OfferingAssessment, requestId: string | null) {
   return {
     policy: presentPolicyForCommercial(assessed.policy, assessed.right),
     outcome: assessed.evaluation ? commercialOfferingView(assessed.evaluation) : null,
@@ -721,7 +742,12 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
 
   app.post("/api/products/:productCode/confirm", async (c) => {
     const runtime = getProductSystem(c);
-    const body = await c.req.json().catch(() => null);
+    const rawBody = await c.req.json().catch(() => null);
+    const variantRoute = resolveVariantRouteBody(c, runtime, c.req.param("productCode"), rawBody, "CONFIRM");
+    if (variantRoute && !variantRoute.ok) {
+      return c.json(variantRoute.body, variantRoute.status);
+    }
+    const body = variantRoute ? variantRoute.context.body : rawBody;
     const compiled = compileAcceptedProduct(
       runtime,
       c.req.param("productCode"),
@@ -729,6 +755,27 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
     );
     if (!compiled.ok) {
       return c.json(compiled.body, compiled.status);
+    }
+    // The confirmation of a saved variant is kept with its author; re-reading it writes nothing.
+    let confirmedVariant: { variantId: string; version: number; confirmedAt: string | null; confirmedByLabel: string | null } | null = null;
+    if (variantRoute) {
+      const { variant, expectedVersion } = variantRoute.context;
+      if (expectedVersion === null) {
+        confirmedVariant = variant;
+      } else {
+        const stored = confirmVariant(
+          runtime.assemblyPlane().db,
+          // The review the person confirmed: the same id the preview of the saved values returns.
+          { variantId: variant.variantId, expectedVersion, reviewId: String(body.reviewId ?? "") },
+          actorIdentity(c),
+        );
+        if (!stored.ok) {
+          return stored.error === "version_conflict"
+            ? c.json(presentVariantConflict(stored.current), 409)
+            : c.json({ error: stored.error }, stored.error === "not_found" ? 404 : 409);
+        }
+        confirmedVariant = stored.variant;
+      }
     }
     const access = financialAccess(c, "commercial");
     const priced = resolveProductCommercialForRequest(
@@ -821,11 +868,22 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         ? siteInstallationIsPrequoteReady(installationScope)
         : null,
       jobCommercial: access === "workshop" ? null : jobCommercial,
+      ...(confirmedVariant
+        ? {
+            variant: {
+              variantId: confirmedVariant.variantId,
+              version: confirmedVariant.version,
+              confirmedAt: confirmedVariant.confirmedAt,
+              confirmedByLabel: confirmedVariant.confirmedByLabel,
+            },
+          }
+        : {}),
       offering: presentOffering(
         assessOffering(c, runtime, {
           truth: compiled.truth,
           productCode: compiled.truth.templateCode,
           requestId: readRequestId(body),
+          variantId: confirmedVariant?.variantId ?? null,
           commercialPrice,
           eic: compiled.eic,
           installation: installationProjection
@@ -855,7 +913,13 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
     requireCapability("offering.policy.use"),
     async (c) => {
       const runtime = getProductSystem(c);
-      const body = await c.req.json().catch(() => null);
+      const rawBody = await c.req.json().catch(() => null);
+      const variantRoute = resolveVariantRouteBody(c, runtime, c.req.param("productCode"), rawBody, "APPROVAL");
+      if (variantRoute && !variantRoute.ok) {
+        return c.json(variantRoute.body, variantRoute.status);
+      }
+      const body = variantRoute ? variantRoute.context.body : rawBody;
+      const approvalVariant = variantRoute ? variantRoute.context.variant : null;
       const requestId = readRequestId(body);
       if (!requestId || !runtime.readCommercialRequest(requestId)) {
         return c.json(
@@ -877,6 +941,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         truth: compiled.truth,
         productCode: compiled.truth.templateCode,
         requestId,
+        variantId: approvalVariant?.variantId ?? null,
         commercialPrice: priced.commercialPrice,
         eic: compiled.eic,
         installation: installationProjection
@@ -908,6 +973,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         {
           requestId,
           productCode: compiled.truth.templateCode,
+          variantId: approvalVariant?.variantId ?? null,
           bindingHash: assessed.bindingHash,
           policyVersion: assessed.evaluation.policyVersion,
           policyMode: assessed.evaluation.policyMode,
@@ -928,6 +994,12 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
           },
           409,
         );
+      }
+      if (approvalVariant && !stored.alreadyRequested) {
+        appendVariantEvent(runtime.assemblyPlane().db, approvalVariant, "APPROVAL_REQUESTED", actor, stored.approval.requestedAt, {
+          netPrice: stored.approval.netPrice,
+          detail: stored.approval.approvalId,
+        });
       }
       return c.json(
         {
@@ -974,7 +1046,13 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
 
   app.post("/api/products/:productCode/quote-snapshots", async (c) => {
     const runtime = getProductSystem(c);
-    const body = await c.req.json().catch(() => null);
+    const rawBody = await c.req.json().catch(() => null);
+    const variantRoute = resolveVariantRouteBody(c, runtime, c.req.param("productCode"), rawBody, "ISSUE");
+    if (variantRoute && !variantRoute.ok) {
+      return c.json(variantRoute.body, variantRoute.status);
+    }
+    const body = variantRoute ? variantRoute.context.body : rawBody;
+    const issuedVariant = variantRoute ? variantRoute.context : null;
     const compiled = compileAcceptedProduct(
       runtime,
       c.req.param("productCode"),
@@ -1052,6 +1130,17 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       });
       if (overlap) {
         return c.json(overlap, 409);
+      }
+      if (!issuedVariant && listRequestVariants(runtime.assemblyPlane().db, requestId).length > 0) {
+        return c.json(
+          {
+            error: "variant_required",
+            reasons: [
+              "Cererea are variante salvate. Emite oferta din varianta păstrată pe server, nu pe calea veche de înghețare.",
+            ],
+          },
+          409,
+        );
       }
     }
     const offeringRight = effectiveOfferingPriceRight(c, runtime);
@@ -1136,6 +1225,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       truth: compiled.truth,
       productCode: compiled.truth.templateCode,
       requestId,
+      variantId: issuedVariant?.variant.variantId ?? null,
       commercialPrice,
       eic: compiled.eic,
       installation: installationForFreeze
@@ -1273,6 +1363,31 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
           // a request-linked freeze so an unlinked snapshot cannot remain.
           throw new RequestLinkedQuoteRollback(presentRequestQuoteLinkFailure(linked));
         }
+        if (issuedVariant) {
+          // The variant becomes the issued quote in the same transaction: a quote can never be
+          // frozen from a variant that someone else changed in the meantime.
+          const marked = markVariantIssued(
+            plane.db,
+            {
+              variantId: issuedVariant.variant.variantId,
+              expectedVersion: issuedVariant.expectedVersion ?? issuedVariant.variant.version,
+              quoteSnapshotId: stored.snapshot.quoteSnapshotId,
+            },
+            actorIdentity(c),
+            frozenAt,
+          );
+          if (!marked.ok) {
+            throw new RequestLinkedQuoteRollback(
+              marked.error === "version_conflict"
+                ? {
+                    error: "version_conflict",
+                    reasons: presentVariantConflict(marked.current).reasons,
+                    status: 409,
+                  }
+                : { error: marked.error, reasons: ["Varianta nu mai poate fi emisă în starea curentă."], status: 409 },
+            );
+          }
+        }
         return { ok: true as const, stored, linked };
       }).immediate();
     } catch (caught) {
@@ -1369,17 +1484,42 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       if (!snapshot || snapshot.productCode !== c.req.param("productCode")) {
         return c.json({ error: "not_found" }, 404);
       }
-      const exception = await readIncompleteCostException(c);
+      const body = await c.req.json().catch(() => null);
+      const exception = incompleteCostExceptionFromBody(c, body);
       if (exception === "forbidden") {
         return c.json({ error: "forbidden", reasons: ["Doar Proprietarul poate accepta o ofertă cu cost intern incomplet."] }, 403);
       }
       // Validate both frozen contracts before storing either record.
       const recorded = recordQuoteAcceptance(snapshot, { incompleteCost: exception });
       if (!recorded.ok) return c.json({ error: recorded.error, reasons: recorded.reasons }, 422);
-      const acceptance = runtime.readQuoteAcceptance(snapshot.quoteSnapshotId) ?? recorded.decision;
+      const existingAcceptance = runtime.readQuoteAcceptance(snapshot.quoteSnapshotId);
+      const acceptance = existingAcceptance ?? recorded.decision;
       const frozen = freezeOrderSnapshot(snapshot, acceptance);
       if (!frozen.ok) return c.json({ error: frozen.error, reasons: frozen.reasons }, 422);
       const plane = runtime.assemblyPlane();
+      const alternativeCheck = checkAlternativeAcceptance({
+        db: plane.db,
+        organizationId: plane.organizationId,
+        quoteSnapshotId: snapshot.quoteSnapshotId,
+        alreadyAccepted: existingAcceptance !== null,
+        confirmed: readAlternativeAcceptanceConfirmed(body),
+      });
+      if (!alternativeCheck.ok) return c.json(alternativeCheck.body, alternativeCheck.status);
+      const installationLine = snapshot.lines?.find((line) => line.kind === "SITE_INSTALLATION");
+      const installationCheck = checkInstallationAcceptance({
+        runtime,
+        db: plane.db,
+        organizationId: plane.organizationId,
+        requestId: getCommercialRequestQuoteLinkByQuote(plane.db, snapshot.quoteSnapshotId)?.requestId,
+        quoteSnapshotId: snapshot.quoteSnapshotId,
+        quoteHasInstallation: Boolean(installationLine),
+        quoteInstallationNet:
+          installationLine && "commercial" in installationLine ? (installationLine.commercial?.netPrice ?? null) : null,
+        alreadyAccepted: existingAcceptance !== null,
+        decision: readInstallationDecision(body),
+        actor: actorIdentity(c),
+      });
+      if (!installationCheck.ok) return c.json(installationCheck.body, installationCheck.status);
       const stored = plane.db.transaction(() => {
         const link = getCommercialRequestQuoteLinkByQuote(plane.db, snapshot.quoteSnapshotId);
         const refusal = refuseAcceptIfDispositioned(
@@ -1391,8 +1531,11 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         if (refusal) {
           return { blocked: true as const, error: refusal.error, reasons: refusal.reasons };
         }
+        installationCheck.record?.();
         runtime.persistQuoteAcceptance(acceptance);
-        return { blocked: false as const, order: runtime.persistOrderSnapshot(frozen.snapshot) };
+        const order = runtime.persistOrderSnapshot(frozen.snapshot);
+        installationCheck.onOrderCreated?.(order.snapshot.orderSnapshotId);
+        return { blocked: false as const, order };
       }).immediate();
       if (stored.blocked) {
         return c.json({ error: stored.error, reasons: stored.reasons }, 422);
@@ -1411,7 +1554,8 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       if (!snapshot || snapshot.productCode !== c.req.param("productCode")) {
         return c.json({ error: "not_found" }, 404);
       }
-      const exception = await readIncompleteCostException(c);
+      const body = await c.req.json().catch(() => null);
+      const exception = incompleteCostExceptionFromBody(c, body);
       if (exception === "forbidden") {
         return c.json({ error: "forbidden", reasons: ["Doar Proprietarul poate accepta o ofertă cu cost intern incomplet."] }, 403);
       }
@@ -1423,6 +1567,30 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         );
       }
       const plane = runtime.assemblyPlane();
+      const alreadyAccepted = runtime.readQuoteAcceptance(snapshot.quoteSnapshotId) !== null;
+      const alternativeCheck = checkAlternativeAcceptance({
+        db: plane.db,
+        organizationId: plane.organizationId,
+        quoteSnapshotId: snapshot.quoteSnapshotId,
+        alreadyAccepted,
+        confirmed: readAlternativeAcceptanceConfirmed(body),
+      });
+      if (!alternativeCheck.ok) return c.json(alternativeCheck.body, alternativeCheck.status);
+      const installationLine = snapshot.lines?.find((line) => line.kind === "SITE_INSTALLATION");
+      const installationCheck = checkInstallationAcceptance({
+        runtime,
+        db: plane.db,
+        organizationId: plane.organizationId,
+        requestId: getCommercialRequestQuoteLinkByQuote(plane.db, snapshot.quoteSnapshotId)?.requestId,
+        quoteSnapshotId: snapshot.quoteSnapshotId,
+        quoteHasInstallation: Boolean(installationLine),
+        quoteInstallationNet:
+          installationLine && "commercial" in installationLine ? (installationLine.commercial?.netPrice ?? null) : null,
+        alreadyAccepted,
+        decision: readInstallationDecision(body),
+        actor: actorIdentity(c),
+      });
+      if (!installationCheck.ok) return c.json(installationCheck.body, installationCheck.status);
       const stored = plane.db.transaction(() => {
         const link = getCommercialRequestQuoteLinkByQuote(plane.db, snapshot.quoteSnapshotId);
         const refusal = refuseAcceptIfDispositioned(
@@ -1434,6 +1602,7 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
         if (refusal) {
           return { blocked: true as const, error: refusal.error, reasons: refusal.reasons };
         }
+        installationCheck.record?.();
         return { blocked: false as const, acceptance: runtime.persistQuoteAcceptance(recorded.decision) };
       }).immediate();
       if (stored.blocked) {
@@ -1492,7 +1661,17 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
           422,
         );
       }
-      const stored = runtime.persistOrderSnapshot(frozen.snapshot);
+      const plane = runtime.assemblyPlane();
+      const stored = plane.db.transaction(() => {
+        const order = runtime.persistOrderSnapshot(frozen.snapshot);
+        completePendingCommonInstallation(
+          plane.db,
+          snapshot.quoteSnapshotId,
+          order.snapshot.orderSnapshotId,
+          actorIdentity(c),
+        );
+        return order;
+      }).immediate();
       return c.json({
         created: stored.created,
         orderSnapshot: scopeOrderSnapshot(stored.snapshot, financialAccess(c, "commercial")),
@@ -1542,7 +1721,11 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       if (!orderSnapshot || orderSnapshot.productCode !== c.req.param("productCode")) {
         return c.json({ error: "not_found" }, 404);
       }
-      const frozen = freezeProductionReleaseFromOrder(orderSnapshot);
+      const plane = runtime.assemblyPlane();
+      const requestId = getCommercialRequestQuoteLinkByQuote(plane.db, orderSnapshot.sourceQuoteSnapshotId)?.requestId;
+      const frozen = freezeProductionReleaseFromOrder(orderSnapshot, {
+        skipSiteInstallationOperation: skipSiteInstallationForOrder(plane.db, requestId, orderSnapshot.orderSnapshotId),
+      });
       if (!frozen.ok) {
         return c.json(
           { error: frozen.error, reasons: frozen.reasons },
@@ -1776,6 +1959,15 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
       return c.json({ error: "invalid_session" }, 401);
     }
     const taskId = httpPathIdentity(c.req.path, "/api/execution-tasks/", "/start");
+    const plan = runtime.readExecutionPlanByTaskId(taskId);
+    const task = plan?.tasks.find((item) => item.taskId === taskId);
+    if (plan && task) {
+      const plane = runtime.assemblyPlane();
+      const blocked = holderInstallationStartBlocked(plane.db, plane.organizationId, plan.plan.sourceSnapshotId, task.processId);
+      if (blocked.blocked) {
+        return c.json({ error: "installation_group_not_ready", reasons: blocked.reasons }, 409);
+      }
+    }
     const boundAt = new Date().toISOString();
     return respondTaskMutation(
       c,
@@ -1971,7 +2163,7 @@ function confirmFailure(
   };
 }
 
-function refuseDisabledNewWork(
+export function refuseDisabledNewWork(
   runtime: ProductSystemRuntime,
   productCode: string,
 ): { status: 409; body: Record<string, unknown> } | null {
@@ -2264,12 +2456,6 @@ function readApprovalNote(body: unknown): string | null | false {
   const trimmed = value.trim();
   if (trimmed === "") return null;
   return trimmed.length > 500 ? false : trimmed;
-}
-
-async function readIncompleteCostException(
-  c: ApiContext,
-): Promise<{ acceptedByUserId: string; reason: string } | null | "forbidden"> {
-  return incompleteCostExceptionFromBody(c, await c.req.json().catch(() => null));
 }
 
 export function actorUserId(c: ApiContext): string {

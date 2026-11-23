@@ -31,6 +31,7 @@ const LATER_MIGRATIONS = [
   "051_commercial_closure_ledger.sql",
   "052_execution_issue_lifecycle.sql",
   "053_commercial_financial_control.sql",
+  "054_commercial_continuity_v2.sql",
 ] as const;
 
 const LATER_TABLES = [
@@ -42,6 +43,12 @@ const LATER_TABLES = [
   "commercial_ledger_events",
   "commercial_offer_dispositions",
   "execution_task_issue_lifecycle",
+  "commercial_request_journal_entries",
+  "commercial_request_variant_events",
+  "commercial_request_variants",
+  "commercial_installation_decisions",
+  "commercial_installation_commitment_events",
+  "commercial_installation_common_intents",
   "commercial_price_approval_events",
   "commercial_price_approvals",
   "organization_offering_policy_versions",

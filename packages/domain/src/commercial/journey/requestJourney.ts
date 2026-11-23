@@ -356,6 +356,21 @@ function administrativeNote(status: CommercialRequestStatus): string | null {
   }
 }
 
+/** Where a saved, unissued quote variant stands, from stored facts only. */
+export type RequestJourneyVariantStage = "IN_PROGRESS" | "AWAITING_PRICE" | "PRICED";
+export type RequestJourneyVariant = { variantId: string; stage: RequestJourneyVariantStage };
+
+/** One label for the variants of a request; the earliest stage is the one that holds it back. */
+export function requestJourneyVariantLabel(variants: readonly RequestJourneyVariant[]): string {
+  if (variants.some((variant) => variant.stage === "IN_PROGRESS")) {
+    return variants.length === 1 ? "Continuă configurarea" : `${variants.length} variante în lucru`;
+  }
+  if (variants.some((variant) => variant.stage === "AWAITING_PRICE")) {
+    return "Așteaptă prețul";
+  }
+  return variants.length === 1 ? "Preț pregătit · deschide varianta" : `${variants.length} variante cu preț`;
+}
+
 /**
  * The single commercial journey of a request. Cereri, request detail and the customer
  * dossier read this same object, so their next action, target and counts agree.
@@ -368,10 +383,14 @@ export function projectRequestCommercialJourney(input: {
   offers: readonly JourneyOffer[];
   assemblies: readonly RequestAssemblyWork[];
   ledger: RequestJourneyLedger;
+  /** Saved quote variants that have no issued quote yet (Commercial Continuity V2). */
+  openVariants?: readonly RequestJourneyVariant[];
 }): RequestCommercialJourney {
   const open = input.ledger.state === "OPEN";
   const offers = [...input.offers].sort(byCreatedThenId);
-  const hasWork = offers.length > 0 || input.assemblies.length > 0;
+  const openVariants = input.openVariants ?? [];
+  // A request with a saved variant already has a product chosen: it never asks for one again.
+  const hasWork = offers.length > 0 || input.assemblies.length > 0 || openVariants.length > 0;
   const offerItems = offers.flatMap((offer) => {
     const item = offerItem(offer);
     return item ? [item] : [];
@@ -413,6 +432,14 @@ export function projectRequestCommercialJourney(input: {
       return {
         action: "CHOOSE_PRODUCT",
         label: requestJourneyNextActionLabel("CHOOSE_PRODUCT"),
+        href: input.requestHref,
+      };
+    }
+    if (open && openVariants.length > 0) {
+      // The variant row on the request carries the exact state and the action for the actor.
+      return {
+        action: "OPEN_REQUEST",
+        label: requestJourneyVariantLabel(openVariants),
         href: input.requestHref,
       };
     }

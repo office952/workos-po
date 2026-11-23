@@ -19,6 +19,8 @@ export function saveOfferingPolicy(input: {
     incompleteCostRequiresApproval: boolean;
     minimumMarginPercent: number | null;
     maximumNetValue: number | null;
+    /** Control total: every quote of the Comercial role needs the Owner's approval. */
+    everyOfferRequiresApproval?: boolean;
   };
   expectedVersion: number;
 }): Promise<JsonResult> {

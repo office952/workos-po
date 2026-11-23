@@ -4,7 +4,13 @@ export function QuoteDecisionNote({ mode, permission }: { mode: QuoteDecisionMod
   return (
     <section className="quote-decision" aria-label="Decizia ofertei" data-mode={mode}>
       {mode === "ordered" ? (
-        <p>Comanda creată nu înseamnă că producția a pornit. Trimiterea în producție rămâne un pas separat, în fișa lucrării.</p>
+        <>
+          <h2>Comandă acceptată a clientului</h2>
+          <p>
+            Aceasta nu mai este un preț aprobat intern și nici doar o ofertă emisă. Clientul a acceptat, iar comanda există.
+            Producția rămâne un pas separat, în fișa lucrării.
+          </p>
+        </>
       ) : mode === "confirm-order" ? (
         <>
           <h2>Obligație deschisă</h2>
@@ -16,7 +22,8 @@ export function QuoteDecisionNote({ mode, permission }: { mode: QuoteDecisionMod
         </>
       ) : mode === "accept" ? (
         <>
-          <h2>Ce se întâmplă când accepți</h2>
+          <h2>Ofertă emisă, încă neacceptată</h2>
+          <p>Prețul aprobat intern nu este o comandă. Această ofertă înghețată așteaptă acceptarea clientului.</p>
           <ul>
             <li>Acceptarea creează comanda din această versiune înghețată. Sumele rămân cele primite de la server.</li>
             <li>Se deschide fișa lucrării în starea pe care o raportează serverul pentru comanda creată.</li>

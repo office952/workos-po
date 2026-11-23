@@ -286,3 +286,4 @@ export {
 } from "./closure/index.js";
 export * from "./journey/index.js";
 export * from "./offeringPolicy.js";
+export * from "./installationCommitment.js";

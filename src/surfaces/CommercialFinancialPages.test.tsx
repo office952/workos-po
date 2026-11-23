@@ -88,7 +88,7 @@ describe("OfferingPolicyAdminPage", () => {
     });
   });
 
-  it("requires a reason to reject an approval request", async () => {
+  it("sends the Owner to the variant instead of deciding in the queue", async () => {
     const fetchMock = vi.fn((input: RequestInfo) => {
       const url = String(input);
       if (url.endsWith("/api/admin/offering-policy")) {
@@ -96,16 +96,28 @@ describe("OfferingPolicyAdminPage", () => {
       }
       if (url.includes("/api/admin/price-approvals")) {
         return jsonResponse({
-          approvals: [{ approvalId: "apr:2", requestId: "req:2", status: "REQUESTED", statusLabel: "", netPrice: 700, currency: "EUR", triggeredRules: [] }],
+          approvals: [{
+            approvalId: "apr:2",
+            requestId: "req:2",
+            variantId: "var:2",
+            productCode: "PRD-LETTERS-FRONTLIT-PLEXI-AL06",
+            status: "REQUESTED",
+            statusLabel: "",
+            netPrice: 700,
+            currency: "EUR",
+            triggeredRules: [],
+          }],
         });
       }
       return jsonResponse({});
     });
     vi.stubGlobal("fetch", fetchMock);
-    const user = userEvent.setup();
     render(<OfferingPolicyAdminPage />);
-    await user.click(await screen.findByRole("button", { name: "Respinge" }));
-    expect(screen.getByText("Scrie motivul respingerii; Comercialul îl va vedea.")).toBeInTheDocument();
+    const decide = await screen.findByRole("link", { name: "Deschide varianta și decide acolo" });
+    expect(decide).toHaveAttribute("href", expect.stringContaining("varianta=var%3A2"));
+    expect(decide).toHaveAttribute("href", expect.stringContaining("pas=pret"));
+    expect(screen.queryByRole("button", { name: "Respinge" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Aprobă" })).not.toBeInTheDocument();
     expect(fetchMock.mock.calls.some((call) => String(call[0]).includes("/decision"))).toBe(false);
   });
 

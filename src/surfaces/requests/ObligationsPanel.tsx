@@ -6,14 +6,28 @@ import { journeyItemHref } from "../../presentation/journeyHref";
  * offers that only wait for the customer. Every item comes from the server journey and only
  * navigates; confirming, deciding or closing happens on the target page.
  */
-export function ObligationsPanel({ journey, requestId }: { journey: CommercialJourneyTransport; requestId: string }) {
+export function ObligationsPanel({
+  journey,
+  requestId,
+  variantStep = null,
+}: {
+  journey: CommercialJourneyTransport;
+  requestId: string;
+  /**
+   * The server's next step of the request while it has saved quote variants and no offer yet
+   * (Commercial Continuity V2). The same text the register and Start show.
+   */
+  variantStep?: string | null;
+}) {
   const { actionable, waiting } = journey;
   if (actionable.length === 0 && waiting.length === 0) {
     return (
       <section className="obligations obligations--quiet" aria-label="De rezolvat" data-testid="request-obligations">
         <p className="obligations__head">
-          <span className="obligations__title">Nimic de rezolvat acum</span>
-          <span className="obligations__summary">{journey.offerSummary.summaryLabel}</span>
+          <span className="obligations__title">{variantStep ?? "Nimic de rezolvat acum"}</span>
+          <span className="obligations__summary">
+            {variantStep ? "Variantă de ofertă în lucru" : journey.offerSummary.summaryLabel}
+          </span>
         </p>
       </section>
     );

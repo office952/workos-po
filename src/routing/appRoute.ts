@@ -509,6 +509,19 @@ export function configuratorHref(context: SpineContext): string {
   return withSpineContext("/configurator", context);
 }
 
+/** The Configurator on a saved quote variant: the address names the variant, not only the product. */
+export function configuratorVariantHref(context: SpineContext, variantId: string, step?: "pret" | "verificare"): string {
+  const href = withSpineContext("/configurator", context);
+  const params = new URLSearchParams(href.split("?")[1] ?? "");
+  params.set("varianta", variantId);
+  if (step) params.set("pas", step);
+  return `/configurator?${params.toString()}`;
+}
+
+export function readVariantId(search: string): string | null {
+  return readSearchParam(search, "varianta");
+}
+
 export function canonicalLocation(pathname: string, search: string): string | null {
   if (pathname === "/planificare") {
     const params = new URLSearchParams(search);

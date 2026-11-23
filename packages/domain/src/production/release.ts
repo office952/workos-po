@@ -30,7 +30,7 @@ const MISSING_INPUT_REASON =
 
 export function freezeProductionReleaseFromOrder(
   order: OrderSnapshot,
-  options?: { createdAt?: string },
+  options?: { createdAt?: string; skipSiteInstallationOperation?: boolean },
 ): ProductionReleaseResult {
   const siteInstallation = siteInstallationFromOrder(order);
   if (order.schemaVersion === ORDER_SNAPSHOT_SCHEMA_VERSION_V2 && !siteInstallation) {
@@ -40,6 +40,7 @@ export function freezeProductionReleaseFromOrder(
       reasons: [INCOMPATIBLE_REASON],
     };
   }
+  const includeSiteInstallation = Boolean(siteInstallation) && !options?.skipSiteInstallationOperation;
   if (
     order.schemaVersion !== ORDER_SNAPSHOT_SCHEMA_VERSION &&
     order.schemaVersion !== ORDER_SNAPSHOT_SCHEMA_VERSION_V2 ||
@@ -76,7 +77,7 @@ export function freezeProductionReleaseFromOrder(
   }
 
   const productionInput = copyFrozenProductionInput(input);
-  const operations = siteInstallation
+  const operations = includeSiteInstallation
     ? appendInstallAtSiteOperation(productionInput.operations)
     : productionInput.operations;
   if (!operations) {
@@ -108,7 +109,7 @@ export function freezeProductionReleaseFromOrder(
     quantities: order.quantities.map((item) => ({ ...item })),
     requirements: productionInput.requirements,
     operations,
-    ...(siteInstallation ? { siteInstallation } : {}),
+    ...(includeSiteInstallation && siteInstallation ? { siteInstallation } : {}),
     usedTechnicalSettings: productionInput.usedTechnicalSettings,
     usedRecipes: productionInput.usedRecipes,
     ...(productionInput.usedFormulas ? { usedFormulas: productionInput.usedFormulas } : {}),

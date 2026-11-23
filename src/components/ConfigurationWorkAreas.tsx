@@ -4,7 +4,7 @@ export type ConfigurationWorkArea = "configuration" | "review" | "commercial";
 const areas: readonly { id: ConfigurationWorkArea; label: string }[] = [
   { id: "configuration", label: "Configurație" },
   { id: "review", label: "Verificare" },
-  { id: "commercial", label: "Pregătire ofertă" },
+  { id: "commercial", label: "Preț și ofertă" },
 ];
 
 /** These are work areas, not product lifecycle states. Switching never confirms. */

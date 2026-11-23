@@ -56,7 +56,7 @@ export type BranchAction = {
   href: string;
 };
 
-export type CommercialBranchKind = "product" | "assembly" | "unlinked";
+export type CommercialBranchKind = "product" | "assembly" | "unlinked" | "variant";
 
 /** Where the branch's current offer stands: the server's commercial status of that offer. */
 export type BranchCommercialState = OfferDotState;
@@ -122,6 +122,27 @@ export type CommercialBranch = {
   priceLabel: string | null;
   consultOnly: boolean;
   revisionPending: boolean;
+  variantId?: string | null;
+  alternativeOfLabel?: string | null;
+};
+
+export type OpenVariantBranchInput = {
+  variantId: string;
+  requestId: string;
+  customerId: string;
+  productCode: string;
+  indexLabel: string;
+  title: string;
+  subtitle: string | null;
+  stateLabel: string;
+  needsAction: boolean;
+  actionLabel: string;
+  href: string;
+  priceLabel: string | null;
+  notes: string | null;
+  alternativeOfLabel: string | null;
+  lifecycle: "ACTIVE" | "WITHDRAWN";
+  registeredAt: string | null;
 };
 
 export type LocalConfigurationNotice = {
@@ -158,6 +179,8 @@ export function presentCommercialBranches(input: {
   customerId?: string | null;
   /** The request's server journey; when present it alone says which branch must act or waits. */
   journey?: CommercialJourneyTransport | null;
+  /** Unissued saved quote variants (Commercial Continuity V2). Issued variants are the offer rows. */
+  openVariants?: readonly OpenVariantBranchInput[];
 }): CommercialBranchModel {
   const consumed = new Set<string>();
   const drafts: CommercialBranch[] = [];
@@ -171,6 +194,10 @@ export function presentCommercialBranches(input: {
     if (consumed.has(offer.quoteSnapshotId) || offer.kind !== "PRODUCT") continue;
     consumed.add(offer.quoteSnapshotId);
     drafts.push(productBranch(offer, input.jobs, input.jobsStatus));
+  }
+
+  for (const variant of input.openVariants ?? []) {
+    drafts.push(variantBranch(variant));
   }
 
   const unlinkedGroups = new Map<string, RequestLinkedOfferTransport[]>();
@@ -698,12 +725,60 @@ function offerActionLabel(offer: RequestLinkedOfferTransport): string {
 
 /** A branch acts or waits only when one of the server's journey items names its offer or assembly. */
 function journeyObligation(branch: CommercialBranch, journey: CommercialJourneyTransport): BranchObligation {
+  if (branch.kind === "variant") return branch.obligation;
   const names = (item: { quoteSnapshotId: string | null; assemblyId: string | null }) =>
     (item.quoteSnapshotId !== null && branch.quotes.some((quote) => quote.quoteSnapshotId === item.quoteSnapshotId))
     || (item.quoteSnapshotId === null && item.assemblyId !== null && branch.key === `assembly:${item.assemblyId}`);
   if (journey.actionable.some(names)) return "ACTIONABLE";
   if (journey.waiting.some(names)) return "WAITING";
   return "NONE";
+}
+
+function variantBranch(input: OpenVariantBranchInput): CommercialBranch {
+  const withdrawn = input.lifecycle === "WITHDRAWN";
+  const obligation: BranchObligation = withdrawn ? "NONE" : input.needsAction ? "ACTIONABLE" : "WAITING";
+  const state: BranchCommercialState = withdrawn ? "decided" : input.needsAction ? "undecided" : "awaiting";
+  return {
+    key: `variant:${input.variantId}`,
+    kind: "variant",
+    index: 0,
+    indexLabel: input.indexLabel,
+    title: input.title,
+    subtitle: input.subtitle,
+    inscription: input.title,
+    offerReference: null,
+    kindLabel: input.alternativeOfLabel ? `Alternativă · ${input.alternativeOfLabel}` : "Variantă",
+    state,
+    stateLabel: input.stateLabel,
+    obligation,
+    needsAction: obligation === "ACTIONABLE",
+    step: { label: input.actionLabel, href: input.href, tone: input.needsAction ? "action" : "muted" },
+    needsAttention: input.needsAction,
+    jobCell: { label: "—", href: null, tone: "empty" },
+    chain: [
+      { key: "offer", name: "Ofertă", value: "Neemisă", detail: input.stateLabel, tone: "current" },
+      { key: "order", name: "Comandă", value: "—", detail: "După emitere", tone: "empty" },
+      { key: "job", name: "Lucrare", value: "—", detail: null, tone: "empty" },
+    ],
+    registeredAt: input.registeredAt,
+    stages: {
+      configuration: { label: "Variantă salvată", detail: null, tone: "current", href: input.href },
+      offer: { label: "Neemisă", detail: input.stateLabel, tone: "waiting", href: input.href },
+      work: EMPTY,
+      production: EMPTY,
+    },
+    quotes: [],
+    note: input.notes,
+    primaryAction: { label: input.actionLabel, href: input.href },
+    assemblyHref: null,
+    orderHref: null,
+    executionHref: null,
+    priceLabel: input.priceLabel,
+    consultOnly: false,
+    revisionPending: false,
+    variantId: input.variantId,
+    alternativeOfLabel: input.alternativeOfLabel,
+  };
 }
 
 function jobCell(link: JobLink): BranchJobCell {

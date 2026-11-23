@@ -26,6 +26,17 @@ import { ConfigurationReview } from "../components/ConfigurationReview";
 import { ConfigurationWorkAreas, type ConfigurationWorkArea } from "../components/ConfigurationWorkAreas";
 import { ConfiguratorReadinessIndicator } from "../components/ConfiguratorReadinessIndicator";
 import { ConfiguratorStateBar } from "../components/ConfiguratorStateBar";
+import {
+  QuoteVariantConflictBanner,
+  QuoteVariantOwnerDecision,
+  QuoteVariantSaveLine,
+} from "../configuration/QuoteVariantStatus";
+import { VARIANT_AUTOSAVE_DEBOUNCE_MS, useQuoteVariant } from "../configuration/useQuoteVariant";
+import { presentJournal } from "../adapters/quoteVariantAdapter";
+import { fetchRequestJournal } from "../api/quoteVariants";
+import { requestJournalKey, useRequestVariants } from "./requests/requestVariantsData";
+import { navigate } from "../routing/navigate";
+import "../styles/surfaces/quote-variant.css";
 import { LoadingFloor } from "../components/LoadingFloor";
 import "../styles/surfaces/commercial.css";
 import "../styles/surfaces/configuration-workbench.css";
@@ -62,7 +73,7 @@ import { CostCompletenessIssues } from "../presentation/costCompleteness";
 import { presentCostLine, selectLineByResource } from "../presentation/costLine";
 import { RateAcknowledgementNotice } from "../presentation/rateAcknowledgement";
 import { ALUMINIUM_RETURN_PROFILE_RESOURCE_ID } from "../reference/lettersProduct";
-import { assemblyHref, requestProductHref, requestHref, quoteHref } from "../routing/appRoute";
+import { assemblyHref, configuratorVariantHref, requestProductHref, requestHref, quoteHref } from "../routing/appRoute";
 import { configuratorReturnHref } from "../routing/configuratorReturn";
 import {
   labelsMatchingContext,
@@ -91,6 +102,25 @@ function commercialResultKey(input: {
   reviewId: string | null;
 }): string {
   return JSON.stringify(input);
+}
+
+const PHONE_COMMERCIAL_QUERY = "(max-width: 767px)";
+
+/** Phone keeps the issue action in the sticky state bar so it is not below the first viewport. */
+function usePhoneCommercialActions(): boolean {
+  const [phone, setPhone] = useState(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+    return window.matchMedia(PHONE_COMMERCIAL_QUERY).matches;
+  });
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia(PHONE_COMMERCIAL_QUERY);
+    const sync = () => setPhone(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
+  return phone;
 }
 
 type PreviewState = "idle" | "pending" | "ready" | "error";
@@ -168,6 +198,10 @@ export type ConfiguratorPageProps = ConfiguratorContext & {
   memberRole?: AssemblyMemberRole | null;
   /** Assembly member opened from „Stabilește prețul”: start on the price step, not on the values. */
   openPriceStep?: boolean;
+  /** Saved quote variant of the request (Commercial Continuity V2). Null = the pre-V2 path. */
+  variantId?: string | null;
+  /** Opened by someone continuing a confirmed variant: start on the review, not on the values. */
+  openReviewStep?: boolean;
 };
 
 export const INITIAL_PREVIEW_DEBOUNCE_MS = 0;
@@ -231,6 +265,8 @@ export function ConfiguratorPage({
   assemblyId = null,
   memberRole = null,
   openPriceStep = false,
+  variantId = null,
+  openReviewStep = false,
 }: ConfiguratorPageProps) {
   const context: ConfiguratorContext = { customerId, requestId, productCode, ...(assemblyId ? { assemblyId } : {}) };
   const stored = readConfiguratorSession();
@@ -246,8 +282,13 @@ export function ConfiguratorPage({
     return owned;
   });
   const [workArea, setWorkArea] = useState<ConfigurationWorkArea>(
-    openPriceStep && assemblyId && memberRole ? "commercial" : "configuration",
+    openPriceStep && ((assemblyId && memberRole) || variantId)
+      ? "commercial"
+      : openReviewStep && variantId
+        ? "review"
+        : "configuration",
   );
+  const phoneCommercialActions = usePhoneCommercialActions();
   const workAreaRef = useRef<ConfigurationWorkArea>(workArea);
   useEffect(() => { workAreaRef.current = workArea; }, [workArea]);
   const sectionsHandle = useRef<ConfigurationSectionsHandle>(null);
@@ -287,6 +328,43 @@ export function ConfiguratorPage({
       setDrafts(seeded);
     }
     setSeedApplied(true);
+  }
+  // Commercial Continuity V2: the saved variant is the source of the values, not the browser.
+  const variantWork = useQuoteVariant(requestId, variantId);
+  const siblingVariants = useRequestVariants(requestId);
+  const journal = useResource(requestId ? requestJournalKey(requestId) : null, async () =>
+    presentJournal(await fetchRequestJournal(requestId as string)),
+  );
+  const [variantSeeded, setVariantSeeded] = useState(!variantId);
+  const [variantSaveAttempt, setVariantSaveAttempt] = useState(0);
+  const [variantBusy, setVariantBusy] = useState(false);
+  const [draftRecovery, setDraftRecovery] = useState(false);
+  const [notesDraft, setNotesDraft] = useState("");
+  const userEditedRef = useRef(false);
+  const savedValuesKey = useRef<string | null>(null);
+  /** Something was typed that the server has not confirmed as saved yet. */
+  const [unsavedEdits, setUnsavedEdits] = useState(false);
+  if (variantId && !variantSeeded && variantWork.loadState === "ready" && variantWork.initialValues) {
+    const seeded: Record<string, string> = {};
+    for (const [key, value] of Object.entries(variantWork.initialValues)) {
+      if (value !== null && value !== undefined) seeded[key] = String(value);
+    }
+    const differs = Object.keys({ ...seeded, ...drafts }).some((key) => (drafts[key] ?? "") !== (seeded[key] ?? ""));
+    if (hadOwnedDrafts && differs) {
+      // Keep the local copy on screen, but do not autosave it over the server copy until the
+      // person chooses. Autosaving here would destroy the saved variant before they decide.
+      setDraftRecovery(true);
+    } else {
+      setDrafts(seeded);
+    }
+    const stored = variantWork.variant;
+    // Only a price set for the configuration confirmed now is brought back into the field; a
+    // price of an earlier configuration has to be entered and confirmed again by a person.
+    if (stored?.priceVisible && stored.netPrice !== null && stored.priceForConfirmedConfiguration) {
+      setManualNetDraft(String(stored.netPrice));
+    }
+    setNotesDraft(stored?.notes ?? "");
+    setVariantSeeded(true);
   }
   const confirmedMember = member.data?.confirmed ?? null;
   const memberConsultOnly = Boolean(assemblyId && memberRole && member.data && !member.data.membersEditable);
@@ -344,8 +422,58 @@ export function ConfiguratorPage({
     });
   }, [assemblyId, customerId, drafts, lastQuote, productCode, requestId, workbenchNavigation]);
 
+  /** Saves the typed values on the variant now. True when nothing is left unsaved. */
+  async function flushVariantSave(): Promise<boolean> {
+    if (!variantId || !variantSeeded || !userEditedRef.current) return true;
+    const values = currentTransportValues();
+    const key = JSON.stringify(values);
+    if (key === savedValuesKey.current) {
+      setUnsavedEdits(false);
+      return true;
+    }
+    const saved = await variantWork.saveValues(values);
+    if (saved) {
+      savedValuesKey.current = key;
+      setUnsavedEdits(false);
+    }
+    return saved;
+  }
+
   useEffect(() => {
-    if (!productCode || (assemblyId && memberRole && !seedApplied)) {
+    if (!variantId || !variantSeeded || !userEditedRef.current || variantWork.conflict || draftRecovery) return;
+    const handle = window.setTimeout(() => {
+      void flushVariantSave();
+    }, VARIANT_AUTOSAVE_DEBOUNCE_MS);
+    return () => window.clearTimeout(handle);
+    // The effect follows the typed values; the save function reads the latest ones itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey, variantId, variantSeeded, variantSaveAttempt, variantWork.conflict, draftRecovery]);
+
+  useEffect(() => {
+    if (!variantId || !variantSeeded || !confirmation?.manualProductPriceAuthorized) return;
+    const net = parsedManualNet();
+    if (net === null || net === variantWork.variant?.netPrice) return;
+    const handle = window.setTimeout(() => {
+      void variantWork.savePrice(net).then((saved) => {
+        if (saved.ok) void confirm({ reread: true });
+      });
+    }, VARIANT_AUTOSAVE_DEBOUNCE_MS);
+    return () => window.clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [manualNetDraft, variantId, variantSeeded, confirmation?.manualProductPriceAuthorized]);
+
+  useEffect(() => {
+    if (!variantId || !variantSeeded) return;
+    if ((notesDraft.trim() || null) === (variantWork.variant?.notes ?? null)) return;
+    const handle = window.setTimeout(() => {
+      void variantWork.saveNotes(notesDraft.trim() === "" ? null : notesDraft.trim());
+    }, VARIANT_AUTOSAVE_DEBOUNCE_MS);
+    return () => window.clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notesDraft, variantId, variantSeeded]);
+
+  useEffect(() => {
+    if (!productCode || (assemblyId && memberRole && !seedApplied) || (variantId && !variantSeeded)) {
       return;
     }
     let cancelled = false;
@@ -416,7 +544,7 @@ export function ConfiguratorPage({
       cancelled = true;
       window.clearTimeout(handle);
     };
-  }, [draftKey, drafts, productCode, requestId, assemblyId, memberRole, seedApplied, previewAttempt]);
+  }, [draftKey, drafts, productCode, requestId, assemblyId, memberRole, seedApplied, previewAttempt, variantId, variantSeeded]);
 
   function invalidateStaleCommercialDraft(): void {
     confirmGeneration.current += 1;
@@ -429,11 +557,14 @@ export function ConfiguratorPage({
   }
 
   function updateField(fieldId: string, value: string): void {
+    userEditedRef.current = true;
+    if (variantId) setUnsavedEdits(true);
     invalidateStaleCommercialDraft();
     setDrafts((current) => ({ ...current, [fieldId]: value }));
   }
 
-  async function confirm(): Promise<void> {
+  /** `reread`: read back a variant that is already confirmed, without writing anything. */
+  async function confirm(options: { reread?: boolean } = {}): Promise<void> {
     if (!preview?.reviewId || !activeProduct) {
       return;
     }
@@ -443,17 +574,61 @@ export function ConfiguratorPage({
     setConfirmState("pending");
     setConfirmError(null);
     try {
-      let presented = presentConfirm(
-        await postConfigurationConfirm(activeProduct, {
+      if (variantId && !(await flushVariantSave())) {
+        setConfirmState("error");
+        setConfirmError("Valorile nu sunt salvate încă. Salvează-le înainte de confirmare.");
+        return;
+      }
+      const reviewId = preview.reviewId;
+      // On a saved variant the server confirms what it stores; the version guards the write.
+      const confirmVariant = async (): Promise<unknown> => {
+        const payload = await postConfigurationConfirm(activeProduct, {
           values: currentTransportValues(),
-          reviewId: preview.reviewId,
-          ...(requestId ? { requestId } : {}),
-          ...commercialPayload(),
-        }),
-        preview.reviewId,
+          reviewId,
+          variantId: variantId as string,
+          // A re-read carries no version, so it can never confirm a changed configuration.
+          ...(options.reread ? {} : { expectedVersion: variantWork.version() ?? undefined }),
+        });
+        const version = (payload as { variant?: { version?: unknown } } | null)?.variant?.version;
+        if (typeof version === "number") variantWork.setVersion(version);
+        return payload;
+      };
+      let presented = presentConfirm(
+        variantId
+          ? await confirmVariant()
+          : await postConfigurationConfirm(activeProduct, {
+              values: currentTransportValues(),
+              reviewId,
+              ...(requestId ? { requestId } : {}),
+              ...commercialPayload(),
+            }),
+        reviewId,
       );
       if (generation !== confirmGeneration.current) {
         return;
+      }
+      // A re-read never writes: a price is saved only when a person confirms it on this screen.
+      if (variantId && !options.reread && presented?.manualProductPriceAuthorized) {
+        // The official price is saved on the variant, then read back as the server evaluates it.
+        const net = parsedManualNet();
+        const stored = variantWork.variant;
+        const priceChanged = net !== null && (stored?.netPrice !== net || !stored?.priceForConfirmedConfiguration);
+        if (priceChanged) {
+          const saved = await variantWork.savePrice(net);
+          if (!saved.ok) {
+            setConfirmState("error");
+            setConfirmError(saved.reasons[0] ?? "Prețul nu a putut fi salvat pe variantă.");
+            return;
+          }
+          presented = presentConfirm(await confirmVariant(), reviewId);
+          if (generation !== confirmGeneration.current) {
+            return;
+          }
+        }
+      }
+      if (variantId) {
+        void variantWork.refresh();
+        if (requestId) invalidateAfterRequestDetailChange(requestId);
       }
       if (!presented) {
         setConfirmState("error");
@@ -486,12 +661,16 @@ export function ConfiguratorPage({
       setConfirmation(presented);
       setPricedResultKey(sentKey);
       setConfirmState("idle");
-      if (fromTechnicalReview && workAreaRef.current === "review") setWorkArea("commercial");
+      if (fromTechnicalReview && !options.reread && workAreaRef.current === "review") setWorkArea("commercial");
     } catch (error) {
       if (generation !== confirmGeneration.current) {
         return;
       }
       setConfirmState("error");
+      if (variantId && variantWork.noteError(error)) {
+        setConfirmError("Altcineva a modificat varianta. Alege mai sus cum continui.");
+        return;
+      }
       setConfirmError(
         error instanceof TransportError
           ? (readTransportReasons(error.body)[0] ??
@@ -516,8 +695,14 @@ export function ConfiguratorPage({
       customerId,
       requestId,
       ...commercialPayload(),
+      ...(variantId ? { variantId, expectedVersion: variantWork.version() } : {}),
       ...(approvalNote.trim() ? { approvalNote: approvalNote.trim() } : {}),
     });
+    if (variantId) {
+      if (!result.ok) variantWork.noteError(new TransportError("approval_refused", result.status, result.body));
+      void variantWork.refresh();
+      invalidateAfterRequestDetailChange(requestId);
+    }
     const offering = presentOfferingView((result.body as { offering?: unknown } | null)?.offering);
     if (offering) {
       setConfirmation((current) => (current ? { ...current, offering } : current));
@@ -586,8 +771,10 @@ export function ConfiguratorPage({
           ...(options.separateQuote ? { commercialIntent: SEPARATE_QUOTE_INTENT } : {}),
           ...commercialPayload(),
           ...rateAcknowledgement,
+          ...(variantId ? { variantId, expectedVersion: variantWork.version() ?? undefined } : {}),
         }),
       );
+      if (variantId) void variantWork.refresh();
       if (!presented) {
         setFreezeState("error");
         setFreezeError("Oferta înghețată nu poate fi prezentată.");
@@ -604,6 +791,10 @@ export function ConfiguratorPage({
       setFreezeState("idle");
     } catch (error) {
       setFreezeState("error");
+      if (variantId && variantWork.noteError(error)) {
+        setFreezeError("Altcineva a modificat varianta. Oferta nu a fost emisă.");
+        return;
+      }
       const overlap = existingCommercialWork(error);
       if (overlap) {
         setOverlapAssemblyId(overlap.assemblyId);
@@ -623,6 +814,21 @@ export function ConfiguratorPage({
 
   const profile = confirmation ? profilePresentation(confirmation.lines) : null;
   const ready = previewState === "ready" && preview?.readiness === "ready" && preview.reviewId !== null;
+  // A variant confirmed earlier, by anyone, opens with its price and policy outcome already read.
+  const variantReread = useRef(false);
+  const variantState = variantWork.variant?.state ?? null;
+  useEffect(() => {
+    if (!variantId || !variantSeeded || variantReread.current || !ready || confirmation || !variantState) return;
+    if (["IN_PROGRESS", "READY_TO_VERIFY", "NEEDS_REVERIFY", "UNAVAILABLE", "WITHDRAWN", "ISSUED"].includes(variantState)) return;
+    const handle = window.setTimeout(() => {
+      if (variantReread.current) return;
+      variantReread.current = true;
+      void confirm({ reread: true });
+    }, 0);
+    return () => window.clearTimeout(handle);
+    // `confirm` reads the latest state itself; the effect only decides when to call it once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [variantId, variantSeeded, ready, confirmation, variantState]);
   const confirmPending = confirmState === "pending";
   const freezePending = freezeState === "pending";
   const priceIsCurrent =
@@ -646,6 +852,22 @@ export function ConfiguratorPage({
     !ratesAcknowledged ||
     approvalPending ||
     offering?.outcome === "NOT_PERMITTED";
+  const canIssueOffer = Boolean(confirmation && !assemblyId && confirmation.manualProductPriceAuthorized);
+  const issueOfferDisabled =
+    freezePending ||
+    freezeBlocked ||
+    Boolean(variantId && (variantWork.saveState === "failed" || variantWork.saveState === "conflict" || variantWork.variant?.quoteSnapshotId));
+  const issueOfferButton = canIssueOffer ? (
+    <Button
+      data-testid="commercial-issue-action"
+      disabled={issueOfferDisabled}
+      onClick={() => {
+        void freeze();
+      }}
+    >
+      {variantId ? "Emite oferta" : "Îngheață oferta"}
+    </Button>
+  ) : null;
   const priceNotReady = Boolean(confirmation && !validCustomerPrice);
   const sections = preview ? buildWorkbenchSections(preview) : [];
   const missingEntries = preview ? workbenchMissingEntries(sections, preview.missing) : [];
@@ -661,14 +883,17 @@ export function ConfiguratorPage({
     missingParts: [...new Set(missingEntries.map((entry) => `${entry.sectionNumber} ${entry.sectionTitle}`))],
     confirmed,
     frozen,
+    saved: Boolean(variantId),
   });
   const backHref = requestId ? requestHref(requestId) : "/cereri";
   const backLabel = requestId ? "Înapoi la cerere" : "Înapoi la cereri";
   const stateNote = assemblyId
     ? workState === "CONFIRMED_CONFIGURATION" ? "Confirmarea a salvat această parte în ansamblu. Oferta comună se îngheață din ansamblu." : null
-    : workState === "CONFIRMED_CONFIGURATION" && manualNetDraft.trim()
-      ? "Prețul manual nu este salvat. Se păstrează numai la înghețarea ofertei."
-      : null;
+    : variantId
+      ? null
+      : workState === "CONFIRMED_CONFIGURATION" && manualNetDraft.trim()
+        ? "Prețul manual nu este salvat. Se păstrează numai la înghețarea ofertei."
+        : null;
 
   function goToFirstMissing(): void {
     const first = missingEntries[0];
@@ -742,6 +967,118 @@ export function ConfiguratorPage({
           commercial: frozen ? "înghețată în ofertă" : confirmed ? "pasul următor" : "după confirmare",
         }}
       />
+      {variantId && siblingVariants.data && siblingVariants.data.filter((item) => item.quoteSnapshotId === null).length > 1 ? (
+        <label className="adm-field__label" htmlFor="variant-switcher">
+          Varianta de lucru
+          <select
+            id="variant-switcher"
+            value={variantId}
+            onChange={(event) => {
+              const next = siblingVariants.data?.find((item) => item.variantId === event.target.value);
+              if (!next || !requestId) return;
+              navigate(
+                configuratorVariantHref(
+                  { customerId, requestId, productCode: next.productCode },
+                  next.variantId,
+                ),
+              );
+            }}
+          >
+            {siblingVariants.data
+              .filter((item) => item.quoteSnapshotId === null)
+              .map((item) => (
+                <option key={item.variantId} value={item.variantId}>
+                  {item.indexLabel} · {item.inscription ?? item.productLabel} · {item.stateLabel}
+                </option>
+              ))}
+          </select>
+        </label>
+      ) : null}
+      {draftRecovery ? (
+        <InlineAlert tone="pending" title="Modificări locale nesalvate">
+          Ai valori din vizita anterioară care diferă de ce este salvat pe server.{" "}
+          <Button
+            variant="secondary"
+            onClick={() => {
+              userEditedRef.current = true;
+              setUnsavedEdits(true);
+              setDraftRecovery(false);
+              setVariantSaveAttempt((current) => current + 1);
+            }}
+          >
+            Păstrează valorile din pagină
+          </Button>{" "}
+          <Button
+            variant="secondary"
+            onClick={() => {
+              if (!variantWork.initialValues) return;
+              const seeded: Record<string, string> = {};
+              for (const [key, value] of Object.entries(variantWork.initialValues)) {
+                if (value !== null && value !== undefined) seeded[key] = String(value);
+              }
+              userEditedRef.current = false;
+              setDrafts(seeded);
+              setUnsavedEdits(false);
+              setDraftRecovery(false);
+            }}
+          >
+            Folosește versiunea salvată
+          </Button>
+        </InlineAlert>
+      ) : null}
+      {variantId && variantWork.loadState === "error" ? (
+        <InlineAlert tone="error" title="Varianta nu a putut fi citită">
+          Valorile salvate pe cerere nu au putut fi încărcate.{" "}
+          <Button variant="secondary" onClick={variantWork.reload}>Reîncearcă</Button>
+        </InlineAlert>
+      ) : null}
+      {variantId ? (
+        <>
+          <QuoteVariantSaveLine
+            work={variantWork}
+            pendingChanges={unsavedEdits}
+            onRetry={() => setVariantSaveAttempt((current) => current + 1)}
+          />
+          <QuoteVariantConflictBanner
+            work={variantWork}
+            busy={variantBusy}
+            onSeeTheirs={() => {
+              userEditedRef.current = false;
+              savedValuesKey.current = null;
+              setUnsavedEdits(false);
+              invalidateStaleCommercialDraft();
+              setVariantSeeded(false);
+              variantWork.reload();
+            }}
+            onKeepMine={() => {
+              setVariantBusy(true);
+              void variantWork.keepMineAsAlternative(currentTransportValues()).then((createdId) => {
+                setVariantBusy(false);
+                if (createdId) navigate(configuratorVariantHref({ customerId, requestId, productCode }, createdId));
+              });
+            }}
+          />
+          {/* The Owner's decision is the task of this visit: it stays in the first screen. */}
+          <QuoteVariantOwnerDecision
+            work={variantWork}
+            onSeeValues={() => setWorkArea("review")}
+            onDecided={() => {
+              variantReread.current = false;
+              setConfirmation(null);
+              void variantWork.refresh();
+              if (requestId) invalidateAfterRequestDetailChange(requestId);
+            }}
+          />
+          {variantWork.variant?.quoteSnapshotId ? (
+            <InlineAlert tone="blocked" title="Ofertă emisă">
+              Oferta acestei variante a fost emisă și nu se mai modifică. Pentru o schimbare, pornește o variantă nouă din cerere.{" "}
+              <a className="text-link" href={quoteHref(variantWork.variant.productCode, variantWork.variant.quoteSnapshotId)}>
+                Deschide oferta
+              </a>
+            </InlineAlert>
+          ) : null}
+        </>
+      ) : null}
           {customerId === null || requestId === null ? (
             <InlineAlert tone="blocked" title="Context comercial incomplet">
               Completează clientul și cererea pentru a continua traseul asistat către ofertă.
@@ -790,6 +1127,8 @@ export function ConfiguratorPage({
                 productCode={productCode}
                 drafts={drafts}
                 onApply={(next) => {
+                  userEditedRef.current = true;
+                  if (variantId) setUnsavedEdits(true);
                   invalidateStaleCommercialDraft();
                   setDrafts(next);
                 }}
@@ -814,7 +1153,9 @@ export function ConfiguratorPage({
             adminReturnHref={adminReturnHref}
             footnote={
               <p className="configuration-persistence" data-testid="configuration-persistence">
-                {assemblyId
+                {variantId
+                  ? "Valorile se salvează pe cerere pe măsură ce le completezi. Confirmarea și oferta rămân gesturi separate."
+                  : assemblyId
                   ? "Modificări locale, în această filă. Confirmarea salvează partea în ansamblu; oferta comună apare numai după înghețare."
                   : "Modificări locale, în această filă. Verificarea întreabă serverul și nu creează oferta. Oferta apare doar când o îngheți; închiderea filei poate pierde valorile."}
               </p>
@@ -891,7 +1232,7 @@ export function ConfiguratorPage({
           ) : null}
 
         <div className="configuration-commercial__heading">
-          <h2 id="pregatire-oferta-title">Pregătire ofertă</h2>
+          <h2 id="pregatire-oferta-title">Preț și ofertă</h2>
           <p>Termenii și prețul clientului pentru configurația confirmată.</p>
         </div>
         {confirmError ? <InlineAlert tone="error" title="Confirmarea a eșuat">{confirmError}</InlineAlert> : null}
@@ -945,6 +1286,7 @@ export function ConfiguratorPage({
               ) : (
                 <OwnerPricingHandoff
                   reason={confirmation.offering?.blockedReason ?? null}
+                  saved={Boolean(variantId)}
                   backHref={assemblyId ? null : backHref}
                   backLabel={backLabel}
                 />
@@ -960,7 +1302,7 @@ export function ConfiguratorPage({
                   ) : null}
                 </InlineAlert>
               ) : null}
-              {confirmation.manualProductPriceAuthorized ? (
+              {confirmation.manualProductPriceAuthorized && !variantId ? (
                 <Button
                   disabled={confirmPending}
                   onClick={() => {
@@ -969,6 +1311,27 @@ export function ConfiguratorPage({
                 >
                   {serverCustomerPriceReady ? "Actualizează prețul" : "Confirmă prețul"}
                 </Button>
+              ) : null}
+              {variantId ? (
+                <TextField
+                  id="variant-notes"
+                  label="Observații"
+                  value={notesDraft}
+                  hint="Rămân pe variantă. Nu înlocuiesc prețul oficial."
+                  onChange={setNotesDraft}
+                />
+              ) : null}
+              {variantId && variantWork.variant?.installationNetPrice !== null && variantWork.variant?.installationNetPrice !== undefined ? (
+                <p className="ui-note">
+                  Montaj la locație: {formatMoney(variantWork.variant.installationNetPrice, variantWork.variant.currency ?? "EUR")} net.
+                  Prețul și faptele de montaj se editează pe cerere; după emiterea unei oferte rămân blocate.
+                  {requestId ? (
+                    <>
+                      {" "}
+                      <a className="text-link" href={requestHref(requestId)}>Deschide cererea</a>
+                    </>
+                  ) : null}
+                </p>
               ) : null}
             </>
           )}
@@ -990,13 +1353,26 @@ export function ConfiguratorPage({
           {confirmation && serverCustomerPriceReady && !priceIsCurrent ? (
             <InlineAlert tone="blocked" title="Preț neactualizat">
               Prețul manual s-a schimbat față de ultima confirmare.
-              Actualizează prețul înainte de a îngheța oferta.
+              {variantId ? " Prețul se salvează automat pe variantă." : " Actualizează prețul înainte de a îngheța oferta."}
             </InlineAlert>
           ) : null}
           {priceNotReady && priceIsCurrent && confirmation?.manualProductPriceAuthorized ? (
             <InlineAlert tone="blocked" title="Prețul nu este gata">
-              Introdu și confirmă un preț net manual valid înainte de a îngheța oferta.
+              {variantId
+                ? "Introdu un preț net valid; se salvează automat pe variantă."
+                : "Introdu și confirmă un preț net manual valid înainte de a îngheța oferta."}
             </InlineAlert>
+          ) : null}
+          {variantId && (journal.data ?? []).some((item) => item.source === "PERSON" && item.amountLabel) ? (
+            <p className="ui-note" data-testid="journal-price-cue">
+              Jurnal: {(journal.data ?? [])
+                .filter((item) => item.source === "PERSON" && item.amountLabel)
+                .slice(0, 2)
+                .map((item) => `${item.kindLabel} ${item.amountLabel}`)
+                .join(" · ")}
+              {" "}
+              — nu înlocuiește prețul oficial.
+            </p>
           ) : null}
           {rateRequirement && validCustomerPrice && !assemblyId ? (
             <RateAcknowledgementNotice
@@ -1021,20 +1397,25 @@ export function ConfiguratorPage({
               }}
             />
           ) : null}
+          {variantId && variantWork.variant?.approval?.staleReason ? (
+            <InlineAlert tone="blocked" title="Aprobare caducă">
+              {variantWork.variant.approval.staleReason}
+            </InlineAlert>
+          ) : null}
           {confirmation && !confirmation.manualProductPriceAuthorized && !assemblyId ? (
             <p className="ui-note" data-testid="owner-pricing-pending">
-              Prețul clientului apare aici după ce Proprietarul îl stabilește și îngheață oferta.
+              {variantId
+                ? "Prețul îl stabilește Proprietarul. Configurația este salvată pe cerere."
+                : "Prețul clientului apare aici după ce Proprietarul îl stabilește și îngheață oferta."}
             </p>
           ) : null}
-          {confirmation && !assemblyId && confirmation.manualProductPriceAuthorized ? (
-            <Button
-              disabled={freezePending || freezeBlocked}
-              onClick={() => {
-                void freeze();
-              }}
-            >
-              Îngheață oferta
-            </Button>
+          {canIssueOffer && !phoneCommercialActions ? (
+            <div className="configuration-commercial__issue">{issueOfferButton}</div>
+          ) : null}
+          {canIssueOffer && phoneCommercialActions ? (
+            <p className="ui-note" data-testid="commercial-issue-in-bar">
+              Emite oferta din bara de jos, ca să rămână vizibilă pe ecranul îngust.
+            </p>
           ) : null}
           {assemblyId && confirmation ? (
             <p>
@@ -1043,7 +1424,7 @@ export function ConfiguratorPage({
               </a>
             </p>
           ) : null}
-          {freezePending ? <LoadingIndicator label="Se îngheață oferta" /> : null}
+          {freezePending ? <LoadingIndicator label={variantId ? "Se emite oferta" : "Se îngheață oferta"} /> : null}
           {freezeError && overlapAssemblyId ? (
             <InlineAlert tone="blocked" title="Produsul este deja în ansamblul cererii">
               {freezeError}{" "}
@@ -1059,19 +1440,19 @@ export function ConfiguratorPage({
               </Button>
             </InlineAlert>
           ) : freezeError ? (
-            <InlineAlert tone="error" title="Înghețarea a eșuat">
+            <InlineAlert tone="error" title={variantId ? "Oferta nu a fost emisă" : "Înghețarea a eșuat"}>
               {freezeError}
             </InlineAlert>
           ) : null}
           {visibleLastQuote ? (
             <section className="quote-result" aria-label="Ultima ofertă înghețată">
-              <h3>Ultima ofertă înghețată</h3>
-              <p>Această versiune rămâne neschimbată când editezi configurația.</p>
+              <h3>{variantId ? "Ofertă emisă" : "Ultima ofertă înghețată"}</h3>
+              <p>{variantId ? "Oferta nu se mai modifică. Pentru o schimbare pornește o variantă nouă din cerere." : "Această versiune rămâne neschimbată când editezi configurația."}</p>
               <a
                 className="pilot-create"
                 href={quoteHref(visibleLastQuote.productCode, visibleLastQuote.quoteSnapshotId)}
               >
-                Deschide oferta înghețată
+                {variantId ? "Deschide oferta" : "Deschide oferta înghețată"}
               </a>
             </section>
           ) : null}
@@ -1130,7 +1511,7 @@ export function ConfiguratorPage({
       </div>
       </div>
       </section>
-      <ConfiguratorStateBar state={workState} assembly={Boolean(assemblyId)} note={stateNote}>
+      <ConfiguratorStateBar state={workState} assembly={Boolean(assemblyId)} saved={Boolean(variantId)} note={stateNote}>
         <a className="hit configuration-state-bar__back" href={backHref}>
           <span className="button button--ghost">{backLabel}</span>
         </a>
@@ -1141,8 +1522,10 @@ export function ConfiguratorPage({
         ) : workArea === "review" ? (
           <>
             <Button variant="secondary" onClick={() => setWorkArea("configuration")}>Editează configurația</Button>
-            <Button disabled={!ready || confirmPending || !productCode} onClick={() => void confirm()}>Confirmă configurația</Button>
+            <Button disabled={!ready || confirmPending || !productCode || draftRecovery} onClick={() => void confirm()}>Confirmă configurația</Button>
           </>
+        ) : workArea === "commercial" && phoneCommercialActions ? (
+          issueOfferButton
         ) : null}
       </ConfiguratorStateBar>
       </fieldset>

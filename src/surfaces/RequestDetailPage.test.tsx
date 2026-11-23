@@ -182,9 +182,21 @@ describe("RequestDetailPage", () => {
       statusLabel: "Nouă",
       journey: journey({ phase: "REOPENED", phaseLabel: "Redeschisă", nextAction: "CHOOSE_PRODUCT", nextActionLabel: "Alege produsul" }),
     });
-    stubDetail(detail, (url) => {
+    stubDetail(detail, (url, init) => {
       if (url.endsWith("/product-catalog")) {
         return new Response(JSON.stringify({ tree: [{ kind: "product", code: "PRD-TEST", label: "Litere test" }] }), { status: 200 });
+      }
+      // Commercial Continuity V2: choosing a product creates the saved quote variant first.
+      if (url.endsWith("/api/requests/req-new/variants") && init?.method === "POST") {
+        return new Response(
+          JSON.stringify({
+            variant: {
+              variantId: "var-1", requestId: "req-new", productCode: "PRD-TEST", indexLabel: "01", version: 1,
+              state: "IN_PROGRESS", stateLabel: "În lucru · lipsesc 3 informații", action: "CONTINUE", actionLabel: "Continuă",
+            },
+          }),
+          { status: 201 },
+        );
       }
       if (url.includes("/assemblies")) {
         return new Response(JSON.stringify({ canCreate: false, offerings: [], assemblies: [] }), { status: 200 });
@@ -206,7 +218,12 @@ describe("RequestDetailPage", () => {
     expect(params.get("request")).toBe("req-new");
     expect(params.get("customer")).toBe("cus-1");
     expect(params.get("product")).toBe("PRD-TEST");
-    expect(vi.mocked(fetch).mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
+    expect(params.get("varianta")).toBe("var-1");
+    // The only write is the creation of the variant on the request.
+    const writes = vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method && init.method !== "GET");
+    expect(writes).toHaveLength(1);
+    expect(String(writes[0]?.[0])).toContain("/api/requests/req-new/variants");
+    expect(JSON.parse(String(writes[0]?.[1]?.body))).toEqual({ productCode: "PRD-TEST" });
   });
 
   it("lists the server's obligations apart from the customer's waiting, each opening its own offer", async () => {

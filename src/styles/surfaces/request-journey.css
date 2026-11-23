@@ -200,3 +200,10 @@
     margin-left: 20px;
   }
 }
+
+.stack.request-installation-obligation--page { display: none; }
+
+@media (max-width: 767px) {
+  .stack.request-installation-obligation--page { display: grid; }
+  .stack.request-installation-obligation--aside { display: none; }
+}

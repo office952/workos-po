@@ -10,6 +10,73 @@ async function asOwner(ctx, label = "owner") {
   return ui;
 }
 
+function locationNamesRequest(loc, requestId) {
+  if (!requestId) return false;
+  return loc.includes(`request=${encodeURIComponent(requestId)}`) || loc.includes(`request=${requestId}`);
+}
+
+/**
+ * Administration › Reguli de ofertare lists pending approvals only as navigation.
+ * Opens the decide-link of the named customer so the Owner lands on that request's saved variant.
+ */
+async function openQueuedApproval(ui, customerName) {
+  await ui.go("/admin/offering");
+  await ui.page.waitFor(`document.body.innerText.includes(${JSON.stringify(customerName)})`, 20000);
+  const result = await ui.page.eval(`(() => {
+    const norm = (s) => (s || '').trim().replace(/\\s+/g, ' ');
+    const needle = ${JSON.stringify(customerName)};
+    const list = document.querySelector('[aria-label="Solicitări în așteptare"]');
+    const rows = [...(list ? list.querySelectorAll('li') : [])];
+    const row = rows.find((r) => r.offsetParent !== null && norm(r.textContent).includes(needle));
+    const link = row && [...row.querySelectorAll('a')].find((a) => a.offsetParent && /Deschide varianta și decide acolo/.test(norm(a.textContent)));
+    if (!link) return { ok: false, href: null };
+    const href = link.getAttribute("href") || "";
+    if (!/[?&]varianta=/.test(href)) return { ok: false, href };
+    link.scrollIntoView({ block: 'center' });
+    link.click();
+    return { ok: true, href };
+  })()`);
+  if (!result?.ok) throw new Error(`openQueuedApproval: no variant decide link for ${customerName} (href=${result?.href ?? "none"})`);
+  await ui.settle(900);
+  await ui.page.waitFor(`/\\/configurator/.test(location.pathname) && /[?&]varianta=/.test(location.search)`, 20000);
+  await ui.waitText(/Cerere de aprobare/, 20000);
+}
+
+/** Request page › simple product: creates the persisted quote variant and opens it. */
+async function startSimpleProductVariant(ui, requestId) {
+  await ui.go(`/cereri/${encodeURIComponent(requestId)}`);
+  await ui.waitText(/Alege produsul pentru această cerere/, 20000);
+  await ui.click(/^Litere volumetrice luminoase — față plexiglas/);
+  await ui.page.waitFor(`/\\/configurator/.test(location.pathname) && /[?&]varianta=/.test(location.search)`, 25000);
+  await ui.settle(700);
+  ui.configuratorUrl = await ui.page.eval("location.pathname + location.search");
+  return ui.configuratorUrl;
+}
+
+/** Official price autosaves on a variant; there is no Confirmă/Actualizează control. */
+async function setVariantPrice(ui, net) {
+  await ui.fill("Preț net al produsului, fără TVA", String(net));
+  await ui.settle(1600);
+}
+
+async function openPriceStep(ui) {
+  if (await ui.canClick("Preț și ofertă")) await ui.click("Preț și ofertă");
+  else if (await ui.canClick("Pregătire ofertă")) await ui.click("Pregătire ofertă");
+  await ui.settle(700);
+}
+
+async function canIssue(ui) {
+  return (await ui.canClick("Emite oferta")) || (await ui.canClick("Îngheață oferta"));
+}
+
+async function issueQuote(ui) {
+  if (await ui.canClick("Emite oferta")) await ui.click("Emite oferta", { exact: true });
+  else await ui.click("Îngheață oferta", { exact: true });
+  await ui.waitText(/Deschide oferta/, 20000);
+  await ui.click("Deschide oferta");
+  await ui.page.waitFor(`/oferte\\//.test(location.pathname)`, 20000);
+}
+
 /** Owner — products offered for new work (versioned selection). */
 async function products(ctx) {
   const ui = await asOwner(ctx, "owner-products");
@@ -874,7 +941,8 @@ async function offering(ctx) {
       await owner.go("/admin/offering");
       await owner.waitText(/Reguli de ofertare/);
       await owner.shot("CFC_OWNER_offering-default", { step: "CFC-1", role: "Proprietar", state: "fără politică salvată: doar Proprietarul" }, { full: true });
-      await owner.click(/excepțiile cer aprobarea/);
+      // CONTROL_BY_RULES → COMMERCIAL_APPROVAL_POLICY. Do not click Control total.
+      await owner.click(/Control pe reguli/);
       await owner.settle(400);
       ctx.check("CFC-1 approval mode without a rule cannot be saved (fail-closed, UI)", await owner.has(/Nicio regulă activă/));
       await owner.fill("Valoare netă maximă fără aprobare", "1000");
@@ -899,18 +967,19 @@ async function offering(ctx) {
       ctx.state.ids.approvalRequestId = requestId;
       ctx.saveState?.();
     }
-    const { customerId: baseCustomer, requestId: baseRequest, configuratorUrl } = ctx.state.ids;
-    commercial.configuratorUrl = configuratorUrl
-      .split(encodeURIComponent(baseRequest)).join(encodeURIComponent(ctx.state.ids.approvalRequestId))
-      .split(baseRequest).join(ctx.state.ids.approvalRequestId)
-      .split(encodeURIComponent(baseCustomer)).join(encodeURIComponent(ctx.state.ids.approvalCustomerId))
-      .split(baseCustomer).join(ctx.state.ids.approvalCustomerId);
+    if (!ctx.state.ids.approvalConfiguratorUrl) {
+      await startSimpleProductVariant(commercial, ctx.state.ids.approvalRequestId);
+      ctx.state.ids.approvalConfiguratorUrl = commercial.configuratorUrl;
+      ctx.saveState?.();
+    } else {
+      commercial.configuratorUrl = ctx.state.ids.approvalConfiguratorUrl;
+    }
     await fillAndConfirm(commercial);
-    await commercial.fill("Preț net al produsului, fără TVA", "1450");
-    await commercial.click("Confirmă prețul");
-    await commercial.settle(1500);
+    await openPriceStep(commercial);
+    await setVariantPrice(commercial, "1450");
+    await commercial.waitText(/Necesită aprobarea Proprietarului/, 15000);
     ctx.check("CFC-3 Comercial sets the price; the server asks for the Owner's approval (UI)", await commercial.has(/Necesită aprobarea Proprietarului/));
-    ctx.check("CFC-3b freeze is not available before approval (UI)", !(await commercial.canClick("Îngheață oferta")));
+    ctx.check("CFC-3b freeze is not available before approval (UI)", !(await canIssue(commercial)));
     await commercial.shot("CFC_COMMERCIAL_approval-required", { step: "CFC-3", role: "Comercial", state: "ofertă peste regulile firmei: aprobare necesară" }, { full: true });
     if (await commercial.canClick("Trimite spre aprobare")) {
       await commercial.fill("Notă pentru Proprietar (opțional)", "Client cu volum mare");
@@ -926,27 +995,42 @@ async function offering(ctx) {
     await owner.go("/admin/offering");
     await owner.waitText(/Client Aprobare SRL/, 20000);
     await owner.shot("CFC_OWNER_approval-request", { step: "CFC-5", role: "Proprietar", state: "solicitare de aprobare: regula declanșată, preț net" }, { full: true });
+    ctx.check(
+      "CFC-5 admin queue is navigation only",
+      (await owner.has(/Deschide varianta și decide acolo/)) && !(await owner.canClick("Aprobă această variantă")),
+    );
     const pending = (await owner.api("/api/admin/price-approvals?status=REQUESTED")).body?.approvals ?? [];
     const approval = pending.find((item) => item.requestId === ctx.state.ids.approvalRequestId);
-    if (approval) {
-      await owner.click("Aprobă această variantă");
-      await owner.settle(1500);
-    }
+    ctx.check("CFC-5 pending approval is the Comercial's request", Boolean(approval), approval?.requestId);
+    await openQueuedApproval(owner, "Client Aprobare SRL");
+    const approvalLoc = await owner.page.eval("location.pathname + location.search");
+    ctx.check(
+      "CFC-5 Owner opened the persisted variant of that request",
+      /\/configurator/.test(approvalLoc) && /[?&]varianta=/.test(approvalLoc) && locationNamesRequest(approvalLoc, ctx.state.ids.approvalRequestId),
+      approvalLoc,
+    );
+    ctx.check(
+      "CFC-5 decision shows the proposed net price and the Comercial note",
+      (await owner.has(/1\.450,00 EUR/)) && (await owner.has(/Client cu volum mare/)),
+    );
+    ctx.check("CFC-5 configuration is one step from the decision", await owner.canClick("Vezi valorile"));
+    await owner.click("Vezi valorile");
+    await owner.settle(600);
+    ctx.check("CFC-5 configuration review is visible", await owner.has(/Configurație confirmată/));
+    await owner.click("Aprobă această variantă");
+    await owner.settle(1500);
     const decided = (await owner.api("/api/admin/price-approvals?status=APPROVED")).body?.approvals ?? [];
     const approved = decided.find((item) => item.requestId === ctx.state.ids.approvalRequestId);
     ctx.check("CFC-5 Owner approves the exact variant (UI), journaled by the server", Boolean(approved), approved?.status);
     if (approved) ctx.state.ids.approvalId = approved.approvalId;
 
+    commercial.configuratorUrl = ctx.state.ids.approvalConfiguratorUrl;
     await fillAndConfirm(commercial);
-    await commercial.fill("Preț net al produsului, fără TVA", "1450");
-    await commercial.click("Confirmă prețul");
-    await commercial.settle(1500);
+    await openPriceStep(commercial);
+    await setVariantPrice(commercial, "1450");
     ctx.check("CFC-6 Comercial sees the approval for the same variant (UI)", await commercial.has(/Aprobată de Proprietar/));
     await commercial.shot("CFC_COMMERCIAL_approval-granted", { step: "CFC-6", role: "Comercial", state: "aprobare acordată, înghețare permisă" }, { full: true });
-    await commercial.click("Îngheață oferta", { exact: true });
-    await commercial.waitText(/Deschide oferta înghețată/, 20000);
-    await commercial.click("Deschide oferta înghețată");
-    await commercial.page.waitFor(`/oferte\\//.test(location.pathname)`, 20000);
+    await issueQuote(commercial);
     const approvedQuoteUrl = await commercial.page.eval("location.pathname");
     const quote = (await owner.api(quoteApi(approvedQuoteUrl))).body;
     const frozenOffering = (quote?.quoteSnapshot ?? quote)?.offering;
@@ -1056,6 +1140,7 @@ async function roleClarity(ctx) {
     if (saved.status !== 200) throw new Error(`policy ${mode}: ${saved.status}`);
   };
   const newRequest = async (key, client) => {
+    const urlKey = `${key}ConfiguratorUrl`;
     if (!ctx.state.ids[`${key}RequestId`]) {
       const customer = await commercial.api("/api/customers", { method: "POST", body: JSON.stringify({ displayName: client }) });
       const customerId = customer.body?.customer?.customerId;
@@ -1064,20 +1149,18 @@ async function roleClarity(ctx) {
       ctx.state.ids[`${key}RequestId`] = req.body?.request?.requestId ?? req.body?.detail?.request?.requestId;
       ctx.saveState?.();
     }
-    const { customerId: baseCustomer, requestId: baseRequest, configuratorUrl } = ctx.state.ids;
-    const requestId = ctx.state.ids[`${key}RequestId`];
-    const customerId = ctx.state.ids[`${key}CustomerId`];
+    if (!ctx.state.ids[urlKey]) {
+      await startSimpleProductVariant(commercial, ctx.state.ids[`${key}RequestId`]);
+      ctx.state.ids[urlKey] = commercial.configuratorUrl;
+      ctx.saveState?.();
+    }
     return {
-      requestId,
-      url: configuratorUrl
-        .split(encodeURIComponent(baseRequest)).join(encodeURIComponent(requestId)).split(baseRequest).join(requestId)
-        .split(encodeURIComponent(baseCustomer)).join(encodeURIComponent(customerId)).split(baseCustomer).join(customerId),
+      requestId: ctx.state.ids[`${key}RequestId`],
+      url: ctx.state.ids[urlKey],
     };
   };
   const price = async (ui, value) => {
-    await ui.fill("Preț net al produsului, fără TVA", String(value));
-    await ui.click(/^(Confirmă|Actualizează) prețul$/);
-    await ui.settle(1500);
+    await setVariantPrice(ui, value);
   };
   const views = [[1440, 900, "light"], [1280, 800, "dark"], [768, 1024, "light"], [390, 844, "dark"]];
   const responsive = async (ui, name, state, check) => {
@@ -1096,13 +1179,13 @@ async function roleClarity(ctx) {
     const ownerOnly = await newRequest("rcOwnerOnly", "Client Proprietar Prețuiește SRL");
     commercial.configuratorUrl = ownerOnly.url;
     await fillAndConfirm(commercial);
-    await commercial.click("Pregătire ofertă");
+    await openPriceStep(commercial);
     const handoff = await commercial.text();
     ctx.check(
       "RC-1 OWNER_ONLY: Comercial sees the configuration is ready, who prices, next step and way back (UI)",
-      /Configurația este gata\. Prețul îl stabilește Proprietarul/.test(handoff) && /După înghețare/.test(handoff) && /Înapoi la cerere/.test(handoff),
+      /Configurația este (gata|salvată)\. Prețul îl stabilește Proprietarul/.test(handoff) && /După (înghețare|emitere)/.test(handoff) && /Înapoi la cerere/.test(handoff),
     );
-    ctx.check("RC-1b OWNER_ONLY: no unavailable freeze action and no false hand-over button (UI)", !(await commercial.canClick("Îngheață oferta")) && !/Trimite Proprietarului/.test(handoff));
+    ctx.check("RC-1b OWNER_ONLY: no unavailable freeze action and no false hand-over button (UI)", !(await canIssue(commercial)) && !/Trimite Proprietarului/.test(handoff));
     ctx.check("RC-6 Comercial sees no unconfirmed-rate list and no error-toned cost notice (UI)", !/Tarife neconfirmate|Vezi cele \d+ tarife|Cost intern indisponibil/.test(handoff) && /vizibil doar Proprietarului/.test(handoff));
     await responsive(commercial, "RC_COMMERCIAL_owner-only-handoff", "OWNER_ONLY: configurație gata, prețul îl stabilește Proprietarul", () => commercial.has(/Prețul îl stabilește Proprietarul/));
     // Focus and keyboard: the way back is a reachable link.
@@ -1115,7 +1198,7 @@ async function roleClarity(ctx) {
     await owner.shot("RC_OWNER_requests-list", { step: "RC-1d", role: "Proprietar", state: "Cereri: cererea pregătită de Comercial" }, { full: true });
     owner.configuratorUrl = ownerOnly.url;
     await fillAndConfirm(owner);
-    await owner.click("Pregătire ofertă");
+    await openPriceStep(owner);
     ctx.check("RC-1e the Owner can set the price in OWNER_ONLY (UI)", await owner.has(/Preț net al produsului, fără TVA/));
     // The disclosure is shown next to a valid client price.
     await price(owner, 1300);
@@ -1127,13 +1210,10 @@ async function roleClarity(ctx) {
     const autonomous = await newRequest("rcAutonomous", "Client Autonomie SRL");
     commercial.configuratorUrl = autonomous.url;
     await fillAndConfirm(commercial);
-    await commercial.click("Pregătire ofertă");
+    await openPriceStep(commercial);
     await price(commercial, 1200);
-    ctx.check("RC-2 AUTONOMOUS: Comercial prices and may freeze, without internal cost (UI)", (await commercial.canClick("Îngheață oferta")) && !(await commercial.has(/Tarife neconfirmate|marj/i)));
-    await commercial.click("Îngheață oferta", { exact: true });
-    await commercial.waitText(/Deschide oferta înghețată/, 20000);
-    await commercial.click("Deschide oferta înghețată");
-    await commercial.page.waitFor(`/oferte\\//.test(location.pathname)`, 20000);
+    ctx.check("RC-2 AUTONOMOUS: Comercial prices and may freeze, without internal cost (UI)", (await canIssue(commercial)) && !(await commercial.has(/Tarife neconfirmate|marj/i)));
+    await issueQuote(commercial);
     const autonomousQuoteUrl = await commercial.page.eval("location.pathname");
     const autonomousQuote = (await owner.api(quoteApi(autonomousQuoteUrl))).body;
     const autonomousOffering = (autonomousQuote?.quoteSnapshot ?? autonomousQuote)?.offering;
@@ -1150,44 +1230,47 @@ async function roleClarity(ctx) {
     const strict = await newRequest("rcStrict", "Client Respingere SRL");
     commercial.configuratorUrl = strict.url;
     await fillAndConfirm(commercial);
-    await commercial.click("Pregătire ofertă");
+    await openPriceStep(commercial);
     await price(commercial, 1450);
-    ctx.check("RC-3 APPROVAL: over the rule, approval required, no freeze (UI)", (await commercial.has(/Necesită aprobarea Proprietarului/)) && !(await commercial.canClick("Îngheață oferta")));
+    await commercial.waitText(/Necesită aprobarea Proprietarului/, 15000);
+    ctx.check("RC-3 APPROVAL: over the rule, approval required, no freeze (UI)", (await commercial.has(/Necesită aprobarea Proprietarului/)) && !(await canIssue(commercial)));
     await commercial.fill("Notă pentru Proprietar (opțional)", "Client strategic");
     await commercial.click("Trimite spre aprobare");
     await commercial.waitText(/Așteaptă aprobarea Proprietarului/, 15000);
-    await owner.go("/admin/offering");
-    await owner.waitText(/Client Respingere SRL/, 20000);
-    await owner.fill("Motivul deciziei", "Preț prea mare pentru acest client");
+    await openQueuedApproval(owner, "Client Respingere SRL");
+    ctx.check("RC-3b decision shows the exception price and the Comercial note", (await owner.has(/1\.450,00 EUR/)) && (await owner.has(/Client strategic/)));
+    await owner.click("Respinge…");
+    await owner.fill("Motivul respingerii", "Preț prea mare pentru acest client");
     await owner.click("Respinge", { exact: true });
     await owner.settle(1500);
     const rejected = ((await owner.api("/api/admin/price-approvals?status=REJECTED")).body?.approvals ?? []).find((item) => item.requestId === strict.requestId);
     ctx.check("RC-3b Owner rejects with a reason (UI), recorded by the server", Boolean(rejected), rejected?.status);
     await commercial.go(commercial.configuratorUrl);
     await fillAndConfirm(commercial);
-    await commercial.click("Pregătire ofertă");
+    await openPriceStep(commercial);
     await price(commercial, 1450);
     ctx.check("RC-3c Comercial sees the rejection and its reason (UI)", (await commercial.has(/Respins/)) && (await commercial.has(/Preț prea mare pentru acest client/)));
     await responsive(commercial, "RC_COMMERCIAL_approval-rejected", "APPROVAL: solicitare respinsă cu motiv", () => commercial.has(/Preț prea mare pentru acest client/));
     await price(commercial, 950);
-    ctx.check("RC-3d recovery: a price within the rules can be frozen (UI)", await commercial.canClick("Îngheață oferta"));
+    ctx.check("RC-3d recovery: a price within the rules can be frozen (UI)", await canIssue(commercial));
     await price(commercial, 1400);
     await commercial.click("Trimite spre aprobare");
     await commercial.waitText(/Așteaptă aprobarea Proprietarului/, 15000);
     const pendingApproval = ((await owner.api("/api/admin/price-approvals?status=REQUESTED")).body?.approvals ?? []).find((item) => item.requestId === strict.requestId);
-    await owner.go("/admin/offering");
-    await owner.waitText(/Client Respingere SRL/, 20000);
+    await openQueuedApproval(owner, "Client Respingere SRL");
+    ctx.check("RC-4 decision shows the 1400 net price of this variant", await owner.has(/1\.400,00 EUR/));
     await owner.click("Aprobă această variantă");
     await owner.settle(1500);
     const approved = ((await owner.api("/api/admin/price-approvals?status=APPROVED")).body?.approvals ?? []).find((item) => item.approvalId === pendingApproval?.approvalId);
     ctx.check("RC-4 Owner approves the exact 1400 variant (UI)", Boolean(approved), approved?.status);
     await commercial.go(commercial.configuratorUrl);
     await fillAndConfirm(commercial);
-    await commercial.click("Pregătire ofertă");
+    await openPriceStep(commercial);
     await price(commercial, 1400);
-    ctx.check("RC-4b the approval covers the same variant (UI)", (await commercial.has(/Aprobată de Proprietar/)) && (await commercial.canClick("Îngheață oferta")));
+    ctx.check("RC-4b the approval covers the same variant (UI)", (await commercial.has(/Aprobată de Proprietar/)) && (await canIssue(commercial)));
     await price(commercial, 1401);
-    ctx.check("RC-4c a changed price is not covered by the earlier approval (UI)", (await commercial.has(/Necesită aprobarea Proprietarului/)) && !(await commercial.canClick("Îngheață oferta")));
+    await commercial.waitText(/Necesită aprobarea Proprietarului/, 15000);
+    ctx.check("RC-4c a changed price is not covered by the earlier approval (UI)", (await commercial.has(/Necesită aprobarea Proprietarului/)) && !(await canIssue(commercial)));
     await commercial.shot("RC_COMMERCIAL_approval-stale", { step: "RC-4", role: "Comercial", state: "preț schimbat după aprobare: aprobarea nu mai acoperă oferta" }, { full: true });
 
     // Request decisions: close and reopen the OWNER_ONLY request from its own page (Mai multe).

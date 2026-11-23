@@ -40,7 +40,7 @@ const DROPPED_TERMINAL_PROCESSES = new Set<string>([
 
 export function projectAssemblyProduction(
   order: AssemblyOrderSnapshot,
-  input: { snapshotId: string; createdAt: string },
+  input: { snapshotId: string; createdAt: string; skipSiteInstallationOperation?: boolean },
 ): { ok: true; snapshot: AssemblyProductionSnapshot } | AssemblyRuleFailure {
   const retained = order.children.map((child) => ({
     child,
@@ -79,7 +79,8 @@ export function projectAssemblyProduction(
     };
   }
   const serviceLine = order.serviceLine?.lineVersion === 2 ? order.serviceLine : undefined;
-  const operations = serviceLine
+  const includeSiteInstallation = Boolean(serviceLine) && !input.skipSiteInstallationOperation;
+  const operations = includeSiteInstallation
     ? appendInstallAtSiteOperation(assemblyOperations)
     : assemblyOperations;
   if (!operations) {
@@ -89,7 +90,7 @@ export function projectAssemblyProduction(
       reasons: ["Montajul la locație nu poate fi atașat după ambalare."],
     };
   }
-  const siteInstallation = serviceLine
+  const siteInstallation = includeSiteInstallation && serviceLine
     ? projectSiteInstallationOperationalView({
         providerMode: serviceLine.providerMode,
         hostContext: serviceLine.hostContext,
@@ -100,7 +101,7 @@ export function projectAssemblyProduction(
   const eic = reconcileAssemblyEic({
     members: retained,
     assemblyOperations: operations,
-    ...(serviceLine ? { serviceLine } : {}),
+    ...(includeSiteInstallation && serviceLine ? { serviceLine } : {}),
     ...(order.operationCost ? { operationCost: order.operationCost } : {}),
   });
   const operationCost: AssemblyProductionOperationCost | undefined = order.operationCost

@@ -8,6 +8,7 @@ import {
   projectRequestCommercialJourney,
   requestJourneyNextActionLabel,
   type RequestCommercialJourney,
+  type RequestJourneyVariant,
   type RequestJourneyNextAction,
 } from "../commercial/journey/requestJourney.js";
 import type { QuoteOverviewItem, QuoteOverviewStage } from "../quotes/overview.js";
@@ -293,8 +294,10 @@ export function projectRequestJourney(input: {
   quotes: readonly QuoteOverviewItem[];
   assemblies: readonly RequestAssemblyWork[];
   ledger: RequestLedgerInput;
+  variants?: readonly RequestJourneyVariant[];
 }): RequestCommercialJourney {
   return projectRequestCommercialJourney({
+    openVariants: input.variants ?? [],
     status: input.request.status,
     requestHref: requestOverviewHref(input.request.requestId),
     acceptsNewProductWork: requestAcceptsNewProductWork(input.request.status),
@@ -311,6 +314,8 @@ export function projectRequestOverviewItem(input: {
   quotes: readonly QuoteOverviewItem[];
   assemblies?: readonly RequestAssemblyWork[];
   ledger?: RequestLedgerInput;
+  /** Saved quote variants without an issued quote (Commercial Continuity V2). */
+  variants?: readonly RequestJourneyVariant[];
 }): RequestOverviewItem {
   const assemblies = input.assemblies ?? [];
   const ledger = input.ledger ?? OPEN_LEDGER;
@@ -320,6 +325,7 @@ export function projectRequestOverviewItem(input: {
     quotes: input.quotes,
     assemblies,
     ledger,
+    variants: input.variants ?? [],
   });
   const furthestQuote = furthestLinkedQuote(input.quotes);
   return {
@@ -434,6 +440,8 @@ export function projectRequestDetail(input: {
   assemblies?: readonly RequestAssemblyWork[];
   asOf?: string;
   commercial?: CommercialRequestView | null;
+  /** Saved quote variants without an issued quote (Commercial Continuity V2). */
+  variants?: readonly RequestJourneyVariant[];
 }): RequestDetailProjection {
   const assemblies = input.assemblies ?? [];
   const commercial = input.commercial ?? null;
@@ -447,6 +455,7 @@ export function projectRequestDetail(input: {
     request: input.request,
     quotes: input.quotes,
     assemblies,
+    variants: input.variants ?? [],
     ledger: commercial
       ? {
           state: commercial.state,
@@ -475,7 +484,7 @@ export function projectRequestDetail(input: {
     linkedAssemblyId: furthestRequestAssembly(assemblies)?.assemblyId ?? null,
     canStartAdditionalWork:
       commercialState === "OPEN" &&
-      (assemblies.length > 0 || input.quotes.length > 0) &&
+      (assemblies.length > 0 || input.quotes.length > 0 || (input.variants ?? []).length > 0) &&
       requestAcceptsNewProductWork(input.request.status),
     attachments,
     installationScope: presentSiteInstallationScope(

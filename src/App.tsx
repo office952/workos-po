@@ -19,6 +19,7 @@ import {
   parseJobsView,
   parseOperationalReturn,
   parseSpineContext,
+  readVariantId,
   parseFileContext,
   parseTaskContext,
   parsePublicAccountRoute,
@@ -117,15 +118,19 @@ function renderRoute(route: AppRoute, search: string): ReactNode {
       const context = parseSpineContext(search);
       const assemblyId = new URLSearchParams(search).get("assembly");
       const memberRole = new URLSearchParams(search).get("role");
+      const variantId = readVariantId(search);
+      const step = new URLSearchParams(search).get("pas");
       return (
         <ConfiguratorPage
-          key={configuratorContextKey({ ...context, assemblyId })}
+          key={`${configuratorContextKey({ ...context, assemblyId })}\u001f${variantId ?? ""}`}
+          variantId={variantId}
+          openReviewStep={step === "verificare"}
           customerId={context.customerId}
           requestId={context.requestId}
           productCode={context.productCode}
           assemblyId={assemblyId}
           memberRole={readAssemblyMemberRole(memberRole)}
-          openPriceStep={new URLSearchParams(search).get("pas") === "pret"}
+          openPriceStep={step === "pret"}
         />
       );
     }

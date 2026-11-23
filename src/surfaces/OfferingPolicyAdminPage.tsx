@@ -1,5 +1,6 @@
-import { useId, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
+  CONTROL_TOTAL_MODE,
   presentOfferingAdmin,
   presentPriceApprovals,
   type OfferingAdminModel,
@@ -20,9 +21,8 @@ import {
 } from "../admin/adminParts";
 import { adminFailureContent, describeAdminFailure } from "../admin/serverMessages";
 import { useAdminLeaveGuard } from "../admin/useAdminLeaveGuard";
-import { decidePriceApproval, fetchOfferingPolicyAdmin, fetchPriceApprovals, saveOfferingPolicy } from "../api/commercialFinancial";
-import { TransportError, readTransportReasons } from "../api/http";
-import { Button } from "../components/Button";
+import { fetchOfferingPolicyAdmin, fetchPriceApprovals, saveOfferingPolicy } from "../api/commercialFinancial";
+import { TransportError } from "../api/http";
 import { InlineAlert } from "../components/InlineAlert";
 import { LoadingFloor } from "../components/LoadingFloor";
 import { StateNotice } from "../components/StateNotice";
@@ -30,7 +30,7 @@ import { invalidateResources } from "../data/resourceCache";
 import { resourceKeys } from "../data/resourceKeys";
 import { useResource } from "../data/useResource";
 import { formatMoney, formatTimestamp } from "../presentation/format";
-import { requestHref } from "../routing/appRoute";
+import { configuratorVariantHref, requestHref } from "../routing/appRoute";
 import "../styles/surfaces/commercial-financial.css";
 
 type Draft = { mode: string; incomplete: boolean; margin: string; maxValue: string };
@@ -42,6 +42,8 @@ const MODE_DESCRIPTIONS: Record<string, string> = {
     "Comercialul stabilește prețul net și îngheață oferta. Nu vede costul intern și nu acceptă comanda.",
   COMMERCIAL_APPROVAL_POLICY:
     "Comercialul îngheață ofertele care respectă regulile de mai jos. Celelalte îți sunt trimise spre aprobare.",
+  [CONTROL_TOTAL_MODE]:
+    "Comercialul configurează și propune prețul. Fiecare ofertă a lui îți este trimisă spre aprobare, indiferent de sumă sau marjă.",
 };
 
 const SAVE_EFFECTS = [
@@ -116,12 +118,15 @@ export function OfferingPolicyAdminPage() {
     if (!draft || !model || invalid) return;
     setSaveState("pending");
     setErrorMessage(null);
+    const controlTotal = draft.mode === CONTROL_TOTAL_MODE;
     const result = await saveOfferingPolicy({
-      mode: draft.mode,
+      // Control total is saved as the approval mode with its unconditional rule.
+      mode: controlTotal ? "COMMERCIAL_APPROVAL_POLICY" : draft.mode,
       rules: {
         incompleteCostRequiresApproval: approvalMode ? draft.incomplete : false,
         minimumMarginPercent: approvalMode ? (margin as number | null) : null,
         maximumNetValue: approvalMode ? (maxValue as number | null) : null,
+        ...(controlTotal ? { everyOfferRequiresApproval: true } : {}),
       },
       expectedVersion: model.policy.version,
     });
@@ -206,6 +211,10 @@ export function OfferingPolicyAdminPage() {
                   {errorMessage} Modificările tale sunt păstrate.
                 </InlineAlert>
               ) : null}
+              <PriceApprovalsSection
+                approvals={approvals.data ?? []}
+                loading={approvals.status === "loading" && !approvals.data}
+              />
               <AdminSection title="Cine stabilește prețul și îngheață oferta">
                 <AdminPolicyOptions
                   name="offering-mode"
@@ -216,10 +225,17 @@ export function OfferingPolicyAdminPage() {
                   options={model.modes.map((item) => ({
                     value: item.mode,
                     label: item.label,
-                    description: MODE_DESCRIPTIONS[item.mode],
+                    description: MODE_DESCRIPTIONS[item.mode] ?? item.summary,
                   }))}
                   onChange={(mode) => setDraft({ ...draft, mode })}
                 />
+                {model.affectedVariants > 0 && draft.mode !== model.policy.mode ? (
+                  <p className="ui-note" data-testid="offering-affected-variants">
+                    {model.affectedVariants === 1
+                      ? "O variantă de ofertă neemisă are o aprobare în curs sau acordată. După salvare, aprobarea trebuie cerută din nou."
+                      : `${model.affectedVariants} variante de ofertă neemise au aprobări în curs sau acordate. După salvare, aprobările trebuie cerute din nou.`}
+                  </p>
+                ) : null}
               </AdminSection>
               {approvalMode ? (
                 <AdminSection
@@ -270,10 +286,6 @@ export function OfferingPolicyAdminPage() {
                   ) : null}
                 </AdminSection>
               ) : null}
-              <PriceApprovalsSection
-                approvals={approvals.data ?? []}
-                loading={approvals.status === "loading" && !approvals.data}
-              />
             </>
           }
           aside={
@@ -371,30 +383,13 @@ function PriceApprovalsSection({ approvals, loading }: { approvals: PriceApprova
 }
 
 function ApprovalRow({ item }: { item: PriceApprovalItem }) {
-  const [reason, setReason] = useState("");
-  const [state, setState] = useState<"idle" | "pending" | "error">("idle");
-  const [error, setError] = useState<string | null>(null);
-  const reasonId = useId();
-
-  async function decide(decision: "APPROVED" | "REJECTED"): Promise<void> {
-    if (decision === "REJECTED" && reason.trim() === "") {
-      setState("error");
-      setError("Scrie motivul respingerii; Comercialul îl va vedea.");
-      return;
-    }
-    setState("pending");
-    setError(null);
-    const result = await decidePriceApproval(item.approvalId, decision, reason.trim() === "" ? null : reason.trim());
-    if (result.ok) {
-      invalidateResources(resourceKeys.priceApprovals(), resourceKeys.offeringAdmin());
-      setState("idle");
-      return;
-    }
-    setState("error");
-    setError(readTransportReasons(result.body).join(" ") || "Decizia nu a putut fi salvată.");
-  }
-
   const total = (item.netPrice ?? 0) + (item.installationNetPrice ?? 0);
+  const decideHref =
+    item.requestId && item.variantId && item.productCode
+      ? configuratorVariantHref({ customerId: null, requestId: item.requestId, productCode: item.productCode }, item.variantId, "pret")
+      : item.requestId
+        ? requestHref(item.requestId)
+        : null;
   return (
     <li className="cfc-approval">
       <div className="cfc-approval__head">
@@ -412,23 +407,13 @@ function ApprovalRow({ item }: { item: PriceApprovalItem }) {
         Cerută de {item.requestedByLabel ?? "—"} · {formatTimestamp(item.requestedAt) ?? ""}
         {item.requestNote ? ` · Notă: ${item.requestNote}` : ""}
       </p>
-      <label className="adm-field__label" htmlFor={reasonId}>
-        Motivul deciziei (obligatoriu la respingere)
-      </label>
-      <textarea id={reasonId} rows={2} maxLength={500} value={reason} disabled={state === "pending"} onChange={(event) => setReason(event.target.value)} />
-      {error ? (
-        <InlineAlert tone="error" title="Decizia nu a fost salvată">
-          {error}
-        </InlineAlert>
+      {decideHref ? (
+        <p>
+          <a className="text-link" href={decideHref}>
+            Deschide varianta și decide acolo
+          </a>
+        </p>
       ) : null}
-      <div className="cfc-approval__actions">
-        <Button disabled={state === "pending"} onClick={() => void decide("APPROVED")}>
-          Aprobă această variantă
-        </Button>
-        <Button variant="secondary" disabled={state === "pending"} onClick={() => void decide("REJECTED")}>
-          Respinge
-        </Button>
-      </div>
     </li>
   );
 }

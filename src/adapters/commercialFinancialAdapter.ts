@@ -36,17 +36,32 @@ export type OfferingPolicyView = {
 export type OfferingAdminModel = {
   policy: OfferingPolicyView;
   versions: OfferingPolicyView[];
-  modes: { mode: string; label: string }[];
+  modes: { mode: string; label: string; summary?: string }[];
   openApprovals: number;
+  /** Unissued quote variants whose approval a policy change would make stale. */
+  affectedVariants: number;
+};
+
+/**
+ * The four commercial modes as the page selects them. Control total is stored by the server as
+ * the approval mode with its unconditional rule; here it is a choice of its own.
+ */
+export const CONTROL_TOTAL_MODE = "CONTROL_TOTAL";
+const PAGE_MODE_BY_CONTROL_MODE: Record<string, string> = {
+  OWNER_ONLY: "OWNER_ONLY",
+  CONTROL_TOTAL: CONTROL_TOTAL_MODE,
+  CONTROL_BY_RULES: "COMMERCIAL_APPROVAL_POLICY",
+  COMMERCIAL_AUTONOMY: "COMMERCIAL_AUTONOMOUS",
 };
 
 function presentPolicy(value: unknown): OfferingPolicyView | null {
   const row = record(value);
   if (!row || typeof row.mode !== "string" || typeof row.version !== "number") return null;
   const rules = record(row.rules) ?? {};
+  const controlTotal = row.controlMode === CONTROL_TOTAL_MODE;
   return {
-    mode: row.mode,
-    modeLabel: text(row.modeLabel) ?? row.mode,
+    mode: controlTotal ? CONTROL_TOTAL_MODE : row.mode,
+    modeLabel: text(row.controlModeLabel) ?? text(row.modeLabel) ?? row.mode,
     rules: {
       incompleteCostRequiresApproval: rules.incompleteCostRequiresApproval === true,
       minimumMarginPercent: num(rules.minimumMarginPercent),
@@ -69,17 +84,29 @@ export function presentOfferingAdmin(value: unknown): OfferingAdminModel | null 
       const presented = presentPolicy(row);
       return presented ? [presented] : [];
     }),
-    modes: list(body.modes).flatMap((row) => {
-      const item = record(row);
-      return item && typeof item.mode === "string" ? [{ mode: item.mode, label: text(item.label) ?? item.mode }] : [];
-    }),
+    modes:
+      list(body.controlModes).length > 0
+        ? list(body.controlModes).flatMap((row) => {
+            const item = record(row);
+            const mode = item && typeof item.controlMode === "string" ? PAGE_MODE_BY_CONTROL_MODE[item.controlMode] : undefined;
+            return item && mode
+              ? [{ mode, label: text(item.label) ?? mode, ...(text(item.summary) ? { summary: text(item.summary) as string } : {}) }]
+              : [];
+          })
+        : list(body.modes).flatMap((row) => {
+            const item = record(row);
+            return item && typeof item.mode === "string" ? [{ mode: item.mode, label: text(item.label) ?? item.mode }] : [];
+          }),
     openApprovals: num(body.openApprovals) ?? 0,
+    affectedVariants: num(body.affectedVariants) ?? 0,
   };
 }
 
 export type PriceApprovalItem = {
   approvalId: string;
   requestId: string;
+  variantId: string | null;
+  productCode: string | null;
   requestReference: string | null;
   customerLabel: string | null;
   status: string;
@@ -106,6 +133,8 @@ export function presentPriceApprovals(value: unknown): PriceApprovalItem[] {
       {
         approvalId: item.approvalId,
         requestId: text(item.requestId) ?? "",
+        variantId: text(item.variantId),
+        productCode: text(item.productCode),
         requestReference: text(item.requestReference),
         customerLabel: text(item.customerLabel),
         status: text(item.status) ?? "",

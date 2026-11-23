@@ -335,6 +335,7 @@ import {
   persistInstallationManualPrice,
   persistUpdatedCommercialRequest,
 } from "../requests/store.js";
+import { openVariantStages } from "../requests/variantStore.js";
 import {
   decorateQuotesWithCommercial,
   projectStoredCommercialView,
@@ -762,7 +763,7 @@ export type ProductSystemRuntime = {
     actor: { userId: string; label: string },
     expectedVersion: number,
   ): OfferingPolicySaveResult;
-  readLatestPriceApproval(requestId: string, productCode: string): PriceApprovalRecord | null;
+  readLatestPriceApproval(requestId: string, productCode: string, variantId?: string | null): PriceApprovalRecord | null;
   readPriceApproval(approvalId: string): PriceApprovalRecord | null;
   listPriceApprovals(options?: { status?: PriceApprovalStatus; limit?: number }): PriceApprovalRecord[];
   listPriceApprovalEvents(approvalId: string): ApprovalEvent[];
@@ -770,6 +771,7 @@ export type ProductSystemRuntime = {
     input: Omit<Parameters<typeof requestPriceApproval>[1], "subject"> & {
       requestId: string;
       productCode: string;
+      variantId?: string | null;
     },
     actor: { userId: string; label: string },
   ): ApprovalRequestResult;
@@ -1470,8 +1472,8 @@ export function createProductSystemRuntimeFromOpenDb(
     saveOfferingPolicy(input, actor, expectedVersion) {
       return saveOfferingPolicy(db, input, actor, expectedVersion);
     },
-    readLatestPriceApproval(requestId, productCode) {
-      return readLatestPriceApproval(db, currentOrganizationId(), requestId, productCode);
+    readLatestPriceApproval(requestId, productCode, variantId = null) {
+      return readLatestPriceApproval(db, currentOrganizationId(), requestId, productCode, variantId);
     },
     readPriceApproval(approvalId) {
       return readPriceApproval(db, currentOrganizationId(), approvalId);
@@ -1483,10 +1485,19 @@ export function createProductSystemRuntimeFromOpenDb(
       return listPriceApprovalEvents(db, approvalId);
     },
     requestPriceApproval(input, actor) {
-      const { requestId, productCode, ...rest } = input;
+      const { requestId, productCode, variantId, ...rest } = input;
       return requestPriceApproval(
         db,
-        { ...rest, subject: { kind: "PRODUCT_QUOTE", organizationId: currentOrganizationId(), requestId, productCode } },
+        {
+          ...rest,
+          subject: {
+            kind: "PRODUCT_QUOTE",
+            organizationId: currentOrganizationId(),
+            requestId,
+            productCode,
+            ...(variantId ? { variantId } : {}),
+          },
+        },
         actor,
       );
     },
@@ -1692,6 +1703,7 @@ export function createProductSystemRuntimeFromOpenDb(
         hasLinkedQuotes: requestHasLinkedQuotes(db, request.requestId),
         assemblies: requestAssemblyWork(db, organizationId, request.requestId),
         commercial: projectStoredCommercialView(db, organizationId, request.requestId, true, true),
+        variants: openVariantStages(db, request.requestId),
       });
     },
     readRequestAssemblyWork(requestId) {
@@ -1948,6 +1960,7 @@ function requestOverviewItems(db: SqliteDatabase, organizationId: string) {
         closedAt: ledger.closedAt,
         reopenedAt: ledger.reopenedAt,
       },
+      variants: openVariantStages(db, request.requestId),
     });
   });
 }

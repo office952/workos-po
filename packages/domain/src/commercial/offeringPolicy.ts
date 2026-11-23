@@ -29,6 +29,11 @@ export type OfferingPolicyRules = {
   minimumMarginPercent: number | null;
   /** Net value above this amount (EUR, without VAT) ⇒ approval. `null` = rule off. */
   maximumNetValue: number | null;
+  /**
+   * Control total (Commercial Continuity V2): every quote priced by the Comercial role needs the
+   * Owner's approval, whatever its value or margin. Absent or false on every earlier version.
+   */
+  everyOfferRequiresApproval?: boolean;
 };
 
 export type OfferingPolicy = {
@@ -49,6 +54,7 @@ export type OfferingPolicyInput = {
     incompleteCostRequiresApproval?: unknown;
     minimumMarginPercent?: unknown;
     maximumNetValue?: unknown;
+    everyOfferRequiresApproval?: unknown;
   } | null;
 };
 
@@ -126,16 +132,24 @@ export function validateOfferingPolicyInput(
       reason: "Valoarea maximă trebuie să fie un număr pozitiv.",
     });
   }
+  const everyOffer = raw.everyOfferRequiresApproval;
+  if (everyOffer !== undefined && typeof everyOffer !== "boolean") {
+    issues.push({ field: "everyOfferRequiresApproval", reason: "Valoarea regulii nu este validă." });
+  }
   if (issues.length > 0) return { ok: false, issues };
   const mode = input.mode as OfferingPolicyMode;
+  // Control total is the approval mode with the unconditional rule. The value and margin rules are
+  // not stored with it: nothing may let a quote through without the Owner.
   const rules: OfferingPolicyRules =
-    mode === "COMMERCIAL_APPROVAL_POLICY"
-      ? {
-          incompleteCostRequiresApproval: incomplete === true,
-          minimumMarginPercent: margin as number | null,
-          maximumNetValue: maxValue as number | null,
-        }
-      : EMPTY_OFFERING_RULES;
+    mode !== "COMMERCIAL_APPROVAL_POLICY"
+      ? EMPTY_OFFERING_RULES
+      : everyOffer === true
+        ? { ...EMPTY_OFFERING_RULES, everyOfferRequiresApproval: true }
+        : {
+            incompleteCostRequiresApproval: incomplete === true,
+            minimumMarginPercent: margin as number | null,
+            maximumNetValue: maxValue as number | null,
+          };
   if (mode === "COMMERCIAL_APPROVAL_POLICY" && !hasActiveOfferingRule(rules)) {
     return {
       ok: false,
@@ -152,10 +166,68 @@ export function validateOfferingPolicyInput(
 
 export function hasActiveOfferingRule(rules: OfferingPolicyRules): boolean {
   return (
+    rules.everyOfferRequiresApproval === true ||
     rules.incompleteCostRequiresApproval ||
     rules.minimumMarginPercent !== null ||
     rules.maximumNetValue !== null
   );
+}
+
+/**
+ * The four commercial modes an Owner chooses from. Control total is not a fourth stored mode: it
+ * is the approval mode with the unconditional rule, so the approval mechanism stays single.
+ */
+export const OFFERING_CONTROL_MODES = ["OWNER_ONLY", "CONTROL_TOTAL", "CONTROL_BY_RULES", "COMMERCIAL_AUTONOMY"] as const;
+export type OfferingControlMode = (typeof OFFERING_CONTROL_MODES)[number];
+
+export function offeringControlMode(policy: Pick<OfferingPolicy, "mode" | "rules">): OfferingControlMode {
+  switch (policy.mode) {
+    case "OWNER_ONLY":
+      return "OWNER_ONLY";
+    case "COMMERCIAL_AUTONOMOUS":
+      return "COMMERCIAL_AUTONOMY";
+    case "COMMERCIAL_APPROVAL_POLICY":
+      return policy.rules.everyOfferRequiresApproval === true ? "CONTROL_TOTAL" : "CONTROL_BY_RULES";
+    default: {
+      const _exhaustive: never = policy.mode;
+      return _exhaustive;
+    }
+  }
+}
+
+export function offeringControlModeLabel(mode: OfferingControlMode): string {
+  switch (mode) {
+    case "OWNER_ONLY":
+      return "Doar Proprietarul";
+    case "CONTROL_TOTAL":
+      return "Control total";
+    case "CONTROL_BY_RULES":
+      return "Control pe reguli";
+    case "COMMERCIAL_AUTONOMY":
+      return "Autonomie comercială";
+    default: {
+      const _exhaustive: never = mode;
+      return _exhaustive;
+    }
+  }
+}
+
+/** One sentence per mode: what the Comercial role may do. No thresholds, no internal values. */
+export function offeringControlModeSummary(mode: OfferingControlMode): string {
+  switch (mode) {
+    case "OWNER_ONLY":
+      return "Comercialul configurează. Prețul și oferta sunt ale Proprietarului.";
+    case "CONTROL_TOTAL":
+      return "Comercialul propune prețul. Fiecare ofertă a lui are nevoie de aprobarea Proprietarului.";
+    case "CONTROL_BY_RULES":
+      return "Comercialul emite în limitele firmei. Excepțiile au nevoie de aprobarea Proprietarului.";
+    case "COMMERCIAL_AUTONOMY":
+      return "Comercialul stabilește prețul și emite. Totul rămâne consemnat.";
+    default: {
+      const _exhaustive: never = mode;
+      return _exhaustive;
+    }
+  }
 }
 
 export function sameOfferingPolicy(
@@ -166,7 +238,8 @@ export function sameOfferingPolicy(
     current.mode === next.mode &&
     current.rules.incompleteCostRequiresApproval === next.rules.incompleteCostRequiresApproval &&
     current.rules.minimumMarginPercent === next.rules.minimumMarginPercent &&
-    current.rules.maximumNetValue === next.rules.maximumNetValue
+    current.rules.maximumNetValue === next.rules.maximumNetValue &&
+    (current.rules.everyOfferRequiresApproval === true) === (next.rules.everyOfferRequiresApproval === true)
   );
 }
 
@@ -207,6 +280,7 @@ export const OFFERING_INCOMPLETE_POLICY_REASON =
   "Regulile de ofertare ale firmei sunt incomplete. Proprietarul trebuie să le finalizeze.";
 
 export const OFFERING_RULE_IDS = [
+  "EVERY_OFFER",
   "INCOMPLETE_INTERNAL_COST",
   "MINIMUM_MARGIN",
   "MINIMUM_MARGIN_UNVERIFIABLE",
@@ -216,6 +290,8 @@ export type OfferingRuleId = (typeof OFFERING_RULE_IDS)[number];
 
 export function offeringRuleLabel(rule: OfferingRuleId): string {
   switch (rule) {
+    case "EVERY_OFFER":
+      return "Politica firmei: fiecare ofertă a Comercialului se aprobă (Control total)";
     case "INCOMPLETE_INTERNAL_COST":
       return "Costul intern nu este complet";
     case "MINIMUM_MARGIN":
@@ -268,6 +344,10 @@ export function evaluateOfferingPolicy(input: OfferingEvaluationInput): Offering
     return { ...base, outcome: "WITHIN_POLICY", triggeredRules: [] };
   }
   const rules = input.policy.rules;
+  if (rules.everyOfferRequiresApproval === true) {
+    // Control total: no value, margin or cost fact can let the Comercial role through.
+    return { ...base, outcome: "APPROVAL_REQUIRED", triggeredRules: ["EVERY_OFFER"] };
+  }
   const triggered: OfferingRuleId[] = [];
   const costKnown =
     input.internalCostComplete && typeof input.internalCost === "number" && Number.isFinite(input.internalCost);
@@ -303,9 +383,12 @@ export function commercialOfferingView(evaluation: OfferingEvaluation): Commerci
     case "WITHIN_POLICY":
       return { outcome: "WITHIN_POLICY", message: "Oferta respectă regulile firmei." };
     case "APPROVAL_REQUIRED":
+      // The mode is not a financial fact: naming it tells the Comercial why, without a threshold.
       return {
         outcome: "APPROVAL_REQUIRED",
-        message: "Oferta necesită aprobarea Proprietarului înainte de înghețare.",
+        message: evaluation.triggeredRules.includes("EVERY_OFFER")
+          ? "În această firmă, fiecare ofertă este aprobată de Proprietar înainte de emitere."
+          : "Oferta necesită aprobarea Proprietarului înainte de înghețare.",
       };
     case "NOT_PERMITTED":
       return { outcome: "NOT_PERMITTED", message: OFFERING_OWNER_ONLY_REASON };
@@ -331,6 +414,11 @@ export type PriceApprovalSubject = {
   organizationId: string;
   requestId: string;
   productCode: string;
+  /**
+   * The saved quote variant the approval is about (Commercial Continuity V2). Absent on every
+   * approval requested before variants existed, so those binding hashes are unchanged.
+   */
+  variantId?: string;
 };
 
 /**

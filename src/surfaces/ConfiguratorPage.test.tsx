@@ -298,7 +298,7 @@ async function confirmReady() {
     expect(screen.getByRole("button", { name: "Confirmă configurația" })).toBeEnabled();
   });
   await user.click(screen.getByRole("button", { name: "Confirmă configurația" }));
-  await waitFor(() => expect(screen.getByRole("tab", { name: /Pregătire ofertă/ })).toHaveAttribute("aria-selected", "true"));
+  await waitFor(() => expect(screen.getByRole("tab", { name: /Preț și ofertă/ })).toHaveAttribute("aria-selected", "true"));
   const net = await screen.findByLabelText("Preț net al produsului, fără TVA");
   await user.type(net, "100");
   await user.click(screen.getByRole("button", { name: "Confirmă prețul" }));
@@ -353,7 +353,7 @@ describe("ConfiguratorPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Modifică Textul literelor" }));
     await waitFor(() => expect(screen.getByLabelText("Textul literelor")).toHaveFocus());
     expect(screen.getByLabelText("Textul literelor")).toHaveValue("NORD");
-    await userEvent.click(screen.getByRole("tab", { name: "Pregătire ofertă" }));
+    await userEvent.click(screen.getByRole("tab", { name: "Preț și ofertă" }));
     expect(screen.getByRole("button", { name: "Verifică și confirmă configurația" })).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/confirm"))).toBe(false);
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/quote-snapshots"))).toBe(false);
@@ -365,7 +365,7 @@ describe("ConfiguratorPage", () => {
     await screen.findByLabelText("Textul literelor");
     await userEvent.click(screen.getByRole("button", { name: "Verifică configurația" }));
     await userEvent.click(screen.getByRole("button", { name: "Confirmă configurația" }));
-    await waitFor(() => expect(screen.getByRole("tab", { name: "Pregătire ofertă" })).toHaveAttribute("aria-selected", "true"));
+    await waitFor(() => expect(screen.getByRole("tab", { name: "Preț și ofertă" })).toHaveAttribute("aria-selected", "true"));
     expect(screen.getByText(/Detalii de calcul și verificare/).closest("details")).not.toHaveAttribute("open");
     expect(screen.getByRole("heading", { name: "Cost intern" })).toBeVisible();
     await userEvent.click(screen.getByRole("tab", { name: "Configurație" }));
@@ -529,7 +529,7 @@ describe("ConfiguratorPage", () => {
     await user.type(net, "142");
     const confirms = () => fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/confirm"));
     expect(confirms()).toHaveLength(2);
-    await user.click(screen.getByRole("tab", { name: /Pregătire ofertă/ }));
+    await user.click(screen.getByRole("tab", { name: /Preț și ofertă/ }));
     expect(net).toHaveValue("142");
     expect(confirms()).toHaveLength(2);
     await user.click(screen.getByRole("tab", { name: /Configurație/ }));
@@ -543,7 +543,7 @@ describe("ConfiguratorPage", () => {
     const fetchMock = installFetch({ rate: 3, cost: 37.5 });
     renderConfigurator({ assemblyId: "asm:1", memberRole: "SIGNAGE_LETTERS" });
     await screen.findByLabelText("Textul literelor");
-    await userEvent.click(screen.getByRole("tab", { name: /Pregătire ofertă/ }));
+    await userEvent.click(screen.getByRole("tab", { name: /Preț și ofertă/ }));
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/members"))).toBe(false);
     await confirmReady();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/assemblies/asm%3A1/members", expect.objectContaining({ method: "POST" })));
@@ -628,7 +628,7 @@ describe("ConfiguratorPage", () => {
     fetchMock.mockImplementation((input, init) => String(input).includes("/members/SIGNAGE_LETTERS") ? confirmedMemberResponse(true) : original(input, init));
     renderConfigurator({ assemblyId: "asm:1", memberRole: "SIGNAGE_LETTERS" });
     await waitFor(() => expect(screen.getByLabelText("Textul literelor")).toHaveValue("NORD"));
-    await userEvent.click(screen.getByRole("tab", { name: /Pregătire ofertă/ }));
+    await userEvent.click(screen.getByRole("tab", { name: /Preț și ofertă/ }));
     const price = await screen.findByTestId("confirmed-member-price");
     expect(price).toHaveTextContent("Ultima confirmare acceptată în ansamblu");
     expect(price).toHaveTextContent("646,38 EUR");
@@ -645,7 +645,7 @@ describe("ConfiguratorPage", () => {
     renderConfigurator({ assemblyId: "asm:1", memberRole: "SIGNAGE_LETTERS" });
     await waitFor(() => expect(screen.getByLabelText("Textul literelor")).toHaveValue("NORD"));
     await userEvent.type(screen.getByLabelText("Textul literelor"), "X");
-    await userEvent.click(screen.getByRole("tab", { name: /Pregătire ofertă/ }));
+    await userEvent.click(screen.getByRole("tab", { name: /Preț și ofertă/ }));
     expect(await screen.findByText("Configurația a fost modificată")).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/members"))).toBe(false);
   });
@@ -657,7 +657,7 @@ describe("ConfiguratorPage", () => {
     renderConfigurator({ assemblyId: "asm:1", memberRole: "SIGNAGE_LETTERS" });
     expect(await screen.findByText("Doar consultare")).toBeInTheDocument();
     expect(await screen.findByLabelText("Textul literelor")).toBeDisabled();
-    await userEvent.click(screen.getByRole("tab", { name: /Pregătire ofertă/ }));
+    await userEvent.click(screen.getByRole("tab", { name: /Preț și ofertă/ }));
     expect(await screen.findByTestId("confirmed-member-price")).toHaveTextContent("646,38 EUR");
     expect(screen.queryByRole("button", { name: "Verifică și reconfirmă configurația" })).not.toBeInTheDocument();
   });
@@ -1808,7 +1808,7 @@ describe("published preset application", () => {
     expect(screen.queryByRole("button", { name: "Îngheață oferta", hidden: true })).not.toBeInTheDocument();
     expect(screen.queryByTestId("customer-price")).not.toBeInTheDocument();
     expect(screen.getByText("Se actualizează")).toBeInTheDocument();
-    await user.click(screen.getByRole("tab", { name: /Pregătire ofertă/ }));
+    await user.click(screen.getByRole("tab", { name: /Preț și ofertă/ }));
     expect(screen.getByText("Prețul clientului apare după calculul de pe server.")).toBeInTheDocument();
     expect(screen.getByText("După confirmarea configurației introduci prețul net pentru această ofertă. Costul intern rămâne separat.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Deschide oferta înghețată" })).toBeInTheDocument();
@@ -1880,5 +1880,63 @@ describe("assembly letters mounting drafts", () => {
       "constructive.mountingContext": "acm_panel",
       "back.supportKind": "PANEL",
     });
+  });
+});
+
+describe("saved variant local recovery", () => {
+  afterEach(() => {
+    resetResourceCache();
+  });
+
+  it("does not overwrite the saved variant while the person still chooses which copy to keep", async () => {
+    seedOwnedDrafts({ "root.inscription": "LOCAL" });
+    const variant = {
+      variantId: "var-1",
+      requestId: "req-1",
+      indexLabel: "01",
+      productCode: LETTERS_PRODUCT,
+      productLabel: "Litere",
+      inscription: "SERVER",
+      lifecycle: "ACTIVE",
+      version: 3,
+      state: "READY_TO_VERIFY",
+      stateLabel: "Gata de verificare",
+      action: "VERIFY",
+      actionLabel: "Verifică configurația",
+      needsAction: true,
+      missingCount: 0,
+      updatedAt: "2026-11-22T10:00:00Z",
+      updatedByLabel: "Proprietar",
+    };
+    const fetchMock = installFetch({ rate: 3.2, cost: 40 });
+    const fallback = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/api/requests/req-1/variants/var-1")) {
+        if (init?.method === "PATCH") {
+          return jsonResponse({ error: "unexpected_autosave" }, 500);
+        }
+        return jsonResponse({
+          variant,
+          values: { "root.inscription": "SERVER", "face.finish": "none" },
+        });
+      }
+      if (url.endsWith("/api/requests/req-1/variants")) {
+        return jsonResponse({ variants: [variant] });
+      }
+      if (url.endsWith("/api/requests/req-1/journal")) {
+        return jsonResponse({ entries: [], officialEvents: [] });
+      }
+      return fallback ? fallback(input, init) : jsonResponse({});
+    });
+    renderConfigurator({ variantId: "var-1" });
+    expect(await screen.findByText("Modificări locale nesalvate")).toBeInTheDocument();
+    await new Promise((resolve) => window.setTimeout(resolve, 900));
+    expect(
+      fetchMock.mock.calls.some(
+        ([url, init]) => String(url).includes("/api/requests/req-1/variants/var-1") && init?.method === "PATCH",
+      ),
+    ).toBe(false);
+    expect(screen.getByLabelText("Textul literelor")).toHaveValue("LOCAL");
   });
 });

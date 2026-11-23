@@ -1,0 +1,195 @@
+/*
+ * Commercial Continuity V2 · saved quote variant: save line, conflict choice, owner decision,
+ * request variant rows and the commercial journal. Uses the existing tokens only; the visual
+ * direction of these additions is pending Owner acceptance in WorkOS-N (R2 §16).
+ */
+
+.variant-save-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-8) var(--space-16);
+  margin: 0 0 var(--space-12);
+  padding: var(--space-8) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.variant-save-line p {
+  margin: 0;
+}
+
+.variant-save-line__state,
+.variant-save-line__save {
+  color: var(--color-text-secondary);
+}
+
+.variant-save-line__save--attention {
+  color: var(--wos-warning-text);
+  font-weight: 600;
+}
+
+.variant-conflict:focus {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.variant-conflict__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin-top: var(--space-8);
+}
+
+.variant-decision {
+  display: grid;
+  gap: var(--space-8);
+  margin: var(--space-12) 0;
+  padding: var(--space-12);
+  border: 1px solid var(--color-border);
+}
+
+.variant-decision h3,
+.variant-decision p {
+  margin: 0;
+}
+
+.variant-decision__reject {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.variant-decision__reject textarea,
+.journal-form textarea,
+.journal-form input,
+.journal-form select {
+  width: 100%;
+  max-width: 100%;
+  font: inherit;
+}
+
+.request-variants {
+  display: grid;
+  gap: var(--space-8);
+  margin: var(--space-16) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.request-variants__row {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-8) var(--space-12);
+  padding: var(--space-12);
+  border: 1px solid var(--color-border);
+}
+
+.request-variants__row--alternative {
+  margin-left: var(--space-16);
+  border-left-width: 3px;
+}
+
+.request-variants__row--withdrawn {
+  opacity: 0.7;
+}
+
+.request-variants__index {
+  font-family: var(--font-mono);
+  color: var(--color-text-secondary);
+}
+
+.request-variants__body p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.request-variants__meta {
+  color: var(--color-text-secondary);
+}
+
+.request-variants__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-8);
+}
+
+.request-journal {
+  margin: var(--space-16) 0;
+}
+
+.request-journal__list {
+  display: grid;
+  gap: var(--space-8);
+  margin: var(--space-12) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.request-journal__item {
+  display: grid;
+  grid-template-columns: minmax(7rem, 10rem) minmax(0, 1fr);
+  gap: var(--space-6) var(--space-12);
+  padding: var(--space-8) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.request-journal__item p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.request-journal__kind {
+  font-weight: 600;
+}
+
+.request-journal__item--application .request-journal__kind {
+  font-weight: 400;
+  font-style: italic;
+}
+
+.request-journal__item--rectified .request-journal__amount,
+.request-journal__item--rectified .request-journal__notes {
+  text-decoration: line-through;
+}
+
+.request-journal__when,
+.request-journal__detail {
+  color: var(--color-text-secondary);
+}
+
+.journal-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-12);
+  margin-top: var(--space-12);
+}
+
+.journal-form label {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.journal-form__wide {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 40rem) {
+  .request-variants__row {
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+  }
+
+  .request-variants__actions {
+    grid-column: 1 / -1;
+    justify-content: stretch;
+  }
+
+  .request-variants__actions > * {
+    flex: 1 1 auto;
+  }
+
+  .request-journal__item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
