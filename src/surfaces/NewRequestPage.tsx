@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { presentCustomer, presentCustomerList } from "../adapters/customerAdapter";
 import { presentCreatedRequestId } from "../adapters/requestAdapter";
 import { asRecord, asString } from "../adapters/record";
+import { createAssembly, loadAssemblyOfferings } from "../api/assemblies";
 import { createCustomer, lookupCustomerByCui } from "../api/customers";
 import { createRequest } from "../api/requests";
 import { TransportError, readTransportErrorCode } from "../api/http";
@@ -14,7 +15,7 @@ import { resourceKeys } from "../data/resourceKeys";
 import { loadCatalogProducts, loadCustomerList, loadCustomerWorkspace } from "../data/routeLoaders";
 import { useResource } from "../data/useResource";
 import { SlicePage } from "../layout/SlicePage";
-import { clientHref, configuratorHref, requestHref } from "../routing/appRoute";
+import { assemblyHref, clientHref, configuratorHref, requestHref } from "../routing/appRoute";
 import { navigate } from "../routing/navigate";
 import { useUnsavedChangesGuard } from "../routing/useUnsavedChangesGuard";
 import { readConfiguratorSession, writeConfiguratorSession } from "../session/configuratorSession";
@@ -23,6 +24,7 @@ import "../styles/surfaces/request-intake.css";
 export function NewRequestPage() {
   const customers = useResource(resourceKeys.customerIntake(), loadCustomerList);
   const catalog = useResource(resourceKeys.catalog(), loadCatalogProducts);
+  const assemblies = useResource("assembly-offerings", loadAssemblyOfferings);
   const [customerId, setCustomerId] = useState(new URLSearchParams(window.location.search).get("customer") ?? "");
   // N-018 · opened from a client page, the way back and "Anulează" return there.
   const [originCustomerId] = useState(() => new URLSearchParams(window.location.search).get("customer"));
@@ -34,6 +36,8 @@ export function NewRequestPage() {
   const [address, setAddress] = useState(""); const [city, setCity] = useState("");
   const [title, setTitle] = useState(""); const [description, setDescription] = useState("");
   const [productCode, setProductCode] = useState<string | null>(null);
+  const [assemblyKind, setAssemblyKind] = useState<string | null>(null);
+  const [savedRequestId, setSavedRequestId] = useState<string | null>(null);
   const [pending, setPending] = useState(false); const saving = useRef(false);
   const [lookupPending, setLookupPending] = useState(false);
   const [notice, setNotice] = useState<string | null>(null); const [error, setError] = useState<string | null>(null);
@@ -44,6 +48,8 @@ export function NewRequestPage() {
   const selected = allCustomers.find(c => c.customerId === customerId) ?? workspace.data?.customer;
   const visibleCustomers = allCustomers.filter(c => c.customerId === customerId || [c.displayName, c.cui, c.city].some(value => value?.toLocaleLowerCase("ro").includes(query.toLocaleLowerCase("ro"))));
   const selectedProduct = catalog.data?.find(product => product.code === productCode);
+  const offerings = assemblies.data?.canCreate ? assemblies.data.offerings : [];
+  const selectedAssembly = offerings.find(item => item.kind === assemblyKind) ?? null;
   const canSave = !pending && !lookupPending && Boolean(title.trim() && description.trim()) && (newCustomer ? Boolean(name.trim()) : workspace.data?.canCreateRequest === true);
   const dirty = !pending && [title, description, ...(newCustomer ? [cui, name, address, city] : [])].some(value => value.trim() !== "");
   const unsavedGuard = useUnsavedChangesGuard({ dirty, subject: "Titlul și descrierea cererii" });
@@ -75,6 +81,7 @@ export function NewRequestPage() {
     saving.current = true; setPending(true); setError(null);
     const scope = generation.current;
     let ownedId = customerId;
+    let persistedRequestId = savedRequestId;
     try {
       if (newCustomer) {
         const created = presentCustomer(await createCustomer(name.trim(), { cui: cui.trim(), address: address.trim(), city: city.trim() }));
@@ -84,13 +91,24 @@ export function NewRequestPage() {
         if (scope !== generation.current) return;
         setLookupCustomers(current => [...current, created]); setCustomerId(ownedId); setNewCustomer(false);
       }
-      const result = await createRequest({ customerId: ownedId, title: title.trim(), description: description.trim() });
-      const requestId = presentCreatedRequestId(result);
-      if (!requestId) throw new Error("unpresentable_request");
-      invalidateAfterCreateRequest(ownedId);
-      if (scope !== generation.current) return;
+      let requestId = persistedRequestId;
+      if (!requestId) {
+        const result = await createRequest({ customerId: ownedId, title: title.trim(), description: description.trim() });
+        requestId = presentCreatedRequestId(result);
+        if (!requestId) throw new Error("unpresentable_request");
+        invalidateAfterCreateRequest(ownedId);
+        if (scope !== generation.current) return;
+        persistedRequestId = requestId;
+        setSavedRequestId(requestId);
+      }
       const previous = readConfiguratorSession();
-      writeConfiguratorSession({ ...previous, customerId: ownedId, requestId, productCode, customerLabel: selected?.displayName ?? name.trim(), requestLabel: title.trim() });
+      writeConfiguratorSession({ ...previous, customerId: ownedId, requestId, productCode: assemblyKind ? null : productCode, customerLabel: selected?.displayName ?? name.trim(), requestLabel: title.trim() });
+      if (assemblyKind) {
+        const assemblyId = await createAssembly(requestId, assemblyKind);
+        if (scope !== generation.current) return;
+        navigate(assemblyHref(assemblyId), "push", { bypassGuard: true });
+        return;
+      }
       navigate(productCode ? configuratorHref({ customerId: ownedId, requestId, productCode }) : requestHref(requestId), "push", { bypassGuard: true });
     } catch (e) {
       if (scope !== generation.current) return;
@@ -98,13 +116,13 @@ export function NewRequestPage() {
         const found = presentCustomerList(e.body); setLookupCustomers(found); setNewCustomer(false);
         setCustomerId(found.length === 1 ? found[0]!.customerId : "");
         setError("Clientul există deja. Verifică selecția și salvează din nou cererea; nu a fost creat un duplicat.");
-      } else setError("Cererea nu a putut fi salvată. Datele introduse sunt păstrate pentru reîncercare.");
+      } else setError(persistedRequestId && assemblyKind ? "Cererea este salvată, dar ansamblul nu a putut fi deschis. Reîncearcă deschiderea sau continuă din cerere." : "Cererea nu a putut fi salvată. Datele introduse sunt păstrate pentru reîncercare.");
     } finally { saving.current = false; if (scope === generation.current) setPending(false); }
   }
 
-  const undecidedChoice = <button type="button" disabled={pending} aria-pressed={productCode === null} onClick={() => setProductCode(null)}>
+  const undecidedChoice = <button type="button" disabled={pending} aria-pressed={productCode === null && assemblyKind === null} onClick={() => { setProductCode(null); setAssemblyKind(null); }}>
     <span><strong>Momentan indecis</strong><span>Aleg produsul ulterior din cerere.</span></span>
-    <span className="product-picker__action">{productCode === null ? "Selectat" : "Alege"}</span>
+    <span className="product-picker__action">{productCode === null && assemblyKind === null ? "Selectat" : "Alege"}</span>
   </button>;
 
   return <SlicePage contextLabel="Cereri" currentHref="/cereri/noua" workspace="stack" surface="cereri-intake" eyebrow="Cerere nouă" title="Ce dorește clientul?" action={<a className="text-link request-intake__back" href={exitHref}>{originCustomerId ? "← Fișa clientului" : "← Toate cererile"}</a>}>
@@ -130,16 +148,18 @@ export function NewRequestPage() {
       <fieldset className="request-intake-form__section request-intake-form__brief" disabled={pending}><legend>2. Lucrarea solicitată</legend><label>Titlu cerere<input required value={title} onChange={e => setTitle(e.target.value)} placeholder="Ce trebuie realizat?" /></label><label>Descriere<textarea required value={description} onChange={e => setDescription(e.target.value)} placeholder="Descrie lucrarea și cerințele cunoscute." aria-describedby="request-intake-brief-hint" /></label><p id="request-intake-brief-hint" className="request-intake__hint">Detaliile tehnice se completează la configurarea produsului.</p></fieldset>
       </div>
       <fieldset className="request-intake-form__section request-intake-form__products" disabled={pending}><legend>3. Produs de pornire</legend>
-        <p className="request-intake__hint">Alege produsul de configurat sau continuă cu „Momentan indecis”. Poți adăuga alte produse în aceeași cerere.</p>
-        {catalog.data ? <ProductPicker variant="choices" products={catalog.data} leadingChoice={undecidedChoice} selectedCode={productCode} actionLabel="Alege" disabled={pending} onChoose={p => setProductCode(p.code)} /> : <div className="product-picker product-picker--choices"><ul className="product-picker__list"><li>{undecidedChoice}</li></ul></div>}
+        <p className="request-intake__hint">Alege un ansamblu de fațadă deja suportat, un produs de configurat, sau continuă cu „Momentan indecis”. Poți adăuga alte produse în aceeași cerere.</p>
+        {offerings.length > 0 ? <div className="product-picker product-picker--choices"><p className="request-intake__hint">Ansambluri de fațadă. Fiecare parte se configurează în ansamblu, apoi se pregătește o singură ofertă.</p><ul className="product-picker__list">{offerings.map(item => <li key={item.kind}><button type="button" disabled={pending} aria-pressed={assemblyKind === item.kind} onClick={() => { setAssemblyKind(item.kind); setProductCode(null); }}><span><strong>{item.label}</strong><span>{item.summary}</span></span><span className="product-picker__action">{assemblyKind === item.kind ? "Selectat" : "Alege"}</span></button></li>)}</ul></div> : null}
+        {assemblies.status === "error" ? <InlineAlert tone="error" title="Ansamblurile nu au putut fi citite">Poți alege un produs sau „Momentan indecis”.<Button variant="secondary" onClick={() => invalidateResources("assembly-offerings")}>Reîncearcă ansamblurile</Button></InlineAlert> : null}
+        {catalog.data ? <ProductPicker variant="choices" products={catalog.data} leadingChoice={undecidedChoice} selectedCode={productCode} actionLabel="Alege" disabled={pending} onChoose={p => { setProductCode(p.code); setAssemblyKind(null); }} /> : <div className="product-picker product-picker--choices"><ul className="product-picker__list"><li>{undecidedChoice}</li></ul></div>}
         {catalog.status === "loading" && !catalog.data && <p className="request-intake__hint" role="status">Se încarcă produsele disponibile…</p>}
         {catalog.status === "error" && <InlineAlert tone="error" title="Produsele nu au putut fi citite">Poți salva cererea cu produsul momentan indecis.<Button variant="secondary" onClick={() => invalidateResources(resourceKeys.catalog())}>Reîncearcă</Button></InlineAlert>}
       </fieldset>
       {error && <InlineAlert tone="error" title="Verifică înainte de continuare">{error}</InlineAlert>}
       {/* N-018 · Rezumat: beside the form on desktop, a bar at the bottom on phone. */}
       <section className="request-intake-form__footer" aria-labelledby="request-intake-summary">
-        <div className="request-intake__summary"><h2 id="request-intake-summary" className="request-intake__summary-title">Rezumat</h2><ul className="request-intake__summary-lines"><li>{newCustomer ? name.trim() || "Client nou" : (customerId && selected?.displayName) || "Client de selectat"}</li><li>{title.trim() || "Titlul cererii, necompletat"}</li><li>{productCode ? `Produs: ${selectedProduct?.label ?? "selectat"}` : "Produs: momentan indecis"}</li></ul><p className="request-intake__hint">{productCode ? "Cererea se salvează înainte de configurarea produsului." : "După salvare poți alege produsul din cerere."}</p></div>
-        <div className="request-intake-form__actions"><a className="text-link" href={exitHref}>Anulează</a><Button type="submit" disabled={!canSave}>{pending ? "Se salvează…" : productCode ? "Creează cererea și configurează" : "Salvează cererea"}</Button></div>
+        <div className="request-intake__summary"><h2 id="request-intake-summary" className="request-intake__summary-title">Rezumat</h2><ul className="request-intake__summary-lines"><li>{newCustomer ? name.trim() || "Client nou" : (customerId && selected?.displayName) || "Client de selectat"}</li><li>{title.trim() || "Titlul cererii, necompletat"}</li><li>{selectedAssembly ? `Ansamblu: ${selectedAssembly.label}` : productCode ? `Produs: ${selectedProduct?.label ?? "selectat"}` : "Produs: momentan indecis"}</li></ul><p className="request-intake__hint">{selectedAssembly ? "Cererea se salvează, apoi se deschide ansamblul." : productCode ? "Cererea se salvează înainte de configurarea produsului." : "După salvare poți alege produsul din cerere."}</p>{savedRequestId ? <p className="request-intake__hint"><a className="text-link" href={requestHref(savedRequestId)}>Deschide cererea salvată</a></p> : null}</div>
+        <div className="request-intake-form__actions"><a className="text-link" href={exitHref}>Anulează</a><Button type="submit" disabled={!canSave}>{pending ? "Se salvează…" : selectedAssembly ? "Creează cererea și deschide ansamblul" : productCode ? "Creează cererea și configurează" : "Salvează cererea"}</Button></div>
       </section>
     </form>
     {unsavedGuard}

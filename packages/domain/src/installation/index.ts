@@ -23,6 +23,7 @@ export {
   type SiteInstallationEvidenceInput,
   type SiteInstallationIncompleteReason,
   type SiteInstallationIncompleteReasonId,
+  type SiteInstallationElectricalCost,
   type SiteInstallationOperatorView,
   type SiteInstallationOwnerInternalCost,
   type SiteInstallationProjectionInput,
@@ -30,9 +31,12 @@ export {
 } from "./scope.js";
 export {
   costEvidenceCoversInstant,
+  isCompleteIncludedSiteElectricalEvidence,
   isCompleteInternalInstallLaborEvidence,
   isCompleteSubcontractInstallEvidence,
+  isCompleteSubcontractedSiteElectricalEvidence,
   isOwnerConfirmedCostEvidence,
+  siteElectricalEvidenceForState,
   siteInstallationEvidenceFromRows,
 } from "./evidence.js";
 export {

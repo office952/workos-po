@@ -221,6 +221,8 @@ export const LAB_ATTACH_INTERNAL_FRAME_ID = "LAB-ATTACH-INTERNAL-FRAME";
 export const LAB_SITE_INSTALL_ID = "LAB-SITE-INSTALL";
 export const LAB_WORKSHOP_LABOR_ID = "LAB-WORKSHOP-LABOR";
 export const SVC_SITE_INSTALL_SUBCONTRACT_ID = "SVC-SITE-INSTALL-SUBCONTRACT";
+export const SVC_SITE_ELECTRICAL_INCLUDED_ID = "SVC-SITE-ELECTRICAL-INCLUDED";
+export const SVC_SITE_ELECTRICAL_SUBCONTRACT_ID = "SVC-SITE-ELECTRICAL-SUBCONTRACT";
 
 export const materialFamilies: readonly MaterialFamily[] = [
   {
@@ -477,6 +479,18 @@ export const resourceCatalog: readonly ResourceDefinition[] = [
   {
     id: SVC_SITE_INSTALL_SUBCONTRACT_ID,
     label: "Montaj la locație subcontractat",
+    kind: "SERVICE",
+    unit: "job",
+  },
+  {
+    id: SVC_SITE_ELECTRICAL_INCLUDED_ID,
+    label: "Racord electric inclus la locație",
+    kind: "SERVICE",
+    unit: "job",
+  },
+  {
+    id: SVC_SITE_ELECTRICAL_SUBCONTRACT_ID,
+    label: "Racord electric subcontractat la locație",
     kind: "SERVICE",
     unit: "job",
   },
@@ -809,6 +823,21 @@ export function ownerConfirmedCostSource(kind: ResourceKind): CostEvidence["sour
 
 export function isValidCostAmount(amount: number): boolean {
   return Number.isFinite(amount) && amount > 0;
+}
+
+export function isSiteElectricalCostResource(resourceId: string): boolean {
+  return (
+    resourceId === SVC_SITE_ELECTRICAL_INCLUDED_ID ||
+    resourceId === SVC_SITE_ELECTRICAL_SUBCONTRACT_ID
+  );
+}
+
+/** Positive amounts stay required for product resources. Site electrical may be a confirmed zero. */
+export function isAcceptedCostAmount(resourceId: string, amount: number): boolean {
+  if (isSiteElectricalCostResource(resourceId)) {
+    return Number.isFinite(amount) && amount >= 0;
+  }
+  return isValidCostAmount(amount);
 }
 
 export function listMaterialSpecifications(

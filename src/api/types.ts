@@ -230,6 +230,7 @@ export type QuoteOfferLineTransport = {
   label: string;
   netPrice: number | null;
   currency: string | null;
+  detail?: string | null;
 };
 
 export type QuoteSnapshotTransport = {
@@ -507,6 +508,9 @@ export type RequestInstallationScopeTransport = {
   incompleteReasons: RequestInstallationReasonTransport[];
   ownerInternalCostLabel: string | null;
   ownerInternalCostTotal: number | null;
+  electricalCostLabel?: string | null;
+  electricalCostTotal?: number | null;
+  electricalCostDeliberateZero?: boolean;
 };
 
 export type RequestInstallationOfferTransport = {
@@ -734,7 +738,14 @@ export type AssemblyQuoteTransport = {
   requestId: string | null;
   superseded: boolean;
   sections: AssemblyQuoteSectionTransport[];
-  serviceSection: { label: string; netPrice: number; vatAmount: number; grossPrice: number; currency: string } | null;
+  serviceSection: {
+    label: string;
+    netPrice: number;
+    vatAmount: number;
+    grossPrice: number;
+    currency: string;
+    electricalLabel?: string | null;
+  } | null;
   totals: { netPrice: number; vatAmount: number; grossPrice: number; currency: string };
   orderSnapshotId: string | null;
   /** Present only for owners; null when the evidence cannot be traced. */
@@ -1099,6 +1110,9 @@ export type CostEvidenceRowTransport = {
   kindLabel: string | null;
   classificationLabel: string | null;
   sourceLabel: string | null;
+  supplierLabel?: string | null;
+  validFrom?: string | null;
+  validUntil?: string | null;
 };
 
 export type OperationalServiceCapabilityTransport = {

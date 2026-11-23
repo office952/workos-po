@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { SVC_SITE_ELECTRICAL_INCLUDED_ID, type CostEvidence } from "../resources/catalog.js";
 import { blankSiteInstallationFacts } from "./facts.js";
 import {
   freezeSiteInstallationContexts,
@@ -67,6 +68,33 @@ describe("frozen host context", () => {
     expect(frozen?.hostContext.sourceFactsVersion).toBe(3);
     expect(frozen?.hostContext.surfaceType).toBe("CONCRETE");
     expect(frozen?.siteExecutionContext.street).toBe("Strada Sintetică 1");
+  });
+
+  it("freezes included electrical once a deliberate zero cost is confirmed", () => {
+    const zero: CostEvidence = {
+      resourceId: SVC_SITE_ELECTRICAL_INCLUDED_ID,
+      amount: 0,
+      currency: "EUR",
+      perUnit: "job",
+      source: "OWNER_CONFIRMED_WORKSHOP",
+      classification: "OWNER_CONFIRMED",
+      note: "Fără cost separat.",
+    };
+    const frozen = freezeSiteInstallationContexts(
+      readyFacts({ siteElectrical: "INCLUDED" }),
+      "req:synthetic",
+      "INTERNAL",
+      { evidence: zero },
+    );
+    expect(frozen?.siteExecutionContext.siteElectrical).toBe("INCLUDED");
+    expect(
+      freezeSiteInstallationContexts(
+        readyFacts({ siteElectrical: "INCLUDED" }),
+        "req:synthetic",
+        "INTERNAL",
+        { evidence: { ...zero, note: " " } },
+      ),
+    ).toBeNull();
   });
 
   it("refuses electrical work that has no approved cost contract", () => {

@@ -1,3 +1,8 @@
+import type { CostEvidence } from "../resources/catalog.js";
+import {
+  isCompleteIncludedSiteElectricalEvidence,
+  isCompleteSubcontractedSiteElectricalEvidence,
+} from "./evidence.js";
 import {
   siteInstallationElectricalStateLabel,
   siteInstallationFacadeTypeLabel,
@@ -61,12 +66,18 @@ export type FrozenSiteInstallationContexts = {
 const COMPLETABLE_ELECTRICAL = new Set<SiteInstallationElectricalState>([
   "EXCLUDED_CUSTOMER_RESPONSIBILITY",
   "NOT_APPLICABLE",
+  "INCLUDED",
+  "SUBCONTRACTED",
 ]);
 
 export function freezeSiteInstallationContexts(
   facts: SiteInstallationFacts,
   requestId: string,
   providerMode?: "INTERNAL" | "SUBCONTRACTED",
+  electrical?: {
+    evidence?: CostEvidence | null;
+    asOf?: string;
+  },
 ): FrozenSiteInstallationContexts | null {
   if (facts.requestId !== requestId || facts.version < 1) {
     return null;
@@ -78,6 +89,9 @@ export function freezeSiteInstallationContexts(
     return null;
   }
   if (!COMPLETABLE_ELECTRICAL.has(facts.siteElectrical)) {
+    return null;
+  }
+  if (!siteElectricalCostIsFreezable(facts, electrical?.evidence ?? null, electrical?.asOf)) {
     return null;
   }
   const street = facts.street.trim();
@@ -191,10 +205,7 @@ export function isFrozenSiteExecutionContextV1(
   if (!value.street.trim() || !value.city.trim() || !value.countryCode.trim()) {
     return false;
   }
-  if (
-    value.siteElectrical !== "EXCLUDED_CUSTOMER_RESPONSIBILITY" &&
-    value.siteElectrical !== "NOT_APPLICABLE"
-  ) {
+  if (!COMPLETABLE_ELECTRICAL.has(value.siteElectrical)) {
     return false;
   }
   if (!optionalDimension(value.installationElevationMm)) {
@@ -271,6 +282,31 @@ export function copyFrozenSiteExecutionContext(
   value: FrozenSiteExecutionContextV1,
 ): FrozenSiteExecutionContextV1 {
   return { ...value };
+}
+
+function siteElectricalCostIsFreezable(
+  facts: SiteInstallationFacts,
+  evidence: CostEvidence | null,
+  asOf: string | undefined,
+): boolean {
+  switch (facts.siteElectrical) {
+    case "EXCLUDED_CUSTOMER_RESPONSIBILITY":
+    case "NOT_APPLICABLE":
+      return true;
+    case "INCLUDED":
+      return isCompleteIncludedSiteElectricalEvidence(evidence);
+    case "SUBCONTRACTED":
+      return isCompleteSubcontractedSiteElectricalEvidence(
+        evidence,
+        asOf ?? new Date().toISOString(),
+      );
+    case "UNCONFIRMED":
+      return false;
+    default: {
+      const _exhaustive: never = facts.siteElectrical;
+      return _exhaustive;
+    }
+  }
 }
 
 function operationalNote(value: string | undefined): string | null {

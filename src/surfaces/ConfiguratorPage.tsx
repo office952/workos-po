@@ -1325,6 +1325,7 @@ export function ConfiguratorPage({
                 <p className="ui-note">
                   Montaj la locație: {formatMoney(variantWork.variant.installationNetPrice, variantWork.variant.currency ?? "EUR")} net.
                   Prețul și faptele de montaj se editează pe cerere; după emiterea unei oferte rămân blocate.
+                  Racordul exclus sau care nu se aplică nu adaugă cost. Racordul inclus sau subcontractat rămâne blocat până există evidență de cost confirmată, inclusiv costul zero confirmat explicit.
                   {requestId ? (
                     <>
                       {" "}

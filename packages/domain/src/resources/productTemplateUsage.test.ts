@@ -8,6 +8,8 @@ import {
   FOREX_10MM_ID,
   LAB_SITE_INSTALL_ID,
   PLEXIGLAS_3MM_OPAL_ID,
+  SVC_SITE_ELECTRICAL_INCLUDED_ID,
+  SVC_SITE_ELECTRICAL_SUBCONTRACT_ID,
   RETURN_CANT_FORMING_ID,
   STEEL_FRAME_PROFILE_ID,
   SVC_CNC_FACE_ID,
@@ -66,6 +68,8 @@ describe("product template resource usage", () => {
     expect(letters?.resourceIds).not.toContain(ACM_3MM_ID);
     expect(letters?.resourceIds).not.toContain(LAB_SITE_INSTALL_ID);
     expect(letters?.resourceIds).not.toContain(SVC_SITE_INSTALL_SUBCONTRACT_ID);
+    expect(letters?.resourceIds).not.toContain(SVC_SITE_ELECTRICAL_INCLUDED_ID);
+    expect(letters?.resourceIds).not.toContain(SVC_SITE_ELECTRICAL_SUBCONTRACT_ID);
   });
 
   it("keeps ACM cassette usage separate from LETTERS-only rows", () => {

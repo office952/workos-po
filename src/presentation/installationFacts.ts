@@ -57,6 +57,23 @@ export function presentElectricalStateLabel(value: string): string {
   return ELECTRICAL_STATE_LABELS[value] ?? value;
 }
 
+export function presentElectricalStateGuidance(value: string): string {
+  switch (value) {
+    case "UNCONFIRMED":
+      return "Necunoscut. Montajul nu poate fi ofertat până confirmi racordul.";
+    case "INCLUDED":
+      return "Inclus în lucrare. Cere evidență de cost la Costuri de producție. Costul zero este valid doar dacă este confirmat explicit, cu o notă.";
+    case "SUBCONTRACTED":
+      return "Subcontractat. Cere evidența subcontractantului, cu furnizor și valabilitate. Costul zero se confirmă explicit, cu o notă.";
+    case "EXCLUDED_CUSTOMER_RESPONSIBILITY":
+      return "Exclus. Rămâne responsabilitatea clientului și nu intră în costul ofertei.";
+    case "NOT_APPLICABLE":
+      return "Nu se aplică. Nu se cere cost de racord.";
+    default:
+      return "";
+  }
+}
+
 export function presentInstallationModeLabel(value: string | null): string {
   if (!value) {
     return "Neales";

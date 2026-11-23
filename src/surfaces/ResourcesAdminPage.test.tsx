@@ -492,4 +492,99 @@ describe("ResourcesAdminPage", () => {
     expect(screen.getByRole("heading", { level: 2, name: /CNC față/ })).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Modificări nesalvate" })).not.toBeInTheDocument();
   });
+
+  it("records an explicit zero for included site electrical and refuses a silent zero", async () => {
+    const electrical = {
+      id: "SVC-SITE-ELECTRICAL-INCLUDED",
+      label: "Racord electric inclus la locație",
+      kindLabel: "Serviciu",
+      unitLabel: "lucrare",
+      cost: null,
+    };
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/api/admin/assembly-operation-cost")) {
+        return jsonResponse({
+          canEdit: true,
+          version: 1,
+          updatedAt: null,
+          finalInspectionMode: "INCLUDED",
+          finalPackagingMode: "INCLUDED",
+          inspectionOptions: [{ value: "INCLUDED", label: "Inclusă" }],
+          packagingOptions: [{ value: "INCLUDED", label: "Inclusă" }],
+          history: [],
+          rates: [],
+          futureOnlyNotice: "Politica se aplică doar lucrărilor noi.",
+        });
+      }
+      if (init?.method === "POST") {
+        return jsonResponse({
+          evidence: { evidenceRowId: "row-electrical" },
+          admin: {
+            writeState: "READY",
+            costEvidence: [{
+              resourceId: "SVC-SITE-ELECTRICAL-INCLUDED",
+              resourceLabel: electrical.label,
+              evidenceRowId: "row-electrical",
+              amount: 0,
+              currency: "EUR",
+              unitLabel: "lucrare",
+              kindLabel: "Serviciu",
+              note: "Confirmat fără cost",
+              classificationLabel: "Confirmat de owner",
+            }],
+          },
+        });
+      }
+      return jsonResponse({ writeState: "READY", costEvidence: [aluminiumRow], services: [electrical] });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<ResourcesAdminPage />);
+    await user.click(await screen.findByRole("button", { name: /Racord electric inclus/ }));
+    await user.type(screen.getByLabelText("Cost operație (EUR/lucrare)"), "0");
+    await user.click(screen.getByRole("button", { name: "Salvează" }));
+    expect(await screen.findByText("Costul zero se înregistrează explicit, cu o notă.")).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some((call) => call[1]?.method === "POST")).toBe(false);
+    await user.type(screen.getByLabelText("Notă"), "Confirmat fără cost");
+    await user.click(screen.getByRole("button", { name: "Salvează" }));
+    await screen.findByText("Cost salvat");
+    const post = fetchMock.mock.calls.find((call) => call[1]?.method === "POST");
+    expect(JSON.parse(String(post?.[1]?.body))).toEqual({
+      resourceId: "SVC-SITE-ELECTRICAL-INCLUDED",
+      amount: 0,
+      note: "Confirmat fără cost",
+    });
+  });
+
+  it("refuses a zero cost on an ordinary resource before any write", async () => {
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      void init;
+      const url = String(input);
+      if (url.includes("/api/admin/assembly-operation-cost")) {
+        return jsonResponse({
+          canEdit: true,
+          version: 1,
+          updatedAt: null,
+          finalInspectionMode: "INCLUDED",
+          finalPackagingMode: "INCLUDED",
+          inspectionOptions: [{ value: "INCLUDED", label: "Inclusă" }],
+          packagingOptions: [{ value: "INCLUDED", label: "Inclusă" }],
+          history: [],
+          rates: [],
+          futureOnlyNotice: "Politica se aplică doar lucrărilor noi.",
+        });
+      }
+      return jsonResponse({ writeState: "READY", costEvidence: [plexiRow] });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<ResourcesAdminPage />);
+    await user.click(await screen.findByRole("button", { name: /Plexiglas 3 mm opal/ }));
+    await user.clear(screen.getByLabelText("Cost achiziție (EUR/m²)"));
+    await user.type(screen.getByLabelText("Cost achiziție (EUR/m²)"), "0");
+    await user.click(screen.getByRole("button", { name: "Salvează" }));
+    expect(await screen.findByText("Suma trebuie să fie un număr mai mare decât zero.")).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some((call) => call[1]?.method === "PATCH" || call[1]?.method === "POST")).toBe(false);
+  });
 });

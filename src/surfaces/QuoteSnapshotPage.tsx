@@ -243,6 +243,11 @@ export function QuoteSnapshotPage({
                 { label: "Etapă", value: commercialLifecycleLabel(lifecycleMode) },
                 { label: "Stare comercială", value: presentedEnvelope?.commercialStatusLabel?.trim() || stageLabel || "—" },
                 { label: "Tip", value: presentedEnvelope?.kindLabel || "Produs" },
+                ...presentedSnapshot.offerLines.flatMap((line) =>
+                  line.kind === "SITE_INSTALLATION" && line.detail
+                    ? [{ label: "Racord electric", value: line.detail }]
+                    : [],
+                ),
               ]}
               actions={
                 <>

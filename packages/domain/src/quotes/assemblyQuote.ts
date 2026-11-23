@@ -126,11 +126,39 @@ export type AssemblyQuoteDetail = {
     vatAmount: number;
     grossPrice: number;
     currency: "EUR";
+    electricalLabel?: string;
   } | null;
   totals: { netPrice: number; vatAmount: number; grossPrice: number; currency: "EUR" };
   orderSnapshotId: string | null;
   productionSnapshotId: string | null;
 };
+
+function serviceElectricalLabel(
+  line: NonNullable<AssemblyQuoteSnapshot["serviceLine"]>,
+): { electricalLabel: string } | Record<string, never> {
+  const state = line.siteExecutionContext.siteElectrical;
+  const zero = line.siteElectricalEvidence?.amount === 0;
+  switch (state) {
+    case "EXCLUDED_CUSTOMER_RESPONSIBILITY":
+      return { electricalLabel: "Exclus. Responsabilitatea clientului. Nu intră în costul ofertei." };
+    case "NOT_APPLICABLE":
+      return { electricalLabel: "Nu se aplică. Nu se cere cost de racord." };
+    case "INCLUDED":
+      return {
+        electricalLabel: zero
+          ? "Inclus în lucrare. Cost confirmat explicit la zero."
+          : "Inclus în lucrare.",
+      };
+    case "SUBCONTRACTED":
+      return {
+        electricalLabel: zero
+          ? "Subcontractat. Cost confirmat explicit la zero."
+          : "Subcontractat.",
+      };
+    default:
+      return {};
+  }
+}
 
 export function presentAssemblyQuoteDetail(input: {
   quote: AssemblyQuoteSnapshot;
@@ -165,6 +193,7 @@ export function presentAssemblyQuoteDetail(input: {
           vatAmount: quote.serviceLine.commercial.vatAmount,
           grossPrice: quote.serviceLine.commercial.grossPrice,
           currency: quote.serviceLine.commercial.currency,
+          ...serviceElectricalLabel(quote.serviceLine),
         }
       : null,
     totals: {
