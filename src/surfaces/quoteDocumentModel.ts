@@ -37,7 +37,7 @@ export function presentProductQuoteLines(snapshot: QuoteSnapshotTransport, total
   return snapshot.offerLines.map((line) => ({
     key: `${line.kind}-${line.label}`,
     title: line.kind === "PRODUCT" ? snapshot.productLabel : line.label,
-    detail: line.kind === "PRODUCT" ? inscription : null,
+    detail: line.kind === "PRODUCT" ? inscription : line.detail ?? null,
     netPrice: line.netPrice,
     vatPercent: null,
     vatAmount: null,
@@ -75,7 +75,7 @@ export function presentAssemblyQuoteLines(quote: AssemblyQuoteTransport): QuoteL
         {
           key: "service",
           title: service.label,
-          detail: "Serviciu",
+          detail: service.electricalLabel ?? "Serviciu",
           netPrice: service.netPrice,
           vatPercent: null,
           vatAmount: service.vatAmount,

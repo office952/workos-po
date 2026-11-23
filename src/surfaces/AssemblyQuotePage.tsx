@@ -179,6 +179,9 @@ export function AssemblyQuotePage({ quoteSnapshotId }: AssemblyQuotePageProps) {
               facts={[
                 { label: "Stare comercială", value: item.commercialStatusLabel?.trim() || item.stageLabel || "—" },
                 { label: "Tip", value: `${item.kindLabel} · ${item.sectionCount} secțiuni` },
+                ...(quote.serviceSection?.electricalLabel
+                  ? [{ label: "Racord electric", value: quote.serviceSection.electricalLabel }]
+                  : []),
               ]}
               actions={
                 <>

@@ -2,10 +2,12 @@ import { randomUUID } from "node:crypto";
 import {
   calendarDateOrderIsValid,
   parseCanonicalCalendarDate,
+  SVC_SITE_ELECTRICAL_SUBCONTRACT_ID,
   SVC_SITE_INSTALL_SUBCONTRACT_ID,
   costEvidence,
   getResource,
-  isValidCostAmount,
+  isAcceptedCostAmount,
+  isSiteElectricalCostResource,
   ownerConfirmedCostSource,
   parseCostEvidenceWhen,
   resourceAllowsCostEvidenceQualifier,
@@ -187,7 +189,8 @@ export function supersedeCostEvidence(
     validUntil?: unknown;
   },
 ): CostEvidenceWriteResult {
-  if (!isValidCostAmount(typeof amount === "number" ? amount : Number.NaN)) {
+  const numericAmount = typeof amount === "number" ? amount : Number.NaN;
+  if (!Number.isFinite(numericAmount) || numericAmount < 0) {
     return { ok: false, error: "invalid_amount" };
   }
   const parsedNote = parseNote(note);
@@ -223,6 +226,9 @@ export function supersedeCostEvidence(
     if (!resource) {
       return { ok: false, error: "unknown_resource" };
     }
+    if (!isAcceptedCostAmount(resource.id, numericAmount)) {
+      return { ok: false, error: "invalid_amount" };
+    }
 
     const supplier = parseOptionalText(extras?.supplierLabel, 200);
     if (!supplier.ok) {
@@ -242,10 +248,21 @@ export function supersedeCostEvidence(
       validFrom.value !== undefined ? validFrom.value : active.valid_from;
     const nextValidUntil =
       validUntil.value !== undefined ? validUntil.value : active.valid_until;
-    if (active.resource_id === SVC_SITE_INSTALL_SUBCONTRACT_ID) {
+    if (
+      active.resource_id === SVC_SITE_INSTALL_SUBCONTRACT_ID ||
+      active.resource_id === SVC_SITE_ELECTRICAL_SUBCONTRACT_ID
+    ) {
       if (!nextSupplier || !nextValidUntil) {
         return { ok: false, error: "invalid_supplier" };
       }
+    }
+    const nextNote = parsedNote.note === "" ? active.note : parsedNote.note;
+    if (
+      isSiteElectricalCostResource(active.resource_id) &&
+      numericAmount === 0 &&
+      nextNote.trim() === ""
+    ) {
+      return { ok: false, error: "invalid_note" };
     }
     if (!calendarDateOrderIsValid(nextValidFrom, nextValidUntil)) {
       return { ok: false, error: "invalid_validity" };
@@ -287,7 +304,7 @@ export function supersedeCostEvidence(
       amount,
       active.per_unit,
       ownerConfirmedSourceForResource(resource.id, resource.kind),
-      parsedNote.note === "" ? active.note : parsedNote.note,
+      nextNote,
       nextSupplier,
       nextValidFrom,
       nextValidUntil,
@@ -338,7 +355,7 @@ function toCostEvidence(row: CostEvidenceRow): CostEvidence | null {
   if (!isCostSource(row.source) || !isCostClassification(row.classification)) {
     return null;
   }
-  if (!isValidCostAmount(row.amount)) {
+  if (!isAcceptedCostAmount(row.resource_id, row.amount)) {
     return null;
   }
   return {
@@ -373,9 +390,7 @@ export function createInitialCostEvidence(
     validUntil?: unknown;
   },
 ): CostEvidenceWriteResult {
-  if (!isValidCostAmount(typeof input.amount === "number" ? input.amount : Number.NaN)) {
-    return { ok: false, error: "invalid_amount" };
-  }
+  const numericAmount = typeof input.amount === "number" ? input.amount : Number.NaN;
   const parsedNote = parseNote(input.note);
   if (!parsedNote.ok) {
     return parsedNote;
@@ -383,6 +398,16 @@ export function createInitialCostEvidence(
   const resource = getResource(input.resourceId);
   if (!resource) {
     return { ok: false, error: "unknown_resource" };
+  }
+  if (!isAcceptedCostAmount(resource.id, numericAmount)) {
+    return { ok: false, error: "invalid_amount" };
+  }
+  if (
+    isSiteElectricalCostResource(resource.id) &&
+    numericAmount === 0 &&
+    parsedNote.note.trim() === ""
+  ) {
+    return { ok: false, error: "invalid_note" };
   }
   const parsedWhen = parseCostEvidenceWhen(input.when);
   if (!parsedWhen.ok) {
@@ -406,7 +431,10 @@ export function createInitialCostEvidence(
   if (!validUntil.ok) {
     return { ok: false, error: "invalid_validity" };
   }
-  if (resource.id === SVC_SITE_INSTALL_SUBCONTRACT_ID) {
+  if (
+    resource.id === SVC_SITE_INSTALL_SUBCONTRACT_ID ||
+    resource.id === SVC_SITE_ELECTRICAL_SUBCONTRACT_ID
+  ) {
     if (!supplier.value || !validUntil.value) {
       return { ok: false, error: "invalid_supplier" };
     }
@@ -500,7 +528,10 @@ function ownerConfirmedSourceForResource(
   resourceId: string,
   kind: ResourceKind,
 ): CostEvidence["source"] {
-  if (resourceId === SVC_SITE_INSTALL_SUBCONTRACT_ID) {
+  if (
+    resourceId === SVC_SITE_INSTALL_SUBCONTRACT_ID ||
+    resourceId === SVC_SITE_ELECTRICAL_SUBCONTRACT_ID
+  ) {
     return "OWNER_CONFIRMED_PURCHASE";
   }
   return ownerConfirmedCostSource(kind);

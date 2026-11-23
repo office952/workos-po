@@ -628,4 +628,70 @@ describe("PERF_3 resources mutation delta", () => {
     expect(counts.deltas).toEqual([]);
     runtime.close();
   });
+
+  it("accepts an explicit site-electrical zero and keeps ordinary zero invalid", async () => {
+    const { runtime } = countedRuntime();
+    const app = createApp({ productSystem: runtime });
+    const silent = await app.request("/api/resources-admin/cost-evidence", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ resourceId: "SVC-SITE-ELECTRICAL-INCLUDED", amount: 0 }),
+    });
+    expect(silent.status).toBe(400);
+    expect((await readBody(silent)).error).toBe("invalid_note");
+
+    const included = await app.request("/api/resources-admin/cost-evidence", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        resourceId: "SVC-SITE-ELECTRICAL-INCLUDED",
+        amount: 0,
+        note: "Confirmat fără cost separat",
+      }),
+    });
+    expect(included.status).toBe(201);
+    const includedBody = await readBody(included);
+    expect(findCost(includedBody.admin as JsonObject, "SVC-SITE-ELECTRICAL-INCLUDED")?.amount).toBe(0);
+
+    const missingSupplier = await app.request("/api/resources-admin/cost-evidence", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        resourceId: "SVC-SITE-ELECTRICAL-SUBCONTRACT",
+        amount: 40,
+        note: "Electrician",
+      }),
+    });
+    expect(missingSupplier.status).toBe(400);
+    expect((await readBody(missingSupplier)).error).toBe("invalid_supplier");
+
+    const subcontract = await app.request("/api/resources-admin/cost-evidence", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        resourceId: "SVC-SITE-ELECTRICAL-SUBCONTRACT",
+        amount: 40,
+        note: "Electrician",
+        supplierLabel: "Electro Test",
+        validUntil: "2026-12-31",
+      }),
+    });
+    expect(subcontract.status).toBe(201);
+    const subcontractBody = await readBody(subcontract);
+    expect(findCost(subcontractBody.admin as JsonObject, "SVC-SITE-ELECTRICAL-SUBCONTRACT")?.amount).toBe(40);
+
+    const before = await readBody(await app.request("/api/resources-admin"));
+    const plexi = findCost(before, PLEXIGLAS_3MM_OPAL_ID);
+    const ordinaryZero = await app.request(
+      `/api/resources-admin/cost-evidence/${plexi?.evidenceRowId as string}`,
+      {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ amount: 0, note: "nu este zero tacit" }),
+      },
+    );
+    expect(ordinaryZero.status).toBe(400);
+    expect((await readBody(ordinaryZero)).error).toBe("invalid_amount");
+    runtime.close();
+  });
 });

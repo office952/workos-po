@@ -49,6 +49,7 @@ import {
   SERVICE_QUOTE_DOCUMENT_NOT_AUTHORIZED,
   SERVICE_QUOTE_DOCUMENT_NOT_AUTHORIZED_REASON,
   SITE_INSTALLATION_SCOPE_ID,
+  siteElectricalEvidenceForState,
   siteInstallationEvidenceFromRows,
   siteInstallationFreezeRefusal,
   requestStandaloneQuoteRefusal,
@@ -1324,6 +1325,10 @@ export function registerProductRoutes(app: Hono<ApiEnv>): void {
                 requestId,
                 facts: installationFacts,
                 evidence: installationEvidence,
+                siteElectricalEvidence: siteElectricalEvidenceForState(
+                  installationFacts.siteElectrical,
+                  installationReadiness?.readiness.evidence,
+                ),
               },
             }
           : {}),

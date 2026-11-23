@@ -347,6 +347,9 @@ function presentInstallationScope(
     commercialNetPrice: asNumber(row.commercialNetPrice),
     ownerInternalCostLabel: asString(ownerCost?.label),
     ownerInternalCostTotal: asNumber(ownerCost?.total),
+    electricalCostLabel: asString(asRecord(row.electricalCost)?.label),
+    electricalCostTotal: asNumber(asRecord(row.electricalCost)?.total),
+    electricalCostDeliberateZero: asRecord(row.electricalCost)?.deliberateZero === true,
     incompleteReasons: reasons.flatMap((reason) => {
       const item = asRecord(reason);
       if (!item || typeof item.label !== "string") {

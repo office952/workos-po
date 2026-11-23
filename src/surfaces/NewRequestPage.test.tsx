@@ -10,6 +10,7 @@ const json = (body: unknown, status = 200) => Promise.resolve({ ok: status < 400
 function reads(input: RequestInfo) {
   const url = String(input);
   if (url.endsWith("/product-catalog")) return json({ tree: [{ kind: "product", code: "PRD-TEST", label: "Litere test" }] });
+  if (url.endsWith("/assemblies/offering")) return json({ canCreate: true, offerings: [] });
   if (url.endsWith("/workspace")) return json({ workspace: { customer, canCreateRequest: true, summary: {}, requests: [], quotes: [], jobs: [] } });
   return json({ customers: [customer] });
 }
@@ -70,6 +71,42 @@ describe("request intake", () => {
     view.unmount(); window.history.replaceState({}, "", "/cereri");
     await act(async () => release(await json({ request: { requestId: "req-old" } }, 201)));
     expect(window.location.pathname).toBe("/cereri");
+  });
+
+  it("opens a supported façade assembly after the request is saved", async () => {
+    window.history.replaceState({}, "", "/cereri/noua?customer=cus-1");
+    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (init?.method === "POST" && url === "/api/requests") return json({ request: { requestId: "req-asm" } }, 201);
+      if (init?.method === "POST" && url === "/api/assemblies") return json({ assembly: { assemblyId: "asm-1" } }, 201);
+      if (url.endsWith("/assemblies/offering")) {
+        return json({
+          canCreate: true,
+          offerings: [{
+            kind: "SIGN_ASSEMBLY_ACM_LETTERS_V1",
+            available: true,
+            label: "Panou ACM + litere volumetrice",
+            summary: "Panou ACM și litere volumetrice, confirmate separat și montate împreună.",
+            members: [],
+          }],
+        });
+      }
+      return reads(input);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<NewRequestPage />);
+    await brief();
+    await userEvent.click(await screen.findByRole("button", { name: /Panou ACM \+ litere volumetrice/ }));
+    const button = screen.getByRole("button", { name: "Creează cererea și deschide ansamblul" });
+    await waitFor(() => expect(button).toBeEnabled());
+    await userEvent.click(button);
+    await waitFor(() => expect(window.location.pathname).toBe("/ansamblu"));
+    expect(window.location.search).toContain("assembly=asm-1");
+    expect(fetchMock).toHaveBeenCalledWith("/api/requests", expect.objectContaining({ method: "POST" }));
+    expect(fetchMock).toHaveBeenCalledWith("/api/assemblies", expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ requestId: "req-asm", kind: "SIGN_ASSEMBLY_ACM_LETTERS_V1" }),
+    }));
   });
 
   it("returns from a chosen product to undecided and updates the continuation", async () => {

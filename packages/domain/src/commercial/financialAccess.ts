@@ -369,11 +369,12 @@ export function scopeSiteInstallationOperatorView(
   view: SiteInstallationOperatorView,
   access: FinancialAccessScope,
 ): SiteInstallationOperatorView {
-  if (access === "owner" || !view.ownerInternalCost) {
+  if (access === "owner" || (!view.ownerInternalCost && !view.electricalCost)) {
     return view;
   }
   const rest = { ...view };
   delete rest.ownerInternalCost;
+  delete rest.electricalCost;
   return rest;
 }
 

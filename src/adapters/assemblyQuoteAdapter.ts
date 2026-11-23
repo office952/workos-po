@@ -109,7 +109,13 @@ export function presentAssemblyQuoteEnvelope(payload: unknown): AssemblyQuoteTra
     superseded: asBoolean(detail.superseded) ?? false,
     sections,
     serviceSection:
-      service && serviceMoney ? { label: asString(service.label) ?? "Serviciu", ...serviceMoney } : null,
+      service && serviceMoney
+        ? {
+            label: asString(service.label) ?? "Serviciu",
+            ...serviceMoney,
+            electricalLabel: asString(service.electricalLabel),
+          }
+        : null,
     totals,
     orderSnapshotId: asString(detail.orderSnapshotId),
     internalCost: "internalCost" in record ? presentCost(record.internalCost) : undefined,

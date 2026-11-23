@@ -78,6 +78,9 @@ function presentRow(value: unknown): CostEvidenceRowTransport | null {
       typeof record.sourceLabel === "string"
         ? presentOperatorFacingCopy(record.sourceLabel)
         : null,
+    supplierLabel: typeof record.supplierLabel === "string" ? record.supplierLabel : null,
+    validFrom: typeof record.validFrom === "string" ? record.validFrom : null,
+    validUntil: typeof record.validUntil === "string" ? record.validUntil : null,
   };
 }
 
@@ -111,6 +114,9 @@ function presentCatalogGap(
     kindLabel: typeof record.kindLabel === "string" ? record.kindLabel : null,
     classificationLabel: null,
     sourceLabel: null,
+    supplierLabel: null,
+    validFrom: null,
+    validUntil: null,
   };
 }
 

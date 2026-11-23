@@ -89,6 +89,8 @@ describe("resource catalog", () => {
       "LAB-SITE-INSTALL",
       "LAB-WORKSHOP-LABOR",
       "SVC-SITE-INSTALL-SUBCONTRACT",
+      "SVC-SITE-ELECTRICAL-INCLUDED",
+      "SVC-SITE-ELECTRICAL-SUBCONTRACT",
     ]);
   });
 
@@ -109,6 +111,8 @@ describe("resource catalog", () => {
       "SVC-CNC-SHEET-PANEL",
       "SVC-CUT-METAL-STOCK",
       "SVC-SITE-INSTALL-SUBCONTRACT",
+      "SVC-SITE-ELECTRICAL-INCLUDED",
+      "SVC-SITE-ELECTRICAL-SUBCONTRACT",
     ]);
     expect(getResource("LAB-BOND-LETTER-BODY")?.kind).toBe("LABOR");
     expect(resourceKindLabel("LABOR")).toBe("Manoperă");

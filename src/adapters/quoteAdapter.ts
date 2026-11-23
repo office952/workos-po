@@ -68,6 +68,28 @@ export function presentFrozenRateAcknowledgement(
   return acknowledgedAt && rates.length > 0 ? { acknowledgedAt, rates } : null;
 }
 
+function presentInstallationElectricalDetail(row: Record<string, unknown>): string | null {
+  const execution = asRecord(row.siteExecutionContext);
+  const technical = asRecord(row.technicalConfiguration);
+  const state = asString(execution?.siteElectrical) ?? asString(technical?.siteElectrical);
+  const amount = asNumber(asRecord(row.siteElectricalEvidence)?.amount);
+  const zero = amount === 0;
+  switch (state) {
+    case "EXCLUDED_CUSTOMER_RESPONSIBILITY":
+      return "Exclus. Responsabilitatea clientului. Nu intră în costul ofertei.";
+    case "NOT_APPLICABLE":
+      return "Nu se aplică. Nu se cere cost de racord.";
+    case "INCLUDED":
+      return zero ? "Inclus în lucrare. Cost confirmat explicit la zero." : "Inclus în lucrare.";
+    case "SUBCONTRACTED":
+      return zero ? "Subcontractat. Cost confirmat explicit la zero." : "Subcontractat.";
+    case "UNCONFIRMED":
+      return "Neconfirmat. Oferta nu poate fi acceptată până confirmi racordul.";
+    default:
+      return null;
+  }
+}
+
 function presentOfferLines(value: unknown): QuoteOfferLineTransport[] {
   if (!Array.isArray(value)) {
     return [];
@@ -91,6 +113,7 @@ function presentOfferLines(value: unknown): QuoteOfferLineTransport[] {
         label,
         netPrice: asNumber(commercial?.netPrice),
         currency: asString(commercial?.currency),
+        detail: kind === "SITE_INSTALLATION" ? presentInstallationElectricalDetail(row) : null,
       },
     ];
   });

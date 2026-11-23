@@ -49,10 +49,22 @@ import { useUnsavedChangesGuard } from "../routing/useUnsavedChangesGuard";
 type SaveState = "idle" | "pending" | "success" | "stale" | "error";
 
 /** Refusals the cost write returns (apps/api resources/store.ts), in operator wording. */
+const SITE_ELECTRICAL_INCLUDED_ID = "SVC-SITE-ELECTRICAL-INCLUDED";
+const SITE_ELECTRICAL_SUBCONTRACT_ID = "SVC-SITE-ELECTRICAL-SUBCONTRACT";
+
 const COST_CODES = {
   invalid_amount: "Suma trebuie să fie un număr mai mare decât zero.",
+  invalid_note: "Costul zero se înregistrează explicit, cu o notă.",
+  invalid_supplier: "Racordul subcontractat cere furnizorul.",
+  invalid_validity: "Valabilitatea trebuie să fie o dată AAAA-LL-ZZ, iar data de început nu poate fi după data de sfârșit.",
   unknown_resource: "Această resursă nu mai există în registru. Reîncarcă pagina.",
 } as const;
+
+function siteElectricalKind(resourceId: string): "included" | "subcontract" | null {
+  if (resourceId === SITE_ELECTRICAL_INCLUDED_ID) return "included";
+  if (resourceId === SITE_ELECTRICAL_SUBCONTRACT_ID) return "subcontract";
+  return null;
+}
 
 function rowKey(row: CostEvidenceRowTransport, index: number): string {
   return row.evidenceRowId ?? `${row.resourceId}:${row.qualifierIdentity ?? index}`;
@@ -69,7 +81,15 @@ function qualifierWhen(row: CostEvidenceRowTransport): { volumeDepthMm?: number 
   return { volumeDepthMm: row.qualifier.value };
 }
 
-type Switch = { key: string | null; amount: string; note: string; label: string };
+type Switch = {
+  key: string | null;
+  amount: string;
+  note: string;
+  supplier: string;
+  validFrom: string;
+  validUntil: string;
+  label: string;
+};
 
 export function ResourcesAdminPage() {
   const admin = useResource(resourceKeys.resourcesAdmin(), loadResourcesAdmin);
@@ -80,6 +100,9 @@ export function ResourcesAdminPage() {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [supplier, setSupplier] = useState("");
+  const [validFrom, setValidFrom] = useState("");
+  const [validUntil, setValidUntil] = useState("");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<CostRegistryFilterId>("all");
   const [source, setSource] = useState<unknown>(null);
@@ -95,7 +118,16 @@ export function ResourcesAdminPage() {
     () => rows.find((row, index) => rowKey(row, index) === selectedKey) ?? null,
     [rows, selectedKey],
   );
-  const dirty = selected !== null && (amount !== amountDraft(selected) || note !== (selected.note ?? ""));
+  const electricalKind = selected ? siteElectricalKind(selected.resourceId) : null;
+  const dirty = selected !== null && (
+    amount !== amountDraft(selected)
+    || note !== (selected.note ?? "")
+    || (electricalKind === "subcontract" && (
+      supplier !== (selected.supplierLabel ?? "")
+      || validFrom !== (selected.validFrom ?? "")
+      || validUntil !== (selected.validUntil ?? "")
+    ))
+  );
 
   const filteredRows = useMemo(() => filterCostRegistryRows(rows, filter, query), [filter, query, rows]);
   const selectedPinned = selected !== null && !filteredRows.some((row) => sameCostRegistryRow(row, selected));
@@ -116,11 +148,17 @@ export function ResourcesAdminPage() {
         if (!keepDraft) {
           setAmount(amountDraft(nextSelected));
           setNote(nextSelected.note ?? "");
+          setSupplier(nextSelected.supplierLabel ?? "");
+          setValidFrom(nextSelected.validFrom ?? "");
+          setValidUntil(nextSelected.validUntil ?? "");
         }
       } else {
         setSelectedKey(null);
         setAmount("");
         setNote("");
+        setSupplier("");
+        setValidFrom("");
+        setValidUntil("");
       }
     }
     setErrorMessage(null);
@@ -133,6 +171,9 @@ export function ResourcesAdminPage() {
     setSelectedKey(next.key);
     setAmount(next.amount);
     setNote(next.note);
+    setSupplier(next.supplier);
+    setValidFrom(next.validFrom);
+    setValidUntil(next.validUntil);
     setSaveState("idle");
     setErrorMessage(null);
   }
@@ -149,27 +190,67 @@ export function ResourcesAdminPage() {
   function selectRow(row: CostEvidenceRowTransport, index: number): void {
     const key = rowKey(row, index);
     if (key === selectedKey) return;
-    requestSelect({ key, amount: amountDraft(row), note: row.note ?? "", label: row.resourceLabel });
+    requestSelect({
+      key,
+      amount: amountDraft(row),
+      note: row.note ?? "",
+      supplier: row.supplierLabel ?? "",
+      validFrom: row.validFrom ?? "",
+      validUntil: row.validUntil ?? "",
+      label: row.resourceLabel,
+    });
   }
 
   function discardDraft(): void {
     setAmount(amountDraft(selected));
     setNote(selected?.note ?? "");
+    setSupplier(selected?.supplierLabel ?? "");
+    setValidFrom(selected?.validFrom ?? "");
+    setValidUntil(selected?.validUntil ?? "");
     setSaveState("idle");
     setErrorMessage(null);
   }
 
   async function save(row: CostEvidenceRowTransport): Promise<boolean> {
     const parsed = parseCostAmountDraft(amount);
-    if (!parsed.ok) {
+    const kind = siteElectricalKind(row.resourceId);
+    if (!parsed.ok || parsed.amount < 0) {
       setSaveState("error");
       setErrorMessage("Costul trebuie să fie un număr.");
       return false;
     }
+    if (parsed.amount === 0 && kind === null) {
+      setSaveState("error");
+      setErrorMessage(COST_CODES.invalid_amount);
+      return false;
+    }
+    const trimmedNote = note.trim();
+    if (kind !== null && parsed.amount === 0 && trimmedNote === "") {
+      setSaveState("error");
+      setErrorMessage(COST_CODES.invalid_note);
+      return false;
+    }
+    const trimmedSupplier = supplier.trim();
+    const trimmedFrom = validFrom.trim();
+    const trimmedUntil = validUntil.trim();
+    if (kind === "subcontract" && (trimmedSupplier === "" || trimmedUntil === "")) {
+      setSaveState("error");
+      setErrorMessage("Racordul subcontractat cere furnizorul și data până la care este valabil.");
+      return false;
+    }
     setSaveState("pending");
     setErrorMessage(null);
-    const trimmedNote = note.trim();
-    const body = trimmedNote === "" ? { amount: parsed.amount } : { amount: parsed.amount, note: trimmedNote };
+    const body = {
+      amount: parsed.amount,
+      ...(trimmedNote === "" ? {} : { note: trimmedNote }),
+      ...(kind === "subcontract"
+        ? {
+            supplierLabel: trimmedSupplier,
+            ...(trimmedFrom === "" ? {} : { validFrom: trimmedFrom }),
+            validUntil: trimmedUntil,
+          }
+        : {}),
+    };
     const when = qualifierWhen(row);
     const result = row.evidenceRowId
       ? await patchCostEvidence(row.evidenceRowId, body)
@@ -356,12 +437,49 @@ export function ResourcesAdminPage() {
                         id="cost-note"
                         label="Notă"
                         value={note}
+                        hint={electricalKind ? "Costul zero este valid doar împreună cu o notă." : undefined}
                         disabled={!editEnabled}
                         onChange={(value) => {
                           setNote(value);
                           if (saveState === "success") setSaveState("idle");
                         }}
                       />
+                      {electricalKind === "subcontract" ? (
+                        <>
+                          <TextField
+                            id="cost-supplier"
+                            label="Furnizor"
+                            value={supplier}
+                            disabled={!editEnabled}
+                            onChange={(value) => {
+                              setSupplier(value);
+                              if (saveState === "success") setSaveState("idle");
+                            }}
+                          />
+                          <TextField
+                            id="cost-valid-from"
+                            label="Valabil de la"
+                            value={validFrom}
+                            hint="AAAA-LL-ZZ. Opțional."
+                            disabled={!editEnabled}
+                            onChange={(value) => {
+                              setValidFrom(value);
+                              if (saveState === "success") setSaveState("idle");
+                            }}
+                          />
+                          <TextField
+                            id="cost-valid-until"
+                            label="Valabil până la"
+                            value={validUntil}
+                            hint="AAAA-LL-ZZ"
+                            disabled={!editEnabled}
+                            onChange={(value) => {
+                              setValidUntil(value);
+                              if (saveState === "success") setSaveState("idle");
+                            }}
+                          />
+                        </>
+                      ) : null}
                     </div>
                   ) : (
                     <>
@@ -388,7 +506,7 @@ export function ResourcesAdminPage() {
                       <Button
                         variant="ghost"
                         disabled={pending}
-                        onClick={() => requestSelect({ key: null, amount: "", note: "", label: "lista fără selecție" })}
+                        onClick={() => requestSelect({ key: null, amount: "", note: "", supplier: "", validFrom: "", validUntil: "", label: "lista fără selecție" })}
                       >
                         Golește selecția
                       </Button>

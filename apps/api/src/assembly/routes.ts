@@ -31,6 +31,7 @@ import {
   projectAssemblyProduction,
   projectSiteInstallationScope,
   SITE_INSTALLATION_SCOPE_ID,
+  siteElectricalEvidenceForState,
   siteInstallationEvidenceFromRows,
   siteInstallationFreezeRefusal,
   assessAssemblyRateAcknowledgement,
@@ -897,6 +898,10 @@ function assemblyServiceLine(
     requestId,
     facts: readiness.facts,
     evidence,
+    siteElectricalEvidence: siteElectricalEvidenceForState(
+      readiness.facts.siteElectrical,
+      readiness.evidence,
+    ),
   });
   if (!frozen.ok) {
     return frozen;

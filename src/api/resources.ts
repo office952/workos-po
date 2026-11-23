@@ -18,7 +18,13 @@ export async function fetchResourcesAdmin(): Promise<unknown> {
 
 export async function patchCostEvidence(
   evidenceRowId: string,
-  body: { amount: number; note?: string },
+  body: {
+    amount: number;
+    note?: string;
+    supplierLabel?: string;
+    validFrom?: string;
+    validUntil?: string;
+  },
 ): Promise<ReturnType<typeof sendJson>> {
   return sendJson("PATCH", costEvidencePatchPath(evidenceRowId), body);
 }
@@ -28,6 +34,9 @@ export async function postCostEvidence(body: {
   amount: number;
   note?: string;
   when?: { volumeDepthMm?: number };
+  supplierLabel?: string;
+  validFrom?: string;
+  validUntil?: string;
 }): Promise<ReturnType<typeof sendJson>> {
   return sendJson("POST", costEvidenceCollectionPath(), body);
 }

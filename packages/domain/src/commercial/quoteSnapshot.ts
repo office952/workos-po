@@ -21,6 +21,8 @@ import type { ProductAggregate, ProductTruth } from "../product/types.js";
 import type { EicResult } from "../resources/eic.js";
 import {
   LAB_SITE_INSTALL_ID,
+  SVC_SITE_ELECTRICAL_INCLUDED_ID,
+  SVC_SITE_ELECTRICAL_SUBCONTRACT_ID,
   SVC_SITE_INSTALL_SUBCONTRACT_ID,
   type CostEvidence,
 } from "../resources/catalog.js";
@@ -173,6 +175,8 @@ export type FrozenSiteInstallationQuoteLineV2 = FrozenSiteInstallationLineBase &
   hostContext: FrozenHostContextV1;
   mountingInterface: FrozenMountingInterfaceV1;
   siteExecutionContext: FrozenSiteExecutionContextV1;
+  /** Present only when the frozen electrical state is included or subcontracted. */
+  siteElectricalEvidence?: FrozenServiceEvidenceProvenance;
 };
 
 export type FrozenSiteInstallationQuoteLine =
@@ -189,6 +193,8 @@ export type QuoteInstallationFreezeInput = {
   requestId: string;
   facts: SiteInstallationFacts;
   evidence: CostEvidence;
+  siteElectricalEvidence?: CostEvidence | null;
+  asOf?: string;
 };
 
 export type FrozenJobCommercial = {
@@ -496,6 +502,9 @@ function copyFrozenSiteInstallationQuoteLine(
       hostContext: copyFrozenHostContext(line.hostContext),
       mountingInterface: copyFrozenMountingInterface(line.mountingInterface),
       siteExecutionContext: copyFrozenSiteExecutionContext(line.siteExecutionContext),
+      ...(line.siteElectricalEvidence
+        ? { siteElectricalEvidence: copyFrozenServiceEvidence(line.siteElectricalEvidence) }
+        : {}),
     };
   }
   return {
@@ -682,10 +691,29 @@ function freezeJobQuoteFields(input: {
       reasons: [SERVICE_LINE_INVARIANT_REASON],
     };
   }
+  const electricalState = input.installation.facts.siteElectrical;
+  const electricalProvenance = freezeSiteElectricalEvidence(
+    electricalState,
+    input.installation.siteElectricalEvidence,
+  );
+  if (
+    (electricalState === "INCLUDED" || electricalState === "SUBCONTRACTED") &&
+    !electricalProvenance
+  ) {
+    return {
+      ok: false,
+      error: "unavailable_offer",
+      reasons: [SERVICE_LINE_INVARIANT_REASON],
+    };
+  }
   const contexts = freezeSiteInstallationContexts(
     input.installation.facts,
     input.installation.requestId,
     input.installation.providerMode,
+    {
+      evidence: input.installation.siteElectricalEvidence ?? null,
+      asOf: input.installation.asOf,
+    },
   );
   if (!contexts) {
     return {
@@ -740,6 +768,7 @@ function freezeJobQuoteFields(input: {
     hostContext: contexts.hostContext,
     mountingInterface: contexts.mountingInterface,
     siteExecutionContext: contexts.siteExecutionContext,
+    ...(electricalProvenance ? { siteElectricalEvidence: electricalProvenance } : {}),
   };
   return {
     ok: true,
@@ -907,6 +936,72 @@ function isFrozenServiceEvidenceProvenance(
   return false;
 }
 
+function siteElectricalEvidenceIsConsistent(
+  installation: FrozenSiteInstallationQuoteLine,
+): boolean {
+  const state =
+    installation.lineVersion === FROZEN_SITE_INSTALLATION_LINE_VERSION_V2
+      ? installation.siteExecutionContext.siteElectrical
+      : installation.technicalConfiguration.siteElectrical;
+  const evidence =
+    installation.lineVersion === FROZEN_SITE_INSTALLATION_LINE_VERSION_V2
+      ? installation.siteElectricalEvidence
+      : undefined;
+  if (state === "INCLUDED" || state === "SUBCONTRACTED") {
+    return freezeSiteElectricalEvidence(state, evidence) !== null;
+  }
+  return evidence === undefined;
+}
+
+function freezeSiteElectricalEvidence(
+  state: SiteInstallationElectricalState,
+  evidence: CostEvidence | FrozenServiceEvidenceProvenance | null | undefined,
+): FrozenServiceEvidenceProvenance | null {
+  if (!evidence || evidence.currency !== "EUR" || evidence.classification !== "OWNER_CONFIRMED") {
+    return null;
+  }
+  if (!Number.isFinite(evidence.amount) || evidence.amount < 0) {
+    return null;
+  }
+  if (state === "INCLUDED") {
+    if (
+      evidence.resourceId !== SVC_SITE_ELECTRICAL_INCLUDED_ID ||
+      evidence.perUnit !== "job"
+    ) {
+      return null;
+    }
+    return {
+      resourceId: evidence.resourceId,
+      classification: evidence.classification,
+      amount: evidence.amount,
+      currency: "EUR",
+      perUnit: evidence.perUnit,
+    };
+  }
+  if (state === "SUBCONTRACTED") {
+    const supplier = evidence.supplierLabel?.trim() ?? "";
+    if (
+      evidence.resourceId !== SVC_SITE_ELECTRICAL_SUBCONTRACT_ID ||
+      evidence.perUnit !== "job" ||
+      supplier.length === 0 ||
+      !evidence.validUntil?.trim()
+    ) {
+      return null;
+    }
+    return {
+      resourceId: evidence.resourceId,
+      classification: evidence.classification,
+      amount: evidence.amount,
+      currency: "EUR",
+      perUnit: evidence.perUnit,
+      supplierLabel: supplier,
+      ...(evidence.validFrom ? { validFrom: evidence.validFrom } : {}),
+      validUntil: evidence.validUntil,
+    };
+  }
+  return null;
+}
+
 function freezeServiceEvidenceProvenance(
   providerMode: OperationalServiceProviderMode,
   evidence: CostEvidence,
@@ -1065,7 +1160,8 @@ function isExactQuoteSnapshotV2(snapshot: QuoteSnapshot): boolean {
     !isFrozenServiceEvidenceProvenance(
       installation.providerMode,
       installation.evidence,
-    )
+    ) ||
+    !siteElectricalEvidenceIsConsistent(installation)
   ) {
     return false;
   }

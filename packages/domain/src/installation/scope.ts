@@ -7,6 +7,8 @@ import type { OperationalServiceProviderMode } from "../operationalServices.js";
 import type { CostEvidence } from "../resources/catalog.js";
 import {
   LAB_SITE_INSTALL_ID,
+  SVC_SITE_ELECTRICAL_INCLUDED_ID,
+  SVC_SITE_ELECTRICAL_SUBCONTRACT_ID,
   SVC_SITE_INSTALL_SUBCONTRACT_ID,
   getResource,
   resourceUnitLabel,
@@ -14,8 +16,10 @@ import {
 import { roundMoney } from "../commercial/price.js";
 import type { EicLine, EicResult } from "../resources/eic.js";
 import {
+  isCompleteIncludedSiteElectricalEvidence,
   isCompleteInternalInstallLaborEvidence,
   isCompleteSubcontractInstallEvidence,
+  isCompleteSubcontractedSiteElectricalEvidence,
 } from "./evidence.js";
 import type { SiteInstallationFacts } from "./facts.js";
 
@@ -55,6 +59,8 @@ export type SiteInstallationIncompleteReason = {
 export type SiteInstallationEvidenceInput = {
   internalLabor?: CostEvidence | null;
   subcontract?: CostEvidence | null;
+  includedElectrical?: CostEvidence | null;
+  subcontractedElectrical?: CostEvidence | null;
 };
 
 export type SiteInstallationProjectionInput = {
@@ -84,6 +90,13 @@ export type SiteInstallationOwnerInternalCost = {
   rate: number;
 };
 
+export type SiteInstallationElectricalCost = {
+  label: string;
+  total: number;
+  currency: "EUR";
+  deliberateZero: boolean;
+};
+
 export type SiteInstallationOperatorView = {
   scopeId: typeof SITE_INSTALLATION_SCOPE_ID;
   label: typeof SITE_INSTALLATION_LABEL;
@@ -93,6 +106,7 @@ export type SiteInstallationOperatorView = {
   commercialGrossPrice: number | null;
   incompleteReasons: readonly SiteInstallationIncompleteReason[];
   ownerInternalCost?: SiteInstallationOwnerInternalCost;
+  electricalCost?: SiteInstallationElectricalCost;
 };
 
 export function isKnownOptionalScopeId(value: string): value is OptionalCommercialScopeId {
@@ -147,7 +161,7 @@ export function siteInstallationIncompleteReasonLabel(
     case "SUBCONTRACT_EVIDENCE_INVALID":
       return "Evidența subcontractantului nu este validă pentru această dată.";
     case "SITE_ELECTRICAL_COST_REQUIRED":
-      return "Racordul electric inclus sau subcontractat nu are evidență de cost.";
+      return "Racordul electric inclus sau subcontractat nu are evidență de cost confirmată. Costul zero se înregistrează explicit, cu o notă.";
     case "SITE_ADDRESS_INCOMPLETE":
       return "Adresa locului de execuție este incompletă.";
     case "SITE_MEASUREMENTS_UNCONFIRMED":
@@ -194,11 +208,15 @@ export function siteInstallationIncompleteReasonIds(
   if (!facts || facts.siteElectrical === "UNCONFIRMED") {
     ids.push("SITE_ELECTRICAL_UNCONFIRMED");
   }
-  if (
-    facts?.siteElectrical === "INCLUDED" ||
-    facts?.siteElectrical === "SUBCONTRACTED"
-  ) {
-    ids.push("SITE_ELECTRICAL_COST_REQUIRED");
+  if (facts?.siteElectrical === "INCLUDED") {
+    if (!isCompleteIncludedSiteElectricalEvidence(input.evidence?.includedElectrical)) {
+      ids.push("SITE_ELECTRICAL_COST_REQUIRED");
+    }
+  } else if (facts?.siteElectrical === "SUBCONTRACTED") {
+    const electrical = input.evidence?.subcontractedElectrical ?? null;
+    if (!isCompleteSubcontractedSiteElectricalEvidence(electrical, asOf)) {
+      ids.push("SITE_ELECTRICAL_COST_REQUIRED");
+    }
   }
 
   const mode = input.providerMode ?? null;
@@ -274,6 +292,7 @@ export function presentSiteInstallationScope(
   }
   const commercialComplete = projection.commercial.completeness === "COMPLETE";
   const ownerInternalCost = presentOwnerInternalCost(projection.eic);
+  const electricalCost = presentElectricalCost(projection.eic);
   return {
     scopeId: projection.scopeId,
     label: projection.label,
@@ -283,6 +302,7 @@ export function presentSiteInstallationScope(
     commercialGrossPrice: commercialComplete ? projection.commercial.grossPrice : null,
     incompleteReasons: projection.incompleteReasons,
     ...(ownerInternalCost ? { ownerInternalCost } : {}),
+    ...(electricalCost ? { electricalCost } : {}),
   };
 }
 
@@ -345,6 +365,33 @@ function presentOwnerInternalCost(
   };
 }
 
+function presentElectricalCost(
+  eic: EicResult,
+): SiteInstallationElectricalCost | undefined {
+  if (eic.completeness !== "COMPLETE") {
+    return undefined;
+  }
+  const line = eic.lines.find(
+    (item) =>
+      item.resourceId === SVC_SITE_ELECTRICAL_INCLUDED_ID ||
+      item.resourceId === SVC_SITE_ELECTRICAL_SUBCONTRACT_ID,
+  );
+  if (!line) {
+    return undefined;
+  }
+  const deliberateZero = line.cost === 0;
+  return {
+    label: deliberateZero
+      ? "Cost racord electric confirmat la zero"
+      : line.resourceId === SVC_SITE_ELECTRICAL_INCLUDED_ID
+        ? "Cost racord electric inclus"
+        : "Cost racord electric subcontractat",
+    total: line.cost,
+    currency: "EUR",
+    deliberateZero,
+  };
+}
+
 function ownerInternalCostLabel(resourceId: string): string {
   switch (resourceId) {
     case LAB_SITE_INSTALL_ID:
@@ -392,6 +439,12 @@ export function siteInstallationFreezeRefusal(
     ...readiness,
   });
   const reasons = [SITE_INSTALLATION_FREEZE_REASON];
+  const electrical = projection?.incompleteReasons.find(
+    (reason) => reason.id === "SITE_ELECTRICAL_COST_REQUIRED",
+  );
+  if (electrical) {
+    reasons.unshift(electrical.label);
+  }
   if (projection && projection.commercial.completeness !== "COMPLETE") {
     reasons.push(SITE_INSTALLATION_PRICE_FREEZE_REASON);
   }
@@ -440,7 +493,7 @@ function buildInstallEicLines(input: SiteInstallationProjectionInput): EicLine[]
     }
     const quantity = roundMoney(crew * hours);
     const cost = roundMoney(quantity * evidence.amount);
-    return [
+    return withSiteElectricalLine(input, [
       {
         resourceId: resource.id,
         label: resource.label,
@@ -452,7 +505,7 @@ function buildInstallEicLines(input: SiteInstallationProjectionInput): EicLine[]
         kind: resource.kind,
         group: "labor",
       },
-    ];
+    ]);
   }
   if (input.providerMode === "SUBCONTRACTED") {
     const evidence = input.evidence?.subcontract ?? null;
@@ -463,7 +516,7 @@ function buildInstallEicLines(input: SiteInstallationProjectionInput): EicLine[]
     if (!resource) {
       return [];
     }
-    return [
+    return withSiteElectricalLine(input, [
       {
         resourceId: resource.id,
         label: resource.label,
@@ -475,9 +528,61 @@ function buildInstallEicLines(input: SiteInstallationProjectionInput): EicLine[]
         kind: resource.kind,
         group: "services",
       },
-    ];
+    ]);
   }
   return [];
+}
+
+function withSiteElectricalLine(
+  input: SiteInstallationProjectionInput,
+  lines: EicLine[],
+): EicLine[] {
+  if (lines.length === 0) {
+    return lines;
+  }
+  const electrical = buildSiteElectricalEicLine(input);
+  return electrical ? [...lines, electrical] : lines;
+}
+
+function buildSiteElectricalEicLine(
+  input: SiteInstallationProjectionInput,
+): EicLine | null {
+  const asOf = input.asOf ?? new Date().toISOString();
+  const state = input.facts?.siteElectrical;
+  const evidence =
+    state === "INCLUDED"
+      ? input.evidence?.includedElectrical ?? null
+      : state === "SUBCONTRACTED"
+        ? input.evidence?.subcontractedElectrical ?? null
+        : null;
+  const complete =
+    state === "INCLUDED"
+      ? isCompleteIncludedSiteElectricalEvidence(evidence)
+      : state === "SUBCONTRACTED"
+        ? isCompleteSubcontractedSiteElectricalEvidence(evidence, asOf)
+        : false;
+  if (!complete || !evidence) {
+    return null;
+  }
+  const resourceId =
+    state === "INCLUDED"
+      ? SVC_SITE_ELECTRICAL_INCLUDED_ID
+      : SVC_SITE_ELECTRICAL_SUBCONTRACT_ID;
+  const resource = getResource(resourceId);
+  if (!resource) {
+    return null;
+  }
+  return {
+    resourceId: resource.id,
+    label: resource.label,
+    quantity: 1,
+    unit: resource.unit,
+    rate: evidence.amount,
+    currency: "EUR",
+    cost: roundMoney(evidence.amount),
+    kind: resource.kind,
+    group: "services",
+  };
 }
 
 function uniqueReasonIds(

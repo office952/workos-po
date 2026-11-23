@@ -22,6 +22,7 @@ import {
   FACADE_TYPE_OPTIONS,
   FIXING_METHOD_OPTIONS,
   MEASUREMENT_STATUS_OPTIONS,
+  presentElectricalStateGuidance,
   presentElectricalStateLabel,
   presentFacadeTypeLabel,
   presentFixingMethodLabel,
@@ -354,6 +355,9 @@ function readinessLabel(detail: RequestDetailTransport): string {
   ) {
     return "Pregătit pentru ofertă";
   }
+  if (scope?.incompleteReasons.some((reason) => reason.id === "SITE_ELECTRICAL_COST_REQUIRED")) {
+    return "Incomplet · racordul electric nu are evidență de cost";
+  }
   return "Incomplet";
 }
 
@@ -362,12 +366,18 @@ function InstallationInternalCost({ detail }: { detail: RequestDetailTransport }
   if (scope?.ownerInternalCostTotal == null || !scope.ownerInternalCostLabel) {
     return null;
   }
+  const electrical = scope.electricalCostLabel && scope.electricalCostTotal != null
+    ? `${formatMoney(scope.electricalCostTotal, "EUR")}${scope.electricalCostDeliberateZero ? " · confirmat explicit" : ""} · inclus în totalul intern`
+    : null;
   return (
     <dl className="fact-grid">
       <InfoRow
         label={scope.ownerInternalCostLabel}
         value={formatMoney(scope.ownerInternalCostTotal, "EUR")}
       />
+      {electrical && scope.electricalCostLabel ? (
+        <InfoRow label={scope.electricalCostLabel} value={electrical} />
+      ) : null}
     </dl>
   );
 }
@@ -502,6 +512,7 @@ function RequestInstallationFactsReadout({
           label="Racord electric"
           value={presentElectricalStateLabel(facts?.siteElectrical ?? "")}
         />
+        <p className="ui-note">{presentElectricalStateGuidance(facts?.siteElectrical ?? "")}</p>
       </dl>
     </>
   );
@@ -740,6 +751,10 @@ function RequestInstallationFactsEditor({
         options={ELECTRICAL_STATE_OPTIONS}
         onChange={(value) => setDraft((current) => ({ ...current, siteElectrical: value }))}
       />
+      <p className="ui-note" id="install-electrical-guidance">{presentElectricalStateGuidance(draft.siteElectrical)}</p>
+      {draft.siteElectrical === "INCLUDED" || draft.siteElectrical === "SUBCONTRACTED" ? (
+        <p className="ui-note"><a className="text-link" href="/admin/resources">Deschide costurile de producție</a></p>
+      ) : null}
       {internalMode ? (
         <>
           <TextField
