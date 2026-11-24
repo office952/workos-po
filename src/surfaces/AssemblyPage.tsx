@@ -65,6 +65,8 @@ type AssemblyView = {
   quoteFreezable?: boolean;
   /** Server-owned freeze eligibility: members that still prevent freezing the common quote. */
   freezeBlockers?: { role: string; roleLabel: string; code: string; reason: string }[];
+  /** Server-owned installation refusal. Empty once the quote for this truth is already frozen. */
+  installationFreezeReasons?: string[];
   /** Price state of each member; the amount is present only for roles that may read client prices. */
   memberPrices?: { role: string; roleLabel: string; priced: boolean; netPrice: number | null; currency: string }[];
   orderId: string | null;
@@ -198,9 +200,12 @@ export function AssemblyPage() {
     assembly && incompleteMember ? memberConfiguratorHref(assembly, incompleteMember) : null;
   const membersEditable = assembly?.membersEditable !== false;
   const freezeBlockers = assembly?.freezeBlockers ?? [];
-  // Confirmed, not ordered, and the server names members without a price: freezing is explained, not offered.
+  const installationFreezeReasons = assembly?.installationFreezeReasons ?? [];
+  // Confirmed, not ordered, and the server names why the common quote cannot be frozen yet.
   const freezeBlocked =
-    assembly?.status === "CONFIRMED" && !assembly.orderId && freezeBlockers.length > 0;
+    assembly?.status === "CONFIRMED" &&
+    !assembly.orderId &&
+    (freezeBlockers.length > 0 || installationFreezeReasons.length > 0);
   const memberPriceByRole = new Map((assembly?.memberPrices ?? []).map((item) => [item.role, item]));
   const rateRequirement = presentRateAcknowledgement(assembly?.rateAcknowledgement);
   const frozenRateAcknowledgement = presentFrozenRateAcknowledgement(
@@ -330,28 +335,40 @@ export function AssemblyPage() {
             {freezeBlocked && assembly ? (
               <div className="assembly-freeze-blocked" data-testid="assembly-freeze-blockers">
                 <InlineAlert tone="pending" title="Oferta comună nu poate fi înghețată încă">
-                  <p>Lipsește prețul net pentru: {freezeBlockers.map((item) => item.roleLabel).join(", ")}.</p>
-                  <ul className="assembly-freeze-blocked__list">
-                    {freezeBlockers.map((blocker) => {
-                      const target = assembly.scopes.find((item) => item.role === blocker.role);
-                      const memberHref = target ? memberConfiguratorHref(assembly, target) : null;
-                      const href = memberHref ? `${memberHref}&pas=pret` : null;
-                      return (
-                        <li key={blocker.role}>
-                          {href ? (
-                            <a className="text-link" href={href}>Stabilește prețul · {blocker.roleLabel}</a>
-                          ) : (
-                            blocker.reason
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  {freezeBlockers.length > 0 ? (
+                    <>
+                      <p>Lipsește prețul net pentru: {freezeBlockers.map((item) => item.roleLabel).join(", ")}.</p>
+                      <ul className="assembly-freeze-blocked__list">
+                        {freezeBlockers.map((blocker) => {
+                          const target = assembly.scopes.find((item) => item.role === blocker.role);
+                          const memberHref = target ? memberConfiguratorHref(assembly, target) : null;
+                          const href = memberHref ? `${memberHref}&pas=pret` : null;
+                          return (
+                            <li key={blocker.role}>
+                              {href ? (
+                                <a className="text-link" href={href}>Stabilește prețul · {blocker.roleLabel}</a>
+                              ) : (
+                                blocker.reason
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </>
+                  ) : null}
+                  {installationFreezeReasons.length > 0 ? (
+                    <ul className="assembly-freeze-blocked__list" data-testid="assembly-installation-freeze-reasons">
+                      {installationFreezeReasons.map((reason) => (
+                        <li key={reason}>{reason}</li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </InlineAlert>
                 <Button disabled aria-describedby="assembly-freeze-blocked-note">Îngheață oferta</Button>
                 <p className="ui-note" id="assembly-freeze-blocked-note">
-                  Butonul se activează când fiecare parte are preț. Serverul face aceeași verificare la înghețare.
-                  Stabilirea prețului nu cere reconfirmarea configurației.
+                  {freezeBlockers.length > 0 && installationFreezeReasons.length === 0
+                    ? "Butonul se activează când fiecare parte are preț. Serverul face aceeași verificare la înghețare. Stabilirea prețului nu cere reconfirmarea configurației."
+                    : "Butonul se activează când evidența cerută este completă. Serverul face aceeași verificare la înghețare."}
                 </p>
               </div>
             ) : null}
@@ -386,6 +403,7 @@ export function AssemblyPage() {
                 <p className="ui-note">
                   Sumele pe secțiuni includ TVA și formează împreună totalul comercial cu TVA.
                   Totalul net și TVA sunt afișate separat mai jos.
+                  Cota din această ofertă este cea înghețată la emitere; o modificare ulterioară a politicii firmei nu rescrie documentul.
                 </p>
                 <p className="section-label">Totaluri ofertă</p>
                 <dl aria-label="Totaluri ofertă">

@@ -1,4 +1,5 @@
 import type { CommercialPolicy } from "../commercial/policy.js";
+import type { CommercialPolicySource, ResolvedCommercialPolicy } from "../commercial/resolvePolicy.js";
 import {
   projectManualFixedServicePrice,
 } from "../commercial/servicePrice.js";
@@ -70,7 +71,7 @@ export type SiteInstallationProjectionInput = {
   evidence?: SiteInstallationEvidenceInput;
   manualNetPrice?: number | null;
   asOf?: string;
-  policy?: CommercialPolicy;
+  policy?: CommercialPolicy | ResolvedCommercialPolicy;
 };
 
 export type SiteInstallationScopeProjection = {
@@ -104,6 +105,10 @@ export type SiteInstallationOperatorView = {
   commercialCompleteness: CommercialPriceCompleteness;
   commercialNetPrice: number | null;
   commercialGrossPrice: number | null;
+  /** VAT rate of the active policy used for this live projection. Null until the client price is complete. */
+  commercialVatPercent: number | null;
+  /** Whether that rate comes from the organization policy or the platform default. */
+  commercialPolicySource: CommercialPolicySource | null;
   incompleteReasons: readonly SiteInstallationIncompleteReason[];
   ownerInternalCost?: SiteInstallationOwnerInternalCost;
   electricalCost?: SiteInstallationElectricalCost;
@@ -300,6 +305,10 @@ export function presentSiteInstallationScope(
     commercialCompleteness: projection.commercial.completeness,
     commercialNetPrice: commercialComplete ? projection.commercial.netPrice : null,
     commercialGrossPrice: commercialComplete ? projection.commercial.grossPrice : null,
+    commercialVatPercent: commercialComplete ? projection.commercial.vatPercent : null,
+    commercialPolicySource: commercialComplete
+      ? (projection.commercial.policySource ?? "CODE_DEFAULT")
+      : null,
     incompleteReasons: projection.incompleteReasons,
     ...(ownerInternalCost ? { ownerInternalCost } : {}),
     ...(electricalCost ? { electricalCost } : {}),

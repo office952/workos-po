@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_COMMERCIAL_POLICY } from "../commercial/policy.js";
+import { projectManualFixedServicePrice } from "../commercial/servicePrice.js";
 import { createCustomer } from "../customers/identity.js";
 import { projectCustomerWorkspace } from "../customers/workspace.js";
+import { applySiteInstallationFactsPatch } from "../installation/facts.js";
+import { SITE_INSTALLATION_SCOPE_ID } from "../installation/scope.js";
+import { LAB_SITE_INSTALL_ID, SVC_SITE_ELECTRICAL_INCLUDED_ID, type CostEvidence } from "../resources/catalog.js";
 import { quoteOverviewCommercialFields, type QuoteOverviewItem } from "../quotes/overview.js";
 import type { RequestAssemblyWork } from "./assemblyWork.js";
 import { COMMERCIAL_REQUEST_STATUSES, type CommercialRequest } from "./commercialRequest.js";
@@ -418,5 +423,78 @@ describe("request overview projection", () => {
       jobs: [],
     });
     expect(workspace.summary.requestNeedsAction).toBe(1);
+  });
+
+  it("prices live installation gross from the organization policy, not the platform default", () => {
+    const saved = applySiteInstallationFactsPatch({
+      selected: true,
+      hasLinkedQuotes: false,
+      current: null,
+      requestId: "crq:11111111-2222-3333-4444-555555555555",
+      expectedVersion: 0,
+      patch: {
+        street: "Strada Fabricii 10",
+        city: "București",
+        measurementStatus: "OFFICE_MEASURED",
+        facadeType: "CONCRETE",
+        fixingMethod: "MECHANICAL_ANCHOR",
+        siteElectrical: "INCLUDED",
+        crewSize: 2,
+        plannedDurationHours: 6,
+      },
+      updatedAt: "2026-09-02T10:00:00.000Z",
+    });
+    if (!saved.ok) {
+      throw new Error("expected installation facts");
+    }
+    const labor: CostEvidence = {
+      resourceId: LAB_SITE_INSTALL_ID,
+      amount: 28,
+      currency: "EUR",
+      perUnit: "person_hour",
+      source: "OWNER_CONFIRMED_WORKSHOP",
+      classification: "OWNER_CONFIRMED",
+      note: "Tarif montaj.",
+    };
+    const electrical: CostEvidence = {
+      resourceId: SVC_SITE_ELECTRICAL_INCLUDED_ID,
+      amount: 40,
+      currency: "EUR",
+      perUnit: "job",
+      source: "OWNER_CONFIRMED_WORKSHOP",
+      classification: "OWNER_CONFIRMED",
+      note: "Racord inclus.",
+    };
+    const organizationPolicy = {
+      ...DEFAULT_COMMERCIAL_POLICY,
+      vatPercent: 19,
+      source: "ORGANIZATION" as const,
+      effectiveFrom: "2026-09-01T00:00:00.000Z",
+      createdAt: "2026-09-01T00:00:00.000Z",
+      supersedesVersion: null,
+    };
+    const input = {
+      request: request({
+        optionalScopeIds: [SITE_INSTALLATION_SCOPE_ID],
+        siteInstallationMode: "INTERNAL" as const,
+        installationManualNetEur: 700,
+      }),
+      customerDisplayName: "Client",
+      quotes: [],
+      installationFacts: saved.facts,
+      installationEvidence: { internalLabor: labor, includedElectrical: electrical },
+    };
+    const withOrganization = projectRequestDetail({ ...input, commercialPolicy: organizationPolicy });
+    const withPlatformDefault = projectRequestDetail(input);
+    const expected = projectManualFixedServicePrice({ netPrice: 700 }, organizationPolicy);
+    expect(withOrganization.installationScope?.commercialNetPrice).toBe(700);
+    expect(withOrganization.installationScope?.commercialVatPercent).toBe(19);
+    expect(withOrganization.installationScope?.commercialPolicySource).toBe("ORGANIZATION");
+    expect(withOrganization.installationScope?.commercialGrossPrice).toBe(expected.grossPrice);
+    expect(withPlatformDefault.installationScope?.commercialVatPercent).toBe(DEFAULT_COMMERCIAL_POLICY.vatPercent);
+    expect(withPlatformDefault.installationScope?.commercialGrossPrice).not.toBe(expected.grossPrice);
+    expect(withOrganization.installationScope?.ownerInternalCost?.total).not.toBe(
+      withOrganization.installationScope?.commercialNetPrice,
+    );
   });
 });

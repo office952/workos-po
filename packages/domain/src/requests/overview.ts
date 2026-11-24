@@ -19,6 +19,7 @@ import {
   type CommercialRequestAttachment,
   type RequestAttachmentProjection,
 } from "./attachment.js";
+import type { CommercialPolicy } from "../commercial/policy.js";
 import {
   SITE_INSTALLATION_SCOPE_ID,
   presentSiteInstallationScope,
@@ -439,6 +440,8 @@ export function projectRequestDetail(input: {
   hasLinkedQuotes?: boolean;
   assemblies?: readonly RequestAssemblyWork[];
   asOf?: string;
+  /** Active commercial policy for this organization. Omitted only when no resolvable policy exists. */
+  commercialPolicy?: CommercialPolicy;
   commercial?: CommercialRequestView | null;
   /** Saved quote variants without an issued quote (Commercial Continuity V2). */
   variants?: readonly RequestJourneyVariant[];
@@ -495,6 +498,7 @@ export function projectRequestDetail(input: {
         evidence: input.installationEvidence,
         manualNetPrice: input.request.installationManualNetEur ?? null,
         asOf: input.asOf,
+        ...(input.commercialPolicy ? { policy: input.commercialPolicy } : {}),
       }),
     ),
     installationOffer: projectSiteInstallationRequestOffer({

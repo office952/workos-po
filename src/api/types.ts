@@ -505,6 +505,8 @@ export type RequestInstallationScopeTransport = {
   eicCompleteness: string | null;
   commercialCompleteness: string | null;
   commercialNetPrice: number | null;
+  commercialGrossPrice: number | null;
+  commercialVatPercent: number | null;
   incompleteReasons: RequestInstallationReasonTransport[];
   ownerInternalCostLabel: string | null;
   ownerInternalCostTotal: number | null;
