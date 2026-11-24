@@ -577,4 +577,41 @@ describe("AssemblyPage freeze eligibility (Assembly & Supervision Coherence V1 �
     expect(await screen.findByRole("button", { name: "Îngheață oferta" })).not.toBeDisabled();
     expect(screen.queryByTestId("assembly-freeze-blockers")).not.toBeInTheDocument();
   });
+
+  it("keeps freeze unavailable and explains missing electrical evidence from the server", async () => {
+    window.history.replaceState(null, "", "/ansamblu?assembly=asm:electrical");
+    const reason =
+      "Racordul electric inclus sau subcontractat nu are evidență de cost confirmată. Costul zero se înregistrează explicit, cu o notă.";
+    serve({
+      ...confirmedAssembly("asm:electrical"),
+      quoteFreezable: false,
+      freezeBlockers: [],
+      installationFreezeReasons: [reason, "Montajul nu are încă un cost complet."],
+    });
+    render(<AssemblyPage />);
+    const reasons = await screen.findByTestId("assembly-installation-freeze-reasons");
+    expect(reasons).toHaveTextContent(reason);
+    expect(screen.getByRole("button", { name: "Îngheață oferta" })).toBeDisabled();
+    expect(screen.queryByText("Următorul pas: îngheață oferta")).not.toBeInTheDocument();
+  });
+
+  it("labels a frozen quote as the historical VAT document", async () => {
+    window.history.replaceState(null, "", "/ansamblu?assembly=asm:frozen-vat");
+    serve({
+      ...confirmedAssembly("asm:frozen-vat"),
+      quoteFreezable: false,
+      quoteSnapshotId: "asmq:frozen-vat",
+      quote: {
+        label: "Ofertă ansamblu",
+        sections: [{ title: "Montaj la locație", inscription: "Serviciu", grossPrice: 833 }],
+        netPrice: 700,
+        vatAmount: 133,
+        grossPrice: 833,
+        currency: "EUR",
+      },
+    });
+    render(<AssemblyPage />);
+    expect(await screen.findByText(/înghețată la emitere/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Îngheață oferta" })).not.toBeInTheDocument();
+  });
 });

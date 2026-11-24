@@ -1692,6 +1692,7 @@ export function createProductSystemRuntimeFromOpenDb(
         organizationId,
         requestCommercialQuoteItems(db, organizationId, request.requestId),
       );
+      const policyResolution = resolveStoredCommercialPolicy(db);
       return projectRequestDetail({
         request,
         customerDisplayName: getCustomer(db, request.customerId)?.displayName ?? null,
@@ -1701,6 +1702,7 @@ export function createProductSystemRuntimeFromOpenDb(
         installationFacts: getInstallationFacts(db, request.requestId),
         installationEvidence: siteInstallationEvidenceFromRows(readActiveCostEvidence(db)),
         hasLinkedQuotes: requestHasLinkedQuotes(db, request.requestId),
+        ...(policyResolution.ok ? { commercialPolicy: policyResolution.policy } : {}),
         assemblies: requestAssemblyWork(db, organizationId, request.requestId),
         commercial: projectStoredCommercialView(db, organizationId, request.requestId, true, true),
         variants: openVariantStages(db, request.requestId),

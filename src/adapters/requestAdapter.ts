@@ -345,6 +345,8 @@ function presentInstallationScope(
     eicCompleteness: asString(row.eicCompleteness),
     commercialCompleteness: asString(row.commercialCompleteness),
     commercialNetPrice: asNumber(row.commercialNetPrice),
+    commercialGrossPrice: asNumber(row.commercialGrossPrice),
+    commercialVatPercent: asNumber(row.commercialVatPercent),
     ownerInternalCostLabel: asString(ownerCost?.label),
     ownerInternalCostTotal: asNumber(ownerCost?.total),
     electricalCostLabel: asString(asRecord(row.electricalCost)?.label),

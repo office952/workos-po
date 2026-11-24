@@ -670,6 +670,20 @@ function presentCurrent(
     return child ? [child] : [];
   });
   const freezeBlockers = bundle.order ? [] : assemblyQuoteFreezeBlockers(bundle.definition, memberChildren);
+  const awaitingQuoteFreeze =
+    bundle.definition.status === "CONFIRMED" &&
+    bundle.truth !== null &&
+    bundle.order === null &&
+    bundle.quote?.assemblyTruthId !== bundle.truth.assemblyTruthId;
+  const installationContext = awaitingQuoteFreeze
+    ? loadSiteInstallationContext(runtime, bundle.truth?.requestId ?? null)
+    : null;
+  const installationRefusal = installationContext
+    ? siteInstallationFreezeRefusal(
+        installationContext.request.optionalScopeIds,
+        installationContext.readiness,
+      )
+    : null;
   const memberPrices = bundle.definition.members.map((member) => {
     const child = memberChildren.find((item) => item.truthId === member.confirmedTruthId);
     const priced = !freezeBlockers.some((blocker) => blocker.role === member.role) && Boolean(child?.commercial);
@@ -684,13 +698,9 @@ function presentCurrent(
   });
   return {
     quoteSnapshotId: bundle.quote?.quoteSnapshotId ?? null,
-    quoteFreezable:
-      bundle.definition.status === "CONFIRMED" &&
-      bundle.truth !== null &&
-      bundle.order === null &&
-      bundle.quote?.assemblyTruthId !== bundle.truth.assemblyTruthId &&
-      freezeBlockers.length === 0,
+    quoteFreezable: awaitingQuoteFreeze && freezeBlockers.length === 0 && installationRefusal === null,
     freezeBlockers,
+    installationFreezeReasons: installationRefusal?.reasons ?? [],
     memberPrices,
     ...review,
     quote,
@@ -851,24 +861,38 @@ function loadBundle(runtime: ReturnType<typeof getProductSystem>, assemblyId: st
   };
 }
 
-function assemblyServiceLine(
+function loadSiteInstallationContext(
   runtime: ReturnType<typeof getProductSystem>,
   requestId: string | null,
 ) {
   if (!requestId) {
-    return { ok: true, line: null };
+    return null;
   }
   const request = runtime.readCommercialRequest(requestId);
-  if (!request?.optionalScopeIds.includes(SITE_INSTALLATION_SCOPE_ID)) {
-    return { ok: true, line: null };
+  if (!request) {
+    return null;
   }
   const detail = runtime.readRequestDetail(requestId);
-  const readiness = {
-    facts: detail?.installationFacts ?? null,
-    providerMode: request.siteInstallationMode,
-    evidence: siteInstallationEvidenceFromRows(runtime.listActiveCostEvidence()),
-    manualNetPrice: request.installationManualNetEur ?? null,
+  return {
+    request,
+    readiness: {
+      facts: detail?.installationFacts ?? null,
+      providerMode: request.siteInstallationMode,
+      evidence: siteInstallationEvidenceFromRows(runtime.listActiveCostEvidence()),
+      manualNetPrice: request.installationManualNetEur ?? null,
+    },
   };
+}
+
+function assemblyServiceLine(
+  runtime: ReturnType<typeof getProductSystem>,
+  requestId: string | null,
+) {
+  const context = loadSiteInstallationContext(runtime, requestId);
+  if (!context?.request.optionalScopeIds.includes(SITE_INSTALLATION_SCOPE_ID)) {
+    return { ok: true as const, line: null };
+  }
+  const { request, readiness } = context;
   const refusal = siteInstallationFreezeRefusal(request.optionalScopeIds, readiness);
   if (refusal) {
     return { ok: false, error: refusal.error, reasons: refusal.reasons };
@@ -895,7 +919,7 @@ function assemblyServiceLine(
     eic: projection.eic,
     commercial: projection.commercial,
     providerMode: readiness.providerMode,
-    requestId,
+    requestId: request.requestId,
     facts: readiness.facts,
     evidence,
     siteElectricalEvidence: siteElectricalEvidenceForState(

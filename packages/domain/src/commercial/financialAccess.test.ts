@@ -289,6 +289,8 @@ describe("financial access", () => {
       commercialCompleteness: "COMPLETE" as const,
       commercialNetPrice: 200,
       commercialGrossPrice: 242,
+      commercialVatPercent: 21,
+      commercialPolicySource: "CODE_DEFAULT" as const,
       incompleteReasons: [],
       ownerInternalCost: {
         label: "Cost intern estimat montaj",

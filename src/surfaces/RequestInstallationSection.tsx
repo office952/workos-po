@@ -384,6 +384,9 @@ function InstallationInternalCost({ detail }: { detail: RequestDetailTransport }
 
 function InstallationPriceControl({ detail }: { detail: RequestDetailTransport }) {
   const current = detail.installationScope?.commercialNetPrice;
+  const gross = detail.installationScope?.commercialGrossPrice;
+  const vatPercent = detail.installationScope?.commercialVatPercent;
+  const liveVat = gross != null && vatPercent != null ? { gross, vatPercent } : null;
   const [draft, setDraft] = useState(current?.toString() ?? "");
   const [saveState, setSaveState] = useState<"idle" | "pending" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -427,6 +430,12 @@ function InstallationPriceControl({ detail }: { detail: RequestDetailTransport }
             label="Preț client montaj (EUR)"
             value={current == null ? "Neconfirmat" : formatMoney(current, "EUR")}
           />
+          {liveVat ? (
+            <InfoRow
+              label="Preț curent cu TVA"
+              value={`${formatMoney(liveVat.gross, "EUR")} · TVA ${liveVat.vatPercent}% · politica activă acum`}
+            />
+          ) : null}
         </dl>
       ) : (
         <>
@@ -439,8 +448,21 @@ function InstallationPriceControl({ detail }: { detail: RequestDetailTransport }
           <Button disabled={saveState === "pending"} onClick={() => void save()}>
             Salvează prețul de montaj
           </Button>
+          {liveVat ? (
+            <dl className="fact-grid">
+              <InfoRow
+                label="Preț curent cu TVA"
+                value={`${formatMoney(liveVat.gross, "EUR")} · TVA ${liveVat.vatPercent}% · politica activă acum`}
+              />
+            </dl>
+          ) : null}
         </>
       )}
+      {locked && liveVat ? (
+        <p className="ui-note">
+          Proiecția folosește politica comercială activă. Oferta înghețată păstrează cota de la emitere și nu se rescrie dacă politica se schimbă.
+        </p>
+      ) : null}
       {saveError ? (
         <InlineAlert tone="error" title="Prețul nu a putut fi salvat">
           {saveError}

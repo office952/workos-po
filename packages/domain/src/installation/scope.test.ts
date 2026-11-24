@@ -451,4 +451,88 @@ describe("optional site installation scope", () => {
     );
     expect(missing?.eic.completeness).toBe("PARTIAL");
   });
+
+  it("refuses freeze until included electrical evidence is deliberate, then prices VAT from the organization policy", () => {
+    const organizationPolicy = {
+      ...DEFAULT_COMMERCIAL_POLICY,
+      vatPercent: 19,
+      source: "ORGANIZATION" as const,
+      effectiveFrom: "2026-09-01T00:00:00.000Z",
+      createdAt: "2026-09-01T00:00:00.000Z",
+      supersedesVersion: null,
+    };
+    const base = {
+      facts: factsWithElectrical("INCLUDED"),
+      providerMode: "INTERNAL" as const,
+      manualNetPrice: 700,
+      asOf: "2026-09-02T12:00:00.000Z",
+      policy: organizationPolicy,
+    };
+    const missing = siteInstallationFreezeRefusal([SITE_INSTALLATION_SCOPE_ID], {
+      ...base,
+      evidence: { internalLabor: ownerLabor(28) },
+    });
+    expect(missing?.error).toBe("incomplete_offer");
+    expect(missing?.reasons[0]).toMatch(/notă/);
+
+    const unjustifiedZero = siteInstallationFreezeRefusal([SITE_INSTALLATION_SCOPE_ID], {
+      ...base,
+      evidence: { internalLabor: ownerLabor(28), includedElectrical: includedElectrical(0, "") },
+    });
+    expect(unjustifiedZero).not.toBeNull();
+
+    const deliberateZero = siteInstallationFreezeRefusal([SITE_INSTALLATION_SCOPE_ID], {
+      ...base,
+      evidence: {
+        internalLabor: ownerLabor(28),
+        includedElectrical: includedElectrical(0, "Inclus fără cost separat."),
+      },
+    });
+    expect(deliberateZero).toBeNull();
+
+    const confirmed = projectSiteInstallationScope({
+      selected: true,
+      ...base,
+      evidence: { internalLabor: ownerLabor(28), includedElectrical: includedElectrical(40) },
+    });
+    expect(siteInstallationFreezeRefusal([SITE_INSTALLATION_SCOPE_ID], {
+      ...base,
+      evidence: { internalLabor: ownerLabor(28), includedElectrical: includedElectrical(40) },
+    })).toBeNull();
+    const presented = presentSiteInstallationScope(confirmed);
+    const priced = projectManualFixedServicePrice({ netPrice: 700 }, organizationPolicy);
+    expect(presented?.commercialNetPrice).toBe(700);
+    expect(presented?.commercialVatPercent).toBe(19);
+    expect(presented?.commercialPolicySource).toBe("ORGANIZATION");
+    expect(presented?.commercialGrossPrice).toBe(priced.grossPrice);
+    expect(presented?.commercialGrossPrice).not.toBe(
+      projectManualFixedServicePrice({ netPrice: 700 }).grossPrice,
+    );
+    expect(confirmed?.eic.total).not.toBe(presented?.commercialNetPrice);
+  });
+
+  it("requires current supplier evidence before subcontracted electrical can be frozen", () => {
+    const ready = {
+      facts: factsWithElectrical("SUBCONTRACTED"),
+      providerMode: "SUBCONTRACTED" as const,
+      evidence: {
+        subcontract: ownerSubcontract(180),
+        subcontractedElectrical: subcontractedElectrical(55),
+      },
+      manualNetPrice: 200,
+      asOf: "2026-06-01T00:00:00.000Z",
+    };
+    expect(siteInstallationFreezeRefusal([SITE_INSTALLATION_SCOPE_ID], ready)).toBeNull();
+    expect(siteInstallationFreezeRefusal([SITE_INSTALLATION_SCOPE_ID], {
+      ...ready,
+      evidence: {
+        subcontract: ownerSubcontract(180),
+        subcontractedElectrical: { ...subcontractedElectrical(55), supplierLabel: "  " },
+      },
+    })).not.toBeNull();
+    expect(siteInstallationFreezeRefusal([SITE_INSTALLATION_SCOPE_ID], {
+      ...ready,
+      asOf: "2027-01-02T00:00:00.000Z",
+    })).not.toBeNull();
+  });
 });
